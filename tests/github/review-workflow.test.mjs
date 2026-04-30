@@ -50,8 +50,15 @@ test("pull request template requires story, verification, and review evidence", 
     /AI review completed before human review request, or equivalent human review fallback recorded because Codex review was unavailable/i,
   );
   assert.match(prTemplate, /before human review/i);
-  assert.match(prTemplate, /AI review comment/i);
-  assert.match(prTemplate, /revision response comment/i);
+  assert.match(prTemplate, /AI review comment, if Codex review was used/i);
+  assert.match(
+    prTemplate,
+    /Equivalent human review fallback reference, if Codex review was unavailable/i,
+  );
+  assert.match(
+    prTemplate,
+    /Revision response comment, if Codex review was used/i,
+  );
   assert.match(
     prTemplate,
     /Separate Codex review invocation completed before human review request, or equivalent human review fallback recorded because Codex review was unavailable/i,
@@ -63,6 +70,10 @@ test("pull request template requires story, verification, and review evidence", 
   assert.match(
     prTemplate,
     /copies the findings and verdict from the separate Codex review output onto this PR, or the fallback review reference explains why Codex review was unavailable/i,
+  );
+  assert.match(
+    prTemplate,
+    /Human review requested after the AI review record or fallback review reference was posted/i,
   );
   assert.match(
     prTemplate,
@@ -108,6 +119,10 @@ test("branch protection guide names the required status checks and approvals", a
   );
   assert.match(
     guide,
+    /required review artifacts are missing: the AI review comment and revision response comment for Codex-reviewed PRs, or the fallback review reference for PRs using the equivalent human-review fallback/i,
+  );
+  assert.match(
+    guide,
     /findings and verdict copied from the separate Codex review output/i,
   );
   assert.match(guide, /60[- ]minute/i);
@@ -136,6 +151,10 @@ test("agents guidance requires AI review to finish before human review request",
   assert.match(
     agents,
     /copy the findings and verdict from that separate Codex review output into an AI review comment/i,
+  );
+  assert.match(
+    agents,
+    /request human review only after the AI review record or explicit equivalent-human-review fallback record exists, and after the revision response comment is up to date when a separate Codex review invocation was used/i,
   );
   assert.match(
     agents,

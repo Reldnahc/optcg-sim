@@ -49,7 +49,7 @@ dependencies:
 acceptance_criteria:
   - AGENTS.md requires a separate Codex review invocation before human review is requested when Codex review is available and preserves an equivalent human review fallback when it is unavailable
   - the review workflow documents a 60-minute timeout budget for the default Codex CLI review step
-  - pull request and review comment templates capture the actual review path, the Codex CLI command or alternate mode, and the requirement to post findings from the separate review onto the PR
+  - pull request and review comment templates capture the actual review path, the Codex CLI command or alternate mode, and the requirement to post findings from the separate review onto the PR while allowing the fallback path to omit AI-review-specific artifacts
   - workflow tests fail if the separate-review requirement, the equivalent-human-review fallback, the no-self-review rule, or the 60-minute timeout language is removed
 required_tests:
   - review workflow tests covering AGENTS.md, PR template, branch protection guide, and review comment templates

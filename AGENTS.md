@@ -127,7 +127,7 @@ Code review is required. Use this flow unless a higher-authority story or packet
 7. if a separate Codex review invocation was used, copy the findings and verdict from that separate Codex review output into an AI review comment on the pull request before human review is requested
 8. if Codex review is unavailable on the chosen surface, record an equivalent human review step explicitly rather than silently skipping the review gate
 9. fix the material findings or post a revision response comment that records the disposition of each unresolved item
-10. request human review only after the AI review record or explicit equivalent-human-review fallback record exists and the revision response comment is up to date
+10. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, and after the revision response comment is up to date when a separate Codex review invocation was used
 11. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes
 12. if review finds multi-concern drift, split the story or narrow the patch before merge
 
