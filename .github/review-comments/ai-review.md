@@ -2,9 +2,9 @@
 
 - Story ID:
 - Story file:
-- Reviewer path: Codex CLI
+- Reviewer path: Codex CLI or `@codex review`
 - Review scope:
-- Review command:
+- Review command or mode:
 - Review timeout budget: 60 minutes
 - Review prompt or mode:
 - Files reviewed:
@@ -12,6 +12,6 @@
 - Verdict:
 - Required follow-up before human review:
 
-Use this comment for the first-pass AI review record on the PR. Human review should not be requested until this comment exists and any blocking findings are addressed or explicitly dispositioned in the revision response comment. Implementation-agent self-review does not satisfy this gate; the review must come from a separate Codex CLI invocation.
+Use this comment for the first-pass AI review record on the PR. Human review should not be requested until this comment exists and any blocking findings are addressed or explicitly dispositioned in the revision response comment. Implementation-agent self-review does not satisfy this gate; the review must come from a separate Codex review invocation.
 
-Populate this comment from the findings and verdict produced by that separate Codex CLI review invocation, then post it on the GitHub pull request before human review is requested.
+Copy the findings and verdict from that separate Codex review output into this comment, then post it on the GitHub pull request before human review is requested.
