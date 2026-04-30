@@ -125,7 +125,7 @@ Code review is required. Use this flow unless a higher-authority story or packet
 5. give the default Codex CLI review step a 60-minute timeout budget before treating it as timed out or failed
 6. self-review by the implementation agent does not satisfy the Codex review gate
 7. if a separate Codex review invocation was used, copy the findings and verdict from that separate Codex review output into an AI review comment on the pull request before human review is requested
-8. if Codex review is unavailable on the chosen surface, record an equivalent human review step explicitly rather than silently skipping the review gate
+8. if Codex review is unavailable on the chosen surface, or if the review run times out or fails, record an equivalent human review step explicitly rather than silently skipping the review gate
 9. fix the material findings or post a revision response comment that records the disposition of each unresolved item
 10. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, and after the revision response comment is up to date when a separate Codex review invocation was used
 11. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes

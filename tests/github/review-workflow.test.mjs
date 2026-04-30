@@ -47,13 +47,13 @@ test("pull request template requires story, verification, and review evidence", 
   assert.match(prTemplate, /pnpm verify/i);
   assert.match(
     prTemplate,
-    /AI review completed before human review request, or equivalent human review fallback recorded because Codex review was unavailable/i,
+    /AI review completed before human review request, or equivalent human review fallback recorded because Codex review was unavailable, timed out, or failed/i,
   );
   assert.match(prTemplate, /before human review/i);
   assert.match(prTemplate, /AI review comment, if Codex review was used/i);
   assert.match(
     prTemplate,
-    /Equivalent human review fallback reference, if Codex review was unavailable/i,
+    /Equivalent human review fallback reference, if Codex review was unavailable, timed out, or failed/i,
   );
   assert.match(
     prTemplate,
@@ -61,7 +61,7 @@ test("pull request template requires story, verification, and review evidence", 
   );
   assert.match(
     prTemplate,
-    /Separate Codex review invocation completed before human review request, or equivalent human review fallback recorded because Codex review was unavailable/i,
+    /Separate Codex review invocation completed before human review request, or equivalent human review fallback recorded because Codex review was unavailable, timed out, or failed/i,
   );
   assert.match(
     prTemplate,
@@ -69,7 +69,7 @@ test("pull request template requires story, verification, and review evidence", 
   );
   assert.match(
     prTemplate,
-    /copies the findings and verdict from the separate Codex review output onto this PR, or the fallback review reference explains why Codex review was unavailable/i,
+    /copies the findings and verdict from the separate Codex review output onto this PR, or the fallback review reference explains why Codex review was unavailable, timed out, or failed/i,
   );
   assert.match(
     prTemplate,
@@ -77,7 +77,7 @@ test("pull request template requires story, verification, and review evidence", 
   );
   assert.match(
     prTemplate,
-    /Review path used: `<Codex CLI \| @codex review \| equivalent human review fallback>`/i,
+    /Review path used: `<Codex CLI \| @codex review \| other Codex review surface \| equivalent human review fallback>`/i,
   );
   assert.match(prTemplate, /60[- ]minute/i);
 });
@@ -111,7 +111,7 @@ test("branch protection guide names the required status checks and approvals", a
   );
   assert.match(
     guide,
-    /When Codex review is unavailable, pull requests should record an equivalent human review step instead of silently skipping the review gate/i,
+    /When Codex review is unavailable, times out, or fails, pull requests should record an equivalent human review step instead of silently skipping the review gate/i,
   );
   assert.match(
     guide,
@@ -119,7 +119,7 @@ test("branch protection guide names the required status checks and approvals", a
   );
   assert.match(
     guide,
-    /required review artifacts are missing: the AI review comment and revision response comment for Codex-reviewed PRs, or the fallback review reference for PRs using the equivalent human-review fallback/i,
+    /required review artifacts are missing: the AI review comment and revision response comment for Codex-reviewed PRs, or the fallback review reference for PRs using the equivalent human-review fallback because Codex review was unavailable, timed out, or failed/i,
   );
   assert.match(
     guide,
@@ -146,7 +146,7 @@ test("agents guidance requires AI review to finish before human review request",
   );
   assert.match(
     agents,
-    /if Codex review is unavailable on the chosen surface, record an equivalent human review step explicitly rather than silently skipping the review gate/i,
+    /if Codex review is unavailable on the chosen surface, or if the review run times out or fails, record an equivalent human review step explicitly rather than silently skipping the review gate/i,
   );
   assert.match(
     agents,
