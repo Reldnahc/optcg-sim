@@ -21,7 +21,11 @@
 ## Review
 
 - [ ] AI review completed before human review request
-- [ ] `@codex review` requested or equivalent agent review recorded
+- [ ] Separate Codex CLI review completed before human review request
+- [ ] Implementation-agent self-review was not used as the review gate
+- Codex CLI review command:
+- Optional `@codex review` link:
+- Review timeout budget: 60 minutes
 - AI review comment:
 - Revision response comment:
 - [ ] Blocking AI review findings resolved or explicitly carried as blockers with disposition

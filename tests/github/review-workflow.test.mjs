@@ -49,6 +49,8 @@ test("pull request template requires story, verification, and review evidence", 
   assert.match(prTemplate, /before human review/i);
   assert.match(prTemplate, /AI review comment/i);
   assert.match(prTemplate, /revision response comment/i);
+  assert.match(prTemplate, /Codex CLI review/i);
+  assert.match(prTemplate, /60[- ]minute/i);
 });
 
 test("branch protection guide names the required status checks and approvals", async () => {
@@ -63,6 +65,8 @@ test("branch protection guide names the required status checks and approvals", a
   assert.match(guide, /AI review/i);
   assert.match(guide, /before human review/i);
   assert.match(guide, /revision response comment/i);
+  assert.match(guide, /Codex CLI review/i);
+  assert.match(guide, /60[- ]minute/i);
 });
 
 test("agents guidance requires AI review to finish before human review request", async () => {
@@ -72,6 +76,9 @@ test("agents guidance requires AI review to finish before human review request",
   assert.match(agents, /before human review/i);
   assert.match(agents, /review comment/i);
   assert.match(agents, /revision response comment/i);
+  assert.match(agents, /Codex CLI review/i);
+  assert.match(agents, /self-review/i);
+  assert.match(agents, /60[- ]minute/i);
 });
 
 test("checked-in review comment templates exist for AI findings and revisions", async () => {
@@ -83,11 +90,16 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   assert.match(aiReview, /^## AI Review Record$/m);
   assert.match(aiReview, /Story ID:/);
   assert.match(aiReview, /Review scope:/i);
+  assert.match(aiReview, /Review command:/i);
+  assert.match(aiReview, /Review timeout budget:/i);
   assert.match(aiReview, /Findings:/i);
   assert.match(aiReview, /Verdict:/i);
+  assert.match(aiReview, /Codex CLI/i);
+  assert.match(aiReview, /60[- ]minute/i);
 
   assert.match(revisionResponse, /^## AI Review Revision Response$/m);
   assert.match(revisionResponse, /AI review comment:/i);
   assert.match(revisionResponse, /Disposition:/i);
   assert.match(revisionResponse, /Follow-up commits:/i);
+  assert.match(revisionResponse, /Reviewer path:/i);
 });

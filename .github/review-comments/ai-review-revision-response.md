@@ -1,6 +1,7 @@
 ## AI Review Revision Response
 
 - AI review comment:
+- Reviewer path:
 - Follow-up commits:
 - Disposition:
 - Resolved findings:

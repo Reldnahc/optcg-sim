@@ -1,0 +1,55 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-010
+epic_id: KICK-001
+title: Require separate Codex CLI review with a documented 60-minute timeout
+type: tooling
+area: infra
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Tighten the review workflow so human review only starts after a separate Codex CLI
+  review invocation has been run and recorded, with the review timeout budget documented
+  as 60 minutes.
+story_boundary: >
+  Own review-policy artifacts only: AGENTS guidance, GitHub review workflow artifacts,
+  review comment templates, and tests that enforce those requirements. Do not change CI
+  jobs, feature code, or story packet generation in this story.
+allowed_touch_points:
+  - AGENTS.md
+  - .github/pull_request_template.md
+  - .github/branch-protection.md
+  - .github/review-comments/**
+  - tests/github/**
+  - stories/approved/**
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s016
+  - 32-codex-agent-integration.s010
+  - 32-codex-agent-integration.s011
+  - 32-codex-agent-integration.s013
+scope:
+  - require a separate Codex CLI review invocation before human review request
+  - document that self-review by the implementation agent does not satisfy the Codex review gate
+  - document a 60-minute timeout budget for the Codex CLI review step
+  - update review templates and tests so the separate Codex review requirement is mechanically visible
+non_scope:
+  - packet generation implementation
+  - GitHub Actions automation for launching Codex review
+  - gameplay or contract feature work
+dependencies:
+  - INF-008
+  - INF-009
+acceptance_criteria:
+  - AGENTS.md requires a separate Codex CLI review invocation before human review is requested
+  - the review workflow documents a 60-minute timeout budget for the Codex CLI review step
+  - pull request and review comment templates capture the Codex CLI command or mode distinctly from self-review
+  - workflow tests fail if the separate Codex CLI requirement or the 60-minute timeout language is removed
+required_tests:
+  - review workflow tests covering AGENTS.md, PR template, branch protection guide, and review comment templates
+repo_rules:
+  - a local implementation agent self-review does not count as the separate Codex review gate
+  - review comments must make it clear whether the review came from Codex CLI, GitHub @codex review, or another equivalent path
+  - the timeout budget must be documented in checked-in workflow guidance, not left to chat memory
+ambiguity_policy: implement_if_clearly_implied
