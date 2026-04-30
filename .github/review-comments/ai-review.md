@@ -12,6 +12,7 @@
 - Verdict:
 - Required follow-up before human review:
 
-Use this comment for the first-pass AI review record on the PR. Human review should not be requested until this comment exists and any blocking findings are addressed or explicitly dispositioned in the revision response comment. Implementation-agent self-review does not satisfy this gate; the review must come from a separate Codex review invocation.
+Use this comment for the first-pass AI review record on Codex-reviewed PRs. Human review should not be requested until this comment exists and any blocking findings are addressed or explicitly dispositioned in the revision response comment. Implementation-agent self-review does not satisfy this gate; the review must come from a separate Codex review invocation.
 
 Copy the findings and verdict from that separate Codex review output into this comment, then post it on the GitHub pull request before human review is requested.
+When the workflow falls back to an equivalent human review because no usable Codex review surface remains, do not require this comment; record the fallback review reference instead.

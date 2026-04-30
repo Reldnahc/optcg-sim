@@ -146,7 +146,7 @@ test("agents guidance requires AI review to finish before human review request",
   );
   assert.match(
     agents,
-    /if Codex review is unavailable on the chosen surface, or if the review run times out or fails, record an equivalent human review step explicitly rather than silently skipping the review gate/i,
+    /if no usable Codex review surface remains for the patch, or if every attempted Codex review run is unavailable, times out, or fails, record an equivalent human review step explicitly rather than silently skipping the review gate/i,
   );
   assert.match(
     agents,
@@ -184,6 +184,10 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   assert.match(
     aiReview,
     /Copy the findings and verdict from that separate Codex review output into this comment/i,
+  );
+  assert.match(
+    aiReview,
+    /When the workflow falls back to an equivalent human review because no usable Codex review surface remains, do not require this comment; record the fallback review reference instead/i,
   );
   assert.match(aiReview, /60[- ]minute/i);
 
