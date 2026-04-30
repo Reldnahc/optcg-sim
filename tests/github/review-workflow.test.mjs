@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
@@ -73,6 +73,10 @@ test("pull request template requires story, verification, and review evidence", 
   assert.match(
     prTemplate,
     /Implementation-agent self-review was not used as the review gate/i,
+  );
+  assert.match(
+    prTemplate,
+    /The required review artifact is present on this PR\./i,
   );
   assert.match(
     prTemplate,
@@ -276,16 +280,24 @@ test("checked-in review comment templates exist for AI findings and revisions", 
 
 test("only one approved review workflow remains authoritative after INF-010", async () => {
   const inf009 = await readText(
-    "stories/approved/INF-009-ai-review-gate-and-pr-comment-trail.yaml",
+    "stories/done/INF-009-ai-review-gate-and-pr-comment-trail.yaml",
   );
   const inf010 = await readText(
     "stories/approved/INF-010-separate-codex-cli-review-and-timeout-policy.yaml",
   );
 
-  assert.match(inf009, /^status:\s+replaced$/m);
-  assert.match(inf009, /Superseded by INF-010\./i);
+  await assert.rejects(() =>
+    access(
+      path.join(
+        repoRoot,
+        "stories/approved/INF-009-ai-review-gate-and-pr-comment-trail.yaml",
+      ),
+    ),
+  );
+  assert.match(inf009, /^status:\s+done$/m);
+  assert.match(inf009, /superseded by INF-010/i);
   assert.match(
     inf010,
-    /INF-009 is superseded so only one approved review workflow remains authoritative after this story lands/i,
+    /INF-009 is moved out of `stories\/approved\/` into done history so only one approved review workflow remains authoritative after this story lands/i,
   );
 });

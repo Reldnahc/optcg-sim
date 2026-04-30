@@ -26,6 +26,7 @@ allowed_touch_points:
   - .github/review-comments/**
   - tests/github/**
   - stories/approved/**
+  - stories/done/**
 spec_refs:
   - 23-repo-tooling-and-enforcement.s016
   - 32-codex-agent-integration.s010
@@ -51,7 +52,7 @@ acceptance_criteria:
   - the review workflow documents a 60-minute timeout budget for the default Codex CLI review step
   - pull request and review comment templates capture the actual review path, the Codex CLI command or alternate mode, the higher-authority merge-gate review record, and the requirement to post findings from the separate review onto the PR while allowing the fallback path to omit AI-review-specific artifacts
   - repo guidance keeps the separate Codex review as a first-pass gate while leaving the higher-authority merge gate satisfied by `@codex review` or an equivalent human review step
-  - INF-009 is superseded so only one approved review workflow remains authoritative after this story lands
+  - INF-009 is moved out of `stories/approved/` into done history so only one approved review workflow remains authoritative after this story lands
   - workflow tests fail if the separate-review requirement, the equivalent-human-review fallback, the no-self-review rule, or the 60-minute timeout language is removed
 required_tests:
   - review workflow tests covering AGENTS.md, PR template, branch protection guide, and review comment templates
