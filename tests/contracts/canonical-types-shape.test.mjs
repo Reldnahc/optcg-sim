@@ -39,8 +39,24 @@ test("Action preserves branded IDs for effect activation and decision responses"
   );
 });
 
+test("EffectBlock uses branded effect IDs consistently with queue and action contracts", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+
+  assert.match(
+    canonicalTypes,
+    /export interface EffectBlock\s*{[\s\S]*?\bid:\s*EffectId;[\s\S]*?}/m,
+  );
+});
+
 test("PoneglyphCardDetail preserves the raw API payload shape", async () => {
   const canonicalTypes = await readCanonicalTypes();
+  const rawPoneglyphBlockMatch = canonicalTypes.match(
+    /export interface PoneglyphCardDetail\s*{[\s\S]*?}/m,
+  );
+
+  assert.ok(rawPoneglyphBlockMatch, "missing PoneglyphCardDetail interface");
+
+  const rawPoneglyphBlock = rawPoneglyphBlockMatch[0];
 
   assert.match(
     canonicalTypes,
@@ -62,15 +78,12 @@ test("PoneglyphCardDetail preserves the raw API payload shape", async () => {
     canonicalTypes,
     /export interface PoneglyphCardDetail\s*{[\s\S]*?\bcard_number:\s*string;[\s\S]*?\bset_name:\s*string;[\s\S]*?\breleased_at:\s*string\s*\|\s*null;[\s\S]*?\bcard_type:\s*string;[\s\S]*?\brarity:\s*string\s*\|\s*null;[\s\S]*?\bcost:\s*number\s*\|\s*null;[\s\S]*?\bpower:\s*number\s*\|\s*null;[\s\S]*?\bcounter:\s*number\s*\|\s*null;[\s\S]*?\blife:\s*number\s*\|\s*null;[\s\S]*?\battribute:\s*string\[]\s*\|\s*null;[\s\S]*?\beffect:\s*string\s*\|\s*null;[\s\S]*?\btrigger:\s*string\s*\|\s*null;[\s\S]*?\bblock:\s*string\s*\|\s*null;[\s\S]*?\bavailable_languages:\s*string\[];[\s\S]*?\bofficial_faq:\s*PoneglyphOfficialFaq\[];[\s\S]*?}/m,
   );
-  assert.doesNotMatch(canonicalTypes, /\bcardNumber:\s*string;/);
+  assert.doesNotMatch(rawPoneglyphBlock, /\bcardNumber:\s*string;/);
+  assert.doesNotMatch(rawPoneglyphBlock, /\bsetName:\s*string;/);
+  assert.doesNotMatch(rawPoneglyphBlock, /\bavailableLanguages:\s*string\[];/);
   assert.doesNotMatch(
-    canonicalTypes,
-    /\bsetName:\s*string;[\s\S]*?export interface PoneglyphCardDetail/m,
-  );
-  assert.doesNotMatch(canonicalTypes, /\bavailableLanguages:\s*string\[];/);
-  assert.doesNotMatch(
-    canonicalTypes,
-    /\bofficialFaq:\s*PoneglyphOfficialFaq\[];[\s\S]*?export interface PoneglyphCardDetail/m,
+    rawPoneglyphBlock,
+    /\bofficialFaq:\s*PoneglyphOfficialFaq\[];/,
   );
 });
 

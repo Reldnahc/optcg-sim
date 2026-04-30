@@ -1018,7 +1018,7 @@ export interface EffectDefinitionMetadata {
 }
 
 export interface EffectBlock {
-  id: string;
+  id: EffectId;
   category: EffectCategory;
   trigger: Trigger;
   condition?: Condition;
