@@ -1,0 +1,52 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SEC-001
+epic_id: KICK-001
+title: Add hidden-information regression lane scaffolding
+type: verification
+area: security
+primary_concern: verification
+priority: critical
+status: generated
+summary: >
+  Add the dedicated regression lane and initial fixture shape needed to enforce hidden-information
+  safety as a first-class merge gate instead of an informal review concern.
+story_boundary: >
+  Own hidden-information regression lane scaffolding and the first policy-oriented fixtures only.
+  Do not implement broader engine features, spectator mode behavior, or client rendering changes here.
+allowed_touch_points:
+  - package.json
+  - tests/hidden-info/**
+  - fixtures/hidden-info/**
+  - tools/**
+  - scripts/**
+spec_refs:
+  - 11-testing-quality.s011 (Hidden-information tests)
+  - 11-testing-quality.s022 (Required repo enforcement linkage)
+  - 23-repo-tooling-and-enforcement.s010 (Test tooling requirements)
+  - 23-repo-tooling-and-enforcement.s012 (Hidden-information safety enforcement)
+  - 23-repo-tooling-and-enforcement.s022 (Required implementation sequence for tooling)
+  - 23-repo-tooling-and-enforcement.s023 (Definition of done for repo tooling)
+scope:
+  - add a dedicated hidden-information regression lane callable from local tooling and CI
+  - define initial fixture and assertion shape for filtered player-view and spectator-policy checks
+  - wire the lane so future engine/view stories can add cases without redefining the enforcement path
+non_scope:
+  - spectator feature implementation
+  - replay serializer policy changes
+  - client bundle architecture changes
+dependencies:
+  - INF-004
+acceptance_criteria:
+  - a dedicated hidden-information test lane exists independently from generic unit tests
+  - the lane can express assertions for absent opponent hand contents, deck order, face-down life identity, RNG state, and queue internals
+  - the lane is structured so future stories can add filtered-view fixtures without inventing a new test harness
+required_tests:
+  - hidden-information fixture smoke test for filtered player view assertions
+  - regression harness smoke test for spectator-policy assertions with placeholder fixtures where full implementation is not yet present
+repo_rules:
+  - hidden-information leakage remains merge-blocking and release-blocking
+  - no security regression lane may depend on browser bundles or manual reviewer inspection
+  - future view-filtering stories must extend this lane instead of creating one-off ad hoc checks
+ambiguity_policy: fail_and_escalate

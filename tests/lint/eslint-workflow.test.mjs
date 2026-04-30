@@ -1,0 +1,119 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { test } from "vitest";
+
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+);
+
+async function readJson(relativePath) {
+  const absolutePath = path.join(repoRoot, relativePath);
+  const contents = await readFile(absolutePath, "utf8");
+  return JSON.parse(contents);
+}
+
+async function lintFixture(relativePath) {
+  const { ESLint } = await import("eslint");
+  const eslint = new ESLint({
+    cwd: repoRoot,
+  });
+
+  return eslint.lintFiles([relativePath]);
+}
+
+test("package.json defines a real eslint-based lint script", async () => {
+  const packageJson = await readJson("package.json");
+
+  assert.equal(
+    typeof packageJson.scripts?.lint,
+    "string",
+    "missing lint script",
+  );
+  assert.match(
+    packageJson.scripts.lint,
+    /eslint/i,
+    "lint script should run eslint",
+  );
+});
+
+test("eslint config file exists", async () => {
+  const configCandidates = ["eslint.config.mjs", "eslint.config.js"];
+
+  const contents = await Promise.any(
+    configCandidates.map(async (candidate) =>
+      readFile(path.join(repoRoot, candidate), "utf8"),
+    ),
+  );
+
+  assert.equal(typeof contents, "string");
+});
+
+test("eslint rejects explicit any and non-null assertions", async () => {
+  const results = await lintFixture("tests/fixtures/eslint/unsafe-types.ts");
+  const messages = results.flatMap((result) =>
+    result.messages.map((message) => message.ruleId),
+  );
+
+  assert.ok(messages.includes("@typescript-eslint/no-explicit-any"));
+  assert.ok(messages.includes("@typescript-eslint/no-non-null-assertion"));
+});
+
+test("eslint rejects ts-ignore and ts-nocheck", async () => {
+  const results = await lintFixture(
+    "tests/fixtures/eslint/banned-ts-comments.ts",
+  );
+  const messages = results.flatMap((result) =>
+    result.messages.map((message) => message.ruleId),
+  );
+
+  assert.ok(messages.includes("@typescript-eslint/ban-ts-comment"));
+});
+
+test("eslint rejects default exports and console usage in production code", async () => {
+  const results = await lintFixture(
+    "tests/fixtures/eslint/production-smells.ts",
+  );
+  const messages = results.flatMap((result) =>
+    result.messages.map((message) => message.ruleId),
+  );
+
+  assert.ok(messages.includes("no-restricted-syntax"));
+  assert.ok(messages.includes("no-console"));
+});
+
+test("eslint rejects floating promises", async () => {
+  const results = await lintFixture(
+    "tests/fixtures/eslint/floating-promise.ts",
+  );
+  const messages = results.flatMap((result) =>
+    result.messages.map((message) => message.ruleId),
+  );
+
+  assert.ok(messages.includes("@typescript-eslint/no-floating-promises"));
+});
+
+test("eslint rejects focused tests", async () => {
+  const results = await lintFixture(
+    "tests/fixtures/eslint/focused.only.test.ts",
+  );
+  const messages = results.flatMap((result) =>
+    result.messages.map((message) => message.ruleId),
+  );
+
+  assert.ok(messages.includes("vitest/no-focused-tests"));
+});
+
+test("eslint rejects forbidden engine-core imports", async () => {
+  const results = await lintFixture(
+    "tests/fixtures/eslint/packages/engine-core/src/forbidden-import.ts",
+  );
+  const messages = results.flatMap((result) =>
+    result.messages.map((message) => message.ruleId),
+  );
+
+  assert.ok(messages.includes("no-restricted-imports"));
+});

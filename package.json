@@ -1,0 +1,28 @@
+{
+  "name": "optcg-sim",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "format": "corepack pnpm exec prettier --write .",
+    "format:check": "corepack pnpm exec prettier --check .",
+    "lint": "corepack pnpm exec eslint . --max-warnings=0 --ext .js,.mjs,.cjs,.ts,.mts,.cts --ignore-pattern tests/fixtures/eslint/**",
+    "typecheck": "corepack pnpm exec tsc -p packages/types/tsconfig.json --noEmit",
+    "test": "corepack pnpm exec vitest run",
+    "test:contracts": "corepack pnpm exec vitest run tests/contracts/story-schema-contract.test.mjs",
+    "coverage": "corepack pnpm exec vitest run --coverage",
+    "verify": "corepack pnpm run format:check && corepack pnpm run lint && corepack pnpm run typecheck && corepack pnpm run test && corepack pnpm run test:contracts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@vitest/coverage-v8": "^4.1.5",
+    "eslint": "^9.39.1",
+    "eslint-plugin-vitest": "^0.5.4",
+    "globals": "^16.5.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.3",
+    "vitest": "^4.1.5"
+  }
+}

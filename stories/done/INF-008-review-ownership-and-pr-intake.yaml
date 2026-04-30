@@ -1,0 +1,49 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-008
+epic_id: KICK-001
+title: Add review ownership and pull request intake artifacts
+type: tooling
+area: infra
+primary_concern: verification
+priority: high
+status: done
+summary: >
+  Add the GitHub repository artifacts that make review expectations concrete:
+  code owners, a structured pull request template, and documented branch protection.
+story_boundary: >
+  Own review-routing and pull request intake artifacts only. Do not redesign CI jobs,
+  local commands, or GitHub Project synchronization in this story.
+allowed_touch_points:
+  - .github/CODEOWNERS
+  - .github/pull_request_template.md
+  - .github/branch-protection.md
+  - tests/github/**
+  - stories/generated/**
+  - stories/approved/**
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+  - 32-codex-agent-integration.s010 (Review flow)
+  - 32-codex-agent-integration.s013 (Merge gate recommendation)
+scope:
+  - add CODEOWNERS entries for current repo ownership
+  - add a pull request template that requires story, scope, and verification evidence
+  - document the exact branch protection settings required to enforce the review policy
+non_scope:
+  - live GitHub settings changes
+  - CI job redesign
+  - issue or board synchronization
+dependencies:
+  - INF-007
+acceptance_criteria:
+  - review-sensitive paths automatically request the declared code owner
+  - pull requests have a checked-in template requiring story linkage and verification evidence
+  - the repo documents the exact required status checks and approval settings for protected branches
+required_tests:
+  - review artifact smoke test proving CODEOWNERS, PR template, and branch protection guide exist with the required content
+repo_rules:
+  - review routing must not depend on reviewer memory
+  - merge expectations must cite the canonical CI job names
+  - code owner defaults may be narrow initially but must be real, not fictional placeholders
+ambiguity_policy: implement_if_clearly_implied

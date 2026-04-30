@@ -1,0 +1,53 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-007
+epic_id: KICK-001
+title: Add CI workflows mirroring local verification
+type: tooling
+area: infra
+primary_concern: verification
+priority: critical
+status: done
+summary: >
+  Add CI workflows that mirror the local quality contract so merge protection depends on
+  passing checks instead of reviewer memory.
+story_boundary: >
+  Own CI workflow definitions and job composition only. Do not redesign local commands,
+  lint rules, test logic, or contract validators inside this story.
+allowed_touch_points:
+  - .github/workflows/**
+  - package.json
+  - scripts/**
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s010 (Test tooling requirements)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+  - 23-repo-tooling-and-enforcement.s022 (Required implementation sequence for tooling)
+  - 23-repo-tooling-and-enforcement.s023 (Definition of done for repo tooling)
+scope:
+  - add CI jobs for quality, tests, contracts, and formatting aligned with local commands
+  - publish coverage artifacts where the spec requires them
+  - make the CI workflow structure compatible with branch protection and later package expansion
+non_scope:
+  - local command design
+  - hook installation
+  - new lint rules or test assertions
+  - GitHub Project or issue sync automation
+dependencies:
+  - INF-002
+  - INF-003
+  - INF-004
+  - INF-006
+  - SEC-001
+acceptance_criteria:
+  - CI installs locked dependencies and runs the quality, test, and contracts lanes through canonical commands
+  - formatting is checked in CI rather than left to reviewer comments
+  - workflow structure is ready for branch protection and coverage artifact publication
+required_tests:
+  - workflow lint or dry-run validation for each added CI workflow file
+  - smoke execution path proving the quality, test, and contracts jobs call the expected root commands
+repo_rules:
+  - CI and local verification must remain materially aligned
+  - merge protection must depend on passing CI rather than conversational approval
+  - CI must not bypass the contract or hidden-information enforcement lanes once they exist
+ambiguity_policy: implement_if_clearly_implied

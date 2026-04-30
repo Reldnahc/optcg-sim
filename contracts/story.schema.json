@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://optcg.dev/contracts/story.schema.json",
+  "title": "OPTCG Approved Story",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "spec_version",
+    "spec_package_name",
+    "story_schema_version",
+    "id",
+    "epic_id",
+    "title",
+    "type",
+    "area",
+    "primary_concern",
+    "priority",
+    "status",
+    "summary",
+    "story_boundary",
+    "allowed_touch_points",
+    "spec_refs",
+    "scope",
+    "non_scope",
+    "dependencies",
+    "acceptance_criteria",
+    "required_tests",
+    "repo_rules",
+    "ambiguity_policy"
+  ],
+  "properties": {
+    "spec_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "spec_package_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "story_schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*-[0-9]{3}$"
+    },
+    "epic_id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*-[0-9]{3}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "design",
+        "implementation",
+        "verification",
+        "refactor",
+        "tooling",
+        "ambiguity"
+      ]
+    },
+    "area": {
+      "type": "string",
+      "enum": [
+        "contracts",
+        "engine",
+        "cards",
+        "server",
+        "client",
+        "replay",
+        "database",
+        "infra",
+        "docs",
+        "security"
+      ]
+    },
+    "primary_concern": {
+      "type": "string",
+      "enum": [
+        "contract",
+        "rules",
+        "view",
+        "protocol",
+        "persistence",
+        "tooling",
+        "ui",
+        "cli",
+        "docs",
+        "verification"
+      ]
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low"]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "generated",
+        "approved",
+        "in_progress",
+        "blocked",
+        "done",
+        "replaced"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "story_boundary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "allowed_touch_points": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "spec_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "scope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "non_scope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "required_tests": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "repo_rules": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "ambiguity_policy": {
+      "type": "string",
+      "enum": ["fail_and_escalate", "implement_if_clearly_implied"]
+    }
+  }
+}

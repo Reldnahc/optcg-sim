@@ -1,0 +1,76 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { test } from "vitest";
+
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+);
+
+async function readJson(relativePath) {
+  const absolutePath = path.join(repoRoot, relativePath);
+  const contents = await readFile(absolutePath, "utf8");
+  return JSON.parse(contents);
+}
+
+async function readText(relativePath) {
+  return readFile(path.join(repoRoot, relativePath), "utf8");
+}
+
+test("package.json exposes the canonical contract lane for CI", async () => {
+  const packageJson = await readJson("package.json");
+
+  assert.equal(
+    typeof packageJson.scripts?.["test:contracts"],
+    "string",
+    "missing test:contracts script",
+  );
+  assert.match(
+    packageJson.scripts.verify,
+    /pnpm run test:contracts/i,
+    "verify should include the root contracts lane once it exists",
+  );
+});
+
+test("ci workflow file exists with the expected verification jobs", async () => {
+  const workflow = await readText(".github/workflows/ci.yml");
+
+  assert.match(workflow, /^name:\s*CI/m);
+  assert.match(workflow, /^on:\s*$/m);
+  assert.match(workflow, /^\s+pull_request:\s*$/m);
+  assert.match(workflow, /^\s+push:\s*$/m);
+  assert.match(workflow, /^\s+quality:\s*$/m);
+  assert.match(workflow, /^\s+test:\s*$/m);
+  assert.match(workflow, /^\s+contracts:\s*$/m);
+  assert.match(workflow, /^\s+coverage:\s*$/m);
+});
+
+test("ci workflow runs the canonical root commands and publishes coverage", async () => {
+  const workflow = await readText(".github/workflows/ci.yml");
+
+  const requiredCommands = [
+    "pnpm install --frozen-lockfile",
+    "pnpm format:check",
+    "pnpm lint",
+    "pnpm typecheck",
+    "pnpm test",
+    "pnpm test:contracts",
+    "pnpm coverage",
+  ];
+
+  for (const command of requiredCommands) {
+    assert.match(
+      workflow,
+      new RegExp(command.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")),
+      `workflow should call \`${command}\``,
+    );
+  }
+
+  assert.match(workflow, /actions\/setup-node@v4/);
+  assert.match(workflow, /pnpm\/action-setup@v4/);
+  assert.match(workflow, /actions\/upload-artifact@v4/);
+  assert.match(workflow, /coverage-artifact/);
+});

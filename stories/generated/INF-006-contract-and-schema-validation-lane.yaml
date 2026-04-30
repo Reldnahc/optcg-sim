@@ -1,0 +1,56 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-006
+epic_id: KICK-001
+title: Add contract and schema validation lane
+type: tooling
+area: contracts
+primary_concern: verification
+priority: critical
+status: generated
+summary: >
+  Add automated validation for canonical contracts, effect DSL fixtures, SQL contracts,
+  and approved story files so spec drift becomes mechanically detectable.
+story_boundary: >
+  Own contract and schema validation commands only. Do not add general CI workflow
+  orchestration, hidden-information regression logic, or gameplay tests beyond contract-facing fixtures.
+allowed_touch_points:
+  - contracts/**
+  - package.json
+  - tools/**
+  - scripts/**
+  - fixtures/**
+  - stories/**
+spec_refs:
+  - 11-testing-quality.s021 (v6 contract validation)
+  - 22-v6-implementation-tightening.s019 (Spec-driven delivery artifacts are now defined)
+  - 23-repo-tooling-and-enforcement.s010 (Test tooling requirements)
+  - 23-repo-tooling-and-enforcement.s011 (Contract and fixture validation)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+scope:
+  - add commands to compile canonical types and validate effect DSL fixtures
+  - add validation for SQL/schema artifacts and approved story files
+  - expose a root contracts validation lane suitable for local verify and CI usage
+non_scope:
+  - hidden-information regression assertions
+  - gameplay engine tests unrelated to contract validation
+  - CI workflow job definitions
+  - board sync automation
+dependencies:
+  - INF-001
+  - INF-004
+acceptance_criteria:
+  - canonical type contract compilation is automated
+  - effect DSL fixtures can be validated automatically against the canonical schema
+  - approved story files can be validated automatically against the story schema once the schema file exists in-repo
+  - the contracts lane is callable independently and can be included in root verify and CI
+required_tests:
+  - command smoke test for canonical type compilation
+  - fixture validation test that rejects at least one invalid effect DSL sample
+  - story-schema validation smoke test using one valid and one invalid approved story fixture once the schema artifact exists
+repo_rules:
+  - fixture and contract drift must be caught automatically rather than by reviewer inspection
+  - schema validation must preserve the canonical authority order from the spec package
+  - no contract-validation path may require live external services
+ambiguity_policy: fail_and_escalate

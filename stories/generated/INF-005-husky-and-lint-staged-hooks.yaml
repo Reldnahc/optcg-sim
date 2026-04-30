@@ -1,0 +1,53 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-005
+epic_id: KICK-001
+title: Add Husky and lint-staged local quality hooks
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: generated
+summary: >
+  Add local pre-commit and pre-push hooks so contributors hit the formatting, lint, and
+  verification workflow before opening CI.
+story_boundary: >
+  Own local git hook installation and staged-file quality checks only. Do not redefine the
+  underlying lint, format, or verify commands and do not introduce CI workflow logic here.
+allowed_touch_points:
+  - .husky/**
+  - lint-staged.config.js
+  - lint-staged.config.cjs
+  - package.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s003 (Canonical toolchain)
+  - 23-repo-tooling-and-enforcement.s004 (Required root files)
+  - 23-repo-tooling-and-enforcement.s013 (Git hook policy)
+  - 23-repo-tooling-and-enforcement.s014 (pre-commit)
+  - 23-repo-tooling-and-enforcement.s015 (pre-push)
+scope:
+  - install Husky or an equivalent hook runner
+  - add staged-file formatting and lint checks for pre-commit
+  - add a meaningful pre-push verification subset aligned with existing root commands
+non_scope:
+  - formatting rule design
+  - ESLint rule design
+  - CI workflow implementation
+  - contract/schema validator implementation
+dependencies:
+  - INF-002
+  - INF-003
+  - INF-004
+acceptance_criteria:
+  - pre-commit runs formatting and lint checks on staged files only
+  - pre-push runs a meaningful verification subset through existing root commands
+  - hooks can be installed by contributors without custom manual steps outside documented bootstrap
+required_tests:
+  - hook smoke test showing pre-commit targets staged files rather than the full repo
+  - hook smoke test showing pre-push invokes the expected verification subset
+repo_rules:
+  - hooks must reinforce rather than replace CI
+  - hooks must call canonical root commands instead of bespoke duplicate logic
+  - staged-file checks must not silently skip lint or formatting on supported file types
+ambiguity_policy: implement_if_clearly_implied

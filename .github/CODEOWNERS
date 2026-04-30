@@ -1,0 +1,12 @@
+# Default owner until package-specific ownership expands.
+* @Reldnahc
+
+# Workflow and review policy artifacts are owner-reviewed.
+/.github/ @Reldnahc
+/contracts/ @Reldnahc
+/specs/ @Reldnahc
+
+# Core package boundaries should route through the current repo owner until
+# additional maintainers are declared.
+/packages/types/ @Reldnahc
+/packages/engine-core/ @Reldnahc
