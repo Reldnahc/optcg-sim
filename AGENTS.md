@@ -131,6 +131,8 @@ Code review is required. Use this flow unless a higher-authority story or packet
 11. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes
 12. if review finds multi-concern drift, split the story or narrow the patch before merge
 
+The separate Codex review invocation is a repo-level first-pass gate before human review. It does not replace the spec's merge-gate requirement for `@codex review` or an equivalent human review step.
+
 Passing AI review does not replace human review.
 
 When a separate Codex review invocation is used, the PR review record must contain two durable comments:

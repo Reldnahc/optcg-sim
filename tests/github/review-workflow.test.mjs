@@ -119,6 +119,10 @@ test("branch protection guide names the required status checks and approvals", a
   );
   assert.match(
     guide,
+    /When the equivalent human-review fallback is used, pull requests should record the fallback metadata in the fallback review reference before human approval/i,
+  );
+  assert.match(
+    guide,
     /required review artifacts are missing: the AI review comment and revision response comment for Codex-reviewed PRs, or the fallback review reference for PRs using the equivalent human-review fallback because Codex review was unavailable, timed out, or failed/i,
   );
   assert.match(
@@ -155,6 +159,10 @@ test("agents guidance requires AI review to finish before human review request",
   assert.match(
     agents,
     /request human review only after the AI review record or explicit equivalent-human-review fallback record exists, and after the revision response comment is up to date when a separate Codex review invocation was used/i,
+  );
+  assert.match(
+    agents,
+    /The separate Codex review invocation is a repo-level first-pass gate before human review\. It does not replace the spec's merge-gate requirement for `@codex review` or an equivalent human review step\./i,
   );
   assert.match(
     agents,
