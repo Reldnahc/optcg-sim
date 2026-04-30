@@ -184,84 +184,90 @@ export interface ResolvedCardOverlay {
 
 export interface PoneglyphLegalityRecord {
   status: string;
-  bannedAt?: string;
+  banned_at?: string;
   reason?: string;
-  maxCopies?: number;
-  pairedWith?: string[];
+  max_copies?: number;
+  paired_with?: string[];
 }
 
 export interface PoneglyphOfficialFaq {
   question: string;
   answer: string;
-  updatedOn: string;
+  updated_on: string;
 }
 
 export interface PoneglyphErrata {
   date: string;
-  label?: string;
-  beforeText?: string;
-  afterText?: string;
+  label: string | null;
+  before_text: string | null;
+  after_text: string | null;
   images?: {
-    source?: string;
+    source?: string | null;
     scan?: {
-      display?: string;
-      full?: string;
-      thumb?: string;
+      display: string | null;
+      full: string | null;
+      thumb: string | null;
     };
   };
 }
 
 export interface PoneglyphVariant {
   index: number;
-  name?: string;
-  label?: string;
-  artist?: string;
+  name: string | null;
+  label: string | null;
+  artist: string | null;
   product: {
-    id?: string;
-    slug?: string;
-    name?: string;
-    setCode?: string;
-    releasedAt?: string;
+    id: string | null;
+    slug: string | null;
+    name: string | null;
+    set_code: string | null;
+    released_at: string | null;
   };
   images: {
-    stock: { full?: string; thumb?: string };
-    scan: { display?: string; full?: string; thumb?: string };
+    stock: { full: string | null; thumb: string | null };
+    scan: {
+      display: string | null;
+      full: string | null;
+      thumb: string | null;
+    };
   };
   errata: PoneglyphErrata[];
   market: {
-    tcgplayerUrl?: string;
-    marketPrice?: string;
-    lowPrice?: string;
-    midPrice?: string;
-    highPrice?: string;
+    tcgplayer_url: string | null;
+    market_price: string | null;
+    low_price: string | null;
+    mid_price: string | null;
+    high_price: string | null;
   };
 }
 
 export interface PoneglyphCardDetail {
-  cardNumber: string;
+  card_number: string;
   name: string;
   language: string;
   set: string;
-  setName: string;
-  releasedAt?: string;
+  set_name: string;
+  released_at: string | null;
   released: boolean;
-  cardType: string;
-  rarity?: string;
+  card_type: string;
+  rarity: string | null;
   color: string[];
-  cost?: number;
-  power?: number;
-  counter?: number;
-  life?: number;
-  attribute?: string[];
+  cost: number | null;
+  power: number | null;
+  counter: number | null;
+  life: number | null;
+  attribute: string[] | null;
   types: string[];
-  effect?: string;
-  trigger?: string;
-  block?: string;
+  effect: string | null;
+  trigger: string | null;
+  block: string | null;
   variants: PoneglyphVariant[];
   legality: Record<string, PoneglyphLegalityRecord>;
-  availableLanguages: string[];
-  officialFaq: PoneglyphOfficialFaq[];
+  available_languages: string[];
+  official_faq: PoneglyphOfficialFaq[];
 }
+
+export type NormalizedErrata = PoneglyphErrata;
 
 export interface ResolvedCardVariant {
   variantKey: VariantKey;
@@ -303,6 +309,7 @@ export interface ResolvedCard {
   variants: ResolvedCardVariant[];
   legality: Record<string, PoneglyphLegalityRecord>;
   officialFaq: PoneglyphOfficialFaq[];
+  errata: NormalizedErrata[];
   sourceTextHash: string;
   behaviorHash: string;
   support: CardImplementationRecord;
