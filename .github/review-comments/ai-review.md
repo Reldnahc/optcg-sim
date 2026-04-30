@@ -3,6 +3,7 @@
 - Story ID:
 - Story file:
 - Reviewer path: <Codex CLI | @codex review | other Codex review surface>
+- Review provenance: <separate Codex review invocation | not implementation-agent self-review>
 - Review scope:
 - Review command or mode:
 - Review timeout budget: 60 minutes

@@ -47,13 +47,13 @@ test("pull request template requires story, verification, and review evidence", 
   assert.match(prTemplate, /pnpm verify/i);
   assert.match(
     prTemplate,
-    /AI review completed before human review request, or equivalent human review fallback recorded because Codex review was unavailable, timed out, or failed/i,
+    /AI review completed before human review request, or equivalent human review fallback recorded because no usable Codex review surface remained after available Codex review attempts were unavailable, timed out, or failed/i,
   );
   assert.match(prTemplate, /before human review/i);
   assert.match(prTemplate, /AI review comment, if Codex review was used/i);
   assert.match(
     prTemplate,
-    /Equivalent human review fallback reference, if Codex review was unavailable, timed out, or failed/i,
+    /Equivalent human review fallback reference, if no usable Codex review surface remained after available Codex review attempts were unavailable, timed out, or failed/i,
   );
   assert.match(
     prTemplate,
@@ -65,7 +65,7 @@ test("pull request template requires story, verification, and review evidence", 
   );
   assert.match(
     prTemplate,
-    /Separate Codex review invocation completed before human review request, or equivalent human review fallback recorded because Codex review was unavailable, timed out, or failed/i,
+    /Separate Codex review invocation completed before human review request, or equivalent human review fallback recorded because no usable Codex review surface remained after available Codex review attempts were unavailable, timed out, or failed/i,
   );
   assert.match(
     prTemplate,
@@ -73,7 +73,7 @@ test("pull request template requires story, verification, and review evidence", 
   );
   assert.match(
     prTemplate,
-    /copies the findings and verdict from the separate Codex review output onto this PR, or the fallback review reference explains why Codex review was unavailable, timed out, or failed/i,
+    /copies the findings and verdict from the separate Codex review output onto this PR, or the fallback review reference explains why no usable Codex review surface remained after available Codex review attempts were unavailable, timed out, or failed/i,
   );
   assert.match(
     prTemplate,
@@ -193,6 +193,10 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   assert.match(
     aiReview,
     /Reviewer path: <Codex CLI \| @codex review \| other Codex review surface>/i,
+  );
+  assert.match(
+    aiReview,
+    /Review provenance: <separate Codex review invocation \| not implementation-agent self-review>/i,
   );
   assert.match(aiReview, /Review scope:/i);
   assert.match(aiReview, /Review command or mode:/i);
