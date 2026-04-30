@@ -50,10 +50,13 @@ test("pull request template requires story, verification, and review evidence", 
     /AI review completed before human review request, or equivalent human review fallback recorded because no usable Codex review surface remained after available Codex review attempts were unavailable, timed out, or failed/i,
   );
   assert.match(prTemplate, /before human review/i);
-  assert.match(prTemplate, /AI review comment, if Codex review was used/i);
   assert.match(
     prTemplate,
-    /Equivalent human review fallback reference, if no usable Codex review surface remained after available Codex review attempts were unavailable, timed out, or failed/i,
+    /AI review record, if Codex review was used \(`@codex review` link or AI review comment link\)/i,
+  );
+  assert.match(
+    prTemplate,
+    /Equivalent human review fallback comment, if no usable Codex review surface remained after available Codex review attempts were unavailable, timed out, or failed/i,
   );
   assert.match(
     prTemplate,
@@ -73,11 +76,15 @@ test("pull request template requires story, verification, and review evidence", 
   );
   assert.match(
     prTemplate,
-    /copies the findings and verdict from the separate Codex review output onto this PR, or the fallback review reference explains why no usable Codex review surface remained after available Codex review attempts were unavailable, timed out, or failed/i,
+    /For Codex CLI or other non-GitHub review surfaces, the AI review comment copies the findings and verdict from the separate Codex review output\. For `@codex review`, the native `@codex review` output itself serves as the AI review record\./i,
   );
   assert.match(
     prTemplate,
-    /Human review requested after the AI review record or fallback review reference was posted/i,
+    /If the fallback path was used, the fallback review comment explains why no usable Codex review surface remained after available Codex review attempts were unavailable, timed out, or failed/i,
+  );
+  assert.match(
+    prTemplate,
+    /Human review requested after the AI review record or fallback review comment was posted/i,
   );
   assert.match(prTemplate, /Merge-gate review record is present before merge/i);
   assert.match(
@@ -121,11 +128,15 @@ test("branch protection guide names the required status checks and approvals", a
   );
   assert.match(
     guide,
-    /When Codex review is used, pull requests should post an AI review comment/i,
+    /When GitHub `@codex review` is used, that native review output should serve as the AI review record without requiring a duplicate transcription comment/i,
   );
   assert.match(
     guide,
-    /When the equivalent human-review fallback is used, pull requests should record the fallback metadata in the fallback review reference before human approval/i,
+    /When Codex CLI or another non-GitHub Codex review surface is used, pull requests should post an AI review comment/i,
+  );
+  assert.match(
+    guide,
+    /When the equivalent human-review fallback is used, pull requests should record the fallback metadata in the fallback review comment before human approval by using `\.github\/review-comments\/equivalent-human-review-fallback\.md`\./i,
   );
   assert.match(
     guide,
@@ -133,11 +144,7 @@ test("branch protection guide names the required status checks and approvals", a
   );
   assert.match(
     guide,
-    /required review artifacts are missing: the AI review comment and revision response comment for Codex-reviewed PRs, or the fallback review reference for PRs using the equivalent human-review fallback because Codex review was unavailable, timed out, or failed/i,
-  );
-  assert.match(
-    guide,
-    /findings and verdict copied from the separate Codex review output/i,
+    /required review artifacts are missing: an AI review record plus revision response comment for Codex-reviewed PRs, or the fallback review comment for PRs using the equivalent human-review fallback because Codex review was unavailable, timed out, or failed/i,
   );
   assert.match(guide, /60[- ]minute/i);
 });
@@ -161,11 +168,15 @@ test("agents guidance requires AI review to finish before human review request",
   );
   assert.match(
     agents,
-    /if no usable Codex review surface remains for the patch, or if every attempted Codex review run is unavailable, times out, or fails, record an equivalent human review step explicitly rather than silently skipping the review gate/i,
+    /if no usable Codex review surface remains for the patch, or if every attempted Codex review run is unavailable, times out, or fails, record an equivalent human review fallback comment explicitly rather than silently skipping the review gate/i,
   );
   assert.match(
     agents,
-    /copy the findings and verdict from that separate Codex review output into an AI review comment/i,
+    /if GitHub `@codex review` was the separate review path, treat the native `@codex review` output itself as the AI review record and do not require a duplicate transcription comment/i,
+  );
+  assert.match(
+    agents,
+    /if a separate Codex review invocation was used and its output does not already live on the pull request, copy the findings and verdict from that separate Codex review output into an AI review comment before human review is requested/i,
   );
   assert.match(
     agents,
@@ -177,13 +188,24 @@ test("agents guidance requires AI review to finish before human review request",
   );
   assert.match(
     agents,
-    /When a separate Codex review invocation is used, the PR review record must contain two durable comments/i,
+    /When a separate Codex review invocation is used, the PR review record must contain:/i,
+  );
+  assert.match(
+    agents,
+    /an AI review record: either the native `@codex review` artifact or an AI review comment with findings and verdict for non-GitHub review surfaces/i,
+  );
+  assert.match(
+    agents,
+    /fallback review comment based on `\.github\/review-comments\/equivalent-human-review-fallback\.md`/i,
   );
   assert.match(agents, /60[- ]minute/i);
 });
 
 test("checked-in review comment templates exist for AI findings and revisions", async () => {
   const aiReview = await readText(".github/review-comments/ai-review.md");
+  const fallbackReview = await readText(
+    ".github/review-comments/equivalent-human-review-fallback.md",
+  );
   const revisionResponse = await readText(
     ".github/review-comments/ai-review-revision-response.md",
   );
@@ -210,21 +232,40 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   assert.match(aiReview, /separate Codex review invocation/i);
   assert.match(
     aiReview,
-    /Copy the findings and verdict from that separate Codex review output into this comment/i,
+    /If the separate review path was Codex CLI or another non-GitHub review surface, copy the findings and verdict from that separate Codex review output into this comment/i,
   );
   assert.match(
     aiReview,
-    /When the workflow falls back to an equivalent human review because no usable Codex review surface remains, do not require this comment; record the fallback review reference instead/i,
+    /If GitHub `@codex review` was the separate review path, use the native `@codex review` output itself as the AI review record and do not require a duplicate AI review comment/i,
+  );
+  assert.match(
+    aiReview,
+    /When the workflow falls back to an equivalent human review because no usable Codex review surface remains, do not require this comment; record the fallback review comment instead/i,
   );
   assert.match(aiReview, /60[- ]minute/i);
 
+  assert.match(fallbackReview, /^## Equivalent Human Review Fallback$/m);
+  assert.match(fallbackReview, /Failed or unavailable Codex review attempts:/i);
+  assert.match(fallbackReview, /Why no usable Codex review surface remained:/i);
+  assert.match(fallbackReview, /Fallback human reviewer:/i);
+  assert.match(fallbackReview, /Findings:/i);
+  assert.match(fallbackReview, /Verdict:/i);
+  assert.match(
+    fallbackReview,
+    /Merge-gate review record \(`@codex review` link or equivalent human review step reference\):/i,
+  );
+  assert.match(
+    fallbackReview,
+    /Use this comment when no usable Codex review surface remains after available Codex review attempts were unavailable, timed out, or failed/i,
+  );
+
   assert.match(revisionResponse, /^## AI Review Revision Response$/m);
-  assert.match(revisionResponse, /AI review comment:/i);
+  assert.match(revisionResponse, /AI review record:/i);
   assert.match(revisionResponse, /Disposition:/i);
   assert.match(revisionResponse, /Follow-up commits:/i);
   assert.match(revisionResponse, /Reviewer path:/i);
   assert.match(
     revisionResponse,
-    /Reference the AI review comment that copied the findings from the separate Codex review output/i,
+    /Reference the AI review record that drove the follow-up work: either the AI review comment that copied the findings from a non-GitHub Codex review output, or the native `@codex review` artifact when that was the review path/i,
   );
 });
