@@ -40,7 +40,7 @@ These names must stay aligned with `.github/workflows/ci.yml`.
 - When GitHub `@codex review` is used, that native review output should serve as the AI review record without requiring a duplicate transcription comment.
 - When Codex CLI or another non-GitHub Codex review surface is used, pull requests should post an AI review comment with findings and verdict copied from the separate Codex review output.
 - When Codex review is used, pull requests should post a revision response comment that records follow-up commits and unresolved dispositions.
-- When Codex review is used, pull requests should record the actual review path and the Codex CLI command or alternate mode in the AI review comment before human approval.
+- When Codex review is used, pull requests should record the actual review path and the Codex CLI command or alternate mode in the AI review record before human approval.
 - When the equivalent human-review fallback is used, pull requests should record the fallback metadata in the fallback review comment before human approval by using `.github/review-comments/equivalent-human-review-fallback.md`.
 - Pull requests should record the higher-authority merge-gate review as either an `@codex review` link or an equivalent human review step reference before merge.
 

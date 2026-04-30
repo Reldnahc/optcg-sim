@@ -136,6 +136,10 @@ test("branch protection guide names the required status checks and approvals", a
   );
   assert.match(
     guide,
+    /When Codex review is used, pull requests should record the actual review path and the Codex CLI command or alternate mode in the AI review record before human approval/i,
+  );
+  assert.match(
+    guide,
     /When the equivalent human-review fallback is used, pull requests should record the fallback metadata in the fallback review comment before human approval by using `\.github\/review-comments\/equivalent-human-review-fallback\.md`\./i,
   );
   assert.match(
@@ -267,5 +271,21 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   assert.match(
     revisionResponse,
     /Reference the AI review record that drove the follow-up work: either the AI review comment that copied the findings from a non-GitHub Codex review output, or the native `@codex review` artifact when that was the review path/i,
+  );
+});
+
+test("only one approved review workflow remains authoritative after INF-010", async () => {
+  const inf009 = await readText(
+    "stories/approved/INF-009-ai-review-gate-and-pr-comment-trail.yaml",
+  );
+  const inf010 = await readText(
+    "stories/approved/INF-010-separate-codex-cli-review-and-timeout-policy.yaml",
+  );
+
+  assert.match(inf009, /^status:\s+replaced$/m);
+  assert.match(inf009, /Superseded by INF-010\./i);
+  assert.match(
+    inf010,
+    /INF-009 is superseded so only one approved review workflow remains authoritative after this story lands/i,
   );
 });

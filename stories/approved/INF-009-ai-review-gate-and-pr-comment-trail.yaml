@@ -8,10 +8,11 @@ type: tooling
 area: infra
 primary_concern: verification
 priority: high
-status: approved
+status: replaced
 summary: >
-  Tighten the pull-request workflow so AI review happens before human review and the
-  pull request retains a durable comment trail for the AI findings and follow-up revisions.
+  Superseded by INF-010. This older workflow tightened the pull-request process so AI
+  review happened before human review and the pull request retained a durable comment
+  trail for the AI findings and follow-up revisions.
 story_boundary: >
   Own review-process artifacts only: checked-in repo guidance, pull request intake text,
   PR comment templates, and tests that enforce those requirements. Do not add a new CI job,
