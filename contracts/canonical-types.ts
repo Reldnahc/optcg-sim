@@ -154,7 +154,7 @@ export interface CardImplementationRecord {
   rulesVersion: string;
   cardDataVersion: string;
   sourceTextHash: string;
-  behaviorHash?: string;
+  behaviorHash: string;
   notes?: string;
 }
 
@@ -267,7 +267,10 @@ export interface PoneglyphCardDetail {
   official_faq: PoneglyphOfficialFaq[];
 }
 
-export type NormalizedErrata = PoneglyphErrata;
+export interface NormalizedErrata extends PoneglyphErrata {
+  variantIndex: number;
+  variantKey: VariantKey;
+}
 
 export interface ResolvedCardVariant {
   variantKey: VariantKey;
@@ -475,7 +478,6 @@ export interface CardInstance {
   state?: "active" | "rested";
   attachedDon: InstanceId[];
   turnPlayed?: number;
-  oncePerTurnUsed?: Record<EffectId, number>;
 }
 
 export interface LifeCard {

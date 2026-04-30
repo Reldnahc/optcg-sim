@@ -48,6 +48,29 @@ test("EffectBlock uses branded effect IDs consistently with queue and action con
   );
 });
 
+test("CardImplementationRecord requires behavior hash drift metadata", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+  const implementationRecordBlockMatch = canonicalTypes.match(
+    /export interface CardImplementationRecord\s*{[\s\S]*?}/m,
+  );
+
+  assert.ok(
+    implementationRecordBlockMatch,
+    "missing CardImplementationRecord interface",
+  );
+  assert.match(implementationRecordBlockMatch[0], /\bbehaviorHash:\s*string;/);
+});
+
+test("CardInstance relies on the GameState once-per-turn ledger", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+  const cardInstanceBlockMatch = canonicalTypes.match(
+    /export interface CardInstance\s*{[\s\S]*?}/m,
+  );
+
+  assert.ok(cardInstanceBlockMatch, "missing CardInstance interface");
+  assert.doesNotMatch(cardInstanceBlockMatch[0], /\boncePerTurnUsed\??:/);
+});
+
 test("PoneglyphCardDetail preserves the raw API payload shape", async () => {
   const canonicalTypes = await readCanonicalTypes();
   const rawPoneglyphBlockMatch = canonicalTypes.match(
@@ -90,7 +113,10 @@ test("PoneglyphCardDetail preserves the raw API payload shape", async () => {
 test("ResolvedCard retains errata in normalized manifests", async () => {
   const canonicalTypes = await readCanonicalTypes();
 
-  assert.match(canonicalTypes, /export type NormalizedErrata\s*=/m);
+  assert.match(
+    canonicalTypes,
+    /export interface NormalizedErrata\s+extends\s+PoneglyphErrata\s*{[\s\S]*?\bvariantIndex:\s*number;[\s\S]*?\bvariantKey:\s*VariantKey;[\s\S]*?}/m,
+  );
   assert.match(
     canonicalTypes,
     /export interface ResolvedCard\s*{[\s\S]*?\berrata:\s*NormalizedErrata\[];[\s\S]*?}/m,
