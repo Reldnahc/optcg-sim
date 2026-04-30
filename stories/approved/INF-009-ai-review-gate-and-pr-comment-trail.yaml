@@ -1,0 +1,55 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-009
+epic_id: KICK-001
+title: Require AI review gate and PR comment trail before human review
+type: tooling
+area: infra
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Tighten the pull-request workflow so AI review happens before human review and the
+  pull request retains a durable comment trail for the AI findings and follow-up revisions.
+story_boundary: >
+  Own review-process artifacts only: checked-in repo guidance, pull request intake text,
+  PR comment templates, and tests that enforce those requirements. Do not add a new CI job,
+  GitHub app integration, or external automation in this story.
+allowed_touch_points:
+  - AGENTS.md
+  - .github/pull_request_template.md
+  - .github/branch-protection.md
+  - .github/review-comments/**
+  - tests/github/**
+  - stories/approved/**
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 32-codex-agent-integration.s008
+  - 32-codex-agent-integration.s010
+  - 32-codex-agent-integration.s011
+  - 32-codex-agent-integration.s013
+scope:
+  - require AI review before human review in checked-in repo workflow guidance
+  - require pull requests to record an AI review comment and a revision-response comment
+  - provide checked-in templates that standardize the AI review and revision-response comments
+  - add tests that fail if the AI review gate or comment-trail artifacts are removed
+non_scope:
+  - automatic AI review execution in CI or GitHub Actions
+  - GitHub branch-protection API changes beyond documenting the policy
+  - gameplay or feature implementation work
+dependencies:
+  - INF-008
+acceptance_criteria:
+  - repo guidance states that AI review must complete before human review is requested
+  - the pull request template requires links or references to both the AI review comment and the revision-response comment
+  - checked-in PR comment templates exist for the AI review record and the revision-response follow-up
+  - review workflow tests verify the stricter gate and comment-trail requirements
+required_tests:
+  - review workflow tests covering AGENTS.md, pull request template, branch protection guide, and review comment templates
+repo_rules:
+  - the workflow must keep human review as final acceptance for sensitive changes
+  - the PR record must make review findings and revision dispositions easy to audit after merge
+  - the story must not claim enforcement that the checked-in repo artifacts do not actually provide
+ambiguity_policy: implement_if_clearly_implied

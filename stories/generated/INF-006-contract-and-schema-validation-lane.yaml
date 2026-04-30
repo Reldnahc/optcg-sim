@@ -8,10 +8,12 @@ type: tooling
 area: contracts
 primary_concern: verification
 priority: critical
-status: generated
+status: replaced
 summary: >
-  Add automated validation for canonical contracts, effect DSL fixtures, SQL contracts,
-  and approved story files so spec drift becomes mechanically detectable.
+  This broad candidate was replaced during normalization. Story-schema validation and the
+  root contracts lane already landed in the repo foundation, and the remaining contract
+  validation work is split into smaller approved stories so each contract concern can be
+  reviewed independently.
 story_boundary: >
   Own contract and schema validation commands only. Do not add general CI workflow
   orchestration, hidden-information regression logic, or gameplay tests beyond contract-facing fixtures.
@@ -29,28 +31,17 @@ spec_refs:
   - 23-repo-tooling-and-enforcement.s011 (Contract and fixture validation)
   - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
 scope:
-  - add commands to compile canonical types and validate effect DSL fixtures
-  - add validation for SQL/schema artifacts and approved story files
-  - expose a root contracts validation lane suitable for local verify and CI usage
+  - historical record of the oversized candidate before decomposition
 non_scope:
-  - hidden-information regression assertions
-  - gameplay engine tests unrelated to contract validation
-  - CI workflow job definitions
-  - board sync automation
+  - implementation work
+  - review authority over the replacement child stories
 dependencies:
   - INF-001
   - INF-004
 acceptance_criteria:
-  - canonical type contract compilation is automated
-  - effect DSL fixtures can be validated automatically against the canonical schema
-  - approved story files can be validated automatically against the story schema once the schema file exists in-repo
-  - the contracts lane is callable independently and can be included in root verify and CI
+  - replacement child stories exist for canonical types, effect DSL fixtures, database schema validation, and root lane aggregation
 required_tests:
-  - command smoke test for canonical type compilation
-  - fixture validation test that rejects at least one invalid effect DSL sample
-  - story-schema validation smoke test using one valid and one invalid approved story fixture once the schema artifact exists
+  - none; replacement tracking artifact only
 repo_rules:
-  - fixture and contract drift must be caught automatically rather than by reviewer inspection
-  - schema validation must preserve the canonical authority order from the spec package
-  - no contract-validation path may require live external services
+  - replacement stories must stay concern-scoped and independently reviewable
 ambiguity_policy: fail_and_escalate

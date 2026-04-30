@@ -120,11 +120,19 @@ Code review is required. Use this flow unless a higher-authority story or packet
 
 1. keep the patch inside one approved story
 2. run `pnpm verify` and the story's required tests
-3. request agent review for scope creep, missing tests, and contract drift when available
-4. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes
-5. if review finds multi-concern drift, split the story or narrow the patch before merge
+3. run AI review for scope creep, missing tests, and contract drift when available
+4. post an AI review comment on the pull request before human review is requested
+5. fix the material findings or post a revision response comment that records the disposition of each unresolved item
+6. request human review only after the AI review record exists and the revision response comment is up to date
+7. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes
+8. if review finds multi-concern drift, split the story or narrow the patch before merge
 
-Passing agent review does not replace human review.
+Passing AI review does not replace human review.
+
+The PR review record must contain two durable comments:
+
+- an AI review comment with findings and verdict
+- a revision response comment that tracks the follow-up commits and dispositions
 
 ## Reporting Format
 

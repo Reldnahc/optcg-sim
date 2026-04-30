@@ -1,0 +1,44 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-006C
+epic_id: KICK-001
+title: Add database schema contract parse lane
+type: tooling
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Add the canonical database schema contract artifact and a local parse or lint check so
+  DDL drift is caught without relying on reviewer inspection.
+story_boundary: >
+  Own the canonical database schema file and its local parse or lint automation only. Do
+  not add effect DSL validation, TypeScript contract compilation, or root lane aggregation
+  in this story.
+allowed_touch_points:
+  - contracts/database-schema-v6.sql
+  - package.json
+  - tests/contracts/**
+  - tools/**
+spec_refs:
+  - 11-testing-quality.s021 (v6 contract validation)
+  - 23-repo-tooling-and-enforcement.s011 (Contract and fixture validation)
+scope:
+  - add the canonical database schema file at the spec-defined path
+  - add a local parse, lint, or smoke validation path for the committed schema contract
+non_scope:
+  - effect DSL validation
+  - canonical TypeScript contract compilation
+  - root contracts lane aggregation
+dependencies:
+  - INF-004
+acceptance_criteria:
+  - contracts/database-schema-v6.sql exists at the canonical path
+  - a local validation path exists that fails when the schema contract is malformed
+required_tests:
+  - command or test smoke check proving the committed database schema artifact parses or lint-checks locally
+repo_rules:
+  - schema validation must not require a live database service
+  - the committed SQL contract remains the canonical source for automation
+ambiguity_policy: fail_and_escalate
