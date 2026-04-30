@@ -1,0 +1,48 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-006B
+epic_id: KICK-001
+title: Add effect DSL schema and fixture validation lane
+type: tooling
+area: contracts
+primary_concern: contract
+priority: critical
+status: approved
+summary: >
+  Add the canonical effect DSL schema plus valid and invalid fixture coverage so JSON
+  effect definitions can be validated mechanically before they reach runtime work.
+story_boundary: >
+  Own the effect DSL schema artifact, fixture samples, and fixture-validation automation
+  only. Do not add database checks, canonical TypeScript compilation, or root lane
+  aggregation in this story.
+allowed_touch_points:
+  - contracts/effect-dsl.schema.json
+  - fixtures/**
+  - package.json
+  - tests/contracts/**
+  - tools/**
+spec_refs:
+  - 11-testing-quality.s021 (v6 contract validation)
+  - 23-repo-tooling-and-enforcement.s011 (Contract and fixture validation)
+scope:
+  - add the canonical effect DSL schema at the spec-defined path
+  - add at least one valid and one invalid effect DSL fixture dedicated to validation tests
+  - add a validation command or test that proves invalid fixtures are rejected
+non_scope:
+  - canonical TypeScript contract compilation
+  - database schema validation
+  - root contracts lane aggregation
+dependencies:
+  - INF-004
+  - INF-006A
+acceptance_criteria:
+  - contracts/effect-dsl.schema.json exists at the canonical path
+  - committed validation fixtures include at least one valid and one invalid sample
+  - the validation lane rejects the invalid sample and accepts the valid sample
+required_tests:
+  - fixture validation smoke test with one valid effect DSL sample and one invalid sample
+repo_rules:
+  - fixture validation must remain local and deterministic
+  - invalid fixtures used for validation must stay isolated from production card content
+ambiguity_policy: fail_and_escalate
