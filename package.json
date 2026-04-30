@@ -7,7 +7,7 @@
   "scripts": {
     "format": "corepack pnpm exec prettier --write .",
     "format:check": "corepack pnpm exec prettier --check .",
-    "lint": "corepack pnpm exec eslint . --max-warnings=0 --ext .js,.mjs,.cjs,.ts,.mts,.cts --ignore-pattern tests/fixtures/eslint/**",
+    "lint": "corepack pnpm exec eslint . --max-warnings=0 --ext .js,.mjs,.cjs,.ts,.mts,.cts",
     "typecheck": "corepack pnpm exec tsc -p packages/types/tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run",
     "test:contracts": "corepack pnpm exec vitest run tests/contracts/story-schema-contract.test.mjs",

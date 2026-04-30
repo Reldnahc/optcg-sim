@@ -47,6 +47,11 @@ test("package.json defines a real eslint-based lint script", async () => {
     /eslint/i,
     "lint script should run eslint",
   );
+  assert.doesNotMatch(
+    packageJson.scripts.lint,
+    /--ignore-pattern\s+tests\/fixtures\/eslint\/\*\*/i,
+    "repo-wide fixture ignores should live in ESLint config, not only in the CLI script",
+  );
 });
 
 test("eslint config file exists", async () => {
