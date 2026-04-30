@@ -30,6 +30,7 @@ export default [
       "coverage/**",
       "dist/**",
       "node_modules/**",
+      "tests/fixtures/eslint/**",
       "tests/fixtures/prettier/ignored/**",
     ],
   },

@@ -20,9 +20,18 @@ async function lintFixture(relativePath) {
   const { ESLint } = await import("eslint");
   const eslint = new ESLint({
     cwd: repoRoot,
+    ignore: false,
   });
 
   return eslint.lintFiles([relativePath]);
+}
+
+async function createRepoEslint() {
+  const { ESLint } = await import("eslint");
+
+  return new ESLint({
+    cwd: repoRoot,
+  });
 }
 
 test("package.json defines a real eslint-based lint script", async () => {
@@ -50,6 +59,19 @@ test("eslint config file exists", async () => {
   );
 
   assert.equal(typeof contents, "string");
+});
+
+test("eslint ignores rule-testing fixtures during repo-wide linting", async () => {
+  const eslint = await createRepoEslint();
+  const isIgnored = await eslint.isPathIgnored(
+    path.join(repoRoot, "tests/fixtures/eslint/unsafe-types.ts"),
+  );
+
+  assert.equal(
+    isIgnored,
+    true,
+    "repo-wide lint should ignore rule-testing fixtures",
+  );
 });
 
 test("eslint rejects explicit any and non-null assertions", async () => {
