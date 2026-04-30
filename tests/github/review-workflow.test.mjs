@@ -106,6 +106,7 @@ test("branch protection guide names the required status checks and approvals", a
     guide,
     /separate Codex review invocation before human review is requested when a Codex review surface is available/i,
   );
+  assert.match(guide, /codex\.cmd exec review --base main/i);
   assert.match(
     guide,
     /GitHub `@codex review` remains an allowed alternate review path/i,
@@ -149,6 +150,7 @@ test("agents guidance requires AI review to finish before human review request",
   assert.match(agents, /review comment/i);
   assert.match(agents, /revision response comment/i);
   assert.match(agents, /run a separate Codex review invocation/i);
+  assert.match(agents, /codex\.cmd exec review --base main/i);
   assert.match(
     agents,
     /GitHub `@codex review` remains an allowed alternate path/i,
@@ -197,6 +199,10 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   assert.match(aiReview, /Review timeout budget:/i);
   assert.match(aiReview, /Findings:/i);
   assert.match(aiReview, /Verdict:/i);
+  assert.match(
+    aiReview,
+    /Merge-gate review record \(`@codex review` link or equivalent human review step reference\):/i,
+  );
   assert.match(aiReview, /separate Codex review invocation/i);
   assert.match(
     aiReview,

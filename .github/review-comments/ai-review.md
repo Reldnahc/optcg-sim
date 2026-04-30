@@ -11,6 +11,7 @@
 - Findings:
 - Verdict:
 - Required follow-up before human review:
+- Merge-gate review record (`@codex review` link or equivalent human review step reference):
 
 Use this comment for the first-pass AI review record on Codex-reviewed PRs. Human review should not be requested until this comment exists and any blocking findings are addressed or explicitly dispositioned in the revision response comment. Implementation-agent self-review does not satisfy this gate; the review must come from a separate Codex review invocation.
 
