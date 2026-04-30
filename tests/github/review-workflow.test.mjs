@@ -45,6 +45,10 @@ test("pull request template requires story, verification, and review evidence", 
 
   assert.match(prTemplate, /@codex review/i);
   assert.match(prTemplate, /pnpm verify/i);
+  assert.match(prTemplate, /AI review/i);
+  assert.match(prTemplate, /before human review/i);
+  assert.match(prTemplate, /AI review comment/i);
+  assert.match(prTemplate, /revision response comment/i);
 });
 
 test("branch protection guide names the required status checks and approvals", async () => {
@@ -56,4 +60,34 @@ test("branch protection guide names the required status checks and approvals", a
   assert.match(guide, /coverage/);
   assert.match(guide, /at least one approval/i);
   assert.match(guide, /require review from Code Owners/i);
+  assert.match(guide, /AI review/i);
+  assert.match(guide, /before human review/i);
+  assert.match(guide, /revision response comment/i);
+});
+
+test("agents guidance requires AI review to finish before human review request", async () => {
+  const agents = await readText("AGENTS.md");
+
+  assert.match(agents, /AI review/i);
+  assert.match(agents, /before human review/i);
+  assert.match(agents, /review comment/i);
+  assert.match(agents, /revision response comment/i);
+});
+
+test("checked-in review comment templates exist for AI findings and revisions", async () => {
+  const aiReview = await readText(".github/review-comments/ai-review.md");
+  const revisionResponse = await readText(
+    ".github/review-comments/ai-review-revision-response.md",
+  );
+
+  assert.match(aiReview, /^## AI Review Record$/m);
+  assert.match(aiReview, /Story ID:/);
+  assert.match(aiReview, /Review scope:/i);
+  assert.match(aiReview, /Findings:/i);
+  assert.match(aiReview, /Verdict:/i);
+
+  assert.match(revisionResponse, /^## AI Review Revision Response$/m);
+  assert.match(revisionResponse, /AI review comment:/i);
+  assert.match(revisionResponse, /Disposition:/i);
+  assert.match(revisionResponse, /Follow-up commits:/i);
 });

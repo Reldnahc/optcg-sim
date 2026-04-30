@@ -20,8 +20,12 @@
 
 ## Review
 
+- [ ] AI review completed before human review request
 - [ ] `@codex review` requested or equivalent agent review recorded
-- [ ] Human review requested
+- AI review comment:
+- Revision response comment:
+- [ ] Blocking AI review findings resolved or explicitly carried as blockers with disposition
+- [ ] Human review requested after the AI review record was posted
 - [ ] Follow-up ambiguities or blockers documented if review uncovered them
 
 ## Assumptions and Risks

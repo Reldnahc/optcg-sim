@@ -30,4 +30,9 @@ These names must stay aligned with `.github/workflows/ci.yml`.
 
 - Pull requests should link the approved story file.
 - Pull requests should include `pnpm verify` evidence.
+- Pull requests should complete AI review before human review is requested.
+- Pull requests should post an AI review comment with findings and verdict.
+- Pull requests should post a revision response comment that records follow-up commits and unresolved dispositions.
 - Pull requests should record `@codex review` or an equivalent review pass before human approval.
+
+GitHub branch protection does not enforce PR comment content directly. Until additional automation exists, reviewers and owners must reject review handoff when the AI review comment or revision response comment is missing.
