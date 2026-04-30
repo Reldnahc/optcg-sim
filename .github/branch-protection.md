@@ -32,11 +32,11 @@ These names must stay aligned with `.github/workflows/ci.yml`.
 - Pull requests should include `pnpm verify` evidence.
 - Pull requests should complete AI review before human review is requested when Codex review is available.
 - Pull requests should complete a separate Codex review invocation before human review is requested when a Codex review surface is available.
-- The default review command is `codex.cmd exec review --base main` or the platform-equivalent Codex CLI review command.
+- The default review command is `codex.cmd exec review --base <PR target branch>` or the platform-equivalent Codex CLI review command.
 - GitHub `@codex review` remains an allowed alternate review path when that surface is used intentionally.
 - The review workflow should allow up to 60 minutes for the default Codex CLI review step before it is treated as timed out.
 - Implementation-agent self-review does not satisfy the Codex review gate.
-- When Codex review is unavailable, times out, or fails, pull requests should record an equivalent human review step instead of silently skipping the review gate.
+- When no usable Codex review surface remains for the patch after the available Codex review surfaces were found unavailable, timed out, or failed, pull requests should record an equivalent human review step instead of silently skipping the review gate.
 - When GitHub `@codex review` is used, that native review output should serve as the AI review record without requiring a duplicate transcription comment.
 - When Codex CLI or another non-GitHub Codex review surface is used, pull requests should post an AI review comment with findings and verdict copied from the separate Codex review output.
 - When Codex review is used, pull requests should post a revision response comment that records follow-up commits and unresolved dispositions.

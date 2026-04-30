@@ -121,12 +121,12 @@ Code review is required. Use this flow unless a higher-authority story or packet
 1. keep the patch inside one approved story
 2. run `pnpm verify` and the story's required tests
 3. run a separate Codex review invocation for scope creep, missing tests, contract drift, and correctness risk when a Codex review surface is available for the patch
-4. use `codex.cmd exec review --base main` or the platform-equivalent Codex CLI review command as the default review path; GitHub `@codex review` remains an allowed alternate path when that surface is used intentionally
+4. use `codex.cmd exec review --base <PR target branch>` or the platform-equivalent Codex CLI review command as the default review path; GitHub `@codex review` remains an allowed alternate path when that surface is used intentionally
 5. give the default Codex CLI review step a 60-minute timeout budget before treating it as timed out or failed
 6. self-review by the implementation agent does not satisfy the Codex review gate
 7. if a separate Codex review invocation was used and its output does not already live on the pull request, copy the findings and verdict from that separate Codex review output into an AI review comment before human review is requested
 8. if GitHub `@codex review` was the separate review path, treat the native `@codex review` output itself as the AI review record and do not require a duplicate transcription comment
-9. if no usable Codex review surface remains for the patch, or if every attempted Codex review run is unavailable, times out, or fails, record an equivalent human review fallback comment explicitly rather than silently skipping the review gate
+9. if no usable Codex review surface remains for the patch after the available Codex review surfaces were found unavailable, timed out, or failed, record an equivalent human review fallback comment explicitly rather than silently skipping the review gate
 10. fix the material findings or post a revision response comment that records the disposition of each unresolved item
 11. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, and after the revision response comment is up to date when a separate Codex review invocation was used
 12. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes

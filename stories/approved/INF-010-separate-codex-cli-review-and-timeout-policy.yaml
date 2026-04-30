@@ -37,7 +37,7 @@ scope:
   - prefer Codex CLI as the default review path while keeping GitHub `@codex review` as an allowed alternate path
   - document that self-review by the implementation agent does not satisfy the Codex review gate
   - document a 60-minute timeout budget for the default Codex CLI review step
-  - preserve the spec-compatible equivalent human review fallback when no usable Codex review surface remains because available Codex review attempts are unavailable, time out, or fail
+  - preserve the spec-compatible equivalent human review fallback when no usable Codex review surface remains because the available Codex review surfaces are unavailable, time out, or fail
   - require the review findings and verdict to be copied from the Codex review output into PR comments before human review when a separate Codex review is used
   - update review templates and tests so the separate Codex review requirement, fallback, and actual review-path capture are mechanically visible
 non_scope:

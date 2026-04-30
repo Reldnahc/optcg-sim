@@ -18,4 +18,4 @@ Use this comment for the first-pass AI review record on Codex-reviewed PRs. Huma
 
 If the separate review path was Codex CLI or another non-GitHub review surface, copy the findings and verdict from that separate Codex review output into this comment, then post it on the GitHub pull request before human review is requested.
 If GitHub `@codex review` was the separate review path, use the native `@codex review` output itself as the AI review record and do not require a duplicate AI review comment.
-When the workflow falls back to an equivalent human review because no usable Codex review surface remains, do not require this comment; record the fallback review comment instead.
+When the workflow falls back to an equivalent human review because no usable Codex review surface remains after the available Codex review surfaces were found unavailable, timed out, or failed, do not require this comment; record the fallback review comment instead.
