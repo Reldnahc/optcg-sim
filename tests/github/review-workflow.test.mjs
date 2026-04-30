@@ -45,13 +45,16 @@ test("pull request template requires story, verification, and review evidence", 
 
   assert.match(prTemplate, /@codex review/i);
   assert.match(prTemplate, /pnpm verify/i);
-  assert.match(prTemplate, /AI review/i);
+  assert.match(
+    prTemplate,
+    /AI review completed before human review request, or equivalent human review fallback recorded because Codex review was unavailable/i,
+  );
   assert.match(prTemplate, /before human review/i);
   assert.match(prTemplate, /AI review comment/i);
   assert.match(prTemplate, /revision response comment/i);
   assert.match(
     prTemplate,
-    /Separate Codex review invocation completed before human review request/i,
+    /Separate Codex review invocation completed before human review request, or equivalent human review fallback recorded because Codex review was unavailable/i,
   );
   assert.match(
     prTemplate,
@@ -59,9 +62,12 @@ test("pull request template requires story, verification, and review evidence", 
   );
   assert.match(
     prTemplate,
-    /copies the findings and verdict from the separate Codex review output onto this PR/i,
+    /copies the findings and verdict from the separate Codex review output onto this PR, or the fallback review reference explains why Codex review was unavailable/i,
   );
-  assert.match(prTemplate, /Codex CLI or `@codex review`/i);
+  assert.match(
+    prTemplate,
+    /Review path used: `<Codex CLI \| @codex review \| equivalent human review fallback>`/i,
+  );
   assert.match(prTemplate, /60[- ]minute/i);
 });
 
@@ -74,10 +80,16 @@ test("branch protection guide names the required status checks and approvals", a
   assert.match(guide, /coverage/);
   assert.match(guide, /at least one approval/i);
   assert.match(guide, /require review from Code Owners/i);
-  assert.match(guide, /AI review/i);
+  assert.match(
+    guide,
+    /AI review before human review is requested when Codex review is available/i,
+  );
   assert.match(guide, /before human review/i);
   assert.match(guide, /revision response comment/i);
-  assert.match(guide, /separate Codex review invocation before human review/i);
+  assert.match(
+    guide,
+    /separate Codex review invocation before human review is requested when a Codex review surface is available/i,
+  );
   assert.match(
     guide,
     /GitHub `@codex review` remains an allowed alternate review path/i,
@@ -85,6 +97,14 @@ test("branch protection guide names the required status checks and approvals", a
   assert.match(
     guide,
     /Implementation-agent self-review does not satisfy the Codex review gate/i,
+  );
+  assert.match(
+    guide,
+    /When Codex review is unavailable, pull requests should record an equivalent human review step instead of silently skipping the review gate/i,
+  );
+  assert.match(
+    guide,
+    /When Codex review is used, pull requests should post an AI review comment/i,
   );
   assert.match(
     guide,
@@ -96,7 +116,7 @@ test("branch protection guide names the required status checks and approvals", a
 test("agents guidance requires AI review to finish before human review request", async () => {
   const agents = await readText("AGENTS.md");
 
-  assert.match(agents, /AI review/i);
+  assert.match(agents, /Passing AI review does not replace human review/i);
   assert.match(agents, /before human review/i);
   assert.match(agents, /review comment/i);
   assert.match(agents, /revision response comment/i);
@@ -111,7 +131,15 @@ test("agents guidance requires AI review to finish before human review request",
   );
   assert.match(
     agents,
+    /if Codex review is unavailable on the chosen surface, record an equivalent human review step explicitly rather than silently skipping the review gate/i,
+  );
+  assert.match(
+    agents,
     /copy the findings and verdict from that separate Codex review output into an AI review comment/i,
+  );
+  assert.match(
+    agents,
+    /When a separate Codex review invocation is used, the PR review record must contain two durable comments/i,
   );
   assert.match(agents, /60[- ]minute/i);
 });
@@ -124,7 +152,10 @@ test("checked-in review comment templates exist for AI findings and revisions", 
 
   assert.match(aiReview, /^## AI Review Record$/m);
   assert.match(aiReview, /Story ID:/);
-  assert.match(aiReview, /Reviewer path: Codex CLI or `@codex review`/i);
+  assert.match(
+    aiReview,
+    /Reviewer path: <Codex CLI \| @codex review \| other Codex review surface>/i,
+  );
   assert.match(aiReview, /Review scope:/i);
   assert.match(aiReview, /Review command or mode:/i);
   assert.match(aiReview, /Review timeout budget:/i);

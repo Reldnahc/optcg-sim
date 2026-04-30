@@ -2,7 +2,7 @@
 
 - Story ID:
 - Story file:
-- Reviewer path: Codex CLI or `@codex review`
+- Reviewer path: <Codex CLI | @codex review | other Codex review surface>
 - Review scope:
 - Review command or mode:
 - Review timeout budget: 60 minutes

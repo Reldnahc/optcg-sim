@@ -120,24 +120,25 @@ Code review is required. Use this flow unless a higher-authority story or packet
 
 1. keep the patch inside one approved story
 2. run `pnpm verify` and the story's required tests
-3. run a separate Codex review invocation for scope creep, missing tests, contract drift, and correctness risk
+3. run a separate Codex review invocation for scope creep, missing tests, contract drift, and correctness risk when a Codex review surface is available for the patch
 4. use `codex.cmd exec review --base main` or the platform-equivalent Codex CLI review command as the default review path; GitHub `@codex review` remains an allowed alternate path when that surface is used intentionally
 5. give the default Codex CLI review step a 60-minute timeout budget before treating it as timed out or failed
 6. self-review by the implementation agent does not satisfy the Codex review gate
-7. copy the findings and verdict from that separate Codex review output into an AI review comment on the pull request before human review is requested
-8. fix the material findings or post a revision response comment that records the disposition of each unresolved item
-9. request human review only after the AI review record exists and the revision response comment is up to date
-10. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes
-11. if review finds multi-concern drift, split the story or narrow the patch before merge
+7. if a separate Codex review invocation was used, copy the findings and verdict from that separate Codex review output into an AI review comment on the pull request before human review is requested
+8. if Codex review is unavailable on the chosen surface, record an equivalent human review step explicitly rather than silently skipping the review gate
+9. fix the material findings or post a revision response comment that records the disposition of each unresolved item
+10. request human review only after the AI review record or explicit equivalent-human-review fallback record exists and the revision response comment is up to date
+11. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes
+12. if review finds multi-concern drift, split the story or narrow the patch before merge
 
 Passing AI review does not replace human review.
 
-The PR review record must contain two durable comments:
+When a separate Codex review invocation is used, the PR review record must contain two durable comments:
 
 - an AI review comment with findings and verdict
 - a revision response comment that tracks the follow-up commits and dispositions
 
-The AI review comment must state:
+When a separate Codex review invocation is used, the AI review comment must state:
 
 - that the review came from a separate Codex review invocation rather than implementation-agent self-review
 - the exact review path and command or mode used
