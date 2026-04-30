@@ -41,5 +41,6 @@ These names must stay aligned with `.github/workflows/ci.yml`.
 - When Codex review is used, pull requests should post a revision response comment that records follow-up commits and unresolved dispositions.
 - When Codex review is used, pull requests should record the actual review path and the Codex CLI command or alternate mode in the AI review comment before human approval.
 - When the equivalent human-review fallback is used, pull requests should record the fallback metadata in the fallback review reference before human approval.
+- Pull requests should record the higher-authority merge-gate review as either an `@codex review` link or an equivalent human review step reference before merge.
 
 GitHub branch protection does not enforce PR comment content directly. Until additional automation exists, reviewers and owners must reject review handoff when the required review artifacts are missing: the AI review comment and revision response comment for Codex-reviewed PRs, or the fallback review reference for PRs using the equivalent human-review fallback because Codex review was unavailable, timed out, or failed.

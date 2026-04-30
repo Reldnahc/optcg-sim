@@ -30,9 +30,11 @@
 - AI review comment, if Codex review was used:
 - Equivalent human review fallback reference, if Codex review was unavailable, timed out, or failed:
 - Revision response comment, if Codex review was used:
+- Merge-gate review record (`@codex review` link or equivalent human review step reference):
 - [ ] The AI review comment copies the findings and verdict from the separate Codex review output onto this PR, or the fallback review reference explains why Codex review was unavailable, timed out, or failed
 - [ ] Blocking AI review findings resolved or explicitly carried as blockers with disposition, or the fallback review reference records any remaining blockers
 - [ ] Human review requested after the AI review record or fallback review reference was posted
+- [ ] Merge-gate review record is present before merge
 - [ ] Follow-up ambiguities or blockers documented if review uncovered them
 
 ## Assumptions and Risks

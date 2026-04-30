@@ -61,6 +61,10 @@ test("pull request template requires story, verification, and review evidence", 
   );
   assert.match(
     prTemplate,
+    /Merge-gate review record \(`@codex review` link or equivalent human review step reference\)/i,
+  );
+  assert.match(
+    prTemplate,
     /Separate Codex review invocation completed before human review request, or equivalent human review fallback recorded because Codex review was unavailable, timed out, or failed/i,
   );
   assert.match(
@@ -75,6 +79,7 @@ test("pull request template requires story, verification, and review evidence", 
     prTemplate,
     /Human review requested after the AI review record or fallback review reference was posted/i,
   );
+  assert.match(prTemplate, /Merge-gate review record is present before merge/i);
   assert.match(
     prTemplate,
     /Review path used: `<Codex CLI \| @codex review \| other Codex review surface \| equivalent human review fallback>`/i,
@@ -120,6 +125,10 @@ test("branch protection guide names the required status checks and approvals", a
   assert.match(
     guide,
     /When the equivalent human-review fallback is used, pull requests should record the fallback metadata in the fallback review reference before human approval/i,
+  );
+  assert.match(
+    guide,
+    /Pull requests should record the higher-authority merge-gate review as either an `@codex review` link or an equivalent human review step reference before merge/i,
   );
   assert.match(
     guide,
