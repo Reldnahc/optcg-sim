@@ -52,7 +52,7 @@ test("pull request template requires story, verification, and review evidence", 
   assert.match(prTemplate, /before human review/i);
   assert.match(
     prTemplate,
-    /AI review record, if Codex review was used \(`@codex review` link or AI review comment link\)/i,
+    /AI review record, if Codex review was used \(native PR artifact link or AI review comment link\)/i,
   );
   assert.match(
     prTemplate,
@@ -80,7 +80,7 @@ test("pull request template requires story, verification, and review evidence", 
   );
   assert.match(
     prTemplate,
-    /For Codex CLI or other non-GitHub review surfaces, the AI review comment copies the findings and verdict from the separate Codex review output\. For `@codex review`, the native `@codex review` output itself serves as the AI review record\./i,
+    /When the separate Codex review output does not already live on the PR, the AI review comment copies the findings and verdict from that separate Codex review output\. When a Codex review surface already posts a durable PR artifact, that native PR artifact itself serves as the AI review record\./i,
   );
   assert.match(
     prTemplate,
@@ -132,11 +132,15 @@ test("branch protection guide names the required status checks and approvals", a
   );
   assert.match(
     guide,
-    /When GitHub `@codex review` is used, that native review output should serve as the AI review record without requiring a duplicate transcription comment/i,
+    /When a Codex review surface already posts a durable pull-request artifact, that native review output should serve as the AI review record without requiring a duplicate transcription comment/i,
   );
   assert.match(
     guide,
-    /When Codex CLI or another non-GitHub Codex review surface is used, pull requests should post an AI review comment/i,
+    /When the separate Codex review output does not already live on the pull request, pull requests should post an AI review comment/i,
+  );
+  assert.match(
+    guide,
+    /The review workflow should allow up to 60 minutes for the default Codex CLI review step while it is actively running\. Deterministic failures such as unavailable command, auth or config errors, or immediate process failure count as failed immediately\./i,
   );
   assert.match(
     guide,
@@ -180,7 +184,7 @@ test("agents guidance requires AI review to finish before human review request",
   );
   assert.match(
     agents,
-    /if GitHub `@codex review` was the separate review path, treat the native `@codex review` output itself as the AI review record and do not require a duplicate transcription comment/i,
+    /if the separate Codex review surface already posted a durable pull-request artifact, treat that native PR artifact as the AI review record and do not require a duplicate transcription comment/i,
   );
   assert.match(
     agents,
@@ -200,7 +204,11 @@ test("agents guidance requires AI review to finish before human review request",
   );
   assert.match(
     agents,
-    /an AI review record: either the native `@codex review` artifact or an AI review comment with findings and verdict for non-GitHub review surfaces/i,
+    /an AI review record: either a native PR artifact from `@codex review` or another Codex review surface, or an AI review comment with findings and verdict when the separate review output does not already live on the pull request/i,
+  );
+  assert.match(
+    agents,
+    /give the default Codex CLI review step up to 60 minutes while it is actively running; deterministic failures such as unavailable command, auth or config errors, or immediate process failure count as failed immediately and do not require waiting out the timeout budget/i,
   );
   assert.match(
     agents,
@@ -240,11 +248,11 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   assert.match(aiReview, /separate Codex review invocation/i);
   assert.match(
     aiReview,
-    /If the separate review path was Codex CLI or another non-GitHub review surface, copy the findings and verdict from that separate Codex review output into this comment/i,
+    /If the separate Codex review output does not already live on the pull request, copy the findings and verdict from that separate Codex review output into this comment/i,
   );
   assert.match(
     aiReview,
-    /If GitHub `@codex review` was the separate review path, use the native `@codex review` output itself as the AI review record and do not require a duplicate AI review comment/i,
+    /If the separate Codex review surface already posted a durable pull-request artifact, use that native PR artifact itself as the AI review record and do not require a duplicate AI review comment/i,
   );
   assert.match(
     aiReview,

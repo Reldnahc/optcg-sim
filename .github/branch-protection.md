@@ -34,11 +34,11 @@ These names must stay aligned with `.github/workflows/ci.yml`.
 - Pull requests should complete a separate Codex review invocation before human review is requested when a Codex review surface is available.
 - The default review command is `codex.cmd exec review --base <PR target branch>` or the platform-equivalent Codex CLI review command.
 - GitHub `@codex review` remains an allowed alternate review path when that surface is used intentionally.
-- The review workflow should allow up to 60 minutes for the default Codex CLI review step before it is treated as timed out.
+- The review workflow should allow up to 60 minutes for the default Codex CLI review step while it is actively running. Deterministic failures such as unavailable command, auth or config errors, or immediate process failure count as failed immediately.
 - Implementation-agent self-review does not satisfy the Codex review gate.
 - When no usable Codex review surface remains for the patch after the available Codex review surfaces were found unavailable, timed out, or failed, pull requests should record an equivalent human review step instead of silently skipping the review gate.
-- When GitHub `@codex review` is used, that native review output should serve as the AI review record without requiring a duplicate transcription comment.
-- When Codex CLI or another non-GitHub Codex review surface is used, pull requests should post an AI review comment with findings and verdict copied from the separate Codex review output.
+- When a Codex review surface already posts a durable pull-request artifact, that native review output should serve as the AI review record without requiring a duplicate transcription comment.
+- When the separate Codex review output does not already live on the pull request, pull requests should post an AI review comment with findings and verdict copied from the separate Codex review output.
 - When Codex review is used, pull requests should post a revision response comment that records follow-up commits and unresolved dispositions.
 - When Codex review is used, pull requests should record the actual review path and the Codex CLI command or alternate mode in the AI review record before human approval.
 - When the equivalent human-review fallback is used, pull requests should record the fallback metadata in the fallback review comment before human approval by using `.github/review-comments/equivalent-human-review-fallback.md`.
