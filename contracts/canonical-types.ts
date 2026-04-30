@@ -626,6 +626,7 @@ export interface GameState {
   timers: TimerState;
   battle?: BattleState;
   pendingDecision?: PendingDecision;
+  oncePerTurn: OncePerTurnRecord[];
   effectQueue: EffectQueueEntry[];
   deferredTriggers: DeferredTriggerBucket[];
   continuousEffects: ContinuousEffectRecord[];
@@ -1163,7 +1164,7 @@ export type Action =
   | {
       type: "activateEffect";
       source: CardRef;
-      effectId: string;
+      effectId: EffectId;
       costPayment?: PaymentSpec;
     }
   | { type: "attachDon"; donInstanceId: InstanceId; target: CardRef }
@@ -1174,7 +1175,7 @@ export type Action =
   | { type: "concede"; playerId: PlayerId }
   | {
       type: "respondToDecision";
-      decisionId: string;
+      decisionId: DecisionId;
       response: DecisionResponse;
     };
 
