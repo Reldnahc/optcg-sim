@@ -90,6 +90,7 @@ Use root-level Codex skills for repeatable task classes such as:
 
 - implement one approved story,
 - review one patch against a story,
+- orchestrate worker and reviewer subagents around one approved story,
 - sync approved stories into GitHub issue bodies and board fields,
 - raise ambiguity issues when cited sections do not decide behavior.
 
@@ -104,11 +105,12 @@ Section Ref: `32-codex-agent-integration.s008`
 1. Approve a story.
 2. Generate an agent packet.
 3. Run `node --experimental-strip-types tools/spec_board_sync.ts --story <path> --dry-run --write-preview`, then perform live sync when ready.
-4. Assign the packet to Codex CLI or Codex cloud.
-5. Have Codex implement the story in a branch or worktree.
-6. Require tests and a short assumptions/blockers note.
-7. Link the pull request back to the story issue.
-8. Run Codex review plus human review before merge.
+4. Have a parent Codex agent read the story, packet, and `AGENTS.md`, stay mostly in orchestration mode, and remain the owner of story authority, scope decisions, ambiguity handling, and review handoff.
+5. Spawn a worker subagent for the main implementation body of the story whenever delegation is available.
+6. Allow the parent agent to do only small local glue work such as rebases, tiny integration edits, verification reruns, and PR administration.
+7. Require tests and a short assumptions/blockers note.
+8. Link the pull request back to the story issue.
+9. Spawn a separate reviewer subagent plus human review before merge.
 
 ## Codex packet footer
 
@@ -133,7 +135,7 @@ If the spec is ambiguous, stop at the narrowest safe point and open/append an am
 
 Section Ref: `32-codex-agent-integration.s010`
 
-Use Codex review as a fast first-pass reviewer for scope creep, missing tests, and obvious contract drift, but do not treat a passing agent review as authoritative proof of correctness. Human review still owns final acceptance for gameplay correctness and policy-sensitive areas.
+Use a separate reviewer subagent as a fast first-pass reviewer for scope creep, missing tests, and obvious contract drift, but do not treat a passing agent review as authoritative proof of correctness. Human review still owns final acceptance for gameplay correctness and policy-sensitive areas.
 
 ## GitHub-connected modes
 
@@ -141,11 +143,12 @@ Use Codex review as a fast first-pass reviewer for scope creep, missing tests, a
 
 Section Ref: `32-codex-agent-integration.s011`
 
-Codex may be used in three complementary ways:
+Codex may be used in several complementary ways:
 
-- local/CLI implementation against a checked-out repo,
-- cloud task execution against a connected GitHub repository,
-- GitHub pull-request review using `@codex review`.
+- a parent agent orchestrating work against a checked-out repo,
+- worker subagents implementing approved stories,
+- reviewer subagents reviewing diffs against the PR base branch,
+- optional GitHub-connected or cloud task execution when that surface exists.
 
 These modes should share the same story, packet, and `AGENTS.md` guidance so the execution rules do not vary by surface.
 
@@ -163,6 +166,9 @@ Do not exceed story scope.
 Run the required tests and report exact files changed, tests run, and any ambiguity surfaced.
 ```
 
+For delegated execution, the parent agent should pass this prompt to the worker
+subagent together with explicit file ownership and test ownership.
+
 ## Merge gate recommendation
 
 <!-- SECTION_REF: 32-codex-agent-integration.s013 -->
@@ -175,4 +181,4 @@ A Codex-authored patch should not be merged unless:
 - the patch satisfies the listed acceptance criteria,
 - required tests are present and passing,
 - no uncited behavior is introduced,
-- the review record includes either `@codex review` or an equivalent human review step.
+- the review record includes either a reviewer-subagent artifact or an equivalent human review step.
