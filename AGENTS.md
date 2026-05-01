@@ -120,19 +120,35 @@ Code review is required. Use this flow unless a higher-authority story or packet
 
 1. keep the patch inside one approved story
 2. run `pnpm verify` and the story's required tests
-3. run AI review for scope creep, missing tests, and contract drift when available
-4. post an AI review comment on the pull request before human review is requested
-5. fix the material findings or post a revision response comment that records the disposition of each unresolved item
-6. request human review only after the AI review record exists and the revision response comment is up to date
-7. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes
-8. if review finds multi-concern drift, split the story or narrow the patch before merge
+3. run a separate Codex review invocation for scope creep, missing tests, contract drift, and correctness risk when a Codex review surface is available for the patch
+4. use `codex.cmd exec review --base <PR target branch>` or the platform-equivalent Codex CLI review command as the default review path; GitHub `@codex review` remains an allowed alternate path when that surface is used intentionally
+5. give the default Codex CLI review step up to 60 minutes while it is actively running; deterministic failures such as unavailable command, auth or config errors, or immediate process failure count as failed immediately and do not require waiting out the timeout budget
+6. self-review by the implementation agent does not satisfy the Codex review gate
+7. if a separate Codex review invocation was used and its output does not already live on the pull request, copy the findings and verdict from that separate Codex review output into an AI review comment before human review is requested
+8. if the separate Codex review surface already posted a durable pull-request artifact, treat that native PR artifact as the AI review record and do not require a duplicate transcription comment
+9. if no usable Codex review surface remains for the patch after the available Codex review surfaces were found unavailable, timed out, or failed, record an equivalent human review fallback comment explicitly rather than silently skipping the review gate
+10. fix the material findings or post a revision response comment that records the disposition of each unresolved item
+11. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, and after the revision response comment is up to date when a separate Codex review invocation was used
+12. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes
+13. if review finds multi-concern drift, split the story or narrow the patch before merge
+
+The separate Codex review invocation is a repo-level first-pass gate before human review. It does not replace the spec's merge-gate requirement for `@codex review` or an equivalent human review step.
 
 Passing AI review does not replace human review.
 
-The PR review record must contain two durable comments:
+When a separate Codex review invocation is used, the PR review record must contain:
 
-- an AI review comment with findings and verdict
+- an AI review record: either a native PR artifact from `@codex review` or another Codex review surface, or an AI review comment with findings and verdict when the separate review output does not already live on the pull request
 - a revision response comment that tracks the follow-up commits and dispositions
+
+When the equivalent human-review fallback is used, the PR review record must contain a fallback review comment based on `.github/review-comments/equivalent-human-review-fallback.md` so the failed or unavailable Codex attempts, the fallback human reviewer, the findings, and the merge-gate record are durable on the pull request.
+
+When the AI review record is a copied comment rather than a native `@codex review` artifact, that comment must state:
+
+- that the review came from a separate Codex review invocation rather than implementation-agent self-review
+- the exact review path and command or mode used
+- the 60-minute timeout budget for the default Codex CLI review step
+- the findings and verdict copied from that separate Codex review invocation and posted on the GitHub pull request
 
 ## Reporting Format
 
