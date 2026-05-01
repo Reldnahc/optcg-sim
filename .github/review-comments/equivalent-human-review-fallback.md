@@ -2,13 +2,15 @@
 
 - Story ID:
 - Story file:
-- Failed or unavailable Codex review attempts:
-- Why no usable Codex review surface remained:
+- Parent-agent orchestration note:
+- Worker subagent reference(s):
+- Failed or unavailable reviewer-subagent attempts:
+- Why no usable reviewer-subagent run remained:
 - Fallback human reviewer:
 - Review scope:
 - Findings:
 - Verdict:
 - Blocking issues or follow-up before human review:
-- Merge-gate review record (`@codex review` link or equivalent human review step reference):
+- Human merge-gate review record (approval link or equivalent human review step reference):
 
-Use this comment when no usable Codex review surface remains after the available Codex review surfaces were found unavailable, timed out, or failed. Record the attempted Codex review surfaces and failure modes, then document the equivalent human review that satisfied the fallback before broader human review is requested.
+Use this comment when no usable reviewer-subagent run remains after the available reviewer-subagent surfaces were found unavailable, timed out, or failed. Record the attempted reviewer-subagent surfaces and failure modes, confirm that implementation-worker self-review and parent-coordinator self-review did not serve as the AI review gate, then document the equivalent human review that satisfied the fallback before broader human review is requested.

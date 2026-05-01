@@ -1,0 +1,71 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-011
+epic_id: KICK-001
+title: Replace CLI-specific review policy with subagent orchestration and reviewer gate
+type: tooling
+area: infra
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Replace the CLI-specific AI review workflow with a parent-orchestrated subagent
+  workflow where worker subagents handle main implementation, a separate reviewer
+  subagent provides the AI review gate, and equivalent human-review fallback remains
+  available when reviewer subagent execution is unavailable.
+story_boundary: >
+  Own review-policy artifacts only: AGENTS guidance, Codex integration spec text,
+  GitHub review workflow artifacts, review comment templates, story status updates,
+  and tests that enforce those requirements. Do not change CI jobs, feature code, or
+  packet generation in this story.
+allowed_touch_points:
+  - AGENTS.md
+  - specs/32-codex-agent-integration.md
+  - .github/pull_request_template.md
+  - .github/branch-protection.md
+  - .github/review-comments/**
+  - tests/github/**
+  - stories/approved/**
+  - stories/done/**
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s016
+  - 32-codex-agent-integration.s008
+  - 32-codex-agent-integration.s010
+  - 32-codex-agent-integration.s011
+  - 32-codex-agent-integration.s013
+scope:
+  - keep the parent agent in charge of story authority, scope decisions, ambiguity handling, and story-state transitions while subagents execute delegated work
+  - require parent-agent orchestration with worker subagents for main implementation by default
+  - require a separate reviewer subagent before human review when AI review is available
+  - document that implementation-agent self-review does not satisfy the reviewer gate
+  - preserve a documented 60-minute timeout budget for reviewer-subagent execution
+  - preserve the explicit equivalent human-review fallback when reviewer-subagent execution is unavailable, times out, or fails
+  - require PR comments and templates to record worker/reviewer provenance rather than CLI command provenance
+  - update tests so the subagent workflow, fallback, and no-self-review rule are mechanically enforced
+  - move INF-010 out of approved history so only the new subagent review workflow remains authoritative
+non_scope:
+  - CI automation for launching reviewer subagents
+  - packet generation implementation
+  - gameplay or contract feature work
+dependencies:
+  - INF-008
+  - INF-009
+  - INF-010
+acceptance_criteria:
+  - AGENTS.md requires parent-agent orchestration with worker subagents for main implementation by default and a separate reviewer subagent before human review when AI review is available
+  - the review workflow documents a 60-minute timeout budget for reviewer-subagent execution instead of Codex CLI execution
+  - pull request and review comment templates capture worker/reviewer identities or references, the higher-authority merge-gate review record, and the fallback path when no usable reviewer subagent run is available
+  - the Codex integration spec no longer makes Codex CLI the default execution or review path for this repo workflow
+  - INF-010 is moved out of `stories/approved/` into done history so only one approved review workflow remains authoritative after this story lands
+  - workflow tests fail if the subagent-review requirement, the equivalent-human-review fallback, the no-self-review rule, or the 60-minute timeout language is removed
+required_tests:
+  - review workflow tests covering AGENTS.md, PR template, branch protection guide, and review comment templates
+repo_rules:
+  - the parent agent remains the story owner and controls scope, packet authority, review handoff, and story-state transitions
+  - the parent agent may do small local glue work but should remain mostly orchestration
+  - worker subagents own the main implementation body for a story when delegation is available
+  - reviewer subagent output must come from a different agent than the implementing worker
+  - review comments must make it clear whether the review came from a reviewer subagent or the equivalent human-review fallback
+  - the timeout budget must be documented in checked-in workflow guidance, not left to chat memory
+ambiguity_policy: implement_if_clearly_implied

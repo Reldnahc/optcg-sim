@@ -8,13 +8,14 @@ type: tooling
 area: infra
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Tighten the review workflow so human review normally starts only after a separate
   Codex review invocation has been run and recorded, with Codex CLI as the default
   path, the review timeout budget documented as 60 minutes, the review findings posted
   back onto the GitHub pull request, and the spec-compatible human-review fallback
-  preserved when Codex review is unavailable.
+  preserved when Codex review is unavailable. This landed as an intermediate policy
+  and is superseded by INF-011's subagent-based review workflow.
 story_boundary: >
   Own review-policy artifacts only: AGENTS guidance, GitHub review workflow artifacts,
   review comment templates, and tests that enforce those requirements. Do not change CI
