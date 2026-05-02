@@ -518,6 +518,96 @@ test("active packet verification enforces packet presence, freshness, and requir
   assert.match(stalePacket.stderr, /stale/i);
 });
 
+test("active packet verification accepts letter-suffixed story ids with exact packet paths", async () => {
+  const tempRepoRoot = await makeTempRepoFixture();
+  const manifestPath = path.join(tempRepoRoot, "agent-packets", "active.json");
+  const numericStoryPath = path.join(
+    tempRepoRoot,
+    "stories",
+    "approved",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+  );
+  const suffixedStoryPath = path.join(
+    tempRepoRoot,
+    "stories",
+    "approved",
+    "INF-014A-story-lifecycle-and-active-packet-cleanup.yaml",
+  );
+  const sourceStory = await readFile(numericStoryPath, "utf8");
+
+  await writeFile(
+    suffixedStoryPath,
+    sourceStory.replace(/^id: INF-014$/m, "id: INF-014A"),
+  );
+
+  const buildResult = runPacketToolFromRepo(tempRepoRoot, [
+    "generate",
+    "--story",
+    suffixedStoryPath,
+    "--manifest",
+    manifestPath,
+    "--activate",
+  ]);
+
+  assert.equal(
+    buildResult.status,
+    0,
+    `expected suffixed packet build to pass\nstdout:\n${buildResult.stdout ?? ""}\nstderr:\n${buildResult.stderr ?? ""}`,
+  );
+
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  assert.deepEqual(manifest.activeStories, [
+    {
+      packetPath: "agent-packets/INF-014A.md",
+      storyId: "INF-014A",
+      storyPath:
+        "stories/approved/INF-014A-story-lifecycle-and-active-packet-cleanup.yaml",
+      storySha256: manifest.activeStories[0].storySha256,
+    },
+  ]);
+
+  const verified = runPacketToolFromRepo(tempRepoRoot, [
+    "verify-active",
+    "--manifest",
+    manifestPath,
+  ]);
+
+  assert.equal(
+    verified.status,
+    0,
+    `expected suffixed active packet verification to pass\nstdout:\n${verified.stdout ?? ""}\nstderr:\n${verified.stderr ?? ""}`,
+  );
+
+  await writeFile(
+    manifestPath,
+    JSON.stringify(
+      {
+        version: 1,
+        activeStories: [
+          {
+            ...manifest.activeStories[0],
+            packetPath: "agent-packets/custom-INF-014A.md",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+
+  const wrongPacketManifest = runPacketToolFromRepo(tempRepoRoot, [
+    "verify-active",
+    "--manifest",
+    manifestPath,
+  ]);
+
+  assert.notEqual(wrongPacketManifest.status, 0);
+  assert.match(
+    wrongPacketManifest.stderr,
+    /checked-in agent-packets\/INF-014A\.md/i,
+  );
+});
+
 test("packet activation replaces any prior active story", async () => {
   const tempRepoRoot = await makeTempRepoFixture();
   const manifestPath = path.join(tempRepoRoot, "agent-packets", "active.json");

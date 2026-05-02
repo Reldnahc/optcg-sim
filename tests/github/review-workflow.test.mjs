@@ -39,6 +39,10 @@ function assertMatchesAll(text, patterns) {
   }
 }
 
+function assertValidStoryId(storyId) {
+  assert.match(storyId, /^[A-Z][A-Z0-9]*-\d{3}[A-Z]?$/);
+}
+
 async function assertStoryMovedToDone(storyId, fileName) {
   const doneStory = await readText(`stories/done/${fileName}`);
 
@@ -318,7 +322,7 @@ test("active packet manifest is empty between stories or points to one current a
 
   const [activeStory] = manifest.activeStories;
 
-  assert.match(activeStory.storyId, /^INF-\d+$/);
+  assertValidStoryId(activeStory.storyId);
   assert.match(activeStory.storySha256, /^[0-9a-f]{64}$/);
   assert.equal(
     activeStory.packetPath,
@@ -342,6 +346,15 @@ test("active packet manifest is empty between stories or points to one current a
     packet,
     new RegExp(`<!-- agent-packet:story-path ${activeStory.storyPath} -->`),
   );
+});
+
+test("active packet workflow accepts schema-authorized story identifiers", () => {
+  assert.doesNotThrow(() => assertValidStoryId("INF-015"));
+  assert.doesNotThrow(() => assertValidStoryId("INF-006A"));
+  assert.doesNotThrow(() => assertValidStoryId("ENG-012"));
+  assert.doesNotThrow(() => assertValidStoryId("SEC-001B"));
+  assert.throws(() => assertValidStoryId("INF-006AA"));
+  assert.throws(() => assertValidStoryId("INF-006-alpha"));
 });
 
 test("merged workflow stories move out of approved backlog into done history", async () => {
