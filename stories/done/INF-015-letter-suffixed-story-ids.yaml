@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Align story schema and workflow validation with the approved split-story
   identifier format used by INF-006A through INF-006D so active packet
