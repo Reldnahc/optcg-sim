@@ -37,8 +37,9 @@ spec_refs:
 scope:
   - document the parent orchestrator model as gpt-5.5
   - require reviewer subagents to use gpt-5.4 with high reasoning
-  - require implementation worker subagents to use either gpt-5.4 with medium reasoning or gpt-5.3-codex with medium reasoning based on story complexity
-  - document that simple mechanical stories should prefer gpt-5.3-codex medium while broader or riskier integration stories should prefer gpt-5.4 medium
+  - require implementation worker subagents to default to gpt-5.3-codex with medium reasoning
+  - document that complex, risky, or integration-heavy implementation stories should use gpt-5.5 with medium reasoning
+  - document that documentation-only authority edits are parent-owned and still require separate reviewer subagent review
   - update PR, AI review, fallback review, and revision-response templates to record worker and reviewer model provenance
   - add workflow tests that fail if the model-routing policy or provenance fields are removed
 non_scope:
@@ -53,13 +54,15 @@ acceptance_criteria:
   - AGENTS.md defines the canonical parent, worker, and reviewer subagent model-routing policy
   - specs/32-codex-agent-integration.md includes the same model-routing policy as specification text
   - pull request, AI review, fallback review, and revision-response templates require model and reasoning provenance for parent, worker, and reviewer roles
-  - workflow tests enforce gpt-5.5 parent orchestration, gpt-5.4 high reviewer subagents, and gpt-5.4 or gpt-5.3-codex medium implementation workers
+  - workflow tests enforce gpt-5.5 parent orchestration, gpt-5.4 high reviewer subagents, gpt-5.3-codex medium default implementation workers, gpt-5.5 medium complex implementation workers, and parent-owned authority edits
 required_tests:
   - review workflow tests covering AGENTS.md model routing
   - review workflow tests covering PR and AI review template model provenance
 repo_rules:
   - parent orchestration runs on gpt-5.5 unless a higher-authority runtime constraint prevents it and the deviation is recorded
   - reviewer subagents must use gpt-5.4 with high reasoning
-  - implementation worker subagents must use gpt-5.4 with medium reasoning or gpt-5.3-codex with medium reasoning unless an approved story explicitly overrides it
+  - implementation worker subagents must default to gpt-5.3-codex with medium reasoning unless an approved story explicitly overrides it
+  - complex, risky, or integration-heavy implementation stories must use gpt-5.5 with medium reasoning unless an approved story explicitly overrides it
+  - documentation-only authority edits should be handled by the parent agent directly and still require separate reviewer subagent review
   - the parent agent owns worker model choice and must record model-routing deviations in the PR review trail
 ambiguity_policy: implement_if_clearly_implied

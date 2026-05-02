@@ -128,10 +128,15 @@ Model routing policy for this workflow:
 
 - Parent/orchestrator model: `gpt-5.5`
 - Reviewer subagent model: `gpt-5.4` with `high` reasoning
-- Implementation worker model: `gpt-5.4` with `medium` reasoning or `gpt-5.3-codex` with `medium` reasoning
-- Simple mechanical stories should prefer `gpt-5.3-codex` with `medium` reasoning
-- Broader, riskier, or integration-heavy stories should prefer `gpt-5.4` with `medium` reasoning
+- Implementation worker model: default to `gpt-5.3-codex` with `medium` reasoning
+- Complex, risky, or integration-heavy implementation stories should use `gpt-5.5` with `medium` reasoning
 - Any model-routing deviation must be recorded in the PR review trail and implementation note
+
+Parent-owned authority edits:
+
+- Parent-owned authority edits: documentation-only changes to `AGENTS.md`, `specs/`, story files, packets, and workflow templates should be handled by the parent agent directly
+- Parent-owned authority edits still require tests when applicable, full verification, and separate reviewer subagent review
+- Use worker subagents for implementation code or large bounded documentation rewrites, not small authority-layer corrections
 
 1. the parent agent reads `AGENTS.md`, the approved story, and the packet
 2. the parent agent stays mostly in orchestration mode

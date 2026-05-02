@@ -196,9 +196,10 @@ The parent/orchestrator model is gpt-5.5.
 
 Reviewer subagent model is gpt-5.4 with high reasoning.
 
-Implementation worker subagents use either gpt-5.4 with medium reasoning or gpt-5.3-codex with medium reasoning, selected by the parent agent based on story complexity.
+Implementation worker subagents default to gpt-5.3-codex with medium reasoning.
 
-Simple mechanical stories should prefer gpt-5.3-codex with medium reasoning.
-Broader, riskier, or integration-heavy stories should prefer gpt-5.4 with medium reasoning.
+Complex, risky, or integration-heavy implementation stories should use gpt-5.5 with medium reasoning.
 
 Any model-routing deviation must be recorded in the pull-request review trail and implementation note.
+
+Documentation-only authority edits should be handled by the parent agent directly. Authority edits still require separate reviewer subagent review, tests when applicable, and full verification before PR handoff.
