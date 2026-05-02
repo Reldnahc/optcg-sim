@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-006A.md",
+      "storyId": "INF-006A",
+      "storyPath": "stories/approved/INF-006A-canonical-types-compile-lane.yaml",
+      "storySha256": "c12e35a4fd9e76167615f18288a882ecc7298281724606d1d61e7bf804730165"
+    }
+  ],
   "version": 1
 }

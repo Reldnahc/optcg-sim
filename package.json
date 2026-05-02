@@ -8,6 +8,7 @@
     "format": "corepack pnpm exec prettier --write .",
     "format:check": "corepack pnpm exec prettier --check .",
     "lint": "corepack pnpm exec eslint . --max-warnings=0 --ext .js,.mjs,.cjs,.ts,.mts,.cts",
+    "contracts:compile": "corepack pnpm exec tsc -p contracts/tsconfig.json --noEmit",
     "packets:complete": "node --experimental-strip-types tools/build-agent-packet.ts complete",
     "packets:generate": "node --experimental-strip-types tools/build-agent-packet.ts generate",
     "packets:verify": "node --experimental-strip-types tools/build-agent-packet.ts verify-active",
