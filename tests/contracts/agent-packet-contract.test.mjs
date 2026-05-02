@@ -626,6 +626,102 @@ test("active packet verification rejects stories that drift away from approved s
   assert.match(verified.stderr, /status approved/i);
 });
 
+test("packet completion moves an active story to done and clears active artifacts", async () => {
+  const tempRepoRoot = await makeTempRepoFixture();
+  const manifestPath = path.join(tempRepoRoot, "agent-packets", "active.json");
+  const packetPath = path.join(tempRepoRoot, "agent-packets", "INF-014.md");
+  const approvedStoryPath = path.join(
+    tempRepoRoot,
+    "stories",
+    "approved",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+  );
+  const doneStoryPath = path.join(
+    tempRepoRoot,
+    "stories",
+    "done",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+  );
+
+  const buildResult = runPacketToolFromRepo(tempRepoRoot, [
+    "generate",
+    "--story",
+    approvedStoryPath,
+    "--manifest",
+    manifestPath,
+    "--activate",
+  ]);
+
+  assert.equal(
+    buildResult.status,
+    0,
+    `expected packet build to pass\nstdout:\n${buildResult.stdout ?? ""}\nstderr:\n${buildResult.stderr ?? ""}`,
+  );
+
+  const completed = runPacketToolFromRepo(tempRepoRoot, [
+    "complete",
+    "--story",
+    approvedStoryPath,
+    "--manifest",
+    manifestPath,
+  ]);
+
+  assert.equal(
+    completed.status,
+    0,
+    `expected packet completion to pass\nstdout:\n${completed.stdout ?? ""}\nstderr:\n${completed.stderr ?? ""}`,
+  );
+
+  await assert.rejects(() => readFile(approvedStoryPath, "utf8"));
+  await assert.rejects(() => readFile(packetPath, "utf8"));
+
+  const doneStory = await readFile(doneStoryPath, "utf8");
+  assert.match(doneStory, /^status: done$/m);
+
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  assert.deepEqual(manifest.activeStories, []);
+
+  const verified = runPacketToolFromRepo(tempRepoRoot, [
+    "verify-active",
+    "--manifest",
+    manifestPath,
+  ]);
+
+  assert.equal(
+    verified.status,
+    0,
+    `expected empty post-completion manifest to verify\nstdout:\n${verified.stdout ?? ""}\nstderr:\n${verified.stderr ?? ""}`,
+  );
+});
+
+test("packet completion fails closed for inactive stories", async () => {
+  const tempRepoRoot = await makeTempRepoFixture();
+  const manifestPath = path.join(tempRepoRoot, "agent-packets", "active.json");
+  const approvedStoryPath = path.join(
+    tempRepoRoot,
+    "stories",
+    "approved",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+  );
+
+  await mkdir(path.dirname(manifestPath), { recursive: true });
+  await writeFile(
+    manifestPath,
+    JSON.stringify({ activeStories: [], version: 1 }, null, 2),
+  );
+
+  const completed = runPacketToolFromRepo(tempRepoRoot, [
+    "complete",
+    "--story",
+    approvedStoryPath,
+    "--manifest",
+    manifestPath,
+  ]);
+
+  assert.notEqual(completed.status, 0);
+  assert.match(completed.stderr, /must be the active story/i);
+});
+
 test("packet builder accepts folded block-scalar variants in approved story yaml", async () => {
   const tempDir = await makeTempDir();
   const variantStoryPath = path.join(tempDir, "INF-014-variant.story.yaml");
@@ -959,6 +1055,10 @@ test("repo guidance documents active-story packet requirements", async () => {
     path.join(repoRoot, "specs/32-codex-agent-integration.md"),
     "utf8",
   );
+  const packageJson = await readFile(
+    path.join(repoRoot, "package.json"),
+    "utf8",
+  );
 
   assert.match(
     agents,
@@ -973,15 +1073,29 @@ test("repo guidance documents active-story packet requirements", async () => {
     /Use `pnpm run packets:generate --story <stories\/approved\/\.\.\.yaml> --activate` to build or refresh the packet/,
   );
   assert.match(
+    agents,
+    /Use `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` after a story is merged/,
+  );
+  assert.match(
     packetTemplate,
     /allow approved stories to sit without packets until they become active, but require a current checked-in packet before implementation assignment, reviewer assignment, or PR handoff/,
+  );
+  assert.match(
+    packetTemplate,
+    /complete stories through one packet-tool operation that moves the story to done history, removes the active packet, and clears the completed story from the active packet manifest/,
   );
   assert.match(
     workflow,
     /Approved stories may remain packetless while they are dormant backlog items\./,
   );
   assert.match(
+    workflow,
+    /run the packet completion command to move the completed story to `stories\/done\/`, mark it `done`, remove its active packet, and clear or replace the active-story manifest/,
+  );
+  assert.match(
     codexIntegration,
     /Verify that the active story packet is present and current before worker assignment, reviewer assignment, or PR handoff\./,
   );
+  assert.match(codexIntegration, /run the packet completion command/i);
+  assert.match(packageJson, /"packets:complete"/);
 });

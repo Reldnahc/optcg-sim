@@ -22,6 +22,7 @@ story_boundary: >
   this story.
 allowed_touch_points:
   - AGENTS.md
+  - package.json
   - specs/26-agent-packet-template.md
   - specs/27-spec-driven-story-generation-workflow.md
   - specs/32-codex-agent-integration.md
@@ -47,6 +48,7 @@ scope:
   - define that `agent-packets/active.json` may contain zero or one active story, never multiple active implementation targets
   - make packet activation replace the prior active story entry instead of accumulating active stories
   - make active packet verification reject manifests with more than one active story
+  - add a completion command that moves the active approved story to done history, removes its active packet, and clears the active manifest
   - replace workflow tests that hard-code a specific active story with structural invariants for the current active story
   - move merged workflow stories INF-011, INF-012, and INF-013 out of approved backlog into done history
   - activate this story with a current checked-in packet for implementation and review handoff
@@ -64,12 +66,14 @@ acceptance_criteria:
   - active packet verification passes for zero active stories and for exactly one current active story
   - active packet verification fails when `agent-packets/active.json` contains more than one active story
   - packet activation for one story replaces any prior active story entry in the manifest instead of leaving multiple active stories
+  - packet completion for the active story moves the approved story to `stories/done/`, changes its status to done, removes the active packet, and leaves an empty verified active manifest
   - GitHub workflow tests assert active-story manifest structure, packet existence, approved story status, and path consistency without hard-coding a stale story ID
   - merged workflow stories INF-011, INF-012, and INF-013 are recorded under `stories/done/` with done status and are no longer present under `stories/approved/`
   - repo guidance documents post-merge story cleanup and parent ownership of story-state transitions
 required_tests:
   - active packet contract tests covering multiple-active rejection
   - active packet contract tests covering activation replacement semantics
+  - active packet contract tests covering automated completion cleanup
   - review workflow tests covering structural active-story invariants and done-history cleanup
 repo_rules:
   - one approved story may be active for implementation or review handoff at a time

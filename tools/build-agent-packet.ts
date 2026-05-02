@@ -4,6 +4,7 @@ import {
   mkdir,
   readFile,
   readdir,
+  rm,
   stat,
   writeFile,
 } from "node:fs/promises";
@@ -65,6 +66,12 @@ type BuildOptions = {
 type VerifyOptions = {
   manifestPath: string;
   repoRoot: string;
+};
+
+type CompleteOptions = {
+  manifestPath: string;
+  repoRoot: string;
+  storyPath: string;
 };
 
 const REQUIRED_PACKET_HEADINGS = [
@@ -190,10 +197,16 @@ async function main() {
       return;
     }
 
+    if (command === "complete") {
+      await runComplete(parseCompleteOptions(args));
+      return;
+    }
+
     throw new Error(
       "Usage:\n" +
         "  node --experimental-strip-types tools/build-agent-packet.ts generate --story <path> [--output <path>] [--manifest <path>] [--activate]\n" +
-        "  node --experimental-strip-types tools/build-agent-packet.ts verify-active [--manifest <path>]",
+        "  node --experimental-strip-types tools/build-agent-packet.ts verify-active [--manifest <path>]\n" +
+        "  node --experimental-strip-types tools/build-agent-packet.ts complete --story <path> [--manifest <path>]",
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -291,6 +304,21 @@ function parseVerifyOptions(args: string[]): VerifyOptions {
   };
 }
 
+function parseCompleteOptions(args: string[]): CompleteOptions {
+  const repoRoot = findRepoRoot();
+  const options = parseOptionMap(args);
+
+  return {
+    manifestPath: resolveCliPath(
+      options.get("--manifest") ??
+        path.join(repoRoot, "agent-packets", "active.json"),
+      process.cwd(),
+    ),
+    repoRoot,
+    storyPath: resolveCliPath(requireOption(options, "--story"), process.cwd()),
+  };
+}
+
 async function runBuild(options: BuildOptions) {
   const storySource = await readUtf8(options.storyPath);
   const story = parseStoryYaml(storySource);
@@ -358,13 +386,7 @@ async function runVerifyActive(options: VerifyOptions) {
 
   const manifest = await loadManifest(options.manifestPath);
 
-  if (manifest.activeStories.length > 1) {
-    throw new Error(
-      `Active story manifest may contain at most one active story; found ${String(
-        manifest.activeStories.length,
-      )}.`,
-    );
-  }
+  assertAtMostOneActiveStory(manifest);
 
   for (const entry of manifest.activeStories) {
     assertCanonicalActiveStoryPath(entry.storyId, entry.storyPath);
@@ -440,6 +462,76 @@ async function runVerifyActive(options: VerifyOptions) {
   process.stdout.write(
     `Verified ${String(manifest.activeStories.length)} active story packet(s).\n`,
   );
+}
+
+async function runComplete(options: CompleteOptions) {
+  assertCanonicalActiveManifestPath(options.repoRoot, options.manifestPath);
+  const storySource = await readUtf8(options.storyPath);
+  const story = parseStoryYaml(storySource);
+  const storyPathLabel = toManifestPath(options.repoRoot, options.storyPath);
+
+  assertCanonicalActiveStoryPath(story.id, storyPathLabel);
+
+  if (story.status !== "approved") {
+    throw new Error(
+      `Only approved active stories may be completed. ${story.id} has status ${story.status}.`,
+    );
+  }
+
+  const manifest = await loadManifest(options.manifestPath);
+
+  assertAtMostOneActiveStory(manifest);
+
+  const activeEntry = manifest.activeStories[0];
+
+  if (
+    activeEntry === undefined ||
+    activeEntry.storyId !== story.id ||
+    activeEntry.storyPath !== storyPathLabel
+  ) {
+    throw new Error(
+      `Story ${story.id} must be the active story before completion.`,
+    );
+  }
+
+  await runVerifyActive({
+    manifestPath: options.manifestPath,
+    repoRoot: options.repoRoot,
+  });
+
+  const donePath = path.join(
+    options.repoRoot,
+    "stories",
+    "done",
+    path.basename(options.storyPath),
+  );
+  const donePathLabel = toManifestPath(options.repoRoot, donePath);
+
+  if (await fileExists(donePath)) {
+    throw new Error(`Done story already exists: ${donePathLabel}.`);
+  }
+
+  const doneStorySource = storySource.replace(
+    /^status:\s+approved$/m,
+    "status: done",
+  );
+
+  if (doneStorySource === storySource) {
+    throw new Error(`Unable to mark ${story.id} as done.`);
+  }
+
+  await mkdir(path.dirname(donePath), { recursive: true });
+  await writeFile(donePath, doneStorySource);
+  await rm(options.storyPath);
+  await rm(resolveManifestPath(options.repoRoot, activeEntry.packetPath), {
+    force: true,
+  });
+  await writeFile(
+    options.manifestPath,
+    `${JSON.stringify({ activeStories: [], version: manifest.version }, null, 2)}\n`,
+  );
+
+  process.stdout.write(`${donePathLabel}\n`);
 }
 
 async function buildPacket(input: {
@@ -898,6 +990,33 @@ function parseStoryYaml(source: string): StoryData {
   };
 }
 
+function parseOptionMap(args: string[]) {
+  const options = new Map<string, string>();
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === undefined) {
+      throw new Error("Unexpected missing CLI token.");
+    }
+
+    if (!token.startsWith("--")) {
+      throw new Error(`Unexpected argument: ${token}`);
+    }
+
+    const value = args[index + 1];
+
+    if (!value || value.startsWith("--")) {
+      throw new Error(`Missing value for ${token}`);
+    }
+
+    options.set(token, value);
+    index += 1;
+  }
+
+  return options;
+}
+
 function isListLine(line: string | undefined) {
   return typeof line === "string" && /^ {2}- /.test(line);
 }
@@ -1037,6 +1156,16 @@ async function loadManifest(manifestPath: string) {
     })),
     version: typeof manifest.version === "number" ? manifest.version : 1,
   };
+}
+
+function assertAtMostOneActiveStory(manifest: ActiveStoryManifest) {
+  if (manifest.activeStories.length > 1) {
+    throw new Error(
+      `Active story manifest may contain at most one active story; found ${String(
+        manifest.activeStories.length,
+      )}.`,
+    );
+  }
 }
 
 function readPacketMetadata(packetSource: string, key: string) {

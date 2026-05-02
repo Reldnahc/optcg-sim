@@ -227,7 +227,7 @@ Section Ref: `27-spec-driven-story-generation-workflow.s012`
 5. assign the active-story packet to agents,
 6. implement or review the story from the packet,
 7. validate the resulting patch against the story and spec,
-8. after merge, move the completed story to `stories/done/`, mark it `done`, and clear or replace the active-story manifest before the next story starts.
+8. after merge, run the packet completion command to move the completed story to `stories/done/`, mark it `done`, remove its active packet, and clear or replace the active-story manifest before the next story starts.
 
 ### Stronger process
 
@@ -272,7 +272,7 @@ A story should not be marked done unless:
 - no prohibited scope creep is introduced,
 - any new ambiguity is surfaced explicitly.
 
-After a story is marked done, it should not remain under `stories/approved/` and should not remain listed in `agent-packets/active.json`. The parent agent owns this cleanup because story state and packet authority are orchestration concerns, not worker or reviewer subagent concerns.
+After a story is marked done, it should not remain under `stories/approved/`, should not retain an active packet, and should not remain listed in `agent-packets/active.json`. The parent agent owns this cleanup because story state and packet authority are orchestration concerns, not worker or reviewer subagent concerns. Repos should provide a single command for this transition so story movement, packet removal, and manifest cleanup cannot drift independently.
 
 ## First practical adoption step
 

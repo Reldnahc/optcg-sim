@@ -148,7 +148,7 @@ When building a packet from an approved story:
 - include the approved ambiguity policy,
 - allow approved stories to sit without packets until they become active, but require a current checked-in packet before implementation assignment, reviewer assignment, or PR handoff,
 - keep the active packet manifest to zero or one active story; activating a story replaces the prior active entry rather than accumulating active implementation targets,
-- remove completed stories from the active packet manifest when they move to done history,
+- complete stories through one packet-tool operation that moves the story to done history, removes the active packet, and clears the completed story from the active packet manifest,
 - split the story before packet generation if the packet would otherwise need multiple unrelated concerns to be implemented together.
 
 ## Recommended agent instruction footer
