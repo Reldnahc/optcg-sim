@@ -135,7 +135,10 @@ Schema version for story-file validation. For the initial v6 contract, use `1.0.
 
 Section Ref: `24-story-schema.s009`
 
-Stable unique identifier such as `ENG-012` or `SRV-004`.
+Stable unique identifier such as `ENG-012` or `SRV-004`. A story that is
+split from a broader numbered item may use one uppercase letter suffix after
+the three-digit sequence, such as `INF-006A`; suffixes are for story IDs only
+and do not change the parent `epic_id` format.
 
 ### `title`
 

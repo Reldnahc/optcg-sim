@@ -115,3 +115,16 @@ test("story schema enums match the canonical spec vocabulary", async () => {
     "implement_if_clearly_implied",
   ]);
 });
+
+test("story schema accepts split-story letter suffixes without broad arbitrary suffixes", async () => {
+  const schema = await readJson("contracts/story.schema.json");
+  const storyIdPattern = new RegExp(schema.properties.id.pattern);
+  const epicIdPattern = new RegExp(schema.properties.epic_id.pattern);
+
+  assert.match("INF-015", storyIdPattern);
+  assert.match("INF-006A", storyIdPattern);
+  assert.doesNotMatch("INF-006AA", storyIdPattern);
+  assert.doesNotMatch("INF-006-alpha", storyIdPattern);
+  assert.match("KICK-001", epicIdPattern);
+  assert.doesNotMatch("KICK-001A", epicIdPattern);
+});
