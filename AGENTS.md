@@ -38,12 +38,23 @@ Use stable `SECTION_REF` citations from the spec. Do not cite heading anchors or
 - Approved stories may exist without packets until they become active.
 - Before implementation starts, before a worker or reviewer subagent is assigned, and before PR handoff begins, generate a current checked-in packet for the active story under `agent-packets/`.
 - Track active stories in `agent-packets/active.json` and keep the packet current relative to the approved story.
+- `agent-packets/active.json` may contain zero active stories or exactly one active story. It must never contain multiple active implementation or review handoff targets.
 - Use `pnpm run packets:generate --story <stories/approved/...yaml> --activate` to build or refresh the packet for the story you are activating.
 - Use `pnpm packets:verify` immediately after generating or refreshing the packet, and before worker assignment, reviewer assignment, implementation handoff, or PR handoff, to fail fast on missing or stale active-story packets.
+- Use `pnpm run packets:complete --story <stories/approved/...yaml>` after a story is merged to move it to done history, remove its active packet, and clear it from `agent-packets/active.json`.
 - Stay inside the story's `scope`, `story_boundary`, and `allowed_touch_points`.
 - Do not silently absorb adjacent contract, engine, server, client, replay, or UI work just because it is nearby.
 - If the needed work crosses concerns, stop and split the story or raise the ambiguity instead of broadening the patch.
 - Supporting tests, fixtures, snapshots, and docs for the same concern are allowed in the same story.
+
+## Story Lifecycle Rules
+
+- The parent agent owns story-state transitions and active-packet cleanup.
+- A merged story must move from `stories/approved/` to `stories/done/` with `status: done` before the next implementation story is handed off.
+- Completed stories must not remain in `agent-packets/active.json`.
+- Activating a new story replaces the previous active manifest entry instead of accumulating multiple active stories.
+- Completing a story must use the packet completion command so story movement, active-packet removal, and manifest cleanup happen as one verified operation.
+- Dormant approved backlog stories do not require checked-in packets until they are activated.
 
 ## Superpowers Plugin
 

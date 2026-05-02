@@ -176,6 +176,8 @@ The packet should be minimal but sufficient. Overloading agents with the full sp
 
 Approved stories may remain packetless while they are dormant backlog items. Once a story becomes active for implementation, reviewer assignment, or PR handoff, the repo should require a current checked-in packet and fail verification when that packet is missing or stale relative to the approved story.
 
+The active-story manifest should represent the current implementation or review handoff target only. A manifest with no active story is valid between stories, but a manifest with multiple active stories should fail verification because it makes ownership and review scope ambiguous.
+
 ## Suggested repo layout
 
 <!-- SECTION_REF: 27-spec-driven-story-generation-workflow.s010 -->
@@ -224,7 +226,8 @@ Section Ref: `27-spec-driven-story-generation-workflow.s012`
 4. build or refresh the checked-in packet for the active story,
 5. assign the active-story packet to agents,
 6. implement or review the story from the packet,
-7. validate the resulting patch against the story and spec.
+7. validate the resulting patch against the story and spec,
+8. after merge, run the packet completion command to move the completed story to `stories/done/`, mark it `done`, remove its active packet, and clear or replace the active-story manifest before the next story starts.
 
 ### Stronger process
 
@@ -268,6 +271,8 @@ A story should not be marked done unless:
 - the patch stays within the approved story boundary and allowed touch points or the story is updated and re-approved first,
 - no prohibited scope creep is introduced,
 - any new ambiguity is surfaced explicitly.
+
+After a story is marked done, it should not remain under `stories/approved/`, should not retain an active packet, and should not remain listed in `agent-packets/active.json`. The parent agent owns this cleanup because story state and packet authority are orchestration concerns, not worker or reviewer subagent concerns. Repos should provide a single command for this transition so story movement, packet removal, and manifest cleanup cannot drift independently.
 
 ## First practical adoption step
 
