@@ -114,6 +114,8 @@ Section Ref: `32-codex-agent-integration.s008`
 9. Require tests and a short assumptions/blockers note.
 10. Link the pull request back to the story issue.
 11. Spawn a separate reviewer subagent plus human review before merge.
+12. After merge, have the parent agent move the completed story to done history
+    and clear or replace the active packet manifest before starting the next story.
 
 ## Codex packet footer
 
@@ -185,6 +187,10 @@ A Codex-authored patch should not be merged unless:
 - required tests are present and passing,
 - no uncited behavior is introduced,
 - the review record includes either a reviewer-subagent artifact or an equivalent human review step.
+
+After merge, the story should no longer remain approved or active. The parent agent
+should move it to `stories/done/` with `status: done` and ensure
+`agent-packets/active.json` contains no completed story.
 
 ## Subagent model routing
 

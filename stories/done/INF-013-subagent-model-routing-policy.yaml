@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Make the parent, worker, and reviewer subagent model-routing policy explicit
   and enforceable so story execution records the model and reasoning levels used

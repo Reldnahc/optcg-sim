@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: critical
-status: approved
+status: done
 summary: >
   Implement checked-in packet generation and active-story packet enforcement so an
   approved story receives a reviewable execution packet before implementation,

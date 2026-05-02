@@ -334,10 +334,7 @@ async function runBuild(options: BuildOptions) {
       storySha256,
     };
 
-    manifest.activeStories = upsertManifestEntry(
-      manifest.activeStories,
-      nextEntry,
-    );
+    manifest.activeStories = [nextEntry];
 
     await mkdir(path.dirname(options.manifestPath), { recursive: true });
     await writeFile(
@@ -360,6 +357,14 @@ async function runVerifyActive(options: VerifyOptions) {
   }
 
   const manifest = await loadManifest(options.manifestPath);
+
+  if (manifest.activeStories.length > 1) {
+    throw new Error(
+      `Active story manifest may contain at most one active story; found ${String(
+        manifest.activeStories.length,
+      )}.`,
+    );
+  }
 
   for (const entry of manifest.activeStories) {
     assertCanonicalActiveStoryPath(entry.storyId, entry.storyPath);
@@ -1032,18 +1037,6 @@ async function loadManifest(manifestPath: string) {
     })),
     version: typeof manifest.version === "number" ? manifest.version : 1,
   };
-}
-
-function upsertManifestEntry(
-  entries: ActiveStoryEntry[],
-  nextEntry: ActiveStoryEntry,
-) {
-  const filtered = entries.filter(
-    (entry) => entry.storyId !== nextEntry.storyId,
-  );
-  filtered.push(nextEntry);
-  filtered.sort((left, right) => left.storyId.localeCompare(right.storyId));
-  return filtered;
 }
 
 function readPacketMetadata(packetSource: string, key: string) {

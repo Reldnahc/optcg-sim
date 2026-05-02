@@ -23,10 +23,31 @@ async function readJson(relativePath) {
   return JSON.parse(await readText(relativePath));
 }
 
+function readYamlScalar(source, key) {
+  const match = source.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
+
+  if (!match?.[1]) {
+    throw new Error(`Unable to read YAML scalar ${key}`);
+  }
+
+  return match[1].trim();
+}
+
 function assertMatchesAll(text, patterns) {
   for (const pattern of patterns) {
     assert.match(text, pattern);
   }
+}
+
+async function assertStoryMovedToDone(storyId, fileName) {
+  const doneStory = await readText(`stories/done/${fileName}`);
+
+  await assert.rejects(() =>
+    access(path.join(repoRoot, "stories", "approved", fileName)),
+  );
+
+  assert.equal(readYamlScalar(doneStory, "id"), storyId);
+  assert.equal(readYamlScalar(doneStory, "status"), "done");
 }
 
 test("codeowners exists and routes review to the repo owner", async () => {
@@ -276,47 +297,51 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   assert.doesNotMatch(revisionResponse, /@codex review/i);
 });
 
-test("active packet manifest names only the current story for PR handoff", async () => {
+test("active packet manifest points to exactly one current approved story and packet", async () => {
   const manifest = await readJson("agent-packets/active.json");
 
-  assert.deepEqual(
-    manifest.activeStories.map((story) => story.storyId),
-    ["INF-013"],
-  );
+  assert.equal(manifest.version, 1);
+  assert.equal(manifest.activeStories.length, 1);
+
+  const [activeStory] = manifest.activeStories;
+
+  assert.match(activeStory.storyId, /^INF-\d+$/);
+  assert.match(activeStory.storySha256, /^[0-9a-f]{64}$/);
   assert.equal(
-    manifest.activeStories[0].storyPath,
-    "stories/approved/INF-013-subagent-model-routing-policy.yaml",
+    activeStory.packetPath,
+    `agent-packets/${activeStory.storyId}.md`,
   );
-  assert.equal(
-    manifest.activeStories[0].packetPath,
-    "agent-packets/INF-013.md",
+  assert.match(
+    activeStory.storyPath,
+    new RegExp(`^stories/approved/${activeStory.storyId}-[a-z0-9-]+\\.yaml$`),
+  );
+
+  const story = await readText(activeStory.storyPath);
+  const packet = await readText(activeStory.packetPath);
+
+  assert.equal(readYamlScalar(story, "id"), activeStory.storyId);
+  assert.equal(readYamlScalar(story, "status"), "approved");
+  assert.match(
+    packet,
+    new RegExp(`<!-- agent-packet:story-id ${activeStory.storyId} -->`),
+  );
+  assert.match(
+    packet,
+    new RegExp(`<!-- agent-packet:story-path ${activeStory.storyPath} -->`),
   );
 });
 
-test("only one approved review workflow remains authoritative after INF-011", async () => {
-  const inf010 = await readText(
-    "stories/done/INF-010-separate-codex-cli-review-and-timeout-policy.yaml",
+test("merged workflow stories move out of approved backlog into done history", async () => {
+  await assertStoryMovedToDone(
+    "INF-011",
+    "INF-011-subagent-orchestration-and-review-workflow.yaml",
   );
-  const inf011 = await readText(
-    "stories/approved/INF-011-subagent-orchestration-and-review-workflow.yaml",
+  await assertStoryMovedToDone(
+    "INF-012",
+    "INF-012-checked-in-active-story-packet-generation.yaml",
   );
-
-  await assert.rejects(() =>
-    access(
-      path.join(
-        repoRoot,
-        "stories/approved/INF-010-separate-codex-cli-review-and-timeout-policy.yaml",
-      ),
-    ),
-  );
-
-  assert.match(inf010, /^status:\s+done$/m);
-  assert.match(inf010, /superseded by INF-011/i);
-  assert.match(inf011, /^status:\s+approved$/m);
-  assert.match(inf011, /worker subagents handle main implementation/i);
-  assert.match(inf011, /reviewer\s+subagent provides the AI review gate/i);
-  assert.match(
-    inf011,
-    /INF-010 is moved out of `stories\/approved\/` into done history so only one approved review workflow remains authoritative after this story lands/i,
+  await assertStoryMovedToDone(
+    "INF-013",
+    "INF-013-subagent-model-routing-policy.yaml",
   );
 });

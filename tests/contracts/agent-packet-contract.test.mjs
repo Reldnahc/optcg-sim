@@ -24,13 +24,14 @@ const repoRoot = path.resolve(
 const tempDirs = [];
 const storyPath = path.join(
   repoRoot,
-  "stories/approved/INF-012-checked-in-active-story-packet-generation.yaml",
+  "stories/approved/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
 );
 const expectedRelevantConstraintBullets = [
-  "packet is a derived authority only; the cited specification and approved story win on conflict",
-  "active story means a story selected for implementation or review handoff, not every approved backlog item",
-  "checked-in packets must be deterministic and reviewable in pull requests",
-  "if packet generation reveals multiple unrelated concerns, split the story before assignment rather than broadening the packet",
+  "one approved story may be active for implementation or review handoff at a time",
+  "dormant approved backlog stories do not require checked-in packets",
+  "completed stories must move to done history and must not remain in the active packet manifest",
+  "the parent agent owns story-state transitions and active-packet cleanup",
+  "packet tooling should enforce lifecycle invariants rather than relying on reviewer memory",
   "use `pnpm`; the canonical local verification commands are `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`",
   "TypeScript stays strict; avoid `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions without explicit justification",
   "ESLint with type-aware rules and Prettier formatting are required; CI and local verification must fail when checked-in generated artifacts are stale",
@@ -39,7 +40,7 @@ const tempRepoFixtureEntries = [
   ["tools", "build-agent-packet.ts"],
   [
     "stories/approved",
-    "INF-012-checked-in-active-story-packet-generation.yaml",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
   ],
   ["specs", "15-implementation-kickoff.md"],
   ["specs", "23-repo-tooling-and-enforcement.md"],
@@ -201,7 +202,7 @@ function toCrlf(value) {
 
 test("packet builder generates the canonical packet sections for an approved story", async () => {
   const tempDir = await makeTempDir();
-  const outputPath = path.join(tempDir, "INF-012.md");
+  const outputPath = path.join(tempDir, "INF-014.md");
   const story = await readStoryValues();
 
   const result = runPacketTool([
@@ -220,7 +221,7 @@ test("packet builder generates the canonical packet sections for an approved sto
 
   const packet = await readFile(outputPath, "utf8");
 
-  assert.match(packet, /<!-- agent-packet:story-id INF-012 -->/);
+  assert.match(packet, /<!-- agent-packet:story-id INF-014 -->/);
   assert.match(packet, /<!-- agent-packet:story-sha256 [0-9a-f]{64} -->/);
   assert.match(packet, /^# Story Packet$/m);
   assert.match(packet, /^## Story$/m);
@@ -237,8 +238,8 @@ test("packet builder generates the canonical packet sections for an approved sto
   assert.match(packet, /^## Acceptance Criteria$/m);
   assert.match(packet, /^## Ambiguity Rule$/m);
   assert.match(packet, /^## Agent Instruction Footer$/m);
-  assert.match(packet, /24-story-schema\.s026/);
-  assert.match(packet, /32-codex-agent-integration\.s012/);
+  assert.match(packet, /26-agent-packet-template\.s005/);
+  assert.match(packet, /32-codex-agent-integration\.s013/);
   assert.match(packet, /23-repo-tooling-and-enforcement\.s005/);
   assert.doesNotMatch(packet, /23-repo-tooling-and-enforcement\.s008/);
   assert.doesNotMatch(packet, /15-implementation-kickoff\.s012/);
@@ -275,8 +276,8 @@ test("packet builder generates the canonical packet sections for an approved sto
 
 test("packet builder normalizes annotated story spec refs without duplicating packet output labels", async () => {
   const tempDir = await makeTempDir();
-  const variantStoryPath = path.join(tempDir, "INF-012-annotated.story.yaml");
-  const outputPath = path.join(tempDir, "INF-012.md");
+  const variantStoryPath = path.join(tempDir, "INF-014-annotated.story.yaml");
+  const outputPath = path.join(tempDir, "INF-014.md");
   const sourceStory = await readFile(storyPath, "utf8");
   const story = await readStoryValues();
 
@@ -284,7 +285,7 @@ test("packet builder normalizes annotated story spec refs without duplicating pa
     variantStoryPath,
     sourceStory.replace(
       `  - ${story.specRefs[0]}`,
-      `  - ${story.specRefs[0]} (Approval rule)`,
+      `  - ${story.specRefs[0]} (Packet construction rules)`,
     ),
   );
 
@@ -303,22 +304,25 @@ test("packet builder normalizes annotated story spec refs without duplicating pa
   );
 
   const packet = await readFile(outputPath, "utf8");
-  assert.match(packet, /^- 24-story-schema\.s026 \(Approval rule\)$/m);
+  assert.match(
+    packet,
+    /^- 26-agent-packet-template\.s005 \(Packet construction rules\)$/m,
+  );
   assert.doesNotMatch(
     packet,
-    /24-story-schema\.s026 \(Approval rule\) \(Approval rule\)/,
+    /26-agent-packet-template\.s005 \(Packet construction rules\) \(Packet construction rules\)/,
   );
 });
 
 test("active packet verification enforces packet presence, freshness, and required sections", async () => {
   const tempRepoRoot = await makeTempRepoFixture();
   const manifestPath = path.join(tempRepoRoot, "agent-packets", "active.json");
-  const packetPath = path.join(tempRepoRoot, "agent-packets", "INF-012.md");
+  const packetPath = path.join(tempRepoRoot, "agent-packets", "INF-014.md");
   const approvedStoryPath = path.join(
     tempRepoRoot,
     "stories",
     "approved",
-    "INF-012-checked-in-active-story-packet-generation.yaml",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
   );
   const sourceStory = await readFile(approvedStoryPath, "utf8");
 
@@ -330,10 +334,10 @@ test("active packet verification enforces packet presence, freshness, and requir
         version: 1,
         activeStories: [
           {
-            storyId: "INF-012",
+            storyId: "INF-014",
             storyPath:
-              "stories/approved/INF-012-checked-in-active-story-packet-generation.yaml",
-            packetPath: "agent-packets/INF-012.md",
+              "stories/approved/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+            packetPath: "agent-packets/INF-014.md",
             storySha256: "missing-packet-placeholder",
           },
         ],
@@ -370,10 +374,10 @@ test("active packet verification enforces packet presence, freshness, and requir
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   assert.deepEqual(manifest.activeStories, [
     {
-      packetPath: "agent-packets/INF-012.md",
-      storyId: "INF-012",
+      packetPath: "agent-packets/INF-014.md",
+      storyId: "INF-014",
       storyPath:
-        "stories/approved/INF-012-checked-in-active-story-packet-generation.yaml",
+        "stories/approved/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
       storySha256: manifest.activeStories[0].storySha256,
     },
   ]);
@@ -410,7 +414,7 @@ test("active packet verification enforces packet presence, freshness, and requir
   await writeFile(
     packetPath,
     packet.replace(
-      "## Why\n\nImplement checked-in packet generation and active-story packet enforcement so an approved story receives a reviewable execution packet before implementation, subagent assignment, or PR handoff.",
+      "## Why\n\nMake completed workflow stories stop remaining active by documenting and enforcing a one-active-story lifecycle: active packets are only for the current implementation or review handoff, completed stories move to done history, and stale active-story state is cleared before the next story starts.",
       "## Why\n\nManual packet body edit that should fail canonical verification.",
     ),
   );
@@ -458,15 +462,108 @@ test("active packet verification enforces packet presence, freshness, and requir
   assert.match(stalePacket.stderr, /stale/i);
 });
 
-test("active packet verification rejects stories that drift away from approved status", async () => {
+test("packet activation replaces any prior active story", async () => {
   const tempRepoRoot = await makeTempRepoFixture();
   const manifestPath = path.join(tempRepoRoot, "agent-packets", "active.json");
-  const packetPath = path.join(tempRepoRoot, "agent-packets", "INF-012.md");
   const approvedStoryPath = path.join(
     tempRepoRoot,
     "stories",
     "approved",
-    "INF-012-checked-in-active-story-packet-generation.yaml",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+  );
+
+  await mkdir(path.dirname(manifestPath), { recursive: true });
+  await writeFile(
+    manifestPath,
+    JSON.stringify(
+      {
+        version: 1,
+        activeStories: [
+          {
+            packetPath: "agent-packets/INF-099.md",
+            storyId: "INF-099",
+            storyPath: "stories/approved/INF-099-previous-story.yaml",
+            storySha256: "0".repeat(64),
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+
+  const buildResult = runPacketToolFromRepo(tempRepoRoot, [
+    "generate",
+    "--story",
+    approvedStoryPath,
+    "--manifest",
+    manifestPath,
+    "--activate",
+  ]);
+
+  assert.equal(
+    buildResult.status,
+    0,
+    `expected packet build to pass\nstdout:\n${buildResult.stdout ?? ""}\nstderr:\n${buildResult.stderr ?? ""}`,
+  );
+
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  assert.deepEqual(
+    manifest.activeStories.map((story) => story.storyId),
+    ["INF-014"],
+  );
+});
+
+test("active packet verification rejects multiple active stories", async () => {
+  const tempRepoRoot = await makeTempRepoFixture();
+  const manifestPath = path.join(tempRepoRoot, "agent-packets", "active.json");
+
+  await mkdir(path.dirname(manifestPath), { recursive: true });
+  await writeFile(
+    manifestPath,
+    JSON.stringify(
+      {
+        version: 1,
+        activeStories: [
+          {
+            packetPath: "agent-packets/INF-014.md",
+            storyId: "INF-014",
+            storyPath:
+              "stories/approved/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+            storySha256: "0".repeat(64),
+          },
+          {
+            packetPath: "agent-packets/INF-099.md",
+            storyId: "INF-099",
+            storyPath: "stories/approved/INF-099-other-story.yaml",
+            storySha256: "0".repeat(64),
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+
+  const verified = runPacketToolFromRepo(tempRepoRoot, [
+    "verify-active",
+    "--manifest",
+    manifestPath,
+  ]);
+
+  assert.notEqual(verified.status, 0);
+  assert.match(verified.stderr, /at most one active story/i);
+});
+
+test("active packet verification rejects stories that drift away from approved status", async () => {
+  const tempRepoRoot = await makeTempRepoFixture();
+  const manifestPath = path.join(tempRepoRoot, "agent-packets", "active.json");
+  const packetPath = path.join(tempRepoRoot, "agent-packets", "INF-014.md");
+  const approvedStoryPath = path.join(
+    tempRepoRoot,
+    "stories",
+    "approved",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
   );
 
   const buildResult = runPacketToolFromRepo(tempRepoRoot, [
@@ -506,10 +603,10 @@ test("active packet verification rejects stories that drift away from approved s
         version: 1,
         activeStories: [
           {
-            packetPath: "agent-packets/INF-012.md",
-            storyId: "INF-012",
+            packetPath: "agent-packets/INF-014.md",
+            storyId: "INF-014",
             storyPath:
-              "stories/approved/INF-012-checked-in-active-story-packet-generation.yaml",
+              "stories/approved/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
             storySha256: blockedStorySha,
           },
         ],
@@ -531,8 +628,8 @@ test("active packet verification rejects stories that drift away from approved s
 
 test("packet builder accepts folded block-scalar variants in approved story yaml", async () => {
   const tempDir = await makeTempDir();
-  const variantStoryPath = path.join(tempDir, "INF-012-variant.story.yaml");
-  const outputPath = path.join(tempDir, "INF-012.md");
+  const variantStoryPath = path.join(tempDir, "INF-014-variant.story.yaml");
+  const outputPath = path.join(tempDir, "INF-014.md");
   const sourceStory = await readFile(storyPath, "utf8");
 
   await writeFile(
@@ -559,11 +656,11 @@ test("packet builder accepts folded block-scalar variants in approved story yaml
   const packet = await readFile(outputPath, "utf8");
   assert.match(
     packet,
-    /Implement checked-in packet generation and active-story packet enforcement so an approved story receives a reviewable execution packet before implementation, subagent assignment, or PR handoff\./,
+    /Make completed workflow stories stop remaining active by documenting and enforcing a one-active-story lifecycle/,
   );
   assert.match(
     packet,
-    /Own packet-generation tooling, checked-in packet artifacts, active-story packet enforcement, and the docs\/tests needed to keep those packets current\./,
+    /Own story lifecycle cleanup for merged workflow stories, active packet manifest invariants, packet-tool enforcement, and workflow tests\/docs that prevent stale active stories\./,
   );
 });
 
@@ -571,9 +668,9 @@ test("packet builder accepts inline empty-array yaml fields", async () => {
   const tempDir = await makeTempDir();
   const variantStoryPath = path.join(
     tempDir,
-    "INF-012-inline-empty.story.yaml",
+    "INF-014-inline-empty.story.yaml",
   );
-  const outputPath = path.join(tempDir, "INF-012.md");
+  const outputPath = path.join(tempDir, "INF-014.md");
   const sourceStory = await readFile(storyPath, "utf8");
 
   await writeFile(
@@ -605,19 +702,19 @@ test("packet activation and verification require checked-in approved story and p
     tempRepoRoot,
     "stories",
     "approved",
-    "INF-012-checked-in-active-story-packet-generation.yaml",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
   );
   const generatedStoryPath = path.join(
     tempRepoRoot,
     "stories",
     "generated",
-    "INF-012-checked-in-active-story-packet-generation.yaml",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
   );
   const manifestPath = path.join(tempRepoRoot, "agent-packets", "active.json");
   const nonCanonicalPacketPath = path.join(
     tempRepoRoot,
     "agent-packets",
-    "custom-INF-012.md",
+    "custom-INF-014.md",
   );
   const sourceStory = await readFile(approvedStoryPath, "utf8");
 
@@ -639,7 +736,7 @@ test("packet activation and verification require checked-in approved story and p
   assert.notEqual(wrongPacketActivation.status, 0);
   assert.match(
     wrongPacketActivation.stderr,
-    /checked-in agent-packets\/INF-012\.md/i,
+    /checked-in agent-packets\/INF-014\.md/i,
   );
 
   const wrongStoryActivation = runPacketToolFromRepo(tempRepoRoot, [
@@ -661,10 +758,10 @@ test("packet activation and verification require checked-in approved story and p
         version: 1,
         activeStories: [
           {
-            storyId: "INF-012",
+            storyId: "INF-014",
             storyPath:
-              "stories/generated/INF-012-checked-in-active-story-packet-generation.yaml",
-            packetPath: "agent-packets/INF-012.md",
+              "stories/generated/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+            packetPath: "agent-packets/INF-014.md",
             storySha256: "0".repeat(64),
           },
         ],
@@ -690,10 +787,10 @@ test("packet activation and verification require checked-in approved story and p
         version: 1,
         activeStories: [
           {
-            storyId: "INF-012",
+            storyId: "INF-014",
             storyPath:
-              "stories/approved/INF-012-checked-in-active-story-packet-generation.yaml",
-            packetPath: "agent-packets/custom-INF-012.md",
+              "stories/approved/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+            packetPath: "agent-packets/custom-INF-014.md",
             storySha256: "0".repeat(64),
           },
         ],
@@ -712,7 +809,7 @@ test("packet activation and verification require checked-in approved story and p
   assert.notEqual(wrongPacketManifest.status, 0);
   assert.match(
     wrongPacketManifest.stderr,
-    /checked-in agent-packets\/INF-012\.md/i,
+    /checked-in agent-packets\/INF-014\.md/i,
   );
 });
 
@@ -722,7 +819,7 @@ test("packet activation and verification require the checked-in active-story man
     tempRepoRoot,
     "stories",
     "approved",
-    "INF-012-checked-in-active-story-packet-generation.yaml",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
   );
   const nonCanonicalManifestPath = path.join(
     tempRepoRoot,
@@ -776,9 +873,9 @@ test("packet builder discovers checked-in spec docs recursively", async () => {
     tempRepoRoot,
     "stories",
     "approved",
-    "INF-012-checked-in-active-story-packet-generation.yaml",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
   );
-  const outputPath = path.join(tempRepoRoot, "agent-packets", "INF-012.md");
+  const outputPath = path.join(tempRepoRoot, "agent-packets", "INF-014.md");
 
   await mkdir(nestedSpecsDir, { recursive: true });
   await rename(movedSpecSourcePath, movedSpecTargetPath);
@@ -798,7 +895,7 @@ test("packet builder discovers checked-in spec docs recursively", async () => {
   );
 
   const packet = await readFile(outputPath, "utf8");
-  assert.match(packet, /26-agent-packet-template\.s001/);
+  assert.match(packet, /26-agent-packet-template\.s005/);
 });
 
 test("active packet verification requires a checked-in active story manifest", async () => {
@@ -825,7 +922,7 @@ test("active packet verification ignores approved dormant stories without packet
   await mkdir(path.dirname(manifestPath), { recursive: true });
   await writeFile(
     dormantStoryPath,
-    sourceStory.replace(/^id: INF-012$/m, "id: INF-099"),
+    sourceStory.replace(/^id: INF-014$/m, "id: INF-099"),
   );
   await writeFile(
     manifestPath,
