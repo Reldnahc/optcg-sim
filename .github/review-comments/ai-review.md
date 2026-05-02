@@ -4,6 +4,10 @@
 - Story file:
 - Parent-agent orchestration note:
 - Worker subagent reference(s):
+- Parent/orchestrator model: `gpt-5.5`
+- Implementation worker model and reasoning: `<gpt-5.4 medium | gpt-5.3-codex medium>`
+- Reviewer model and reasoning: `gpt-5.4 high`
+- Model-routing deviations:
 - Reviewer path: <reviewer subagent | native PR review artifact>
 - Review provenance: <separate reviewer subagent run | not implementation-worker or parent-coordinator self-review>
 - Reviewer subagent reference or review surface:

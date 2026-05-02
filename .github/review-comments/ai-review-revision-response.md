@@ -3,6 +3,10 @@
 - AI review record:
 - Parent-agent orchestration note:
 - Worker subagent reference(s):
+- Parent/orchestrator model: `gpt-5.5`
+- Implementation worker model and reasoning: `<gpt-5.4 medium | gpt-5.3-codex medium>`
+- Reviewer model and reasoning: `gpt-5.4 high`
+- Model-routing deviations:
 - Reviewer path:
 - Reviewer subagent reference or review surface:
 - Follow-up commits:

@@ -19,6 +19,10 @@ async function readActiveText(relativePath) {
   return text.replace(/<!--[\s\S]*?-->/g, "");
 }
 
+async function readJson(relativePath) {
+  return JSON.parse(await readText(relativePath));
+}
+
 function assertMatchesAll(text, patterns) {
   for (const pattern of patterns) {
     assert.match(text, pattern);
@@ -62,6 +66,10 @@ test("pull request template requires story, verification, and subagent review ev
     /Parent agent stayed within small local glue and orchestration while worker subagent\(s\) handled the main implementation body/i,
     /Reviewer subagent output came from a different agent than the implementing worker, or equivalent human review fallback was recorded/i,
     /Worker subagent reference\(s\):/i,
+    /Parent\/orchestrator model: `gpt-5\.5`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.4 medium \| gpt-5\.3-codex medium>`/i,
+    /Reviewer model and reasoning: `gpt-5\.4 high`/i,
+    /Model-routing deviations:/i,
     /Parent-agent orchestration note:/i,
     /Review path used: `<reviewer subagent \| native PR review artifact \| equivalent human review fallback>`/i,
     /Reviewer subagent reference or review surface:/i,
@@ -98,6 +106,11 @@ test("branch protection guide names the required status checks and subagent revi
     /Parent agents should remain mostly orchestration and small local glue while worker subagents handle the main implementation body when delegation is available/i,
     /AI review before human review is requested when reviewer subagent review is available/i,
     /separate reviewer subagent run before human review is requested when a reviewer-subagent surface is available/i,
+    /Parent orchestration runs on gpt-5\.5/i,
+    /Implementation worker subagents use gpt-5\.4 medium or gpt-5\.3-codex medium/i,
+    /Reviewer subagents always use gpt-5\.4 high/i,
+    /Simple mechanical stories should prefer gpt-5\.3-codex medium/i,
+    /broader or riskier integration stories should prefer gpt-5\.4 medium/i,
     /default review path is a spawned reviewer subagent against the PR base branch/i,
     /60 minutes/i,
     /Implementation-worker self-review and parent-coordinator self-review do not satisfy the reviewer gate/i,
@@ -134,6 +147,12 @@ test("agents guidance requires parent orchestration plus separate reviewer subag
     /story-state/i,
     /transitions stay with the parent agent/i,
     /rather than the worker or reviewer[\s\S]*subagents/i,
+    /Parent\/orchestrator model: `gpt-5\.5`/i,
+    /Reviewer subagent model: `gpt-5\.4` with `high` reasoning/i,
+    /Implementation worker model: `gpt-5\.4` with `medium` reasoning or `gpt-5\.3-codex` with `medium` reasoning/i,
+    /Simple mechanical stories should prefer `gpt-5\.3-codex` with `medium` reasoning/i,
+    /Broader, riskier, or integration-heavy stories should prefer `gpt-5\.4` with `medium` reasoning/i,
+    /Any model-routing deviation must be recorded in the PR review trail and implementation note/i,
     /small local glue work/i,
     /parent agent should not do the main implementation body/i,
     /run a separate reviewer subagent/i,
@@ -163,6 +182,12 @@ test("codex integration spec reflects subagent orchestration instead of cli-firs
     /remain the owner of story authority, scope decisions, ambiguity handling, and review handoff/i,
     /worker subagent/i,
     /reviewer subagent/i,
+    /parent\/orchestrator model is gpt-5\.5/i,
+    /reviewer subagent model is gpt-5\.4 with high reasoning/i,
+    /implementation worker subagents use either gpt-5\.4 with medium reasoning\s+or gpt-5\.3-codex with medium reasoning/i,
+    /Simple mechanical stories should prefer gpt-5\.3-codex with medium reasoning/i,
+    /Broader, riskier, or integration-heavy stories should prefer gpt-5\.4 with\s+medium reasoning/i,
+    /Any model-routing deviation must be recorded in the pull-request review trail\s+and implementation note/i,
     /small local glue work/i,
     /equivalent human review step/i,
     /before merge/i,
@@ -188,6 +213,10 @@ test("checked-in review comment templates exist for AI findings and revisions", 
     /Story ID:/i,
     /Parent-agent orchestration note:/i,
     /Worker subagent reference\(s\):/i,
+    /Parent\/orchestrator model: `gpt-5\.5`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.4 medium \| gpt-5\.3-codex medium>`/i,
+    /Reviewer model and reasoning: `gpt-5\.4 high`/i,
+    /Model-routing deviations:/i,
     /Reviewer path: <reviewer subagent \| native PR review artifact>/i,
     /Review provenance: <separate reviewer subagent run \| not implementation-worker or parent-coordinator self-review>/i,
     /Reviewer subagent reference or review surface:/i,
@@ -207,6 +236,10 @@ test("checked-in review comment templates exist for AI findings and revisions", 
     /^## Equivalent Human Review Fallback$/m,
     /Parent-agent orchestration note:/i,
     /Worker subagent reference\(s\):/i,
+    /Parent\/orchestrator model: `gpt-5\.5`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.4 medium \| gpt-5\.3-codex medium>`/i,
+    /Reviewer model and reasoning: `gpt-5\.4 high`/i,
+    /Model-routing deviations:/i,
     /Failed or unavailable reviewer-subagent attempts:/i,
     /Why no usable reviewer-subagent run remained:/i,
     /Fallback human reviewer:/i,
@@ -224,6 +257,10 @@ test("checked-in review comment templates exist for AI findings and revisions", 
     /AI review record:/i,
     /Parent-agent orchestration note:/i,
     /Worker subagent reference\(s\):/i,
+    /Parent\/orchestrator model: `gpt-5\.5`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.4 medium \| gpt-5\.3-codex medium>`/i,
+    /Reviewer model and reasoning: `gpt-5\.4 high`/i,
+    /Model-routing deviations:/i,
     /Reviewer path:/i,
     /Reviewer subagent reference or review surface:/i,
     /Follow-up commits:/i,
@@ -234,6 +271,23 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   ]);
 
   assert.doesNotMatch(revisionResponse, /@codex review/i);
+});
+
+test("active packet manifest names only the current story for PR handoff", async () => {
+  const manifest = await readJson("agent-packets/active.json");
+
+  assert.deepEqual(
+    manifest.activeStories.map((story) => story.storyId),
+    ["INF-013"],
+  );
+  assert.equal(
+    manifest.activeStories[0].storyPath,
+    "stories/approved/INF-013-subagent-model-routing-policy.yaml",
+  );
+  assert.equal(
+    manifest.activeStories[0].packetPath,
+    "agent-packets/INF-013.md",
+  );
 });
 
 test("only one approved review workflow remains authoritative after INF-011", async () => {

@@ -26,6 +26,10 @@
 - [ ] Parent agent stayed within small local glue and orchestration while worker subagent(s) handled the main implementation body
 - [ ] Reviewer subagent output came from a different agent than the implementing worker, or equivalent human review fallback was recorded
 - Worker subagent reference(s):
+- Parent/orchestrator model: `gpt-5.5`
+- Implementation worker model and reasoning: `<gpt-5.4 medium | gpt-5.3-codex medium>`
+- Reviewer model and reasoning: `gpt-5.4 high`
+- Model-routing deviations:
 - Parent-agent orchestration note:
 - Review path used: `<reviewer subagent | native PR review artifact | equivalent human review fallback>`
 - Reviewer subagent reference or review surface:

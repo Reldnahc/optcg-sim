@@ -4,6 +4,10 @@
 - Story file:
 - Parent-agent orchestration note:
 - Worker subagent reference(s):
+- Parent/orchestrator model: `gpt-5.5`
+- Implementation worker model and reasoning: `<gpt-5.4 medium | gpt-5.3-codex medium>`
+- Reviewer model and reasoning: `gpt-5.4 high`
+- Model-routing deviations:
 - Failed or unavailable reviewer-subagent attempts:
 - Why no usable reviewer-subagent run remained:
 - Fallback human reviewer:

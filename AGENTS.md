@@ -124,6 +124,15 @@ For story-scoped work, also run the story's required tests and report the exact 
 When subagents are available in the current Codex surface, use a parent-orchestrated
 workflow by default:
 
+Model routing policy for this workflow:
+
+- Parent/orchestrator model: `gpt-5.5`
+- Reviewer subagent model: `gpt-5.4` with `high` reasoning
+- Implementation worker model: `gpt-5.4` with `medium` reasoning or `gpt-5.3-codex` with `medium` reasoning
+- Simple mechanical stories should prefer `gpt-5.3-codex` with `medium` reasoning
+- Broader, riskier, or integration-heavy stories should prefer `gpt-5.4` with `medium` reasoning
+- Any model-routing deviation must be recorded in the PR review trail and implementation note
+
 1. the parent agent reads `AGENTS.md`, the approved story, and the packet
 2. the parent agent stays mostly in orchestration mode
 3. the parent agent should spawn a worker subagent for the main implementation body of
