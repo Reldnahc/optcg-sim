@@ -35,6 +35,7 @@ A repo using this workflow should check in:
 - `AGENTS.md` at repo root,
 - approved story files validated by [`contracts/story.schema.json`](contracts/story.schema.json),
 - agent packets generated from approved stories,
+- `agent-packets/active.json` or an equivalent checked-in manifest for active stories when packet enforcement is enabled,
 - the board sync tool `tools/spec_board_sync.ts`,
 - board sync metadata under `stories/.sync/`,
 - optional Codex skills under [`.agents/skills/`](.agents/skills/) for repeatable workflows.
@@ -103,14 +104,15 @@ A skill should accelerate a workflow, not replace the authoritative story or pac
 Section Ref: `32-codex-agent-integration.s008`
 
 1. Approve a story.
-2. Generate an agent packet.
+2. Generate or refresh the checked-in packet for the active story.
 3. Run `node --experimental-strip-types tools/spec_board_sync.ts --story <path> --dry-run --write-preview`, then perform live sync when ready.
-4. Have a parent Codex agent read the story, packet, and `AGENTS.md`, stay mostly in orchestration mode, and remain the owner of story authority, scope decisions, ambiguity handling, and review handoff.
-5. Spawn a worker subagent for the main implementation body of the story whenever delegation is available.
-6. Allow the parent agent to do only small local glue work such as rebases, tiny integration edits, verification reruns, and PR administration.
-7. Require tests and a short assumptions/blockers note.
-8. Link the pull request back to the story issue.
-9. Spawn a separate reviewer subagent plus human review before merge.
+4. Verify that the active story packet is present and current before worker assignment, reviewer assignment, or PR handoff.
+5. Have a parent Codex agent read the story, packet, and `AGENTS.md`, stay mostly in orchestration mode, and remain the owner of story authority, scope decisions, ambiguity handling, and review handoff.
+6. Spawn a worker subagent for the main implementation body of the story whenever delegation is available.
+7. Allow the parent agent to do only small local glue work such as rebases, tiny integration edits, verification reruns, and PR administration.
+8. Require tests and a short assumptions/blockers note.
+9. Link the pull request back to the story issue.
+10. Spawn a separate reviewer subagent plus human review before merge.
 
 ## Codex packet footer
 

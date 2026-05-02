@@ -35,6 +35,11 @@ Use stable `SECTION_REF` citations from the spec. Do not cite heading anchors or
 
 - Read `AGENTS.md` first, then the approved story, then the corresponding packet.
 - Implement only one approved story at a time.
+- Approved stories may exist without packets until they become active.
+- Before implementation starts, before a worker or reviewer subagent is assigned, and before PR handoff begins, generate a current checked-in packet for the active story under `agent-packets/`.
+- Track active stories in `agent-packets/active.json` and keep the packet current relative to the approved story.
+- Use `pnpm run packets:generate --story <stories/approved/...yaml> --activate` to build or refresh the packet for the story you are activating.
+- Use `pnpm packets:verify` immediately after generating or refreshing the packet, and before worker assignment, reviewer assignment, implementation handoff, or PR handoff, to fail fast on missing or stale active-story packets.
 - Stay inside the story's `scope`, `story_boundary`, and `allowed_touch_points`.
 - Do not silently absorb adjacent contract, engine, server, client, replay, or UI work just because it is nearby.
 - If the needed work crosses concerns, stop and split the story or raise the ambiguity instead of broadening the patch.

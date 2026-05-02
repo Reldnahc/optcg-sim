@@ -161,7 +161,7 @@ A story may move from `generated` to `approved` only if:
 
 Section Ref: `27-spec-driven-story-generation-workflow.s009`
 
-Once a story is approved, generate a packet using [`26-agent-packet-template.md`](26-agent-packet-template.md).
+Once a story is selected to become active, generate or refresh a checked-in packet using [`26-agent-packet-template.md`](26-agent-packet-template.md).
 
 Packet generation should gather:
 
@@ -173,6 +173,8 @@ Packet generation should gather:
 - any directly related contract snippets needed for the task.
 
 The packet should be minimal but sufficient. Overloading agents with the full spec is discouraged unless the task genuinely requires it. If packet construction reveals that one assignment still spans multiple concerns, return the story to normalization instead of padding the packet.
+
+Approved stories may remain packetless while they are dormant backlog items. Once a story becomes active for implementation, reviewer assignment, or PR handoff, the repo should require a current checked-in packet and fail verification when that packet is missing or stale relative to the approved story.
 
 ## Suggested repo layout
 
@@ -219,8 +221,8 @@ Section Ref: `27-spec-driven-story-generation-workflow.s012`
 1. use an agent or script to generate candidate epics and concern-sliced stories from spec sections,
 2. review and approve the decomposition and the stories,
 3. export approved stories to GitHub issues or draft issues as needed using `tools/spec_board_sync.ts`,
-4. build packets automatically,
-5. assign packets to agents,
+4. build or refresh the checked-in packet for the active story,
+5. assign the active-story packet to agents,
 6. implement or review the story from the packet,
 7. validate the resulting patch against the story and spec.
 
