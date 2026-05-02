@@ -8,13 +8,16 @@
     "format": "corepack pnpm exec prettier --write .",
     "format:check": "corepack pnpm exec prettier --check .",
     "lint": "corepack pnpm exec eslint . --max-warnings=0 --ext .js,.mjs,.cjs,.ts,.mts,.cts",
-    "typecheck": "corepack pnpm exec tsc -p packages/types/tsconfig.json --noEmit",
+    "packets:generate": "node --experimental-strip-types tools/build-agent-packet.ts generate",
+    "packets:verify": "node --experimental-strip-types tools/build-agent-packet.ts verify-active",
+    "typecheck": "corepack pnpm exec tsc -p packages/types/tsconfig.json --noEmit && corepack pnpm exec tsc -p tools/tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run",
-    "test:contracts": "corepack pnpm exec vitest run tests/contracts/story-schema-contract.test.mjs",
+    "test:contracts": "corepack pnpm exec vitest run tests/contracts",
     "coverage": "corepack pnpm exec vitest run --coverage",
-    "verify": "corepack pnpm run format:check && corepack pnpm run lint && corepack pnpm run typecheck && corepack pnpm run test && corepack pnpm run test:contracts"
+    "verify": "corepack pnpm run format:check && corepack pnpm run lint && corepack pnpm run typecheck && corepack pnpm run packets:verify && corepack pnpm run test && corepack pnpm run test:contracts"
   },
   "devDependencies": {
+    "@types/node": "^24.10.1",
     "@eslint/js": "^9.39.1",
     "@vitest/coverage-v8": "^4.1.5",
     "eslint": "^9.39.1",

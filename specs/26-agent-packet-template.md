@@ -138,12 +138,15 @@ When building a packet from an approved story:
 
 - include only the relevant spec material,
 - do not dump the entire spec by default,
+- write the packet as a checked-in artifact under `agent-packets/<STORY-ID>.md`,
+- include stable metadata for the source story id, story path, and source-story freshness hash so tooling can verify the packet later,
 - preserve the `primary_concern`, `story_boundary`, and `allowed_touch_points` exactly,
 - preserve exact acceptance criteria from the story,
 - preserve non-scope unchanged,
 - include the applicable repo rules from [`23-repo-tooling-and-enforcement.md`](23-repo-tooling-and-enforcement.md),
 - include code and architecture constraints from the relevant documents,
 - include the approved ambiguity policy,
+- allow approved stories to sit without packets until they become active, but require a current checked-in packet before implementation assignment, reviewer assignment, or PR handoff,
 - split the story before packet generation if the packet would otherwise need multiple unrelated concerns to be implemented together.
 
 ## Recommended agent instruction footer
