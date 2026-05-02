@@ -194,6 +194,13 @@ should use the packet completion command to move it to `stories/done/` with
 `status: done`, remove the active packet, and ensure `agent-packets/active.json`
 contains no completed story.
 
+Pure packet-completion cleanup does not require reviewer-subagent review when the
+commit contains only the exact file changes produced by the packet completion
+command and repo verification passes. If cleanup requires any manual edit beyond
+that command output, including edits to packet files, `agent-packets/active.json`,
+tooling, tests, fixtures, specs, workflow docs, or story files, use the normal
+separate reviewer-subagent review path before pushing or merging.
+
 ## Subagent model routing
 
 <!-- SECTION_REF: 32-codex-agent-integration.s014 -->

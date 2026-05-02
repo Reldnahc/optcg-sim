@@ -54,6 +54,8 @@ Use stable `SECTION_REF` citations from the spec. Do not cite heading anchors or
 - Completed stories must not remain in `agent-packets/active.json`.
 - Activating a new story replaces the previous active manifest entry instead of accumulating multiple active stories.
 - Completing a story must use the packet completion command so story movement, active-packet removal, and manifest cleanup happen as one verified operation.
+- A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` does not require a separate reviewer subagent run. Run `pnpm verify` before pushing it.
+- If cleanup requires any manual edit beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, run full verification and a separate reviewer subagent before pushing or merging.
 - Dormant approved backlog stories do not require checked-in packets until they are activated.
 
 ## Superpowers Plugin
@@ -147,6 +149,8 @@ Parent-owned authority edits:
 
 - Parent-owned authority edits: documentation-only changes to `AGENTS.md`, `specs/`, story files, packets, and workflow templates should be handled by the parent agent directly
 - Parent-owned authority edits still require tests when applicable, full verification, and separate reviewer subagent review
+- Pure packet-completion cleanup is the one lifecycle exception: when the patch contains only the exact file changes produced by direct `packets:complete` output, `pnpm verify` is sufficient and a separate reviewer subagent run is not required
+- Manual edits beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, require full verification and separate reviewer subagent review
 - Use worker subagents for implementation code or large bounded documentation rewrites, not small authority-layer corrections
 
 1. the parent agent reads `AGENTS.md`, the approved story, and the packet

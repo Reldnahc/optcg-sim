@@ -45,6 +45,8 @@
 - [ ] Human merge-gate review record is present before merge
 - [ ] Follow-up ambiguities or blockers documented if review uncovered them
 
+Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` do not use this pull-request review artifact path. If cleanup includes any manual edit beyond that command output, use the normal PR checklist above.
+
 ## Assumptions and Risks
 
 - Assumptions:

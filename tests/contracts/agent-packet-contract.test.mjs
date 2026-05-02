@@ -4,6 +4,7 @@ import {
   cp,
   mkdtemp,
   mkdir,
+  readdir,
   readFile,
   rename,
   rm,
@@ -133,6 +134,28 @@ async function makeTempRepoFixture() {
   }
 
   return tempRepoRoot;
+}
+
+async function listFilesRecursive(rootDir, baseDir = rootDir) {
+  const entries = await readdir(rootDir, { withFileTypes: true });
+  const filePaths = [];
+
+  for (const entry of entries) {
+    const entryPath = path.join(rootDir, entry.name);
+
+    if (entry.isDirectory()) {
+      filePaths.push(...(await listFilesRecursive(entryPath, baseDir)));
+      continue;
+    }
+
+    if (entry.isFile()) {
+      filePaths.push(
+        path.relative(baseDir, entryPath).split(path.sep).join("/"),
+      );
+    }
+  }
+
+  return filePaths.sort();
 }
 
 async function readStoryValues() {
@@ -675,6 +698,17 @@ test("packet completion moves an active story to done and clears active artifact
     "done",
     "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
   );
+  const expectedFilesAfterCompletion = [
+    "agent-packets/active.json",
+    "specs/15-implementation-kickoff.md",
+    "specs/23-repo-tooling-and-enforcement.md",
+    "specs/24-story-schema.md",
+    "specs/26-agent-packet-template.md",
+    "specs/27-spec-driven-story-generation-workflow.md",
+    "specs/32-codex-agent-integration.md",
+    "stories/done/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+    "tools/build-agent-packet.ts",
+  ];
 
   const buildResult = runPacketToolFromRepo(tempRepoRoot, [
     "generate",
@@ -689,6 +723,23 @@ test("packet completion moves an active story to done and clears active artifact
     buildResult.status,
     0,
     `expected packet build to pass\nstdout:\n${buildResult.stdout ?? ""}\nstderr:\n${buildResult.stderr ?? ""}`,
+  );
+
+  const unchangedFileHashes = new Map(
+    await Promise.all(
+      [
+        "specs/15-implementation-kickoff.md",
+        "specs/23-repo-tooling-and-enforcement.md",
+        "specs/24-story-schema.md",
+        "specs/26-agent-packet-template.md",
+        "specs/27-spec-driven-story-generation-workflow.md",
+        "specs/32-codex-agent-integration.md",
+        "tools/build-agent-packet.ts",
+      ].map(async (relativePath) => [
+        relativePath,
+        sha256(await readFile(path.join(tempRepoRoot, relativePath), "utf8")),
+      ]),
+    ),
   );
 
   const completed = runPacketToolFromRepo(tempRepoRoot, [
@@ -713,6 +764,17 @@ test("packet completion moves an active story to done and clears active artifact
 
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   assert.deepEqual(manifest.activeStories, []);
+  assert.deepEqual(
+    await listFilesRecursive(tempRepoRoot),
+    expectedFilesAfterCompletion,
+  );
+
+  for (const [relativePath, beforeHash] of unchangedFileHashes) {
+    assert.equal(
+      sha256(await readFile(path.join(tempRepoRoot, relativePath), "utf8")),
+      beforeHash,
+    );
+  }
 
   const verified = runPacketToolFromRepo(tempRepoRoot, [
     "verify-active",
@@ -1110,12 +1172,24 @@ test("repo guidance documents active-story packet requirements", async () => {
     /Use `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` after a story is merged/,
   );
   assert.match(
+    agents,
+    /A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` does not require a separate reviewer subagent run/i,
+  );
+  assert.match(
+    agents,
+    /If cleanup requires any manual edit beyond the packet completion command output, including edits to packet files, `agent-packets\/active\.json`, tooling, tests, fixtures, specs, workflow docs, or story files, run full verification and a separate reviewer subagent before pushing or merging/i,
+  );
+  assert.match(
     packetTemplate,
     /allow approved stories to sit without packets until they become active, but require a current checked-in packet before implementation assignment, reviewer assignment, or PR handoff/,
   );
   assert.match(
     packetTemplate,
     /complete stories through one packet-tool operation that moves the story to done history, removes the active packet, and clears the completed story from the active packet manifest/,
+  );
+  assert.match(
+    packetTemplate,
+    /treat the exact file changes produced by that completion operation as generated lifecycle cleanup that needs repo verification but does not need separate reviewer-subagent review unless any manual edits are added/,
   );
   assert.match(
     workflow,
@@ -1126,9 +1200,17 @@ test("repo guidance documents active-story packet requirements", async () => {
     /run the packet completion command to move the completed story to `stories\/done\/`, mark it `done`, remove its active packet, and clear or replace the active-story manifest/,
   );
   assert.match(
+    workflow,
+    /A commit that contains only the exact file changes produced by the packet completion command is a generated lifecycle cleanup and does not need a separate reviewer-subagent pass/i,
+  );
+  assert.match(
     codexIntegration,
     /Verify that the active story packet is present and current before worker assignment, reviewer assignment, or PR handoff\./,
   );
   assert.match(codexIntegration, /run the packet completion command/i);
+  assert.match(
+    codexIntegration,
+    /Pure packet-completion cleanup does not require reviewer-subagent review/i,
+  );
   assert.match(packageJson, /"packets:complete"/);
 });

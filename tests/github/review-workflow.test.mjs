@@ -107,6 +107,8 @@ test("pull request template requires story, verification, and subagent review ev
     /Blocking AI review findings resolved or explicitly carried as blockers with disposition/i,
     /Human review requested after the AI review record or fallback review comment was posted/i,
     /Human merge-gate review record is present before merge/i,
+    /Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` do not use this pull-request review artifact path/i,
+    /If cleanup includes any manual edit beyond that command output, use the normal PR checklist above/i,
   ]);
 
   assert.doesNotMatch(prTemplate, /codex\.cmd exec review/i);
@@ -144,6 +146,8 @@ test("branch protection guide names the required status checks and subagent revi
     /When reviewer subagent review is used, pull requests should record the actual worker and reviewer identities or references in the AI review record before human approval/i,
     /When the equivalent human-review fallback is used, pull requests should record the fallback metadata in the fallback review comment before human approval/i,
     /Pull requests should record the human merge-gate review as either an approval link or an equivalent human review step reference before merge/i,
+    /Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` are not pull-request handoffs and do not require reviewer-subagent artifacts/i,
+    /If a cleanup commit includes any manual edit beyond packet-completion command output, including edits to packet files, `agent-packets\/active\.json`, tooling, tests, fixtures, specs, workflow docs, or story files, use the normal pull-request and reviewer-subagent path/i,
     /required review artifacts are missing: an AI review record plus revision response comment/i,
     /reviewer-subagent-reviewed PRs/i,
     /equivalent human-review fallback/i,
@@ -176,6 +180,9 @@ test("agents guidance requires parent orchestration plus separate reviewer subag
     /Parent-owned authority edits: documentation-only changes to `AGENTS\.md`, `specs\/`, story files, packets, and workflow templates should be handled by the parent agent directly/i,
     /Parent-owned authority edits still require tests when applicable, full verification, and separate reviewer subagent review/i,
     /Any model-routing deviation must be recorded in the PR review trail and implementation note/i,
+    /Pure packet-completion cleanup is the one lifecycle exception/i,
+    /does not require a separate reviewer subagent run/i,
+    /Manual edits beyond the packet completion command output, including edits to packet files, `agent-packets\/active\.json`, tooling, tests, fixtures, specs, workflow docs, or story files, require full verification and separate reviewer subagent review/i,
     /small local glue work/i,
     /parent agent should not do the main implementation body/i,
     /run a separate reviewer subagent/i,

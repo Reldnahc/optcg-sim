@@ -149,6 +149,7 @@ When building a packet from an approved story:
 - allow approved stories to sit without packets until they become active, but require a current checked-in packet before implementation assignment, reviewer assignment, or PR handoff,
 - keep the active packet manifest to zero or one active story; activating a story replaces the prior active entry rather than accumulating active implementation targets,
 - complete stories through one packet-tool operation that moves the story to done history, removes the active packet, and clears the completed story from the active packet manifest,
+- treat the exact file changes produced by that completion operation as generated lifecycle cleanup that needs repo verification but does not need separate reviewer-subagent review unless any manual edits are added,
 - split the story before packet generation if the packet would otherwise need multiple unrelated concerns to be implemented together.
 
 ## Recommended agent instruction footer
