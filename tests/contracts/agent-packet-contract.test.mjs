@@ -24,7 +24,7 @@ const repoRoot = path.resolve(
 const tempDirs = [];
 const storyPath = path.join(
   repoRoot,
-  "stories/approved/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+  "tests/fixtures/stories/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
 );
 const expectedRelevantConstraintBullets = [
   "one approved story may be active for implementation or review handoff at a time",
@@ -37,17 +37,46 @@ const expectedRelevantConstraintBullets = [
   "ESLint with type-aware rules and Prettier formatting are required; CI and local verification must fail when checked-in generated artifacts are stale",
 ];
 const tempRepoFixtureEntries = [
-  ["tools", "build-agent-packet.ts"],
-  [
-    "stories/approved",
-    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
-  ],
-  ["specs", "15-implementation-kickoff.md"],
-  ["specs", "23-repo-tooling-and-enforcement.md"],
-  ["specs", "24-story-schema.md"],
-  ["specs", "26-agent-packet-template.md"],
-  ["specs", "27-spec-driven-story-generation-workflow.md"],
-  ["specs", "32-codex-agent-integration.md"],
+  {
+    fileName: "build-agent-packet.ts",
+    sourceDir: "tools",
+    targetDir: "tools",
+  },
+  {
+    fileName: "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+    sourceDir: "tests/fixtures/stories",
+    targetDir: "stories/approved",
+  },
+  {
+    fileName: "15-implementation-kickoff.md",
+    sourceDir: "specs",
+    targetDir: "specs",
+  },
+  {
+    fileName: "23-repo-tooling-and-enforcement.md",
+    sourceDir: "specs",
+    targetDir: "specs",
+  },
+  {
+    fileName: "24-story-schema.md",
+    sourceDir: "specs",
+    targetDir: "specs",
+  },
+  {
+    fileName: "26-agent-packet-template.md",
+    sourceDir: "specs",
+    targetDir: "specs",
+  },
+  {
+    fileName: "27-spec-driven-story-generation-workflow.md",
+    sourceDir: "specs",
+    targetDir: "specs",
+  },
+  {
+    fileName: "32-codex-agent-integration.md",
+    sourceDir: "specs",
+    targetDir: "specs",
+  },
 ];
 
 afterEach(async () => {
@@ -90,10 +119,14 @@ async function makeTempRepoFixture() {
 
   await mkdir(tempRepoRoot, { recursive: true });
 
-  for (const [relativeDir, fileName] of tempRepoFixtureEntries) {
-    const sourcePath = path.join(repoRoot, relativeDir, fileName);
-    const targetDir = path.join(tempRepoRoot, relativeDir);
-    const targetPath = path.join(targetDir, fileName);
+  for (const fixtureEntry of tempRepoFixtureEntries) {
+    const sourcePath = path.join(
+      repoRoot,
+      fixtureEntry.sourceDir,
+      fixtureEntry.fileName,
+    );
+    const targetDir = path.join(tempRepoRoot, fixtureEntry.targetDir);
+    const targetPath = path.join(targetDir, fixtureEntry.fileName);
 
     await mkdir(targetDir, { recursive: true });
     await cp(sourcePath, targetPath);

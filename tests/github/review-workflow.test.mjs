@@ -297,10 +297,16 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   assert.doesNotMatch(revisionResponse, /@codex review/i);
 });
 
-test("active packet manifest points to exactly one current approved story and packet", async () => {
+test("active packet manifest is empty between stories or points to one current approved story and packet", async () => {
   const manifest = await readJson("agent-packets/active.json");
 
   assert.equal(manifest.version, 1);
+  assert.equal(Array.isArray(manifest.activeStories), true);
+
+  if (manifest.activeStories.length === 0) {
+    return;
+  }
+
   assert.equal(manifest.activeStories.length, 1);
 
   const [activeStory] = manifest.activeStories;
@@ -343,5 +349,13 @@ test("merged workflow stories move out of approved backlog into done history", a
   await assertStoryMovedToDone(
     "INF-013",
     "INF-013-subagent-model-routing-policy.yaml",
+  );
+  await assertStoryMovedToDone(
+    "INF-014",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+  );
+
+  await assert.rejects(() =>
+    access(path.join(repoRoot, "agent-packets", "INF-014.md")),
   );
 });
