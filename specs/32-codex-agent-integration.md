@@ -110,9 +110,10 @@ Section Ref: `32-codex-agent-integration.s008`
 5. Have a parent Codex agent read the story, packet, and `AGENTS.md`, stay mostly in orchestration mode, and remain the owner of story authority, scope decisions, ambiguity handling, and review handoff.
 6. Spawn a worker subagent for the main implementation body of the story whenever delegation is available.
 7. Allow the parent agent to do only small local glue work such as rebases, tiny integration edits, verification reruns, and PR administration.
-8. Require tests and a short assumptions/blockers note.
-9. Link the pull request back to the story issue.
-10. Spawn a separate reviewer subagent plus human review before merge.
+8. Follow the subagent model routing policy.
+9. Require tests and a short assumptions/blockers note.
+10. Link the pull request back to the story issue.
+11. Spawn a separate reviewer subagent plus human review before merge.
 
 ## Codex packet footer
 
@@ -184,3 +185,21 @@ A Codex-authored patch should not be merged unless:
 - required tests are present and passing,
 - no uncited behavior is introduced,
 - the review record includes either a reviewer-subagent artifact or an equivalent human review step.
+
+## Subagent model routing
+
+<!-- SECTION_REF: 32-codex-agent-integration.s014 -->
+
+Section Ref: `32-codex-agent-integration.s014`
+
+The parent/orchestrator model is gpt-5.5.
+
+Reviewer subagent model is gpt-5.4 with high reasoning.
+
+Implementation worker subagents default to gpt-5.3-codex with medium reasoning.
+
+Complex, risky, or integration-heavy implementation stories should use gpt-5.5 with medium reasoning.
+
+Any model-routing deviation must be recorded in the pull-request review trail and implementation note.
+
+Documentation-only authority edits should be handled by the parent agent directly. Authority edits still require separate reviewer subagent review, tests when applicable, and full verification before PR handoff.

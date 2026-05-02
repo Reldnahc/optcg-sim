@@ -3,7 +3,11 @@
 - Story ID:
 - Story file:
 - Parent-agent orchestration note:
-- Worker subagent reference(s):
+- Worker subagent reference(s) or `none: parent-owned authority edit`:
+- Parent/orchestrator model: `gpt-5.5`
+- Implementation worker model and reasoning: `<gpt-5.3-codex medium | gpt-5.5 medium | none: parent-owned authority edit>`
+- Reviewer model and reasoning: `gpt-5.4 high`
+- Model-routing deviations:
 - Failed or unavailable reviewer-subagent attempts:
 - Why no usable reviewer-subagent run remained:
 - Fallback human reviewer:

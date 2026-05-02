@@ -33,6 +33,12 @@ These names must stay aligned with `.github/workflows/ci.yml`.
 - Parent agents should remain mostly orchestration and small local glue while worker subagents handle the main implementation body when delegation is available.
 - Pull requests should complete AI review before human review is requested when reviewer subagent review is available.
 - Pull requests should complete a separate reviewer subagent run before human review is requested when a reviewer-subagent surface is available.
+- Parent orchestration runs on gpt-5.5.
+- Implementation worker subagents default to gpt-5.3-codex medium.
+- Reviewer subagents always use gpt-5.4 high.
+- Complex, risky, or integration-heavy implementation stories should escalate to gpt-5.5 medium.
+- Parent agents own documentation-only authority edits directly.
+- Documentation-only authority edits still require separate reviewer subagent review.
 - The default review path is a spawned reviewer subagent against the PR base branch.
 - The review workflow should allow up to 60 minutes for the reviewer subagent run while it is actively running. Deterministic failures such as unavailable reviewer subagent execution, immediate spawn failure, or immediate runtime failure count as failed immediately.
 - Implementation-worker self-review and parent-coordinator self-review do not satisfy the reviewer gate.

@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-012.md",
-      "storyId": "INF-012",
-      "storyPath": "stories/approved/INF-012-checked-in-active-story-packet-generation.yaml",
-      "storySha256": "1a1bb08ed35bf5a09ca742d8bdac3d8c2fe76baa0ea9fc1857a5a096f07dc043"
+      "packetPath": "agent-packets/INF-013.md",
+      "storyId": "INF-013",
+      "storyPath": "stories/approved/INF-013-subagent-model-routing-policy.yaml",
+      "storySha256": "28b2b97ae002f2c863873cc7559a55e3271a31fbd05a4f97f23ab6da42fcbf3e"
     }
   ],
   "version": 1
