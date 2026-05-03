@@ -1,0 +1,71 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-003
+epic_id: M1-001
+title: Split shared types package by concern
+type: tooling
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Refactor the completed `@optcg/types` package so canonical shared type
+  contracts and package-local tests are organized by concern instead of living in
+  one large implementation file and one large test file.
+story_boundary: >
+  Own only source/test organization inside `packages/types/src`. Preserve the
+  public `@optcg/types` API and canonical type shapes exactly. Do not introduce
+  new contracts, runtime behavior, public view DTOs, engine-core code, package
+  dependencies, or cross-package implementation work.
+allowed_touch_points:
+  - packages/types/src/**
+spec_refs:
+  - 01-system-architecture.s024 (Future ownership model and workflow rules)
+  - 15-implementation-kickoff.s005 (Step 1 - @optcg/types)
+  - 22-v6-implementation-tightening.s006 (Canonical type contract)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+  - 23-repo-tooling-and-enforcement.s009 (Formatting)
+scope:
+  - split `packages/types/src/index.ts` into concern-scoped source modules that match the completed TYP-001 ownership areas
+  - keep `packages/types/src/index.ts` as a public barrel that re-exports the same public type names from the concern modules
+  - split the large package-local type test file into concern-scoped test files plus one export-cohesion test
+  - keep the TYP-001H export ownership manifest and package-name import coverage effective after the file split
+  - ensure source modules have clear dependency direction and do not create circular runtime imports
+non_scope:
+  - changing any exported canonical type or interface shape
+  - adding, removing, or renaming public exports from `@optcg/types`
+  - adding public/player/spectator view DTOs while TYP-002 remains blocked
+  - adding runtime behavior or value-level package APIs
+  - changing package metadata, dependencies, scripts, or workspace wiring
+  - implementing engine-core, card-data adapters, server protocol, browser client, replay, or hidden-info filtering behavior
+dependencies:
+  - TYP-001A
+  - TYP-001B
+  - TYP-001C
+  - TYP-001D
+  - TYP-001E
+  - TYP-001F
+  - TYP-001G
+  - TYP-001H
+acceptance_criteria:
+  - "`packages/types/src/index.ts` is a public barrel for concern-scoped modules and does not contain domain contract definitions directly"
+  - "every public export available from `@optcg/types` before this refactor remains available after the refactor"
+  - "the checked export ownership manifest still exactly covers the canonical type/interface exports from `contracts/canonical-types.ts`"
+  - package-local tests are split by concern so future stories can review relevant type coverage without reading one monolithic test file
+  - the refactor does not alter canonical contract shapes, package metadata, dependencies, scripts, runtime exports, or package behavior
+  - the package entrypoint remains type-only at runtime and exposes no value exports
+required_tests:
+  - "package compile/typecheck for `packages/types`"
+  - package-local tests covering each concern-scoped test file
+  - "export-cohesion test proving manifest-covered exports remain importable from `@optcg/types`"
+  - "regression check that `packages/types/src/index.ts` exports from concern modules and does not define canonical domain contracts inline"
+  - "runtime entrypoint smoke test proving `import('./index.js')` still has no value exports"
+  - "root `corepack pnpm run verify`"
+repo_rules:
+  - this is a refactor-only story; if any contract shape change appears necessary, stop and create a separate contract story
+  - do not unblock or implement TYP-002 public view DTOs in this story
+  - do not change `packages/types/package.json` or package metadata in this story
+  - keep dependency direction simple enough that each concern module can be reviewed independently
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate
