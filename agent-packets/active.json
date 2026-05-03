@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-001C.md",
+      "storyId": "ENG-001C",
+      "storyPath": "stories/approved/ENG-001C-stable-state-hash-primitive.yaml",
+      "storySha256": "d2eb2358518448576c2abdcd8a7bb45800374c374b8958012bb4387c3ebce253"
+    }
+  ],
   "version": 1
 }
