@@ -949,9 +949,21 @@ test("TYP-001F runtime support fixtures compile for timers, rng, player state, b
   const winner: Winner = "draw";
   const status: MatchStatus = { type: "active" };
   const battle: BattleState = {
-    attacker: { instanceId: leader.instanceId, cardId: leader.cardId, playerId: playerA },
-    originalTarget: { instanceId: leader.instanceId, cardId: leader.cardId, playerId: playerB },
-    currentTarget: { instanceId: leader.instanceId, cardId: leader.cardId, playerId: playerB },
+    attacker: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: playerA,
+    },
+    originalTarget: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: playerB,
+    },
+    currentTarget: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: playerB,
+    },
     step: "damage",
     damageCount: 1,
   };
@@ -1053,7 +1065,10 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
     sourcePresencePolicy: "mustRemainInSameZone",
     causedBy,
   };
-  const targetSpec: TargetSpec = { type: "selection", selection: "sel-1" as SelectionId };
+  const targetSpec: TargetSpec = {
+    type: "selection",
+    selection: "sel-1" as SelectionId,
+  };
   const layer: ModifierLayer = "powerAdd";
   const operation: ModifierOperation = { type: "addPower", value: 1000 };
   const modifier: Modifier = { layer, target: targetSpec, operation };
@@ -1067,7 +1082,9 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
     cannotBeAttacked: false,
     protectedFrom: [protection],
   };
-  const restrictions: RestrictionIndex = { [source.instanceId]: ["cannot-attack"] };
+  const restrictions: RestrictionIndex = {
+    [source.instanceId]: ["cannot-attack"],
+  };
   const gameView: ComputedGameView = {
     seq: 1 as StateSeq,
     turnPlayerId: player,
