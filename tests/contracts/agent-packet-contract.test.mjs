@@ -928,6 +928,18 @@ test("complete-many completes explicit approved stories including inactive prede
     "approved",
     "INF-015-duplicate-parent-integration-cleanup.yaml",
   );
+  const missingPacketStoryPath = path.join(
+    tempRepoRoot,
+    "stories",
+    "approved",
+    "INF-016-missing-packet-parent-integration-cleanup.yaml",
+  );
+  const stalePacketStoryPath = path.join(
+    tempRepoRoot,
+    "stories",
+    "approved",
+    "INF-017-stale-packet-parent-integration-cleanup.yaml",
+  );
   const activePacketPath = path.join(
     tempRepoRoot,
     "agent-packets",
@@ -958,8 +970,22 @@ test("complete-many completes explicit approved stories including inactive prede
       /^title: .+$/m,
       "title: Parent integration cleanup can complete multiple approved substories",
     );
+  const missingPacketStorySource = activeStorySource
+    .replace(/^id: INF-014$/m, "id: INF-016")
+    .replace(
+      /^title: .+$/m,
+      "title: Parent integration cleanup rejects missing packets",
+    );
+  const stalePacketStorySource = activeStorySource
+    .replace(/^id: INF-014$/m, "id: INF-017")
+    .replace(
+      /^title: .+$/m,
+      "title: Parent integration cleanup rejects stale packets",
+    );
   await writeFile(inactiveStoryPath, inactiveStorySource);
   await writeFile(duplicateIdStoryPath, inactiveStorySource);
+  await writeFile(missingPacketStoryPath, missingPacketStorySource);
+  await writeFile(stalePacketStoryPath, stalePacketStorySource);
 
   const activeBuildResult = runPacketToolFromRepo(tempRepoRoot, [
     "generate",
@@ -979,6 +1005,53 @@ test("complete-many completes explicit approved stories including inactive prede
     inactivePacketPath,
   ]);
   assert.equal(inactiveBuildResult.status, 0);
+
+  const stalePacketBuildResult = runPacketToolFromRepo(tempRepoRoot, [
+    "generate",
+    "--story",
+    stalePacketStoryPath,
+  ]);
+  assert.equal(stalePacketBuildResult.status, 0);
+  await writeFile(
+    stalePacketStoryPath,
+    stalePacketStorySource.replace(
+      /^title: .+$/m,
+      "title: Parent integration cleanup changed after packet generation",
+    ),
+  );
+
+  const manifestSource = await readFile(manifestPath, "utf8");
+  await rm(manifestPath);
+  const missingManifestResult = runPacketToolFromRepo(tempRepoRoot, [
+    "complete-many",
+    "--story",
+    inactiveStoryPath,
+    "--story",
+    activeStoryPath,
+  ]);
+  await writeFile(manifestPath, manifestSource);
+  assert.notEqual(missingManifestResult.status, 0);
+  assert.match(missingManifestResult.stderr, /manifest is required/i);
+
+  const missingPacketResult = runPacketToolFromRepo(tempRepoRoot, [
+    "complete-many",
+    "--story",
+    missingPacketStoryPath,
+    "--manifest",
+    manifestPath,
+  ]);
+  assert.notEqual(missingPacketResult.status, 0);
+  assert.match(missingPacketResult.stderr, /missing packet/i);
+
+  const stalePacketResult = runPacketToolFromRepo(tempRepoRoot, [
+    "complete-many",
+    "--story",
+    stalePacketStoryPath,
+    "--manifest",
+    manifestPath,
+  ]);
+  assert.notEqual(stalePacketResult.status, 0);
+  assert.match(stalePacketResult.stderr, /stale packet/i);
 
   const duplicateStoriesResult = runPacketToolFromRepo(tempRepoRoot, [
     "complete-many",

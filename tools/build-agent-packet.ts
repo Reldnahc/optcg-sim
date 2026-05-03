@@ -603,6 +603,13 @@ async function runComplete(options: CompleteOptions) {
 
 async function runCompleteMany(options: CompleteManyOptions) {
   assertCanonicalActiveManifestPath(options.repoRoot, options.manifestPath);
+
+  if (!(await fileExists(options.manifestPath))) {
+    throw new Error(
+      `Active story manifest is required: ${toManifestPath(options.repoRoot, options.manifestPath)}.`,
+    );
+  }
+
   const manifest = await loadManifest(options.manifestPath);
   assertAtMostOneActiveStory(manifest);
 
@@ -643,6 +650,57 @@ async function runCompleteMany(options: CompleteManyOptions) {
       );
     }
 
+    const currentStorySha256 = sha256(storySource);
+    const packetPath = path.join(
+      options.repoRoot,
+      AGENT_PACKETS_DIR,
+      `${story.id}.md`,
+    );
+    const packetPathLabel = toManifestPath(options.repoRoot, packetPath);
+
+    if (!(await fileExists(packetPath))) {
+      throw new Error(
+        `Story ${story.id} is missing packet ${packetPathLabel}.`,
+      );
+    }
+
+    const packetSource = await readUtf8(packetPath);
+    const normalizedPacketSource = normalizeLineEndings(packetSource);
+    const packetStoryId = readPacketMetadata(packetSource, "story-id");
+    const packetStorySha256 = readPacketMetadata(packetSource, "story-sha256");
+
+    if (packetStoryId !== story.id) {
+      throw new Error(`Story ${story.id} packet metadata does not match.`);
+    }
+
+    if (packetStorySha256 !== currentStorySha256) {
+      throw new Error(`Story ${story.id} has a stale packet.`);
+    }
+
+    for (const heading of REQUIRED_PACKET_HEADINGS) {
+      if (!normalizedPacketSource.includes(`${heading}\n`)) {
+        throw new Error(
+          `Story ${story.id} packet is missing required section ${heading}.`,
+        );
+      }
+    }
+
+    const expectedPacketSource = await buildPacket({
+      repoRoot: options.repoRoot,
+      story,
+      storyPath,
+      storySource,
+    });
+
+    if (
+      normalizePacketContent(packetSource) !==
+      normalizePacketContent(expectedPacketSource)
+    ) {
+      throw new Error(
+        `Story ${story.id} packet does not match the canonical packet content generated from ${storyPathLabel}.`,
+      );
+    }
+
     const donePath = path.join(
       options.repoRoot,
       "stories",
@@ -668,11 +726,7 @@ async function runCompleteMany(options: CompleteManyOptions) {
       donePath,
       donePathLabel,
       doneStorySource,
-      packetPath: path.join(
-        options.repoRoot,
-        AGENT_PACKETS_DIR,
-        `${story.id}.md`,
-      ),
+      packetPath,
       storyId: story.id,
       storyPath,
       storyPathLabel,

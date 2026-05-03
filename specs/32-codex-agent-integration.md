@@ -210,7 +210,8 @@ parent integration branch is open, but they must not be marked done until the
 parent pull request has merged to `main`. After the parent merge, the parent
 agent must use the multi-story packet completion command to move every included
 substory to `stories/done/`, remove their packets, and clear any matching active
-manifest entry.
+manifest entry. The multi-story completion command must reject cleanup when
+manifest or packet evidence for any listed substory is missing or stale.
 
 Pure packet-completion cleanup does not require reviewer-subagent review when the
 commit contains only the exact file changes produced by the packet completion

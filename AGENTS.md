@@ -72,7 +72,7 @@ Use this workflow when a parent story has been decomposed into approved substori
 - After all substories for the parent story land on the parent integration branch, open one parent PR from the integration branch to `main`.
 - The parent PR must receive a full-story integration review that checks the parent story, all included substory PRs, packet history, cross-story consistency, CI, tests, scope boundaries, and unresolved PR comments.
 - Human review is required on the parent PR before it merges to `main`.
-- After the parent PR merges to `main`, complete all included substories with `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` so previously active substories can be completed even when they are no longer the current active manifest entry.
+- After the parent PR merges to `main`, complete all included substories with `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` so previously active substories can be completed even when they are no longer the current active manifest entry. The command must fail closed if manifest or packet evidence for any listed substory is missing or stale.
 - Substory PR comments remain the durable historical record for AI review and revisions even when human review happens only on the parent PR.
 - The final parent PR still follows the normal Review Workflow, including reviewer-subagent review, durable AI review records, revision response records, CI, `pnpm verify`, and human review before merge.
 
