@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-006C.md",
-      "storyId": "INF-006C",
-      "storyPath": "stories/approved/INF-006C-database-schema-parse-lane.yaml",
-      "storySha256": "2ff564745cd2c654e5cae5dc155023670dd29806b4a42f7d739bb2ba98cc154a"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

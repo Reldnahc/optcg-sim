@@ -8,7 +8,7 @@ type: tooling
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Add the canonical database schema contract artifact and a local parse or lint check so
   DDL drift is caught without relying on reviewer inspection.
