@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: critical
-status: done
+status: generated
 summary: >
   Add the shared card metadata, variant, decklist, and account-level loadout
   types needed before engine fixture cards and later card-data adapters can use

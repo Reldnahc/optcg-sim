@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: critical
-status: done
+status: generated
 summary: >
   Add the canonical event journal support contracts that later decisions,
   runtime state, engine results, replay, and filtering stories depend on.
