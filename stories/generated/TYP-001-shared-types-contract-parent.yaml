@@ -45,7 +45,9 @@ required_tests:
   - story review must verify this parent is replaced by child stories before any shared-types implementation begins
 repo_rules:
   - do not approve or packetize this parent story
-  - approve only one child story at a time
+  - child stories may be approved together on the parent integration branch, but only one child story may be active in `agent-packets/active.json` at a time
+  - child stories merged only into the parent integration branch remain approved until the parent branch lands on `main`
+  - after the parent branch lands on `main`, complete included child stories with `pnpm run packets:complete-many`
   - each child story must cite exact spec sections and stay within `packages/types/**`
   - if older spec prose conflicts with `contracts/canonical-types.ts`, treat `22-v6-implementation-tightening.s006` and the canonical contract as the implementation authority
   - each canonical export added to `@optcg/types` must be owned by exactly one child story before implementation begins

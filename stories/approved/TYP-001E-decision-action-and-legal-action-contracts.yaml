@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: critical
-status: generated
+status: approved
 summary: >
   Add the canonical pure-data decision and action contracts after their card,
   event, and effect support contracts exist.
@@ -42,6 +42,7 @@ non_scope:
   - legal-action generation
   - action validation or application
   - match-server action envelopes or WebSocket protocol DTOs
+  - public/player-facing legal-action projection, hidden-info filtering, or `PublicLegalAction` DTOs
   - CLI command parsing or prompt rendering
   - effect queue processing behavior
 dependencies:
@@ -53,12 +54,15 @@ acceptance_criteria:
   - decision and action contracts are pure data and contain no server transport envelope fields
   - "`respondToDecision` can be expressed without cross-story type gaps"
   - later engine stories can import action and decision contracts without importing server or client code
+  - story follows `contracts/canonical-types.ts` exactly where older prose differs; do not introduce stale non-canonical decision families such as `chooseCharacterToTrashForOverflow`, and use canonical `confirmLifeTrigger`
 required_tests:
   - package type test compiling one fixture for every canonical decision interface
   - package type test compiling one fixture for every canonical `DecisionResponse` variant, including `loopCount`
   - package type test compiling representative payment, target, card-selection, and effect-option decision support contracts
   - package type test compiling one fixture for every canonical `Action` variant
   - package type test compiling the `respondToDecision` action with a typed decision response
+  - package negative type tests proving transport envelope fields such as `clientActionId`, `expectedStateSeq`, `actionHash`, `sentAtClientTime`, `matchId`, and `signature` are rejected from `Action` and `LegalAction`
+  - package type test proving `LegalAction` is assignable-equivalent to `Action` and does not introduce a separate shape
 repo_rules:
   - fail closed on ambiguous decision categories
   - keep engine action contracts transport-free

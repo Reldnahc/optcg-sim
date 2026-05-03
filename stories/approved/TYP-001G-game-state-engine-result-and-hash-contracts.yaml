@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: critical
-status: generated
+status: approved
 summary: >
   Add the canonical top-level GameState, engine result, error, hash input, and
   custom handler contracts after all referenced support, event, decision,
@@ -34,15 +34,19 @@ spec_refs:
 scope:
   - export canonical `GameState`, `EngineStepResult`, `EngineResult`, `EngineError`, `StateHashInput`, `AtomicMutation`, and `CustomHandler` contracts
   - ensure `GameState` composes only type families delivered by TYP-001A through TYP-001F
-  - ensure canonical v6 `EngineResult` uses filtered `EngineEvent[]` where applicable and does not reintroduce stale `PublicEffectEvent` contracts
+  - ensure canonical v6 `EngineResult` exposes `events: EngineEvent[]` only, does not add `publicEvents`, and does not reintroduce stale `PublicEffectEvent` contracts
   - add package-local type tests compiling representative minimal `GameState`, `EngineStepResult`, `EngineResult`, `EngineError`, `StateHashInput`, and `CustomHandler` fixtures
 non_scope:
   - hash computation
   - event journal mutation logic
   - replay serialization or reconstruction
+  - replay validation or reconstruction behavior
   - public/player/spectator view DTOs
+  - filtering or public-view projection contracts
   - engine-core package creation
   - CLI runner behavior
+  - custom handler execution behavior
+  - package export cohesion or exhaustive export manifests
 dependencies:
   - TYP-001A
   - TYP-001B
@@ -54,10 +58,15 @@ acceptance_criteria:
   - "`GameState` includes hidden zones, RNG state, internal queues, audit metadata, decisions, and match status fields through canonical support types"
   - engine result contracts expose deterministic result metadata without implementing behavior
   - public view DTOs are not mixed into canonical state or result contracts
+  - G-owned exports match `contracts/canonical-types.ts` exactly for `GameState`, `EngineStepResult`, `EngineResult`, `EngineError`, `StateHashInput`, `AtomicMutation`, and `CustomHandler`
 required_tests:
   - package type test compiling a minimal canonical `GameState` fixture
   - package type test proving hidden-zone fields are represented in canonical state
   - package type test compiling representative `EngineStepResult`, `EngineResult`, `EngineError`, `StateHashInput`, and `CustomHandler` fixtures
+  - package negative type test proving `EngineResult` rejects stale `publicEvents: PublicEffectEvent[]`
+  - package negative type tests proving `PublicEffectEvent`, player/spectator/public view DTOs, filtering DTOs, and replay DTOs are not exported
+  - package compile test proving no replay reconstruction, filtering, hashing, mutation, or custom-handler execution behavior is added
+  - update prior TYP-001F negative export guard so G-owned exports are now allowed while public DTO/export negatives remain
 repo_rules:
   - canonical state is server-only and may include hidden information
   - do not implement hashing, mutation, filtering, or engine behavior in this contract story

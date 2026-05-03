@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: critical
-status: generated
+status: approved
 summary: >
   Add the canonical effect-definition support contracts that decisions,
   runtime queues, continuous effects, and card implementation metadata depend
@@ -21,7 +21,6 @@ allowed_touch_points:
   - packages/types/src/**
 spec_refs:
   - 04-effect-runtime.s004 (Effect definition usage)
-  - 04-effect-runtime.s006 (Effect queue)
   - 04-effect-runtime.s007 (Source presence policy)
   - 04-effect-runtime.s016 (Failure policy)
   - 04-effect-runtime.s017 (Transient reveal and selection sets)
@@ -63,6 +62,7 @@ required_tests:
   - package type test compiling representative zone-based and transient-set-based `CardSelectionRequest` examples
   - package type test compiling representative `Duration`, `SearchRequest`, `ReplacementTrigger`, and `Effect` examples
   - package type test compiling a representative `EffectDefinition`
+  - "package type test covering canonical-vs-old-spec conflict points for `EffectBlock.id: EffectId`, `conditionTiming`, `EffectDefinitionMetadata.generatedBy`, `EffectDefinitionMetadata.reviewedBy`, `EffectDefinitionMetadata.reviewedAt`, and `CardFilter.colorsAny`/`colorsAll: CardColor[]`"
   - "package compile test proving every deprecated CardFilter alias from `05-effect-dsl-reference.s010` is rejected with `@ts-expect-error`: `cardId`, `cardName`, `cardNameContains`, `cardNameNot`, `category`, `color`, `colorIncludes`, `type`, `typeIncludes`, `typeIncludesAny`, `attribute`, `costOp`, `costValue`, `powerOp`, `powerValue`, `hasKeyword`, and `lacksKeyword`"
 repo_rules:
   - do not implement effect execution or validation behavior in the types package
