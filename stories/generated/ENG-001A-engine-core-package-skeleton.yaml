@@ -46,6 +46,7 @@ dependencies:
   - TYP-001E
   - TYP-001F
   - TYP-001G
+  - TYP-001H
 acceptance_criteria:
   - "`@optcg/engine-core` exists as a workspace package"
   - root typecheck compiles engine-core

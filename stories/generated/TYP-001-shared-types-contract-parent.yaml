@@ -14,7 +14,7 @@ summary: >
   surface required before engine-core implementation can begin.
 story_boundary: >
   This parent story is not implementable. It preserves the full shared-types
-  context and is replaced by smaller child stories TYP-001A through TYP-001G.
+  context and is replaced by smaller child stories TYP-001A through TYP-001H.
 allowed_touch_points:
   - packages/types/**
 spec_refs:
@@ -26,9 +26,11 @@ spec_refs:
   - 16-typescript-interface-draft.s005 (Game state)
   - 16-typescript-interface-draft.s008 (Actions and decisions)
   - 16-typescript-interface-draft.s009 (Engine result)
+  - 22-v6-implementation-tightening.s006 (Canonical type contract)
 scope:
   - define the full shared type package delivery context
   - split implementation into concern-scoped child stories
+  - "canonical ownership map: TYP-001A owns `Brand`, branded identifiers, and global scalar/reference primitives; TYP-001B owns card metadata, card refs/snapshots, Poneglyph-derived canonical support types, decklists, manifests, and loadouts; TYP-001C owns engine event, event visibility, and causality contracts; TYP-001D owns effect definition, filter, target, duration, and effect DSL support contracts; TYP-001E owns decision/action contracts and their directly required support contracts; TYP-001F owns runtime support structures; TYP-001G owns GameState, engine result, engine error, custom handler, state hash input, and atomic mutation contracts; TYP-001H owns export cohesion only"
 non_scope:
   - direct implementation from this parent story
   - engine-core behavior
@@ -45,4 +47,6 @@ repo_rules:
   - do not approve or packetize this parent story
   - approve only one child story at a time
   - each child story must cite exact spec sections and stay within `packages/types/**`
+  - if older spec prose conflicts with `contracts/canonical-types.ts`, treat `22-v6-implementation-tightening.s006` and the canonical contract as the implementation authority
+  - each canonical export added to `@optcg/types` must be owned by exactly one child story before implementation begins
 ambiguity_policy: fail_and_escalate

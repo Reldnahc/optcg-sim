@@ -1,0 +1,71 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-001F
+epic_id: M1-001
+title: Add runtime support structural contracts
+type: implementation
+area: contracts
+primary_concern: contract
+priority: critical
+status: generated
+summary: >
+  Add the canonical structural support contracts used inside state and runtime
+  processing before the final GameState and EngineResult surfaces are exported.
+story_boundary: >
+  Own only runtime support structures such as timers, RNG, card instances,
+  player state, turn/battle state, audit/reveal records, once-per-turn records,
+  replacement/deferred trigger state, effect queue entries, execution contexts,
+  continuous effects, loop signatures, and computed views. Do not export
+  GameState, EngineResult, actions, decisions, public view DTOs, custom
+  handlers, or engine behavior.
+allowed_touch_points:
+  - packages/types/src/**
+spec_refs:
+  - 02-engine-mechanics.s006 (Zone and card state constraints)
+  - 03-game-state-events-decisions.s002 (Canonical state rules)
+  - 03-game-state-events-decisions.s003 (State layering)
+  - 03-game-state-events-decisions.s019 (RNG state)
+  - 03-game-state-events-decisions.s021 (Invariant hooks)
+  - 03-game-state-events-decisions.s022 (Turn state)
+  - 04-effect-runtime.s006 (Effect queue)
+  - 04-effect-runtime.s008 (Trigger detection from events)
+  - 04-effect-runtime.s013 (Replacement effects)
+  - 04-effect-runtime.s014 (Continuous effects)
+  - 04-effect-runtime.s017 (Transient reveal and selection sets)
+  - 07-match-server-protocol.s013 (Timer state)
+  - 22-v6-implementation-tightening.s006 (Canonical type contract)
+scope:
+  - "export canonical timer contracts: `PlayerGameTimer`, `TimerState`, and `PublicTimerState`"
+  - "export canonical RNG, card, player, match, battle, and turn support contracts: `RngState`, `RngDrawResult`, `CardInstance`, `LifeCard`, `PlayerState`, `Winner`, `MatchStatus`, `BattleState`, and `TurnState`"
+  - "export canonical audit, loop, reveal, replacement, trigger, and transient set contracts: `AuditEntry`, `LoopSignature`, `RevealRecord`, `ReplacementProcessState`, `ReplaceableProcessType`, `ReplacementProcess`, `TriggerCandidate`, `TransientCardSet`, and `DeferredTriggerBucket`"
+  - "export canonical protection, restriction, computed-view, queue, execution-context, target-spec, modifier, and continuous-effect contracts: `Protection`, `RestrictionIndex`, `ComputedCardView`, `ComputedGameView`, `OncePerTurnRecord`, `EffectQueueEntry`, `EffectExecutionContext`, `EffectContext`, `TargetSpec`, `ModifierLayer`, `ModifierOperation`, `Modifier`, `ContinuousEffectRecord`, and `ContinuousEffect`"
+  - ensure server-only runtime structures can represent hidden zones and internal queues without exposing public DTOs
+  - add package-local type tests for representative runtime support fixtures
+non_scope:
+  - "`GameState`, `EngineResult`, `EngineStepResult`, `EngineError`, `StateHashInput`, or `AtomicMutation`"
+  - action and pending-decision unions
+  - effect definition/filter contracts owned by TYP-001D
+  - decision/action support contracts owned by TYP-001E
+  - "`CustomHandler`"
+  - player or spectator view DTOs
+dependencies:
+  - TYP-001A
+  - TYP-001B
+  - TYP-001C
+  - TYP-001D
+acceptance_criteria:
+  - runtime support contracts use serializable arrays and records rather than raw JavaScript `Set`
+  - hidden-zone and server-only internals are represented only in canonical/runtime structures, not public DTOs
+  - support structures are available for the later GameState contract without circular story dependencies
+  - this story does not export `GameState`, result/hash/error contracts, `CustomHandler`, action/decision unions, or player/spectator view DTOs
+required_tests:
+  - package type test compiling representative timer and RNG state fixtures
+  - package type test compiling representative player, zone, card-instance, turn, and battle state fixtures
+  - package type test compiling representative effect queue, execution context, modifier, and continuous effect records
+  - package compile test proving `GameState`, `EngineResult`, `EngineError`, `StateHashInput`, `CustomHandler`, action/decision unions, `PlayerView`, and `SpectatorView` are not introduced by this slice
+repo_rules:
+  - canonical runtime support structures may include hidden information
+  - do not add filtering behavior in this contract story
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

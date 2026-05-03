@@ -1,0 +1,58 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-001H
+epic_id: M1-001
+title: Add shared types export cohesion tests
+type: implementation
+area: contracts
+primary_concern: contract
+priority: critical
+status: generated
+summary: >
+  Finish the shared type package replacement with export cohesion tests that
+  prove all canonical TYP-001 contract exports are importable from
+  `@optcg/types` without adding new type families.
+story_boundary: >
+  Own only package export cohesion and package-local tests. Do not introduce new
+  domain contracts, public view DTOs, engine behavior, adapters, or runtime
+  implementation.
+allowed_touch_points:
+  - packages/types/src/**
+  - packages/types/package.json
+spec_refs:
+  - 15-implementation-kickoff.s005 (Step 1 - @optcg/types)
+  - 22-v6-implementation-tightening.s006 (Canonical type contract)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+scope:
+  - ensure the package entrypoint exports the type families delivered by TYP-001A through TYP-001G
+  - remove or quarantine any remaining placeholder-only export coverage
+  - add an exhaustive package export cohesion test or checked ownership manifest that enumerates every `export type` and `export interface` from `contracts/canonical-types.ts` owned by TYP-001A through TYP-001G
+  - add package export cohesion tests for branded IDs, card/deck/loadout contracts, events, effect support, decisions/actions, runtime support structures, GameState, EngineResult, error, handler, and hash input contracts
+non_scope:
+  - new branded IDs or primitive aliases
+  - new card metadata, state, action, decision, event, result, effect, handler, or view DTO shapes
+  - public/player/spectator view DTOs
+  - engine-core package creation
+  - runtime behavior
+dependencies:
+  - TYP-001A
+  - TYP-001B
+  - TYP-001C
+  - TYP-001D
+  - TYP-001E
+  - TYP-001F
+  - TYP-001G
+acceptance_criteria:
+  - package exports no longer rely on placeholder contract coverage
+  - every canonical export owned by TYP-001A through TYP-001G is importable from `@optcg/types`
+  - the ownership/export manifest has no unowned or duplicate-owned canonical exports for the TYP-001 scope
+  - this story does not add new contract families beyond export cohesion
+required_tests:
+  - exhaustive package export test or checked manifest proving every canonical export owned by TYP-001A through TYP-001G is importable from `@optcg/types`
+  - root `corepack pnpm run verify`
+repo_rules:
+  - do not introduce public view DTOs until TYP-002 resolves the authority gap
+  - do not implement runtime behavior in the types package
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

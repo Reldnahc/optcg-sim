@@ -21,10 +21,10 @@ allowed_touch_points:
   - tests/engine/**
 spec_refs:
   - 03-game-state-events-decisions.s020 (Hashing)
-  - 16-typescript-interface-draft.s010 (Hashing)
   - 12-roadmap.s005 (Milestone 1: terminal engine)
   - 15-implementation-kickoff.s006 (Step 2 - @optcg/engine-core)
   - 15-implementation-kickoff.s011 (Definition of done for kickoff)
+  - 22-v6-implementation-tightening.s006 (Canonical type contract)
 scope:
   - add a stable canonical serialization helper for JSON-compatible state-shaped values
   - add a deterministic hash helper using Node standard library crypto

@@ -38,7 +38,7 @@ non_scope:
   - CLI runner
   - server or browser integration
 dependencies:
-  - TYP-001G
+  - TYP-001H
 acceptance_criteria:
   - child stories exist for the first engine-core foundation concerns
   - this parent story remains non-implementable and is not packetized

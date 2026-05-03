@@ -1,0 +1,65 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-001G
+epic_id: M1-001
+title: Add GameState, engine result, error, hash, and handler contracts
+type: implementation
+area: contracts
+primary_concern: contract
+priority: critical
+status: generated
+summary: >
+  Add the canonical top-level GameState, engine result, error, hash input, and
+  custom handler contracts after all referenced support, event, decision,
+  action, and runtime contracts exist.
+story_boundary: >
+  Own only top-level canonical state, engine result, step result, atomic
+  mutation, engine error, custom handler, and state-hash input type exports. Do
+  not implement hashing, mutation, event emission, replay reconstruction,
+  filtering, public view DTOs, or engine-core behavior.
+allowed_touch_points:
+  - packages/types/src/**
+spec_refs:
+  - 03-game-state-events-decisions.s002 (Canonical state rules)
+  - 03-game-state-events-decisions.s004 (Engine result)
+  - 03-game-state-events-decisions.s007 (Atomic mutation contract)
+  - 03-game-state-events-decisions.s020 (Hashing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 04-effect-runtime.s018 (Custom handlers)
+  - 16-typescript-interface-draft.s005 (Game state)
+  - 16-typescript-interface-draft.s009 (Engine result)
+  - 16-typescript-interface-draft.s010 (Hashing)
+  - 22-v6-implementation-tightening.s006 (Canonical type contract)
+scope:
+  - export canonical `GameState`, `EngineStepResult`, `EngineResult`, `EngineError`, `StateHashInput`, `AtomicMutation`, and `CustomHandler` contracts
+  - ensure `GameState` composes only type families delivered by TYP-001A through TYP-001F
+  - ensure canonical v6 `EngineResult` uses filtered `EngineEvent[]` where applicable and does not reintroduce stale `PublicEffectEvent` contracts
+  - add package-local type tests compiling representative minimal `GameState`, `EngineStepResult`, `EngineResult`, `EngineError`, `StateHashInput`, and `CustomHandler` fixtures
+non_scope:
+  - hash computation
+  - event journal mutation logic
+  - replay serialization or reconstruction
+  - public/player/spectator view DTOs
+  - engine-core package creation
+  - CLI runner behavior
+dependencies:
+  - TYP-001A
+  - TYP-001B
+  - TYP-001C
+  - TYP-001D
+  - TYP-001E
+  - TYP-001F
+acceptance_criteria:
+  - "`GameState` includes hidden zones, RNG state, internal queues, audit metadata, decisions, and match status fields through canonical support types"
+  - engine result contracts expose deterministic result metadata without implementing behavior
+  - public view DTOs are not mixed into canonical state or result contracts
+required_tests:
+  - package type test compiling a minimal canonical `GameState` fixture
+  - package type test proving hidden-zone fields are represented in canonical state
+  - package type test compiling representative `EngineStepResult`, `EngineResult`, `EngineError`, `StateHashInput`, and `CustomHandler` fixtures
+repo_rules:
+  - canonical state is server-only and may include hidden information
+  - do not implement hashing, mutation, filtering, or engine behavior in this contract story
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

@@ -60,8 +60,10 @@ and packetized.
 
 Initial child focus:
 
-- `TYP-001A` through `TYP-001G` replace the placeholder shared type package in
-  small contract slices.
+- `TYP-001A` through `TYP-001H` replace the placeholder shared type package in
+  small canonical-contract slices ordered by dependency.
+- `TYP-002` tracks the public/player/spectator view DTO authority gap until the
+  spec and canonical contract agree on exact DTO names and shapes.
 - `ENG-001A` through `ENG-001C` prepare engine package and deterministic
   primitives after the required type slices land.
 - CLI stories stay generated/deferred until engine behavior exists.
