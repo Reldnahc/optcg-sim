@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/SEC-001C.md",
-      "storyId": "SEC-001C",
-      "storyPath": "stories/approved/SEC-001C-hidden-info-verify-and-ci-gate.yaml",
-      "storySha256": "62c1df52d23c890a62ab1bb1ff1708757e546994c857211b062f123119c2c741"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
