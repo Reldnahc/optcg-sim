@@ -5,6 +5,9 @@ import { Client as PgClient } from "pg";
 import WebSocket from "ws";
 import axios from "axios";
 import { fetch as undiciFetch } from "undici";
+import nodeFetch from "node-fetch";
+import { browserOnlyValue } from "../../../browser/src/example";
+import { serverOnlyValue } from "../../../server/src/example";
 
 export const forbiddenReference = clientOnlyValue;
 export const forbiddenReact = React;
@@ -13,3 +16,6 @@ export const forbiddenPgClient = PgClient;
 export const forbiddenWebSocket = WebSocket;
 export const forbiddenAxios = axios;
 export const forbiddenUndiciFetch = undiciFetch;
+export const forbiddenNodeFetch = nodeFetch;
+export const forbiddenBrowserReference = browserOnlyValue;
+export const forbiddenServerReference = serverOnlyValue;

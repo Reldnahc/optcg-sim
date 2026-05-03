@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-001A -->
 <!-- agent-packet:story-path stories/approved/ENG-001A-engine-core-package-skeleton.yaml -->
-<!-- agent-packet:story-sha256 3a5140c899bb75ca606fd13297eb91fcb8dbbed78e10a615aef931f97a135604 -->
+<!-- agent-packet:story-sha256 183fe7e54c59a6d78863aec2947538a37e34cf91ad403dacfac802d95338ef51 -->
 
 # Story Packet
 
@@ -133,6 +133,7 @@ Own only package skeleton, a minimal non-gameplay package entrypoint, package co
 - pnpm-lock.yaml
 - pnpm-workspace.yaml
 - eslint.config.mjs
+- tests/contracts/**
 - tests/lint/**
 - tests/fixtures/eslint/**
 

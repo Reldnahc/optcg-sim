@@ -146,7 +146,7 @@ test("eslint rejects forbidden engine-core imports", async () => {
 
   assert.equal(
     restrictedImportMessages.length,
-    7,
+    10,
     "engine-core boundary fixture should trigger one no-restricted-imports error per forbidden import class",
   );
 });

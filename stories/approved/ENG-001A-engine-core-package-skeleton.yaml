@@ -23,6 +23,7 @@ allowed_touch_points:
   - pnpm-lock.yaml
   - pnpm-workspace.yaml
   - eslint.config.mjs
+  - tests/contracts/**
   - tests/lint/**
   - tests/fixtures/eslint/**
 spec_refs:
