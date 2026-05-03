@@ -8,7 +8,7 @@ type: verification
 area: security
 primary_concern: verification
 priority: critical
-status: generated
+status: approved
 summary: >
   Promote the dedicated hidden-information regression lane into local verify and CI
   so leakage checks become a first-class merge gate.

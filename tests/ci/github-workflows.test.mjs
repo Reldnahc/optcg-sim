@@ -38,6 +38,24 @@ function extractContractsJobBlock(workflowText) {
   return lines.slice(startIndex, endIndex).join("\n");
 }
 
+function extractHiddenInfoJobBlock(workflowText) {
+  const lines = workflowText.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) =>
+    /^\s{2}hidden-info:\s*$/.test(line),
+  );
+  assert.notEqual(startIndex, -1, "missing hidden-info job block");
+
+  let endIndex = lines.length;
+  for (let i = startIndex + 1; i < lines.length; i += 1) {
+    if (/^\s{2}[a-zA-Z0-9_-]+:\s*$/.test(lines[i])) {
+      endIndex = i;
+      break;
+    }
+  }
+
+  return lines.slice(startIndex, endIndex).join("\n");
+}
+
 test("package.json exposes the canonical contract lane for CI", async () => {
   const packageJson = await readJson("package.json");
 
@@ -51,10 +69,25 @@ test("package.json exposes the canonical contract lane for CI", async () => {
     "string",
     "missing test:contracts script",
   );
+  assert.equal(
+    typeof packageJson.scripts?.["test:hidden-info"],
+    "string",
+    "missing test:hidden-info script",
+  );
   assert.match(
     packageJson.scripts.verify,
     /pnpm run contracts/i,
     "verify should include the root contracts lane once it exists",
+  );
+  assert.match(
+    packageJson.scripts.verify,
+    /pnpm run test:hidden-info/i,
+    "verify should include the canonical hidden-info lane",
+  );
+  assert.doesNotMatch(
+    packageJson.scripts.verify,
+    /vitest run tests\/hidden-info/i,
+    "verify should not duplicate the hidden-info vitest command directly",
   );
 });
 
@@ -67,6 +100,7 @@ test("ci workflow file exists with the expected verification jobs", async () => 
   assert.match(workflow, /^\s+push:\s*$/m);
   assert.match(workflow, /^\s+quality:\s*$/m);
   assert.match(workflow, /^\s+test:\s*$/m);
+  assert.match(workflow, /^\s+hidden-info:\s*$/m);
   assert.match(workflow, /^\s+contracts:\s*$/m);
   assert.match(workflow, /^\s+coverage:\s*$/m);
 });
@@ -74,6 +108,7 @@ test("ci workflow file exists with the expected verification jobs", async () => 
 test("ci workflow runs the canonical root commands and publishes coverage", async () => {
   const workflow = await readText(".github/workflows/ci.yml");
   const contractsJobBlock = extractContractsJobBlock(workflow);
+  const hiddenInfoJobBlock = extractHiddenInfoJobBlock(workflow);
 
   const requiredCommands = [
     "pnpm install --frozen-lockfile",
@@ -81,13 +116,18 @@ test("ci workflow runs the canonical root commands and publishes coverage", asyn
     "pnpm lint",
     "pnpm typecheck",
     "pnpm test",
+    "pnpm test:hidden-info",
     "pnpm contracts",
     "pnpm coverage",
   ];
 
   for (const command of requiredCommands) {
     const targetText =
-      command === "pnpm contracts" ? contractsJobBlock : workflow;
+      command === "pnpm contracts"
+        ? contractsJobBlock
+        : command === "pnpm test:hidden-info"
+          ? hiddenInfoJobBlock
+          : workflow;
     assert.match(
       targetText,
       new RegExp(command.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")),
@@ -109,6 +149,12 @@ test("ci workflow runs the canonical root commands and publishes coverage", asyn
       `contracts job should not call bespoke sub-lane command \`${command}\``,
     );
   }
+
+  assert.doesNotMatch(
+    hiddenInfoJobBlock,
+    /vitest run tests\/hidden-info/i,
+    "hidden-info job should call the canonical root lane rather than a direct vitest command",
+  );
 
   assert.match(workflow, /actions\/setup-node@v4/);
   assert.match(workflow, /pnpm\/action-setup@v4/);
