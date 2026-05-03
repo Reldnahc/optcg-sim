@@ -1,0 +1,9 @@
+{
+  "name": "leaks RNG state",
+  "leakCategory": "rng-state",
+  "leakPath": "rng",
+  "leakValue": {
+    "seed": "private-seed",
+    "cursor": 19
+  }
+}

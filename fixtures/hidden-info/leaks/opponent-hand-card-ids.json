@@ -1,0 +1,6 @@
+{
+  "name": "leaks opponent hand card IDs",
+  "leakCategory": "opponent-hand-card-ids",
+  "leakPath": "opponent.hand.cardIds",
+  "leakValue": ["opponent-hand-001", "opponent-hand-002"]
+}

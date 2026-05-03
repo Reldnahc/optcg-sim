@@ -1,0 +1,6 @@
+{
+  "name": "leaks face-down life identity",
+  "leakCategory": "face-down-life-identity",
+  "leakPath": "opponent.life.faceDownCardIds",
+  "leakValue": ["life-001", "life-002"]
+}

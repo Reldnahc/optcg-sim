@@ -1,0 +1,9 @@
+{
+  "name": "leaks internal crash and recovery metadata",
+  "leakCategory": "internal-crash-recovery-metadata",
+  "leakPath": "crashRecovery",
+  "leakValue": {
+    "lastCheckpointId": "checkpoint-001",
+    "recoveryNonce": "private-recovery-nonce"
+  }
+}
