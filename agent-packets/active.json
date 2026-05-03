@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/TYP-001C.md",
+      "storyId": "TYP-001C",
+      "storyPath": "stories/approved/TYP-001C-engine-event-causality-and-error-contracts.yaml",
+      "storySha256": "7f2243004ebeff553df293bc97ace4e93ca3fa3338360106f0a56b18a252c8db"
+    }
+  ],
   "version": 1
 }

@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import type {
   Attribute,
   BattleStep,
+  CausalityRef,
   CardCategory,
   CardColor,
   CardImplementationRecord,
@@ -14,7 +15,10 @@ import type {
   Comparator,
   DeckValidationResult,
   DecklistEntry,
+  EngineEvent,
+  EngineEventType,
   EffectId,
+  EventVisibility,
   Keyword,
   Loadout,
   MatchCardManifest,
@@ -24,7 +28,9 @@ import type {
   PoneglyphVariant,
   PlayerId,
   PlayerRef,
+  QueueEntryId,
   ResolvedCard,
+  EngineEventId,
   VariantKey,
   StateSeq,
   Visibility,
@@ -273,4 +279,54 @@ test("poneglyph and resolved/deck validation fixtures compile against canonical 
 
   expect(cardSnapshot.cardId).toBe(cardRef.cardId);
   expect(validationResult.valid).toBe(true);
+});
+
+test("event visibility variants compile for canonical union", () => {
+  const publicVisibility: EventVisibility = { type: "public" };
+  const privateVisibility: EventVisibility = {
+    type: "private",
+    playerId: "player-1" as PlayerId,
+  };
+  const hiddenVisibility: EventVisibility = { type: "hidden" };
+  const replayOnlyVisibility: EventVisibility = { type: "replayOnly" };
+  const serverOnlyVisibility: EventVisibility = { type: "serverOnly" };
+
+  expect(publicVisibility.type).toBe("public");
+  expect(privateVisibility.type).toBe("private");
+  expect(hiddenVisibility.type).toBe("hidden");
+  expect(replayOnlyVisibility.type).toBe("replayOnly");
+  expect(serverOnlyVisibility.type).toBe("serverOnly");
+});
+
+test("engine event compiles with causality ref and no out-of-scope contracts", () => {
+  const eventType: EngineEventType = "cardMoved";
+  const causedBy: CausalityRef = {
+    type: "effect",
+    queueEntryId: "queue-1" as QueueEntryId,
+    effectId: "effect-1" as EffectId,
+  };
+  const event: EngineEvent = {
+    id: "event-1" as EngineEventId,
+    seq: 1,
+    type: eventType,
+    payload: { from: "hand", to: "trash" },
+    visibility: { type: "public" },
+    createdAtStateSeq: 1 as StateSeq,
+    causedBy,
+  };
+  const privateEvent: EngineEvent = {
+    id: "event-2" as EngineEventId,
+    seq: 2,
+    type: eventType,
+    payload: { from: "deck", to: "hand" },
+    visibility: {
+      type: "private",
+      playerId: "player-1" as PlayerId,
+    },
+    createdAtStateSeq: 2 as StateSeq,
+  };
+
+  expect(event.type).toBe("cardMoved");
+  expect(event.causedBy?.type).toBe("effect");
+  expect(privateEvent.visibility.type).toBe("private");
 });
