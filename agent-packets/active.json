@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/TYP-003.md",
+      "storyId": "TYP-003",
+      "storyPath": "stories/approved/TYP-003-types-package-concern-split.yaml",
+      "storySha256": "0032632d346f5939b239d8ecc124df2cf95a45db210f0033ee05713b85dcc8ff"
+    }
+  ],
   "version": 1
 }
