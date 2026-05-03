@@ -8,7 +8,12 @@ type: verification
 area: security
 primary_concern: verification
 priority: high
-status: generated
+status: blocked
+blocked_reason: >
+  SEC-001C is complete, but the repo still has no real production client package
+  boundaries or production client import targets to enforce. Do not approve this
+  story until a real client package exists; do not create fake client modules or
+  placeholder browser bundles just to satisfy this guard.
 summary: >
   Add the future lint or import-boundary safeguard that prevents test-only
   hidden-state helpers and hidden-info fixtures from entering production client
