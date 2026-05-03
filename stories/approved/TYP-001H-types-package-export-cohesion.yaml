@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: critical
-status: generated
+status: approved
 summary: >
   Finish the shared type package replacement with export cohesion tests that
   prove all canonical TYP-001 contract exports are importable from
@@ -27,7 +27,8 @@ spec_refs:
 scope:
   - ensure the package entrypoint exports the type families delivered by TYP-001A through TYP-001G
   - remove or quarantine any remaining placeholder-only export coverage
-  - add an exhaustive package export cohesion test or checked ownership manifest that enumerates every `export type` and `export interface` from `contracts/canonical-types.ts` owned by TYP-001A through TYP-001G
+  - add a checked ownership/export manifest that enumerates every `export type` and `export interface` from `contracts/canonical-types.ts` owned by TYP-001A through TYP-001G
+  - add tests that validate the checked manifest rather than relying on placeholder-only relative import or object-key smoke coverage
   - add package export cohesion tests for branded IDs, card/deck/loadout contracts, events, effect support, decisions/actions, runtime support structures, GameState, EngineResult, error, handler, and hash input contracts
 non_scope:
   - new branded IDs or primitive aliases
@@ -47,12 +48,16 @@ acceptance_criteria:
   - package exports no longer rely on placeholder contract coverage
   - every canonical export owned by TYP-001A through TYP-001G is importable from `@optcg/types`
   - the ownership/export manifest has no unowned or duplicate-owned canonical exports for the TYP-001 scope
+  - "the checked manifest keys exactly match all exported type/interface names in `contracts/canonical-types.ts`; each entry has exactly one owner from `TYP-001A` through `TYP-001G`; no duplicate, unowned, extra, or missing canonical exports are accepted"
   - this story does not add new contract families beyond export cohesion
 required_tests:
-  - exhaustive package export test or checked manifest proving every canonical export owned by TYP-001A through TYP-001G is importable from `@optcg/types`
+  - checked ownership/export manifest plus a test that validates every canonical export owned by TYP-001A through TYP-001G is assigned exactly one owner and importable from `@optcg/types`
+  - compile/package-resolution test importing the manifest-covered exports from `@optcg/types`, not only from `./index.js`
+  - test proving placeholder-only coverage, such as relative import or object-key smoke coverage by itself, is not sufficient as the export proof
   - root `corepack pnpm run verify`
 repo_rules:
   - do not introduce public view DTOs until TYP-002 resolves the authority gap
   - do not implement runtime behavior in the types package
+  - limit `packages/types/package.json` edits to entrypoint metadata required for the package-name import test; do not add dependencies, scripts, runtime fields, or unrelated package setup
   - must pass `corepack pnpm run verify`
 ambiguity_policy: fail_and_escalate
