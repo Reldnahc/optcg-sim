@@ -571,18 +571,16 @@ test("TYP-001E decision and response contracts compile against canonical variant
   };
 
   const targetCandidate: TargetCandidate = {
-    id: "target-1",
     card: {
       instanceId: "instance-1" as CardRef["instanceId"],
       cardId: "OP01-001" as CardId,
       playerId: "player-1" as PlayerId,
     },
-    visibility: "bothPlayers",
+    visibility: { type: "public" },
   };
   const cardSelectionCandidate: CardSelectionCandidate = {
-    id: "candidate-1",
     card: targetCandidate.card,
-    visibility: "bothPlayers",
+    visibility: { type: "private", playerId: "player-1" as PlayerId },
   };
 
   const paymentSpec: PaymentSpec = {

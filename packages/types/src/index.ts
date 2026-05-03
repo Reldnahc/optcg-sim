@@ -849,15 +849,13 @@ export type PaymentOption =
   | { id: string; type: "custom"; action: string };
 
 export interface TargetCandidate {
-  id: string;
   card: CardRef;
-  visibility: Visibility;
+  visibility: EventVisibility;
 }
 
 export interface CardSelectionCandidate {
-  id: string;
   card: CardRef;
-  visibility: Visibility;
+  visibility: EventVisibility;
 }
 
 export type DecisionResponse =
