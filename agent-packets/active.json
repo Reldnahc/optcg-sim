@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-006B.md",
-      "storyId": "INF-006B",
-      "storyPath": "stories/approved/INF-006B-effect-dsl-schema-fixture-validation.yaml",
-      "storySha256": "42b2d504166d11e7d947516b1ce320bb51609f08b94e27f52c8b63bc6b52f194"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

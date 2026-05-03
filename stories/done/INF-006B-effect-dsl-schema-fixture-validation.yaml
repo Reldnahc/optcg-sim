@@ -8,7 +8,7 @@ type: tooling
 area: contracts
 primary_concern: contract
 priority: critical
-status: approved
+status: done
 summary: >
   Add the baseline canonical effect DSL schema plus valid and invalid fixture coverage
   so JSON effect definitions can be validated mechanically before they reach runtime
