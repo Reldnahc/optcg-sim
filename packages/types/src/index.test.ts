@@ -314,7 +314,19 @@ test("engine event compiles with causality ref and no out-of-scope contracts", (
     createdAtStateSeq: 1 as StateSeq,
     causedBy,
   };
+  const privateEvent: EngineEvent = {
+    id: "event-2" as EngineEventId,
+    seq: 2,
+    type: eventType,
+    payload: { from: "deck", to: "hand" },
+    visibility: {
+      type: "private",
+      playerId: "player-1" as PlayerId,
+    },
+    createdAtStateSeq: 2 as StateSeq,
+  };
 
   expect(event.type).toBe("cardMoved");
   expect(event.causedBy?.type).toBe("effect");
+  expect(privateEvent.visibility.type).toBe("private");
 });
