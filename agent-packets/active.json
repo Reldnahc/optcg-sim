@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/TYP-001D.md",
+      "storyId": "TYP-001D",
+      "storyPath": "stories/approved/TYP-001D-effect-definition-filter-and-target-contracts.yaml",
+      "storySha256": "7b7bdbbee6a52fd4fa590c44fb4c1a81731eece272205d68540d8a27905a907f"
+    }
+  ],
   "version": 1
 }
