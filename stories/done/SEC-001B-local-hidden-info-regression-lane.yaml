@@ -8,7 +8,7 @@ type: verification
 area: security
 primary_concern: verification
 priority: critical
-status: approved
+status: done
 summary: >
   Add a dedicated local hidden-information regression command that runs the
   hidden-info fixture/assertion harness independently from the generic unit test lane.
