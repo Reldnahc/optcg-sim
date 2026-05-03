@@ -1,0 +1,50 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SEC-001B
+epic_id: KICK-001
+title: Add local hidden-information regression lane
+type: verification
+area: security
+primary_concern: verification
+priority: critical
+status: generated
+summary: >
+  Add a dedicated local hidden-information regression command that runs the
+  hidden-info fixture/assertion harness independently from the generic unit test lane.
+story_boundary: >
+  Own only local package-script wiring and hidden-info lane smoke tests. Do not add
+  CI workflow wiring, production filtering APIs, spectator behavior, replay behavior,
+  or client rendering logic in this story.
+allowed_touch_points:
+  - package.json
+  - tests/hidden-info/**
+  - fixtures/hidden-info/**
+spec_refs:
+  - 11-testing-quality.s022 (Required repo enforcement linkage)
+  - 23-repo-tooling-and-enforcement.s010 (Test tooling requirements)
+  - 23-repo-tooling-and-enforcement.s012 (Hidden-information safety enforcement)
+  - 23-repo-tooling-and-enforcement.s023 (Definition of done for repo tooling)
+scope:
+  - add a dedicated root hidden-information test command
+  - wire the command to the hidden-info test directory or harness from SEC-001A
+  - add smoke coverage proving the local command exists independently from generic unit tests
+non_scope:
+  - CI workflow wiring
+  - root verify wiring
+  - production filterStateForPlayer implementation
+  - spectator mode behavior
+  - replay serializer policy
+  - client or browser bundle safeguards
+dependencies:
+  - SEC-001A
+acceptance_criteria:
+  - a dedicated root hidden-information test lane exists
+  - the lane runs the hidden-info tests without relying on manual reviewer inspection
+  - the lane uses existing root tooling conventions and does not duplicate test-runner logic in shell scripts
+required_tests:
+  - hidden-information lane smoke test proving the root script calls the canonical hidden-info test target
+repo_rules:
+  - hidden-information leakage remains merge-blocking once the lane is wired into verify and CI by a later story
+  - the local lane must extend the SEC-001A fixture/assertion harness instead of creating a second harness
+ambiguity_policy: fail_and_escalate

@@ -8,10 +8,12 @@ type: verification
 area: security
 primary_concern: verification
 priority: critical
-status: generated
+status: replaced
 summary: >
-  Add the dedicated regression lane and initial fixture shape needed to enforce hidden-information
-  safety as a first-class merge gate instead of an informal review concern.
+  This broad candidate was replaced during backlog normalization. Hidden-information
+  enforcement must be delivered through smaller concern-scoped stories for fixture
+  assertion shape, local lane wiring, and CI/verify integration so no story invents
+  placeholder gameplay, spectator, or client behavior.
 story_boundary: >
   Own hidden-information regression lane scaffolding and the first policy-oriented fixtures only.
   Do not implement broader engine features, spectator mode behavior, or client rendering changes here.
@@ -29,22 +31,19 @@ spec_refs:
   - 23-repo-tooling-and-enforcement.s022 (Required implementation sequence for tooling)
   - 23-repo-tooling-and-enforcement.s023 (Definition of done for repo tooling)
 scope:
-  - add a dedicated hidden-information regression lane callable from local tooling and CI
-  - define initial fixture and assertion shape for filtered player-view and spectator-policy checks
-  - wire the lane so future engine/view stories can add cases without redefining the enforcement path
+  - historical record of the oversized candidate before decomposition
 non_scope:
+  - implementation work
+  - review authority over the replacement child stories
   - spectator feature implementation
   - replay serializer policy changes
   - client bundle architecture changes
 dependencies:
   - INF-004
 acceptance_criteria:
-  - a dedicated hidden-information test lane exists independently from generic unit tests
-  - the lane can express assertions for absent opponent hand contents, deck order, face-down life identity, RNG state, and queue internals
-  - the lane is structured so future stories can add filtered-view fixtures without inventing a new test harness
+  - replacement child stories exist for hidden-info fixture assertions, local lane wiring, and CI/verify integration
 required_tests:
-  - hidden-information fixture smoke test for filtered player view assertions
-  - regression harness smoke test for spectator-policy assertions with placeholder fixtures where full implementation is not yet present
+  - none; replacement tracking artifact only
 repo_rules:
   - hidden-information leakage remains merge-blocking and release-blocking
   - no security regression lane may depend on browser bundles or manual reviewer inspection

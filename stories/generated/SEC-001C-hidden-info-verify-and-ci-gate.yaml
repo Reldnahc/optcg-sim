@@ -1,0 +1,51 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SEC-001C
+epic_id: KICK-001
+title: Wire hidden-information lane into verify and CI
+type: verification
+area: security
+primary_concern: verification
+priority: critical
+status: generated
+summary: >
+  Promote the dedicated hidden-information regression lane into local verify and CI
+  so leakage checks become a first-class merge gate.
+story_boundary: >
+  Own only root verification and CI wiring for the existing hidden-info lane. Do not
+  change the hidden-info fixture contract, production filtering APIs, spectator behavior,
+  replay behavior, or client rendering logic in this story.
+allowed_touch_points:
+  - package.json
+  - .github/workflows/**
+  - tests/ci/**
+spec_refs:
+  - 11-testing-quality.s022 (Required repo enforcement linkage)
+  - 23-repo-tooling-and-enforcement.s010 (Test tooling requirements)
+  - 23-repo-tooling-and-enforcement.s012 (Hidden-information safety enforcement)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+  - 23-repo-tooling-and-enforcement.s023 (Definition of done for repo tooling)
+scope:
+  - add the hidden-information lane to the canonical local verify command
+  - add or update CI wiring so hidden-information checks run before merge
+  - add CI/root-script smoke tests proving CI calls the canonical hidden-info lane rather than bespoke commands
+non_scope:
+  - hidden-info fixture or assertion-harness design
+  - production filterStateForPlayer implementation
+  - spectator mode behavior
+  - replay serializer policy
+  - client or browser bundle safeguards
+dependencies:
+  - SEC-001B
+acceptance_criteria:
+  - local verify includes the dedicated hidden-information lane
+  - CI includes the dedicated hidden-information lane as a merge gate
+  - CI tests assert the workflow calls the canonical root lane rather than duplicating hidden-info command logic
+required_tests:
+  - root verify smoke test proving hidden-info lane inclusion
+  - CI workflow smoke test proving hidden-info job or step calls the canonical hidden-info lane
+repo_rules:
+  - hidden-information leakage must be merge-blocking after this story
+  - CI and local verification must remain materially aligned
+ambiguity_policy: fail_and_escalate
