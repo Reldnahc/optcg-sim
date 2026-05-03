@@ -1,0 +1,36 @@
+{
+  "cardId": "OP01-999",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "OP01-999:auto-on-play-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "ko",
+        "target": {
+          "type": "choose",
+          "request": {
+            "timing": "onResolution",
+            "chooser": "self",
+            "zone": "characterArea",
+            "player": "opponent",
+            "filter": {
+              "colorIncludes": ["red"]
+            },
+            "min": 0,
+            "max": 1,
+            "allowFewerIfUnavailable": true,
+            "visibility": "public"
+          }
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-op01-999",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

@@ -9,6 +9,7 @@
     "format:check": "corepack pnpm exec prettier --check .",
     "lint": "corepack pnpm exec eslint . --max-warnings=0 --ext .js,.mjs,.cjs,.ts,.mts,.cts",
     "contracts:compile": "corepack pnpm exec tsc -p contracts/tsconfig.json --noEmit",
+    "contracts:validate-effects": "node --experimental-strip-types tools/validate-effect-dsl-fixtures.ts",
     "packets:complete": "node --experimental-strip-types tools/build-agent-packet.ts complete",
     "packets:generate": "node --experimental-strip-types tools/build-agent-packet.ts generate",
     "packets:verify": "node --experimental-strip-types tools/build-agent-packet.ts verify-active",
@@ -19,9 +20,10 @@
     "verify": "corepack pnpm run format:check && corepack pnpm run lint && corepack pnpm run typecheck && corepack pnpm run packets:verify && corepack pnpm run test && corepack pnpm run test:contracts"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
     "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.1.5",
+    "ajv": "^8.20.0",
     "eslint": "^9.39.1",
     "eslint-plugin-vitest": "^0.5.4",
     "globals": "^16.5.0",
