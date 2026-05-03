@@ -1,4 +1,5 @@
 import type { RngState } from "@optcg/types";
+import { createHash } from "node:crypto";
 
 const U64_MASK = 0xffff_ffff_ffff_ffffn;
 const U32_MASK = 0xffff_ffffn;
@@ -122,3 +123,96 @@ export const advanceRngFloat01 = (
     nextRng,
   };
 };
+
+const isPlainObject = (value: object): boolean => {
+  const prototype = Object.getPrototypeOf(value) as object | null;
+  return prototype === Object.prototype || prototype === null;
+};
+
+const unsupportedValueError = (path: string, reason: string): TypeError =>
+  new TypeError(`Unsupported canonical state value at ${path}: ${reason}.`);
+
+const canonicalizeValue = (
+  value: unknown,
+  path: string,
+  seen: Set<object>,
+): string => {
+  if (value === null) {
+    return "null";
+  }
+
+  if (typeof value === "string") {
+    return JSON.stringify(value);
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw unsupportedValueError(path, "non-finite number");
+    }
+
+    return JSON.stringify(value);
+  }
+
+  if (typeof value === "bigint") {
+    throw unsupportedValueError(path, "bigint");
+  }
+
+  if (typeof value === "undefined") {
+    throw unsupportedValueError(path, "undefined");
+  }
+
+  if (typeof value === "function") {
+    throw unsupportedValueError(path, "function");
+  }
+
+  if (typeof value === "symbol") {
+    throw unsupportedValueError(path, "symbol");
+  }
+
+  if (typeof value !== "object") {
+    throw unsupportedValueError(path, `unsupported type ${typeof value}`);
+  }
+
+  if (seen.has(value)) {
+    throw new TypeError(
+      `Unsupported canonical state value at ${path}: cyclic.`,
+    );
+  }
+
+  seen.add(value);
+  try {
+    if (Array.isArray(value)) {
+      const items = value.map((item, index) =>
+        canonicalizeValue(item, `${path}[${String(index)}]`, seen),
+      );
+      return `[${items.join(",")}]`;
+    }
+
+    if (!isPlainObject(value)) {
+      throw unsupportedValueError(path, "non-plain object");
+    }
+
+    const objectValue = value as Record<string, unknown>;
+    const keys = Object.keys(objectValue).sort((a, b) => a.localeCompare(b));
+    const pairs = keys.map((key) => {
+      const childPath = `${path}.${key}`;
+      return `${JSON.stringify(key)}:${canonicalizeValue(objectValue[key], childPath, seen)}`;
+    });
+
+    return `{${pairs.join(",")}}`;
+  } finally {
+    seen.delete(value);
+  }
+};
+
+export const canonicalSerializeStateValue = (value: unknown): string =>
+  canonicalizeValue(value, "$", new Set<object>());
+
+export const hashCanonicalStateValue = (value: unknown): string =>
+  createHash("sha256")
+    .update(canonicalSerializeStateValue(value), "utf8")
+    .digest("hex");

@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { advanceRngFloat01, advanceRngUint32, initializeRng } from "./index.js";
+import {
+  advanceRngFloat01,
+  advanceRngUint32,
+  canonicalSerializeStateValue,
+  hashCanonicalStateValue,
+  initializeRng,
+} from "./index.js";
 
 test("same seed produces the same uint32 sequence", () => {
   let a = initializeRng(12345);
@@ -100,4 +106,100 @@ test("fails closed for RNG algorithms without cited ENG-001B behavior", () => {
       }),
     /Unsupported RNG algorithm/,
   );
+});
+
+test("canonical hash is stable across repeated runs for identical input", () => {
+  const input = {
+    players: [
+      { id: "p1", life: 5 },
+      { id: "p2", life: 3 },
+    ],
+    turn: { phase: "main", count: 2 },
+  };
+
+  const hashes = Array.from({ length: 5 }, () =>
+    hashCanonicalStateValue(input),
+  );
+
+  assert.ok(hashes.every((hash) => hash === hashes[0]));
+});
+
+test("canonical serialization normalizes object key insertion order", () => {
+  const a = { b: 2, a: 1 };
+  const b = { a: 1, b: 2 };
+
+  assert.equal(
+    canonicalSerializeStateValue(a),
+    canonicalSerializeStateValue(b),
+  );
+  assert.equal(hashCanonicalStateValue(a), hashCanonicalStateValue(b));
+});
+
+test("canonical serialization normalizes nested object key insertion order", () => {
+  const a = {
+    z: { y: 2, x: 1 },
+    a: [{ d: 4, c: 3 }],
+  };
+  const b = {
+    a: [{ c: 3, d: 4 }],
+    z: { x: 1, y: 2 },
+  };
+
+  assert.equal(
+    canonicalSerializeStateValue(a),
+    canonicalSerializeStateValue(b),
+  );
+  assert.equal(hashCanonicalStateValue(a), hashCanonicalStateValue(b));
+});
+
+test("canonical hash preserves array order significance", () => {
+  const a = { items: [1, 2, 3] };
+  const b = { items: [3, 2, 1] };
+
+  assert.notEqual(
+    canonicalSerializeStateValue(a),
+    canonicalSerializeStateValue(b),
+  );
+  assert.notEqual(hashCanonicalStateValue(a), hashCanonicalStateValue(b));
+});
+
+test("known fixture produces fixed lowercase sha-256 digest", () => {
+  const fixture = {
+    a: 1,
+    b: [true, false, null, "x"],
+    c: { d: "z", e: 0 },
+  };
+
+  assert.equal(
+    hashCanonicalStateValue(fixture),
+    "b99b631ce30127854fb73f55454f26f58e8673d5a14bcba14b29c75aafb37077",
+  );
+});
+
+test("unsupported values and cyclic structures fail closed", () => {
+  assert.throws(
+    () => canonicalSerializeStateValue({ a: undefined }),
+    /Unsupported/,
+  );
+  assert.throws(
+    () => canonicalSerializeStateValue({ fn: () => "x" }),
+    /Unsupported/,
+  );
+  assert.throws(
+    () => canonicalSerializeStateValue({ sym: Symbol("x") }),
+    /Unsupported/,
+  );
+  assert.throws(() => canonicalSerializeStateValue({ n: 1n }), /Unsupported/);
+  assert.throws(
+    () => canonicalSerializeStateValue({ n: Number.NaN }),
+    /Unsupported/,
+  );
+  assert.throws(
+    () => canonicalSerializeStateValue({ n: Number.POSITIVE_INFINITY }),
+    /Unsupported/,
+  );
+
+  const cyclic: { self?: unknown } = {};
+  cyclic.self = cyclic;
+  assert.throws(() => canonicalSerializeStateValue(cyclic), /cyclic/i);
 });
