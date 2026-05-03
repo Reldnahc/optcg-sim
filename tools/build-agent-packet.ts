@@ -74,6 +74,12 @@ type CompleteOptions = {
   storyPath: string;
 };
 
+type CompleteManyOptions = {
+  manifestPath: string;
+  repoRoot: string;
+  storyPaths: string[];
+};
+
 const REQUIRED_PACKET_HEADINGS = [
   "## Story",
   "## Why",
@@ -202,11 +208,17 @@ async function main() {
       return;
     }
 
+    if (command === "complete-many") {
+      await runCompleteMany(parseCompleteManyOptions(args));
+      return;
+    }
+
     throw new Error(
       "Usage:\n" +
         "  node --experimental-strip-types tools/build-agent-packet.ts generate --story <path> [--output <path>] [--manifest <path>] [--activate]\n" +
         "  node --experimental-strip-types tools/build-agent-packet.ts verify-active [--manifest <path>]\n" +
-        "  node --experimental-strip-types tools/build-agent-packet.ts complete --story <path> [--manifest <path>]",
+        "  node --experimental-strip-types tools/build-agent-packet.ts complete --story <path> [--manifest <path>]\n" +
+        "  node --experimental-strip-types tools/build-agent-packet.ts complete-many --story <path> --story <path> [--manifest <path>]",
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -316,6 +328,61 @@ function parseCompleteOptions(args: string[]): CompleteOptions {
     ),
     repoRoot,
     storyPath: resolveCliPath(requireOption(options, "--story"), process.cwd()),
+  };
+}
+
+function parseCompleteManyOptions(args: string[]): CompleteManyOptions {
+  const repoRoot = findRepoRoot();
+  const storyPaths: string[] = [];
+  let manifestPath: string | undefined;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === undefined) {
+      throw new Error("Unexpected missing CLI token.");
+    }
+
+    if (token === "--story") {
+      const storyArg = args[index + 1];
+
+      if (!storyArg || storyArg.startsWith("--")) {
+        throw new Error("Missing value for --story");
+      }
+
+      storyPaths.push(resolveCliPath(storyArg, process.cwd()));
+      index += 1;
+      continue;
+    }
+
+    if (token === "--manifest") {
+      const manifestArg = args[index + 1];
+
+      if (!manifestArg || manifestArg.startsWith("--")) {
+        throw new Error("Missing value for --manifest");
+      }
+
+      manifestPath = resolveCliPath(manifestArg, process.cwd());
+      index += 1;
+      continue;
+    }
+
+    if (token.startsWith("--")) {
+      throw new Error(`Unexpected argument: ${token}`);
+    }
+
+    throw new Error(`Unexpected argument: ${token}`);
+  }
+
+  if (storyPaths.length === 0) {
+    throw new Error("Missing required option --story");
+  }
+
+  return {
+    manifestPath:
+      manifestPath ?? path.join(repoRoot, "agent-packets", "active.json"),
+    repoRoot,
+    storyPaths,
   };
 }
 
@@ -532,6 +599,171 @@ async function runComplete(options: CompleteOptions) {
   );
 
   process.stdout.write(`${donePathLabel}\n`);
+}
+
+async function runCompleteMany(options: CompleteManyOptions) {
+  assertCanonicalActiveManifestPath(options.repoRoot, options.manifestPath);
+
+  if (!(await fileExists(options.manifestPath))) {
+    throw new Error(
+      `Active story manifest is required: ${toManifestPath(options.repoRoot, options.manifestPath)}.`,
+    );
+  }
+
+  const manifest = await loadManifest(options.manifestPath);
+  assertAtMostOneActiveStory(manifest);
+
+  const seenStoryIds = new Set<string>();
+  const seenStoryPaths = new Set<string>();
+  const completions: Array<{
+    donePath: string;
+    donePathLabel: string;
+    doneStorySource: string;
+    packetPath: string;
+    storyId: string;
+    storyPath: string;
+    storyPathLabel: string;
+  }> = [];
+
+  for (const storyPath of options.storyPaths) {
+    const storyPathLabel = toManifestPath(options.repoRoot, storyPath);
+
+    if (seenStoryPaths.has(storyPathLabel)) {
+      throw new Error(`Duplicate --story argument: ${storyPathLabel}.`);
+    }
+
+    seenStoryPaths.add(storyPathLabel);
+    const storySource = await readUtf8(storyPath);
+    const story = parseStoryYaml(storySource);
+
+    assertCanonicalStoryPathForStoryId(story.id, storyPathLabel);
+
+    if (seenStoryIds.has(story.id)) {
+      throw new Error(`Duplicate story id in --story arguments: ${story.id}.`);
+    }
+
+    seenStoryIds.add(story.id);
+
+    if (story.status !== "approved") {
+      throw new Error(
+        `Only approved stories may be completed. ${story.id} has status ${story.status}.`,
+      );
+    }
+
+    const currentStorySha256 = sha256(storySource);
+    const packetPath = path.join(
+      options.repoRoot,
+      AGENT_PACKETS_DIR,
+      `${story.id}.md`,
+    );
+    const packetPathLabel = toManifestPath(options.repoRoot, packetPath);
+
+    if (!(await fileExists(packetPath))) {
+      throw new Error(
+        `Story ${story.id} is missing packet ${packetPathLabel}.`,
+      );
+    }
+
+    const packetSource = await readUtf8(packetPath);
+    const normalizedPacketSource = normalizeLineEndings(packetSource);
+    const packetStoryId = readPacketMetadata(packetSource, "story-id");
+    const packetStorySha256 = readPacketMetadata(packetSource, "story-sha256");
+
+    if (packetStoryId !== story.id) {
+      throw new Error(`Story ${story.id} packet metadata does not match.`);
+    }
+
+    if (packetStorySha256 !== currentStorySha256) {
+      throw new Error(`Story ${story.id} has a stale packet.`);
+    }
+
+    for (const heading of REQUIRED_PACKET_HEADINGS) {
+      if (!normalizedPacketSource.includes(`${heading}\n`)) {
+        throw new Error(
+          `Story ${story.id} packet is missing required section ${heading}.`,
+        );
+      }
+    }
+
+    const expectedPacketSource = await buildPacket({
+      repoRoot: options.repoRoot,
+      story,
+      storyPath,
+      storySource,
+    });
+
+    if (
+      normalizePacketContent(packetSource) !==
+      normalizePacketContent(expectedPacketSource)
+    ) {
+      throw new Error(
+        `Story ${story.id} packet does not match the canonical packet content generated from ${storyPathLabel}.`,
+      );
+    }
+
+    const donePath = path.join(
+      options.repoRoot,
+      "stories",
+      "done",
+      path.basename(storyPath),
+    );
+    const donePathLabel = toManifestPath(options.repoRoot, donePath);
+
+    if (await fileExists(donePath)) {
+      throw new Error(`Done story already exists: ${donePathLabel}.`);
+    }
+
+    const doneStorySource = storySource.replace(
+      /^status:\s+approved$/m,
+      "status: done",
+    );
+
+    if (doneStorySource === storySource) {
+      throw new Error(`Unable to mark ${story.id} as done.`);
+    }
+
+    completions.push({
+      donePath,
+      donePathLabel,
+      doneStorySource,
+      packetPath,
+      storyId: story.id,
+      storyPath,
+      storyPathLabel,
+    });
+  }
+
+  for (const completion of completions) {
+    await mkdir(path.dirname(completion.donePath), { recursive: true });
+    await writeFile(completion.donePath, completion.doneStorySource);
+    await rm(completion.storyPath);
+    await rm(completion.packetPath, { force: true });
+  }
+
+  const remainingActiveStories = manifest.activeStories.filter(
+    (entry) =>
+      !completions.some(
+        (completion) =>
+          completion.storyId === entry.storyId ||
+          completion.storyPathLabel === entry.storyPath,
+      ),
+  );
+  assertAtMostOneActiveStory({
+    ...manifest,
+    activeStories: remainingActiveStories,
+  });
+  await writeFile(
+    options.manifestPath,
+    `${JSON.stringify(
+      { activeStories: remainingActiveStories, version: manifest.version },
+      null,
+      2,
+    )}\n`,
+  );
+
+  process.stdout.write(
+    `${completions.map((completion) => completion.donePathLabel).join("\n")}\n`,
+  );
 }
 
 async function buildPacket(input: {
@@ -1234,6 +1466,25 @@ function assertCanonicalActiveStoryPath(storyId: string, storyPath: string) {
   if (!isCanonicalApprovedStoryPath(storyPath)) {
     throw new Error(
       `Active story ${storyId} must use a checked-in approved story path under ${APPROVED_STORIES_DIR}/.`,
+    );
+  }
+}
+
+function assertCanonicalStoryPathForStoryId(
+  storyId: string,
+  storyPath: string,
+) {
+  if (!isCanonicalApprovedStoryPath(storyPath)) {
+    throw new Error(
+      `Story ${storyId} must use a checked-in approved story path under ${APPROVED_STORIES_DIR}/.`,
+    );
+  }
+
+  const baseName = path.posix.basename(storyPath);
+
+  if (!baseName.startsWith(`${storyId}-`)) {
+    throw new Error(
+      `Story ${storyId} path must match its story id under ${APPROVED_STORIES_DIR}/.`,
     );
   }
 }

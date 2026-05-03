@@ -50,13 +50,31 @@ Use stable `SECTION_REF` citations from the spec. Do not cite heading anchors or
 ## Story Lifecycle Rules
 
 - The parent agent owns story-state transitions and active-packet cleanup.
-- A merged story must move from `stories/approved/` to `stories/done/` with `status: done` before the next implementation story is handed off.
+- A story merged to `main` must move from `stories/approved/` to `stories/done/` with `status: done` before the next implementation story is handed off, except when an approved parent-story integration branch workflow explicitly defers substory completion until the parent PR lands on `main`.
 - Completed stories must not remain in `agent-packets/active.json`.
 - Activating a new story replaces the previous active manifest entry instead of accumulating multiple active stories.
-- Completing a story must use the packet completion command so story movement, active-packet removal, and manifest cleanup happen as one verified operation.
-- A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` does not require a separate reviewer subagent run. Run `pnpm verify` before pushing it.
+- Completing a story must use the packet completion command so story movement, packet removal, and manifest cleanup happen as one verified operation.
+- A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` does not require a separate reviewer subagent run. Run `pnpm verify` before pushing it.
 - If cleanup requires any manual edit beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, run full verification and a separate reviewer subagent before pushing or merging.
 - Dormant approved backlog stories do not require checked-in packets until they are activated.
+
+## Parent Story Integration Branches
+
+Use this workflow when a parent story has been decomposed into approved substories and the user has approved parent-level human review instead of per-substory human review:
+
+- Create a parent integration branch from `main` for the full story or decomposed story group, for example `story/typ-001`.
+- Create each substory implementation branch from the parent integration branch, not from `main`.
+- Open each substory PR against the parent integration branch.
+- Keep one active substory packet at a time. A substory PR may include only its active substory packet, implementation, tests, and parent-owned story activation files.
+- Substory PRs still require CI, `pnpm verify`, reviewer-subagent review, AI review records, and revision response comments.
+- After a substory PR passes CI and AI review, the parent agent may merge it into the parent integration branch without human review if the user explicitly approved this parent-story workflow for the group.
+- Do not run `pnpm run packets:complete` for a substory when it merges only into the parent integration branch. The substory is not done until the parent integration branch lands on `main`.
+- After all substories for the parent story land on the parent integration branch, open one parent PR from the integration branch to `main`.
+- The parent PR must receive a full-story integration review that checks the parent story, all included substory PRs, packet history, cross-story consistency, CI, tests, scope boundaries, and unresolved PR comments.
+- Human review is required on the parent PR before it merges to `main`.
+- After the parent PR merges to `main`, complete all included substories with `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` so previously active substories can be completed even when they are no longer the current active manifest entry. The command must fail closed if manifest or packet evidence for any listed substory is missing or stale.
+- Substory PR comments remain the durable historical record for AI review and revisions even when human review happens only on the parent PR.
+- The final parent PR still follows the normal Review Workflow, including reviewer-subagent review, durable AI review records, revision response records, CI, `pnpm verify`, and human review before merge.
 
 ## Story Review Gate
 
@@ -163,7 +181,7 @@ Parent-owned authority edits:
 
 - Parent-owned authority edits: documentation-only changes to `AGENTS.md`, `specs/`, story files, packets, and workflow templates should be handled by the parent agent directly
 - Parent-owned authority edits still require tests when applicable, full verification, and separate reviewer subagent review
-- Pure packet-completion cleanup is the one lifecycle exception: when the patch contains only the exact file changes produced by direct `packets:complete` output, `pnpm verify` is sufficient and a separate reviewer subagent run is not required
+- Pure packet-completion cleanup is the one lifecycle exception: when the patch contains only the exact file changes produced by direct `packets:complete` or `packets:complete-many` output, `pnpm verify` is sufficient and a separate reviewer subagent run is not required
 - Manual edits beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, require full verification and separate reviewer subagent review
 - Use worker subagents for implementation code or large bounded documentation rewrites, not small authority-layer corrections
 
@@ -206,12 +224,14 @@ Code review is required. Use this flow unless a higher-authority story or packet
 13. if no usable reviewer subagent run remains for the patch after the available reviewer-subagent surfaces were found unavailable, timed out, or failed, record an equivalent human review fallback comment explicitly rather than silently skipping the review gate
 14. fix the material findings or post a revision response comment that records the disposition of each unresolved item
 15. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, and after the revision response comment is up to date when a separate reviewer subagent run was used
-16. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes
+16. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes unless the PR is a substory PR targeting an approved parent integration branch; in that case, human review is deferred to the parent PR
 17. if review finds multi-concern drift, split the story or narrow the patch before merge
 
 The separate reviewer subagent run is a repo-level first-pass gate before human review. It does not replace the merge-gate requirement for a durable review record or equivalent human review step.
 
 Passing AI review does not replace human review.
+
+For parent-story integration branch work, passing AI review permits the parent agent to merge a substory PR into the parent integration branch only after CI, packet verification, AI review records, and revision response records are complete. It does not permit merging the parent integration branch to `main` without human review.
 
 When a separate reviewer subagent run is used, the PR review record must contain:
 

@@ -115,10 +115,13 @@ Section Ref: `32-codex-agent-integration.s008`
 1. Follow the subagent model routing policy.
 1. Require tests and a short assumptions/blockers note.
 1. Link the pull request back to the story issue.
-1. Spawn a separate reviewer subagent plus human review before merge.
+1. Spawn a separate reviewer subagent plus human review before merge. If the user has explicitly approved a parent-story integration branch workflow for a decomposed story group, substory pull requests may merge into the parent integration branch after CI, packet verification, reviewer-subagent review, AI review records, and revision response records pass; human review is then required on the final parent pull request to `main`.
 1. After merge, have the parent agent run the packet completion command to move
    the completed story to done history, remove the active packet, and clear or
-   replace the active packet manifest before starting the next story.
+   replace the active packet manifest before starting the next story. In a
+   parent-story integration branch workflow, defer substory completion until the
+   parent pull request lands on `main`, then complete all included substories in
+   one verified packet-tool operation.
 
 The parent agent must not present stories as approval-ready until the story-review findings are resolved, explicitly deferred, or recorded.
 
@@ -199,6 +202,16 @@ After merge, the story should no longer remain approved or active. The parent ag
 should use the packet completion command to move it to `stories/done/` with
 `status: done`, remove the active packet, and ensure `agent-packets/active.json`
 contains no completed story.
+
+For an explicitly approved parent-story integration branch workflow, substory
+pull requests merge into the parent integration branch before the substory is
+marked done. Those substories may remain under `stories/approved/` while the
+parent integration branch is open, but they must not be marked done until the
+parent pull request has merged to `main`. After the parent merge, the parent
+agent must use the multi-story packet completion command to move every included
+substory to `stories/done/`, remove their packets, and clear any matching active
+manifest entry. The multi-story completion command must reject cleanup when
+manifest or packet evidence for any listed substory is missing or stale.
 
 Pure packet-completion cleanup does not require reviewer-subagent review when the
 commit contains only the exact file changes produced by the packet completion
