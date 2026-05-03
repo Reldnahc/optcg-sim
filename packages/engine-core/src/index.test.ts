@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import * as engineCorePackage from "@optcg/engine-core";
 import {
   advanceRngFloat01,
   advanceRngUint32,
@@ -8,6 +9,21 @@ import {
   hashCanonicalStateValue,
   initializeRng,
 } from "./index.js";
+
+test("package runtime boundary exposes engine-core helpers", () => {
+  assert.deepEqual(Object.keys(engineCorePackage).sort(), [
+    "advanceRngFloat01",
+    "advanceRngUint32",
+    "canonicalSerializeStateValue",
+    "hashCanonicalStateValue",
+    "initializeRng",
+  ]);
+  assert.equal(engineCorePackage.initializeRng, initializeRng);
+  assert.equal(
+    engineCorePackage.canonicalSerializeStateValue,
+    canonicalSerializeStateValue,
+  );
+});
 
 test("same seed produces the same uint32 sequence", () => {
   let a = initializeRng(12345);
