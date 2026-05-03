@@ -383,3 +383,59 @@ export interface Loadout {
   iconId?: string;
   cardVariants?: Partial<Record<CardId, VariantKey>>;
 }
+
+export type EventVisibility =
+  | { type: "public" }
+  | { type: "private"; playerId: PlayerId }
+  | { type: "hidden" }
+  | { type: "replayOnly" }
+  | { type: "serverOnly" };
+
+export interface EngineEvent {
+  id: EngineEventId;
+  seq: number;
+  type: EngineEventType;
+  actor?: PlayerId;
+  source?: CardRef;
+  affected?: CardRef[];
+  payload: unknown;
+  causedBy?: CausalityRef;
+  visibility: EventVisibility;
+  createdAtStateSeq: StateSeq;
+}
+
+export type EngineEventType =
+  | "phaseStarted"
+  | "phaseEnded"
+  | "cardRevealed"
+  | "cardMoved"
+  | "cardPlayed"
+  | "cardDrawn"
+  | "cardDiscarded"
+  | "cardTrashed"
+  | "cardKOd"
+  | "cardReturned"
+  | "donAttached"
+  | "donReturned"
+  | "costPaid"
+  | "attackDeclared"
+  | "blockerActivated"
+  | "counterUsed"
+  | "damageWouldBeDealt"
+  | "damageDealt"
+  | "lifeTaken"
+  | "triggerActivated"
+  | "effectQueued"
+  | "effectResolved"
+  | "replacementApplied"
+  | "decisionCreated"
+  | "decisionResolved"
+  | "ruleProcessingChecked"
+  | "gameEnded";
+
+export type CausalityRef =
+  | { type: "playerAction"; actionId: string }
+  | { type: "effect"; queueEntryId: QueueEntryId; effectId: EffectId }
+  | { type: "ruleProcess"; name: string }
+  | { type: "replacement"; replacementId: string }
+  | { type: "decision"; decisionId: DecisionId };
