@@ -74,3 +74,30 @@ test("callCount starts at 0 and increments once per advance", () => {
   const draw2 = advanceRngFloat01(draw1.nextRng);
   assert.equal(draw2.nextRng.callCount, 2);
 });
+
+test("fails closed for RNG algorithms without cited ENG-001B behavior", () => {
+  assert.throws(
+    () => initializeRng(42, "xoshiro256ss"),
+    /Unsupported RNG algorithm/,
+  );
+  assert.throws(() => initializeRng(42, "test-fixed"), /Unsupported RNG/);
+
+  assert.throws(
+    () =>
+      advanceRngUint32({
+        algorithm: "xoshiro256ss",
+        internalState: "1:2:3:4",
+        callCount: 0,
+      }),
+    /Unsupported RNG algorithm/,
+  );
+  assert.throws(
+    () =>
+      advanceRngUint32({
+        algorithm: "test-fixed",
+        internalState: "0",
+        callCount: 0,
+      }),
+    /Unsupported RNG algorithm/,
+  );
+});
