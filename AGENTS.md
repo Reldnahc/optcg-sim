@@ -193,16 +193,21 @@ Code review is required. Use this flow unless a higher-authority story or packet
 
 1. keep the patch inside one approved story
 2. run `pnpm verify` and the story's required tests
-3. run a separate reviewer subagent for scope creep, missing tests, contract drift, and correctness risk when subagent review is available for the patch
-4. give the reviewer-subagent run up to 60 minutes while it is actively running; deterministic failures such as unavailable subagent surface, immediate spawn failure, or immediate runtime failure count as failed immediately and do not require waiting out the timeout budget
-5. self-review by the implementation worker or the parent implementation coordinator does not satisfy the reviewer gate
-6. if reviewer-subagent output does not already live on the pull request, copy the findings and verdict from that separate reviewer subagent output into an AI review comment before human review is requested
-7. if the reviewer subagent surface already posted a durable pull-request artifact, treat that native PR artifact as the AI review record and do not require a duplicate transcription comment
-8. if no usable reviewer subagent run remains for the patch after the available reviewer-subagent surfaces were found unavailable, timed out, or failed, record an equivalent human review fallback comment explicitly rather than silently skipping the review gate
-9. fix the material findings or post a revision response comment that records the disposition of each unresolved item
-10. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, and after the revision response comment is up to date when a separate reviewer subagent run was used
-11. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes
-12. if review finds multi-concern drift, split the story or narrow the patch before merge
+3. push the story branch and open the pull request before the first reviewer-subagent run; do not wait until all AI review is complete to create the PR
+4. prefer the native GitHub connector for PR creation, PR reads, comments, review threads, and merge operations; use `gh` CLI only as a fallback when the native connector is unavailable or fails, and record the fallback reason in the PR trail
+5. before assigning a reviewer subagent, fetch the current PR description, changed files, issue comments, review comments, review threads, and check status, then include the relevant unresolved PR context in the reviewer handoff
+6. run a separate reviewer subagent for scope creep, missing tests, contract drift, and correctness risk when subagent review is available for the patch
+7. give the reviewer-subagent run up to 60 minutes while it is actively running; deterministic failures such as unavailable subagent surface, immediate spawn failure, or immediate runtime failure count as failed immediately and do not require waiting out the timeout budget
+8. self-review by the implementation worker or the parent implementation coordinator does not satisfy the reviewer gate
+9. post each reviewer-subagent result to the pull request as soon as that review run completes; do not batch AI review findings only at final handoff
+10. if reviewer-subagent output does not already live on the pull request, copy the findings and verdict from that separate reviewer subagent output into an AI review comment immediately after the run
+11. if the reviewer subagent surface already posted a durable pull-request artifact, treat that native PR artifact as the AI review record and do not require a duplicate transcription comment
+12. before assigning any revision worker or re-reviewer, fetch the current PR comments, review comments, review threads, and checks, then include unresolved findings and prior dispositions in the handoff
+13. if no usable reviewer subagent run remains for the patch after the available reviewer-subagent surfaces were found unavailable, timed out, or failed, record an equivalent human review fallback comment explicitly rather than silently skipping the review gate
+14. fix the material findings or post a revision response comment that records the disposition of each unresolved item
+15. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, and after the revision response comment is up to date when a separate reviewer subagent run was used
+16. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes
+17. if review finds multi-concern drift, split the story or narrow the patch before merge
 
 The separate reviewer subagent run is a repo-level first-pass gate before human review. It does not replace the merge-gate requirement for a durable review record or equivalent human review step.
 
@@ -212,6 +217,8 @@ When a separate reviewer subagent run is used, the PR review record must contain
 
 - an AI review record: either a native PR artifact from the reviewer subagent surface, or an AI review comment with findings and verdict when the separate review output does not already live on the pull request
 - a revision response comment that tracks the follow-up commits and dispositions
+
+The PR review record is also the durable coordination surface for agents. Parent agents must keep it current during the work, not reconstruct it only at final handoff. Worker and reviewer subagents are not assumed to see PR comments automatically; the parent agent must fetch and pass the relevant unresolved PR context into their prompts.
 
 When the equivalent human-review fallback is used, the PR review record must contain a fallback review comment based on `.github/review-comments/equivalent-human-review-fallback.md` so the failed or unavailable reviewer-subagent attempts, the fallback human reviewer, the findings, and the merge-gate record are durable on the pull request.
 
@@ -236,6 +243,9 @@ Every implementation or review note should include:
 
 GitHub Issues and board items are projections of local story files, not the authority.
 
+- Use the native GitHub connector as the default GitHub integration surface for repository reads, pull requests, comments, review threads, status checks, labels, and merges.
+- Use `gh` CLI only as a fallback when the native GitHub connector is unavailable, missing access, or returns an operational failure that blocks progress.
+- When falling back to `gh` CLI, record the reason in the implementation note or PR trail so the workflow failure is visible.
 - Sync board state through `tools/spec_board_sync.ts`
 - Write sync metadata under `stories/.sync/`
 - If board state drifts from the approved story file, fix the story or re-run sync
