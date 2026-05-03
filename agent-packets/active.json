@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-016.md",
+      "storyId": "INF-016",
+      "storyPath": "stories/approved/INF-016-story-review-gate-before-presentation.yaml",
+      "storySha256": "670ccc3e5b75bca2264e48bcb5cab554c4b23a845521a5e779b31fdf1e801333"
+    }
+  ],
   "version": 1
 }

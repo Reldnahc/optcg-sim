@@ -29,10 +29,11 @@ The required planning flow is:
 1. specification documents,
 2. candidate story generation,
 3. story normalization,
-4. story approval,
-5. agent packet construction,
-6. implementation or review agent execution,
-7. validation against the approved story and cited spec.
+4. pre-presentation story-review gate,
+5. story approval,
+6. agent packet construction,
+7. implementation or review agent execution,
+8. validation against the approved story and cited spec.
 
 The repo may automate some or all of these steps, but it must preserve the same authority order.
 
@@ -136,6 +137,25 @@ Normalization should:
 
 A story that cannot be normalized cleanly should be converted into an ambiguity story or rejected.
 
+## Pre-presentation story-review gate
+
+<!-- SECTION_REF: 27-spec-driven-story-generation-workflow.s017 -->
+
+Section Ref: `27-spec-driven-story-generation-workflow.s017`
+
+Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready.
+
+Required behavior:
+
+- run a set-level story review before a decomposed story group is presented for human approval,
+- run per-story review before each candidate story is presented for approval,
+- use a story-review agent separate from any implementation worker or implementation patch reviewer,
+- story-review agent uses gpt-5.5 with high reasoning,
+- story-review findings must be fixed, explicitly deferred, or recorded before presentation,
+- do not present a story as approval-ready when no usable story-review agent run exists; present it as unreviewed and blocked on story review instead,
+- story-review agents evaluate story authority, decomposition, scope, non-scope, dependencies, allowed touch points, acceptance criteria, required tests, and ambiguity policy,
+- story-review agents do not review implementation patches; implementation patch review remains a separate gate.
+
 ## Approval rules
 
 <!-- SECTION_REF: 27-spec-driven-story-generation-workflow.s008 -->
@@ -144,6 +164,7 @@ Section Ref: `27-spec-driven-story-generation-workflow.s008`
 
 A story may move from `generated` to `approved` only if:
 
+- the pre-presentation story-review gate has run and material findings are fixed, explicitly deferred, or recorded,
 - required schema fields are present,
 - spec references are valid,
 - the epic/story decomposition is coherent,
@@ -221,13 +242,14 @@ Section Ref: `27-spec-driven-story-generation-workflow.s011`
 Section Ref: `27-spec-driven-story-generation-workflow.s012`
 
 1. use an agent or script to generate candidate epics and concern-sliced stories from spec sections,
-2. review and approve the decomposition and the stories,
-3. export approved stories to GitHub issues or draft issues as needed using `tools/spec_board_sync.ts`,
-4. build or refresh the checked-in packet for the active story,
-5. assign the active-story packet to agents,
-6. implement or review the story from the packet,
-7. validate the resulting patch against the story and spec,
-8. after merge, run the packet completion command to move the completed story to `stories/done/`, mark it `done`, remove its active packet, and clear or replace the active-story manifest before the next story starts.
+2. run the pre-presentation story-review gate,
+3. review and approve the decomposition and the stories,
+4. export approved stories to GitHub issues or draft issues as needed using `tools/spec_board_sync.ts`,
+5. build or refresh the checked-in packet for the active story,
+6. assign the active-story packet to agents,
+7. implement or review the story from the packet,
+8. validate the resulting patch against the story and spec,
+9. after merge, run the packet completion command to move the completed story to `stories/done/`, mark it `done`, remove its active packet, and clear or replace the active-story manifest before the next story starts.
 
 ### Stronger process
 
@@ -240,6 +262,7 @@ Add:
 - dependency graphing,
 - impacted-story detection when spec files change,
 - schema validation for story files,
+- required pre-presentation story-review agents for generated and normalized stories,
 - review-agent checks for scope creep, cross-concern drift, and uncited behavior,
 - story-to-PR boundary checks using `allowed_touch_points`,
 - automatic movement between `generated`, `approved`, `blocked`, and `done` states,
