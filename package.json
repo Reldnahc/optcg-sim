@@ -8,6 +8,7 @@
     "format": "corepack pnpm exec prettier --write .",
     "format:check": "corepack pnpm exec prettier --check .",
     "lint": "corepack pnpm exec eslint . --max-warnings=0 --ext .js,.mjs,.cjs,.ts,.mts,.cts",
+    "contracts": "corepack pnpm run contracts:compile && corepack pnpm run contracts:validate-effects && corepack pnpm run contracts:validate-db-schema && corepack pnpm run test:contracts",
     "contracts:compile": "corepack pnpm exec tsc -p contracts/tsconfig.json --noEmit",
     "contracts:validate-effects": "node --experimental-strip-types tools/validate-effect-dsl-fixtures.ts",
     "contracts:validate-db-schema": "node --experimental-strip-types tools/validate-database-schema.ts",
@@ -18,7 +19,7 @@
     "test": "corepack pnpm exec vitest run",
     "test:contracts": "corepack pnpm exec vitest run tests/contracts",
     "coverage": "corepack pnpm exec vitest run --coverage",
-    "verify": "corepack pnpm run format:check && corepack pnpm run lint && corepack pnpm run typecheck && corepack pnpm run packets:verify && corepack pnpm run test && corepack pnpm run test:contracts"
+    "verify": "corepack pnpm run format:check && corepack pnpm run lint && corepack pnpm run typecheck && corepack pnpm run packets:verify && corepack pnpm run test && corepack pnpm run contracts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

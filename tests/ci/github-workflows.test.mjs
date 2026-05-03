@@ -20,9 +20,32 @@ async function readText(relativePath) {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
+function extractContractsJobBlock(workflowText) {
+  const lines = workflowText.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) =>
+    /^\s{2}contracts:\s*$/.test(line),
+  );
+  assert.notEqual(startIndex, -1, "missing contracts job block");
+
+  let endIndex = lines.length;
+  for (let i = startIndex + 1; i < lines.length; i += 1) {
+    if (/^\s{2}[a-zA-Z0-9_-]+:\s*$/.test(lines[i])) {
+      endIndex = i;
+      break;
+    }
+  }
+
+  return lines.slice(startIndex, endIndex).join("\n");
+}
+
 test("package.json exposes the canonical contract lane for CI", async () => {
   const packageJson = await readJson("package.json");
 
+  assert.equal(
+    typeof packageJson.scripts?.contracts,
+    "string",
+    "missing contracts script",
+  );
   assert.equal(
     typeof packageJson.scripts?.["test:contracts"],
     "string",
@@ -30,7 +53,7 @@ test("package.json exposes the canonical contract lane for CI", async () => {
   );
   assert.match(
     packageJson.scripts.verify,
-    /pnpm run test:contracts/i,
+    /pnpm run contracts/i,
     "verify should include the root contracts lane once it exists",
   );
 });
@@ -50,6 +73,7 @@ test("ci workflow file exists with the expected verification jobs", async () => 
 
 test("ci workflow runs the canonical root commands and publishes coverage", async () => {
   const workflow = await readText(".github/workflows/ci.yml");
+  const contractsJobBlock = extractContractsJobBlock(workflow);
 
   const requiredCommands = [
     "pnpm install --frozen-lockfile",
@@ -57,15 +81,32 @@ test("ci workflow runs the canonical root commands and publishes coverage", asyn
     "pnpm lint",
     "pnpm typecheck",
     "pnpm test",
-    "pnpm test:contracts",
+    "pnpm contracts",
     "pnpm coverage",
   ];
 
   for (const command of requiredCommands) {
+    const targetText =
+      command === "pnpm contracts" ? contractsJobBlock : workflow;
     assert.match(
-      workflow,
+      targetText,
       new RegExp(command.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")),
       `workflow should call \`${command}\``,
+    );
+  }
+
+  const forbiddenContractsJobCommands = [
+    "pnpm test:contracts",
+    "pnpm run contracts:compile",
+    "pnpm run contracts:validate-effects",
+    "pnpm run contracts:validate-db-schema",
+  ];
+
+  for (const command of forbiddenContractsJobCommands) {
+    assert.doesNotMatch(
+      contractsJobBlock,
+      new RegExp(command.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")),
+      `contracts job should not call bespoke sub-lane command \`${command}\``,
     );
   }
 
