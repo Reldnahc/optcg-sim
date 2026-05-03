@@ -91,6 +91,7 @@ Use root-level Codex skills for repeatable task classes such as:
 
 - implement one approved story,
 - review one patch against a story,
+- story-review subagents reviewing generated or normalized stories before human approval,
 - orchestrate worker and reviewer subagents around one approved story,
 - sync approved stories into GitHub issue bodies and board fields,
 - raise ambiguity issues when cited sections do not decide behavior.
@@ -103,20 +104,23 @@ A skill should accelerate a workflow, not replace the authoritative story or pac
 
 Section Ref: `32-codex-agent-integration.s008`
 
+1. Before approving a generated or normalized story, run story-review subagents and resolve, explicitly defer, or record their findings.
 1. Approve a story.
-2. Generate or refresh the checked-in packet for the active story.
-3. Run `node --experimental-strip-types tools/spec_board_sync.ts --story <path> --dry-run --write-preview`, then perform live sync when ready.
-4. Verify that the active story packet is present and current before worker assignment, reviewer assignment, or PR handoff.
-5. Have a parent Codex agent read the story, packet, and `AGENTS.md`, stay mostly in orchestration mode, and remain the owner of story authority, scope decisions, ambiguity handling, and review handoff.
-6. Spawn a worker subagent for the main implementation body of the story whenever delegation is available.
-7. Allow the parent agent to do only small local glue work such as rebases, tiny integration edits, verification reruns, and PR administration.
-8. Follow the subagent model routing policy.
-9. Require tests and a short assumptions/blockers note.
-10. Link the pull request back to the story issue.
-11. Spawn a separate reviewer subagent plus human review before merge.
-12. After merge, have the parent agent run the packet completion command to move
-    the completed story to done history, remove the active packet, and clear or
-    replace the active packet manifest before starting the next story.
+1. Generate or refresh the checked-in packet for the active story.
+1. Run `node --experimental-strip-types tools/spec_board_sync.ts --story <path> --dry-run --write-preview`, then perform live sync when ready.
+1. Verify that the active story packet is present and current before worker assignment, reviewer assignment, or PR handoff.
+1. Have a parent Codex agent read the story, packet, and `AGENTS.md`, stay mostly in orchestration mode, and remain the owner of story authority, scope decisions, ambiguity handling, and review handoff.
+1. Spawn a worker subagent for the main implementation body of the story whenever delegation is available.
+1. Allow the parent agent to do only small local glue work such as rebases, tiny integration edits, verification reruns, and PR administration.
+1. Follow the subagent model routing policy.
+1. Require tests and a short assumptions/blockers note.
+1. Link the pull request back to the story issue.
+1. Spawn a separate reviewer subagent plus human review before merge.
+1. After merge, have the parent agent run the packet completion command to move
+   the completed story to done history, remove the active packet, and clear or
+   replace the active packet manifest before starting the next story.
+
+The parent agent must not present stories as approval-ready until the story-review findings are resolved, explicitly deferred, or recorded.
 
 ## Codex packet footer
 
@@ -142,6 +146,8 @@ If the spec is ambiguous, stop at the narrowest safe point and open/append an am
 Section Ref: `32-codex-agent-integration.s010`
 
 Use a separate reviewer subagent as a fast first-pass reviewer for scope creep, missing tests, and obvious contract drift, but do not treat a passing agent review as authoritative proof of correctness. Human review still owns final acceptance for gameplay correctness and policy-sensitive areas.
+
+Story-review agents are separate from implementation reviewer subagents. Story-review agents review generated or normalized story authority, decomposition, scope, non-scope, dependencies, allowed touch points, acceptance criteria, required tests, and ambiguity policy before human story approval. Implementation reviewer subagents review patches after implementation.
 
 ## GitHub-connected modes
 
@@ -208,6 +214,8 @@ separate reviewer-subagent review path before pushing or merging.
 Section Ref: `32-codex-agent-integration.s014`
 
 The parent/orchestrator model is gpt-5.5.
+
+Story-review agent model is gpt-5.5 with high reasoning.
 
 Reviewer subagent model is gpt-5.4 with high reasoning.
 

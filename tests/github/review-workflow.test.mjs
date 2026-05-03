@@ -207,6 +207,41 @@ test("agents guidance requires parent orchestration plus separate reviewer subag
   assert.doesNotMatch(agents, /default Codex CLI review step/i);
 });
 
+test("story workflow requires pre-presentation story-review agents", async () => {
+  const agents = await readActiveText("AGENTS.md");
+  const storyWorkflow = await readActiveText(
+    "specs/27-spec-driven-story-generation-workflow.md",
+  );
+  const codexSpec = await readActiveText("specs/32-codex-agent-integration.md");
+
+  assertMatchesAll(agents, [
+    /pre-presentation story-review gate/i,
+    /Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready/i,
+    /Story-review agent model: `gpt-5\.5` with `high` reasoning/i,
+    /set-level story review before presenting a decomposed story group/i,
+    /per-story review before presenting each candidate story for approval/i,
+    /story-review agents review story authority and decomposition, not implementation patches/i,
+    /If no usable story-review agent run exists, do not present the story as approval-ready; present it as unreviewed and blocked on story review/i,
+    /implementation patch review remains a separate gate/i,
+  ]);
+
+  assertMatchesAll(storyWorkflow, [
+    /pre-presentation story-review gate/i,
+    /set-level story review before a decomposed story group is presented for human approval/i,
+    /per-story review before each candidate story is presented for approval/i,
+    /story-review findings must be fixed, explicitly deferred, or recorded before presentation/i,
+    /do not present a story as approval-ready when no usable story-review agent run exists; present it as unreviewed and blocked on story review instead/i,
+    /story-review agent uses gpt-5\.5 with high reasoning/i,
+  ]);
+
+  assertMatchesAll(codexSpec, [
+    /story-review subagents reviewing generated or normalized stories before human approval/i,
+    /story-review agent model is gpt-5\.5 with high reasoning/i,
+    /story-review agents are separate from implementation reviewer subagents/i,
+    /The parent agent must not present stories as approval-ready until the story-review findings are resolved, explicitly deferred, or recorded/i,
+  ]);
+});
+
 test("codex integration spec reflects subagent orchestration instead of cli-first execution", async () => {
   const codexSpec = await readActiveText("specs/32-codex-agent-integration.md");
 

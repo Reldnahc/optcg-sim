@@ -58,6 +58,19 @@ Use stable `SECTION_REF` citations from the spec. Do not cite heading anchors or
 - If cleanup requires any manual edit beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, run full verification and a separate reviewer subagent before pushing or merging.
 - Dormant approved backlog stories do not require checked-in packets until they are activated.
 
+## Story Review Gate
+
+Use a pre-presentation story-review gate for generated or normalized story work:
+
+- Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready.
+- Story-review agent model: `gpt-5.5` with `high` reasoning.
+- Run a set-level story review before presenting a decomposed story group.
+- Run per-story review before presenting each candidate story for approval.
+- Story-review agents review story authority and decomposition, not implementation patches.
+- Story-review findings must be fixed, explicitly deferred, or recorded before the parent agent presents stories as approval-ready.
+- If no usable story-review agent run exists, do not present the story as approval-ready; present it as unreviewed and blocked on story review.
+- Implementation patch review remains a separate gate and continues to follow the Review Workflow below.
+
 ## Superpowers Plugin
 
 If the Superpowers plugin or its skills are available in the current Codex session, use them as the preferred process layer for disciplined execution. They accelerate the workflow, but they do not override the cited spec, approved story, or packet.
@@ -140,6 +153,7 @@ workflow by default:
 Model routing policy for this workflow:
 
 - Parent/orchestrator model: `gpt-5.5`
+- Story-review agent model: `gpt-5.5` with `high` reasoning
 - Reviewer subagent model: `gpt-5.4` with `high` reasoning
 - Implementation worker model: default to `gpt-5.3-codex` with `medium` reasoning
 - Complex, risky, or integration-heavy implementation stories should use `gpt-5.5` with `medium` reasoning
