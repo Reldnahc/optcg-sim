@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: critical
-status: done
+status: approved
 summary: >
   Replace the placeholder type export with the exact branded ID and global
   scalar/reference primitives that later type slices, engine state, and card
