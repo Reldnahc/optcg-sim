@@ -1188,6 +1188,49 @@ export interface ComputedGameView {
   restrictions: RestrictionIndex;
 }
 
+export interface EngineStepResult {
+  state: GameState;
+  events: EngineEvent[];
+}
+
+export interface EngineResult {
+  state: GameState;
+  events: EngineEvent[];
+  decisions?: PendingDecision[];
+  errors?: EngineError[];
+  stateHash: string;
+}
+
+export interface StateHashInput {
+  state: GameState;
+  includeHidden: boolean;
+  normalizeTransientIds: boolean;
+}
+
+export type AtomicMutation = (state: GameState) => EngineStepResult;
+
+export interface GameState {
+  matchId: MatchId;
+  status: MatchStatus;
+  version: RuntimeVersionSet;
+  seq: StateSeq;
+  actionSeq: number;
+  turn: TurnState;
+  players: Record<PlayerId, PlayerState>;
+  timers: TimerState;
+  battle?: BattleState;
+  pendingDecision?: PendingDecision;
+  oncePerTurn: OncePerTurnRecord[];
+  effectQueue: EffectQueueEntry[];
+  deferredTriggers: DeferredTriggerBucket[];
+  continuousEffects: ContinuousEffectRecord[];
+  replacementState: ReplacementProcessState[];
+  revealedCards: RevealRecord[];
+  rng: RngState;
+  eventJournal: EngineEvent[];
+  audit: AuditEntry[];
+}
+
 export interface OncePerTurnRecord {
   cardInstanceId: InstanceId;
   effectId: string;
@@ -1271,3 +1314,18 @@ export interface ContinuousEffectRecord {
 }
 
 export type ContinuousEffect = ContinuousEffectRecord;
+
+export type EngineError =
+  | { type: "illegalAction"; reason: string }
+  | { type: "invalidDecisionResponse"; reason: string }
+  | { type: "invariantViolation"; invariant: string; details: unknown }
+  | { type: "unsupportedCard"; cardId: CardId; status: CardSupportStatus }
+  | { type: "effectRuntimeError"; effectId: string; details: unknown }
+  | { type: "loopDetected"; signature: LoopSignature };
+
+export interface CustomHandler {
+  id: string;
+  cardId: CardId;
+  effectId: string;
+  execute(state: GameState, context: EffectContext): EngineResult;
+}
