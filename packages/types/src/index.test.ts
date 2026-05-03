@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 
+import type * as Types from "./index.js";
 import type {
   Attribute,
   BattleStep,
@@ -1171,30 +1172,33 @@ test("TYP-001F rejects raw Set for runtime structures requiring arrays/records",
 });
 
 test("TYP-001F does not introduce out-of-scope public or engine result exports", () => {
-  // @ts-expect-error TYP-001F must not export GameState.
-  type _NoGameState = import("./index.js").GameState;
-  // @ts-expect-error TYP-001F must not export EngineStepResult.
-  type _NoEngineStepResult = import("./index.js").EngineStepResult;
-  // @ts-expect-error TYP-001F must not export EngineResult.
-  type _NoEngineResult = import("./index.js").EngineResult;
-  // @ts-expect-error TYP-001F must not export EngineError.
-  type _NoEngineError = import("./index.js").EngineError;
-  // @ts-expect-error TYP-001F must not export StateHashInput.
-  type _NoStateHashInput = import("./index.js").StateHashInput;
-  // @ts-expect-error TYP-001F must not export AtomicMutation.
-  type _NoAtomicMutation = import("./index.js").AtomicMutation;
-  // @ts-expect-error TYP-001F must not export CustomHandler.
-  type _NoCustomHandler = import("./index.js").CustomHandler;
-  // @ts-expect-error TYP-001F must not export PlayerView.
-  type _NoPlayerView = import("./index.js").PlayerView;
-  // @ts-expect-error TYP-001F must not export SpectatorView.
-  type _NoSpectatorView = import("./index.js").SpectatorView;
-  // @ts-expect-error TYP-001F must not export PublicDecision.
-  type _NoPublicDecision = import("./index.js").PublicDecision;
-  // @ts-expect-error TYP-001F must not export PublicLegalAction.
-  type _NoPublicLegalAction = import("./index.js").PublicLegalAction;
-  // @ts-expect-error TYP-001F must not export PublicActionWindow.
-  type _NoPublicActionWindow = import("./index.js").PublicActionWindow;
+  type OutOfScopeExportWitness = [
+    // @ts-expect-error TYP-001F must not export GameState.
+    Types.GameState,
+    // @ts-expect-error TYP-001F must not export EngineStepResult.
+    Types.EngineStepResult,
+    // @ts-expect-error TYP-001F must not export EngineResult.
+    Types.EngineResult,
+    // @ts-expect-error TYP-001F must not export EngineError.
+    Types.EngineError,
+    // @ts-expect-error TYP-001F must not export StateHashInput.
+    Types.StateHashInput,
+    // @ts-expect-error TYP-001F must not export AtomicMutation.
+    Types.AtomicMutation,
+    // @ts-expect-error TYP-001F must not export CustomHandler.
+    Types.CustomHandler,
+    // @ts-expect-error TYP-001F must not export PlayerView.
+    Types.PlayerView,
+    // @ts-expect-error TYP-001F must not export SpectatorView.
+    Types.SpectatorView,
+    // @ts-expect-error TYP-001F must not export PublicDecision.
+    Types.PublicDecision,
+    // @ts-expect-error TYP-001F must not export PublicLegalAction.
+    Types.PublicLegalAction,
+    // @ts-expect-error TYP-001F must not export PublicActionWindow.
+    Types.PublicActionWindow,
+  ];
+  const outOfScopeExportWitness: OutOfScopeExportWitness | null = null;
 
-  expect(true).toBe(true);
+  expect(outOfScopeExportWitness).toBeNull();
 });
