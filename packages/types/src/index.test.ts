@@ -590,7 +590,11 @@ test("TYP-001E decision and response contracts compile against canonical variant
     selectedCardInstanceIds: ["instance-1" as CardRef["instanceId"]],
     selectedDonInstanceIds: ["instance-2" as CardRef["instanceId"]],
   };
-  const paymentOption: PaymentOption = { id: "opt-1", type: "restDon", count: 1 };
+  const paymentOption: PaymentOption = {
+    id: "opt-1",
+    type: "restDon",
+    count: 1,
+  };
 
   const responseOrderedIds: DecisionResponse = {
     type: "orderedIds",
@@ -682,7 +686,12 @@ test("TYP-001E decision and response contracts compile against canonical variant
   const chooseEffectOption: ChooseEffectOptionDecision = {
     ...baseDecision,
     type: "chooseEffectOption",
-    options: [{ id: "effect-opt-1", effect: { type: "draw", count: 1, player: "self" } }],
+    options: [
+      {
+        id: "effect-opt-1",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    ],
   };
   const confirmLifeTrigger: ConfirmLifeTriggerDecision = {
     ...baseDecision,
@@ -758,15 +767,31 @@ test("TYP-001E action contracts compile and reject transport envelope fields", (
   const response: DecisionResponse = { type: "loopCount", count: 1 };
 
   const actions: Action[] = [
-    { type: "playCard", cardInstanceId: cardRef.instanceId, costPayment: { optionId: "opt-1" } },
-    { type: "activateEffect", source: cardRef, effectId: "effect-1" as EffectId },
-    { type: "attachDon", donInstanceId: "don-1" as CardRef["instanceId"], target: cardRef },
+    {
+      type: "playCard",
+      cardInstanceId: cardRef.instanceId,
+      costPayment: { optionId: "opt-1" },
+    },
+    {
+      type: "activateEffect",
+      source: cardRef,
+      effectId: "effect-1" as EffectId,
+    },
+    {
+      type: "attachDon",
+      donInstanceId: "don-1" as CardRef["instanceId"],
+      target: cardRef,
+    },
     { type: "declareAttack", attacker: cardRef, target: cardRef },
     { type: "activateBlocker", blocker: cardRef },
     { type: "useCounter", cardInstanceId: cardRef.instanceId, target: cardRef },
     { type: "endMainPhase" },
     { type: "concede", playerId: cardRef.playerId },
-    { type: "respondToDecision", decisionId: "decision-1" as DecisionId, response },
+    {
+      type: "respondToDecision",
+      decisionId: "decision-1" as DecisionId,
+      response,
+    },
   ];
   const legalActions: LegalAction[] = actions;
   const actionsAgain: Action[] = legalActions;
@@ -774,22 +799,46 @@ test("TYP-001E action contracts compile and reject transport envelope fields", (
   expect(actions).toHaveLength(9);
   expect(actionsAgain).toHaveLength(9);
 
-  // @ts-expect-error Action is transport-free and must reject envelope fields.
-  const invalidActionClientActionId: Action = { type: "endMainPhase", clientActionId: "x" };
-  // @ts-expect-error Action is transport-free and must reject envelope fields.
-  const invalidActionExpectedStateSeq: Action = { type: "endMainPhase", expectedStateSeq: 1 };
-  // @ts-expect-error Action is transport-free and must reject envelope fields.
-  const invalidActionHash: Action = { type: "endMainPhase", actionHash: "hash" };
-  // @ts-expect-error Action is transport-free and must reject envelope fields.
-  const invalidActionSentAt: Action = { type: "endMainPhase", sentAtClientTime: "2026-05-03T00:00:00.000Z" };
-  // @ts-expect-error Action is transport-free and must reject envelope fields.
-  const invalidActionMatchId: Action = { type: "endMainPhase", matchId: "match-1" };
-  // @ts-expect-error Action is transport-free and must reject envelope fields.
-  const invalidActionSignature: Action = { type: "endMainPhase", signature: "sig" };
-  // @ts-expect-error LegalAction is identical to Action and must reject envelope fields.
-  const invalidLegalActionClientActionId: LegalAction = { type: "endMainPhase", clientActionId: "x" };
-  // @ts-expect-error non-canonical decision family must not exist.
-  const staleDecisionType: PendingDecision = { ...({} as BaseDecision), type: "chooseCharacterToTrashForOverflow" };
+  const invalidActionClientActionId: Action = {
+    type: "endMainPhase",
+    // @ts-expect-error Action is transport-free and must reject envelope fields.
+    clientActionId: "x",
+  };
+  const invalidActionExpectedStateSeq: Action = {
+    type: "endMainPhase",
+    // @ts-expect-error Action is transport-free and must reject envelope fields.
+    expectedStateSeq: 1,
+  };
+  const invalidActionHash: Action = {
+    type: "endMainPhase",
+    // @ts-expect-error Action is transport-free and must reject envelope fields.
+    actionHash: "hash",
+  };
+  const invalidActionSentAt: Action = {
+    type: "endMainPhase",
+    // @ts-expect-error Action is transport-free and must reject envelope fields.
+    sentAtClientTime: "2026-05-03T00:00:00.000Z",
+  };
+  const invalidActionMatchId: Action = {
+    type: "endMainPhase",
+    // @ts-expect-error Action is transport-free and must reject envelope fields.
+    matchId: "match-1",
+  };
+  const invalidActionSignature: Action = {
+    type: "endMainPhase",
+    // @ts-expect-error Action is transport-free and must reject envelope fields.
+    signature: "sig",
+  };
+  const invalidLegalActionClientActionId: LegalAction = {
+    type: "endMainPhase",
+    // @ts-expect-error LegalAction is identical to Action and must reject envelope fields.
+    clientActionId: "x",
+  };
+  const staleDecisionType: PendingDecision = {
+    ...({} as BaseDecision),
+    // @ts-expect-error non-canonical decision family must not exist.
+    type: "chooseCharacterToTrashForOverflow",
+  };
 
   void invalidActionClientActionId;
   void invalidActionExpectedStateSeq;
