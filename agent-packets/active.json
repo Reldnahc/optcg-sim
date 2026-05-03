@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-005.md",
-      "storyId": "INF-005",
-      "storyPath": "stories/approved/INF-005-husky-and-lint-staged-hooks.yaml",
-      "storySha256": "cdb6e0c59c9aaad676bb3b3f78ac70073fe4f10ae554b2e80732c3ad7ada066d"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
