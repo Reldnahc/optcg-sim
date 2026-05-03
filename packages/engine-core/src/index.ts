@@ -144,13 +144,36 @@ const compareCodeUnitOrder = (left: string, right: string): number => {
 const unsupportedValueError = (path: string, reason: string): TypeError =>
   new TypeError(`Unsupported canonical state value at ${path}: ${reason}.`);
 
-const hasArrayIndexOnlyKeys = (value: readonly unknown[]): boolean => {
+const hasArrayIndexOnlyPropertyNames = (value: readonly unknown[]): boolean => {
   const indexes = new Set<string>();
   for (let index = 0; index < value.length; index += 1) {
     indexes.add(String(index));
   }
 
-  return Object.keys(value).every((key) => indexes.has(key));
+  return Object.getOwnPropertyNames(value).every(
+    (key) => key === "length" || indexes.has(key),
+  );
+};
+
+const readEnumerableDataProperty = (
+  owner: object,
+  key: string,
+  path: string,
+): unknown => {
+  const descriptor = Object.getOwnPropertyDescriptor(owner, key);
+  if (descriptor === undefined) {
+    throw unsupportedValueError(path, "missing property descriptor");
+  }
+
+  if (!descriptor.enumerable) {
+    throw unsupportedValueError(path, "non-enumerable property");
+  }
+
+  if (!("value" in descriptor)) {
+    throw unsupportedValueError(path, "accessor property");
+  }
+
+  return descriptor.value;
 };
 
 const canonicalizeValue = (
@@ -212,7 +235,7 @@ const canonicalizeValue = (
         throw unsupportedValueError(path, "array symbol key");
       }
 
-      if (!hasArrayIndexOnlyKeys(value)) {
+      if (!hasArrayIndexOnlyPropertyNames(value)) {
         throw unsupportedValueError(path, "array non-index property");
       }
 
@@ -226,7 +249,15 @@ const canonicalizeValue = (
         }
 
         items.push(
-          canonicalizeValue(value[index], `${path}[${String(index)}]`, seen),
+          canonicalizeValue(
+            readEnumerableDataProperty(
+              value,
+              String(index),
+              `${path}[${String(index)}]`,
+            ),
+            `${path}[${String(index)}]`,
+            seen,
+          ),
         );
       }
 
@@ -243,10 +274,15 @@ const canonicalizeValue = (
     }
 
     const objectValue = value as Record<string, unknown>;
-    const keys = Object.keys(objectValue).sort(compareCodeUnitOrder);
+    const keys =
+      Object.getOwnPropertyNames(objectValue).sort(compareCodeUnitOrder);
     const pairs = keys.map((key) => {
       const childPath = `${path}.${key}`;
-      return `${JSON.stringify(key)}:${canonicalizeValue(objectValue[key], childPath, seen)}`;
+      return `${JSON.stringify(key)}:${canonicalizeValue(
+        readEnumerableDataProperty(objectValue, key, childPath),
+        childPath,
+        seen,
+      )}`;
     });
 
     return `{${pairs.join(",")}}`;

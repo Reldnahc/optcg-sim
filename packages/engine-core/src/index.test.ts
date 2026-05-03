@@ -210,11 +210,34 @@ test("unsupported values and cyclic structures fail closed", () => {
     () => canonicalSerializeStateValue(Object.assign([1], { extra: 2 })),
     /array non-index property/,
   );
+  const arrayWithNonEnumerableProperty = [1];
+  Object.defineProperty(arrayWithNonEnumerableProperty, "extra", { value: 2 });
+  assert.throws(
+    () => canonicalSerializeStateValue(arrayWithNonEnumerableProperty),
+    /array non-index property/,
+  );
   const arrayWithSymbolKey = [1] as unknown[] & { [key: symbol]: unknown };
   arrayWithSymbolKey[Symbol("hidden")] = 2;
   assert.throws(
     () => canonicalSerializeStateValue(arrayWithSymbolKey),
     /array symbol key/,
+  );
+  const objectWithNonEnumerableProperty = { a: 1 };
+  Object.defineProperty(objectWithNonEnumerableProperty, "hidden", {
+    value: 2,
+  });
+  assert.throws(
+    () => canonicalSerializeStateValue(objectWithNonEnumerableProperty),
+    /non-enumerable property/,
+  );
+  const objectWithAccessorProperty = { a: 1 };
+  Object.defineProperty(objectWithAccessorProperty, "hidden", {
+    enumerable: true,
+    get: () => 2,
+  });
+  assert.throws(
+    () => canonicalSerializeStateValue(objectWithAccessorProperty),
+    /accessor property/,
   );
   assert.throws(
     () => canonicalSerializeStateValue({ [Symbol("hidden")]: "x" }),
