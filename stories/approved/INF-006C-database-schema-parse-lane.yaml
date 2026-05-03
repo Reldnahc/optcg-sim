@@ -19,6 +19,7 @@ story_boundary: >
 allowed_touch_points:
   - contracts/database-schema-v6.sql
   - package.json
+  - pnpm-lock.yaml
   - tests/contracts/**
   - tools/**
 spec_refs:
@@ -27,6 +28,7 @@ spec_refs:
 scope:
   - add the canonical database schema file at the spec-defined path
   - add a local parse, lint, or smoke validation path for the committed schema contract
+  - add a direct SQL parser or linter dev dependency when needed for the validation lane
 non_scope:
   - effect DSL validation
   - canonical TypeScript contract compilation
@@ -41,4 +43,5 @@ required_tests:
 repo_rules:
   - schema validation must not require a live database service
   - the committed SQL contract remains the canonical source for automation
+  - dependency and lockfile changes are allowed only for the database schema validation lane
 ambiguity_policy: fail_and_escalate
