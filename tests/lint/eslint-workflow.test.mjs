@@ -143,10 +143,31 @@ test("eslint rejects forbidden engine-core imports", async () => {
       (message) => message.ruleId === "no-restricted-imports",
     ),
   );
+  const restrictedImportText = restrictedImportMessages
+    .map((message) => message.message)
+    .join("\n");
+  const requiredForbiddenSources = [
+    "react",
+    "redis",
+    "pg",
+    "ws",
+    "axios",
+    "undici",
+    "node-fetch",
+    "../../../browser/src/example",
+    "../../../client/src/example",
+    "../../../server/src/example",
+  ];
 
   assert.equal(
     restrictedImportMessages.length,
-    10,
+    requiredForbiddenSources.length,
     "engine-core boundary fixture should trigger one no-restricted-imports error per forbidden import class",
   );
+  for (const source of requiredForbiddenSources) {
+    assert.ok(
+      restrictedImportText.includes(source),
+      `engine-core boundary fixture should reject ${source}`,
+    );
+  }
 });
