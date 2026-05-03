@@ -1144,10 +1144,27 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
 });
 
 test("TYP-001F rejects raw Set for runtime structures requiring arrays/records", () => {
-  // @ts-expect-error attachedDon requires InstanceId[] not Set.
-  const badCard: CardInstance = { attachedDon: new Set() };
-  // @ts-expect-error cards requires CardRef[] not Set.
-  const badTransient: TransientCardSet = { cards: new Set() };
+  const player = "player-1" as PlayerId;
+  const instanceId = "instance-1" as CardRef["instanceId"];
+  const cardId = "OP01-001" as CardId;
+  const zone: ZoneRef = { zone: "characterArea", playerId: player };
+  const badCard: CardInstance = {
+    instanceId,
+    cardId,
+    owner: player,
+    controller: player,
+    zone,
+    // @ts-expect-error attachedDon requires InstanceId[] not Set.
+    attachedDon: new Set<InstanceId>(),
+  };
+  const badTransient: TransientCardSet = {
+    id: "set-1" as SelectionSetId,
+    // @ts-expect-error cards requires CardRef[] not Set.
+    cards: new Set<CardRef>(),
+    origin: "custom",
+    visibility: { type: "public" },
+    cleanupPolicy: "none",
+  };
   // @ts-expect-error transientSets requires Record<SelectionSetId, TransientCardSet>.
   const badTransientSets: EffectExecutionContext["transientSets"] = new Set();
   // @ts-expect-error selections requires Record<SelectionId, CardRef[]>.
