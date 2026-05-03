@@ -1,0 +1,56 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SEC-001D
+epic_id: KICK-001
+title: Add hidden-state helper production-boundary guard
+type: verification
+area: security
+primary_concern: verification
+priority: high
+status: generated
+summary: >
+  Add the future lint or import-boundary safeguard that prevents test-only
+  hidden-state helpers and hidden-info fixtures from entering production client
+  or browser bundles.
+story_boundary: >
+  Own only the production-boundary safeguard for hidden-state test helpers once
+  the repo has real production client package boundaries to enforce. Do not
+  create placeholder client packages, browser bundles, gameplay filtering APIs,
+  replay serializers, or hidden-info fixtures in this story.
+allowed_touch_points:
+  - package.json
+  - pnpm-lock.yaml
+  - eslint.config.mjs
+  - tests/lint/**
+  - tests/fixtures/eslint/**
+  - tests/hidden-info/**
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s008 (Module boundary restrictions)
+  - 23-repo-tooling-and-enforcement.s012 (Hidden-information safety enforcement)
+scope:
+  - add a lint, import-graph, or equivalent automated safeguard that blocks production client imports of hidden-state test helpers
+  - add a negative fixture proving a production client module cannot import hidden-info test helpers or fixtures
+  - add a positive fixture proving hidden-info tests may still import their own fixtures and helpers
+non_scope:
+  - hidden-information fixture contract design
+  - local hidden-info lane wiring
+  - CI hidden-info lane wiring
+  - production filterStateForPlayer implementation
+  - production client package creation
+  - browser bundle implementation
+  - replay serializer privacy checks
+dependencies:
+  - SEC-001C
+acceptance_criteria:
+  - production client code cannot import hidden-state test helpers or hidden-info fixtures without failing an automated repo check
+  - hidden-info test code can still import hidden-info fixtures and helpers needed by the regression harness
+  - the guard uses existing repo verification conventions and does not rely on manual reviewer inspection
+required_tests:
+  - negative boundary fixture proving a production-client import of hidden-state helpers fails the guard
+  - positive boundary fixture proving hidden-info tests can import hidden-info fixtures or helpers
+repo_rules:
+  - do not approve this story until real client production package boundaries or import targets exist
+  - do not create fake client modules or placeholder browser bundles just to satisfy this story
+  - replay serializer privacy remains a separate future story and must not be absorbed here
+ambiguity_policy: fail_and_escalate
