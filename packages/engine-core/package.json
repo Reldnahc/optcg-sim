@@ -13,5 +13,8 @@
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
     "compile": "corepack pnpm run typecheck",
     "test": "corepack pnpm exec vitest run --root ../.. packages/engine-core/src/index.test.ts"
+  },
+  "dependencies": {
+    "@optcg/types": "workspace:*"
   }
 }
