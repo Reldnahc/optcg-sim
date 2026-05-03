@@ -37,6 +37,7 @@ non_scope:
   - replay serializer policy
   - client or browser bundle safeguards
 dependencies:
+  - INF-007
   - SEC-001B
 acceptance_criteria:
   - local verify includes the dedicated hidden-information lane
@@ -46,6 +47,7 @@ required_tests:
   - root verify smoke test proving hidden-info lane inclusion
   - CI workflow smoke test proving hidden-info job or step calls the canonical hidden-info lane
 repo_rules:
-  - hidden-information leakage must be merge-blocking after this story
+  - hidden-information leakage covered by the current hidden-info lane must be merge-blocking after this story
   - CI and local verification must remain materially aligned
+  - replay serializer privacy and client bundle/helper safeguards are deferred to later replay and architecture-boundary stories
 ambiguity_policy: fail_and_escalate

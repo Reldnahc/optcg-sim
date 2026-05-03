@@ -19,14 +19,14 @@ story_boundary: >
 allowed_touch_points:
   - package.json
   - tests/hidden-info/**
-  - fixtures/hidden-info/**
 spec_refs:
   - 11-testing-quality.s022 (Required repo enforcement linkage)
+  - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
   - 23-repo-tooling-and-enforcement.s010 (Test tooling requirements)
   - 23-repo-tooling-and-enforcement.s012 (Hidden-information safety enforcement)
   - 23-repo-tooling-and-enforcement.s023 (Definition of done for repo tooling)
 scope:
-  - add a dedicated root hidden-information test command
+  - add the dedicated root `test:hidden-info` command
   - wire the command to the hidden-info test directory or harness from SEC-001A
   - add smoke coverage proving the local command exists independently from generic unit tests
 non_scope:
@@ -39,12 +39,13 @@ non_scope:
 dependencies:
   - SEC-001A
 acceptance_criteria:
-  - a dedicated root hidden-information test lane exists
+  - a dedicated root `test:hidden-info` lane exists
   - the lane runs the hidden-info tests without relying on manual reviewer inspection
   - the lane uses existing root tooling conventions and does not duplicate test-runner logic in shell scripts
 required_tests:
-  - hidden-information lane smoke test proving the root script calls the canonical hidden-info test target
+  - hidden-information lane smoke test proving `test:hidden-info` calls the canonical `tests/hidden-info` target directly instead of aliasing generic `pnpm test`
 repo_rules:
   - hidden-information leakage remains merge-blocking once the lane is wired into verify and CI by a later story
   - the local lane must extend the SEC-001A fixture/assertion harness instead of creating a second harness
+  - replay serializer privacy and client bundle/helper safeguards are deferred to later replay and architecture-boundary stories
 ambiguity_policy: fail_and_escalate
