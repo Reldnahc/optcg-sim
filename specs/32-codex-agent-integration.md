@@ -213,6 +213,18 @@ substory to `stories/done/`, remove their packets, and clear any matching active
 manifest entry. The multi-story completion command must reject cleanup when
 manifest or packet evidence for any listed substory is missing or stale.
 
+While the parent integration branch is open, `agent-packets/active.json` is a
+single-story handoff pointer, not a parent-story progress report. It may point to
+the current or most recently active substory even after earlier substories have
+merged into the parent branch. Those earlier substories remain approved until the
+parent PR lands on `main` and the multi-story completion command runs.
+
+Before requesting human review on the parent PR, the parent agent should update
+the PR body or post a handoff comment that records completed gates instead of a
+future-tense review plan: included substory PRs, full-story reviewer-subagent
+record, revision response, CI result, repo verification result, required human
+review, and post-merge multi-story cleanup.
+
 Pure packet-completion cleanup does not require reviewer-subagent review when the
 commit contains only the exact file changes produced by the packet completion
 command and repo verification passes. If cleanup requires any manual edit beyond

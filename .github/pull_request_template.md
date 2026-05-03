@@ -45,7 +45,22 @@
 - [ ] Human merge-gate review record is present before merge
 - [ ] Follow-up ambiguities or blockers documented if review uncovered them
 
-Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` do not use this pull-request review artifact path. If cleanup includes any manual edit beyond that command output, use the normal PR checklist above.
+## Parent Integration PRs
+
+Use this section only when the PR merges a parent integration branch into `main`.
+
+- Included substory PRs:
+- [ ] Each included substory PR has CI, `pnpm verify`, AI review record, and revision response recorded on its PR
+- [ ] Full-story integration reviewer-subagent review is posted on this parent PR
+- [ ] Parent PR revision response is posted after full-story integration review
+- [ ] Parent PR body or handoff comment is updated to completed-gate language before human review is requested
+- [ ] Current parent PR CI result:
+- [ ] Current parent branch `pnpm verify` result:
+- [ ] Human review is explicitly required before merge to `main`
+- [ ] Post-merge lifecycle cleanup plan is recorded: `pnpm run packets:complete-many ...`
+- [ ] Active packet state is explained if non-empty: `agent-packets/active.json` is only the current or most recent substory handoff pointer until post-merge cleanup, not the list of unfinished substories
+
+Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` do not use this pull-request review artifact path. If cleanup includes any manual edit beyond that command output, use the normal PR checklist above.
 
 ## Assumptions and Risks
 
