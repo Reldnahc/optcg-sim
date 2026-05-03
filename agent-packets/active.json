@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SEC-001B.md",
+      "storyId": "SEC-001B",
+      "storyPath": "stories/approved/SEC-001B-local-hidden-info-regression-lane.yaml",
+      "storySha256": "a7d477067842aa5e7fbbd4e03a3605b5c31846b7a0d0361f6d484ab2891735a7"
+    }
+  ],
   "version": 1
 }
