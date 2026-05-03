@@ -1364,8 +1364,84 @@ test("TYP-001G canonical game state and engine/result contracts compile", () => 
 });
 
 test("TYP-001G rejects stale EngineResult and out-of-scope exports/behavior", () => {
-  // @ts-expect-error canonical EngineResult must not include stale publicEvents.
-  const staleEngineResult: EngineResult = { publicEvents: [] };
+  const player = "player-a" as PlayerId;
+  const seq = 1 as StateSeq;
+  const event: EngineEvent = {
+    id: "event-1" as EngineEventId,
+    seq: 1,
+    type: "phaseStarted",
+    payload: {},
+    visibility: { type: "public" },
+    createdAtStateSeq: seq,
+  };
+  const leader: CardInstance = {
+    instanceId: "leader-1" as CardRef["instanceId"],
+    cardId: "OP01-001" as CardId,
+    owner: player,
+    controller: player,
+    zone: { zone: "leaderArea", playerId: player },
+    attachedDon: [],
+  };
+  const playerState: PlayerState = {
+    playerId: player,
+    deck: [],
+    donDeck: [],
+    hand: [],
+    trash: [],
+    leader,
+    characters: [],
+    costArea: [],
+    life: [],
+    hasMulliganed: false,
+    turnCount: 1,
+  };
+  const state: GameState = {
+    matchId: "match-1" as MatchId,
+    status: { type: "active" },
+    version: {
+      specVersion: "v6",
+      rulesVersion: "rules-v1",
+      engineVersion: "engine-v1",
+      cardDataVersion: "cards-v1",
+      effectDefinitionsVersion: "effects-v1",
+      customHandlerVersion: "handlers-v1",
+      banlistVersion: "banlist-v1",
+    },
+    seq,
+    actionSeq: 1,
+    turn: {
+      globalTurn: 1,
+      playerTurnCounts: { [player]: 1 },
+      turnPlayerId: player,
+      phase: "main",
+    },
+    players: { [player]: playerState },
+    timers: {
+      players: {
+        [player]: { playerId: player, remainingMs: 120_000, isRunning: true },
+      },
+    },
+    oncePerTurn: [],
+    effectQueue: [],
+    deferredTriggers: [],
+    continuousEffects: [],
+    replacementState: [],
+    revealedCards: [],
+    rng: {
+      algorithm: "test-fixed",
+      internalState: "rng-state",
+      callCount: 0,
+    },
+    eventJournal: [event],
+    audit: [],
+  };
+  const staleEngineResult: EngineResult = {
+    state,
+    events: [event],
+    stateHash: "hash-1",
+    // @ts-expect-error canonical EngineResult must not include stale publicEvents.
+    publicEvents: [],
+  };
   // @ts-expect-error stale draft event contract must not be exported.
   type PublicEffectEventMissing = Types.PublicEffectEvent;
   // @ts-expect-error public view DTO must not be exported.
