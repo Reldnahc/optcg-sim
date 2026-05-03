@@ -8,7 +8,7 @@ type: tooling
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Refactor the completed `@optcg/types` package so canonical shared type
   contracts and package-local tests are organized by concern instead of living in
