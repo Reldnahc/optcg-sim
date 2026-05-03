@@ -1,0 +1,20 @@
+{
+  "cardId": "OP01-016",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "OP01-016:auto-on-ko-1",
+      "category": "auto",
+      "trigger": { "type": "onKO" },
+      "failurePolicy": "requiresAll",
+      "sourcePresencePolicy": "resolveFromLastKnownInformation",
+      "effect": { "type": "custom", "handler": "test.canonicalPolicyEnums" }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-op01-016",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

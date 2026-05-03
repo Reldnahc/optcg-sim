@@ -10,8 +10,9 @@ primary_concern: contract
 priority: critical
 status: approved
 summary: >
-  Add the canonical effect DSL schema plus valid and invalid fixture coverage so JSON
-  effect definitions can be validated mechanically before they reach runtime work.
+  Add the baseline canonical effect DSL schema plus valid and invalid fixture coverage
+  so JSON effect definitions can be validated mechanically before they reach runtime
+  work.
 story_boundary: >
   Own the effect DSL schema artifact, fixture samples, and fixture-validation automation
   only. Do not add database checks, canonical TypeScript compilation, or root lane
@@ -20,19 +21,22 @@ allowed_touch_points:
   - contracts/effect-dsl.schema.json
   - fixtures/**
   - package.json
+  - pnpm-lock.yaml
   - tests/contracts/**
   - tools/**
 spec_refs:
   - 11-testing-quality.s021 (v6 contract validation)
   - 23-repo-tooling-and-enforcement.s011 (Contract and fixture validation)
 scope:
-  - add the canonical effect DSL schema at the spec-defined path
+  - add the baseline canonical effect DSL schema at the spec-defined path
   - add at least one valid and one invalid effect DSL fixture dedicated to validation tests
   - add a validation command or test that proves invalid fixtures are rejected
+  - add a direct JSON Schema validation dev dependency when needed for the validation lane
 non_scope:
   - canonical TypeScript contract compilation
   - database schema validation
   - root contracts lane aggregation
+  - exhaustive JSON Schema parity with every canonical TypeScript effect, cost, condition, and duration union
 dependencies:
   - INF-004
   - INF-006A
@@ -40,9 +44,11 @@ acceptance_criteria:
   - contracts/effect-dsl.schema.json exists at the canonical path
   - committed validation fixtures include at least one valid and one invalid sample
   - the validation lane rejects the invalid sample and accepts the valid sample
+  - the baseline schema rejects deprecated CardFilter aliases represented by the invalid fixture
 required_tests:
   - fixture validation smoke test with one valid effect DSL sample and one invalid sample
 repo_rules:
   - fixture validation must remain local and deterministic
   - invalid fixtures used for validation must stay isolated from production card content
+  - dependency and lockfile changes are allowed only for the effect DSL schema validation lane
 ambiguity_policy: fail_and_escalate

@@ -1,0 +1,21 @@
+{
+  "cardId": "OP01-015",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "OP01-015:auto-on-play-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "optional": false,
+      "oncePerTurn": false,
+      "sourcePresencePolicy": "mustRemainInSameZone",
+      "effect": { "type": "draw", "count": 1, "player": "self" }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-op01-015",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

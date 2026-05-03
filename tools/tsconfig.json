@@ -6,5 +6,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "files": ["build-agent-packet.ts"]
+  "files": ["build-agent-packet.ts", "validate-effect-dsl-fixtures.ts"]
 }
