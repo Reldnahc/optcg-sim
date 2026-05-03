@@ -1280,11 +1280,18 @@ test("TYP-001G canonical game state and engine/result contracts compile", () => 
       turnPlayerId: playerA,
       phase: "main",
     },
-    players: { [playerA]: playerState, [playerB]: { ...playerState, playerId: playerB } },
+    players: {
+      [playerA]: playerState,
+      [playerB]: { ...playerState, playerId: playerB },
+    },
     timers: {
       players: {
         [playerA]: { playerId: playerA, remainingMs: 120_000, isRunning: true },
-        [playerB]: { playerId: playerB, remainingMs: 120_000, isRunning: false },
+        [playerB]: {
+          playerId: playerB,
+          remainingMs: 120_000,
+          isRunning: false,
+        },
       },
     },
     pendingDecision,
@@ -1300,7 +1307,9 @@ test("TYP-001G canonical game state and engine/result contracts compile", () => 
       callCount: 0,
     },
     eventJournal: [event],
-    audit: [{ type: "test", createdAt: "2026-05-03T00:00:00.000Z", payload: {} }],
+    audit: [
+      { type: "test", createdAt: "2026-05-03T00:00:00.000Z", payload: {} },
+    ],
   };
   const stepResult: EngineStepResult = { state, events: [event] };
   const engineError: EngineError = {
@@ -1320,7 +1329,10 @@ test("TYP-001G canonical game state and engine/result contracts compile", () => 
     includeHidden: true,
     normalizeTransientIds: true,
   };
-  const mutation: AtomicMutation = (nextState) => ({ state: nextState, events: [] });
+  const mutation: AtomicMutation = (nextState) => ({
+    state: nextState,
+    events: [],
+  });
   const handler: CustomHandler = {
     id: "handler-1",
     cardId: source.cardId,
@@ -1336,17 +1348,19 @@ test("TYP-001G canonical game state and engine/result contracts compile", () => 
   expect(engineResult.stateHash).toBe("hash-1");
   expect(hashInput.includeHidden).toBe(true);
   expect(mutation(state).state.matchId).toBe(state.matchId);
-  expect(handler.execute(state, {
-    source,
-    controllerId: playerA,
-    causedBy: { type: "playerAction", actionId: "action-2" },
-    execution: {
-      effectId: "effect-1" as EffectId,
+  expect(
+    handler.execute(state, {
       source,
-      transientSets: {},
-      selections: {},
-    },
-  }).stateHash).toBe("hash-2");
+      controllerId: playerA,
+      causedBy: { type: "playerAction", actionId: "action-2" },
+      execution: {
+        effectId: "effect-1" as EffectId,
+        source,
+        transientSets: {},
+        selections: {},
+      },
+    }).stateHash,
+  ).toBe("hash-2");
 });
 
 test("TYP-001G rejects stale EngineResult and out-of-scope exports/behavior", () => {
