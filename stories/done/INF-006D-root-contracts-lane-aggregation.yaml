@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: verification
 priority: critical
-status: approved
+status: done
 summary: >
   Expand the root contracts lane so canonical type compilation, effect DSL validation,
   database schema validation, and story-schema checks run through one stable command for

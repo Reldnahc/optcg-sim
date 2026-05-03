@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-006D.md",
-      "storyId": "INF-006D",
-      "storyPath": "stories/approved/INF-006D-root-contracts-lane-aggregation.yaml",
-      "storySha256": "6922b73e82d53e29818509b21a30829cc4af0849ffde09557b162300fee3d9c3"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
