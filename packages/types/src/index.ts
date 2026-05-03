@@ -833,3 +833,163 @@ export interface EffectDefinition {
   effects: EffectBlock[];
   metadata: EffectDefinitionMetadata;
 }
+
+export interface PaymentSpec {
+  optionId: string;
+  selectedCardInstanceIds?: InstanceId[];
+  selectedDonInstanceIds?: InstanceId[];
+}
+
+export type PaymentOption =
+  | { id: string; type: "restDon"; count: number }
+  | { id: string; type: "returnDon"; count: number }
+  | { id: string; type: "trashFromHand"; count: number; filter?: CardFilter }
+  | { id: string; type: "trashFromField"; count: number; filter?: CardFilter }
+  | { id: string; type: "discard"; count: number; filter?: CardFilter }
+  | { id: string; type: "custom"; action: string };
+
+export interface TargetCandidate {
+  card: CardRef;
+  visibility: EventVisibility;
+}
+
+export interface CardSelectionCandidate {
+  card: CardRef;
+  visibility: EventVisibility;
+}
+
+export type DecisionResponse =
+  | { type: "orderedIds"; ids: string[] }
+  | { type: "optionalActivation"; choice: "activate" | "decline" }
+  | {
+      type: "payment";
+      optionId: string;
+      selectedCardInstanceIds?: InstanceId[];
+      selectedDonInstanceIds?: InstanceId[];
+    }
+  | { type: "targets"; targets: CardRef[] }
+  | { type: "cards"; cards: CardRef[] }
+  | { type: "effectOption"; optionId: string }
+  | { type: "lifeTrigger"; choice: "activateTrigger" | "addToHand" }
+  | { type: "replacement"; replacementId?: string }
+  | { type: "mulligan"; keep: boolean }
+  | { type: "loopCount"; count: number }
+  | { type: "rollbackConsent"; allow: boolean };
+
+export interface BaseDecision {
+  id: DecisionId;
+  type: string;
+  playerId: PlayerId;
+  prompt: string;
+  causedBy: CausalityRef;
+  timeoutMs?: number;
+  defaultResponse?: DecisionResponse;
+  visibility: EventVisibility;
+}
+
+export interface ChooseTriggerOrderDecision extends BaseDecision {
+  type: "chooseTriggerOrder";
+  triggerIds: string[];
+  constraints: { mustUseAll: true };
+}
+
+export interface ChooseOptionalActivationDecision extends BaseDecision {
+  type: "chooseOptionalActivation";
+  effectId: EffectId;
+  source: CardRef;
+  options: ["activate", "decline"];
+}
+
+export interface PayCostDecision extends BaseDecision {
+  type: "payCost";
+  cost: Cost;
+  paymentOptions: PaymentOption[];
+}
+
+export interface SelectTargetsDecision extends BaseDecision {
+  type: "selectTargets";
+  request: TargetRequest;
+  candidates: TargetCandidate[];
+}
+
+export interface SelectCardsDecision extends BaseDecision {
+  type: "selectCards";
+  request: CardSelectionRequest;
+  candidates: CardSelectionCandidate[];
+}
+
+export interface ChooseEffectOptionDecision extends BaseDecision {
+  type: "chooseEffectOption";
+  options: EffectOption[];
+}
+
+export interface ConfirmLifeTriggerDecision extends BaseDecision {
+  type: "confirmLifeTrigger";
+  card: CardRef;
+  options: ["activateTrigger", "addToHand"];
+}
+
+export interface OrderCardsDecision extends BaseDecision {
+  type: "orderCards";
+  cards: CardRef[];
+  destination: Zone;
+}
+
+export interface MulliganDecision extends BaseDecision {
+  type: "mulligan";
+  options: ["keep", "mulligan"];
+}
+
+export interface DeclareLoopCountDecision extends BaseDecision {
+  type: "declareLoopCount";
+  min: number;
+  max: number;
+}
+
+export interface RollbackConsentDecision extends BaseDecision {
+  type: "rollbackConsent";
+  rollbackPointId: string;
+}
+
+export interface ChooseReplacementDecision extends BaseDecision {
+  type: "chooseReplacement";
+  processId: string;
+  replacementIds: string[];
+  mandatory: boolean;
+}
+
+export type PendingDecision =
+  | ChooseTriggerOrderDecision
+  | ChooseOptionalActivationDecision
+  | PayCostDecision
+  | SelectTargetsDecision
+  | SelectCardsDecision
+  | ChooseEffectOptionDecision
+  | ConfirmLifeTriggerDecision
+  | OrderCardsDecision
+  | MulliganDecision
+  | DeclareLoopCountDecision
+  | RollbackConsentDecision
+  | ChooseReplacementDecision;
+
+export type Action =
+  | { type: "playCard"; cardInstanceId: InstanceId; costPayment?: PaymentSpec }
+  | {
+      type: "activateEffect";
+      source: CardRef;
+      effectId: EffectId;
+      costPayment?: PaymentSpec;
+    }
+  | { type: "attachDon"; donInstanceId: InstanceId; target: CardRef }
+  | { type: "declareAttack"; attacker: CardRef; target: CardRef }
+  | { type: "activateBlocker"; blocker: CardRef }
+  | { type: "useCounter"; cardInstanceId: InstanceId; target: CardRef }
+  | { type: "endMainPhase" }
+  | { type: "concede"; playerId: PlayerId }
+  | {
+      type: "respondToDecision";
+      decisionId: DecisionId;
+      response: DecisionResponse;
+    };
+
+export type LegalAction = Action;
