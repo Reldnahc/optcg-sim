@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/TYP-001A.md",
-      "storyId": "TYP-001A",
-      "storyPath": "stories/approved/TYP-001A-branded-identifiers-and-primitives.yaml",
-      "storySha256": "2b927cc404e8bd28ace34820836bfe94d5fe79891688d420c8e5ffe7b47c3580"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
