@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: critical
-status: approved
+status: done
 summary: >
   Finish the shared type package replacement with export cohesion tests that
   prove all canonical TYP-001 contract exports are importable from

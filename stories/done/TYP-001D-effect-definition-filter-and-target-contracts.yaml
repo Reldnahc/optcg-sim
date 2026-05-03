@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: critical
-status: approved
+status: done
 summary: >
   Add the canonical effect-definition support contracts that decisions,
   runtime queues, continuous effects, and card implementation metadata depend

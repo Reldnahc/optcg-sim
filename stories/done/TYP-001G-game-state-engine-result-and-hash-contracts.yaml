@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: critical
-status: approved
+status: done
 summary: >
   Add the canonical top-level GameState, engine result, error, hash input, and
   custom handler contracts after all referenced support, event, decision,
