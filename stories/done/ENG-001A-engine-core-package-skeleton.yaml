@@ -8,7 +8,7 @@ type: tooling
 area: engine
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Add the strict `@optcg/engine-core` package shell so later engine stories have
   a pure package boundary, compile target, and package-local test lane.
