@@ -1,0 +1,139 @@
+{
+  "name": "clean filtered player view",
+  "publicPaths": [
+    { "path": "matchId", "description": "player views expose match identity" },
+    {
+      "path": "playerId",
+      "description": "player views identify the recipient"
+    },
+    {
+      "path": "stateSeq",
+      "description": "player views expose public state sequence"
+    },
+    {
+      "path": "actionSeq",
+      "description": "player views expose public action sequence"
+    },
+    {
+      "path": "opponent.hand.count",
+      "description": "opponent hand count is public"
+    },
+    { "path": "self.deck.count", "description": "own deck count is public" },
+    {
+      "path": "opponent.deck.count",
+      "description": "opponent deck count is public"
+    },
+    {
+      "path": "self.life.faceDownCount",
+      "description": "face-down life count is public"
+    },
+    {
+      "path": "opponent.life.faceDownCount",
+      "description": "opponent face-down life count is public"
+    },
+    {
+      "path": "legalActions",
+      "description": "public legal actions are allowed"
+    },
+    { "path": "timers", "description": "public timer state is allowed" }
+  ],
+  "privatePaths": [
+    {
+      "category": "opponent-hand-card-ids",
+      "path": "opponent.hand.cardIds",
+      "description": "opponent hand contents must not be visible"
+    },
+    {
+      "category": "deck-order",
+      "path": "self.deck.order",
+      "description": "deck order must not be visible"
+    },
+    {
+      "category": "deck-card-ids-beyond-count",
+      "path": "self.deck.cardIds",
+      "description": "deck card identities beyond count must not be visible"
+    },
+    {
+      "category": "face-down-life-identity",
+      "path": "opponent.life.faceDownCardIds",
+      "description": "face-down life identities must not be visible"
+    },
+    {
+      "category": "rng-state",
+      "path": "rng",
+      "description": "RNG seed and internal state must be absent"
+    },
+    {
+      "category": "non-public-queue-internals",
+      "path": "effectQueue",
+      "description": "non-public queue internals must be absent"
+    },
+    {
+      "category": "private-decision-candidates",
+      "path": "pendingDecision.privateCandidates",
+      "description": "private decision candidates must be absent"
+    },
+    {
+      "category": "internal-crash-recovery-metadata",
+      "path": "crashRecovery",
+      "description": "internal crash and recovery metadata must be absent"
+    }
+  ],
+  "view": {
+    "matchId": "match-001",
+    "playerId": "player-a",
+    "stateSeq": 12,
+    "actionSeq": 7,
+    "turn": {
+      "playerId": "player-a",
+      "phase": "main"
+    },
+    "self": {
+      "deck": {
+        "count": 41
+      },
+      "hand": {
+        "cardIds": ["self-hand-001", "self-hand-002"]
+      },
+      "life": {
+        "faceDownCount": 5
+      }
+    },
+    "opponent": {
+      "deck": {
+        "count": 38
+      },
+      "hand": {
+        "count": 5
+      },
+      "life": {
+        "faceDownCount": 4
+      }
+    },
+    "pendingDecision": {
+      "id": "decision-001",
+      "playerId": "player-a",
+      "type": "mulligan",
+      "prompt": "Choose whether to keep your opening hand.",
+      "causedBy": { "type": "ruleProcess", "name": "mulligan" },
+      "visibility": { "type": "private", "playerId": "player-a" },
+      "options": ["keep", "mulligan"]
+    },
+    "legalActions": [{ "type": "pass" }],
+    "revealedCards": [],
+    "effectEvents": [],
+    "timers": {
+      "activePlayerId": "player-a",
+      "players": {
+        "player-a": {
+          "remainingMs": 300000,
+          "isRunning": true
+        },
+        "player-b": {
+          "remainingMs": 300000,
+          "isRunning": false
+        }
+      }
+    }
+  }
+}

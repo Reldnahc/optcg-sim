@@ -1,0 +1,6 @@
+{
+  "name": "leaks private decision candidates",
+  "leakCategory": "private-decision-candidates",
+  "leakPath": "pendingDecision.privateCandidates",
+  "leakValue": [{ "cardId": "candidate-001" }]
+}

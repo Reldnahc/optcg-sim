@@ -1,0 +1,6 @@
+{
+  "name": "leaks deck card identities beyond count",
+  "leakCategory": "deck-card-ids-beyond-count",
+  "leakPath": "self.deck.cardIds",
+  "leakValue": ["deck-001", "deck-002", "deck-003"]
+}

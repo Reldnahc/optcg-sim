@@ -1,0 +1,6 @@
+{
+  "name": "leaks non-public queue internals",
+  "leakCategory": "non-public-queue-internals",
+  "leakPath": "effectQueue",
+  "leakValue": [{ "sourceCardId": "hidden-source-001" }]
+}

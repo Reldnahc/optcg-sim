@@ -1,0 +1,6 @@
+{
+  "name": "leaks deck order",
+  "leakCategory": "deck-order",
+  "leakPath": "self.deck.order",
+  "leakValue": ["deck-top", "deck-second", "deck-third"]
+}
