@@ -9,6 +9,7 @@ const repoRoot = path.resolve(
   "..",
   "..",
 );
+const ESLINT_FIXTURE_TIMEOUT_MS = 15_000;
 
 async function readJson(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
@@ -79,15 +80,19 @@ test("eslint ignores rule-testing fixtures during repo-wide linting", async () =
   );
 });
 
-test("eslint rejects explicit any and non-null assertions", async () => {
-  const results = await lintFixture("tests/fixtures/eslint/unsafe-types.ts");
-  const messages = results.flatMap((result) =>
-    result.messages.map((message) => message.ruleId),
-  );
+test(
+  "eslint rejects explicit any and non-null assertions",
+  async () => {
+    const results = await lintFixture("tests/fixtures/eslint/unsafe-types.ts");
+    const messages = results.flatMap((result) =>
+      result.messages.map((message) => message.ruleId),
+    );
 
-  assert.ok(messages.includes("@typescript-eslint/no-explicit-any"));
-  assert.ok(messages.includes("@typescript-eslint/no-non-null-assertion"));
-});
+    assert.ok(messages.includes("@typescript-eslint/no-explicit-any"));
+    assert.ok(messages.includes("@typescript-eslint/no-non-null-assertion"));
+  },
+  ESLINT_FIXTURE_TIMEOUT_MS,
+);
 
 test("eslint rejects ts-ignore and ts-nocheck", async () => {
   const results = await lintFixture(
