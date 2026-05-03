@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-001B.md",
-      "storyId": "ENG-001B",
-      "storyPath": "stories/approved/ENG-001B-deterministic-rng-wrapper.yaml",
-      "storySha256": "46a34968cd86c0d4551a7d0cd76a1c59b9c58058bbcc98a3321c50a3c9872d2b"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

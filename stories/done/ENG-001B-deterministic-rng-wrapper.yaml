@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the deterministic RNG wrapper primitive needed before setup, shuffling,
   mulligan, and state hashing stories can produce replayable results.
