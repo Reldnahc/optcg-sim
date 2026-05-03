@@ -8,18 +8,21 @@ type: tooling
 area: engine
 primary_concern: tooling
 priority: high
-status: generated
+status: approved
 summary: >
   Add the strict `@optcg/engine-core` package shell so later engine stories have
   a pure package boundary, compile target, and package-local test lane.
 story_boundary: >
-  Own only package skeleton, exports placeholder for future engine behavior,
-  package compile/test wiring, and boundary tests. Do not implement GameState
-  setup, RNG, hashing, legal actions, or turn flow.
+  Own only package skeleton, a minimal non-gameplay package entrypoint,
+  package compile/test wiring, and boundary tests. Do not stub or export
+  engine behavior functions from `15-implementation-kickoff.s006`, and do not
+  implement GameState setup, RNG, hashing, legal actions, or turn flow.
 allowed_touch_points:
   - packages/engine-core/**
   - package.json
+  - pnpm-lock.yaml
   - pnpm-workspace.yaml
+  - eslint.config.mjs
   - tests/lint/**
   - tests/fixtures/eslint/**
 spec_refs:
@@ -47,16 +50,18 @@ dependencies:
   - TYP-001F
   - TYP-001G
   - TYP-001H
+  - TYP-003
 acceptance_criteria:
   - "`@optcg/engine-core` exists as a workspace package"
   - root typecheck compiles engine-core
   - engine-core package boundary rejects forbidden imports mechanically
 required_tests:
   - package compile smoke test for engine-core
-  - lint fixture test proving forbidden engine-core imports fail
+  - lint fixture test proving engine-core rejects forbidden imports for React, browser/client code, WebSocket/server transport, Redis, Postgres, and live HTTP clients
   - root verify includes the new compile target
 repo_rules:
   - do not approve this story until all TYP-001 child stories are done
+  - do not approve this story until TYP-003 is done
   - engine-core must not import React, browser code, WebSocket transport, Redis, Postgres, or live HTTP clients
   - do not add gameplay behavior in the package skeleton story
   - must pass `corepack pnpm run verify`
