@@ -1,0 +1,54 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-001B
+epic_id: M1-001
+title: Add deterministic RNG wrapper primitive
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Add the deterministic RNG wrapper primitive needed before setup, shuffling,
+  mulligan, and state hashing stories can produce replayable results.
+story_boundary: >
+  Own only deterministic RNG state and draw/advance helpers inside engine-core.
+  Do not implement deck setup, shuffling policy, GameState creation, action
+  application, or replay serialization.
+allowed_touch_points:
+  - packages/engine-core/**
+  - tests/engine/**
+spec_refs:
+  - 03-game-state-events-decisions.s002 (Canonical state rules)
+  - 03-game-state-events-decisions.s020 (Hashing)
+  - 12-roadmap.s015 (Immediate next tasks)
+  - 15-implementation-kickoff.s006 (Step 2 - @optcg/engine-core)
+  - 15-implementation-kickoff.s011 (Definition of done for kickoff)
+scope:
+  - define an engine-core RNG state shape using shared type contracts
+  - add deterministic RNG initialization from an explicit seed
+  - add pure advance helpers that return next RNG state plus generated value
+  - add tests proving repeated runs with the same seed produce the same sequence
+non_scope:
+  - deck shuffling
+  - GameState creation
+  - state hash computation
+  - event emission
+  - CLI command behavior
+dependencies:
+  - ENG-001A
+acceptance_criteria:
+  - RNG helpers are pure and deterministic for a given seed
+  - RNG state can be serialized as part of canonical state later
+  - no global `Math.random` use is introduced
+required_tests:
+  - unit test proving same seed produces same sequence
+  - unit test proving different seeds produce different early sequences
+  - unit test proving helpers do not mutate the input RNG state
+repo_rules:
+  - do not approve this story until ENG-001A is done
+  - engine-core behavior must remain deterministic
+  - no hidden global randomness is allowed
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

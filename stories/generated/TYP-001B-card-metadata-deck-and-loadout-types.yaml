@@ -1,0 +1,53 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-001B
+epic_id: M1-001
+title: Add card metadata, decklist, and loadout contracts
+type: implementation
+area: contracts
+primary_concern: contract
+priority: critical
+status: generated
+summary: >
+  Add the shared card metadata, variant, decklist, and account-level loadout
+  types needed before engine fixture cards and later card-data adapters can use
+  the same contract language.
+story_boundary: >
+  Own only card/deck/loadout type exports in `@optcg/types`. Do not implement
+  validation logic, Poneglyph HTTP access, card fixtures, engine setup, or deck
+  builder behavior.
+allowed_touch_points:
+  - packages/types/src/**
+spec_refs:
+  - 09-card-data-and-support-policy.s003 (Data ownership model)
+  - 09-card-data-and-support-policy.s008 (Card variants and alternate art)
+  - 09-card-data-and-support-policy.s013 (Match-time card manifest)
+  - 09-card-data-and-support-policy.s014 (Canonical Poneglyph normalization)
+  - 16-typescript-interface-draft.s004 (Card metadata)
+  - 16-typescript-interface-draft.s013 (Account-level loadouts)
+scope:
+  - export card category, color, attribute, rarity, and support-status contract types needed by metadata
+  - export resolved card metadata and match card manifest interfaces shaped around base Poneglyph card IDs
+  - export decklist entry and loadout interfaces with generated `VariantKey` support
+  - add package-local type tests for base-card quantity and variant-key shape usage
+non_scope:
+  - Poneglyph schema validation
+  - fixture card files
+  - deck legality validation behavior
+  - source text or behavior hash computation
+  - engine state or setup behavior
+dependencies:
+  - TYP-001A
+acceptance_criteria:
+  - card metadata contracts use base `CardId` for gameplay identity
+  - deck/loadout contracts can represent split variants without changing base-card quantities
+  - match manifests can snapshot resolved cards without requiring live card-data access
+required_tests:
+  - package test proving deck entries and loadouts accept base card IDs plus variant keys
+  - package test proving resolved card metadata can represent fixture-sourced card data
+repo_rules:
+  - variants are cosmetic and must not become gameplay identity
+  - do not add runtime Poneglyph dependencies to `@optcg/types`
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

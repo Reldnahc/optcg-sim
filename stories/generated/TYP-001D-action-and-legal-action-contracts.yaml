@@ -1,0 +1,50 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-001D
+epic_id: M1-001
+title: Add action and legal-action contracts
+type: implementation
+area: contracts
+primary_concern: contract
+priority: critical
+status: generated
+summary: >
+  Add the pure-data engine action and legal-action contracts required before
+  engine-core can expose `getLegalActions` or accept terminal-runner input.
+story_boundary: >
+  Own only action and legal-action type exports. Do not implement legality
+  computation, action application, protocol envelopes, CLI parsing, or server
+  transport behavior.
+allowed_touch_points:
+  - packages/types/src/**
+spec_refs:
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s016 (Action envelope inside the engine)
+  - 16-typescript-interface-draft.s008 (Actions and decisions)
+  - 15-implementation-kickoff.s006 (Step 2 - @optcg/engine-core)
+scope:
+  - export the Milestone 1 engine `Action` union
+  - export public/legal action summary types needed by later engine and view stories
+  - represent decision responses only by reference to decision-response contracts, without defining decision behavior here
+non_scope:
+  - pending decision union details
+  - legal-action generation
+  - action validation or application
+  - match-server action envelopes
+  - CLI command parsing
+dependencies:
+  - TYP-001A
+  - TYP-001C
+acceptance_criteria:
+  - action contracts are pure data and contain no server transport envelope fields
+  - legal-action contracts can be exported independently from legality computation
+  - later engine stories can import action contracts without importing server or client code
+required_tests:
+  - package type test compiling representative Milestone 1 actions
+  - package type test proving server envelope fields are not part of the engine action contract
+repo_rules:
+  - keep engine action contracts transport-free
+  - do not add runtime behavior to `@optcg/types`
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

@@ -1,0 +1,51 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-001
+epic_id: M1-001
+title: Add deterministic engine-core foundation
+type: implementation
+area: engine
+primary_concern: rules
+priority: critical
+status: replaced
+summary: >
+  Add the pure deterministic `@optcg/engine-core` foundation needed before
+  terminal vanilla turn flow and CLI play can be implemented.
+story_boundary: >
+  This parent story is not implementable. It preserves engine-core foundation
+  context and is replaced by smaller child stories such as ENG-001A through
+  ENG-001C.
+allowed_touch_points:
+  - packages/engine-core/**
+  - package.json
+  - pnpm-workspace.yaml
+  - tsconfig.base.json
+  - tests/engine/**
+spec_refs:
+  - 12-roadmap.s005 (Milestone 1: terminal engine)
+  - 12-roadmap.s015 (Immediate next tasks)
+  - 15-implementation-kickoff.s006 (Step 2 - @optcg/engine-core)
+  - 15-implementation-kickoff.s011 (Definition of done for kickoff)
+  - 15-implementation-kickoff.s012 (Guardrails)
+scope:
+  - define the engine-core foundation delivery context
+  - split package bootstrap, deterministic RNG, and state hash primitives into child stories
+non_scope:
+  - direct implementation from this parent story
+  - shared type contract implementation
+  - full turn flow
+  - CLI runner
+  - server or browser integration
+dependencies:
+  - TYP-001G
+acceptance_criteria:
+  - child stories exist for the first engine-core foundation concerns
+  - this parent story remains non-implementable and is not packetized
+required_tests:
+  - story review must verify this parent is replaced by child stories before engine-core implementation begins
+repo_rules:
+  - do not approve or packetize this parent story
+  - engine-core must stay pure and free of browser, server, Redis, Postgres, WebSocket, React, and live HTTP dependencies
+  - approve only one child story at a time
+ambiguity_policy: fail_and_escalate

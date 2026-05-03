@@ -1,0 +1,50 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-001A
+epic_id: M1-001
+title: Add branded identifiers and primitive contract types
+type: implementation
+area: contracts
+primary_concern: contract
+priority: critical
+status: generated
+summary: >
+  Replace the placeholder type export with the branded ID and primitive scalar
+  contracts that later type slices, engine state, and card metadata depend on.
+story_boundary: >
+  Own only branded identifiers, shared primitive aliases, and the package test
+  proving they export from `@optcg/types`. Do not add card metadata, game state,
+  actions, decisions, views, or engine behavior.
+allowed_touch_points:
+  - packages/types/src/**
+  - packages/types/package.json
+spec_refs:
+  - 15-implementation-kickoff.s005 (Step 1 - @optcg/types)
+  - 16-typescript-interface-draft.s003 (Brand and primitive identifiers)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+scope:
+  - add the shared `Brand` utility type
+  - export branded IDs needed by Milestone 1, including card, instance, player, match, effect, decision, queue, loadout, and variant identifiers
+  - remove the placeholder-only export from the package surface
+  - add package-local compile tests for representative branded assignment behavior
+non_scope:
+  - card metadata interfaces
+  - deck and loadout shapes
+  - game-state structure
+  - action and decision unions
+  - player-view DTOs
+  - engine-core package creation
+dependencies: []
+acceptance_criteria:
+  - "`@optcg/types` exports the branded identifier primitives required by later stories"
+  - the placeholder-only export is no longer the package's meaningful contract
+  - representative branded IDs are not assignable to each other in compile-time tests
+required_tests:
+  - package test proving branded identifiers can be constructed at trust boundaries
+  - package compile test proving incompatible branded identifiers are rejected with `@ts-expect-error`
+repo_rules:
+  - TypeScript strictness must remain enabled
+  - do not use `any`, non-null assertions, or unchecked broad assertions
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

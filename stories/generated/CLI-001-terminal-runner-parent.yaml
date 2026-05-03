@@ -1,0 +1,47 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CLI-001
+epic_id: M1-001
+title: Add terminal game runner
+type: implementation
+area: engine
+primary_concern: cli
+priority: medium
+status: replaced
+summary: >
+  Add a terminal runner after engine primitives and basic vanilla turn flow
+  exist, allowing one developer to play both sides from the command line.
+story_boundary: >
+  This parent story is not implementable yet. It preserves CLI runner context
+  for later slicing after engine-core setup, legal actions, and action
+  application stories exist.
+allowed_touch_points:
+  - packages/engine-core/**
+  - packages/cli/**
+  - tests/cli/**
+  - package.json
+spec_refs:
+  - 12-roadmap.s005 (Milestone 1: terminal engine)
+  - 15-implementation-kickoff.s007 (Step 3 - CLI runner)
+  - 15-implementation-kickoff.s011 (Definition of done for kickoff)
+scope:
+  - preserve CLI runner command context for later child-story slicing
+  - defer implementation until engine behavior exists
+non_scope:
+  - direct implementation from this parent story
+  - engine setup or turn flow
+  - browser UI
+  - match server protocol
+dependencies:
+  - ENG-001A
+acceptance_criteria:
+  - this parent story remains non-implementable until engine behavior child stories exist
+  - later CLI child stories can cite this parent context and exact CLI command requirements
+required_tests:
+  - story review must verify CLI implementation is deferred until engine APIs exist
+repo_rules:
+  - do not approve or packetize this parent story
+  - do not create CLI scaffolding before engine behavior can drive it
+  - approve only concern-scoped CLI child stories later
+ambiguity_policy: fail_and_escalate

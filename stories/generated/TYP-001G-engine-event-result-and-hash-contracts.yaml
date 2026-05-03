@@ -1,0 +1,59 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-001G
+epic_id: M1-001
+title: Add engine event, result, error, and hash contracts
+type: implementation
+area: contracts
+primary_concern: contract
+priority: critical
+status: generated
+summary: >
+  Add the shared engine event journal, result, error, causality, visibility, and
+  state-hash contract types needed before engine-core exposes deterministic
+  execution APIs.
+story_boundary: >
+  Own only event/result/error/hash type exports and final package export
+  cohesion. Do not implement hashing, event emission, engine mutation, replay
+  reconstruction, or CLI behavior.
+allowed_touch_points:
+  - packages/types/src/**
+spec_refs:
+  - 03-game-state-events-decisions.s004 (Engine result)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s008 (Causality refs)
+  - 03-game-state-events-decisions.s018 (Event visibility)
+  - 03-game-state-events-decisions.s020 (Hashing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 16-typescript-interface-draft.s007 (Engine event)
+  - 16-typescript-interface-draft.s009 (Engine result)
+  - 16-typescript-interface-draft.s010 (Hashing)
+scope:
+  - export engine event, event type, visibility, causality, error, result, and state-hash types
+  - ensure `EngineResult` references typed state, events, errors, decisions, public events, and hash output
+  - add package export cohesion tests covering the full TYP-001 child-story surface
+non_scope:
+  - hash computation
+  - event journal mutation logic
+  - replay serialization
+  - engine-core package creation
+  - CLI runner behavior
+dependencies:
+  - TYP-001A
+  - TYP-001C
+  - TYP-001E
+  - TYP-001F
+acceptance_criteria:
+  - engine result contracts expose deterministic result metadata without implementing behavior
+  - event visibility and causality contracts are available to later engine and filtering stories
+  - package exports no longer rely on placeholder contract coverage
+required_tests:
+  - package type test compiling a representative `EngineEvent`
+  - package type test compiling a representative `EngineResult`
+  - package export test proving key shared contracts are importable from `@optcg/types`
+repo_rules:
+  - do not implement hashing or mutation behavior in this contract story
+  - keep event/result contracts serializable and deterministic-friendly
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

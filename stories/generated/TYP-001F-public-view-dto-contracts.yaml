@@ -1,0 +1,53 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-001F
+epic_id: M1-001
+title: Add player and spectator view DTO contracts
+type: implementation
+area: contracts
+primary_concern: view
+priority: critical
+status: generated
+summary: >
+  Add the shared public view DTO contracts required before filtering stories can
+  return typed player and spectator views without exposing canonical GameState.
+story_boundary: >
+  Own only DTO type exports for public/player/spectator views. Do not implement
+  `filterStateForPlayer`, hidden-info assertions, spectator policy behavior, or
+  client rendering.
+allowed_touch_points:
+  - packages/types/src/**
+spec_refs:
+  - 06-visibility-security.s004 (PlayerView shape)
+  - 06-visibility-security.s008 (Spectator policy)
+  - 06-visibility-security.s020 (Ranked spectator policy)
+  - 06-visibility-security.s021 (View contract summary)
+  - 16-typescript-interface-draft.s005 (Game state)
+scope:
+  - export `PlayerView`, `SpectatorView`, and supporting public DTO types
+  - model visible self/opponent zone summaries without exposing hidden card IDs
+  - model public turn, battle, timer, legal-action, reveal, and effect-event summaries needed by views
+non_scope:
+  - filtering implementation
+  - hidden-info fixture contract changes
+  - spectator delay buffers
+  - replay view policy
+  - browser/client package code
+dependencies:
+  - TYP-001A
+  - TYP-001B
+  - TYP-001D
+  - TYP-001E
+acceptance_criteria:
+  - "`PlayerView` can represent the fields required by the visibility spec"
+  - opponent hidden zones expose counts rather than card identity arrays
+  - DTOs are separate from canonical `GameState`
+required_tests:
+  - package type test compiling a representative filtered `PlayerView`
+  - package type test proving opponent hand and deck summaries use count-oriented DTOs
+repo_rules:
+  - public DTOs must not include server-only RNG, effect queue internals, or crash recovery metadata
+  - do not modify hidden-info fixtures in this story
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

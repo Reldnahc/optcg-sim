@@ -1,0 +1,48 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-001
+epic_id: M1-001
+title: Replace placeholder shared type package with canonical contracts
+type: implementation
+area: contracts
+primary_concern: contract
+priority: critical
+status: replaced
+summary: >
+  Replace the placeholder `@optcg/types` package with the shared contract
+  surface required before engine-core implementation can begin.
+story_boundary: >
+  This parent story is not implementable. It preserves the full shared-types
+  context and is replaced by smaller child stories TYP-001A through TYP-001G.
+allowed_touch_points:
+  - packages/types/**
+spec_refs:
+  - 12-roadmap.s003 (Revised build order)
+  - 12-roadmap.s015 (Immediate next tasks)
+  - 15-implementation-kickoff.s005 (Step 1 - @optcg/types)
+  - 16-typescript-interface-draft.s003 (Brand and primitive identifiers)
+  - 16-typescript-interface-draft.s004 (Card metadata)
+  - 16-typescript-interface-draft.s005 (Game state)
+  - 16-typescript-interface-draft.s008 (Actions and decisions)
+  - 16-typescript-interface-draft.s009 (Engine result)
+scope:
+  - define the full shared type package delivery context
+  - split implementation into concern-scoped child stories
+non_scope:
+  - direct implementation from this parent story
+  - engine-core behavior
+  - card-data adapter behavior
+  - server protocol implementation
+  - browser client implementation
+dependencies: []
+acceptance_criteria:
+  - child stories exist for the shared type concerns needed by Milestone 1
+  - this parent story remains non-implementable and is not packetized
+required_tests:
+  - story review must verify this parent is replaced by child stories before any shared-types implementation begins
+repo_rules:
+  - do not approve or packetize this parent story
+  - approve only one child story at a time
+  - each child story must cite exact spec sections and stay within `packages/types/**`
+ambiguity_policy: fail_and_escalate
