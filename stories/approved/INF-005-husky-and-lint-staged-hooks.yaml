@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: generated
+status: approved
 summary: >
   Add local pre-commit and pre-push hooks so contributors hit the formatting, lint, and
   verification workflow before opening CI.
@@ -20,6 +20,8 @@ allowed_touch_points:
   - lint-staged.config.js
   - lint-staged.config.cjs
   - package.json
+  - pnpm-lock.yaml
+  - tests/hooks/**
 spec_refs:
   - 23-repo-tooling-and-enforcement.s003 (Canonical toolchain)
   - 23-repo-tooling-and-enforcement.s004 (Required root files)
