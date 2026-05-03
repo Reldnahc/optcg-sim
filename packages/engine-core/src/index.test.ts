@@ -135,6 +135,10 @@ test("canonical serialization normalizes object key insertion order", () => {
   assert.equal(hashCanonicalStateValue(a), hashCanonicalStateValue(b));
 });
 
+test("canonical serialization uses locale-independent code unit key order", () => {
+  assert.equal(canonicalSerializeStateValue({ b: 1, A: 2 }), '{"A":2,"b":1}');
+});
+
 test("canonical serialization normalizes nested object key insertion order", () => {
   const a = {
     z: { y: 2, x: 1 },
@@ -197,6 +201,14 @@ test("unsupported values and cyclic structures fail closed", () => {
   assert.throws(
     () => canonicalSerializeStateValue({ n: Number.POSITIVE_INFINITY }),
     /Unsupported/,
+  );
+  assert.throws(
+    () => canonicalSerializeStateValue(Object.assign([], { 1: "hole" })),
+    /sparse array slot/,
+  );
+  assert.throws(
+    () => canonicalSerializeStateValue({ [Symbol("hidden")]: "x" }),
+    /symbol key/,
   );
 
   const cyclic: { self?: unknown } = {};

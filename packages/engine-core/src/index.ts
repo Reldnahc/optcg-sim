@@ -129,6 +129,18 @@ const isPlainObject = (value: object): boolean => {
   return prototype === Object.prototype || prototype === null;
 };
 
+const compareCodeUnitOrder = (left: string, right: string): number => {
+  if (left < right) {
+    return -1;
+  }
+
+  if (left > right) {
+    return 1;
+  }
+
+  return 0;
+};
+
 const unsupportedValueError = (path: string, reason: string): TypeError =>
   new TypeError(`Unsupported canonical state value at ${path}: ${reason}.`);
 
@@ -186,9 +198,20 @@ const canonicalizeValue = (
   seen.add(value);
   try {
     if (Array.isArray(value)) {
-      const items = value.map((item, index) =>
-        canonicalizeValue(item, `${path}[${String(index)}]`, seen),
-      );
+      const items: string[] = [];
+      for (let index = 0; index < value.length; index += 1) {
+        if (!Object.hasOwn(value, index)) {
+          throw unsupportedValueError(
+            `${path}[${String(index)}]`,
+            "sparse array slot",
+          );
+        }
+
+        items.push(
+          canonicalizeValue(value[index], `${path}[${String(index)}]`, seen),
+        );
+      }
+
       return `[${items.join(",")}]`;
     }
 
@@ -196,8 +219,13 @@ const canonicalizeValue = (
       throw unsupportedValueError(path, "non-plain object");
     }
 
+    const symbolKeys = Object.getOwnPropertySymbols(value);
+    if (symbolKeys.length > 0) {
+      throw unsupportedValueError(path, "symbol key");
+    }
+
     const objectValue = value as Record<string, unknown>;
-    const keys = Object.keys(objectValue).sort((a, b) => a.localeCompare(b));
+    const keys = Object.keys(objectValue).sort(compareCodeUnitOrder);
     const pairs = keys.map((key) => {
       const childPath = `${path}.${key}`;
       return `${JSON.stringify(key)}:${canonicalizeValue(objectValue[key], childPath, seen)}`;
