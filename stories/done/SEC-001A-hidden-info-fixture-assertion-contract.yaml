@@ -8,7 +8,7 @@ type: verification
 area: security
 primary_concern: verification
 priority: critical
-status: approved
+status: done
 summary: >
   Define the first hidden-information fixture and assertion contract so future
   filtered-view stories can express leakage expectations without inventing a new

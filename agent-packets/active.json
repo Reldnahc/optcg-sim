@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/SEC-001A.md",
-      "storyId": "SEC-001A",
-      "storyPath": "stories/approved/SEC-001A-hidden-info-fixture-assertion-contract.yaml",
-      "storySha256": "2260a51938ea5194160dbf2cf02c3c0817e7bf627fd4021e80ab89e8ae2bc00e"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
