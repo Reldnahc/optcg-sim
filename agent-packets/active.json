@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/TYP-001B.md",
+      "storyId": "TYP-001B",
+      "storyPath": "stories/approved/TYP-001B-card-metadata-deck-and-loadout-types.yaml",
+      "storySha256": "0169816500a95842d5ddfb754fbbb4cd21f7bfab1c20de4aae63660278774658"
+    }
+  ],
   "version": 1
 }
