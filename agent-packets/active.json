@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-001G.md",
-      "storyId": "TYP-001G",
-      "storyPath": "stories/approved/TYP-001G-game-state-engine-result-and-hash-contracts.yaml",
-      "storySha256": "0e24942022307fc558bff7e325abb4f04654a00c62d65519b948baa723ecf08d"
+      "packetPath": "agent-packets/TYP-001H.md",
+      "storyId": "TYP-001H",
+      "storyPath": "stories/approved/TYP-001H-types-package-export-cohesion.yaml",
+      "storySha256": "ed00ee07d2eaeeb6d9a51e16221d43976c59f83213ca678c30920ccba22a2e6f"
     }
   ],
   "version": 1
