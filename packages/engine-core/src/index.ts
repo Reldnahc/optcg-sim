@@ -144,6 +144,15 @@ const compareCodeUnitOrder = (left: string, right: string): number => {
 const unsupportedValueError = (path: string, reason: string): TypeError =>
   new TypeError(`Unsupported canonical state value at ${path}: ${reason}.`);
 
+const hasArrayIndexOnlyKeys = (value: readonly unknown[]): boolean => {
+  const indexes = new Set<string>();
+  for (let index = 0; index < value.length; index += 1) {
+    indexes.add(String(index));
+  }
+
+  return Object.keys(value).every((key) => indexes.has(key));
+};
+
 const canonicalizeValue = (
   value: unknown,
   path: string,
@@ -198,6 +207,15 @@ const canonicalizeValue = (
   seen.add(value);
   try {
     if (Array.isArray(value)) {
+      const symbolKeys = Object.getOwnPropertySymbols(value);
+      if (symbolKeys.length > 0) {
+        throw unsupportedValueError(path, "array symbol key");
+      }
+
+      if (!hasArrayIndexOnlyKeys(value)) {
+        throw unsupportedValueError(path, "array non-index property");
+      }
+
       const items: string[] = [];
       for (let index = 0; index < value.length; index += 1) {
         if (!Object.hasOwn(value, index)) {

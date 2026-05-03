@@ -207,6 +207,16 @@ test("unsupported values and cyclic structures fail closed", () => {
     /sparse array slot/,
   );
   assert.throws(
+    () => canonicalSerializeStateValue(Object.assign([1], { extra: 2 })),
+    /array non-index property/,
+  );
+  const arrayWithSymbolKey = [1] as unknown[] & { [key: symbol]: unknown };
+  arrayWithSymbolKey[Symbol("hidden")] = 2;
+  assert.throws(
+    () => canonicalSerializeStateValue(arrayWithSymbolKey),
+    /array symbol key/,
+  );
+  assert.throws(
     () => canonicalSerializeStateValue({ [Symbol("hidden")]: "x" }),
     /symbol key/,
   );
