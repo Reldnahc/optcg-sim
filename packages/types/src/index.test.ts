@@ -1393,18 +1393,20 @@ test("TYP-001G rejects stale EngineResult and out-of-scope exports/behavior", ()
   // @ts-expect-error custom handler execution helper behavior is out of scope.
   type ExecuteCustomHandlerMissing = Types.executeCustomHandler;
 
+  const missingType = <T>(value: T | null): T | null => value;
+
   void staleEngineResult;
-  void (null as PublicEffectEventMissing | null);
-  void (null as PlayerViewMissing | null);
-  void (null as SpectatorViewMissing | null);
-  void (null as PublicDecisionMissing | null);
-  void (null as PublicLegalActionMissing | null);
-  void (null as PublicActionWindowMissing | null);
-  void (null as FilteredGameStateMissing | null);
-  void (null as ReplayEventMissing | null);
-  void (null as HashStateMissing | null);
-  void (null as ApplyMutationMissing | null);
-  void (null as ReconstructReplayStateMissing | null);
-  void (null as BuildPublicViewMissing | null);
-  void (null as ExecuteCustomHandlerMissing | null);
+  expect(missingType<PublicEffectEventMissing>(null)).toBeNull();
+  expect(missingType<PlayerViewMissing>(null)).toBeNull();
+  expect(missingType<SpectatorViewMissing>(null)).toBeNull();
+  expect(missingType<PublicDecisionMissing>(null)).toBeNull();
+  expect(missingType<PublicLegalActionMissing>(null)).toBeNull();
+  expect(missingType<PublicActionWindowMissing>(null)).toBeNull();
+  expect(missingType<FilteredGameStateMissing>(null)).toBeNull();
+  expect(missingType<ReplayEventMissing>(null)).toBeNull();
+  expect(missingType<HashStateMissing>(null)).toBeNull();
+  expect(missingType<ApplyMutationMissing>(null)).toBeNull();
+  expect(missingType<ReconstructReplayStateMissing>(null)).toBeNull();
+  expect(missingType<BuildPublicViewMissing>(null)).toBeNull();
+  expect(missingType<ExecuteCustomHandlerMissing>(null)).toBeNull();
 });
