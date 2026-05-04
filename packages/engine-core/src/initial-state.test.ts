@@ -197,3 +197,27 @@ test("fails closed for invalid leaderLifeCounts input", () => {
   nonInteger.leaderLifeCounts[p1] = 2.5;
   assert.throws(() => createInitialState(nonInteger), /non-negative integer/);
 });
+
+test("fails closed when playerOrder contains duplicate player ids", () => {
+  const duplicatePlayers = {
+    ...createInput(),
+    playerOrder: [p1, p1] as const,
+  };
+  assert.throws(
+    () => createInitialState(duplicatePlayers),
+    /playerOrder must contain two distinct players/,
+  );
+});
+
+test("fails closed when deck cannot satisfy opening hand plus life setup", () => {
+  const shortDeck = createInput();
+  shortDeck.leaderLifeCounts[p1] = 5;
+  shortDeck.deckCardIds[p1] = must(shortDeck.deckCardIds[p1], "p1 deck").slice(
+    0,
+    9,
+  );
+  assert.throws(
+    () => createInitialState(shortDeck),
+    /deckCardIds for p1 must contain at least 10 cards/,
+  );
+});

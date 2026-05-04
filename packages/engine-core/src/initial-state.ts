@@ -178,6 +178,9 @@ export const createInitialState = (
   input: CreateInitialStateInput,
 ): PreMulliganSetupGameState => {
   const [firstPlayerId, secondPlayerId] = input.playerOrder;
+  if (firstPlayerId === secondPlayerId) {
+    throw new TypeError("playerOrder must contain two distinct players.");
+  }
   if (
     input.firstPlayerId !== firstPlayerId &&
     input.firstPlayerId !== secondPlayerId
@@ -193,6 +196,17 @@ export const createInitialState = (
     if (!Number.isInteger(lifeCount) || lifeCount < 0) {
       throw new TypeError(
         `leaderLifeCounts for ${playerId} must be a non-negative integer.`,
+      );
+    }
+    const requiredDeckCards = OPENING_HAND_SIZE + lifeCount;
+    const deckCardIds = requirePlayerValue(
+      input.deckCardIds,
+      playerId,
+      "deckCardIds",
+    );
+    if (deckCardIds.length < requiredDeckCards) {
+      throw new TypeError(
+        `deckCardIds for ${playerId} must contain at least ${String(requiredDeckCards)} cards.`,
       );
     }
   }
