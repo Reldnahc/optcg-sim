@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import type { CardId, MatchId, PlayerId } from "@optcg/types";
 
+import { hashCanonicalStateValue } from "./canonical-state.js";
 import { createInitialState } from "./initial-state.js";
 import { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
 import { applyAction, getLegalActions } from "./actions.js";
@@ -289,11 +290,30 @@ test("applyAction rejects illegal attachDon variants", () => {
 test("applyAction endMainPhase transitions to next turn refresh", () => {
   const state = createActiveState();
   state.turn.phase = "main";
+  const seqBefore = state.seq;
+  const actionSeqBefore = state.actionSeq;
+  const journalLengthBefore = state.eventJournal.length;
 
   const result = applyAction(state, { type: "endMainPhase" });
   assert.equal(result.errors, undefined);
   assert.equal(result.state.turn.phase, "refresh");
   assert.equal(result.state.turn.turnPlayerId, p2);
+  assert.equal(
+    result.state.seq,
+    ((seqBefore as number) + 1) as typeof state.seq,
+  );
+  assert.equal(result.state.actionSeq, actionSeqBefore + 1);
+  assert.equal(
+    result.state.eventJournal.length,
+    journalLengthBefore + result.events.length,
+  );
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+  assert.equal(
+    result.events.every(
+      (event) => event.createdAtStateSeq === result.state.seq,
+    ),
+    true,
+  );
 });
 
 test("applyAction concede immediately completes match for opponent", () => {

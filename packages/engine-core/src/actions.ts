@@ -76,6 +76,20 @@ const appendRuleProcessingChecked = (
   );
 };
 
+const rebaseEvents = (
+  state: GameState,
+  events: EngineEvent[],
+  seqOffset: number,
+): EngineEvent[] =>
+  events.map((event, index) => ({
+    ...event,
+    id: toEngineEventId(
+      `event:${String(state.seq)}:${String(seqOffset + index)}:${event.type}`,
+    ),
+    seq: state.eventJournal.length + seqOffset + index,
+    createdAtStateSeq: toStateSeq(state.seq + 1),
+  }));
+
 const getOpponentId = (
   state: GameState,
   playerId: PlayerId,
@@ -197,10 +211,8 @@ const applyEndMainPhase = (state: GameState): EngineResult => {
 
   const preEndState: GameState = {
     ...state,
-    seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
     turn: { ...state.turn, phase: "end" },
-    eventJournal: [...state.eventJournal, ...transitionEvents],
   };
   assertGameStateInvariants(preEndState);
 
@@ -208,10 +220,16 @@ const applyEndMainPhase = (state: GameState): EngineResult => {
   if (endResult.errors !== undefined) {
     return endResult;
   }
-  return {
-    ...endResult,
-    events: [...transitionEvents, ...endResult.events],
+  const events = [
+    ...transitionEvents,
+    ...rebaseEvents(state, endResult.events, transitionEvents.length + 1),
+  ];
+  const nextState: GameState = {
+    ...endResult.state,
+    eventJournal: [...state.eventJournal, ...events],
   };
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
 };
 
 const applyAttachDon = (
