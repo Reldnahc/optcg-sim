@@ -8,7 +8,7 @@ type: verification
 area: replay
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Expand the package-local replay smoke fixture to cover manifest-backed setup,
   vanilla attack declaration, supported vanilla Life damage, Character K.O., and

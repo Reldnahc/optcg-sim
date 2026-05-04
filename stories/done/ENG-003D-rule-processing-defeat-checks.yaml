@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: critical
-status: approved
+status: done
 summary: >
   Add reusable rule-processing defeat checks for Milestone 1 leader damage at 0
   Life, deck-out, and simultaneous double-loss handling.

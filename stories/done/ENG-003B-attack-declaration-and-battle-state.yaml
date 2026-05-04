@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: critical
-status: approved
+status: done
 summary: >
   Add legal `declareAttack` generation and application for vanilla Main Phase
   attacks, resting the attacker and creating the authoritative battle sub-state.

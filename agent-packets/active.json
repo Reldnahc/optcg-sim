@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-003E.md",
-      "storyId": "ENG-003E",
-      "storyPath": "stories/approved/ENG-003E-vanilla-combat-replay-smoke.yaml",
-      "storySha256": "61caa97355c8c043b532d89a8ffc21627ed638d21b198625df49c8d67d0dcd35"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

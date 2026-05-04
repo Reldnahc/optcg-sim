@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: critical
-status: approved
+status: done
 summary: >
   Resolve manifest-proven no-blocker, no-counter, no-trigger vanilla battles as
   a deterministic internal engine step reached from the canonical action loop,

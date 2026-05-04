@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: critical
-status: approved
+status: done
 summary: >
   Add canonical match-manifest state authority and the manifest-backed computed
   combat view needed before attack legality and damage resolution can use card
