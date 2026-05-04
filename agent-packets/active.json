@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-003A.md",
-      "storyId": "ENG-003A",
-      "storyPath": "stories/approved/ENG-003A-match-manifest-computed-combat-view.yaml",
-      "storySha256": "46743431fd531c0bafb96ddbf5658cb4b4696c7001a64ef1ea2368658b77279c"
+      "packetPath": "agent-packets/ENG-003B.md",
+      "storyId": "ENG-003B",
+      "storyPath": "stories/approved/ENG-003B-attack-declaration-and-battle-state.yaml",
+      "storySha256": "be46948eb5f0b925162082fd25e8be01d7f92bd5e82c8cce40762de69f9e22c9"
     }
   ],
   "version": 1
