@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add deterministic official mulligan decision and resolution flow after
   pre-mulligan setup so the engine can reach a legal post-mulligan starting

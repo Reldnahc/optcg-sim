@@ -8,7 +8,7 @@ type: verification
 area: replay
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Add a narrow golden replay smoke fixture for the deterministic setup,
   mulligan, phase, and action skeleton, proving the same seed and action script

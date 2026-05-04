@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add deterministic phase progression helpers for the Milestone 1 vanilla turn
   loop, covering refresh, draw, DON!!, main entry, and end-phase turn handoff

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add pure invariant utilities for authoritative `GameState` values so later
   setup, action application, decision resume, and replay tests can fail closed

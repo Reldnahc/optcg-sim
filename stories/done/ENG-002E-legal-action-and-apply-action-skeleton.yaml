@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the first `getLegalActions` and `applyAction` engine APIs for safe
   Milestone 1 concession, phase control, and simple active-DON!! attachment,

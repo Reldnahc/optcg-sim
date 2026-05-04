@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add `createInitialState` for vanilla Milestone 1 setup fixtures, producing a
   deterministic authoritative pre-mulligan `GameState` from explicit player
