@@ -254,14 +254,6 @@ test("TYP-001G rejects stale EngineResult and out-of-scope exports/behavior", ()
   };
   // @ts-expect-error stale draft event contract must not be exported.
   type PublicEffectEventMissing = Types.PublicEffectEvent;
-  // @ts-expect-error public view DTO must not be exported.
-  type PlayerViewMissing = Types.PlayerView;
-  // @ts-expect-error spectator view DTO must not be exported.
-  type SpectatorViewMissing = Types.SpectatorView;
-  // @ts-expect-error public decision DTO must not be exported.
-  type PublicDecisionMissing = Types.PublicDecision;
-  // @ts-expect-error public legal action DTO must not be exported.
-  type PublicLegalActionMissing = Types.PublicLegalAction;
   // @ts-expect-error public action window DTO must not be exported.
   type PublicActionWindowMissing = Types.PublicActionWindow;
   // @ts-expect-error filtering DTO must not be exported.
@@ -283,10 +275,6 @@ test("TYP-001G rejects stale EngineResult and out-of-scope exports/behavior", ()
 
   void staleEngineResult;
   expect(missingType<PublicEffectEventMissing>(null)).toBeNull();
-  expect(missingType<PlayerViewMissing>(null)).toBeNull();
-  expect(missingType<SpectatorViewMissing>(null)).toBeNull();
-  expect(missingType<PublicDecisionMissing>(null)).toBeNull();
-  expect(missingType<PublicLegalActionMissing>(null)).toBeNull();
   expect(missingType<PublicActionWindowMissing>(null)).toBeNull();
   expect(missingType<FilteredGameStateMissing>(null)).toBeNull();
   expect(missingType<ReplayEventMissing>(null)).toBeNull();

@@ -357,14 +357,6 @@ test("TYP-001F rejects raw Set for runtime structures requiring arrays/records",
 
 test("TYP-001F does not introduce out-of-scope public or engine result exports", () => {
   type OutOfScopeExportWitness = [
-    // @ts-expect-error TYP-001F must not export PlayerView.
-    Types.PlayerView,
-    // @ts-expect-error TYP-001F must not export SpectatorView.
-    Types.SpectatorView,
-    // @ts-expect-error TYP-001F must not export PublicDecision.
-    Types.PublicDecision,
-    // @ts-expect-error TYP-001F must not export PublicLegalAction.
-    Types.PublicLegalAction,
     // @ts-expect-error TYP-001F must not export PublicActionWindow.
     Types.PublicActionWindow,
   ];

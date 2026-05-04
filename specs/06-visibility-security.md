@@ -68,7 +68,7 @@ interface PlayerView {
   pendingDecision?: PublicDecision;
   legalActions: PublicLegalAction[];
   revealedCards: PublicRevealRecord[];
-  effectEvents: PublicEffectEvent[];
+  events: EngineEvent[];
   timers: PublicTimerState;
 }
 ```
@@ -82,6 +82,140 @@ Do not include:
 - Effect queue internals.
 - Private decision candidates not visible to recipient.
 - Internal crash/recovery metadata.
+
+Canonical public support DTOs for the initial live view contract:
+
+```ts
+type SpectatorPolicy = {
+  mode: "disabled" | "live-filtered";
+  allowHandRevealAfterGame: boolean;
+};
+
+interface PublicTurnState {
+  globalTurn: number;
+  playerTurnCounts: Record<PlayerId, number>;
+  turnPlayerId: PlayerId;
+  phase: "refresh" | "draw" | "don" | "main" | "end";
+  step?: BattleStep;
+}
+
+interface PublicBattleState {
+  attacker: CardRef;
+  originalTarget: CardRef;
+  currentTarget: CardRef;
+  blocker?: CardRef;
+  step: BattleStep;
+  damageCount: number;
+}
+
+interface PublicCardView {
+  instanceId: InstanceId;
+  cardId: CardId;
+  owner: PlayerId;
+  controller: PlayerId;
+  zone: ZoneRef;
+  state?: "active" | "rested";
+  attachedDonCount: number;
+  turnPlayed?: number;
+}
+
+interface PublicLifeView {
+  count: number;
+  faceUpCards: PublicCardView[];
+}
+
+interface VisiblePlayerState {
+  playerId: PlayerId;
+  deckCount: number;
+  donDeckCount: number;
+  hand: PublicCardView[];
+  trash: PublicCardView[];
+  leader: PublicCardView;
+  characters: PublicCardView[];
+  stage?: PublicCardView;
+  costArea: PublicCardView[];
+  life: PublicLifeView;
+  hasMulliganed: boolean;
+  turnCount: number;
+}
+
+interface OpponentVisibleState {
+  playerId: PlayerId;
+  deckCount: number;
+  donDeckCount: number;
+  handCount: number;
+  trash: PublicCardView[];
+  leader: PublicCardView;
+  characters: PublicCardView[];
+  stage?: PublicCardView;
+  costArea: PublicCardView[];
+  life: PublicLifeView;
+  hasMulliganed: boolean;
+  turnCount: number;
+}
+
+type SpectatorVisiblePlayerState = OpponentVisibleState;
+
+interface PublicDecision {
+  id: DecisionId;
+  type: string;
+  playerId: PlayerId;
+  prompt: string;
+  causedBy: CausalityRef;
+  timeoutMs?: number;
+}
+
+type PublicLegalAction =
+  | { type: "playCard"; card: CardRef; costPaymentRequired?: boolean }
+  | { type: "activateEffect"; source: CardRef; effectId: EffectId }
+  | { type: "attachDon"; don: CardRef; target: CardRef }
+  | { type: "declareAttack"; attacker: CardRef; target: CardRef }
+  | { type: "activateBlocker"; blocker: CardRef }
+  | { type: "useCounter"; card: CardRef; target: CardRef }
+  | { type: "endMainPhase" }
+  | { type: "concede"; playerId: PlayerId }
+  | { type: "respondToDecision"; decisionId: DecisionId };
+
+interface PublicRevealRecord {
+  id: string;
+  cards: CardRef[];
+  visibility: "public" | "privateToRecipient";
+  origin: ZoneRef | "topOfDeck" | "lifeDamage" | "custom";
+  createdAtStateSeq: StateSeq;
+  cleanupPolicy: "returnToOrigin" | "trashAfterResolution" | "none";
+}
+
+type SpectatorRevealRecord = Omit<PublicRevealRecord, "visibility"> & {
+  visibility: "public";
+};
+
+type SpectatorEvent = Omit<EngineEvent, "visibility"> & {
+  visibility: { type: "public" };
+};
+```
+
+Initial live-filtered spectator view is distinct from `PlayerView`:
+
+```ts
+interface SpectatorView {
+  matchId: MatchId;
+  stateSeq: StateSeq;
+  actionSeq: number;
+  spectatorPolicy: SpectatorPolicy;
+  turn: PublicTurnState;
+  players: Record<PlayerId, SpectatorVisiblePlayerState>;
+  battle?: PublicBattleState;
+  revealedCards: SpectatorRevealRecord[];
+  events: SpectatorEvent[];
+  timers: PublicTimerState;
+}
+```
+
+Initial `SpectatorView` has no `pendingDecision` or `legalActions` field.
+It does not include either player's hand card IDs, deck order, face-down life
+card IDs, private reveal records, non-public events, RNG state, effect queue
+internals, or audit entries. Full-information live spectating is deferred to a
+future explicit policy story.
 
 ## Temporary visibility
 
@@ -346,14 +480,14 @@ Section Ref: `06-visibility-security.s021`
 
 The mechanical spec separated visibility into multiple view categories. The implementation should keep separate filters rather than one generic serializer.
 
-| View                   | Purpose                      | Hidden-info policy                                                               |
-| ---------------------- | ---------------------------- | -------------------------------------------------------------------------------- |
-| `PlayerView`           | Active player UI             | Own hand visible; opponent hidden zones counted only.                            |
-| `SpectatorView`        | Spectator UI                 | Depends on spectator mode.                                                       |
-| `ReplayView`           | Completed replay             | Can show full state after match completion, subject to replay visibility policy. |
-| Temporary reveal view  | Resolving effects            | Shows only currently revealed cards to allowed recipients.                       |
-| Battle-specific view   | Attack/block/counter windows | Shows battle context without leaking opponent counters unless revealed.          |
-| Effect-resolution view | Search/look/choice prompts   | Private candidates visible only to choosing player unless effect says reveal.    |
+| View                   | Purpose                      | Hidden-info policy                                                                 |
+| ---------------------- | ---------------------------- | ---------------------------------------------------------------------------------- |
+| `PlayerView`           | Active player UI             | Own hand visible; opponent hidden zones counted only.                              |
+| `SpectatorView`        | Spectator UI                 | Initial `live-filtered` mode shows public board/zones and hidden-zone counts only. |
+| `ReplayView`           | Completed replay             | Can show full state after match completion, subject to replay visibility policy.   |
+| Temporary reveal view  | Resolving effects            | Shows only currently revealed cards to allowed recipients.                         |
+| Battle-specific view   | Attack/block/counter windows | Shows battle context without leaking opponent counters unless revealed.            |
+| Effect-resolution view | Search/look/choice prompts   | Private candidates visible only to choosing player unless effect says reveal.      |
 
 ## Anti-cheat layers from the original plan
 

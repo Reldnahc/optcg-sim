@@ -64,6 +64,9 @@ Initial child focus:
   small canonical-contract slices ordered by dependency.
 - `TYP-002` tracks the public/player/spectator view DTO authority gap until the
   spec and canonical contract agree on exact DTO names and shapes.
+- `TYP-002A` resolves that gap for initial live player and live-filtered
+  spectator DTO contracts only. Full-information live spectator policy remains a
+  later explicit policy story.
 - `TYP-003` keeps the completed shared type surface reviewable by splitting the
   package source and tests by concern without changing the public API.
 - `ENG-001A` through `ENG-001C` prepare engine package and deterministic

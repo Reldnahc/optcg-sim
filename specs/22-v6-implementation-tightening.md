@@ -98,6 +98,9 @@ Resolved and normalized items include:
 - `CardSelectionRequest`
 - `EffectOption`
 - `PublicEffectEvent` replacement via filtered `EngineEvent[]`
+- `PlayerView` and initial live-filtered `SpectatorView`
+- public live-view DTO support contracts
+- spectator-safe public-only reveal and event DTOs
 - `eventLog`/`eventJournal` conflict resolved to `eventJournal`
 - `activeBattle`/`battle` conflict resolved to `battle`
 - serializable arrays instead of `Set`
