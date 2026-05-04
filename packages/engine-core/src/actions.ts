@@ -119,6 +119,23 @@ const getAttachTargets = (state: GameState, playerId: PlayerId): CardRef[] => {
 const isMatchActive = (state: GameState): boolean =>
   state.status.type === "active";
 
+const canConcede = (state: GameState): boolean =>
+  state.status.type !== "completed" && state.status.type !== "gameOver";
+
+const zonesEqual = (
+  left: NonNullable<CardRef["zone"]>,
+  right: CardRef["zone"],
+): boolean =>
+  right !== undefined &&
+  left.zone === right.zone &&
+  left.playerId === right.playerId &&
+  left.index === right.index &&
+  left.slot === right.slot;
+
+const targetMatchesCard = (target: CardRef, card: CardInstance): boolean =>
+  target.cardId === card.cardId &&
+  (target.zone === undefined || zonesEqual(target.zone, card.zone));
+
 export const getLegalActions = (
   state: GameState,
   playerId: PlayerId,
@@ -155,8 +172,11 @@ const applyConcede = (
   state: GameState,
   action: Extract<Action, { type: "concede" }>,
 ): EngineResult => {
-  if (!isMatchActive(state)) {
-    return illegalAction(state, "Concede is only legal while match is active.");
+  if (!canConcede(state)) {
+    return illegalAction(
+      state,
+      "Concede is only legal before match completion.",
+    );
   }
   if (state.players[action.playerId] === undefined) {
     return illegalAction(state, "Conceding player does not exist.");
@@ -182,6 +202,7 @@ const applyConcede = (
     status: { type: "completed", winner: opponentId },
     eventJournal: [...state.eventJournal, ...events],
   };
+  delete nextState.pendingDecision;
   assertGameStateInvariants(nextState);
   return toEngineResult(nextState, events);
 };
@@ -272,9 +293,13 @@ const applyAttachDon = (
     return illegalAction(state, "attachDon donor not found.");
   }
 
-  const isLeaderTarget = player.leader.instanceId === action.target.instanceId;
+  const isLeaderTarget =
+    player.leader.instanceId === action.target.instanceId &&
+    targetMatchesCard(action.target, player.leader);
   const targetCharacterIndex = player.characters.findIndex(
-    (character) => character.instanceId === action.target.instanceId,
+    (character) =>
+      character.instanceId === action.target.instanceId &&
+      targetMatchesCard(action.target, character),
   );
   if (!isLeaderTarget && targetCharacterIndex < 0) {
     return illegalAction(

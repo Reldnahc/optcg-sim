@@ -285,6 +285,29 @@ test("applyAction rejects illegal attachDon variants", () => {
     },
   });
   assert.equal(invalidTarget.errors?.[0]?.type, "illegalAction");
+
+  const malformedTargetCardId = applyAction(base, {
+    type: "attachDon",
+    donInstanceId: don.instanceId,
+    target: {
+      instanceId: p1State.leader.instanceId,
+      cardId: toCardId("forged-leader"),
+      playerId: p1,
+    },
+  });
+  assert.equal(malformedTargetCardId.errors?.[0]?.type, "illegalAction");
+
+  const malformedTargetZone = applyAction(base, {
+    type: "attachDon",
+    donInstanceId: don.instanceId,
+    target: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+      zone: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+    },
+  });
+  assert.equal(malformedTargetZone.errors?.[0]?.type, "illegalAction");
 });
 
 test("applyAction endMainPhase transitions to next turn refresh", () => {
@@ -323,6 +346,17 @@ test("applyAction concede immediately completes match for opponent", () => {
   const result = applyAction(state, { type: "concede", playerId: p1 });
   assert.equal(result.errors, undefined);
   assert.deepEqual(result.state.status, { type: "completed", winner: p2 });
+});
+
+test("applyAction concession during a pending decision clears the decision", () => {
+  const setup = createInitialState(createInput());
+  const state = startMulliganFlow(setup).state;
+  const result = applyAction(state, { type: "concede", playerId: p1 });
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.state.status, { type: "completed", winner: p2 });
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.decisions, undefined);
 });
 
 test("illegal actions return errors and do not mutate input state", () => {
