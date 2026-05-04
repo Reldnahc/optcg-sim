@@ -13,6 +13,7 @@ import type {
 } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "./canonical-state.js";
+import { computeView } from "./compute-view.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { advanceEndPhase } from "./phases.js";
 
@@ -136,6 +137,44 @@ const targetMatchesCard = (target: CardRef, card: CardInstance): boolean =>
   target.cardId === card.cardId &&
   (target.zone === undefined || zonesEqual(target.zone, card.zone));
 
+const getCombatCardByInstanceId = (
+  state: GameState,
+  instanceId: CardInstance["instanceId"],
+): { card: CardInstance; playerId: PlayerId; isLeader: boolean } | null => {
+  for (const [playerId, player] of Object.entries(state.players) as [
+    PlayerId,
+    GameState["players"][PlayerId],
+  ][]) {
+    if (player.leader.instanceId === instanceId) {
+      return { card: player.leader, playerId, isLeader: true };
+    }
+    const character = player.characters.find(
+      (candidate) => candidate.instanceId === instanceId,
+    );
+    if (character !== undefined) {
+      return { card: character, playerId, isLeader: false };
+    }
+  }
+  return null;
+};
+
+const reifyCardRef = (
+  state: GameState,
+  ref: CardRef,
+): { card: CardInstance; playerId: PlayerId; isLeader: boolean } | null => {
+  const located = getCombatCardByInstanceId(state, ref.instanceId);
+  if (located === null) {
+    return null;
+  }
+  if (
+    ref.playerId !== located.playerId ||
+    !targetMatchesCard(ref, located.card)
+  ) {
+    return null;
+  }
+  return located;
+};
+
 export const getLegalActions = (
   state: GameState,
   playerId: PlayerId,
@@ -151,6 +190,9 @@ export const getLegalActions = (
   if (state.turn.phase !== "main" || state.turn.turnPlayerId !== playerId) {
     return actions;
   }
+  if (state.battle !== undefined) {
+    return actions;
+  }
 
   actions.push({ type: "endMainPhase" });
   const player = state.players[playerId];
@@ -164,6 +206,34 @@ export const getLegalActions = (
         target,
       });
     }
+  }
+
+  try {
+    const view = computeView(state);
+    for (const [attackerId, targetIds] of Object.entries(
+      view.legalAttackTargets,
+    )) {
+      const attacker = getCombatCardByInstanceId(
+        state,
+        attackerId as CardInstance["instanceId"],
+      );
+      if (attacker === null || attacker.playerId !== playerId) {
+        continue;
+      }
+      for (const targetId of targetIds) {
+        const target = getCombatCardByInstanceId(state, targetId);
+        if (target === null) {
+          continue;
+        }
+        actions.push({
+          type: "declareAttack",
+          attacker: toCardRef(attacker.card, attacker.playerId),
+          target: toCardRef(target.card, target.playerId),
+        });
+      }
+    }
+  } catch {
+    // Fail closed when computed combat metadata is unsupported or invalid.
   }
   return actions;
 };
@@ -361,6 +431,121 @@ const applyAttachDon = (
   return toEngineResult(nextState, events);
 };
 
+const applyDeclareAttack = (
+  state: GameState,
+  action: Extract<Action, { type: "declareAttack" }>,
+): EngineResult => {
+  if (!isMatchActive(state)) {
+    return illegalAction(
+      state,
+      "declareAttack is only legal while match is active.",
+    );
+  }
+  if (state.turn.phase !== "main") {
+    return illegalAction(state, "declareAttack requires main phase.");
+  }
+  if (state.battle !== undefined) {
+    return illegalAction(
+      state,
+      "declareAttack is illegal during an active battle.",
+    );
+  }
+
+  const attacker = reifyCardRef(state, action.attacker);
+  if (attacker === null) {
+    return illegalAction(
+      state,
+      "declareAttack attacker reference is stale or invalid.",
+    );
+  }
+  if (attacker.playerId !== state.turn.turnPlayerId) {
+    return illegalAction(
+      state,
+      "declareAttack attacker must be controlled by turn player.",
+    );
+  }
+  if (attacker.card.state !== "active") {
+    return illegalAction(state, "declareAttack attacker must be active.");
+  }
+
+  const target = reifyCardRef(state, action.target);
+  if (target === null) {
+    return illegalAction(
+      state,
+      "declareAttack target reference is stale or invalid.",
+    );
+  }
+
+  let legalTargets: readonly CardInstance["instanceId"][];
+  try {
+    const computed = computeView(state);
+    legalTargets = computed.legalAttackTargets[attacker.card.instanceId] ?? [];
+  } catch {
+    return illegalAction(
+      state,
+      "declareAttack is unsupported for current combat metadata.",
+    );
+  }
+  if (!legalTargets.includes(target.card.instanceId)) {
+    return illegalAction(
+      state,
+      "declareAttack target is not legal for attacker.",
+    );
+  }
+
+  const nextPlayer = state.players[attacker.playerId];
+  if (nextPlayer === undefined) {
+    return illegalAction(
+      state,
+      "declareAttack attacker player does not exist.",
+    );
+  }
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    players: {
+      ...state.players,
+      [attacker.playerId]: {
+        ...nextPlayer,
+        leader: attacker.isLeader
+          ? { ...nextPlayer.leader, state: "rested" }
+          : nextPlayer.leader,
+        characters: nextPlayer.characters.map((character) =>
+          !attacker.isLeader &&
+          character.instanceId === attacker.card.instanceId
+            ? { ...character, state: "rested" }
+            : character,
+        ),
+      },
+    },
+    battle: {
+      attacker: toCardRef(attacker.card, attacker.playerId),
+      originalTarget: toCardRef(target.card, target.playerId),
+      currentTarget: toCardRef(target.card, target.playerId),
+      step: "attack",
+      damageCount: 1,
+    },
+  };
+
+  const events: EngineEvent[] = [
+    createEvent(
+      state,
+      1,
+      "attackDeclared",
+      {
+        attacker: toCardRef(attacker.card, attacker.playerId),
+        target: toCardRef(target.card, target.playerId),
+      },
+      { type: "public" },
+    ),
+  ];
+  appendRuleProcessingChecked(state, events, "main");
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
+};
+
 export const applyAction = (state: GameState, action: Action): EngineResult => {
   if (action.type === "concede") {
     return applyConcede(state, action);
@@ -376,6 +561,9 @@ export const applyAction = (state: GameState, action: Action): EngineResult => {
   }
   if (action.type === "attachDon") {
     return applyAttachDon(state, action);
+  }
+  if (action.type === "declareAttack") {
+    return applyDeclareAttack(state, action);
   }
   return illegalAction(state, `Unsupported action type: ${action.type}`);
 };
