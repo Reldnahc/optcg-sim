@@ -14,3 +14,10 @@ export {
   GameStateInvariantError,
 } from "./invariants.js";
 export { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
+export {
+  advanceDonPhase,
+  advanceDrawPhase,
+  advanceEndPhase,
+  advanceRefreshPhase,
+  enterMainPhase,
+} from "./phases.js";

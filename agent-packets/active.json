@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-002C.md",
-      "storyId": "ENG-002C",
-      "storyPath": "stories/approved/ENG-002C-official-mulligan-flow.yaml",
-      "storySha256": "de4d4de1be86f080d87d48c92805a4ad840adfdf1168d6fbc2985217065a9771"
+      "packetPath": "agent-packets/ENG-002D.md",
+      "storyId": "ENG-002D",
+      "storyPath": "stories/approved/ENG-002D-vanilla-phase-progression.yaml",
+      "storySha256": "2289eb6439906d710c1b1e06b8c78e1c675e531d40cdc9de21718b806413c656"
     }
   ],
   "version": 1

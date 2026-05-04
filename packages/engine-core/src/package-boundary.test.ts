@@ -3,6 +3,10 @@ import { test } from "vitest";
 
 import * as engineCorePackage from "@optcg/engine-core";
 import {
+  advanceDonPhase,
+  advanceDrawPhase,
+  advanceEndPhase,
+  advanceRefreshPhase,
   advanceRngFloat01,
   advanceRngUint32,
   assertGameStateInvariants,
@@ -12,6 +16,7 @@ import {
   GameStateInvariantError,
   hashCanonicalStateValue,
   initializeRng,
+  enterMainPhase,
   respondToMulliganDecision,
   startMulliganFlow,
 } from "./index.js";
@@ -19,17 +24,27 @@ import {
 test("package runtime boundary exposes engine-core helpers", () => {
   assert.deepEqual(Object.keys(engineCorePackage).sort(), [
     "GameStateInvariantError",
+    "advanceDonPhase",
+    "advanceDrawPhase",
+    "advanceEndPhase",
+    "advanceRefreshPhase",
     "advanceRngFloat01",
     "advanceRngUint32",
     "assertGameStateInvariants",
     "canonicalSerializeStateValue",
     "collectGameStateInvariantViolations",
     "createInitialState",
+    "enterMainPhase",
     "hashCanonicalStateValue",
     "initializeRng",
     "respondToMulliganDecision",
     "startMulliganFlow",
   ]);
+  assert.equal(engineCorePackage.advanceRefreshPhase, advanceRefreshPhase);
+  assert.equal(engineCorePackage.advanceDrawPhase, advanceDrawPhase);
+  assert.equal(engineCorePackage.advanceDonPhase, advanceDonPhase);
+  assert.equal(engineCorePackage.enterMainPhase, enterMainPhase);
+  assert.equal(engineCorePackage.advanceEndPhase, advanceEndPhase);
   assert.equal(engineCorePackage.initializeRng, initializeRng);
   assert.equal(engineCorePackage.advanceRngUint32, advanceRngUint32);
   assert.equal(engineCorePackage.advanceRngFloat01, advanceRngFloat01);
