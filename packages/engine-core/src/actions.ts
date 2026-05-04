@@ -114,6 +114,9 @@ export const getLegalActions = (
   }
 
   const actions: LegalAction[] = [{ type: "concede", playerId }];
+  if (state.pendingDecision !== undefined) {
+    return actions;
+  }
   if (state.turn.phase !== "main" || state.turn.turnPlayerId !== playerId) {
     return actions;
   }
@@ -318,6 +321,12 @@ const applyAttachDon = (
 export const applyAction = (state: GameState, action: Action): EngineResult => {
   if (action.type === "concede") {
     return applyConcede(state, action);
+  }
+  if (state.pendingDecision !== undefined) {
+    return illegalAction(
+      state,
+      "Phase actions are illegal while a decision is pending.",
+    );
   }
   if (action.type === "endMainPhase") {
     return applyEndMainPhase(state);

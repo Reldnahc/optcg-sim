@@ -126,6 +126,17 @@ test("getLegalActions outside main phase still includes concession", () => {
   ]);
 });
 
+test("getLegalActions suppresses phase actions while a decision is pending", () => {
+  const setup = createInitialState(createInput());
+  const pending = startMulliganFlow(setup).state;
+  pending.status = { type: "active" };
+  pending.turn.phase = "main";
+
+  assert.deepEqual(getLegalActions(pending, p1), [
+    { type: "concede", playerId: p1 },
+  ]);
+});
+
 test("applyAction attaches active DON!! to own leader/character during main phase", () => {
   const state = createActiveState();
   state.turn.phase = "main";
@@ -307,6 +318,19 @@ test("illegal actions return errors and do not mutate input state", () => {
       playerId: p1,
     },
   });
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.equal(JSON.stringify(state), before);
+});
+
+test("pending decisions reject non-concession applyAction requests without mutation", () => {
+  const setup = createInitialState(createInput());
+  const state = startMulliganFlow(setup).state;
+  state.status = { type: "active" };
+  state.turn.phase = "main";
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, { type: "endMainPhase" });
 
   assert.equal(result.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(state), before);
