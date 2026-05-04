@@ -1,0 +1,70 @@
+{
+  "fixtureType": "cliCommandScriptSmokeLocalV1",
+  "description": "Local CLI command-script smoke fixture for CLI-001D. CLI verification only; not a production replay artifact schema.",
+  "manifestStats": {
+    "manifestHash": "cli-fixture-manifest-v1",
+    "cardDataVersion": "cli-fixture",
+    "cardCount": 46
+  },
+  "scenarios": [
+    {
+      "id": "concession-completion",
+      "bootCommands": ["respond keep", "respond keep"],
+      "setupScript": [],
+      "actionCommands": ["concede"],
+      "expected": {
+        "checkpointHashes": [
+          "4958e94b631748cab0eaae6512699988a02ae76b2ef9ce63087acc49ece52f0b",
+          "3f6f00fd9842376e92d1dcdd0f40fdb154446ca195f4d1e14c612a9df6cbe465",
+          "72e117d9096463c5ea9e45b0cc6ef32110dc5bb405678e7b42824f5accaa04d5"
+        ],
+        "finalHash": "72e117d9096463c5ea9e45b0cc6ef32110dc5bb405678e7b42824f5accaa04d5",
+        "finalStatus": { "type": "completed", "winner": "p2" }
+      }
+    },
+    {
+      "id": "leader-damage-terminal-defeat",
+      "bootCommands": ["respond keep", "respond keep"],
+      "setupScript": [
+        {
+          "type": "advance-to-main-phase",
+          "turnPlayerId": "p1",
+          "globalTurn": 3
+        },
+        { "type": "set-leader-life-count", "playerId": "p2", "lifeCount": 0 }
+      ],
+      "actionCommands": ["attack leader opponent-leader"],
+      "expected": {
+        "checkpointHashes": [
+          "4958e94b631748cab0eaae6512699988a02ae76b2ef9ce63087acc49ece52f0b",
+          "3f6f00fd9842376e92d1dcdd0f40fdb154446ca195f4d1e14c612a9df6cbe465",
+          "5f40df9c07b86aea9be756fa7502b999a23450a3c4d871471276bae7549b3669"
+        ],
+        "finalHash": "5f40df9c07b86aea9be756fa7502b999a23450a3c4d871471276bae7549b3669",
+        "finalStatus": { "type": "completed", "winner": "p1" }
+      }
+    },
+    {
+      "id": "deck-out-terminal-defeat",
+      "bootCommands": ["respond keep", "respond keep"],
+      "setupScript": [
+        {
+          "type": "advance-to-main-phase",
+          "turnPlayerId": "p1",
+          "globalTurn": 3
+        },
+        { "type": "set-deck-empty", "playerId": "p2" }
+      ],
+      "actionCommands": ["pass"],
+      "expected": {
+        "checkpointHashes": [
+          "4958e94b631748cab0eaae6512699988a02ae76b2ef9ce63087acc49ece52f0b",
+          "3f6f00fd9842376e92d1dcdd0f40fdb154446ca195f4d1e14c612a9df6cbe465",
+          "be7d0a7fa54d78d03dae762fd4141ff2eef70bff5882c96a54cb17d42dd6b931"
+        ],
+        "finalHash": "be7d0a7fa54d78d03dae762fd4141ff2eef70bff5882c96a54cb17d42dd6b931",
+        "finalStatus": { "type": "completed", "winner": "p1" }
+      }
+    }
+  ]
+}
