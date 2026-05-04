@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-003B.md",
-      "storyId": "ENG-003B",
-      "storyPath": "stories/approved/ENG-003B-attack-declaration-and-battle-state.yaml",
-      "storySha256": "be46948eb5f0b925162082fd25e8be01d7f92bd5e82c8cce40762de69f9e22c9"
+      "packetPath": "agent-packets/ENG-003C.md",
+      "storyId": "ENG-003C",
+      "storyPath": "stories/approved/ENG-003C-vanilla-damage-life-and-ko.yaml",
+      "storySha256": "e3ed024bdeee7b44a6a5d1620142471fa87bb3eade265be93b5e43add97f9496"
     }
   ],
   "version": 1

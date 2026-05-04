@@ -77,6 +77,16 @@ const appendRuleProcessingChecked = (
   );
 };
 
+const appendEvent = (
+  state: GameState,
+  events: EngineEvent[],
+  type: EngineEvent["type"],
+  payload: unknown,
+  visibility: EngineEvent["visibility"] = { type: "public" },
+): void => {
+  events.push(createEvent(state, events.length + 1, type, payload, visibility));
+};
+
 const rebaseEvents = (
   state: GameState,
   events: EngineEvent[],
@@ -540,6 +550,320 @@ const applyDeclareAttack = (
       { type: "public" },
     ),
   ];
+  appendRuleProcessingChecked(state, events, "main");
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextState);
+  const declaredResult = toEngineResult(nextState, events);
+  if (declaredResult.errors !== undefined) {
+    return declaredResult;
+  }
+  const resolved = resolveSupportedVanillaBattle(declaredResult.state);
+  if (resolved.errors !== undefined) {
+    const firstError = resolved.errors[0];
+    return firstError === undefined
+      ? illegalAction(state, "Battle resolution failed.")
+      : toEngineResult(state, [], [firstError]);
+  }
+  const resolutionEvents = rebaseEvents(
+    state,
+    resolved.events,
+    events.length + 1,
+  );
+  const finalState: GameState = {
+    ...resolved.state,
+    seq: nextState.seq,
+    actionSeq: nextState.actionSeq,
+    eventJournal: [...state.eventJournal, ...events, ...resolutionEvents],
+  };
+  return toEngineResult(finalState, [...events, ...resolutionEvents]);
+};
+
+const unsupportedBattleResolution = (
+  state: GameState,
+  reason: string,
+): EngineResult => illegalAction(state, reason);
+
+const reindexZoneCards = (
+  cards: CardInstance[],
+  zone: CardInstance["zone"]["zone"],
+  playerId: PlayerId,
+  slot: NonNullable<CardInstance["zone"]["slot"]>,
+): CardInstance[] =>
+  cards.map((card, index) => ({
+    ...card,
+    zone: { zone, playerId, slot, index },
+  }));
+
+export const resolveSupportedVanillaBattle = (
+  state: GameState,
+): EngineResult => {
+  if (state.battle === undefined) {
+    return illegalAction(state, "No active battle to resolve.");
+  }
+  if (
+    state.battle.blocker !== undefined ||
+    state.battle.damageCount !== 1 ||
+    state.battle.step !== "attack"
+  ) {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported blocker, step, or multi-damage behavior.",
+    );
+  }
+  if (
+    state.effectQueue.length > 0 ||
+    state.deferredTriggers.length > 0 ||
+    state.replacementState.length > 0
+  ) {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported trigger or replacement processing.",
+    );
+  }
+
+  const attacker = reifyCardRef(state, state.battle.attacker);
+  const target = reifyCardRef(state, state.battle.currentTarget);
+  if (attacker === null || target === null) {
+    return illegalAction(state, "Battle participants are stale or invalid.");
+  }
+
+  let view: ReturnType<typeof computeView>;
+  try {
+    view = computeView(state);
+  } catch {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported combat metadata.",
+    );
+  }
+  if (Object.keys(view.restrictions).length > 0) {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported restriction handling.",
+    );
+  }
+
+  const attackerView = view.cards[attacker.card.instanceId];
+  const targetView = view.cards[target.card.instanceId];
+  if (
+    attackerView?.currentPower === undefined ||
+    targetView?.currentPower === undefined
+  ) {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported derived power metadata.",
+    );
+  }
+  if (
+    attackerView.keywords.includes("banish") ||
+    attackerView.keywords.includes("doubleAttack") ||
+    targetView.protectedFrom.length > 0
+  ) {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported keyword or protection handling.",
+    );
+  }
+
+  const events: EngineEvent[] = [];
+  let nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+  };
+  delete nextState.battle;
+
+  if (attackerView.currentPower >= targetView.currentPower) {
+    if (target.isLeader) {
+      const damaged = nextState.players[target.playerId];
+      const topLife = damaged?.life[0];
+      if (damaged === undefined || topLife === undefined) {
+        return illegalAction(
+          state,
+          "Leader damage at 0 life is unsupported before terminal defeat handling.",
+        );
+      }
+      const lifeMeta = nextState.cardManifest.cards[topLife.card.cardId];
+      if (
+        lifeMeta?.triggerText !== undefined &&
+        lifeMeta.triggerText.length > 0
+      ) {
+        return unsupportedBattleResolution(
+          state,
+          "Life trigger reveal decisions are unsupported in this battle path.",
+        );
+      }
+      const movedLifeCard: CardInstance = {
+        ...topLife.card,
+        zone: {
+          zone: "hand",
+          playerId: target.playerId,
+          slot: "hand",
+          index: 0,
+        },
+      };
+      const nextHand = reindexZoneCards(
+        [movedLifeCard, ...damaged.hand],
+        "hand",
+        target.playerId,
+        "hand",
+      );
+      const nextLife = damaged.life.slice(1).map((lifeCard, index) => ({
+        ...lifeCard,
+        card: {
+          ...lifeCard.card,
+          zone: {
+            zone: "life",
+            playerId: target.playerId,
+            slot: "life",
+            index,
+          },
+        },
+      }));
+      nextState = {
+        ...nextState,
+        players: {
+          ...nextState.players,
+          [target.playerId]: { ...damaged, hand: nextHand, life: nextLife },
+        },
+      };
+      appendEvent(state, events, "damageDealt", {
+        attacker: attacker.card.instanceId,
+        target: target.card.instanceId,
+        amount: 1,
+      });
+      appendEvent(state, events, "lifeTaken", {
+        damagedPlayerId: target.playerId,
+        amount: 1,
+      });
+      appendEvent(
+        state,
+        events,
+        "cardMoved",
+        {
+          from: {
+            zone: "life",
+            playerId: target.playerId,
+            slot: "life",
+            index: 0,
+          },
+          to: {
+            zone: "hand",
+            playerId: target.playerId,
+            slot: "hand",
+            index: 0,
+          },
+          reason: "battleDamage",
+        },
+        { type: "public" },
+      );
+      appendEvent(
+        state,
+        events,
+        "cardMoved",
+        {
+          instanceId: movedLifeCard.instanceId,
+          cardId: movedLifeCard.cardId,
+          from: {
+            zone: "life",
+            playerId: target.playerId,
+            slot: "life",
+            index: 0,
+          },
+          to: movedLifeCard.zone,
+          reason: "battleDamage",
+        },
+        { type: "private", playerId: target.playerId },
+      );
+    } else {
+      const defender = nextState.players[target.playerId];
+      if (defender === undefined) {
+        return illegalAction(state, "Battle target player does not exist.");
+      }
+      const koIndex = defender.characters.findIndex(
+        (character) => character.instanceId === target.card.instanceId,
+      );
+      if (koIndex < 0 || target.card.state !== "rested") {
+        return unsupportedBattleResolution(
+          state,
+          "Battle target is no longer a supported rested character target.",
+        );
+      }
+      const koCard = defender.characters[koIndex];
+      if (koCard === undefined) {
+        return illegalAction(state, "K.O. target not found.");
+      }
+      const nextCharacters = defender.characters.filter(
+        (_, index) => index !== koIndex,
+      );
+      const trashedCard: CardInstance = {
+        ...koCard,
+        attachedDon: [],
+        zone: {
+          zone: "trash",
+          playerId: target.playerId,
+          slot: "trash",
+          index: 0,
+        },
+      };
+      const nextTrash = reindexZoneCards(
+        [trashedCard, ...defender.trash],
+        "trash",
+        target.playerId,
+        "trash",
+      );
+      const attachedDonIds = new Set(koCard.attachedDon);
+      const nextCostArea = defender.costArea.map((card) =>
+        attachedDonIds.has(card.instanceId)
+          ? { ...card, state: "rested" }
+          : card,
+      );
+      nextState = {
+        ...nextState,
+        players: {
+          ...nextState.players,
+          [target.playerId]: {
+            ...defender,
+            characters: nextCharacters,
+            trash: nextTrash,
+            costArea: nextCostArea,
+          },
+        },
+      };
+      appendEvent(state, events, "damageDealt", {
+        attacker: attacker.card.instanceId,
+        target: target.card.instanceId,
+        amount: 1,
+      });
+      appendEvent(state, events, "cardKOd", {
+        playerId: target.playerId,
+        instanceId: target.card.instanceId,
+      });
+      appendEvent(state, events, "cardMoved", {
+        from: target.card.zone,
+        to: trashedCard.zone,
+        reason: "ko",
+      });
+      for (const donId of koCard.attachedDon) {
+        appendEvent(
+          state,
+          events,
+          "donReturned",
+          { playerId: target.playerId, donInstanceId: donId, state: "rested" },
+          { type: "replayOnly" },
+        );
+      }
+    }
+  }
+
+  events.push(
+    createEvent(
+      state,
+      events.length + 1,
+      "effectResolved",
+      { systemStep: "endBattle", battleCleared: true },
+      { type: "replayOnly" },
+    ),
+  );
   appendRuleProcessingChecked(state, events, "main");
   nextState.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextState);

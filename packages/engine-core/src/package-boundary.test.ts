@@ -19,6 +19,7 @@ import {
   getLegalActions,
   hashCanonicalStateValue,
   initializeRng,
+  resolveSupportedVanillaBattle,
   enterMainPhase,
   respondToMulliganDecision,
   startMulliganFlow,
@@ -43,6 +44,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "getLegalActions",
     "hashCanonicalStateValue",
     "initializeRng",
+    "resolveSupportedVanillaBattle",
     "respondToMulliganDecision",
     "startMulliganFlow",
   ]);
@@ -56,6 +58,10 @@ test("package runtime boundary exposes engine-core helpers", () => {
   assert.equal(engineCorePackage.advanceRngFloat01, advanceRngFloat01);
   assert.equal(engineCorePackage.getLegalActions, getLegalActions);
   assert.equal(engineCorePackage.applyAction, applyAction);
+  assert.equal(
+    engineCorePackage.resolveSupportedVanillaBattle,
+    resolveSupportedVanillaBattle,
+  );
   assert.equal(
     engineCorePackage.canonicalSerializeStateValue,
     canonicalSerializeStateValue,

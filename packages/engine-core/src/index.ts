@@ -21,5 +21,9 @@ export {
   advanceRefreshPhase,
   enterMainPhase,
 } from "./phases.js";
-export { applyAction, getLegalActions } from "./actions.js";
+export {
+  applyAction,
+  getLegalActions,
+  resolveSupportedVanillaBattle,
+} from "./actions.js";
 export { computeView } from "./compute-view.js";
