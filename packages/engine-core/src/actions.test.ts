@@ -46,6 +46,78 @@ const hasPlayCardAction = (
       action.type === "playCard" && action.cardInstanceId === card.instanceId,
   );
 
+const toTestCardRef = (card: CardInstance, playerId: PlayerId) => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  playerId,
+  zone: card.zone,
+});
+
+const respondToDecisionActions = (
+  legal: ReturnType<typeof getLegalActions>,
+): Extract<
+  ReturnType<typeof getLegalActions>[number],
+  { type: "respondToDecision" }
+>[] => legal.filter((action) => action.type === "respondToDecision");
+
+const setupOccupiedStagePlayState = (cost: number) => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const newStage = must(p1State.hand[1], "new stage");
+  const oldStageSource = must(p1State.hand[2], "old stage source");
+  p1State.stage = {
+    ...oldStageSource,
+    instanceId:
+      `${String(oldStageSource.instanceId)}:existing-stage` as CardInstance["instanceId"],
+    zone: { zone: "stageArea", playerId: p1, slot: "stage", index: 0 },
+    state: "active",
+    attachedDon: [],
+  };
+  state.cardManifest.cards[newStage.cardId] = resolvedCard({
+    cardId: newStage.cardId,
+    category: "stage",
+    cost,
+  });
+  state.cardManifest.cards[p1State.stage.cardId] = resolvedCard({
+    cardId: p1State.stage.cardId,
+    category: "stage",
+    cost: 0,
+  });
+  return { state, newStage, oldStage: p1State.stage };
+};
+
+const setupFullCharacterPlayState = (cost: number) => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const newCharacter = must(p1State.hand[0], "new character");
+  p1State.characters = Array.from({ length: 5 }, (_, index) => {
+    const source = must(p1State.hand[(index % 4) + 1], "character source");
+    const character: CardInstance = {
+      ...source,
+      instanceId:
+        `${String(source.instanceId)}:existing-character:${String(index)}` as CardInstance["instanceId"],
+      zone: { zone: "characterArea", playerId: p1, slot: "character", index },
+      state: "active",
+      attachedDon: [],
+      turnPlayed: 1,
+    };
+    state.cardManifest.cards[character.cardId] = resolvedCard({
+      cardId: character.cardId,
+      category: "character",
+      cost: 0,
+      power: 2000,
+    });
+    return character;
+  });
+  state.cardManifest.cards[newCharacter.cardId] = resolvedCard({
+    cardId: newCharacter.cardId,
+    category: "character",
+    cost,
+    power: 3000,
+  });
+  return { state, newCharacter, existingCharacters: p1State.characters };
+};
+
 const createInput = () => ({
   matchId: toMatchId("match-actions-1"),
   firstPlayerId: p1,
@@ -444,6 +516,25 @@ test("getLegalActions omits playCard when card play preconditions fail", () => {
   }));
   assert.equal(
     hasPlayCardAction(getLegalActions(fullCharacters, p1), fullCharacter),
+    true,
+  );
+  fullP1.characters = [
+    ...fullP1.characters,
+    {
+      ...fullCharacter,
+      instanceId:
+        `${String(fullCharacter.instanceId)}:overflow-corrupt` as CardInstance["instanceId"],
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 5,
+      },
+      state: "active",
+    },
+  ];
+  assert.equal(
+    hasPlayCardAction(getLegalActions(fullCharacters, p1), fullCharacter),
     false,
   );
 
@@ -464,7 +555,7 @@ test("getLegalActions omits playCard when card play preconditions fail", () => {
   };
   assert.equal(
     hasPlayCardAction(getLegalActions(occupiedStage, p1), stageCard),
-    false,
+    true,
   );
 
   const battleState = setupMainPlayState();
@@ -781,6 +872,419 @@ test("zero-cost playCard resolves directly for Stage without payCost decision", 
       { type: "replayOnly" },
     ],
   );
+});
+
+test("getLegalActions includes payable Stage replacement and Character overflow play", () => {
+  const occupiedStage = setupOccupiedStagePlayState(1);
+  const fullCharacters = setupFullCharacterPlayState(1);
+
+  assert.equal(
+    hasPlayCardAction(
+      getLegalActions(occupiedStage.state, p1),
+      occupiedStage.newStage,
+    ),
+    true,
+  );
+  assert.equal(
+    hasPlayCardAction(
+      getLegalActions(fullCharacters.state, p1),
+      fullCharacters.newCharacter,
+    ),
+    true,
+  );
+});
+
+test("zero-cost Stage replacement trashes old Stage before placing new Stage", () => {
+  const { state, newStage, oldStage } = setupOccupiedStagePlayState(0);
+
+  const result = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: newStage.instanceId,
+  });
+
+  assert.equal(result.errors, undefined);
+  const p1State = must(result.state.players[p1], "p1");
+  assert.equal(p1State.stage?.instanceId, newStage.instanceId);
+  assert.equal(
+    must(p1State.trash[0], "trash stage").instanceId,
+    oldStage.instanceId,
+  );
+  assert.equal(p1State.trash[0]?.zone.index, 0);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    [
+      "cardRevealed",
+      "cardMoved",
+      "cardTrashed",
+      "cardMoved",
+      "cardPlayed",
+      "ruleProcessingChecked",
+    ],
+  );
+  const oldStageMove = must(
+    result.events.find(
+      (event) =>
+        event.type === "cardMoved" &&
+        (event.payload as { instanceId?: CardInstance["instanceId"] })
+          .instanceId === oldStage.instanceId,
+    ),
+    "old stage movement",
+  );
+  const newStageMove = must(
+    result.events.find(
+      (event) =>
+        event.type === "cardMoved" &&
+        (event.payload as { instanceId?: CardInstance["instanceId"] })
+          .instanceId === newStage.instanceId,
+    ),
+    "new stage movement",
+  );
+  assert.equal(oldStageMove.seq < newStageMove.seq, true);
+  assert.equal(
+    result.events.some((event) => event.type === "cardKOd"),
+    false,
+  );
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+test("nonzero occupied-Stage play pays before replacing old Stage", () => {
+  const { state, newStage, oldStage } = setupOccupiedStagePlayState(2);
+
+  const opened = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: newStage.instanceId,
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "payCost");
+  assert.equal(
+    must(opened.state.players[p1], "opened p1").stage?.instanceId,
+    oldStage.instanceId,
+  );
+  assert.deepEqual(
+    opened.events.map((event) => event.type),
+    ["cardRevealed", "decisionCreated"],
+  );
+
+  const openedP1 = must(opened.state.players[p1], "opened p1");
+  const selected = must(openedP1.costArea[0], "don0");
+  const selected2 = must(openedP1.costArea[1], "don1");
+  const beforeInvalid = JSON.stringify(opened.state);
+  const invalid = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "decision").id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [selected.instanceId],
+    },
+  });
+  assert.equal(invalid.errors?.[0]?.type, "illegalAction");
+  assert.equal(JSON.stringify(opened.state), beforeInvalid);
+
+  const resolved = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "decision").id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [selected.instanceId, selected2.instanceId],
+    },
+  });
+  assert.equal(resolved.errors, undefined);
+  const resolvedP1 = must(resolved.state.players[p1], "resolved p1");
+  assert.equal(resolvedP1.stage?.instanceId, newStage.instanceId);
+  assert.equal(
+    must(resolvedP1.trash[0], "trash stage").instanceId,
+    oldStage.instanceId,
+  );
+  assert.equal(resolvedP1.costArea[0]?.state, "rested");
+  assert.equal(resolvedP1.costArea[1]?.state, "rested");
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    [
+      "costPaid",
+      "decisionResolved",
+      "cardMoved",
+      "cardTrashed",
+      "cardMoved",
+      "cardPlayed",
+      "ruleProcessingChecked",
+    ],
+  );
+});
+
+test("Stage replacement fails closed when old Stage has attached DON!! state", () => {
+  const { state, newStage } = setupOccupiedStagePlayState(0);
+  const p1State = must(state.players[p1], "p1");
+  const stage = must(p1State.stage, "stage");
+  p1State.stage = {
+    ...stage,
+    attachedDon: ["invalid-stage-don" as CardInstance["instanceId"]],
+  };
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: newStage.instanceId,
+  });
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.equal(JSON.stringify(state), before);
+});
+
+test("zero-cost Character overflow creates SelectCardsDecision with controlled Character candidates", () => {
+  const { state, newCharacter, existingCharacters } =
+    setupFullCharacterPlayState(0);
+
+  const result = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: newCharacter.instanceId,
+  });
+
+  assert.equal(result.errors, undefined);
+  const decision = must(result.state.pendingDecision, "overflow decision");
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.playerId, p1);
+  assert.deepEqual(
+    decision.candidates.map((candidate) => candidate.card.instanceId),
+    existingCharacters.map((card) => card.instanceId),
+  );
+  assert.deepEqual(
+    {
+      min: decision.request.min,
+      max: decision.request.max,
+      zone: decision.request.zone,
+    },
+    { min: 1, max: 1, zone: "characterArea" },
+  );
+  assert.equal(
+    must(result.state.players[p1], "p1").hand.some(
+      (card) => card.instanceId === newCharacter.instanceId,
+    ),
+    true,
+  );
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["cardRevealed", "decisionCreated"],
+  );
+});
+
+test("nonzero Character overflow creates payCost first and SelectCardsDecision after payment", () => {
+  const { state, newCharacter, existingCharacters } =
+    setupFullCharacterPlayState(2);
+  const opened = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: newCharacter.instanceId,
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "payCost");
+
+  const openedP1 = must(opened.state.players[p1], "opened p1");
+  const selected = must(openedP1.costArea[0], "don0");
+  const selected2 = must(openedP1.costArea[1], "don1");
+  const resolved = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "decision").id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [selected.instanceId, selected2.instanceId],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  const decision = must(resolved.state.pendingDecision, "overflow decision");
+  assert.equal(decision.type, "selectCards");
+  assert.deepEqual(
+    decision.candidates.map((candidate) => candidate.card.instanceId),
+    existingCharacters.map((card) => card.instanceId),
+  );
+  assert.equal(
+    must(resolved.state.players[p1], "p1").costArea[0]?.state,
+    "rested",
+  );
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    ["costPaid", "decisionResolved", "decisionCreated"],
+  );
+});
+
+test("Character overflow legal actions expose matching card responses only to decision player", () => {
+  const { state, newCharacter, existingCharacters } =
+    setupFullCharacterPlayState(0);
+  const opened = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: newCharacter.instanceId,
+  });
+  const decision = must(opened.state.pendingDecision, "decision");
+
+  const legalForP1 = respondToDecisionActions(
+    getLegalActions(opened.state, p1),
+  );
+  const legalForP2 = respondToDecisionActions(
+    getLegalActions(opened.state, p2),
+  );
+
+  assert.deepEqual(
+    legalForP1.map((action) => ({
+      decisionId: action.decisionId,
+      response: action.response,
+    })),
+    existingCharacters.map((character) => ({
+      decisionId: decision.id,
+      response: {
+        type: "cards",
+        cards: [
+          {
+            instanceId: character.instanceId,
+            cardId: character.cardId,
+            playerId: p1,
+            zone: character.zone,
+          },
+        ],
+      },
+    })),
+  );
+  assert.deepEqual(legalForP2, []);
+});
+
+test("valid Character overflow response trashes selected Character and places new Character", () => {
+  const { state, newCharacter, existingCharacters } =
+    setupFullCharacterPlayState(0);
+  const attachedDon = must(must(state.players[p1], "p1").costArea[0], "don");
+  const selectedCharacter = must(existingCharacters[2], "selected character");
+  selectedCharacter.attachedDon = [attachedDon.instanceId];
+  const opened = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: newCharacter.instanceId,
+  });
+  const decision = must(opened.state.pendingDecision, "decision");
+
+  const resolved = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "cards",
+      cards: [
+        {
+          instanceId: selectedCharacter.instanceId,
+          cardId: selectedCharacter.cardId,
+          playerId: p1,
+          zone: selectedCharacter.zone,
+        },
+      ],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const resolvedP1 = must(resolved.state.players[p1], "p1");
+  assert.equal(resolvedP1.characters.length, 5);
+  assert.equal(
+    resolvedP1.characters.some(
+      (card) => card.instanceId === selectedCharacter.instanceId,
+    ),
+    false,
+  );
+  assert.equal(resolvedP1.characters[4]?.instanceId, newCharacter.instanceId);
+  assert.equal(
+    must(resolvedP1.trash[0], "trashed character").instanceId,
+    selectedCharacter.instanceId,
+  );
+  assert.equal(
+    resolvedP1.costArea.find(
+      (card) => card.instanceId === attachedDon.instanceId,
+    )?.state,
+    "rested",
+  );
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardMoved",
+      "cardTrashed",
+      "donReturned",
+      "cardMoved",
+      "cardPlayed",
+      "ruleProcessingChecked",
+    ],
+  );
+  assert.equal(
+    resolved.events.some((event) => event.type === "cardKOd"),
+    false,
+  );
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("Character overflow rejects stale, wrong-player, wrong-card, missing, and multi-card responses without mutation", () => {
+  const { state, newCharacter, existingCharacters } =
+    setupFullCharacterPlayState(0);
+  const opened = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: newCharacter.instanceId,
+  });
+  const decision = must(opened.state.pendingDecision, "decision");
+  const selectedCharacter = must(existingCharacters[0], "selected character");
+  const before = JSON.stringify(opened.state);
+  const run = (action: Parameters<typeof applyAction>[1]) => {
+    const result = applyAction(opened.state, action);
+    assert.equal(result.errors?.[0]?.type, "illegalAction");
+    assert.equal(JSON.stringify(opened.state), before);
+  };
+
+  run({
+    type: "respondToDecision",
+    decisionId: `${String(decision.id)}:stale` as typeof decision.id,
+    response: { type: "cards", cards: [toTestCardRef(selectedCharacter, p1)] },
+  });
+  const wrongPlayerState = {
+    ...opened.state,
+    pendingDecision: { ...decision, playerId: p2 },
+  };
+  const wrongPlayerBefore = JSON.stringify(wrongPlayerState);
+  const wrongPlayer = applyAction(wrongPlayerState, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [toTestCardRef(selectedCharacter, p1)] },
+  });
+  assert.equal(wrongPlayer.errors?.[0]?.type, "illegalAction");
+  assert.equal(JSON.stringify(wrongPlayerState), wrongPlayerBefore);
+  run({
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [] },
+  });
+  run({
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "cards",
+      cards: [
+        toTestCardRef(must(existingCharacters[0], "first"), p1),
+        toTestCardRef(must(existingCharacters[1], "second"), p1),
+      ],
+    },
+  });
+  run({
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "cards",
+      cards: [
+        {
+          instanceId: newCharacter.instanceId,
+          cardId: newCharacter.cardId,
+          playerId: p1,
+          zone: newCharacter.zone,
+        },
+      ],
+    },
+  });
+  run({
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "payment", optionId: "restDon" },
+  });
 });
 
 test("respondToDecision rejects duplicate/forged DON!! selections without mutation", () => {
