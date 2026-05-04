@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: view
 priority: high
-status: approved
+status: done
 summary: >
   Resolve the TYP-002 public/player/spectator view DTO authority gap by adding
   exact canonical live-view DTO contracts for player and initial spectator
