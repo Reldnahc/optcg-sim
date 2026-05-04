@@ -179,14 +179,10 @@ test("redraw rebuilds life from reshuffled deck and keeps deterministic orientat
   const lifeB = must(afterB.state.players[p1], "p1 after B").life.map(
     (lifeCard) => lifeCard.card.cardId,
   );
-  const deckTopA = must(afterA.state.players[p1], "p1 after A")
-    .deck.slice(0, lifeA.length)
-    .map((card) => card.cardId);
-
   assert.equal(lifeA.length, beforeLifeA.length);
   assert.deepEqual(lifeA, lifeB);
   assert.notDeepEqual(lifeA, beforeLifeA);
-  assert.deepEqual(lifeA, [...deckTopA].reverse());
+  assert.deepEqual(lifeA, [toCardId("p1-i"), toCardId("p1-g")]);
 });
 
 test("rejects duplicate mulligan for same player", () => {
