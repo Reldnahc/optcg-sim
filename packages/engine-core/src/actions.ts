@@ -594,6 +594,23 @@ const reindexZoneCards = (
     zone: { zone, playerId, slot, index },
   }));
 
+const hasUnsupportedCounterWindow = (
+  state: GameState,
+  defenderId: PlayerId,
+): boolean => {
+  const defender = state.players[defenderId];
+  if (defender === undefined) {
+    return true;
+  }
+  return defender.hand.some((card) => {
+    const metadata = state.cardManifest.cards[card.cardId];
+    return (
+      metadata === undefined ||
+      (metadata.counter !== undefined && metadata.counter > 0)
+    );
+  });
+};
+
 export const resolveSupportedVanillaBattle = (
   state: GameState,
 ): EngineResult => {
@@ -625,6 +642,12 @@ export const resolveSupportedVanillaBattle = (
   const target = reifyCardRef(state, state.battle.currentTarget);
   if (attacker === null || target === null) {
     return illegalAction(state, "Battle participants are stale or invalid.");
+  }
+  if (hasUnsupportedCounterWindow(state, target.playerId)) {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported counter window handling.",
+    );
   }
 
   let view: ReturnType<typeof computeView>;
@@ -792,8 +815,11 @@ export const resolveSupportedVanillaBattle = (
       if (koCard === undefined) {
         return illegalAction(state, "K.O. target not found.");
       }
-      const nextCharacters = defender.characters.filter(
-        (_, index) => index !== koIndex,
+      const nextCharacters = reindexZoneCards(
+        defender.characters.filter((_, index) => index !== koIndex),
+        "characterArea",
+        target.playerId,
+        "character",
       );
       const trashedCard: CardInstance = {
         ...koCard,

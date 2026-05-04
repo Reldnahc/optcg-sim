@@ -72,6 +72,7 @@ const resolvedCard = (params: {
   cardId: CardId;
   category: "leader" | "character" | "don";
   power?: number;
+  counter?: number;
   printedKeywords?: ("rush" | "rushCharacter" | "doubleAttack")[];
 }): ResolvedCard => {
   const base = {
@@ -102,6 +103,7 @@ const resolvedCard = (params: {
       behaviorHash: "behavior-hash",
     },
     ...(params.power !== undefined ? { power: params.power } : {}),
+    ...(params.counter !== undefined ? { counter: params.counter } : {}),
   } satisfies ResolvedCard;
   return base;
 };
@@ -814,6 +816,67 @@ test("equal-or-greater power K.O.s rested character and returns attached DON!! r
   );
 });
 
+test("character K.O. reindexes surviving defender characters", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  const survivor = must(p2State.hand[0], "second defender");
+  p2State.characters.push({
+    ...survivor,
+    zone: { zone: "characterArea", playerId: p2, slot: "character", index: 1 },
+    state: "rested",
+    attachedDon: [],
+    turnPlayed: 1,
+  });
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 3000,
+  });
+  state.cardManifest.cards[survivor.cardId] = resolvedCard({
+    cardId: survivor.cardId,
+    category: "character",
+    power: 3000,
+  });
+
+  const result = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+  });
+
+  const defender = must(result.state.players[p2], "p2");
+  assert.equal(result.errors, undefined);
+  assert.equal(defender.characters.length, 1);
+  const remainingCharacter = must(defender.characters[0], "remaining defender");
+  assert.equal(remainingCharacter.instanceId, survivor.instanceId);
+  assert.deepEqual(remainingCharacter.zone, {
+    zone: "characterArea",
+    playerId: p2,
+    slot: "character",
+    index: 0,
+  });
+});
+
 test("lower-power attack causes no K.O. and no life movement", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -960,6 +1023,39 @@ test("applyAction declareAttack fails closed without mutation when vanilla conti
     }),
     triggerText: "TRIGGER: do a thing",
   };
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.deepEqual(result.events, []);
+});
+
+test("applyAction declareAttack fails closed when defender has counter metadata in hand", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterCard = must(p2State.hand[0], "counter card");
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
   const before = JSON.stringify(state);
 
   const result = applyAction(state, {
