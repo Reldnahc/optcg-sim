@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-005A.md",
+      "storyId": "ENG-005A",
+      "storyPath": "stories/approved/ENG-005A-vanilla-character-stage-play-no-overflow.yaml",
+      "storySha256": "406ca5631648f1579dd10020b4352be8254d04207dc9c076a7d68633a2d9311e"
+    }
+  ],
   "version": 1
 }
