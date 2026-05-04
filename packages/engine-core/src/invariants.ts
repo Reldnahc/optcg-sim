@@ -31,8 +31,30 @@ interface CardRecord {
   location: string;
 }
 
+interface ExpectedZoneRefShape {
+  zone: CardInstance["zone"]["zone"];
+  slot: NonNullable<CardInstance["zone"]["slot"]>;
+  index?: number;
+}
+
 const isLegalAttachedDonHost = (host: CardInstance): boolean =>
   host.zone.zone === "leaderArea" || host.zone.zone === "characterArea";
+
+const validateZoneRefShape = (
+  card: CardInstance,
+  expected: ExpectedZoneRefShape,
+): boolean => {
+  if (card.zone.zone !== expected.zone) {
+    return false;
+  }
+  if (card.zone.slot !== expected.slot) {
+    return false;
+  }
+  if (expected.index !== undefined && card.zone.index !== expected.index) {
+    return false;
+  }
+  return true;
+};
 
 const zoneCardsForPlayer = (
   state: GameState,
@@ -123,21 +145,149 @@ export const collectGameStateInvariantViolations = (
       }
     }
 
-    for (const [index, lifeCard] of player.life.entries()) {
-      const lifeZone = lifeCard.card.zone;
+    for (const [index, card] of player.deck.entries()) {
+      if (!validateZoneRefShape(card, { zone: "deck", slot: "deck", index })) {
+        violations.push({
+          invariant: "players.zoneRef",
+          message: "deck card zoneRef must match container and index",
+          details: {
+            instanceId: card.instanceId,
+            playerId,
+            zone: card.zone,
+            index,
+          },
+        });
+      }
+    }
+    for (const [index, card] of player.donDeck.entries()) {
       if (
-        lifeZone.zone !== "life" ||
-        lifeZone.slot !== "life" ||
-        lifeZone.index !== index
+        !validateZoneRefShape(card, { zone: "donDeck", slot: "donDeck", index })
       ) {
         violations.push({
-          invariant: "players.lifeWrapping",
-          message:
-            "life entries must wrap cards in life zone at matching index",
+          invariant: "players.zoneRef",
+          message: "donDeck card zoneRef must match container and index",
+          details: {
+            instanceId: card.instanceId,
+            playerId,
+            zone: card.zone,
+            index,
+          },
+        });
+      }
+    }
+    for (const [index, card] of player.hand.entries()) {
+      if (!validateZoneRefShape(card, { zone: "hand", slot: "hand", index })) {
+        violations.push({
+          invariant: "players.zoneRef",
+          message: "hand card zoneRef must match container and index",
+          details: {
+            instanceId: card.instanceId,
+            playerId,
+            zone: card.zone,
+            index,
+          },
+        });
+      }
+    }
+    for (const [index, card] of player.trash.entries()) {
+      if (
+        !validateZoneRefShape(card, { zone: "trash", slot: "trash", index })
+      ) {
+        violations.push({
+          invariant: "players.zoneRef",
+          message: "trash card zoneRef must match container and index",
+          details: {
+            instanceId: card.instanceId,
+            playerId,
+            zone: card.zone,
+            index,
+          },
+        });
+      }
+    }
+    if (
+      !validateZoneRefShape(player.leader, {
+        zone: "leaderArea",
+        slot: "leader",
+      })
+    ) {
+      violations.push({
+        invariant: "players.zoneRef",
+        message: "leader zoneRef must match leader container",
+        details: {
+          instanceId: player.leader.instanceId,
+          playerId,
+          zone: player.leader.zone,
+        },
+      });
+    }
+    for (const [index, card] of player.characters.entries()) {
+      if (
+        !validateZoneRefShape(card, {
+          zone: "characterArea",
+          slot: "character",
+          index,
+        })
+      ) {
+        violations.push({
+          invariant: "players.zoneRef",
+          message: "character zoneRef must match container and index",
+          details: {
+            instanceId: card.instanceId,
+            playerId,
+            zone: card.zone,
+            index,
+          },
+        });
+      }
+    }
+    if (
+      player.stage !== undefined &&
+      !validateZoneRefShape(player.stage, { zone: "stageArea", slot: "stage" })
+    ) {
+      violations.push({
+        invariant: "players.zoneRef",
+        message: "stage zoneRef must match stage container",
+        details: {
+          instanceId: player.stage.instanceId,
+          playerId,
+          zone: player.stage.zone,
+        },
+      });
+    }
+    for (const [index, card] of player.costArea.entries()) {
+      if (
+        !validateZoneRefShape(card, { zone: "costArea", slot: "cost", index })
+      ) {
+        violations.push({
+          invariant: "players.zoneRef",
+          message: "costArea card zoneRef must match container and index",
+          details: {
+            instanceId: card.instanceId,
+            playerId,
+            zone: card.zone,
+            index,
+          },
+        });
+      }
+    }
+
+    for (const [index, lifeCard] of player.life.entries()) {
+      if (
+        !validateZoneRefShape(lifeCard.card, {
+          zone: "life",
+          slot: "life",
+          index,
+        })
+      ) {
+        violations.push({
+          invariant: "players.zoneRef",
+          message: "life card zoneRef must match life container and index",
           details: {
             instanceId: lifeCard.card.instanceId,
-            expectedIndex: index,
-            zone: lifeZone,
+            playerId,
+            zone: lifeCard.card.zone,
+            index,
           },
         });
       }
@@ -258,6 +408,15 @@ export const collectGameStateInvariantViolations = (
   }
 
   const turnCountKeys = Object.keys(state.turn.playerTurnCounts);
+  for (const playerId of playerIds) {
+    if (!Object.hasOwn(state.turn.playerTurnCounts, playerId)) {
+      violations.push({
+        invariant: "turn.validPlayerRef",
+        message: "turn.playerTurnCounts must include every state.players key",
+        details: { playerId },
+      });
+    }
+  }
   for (const key of turnCountKeys) {
     if (!Object.hasOwn(state.players, key)) {
       violations.push({

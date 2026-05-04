@@ -316,6 +316,47 @@ test("invalid turn player reference fails closed", () => {
   );
 });
 
+test("malformed container ZoneRef fails with stable invariant name", () => {
+  const state = createBaseState();
+  getPlayer(state, "p1").leader.zone = {
+    zone: "hand",
+    playerId: toPlayerId("p1"),
+    slot: "hand",
+    index: 0,
+  };
+  getPlayer(state, "p2").hand.push(
+    createCardInstance({
+      instanceId: "p2-hand-1",
+      cardId: "hand-1",
+      owner: "p2",
+      controller: "p2",
+      zone: {
+        zone: "deck",
+        playerId: toPlayerId("p2"),
+        slot: "deck",
+        index: 0,
+      },
+    }),
+  );
+
+  const violations = collectGameStateInvariantViolations(state);
+  assert.ok(
+    violations.some((violation) => violation.invariant === "players.zoneRef"),
+  );
+});
+
+test("missing non-turn-player turn count fails closed", () => {
+  const state = createBaseState();
+  state.turn.playerTurnCounts = { [toPlayerId("p1")]: 1 };
+
+  const violations = collectGameStateInvariantViolations(state);
+  assert.ok(
+    violations.some(
+      (violation) => violation.invariant === "turn.validPlayerRef",
+    ),
+  );
+});
+
 test("assertGameStateInvariants throws typed error with violations payload", () => {
   const state = createBaseState();
   state.turn.turnPlayerId = toPlayerId("missing-player");
