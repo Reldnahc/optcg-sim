@@ -6,6 +6,7 @@ export const TYP_001_STORY_OWNERS = [
   "TYP-001E",
   "TYP-001F",
   "TYP-001G",
+  "TYP-002A",
 ] as const;
 
 export type Typ001StoryOwner = (typeof TYP_001_STORY_OWNERS)[number];
@@ -69,6 +70,19 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   PlayerGameTimer: "TYP-001F",
   TimerState: "TYP-001F",
   PublicTimerState: "TYP-001F",
+  SpectatorPolicy: "TYP-002A",
+  PublicTurnState: "TYP-002A",
+  PublicBattleState: "TYP-002A",
+  PublicCardView: "TYP-002A",
+  PublicLifeView: "TYP-002A",
+  VisiblePlayerState: "TYP-002A",
+  OpponentVisibleState: "TYP-002A",
+  SpectatorVisiblePlayerState: "TYP-002A",
+  PublicDecision: "TYP-002A",
+  PublicLegalAction: "TYP-002A",
+  PublicRevealRecord: "TYP-002A",
+  PlayerView: "TYP-002A",
+  SpectatorView: "TYP-002A",
   RngState: "TYP-001F",
   RngDrawResult: "TYP-001F",
   CardInstance: "TYP-001F",

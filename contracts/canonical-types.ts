@@ -456,6 +456,134 @@ export interface PublicTimerState {
   players: Record<PlayerId, { remainingMs: number; isRunning: boolean }>;
 }
 
+export interface SpectatorPolicy {
+  mode: "disabled" | "live-filtered";
+  allowHandRevealAfterGame: boolean;
+}
+
+export interface PublicTurnState {
+  globalTurn: number;
+  playerTurnCounts: Record<PlayerId, number>;
+  turnPlayerId: PlayerId;
+  phase: "refresh" | "draw" | "don" | "main" | "end";
+  step?: BattleStep;
+}
+
+export interface PublicBattleState {
+  attacker: CardRef;
+  originalTarget: CardRef;
+  currentTarget: CardRef;
+  blocker?: CardRef;
+  step: BattleStep;
+  damageCount: number;
+}
+
+export interface PublicCardView {
+  instanceId: InstanceId;
+  cardId: CardId;
+  owner: PlayerId;
+  controller: PlayerId;
+  zone: ZoneRef;
+  state?: "active" | "rested";
+  attachedDonCount: number;
+  turnPlayed?: number;
+}
+
+export interface PublicLifeView {
+  count: number;
+  faceUpCards: PublicCardView[];
+}
+
+export interface VisiblePlayerState {
+  playerId: PlayerId;
+  deckCount: number;
+  donDeckCount: number;
+  hand: PublicCardView[];
+  trash: PublicCardView[];
+  leader: PublicCardView;
+  characters: PublicCardView[];
+  stage?: PublicCardView;
+  costArea: PublicCardView[];
+  life: PublicLifeView;
+  hasMulliganed: boolean;
+  turnCount: number;
+}
+
+export interface OpponentVisibleState {
+  playerId: PlayerId;
+  deckCount: number;
+  donDeckCount: number;
+  handCount: number;
+  trash: PublicCardView[];
+  leader: PublicCardView;
+  characters: PublicCardView[];
+  stage?: PublicCardView;
+  costArea: PublicCardView[];
+  life: PublicLifeView;
+  hasMulliganed: boolean;
+  turnCount: number;
+}
+
+export type SpectatorVisiblePlayerState = OpponentVisibleState;
+
+export interface PublicDecision {
+  id: DecisionId;
+  type: string;
+  playerId: PlayerId;
+  prompt: string;
+  causedBy: CausalityRef;
+  timeoutMs?: number;
+}
+
+export type PublicLegalAction =
+  | { type: "playCard"; card: CardRef; costPaymentRequired?: boolean }
+  | { type: "activateEffect"; source: CardRef; effectId: EffectId }
+  | { type: "attachDon"; don: CardRef; target: CardRef }
+  | { type: "declareAttack"; attacker: CardRef; target: CardRef }
+  | { type: "activateBlocker"; blocker: CardRef }
+  | { type: "useCounter"; card: CardRef; target: CardRef }
+  | { type: "endMainPhase" }
+  | { type: "concede"; playerId: PlayerId }
+  | { type: "respondToDecision"; decisionId: DecisionId };
+
+export interface PublicRevealRecord {
+  id: string;
+  cards: CardRef[];
+  visibility: "public" | "privateToRecipient";
+  origin: ZoneRef | "topOfDeck" | "lifeDamage" | "custom";
+  createdAtStateSeq: StateSeq;
+  cleanupPolicy: "returnToOrigin" | "trashAfterResolution" | "none";
+}
+
+export interface PlayerView {
+  matchId: MatchId;
+  playerId: PlayerId;
+  stateSeq: StateSeq;
+  actionSeq: number;
+  turn: PublicTurnState;
+  self: VisiblePlayerState;
+  opponent: OpponentVisibleState;
+  battle?: PublicBattleState;
+  pendingDecision?: PublicDecision;
+  legalActions: PublicLegalAction[];
+  revealedCards: PublicRevealRecord[];
+  events: EngineEvent[];
+  timers: PublicTimerState;
+}
+
+export interface SpectatorView {
+  matchId: MatchId;
+  stateSeq: StateSeq;
+  actionSeq: number;
+  spectatorPolicy: SpectatorPolicy;
+  turn: PublicTurnState;
+  players: Record<PlayerId, SpectatorVisiblePlayerState>;
+  battle?: PublicBattleState;
+  revealedCards: PublicRevealRecord[];
+  events: EngineEvent[];
+  timers: PublicTimerState;
+}
+
 export interface RngState {
   algorithm: "pcg32" | "xoshiro256ss" | "test-fixed";
   seedCommitment?: string;

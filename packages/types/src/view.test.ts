@@ -1,0 +1,210 @@
+import { expect, test } from "vitest";
+
+import type {
+  CardId,
+  CardRef,
+  EngineEvent,
+  EngineEventId,
+  InstanceId,
+  MatchId,
+  OpponentVisibleState,
+  PlayerId,
+  PlayerView,
+  PublicBattleState,
+  PublicCardView,
+  PublicDecision,
+  PublicLegalAction,
+  PublicLifeView,
+  PublicRevealRecord,
+  PublicTurnState,
+  SpectatorPolicy,
+  SpectatorView,
+  SpectatorVisiblePlayerState,
+  StateSeq,
+  VisiblePlayerState,
+} from "./index.js";
+
+type HasNoKey<T, K extends PropertyKey> = K extends keyof T ? never : true;
+
+const cardRef = (suffix: string, playerId: PlayerId): CardRef => ({
+  instanceId: `instance-${suffix}` as InstanceId,
+  cardId: `OP01-${suffix}` as CardId,
+  playerId,
+  zone: { zone: "characterArea", playerId },
+});
+
+test("TYP-002A canonical player and spectator view DTO contracts compile", () => {
+  const playerA = "player-a" as PlayerId;
+  const playerB = "player-b" as PlayerId;
+  const seq = 1 as StateSeq;
+  const policy: SpectatorPolicy = {
+    mode: "live-filtered",
+    allowHandRevealAfterGame: false,
+  };
+  const publicCard: PublicCardView = {
+    instanceId: "instance-1" as InstanceId,
+    cardId: "OP01-001" as CardId,
+    owner: playerA,
+    controller: playerA,
+    zone: { zone: "leaderArea", playerId: playerA },
+    state: "active",
+    attachedDonCount: 0,
+  };
+  const life: PublicLifeView = { count: 5, faceUpCards: [] };
+  const turn: PublicTurnState = {
+    globalTurn: 1,
+    playerTurnCounts: { [playerA]: 1, [playerB]: 0 },
+    turnPlayerId: playerA,
+    phase: "main",
+  };
+  const battle: PublicBattleState = {
+    attacker: cardRef("002", playerA),
+    originalTarget: cardRef("003", playerB),
+    currentTarget: cardRef("003", playerB),
+    step: "block",
+    damageCount: 1,
+  };
+  const self: VisiblePlayerState = {
+    playerId: playerA,
+    deckCount: 48,
+    donDeckCount: 10,
+    hand: [publicCard],
+    trash: [],
+    leader: publicCard,
+    characters: [],
+    costArea: [],
+    life,
+    hasMulliganed: false,
+    turnCount: 1,
+  };
+  const opponent: OpponentVisibleState = {
+    playerId: playerB,
+    deckCount: 48,
+    donDeckCount: 10,
+    handCount: 5,
+    trash: [],
+    leader: { ...publicCard, owner: playerB, controller: playerB },
+    characters: [],
+    costArea: [],
+    life,
+    hasMulliganed: false,
+    turnCount: 0,
+  };
+  const spectatorPlayer: SpectatorVisiblePlayerState = {
+    ...opponent,
+    playerId: playerA,
+  };
+  const decision: PublicDecision = {
+    id: "decision-1" as PublicDecision["id"],
+    type: "mulligan",
+    playerId: playerA,
+    prompt: "Choose whether to mulligan.",
+    causedBy: { type: "playerAction", actionId: "action-1" },
+  };
+  const legalAction: PublicLegalAction = {
+    type: "respondToDecision",
+    decisionId: decision.id,
+  };
+  const reveal: PublicRevealRecord = {
+    id: "reveal-1",
+    cards: [cardRef("004", playerA)],
+    visibility: "public",
+    origin: { zone: "deck", playerId: playerA },
+    createdAtStateSeq: seq,
+    cleanupPolicy: "returnToOrigin",
+  };
+  const event: EngineEvent = {
+    id: "event-1" as EngineEventId,
+    seq: 1,
+    type: "phaseStarted",
+    payload: {},
+    visibility: { type: "public" },
+    createdAtStateSeq: seq,
+  };
+  const playerView: PlayerView = {
+    matchId: "match-1" as MatchId,
+    playerId: playerA,
+    stateSeq: seq,
+    actionSeq: 1,
+    turn,
+    self,
+    opponent,
+    battle,
+    pendingDecision: decision,
+    legalActions: [legalAction],
+    revealedCards: [reveal],
+    events: [event],
+    timers: {
+      activePlayerId: playerA,
+      players: {
+        [playerA]: { remainingMs: 120_000, isRunning: true },
+        [playerB]: { remainingMs: 120_000, isRunning: false },
+      },
+    },
+  };
+  const spectatorView: SpectatorView = {
+    matchId: playerView.matchId,
+    stateSeq: seq,
+    actionSeq: 1,
+    spectatorPolicy: policy,
+    turn,
+    players: {
+      [playerA]: spectatorPlayer,
+      [playerB]: { ...spectatorPlayer, playerId: playerB },
+    },
+    battle,
+    revealedCards: [reveal],
+    events: [event],
+    timers: playerView.timers,
+  };
+
+  expect(playerView.legalActions).toHaveLength(1);
+  expect(spectatorView.spectatorPolicy.mode).toBe("live-filtered");
+});
+
+test("TYP-002A player view excludes opponent hidden identities and private internals", () => {
+  const noOpponentHandCards: HasNoKey<OpponentVisibleState, "hand"> = true;
+  const noOpponentDeckCards: HasNoKey<OpponentVisibleState, "deck"> = true;
+  const noOpponentDonDeckCards: HasNoKey<OpponentVisibleState, "donDeck"> =
+    true;
+  const noRng: HasNoKey<PlayerView, "rng"> = true;
+  const noEffectQueue: HasNoKey<PlayerView, "effectQueue"> = true;
+  const noAudit: HasNoKey<PlayerView, "audit"> = true;
+  const noPrivateDecisionCandidates: HasNoKey<PublicDecision, "candidates"> =
+    true;
+  const noPrivateLegalReason: HasNoKey<PublicLegalAction, "reason"> = true;
+
+  expect(noOpponentHandCards).toBe(true);
+  expect(noOpponentDeckCards).toBe(true);
+  expect(noOpponentDonDeckCards).toBe(true);
+  expect(noRng).toBe(true);
+  expect(noEffectQueue).toBe(true);
+  expect(noAudit).toBe(true);
+  expect(noPrivateDecisionCandidates).toBe(true);
+  expect(noPrivateLegalReason).toBe(true);
+});
+
+test("TYP-002A initial spectator view excludes hidden identities and player-only choices", () => {
+  const noSpectatorHandCards: HasNoKey<SpectatorVisiblePlayerState, "hand"> =
+    true;
+  const noSpectatorDeckCards: HasNoKey<SpectatorVisiblePlayerState, "deck"> =
+    true;
+  const noSpectatorDonDeckCards: HasNoKey<
+    SpectatorVisiblePlayerState,
+    "donDeck"
+  > = true;
+  const noPendingDecision: HasNoKey<SpectatorView, "pendingDecision"> = true;
+  const noLegalActions: HasNoKey<SpectatorView, "legalActions"> = true;
+  const noRng: HasNoKey<SpectatorView, "rng"> = true;
+  const noEffectQueue: HasNoKey<SpectatorView, "effectQueue"> = true;
+  const noAudit: HasNoKey<SpectatorView, "audit"> = true;
+
+  expect(noSpectatorHandCards).toBe(true);
+  expect(noSpectatorDeckCards).toBe(true);
+  expect(noSpectatorDonDeckCards).toBe(true);
+  expect(noPendingDecision).toBe(true);
+  expect(noLegalActions).toBe(true);
+  expect(noRng).toBe(true);
+  expect(noEffectQueue).toBe(true);
+  expect(noAudit).toBe(true);
+});

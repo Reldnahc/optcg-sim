@@ -13,7 +13,9 @@ summary: >
   The visibility specs describe player and spectator view DTO requirements, but
   the canonical v6 implementation contract does not currently define
   `PlayerView` or `SpectatorView`. This gap must be resolved before generating
-  implementable public view DTO stories.
+  implementable public view DTO stories. TYP-002A is the story-reviewed
+  replacement path for initial live player and live-filtered spectator DTO
+  contracts.
 story_boundary: >
   Own only the authority gap record and future spec/canonical-contract alignment
   decision. Do not implement public view DTOs, filtering behavior, spectator
@@ -31,6 +33,7 @@ spec_refs:
 scope:
   - document that `PlayerView` and `SpectatorView` are not defined by the canonical v6 type contract
   - require a future spec/canonical-contract update before public view DTO implementation stories are approved
+  - track that TYP-002A is the story-reviewed replacement path for initial live-view DTO contract authority
 non_scope:
   - implementing view DTOs in `@optcg/types`
   - implementing `filterStateForPlayer`
