@@ -174,8 +174,13 @@ test("branch protection guide names the required status checks and subagent revi
 
 test("agents guidance requires parent orchestration plus separate reviewer subagent before human review", async () => {
   const agents = await readActiveText("AGENTS.md");
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const workflowGuidance = `${agents}\n${storyExecution}\n${reviewGate}`;
 
-  assertMatchesAll(agents, [
+  assertMatchesAll(workflowGuidance, [
     /spawn a worker subagent for the main implementation body/i,
     /parent agent stays mostly in orchestration mode/i,
     /parent agent remains in charge of the story itself/i,
@@ -217,14 +222,76 @@ test("agents guidance requires parent orchestration plus separate reviewer subag
   assert.doesNotMatch(agents, /default Codex CLI review step/i);
 });
 
+test("agents guidance exposes a concise root checklist and links detailed workflow docs", async () => {
+  const agents = await readActiveText("AGENTS.md");
+
+  assertMatchesAll(agents, [
+    /## Active Story Checklist/i,
+    /Read `AGENTS\.md`, the approved story, and the active packet/i,
+    /Run `pnpm run packets:generate --story <stories\/approved\/\.\.\.yaml> --activate`/i,
+    /Run `pnpm run packets:verify`/i,
+    /Stay inside the story boundary and `allowed_touch_points`/i,
+    /Open the PR before reviewer-subagent review/i,
+    /Post the AI review record or equivalent human-review fallback/i,
+    /Request human review only after review records are current/i,
+    /Run `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` after merge to `main`/i,
+    /docs\/workflow\/story-execution\.md/i,
+    /docs\/workflow\/review-gate\.md/i,
+    /docs\/workflow\/parent-integration-branches\.md/i,
+    /docs\/workflow\/reporting-and-github-sync\.md/i,
+  ]);
+});
+
+test("workflow procedure docs preserve required story and review gates", async () => {
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+
+  assertMatchesAll(storyExecution, [
+    /Generated or normalized stories must receive story-review agent review/i,
+    /If no usable story-review agent run exists, do not present the story as approval-ready/i,
+    /active\.json` may contain zero active stories or exactly one active story/i,
+    /pnpm run packets:generate --story <stories\/approved\/\.\.\.yaml> --activate/i,
+    /pnpm run packets:verify/i,
+    /pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>/i,
+  ]);
+
+  assertMatchesAll(reviewGate, [
+    /Open the pull request before the first reviewer-subagent run/i,
+    /run a separate reviewer subagent/i,
+    /60 minutes/i,
+    /self-review by the implementation worker or the parent implementation coordinator does not satisfy/i,
+    /AI review record/i,
+    /equivalent human-review fallback/i,
+    /revision response comment/i,
+    /Passing AI review does not replace human review/i,
+  ]);
+
+  assertMatchesAll(parentBranches, [
+    /Create a parent integration branch from `main`/i,
+    /Create each substory implementation branch from the parent integration branch/i,
+    /Do not run `pnpm run packets:complete` for a substory when it merges only into the parent integration branch/i,
+    /Human review is required on the parent PR before it merges to `main`/i,
+    /pnpm run packets:complete-many/i,
+  ]);
+});
+
 test("story workflow requires pre-presentation story-review agents", async () => {
   const agents = await readActiveText("AGENTS.md");
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const workflowGuidance = `${agents}\n${storyExecution}`;
   const storyWorkflow = await readActiveText(
     "specs/27-spec-driven-story-generation-workflow.md",
   );
   const codexSpec = await readActiveText("specs/32-codex-agent-integration.md");
 
-  assertMatchesAll(agents, [
+  assertMatchesAll(workflowGuidance, [
     /pre-presentation story-review gate/i,
     /Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready/i,
     /Story-review agent model: `gpt-5\.5` with `high` reasoning/i,

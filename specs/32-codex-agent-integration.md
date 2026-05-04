@@ -81,6 +81,12 @@ Section Ref: `32-codex-agent-integration.s006`
 - how to format assumptions, blockers, and implementation notes,
 - that GitHub issue and board projection should run through `tools/spec_board_sync.ts` and write metadata to `stories/.sync/`.
 
+The root `AGENTS.md` may stay concise when it links to checked-in workflow
+procedure documents. The root file should prioritize the active-story checklist,
+authority order, safety rules, and procedure links; detailed review, packet,
+lifecycle, and parent-branch procedures may live in focused docs as long as the
+root file names them and tests or reviewers preserve the required gates.
+
 ## Skill usage model
 
 <!-- SECTION_REF: 32-codex-agent-integration.s007 -->
