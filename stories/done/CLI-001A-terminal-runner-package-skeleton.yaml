@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: cli
 priority: high
-status: approved
+status: done
 summary: >
   Add the first CLI runner package and command entry point that can boot a
   deterministic fixture match from existing engine-core setup primitives without

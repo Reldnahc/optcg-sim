@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CLI-001D.md",
-      "storyId": "CLI-001D",
-      "storyPath": "stories/approved/CLI-001D-terminal-runner-smoke-tests.yaml",
-      "storySha256": "d9067491cac9ec110f44b2cad0bb3ca376157b765c67e0fe319ca3ced17df68f"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

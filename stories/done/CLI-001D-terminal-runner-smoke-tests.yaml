@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add CLI-level smoke coverage proving the terminal runner can drive supported
   deterministic vanilla match paths through command scripts and preserve stable

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: cli
 priority: high
-status: approved
+status: done
 summary: >
   Add deterministic terminal rendering helpers for the CLI runner so a developer
   can inspect the booted match state, current hand, legal actions, pending

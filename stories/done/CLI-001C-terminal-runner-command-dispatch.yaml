@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: cli
 priority: high
-status: approved
+status: done
 summary: >
   Add command parsing and dispatch for the terminal runner using only existing
   engine-core actions and mulligan decision responses, with `play <handIndex>`
