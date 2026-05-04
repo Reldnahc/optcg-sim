@@ -52,8 +52,9 @@ For Codex execution:
 2. approved story file,
 3. generated agent packet,
 4. checked-in repo instructions in `AGENTS.md`,
-5. local code reality,
-6. proposed patch.
+5. linked workflow procedure documents under `docs/workflow/`,
+6. local code reality,
+7. proposed patch.
 
 If a lower layer conflicts with a higher one, the higher layer wins.
 

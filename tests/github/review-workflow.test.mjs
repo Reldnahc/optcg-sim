@@ -242,6 +242,25 @@ test("agents guidance exposes a concise root checklist and links detailed workfl
   ]);
 });
 
+test("agents and codex integration spec agree on workflow procedure authority", async () => {
+  const agents = await readActiveText("AGENTS.md");
+  const codexSpec = await readActiveText("specs/32-codex-agent-integration.md");
+
+  assertMatchesAll(agents, [
+    /4\. this `AGENTS\.md`/i,
+    /5\. linked workflow procedure docs under `docs\/workflow\/`/i,
+    /6\. local code reality/i,
+    /7\. proposed patch/i,
+  ]);
+
+  assertMatchesAll(codexSpec, [
+    /4\. checked-in repo instructions in `AGENTS\.md`/i,
+    /5\. linked workflow procedure documents under `docs\/workflow\/`/i,
+    /6\. local code reality/i,
+    /7\. proposed patch/i,
+  ]);
+});
+
 test("workflow procedure docs preserve required story and review gates", async () => {
   const storyExecution = await readActiveText(
     "docs/workflow/story-execution.md",
