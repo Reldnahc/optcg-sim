@@ -204,11 +204,22 @@ The kickoff phase is not considered complete if the repo can compile locally but
 Section Ref: `15-implementation-kickoff.s011`
 
 - `pnpm test` passes.
-- A CLI vanilla match can end by damage, deck-out, or concession.
+- CLI can play a complete vanilla match through normal legal actions.
+- Character play from hand exists.
+- Stage play from hand exists.
+- DON!! attach/refresh works.
+- Attacks against Leader and rested Character work.
+- Damage, life-to-hand, K.O., deck-out, and concession endings work.
 - Every accepted action increments `stateSeq`.
+- Every accepted action has stable state hash output.
 - Every atomic mutation emits at least one `EngineEvent` or has an explicit no-event reason.
+- Event journal seq is strictly increasing.
 - `hashGameState()` is stable across repeated runs with the same seed.
-- `filterStateForPlayer()` never leaks opponent hand, deck order, face-down life, RNG, or effect queue internals.
+- Golden replay reconstructs final hash.
+- production `filterStateForPlayer` hidden-info tests consume real engine output
+  and prove opponent hand, deck order, face-down life, RNG, and effect queue
+  internals stay hidden.
+- Milestone 1 does not include server, client, Poneglyph live adapter, Redis, ranked, or broad card pool work.
 
 ## Guardrails
 

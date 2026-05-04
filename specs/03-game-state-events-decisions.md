@@ -151,6 +151,15 @@ Section Ref: `03-game-state-events-decisions.s005`
 
 Every atomic mutation emits events. Trigger detection consumes events, not actions.
 
+Event sequencing is part of the replay and state-hash contract:
+
+- EngineResult.events from one accepted transition must be strictly increasing by
+  `seq`.
+- The final `state.eventJournal` must be strictly increasing by `seq`.
+- Event `seq` values must be allocated by append order.
+- Helpers must not create multiple events in one `push` call when event IDs or seq values depend on `events.length`; append events one at a time or use an
+  equivalent allocator that observes the already-appended event count.
+
 ```ts
 interface EngineEvent {
   id: EngineEventId;

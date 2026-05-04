@@ -94,9 +94,19 @@ Deliverables:
 
 Exit criteria:
 
-- Two sample decks can finish a vanilla match in CLI.
-- Golden replay can reconstruct final hash.
-- Invariant tests pass after every action.
+- CLI can play a complete vanilla match through normal legal actions.
+- Character play from hand exists.
+- Stage play from hand exists.
+- DON!! attach/refresh works.
+- Attacks against Leader and rested Character work.
+- Damage, life-to-hand, K.O., deck-out, and concession endings work.
+- Every accepted action has stable state hash output.
+- Event journal seq is strictly increasing.
+- Golden replay reconstructs final hash.
+- production `filterStateForPlayer` hidden-info tests consume real engine output.
+- Invariant tests pass after every accepted action.
+
+Milestone 1 does not include server, client, Poneglyph live adapter, Redis, ranked, or broad card pool work.
 
 ## Milestone 2: first effect runtime
 
