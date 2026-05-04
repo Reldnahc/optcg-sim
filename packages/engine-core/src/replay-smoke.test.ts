@@ -134,6 +134,11 @@ const replayFixture = (fixture: LocalReplayFixture) => {
       pending,
       `missing pending mulligan decision at index ${String(index)}`,
     );
+    assert.equal(
+      pending.playerId,
+      toPlayerId(response.playerId),
+      `mulligan responder drift at index ${String(index)}`,
+    );
     const result = respondToMulliganDecision(state, {
       type: "respondToDecision",
       decisionId: pending.id,
@@ -183,6 +188,30 @@ test("action-script drift changes final hash from fixture expectation", () => {
   });
 
   assert.notEqual(replayed.finalStateHash, fixture.expected.finalStateHash);
+});
+
+test("mulligan responder drift is rejected before replaying decisions", () => {
+  const fixture = loadFixture();
+  const firstResponse = must(
+    fixture.mulliganResponses[0],
+    "first mulligan response",
+  );
+  const secondResponse = must(
+    fixture.mulliganResponses[1],
+    "second mulligan response",
+  );
+
+  assert.throws(
+    () =>
+      replayFixture({
+        ...fixture,
+        mulliganResponses: [
+          { ...firstResponse, playerId: secondResponse.playerId },
+          { ...secondResponse, playerId: firstResponse.playerId },
+        ],
+      }),
+    /mulligan responder drift at index 0/,
+  );
 });
 
 test("fixture rejects timestamp-like and transport-only metadata keys", () => {
