@@ -11,15 +11,12 @@
     }
   },
   "scripts": {
-    "boot:summary": "node scripts/boot-summary.mjs",
+    "boot:summary": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/cli.ts --boot-summary",
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run --root ../.. packages/cli/src"
   },
   "dependencies": {
     "@optcg/engine-core": "workspace:*",
     "@optcg/types": "workspace:*"
-  },
-  "devDependencies": {
-    "vite": "^8.0.10"
   }
 }

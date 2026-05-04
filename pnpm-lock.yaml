@@ -58,10 +58,6 @@ importers:
       "@optcg/types":
         specifier: workspace:*
         version: link:../types
-    devDependencies:
-      vite:
-        specifier: ^8.0.10
-        version: 8.0.10(@types/node@24.12.2)(yaml@2.8.4)
 
   packages/engine-core:
     dependencies:

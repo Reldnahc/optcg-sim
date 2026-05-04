@@ -21,6 +21,11 @@ export const runCli = (
   return 1;
 };
 
-if (process.argv[1]?.endsWith("cli.js") ?? false) {
+const entrypoint = process.argv[1];
+
+if (
+  entrypoint !== undefined &&
+  (entrypoint.endsWith("cli.js") || entrypoint.endsWith("cli.ts"))
+) {
   process.exitCode = runCli(process.argv.slice(2));
 }
