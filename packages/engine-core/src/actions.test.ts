@@ -90,6 +90,8 @@ const resolvedCard = (params: {
   cost?: number;
   power?: number;
   counter?: number;
+  effectText?: string;
+  triggerText?: string;
   printedKeywords?: ("rush" | "rushCharacter" | "doubleAttack")[];
 }): ResolvedCard => {
   const base = {
@@ -122,6 +124,12 @@ const resolvedCard = (params: {
     ...(params.power !== undefined ? { power: params.power } : {}),
     ...(params.cost !== undefined ? { cost: params.cost } : {}),
     ...(params.counter !== undefined ? { counter: params.counter } : {}),
+    ...(params.effectText !== undefined
+      ? { effectText: params.effectText }
+      : {}),
+    ...(params.triggerText !== undefined
+      ? { triggerText: params.triggerText }
+      : {}),
   } satisfies ResolvedCard;
   return base;
 };
@@ -343,6 +351,8 @@ test("getLegalActions includes playCard for supported vanilla Character and Stag
     category: "character",
     cost: 1,
     power: 2000,
+    effectText: "",
+    triggerText: "",
   });
   state.cardManifest.cards[stage.cardId] = resolvedCard({
     cardId: stage.cardId,
@@ -379,6 +389,7 @@ test("getLegalActions omits playCard when card play preconditions fail", () => {
   const highCost = must(p1State.hand[1], "high-cost character");
   const stage = must(p1State.hand[2], "stage");
   const missingManifest = must(p1State.hand[3], "missing manifest");
+  const missingCost = must(p1State.hand[4], "missing cost");
 
   state.cardManifest.cards[character.cardId] = resolvedCard({
     cardId: character.cardId,
@@ -396,6 +407,12 @@ test("getLegalActions omits playCard when card play preconditions fail", () => {
     cardId: stage.cardId,
     category: "stage",
     cost: 1,
+    effectText: "[Main] draw a card.",
+  });
+  state.cardManifest.cards[missingCost.cardId] = resolvedCard({
+    cardId: missingCost.cardId,
+    category: "character",
+    power: 2000,
   });
   p1State.costArea = p1State.costArea.slice(0, 3).map((card, index) => ({
     ...card,
@@ -405,7 +422,9 @@ test("getLegalActions omits playCard when card play preconditions fail", () => {
   const legal = getLegalActions(state, p1);
   assert.equal(hasPlayCardAction(legal, character), true);
   assert.equal(hasPlayCardAction(legal, highCost), false);
+  assert.equal(hasPlayCardAction(legal, stage), false);
   assert.equal(hasPlayCardAction(legal, missingManifest), false);
+  assert.equal(hasPlayCardAction(legal, missingCost), false);
 
   const fullCharacters = setupMainPlayState();
   const fullP1 = must(fullCharacters.players[p1], "full p1");
@@ -530,6 +549,26 @@ test("applyAction playCard rejects nonzero cards without enough active DON!!", (
 
   assert.equal(result.errors?.[0]?.type, "illegalAction");
   assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(JSON.stringify(state), before);
+});
+
+test("applyAction playCard rejects Character or Stage cards without printed cost", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const card = must(p1State.hand[0], "card");
+  state.cardManifest.cards[card.cardId] = resolvedCard({
+    cardId: card.cardId,
+    category: "character",
+    power: 2000,
+  });
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: card.instanceId,
+  });
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(state), before);
 });
 

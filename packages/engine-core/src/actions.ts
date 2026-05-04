@@ -1015,17 +1015,26 @@ const getSupportedPlayMetadata = (
   ) {
     return null;
   }
-  if (resolved.effectText !== undefined || resolved.triggerText !== undefined) {
+  if (
+    hasUnsupportedPlayText(resolved.effectText) ||
+    hasUnsupportedPlayText(resolved.triggerText)
+  ) {
     return null;
   }
   if (resolved.category !== "character" && resolved.category !== "stage") {
     return null;
   }
+  if (resolved.cost === undefined) {
+    return null;
+  }
   return {
     category: resolved.category,
-    printedCost: Math.max(0, resolved.cost ?? 0),
+    printedCost: Math.max(0, resolved.cost),
   };
 };
+
+const hasUnsupportedPlayText = (text: string | undefined): boolean =>
+  text !== undefined && text.trim().length > 0;
 
 const getPlayableHandCards = (
   state: GameState,
