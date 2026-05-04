@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CLI-001A.md",
+      "storyId": "CLI-001A",
+      "storyPath": "stories/approved/CLI-001A-terminal-runner-package-skeleton.yaml",
+      "storySha256": "801ed3ffe95977476f9593b4910dcd8edda593f024290a268dcf473161dd8cc5"
+    }
+  ],
   "version": 1
 }

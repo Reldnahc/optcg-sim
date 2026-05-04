@@ -1,0 +1,72 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CLI-001A
+epic_id: M1-001
+title: Add terminal runner package skeleton
+type: implementation
+area: engine
+primary_concern: cli
+priority: high
+status: approved
+summary: >
+  Add the first CLI runner package and command entry point that can boot a
+  deterministic fixture match from existing engine-core setup primitives without
+  implementing command rendering or interactive action dispatch yet.
+story_boundary: >
+  Own only the package skeleton, executable command wiring, and deterministic
+  fixture match boot path for the terminal runner. Stop before adding the full
+  command parser, terminal rendering surface, card play behavior, or new engine
+  rules.
+allowed_touch_points:
+  - packages/cli/**
+  - package.json
+  - pnpm-lock.yaml
+  - pnpm-workspace.yaml
+  - tsconfig.base.json
+  - tests/contracts/**
+  - tests/cli/**
+spec_refs:
+  - 12-roadmap.s005 (Milestone 1: terminal engine)
+  - 12-roadmap.s015 (Immediate next tasks)
+  - 15-implementation-kickoff.s004 (Package bootstrap order)
+  - 15-implementation-kickoff.s007 (Step 3 - CLI runner)
+  - 15-implementation-kickoff.s009 (Hardcoded fixture card metadata)
+  - 15-implementation-kickoff.s012 (Guardrails)
+scope:
+  - add a workspace package for the terminal runner without browser, server, database, Redis, WebSocket, React, or live HTTP dependencies
+  - expose a package-local command entry point that can be invoked by a root or package script
+  - build a deterministic hardcoded fixture setup input using existing engine-core primitives and checked-in fixture metadata
+  - start the official mulligan flow from the deterministic initial state
+  - return or print a minimal boot summary containing state sequence, phase/status, pending decision presence, and state hash
+  - keep the boot path deterministic across repeated invocations with the same seed and fixture input
+non_scope:
+  - interactive readline loop
+  - command parser for gameplay commands
+  - "`show`, `hand`, legal-action, or computed-view rendering"
+  - applying gameplay actions from terminal input
+  - implementing `play <handIndex>` or any engine card-play behavior
+  - Poneglyph HTTP access, card-data package work, browser UI, server protocol, persistence, or replay storage
+dependencies:
+  - ENG-001A
+  - ENG-001B
+  - ENG-001C
+  - ENG-002B
+  - ENG-002C
+  - ENG-003A
+acceptance_criteria:
+  - the CLI package is part of the workspace and can compile under the repo typecheck flow
+  - invoking the command boots the same deterministic fixture match with the same final boot hash on repeated runs
+  - the boot path reaches the first pending mulligan decision using existing engine-core APIs
+  - the package boundary excludes server, browser, Redis, Postgres, WebSocket, React, and live HTTP imports
+required_tests:
+  - package or integration test proving the CLI boot helper returns a deterministic state hash for repeated fixture boots
+  - package-boundary test proving the CLI package depends only on allowed local packages and standard Node APIs
+  - script or command smoke test proving the entry point can run without entering an interactive loop
+repo_rules:
+  - do not approve or packetize this story until the CLI child-story set has passed story-review
+  - use the parent integration branch workflow for the CLI-001 child-story group if the group is approved
+  - keep one active CLI substory packet at a time
+  - do not add or modify engine gameplay rules in this story
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate
