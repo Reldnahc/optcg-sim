@@ -1,0 +1,83 @@
+{
+  "fixtureType": "engineCoreReplaySmokeLocalV1",
+  "description": "Local engine-core replay smoke fixture for ENG-002F. Not a production replay artifact schema.",
+  "setupInput": {
+    "matchId": "match-eng-002f-smoke-1",
+    "firstPlayerId": "p1",
+    "rngSeed": "seed-eng-002f-smoke-1",
+    "playerOrder": ["p1", "p2"],
+    "leaderCardIds": {
+      "p1": "leader-red",
+      "p2": "leader-blue"
+    },
+    "leaderLifeCounts": {
+      "p1": 2,
+      "p2": 2
+    },
+    "deckCardIds": {
+      "p1": [
+        "p1-a",
+        "p1-b",
+        "p1-c",
+        "p1-d",
+        "p1-e",
+        "p1-f",
+        "p1-g",
+        "p1-h",
+        "p1-i",
+        "p1-j",
+        "p1-k",
+        "p1-l"
+      ],
+      "p2": [
+        "p2-a",
+        "p2-b",
+        "p2-c",
+        "p2-d",
+        "p2-e",
+        "p2-f",
+        "p2-g",
+        "p2-h",
+        "p2-i",
+        "p2-j",
+        "p2-k",
+        "p2-l"
+      ]
+    },
+    "donDeckCardIds": {
+      "p1": ["p1-don-1", "p1-don-2", "p1-don-3"],
+      "p2": ["p2-don-1", "p2-don-2", "p2-don-3"]
+    },
+    "shuffleDecks": true
+  },
+  "mulliganResponses": [
+    { "playerId": "p1", "keep": true },
+    { "playerId": "p2", "keep": true }
+  ],
+  "actionScript": [{ "type": "concede", "playerId": "p1" }],
+  "expected": {
+    "checkpoints": [
+      {
+        "label": "setup",
+        "stateHash": "a53149466fe29647d0479adaa30c3dcb1020fdf7a0da841b14f138b1a468e503"
+      },
+      {
+        "label": "mulligan-started",
+        "stateHash": "19bd6b919ad7b6766eb72e977e5432e30c55b92d5d8ef3bdb2c5cc7045038dc0"
+      },
+      {
+        "label": "mulligan-response-1",
+        "stateHash": "876694dbd391f38555e4ab2390ed8ddbb408966c945f6ce5d907b59e72f487dd"
+      },
+      {
+        "label": "mulligan-response-2",
+        "stateHash": "183d08f4bbfb2c0341a3a1e77ef37b62907f496be8812ca4c9cb00c54d846ff7"
+      },
+      {
+        "label": "action-1-concede",
+        "stateHash": "f5c5a631e7dd1a4cb46115a7ef7b5df2e8139934de42b8f0e97208af45169ccf"
+      }
+    ],
+    "finalStateHash": "f5c5a631e7dd1a4cb46115a7ef7b5df2e8139934de42b8f0e97208af45169ccf"
+  }
+}
