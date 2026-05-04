@@ -38,9 +38,9 @@
         "checkpointHashes": [
           "4958e94b631748cab0eaae6512699988a02ae76b2ef9ce63087acc49ece52f0b",
           "3f6f00fd9842376e92d1dcdd0f40fdb154446ca195f4d1e14c612a9df6cbe465",
-          "5f40df9c07b86aea9be756fa7502b999a23450a3c4d871471276bae7549b3669"
+          "ee238caa946ae3c06a08562cbf9b015bedd5b9c204f7905ba173b0ff7a3d9dab"
         ],
-        "finalHash": "5f40df9c07b86aea9be756fa7502b999a23450a3c4d871471276bae7549b3669",
+        "finalHash": "ee238caa946ae3c06a08562cbf9b015bedd5b9c204f7905ba173b0ff7a3d9dab",
         "finalStatus": { "type": "completed", "winner": "p1" }
       }
     },
@@ -60,9 +60,9 @@
         "checkpointHashes": [
           "4958e94b631748cab0eaae6512699988a02ae76b2ef9ce63087acc49ece52f0b",
           "3f6f00fd9842376e92d1dcdd0f40fdb154446ca195f4d1e14c612a9df6cbe465",
-          "be7d0a7fa54d78d03dae762fd4141ff2eef70bff5882c96a54cb17d42dd6b931"
+          "33bfc80652c18b905dfefae591a1d2dac0d77981f410c0507e75429f06a16726"
         ],
-        "finalHash": "be7d0a7fa54d78d03dae762fd4141ff2eef70bff5882c96a54cb17d42dd6b931",
+        "finalHash": "33bfc80652c18b905dfefae591a1d2dac0d77981f410c0507e75429f06a16726",
         "finalStatus": { "type": "completed", "winner": "p1" }
       }
     }

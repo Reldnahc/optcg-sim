@@ -71,6 +71,26 @@ const createEvent = (
   createdAtStateSeq: toStateSeq(state.seq + 1),
 });
 
+const appendEvent = (
+  events: EngineEvent[],
+  state: GameState,
+  type: EngineEvent["type"],
+  payload: unknown,
+  visibility?: EngineEvent["visibility"],
+  causedBy?: EngineEvent["causedBy"],
+): EngineEvent => {
+  const event = createEvent(
+    state,
+    events.length + 1,
+    type,
+    payload,
+    visibility,
+    causedBy,
+  );
+  events.push(event);
+  return event;
+};
+
 const payloadRecord = (
   payload: unknown,
 ): Record<string, unknown> | undefined =>
@@ -154,12 +174,10 @@ export const advanceRefreshPhase = (state: GameState): EngineResult => {
 
   const events: EngineEvent[] = [];
   if (!hasStartedCurrentPhase(state, "refresh", turnPlayerId)) {
-    events.push(
-      createEvent(state, 1, "phaseStarted", {
-        phase: "refresh",
-        playerId: turnPlayerId,
-      }),
-    );
+    appendEvent(events, state, "phaseStarted", {
+      phase: "refresh",
+      playerId: turnPlayerId,
+    });
   }
   const attachedDonIds = [
     ...turnPlayer.leader.attachedDon,
@@ -177,14 +195,12 @@ export const advanceRefreshPhase = (state: GameState): EngineResult => {
   });
 
   for (const attachedDonId of attachedDonIds) {
-    events.push(
-      createEvent(
-        state,
-        events.length + 1,
-        "donReturned",
-        { playerId: turnPlayerId, donInstanceId: attachedDonId },
-        { type: "replayOnly" },
-      ),
+    appendEvent(
+      events,
+      state,
+      "donReturned",
+      { playerId: turnPlayerId, donInstanceId: attachedDonId },
+      { type: "replayOnly" },
     );
   }
 
@@ -204,16 +220,14 @@ export const advanceRefreshPhase = (state: GameState): EngineResult => {
     players: { ...state.players, [turnPlayerId]: refreshedPlayer },
   };
 
-  events.push(
-    createEvent(state, events.length + 1, "phaseEnded", {
-      phase: "refresh",
-      playerId: turnPlayerId,
-    }),
-    createEvent(state, events.length + 1, "phaseStarted", {
-      phase: "draw",
-      playerId: turnPlayerId,
-    }),
-  );
+  appendEvent(events, state, "phaseEnded", {
+    phase: "refresh",
+    playerId: turnPlayerId,
+  });
+  appendEvent(events, state, "phaseStarted", {
+    phase: "draw",
+    playerId: turnPlayerId,
+  });
   const nextWithRules = applyRuleProcessingCheckpoint({
     state: nextState,
     events,
@@ -253,14 +267,12 @@ export const advanceDrawPhase = (state: GameState): EngineResult => {
         withIndexedZone(drawn, "hand", "hand", turnPlayer.hand.length),
       ];
       nextPlayer = { ...turnPlayer, deck: nextDeck, hand: nextHand };
-      events.push(
-        createEvent(
-          state,
-          events.length + 1,
-          "cardDrawn",
-          { playerId: turnPlayerId, cardInstanceId: drawn.instanceId },
-          { type: "replayOnly" },
-        ),
+      appendEvent(
+        events,
+        state,
+        "cardDrawn",
+        { playerId: turnPlayerId, cardInstanceId: drawn.instanceId },
+        { type: "replayOnly" },
       );
     }
   }
@@ -271,16 +283,14 @@ export const advanceDrawPhase = (state: GameState): EngineResult => {
     turn: { ...state.turn, phase: "don" },
     players: { ...state.players, [turnPlayerId]: nextPlayer },
   };
-  events.push(
-    createEvent(state, events.length + 1, "phaseEnded", {
-      phase: "draw",
-      playerId: turnPlayerId,
-    }),
-    createEvent(state, events.length + 1, "phaseStarted", {
-      phase: "don",
-      playerId: turnPlayerId,
-    }),
-  );
+  appendEvent(events, state, "phaseEnded", {
+    phase: "draw",
+    playerId: turnPlayerId,
+  });
+  appendEvent(events, state, "phaseStarted", {
+    phase: "don",
+    playerId: turnPlayerId,
+  });
   const nextWithRules = applyRuleProcessingCheckpoint({
     state: nextState,
     events,
