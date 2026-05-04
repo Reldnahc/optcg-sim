@@ -21,3 +21,4 @@ export {
   advanceRefreshPhase,
   enterMainPhase,
 } from "./phases.js";
+export { applyAction, getLegalActions } from "./actions.js";
