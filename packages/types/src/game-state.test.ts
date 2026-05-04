@@ -90,6 +90,16 @@ test("TYP-001G canonical game state and engine/result contracts compile", () => 
       turnPlayerId: playerA,
       phase: "main",
     },
+    cardManifest: {
+      manifestHash: "manifest-hash-1",
+      source: "manual-test",
+      cardDataVersion: "cards-v1",
+      effectDefinitionsVersion: "effects-v1",
+      customHandlerVersion: "handlers-v1",
+      banlistVersion: "banlist-v1",
+      createdAt: "2026-05-04T00:00:00.000Z",
+      cards: {},
+    },
     players: {
       [playerA]: playerState,
       [playerB]: { ...playerState, playerId: playerB },
@@ -224,6 +234,16 @@ test("TYP-001G rejects stale EngineResult and out-of-scope exports/behavior", ()
       playerTurnCounts: { [player]: 1 },
       turnPlayerId: player,
       phase: "main",
+    },
+    cardManifest: {
+      manifestHash: "manifest-hash-1",
+      source: "manual-test",
+      cardDataVersion: "cards-v1",
+      effectDefinitionsVersion: "effects-v1",
+      customHandlerVersion: "handlers-v1",
+      banlistVersion: "banlist-v1",
+      createdAt: "2026-05-04T00:00:00.000Z",
+      cards: {},
     },
     players: { [player]: playerState },
     timers: {

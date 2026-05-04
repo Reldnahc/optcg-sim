@@ -13,11 +13,13 @@ import {
   assertGameStateInvariants,
   canonicalSerializeStateValue,
   collectGameStateInvariantViolations,
+  computeView,
   createInitialState,
   GameStateInvariantError,
   getLegalActions,
   hashCanonicalStateValue,
   initializeRng,
+  resolveSupportedVanillaBattle,
   enterMainPhase,
   respondToMulliganDecision,
   startMulliganFlow,
@@ -36,11 +38,13 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "assertGameStateInvariants",
     "canonicalSerializeStateValue",
     "collectGameStateInvariantViolations",
+    "computeView",
     "createInitialState",
     "enterMainPhase",
     "getLegalActions",
     "hashCanonicalStateValue",
     "initializeRng",
+    "resolveSupportedVanillaBattle",
     "respondToMulliganDecision",
     "startMulliganFlow",
   ]);
@@ -55,6 +59,10 @@ test("package runtime boundary exposes engine-core helpers", () => {
   assert.equal(engineCorePackage.getLegalActions, getLegalActions);
   assert.equal(engineCorePackage.applyAction, applyAction);
   assert.equal(
+    engineCorePackage.resolveSupportedVanillaBattle,
+    resolveSupportedVanillaBattle,
+  );
+  assert.equal(
     engineCorePackage.canonicalSerializeStateValue,
     canonicalSerializeStateValue,
   );
@@ -66,6 +74,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     engineCorePackage.collectGameStateInvariantViolations,
     collectGameStateInvariantViolations,
   );
+  assert.equal(engineCorePackage.computeView, computeView);
   assert.equal(engineCorePackage.createInitialState, createInitialState);
   assert.equal(
     engineCorePackage.assertGameStateInvariants,

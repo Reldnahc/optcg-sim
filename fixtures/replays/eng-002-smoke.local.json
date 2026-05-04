@@ -48,6 +48,16 @@
       "p1": ["p1-don-1", "p1-don-2", "p1-don-3"],
       "p2": ["p2-don-1", "p2-don-2", "p2-don-3"]
     },
+    "cardManifest": {
+      "manifestHash": "fixture-eng-002f-manifest",
+      "source": "manual-test",
+      "cardDataVersion": "fixture",
+      "effectDefinitionsVersion": "fixture",
+      "customHandlerVersion": "fixture",
+      "banlistVersion": "fixture",
+      "cards": {},
+      "createdAt": "2026-05-04T00:00:00.000Z"
+    },
     "shuffleDecks": true
   },
   "mulliganResponses": [
@@ -59,25 +69,25 @@
     "checkpoints": [
       {
         "label": "setup",
-        "stateHash": "a53149466fe29647d0479adaa30c3dcb1020fdf7a0da841b14f138b1a468e503"
+        "stateHash": "51c1852bc0fa5ae446d3781d426058f270e5f0c86ef9f61219e0ebae747fa7fd"
       },
       {
         "label": "mulligan-started",
-        "stateHash": "19bd6b919ad7b6766eb72e977e5432e30c55b92d5d8ef3bdb2c5cc7045038dc0"
+        "stateHash": "f43b20a4f4264668d6259c6020e79f02e52be8c4068ffb1d9bafb8422a11e0ae"
       },
       {
         "label": "mulligan-response-1",
-        "stateHash": "876694dbd391f38555e4ab2390ed8ddbb408966c945f6ce5d907b59e72f487dd"
+        "stateHash": "7293420cebf077e73e6cab83bf7bc5b4c7495bb2f59cb586848858f54848ee90"
       },
       {
         "label": "mulligan-response-2",
-        "stateHash": "183d08f4bbfb2c0341a3a1e77ef37b62907f496be8812ca4c9cb00c54d846ff7"
+        "stateHash": "be2f8b7f0873a786be81160adb98cf83f3fbeec25de31232f80fe6f23b311c84"
       },
       {
         "label": "action-1-concede",
-        "stateHash": "f5c5a631e7dd1a4cb46115a7ef7b5df2e8139934de42b8f0e97208af45169ccf"
+        "stateHash": "75efd0ce2db2d6f72ee3bd956592b22e5ecb7e0ed1a953d8863397e41946c0ef"
       }
     ],
-    "finalStateHash": "f5c5a631e7dd1a4cb46115a7ef7b5df2e8139934de42b8f0e97208af45169ccf"
+    "finalStateHash": "75efd0ce2db2d6f72ee3bd956592b22e5ecb7e0ed1a953d8863397e41946c0ef"
   }
 }
