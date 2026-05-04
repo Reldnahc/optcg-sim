@@ -1,0 +1,60 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-002
+epic_id: M1-001
+title: Add deterministic engine behavior foundation
+type: implementation
+area: engine
+primary_concern: rules
+priority: critical
+status: replaced
+summary: >
+  Add the first deterministic engine behavior layer after the engine-core
+  package, RNG primitive, state hash primitive, and shared view DTO contracts are
+  available. This parent story preserves the group context for invariant,
+  setup, phase-flow, legal-action, and replay-smoke child stories.
+story_boundary: >
+  This parent story is not implementable. It preserves the engine behavior
+  foundation context and is replaced by concern-scoped child stories ENG-002A
+  through ENG-002F.
+allowed_touch_points:
+  - packages/engine-core/**
+  - fixtures/replays/**
+  - tests/engine/**
+spec_refs:
+  - 12-roadmap.s005 (Milestone 1: terminal engine)
+  - 12-roadmap.s015 (Immediate next tasks)
+  - 15-implementation-kickoff.s006 (Step 2 - @optcg/engine-core)
+  - 15-implementation-kickoff.s011 (Definition of done for kickoff)
+  - 18-acceptance-tests.s003 (Milestone 1 - terminal engine)
+  - 18-acceptance-tests.s009 (Global invariants)
+scope:
+  - define the engine behavior foundation delivery group
+  - split invariant helpers, deterministic setup, official mulligan flow, phase progression, legal-action skeleton, and replay smoke into child stories
+  - keep the group on a parent integration branch before merging to main
+non_scope:
+  - direct implementation from this parent story
+  - browser client, server protocol, database, Redis, WebSocket, or live HTTP behavior
+  - full card effect runtime
+  - attack, battle, damage, blocker, counter, and card-play implementation beyond explicit child-story scope
+  - CLI runner implementation
+dependencies:
+  - ENG-001A
+  - ENG-001B
+  - ENG-001C
+  - TYP-001G
+  - TYP-002A
+acceptance_criteria:
+  - child stories exist for the first deterministic engine behavior concerns
+  - this parent story remains non-implementable and is not packetized
+  - child stories can be reviewed as a set before approval
+required_tests:
+  - story review must verify this parent is replaced by concern-scoped child stories before implementation begins
+repo_rules:
+  - do not approve or packetize this parent story
+  - use a parent integration branch for the ENG-002 child-story group if the group is approved
+  - keep one active child-story packet at a time
+  - engine-core must stay pure and free of browser, server, Redis, Postgres, WebSocket, React, and live HTTP dependencies
+  - approve only concern-scoped child stories for implementation
+ambiguity_policy: fail_and_escalate

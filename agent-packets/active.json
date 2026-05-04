@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-002F.md",
+      "storyId": "ENG-002F",
+      "storyPath": "stories/approved/ENG-002F-engine-replay-smoke.yaml",
+      "storySha256": "091a4ee972a72f08f7af90619a5d39aaa35a82a547f50c4c506123ea5cc9f652"
+    }
+  ],
   "version": 1
 }

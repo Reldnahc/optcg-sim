@@ -71,4 +71,7 @@ Initial child focus:
   package source and tests by concern without changing the public API.
 - `ENG-001A` through `ENG-001C` prepare engine package and deterministic
   primitives after the required type slices land.
+- `ENG-002A` through `ENG-002F` form the next engine behavior foundation group:
+  invariants, deterministic setup, official mulligan flow, vanilla phase
+  progression, legal-action skeleton, and first replay smoke.
 - CLI stories stay generated/deferred until engine behavior exists.

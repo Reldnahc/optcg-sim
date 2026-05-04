@@ -1,0 +1,64 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-002A
+epic_id: M1-001
+title: Add engine invariant utilities
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add pure invariant utilities for authoritative `GameState` values so later
+  setup, action application, decision resume, and replay tests can fail closed
+  on invalid state structure.
+story_boundary: >
+  Own only invariant helper APIs and package-local invariant tests inside
+  engine-core. Do not implement setup, action application, phase progression,
+  hidden-information filtering, or replay execution.
+allowed_touch_points:
+  - packages/engine-core/**
+  - tests/engine/**
+spec_refs:
+  - 03-game-state-events-decisions.s002 (Canonical state rules)
+  - 03-game-state-events-decisions.s021 (Invariants)
+  - 03-game-state-events-decisions.s023 (Error categories)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 18-acceptance-tests.s009 (Global invariants)
+scope:
+  - add an exported invariant assertion helper for `GameState`
+  - add a non-throwing invariant collection helper that returns named violations
+  - check that every card instance appears in exactly one zone or as attached DON!! to exactly one legal host
+  - check that attached DON!! belongs to the same player as its host
+  - check that player zone ownership, controller, life wrapping, and turn player references are internally consistent
+  - check that canonical state-shaped values can be serialized and hashed by the existing hash primitive
+non_scope:
+  - creating initial game state
+  - applying player actions
+  - legal action generation
+  - event journal generation
+  - hidden-information view filtering
+  - replay file format or replay execution
+dependencies:
+  - ENG-001A
+  - ENG-001C
+  - TYP-001G
+acceptance_criteria:
+  - valid minimal `GameState` fixtures pass invariant checks
+  - duplicate card-instance placement fails with a stable invariant name
+  - unattached DON!! referenced from a host fails with a stable invariant name
+  - attached DON!! controlled by a different player than its host fails with a stable invariant name
+  - missing turn player and malformed player references fail closed
+required_tests:
+  - unit test for a valid minimal state fixture
+  - unit test for duplicate zone placement
+  - unit test for invalid attached DON!! ownership or missing attached instance
+  - unit test for invalid turn player reference
+  - unit test proving invariant checks do not mutate input state
+repo_rules:
+  - do not approve this story until ENG-001A, ENG-001C, and TYP-001G are done
+  - engine-core behavior must remain deterministic and pure
+  - no hidden-information filtering behavior may be added in this story
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

@@ -1,0 +1,450 @@
+import type {
+  CardInstance,
+  EngineError,
+  EngineEvent,
+  EngineEventId,
+  EngineResult,
+  GameState,
+  PlayerId,
+  PlayerState,
+  StateSeq,
+} from "@optcg/types";
+
+import { hashCanonicalStateValue } from "./canonical-state.js";
+import { assertGameStateInvariants } from "./invariants.js";
+
+const toStateSeq = (value: number): StateSeq => value as StateSeq;
+const toEngineEventId = (value: string): EngineEventId =>
+  value as EngineEventId;
+
+const toEngineResult = (
+  state: GameState,
+  events: EngineEvent[],
+  errors?: readonly [EngineError, ...EngineError[]],
+): EngineResult => {
+  const result: EngineResult = {
+    state,
+    events,
+    stateHash: hashCanonicalStateValue(state),
+  };
+  if (state.pendingDecision !== undefined) {
+    result.decisions = [state.pendingDecision];
+  }
+  if (errors !== undefined) {
+    result.errors = [...errors];
+  }
+  return result;
+};
+
+const invalidPhaseTransition = (
+  state: GameState,
+  expected: GameState["turn"]["phase"],
+): EngineResult =>
+  toEngineResult(
+    state,
+    [],
+    [
+      {
+        type: "illegalAction",
+        reason: `Phase transition requires ${expected} phase.`,
+      },
+    ],
+  );
+
+const createEvent = (
+  state: GameState,
+  seqOffset: number,
+  type: EngineEvent["type"],
+  payload: unknown,
+  visibility: EngineEvent["visibility"] = { type: "public" },
+  causedBy: EngineEvent["causedBy"] = { type: "ruleProcess", name: "turnFlow" },
+): EngineEvent => ({
+  id: toEngineEventId(
+    `event:${String(state.seq)}:${String(seqOffset)}:${type}`,
+  ),
+  seq: state.eventJournal.length + seqOffset,
+  type,
+  payload,
+  visibility,
+  causedBy,
+  createdAtStateSeq: toStateSeq(state.seq + 1),
+});
+
+const payloadRecord = (
+  payload: unknown,
+): Record<string, unknown> | undefined =>
+  typeof payload === "object" && payload !== null
+    ? (payload as Record<string, unknown>)
+    : undefined;
+
+const hasStartedCurrentPhase = (
+  state: GameState,
+  phase: GameState["turn"]["phase"],
+  playerId: PlayerId,
+): boolean => {
+  for (const event of [...state.eventJournal].reverse()) {
+    if (event.type !== "phaseStarted" && event.type !== "phaseEnded") {
+      continue;
+    }
+    const payload = payloadRecord(event.payload);
+    return (
+      event.type === "phaseStarted" &&
+      payload?.["phase"] === phase &&
+      payload["playerId"] === playerId
+    );
+  }
+  return false;
+};
+
+const withIndexedZone = (
+  card: CardInstance,
+  zone: CardInstance["zone"]["zone"],
+  slot: NonNullable<CardInstance["zone"]["slot"]>,
+  index: number,
+): CardInstance => ({
+  ...card,
+  zone: { zone, playerId: card.owner, slot, index },
+});
+
+const secondPlayerId = (
+  state: GameState,
+  firstPlayerId: PlayerId,
+): PlayerId => {
+  const playerIds = Object.keys(state.players) as PlayerId[];
+  const next = playerIds.find((playerId) => playerId !== firstPlayerId);
+  if (next === undefined) {
+    throw new TypeError("Expected exactly two players for turn flow.");
+  }
+  return next;
+};
+
+const isFirstPlayerFirstTurn = (
+  state: GameState,
+  playerId: PlayerId,
+): boolean =>
+  state.turn.globalTurn === 1 && state.turn.playerTurnCounts[playerId] === 1;
+
+const appendRuleProcessingChecked = (
+  state: GameState,
+  events: EngineEvent[],
+  phase: GameState["turn"]["phase"],
+): void => {
+  events.push(
+    createEvent(
+      state,
+      events.length + 1,
+      "ruleProcessingChecked",
+      { phase, result: "ok" },
+      { type: "replayOnly" },
+    ),
+  );
+};
+
+const readyPlayerCards = (player: PlayerState): PlayerState => {
+  const next: PlayerState = {
+    ...player,
+    leader: { ...player.leader, state: "active" },
+    characters: player.characters.map((card) => ({ ...card, state: "active" })),
+    costArea: player.costArea.map((card) => ({ ...card, state: "active" })),
+  };
+  if (player.stage !== undefined) {
+    next.stage = { ...player.stage, state: "active" };
+  }
+  return next;
+};
+
+export const advanceRefreshPhase = (state: GameState): EngineResult => {
+  if (state.turn.phase !== "refresh") {
+    return invalidPhaseTransition(state, "refresh");
+  }
+  const turnPlayerId = state.turn.turnPlayerId;
+  const turnPlayer = state.players[turnPlayerId];
+  if (turnPlayer === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [{ type: "illegalAction", reason: "Turn player does not exist." }],
+    );
+  }
+
+  const events: EngineEvent[] = [];
+  if (!hasStartedCurrentPhase(state, "refresh", turnPlayerId)) {
+    events.push(
+      createEvent(state, 1, "phaseStarted", {
+        phase: "refresh",
+        playerId: turnPlayerId,
+      }),
+    );
+  }
+  const attachedDonIds = [
+    ...turnPlayer.leader.attachedDon,
+    ...turnPlayer.characters.flatMap((card) => card.attachedDon),
+  ];
+  const attachedSet = new Set(attachedDonIds);
+  const costArea = turnPlayer.costArea.map((card, index) => {
+    if (!attachedSet.has(card.instanceId)) {
+      return withIndexedZone(card, "costArea", "cost", index);
+    }
+    return {
+      ...withIndexedZone(card, "costArea", "cost", index),
+      state: "rested" as const,
+    };
+  });
+
+  for (const attachedDonId of attachedDonIds) {
+    events.push(
+      createEvent(
+        state,
+        events.length + 1,
+        "donReturned",
+        { playerId: turnPlayerId, donInstanceId: attachedDonId },
+        { type: "replayOnly" },
+      ),
+    );
+  }
+
+  const refreshedPlayer = readyPlayerCards({
+    ...turnPlayer,
+    leader: { ...turnPlayer.leader, attachedDon: [] },
+    characters: turnPlayer.characters.map((card) => ({
+      ...card,
+      attachedDon: [],
+    })),
+    costArea,
+  });
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    turn: { ...state.turn, phase: "draw" },
+    players: { ...state.players, [turnPlayerId]: refreshedPlayer },
+  };
+
+  events.push(
+    createEvent(state, events.length + 1, "phaseEnded", {
+      phase: "refresh",
+      playerId: turnPlayerId,
+    }),
+    createEvent(state, events.length + 1, "phaseStarted", {
+      phase: "draw",
+      playerId: turnPlayerId,
+    }),
+  );
+  appendRuleProcessingChecked(state, events, "draw");
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
+};
+
+export const advanceDrawPhase = (state: GameState): EngineResult => {
+  if (state.turn.phase !== "draw") {
+    return invalidPhaseTransition(state, "draw");
+  }
+  const turnPlayerId = state.turn.turnPlayerId;
+  const turnPlayer = state.players[turnPlayerId];
+  if (turnPlayer === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [{ type: "illegalAction", reason: "Turn player does not exist." }],
+    );
+  }
+
+  const events: EngineEvent[] = [];
+  let nextPlayer = turnPlayer;
+  if (!isFirstPlayerFirstTurn(state, turnPlayerId)) {
+    const drawn = turnPlayer.deck[0];
+    if (drawn !== undefined) {
+      const nextDeck = turnPlayer.deck
+        .slice(1)
+        .map((card, index) => withIndexedZone(card, "deck", "deck", index));
+      const nextHand = [
+        ...turnPlayer.hand,
+        withIndexedZone(drawn, "hand", "hand", turnPlayer.hand.length),
+      ];
+      nextPlayer = { ...turnPlayer, deck: nextDeck, hand: nextHand };
+      events.push(
+        createEvent(
+          state,
+          events.length + 1,
+          "cardDrawn",
+          { playerId: turnPlayerId, cardInstanceId: drawn.instanceId },
+          { type: "replayOnly" },
+        ),
+      );
+    }
+  }
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    turn: { ...state.turn, phase: "don" },
+    players: { ...state.players, [turnPlayerId]: nextPlayer },
+  };
+  events.push(
+    createEvent(state, events.length + 1, "phaseEnded", {
+      phase: "draw",
+      playerId: turnPlayerId,
+    }),
+    createEvent(state, events.length + 1, "phaseStarted", {
+      phase: "don",
+      playerId: turnPlayerId,
+    }),
+  );
+  appendRuleProcessingChecked(state, events, "don");
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
+};
+
+export const advanceDonPhase = (state: GameState): EngineResult => {
+  if (state.turn.phase !== "don") {
+    return invalidPhaseTransition(state, "don");
+  }
+  const turnPlayerId = state.turn.turnPlayerId;
+  const turnPlayer = state.players[turnPlayerId];
+  if (turnPlayer === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [{ type: "illegalAction", reason: "Turn player does not exist." }],
+    );
+  }
+
+  const placeCount = isFirstPlayerFirstTurn(state, turnPlayerId) ? 1 : 2;
+  const toPlace = turnPlayer.donDeck.slice(0, placeCount);
+  const nextDonDeck = turnPlayer.donDeck
+    .slice(toPlace.length)
+    .map((card, index) => withIndexedZone(card, "donDeck", "donDeck", index));
+  const nextCostArea = [
+    ...turnPlayer.costArea,
+    ...toPlace.map((card, index) => ({
+      ...withIndexedZone(
+        card,
+        "costArea",
+        "cost",
+        turnPlayer.costArea.length + index,
+      ),
+      state: "active" as const,
+    })),
+  ];
+
+  const events: EngineEvent[] = toPlace.map((card, index) =>
+    createEvent(
+      state,
+      index + 1,
+      "cardMoved",
+      {
+        playerId: turnPlayerId,
+        cardInstanceId: card.instanceId,
+        from: "donDeck",
+        to: "costArea",
+      },
+      { type: "replayOnly" },
+    ),
+  );
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    players: {
+      ...state.players,
+      [turnPlayerId]: {
+        ...turnPlayer,
+        donDeck: nextDonDeck,
+        costArea: nextCostArea,
+      },
+    },
+  };
+  appendRuleProcessingChecked(state, events, "don");
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
+};
+
+export const enterMainPhase = (state: GameState): EngineResult => {
+  if (state.turn.phase !== "don") {
+    return invalidPhaseTransition(state, "don");
+  }
+  const turnPlayerId = state.turn.turnPlayerId;
+  const events: EngineEvent[] = [
+    createEvent(state, 1, "phaseEnded", {
+      phase: "don",
+      playerId: turnPlayerId,
+    }),
+    createEvent(state, 2, "phaseStarted", {
+      phase: "main",
+      playerId: turnPlayerId,
+    }),
+  ];
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    turn: { ...state.turn, phase: "main" },
+  };
+  appendRuleProcessingChecked(state, events, "main");
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
+};
+
+export const advanceEndPhase = (state: GameState): EngineResult => {
+  if (state.turn.phase !== "end") {
+    return invalidPhaseTransition(state, "end");
+  }
+  const currentTurnPlayerId = state.turn.turnPlayerId;
+  const nextTurnPlayerId = secondPlayerId(state, currentTurnPlayerId);
+  const nextPlayerTurnCount = state.turn.playerTurnCounts[nextTurnPlayerId];
+  const nextTurnPlayer = state.players[nextTurnPlayerId];
+  if (nextPlayerTurnCount === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [{ type: "illegalAction", reason: "Next turn player count is missing." }],
+    );
+  }
+  if (nextTurnPlayer === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [{ type: "illegalAction", reason: "Next turn player does not exist." }],
+    );
+  }
+  const incrementedNextTurnCount = nextPlayerTurnCount + 1;
+  const nextCounts = {
+    ...state.turn.playerTurnCounts,
+    [nextTurnPlayerId]: incrementedNextTurnCount,
+  };
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    players: {
+      ...state.players,
+      [nextTurnPlayerId]: {
+        ...nextTurnPlayer,
+        turnCount: incrementedNextTurnCount,
+      },
+    },
+    turn: {
+      ...state.turn,
+      globalTurn: state.turn.globalTurn + 1,
+      playerTurnCounts: nextCounts,
+      turnPlayerId: nextTurnPlayerId,
+      phase: "refresh",
+    },
+  };
+  const events: EngineEvent[] = [
+    createEvent(state, 1, "phaseEnded", {
+      phase: "end",
+      playerId: currentTurnPlayerId,
+    }),
+    createEvent(state, 2, "phaseStarted", {
+      phase: "refresh",
+      playerId: nextTurnPlayerId,
+    }),
+  ];
+  appendRuleProcessingChecked(state, events, "refresh");
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
+};
