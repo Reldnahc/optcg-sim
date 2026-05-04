@@ -52,8 +52,9 @@ For Codex execution:
 2. approved story file,
 3. generated agent packet,
 4. checked-in repo instructions in `AGENTS.md`,
-5. local code reality,
-6. proposed patch.
+5. linked workflow procedure documents under `docs/workflow/`,
+6. local code reality,
+7. proposed patch.
 
 If a lower layer conflicts with a higher one, the higher layer wins.
 
@@ -80,6 +81,12 @@ Section Ref: `32-codex-agent-integration.s006`
 - what verification commands to run before claiming completion,
 - how to format assumptions, blockers, and implementation notes,
 - that GitHub issue and board projection should run through `tools/spec_board_sync.ts` and write metadata to `stories/.sync/`.
+
+The root `AGENTS.md` may stay concise when it links to checked-in workflow
+procedure documents. The root file should prioritize the active-story checklist,
+authority order, safety rules, and procedure links; detailed review, packet,
+lifecycle, and parent-branch procedures may live in focused docs as long as the
+root file names them and tests or reviewers preserve the required gates.
 
 ## Skill usage model
 

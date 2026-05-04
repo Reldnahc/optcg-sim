@@ -1,0 +1,76 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-017
+epic_id: KICK-001
+title: Simplify root agent workflow instructions
+type: tooling
+area: infra
+primary_concern: docs
+priority: high
+status: approved
+summary: >
+  Reduce agent workflow compliance failures by shortening the root `AGENTS.md`
+  operating contract and moving detailed procedures into focused checked-in
+  workflow docs while preserving the existing spec-driven gates.
+story_boundary: >
+  Own documentation and workflow tests for agent instruction organization only.
+  Do not change packet-tool behavior, story schema shape, board sync semantics,
+  CI jobs, package code, gameplay rules, or review gate requirements.
+allowed_touch_points:
+  - AGENTS.md
+  - docs/workflow/**
+  - specs/32-codex-agent-integration.md
+  - tests/github/review-workflow.test.mjs
+  - stories/approved/INF-017-agent-workflow-simplification.yaml
+  - agent-packets/INF-017.md
+  - agent-packets/active.json
+spec_refs:
+  - 24-story-schema.s025 (Story sizing and decomposition guidance)
+  - 25-story-template.s002 (Usage rules)
+  - 25-story-template.s013 (Allowed touch points)
+  - 26-agent-packet-template.s001 (Packet purpose)
+  - 26-agent-packet-template.s005 (Packet lifecycle guidance)
+  - 27-spec-driven-story-generation-workflow.s009 (Agent packet generation)
+  - 27-spec-driven-story-generation-workflow.s012 (Recommended operating loop)
+  - 27-spec-driven-story-generation-workflow.s013 (Stronger process)
+  - 27-spec-driven-story-generation-workflow.s017 (Pre-presentation story-review gate)
+  - 32-codex-agent-integration.s005 (Context shaping)
+  - 32-codex-agent-integration.s006 (Root AGENTS contract)
+  - 32-codex-agent-integration.s008 (Recommended orchestration loop)
+  - 32-codex-agent-integration.s010 (Review agents)
+  - 32-codex-agent-integration.s013 (Completion and review)
+scope:
+  - add a short root workflow checklist to `AGENTS.md`
+  - move long procedural details from `AGENTS.md` into focused `docs/workflow/` documents
+  - keep existing story review, packet, PR review, fallback review, human review, and lifecycle requirements intact
+  - update the Codex integration spec to describe concise root instructions plus linked procedure docs
+  - update workflow tests so moved requirements remain enforced
+non_scope:
+  - weakening or removing story-review requirements
+  - weakening or removing reviewer-subagent or equivalent fallback requirements
+  - changing packet generation, verification, or completion behavior
+  - changing story schema validation
+  - changing GitHub board sync behavior
+  - changing CI workflows or protected branch requirements
+  - gameplay, engine, server, client, replay, contract, database, or UI implementation work
+dependencies:
+  - INF-016
+acceptance_criteria:
+  - "`AGENTS.md` starts with a concise active-story operating checklist before detailed policy text"
+  - "`AGENTS.md` links to focused workflow procedure docs for story execution, review gate, parent integration branches, and reporting/GitHub sync"
+  - moved procedure docs preserve the existing required gates for story review, packet generation and verification, PR review records, fallback review, human review, and packet completion cleanup
+  - "`specs/32-codex-agent-integration.md` records that root instructions may be concise when detailed procedures are checked in and linked"
+  - workflow tests fail if the root checklist, procedure doc links, or required review/story gates are removed
+required_tests:
+  - workflow test covering the concise `AGENTS.md` checklist and procedure doc links
+  - workflow test covering preservation of story-review and implementation-review gate language after the doc split
+  - "`pnpm run packets:verify`"
+  - "`pnpm test -- tests/github/review-workflow.test.mjs`"
+  - "`pnpm verify`"
+repo_rules:
+  - must pass pnpm verify
+  - story-review must run before the generated story is presented as approval-ready
+  - parent-owned documentation authority edits still require full verification and separate reviewer-subagent review before human review
+  - the patch must stay inside `allowed_touch_points`
+ambiguity_policy: implement_if_clearly_implied
