@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-017.md",
-      "storyId": "INF-017",
-      "storyPath": "stories/approved/INF-017-agent-workflow-simplification.yaml",
-      "storySha256": "c2cecd10a028b2537e13b7fa8284439d977eba118ac7d3a205c849c6e508a2bf"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

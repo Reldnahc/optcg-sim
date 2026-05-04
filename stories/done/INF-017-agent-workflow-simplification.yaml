@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Reduce agent workflow compliance failures by shortening the root `AGENTS.md`
   operating contract and moving detailed procedures into focused checked-in
