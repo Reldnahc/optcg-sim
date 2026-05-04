@@ -1,0 +1,519 @@
+{
+  "fixtureType": "engineCorePlayCardReplaySmokeLocalV1",
+  "description": "Local engine-core replay smoke fixture for ENG-005C vanilla play-card behavior. Package-local only; not the production replay schema.",
+  "setupInput": {
+    "matchId": "match-eng-005c-smoke-1",
+    "firstPlayerId": "p1",
+    "rngSeed": "seed-eng-005c-smoke-1",
+    "playerOrder": ["p1", "p2"],
+    "leaderCardIds": { "p1": "leader-red", "p2": "leader-blue" },
+    "leaderLifeCounts": { "p1": 2, "p2": 2 },
+    "deckCardIds": {
+      "p1": [
+        "p1-a",
+        "p1-b",
+        "p1-c",
+        "p1-d",
+        "p1-e",
+        "p1-f",
+        "p1-g",
+        "p1-h",
+        "p1-i",
+        "p1-j"
+      ],
+      "p2": ["p2-a", "p2-b", "p2-c", "p2-d", "p2-e", "p2-f", "p2-g", "p2-h"]
+    },
+    "donDeckCardIds": {
+      "p1": ["p1-don-1", "p1-don-2", "p1-don-3"],
+      "p2": ["p2-don-1", "p2-don-2", "p2-don-3"]
+    },
+    "cardManifest": {
+      "manifestHash": "fixture-eng-005c-play-card-manifest",
+      "source": "manual-test",
+      "cardDataVersion": "fixture",
+      "effectDefinitionsVersion": "fixture",
+      "customHandlerVersion": "fixture",
+      "banlistVersion": "fixture",
+      "cards": {
+        "leader-red": {
+          "cardId": "leader-red",
+          "language": "en",
+          "name": "leader-red",
+          "category": "leader",
+          "set": "TEST",
+          "setName": "Test Set",
+          "released": true,
+          "colors": ["red"],
+          "attributes": [],
+          "types": [],
+          "printedKeywords": [],
+          "variants": [],
+          "legality": {},
+          "officialFaq": [],
+          "errata": [],
+          "sourceTextHash": "source-hash",
+          "behaviorHash": "behavior-hash",
+          "support": {
+            "cardId": "leader-red",
+            "status": "vanilla-confirmed",
+            "tested": true,
+            "rulesVersion": "r1",
+            "cardDataVersion": "fixture",
+            "sourceTextHash": "source-hash",
+            "behaviorHash": "behavior-hash"
+          },
+          "power": 5000
+        },
+        "leader-blue": {
+          "cardId": "leader-blue",
+          "language": "en",
+          "name": "leader-blue",
+          "category": "leader",
+          "set": "TEST",
+          "setName": "Test Set",
+          "released": true,
+          "colors": ["red"],
+          "attributes": [],
+          "types": [],
+          "printedKeywords": [],
+          "variants": [],
+          "legality": {},
+          "officialFaq": [],
+          "errata": [],
+          "sourceTextHash": "source-hash",
+          "behaviorHash": "behavior-hash",
+          "support": {
+            "cardId": "leader-blue",
+            "status": "vanilla-confirmed",
+            "tested": true,
+            "rulesVersion": "r1",
+            "cardDataVersion": "fixture",
+            "sourceTextHash": "source-hash",
+            "behaviorHash": "behavior-hash"
+          },
+          "power": 5000
+        },
+        "p1-a": {
+          "cardId": "p1-a",
+          "language": "en",
+          "name": "p1-a",
+          "category": "character",
+          "set": "TEST",
+          "setName": "Test Set",
+          "released": true,
+          "colors": ["red"],
+          "attributes": [],
+          "types": [],
+          "printedKeywords": [],
+          "variants": [],
+          "legality": {},
+          "officialFaq": [],
+          "errata": [],
+          "sourceTextHash": "source-hash",
+          "behaviorHash": "behavior-hash",
+          "support": {
+            "cardId": "p1-a",
+            "status": "vanilla-confirmed",
+            "tested": true,
+            "rulesVersion": "r1",
+            "cardDataVersion": "fixture",
+            "sourceTextHash": "source-hash",
+            "behaviorHash": "behavior-hash"
+          },
+          "cost": 2,
+          "power": 3000
+        },
+        "p1-b": {
+          "cardId": "p1-b",
+          "language": "en",
+          "name": "p1-b",
+          "category": "stage",
+          "set": "TEST",
+          "setName": "Test Set",
+          "released": true,
+          "colors": ["red"],
+          "attributes": [],
+          "types": [],
+          "printedKeywords": [],
+          "variants": [],
+          "legality": {},
+          "officialFaq": [],
+          "errata": [],
+          "sourceTextHash": "source-hash",
+          "behaviorHash": "behavior-hash",
+          "support": {
+            "cardId": "p1-b",
+            "status": "vanilla-confirmed",
+            "tested": true,
+            "rulesVersion": "r1",
+            "cardDataVersion": "fixture",
+            "sourceTextHash": "source-hash",
+            "behaviorHash": "behavior-hash"
+          },
+          "cost": 1
+        },
+        "p1-c": {
+          "cardId": "p1-c",
+          "language": "en",
+          "name": "p1-c",
+          "category": "stage",
+          "set": "TEST",
+          "setName": "Test Set",
+          "released": true,
+          "colors": ["red"],
+          "attributes": [],
+          "types": [],
+          "printedKeywords": [],
+          "variants": [],
+          "legality": {},
+          "officialFaq": [],
+          "errata": [],
+          "sourceTextHash": "source-hash",
+          "behaviorHash": "behavior-hash",
+          "support": {
+            "cardId": "p1-c",
+            "status": "vanilla-confirmed",
+            "tested": true,
+            "rulesVersion": "r1",
+            "cardDataVersion": "fixture",
+            "sourceTextHash": "source-hash",
+            "behaviorHash": "behavior-hash"
+          },
+          "cost": 1
+        },
+        "p1-d": {
+          "cardId": "p1-d",
+          "language": "en",
+          "name": "p1-d",
+          "category": "character",
+          "set": "TEST",
+          "setName": "Test Set",
+          "released": true,
+          "colors": ["red"],
+          "attributes": [],
+          "types": [],
+          "printedKeywords": [],
+          "variants": [],
+          "legality": {},
+          "officialFaq": [],
+          "errata": [],
+          "sourceTextHash": "source-hash",
+          "behaviorHash": "behavior-hash",
+          "support": {
+            "cardId": "p1-d",
+            "status": "vanilla-confirmed",
+            "tested": true,
+            "rulesVersion": "r1",
+            "cardDataVersion": "fixture",
+            "sourceTextHash": "source-hash",
+            "behaviorHash": "behavior-hash"
+          },
+          "cost": 0,
+          "power": 2000
+        },
+        "p1-e": {
+          "cardId": "p1-e",
+          "language": "en",
+          "name": "p1-e",
+          "category": "character",
+          "set": "TEST",
+          "setName": "Test Set",
+          "released": true,
+          "colors": ["red"],
+          "attributes": [],
+          "types": [],
+          "printedKeywords": [],
+          "variants": [],
+          "legality": {},
+          "officialFaq": [],
+          "errata": [],
+          "sourceTextHash": "source-hash",
+          "behaviorHash": "behavior-hash",
+          "support": {
+            "cardId": "p1-e",
+            "status": "vanilla-confirmed",
+            "tested": true,
+            "rulesVersion": "r1",
+            "cardDataVersion": "fixture",
+            "sourceTextHash": "source-hash",
+            "behaviorHash": "behavior-hash"
+          },
+          "cost": 0,
+          "power": 2000
+        },
+        "p1-f": {
+          "cardId": "p1-f",
+          "language": "en",
+          "name": "p1-f",
+          "category": "character",
+          "set": "TEST",
+          "setName": "Test Set",
+          "released": true,
+          "colors": ["red"],
+          "attributes": [],
+          "types": [],
+          "printedKeywords": [],
+          "variants": [],
+          "legality": {},
+          "officialFaq": [],
+          "errata": [],
+          "sourceTextHash": "source-hash",
+          "behaviorHash": "behavior-hash",
+          "support": {
+            "cardId": "p1-f",
+            "status": "vanilla-confirmed",
+            "tested": true,
+            "rulesVersion": "r1",
+            "cardDataVersion": "fixture",
+            "sourceTextHash": "source-hash",
+            "behaviorHash": "behavior-hash"
+          },
+          "cost": 0,
+          "power": 2000
+        },
+        "p1-g": {
+          "cardId": "p1-g",
+          "language": "en",
+          "name": "p1-g",
+          "category": "character",
+          "set": "TEST",
+          "setName": "Test Set",
+          "released": true,
+          "colors": ["red"],
+          "attributes": [],
+          "types": [],
+          "printedKeywords": [],
+          "variants": [],
+          "legality": {},
+          "officialFaq": [],
+          "errata": [],
+          "sourceTextHash": "source-hash",
+          "behaviorHash": "behavior-hash",
+          "support": {
+            "cardId": "p1-g",
+            "status": "vanilla-confirmed",
+            "tested": true,
+            "rulesVersion": "r1",
+            "cardDataVersion": "fixture",
+            "sourceTextHash": "source-hash",
+            "behaviorHash": "behavior-hash"
+          },
+          "cost": 0,
+          "power": 2000
+        },
+        "p1-h": {
+          "cardId": "p1-h",
+          "language": "en",
+          "name": "p1-h",
+          "category": "character",
+          "set": "TEST",
+          "setName": "Test Set",
+          "released": true,
+          "colors": ["red"],
+          "attributes": [],
+          "types": [],
+          "printedKeywords": [],
+          "variants": [],
+          "legality": {},
+          "officialFaq": [],
+          "errata": [],
+          "sourceTextHash": "source-hash",
+          "behaviorHash": "behavior-hash",
+          "support": {
+            "cardId": "p1-h",
+            "status": "vanilla-confirmed",
+            "tested": true,
+            "rulesVersion": "r1",
+            "cardDataVersion": "fixture",
+            "sourceTextHash": "source-hash",
+            "behaviorHash": "behavior-hash"
+          },
+          "cost": 2,
+          "power": 4000
+        }
+      },
+      "createdAt": "2026-05-04T00:00:00.000Z"
+    },
+    "shuffleDecks": false
+  },
+  "mulliganResponses": [
+    { "playerId": "p1", "keep": true },
+    { "playerId": "p2", "keep": true }
+  ],
+  "scenarios": [
+    {
+      "id": "paid-character",
+      "setupScript": [
+        { "type": "setMainPhase", "turnPlayerId": "p1", "globalTurn": 3 },
+        { "type": "setCostAreaFromDonDeck", "playerId": "p1", "count": 3 }
+      ],
+      "actionScript": [
+        { "type": "playCardFromHand", "playerId": "p1", "handIndex": 0 },
+        {
+          "type": "respondToPayment",
+          "playerId": "p1",
+          "costAreaIndices": [0, 1]
+        }
+      ],
+      "expected": {
+        "checkpoints": [
+          {
+            "stateSeq": 3,
+            "actionSeq": 2,
+            "turnNumber": 3,
+            "fullStateHash": "0e0c99a081710d46211236de8483d5e708a0d41a7050c249999acf08382fe276",
+            "snapshotRef": "paid-character:setup"
+          },
+          {
+            "stateSeq": 4,
+            "actionSeq": 3,
+            "turnNumber": 3,
+            "fullStateHash": "8f94c97056f964e113c90cd7b593863c297d0b323d107b219640ec42ffebb082",
+            "snapshotRef": "paid-character:action-1"
+          },
+          {
+            "stateSeq": 5,
+            "actionSeq": 4,
+            "turnNumber": 3,
+            "fullStateHash": "44b92fdbdc0fe5126a1cf835915ffaa983f1068e4c4909ae1e4dc37092f71902",
+            "snapshotRef": "paid-character:action-2"
+          }
+        ],
+        "finalStateHash": "44b92fdbdc0fe5126a1cf835915ffaa983f1068e4c4909ae1e4dc37092f71902",
+        "finalStatus": { "type": "active" },
+        "finalState": {
+          "paidDonIndices": [0, 1],
+          "characters": ["p1-a"],
+          "trash": []
+        }
+      }
+    },
+    {
+      "id": "stage-replacement",
+      "setupScript": [
+        { "type": "setMainPhase", "turnPlayerId": "p1", "globalTurn": 3 },
+        { "type": "setCostAreaFromDonDeck", "playerId": "p1", "count": 3 }
+      ],
+      "actionScript": [
+        { "type": "playCardFromHand", "playerId": "p1", "handIndex": 1 },
+        {
+          "type": "respondToPayment",
+          "playerId": "p1",
+          "costAreaIndices": [0]
+        },
+        { "type": "playCardFromHand", "playerId": "p1", "handIndex": 1 },
+        { "type": "respondToPayment", "playerId": "p1", "costAreaIndices": [1] }
+      ],
+      "expected": {
+        "checkpoints": [
+          {
+            "stateSeq": 3,
+            "actionSeq": 2,
+            "turnNumber": 3,
+            "fullStateHash": "0e0c99a081710d46211236de8483d5e708a0d41a7050c249999acf08382fe276",
+            "snapshotRef": "stage-replacement:setup"
+          },
+          {
+            "stateSeq": 4,
+            "actionSeq": 3,
+            "turnNumber": 3,
+            "fullStateHash": "43155614ed4ce30a1a9f8f065b8a1af183ddadb306f7402c892c534d95762d14",
+            "snapshotRef": "stage-replacement:action-1"
+          },
+          {
+            "stateSeq": 5,
+            "actionSeq": 4,
+            "turnNumber": 3,
+            "fullStateHash": "dfc08a5d7a2a626a975314c8e4d025fbb4c5d9073c23849c2e6d789782efa059",
+            "snapshotRef": "stage-replacement:action-2"
+          },
+          {
+            "stateSeq": 6,
+            "actionSeq": 5,
+            "turnNumber": 3,
+            "fullStateHash": "70ff7b8db9b769ab849a231bcf5027c50a2e49884a61381f6371b8f1d8e0dfc6",
+            "snapshotRef": "stage-replacement:action-3"
+          },
+          {
+            "stateSeq": 7,
+            "actionSeq": 6,
+            "turnNumber": 3,
+            "fullStateHash": "47400b8386558c12b1285da9c026f74f16cb4d9fbccad331ebe31e24d7b8b993",
+            "snapshotRef": "stage-replacement:action-4"
+          }
+        ],
+        "finalStateHash": "47400b8386558c12b1285da9c026f74f16cb4d9fbccad331ebe31e24d7b8b993",
+        "finalStatus": { "type": "active" },
+        "finalState": {
+          "paidDonIndices": [0, 1],
+          "characters": [],
+          "stage": "p1-c",
+          "trash": ["p1-b"]
+        }
+      }
+    },
+    {
+      "id": "character-overflow",
+      "setupScript": [
+        { "type": "setMainPhase", "turnPlayerId": "p1", "globalTurn": 3 },
+        { "type": "setCostAreaFromDonDeck", "playerId": "p1", "count": 3 },
+        {
+          "type": "setCharacters",
+          "playerId": "p1",
+          "cardIds": ["p1-d", "p1-e", "p1-f", "p1-g", "p1-h"],
+          "state": "active",
+          "turnPlayed": 1
+        }
+      ],
+      "actionScript": [
+        { "type": "playCardFromHand", "playerId": "p1", "handIndex": 0 },
+        {
+          "type": "respondToPayment",
+          "playerId": "p1",
+          "costAreaIndices": [0, 1]
+        },
+        { "type": "respondToOverflow", "playerId": "p1", "characterIndex": 2 }
+      ],
+      "expected": {
+        "checkpoints": [
+          {
+            "stateSeq": 3,
+            "actionSeq": 2,
+            "turnNumber": 3,
+            "fullStateHash": "04ffe0625bc0f1a1ee9ab65c1312c1c9a7a5a165ae61c909fc780cd52c369598",
+            "snapshotRef": "character-overflow:setup"
+          },
+          {
+            "stateSeq": 4,
+            "actionSeq": 3,
+            "turnNumber": 3,
+            "fullStateHash": "4fa751604d3e2e46f721364c6e519e1905501ebb8e4c398ae7c445fed234c5c6",
+            "snapshotRef": "character-overflow:action-1"
+          },
+          {
+            "stateSeq": 5,
+            "actionSeq": 4,
+            "turnNumber": 3,
+            "fullStateHash": "ce78bb278c53d5cd4f7b2ecb915bad10c524f8c2bbad780c64ac040842d8fcfb",
+            "snapshotRef": "character-overflow:action-2"
+          },
+          {
+            "stateSeq": 6,
+            "actionSeq": 5,
+            "turnNumber": 3,
+            "fullStateHash": "4e25f4b591af1f23c15f7c9983c79a6db68a5c09137bed3dc7906e143068bb5d",
+            "snapshotRef": "character-overflow:action-3"
+          }
+        ],
+        "finalStateHash": "4e25f4b591af1f23c15f7c9983c79a6db68a5c09137bed3dc7906e143068bb5d",
+        "finalStatus": { "type": "active" },
+        "finalState": {
+          "paidDonIndices": [0, 1],
+          "characters": ["p1-d", "p1-e", "p1-g", "p1-h", "p1-a"],
+          "trash": ["p1-f"],
+          "absentFromCharacters": ["p1-f"]
+        }
+      }
+    }
+  ]
+}
