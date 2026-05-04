@@ -13,10 +13,11 @@ import { assertGameStateInvariants } from "./invariants.js";
 import { advanceRngUint32, initializeRng } from "./rng.js";
 
 const OPENING_HAND_SIZE = 5;
-const DEFAULT_LEADER_LIFE = 5;
 const INITIAL_STATE_SEQ = 0 as StateSeq;
 
 type SetupStatus = Extract<GameState["status"], { type: "setup" }>;
+
+export type PreMulliganSetupGameState = GameState & { status: SetupStatus };
 
 export interface CreateInitialStateInput {
   matchId: MatchId;
@@ -25,6 +26,7 @@ export interface CreateInitialStateInput {
   deckCardIds: Record<PlayerId, CardId[]>;
   donDeckCardIds: Record<PlayerId, CardId[]>;
   leaderCardIds: Record<PlayerId, CardId>;
+  leaderLifeCounts: Record<PlayerId, number>;
   rngSeed: number | bigint | string;
   shuffleDecks?: boolean;
 }
@@ -105,6 +107,7 @@ const createPlayerState = (params: {
   deckCardIds: CardId[];
   donDeckCardIds: CardId[];
   leaderCardId: CardId;
+  leaderLifeCount: number;
   shuffleDecks: boolean;
   rng: RngState;
   turnCount: number;
@@ -144,7 +147,7 @@ const createPlayerState = (params: {
   const lifeSetup = setupLifeFromDeck(
     params.playerId,
     afterHandDeck,
-    DEFAULT_LEADER_LIFE,
+    params.leaderLifeCount,
   );
   const finalDeck = lifeSetup.deck.map((card, index) =>
     withIndexedZone(card, "deck", "deck", index),
@@ -173,13 +176,25 @@ const createPlayerState = (params: {
  */
 export const createInitialState = (
   input: CreateInitialStateInput,
-): GameState => {
+): PreMulliganSetupGameState => {
   const [firstPlayerId, secondPlayerId] = input.playerOrder;
   if (
     input.firstPlayerId !== firstPlayerId &&
     input.firstPlayerId !== secondPlayerId
   ) {
     throw new TypeError("firstPlayerId must exist in playerOrder.");
+  }
+  for (const playerId of input.playerOrder) {
+    const lifeCount = requirePlayerValue(
+      input.leaderLifeCounts,
+      playerId,
+      "leaderLifeCounts",
+    );
+    if (!Number.isInteger(lifeCount) || lifeCount < 0) {
+      throw new TypeError(
+        `leaderLifeCounts for ${playerId} must be a non-negative integer.`,
+      );
+    }
   }
 
   let rng = initializeRng(input.rngSeed);
@@ -200,6 +215,11 @@ export const createInitialState = (
       input.leaderCardIds,
       firstPlayerId,
       "leaderCardIds",
+    ),
+    leaderLifeCount: requirePlayerValue(
+      input.leaderLifeCounts,
+      firstPlayerId,
+      "leaderLifeCounts",
     ),
     shuffleDecks: input.shuffleDecks ?? false,
     rng,
@@ -224,6 +244,11 @@ export const createInitialState = (
       secondPlayerId,
       "leaderCardIds",
     ),
+    leaderLifeCount: requirePlayerValue(
+      input.leaderLifeCounts,
+      secondPlayerId,
+      "leaderLifeCounts",
+    ),
     shuffleDecks: input.shuffleDecks ?? false,
     rng,
     turnCount: input.firstPlayerId === secondPlayerId ? 1 : 0,
@@ -231,7 +256,7 @@ export const createInitialState = (
   rng = secondPlayer.rng;
 
   const status: SetupStatus = { type: "setup" };
-  const state: GameState = {
+  const state: PreMulliganSetupGameState = {
     matchId: input.matchId,
     status,
     version: {
