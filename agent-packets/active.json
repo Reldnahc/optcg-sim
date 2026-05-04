@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-018.md",
+      "storyId": "INF-018",
+      "storyPath": "stories/approved/INF-018-spec-authority-and-milestone-gates.yaml",
+      "storySha256": "89795f0295baa6f8d452981bb68a6ab306eba45387b626526093ce2166b09a48"
+    }
+  ],
   "version": 1
 }

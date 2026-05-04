@@ -872,3 +872,119 @@ The play still obeys rule-processing constraints such as character-area capacity
 Section Ref: `05-effect-dsl-reference.s028`
 
 See [`20-card-implementation-examples.md`](20-card-implementation-examples.md) for full drafts of `OP01-060` and `OP05-091` using these primitives.
+
+## Schema coverage policy
+
+<!-- SECTION_REF: 05-effect-dsl-reference.s029 -->
+
+Section Ref: `05-effect-dsl-reference.s029`
+
+`contracts/effect-dsl.schema.json` is the executable JSON fixture contract.
+TypeScript/spec primitives outside that JSON schema are planned/not
+fixture-authorable until schema validation and fixtures exist.
+
+Schema-supported fixture subset:
+
+- trigger: onPlay
+- trigger: whenAttacking
+- trigger: onOpponentAttack
+- trigger: onBlock
+- trigger: onKO
+- trigger: endOfYourTurn
+- trigger: endOfOpponentTurn
+- trigger: trigger
+- trigger: activateMain
+- trigger: main
+- trigger: counter
+- trigger: permanent
+- trigger: startOfGame
+- trigger: startOfYourTurn
+- trigger: startOfOpponentTurn
+- trigger: startOfMainPhase
+- trigger: endOfBattle
+- trigger: donAttach
+- trigger: custom
+- condition: yourTurn
+- condition: attachedDonCount
+- cost: restDon
+- cost: restSelf
+- cost: sequence
+- target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
+  triggerCard, all, choose
+- duration: thisAction, thisBattle, thisTurn, whileSourceOnField, permanent
+- effect: draw
+- effect: ko
+- effect: modifyPower
+- effect: sequence
+- effect: custom
+- card filters: cardIds, names, nameContains, nameNot, categories, colorsAny,
+  colorsAll, typesAny, typesAll, attributesAny, attributesAll, cost, power,
+  counter, hasKeywords, lacksKeywords, state, owner, controller, excludeSelf,
+  custom
+
+Planned/not fixture-authorable until schema coverage exists:
+
+- condition: donCount
+- condition: opponentTurn
+- condition: lifeCount
+- condition: fieldCount
+- condition: handCount
+- condition: trashCount
+- condition: hasCardInZone
+- condition: attackTarget
+- condition: cardState
+- condition: sourceStillInZone
+- condition: eventPayload
+- condition: and, or, not, custom
+- cost: returnDon
+- cost: trashFromHand
+- cost: trashSelf
+- cost: trashFromField
+- cost: discard
+- cost: chooseOne
+- cost: custom
+- duration: untilEndOfTurn
+- duration: untilStartOfNextTurn
+- duration: whileConditionTrue
+- effect: drawUpTo
+- effect: search
+- effect: lookAtTop
+- effect: revealFromZone
+- effect: revealTop
+- effect: selectFromSet
+- effect: selectCards
+- effect: moveSelected with position
+- effect: putRemaining
+- effect: shuffleDeck
+- effect: bounce
+- effect: trash
+- effect: play
+- effect: playSelected
+- effect: returnUnselectedToDeck
+- effect: trashFromHand
+- effect: setPowerToZero
+- effect: setBasePower
+- effect: modifyCost
+- effect: setBaseCost
+- effect: rest
+- effect: activate
+- effect: giveKeyword
+- effect: removeKeyword
+- effect: addDon
+- effect: attachDon
+- effect: returnDon
+- effect: addLife
+- effect: damage
+- effect: invalidateEffects
+- effect: protectFromKO
+- effect: cannotAttack
+- effect: cannotBlock
+- effect: cannotBeAttacked
+- effect: cannotBeBlockedBy
+- effect: choice
+- effect: conditional
+- effect: forEachMatch
+- effect: repeat
+- effect: replacement
+
+new fixture-authorable primitives must add schema coverage and validation fixtures in the same story that makes the primitive authorable.

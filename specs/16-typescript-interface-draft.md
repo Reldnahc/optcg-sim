@@ -3,8 +3,8 @@ spec_version: "v6"
 spec_package_name: "optcg-md-specs-v6"
 doc_id: "16-typescript-interface-draft"
 doc_title: "Typescript Interface Draft"
-doc_type: "spec-section"
-status: "canonical"
+doc_type: "historical-reference"
+status: "historical"
 machine_readable: true
 ---
 
@@ -20,9 +20,10 @@ Section Ref: `16-typescript-interface-draft.s001`
 
 Section Ref: `16-typescript-interface-draft.s002`
 
-This file is retained as historical/explanatory context. The implementation contract is now [`contracts/canonical-types.ts`](contracts/canonical-types.ts), which resolves the undefined symbols and naming conflicts from this draft and compiles under strict TypeScript. Implementation packages should copy or import from the contract file rather than from snippets in this document.
+This file is retained as historical/explanatory context. It is non-normative.
+The implementation contract is now [`contracts/canonical-types.ts`](contracts/canonical-types.ts), which resolves the undefined symbols and naming conflicts from this draft and compiles under strict TypeScript. Implementation packages must not use this draft over `contracts/canonical-types.ts` or package source types.
 
-This file gives the first implementation pass a concrete shape. Types can evolve, but starting from shared interfaces avoids each package inventing its own model.
+This file shows early design shape only. Types can evolve, but current implementation authority comes from the canonical contract files and package source types, not from snippets in this document.
 
 ## Branded IDs
 
