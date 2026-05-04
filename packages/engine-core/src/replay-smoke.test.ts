@@ -179,6 +179,7 @@ const forbiddenFixtureKeyPatterns = [
   /timestamp/i,
   /receivedAt/i,
   /connectionId/i,
+  /client[-_]?id/i,
   /clientActionId/i,
   /signature/i,
   /transport/i,
@@ -888,14 +889,13 @@ test("ENG-005C replay smoke fixture reproduces paid Character, Stage replacement
 
 test("ENG-005C action-script drift changes final hash from play-card fixture expectation", () => {
   const fixture = loadPlayCardFixture();
-  const scenario = must(fixture.scenarios[0], "paid character scenario");
-  assertPlayCardReplayDrifts(fixture, {
+  const scenario = must(fixture.scenarios[1], "stage replacement scenario");
+  const replayed = replayPlayCardScenario(fixture, {
     ...scenario,
-    actionScript: [
-      { type: "playCardFromHand", playerId: "p1", handIndex: 1 },
-      ...scenario.actionScript.slice(1),
-    ],
+    actionScript: scenario.actionScript.slice(0, 2),
   });
+  assert.notEqual(replayed.finalStateHash, scenario.expected.finalStateHash);
+  assert.notDeepEqual(replayed.checkpoints, scenario.expected.checkpoints);
 });
 
 test("ENG-005C payment-selection drift changes final hash from play-card fixture expectation", () => {
@@ -963,6 +963,7 @@ test("ENG-005C fixture determinism rejects transport/audit keys and allows deter
       {
         ...fixture,
         audit: [{ receivedAt: "2026-05-04T00:00:00.000Z" }],
+        clientId: "client-1",
         signature: "sig",
         scenarios: [
           {
@@ -980,6 +981,7 @@ test("ENG-005C fixture determinism rejects transport/audit keys and allows deter
     ).sort(),
     [
       "audit[0].receivedAt",
+      "clientId",
       "scenarios[0].actionScript[0].clientActionId",
       "signature",
     ],
