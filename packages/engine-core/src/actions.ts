@@ -2,12 +2,14 @@ import type {
   Action,
   CardInstance,
   CardRef,
+  DecisionId,
   EngineError,
   EngineEvent,
   EngineEventId,
   EngineResult,
   GameState,
   LegalAction,
+  PaymentOption,
   PlayerId,
   StateSeq,
 } from "@optcg/types";
@@ -180,6 +182,32 @@ export const getLegalActions = (
 
   const actions: LegalAction[] = [{ type: "concede", playerId }];
   if (state.pendingDecision !== undefined) {
+    const decision = state.pendingDecision;
+    if (
+      decision.type === "payCost" &&
+      decision.playerId === playerId &&
+      parsePlayCardDecisionInstanceId(decision.id) !== null
+    ) {
+      const count = getRestDonCount(decision.paymentOptions);
+      if (count !== null) {
+        const player = state.players[playerId];
+        const activeDonIds = player.costArea
+          .filter((card) => card.state === "active")
+          .map((card) => card.instanceId);
+        const combos = chooseDonCombos(activeDonIds, count);
+        for (const combo of combos) {
+          actions.push({
+            type: "respondToDecision",
+            decisionId: decision.id,
+            response: {
+              type: "payment",
+              optionId: decision.paymentOptions[0]?.id ?? "restDon",
+              selectedDonInstanceIds: combo,
+            },
+          });
+        }
+      }
+    }
     return actions;
   }
   if (state.turn.phase !== "main" || state.turn.turnPlayerId !== playerId) {
@@ -201,6 +229,9 @@ export const getLegalActions = (
         target,
       });
     }
+  }
+  for (const card of getPlayableHandCards(state, playerId)) {
+    actions.push({ type: "playCard", cardInstanceId: card.instanceId });
   }
 
   try {
@@ -446,6 +477,371 @@ const applyAttachDon = (
   return toEngineResult(nextWithRules, events);
 };
 
+const applyPlayCard = (
+  state: GameState,
+  action: Extract<Action, { type: "playCard" }>,
+): EngineResult => {
+  if (!isMatchActive(state)) {
+    return illegalAction(
+      state,
+      "playCard is only legal while match is active.",
+    );
+  }
+  if (state.turn.phase !== "main") {
+    return illegalAction(state, "playCard requires main phase.");
+  }
+  if (state.battle !== undefined) {
+    return illegalAction(state, "playCard is illegal during an active battle.");
+  }
+  if (action.costPayment !== undefined) {
+    return illegalAction(
+      state,
+      "playCard.costPayment is illegal outside respondToDecision.",
+    );
+  }
+
+  const playerId = state.turn.turnPlayerId;
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return illegalAction(state, "Turn player does not exist.");
+  }
+  const handIndex = player.hand.findIndex(
+    (card) => card.instanceId === action.cardInstanceId,
+  );
+  if (handIndex < 0) {
+    return illegalAction(
+      state,
+      "playCard requires a card in turn player's hand.",
+    );
+  }
+  const handCard = player.hand[handIndex];
+  if (handCard === undefined) {
+    return illegalAction(state, "playCard hand card not found.");
+  }
+  const supported = getSupportedPlayMetadata(state, handCard);
+  if (supported === null) {
+    return illegalAction(state, "playCard card is unsupported.");
+  }
+  if (supported.category === "character" && player.characters.length >= 5) {
+    return illegalAction(state, "playCard character area is full.");
+  }
+  if (supported.category === "stage" && player.stage !== undefined) {
+    return illegalAction(state, "playCard stage area is full.");
+  }
+  if (getActiveDonCount(player.costArea) < supported.printedCost) {
+    return illegalAction(state, "playCard requires enough active DON!!.");
+  }
+
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "cardRevealed",
+    { playerId, instanceId: handCard.instanceId, cardId: handCard.cardId },
+    { type: "public" },
+  );
+
+  if (supported.printedCost > 0) {
+    const decisionId = getPlayCardDecisionId(state, handCard);
+    const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
+      id: decisionId,
+      type: "payCost",
+      playerId,
+      prompt: getPlayCardDecisionPrompt(handCard),
+      causedBy: {
+        type: "playerAction",
+        actionId: `action:${String(state.actionSeq + 1)}`,
+      },
+      visibility: { type: "public" },
+      cost: { type: "restDon", count: supported.printedCost },
+      paymentOptions: [
+        { id: "restDon", type: "restDon", count: supported.printedCost },
+      ],
+    };
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      { decisionId, decisionType: "payCost", playerId },
+      { type: "public" },
+    );
+    const nextState: GameState = {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      actionSeq: state.actionSeq + 1,
+      pendingDecision,
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    assertGameStateInvariants(nextState);
+    return toEngineResult(nextState, events);
+  }
+
+  const nextHand = reindexZoneCards(
+    player.hand.filter((_, index) => index !== handIndex),
+    "hand",
+    playerId,
+    "hand",
+  );
+  const playedCardBase = {
+    ...handCard,
+    attachedDon: [] as CardInstance["attachedDon"],
+  };
+  const playedCard: CardInstance =
+    supported.category === "character"
+      ? {
+          ...playedCardBase,
+          turnPlayed: state.turn.globalTurn,
+          zone: {
+            zone: "characterArea",
+            playerId,
+            slot: "character",
+            index: player.characters.length,
+          },
+          state: "active",
+        }
+      : {
+          ...playedCardBase,
+          zone: { zone: "stageArea", playerId, slot: "stage", index: 0 },
+          state: "active",
+        };
+  const nextPlayer =
+    supported.category === "character"
+      ? {
+          ...player,
+          hand: nextHand,
+          characters: [...player.characters, playedCard],
+        }
+      : { ...player, hand: nextHand, stage: playedCard };
+  appendEvent(
+    state,
+    events,
+    "cardMoved",
+    {
+      instanceId: handCard.instanceId,
+      cardId: handCard.cardId,
+      from: handCard.zone,
+      to: playedCard.zone,
+      reason: "playCard",
+    },
+    { type: "public" },
+  );
+  appendEvent(
+    state,
+    events,
+    "cardPlayed",
+    {
+      playerId,
+      instanceId: handCard.instanceId,
+      cardId: handCard.cardId,
+      category: supported.category,
+    },
+    { type: "public" },
+  );
+  const nextStateBase: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    players: { ...state.players, [playerId]: nextPlayer },
+  };
+  const nextState = applyRuleProcessingCheckpoint({
+    state: nextStateBase,
+    events,
+    phase: "main",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
+};
+
+const applyRespondToDecision = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult => {
+  const decision = state.pendingDecision;
+  if (decision === undefined) {
+    return illegalAction(state, "No pending decision.");
+  }
+  if (decision.id !== action.decisionId) {
+    return illegalAction(
+      state,
+      "Decision id does not match current pending decision.",
+    );
+  }
+  if (decision.type !== "payCost") {
+    return illegalAction(state, "Unsupported decision type.");
+  }
+  if (action.response.type !== "payment") {
+    return illegalAction(state, "Unsupported decision response.");
+  }
+  const response = action.response;
+  if (decision.playerId !== state.turn.turnPlayerId) {
+    return illegalAction(state, "Decision player mismatch.");
+  }
+
+  const playCardInstanceId = parsePlayCardDecisionInstanceId(decision.id);
+  if (playCardInstanceId === null) {
+    return illegalAction(state, "Unsupported payCost decision context.");
+  }
+  const player = state.players[decision.playerId];
+  if (player === undefined) {
+    return illegalAction(state, "Decision player does not exist.");
+  }
+  const handIndex = player.hand.findIndex(
+    (card) => card.instanceId === playCardInstanceId,
+  );
+  if (handIndex < 0) {
+    return illegalAction(state, "Decision card reference is stale.");
+  }
+  const handCard = player.hand[handIndex];
+  if (handCard === undefined) {
+    return illegalAction(state, "Decision card not found.");
+  }
+  const supported = getSupportedPlayMetadata(state, handCard);
+  if (supported === null) {
+    return illegalAction(state, "Decision card is unsupported.");
+  }
+  if (response.optionId !== "restDon") {
+    return illegalAction(state, "Payment option mismatch.");
+  }
+  const selected = response.selectedDonInstanceIds;
+  if (selected === undefined || selected.length !== supported.printedCost) {
+    return illegalAction(state, "Payment DON!! selection count mismatch.");
+  }
+  if (new Set(selected).size !== selected.length) {
+    return illegalAction(state, "Payment DON!! selection contains duplicates.");
+  }
+  const costAreaById = new Map(
+    player.costArea.map((card) => [card.instanceId, card]),
+  );
+  for (const donId of selected) {
+    const don = costAreaById.get(donId);
+    if (don === undefined || don.state !== "active") {
+      return illegalAction(state, "Payment DON!! selection is invalid.");
+    }
+  }
+  if (supported.category === "character" && player.characters.length >= 5) {
+    return illegalAction(state, "playCard character area is full.");
+  }
+  if (supported.category === "stage" && player.stage !== undefined) {
+    return illegalAction(state, "playCard stage area is full.");
+  }
+
+  const restedSet = new Set(selected);
+  const nextCostArea = player.costArea.map((card) =>
+    restedSet.has(card.instanceId) ? { ...card, state: "rested" } : card,
+  );
+  const nextHand = reindexZoneCards(
+    player.hand.filter((_, index) => index !== handIndex),
+    "hand",
+    decision.playerId,
+    "hand",
+  );
+  const playedCardBase = {
+    ...handCard,
+    attachedDon: [] as CardInstance["attachedDon"],
+  };
+  const playedCard: CardInstance =
+    supported.category === "character"
+      ? {
+          ...playedCardBase,
+          turnPlayed: state.turn.globalTurn,
+          zone: {
+            zone: "characterArea",
+            playerId: decision.playerId,
+            slot: "character",
+            index: player.characters.length,
+          },
+          state: "active",
+        }
+      : {
+          ...playedCardBase,
+          zone: {
+            zone: "stageArea",
+            playerId: decision.playerId,
+            slot: "stage",
+            index: 0,
+          },
+          state: "active",
+        };
+  const nextPlayer =
+    supported.category === "character"
+      ? {
+          ...player,
+          costArea: nextCostArea,
+          hand: nextHand,
+          characters: [...player.characters, playedCard],
+        }
+      : {
+          ...player,
+          costArea: nextCostArea,
+          hand: nextHand,
+          stage: playedCard,
+        };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "costPaid",
+    {
+      playerId: decision.playerId,
+      optionId: "restDon",
+      selectedDonInstanceIds: selected,
+    },
+    { type: "public" },
+  );
+  appendEvent(
+    state,
+    events,
+    "decisionResolved",
+    { decisionId: decision.id, playerId: decision.playerId },
+    { type: "public" },
+  );
+  appendEvent(
+    state,
+    events,
+    "cardMoved",
+    {
+      instanceId: handCard.instanceId,
+      cardId: handCard.cardId,
+      from: handCard.zone,
+      to: playedCard.zone,
+      reason: "playCard",
+    },
+    { type: "public" },
+  );
+  appendEvent(
+    state,
+    events,
+    "cardPlayed",
+    {
+      playerId: decision.playerId,
+      instanceId: handCard.instanceId,
+      cardId: handCard.cardId,
+      category: supported.category,
+    },
+    { type: "public" },
+  );
+  const nextStateBase: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    players: { ...state.players, [decision.playerId]: nextPlayer },
+  };
+  delete nextStateBase.pendingDecision;
+  const nextState = applyRuleProcessingCheckpoint({
+    state: nextStateBase,
+    events,
+    phase: "main",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
+};
+
 const applyDeclareAttack = (
   state: GameState,
   action: Extract<Action, { type: "declareAttack" }>,
@@ -607,6 +1003,128 @@ const reindexZoneCards = (
     ...card,
     zone: { zone, playerId, slot, index },
   }));
+
+const getSupportedPlayMetadata = (
+  state: GameState,
+  card: CardInstance,
+): { category: "character" | "stage"; printedCost: number } | null => {
+  const resolved = state.cardManifest.cards[card.cardId];
+  if (
+    resolved === undefined ||
+    resolved.support.status !== "vanilla-confirmed"
+  ) {
+    return null;
+  }
+  if (resolved.effectText !== undefined || resolved.triggerText !== undefined) {
+    return null;
+  }
+  if (resolved.category !== "character" && resolved.category !== "stage") {
+    return null;
+  }
+  return {
+    category: resolved.category,
+    printedCost: Math.max(0, resolved.cost ?? 0),
+  };
+};
+
+const getPlayableHandCards = (
+  state: GameState,
+  playerId: PlayerId,
+): CardInstance[] => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return [];
+  }
+  const activeDonCount = getActiveDonCount(player.costArea);
+  return player.hand.filter((card) => {
+    const supported = getSupportedPlayMetadata(state, card);
+    if (supported === null) {
+      return false;
+    }
+    if (activeDonCount < supported.printedCost) {
+      return false;
+    }
+    if (supported.category === "character") {
+      return player.characters.length < 5;
+    }
+    return player.stage === undefined;
+  });
+};
+
+const getActiveDonCount = (costArea: readonly CardInstance[]): number =>
+  costArea.filter((card) => card.state === "active").length;
+
+const toDecisionId = (value: string): DecisionId => value as DecisionId;
+
+const playCardDecisionPrefix = "decision:playCard:cost:";
+
+const getPlayCardDecisionId = (
+  state: GameState,
+  card: CardInstance,
+): DecisionId =>
+  toDecisionId(
+    `${playCardDecisionPrefix}${String(card.instanceId)}:${String(state.seq + 1)}`,
+  );
+
+const getPlayCardDecisionPrompt = (card: CardInstance): string =>
+  `Pay cost to play ${String(card.cardId)}`;
+
+const parsePlayCardDecisionInstanceId = (
+  decisionId: DecisionId,
+): CardInstance["instanceId"] | null => {
+  const value = String(decisionId);
+  if (!value.startsWith(playCardDecisionPrefix)) {
+    return null;
+  }
+  const suffix = value.slice(playCardDecisionPrefix.length);
+  const sequenceSeparator = suffix.lastIndexOf(":");
+  if (sequenceSeparator <= 0) {
+    return null;
+  }
+  return suffix.slice(0, sequenceSeparator) as CardInstance["instanceId"];
+};
+
+const chooseDonCombos = (
+  source: readonly CardInstance["instanceId"][],
+  count: number,
+): CardInstance["instanceId"][][] => {
+  if (count === 0) {
+    return [[]];
+  }
+  if (count > source.length) {
+    return [];
+  }
+  const result: CardInstance["instanceId"][][] = [];
+  const current: CardInstance["instanceId"][] = [];
+  const walk = (start: number): void => {
+    if (current.length === count) {
+      result.push([...current]);
+      return;
+    }
+    for (let i = start; i <= source.length - (count - current.length); i += 1) {
+      const candidate = source[i];
+      if (candidate === undefined) {
+        continue;
+      }
+      current.push(candidate);
+      walk(i + 1);
+      current.pop();
+    }
+  };
+  walk(0);
+  return result;
+};
+
+const getRestDonCount = (options: readonly PaymentOption[]): number | null => {
+  if (options.length !== 1) {
+    return null;
+  }
+  const option = options[0];
+  if (option === undefined || option.type !== "restDon") {
+    return null;
+  }
+  return option.count;
+};
 
 const hasUnsupportedCounterWindow = (
   state: GameState,
@@ -944,11 +1462,17 @@ export const applyAction = (state: GameState, action: Action): EngineResult => {
   if (action.type === "concede") {
     return applyConcede(state, action);
   }
+  if (action.type === "respondToDecision") {
+    return applyRespondToDecision(state, action);
+  }
   if (state.pendingDecision !== undefined) {
     return illegalAction(
       state,
       "Phase actions are illegal while a decision is pending.",
     );
+  }
+  if (action.type === "playCard") {
+    return applyPlayCard(state, action);
   }
   if (action.type === "endMainPhase") {
     return applyEndMainPhase(state);
