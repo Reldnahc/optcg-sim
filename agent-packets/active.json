@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-002D.md",
-      "storyId": "ENG-002D",
-      "storyPath": "stories/approved/ENG-002D-vanilla-phase-progression.yaml",
-      "storySha256": "2289eb6439906d710c1b1e06b8c78e1c675e531d40cdc9de21718b806413c656"
+      "packetPath": "agent-packets/ENG-002E.md",
+      "storyId": "ENG-002E",
+      "storyPath": "stories/approved/ENG-002E-legal-action-and-apply-action-skeleton.yaml",
+      "storySha256": "1efd6956c775547ab6ef709e2a73501a4f0876e697b0ce9701d93daa042a5250"
     }
   ],
   "version": 1
