@@ -3,3 +3,8 @@ export {
   canonicalSerializeStateValue,
   hashCanonicalStateValue,
 } from "./canonical-state.js";
+export {
+  assertGameStateInvariants,
+  collectGameStateInvariantViolations,
+  GameStateInvariantError,
+} from "./invariants.js";
