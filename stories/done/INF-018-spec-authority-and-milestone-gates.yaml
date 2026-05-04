@@ -8,7 +8,7 @@ type: tooling
 area: docs
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Tighten spec authority, Effect DSL schema coverage policy, event sequencing
   requirements, and Milestone 1 exit gates so future agents cannot treat
