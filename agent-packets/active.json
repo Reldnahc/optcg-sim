@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-003C.md",
-      "storyId": "ENG-003C",
-      "storyPath": "stories/approved/ENG-003C-vanilla-damage-life-and-ko.yaml",
-      "storySha256": "e3ed024bdeee7b44a6a5d1620142471fa87bb3eade265be93b5e43add97f9496"
+      "packetPath": "agent-packets/ENG-003D.md",
+      "storyId": "ENG-003D",
+      "storyPath": "stories/approved/ENG-003D-rule-processing-defeat-checks.yaml",
+      "storySha256": "1eedf7b7cbca5c72a67e63ddcadb4eb059f5c0af7353b2d8b93636193c20d025"
     }
   ],
   "version": 1

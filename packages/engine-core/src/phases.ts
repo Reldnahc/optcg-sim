@@ -12,6 +12,7 @@ import type {
 
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { assertGameStateInvariants } from "./invariants.js";
+import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
 const toStateSeq = (value: number): StateSeq => value as StateSeq;
 const toEngineEventId = (value: string): EngineEventId =>
@@ -124,22 +125,6 @@ const isFirstPlayerFirstTurn = (
 ): boolean =>
   state.turn.globalTurn === 1 && state.turn.playerTurnCounts[playerId] === 1;
 
-const appendRuleProcessingChecked = (
-  state: GameState,
-  events: EngineEvent[],
-  phase: GameState["turn"]["phase"],
-): void => {
-  events.push(
-    createEvent(
-      state,
-      events.length + 1,
-      "ruleProcessingChecked",
-      { phase, result: "ok" },
-      { type: "replayOnly" },
-    ),
-  );
-};
-
 const readyPlayerCards = (player: PlayerState): PlayerState => {
   const next: PlayerState = {
     ...player,
@@ -229,10 +214,16 @@ export const advanceRefreshPhase = (state: GameState): EngineResult => {
       playerId: turnPlayerId,
     }),
   );
-  appendRuleProcessingChecked(state, events, "draw");
-  nextState.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  const nextWithRules = applyRuleProcessingCheckpoint({
+    state: nextState,
+    events,
+    phase: "draw",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
+  nextWithRules.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextWithRules);
+  return toEngineResult(nextWithRules, events);
 };
 
 export const advanceDrawPhase = (state: GameState): EngineResult => {
@@ -290,10 +281,16 @@ export const advanceDrawPhase = (state: GameState): EngineResult => {
       playerId: turnPlayerId,
     }),
   );
-  appendRuleProcessingChecked(state, events, "don");
-  nextState.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  const nextWithRules = applyRuleProcessingCheckpoint({
+    state: nextState,
+    events,
+    phase: "don",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
+  nextWithRules.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextWithRules);
+  return toEngineResult(nextWithRules, events);
 };
 
 export const advanceDonPhase = (state: GameState): EngineResult => {
@@ -355,10 +352,16 @@ export const advanceDonPhase = (state: GameState): EngineResult => {
       },
     },
   };
-  appendRuleProcessingChecked(state, events, "don");
-  nextState.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  const nextWithRules = applyRuleProcessingCheckpoint({
+    state: nextState,
+    events,
+    phase: "don",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
+  nextWithRules.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextWithRules);
+  return toEngineResult(nextWithRules, events);
 };
 
 export const enterMainPhase = (state: GameState): EngineResult => {
@@ -382,10 +385,16 @@ export const enterMainPhase = (state: GameState): EngineResult => {
     seq: toStateSeq(state.seq + 1),
     turn: { ...state.turn, phase: "main" },
   };
-  appendRuleProcessingChecked(state, events, "main");
-  nextState.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  const nextWithRules = applyRuleProcessingCheckpoint({
+    state: nextState,
+    events,
+    phase: "main",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
+  nextWithRules.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextWithRules);
+  return toEngineResult(nextWithRules, events);
 };
 
 export const advanceEndPhase = (state: GameState): EngineResult => {
@@ -443,8 +452,14 @@ export const advanceEndPhase = (state: GameState): EngineResult => {
       playerId: nextTurnPlayerId,
     }),
   ];
-  appendRuleProcessingChecked(state, events, "refresh");
-  nextState.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  const nextWithRules = applyRuleProcessingCheckpoint({
+    state: nextState,
+    events,
+    phase: "refresh",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
+  nextWithRules.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextWithRules);
+  return toEngineResult(nextWithRules, events);
 };
