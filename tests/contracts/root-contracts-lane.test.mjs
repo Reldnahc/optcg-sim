@@ -50,7 +50,7 @@ test("contracts lane aggregates canonical contract subcommands", async () => {
   );
 });
 
-test("root typecheck compiles both types and engine-core packages", async () => {
+test("root typecheck compiles workspace package lanes", async () => {
   const packageJson = await readJson("package.json");
   const typecheckLane = packageJson.scripts?.typecheck;
 
@@ -59,6 +59,7 @@ test("root typecheck compiles both types and engine-core packages", async () => 
   const expectedSubcommands = [
     "corepack pnpm exec tsc -p packages/types/tsconfig.json --noEmit",
     "corepack pnpm exec tsc -p packages/engine-core/tsconfig.json --noEmit",
+    "corepack pnpm exec tsc -p packages/cli/tsconfig.json --noEmit",
     "corepack pnpm exec tsc -p tools/tsconfig.json --noEmit",
   ];
 
@@ -68,6 +69,6 @@ test("root typecheck compiles both types and engine-core packages", async () => 
   assert.deepEqual(
     actualSubcommands,
     expectedSubcommands,
-    "typecheck lane must compile types, engine-core, and tools in order",
+    "typecheck lane must compile workspace packages and tools in order",
   );
 });
