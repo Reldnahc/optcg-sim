@@ -1,4 +1,5 @@
 export { advanceRngFloat01, advanceRngUint32, initializeRng } from "./rng.js";
+export { createInitialState } from "./initial-state.js";
 export {
   canonicalSerializeStateValue,
   hashCanonicalStateValue,

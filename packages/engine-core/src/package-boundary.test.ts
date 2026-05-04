@@ -8,6 +8,7 @@ import {
   assertGameStateInvariants,
   canonicalSerializeStateValue,
   collectGameStateInvariantViolations,
+  createInitialState,
   GameStateInvariantError,
   hashCanonicalStateValue,
   initializeRng,
@@ -21,6 +22,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "assertGameStateInvariants",
     "canonicalSerializeStateValue",
     "collectGameStateInvariantViolations",
+    "createInitialState",
     "hashCanonicalStateValue",
     "initializeRng",
   ]);
@@ -39,6 +41,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     engineCorePackage.collectGameStateInvariantViolations,
     collectGameStateInvariantViolations,
   );
+  assert.equal(engineCorePackage.createInitialState, createInitialState);
   assert.equal(
     engineCorePackage.assertGameStateInvariants,
     assertGameStateInvariants,
