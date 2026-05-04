@@ -16,6 +16,7 @@ import { hashCanonicalStateValue } from "./canonical-state.js";
 import { computeView } from "./compute-view.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { advanceEndPhase } from "./phases.js";
+import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
 const toStateSeq = (value: number): StateSeq => value as StateSeq;
 const toEngineEventId = (value: string): EngineEventId =>
@@ -60,22 +61,6 @@ const createEvent = (
   causedBy: { type: "ruleProcess", name: "turnFlow" },
   createdAtStateSeq: toStateSeq(state.seq + 1),
 });
-
-const appendRuleProcessingChecked = (
-  state: GameState,
-  events: EngineEvent[],
-  phase: GameState["turn"]["phase"],
-): void => {
-  events.push(
-    createEvent(
-      state,
-      events.length + 1,
-      "ruleProcessingChecked",
-      { phase, result: "ok" },
-      { type: "replayOnly" },
-    ),
-  );
-};
 
 const appendEvent = (
   state: GameState,
@@ -308,16 +293,30 @@ const applyEndMainPhase = (state: GameState): EngineResult => {
       playerId: state.turn.turnPlayerId,
     }),
   ];
-  appendRuleProcessingChecked(state, transitionEvents, "end");
-
   const preEndState: GameState = {
     ...state,
     actionSeq: state.actionSeq + 1,
     turn: { ...state.turn, phase: "end" },
   };
+  const postRuleState = applyRuleProcessingCheckpoint({
+    state: preEndState,
+    events: transitionEvents,
+    phase: "end",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
+  if (postRuleState.status.type !== "active") {
+    const terminalState: GameState = {
+      ...postRuleState,
+      seq: toStateSeq(state.seq + 1),
+      eventJournal: [...state.eventJournal, ...transitionEvents],
+    };
+    assertGameStateInvariants(terminalState);
+    return toEngineResult(terminalState, transitionEvents);
+  }
   assertGameStateInvariants(preEndState);
 
-  const endResult = advanceEndPhase(preEndState);
+  const endResult = advanceEndPhase(postRuleState);
   if (endResult.errors !== undefined) {
     return endResult;
   }
@@ -435,10 +434,16 @@ const applyAttachDon = (
       { type: "replayOnly" },
     ),
   ];
-  appendRuleProcessingChecked(state, events, "main");
-  nextState.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  const nextWithRules = applyRuleProcessingCheckpoint({
+    state: nextState,
+    events,
+    phase: "main",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
+  nextWithRules.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(nextWithRules);
+  return toEngineResult(nextWithRules, events);
 };
 
 const applyDeclareAttack = (
@@ -550,11 +555,20 @@ const applyDeclareAttack = (
       { type: "public" },
     ),
   ];
-  appendRuleProcessingChecked(state, events, "main");
-  nextState.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextState);
-  const declaredResult = toEngineResult(nextState, events);
+  const declaredState = applyRuleProcessingCheckpoint({
+    state: nextState,
+    events,
+    phase: "main",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
+  declaredState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(declaredState);
+  const declaredResult = toEngineResult(declaredState, events);
   if (declaredResult.errors !== undefined) {
+    return declaredResult;
+  }
+  if (declaredResult.state.status.type !== "active") {
     return declaredResult;
   }
   const resolved = resolveSupportedVanillaBattle(declaredResult.state);
@@ -699,11 +713,35 @@ export const resolveSupportedVanillaBattle = (
     if (target.isLeader) {
       const damaged = nextState.players[target.playerId];
       const topLife = damaged?.life[0];
-      if (damaged === undefined || topLife === undefined) {
-        return illegalAction(
-          state,
-          "Leader damage at 0 life is unsupported before terminal defeat handling.",
+      if (damaged === undefined) {
+        return illegalAction(state, "Battle target player does not exist.");
+      }
+      if (topLife === undefined) {
+        appendEvent(state, events, "damageDealt", {
+          attacker: attacker.card.instanceId,
+          target: target.card.instanceId,
+          amount: 1,
+        });
+        nextState = applyRuleProcessingCheckpoint({
+          state: nextState,
+          events,
+          phase: "main",
+          createEvent: (seqOffset, type, payload, visibility) =>
+            createEvent(state, seqOffset, type, payload, visibility),
+          immediateLosers: [target.playerId],
+        });
+        events.push(
+          createEvent(
+            state,
+            events.length + 1,
+            "effectResolved",
+            { systemStep: "endBattle", battleCleared: true },
+            { type: "replayOnly" },
+          ),
         );
+        nextState.eventJournal = [...state.eventJournal, ...events];
+        assertGameStateInvariants(nextState);
+        return toEngineResult(nextState, events);
       }
       const lifeMeta = nextState.cardManifest.cards[topLife.card.cardId];
       if (
@@ -890,7 +928,13 @@ export const resolveSupportedVanillaBattle = (
       { type: "replayOnly" },
     ),
   );
-  appendRuleProcessingChecked(state, events, "main");
+  nextState = applyRuleProcessingCheckpoint({
+    state: nextState,
+    events,
+    phase: "main",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(state, seqOffset, type, payload, visibility),
+  });
   nextState.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextState);
   return toEngineResult(nextState, events);

@@ -4,14 +4,18 @@ import { test } from "vitest";
 import type {
   CardId,
   CardInstance,
+  EngineEvent,
+  EngineEventId,
   MatchId,
   PlayerId,
   ResolvedCard,
+  StateSeq,
 } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { createInitialState } from "./initial-state.js";
 import { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
+import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 import {
   applyAction,
   getLegalActions,
@@ -21,6 +25,9 @@ import {
 const toMatchId = (value: string): MatchId => value as MatchId;
 const toPlayerId = (value: string): PlayerId => value as PlayerId;
 const toCardId = (value: string): CardId => value as CardId;
+const toEngineEventId = (value: string): EngineEventId =>
+  value as EngineEventId;
+const toStateSeq = (value: number): StateSeq => value as StateSeq;
 
 const p1 = toPlayerId("p1");
 const p2 = toPlayerId("p2");
@@ -673,7 +680,7 @@ test("resolveSupportedVanillaBattle rejects when no active battle", () => {
   assert.equal(JSON.stringify(state), before);
 });
 
-test("leader damage at 0 life fails closed without mutation", () => {
+test("leader damage at 0 life completes the match for the attacker", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -697,10 +704,129 @@ test("leader damage at 0 life fails closed without mutation", () => {
     step: "attack",
     damageCount: 1,
   };
-  const before = JSON.stringify(state);
   const result = resolveSupportedVanillaBattle(state);
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.state.status, { type: "completed", winner: p1 });
+  assert.equal(
+    result.events.some((event) => event.type === "gameEnded"),
+    true,
+  );
+});
+
+test("rule-processing checkpoint decks out defending player after accepted mutation", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  p2State.deck = [];
+
+  const result = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.state.status, { type: "completed", winner: p1 });
+});
+
+test("simultaneous defeat conditions resolve as draw", () => {
+  const state = createActiveState();
+  state.status = { type: "active" };
+  state.turn.phase = "main";
+  must(state.players[p1], "p1").deck = [];
+  must(state.players[p2], "p2").deck = [];
+
+  const result = applyAction(state, { type: "endMainPhase" });
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.state.status, { type: "completed", winner: "draw" });
+});
+
+test("terminal status is not overwritten by later rule-processing checks", () => {
+  const state = setupAttackState();
+  state.status = { type: "completed", winner: p2 };
+  must(state.players[p1], "p1").deck = [];
+  must(state.players[p2], "p2").deck = [];
+  const before = JSON.stringify(state);
+  const events: EngineEvent[] = [];
+
+  const result = applyRuleProcessingCheckpoint({
+    state,
+    events,
+    phase: "main",
+    createEvent: (
+      seqOffset,
+      type,
+      payload,
+      visibility = { type: "public" },
+    ) => ({
+      id: toEngineEventId(
+        `event:${String(state.seq)}:${String(seqOffset)}:${type}`,
+      ),
+      seq: state.eventJournal.length + seqOffset,
+      type,
+      payload,
+      visibility,
+      causedBy: { type: "ruleProcess", name: "test" },
+      createdAtStateSeq: toStateSeq(state.seq + 1),
+    }),
+  });
+  assert.equal(JSON.stringify(result), before);
+  assert.deepEqual(result.status, { type: "completed", winner: p2 });
+  assert.equal(
+    events.some((event) => event.type === "gameEnded"),
+    false,
+  );
+});
+
+test("rejected illegal actions do not run terminal rule processing", () => {
+  const state = createActiveState();
+  state.turn.phase = "draw";
+  must(state.players[p1], "p1").deck = [];
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, { type: "endMainPhase" });
   assert.equal(result.errors?.[0]?.type, "illegalAction");
-  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(
+    result.events.some((event) => event.type === "gameEnded"),
+    false,
+  );
+});
+
+test("terminal rule-processing events and state hash are deterministic", () => {
+  const createDeckOutState = () => {
+    const state = setupAttackState();
+    must(state.players[p2], "p2").deck = [];
+    return state;
+  };
+
+  const first = applyAction(createDeckOutState(), { type: "endMainPhase" });
+  const second = applyAction(createDeckOutState(), { type: "endMainPhase" });
+
+  assert.equal(first.errors, undefined);
+  assert.equal(second.errors, undefined);
+  assert.deepEqual(first.events, second.events);
+  assert.deepEqual(
+    first.state.eventJournal.slice(-first.events.length),
+    first.events,
+  );
+  assert.deepEqual(
+    first.events.map((event) => event.seq),
+    [...new Set(first.events.map((event) => event.seq))],
+  );
+  assert.deepEqual(
+    first.events.map((event) => event.id),
+    [...new Set(first.events.map((event) => event.id))],
+  );
+  assert.equal(first.stateHash, second.stateHash);
 });
 
 test("life orientation uses player.life[0] as next damage card", () => {
