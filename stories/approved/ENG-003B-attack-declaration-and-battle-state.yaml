@@ -1,0 +1,89 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-003B
+epic_id: M1-001
+title: Add attack declaration and battle state
+type: implementation
+area: engine
+primary_concern: rules
+priority: critical
+status: approved
+summary: >
+  Add legal `declareAttack` generation and application for vanilla Main Phase
+  attacks, resting the attacker and creating the authoritative battle sub-state.
+story_boundary: >
+  Own only attack declaration legality, attacker resting, attackDeclared event
+  emission, and battle state creation. Do not resolve block, counter, damage,
+  K.O., life movement, defeat checks, triggers, replacement effects, or card
+  effects.
+allowed_touch_points:
+  - packages/engine-core/**
+  - tests/engine/**
+spec_refs:
+  - 02-engine-mechanics.s014 (Main Phase)
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s025 (Keyword behavior)
+  - 02-engine-mechanics.s037 (First-turn restrictions)
+  - 03-game-state-events-decisions.s003 (Base state vs. computed view)
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s016 (Action contract)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s021 (Invariant hooks)
+  - 03-game-state-events-decisions.s022 (Internal state sequencing)
+  - 03-game-state-events-decisions.s023 (Error categories)
+  - 03-game-state-events-decisions.s018 (Canonical event visibility)
+  - 16-typescript-interface-draft.s006 (Turn and battle state)
+  - 18-acceptance-tests.s003 (Milestone 1 - terminal engine)
+scope:
+  - include `declareAttack` actions in `getLegalActions` for legal attacker and target pairs from `computeView`
+  - depend on `computeView` exposing only vanilla-safe attack pairs and reject pairs whose current manifest-derived metadata would require unsupported attack-timing, trigger, replacement, protection, Banish, Double Attack, or card-effect handling
+  - accept `declareAttack` in `applyAction` only for the turn player's active Main Phase, outside pending decisions, and outside an existing battle
+  - validate the submitted attacker and target against the current computed legal attacker/target pairs
+  - rest the attacking Leader or Character as the atomic attack declaration mutation
+  - 'create `state.battle` with attacker, originalTarget, currentTarget, `step: "attack"`, and vanilla `damageCount: 1`'
+  - emit a public `attackDeclared` event and update the event journal deterministically
+  - reject wrong-phase, attacker not controlled by the turn player, already-rested attacker, first-turn attack, played-this-turn non-Rush Character, illegal target, stale card-ref, and active-character target attacks without mutating input state
+  - run invariants and return a stable `EngineResult.stateHash` after accepted attack declarations
+non_scope:
+  - automatic blocker or counter windows
+  - damage-step resolution
+  - K.O., life movement, trash movement, or attached-DON return when a Character leaves play
+  - defeat checks caused by damage or deck-out
+  - play-card behavior
+  - hidden-information legal-action projection for clients
+dependencies:
+  - ENG-003A
+acceptance_criteria:
+  - legal actions during Main Phase include `declareAttack` for legal attacker/target pairs
+  - non-turn players, pending-decision states, existing-battle states, and non-Main phases do not receive attack declarations except concession remains available
+  - unsupported non-vanilla attack metadata is omitted from legal attack actions and rejected by `applyAction` revalidation without mutating input state
+  - accepted attack declarations rest the attacker and create a battle sub-state
+  - accepted attack declarations emit `attackDeclared`, append the journal, increment accepted-action state sequence once, and produce a new state hash
+  - illegal attack declarations return `illegalAction` errors without mutating the input state
+required_tests:
+  - unit test for legal-action generation of Leader-to-Leader attack
+  - unit test for legal-action generation of Character-to-rested-Character attack
+  - unit test proving active opponent Characters are not legal attack targets
+  - unit test for accepted attack resting the attacker and creating battle state
+  - unit test proving accepted attack declaration does not move Life, K.O. Characters, move cards to trash, or emit damage/K.O. events
+  - unit test rejecting legal-action generation and apply-action declaration while an existing battle sub-state is active
+  - unit test for wrong-phase attack declaration rejection
+  - unit test proving `getLegalActions` does not return attack declarations for the non-turn player
+  - unit test proving `applyAction` rejects an attacker not controlled by `state.turn.turnPlayerId`
+  - unit test for already-rested attacker rejection
+  - unit test for first-turn attack rejection
+  - unit test for played-this-turn non-Rush Character attack rejection
+  - unit test proving unsupported attack-timing effects or Double Attack metadata are omitted or rejected without mutating input state
+  - unit test for stale or forged card-ref attack declaration rejection
+  - unit test proving illegal declarations do not mutate input state
+repo_rules:
+  - do not activate, packetize, or implement this story until ENG-003A is done
+  - keep attack legality driven by `computeView`, not duplicated ad hoc target checks
+  - do not implement damage, K.O., blockers, counters, or triggers in this story
+  - engine behavior must remain deterministic and pure
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

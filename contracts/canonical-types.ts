@@ -767,6 +767,7 @@ export interface GameState {
   seq: StateSeq;
   actionSeq: number;
   turn: TurnState;
+  cardManifest: MatchCardManifest;
   players: Record<PlayerId, PlayerState>;
   timers: TimerState;
   battle?: BattleState;

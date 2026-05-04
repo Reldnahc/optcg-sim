@@ -56,6 +56,16 @@ const createInput = () => ({
     [p1]: ["p1-don-1", "p1-don-2", "p1-don-3"].map(toCardId),
     [p2]: ["p2-don-1", "p2-don-2", "p2-don-3"].map(toCardId),
   },
+  cardManifest: {
+    manifestHash: "manifest-phases-1",
+    source: "manual-test" as const,
+    cardDataVersion: "fixture",
+    effectDefinitionsVersion: "fixture",
+    customHandlerVersion: "fixture",
+    banlistVersion: "fixture",
+    createdAt: "2026-05-04T00:00:00.000Z",
+    cards: {},
+  },
   shuffleDecks: false,
 });
 

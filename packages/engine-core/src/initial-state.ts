@@ -2,6 +2,7 @@ import type {
   CardId,
   CardInstance,
   GameState,
+  MatchCardManifest,
   MatchId,
   PlayerId,
   PlayerState,
@@ -19,6 +20,10 @@ type SetupStatus = Extract<GameState["status"], { type: "setup" }>;
 
 export type PreMulliganSetupGameState = GameState & { status: SetupStatus };
 
+const cloneMatchCardManifest = (
+  manifest: MatchCardManifest,
+): MatchCardManifest => structuredClone(manifest);
+
 export interface CreateInitialStateInput {
   matchId: MatchId;
   playerOrder: readonly [PlayerId, PlayerId];
@@ -27,6 +32,7 @@ export interface CreateInitialStateInput {
   donDeckCardIds: Record<PlayerId, CardId[]>;
   leaderCardIds: Record<PlayerId, CardId>;
   leaderLifeCounts: Record<PlayerId, number>;
+  cardManifest: MatchCardManifest;
   rngSeed: number | bigint | string;
   shuffleDecks?: boolean;
 }
@@ -177,6 +183,7 @@ const createPlayerState = (params: {
 export const createInitialState = (
   input: CreateInitialStateInput,
 ): PreMulliganSetupGameState => {
+  const cardManifestSnapshot = cloneMatchCardManifest(input.cardManifest);
   const [firstPlayerId, secondPlayerId] = input.playerOrder;
   if (firstPlayerId === secondPlayerId) {
     throw new TypeError("playerOrder must contain two distinct players.");
@@ -277,10 +284,10 @@ export const createInitialState = (
       specVersion: "v6",
       rulesVersion: "r1",
       engineVersion: "engine-core",
-      cardDataVersion: "fixture",
-      effectDefinitionsVersion: "fixture",
-      customHandlerVersion: "fixture",
-      banlistVersion: "fixture",
+      cardDataVersion: cardManifestSnapshot.cardDataVersion,
+      effectDefinitionsVersion: cardManifestSnapshot.effectDefinitionsVersion,
+      customHandlerVersion: cardManifestSnapshot.customHandlerVersion,
+      banlistVersion: cardManifestSnapshot.banlistVersion,
     },
     seq: INITIAL_STATE_SEQ,
     actionSeq: 0,
@@ -293,6 +300,7 @@ export const createInitialState = (
       turnPlayerId: input.firstPlayerId,
       phase: "refresh",
     },
+    cardManifest: cardManifestSnapshot,
     players: {
       [firstPlayerId]: firstPlayer.playerState,
       [secondPlayerId]: secondPlayer.playerState,
