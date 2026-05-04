@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-003D.md",
-      "storyId": "ENG-003D",
-      "storyPath": "stories/approved/ENG-003D-rule-processing-defeat-checks.yaml",
-      "storySha256": "1eedf7b7cbca5c72a67e63ddcadb4eb059f5c0af7353b2d8b93636193c20d025"
+      "packetPath": "agent-packets/ENG-003E.md",
+      "storyId": "ENG-003E",
+      "storyPath": "stories/approved/ENG-003E-vanilla-combat-replay-smoke.yaml",
+      "storySha256": "61caa97355c8c043b532d89a8ffc21627ed638d21b198625df49c8d67d0dcd35"
     }
   ],
   "version": 1
