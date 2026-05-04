@@ -92,8 +92,21 @@ export default [
       "no-restricted-imports": [
         "error",
         {
-          paths: ["react", "redis", "pg"],
-          patterns: ["**/client/**", "**/server/**", "**/view-engine/**"],
+          paths: [
+            "react",
+            "redis",
+            "pg",
+            "ws",
+            "axios",
+            "undici",
+            "node-fetch",
+          ],
+          patterns: [
+            "**/browser/**",
+            "**/client/**",
+            "**/server/**",
+            "**/view-engine/**",
+          ],
         },
       ],
     },

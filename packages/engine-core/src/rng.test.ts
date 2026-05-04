@@ -1,0 +1,103 @@
+import assert from "node:assert/strict";
+import { test } from "vitest";
+
+import { advanceRngFloat01, advanceRngUint32, initializeRng } from "./rng.js";
+
+test("same seed produces the same uint32 sequence", () => {
+  let a = initializeRng(12345);
+  let b = initializeRng(12345);
+
+  const seqA: number[] = [];
+  const seqB: number[] = [];
+
+  for (let i = 0; i < 8; i += 1) {
+    const drawA = advanceRngUint32(a);
+    const drawB = advanceRngUint32(b);
+    seqA.push(drawA.value);
+    seqB.push(drawB.value);
+    a = drawA.nextRng;
+    b = drawB.nextRng;
+  }
+
+  assert.deepEqual(seqA, seqB);
+});
+
+test("different seeds produce different early sequence", () => {
+  let a = initializeRng(1);
+  let b = initializeRng(2);
+
+  const seqA: number[] = [];
+  const seqB: number[] = [];
+
+  for (let i = 0; i < 4; i += 1) {
+    const drawA = advanceRngUint32(a);
+    const drawB = advanceRngUint32(b);
+    seqA.push(drawA.value);
+    seqB.push(drawB.value);
+    a = drawA.nextRng;
+    b = drawB.nextRng;
+  }
+
+  assert.notDeepEqual(seqA, seqB);
+});
+
+test("helpers do not mutate input RNG state", () => {
+  const initial = initializeRng(99);
+  const snapshot = structuredClone(initial);
+
+  void advanceRngUint32(initial);
+  void advanceRngFloat01(initial);
+
+  assert.deepEqual(initial, snapshot);
+});
+
+test("initialized and advanced state are JSON-serializable", () => {
+  const initial = initializeRng("seed-value");
+  const draw = advanceRngUint32(initial);
+
+  const initialJson = JSON.stringify(initial);
+  const advancedJson = JSON.stringify(draw.nextRng);
+
+  assert.equal(typeof initialJson, "string");
+  assert.equal(typeof advancedJson, "string");
+  assert.deepEqual(JSON.parse(initialJson), initial);
+  assert.deepEqual(JSON.parse(advancedJson), draw.nextRng);
+});
+
+test("callCount starts at 0 and increments once per advance", () => {
+  const initial = initializeRng(42);
+  assert.equal(initial.callCount, 0);
+
+  const draw1 = advanceRngUint32(initial);
+  assert.equal(draw1.nextRng.callCount, 1);
+
+  const draw2 = advanceRngFloat01(draw1.nextRng);
+  assert.equal(draw2.nextRng.callCount, 2);
+});
+
+test("fails closed for RNG algorithms without cited ENG-001B behavior", () => {
+  assert.throws(
+    () => initializeRng(42, "xoshiro256ss"),
+    /Unsupported RNG algorithm/,
+  );
+  assert.throws(() => initializeRng(42, "test-fixed"), /Unsupported RNG/);
+
+  assert.throws(
+    () =>
+      advanceRngUint32({
+        algorithm: "xoshiro256ss",
+        internalState: "1:2:3:4",
+        callCount: 0,
+      }),
+    /Unsupported RNG algorithm/,
+  );
+  assert.throws(
+    () =>
+      advanceRngUint32({
+        algorithm: "test-fixed",
+        internalState: "0",
+        callCount: 0,
+      }),
+    /Unsupported RNG algorithm/,
+  );
+});

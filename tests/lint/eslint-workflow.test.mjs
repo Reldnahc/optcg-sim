@@ -9,6 +9,7 @@ const repoRoot = path.resolve(
   "..",
   "..",
 );
+const ESLINT_FIXTURE_TIMEOUT_MS = 15_000;
 
 async function readJson(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
@@ -79,15 +80,19 @@ test("eslint ignores rule-testing fixtures during repo-wide linting", async () =
   );
 });
 
-test("eslint rejects explicit any and non-null assertions", async () => {
-  const results = await lintFixture("tests/fixtures/eslint/unsafe-types.ts");
-  const messages = results.flatMap((result) =>
-    result.messages.map((message) => message.ruleId),
-  );
+test(
+  "eslint rejects explicit any and non-null assertions",
+  async () => {
+    const results = await lintFixture("tests/fixtures/eslint/unsafe-types.ts");
+    const messages = results.flatMap((result) =>
+      result.messages.map((message) => message.ruleId),
+    );
 
-  assert.ok(messages.includes("@typescript-eslint/no-explicit-any"));
-  assert.ok(messages.includes("@typescript-eslint/no-non-null-assertion"));
-});
+    assert.ok(messages.includes("@typescript-eslint/no-explicit-any"));
+    assert.ok(messages.includes("@typescript-eslint/no-non-null-assertion"));
+  },
+  ESLINT_FIXTURE_TIMEOUT_MS,
+);
 
 test("eslint rejects ts-ignore and ts-nocheck", async () => {
   const results = await lintFixture(
@@ -138,9 +143,36 @@ test("eslint rejects forbidden engine-core imports", async () => {
   const results = await lintFixture(
     "tests/fixtures/eslint/packages/engine-core/src/forbidden-import.ts",
   );
-  const messages = results.flatMap((result) =>
-    result.messages.map((message) => message.ruleId),
+  const restrictedImportMessages = results.flatMap((result) =>
+    result.messages.filter(
+      (message) => message.ruleId === "no-restricted-imports",
+    ),
   );
+  const restrictedImportText = restrictedImportMessages
+    .map((message) => message.message)
+    .join("\n");
+  const requiredForbiddenSources = [
+    "react",
+    "redis",
+    "pg",
+    "ws",
+    "axios",
+    "undici",
+    "node-fetch",
+    "../../../browser/src/example",
+    "../../../client/src/example",
+    "../../../server/src/example",
+  ];
 
-  assert.ok(messages.includes("no-restricted-imports"));
+  assert.equal(
+    restrictedImportMessages.length,
+    requiredForbiddenSources.length,
+    "engine-core boundary fixture should trigger one no-restricted-imports error per forbidden import class",
+  );
+  for (const source of requiredForbiddenSources) {
+    assert.ok(
+      restrictedImportText.includes(source),
+      `engine-core boundary fixture should reject ${source}`,
+    );
+  }
 });

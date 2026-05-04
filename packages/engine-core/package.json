@@ -1,0 +1,21 @@
+{
+  "name": "@optcg/engine-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
+    "compile": "corepack pnpm run typecheck",
+    "test": "corepack pnpm exec vitest run --root ../.. packages/engine-core/src"
+  },
+  "dependencies": {
+    "@optcg/types": "workspace:*"
+  }
+}

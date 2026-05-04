@@ -49,3 +49,25 @@ test("contracts lane aggregates canonical contract subcommands", async () => {
     "contracts lane must not bypass failures with fallback clauses",
   );
 });
+
+test("root typecheck compiles both types and engine-core packages", async () => {
+  const packageJson = await readJson("package.json");
+  const typecheckLane = packageJson.scripts?.typecheck;
+
+  assert.equal(typeof typecheckLane, "string", "missing root typecheck lane");
+
+  const expectedSubcommands = [
+    "corepack pnpm exec tsc -p packages/types/tsconfig.json --noEmit",
+    "corepack pnpm exec tsc -p packages/engine-core/tsconfig.json --noEmit",
+    "corepack pnpm exec tsc -p tools/tsconfig.json --noEmit",
+  ];
+
+  const actualSubcommands = typecheckLane
+    .split("&&")
+    .map((part) => part.trim());
+  assert.deepEqual(
+    actualSubcommands,
+    expectedSubcommands,
+    "typecheck lane must compile types, engine-core, and tools in order",
+  );
+});
