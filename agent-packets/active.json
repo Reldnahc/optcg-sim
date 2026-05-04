@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-002A.md",
+      "storyId": "ENG-002A",
+      "storyPath": "stories/approved/ENG-002A-engine-invariant-utilities.yaml",
+      "storySha256": "aeb268a528ff16f6ae592be6f6d2ced64d4622d589d383189d48964e0af7bbe1"
+    }
+  ],
   "version": 1
 }
