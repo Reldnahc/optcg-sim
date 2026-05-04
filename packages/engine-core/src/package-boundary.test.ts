@@ -5,16 +5,22 @@ import * as engineCorePackage from "@optcg/engine-core";
 import {
   advanceRngFloat01,
   advanceRngUint32,
+  assertGameStateInvariants,
   canonicalSerializeStateValue,
+  collectGameStateInvariantViolations,
+  GameStateInvariantError,
   hashCanonicalStateValue,
   initializeRng,
 } from "./index.js";
 
 test("package runtime boundary exposes engine-core helpers", () => {
   assert.deepEqual(Object.keys(engineCorePackage).sort(), [
+    "GameStateInvariantError",
     "advanceRngFloat01",
     "advanceRngUint32",
+    "assertGameStateInvariants",
     "canonicalSerializeStateValue",
+    "collectGameStateInvariantViolations",
     "hashCanonicalStateValue",
     "initializeRng",
   ]);
@@ -28,5 +34,17 @@ test("package runtime boundary exposes engine-core helpers", () => {
   assert.equal(
     engineCorePackage.hashCanonicalStateValue,
     hashCanonicalStateValue,
+  );
+  assert.equal(
+    engineCorePackage.collectGameStateInvariantViolations,
+    collectGameStateInvariantViolations,
+  );
+  assert.equal(
+    engineCorePackage.assertGameStateInvariants,
+    assertGameStateInvariants,
+  );
+  assert.equal(
+    engineCorePackage.GameStateInvariantError,
+    GameStateInvariantError,
   );
 });
