@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-004A.md",
+      "storyId": "ENG-004A",
+      "storyPath": "stories/approved/ENG-004A-fix-phase-event-sequence-allocation.yaml",
+      "storySha256": "75b5ba2906e4401df298f501c9416951bdc14e7fac5f9df0272b4623eadfb9c0"
+    }
+  ],
   "version": 1
 }

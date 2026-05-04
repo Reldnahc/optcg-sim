@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { CardId, MatchId, PlayerId } from "@optcg/types";
+import type {
+  CardId,
+  EngineEvent,
+  EngineResult,
+  MatchId,
+  PlayerId,
+} from "@optcg/types";
 
 import { createInitialState } from "./initial-state.js";
 import { assertGameStateInvariants } from "./invariants.js";
@@ -30,6 +36,57 @@ const eventPayload = (event: {
   payload: unknown;
 }): { phase?: string; playerId?: PlayerId } =>
   event.payload as { phase?: string; playerId?: PlayerId };
+
+const assertStrictlyIncreasingEventSeq = (
+  events: readonly EngineEvent[],
+  label: string,
+): void => {
+  let previous: EngineEvent | undefined;
+  for (const event of events) {
+    if (previous !== undefined) {
+      assert.ok(
+        event.seq > previous.seq,
+        `${label} seq ${String(event.seq)} must be greater than ${String(
+          previous.seq,
+        )}`,
+      );
+    }
+    previous = event;
+  }
+};
+
+const assertUniqueEventIds = (
+  events: readonly EngineEvent[],
+  label: string,
+): void => {
+  assert.equal(
+    new Set(events.map((event) => event.id)).size,
+    events.length,
+    `${label} event ids must be unique`,
+  );
+};
+
+const assertTransitionEventSequencing = (
+  result: EngineResult,
+  previousJournalLength: number,
+  label: string,
+): void => {
+  const appendedJournalEvents = result.state.eventJournal.slice(
+    previousJournalLength,
+  );
+
+  assert.deepEqual(
+    appendedJournalEvents.map((event) => event.id),
+    result.events.map((event) => event.id),
+    `${label} events should match appended journal entries`,
+  );
+  assertStrictlyIncreasingEventSeq(result.events, `${label} result.events`);
+  assertUniqueEventIds(result.events, `${label} result.events`);
+  assertStrictlyIncreasingEventSeq(
+    appendedJournalEvents,
+    `${label} eventJournal`,
+  );
+};
 
 const createInput = () => ({
   matchId: toMatchId("match-phase-1"),
@@ -186,6 +243,31 @@ test("refresh phase does not emit a duplicate start after end-phase handoff", ()
   );
 
   assert.equal(refreshStarts.length, 1);
+});
+
+test("refresh-to-draw transition emits unique ordered events", () => {
+  const state = createActiveState();
+  const result = advanceRefreshPhase(state);
+
+  assert.equal(result.state.turn.phase, "draw");
+  assertTransitionEventSequencing(
+    result,
+    state.eventJournal.length,
+    "refresh-to-draw transition",
+  );
+});
+
+test("draw-to-don transition emits unique ordered events", () => {
+  const state = createActiveState();
+  const refresh = advanceRefreshPhase(state);
+  const result = advanceDrawPhase(refresh.state);
+
+  assert.equal(result.state.turn.phase, "don");
+  assertTransitionEventSequencing(
+    result,
+    refresh.state.eventJournal.length,
+    "draw-to-don transition",
+  );
 });
 
 test("rule-processing event is created at the accepted transition sequence", () => {
