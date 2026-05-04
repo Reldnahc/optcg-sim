@@ -189,6 +189,31 @@ test("setup snapshots the provided deterministic card manifest", () => {
   assert.deepEqual(state.cardManifest, input.cardManifest);
 });
 
+test("setup stores an immutable snapshot of the provided manifest data", () => {
+  const input = createInput();
+  const state = createInitialState(input);
+
+  input.cardManifest.manifestHash = "mutated-manifest-hash";
+  input.cardManifest.cardDataVersion = "mutated-card-data-version";
+
+  assert.equal(state.cardManifest.manifestHash, "manifest-initial-state-1");
+  assert.equal(state.cardManifest.cardDataVersion, "fixture");
+});
+
+test("setup version mirrors manifest versions for deterministic match snapshots", () => {
+  const input = createInput();
+  input.cardManifest.cardDataVersion = "cards-v9";
+  input.cardManifest.effectDefinitionsVersion = "effects-v9";
+  input.cardManifest.customHandlerVersion = "handlers-v9";
+  input.cardManifest.banlistVersion = "banlist-v9";
+
+  const state = createInitialState(input);
+  assert.equal(state.version.cardDataVersion, "cards-v9");
+  assert.equal(state.version.effectDefinitionsVersion, "effects-v9");
+  assert.equal(state.version.customHandlerVersion, "handlers-v9");
+  assert.equal(state.version.banlistVersion, "banlist-v9");
+});
+
 test("returned setup output is type-level documented as pre-mulligan setup status", () => {
   const state: PreMulliganSetupGameState = createInitialState(createInput());
   assert.equal(state.status.type, "setup");
