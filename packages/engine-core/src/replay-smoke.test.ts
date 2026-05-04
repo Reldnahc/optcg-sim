@@ -123,6 +123,7 @@ const fixturePathV1 = path.resolve(
 const forbiddenFixtureKeyPatterns = [
   /timestamp/i,
   /receivedAt/i,
+  /connectionId/i,
   /clientActionId/i,
   /signature/i,
   /transport/i,
@@ -504,6 +505,7 @@ test("ENG-002F fixture rejects timestamp-like and transport-only metadata keys",
       {
         ...fixture,
         receivedAt: "2026-05-04T00:00:00.000Z",
+        connectionId: "conn-1",
         actionScript: [
           {
             ...fixture.actionScript[0],
@@ -513,7 +515,7 @@ test("ENG-002F fixture rejects timestamp-like and transport-only metadata keys",
       },
       "",
     ).sort(),
-    ["actionScript[0].clientActionId", "receivedAt"],
+    ["actionScript[0].clientActionId", "connectionId", "receivedAt"],
   );
 });
 
@@ -566,6 +568,7 @@ test("fixture determinism rejects transport/audit keys and allows deterministic 
     collectForbiddenKeys(
       {
         ...fixture,
+        connectionId: "conn-1",
         receivedAt: "2026-05-04T00:00:00.000Z",
         scenarios: [
           { ...fixture.scenarios[0], clientActionId: "client-action-1" },
@@ -573,6 +576,6 @@ test("fixture determinism rejects transport/audit keys and allows deterministic 
       },
       "",
     ).sort(),
-    ["receivedAt", "scenarios[0].clientActionId"],
+    ["connectionId", "receivedAt", "scenarios[0].clientActionId"],
   );
 });
