@@ -1,0 +1,77 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-005C
+epic_id: M1-001
+title: Expand replay smoke for vanilla Character and Stage play
+type: verification
+area: replay
+primary_concern: verification
+priority: medium
+status: approved
+summary: >
+  Add deterministic replay smoke coverage for the ENG-005 vanilla Character and
+  Stage play-card path, including paid play, Stage replacement, and Character
+  overflow response handling.
+story_boundary: >
+  Own only package-local replay smoke fixture and test coverage for ENG-005
+  vanilla play-card behavior. Do not define production replay schema, CLI
+  commands, persisted replay storage, rollback, or client replay views.
+allowed_touch_points:
+  - packages/engine-core/**
+  - fixtures/replays/**
+  - tests/engine/**
+spec_refs:
+  - 02-engine-mechanics.s016 (Playing a card)
+  - 02-engine-mechanics.s036 (DON!! card mechanics)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s017 (Canonical decision routing)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s021 (Invariant hooks)
+  - 08-replay-rollback-recovery.s004 (Replay log)
+  - 08-replay-rollback-recovery.s006 (Checkpoints)
+  - 09-card-data-and-support-policy.s013 (Match-time card manifest)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 11-testing-quality.s010 (Golden replay tests)
+  - 11-testing-quality.s012 (Replay determinism)
+  - 18-acceptance-tests.s003 (Milestone 1 - terminal engine)
+  - 22-v6-implementation-tightening.s012 (Replay contract)
+scope:
+  - extend or add a checked-in local replay smoke fixture using deterministic setup input, manifest data, supported ENG-005 actions, and any deterministic internal system entries emitted by canonical engine processing
+  - replay at least one nonzero-cost vanilla Character play from hand and assert checkpoint or final hashes
+  - replay at least one vanilla Stage play followed by Stage replacement and assert the old Stage reaches trash
+  - replay at least one full Character Area overflow that includes the pending decision and matching `respondToDecision` response
+  - assert that the replayed final state contains paid DON!! rested, the expected Character and Stage zones, and no duplicate card locations
+  - keep fixture entries deterministic and exclude transport timestamps, audit timestamps, signatures, client IDs, and nondeterministic metadata
+  - document in fixture naming or versioning that this remains package-local smoke coverage, not the production replay schema
+non_scope:
+  - production replay artifact schema
+  - persisted replay storage
+  - rollback or recovery behavior
+  - CLI replay command
+  - post-game full-information replay views
+  - Event cards, On Play effects, replacement effects, or full vanilla-game completion coverage
+dependencies:
+  - ENG-005A
+  - ENG-005B
+acceptance_criteria:
+  - replaying the play-card fixture from the same manifest, initial snapshot or RNG seed plus explicit initial deck orders, action script, and decision responses produces the same checkpoint hashes
+  - changing any one of the play action, selected payment, overflow response, or manifest stat changes the final hash or fails a checkpoint assertion
+  - fixture entries contain deterministic engine inputs only
+  - the replay smoke test covers paid Character play, Stage replacement, and Character overflow decision response
+required_tests:
+  - golden replay smoke test for paid vanilla Character play from hand
+  - golden replay smoke test for vanilla Stage replacement
+  - golden replay smoke test for Character overflow with `respondToDecision`
+  - negative test proving action-script drift changes the final hash or fails a checkpoint assertion
+  - negative test proving payment-selection drift changes the final hash or fails a checkpoint assertion
+  - negative test proving overflow-response drift changes the final hash or fails a checkpoint assertion
+  - negative test proving manifest-stat drift changes the final hash or fails a checkpoint assertion
+  - fixture determinism assertion rejecting transport/audit timestamps and transport-only fields while allowing deterministic fixed manifest `createdAt`
+repo_rules:
+  - do not activate, packetize, or implement this story until ENG-005A and ENG-005B are done
+  - replay smoke must not become the production replay artifact schema
+  - deterministic replay entries must exclude transport timestamps, signatures, and client IDs
+  - no hidden-information view policy may be added in this story
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate
