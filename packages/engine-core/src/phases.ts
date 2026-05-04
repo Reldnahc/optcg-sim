@@ -70,6 +70,32 @@ const createEvent = (
   createdAtStateSeq: toStateSeq(state.seq + 1),
 });
 
+const payloadRecord = (
+  payload: unknown,
+): Record<string, unknown> | undefined =>
+  typeof payload === "object" && payload !== null
+    ? (payload as Record<string, unknown>)
+    : undefined;
+
+const hasStartedCurrentPhase = (
+  state: GameState,
+  phase: GameState["turn"]["phase"],
+  playerId: PlayerId,
+): boolean => {
+  for (const event of [...state.eventJournal].reverse()) {
+    if (event.type !== "phaseStarted" && event.type !== "phaseEnded") {
+      continue;
+    }
+    const payload = payloadRecord(event.payload);
+    return (
+      event.type === "phaseStarted" &&
+      payload?.["phase"] === phase &&
+      payload["playerId"] === playerId
+    );
+  }
+  return false;
+};
+
 const withIndexedZone = (
   card: CardInstance,
   zone: CardInstance["zone"]["zone"],
@@ -141,12 +167,15 @@ export const advanceRefreshPhase = (state: GameState): EngineResult => {
     );
   }
 
-  const events: EngineEvent[] = [
-    createEvent(state, 1, "phaseStarted", {
-      phase: "refresh",
-      playerId: turnPlayerId,
-    }),
-  ];
+  const events: EngineEvent[] = [];
+  if (!hasStartedCurrentPhase(state, "refresh", turnPlayerId)) {
+    events.push(
+      createEvent(state, 1, "phaseStarted", {
+        phase: "refresh",
+        playerId: turnPlayerId,
+      }),
+    );
+  }
   const attachedDonIds = [
     ...turnPlayer.leader.attachedDon,
     ...turnPlayer.characters.flatMap((card) => card.attachedDon),
@@ -200,7 +229,7 @@ export const advanceRefreshPhase = (state: GameState): EngineResult => {
       playerId: turnPlayerId,
     }),
   );
-  appendRuleProcessingChecked(nextState, events, "draw");
+  appendRuleProcessingChecked(state, events, "draw");
   nextState.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextState);
   return toEngineResult(nextState, events);
@@ -261,7 +290,7 @@ export const advanceDrawPhase = (state: GameState): EngineResult => {
       playerId: turnPlayerId,
     }),
   );
-  appendRuleProcessingChecked(nextState, events, "don");
+  appendRuleProcessingChecked(state, events, "don");
   nextState.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextState);
   return toEngineResult(nextState, events);
@@ -326,7 +355,7 @@ export const advanceDonPhase = (state: GameState): EngineResult => {
       },
     },
   };
-  appendRuleProcessingChecked(nextState, events, "don");
+  appendRuleProcessingChecked(state, events, "don");
   nextState.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextState);
   return toEngineResult(nextState, events);
@@ -353,7 +382,7 @@ export const enterMainPhase = (state: GameState): EngineResult => {
     seq: toStateSeq(state.seq + 1),
     turn: { ...state.turn, phase: "main" },
   };
-  appendRuleProcessingChecked(nextState, events, "main");
+  appendRuleProcessingChecked(state, events, "main");
   nextState.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextState);
   return toEngineResult(nextState, events);
@@ -366,6 +395,7 @@ export const advanceEndPhase = (state: GameState): EngineResult => {
   const currentTurnPlayerId = state.turn.turnPlayerId;
   const nextTurnPlayerId = secondPlayerId(state, currentTurnPlayerId);
   const nextPlayerTurnCount = state.turn.playerTurnCounts[nextTurnPlayerId];
+  const nextTurnPlayer = state.players[nextTurnPlayerId];
   if (nextPlayerTurnCount === undefined) {
     return toEngineResult(
       state,
@@ -373,13 +403,28 @@ export const advanceEndPhase = (state: GameState): EngineResult => {
       [{ type: "illegalAction", reason: "Next turn player count is missing." }],
     );
   }
+  if (nextTurnPlayer === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [{ type: "illegalAction", reason: "Next turn player does not exist." }],
+    );
+  }
+  const incrementedNextTurnCount = nextPlayerTurnCount + 1;
   const nextCounts = {
     ...state.turn.playerTurnCounts,
-    [nextTurnPlayerId]: nextPlayerTurnCount + 1,
+    [nextTurnPlayerId]: incrementedNextTurnCount,
   };
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
+    players: {
+      ...state.players,
+      [nextTurnPlayerId]: {
+        ...nextTurnPlayer,
+        turnCount: incrementedNextTurnCount,
+      },
+    },
     turn: {
       ...state.turn,
       globalTurn: state.turn.globalTurn + 1,
@@ -398,7 +443,7 @@ export const advanceEndPhase = (state: GameState): EngineResult => {
       playerId: nextTurnPlayerId,
     }),
   ];
-  appendRuleProcessingChecked(nextState, events, "refresh");
+  appendRuleProcessingChecked(state, events, "refresh");
   nextState.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextState);
   return toEngineResult(nextState, events);

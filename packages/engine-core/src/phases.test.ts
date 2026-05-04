@@ -26,6 +26,11 @@ const must = <T>(value: T | undefined, label: string): T => {
   return value;
 };
 
+const eventPayload = (event: {
+  payload: unknown;
+}): { phase?: string; playerId?: PlayerId } =>
+  event.payload as { phase?: string; playerId?: PlayerId };
+
 const createInput = () => ({
   matchId: toMatchId("match-phase-1"),
   firstPlayerId: p1,
@@ -149,11 +154,41 @@ test("end-phase turn handoff and sequence/hash changes", () => {
   assert.equal(ended.state.turn.turnPlayerId, p2);
   assert.equal(ended.state.turn.globalTurn, 2);
   assert.equal(ended.state.turn.playerTurnCounts[p2], 1);
+  assert.equal(must(ended.state.players[p2], "p2").turnCount, 1);
   assert.equal(
     ended.state.seq,
     ((seqBefore as number) + 1) as typeof state.seq,
   );
   assert.notEqual(ended.stateHash, "");
+});
+
+test("refresh phase does not emit a duplicate start after end-phase handoff", () => {
+  const state = createActiveState();
+  state.turn.phase = "end";
+
+  const ended = advanceEndPhase(state);
+  const refreshed = advanceRefreshPhase(ended.state);
+  const refreshStarts = [...ended.events, ...refreshed.events].filter(
+    (event) =>
+      event.type === "phaseStarted" &&
+      eventPayload(event).phase === "refresh" &&
+      eventPayload(event).playerId === p2,
+  );
+
+  assert.equal(refreshStarts.length, 1);
+});
+
+test("rule-processing event is created at the accepted transition sequence", () => {
+  const state = createActiveState();
+  state.turn.phase = "don";
+
+  const result = advanceDonPhase(state);
+  const ruleProcessing = must(
+    result.events.find((event) => event.type === "ruleProcessingChecked"),
+    "rule-processing event",
+  );
+
+  assert.equal(ruleProcessing.createdAtStateSeq, result.state.seq);
 });
 
 test("invariant checks run after phase transitions", () => {
