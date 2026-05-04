@@ -22,3 +22,4 @@ export {
   enterMainPhase,
 } from "./phases.js";
 export { applyAction, getLegalActions } from "./actions.js";
+export { computeView } from "./compute-view.js";

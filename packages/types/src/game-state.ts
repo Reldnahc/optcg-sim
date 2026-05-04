@@ -18,6 +18,7 @@ import type {
   CardSnapshot,
   CardSupportStatus,
   Keyword,
+  MatchCardManifest,
   RuntimeVersionSet,
 } from "./card-metadata.js";
 import type { CausalityRef, EngineEvent } from "./events.js";
@@ -73,6 +74,7 @@ export interface GameState {
   seq: StateSeq;
   actionSeq: number;
   turn: TurnState;
+  cardManifest: MatchCardManifest;
   players: Record<PlayerId, PlayerState>;
   timers: TimerState;
   battle?: BattleState;

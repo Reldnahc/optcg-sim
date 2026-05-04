@@ -26,6 +26,15 @@ test("GameState keeps the once-per-turn ledger in canonical state", async () => 
   );
 });
 
+test("GameState includes the authoritative match card manifest snapshot", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+
+  assert.match(
+    canonicalTypes,
+    /export interface GameState\s*{[\s\S]*?\bcardManifest:\s*MatchCardManifest;[\s\S]*?}/m,
+  );
+});
+
 test("Action preserves branded IDs for effect activation and decision responses", async () => {
   const canonicalTypes = await readCanonicalTypes();
 

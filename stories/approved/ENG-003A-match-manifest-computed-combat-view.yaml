@@ -1,0 +1,103 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-003A
+epic_id: M1-001
+title: Add match-manifest computed combat view
+type: implementation
+area: engine
+primary_concern: rules
+priority: critical
+status: approved
+summary: >
+  Add canonical match-manifest state authority and the manifest-backed computed
+  combat view needed before attack legality and damage resolution can use card
+  stats instead of raw card IDs.
+story_boundary: >
+  Own only the canonical match-manifest field and the minimal computed combat
+  view behavior required for Milestone 1 vanilla attacks. Do not implement attack
+  application, damage, K.O., card play, blockers, counters, triggers, replacement
+  effects, Rush-granting effects, or client view filtering.
+allowed_touch_points:
+  - contracts/canonical-types.ts
+  - fixtures/replays/**
+  - packages/types/src/**
+  - packages/engine-core/**
+  - tests/contracts/**
+  - tests/engine/**
+spec_refs:
+  - 02-engine-mechanics.s007 (Card categories)
+  - 02-engine-mechanics.s014 (Main Phase)
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s025 (Keyword behavior)
+  - 02-engine-mechanics.s036 (DON!! card mechanics)
+  - 02-engine-mechanics.s037 (First-turn restrictions)
+  - 08-replay-rollback-recovery.s005 (Card manifest snapshot)
+  - 09-card-data-and-support-policy.s006 (Why the match server fetches card data)
+  - 03-game-state-events-decisions.s002 (Canonical state model)
+  - 03-game-state-events-decisions.s003 (Base state vs. computed view)
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 09-card-data-and-support-policy.s013 (Match-time card manifest)
+  - 15-implementation-kickoff.s006 (Step 2 - @optcg/engine-core)
+  - 16-typescript-interface-draft.s002 (v6 supersession)
+  - 16-typescript-interface-draft.s005 (Game state)
+  - 18-acceptance-tests.s003 (Milestone 1 - terminal engine)
+scope:
+  - add canonical `cardManifest: MatchCardManifest` to `GameState` in the v6 contract and mirrored types package, grounded in the server-owned match snapshot from `09-card-data-and-support-policy.s006` and the implementation-contract authority from `09-card-data-and-support-policy.s013`
+  - treat `16-typescript-interface-draft.s005` as explanatory shape context only; do not use the historical draft as implementation authority over `contracts/canonical-types.ts`
+  - update deterministic initial-state input and fixtures to carry a manual-test or fixture-sourced match manifest for all setup cards
+  - export `computeView(state)` from engine-core
+  - derive `ComputedGameView.cards` for Leaders and Characters from `state.cardManifest.cards[cardId]`
+  - derive base power, current power, and printed keywords without persisting derived current power on canonical card instances
+  - include attached-DON!! +1000 current-power modifiers only during the controller's turn
+  - derive vanilla `canAttack` and `legalAttackTargets` for active Leaders and Characters during the turn player's Main Phase and outside battle
+  - enforce each player's first-turn attack restriction and Character `turnPlayed` restrictions in the computed view
+  - 'use canonical `ResolvedCard.printedKeywords` values `"rush"` and `"rushCharacter"`: `"rush"` may attack legal Leaders and Characters, while `"rushCharacter"` may attack legal Characters but not Leaders'
+  - fail closed with current engine error contracts or invariant failures when combat-relevant card metadata is missing or unsupported for the Milestone 1 path
+non_scope:
+  - accepting `declareAttack` in `applyAction`
+  - resting attackers
+  - battle sub-state creation
+  - damage, K.O., life movement, or defeat checks
+  - play-card behavior that sets `turnPlayed`
+  - blocker, counter, trigger, replacement, Banish, Double Attack, or Rush-granting behavior
+  - Poneglyph HTTP access, card-data normalization, deck legality validation, or persisted manifest storage
+dependencies:
+  - ENG-002B
+  - ENG-002D
+  - ENG-002E
+  - ENG-002F
+  - TYP-001B
+  - TYP-001F
+  - TYP-001G
+acceptance_criteria:
+  - canonical contract and types package expose `GameState.cardManifest: MatchCardManifest`
+  - engine setup snapshots a deterministic match manifest into `GameState`
+  - "`computeView(state)` returns manifest-derived base and current power for Leaders and Characters"
+  - attached DON!! increases current power only during the controller's turn
+  - Leaders and Characters cannot attack on either player's first turn according to the computed view
+  - 'Characters with `turnPlayed` equal to the current global turn cannot attack unless `printedKeywords` include `"rush"` or `"rushCharacter"`'
+  - 'played-this-turn Characters with `"rush"` may include opponent Leader and rested opponent Characters as legal targets'
+  - 'played-this-turn Characters with `"rushCharacter"` may include rested opponent Characters as legal targets but must exclude opponent Leader'
+  - legal attack target lists include opponent Leader and rested opponent Characters only
+  - missing combat metadata for a relevant Leader or Character fails closed instead of using fallback power
+required_tests:
+  - contract/type test proving `GameState.cardManifest` is part of canonical and package-local type authority
+  - unit test for manifest snapshot plumbing through deterministic setup
+  - unit test for computed base/current power from manifest and attached DON!! during controller turn
+  - unit test for attached DON!! not modifying current power outside controller turn
+  - unit test for first-player first-turn attack restriction in computed legal attack targets
+  - unit test for second-player first-turn attack restriction in computed legal attack targets
+  - unit test for played-this-turn Character attack restriction
+  - 'unit test proving `printedKeywords: ["rush"]` permits played-this-turn Character attacks against legal Leader and Character targets'
+  - 'unit test proving `printedKeywords: ["rushCharacter"]` permits played-this-turn Character attacks against legal Character targets but not Leader targets'
+  - unit test for target lists including opponent Leader and rested opponent Characters only
+  - negative test proving missing Leader or Character power metadata fails closed for combat view computation
+repo_rules:
+  - do not approve this story until ENG-002E and ENG-002F are done
+  - do not persist derived current power into canonical `CardInstance`
+  - do not introduce live Poneglyph access or a card-data package dependency into engine-core
+  - keep engine-core deterministic and pure
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

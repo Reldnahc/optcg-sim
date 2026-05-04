@@ -73,6 +73,16 @@ const createBaseState = (): GameState => {
       turnPlayerId: p1,
       phase: "main",
     },
+    cardManifest: {
+      manifestHash: "manifest-invariants-1",
+      source: "manual-test",
+      cardDataVersion: "fixture",
+      effectDefinitionsVersion: "fixture",
+      customHandlerVersion: "fixture",
+      banlistVersion: "fixture",
+      createdAt: "2026-05-04T00:00:00.000Z",
+      cards: {},
+    },
     players: {
       [p1]: {
         playerId: p1,

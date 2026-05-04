@@ -67,6 +67,16 @@ const createInput = () => ({
     [p1]: ["p1-don-1", "p1-don-2", "p1-don-3"].map(toCardId),
     [p2]: ["p2-don-1", "p2-don-2", "p2-don-3"].map(toCardId),
   },
+  cardManifest: {
+    manifestHash: "manifest-initial-state-1",
+    source: "manual-test" as const,
+    cardDataVersion: "fixture",
+    effectDefinitionsVersion: "fixture",
+    customHandlerVersion: "fixture",
+    banlistVersion: "fixture",
+    createdAt: "2026-05-04T00:00:00.000Z",
+    cards: {},
+  },
   shuffleDecks: false,
 });
 
@@ -171,6 +181,12 @@ test("setup state passes ENG-002A invariants", () => {
   assert.doesNotThrow(() => {
     assertGameStateInvariants(state);
   });
+});
+
+test("setup snapshots the provided deterministic card manifest", () => {
+  const input = createInput();
+  const state = createInitialState(input);
+  assert.deepEqual(state.cardManifest, input.cardManifest);
 });
 
 test("returned setup output is type-level documented as pre-mulligan setup status", () => {

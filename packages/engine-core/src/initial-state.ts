@@ -2,6 +2,7 @@ import type {
   CardId,
   CardInstance,
   GameState,
+  MatchCardManifest,
   MatchId,
   PlayerId,
   PlayerState,
@@ -27,6 +28,7 @@ export interface CreateInitialStateInput {
   donDeckCardIds: Record<PlayerId, CardId[]>;
   leaderCardIds: Record<PlayerId, CardId>;
   leaderLifeCounts: Record<PlayerId, number>;
+  cardManifest: MatchCardManifest;
   rngSeed: number | bigint | string;
   shuffleDecks?: boolean;
 }
@@ -293,6 +295,7 @@ export const createInitialState = (
       turnPlayerId: input.firstPlayerId,
       phase: "refresh",
     },
+    cardManifest: input.cardManifest,
     players: {
       [firstPlayerId]: firstPlayer.playerState,
       [secondPlayerId]: secondPlayer.playerState,

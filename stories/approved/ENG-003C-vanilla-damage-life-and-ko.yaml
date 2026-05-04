@@ -1,0 +1,109 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-003C
+epic_id: M1-001
+title: Resolve supported vanilla damage, life movement, and K.O.
+type: implementation
+area: engine
+primary_concern: rules
+priority: critical
+status: approved
+summary: >
+  Resolve manifest-proven no-blocker, no-counter, no-trigger vanilla battles as
+  a deterministic internal engine step reached from the canonical action loop,
+  moving Life to hand or K.O.ing rested Characters when attacker power is
+  sufficient.
+story_boundary: >
+  Own only vanilla one-damage battle resolution for battles created by
+  `declareAttack` when the manifest proves the unsupported Block, Counter,
+  Trigger, replacement, protection, Banish, and multi-damage paths are absent.
+  Do not add blocker choices, counter choices, life triggers, replacement
+  effects, Banish, multi-damage, card-play effects, or rule-processing defeat
+  completion.
+allowed_touch_points:
+  - packages/engine-core/**
+  - tests/engine/**
+spec_refs:
+  - 02-engine-mechanics.s002 (Purpose)
+  - 02-engine-mechanics.s009 (Canonical Life orientation)
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s019 (Block Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s022 (End of Battle)
+  - 02-engine-mechanics.s023 (Damage processing)
+  - 02-engine-mechanics.s025 (Keyword behavior)
+  - 02-engine-mechanics.s036 (DON!! card mechanics)
+  - 03-game-state-events-decisions.s003 (Base state vs. computed view)
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s018 (Canonical event visibility)
+  - 03-game-state-events-decisions.s023 (Error categories)
+  - 09-card-data-and-support-policy.s010 (Card implementation record)
+  - 09-card-data-and-support-policy.s013 (Match-time card manifest)
+  - 18-acceptance-tests.s003 (Milestone 1 - terminal engine)
+  - 22-v6-implementation-tightening.s008 (Life orientation)
+scope:
+  - export engine-local `resolveSupportedVanillaBattle(state)` from engine-core for focused tests and replay smoke support, while treating it as an internal system step rather than a player-facing command
+  - wire supported vanilla battle resolution into the canonical `applyAction` path after accepted `declareAttack` creates `state.battle`, so supported Milestone 1 combat can advance without an external caller inventing a continuation action
+  - do not add a new `Action` union member or public legal action for battle continuation; the continuation is a deterministic internal system step under `02-engine-mechanics.s002`
+  - before resolving vanilla damage, fail closed with the current engine error contract when the manifest or battle state indicates any unsupported blocker, counter, trigger, replacement, protection, Banish, Double Attack, or non-vanilla timing behavior is relevant
+  - resolve supported vanilla battles without creating blocker or counter decisions only after the unsupported-window guard passes
+  - compute attacker and target power from `computeView` during Damage Step
+  - if attacker power is lower than target power, end the battle without damage or K.O.
+  - if the target is a Leader and the defender has 0 Life, fail closed without mutating input state because terminal defeat is owned by ENG-003D
+  - if the target is a Leader and the defender has Life, move `player.life[0]` to that player's hand according to canonical Life orientation
+  - ensure face-down Life-to-hand public events do not expose card IDs; card-identifying Life-to-hand details must be private to the damaged player or replayOnly
+  - if the target is a rested Character and attacker power is equal or greater, K.O. the Character and move it to trash
+  - return attached DON!! from a K.O.'d Character to the owner's cost area rested
+  - emit deterministic events for damage, life movement, K.O., card movement, and end-of-battle cleanup
+  - clear `state.battle` after vanilla battle resolution completes
+  - run invariants and return a stable `EngineResult.stateHash` after accepted battle resolution
+non_scope:
+  - leader damage at 0 Life producing terminal match completion
+  - deck-out defeat checks
+  - blocker activation and blocker redirection
+  - counter Character or Counter Event decisions
+  - life Trigger reveal/activation decisions
+  - Banish, Double Attack, replacement effects, protection effects, or triggered effects
+  - "full multi-damage processing beyond the vanilla `damageCount: 1` path"
+dependencies:
+  - ENG-003A
+  - ENG-003B
+acceptance_criteria:
+  - battle resolution is reachable from canonical `applyAction` as a deterministic internal system step after supported `declareAttack`, not only from tests or replay helper scripts
+  - focused tests may invoke `resolveSupportedVanillaBattle(state)`, but no new public action contract is added for battle continuation
+  - Leader damage at 0 Life fails closed without mutating input state until ENG-003D implements terminal defeat
+  - supported Leader damage with at least one non-trigger Life moves `life[0]` to the damaged player's hand and reindexes remaining Life
+  - Character target battle K.O.s the rested target when attacker power is equal or greater
+  - Character target battle does not K.O. the target when attacker power is lower
+  - attached DON!! on a K.O.'d Character returns to its owner's cost area rested
+  - battle state is cleared after supported vanilla resolution
+  - accepted battle resolution emits deterministic events and produces a new state hash
+  - unsupported blocker, counter, trigger, replacement, protection, Banish, or multi-damage paths fail closed without mutating input state
+required_tests:
+  - unit test proving supported `applyAction(declareAttack)` reaches vanilla battle resolution through the internal engine step without requiring a continuation action
+  - unit test proving unsupported battle windows fail closed without mutating input state instead of leaving a caller-owned continuation path
+  - unit test proving `resolveSupportedVanillaBattle(state)` rejects states with no active battle without mutating input state
+  - unit test proving Leader damage at 0 Life fails closed without mutating input state
+  - unit test for supported vanilla Leader damage moving top Life to hand
+  - unit test proving Life orientation uses `player.life[0]` as the next damage card
+  - unit test proving public events for face-down Life movement do not expose Life card IDs
+  - unit test proving card-identifying Life-to-hand details are private to the damaged player or replayOnly
+  - unit test for equal-or-greater power K.O. against a rested Character
+  - unit test for lower-power attack causing no K.O. and no Life movement
+  - unit test for attached DON!! returning rested after K.O.
+  - unit test proving battle state clears after resolution
+  - negative test proving a damaged Life card with trigger metadata fails closed because trigger decisions are out of scope
+  - negative test proving a legal blocker or counter window fails closed because blocker/counter decisions are out of scope
+  - negative test proving Banish, Double Attack, replacement, or protection metadata fails closed for this story
+repo_rules:
+  - do not activate, packetize, or implement this story until ENG-003B is done
+  - do not add or modify the canonical `Action` contract for battle continuation in this story
+  - do not implement terminal defeat checks in this story; leave them to ENG-003D
+  - do not silently skip official Block, Counter, or Trigger behavior when manifest metadata indicates it may apply
+  - do not add blocker, counter, trigger, replacement, Banish, Double Attack, or protection behavior in this story
+  - engine behavior must remain deterministic and pure
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

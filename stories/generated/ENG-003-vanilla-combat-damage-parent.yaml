@@ -1,0 +1,83 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-003
+epic_id: M1-001
+title: Add vanilla combat and damage foundation
+type: implementation
+area: engine
+primary_concern: rules
+priority: critical
+status: replaced
+summary: >
+  Add the Milestone 1 vanilla combat and damage layer after deterministic setup,
+  mulligan, phase progression, legal actions, action application, and replay
+  smoke coverage exist.
+story_boundary: >
+  This parent story is not implementable. It preserves the combat and damage
+  delivery context and is replaced by concern-scoped child stories ENG-003A
+  through ENG-003E.
+allowed_touch_points:
+  - contracts/canonical-types.ts
+  - packages/types/src/**
+  - packages/engine-core/**
+  - fixtures/replays/**
+  - tests/contracts/**
+  - tests/engine/**
+spec_refs:
+  - 02-engine-mechanics.s003 (Rule-processing checkpoints)
+  - 02-engine-mechanics.s014 (Main Phase)
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s019 (Block Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s022 (End of Battle)
+  - 02-engine-mechanics.s023 (Damage processing)
+  - 02-engine-mechanics.s025 (Keyword behavior)
+  - 02-engine-mechanics.s035 (Exact win/loss conditions)
+  - 02-engine-mechanics.s036 (DON!! card mechanics)
+  - 02-engine-mechanics.s037 (First-turn restrictions)
+  - 03-game-state-events-decisions.s003 (Base state vs. computed view)
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s016 (Action contract)
+  - 03-game-state-events-decisions.s018 (Canonical event visibility)
+  - 09-card-data-and-support-policy.s013 (Match-time card manifest)
+  - 11-testing-quality.s010 (Golden replay tests)
+  - 11-testing-quality.s012 (Replay determinism)
+  - 12-roadmap.s005 (Milestone 1: terminal engine)
+  - 18-acceptance-tests.s003 (Milestone 1 - terminal engine)
+  - 22-v6-implementation-tightening.s008 (Life orientation)
+scope:
+  - define the vanilla combat and damage delivery group
+  - split canonical manifest state authority, computed combat view, attack declaration, damage/K.O. resolution, defeat checks, and replay smoke into child stories
+  - keep the group on a parent integration branch before merging to main if the group is approved
+non_scope:
+  - direct implementation from this parent story
+  - browser client, server protocol, database, Redis, WebSocket, React, or live HTTP behavior
+  - full card effect runtime
+  - card play implementation
+  - blocker activation, counter actions, trigger activation, replacement effects, Banish, Double Attack, or Rush-granting effects
+  - CLI runner implementation
+dependencies:
+  - ENG-002A
+  - ENG-002B
+  - ENG-002C
+  - ENG-002D
+  - ENG-002E
+  - ENG-002F
+acceptance_criteria:
+  - child stories exist for the first vanilla combat and damage concerns
+  - this parent story remains non-implementable and is not packetized
+  - child stories can be story-reviewed as a set before approval
+required_tests:
+  - story-review agent must verify this parent is replaced by concern-scoped child stories before implementation begins
+repo_rules:
+  - do not approve or packetize this parent story
+  - use a parent integration branch for the ENG-003 child-story group if the group is approved
+  - keep one active child-story packet at a time
+  - approve only concern-scoped child stories for implementation
+  - engine-core must stay pure and free of browser, server, Redis, Postgres, WebSocket, React, and live HTTP dependencies
+ambiguity_policy: fail_and_escalate

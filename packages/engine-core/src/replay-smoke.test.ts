@@ -4,7 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
-import type { CardId, MatchId, PlayerId } from "@optcg/types";
+import type {
+  CardId,
+  MatchCardManifest,
+  MatchId,
+  PlayerId,
+} from "@optcg/types";
 
 import { applyAction } from "./actions.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
@@ -31,6 +36,16 @@ type LocalReplayFixture = {
     leaderLifeCounts: Record<string, number>;
     deckCardIds: Record<string, string[]>;
     donDeckCardIds: Record<string, string[]>;
+    cardManifest: {
+      manifestHash: string;
+      source: "poneglyph" | "poneglyph-fixture" | "manual-test";
+      cardDataVersion: string;
+      effectDefinitionsVersion: string;
+      customHandlerVersion: string;
+      banlistVersion: string;
+      cards: Record<string, unknown>;
+      createdAt: string;
+    };
     shuffleDecks: boolean;
   };
   mulliganResponses: ReadonlyArray<{ playerId: string; keep: boolean }>;
@@ -114,6 +129,7 @@ const replayFixture = (fixture: LocalReplayFixture) => {
         toCardId,
       ),
     },
+    cardManifest: setupInput.cardManifest as MatchCardManifest,
     shuffleDecks: setupInput.shuffleDecks,
   });
   checkpoints.push({

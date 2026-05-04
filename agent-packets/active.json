@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-003A.md",
+      "storyId": "ENG-003A",
+      "storyPath": "stories/approved/ENG-003A-match-manifest-computed-combat-view.yaml",
+      "storySha256": "46743431fd531c0bafb96ddbf5658cb4b4696c7001a64ef1ea2368658b77279c"
+    }
+  ],
   "version": 1
 }
