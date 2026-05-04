@@ -31,6 +31,24 @@ If a lower layer conflicts with a higher layer, the higher layer wins.
 
 Use stable `SECTION_REF` citations from the spec. Do not cite heading anchors or vague file-level references when exact section refs exist.
 
+## Context Reset Recovery
+
+Do not maintain a manual handoff or current-status file. Reset recovery must be inferred from authoritative repo and GitHub state so there is no extra mutable truth source.
+
+When starting after a context reset or uncertain session state:
+
+1. Read `AGENTS.md`.
+2. Check `git status --short --branch` to identify the local branch and dirty files.
+3. Read `agent-packets/active.json` to determine whether an active story exists; if it is missing, malformed, or inconsistent with checked-in packet/story files, stop and surface the recovery inconsistency instead of guessing.
+4. Inspect `stories/approved/`, `stories/done/`, `stories/blocked/`, and `stories/ambiguities/` to reconstruct story state.
+5. Inspect the current branch name, recent branch commits, and recent `main` commits to identify whether the worktree is on `main`, a single-story branch, a substory branch, or a parent integration branch.
+6. Use the native GitHub connector to check open pull requests, recent merged pull requests, unresolved review threads, and failing checks, including PR base/head branches.
+7. If an active packet exists, recover by reading the active approved story and packet before doing any implementation or review handoff.
+8. If no active packet exists on a parent integration branch, do not infer that the repo is between stories; reconstruct the parent/substory state from branch history, merged substory PRs, remaining approved stories, packets, and the parent PR trail.
+9. If no active packet exists on `main`, no open PR needs action, and story/packet state is consistent, infer that the repo is between stories and propose the next candidate from `stories/approved/` or ask the user to choose when ordering is ambiguous.
+
+Manual chat memory is not authority after reset. If reconstructed state conflicts with chat memory, use the repo and GitHub evidence, then surface the conflict explicitly.
+
 ## Story Execution Rules
 
 - Read `AGENTS.md` first, then the approved story, then the corresponding packet.
