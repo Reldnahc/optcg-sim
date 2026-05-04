@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-002A.md",
-      "storyId": "ENG-002A",
-      "storyPath": "stories/approved/ENG-002A-engine-invariant-utilities.yaml",
-      "storySha256": "aeb268a528ff16f6ae592be6f6d2ced64d4622d589d383189d48964e0af7bbe1"
+      "packetPath": "agent-packets/ENG-002B.md",
+      "storyId": "ENG-002B",
+      "storyPath": "stories/approved/ENG-002B-deterministic-initial-state-setup.yaml",
+      "storySha256": "ca2ffb4688331c71e2ba170c4fde38966b6c597eaf4d3ede515b26534ff0fe63"
     }
   ],
   "version": 1
