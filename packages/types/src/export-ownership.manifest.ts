@@ -81,6 +81,8 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   PublicDecision: "TYP-002A",
   PublicLegalAction: "TYP-002A",
   PublicRevealRecord: "TYP-002A",
+  SpectatorRevealRecord: "TYP-002A",
+  SpectatorEvent: "TYP-002A",
   PlayerView: "TYP-002A",
   SpectatorView: "TYP-002A",
   RngState: "TYP-001F",

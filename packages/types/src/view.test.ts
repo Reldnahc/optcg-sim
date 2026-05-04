@@ -17,7 +17,9 @@ import type {
   PublicLifeView,
   PublicRevealRecord,
   PublicTurnState,
+  SpectatorEvent,
   SpectatorPolicy,
+  SpectatorRevealRecord,
   SpectatorView,
   SpectatorVisiblePlayerState,
   StateSeq,
@@ -153,8 +155,18 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
       [playerB]: { ...spectatorPlayer, playerId: playerB },
     },
     battle,
-    revealedCards: [reveal],
-    events: [event],
+    revealedCards: [
+      {
+        ...reveal,
+        visibility: "public",
+      } satisfies SpectatorRevealRecord,
+    ],
+    events: [
+      {
+        ...event,
+        visibility: { type: "public" },
+      } satisfies SpectatorEvent,
+    ],
     timers: playerView.timers,
   };
 
@@ -198,6 +210,34 @@ test("TYP-002A initial spectator view excludes hidden identities and player-only
   const noRng: HasNoKey<SpectatorView, "rng"> = true;
   const noEffectQueue: HasNoKey<SpectatorView, "effectQueue"> = true;
   const noAudit: HasNoKey<SpectatorView, "audit"> = true;
+  const player = "player-a" as PlayerId;
+  const seq = 1 as StateSeq;
+  const spectatorReveal: SpectatorRevealRecord = {
+    id: "reveal-1",
+    cards: [cardRef("005", player)],
+    visibility: "public",
+    origin: { zone: "deck", playerId: player },
+    createdAtStateSeq: seq,
+    cleanupPolicy: "returnToOrigin",
+  };
+  const spectatorEvent: SpectatorEvent = {
+    id: "event-1" as EngineEventId,
+    seq: 1,
+    type: "phaseStarted",
+    payload: {},
+    visibility: { type: "public" },
+    createdAtStateSeq: seq,
+  };
+  const privateSpectatorReveal: SpectatorRevealRecord = {
+    ...spectatorReveal,
+    // @ts-expect-error spectator reveal records must be public-only.
+    visibility: "privateToRecipient",
+  };
+  const privateSpectatorEvent: SpectatorEvent = {
+    ...spectatorEvent,
+    // @ts-expect-error spectator events must be public-only.
+    visibility: { type: "private", playerId: player },
+  };
 
   expect(noSpectatorHandCards).toBe(true);
   expect(noSpectatorDeckCards).toBe(true);
@@ -207,4 +247,6 @@ test("TYP-002A initial spectator view excludes hidden identities and player-only
   expect(noRng).toBe(true);
   expect(noEffectQueue).toBe(true);
   expect(noAudit).toBe(true);
+  void privateSpectatorReveal;
+  void privateSpectatorEvent;
 });

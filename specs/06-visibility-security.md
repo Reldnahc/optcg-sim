@@ -184,6 +184,14 @@ interface PublicRevealRecord {
   createdAtStateSeq: StateSeq;
   cleanupPolicy: "returnToOrigin" | "trashAfterResolution" | "none";
 }
+
+type SpectatorRevealRecord = Omit<PublicRevealRecord, "visibility"> & {
+  visibility: "public";
+};
+
+type SpectatorEvent = Omit<EngineEvent, "visibility"> & {
+  visibility: { type: "public" };
+};
 ```
 
 Initial live-filtered spectator view is distinct from `PlayerView`:
@@ -197,16 +205,17 @@ interface SpectatorView {
   turn: PublicTurnState;
   players: Record<PlayerId, SpectatorVisiblePlayerState>;
   battle?: PublicBattleState;
-  revealedCards: PublicRevealRecord[];
-  events: EngineEvent[];
+  revealedCards: SpectatorRevealRecord[];
+  events: SpectatorEvent[];
   timers: PublicTimerState;
 }
 ```
 
 Initial `SpectatorView` has no `pendingDecision` or `legalActions` field.
 It does not include either player's hand card IDs, deck order, face-down life
-card IDs, RNG state, effect queue internals, or audit entries. Full-information
-live spectating is deferred to a future explicit policy story.
+card IDs, private reveal records, non-public events, RNG state, effect queue
+internals, or audit entries. Full-information live spectating is deferred to a
+future explicit policy story.
 
 ## Temporary visibility
 

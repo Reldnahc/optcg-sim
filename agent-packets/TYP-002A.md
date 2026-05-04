@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id TYP-002A -->
 <!-- agent-packet:story-path stories/approved/TYP-002A-live-view-dto-contract-authority.yaml -->
-<!-- agent-packet:story-sha256 c76cbe71e5de62a622796ecf44e6eadff40081295680f9f68410f518e720c851 -->
+<!-- agent-packet:story-sha256 47fb5415a0b96e4e2dd6f9362cb13775dcd90a92d7b199c6cbd3bcccffe36cbf -->
 
 # Story Packet
 
@@ -232,6 +232,14 @@ interface PublicRevealRecord {
   createdAtStateSeq: StateSeq;
   cleanupPolicy: "returnToOrigin" | "trashAfterResolution" | "none";
 }
+
+type SpectatorRevealRecord = Omit<PublicRevealRecord, "visibility"> & {
+  visibility: "public";
+};
+
+type SpectatorEvent = Omit<EngineEvent, "visibility"> & {
+  visibility: { type: "public" };
+};
 ```
 
 Initial live-filtered spectator view is distinct from `PlayerView`:
@@ -245,16 +253,17 @@ interface SpectatorView {
   turn: PublicTurnState;
   players: Record<PlayerId, SpectatorVisiblePlayerState>;
   battle?: PublicBattleState;
-  revealedCards: PublicRevealRecord[];
-  events: EngineEvent[];
+  revealedCards: SpectatorRevealRecord[];
+  events: SpectatorEvent[];
   timers: PublicTimerState;
 }
 ```
 
 Initial `SpectatorView` has no `pendingDecision` or `legalActions` field.
 It does not include either player's hand card IDs, deck order, face-down life
-card IDs, RNG state, effect queue internals, or audit entries. Full-information
-live spectating is deferred to a future explicit policy story.
+card IDs, private reveal records, non-public events, RNG state, effect queue
+internals, or audit entries. Full-information live spectating is deferred to a
+future explicit policy story.
 
 ### 06-visibility-security.s007 (Legal-action visibility)
 
@@ -339,6 +348,7 @@ Resolved and normalized items include:
 - `PublicEffectEvent` replacement via filtered `EngineEvent[]`
 - `PlayerView` and initial live-filtered `SpectatorView`
 - public live-view DTO support contracts
+- spectator-safe public-only reveal and event DTOs
 - `eventLog`/`eventJournal` conflict resolved to `eventJournal`
 - `activeBattle`/`battle` conflict resolved to `battle`
 - serializable arrays instead of `Set`
@@ -375,12 +385,12 @@ Own only the canonical type contract and @optcg/types export surface for initial
 - update `06-visibility-security.s004` and `06-visibility-security.s021` as needed so the spec names the exact canonical `SpectatorView` field set and support DTO definitions before implementation
 - define the canonical `PlayerView` field set as `matchId`, `playerId`, `stateSeq`, `actionSeq`, `turn`, `self`, `opponent`, optional `battle`, optional recipient-filtered `pendingDecision`, recipient-filtered `legalActions`, `revealedCards`, filtered `events`, and `timers`
 - define the canonical initial `SpectatorView` field set as `matchId`, `stateSeq`, `actionSeq`, `spectatorPolicy`, `turn`, `players`, optional `battle`, `revealedCards`, filtered public `events`, and `timers`
-- define support DTOs named `PublicTurnState`, `PublicBattleState`, `PublicCardView`, `PublicLifeView`, `VisiblePlayerState`, `OpponentVisibleState`, `SpectatorVisiblePlayerState`, `PublicDecision`, `PublicLegalAction`, and `PublicRevealRecord`, unless story review identifies an existing canonical name that should be reused instead
+- define support DTOs named `PublicTurnState`, `PublicBattleState`, `PublicCardView`, `PublicLifeView`, `VisiblePlayerState`, `OpponentVisibleState`, `SpectatorVisiblePlayerState`, `PublicDecision`, `PublicLegalAction`, `PublicRevealRecord`, `SpectatorRevealRecord`, and `SpectatorEvent`, unless story review identifies an existing canonical name that should be reused instead
 - export the new view DTO contracts from `@optcg/types` through the existing concern-split package structure
 - define initial `SpectatorPolicy` as the object shape `{ mode: "disabled" | "live-filtered"; allowHandRevealAfterGame: boolean }`, with no delayed or full-information live mode
 - define `SpectatorView` as distinct from `PlayerView` rather than as a pseudo-player view
 - ensure `PlayerView` exposes own hidden-zone card identities only where the visibility spec permits them and represents opponent hidden zones by counts only
-- ensure initial `live-filtered` `SpectatorView` exposes public board state, public zones, public turn/battle/timer context, hidden-zone counts, public reveal records, and public events only, with no `pendingDecision` or `legalActions` field
+- ensure initial `live-filtered` `SpectatorView` exposes public board state, public zones, public turn/battle/timer context, hidden-zone counts, public reveal records, and public events only, with no `pendingDecision` or `legalActions` field and no private reveal/event payload type
 - preserve full-information live spectator visibility as an explicitly deferred future policy story
 - update the blocked TYP-002 authority-gap record only as needed to point at this replacement story
 
@@ -420,7 +430,7 @@ Own only the canonical type contract and @optcg/types export surface for initial
 - package-name type import test proving the new view DTOs are exported from `@optcg/types`
 - type-level negative tests proving `PlayerView` cannot expose opponent hidden card identity fields or private engine internals
 - type-level negative tests proving `PlayerView.pendingDecision` and `PlayerView.legalActions` cannot expose private opponent candidates or private legal-action reasons
-- type-level negative tests proving initial `SpectatorView` cannot expose either player's hidden card identity fields, any legal actions, any pending decisions, or private engine internals
+- type-level negative tests proving initial `SpectatorView` cannot expose either player's hidden card identity fields, any legal actions, any pending decisions, private reveal records, non-public events, or private engine internals
 - export ownership/cohesion test update assigning each new canonical export to this story exactly once
 
 ## Expected Output
@@ -438,7 +448,7 @@ Own only the canonical type contract and @optcg/types export surface for initial
 - `06-visibility-security.s004` and `06-visibility-security.s021` define exact canonical field sets for `PlayerView`, `SpectatorView`, and required support DTOs
 - `PlayerView` does not include opponent hand card IDs, deck order, face-down opponent life card IDs, RNG state, effect queue internals, audit entries, or private decision candidates
 - `PlayerView.pendingDecision` and `PlayerView.legalActions` are explicitly recipient-filtered and cannot expose private opponent candidates or private legal-action reasons
-- initial `SpectatorView` has no `pendingDecision` or `legalActions` field and does not include either player's hand card IDs, deck order, face-down life card IDs, RNG state, effect queue internals, or audit entries
+- initial `SpectatorView` has no `pendingDecision` or `legalActions` field and does not include either player's hand card IDs, deck order, face-down life card IDs, private reveal records, non-public events, RNG state, effect queue internals, or audit entries
 - the story leaves full-information live spectating explicitly deferred instead of partially modeled
 
 ## Ambiguity Rule

@@ -111,6 +111,14 @@ export interface PublicRevealRecord {
   cleanupPolicy: "returnToOrigin" | "trashAfterResolution" | "none";
 }
 
+export type SpectatorRevealRecord = Omit<PublicRevealRecord, "visibility"> & {
+  visibility: "public";
+};
+
+export type SpectatorEvent = Omit<EngineEvent, "visibility"> & {
+  visibility: { type: "public" };
+};
+
 export interface PlayerView {
   matchId: MatchId;
   playerId: PlayerId;
@@ -135,7 +143,7 @@ export interface SpectatorView {
   turn: PublicTurnState;
   players: Record<PlayerId, SpectatorVisiblePlayerState>;
   battle?: PublicBattleState;
-  revealedCards: PublicRevealRecord[];
-  events: EngineEvent[];
+  revealedCards: SpectatorRevealRecord[];
+  events: SpectatorEvent[];
   timers: PublicTimerState;
 }
