@@ -13,3 +13,4 @@ export {
   collectGameStateInvariantViolations,
   GameStateInvariantError,
 } from "./invariants.js";
+export { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";

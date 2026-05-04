@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-002B.md",
-      "storyId": "ENG-002B",
-      "storyPath": "stories/approved/ENG-002B-deterministic-initial-state-setup.yaml",
-      "storySha256": "ca2ffb4688331c71e2ba170c4fde38966b6c597eaf4d3ede515b26534ff0fe63"
+      "packetPath": "agent-packets/ENG-002C.md",
+      "storyId": "ENG-002C",
+      "storyPath": "stories/approved/ENG-002C-official-mulligan-flow.yaml",
+      "storySha256": "de4d4de1be86f080d87d48c92805a4ad840adfdf1168d6fbc2985217065a9771"
     }
   ],
   "version": 1

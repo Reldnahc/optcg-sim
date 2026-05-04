@@ -12,6 +12,8 @@ import {
   GameStateInvariantError,
   hashCanonicalStateValue,
   initializeRng,
+  respondToMulliganDecision,
+  startMulliganFlow,
 } from "./index.js";
 
 test("package runtime boundary exposes engine-core helpers", () => {
@@ -25,6 +27,8 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "createInitialState",
     "hashCanonicalStateValue",
     "initializeRng",
+    "respondToMulliganDecision",
+    "startMulliganFlow",
   ]);
   assert.equal(engineCorePackage.initializeRng, initializeRng);
   assert.equal(engineCorePackage.advanceRngUint32, advanceRngUint32);
@@ -50,4 +54,9 @@ test("package runtime boundary exposes engine-core helpers", () => {
     engineCorePackage.GameStateInvariantError,
     GameStateInvariantError,
   );
+  assert.equal(
+    engineCorePackage.respondToMulliganDecision,
+    respondToMulliganDecision,
+  );
+  assert.equal(engineCorePackage.startMulliganFlow, startMulliganFlow);
 });
