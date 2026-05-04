@@ -3,6 +3,8 @@ import type {
   CardInstance,
   DecisionId,
   EngineError,
+  EngineEvent,
+  EngineEventId,
   EngineResult,
   GameState,
   MulliganDecision,
@@ -24,14 +26,17 @@ type MulliganDecisionAction = Extract<Action, { type: "respondToDecision" }>;
 
 const toStateSeq = (value: number): StateSeq => value as StateSeq;
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
+const toEngineEventId = (value: string): EngineEventId =>
+  value as EngineEventId;
 
 const toEngineResult = (
   state: GameState,
+  events: EngineEvent[],
   errors?: readonly [EngineError, ...EngineError[]],
 ): EngineResult => {
   const result: EngineResult = {
     state,
-    events: [],
+    events,
     stateHash: hashCanonicalStateValue(state),
   };
   if (state.pendingDecision !== undefined) {
@@ -91,20 +96,38 @@ const redrawOpeningHand = (
   player: PlayerState,
   rng: RngState,
 ): { player: PlayerState; rng: RngState } => {
+  const lifeCount = player.life.length;
+  const lifeDeckOrder = [...player.life]
+    .reverse()
+    .map((lifeCard) => lifeCard.card);
   const returnedToDeck = [
-    ...player.deck.map((card, index) =>
+    ...lifeDeckOrder.map((card, index) =>
       withIndexedZone(card, "deck", "deck", index),
     ),
+    ...player.deck.map((card, index) =>
+      withIndexedZone(card, "deck", "deck", lifeDeckOrder.length + index),
+    ),
     ...player.hand.map((card, index) =>
-      withIndexedZone(card, "deck", "deck", player.deck.length + index),
+      withIndexedZone(
+        card,
+        "deck",
+        "deck",
+        lifeDeckOrder.length + player.deck.length + index,
+      ),
     ),
   ];
   const shuffled = shuffleCardsDeterministic(returnedToDeck, rng);
   const hand = shuffled.cards
     .slice(0, OPENING_HAND_SIZE)
     .map((card, index) => withIndexedZone(card, "hand", "hand", index));
-  const deck = shuffled.cards
-    .slice(OPENING_HAND_SIZE)
+  const afterHandDeck = shuffled.cards.slice(OPENING_HAND_SIZE);
+  const lifeDeckSlice = afterHandDeck.slice(0, lifeCount);
+  const life = [...lifeDeckSlice].reverse().map((card, index) => ({
+    card: withIndexedZone(card, "life", "life", index),
+    faceUp: false,
+  }));
+  const deck = afterHandDeck
+    .slice(lifeCount)
     .map((card, index) => withIndexedZone(card, "deck", "deck", index));
 
   return {
@@ -112,10 +135,35 @@ const redrawOpeningHand = (
       ...player,
       hand,
       deck,
+      life,
       hasMulliganed: true,
     },
     rng: shuffled.rng,
   };
+};
+
+const createEvent = (
+  state: GameState,
+  seqOffset: number,
+  type: EngineEvent["type"],
+  payload: unknown,
+  visibility: EngineEvent["visibility"],
+  causedBy?: EngineEvent["causedBy"],
+): EngineEvent => {
+  const event: EngineEvent = {
+    id: toEngineEventId(
+      `event:${String(state.seq)}:${String(seqOffset)}:${type}`,
+    ),
+    seq: state.eventJournal.length + seqOffset,
+    type,
+    payload,
+    visibility,
+    createdAtStateSeq: toStateSeq(state.seq + 1),
+  };
+  if (causedBy !== undefined) {
+    event.causedBy = causedBy;
+  }
+  return event;
 };
 
 const secondPlayerId = (
@@ -140,20 +188,37 @@ export const startMulliganFlow = (
   if (setupState.pendingDecision !== undefined) {
     return toEngineResult(
       setupState,
+      [],
       invalidDecision("Mulligan flow requires no pending decision."),
     );
   }
 
+  const decision = createMulliganDecision(
+    setupState,
+    setupState.turn.turnPlayerId,
+  );
+  const events: EngineEvent[] = [
+    createEvent(
+      setupState,
+      1,
+      "decisionCreated",
+      {
+        kind: "mulliganDecision",
+        playerId: decision.playerId,
+        decisionId: decision.id,
+      },
+      { type: "replayOnly" },
+      { type: "ruleProcess", name: "officialMulligan" },
+    ),
+  ];
   const nextState: GameState = {
     ...setupState,
     seq: toStateSeq(setupState.seq + 1),
-    pendingDecision: createMulliganDecision(
-      setupState,
-      setupState.turn.turnPlayerId,
-    ),
+    pendingDecision: decision,
+    eventJournal: [...setupState.eventJournal, ...events],
   };
   assertGameStateInvariants(nextState);
-  return toEngineResult(nextState);
+  return toEngineResult(nextState, events);
 };
 
 export const respondToMulliganDecision = (
@@ -164,18 +229,21 @@ export const respondToMulliganDecision = (
   if (pending === undefined || pending.type !== "mulligan") {
     return toEngineResult(
       state,
+      [],
       invalidDecision("No mulligan decision is pending."),
     );
   }
   if (pending.id !== action.decisionId) {
     return toEngineResult(
       state,
+      [],
       invalidDecision("Decision id does not match pending decision."),
     );
   }
   if (action.response.type !== "mulligan") {
     return toEngineResult(
       state,
+      [],
       invalidDecision("Response type must match mulligan decision."),
     );
   }
@@ -184,12 +252,14 @@ export const respondToMulliganDecision = (
   if (player === undefined) {
     return toEngineResult(
       state,
+      [],
       invalidDecision("Pending decision player does not exist."),
     );
   }
   if (!action.response.keep && player.hasMulliganed) {
     return toEngineResult(
       state,
+      [],
       invalidDecision("Player cannot mulligan more than once."),
     );
   }
@@ -213,15 +283,58 @@ export const respondToMulliganDecision = (
     players: nextPlayers,
     rng: maybeUpdated.rng,
   };
+  const events: EngineEvent[] = [
+    createEvent(
+      state,
+      1,
+      "decisionResolved",
+      {
+        kind: "mulliganDecisionResolved",
+        playerId: pending.playerId,
+        decisionId: pending.id,
+        keep: action.response.keep,
+      },
+      { type: "replayOnly" },
+      { type: "decision", decisionId: pending.id },
+    ),
+  ];
+  if (!action.response.keep) {
+    events.push(
+      createEvent(
+        state,
+        events.length + 1,
+        "cardMoved",
+        { kind: "mulliganShuffle", playerId: pending.playerId },
+        { type: "replayOnly" },
+        { type: "decision", decisionId: pending.id },
+      ),
+    );
+  }
   if (isFirstPlayerDecision) {
-    nextState.pendingDecision = createMulliganDecision(
+    const nextDecision = createMulliganDecision(
       state,
       secondPlayerId(state, state.turn.turnPlayerId),
+    );
+    nextState.pendingDecision = nextDecision;
+    events.push(
+      createEvent(
+        state,
+        events.length + 1,
+        "decisionCreated",
+        {
+          kind: "mulliganDecision",
+          playerId: nextDecision.playerId,
+          decisionId: nextDecision.id,
+        },
+        { type: "replayOnly" },
+        { type: "ruleProcess", name: "officialMulligan" },
+      ),
     );
   } else {
     delete nextState.pendingDecision;
   }
+  nextState.eventJournal = [...state.eventJournal, ...events];
 
   assertGameStateInvariants(nextState);
-  return toEngineResult(nextState);
+  return toEngineResult(nextState, events);
 };

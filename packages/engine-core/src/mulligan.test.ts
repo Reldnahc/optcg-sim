@@ -147,6 +147,48 @@ test("redraw-five behavior uses deterministic reshuffle", () => {
   assert.notDeepEqual(handA, originalHand);
 });
 
+test("redraw rebuilds life from reshuffled deck and keeps deterministic orientation", () => {
+  const setupA = createInitialState(createInput());
+  const setupB = createInitialState(createInput());
+
+  const beforeLifeA = must(setupA.players[p1], "p1 before A").life.map(
+    (lifeCard) => lifeCard.card.cardId,
+  );
+  const beforeLifeB = must(setupB.players[p1], "p1 before B").life.map(
+    (lifeCard) => lifeCard.card.cardId,
+  );
+  assert.deepEqual(beforeLifeA, beforeLifeB);
+
+  const startedA = startMulliganFlow(setupA);
+  const startedB = startMulliganFlow(setupB);
+
+  const afterA = respondToMulliganDecision(startedA.state, {
+    type: "respondToDecision",
+    decisionId: must(startedA.state.pendingDecision, "pending decision A").id,
+    response: { type: "mulligan", keep: false },
+  });
+  const afterB = respondToMulliganDecision(startedB.state, {
+    type: "respondToDecision",
+    decisionId: must(startedB.state.pendingDecision, "pending decision B").id,
+    response: { type: "mulligan", keep: false },
+  });
+
+  const lifeA = must(afterA.state.players[p1], "p1 after A").life.map(
+    (lifeCard) => lifeCard.card.cardId,
+  );
+  const lifeB = must(afterB.state.players[p1], "p1 after B").life.map(
+    (lifeCard) => lifeCard.card.cardId,
+  );
+  const deckTopA = must(afterA.state.players[p1], "p1 after A")
+    .deck.slice(0, lifeA.length)
+    .map((card) => card.cardId);
+
+  assert.equal(lifeA.length, beforeLifeA.length);
+  assert.deepEqual(lifeA, lifeB);
+  assert.notDeepEqual(lifeA, beforeLifeA);
+  assert.deepEqual(lifeA, [...deckTopA].reverse());
+});
+
 test("rejects duplicate mulligan for same player", () => {
   const setup = createInitialState(createInput());
   const started = startMulliganFlow(setup);
@@ -193,4 +235,30 @@ test("post-mulligan state passes invariants and stable hash", () => {
   });
   assert.equal(finalA.stateHash, hashCanonicalStateValue(finalA.state));
   assert.equal(finalA.stateHash, finalB.stateHash);
+});
+
+test("accepted mulligan transitions emit events and append to eventJournal", () => {
+  const setup = createInitialState(createInput());
+
+  const started = startMulliganFlow(setup);
+  assert.ok(started.events.length > 0);
+  assert.ok(started.state.eventJournal.length > setup.eventJournal.length);
+  assert.equal(started.events[0]?.type, "decisionCreated");
+
+  const first = respondToMulliganDecision(started.state, {
+    type: "respondToDecision",
+    decisionId: must(started.state.pendingDecision, "first decision").id,
+    response: { type: "mulligan", keep: false },
+  });
+  const firstEventTypes = first.events.map((event) => event.type);
+  assert.ok(firstEventTypes.includes("decisionResolved"));
+  assert.ok(firstEventTypes.includes("decisionCreated"));
+  assert.ok(firstEventTypes.includes("cardMoved"));
+  assert.ok(
+    first.state.eventJournal.length > started.state.eventJournal.length,
+  );
+  assert.equal(
+    first.events.find((event) => event.type === "cardMoved")?.visibility.type,
+    "replayOnly",
+  );
 });
