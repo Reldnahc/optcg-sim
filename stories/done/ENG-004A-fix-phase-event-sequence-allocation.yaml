@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Fix duplicate event sequence and id allocation in phase helpers when multiple
   phase transition events are appended during one EngineResult.
