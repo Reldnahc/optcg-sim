@@ -313,6 +313,9 @@ test("story workflow requires pre-presentation story-review agents", async () =>
   assertMatchesAll(workflowGuidance, [
     /pre-presentation story-review gate/i,
     /Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready/i,
+    /Approval-ready means the exact candidate story has a usable per-story story-review result, and material findings for that story are fixed, explicitly deferred, or recorded/i,
+    /set-level or decomposition-group story review does not satisfy per-story candidate approval review/i,
+    /Each candidate story needs its own usable story-review result before the parent agent presents that exact story for approval/i,
     /Story-review agent model: `gpt-5\.5` with `high` reasoning/i,
     /set-level story review before presenting a decomposed story group/i,
     /per-story review before presenting each candidate story for approval/i,
@@ -323,6 +326,9 @@ test("story workflow requires pre-presentation story-review agents", async () =>
 
   assertMatchesAll(storyWorkflow, [
     /pre-presentation story-review gate/i,
+    /approval-ready means the exact candidate story has a usable per-story story-review result/i,
+    /set-level or decomposition-group story review does not satisfy per-story candidate approval review/i,
+    /each candidate story needs its own usable story-review result before that exact story is presented for approval/i,
     /set-level story review before a decomposed story group is presented for human approval/i,
     /per-story review before each candidate story is presented for approval/i,
     /story-review findings must be fixed, explicitly deferred, or recorded before presentation/i,
@@ -332,6 +338,9 @@ test("story workflow requires pre-presentation story-review agents", async () =>
 
   assertMatchesAll(codexSpec, [
     /story-review subagents reviewing generated or normalized stories before human approval/i,
+    /approval-ready means the exact candidate story has a usable per-story story-review result/i,
+    /set-level or decomposition-group story review does not satisfy per-story candidate approval review/i,
+    /each candidate story needs its own usable story-review result before the parent agent presents that exact story for approval/i,
     /story-review agent model is gpt-5\.5 with high reasoning/i,
     /story-review agents are separate from implementation reviewer subagents/i,
     /The parent agent must not present stories as approval-ready until the story-review findings are resolved, explicitly deferred, or recorded/i,
