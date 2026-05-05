@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-008.md",
+      "storyId": "ENG-008",
+      "storyPath": "stories/approved/ENG-008-split-play-card-support-and-legal-actions.yaml",
+      "storySha256": "520cb40103376282a98f6542fc6831cd2f6adc81ff7e813cdd42ce395f66ce00"
+    }
+  ],
   "version": 1
 }

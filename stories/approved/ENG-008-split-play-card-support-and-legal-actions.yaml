@@ -1,0 +1,95 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-008
+epic_id: M1-001
+title: Split play-card support and legal-action concerns
+type: refactor
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Reduce `play-card.ts` complexity after Character, Stage, overflow, and Event
+  play support by extracting play-card support-policy and legal-action
+  projection concerns into focused engine-core modules without changing
+  gameplay behavior.
+story_boundary: >
+  Own only behavior-preserving separation of play-card support eligibility,
+  playable-card discovery, payment-response legal-action generation, and
+  decision-id parsing helpers. Stop before changing play-card rules, event
+  sequencing, placement/trash/overflow behavior, CLI behavior, replay schema,
+  or any new card capability.
+allowed_touch_points:
+  - packages/engine-core/src/play-card.ts
+  - packages/engine-core/src/play-card-support.ts
+  - packages/engine-core/src/play-card-legal-actions.ts
+  - packages/engine-core/src/play-card-support.test.ts
+  - packages/engine-core/src/play-card.test.ts
+  - packages/engine-core/src/replay-smoke.test.ts
+spec_refs:
+  - 02-engine-mechanics.s014 (Main Phase)
+  - 02-engine-mechanics.s016 (Playing a card)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s012 (Cost payment)
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s016 (Action contract)
+  - 03-game-state-events-decisions.s017 (Canonical decision routing)
+  - 03-game-state-events-decisions.s018 (Canonical event visibility)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s021 (Invariant hooks)
+  - 03-game-state-events-decisions.s022 (Internal state sequencing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 09-card-data-and-support-policy.s010 (Card implementation record)
+  - 09-card-data-and-support-policy.s011 (Support policy by mode)
+  - 09-card-data-and-support-policy.s013 (Match-time card manifest)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 11-testing-quality.s010 (Golden replay tests)
+  - 11-testing-quality.s012 (Replay drift tests)
+  - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+  - 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+  - 15-implementation-kickoff.s012 (Guardrails)
+scope:
+  - create a focused `play-card-support.ts` module that owns `SupportedPlayMetadata`, manifest-backed play support checks, active DON!! counting, destination-conflict checks, and playable hand-card discovery
+  - create a focused `play-card-legal-actions.ts` module that owns play-card decision id creation/parsing, character-overflow decision id creation/parsing, rest-DON payment-combination generation, and pending-decision legal-response projection
+  - keep `play-card.ts` as the orchestration and mutation module for `applyPlayCard`, `applyPlayCardDecisionResponse`, decision creation, payment resolution, overflow response resolution, placement, event emission, rule processing, and invariant checks
+  - preserve all exported `play-card.ts` APIs used by `actions.ts`, tests, CLI behavior, and replay smoke tests
+  - preserve all existing accepted and rejected play-card behavior for Character, Stage, overflow, and Event play, including errors, pending decisions, event order, event visibility, journal append order, state sequence increments, and state hashes
+  - add or move focused tests for extracted support-policy helper behavior only where the extracted helper is now independently reviewable
+  - keep the refactor mechanical enough that reviewers can compare old and new concern boundaries without revalidating new gameplay semantics
+non_scope:
+  - changing legal-action semantics for Character, Stage, Event, overflow, payment, concession, attack, DON!! attach, or phase progression
+  - changing play-card placement, trash, Stage replacement, Character overflow, Event movement, event emission, rule-processing, invariant, or state-hash behavior
+  - introducing Event effects, Counter timing, trigger handling, Blocker, Rush, Banish, Double Attack, replacement, continuous cost modifiers, or effect queues
+  - adding CLI grammar, terminal UX, production replay schema, server protocol, browser UI, database, Redis, WebSocket, React, or live HTTP behavior
+  - broad engine-core architecture cleanup outside the play-card support and legal-action concerns
+dependencies:
+  - ENG-005A
+  - ENG-005B
+  - ENG-005C
+  - ENG-006
+  - TYP-001E
+  - TYP-001G
+acceptance_criteria:
+  - "`play-card.ts` no longer owns support-policy helper logic or pending-decision legal-response projection helper logic"
+  - extracted helper modules have narrow named exports and no dependency on React, browser APIs, WebSocket transport, Redis, Postgres, live HTTP, CLI modules, or test-only helpers
+  - "existing public `play-card.ts` exports remain source-compatible for current engine callers"
+  - Character, Stage, overflow, and Event play tests continue to pass without expectation changes except import or helper-location updates
+  - play-card replay smoke fixture hashes remain unchanged
+  - repeated Event play and play-card replay smoke paths keep the same event type sequence and final state hashes as before the refactor
+  - no new gameplay capability, support status, card category, timing window, or effect behavior is introduced
+required_tests:
+  - "unit tests for extracted support-policy helper behavior covering supported vanilla Character, Stage, exact `[Main]` Event, unsupported status, missing manifest, missing cost, non-empty effect text, non-empty trigger text, and non-Event categories"
+  - "existing `packages/engine-core/src/play-card.test.ts` must pass with unchanged behavioral assertions for Character, Stage, overflow, Event, invalid payment, visibility, reindexing, mutation safety, and determinism"
+  - "existing `packages/engine-core/src/replay-smoke.test.ts` must pass with unchanged play-card fixture hashes"
+  - "`corepack pnpm --filter @optcg/engine-core typecheck` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - keep the patch behavior-preserving; if any state hash, replay hash, event sequence, or existing test expectation changes, stop and split or record the ambiguity
+  - keep engine-core deterministic and pure
+  - do not introduce live Poneglyph access or a card-data package dependency into engine-core
+  - do not export helper APIs from package entrypoints unless an existing production caller needs them
+  - prefer named exports and strict TypeScript types; do not introduce `any`, routine non-null assertions, `@ts-ignore`, or `@ts-nocheck`
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate
