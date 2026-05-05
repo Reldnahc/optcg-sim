@@ -36,6 +36,7 @@ const toCardId = (value: string): CardId => value as CardId;
 const fixtureCard = (params: {
   cardId: CardId;
   category: "leader" | "character" | "don";
+  cost?: number;
   power?: number;
   life?: number;
 }): ResolvedCard => ({
@@ -65,12 +66,13 @@ const fixtureCard = (params: {
     sourceTextHash: `source:${String(params.cardId)}`,
     behaviorHash: `behavior:${String(params.cardId)}`,
   },
+  ...(params.cost !== undefined ? { cost: params.cost } : {}),
   ...(params.power !== undefined ? { power: params.power } : {}),
   ...(params.life !== undefined ? { life: params.life } : {}),
 });
 
 const fixtureDeck = (prefix: string): CardId[] =>
-  Array.from({ length: 12 }, (_, index) =>
+  Array.from({ length: 14 }, (_, index) =>
     toCardId(`${prefix}-card-${String(index + 1)}`),
   );
 
@@ -92,6 +94,7 @@ const createFixtureManifest = (
       : fixtureCard({
           cardId,
           category: "character",
+          cost: 1,
           power: 3000,
         });
   }
@@ -110,7 +113,7 @@ const createFixtureManifest = (
   });
 
   return {
-    manifestHash: "cli-fixture-manifest-v1",
+    manifestHash: "cli-fixture-manifest-v2",
     source: "manual-test",
     cardDataVersion: "cli-fixture",
     effectDefinitionsVersion: "cli-fixture",
