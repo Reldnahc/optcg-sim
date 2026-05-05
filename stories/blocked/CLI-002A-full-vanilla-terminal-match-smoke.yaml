@@ -1,0 +1,91 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CLI-002A
+epic_id: M1-001
+title: Add full vanilla terminal match smoke
+type: verification
+area: engine
+primary_concern: verification
+priority: high
+status: blocked
+blocked_reason: >
+  Existing CLI command-script behavior cannot advance from normal post-mulligan
+  boot into main phase without using smoke `setupScript` phase-mutation
+  shortcuts. After `respond keep;respond keep`, the match is active in Refresh
+  Phase; `pass` currently maps to `endMainPhase` and is rejected outside Main
+  Phase. Keep this verification story blocked until a narrow CLI turn-flow story
+  owns terminal advancement through automatic phases using existing engine-core
+  phase behavior.
+summary: >
+  Add a deterministic CLI command-script smoke that proves the terminal runner
+  can play a complete vanilla match from normal fixture boot through legal CLI
+  commands, stable hashes, and a completed match result.
+story_boundary: >
+  Own only end-to-end CLI-level verification for a complete supported vanilla
+  terminal match. Stop before adding engine gameplay behavior, new CLI command
+  grammar, production replay storage, browser UI, server protocol behavior, or
+  broad fixture/card-data loading.
+allowed_touch_points:
+  - packages/cli/**
+  - tests/cli/**
+  - fixtures/replays/**
+spec_refs:
+  - 02-engine-mechanics.s003 (Rule-processing checkpoints)
+  - 02-engine-mechanics.s014 (Main Phase)
+  - 02-engine-mechanics.s016 (Playing a card)
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s035 (Exact win/loss conditions)
+  - 02-engine-mechanics.s036 (DON!! card mechanics)
+  - 02-engine-mechanics.s037 (First-turn restrictions)
+  - 11-testing-quality.s010 (Golden replay tests)
+  - 11-testing-quality.s012 (Replay drift tests)
+  - 12-roadmap.s005 (Milestone 1: terminal engine)
+  - 15-implementation-kickoff.s007 (Step 3 - CLI runner)
+  - 15-implementation-kickoff.s011 (Definition of done for kickoff)
+  - 18-acceptance-tests.s003 (Milestone 1 - terminal engine)
+scope:
+  - add one or more deterministic CLI command-script smoke scenarios that start from the normal CLI fixture boot path and do not rely on test-only state mutation after boot
+  - drive a complete supported vanilla match through existing CLI commands and existing engine behavior, including mulligan responses, turn progression, Character or Stage play as needed, DON!! attachment, attacks, pass/end-main progression, and a natural completed match result
+  - assert repeated execution of the full-match command script produces the same checkpoint hashes, final state hash, completed match status, and required post-action output fields
+  - assert material command-script or fixture-stat drift changes the final hash or fails a checkpoint assertion
+  - keep the smoke fixture local to CLI verification and avoid defining a production replay artifact schema
+non_scope:
+  - implementing or changing engine gameplay behavior
+  - adding new CLI command grammar or interactive UX features
+  - adding blocker, counter, trigger, Event-card, On Play, Banish, Double Attack, Rush, replacement, or full effect-runtime behavior
+  - using test-only setup steps to skip normal fixture boot, normal phase progression, or normal legal CLI actions for the full-match path
+  - production replay schema, persisted replay storage, replay viewer, rollback, or recovery
+  - live Poneglyph fixture loading, card-data adapter work, deck builder behavior, account/loadout persistence, browser UI, server protocol, transport envelopes, Redis, WebSocket, React, or database behavior
+dependencies:
+  - CLI-001H
+  - CLI-002B
+  - ENG-002E
+  - ENG-003E
+  - ENG-005C
+acceptance_criteria:
+  - command-script smoke tests run under root verification without requiring an interactive terminal
+  - at least one full-match script starts from normal CLI fixture boot and reaches a deterministic completed match status through normal legal CLI commands
+  - the full-match script includes normal terminal use of `respond`, `play`, `respond pay:<donIndex>[,<donIndex>...]`, `attach-don`, `attack`, and `pass` where each command is backed by existing engine behavior
+  - repeated execution of the full-match script produces the same checkpoint hashes, final hash, final status, and required post-action output fields: state sequence, phase/status, pending decision, legal actions, and state hash
+  - material command-script drift or fixture-stat drift changes the final hash or fails a checkpoint assertion
+  - if the full-match script cannot complete using existing engine and CLI behavior, the story fails closed with a parent-owned recorded blocker or follow-up story rather than implementing the missing engine or CLI behavior inline
+required_tests:
+  - CLI smoke test for deterministic full vanilla terminal match completion through `--command-script`
+  - CLI smoke test proving the full-match script starts from normal fixture boot and does not use post-boot setup mutation shortcuts
+  - CLI smoke assertion that the full-match script exercises `respond`, `play`, `respond pay:<donIndex>[,<donIndex>...]`, `attach-don`, `attack`, and `pass`
+  - CLI smoke test proving repeated full-match execution has stable checkpoint hashes, final hash, completed status, and required output fields
+  - negative test proving command-script drift or manifest-stat drift changes the final hash or fails an assertion
+  - blocker-record or follow-up-story artifact if existing engine/CLI behavior cannot complete the match without broadening this story
+repo_rules:
+  - story-review must complete before approval
+  - do not approve or packetize this story again until CLI-002B or an equivalent reviewed CLI turn-flow story is done
+  - keep this story verification-only unless story review rejects that boundary
+  - do not add engine gameplay behavior in this story
+  - do not add new CLI command grammar in this story
+  - smoke fixtures must be deterministic and exclude transport timestamps, signatures, client IDs, and nondeterministic metadata
+  - do not add production replay schema or storage behavior in this story
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate
