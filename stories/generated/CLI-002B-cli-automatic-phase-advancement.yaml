@@ -1,0 +1,72 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CLI-002B
+epic_id: M1-001
+title: Add CLI automatic phase advancement
+type: implementation
+area: engine
+primary_concern: cli
+priority: high
+status: generated
+summary: >
+  Teach the terminal runner to advance through existing automatic engine phases
+  after normal boot and turn pass commands so command scripts can reach Main
+  Phase action priority without test-only setup mutation shortcuts.
+story_boundary: >
+  Own only CLI runner and dispatch behavior needed to continue through existing
+  engine-core refresh, draw, DON!!, and main-phase transitions until player
+  action priority, a pending decision, or match completion is reached. Do not
+  add gameplay rules, new command grammar, replay schema, storage, UI, server
+  protocol, or broad fixture/card-data loading.
+allowed_touch_points:
+  - packages/cli/**
+spec_refs:
+  - 02-engine-mechanics.s003 (Rule-processing checkpoints)
+  - 02-engine-mechanics.s011 (Refresh Phase)
+  - 02-engine-mechanics.s012 (Draw Phase)
+  - 02-engine-mechanics.s013 (DON!! Phase)
+  - 02-engine-mechanics.s014 (Main Phase)
+  - 02-engine-mechanics.s015 (End Phase)
+  - 02-engine-mechanics.s035 (Exact win/loss conditions)
+  - 02-engine-mechanics.s037 (First-turn restrictions)
+  - 12-roadmap.s005 (Milestone 1: terminal engine)
+  - 15-implementation-kickoff.s007 (Step 3 - CLI runner)
+  - 15-implementation-kickoff.s011 (Definition of done for kickoff)
+  - 18-acceptance-tests.s003 (Milestone 1 - terminal engine)
+scope:
+  - add CLI-level advancement through existing engine phase APIs from active non-main phases to the next player-action point
+  - ensure `--command-script "respond keep;respond keep"` reaches normal Main Phase action priority from `bootFixtureMatch()` without smoke `setupScript`
+  - ensure `pass` from Main Phase ends the turn and the CLI reaches the next turn player's Main Phase action priority when no pending decision or terminal status intervenes
+  - preserve pending-decision handling by stopping advancement whenever a pending decision exists
+  - preserve completed or game-over status by stopping command-script execution when the match completes
+non_scope:
+  - changing engine-core phase rules or legality rules
+  - adding new CLI command grammar
+  - implementing blockers, counters, triggers, Event cards, On Play effects, replacement effects, Rush, or other effect runtime behavior
+  - changing smoke fixture setup mutation helpers
+  - production replay schema, persisted replay storage, replay viewer, rollback, recovery, browser UI, server protocol, transport envelopes, Redis, WebSocket, React, or database behavior
+dependencies:
+  - CLI-001G
+  - ENG-002D
+  - ENG-002E
+acceptance_criteria:
+  - command-script execution from normal boot can advance from completed mulligans into Main Phase action priority without `setupScript` mutation
+  - pass from Main Phase advances to the next turn player's Main Phase action priority through existing refresh, draw, and DON!! behavior when no pending decision or terminal status intervenes
+  - advancement stops without consuming commands when a pending decision exists
+  - advancement stops at completed or game-over status
+  - no new CLI command grammar is introduced
+  - existing CLI smoke and command tests continue to pass or are updated only for the intentional terminal phase-advancement behavior
+required_tests:
+  - CLI command-script test proving `respond keep;respond keep` reaches Main Phase action priority from normal boot
+  - CLI command-script or dispatch test proving `pass` from Main Phase reaches the next turn player's Main Phase action priority
+  - regression test proving advancement does not skip pending decisions
+  - regression test proving completed matches stop command-script execution
+repo_rules:
+  - story-review must complete before approval
+  - keep this story CLI-only unless story review rejects that boundary
+  - do not add engine gameplay behavior in this story
+  - do not add new CLI command grammar in this story
+  - must pass `corepack pnpm --filter @optcg/cli test`
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate

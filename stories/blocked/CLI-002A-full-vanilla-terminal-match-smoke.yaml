@@ -8,7 +8,15 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: blocked
+blocked_reason: >
+  Existing CLI command-script behavior cannot advance from normal post-mulligan
+  boot into main phase without using smoke `setupScript` phase-mutation
+  shortcuts. After `respond keep;respond keep`, the match is active in Refresh
+  Phase; `pass` currently maps to `endMainPhase` and is rejected outside Main
+  Phase. Keep this verification story blocked until a narrow CLI turn-flow story
+  owns terminal advancement through automatic phases using existing engine-core
+  phase behavior.
 summary: >
   Add a deterministic CLI command-script smoke that proves the terminal runner
   can play a complete vanilla match from normal fixture boot through legal CLI
@@ -53,6 +61,7 @@ non_scope:
   - live Poneglyph fixture loading, card-data adapter work, deck builder behavior, account/loadout persistence, browser UI, server protocol, transport envelopes, Redis, WebSocket, React, or database behavior
 dependencies:
   - CLI-001H
+  - CLI-002B
   - ENG-002E
   - ENG-003E
   - ENG-005C
@@ -72,6 +81,7 @@ required_tests:
   - blocker-record or follow-up-story artifact if existing engine/CLI behavior cannot complete the match without broadening this story
 repo_rules:
   - story-review must complete before approval
+  - do not approve or packetize this story again until CLI-002B or an equivalent reviewed CLI turn-flow story is done
   - keep this story verification-only unless story review rejects that boundary
   - do not add engine gameplay behavior in this story
   - do not add new CLI command grammar in this story
