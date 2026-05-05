@@ -6,6 +6,7 @@ import {
   assertCliSmokePostActionOutputFields,
   assertCliSmokeScenarioResultMatchesFixture,
   loadCliSmokeFixtureFromFile,
+  runCliSmokeScenarioFromNormalBootThroughCommandScript,
   runCliSmokeScenarioThroughCommandScript,
   runCliSmokeScenario,
 } from "./smoke.js";
@@ -42,6 +43,11 @@ const replaceScenario = (
     scenario.id === replacement.id ? replacement : scenario,
   ),
 });
+
+const scenarioCommands = (scenario: CliSmokeScenario): readonly string[] => [
+  ...scenario.bootCommands,
+  ...scenario.actionCommands,
+];
 
 const assertDeterministicScenario = (
   fixture: CliSmokeFixture,
@@ -127,12 +133,17 @@ describe("CLI-001D terminal runner smoke scripts", () => {
     );
   });
 
-  test("includes required post-action output fields for every smoke script output", () => {
+  test("includes required post-action output fields for every smoke script output", async () => {
     const fixture = loadCliSmokeFixtureFromFile(fixturePath);
 
     for (const scenario of fixture.scenarios) {
       assertCliSmokePostActionOutputFields(
-        runCliSmokeScenario(fixture, scenario.id),
+        scenario.id === "full-vanilla-terminal-match"
+          ? await runCliSmokeScenarioFromNormalBootThroughCommandScript(
+              fixture,
+              scenario.id,
+            )
+          : runCliSmokeScenario(fixture, scenario.id),
       );
     }
   });
@@ -208,5 +219,111 @@ describe("CLI-001H play-card terminal smoke scripts", () => {
     );
 
     assert.equal(result.finalStatus.type, "active");
+  });
+});
+
+describe("CLI-002A full vanilla terminal match smoke", () => {
+  test("runs a complete vanilla match from normal boot through command-script mode", async () => {
+    const fixture = loadCliSmokeFixtureFromFile(fixturePath);
+    const scenario = findScenario(fixture, "full-vanilla-terminal-match");
+
+    assert.deepEqual(
+      scenario.setupScript,
+      [],
+      "full-match smoke must not use post-boot setup mutation shortcuts",
+    );
+    assert.deepEqual(scenario.bootCommands, ["respond keep", "respond keep"]);
+    assert.equal(
+      scenarioCommands(scenario).includes("respond keep"),
+      true,
+      "full-match smoke must exercise normal mulligan respond commands",
+    );
+
+    const first = await runCliSmokeScenarioFromNormalBootThroughCommandScript(
+      fixture,
+      scenario.id,
+    );
+    const second = await runCliSmokeScenarioFromNormalBootThroughCommandScript(
+      fixture,
+      scenario.id,
+    );
+
+    assert.deepEqual(first.checkpoints, second.checkpoints);
+    assert.equal(first.finalStateHash, second.finalStateHash);
+    assert.deepEqual(first.finalStatus, second.finalStatus);
+    assert.deepEqual(first.finalStatus, { type: "completed", winner: "p1" });
+    assertCliSmokeScenarioResultMatchesFixture(fixture, first);
+    assertCliSmokePostActionOutputFields(first);
+  });
+
+  test("documents the required terminal command surface used by the full-match script", () => {
+    const fixture = loadCliSmokeFixtureFromFile(fixturePath);
+    const scenario = findScenario(fixture, "full-vanilla-terminal-match");
+    const commands = scenarioCommands(scenario);
+
+    assert.equal(
+      commands.some((command) => command === "respond keep"),
+      true,
+    );
+    assert.equal(
+      commands.some((command) => /^play \d+$/u.test(command)),
+      true,
+    );
+    assert.equal(
+      commands.some((command) => /^respond pay:\d+(?:,\d+)*$/u.test(command)),
+      true,
+    );
+    assert.equal(
+      commands.some((command) => /^attach-don \d+ \S+$/u.test(command)),
+      true,
+    );
+    assert.equal(
+      commands.some((command) => /^attack \S+ \S+$/u.test(command)),
+      true,
+    );
+    assert.equal(
+      commands.some((command) => command === "pass"),
+      true,
+    );
+  });
+
+  test("detects full-match command-script or manifest-stat drift", async () => {
+    const fixture = loadCliSmokeFixtureFromFile(fixturePath);
+    const scenario = findScenario(fixture, "full-vanilla-terminal-match");
+    const driftedScenario = {
+      ...scenario,
+      actionCommands: scenario.actionCommands.filter(
+        (command) => command !== "attach-don 0 character:0",
+      ),
+    };
+    const commandDriftFixture = replaceScenario(fixture, driftedScenario);
+
+    const commandDrift =
+      await runCliSmokeScenarioFromNormalBootThroughCommandScript(
+        commandDriftFixture,
+        scenario.id,
+      );
+    assert.notEqual(commandDrift.finalStateHash, scenario.expected.finalHash);
+    assert.throws(() => {
+      assertCliSmokeScenarioResultMatchesFixture(
+        commandDriftFixture,
+        commandDrift,
+      );
+    }, /(checkpoint|final) hash/u);
+
+    await assert.rejects(
+      () =>
+        runCliSmokeScenarioFromNormalBootThroughCommandScript(
+          {
+            ...fixture,
+            manifestStats: {
+              ...fixture.manifestStats,
+              manifestHash: `${fixture.manifestStats.manifestHash}:drift`,
+            },
+          },
+          scenario.id,
+        ),
+      /manifest manifestHash/u,
+    );
   });
 });

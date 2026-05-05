@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CLI-002A.md",
+      "storyId": "CLI-002A",
+      "storyPath": "stories/approved/CLI-002A-full-vanilla-terminal-match-smoke.yaml",
+      "storySha256": "212439bb8d9996e8cbdd4c76de711b63d185d804f452c2cd0ed4d9a77e9b61a2"
+    }
+  ],
   "version": 1
 }

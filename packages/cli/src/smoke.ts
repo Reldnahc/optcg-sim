@@ -726,6 +726,58 @@ export const runCliSmokeScenarioThroughCommandScript = async (
   };
 };
 
+export const runCliSmokeScenarioFromNormalBootThroughCommandScript = async (
+  fixture: CliSmokeFixture,
+  scenarioId: string,
+): Promise<CliSmokeScenarioResult> => {
+  const scenario = findScenario(fixture, scenarioId);
+  if (scenario.setupScript.length > 0) {
+    throw new Error(
+      `${scenario.id} cannot use post-boot setup mutation shortcuts.`,
+    );
+  }
+
+  let state = bootFixtureMatch().state;
+  assertManifestStats(fixture, state);
+  const checkpoints: CliSmokeCommandCheckpoint[] = [];
+  const stdout = createStringWriter();
+  const stderr = createStringWriter();
+  const commands = [...scenario.bootCommands, ...scenario.actionCommands];
+  const scriptExitCode = await runCli(
+    ["--command-script", commands.join(";")],
+    {
+      stdin: emptyInput(),
+      stdout: stdout.writer,
+      stderr: stderr.writer,
+    },
+    {
+      onCommandScriptResult: ({ command, result }) => {
+        assertCliCommandAccepted(result, command);
+        state = result.state;
+        checkpoints.push(commandCheckpoint(command, result));
+      },
+    },
+  );
+
+  if (scriptExitCode !== 0) {
+    throw new Error(
+      `CLI smoke command script exited ${String(scriptExitCode)}: ${stderr.output()}`,
+    );
+  }
+  if (stderr.output().length > 0) {
+    throw new Error(
+      `CLI smoke command script wrote stderr: ${stderr.output()}`,
+    );
+  }
+
+  return {
+    scenarioId,
+    finalStateHash: hashCanonicalStateValue(state),
+    finalStatus: statusSnapshot(state.status),
+    checkpoints,
+  };
+};
+
 export const assertCliSmokeScenarioResultMatchesFixture = (
   fixture: CliSmokeFixture,
   result: CliSmokeScenarioResult,
