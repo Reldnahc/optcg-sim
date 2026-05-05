@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-012A.md",
-      "storyId": "ENG-012A",
-      "storyPath": "stories/approved/ENG-012A-match-effect-definition-registry.yaml",
-      "storySha256": "e5460819fa5dd754e898b26213b9111b4143c884a45a2f6afe296015b4035e18"
+      "packetPath": "agent-packets/ENG-012B.md",
+      "storyId": "ENG-012B",
+      "storyPath": "stories/approved/ENG-012B-effect-definition-loading-support-gate.yaml",
+      "storySha256": "4a3c8db2f350eaf19f8e40d75de30efe09140872828dc4f0b1a1be501966230b"
     }
   ],
   "version": 1
