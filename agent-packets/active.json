@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-007.md",
-      "storyId": "ENG-007",
-      "storyPath": "stories/approved/ENG-007-start-of-main-trigger-window-scaffold.yaml",
-      "storySha256": "63c8b5fc998a82d53c27db457df213bb87dc2a3e820b571e91e39080d825c5dc"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

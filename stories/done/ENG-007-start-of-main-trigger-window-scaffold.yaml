@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the Milestone 1 start-of-main timing gate for known trigger-free states so
   Main Phase action priority is not exposed until the engine has
