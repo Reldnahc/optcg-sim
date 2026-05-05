@@ -1,0 +1,118 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-006
+epic_id: M1-001
+title: Add vanilla Event card play skeleton
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Complete the Milestone 1 play-card skeleton by allowing supported vanilla
+  Event cards to be played from hand through the existing engine play-card
+  action path, while failing closed before Event effect resolution.
+story_boundary: >
+  Own only Main Phase play of supported vanilla Event cards from hand through
+  existing engine action and payment routing. Stop before Event effect
+  execution, Counter Event timing, effect queue processing, trigger handling,
+  card-data package work, CLI grammar changes, or server/client behavior.
+allowed_touch_points:
+  - packages/engine-core/**
+  - fixtures/replays/**
+  - tests/engine/**
+spec_refs:
+  - 02-engine-mechanics.s003 (Rule-processing checkpoints)
+  - 02-engine-mechanics.s007 (Card categories)
+  - 02-engine-mechanics.s014 (Main Phase)
+  - 02-engine-mechanics.s016 (Playing a card)
+  - 02-engine-mechanics.s025 (Keyword behavior)
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s012 (Cost payment)
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s016 (Action contract)
+  - 03-game-state-events-decisions.s017 (Canonical decision routing)
+  - 03-game-state-events-decisions.s018 (Canonical event visibility)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s021 (Invariant hooks)
+  - 03-game-state-events-decisions.s022 (Internal state sequencing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 09-card-data-and-support-policy.s010 (Card implementation record)
+  - 09-card-data-and-support-policy.s011 (Support policy by mode)
+  - 09-card-data-and-support-policy.s013 (Match-time card manifest)
+  - 09-card-data-and-support-policy.s014 (Canonical Poneglyph normalization)
+  - 11-testing-quality.s004 (Primitive tests)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 11-testing-quality.s010 (Golden replay tests)
+  - 11-testing-quality.s012 (Replay drift tests)
+  - 12-roadmap.s005 (Milestone 1: terminal engine)
+  - 18-acceptance-tests.s003 (Milestone 1 - terminal engine)
+scope:
+  - include `playCard` actions in `getLegalActions` for supported Event cards in the turn player's hand during Main Phase when no pending decision or battle is active
+  - use the match card manifest to identify supported Event cards, printed costs, and explicit Main Phase Event playability
+  - accept only Event cards whose manifest support is `vanilla-confirmed`, whose category is `event`, whose normalized `effectText.trim()` is exactly `[Main]`, and whose trigger text is empty or absent
+  - omit or reject missing manifest records, unsupported support statuses, non-Event categories for this path, Events without exact `[Main]` timing, `[Counter]` Events, Events with a `[Main]` marker plus any effect body, and Event cards with any trigger text
+  - reject initial `playCard.costPayment` submissions so payment choices stay inside the active `PayCostDecision` context
+  - for nonzero printed costs, accepted Event `playCard` reveals the card and creates a single-use `PayCostDecision` for the turn player with a `restDon` option for the required count
+  - while the Event payment decision is active, `getLegalActions` exposes only matching `respondToDecision` payment responses for the decision player plus concession where already allowed
+  - accept only the matching payment response for the active Event play decision and reject stale, wrong-player, wrong-decision, malformed, duplicate, wrong-player-DON!!, rested, attached, or insufficient DON!! selections without mutating input state
+  - after a valid nonzero payment response, rest exactly the selected active DON!! in the turn player's cost area as payment
+  - allow zero-cost supported Event cards to resolve directly from `playCard` without creating a payment decision
+  - move a played Event from hand to trash after valid payment or zero-cost direct play
+  - reindex the remaining hand cards and trash cards after the Event leaves hand, preserving zone refs and ownership
+  - emit deterministic public `cardRevealed` and public `decisionCreated` events when a nonzero Event payment decision is created
+  - emit deterministic public `costPaid`, public `decisionResolved`, public `cardMoved`, public `cardTrashed`, and public `cardPlayed` events after a valid nonzero payment response
+  - emit deterministic public `cardRevealed`, public `cardMoved`, public `cardTrashed`, and public `cardPlayed` events for accepted zero-cost Event play
+  - increment accepted-action state sequence once, append the event journal, run rule processing and invariants, and return a stable state hash
+non_scope:
+  - Event effect execution or effect queue insertion
+  - "`[Counter]` Event use during Counter Step"
+  - "`[Trigger]` handling from life"
+  - On Play, Activate Main, blocker, counter, replacement, Banish, Double Attack, or Rush behavior
+  - continuous cost modifiers beyond using manifest-derived printed cost clamped to zero
+  - new CLI command grammar, terminal UX, production replay schema, server protocol, browser UI, database, Redis, WebSocket, React, or live HTTP behavior
+dependencies:
+  - ENG-002E
+  - ENG-003D
+  - ENG-005A
+  - ENG-005B
+  - ENG-005C
+  - TYP-001E
+acceptance_criteria:
+  - legal actions include supported vanilla Event `playCard` actions only for the turn player's Main Phase hand cards when no pending decision or battle is active
+  - non-turn players, non-Main phases, pending-decision states, active-battle states, unsupported cards, missing manifest records, non-Event categories in this path, Events without exact `[Main]` timing, `[Counter]` Events, `[Main]` Events with an effect body, and trigger-bearing Event cards do not receive Event play actions
+  - accepted nonzero Event `playCard` creates a `PayCostDecision` instead of accepting direct payment selection on the initial action
+  - while an Event payment decision is active, legal actions include only matching `respondToDecision` payment responses for the decision player plus concession where already allowed
+  - a valid payment response for Event play rests the selected active DON!!, removes the Event from hand, places it in trash, emits required events, and produces a new state hash
+  - accepted zero-cost Event play moves the Event from hand to trash without creating a payment decision
+  - paid and zero-cost Event play leave remaining hand and trash cards with correct zone refs and indexes
+  - illegal payment responses, direct initial `costPayment`, and stale or forged card references return errors without mutating the input state
+  - repeated execution of the same Event play script produces the same event sequence and state hash
+required_tests:
+  - unit test for legal-action generation of payable vanilla Event cards during Main Phase
+  - unit test proving legal actions include Event play when normalized `effectText.trim()` is exactly `[Main]`
+  - unit test proving legal actions omit Event play for non-turn player, non-Main phase, pending decision, active battle, unsupported card, missing manifest card, and non-Event category
+  - unit test proving legal actions omit Event play for missing Main timing marker, `[Counter]` marker, `[Main]` marker plus effect body, and non-empty `triggerText`
+  - unit test for accepted nonzero Event play creating a `PayCostDecision`
+  - unit test for legal-action generation of matching `respondToDecision` payment responses for the Event payment decision player
+  - unit test proving the wrong player does not receive Event payment `respondToDecision` legal actions
+  - unit test for valid payment response completing Event play with exact selected active DON!! payment and hand-to-trash movement
+  - unit test for accepted zero-cost Event play without selected DON!!
+  - unit test asserting public `cardRevealed` and public `decisionCreated` events for accepted nonzero Event `playCard`
+  - unit test asserting public `costPaid`, public `decisionResolved`, public `cardMoved`, public `cardTrashed`, and public `cardPlayed` events for accepted nonzero Event payment response
+  - unit test asserting public `cardRevealed`, public `cardMoved`, public `cardTrashed`, and public `cardPlayed` events for accepted zero-cost Event play
+  - unit test proving paid Event play reindexes remaining hand cards and trash cards with correct zone refs
+  - unit test proving zero-cost Event play reindexes remaining hand cards and trash cards with correct zone refs
+  - unit test rejecting direct initial `costPayment` without mutation
+  - unit test rejecting stale, wrong-player, wrong-decision, malformed, duplicate, wrong-player-DON!!, rested, attached, and insufficient selected DON!! payment responses without mutation
+  - unit test rejecting stale or forged Event card instance references without mutation
+  - replay or smoke test proving repeated Event play execution has stable event sequence and state hash
+repo_rules:
+  - do not activate, packetize, or implement this story until ENG-005C is done
+  - keep engine-core deterministic and pure
+  - do not introduce live Poneglyph access or a card-data package dependency into engine-core
+  - fail closed instead of resolving Event effect text, Counter Event timing, or trigger text
+  - must pass `corepack pnpm run verify`
+ambiguity_policy: fail_and_escalate
