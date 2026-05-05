@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: cli
 priority: high
-status: generated
+status: approved
 summary: >
   Teach the terminal runner to advance through existing automatic engine phases
   after normal boot and turn pass commands so command scripts can reach Main
