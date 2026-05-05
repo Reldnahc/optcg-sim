@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-006.md",
-      "storyId": "ENG-006",
-      "storyPath": "stories/approved/ENG-006-vanilla-event-card-play-skeleton.yaml",
-      "storySha256": "aaba58acbe10e6845714e4b285e625bb4c953186c7fda4aed1f5248d953f246a"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

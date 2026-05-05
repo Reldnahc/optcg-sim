@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Complete the Milestone 1 play-card skeleton by allowing supported vanilla
   Event cards to be played from hand through the existing engine play-card
