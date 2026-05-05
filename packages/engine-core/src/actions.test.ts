@@ -5,6 +5,11 @@ import { createInitialState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";
 import { applyAction, getLegalActions } from "./actions.js";
 import {
+  advanceDonPhase,
+  advanceDrawPhase,
+  advanceRefreshPhase,
+} from "./phases.js";
+import {
   createActiveState,
   createInput,
   must,
@@ -73,6 +78,17 @@ test("getLegalActions outside main phase still includes concession", () => {
   ]);
   assert.deepEqual(getLegalActions(state, p2), [
     { type: "concede", playerId: p2 },
+  ]);
+});
+
+test("getLegalActions in don phase before start-of-main acceptance exposes concession only", () => {
+  const active = createActiveState();
+  const refresh = advanceRefreshPhase(active);
+  const draw = advanceDrawPhase(refresh.state);
+  const don = advanceDonPhase(draw.state);
+
+  assert.deepEqual(getLegalActions(don.state, p1), [
+    { type: "concede", playerId: p1 },
   ]);
 });
 

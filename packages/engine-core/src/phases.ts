@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  CardSupportStatus,
   EngineError,
   EngineEvent,
   EngineEventId,
@@ -126,6 +127,57 @@ const withIndexedZone = (
   ...card,
   zone: { zone, playerId: card.owner, slot, index },
 });
+
+const hasUnsupportedBoardCardSupport = (status: CardSupportStatus): boolean =>
+  status !== "vanilla-confirmed";
+
+const hasNonEmptyText = (value: string | undefined): boolean =>
+  value !== undefined && value.trim().length > 0;
+
+const unsupportedStartOfMain = (
+  state: GameState,
+  details: unknown,
+): EngineResult =>
+  toEngineResult(
+    state,
+    [],
+    [{ type: "effectRuntimeError", effectId: "start-of-main-gate", details }],
+  );
+
+const findUnsupportedBoardCard = (
+  state: GameState,
+): { cardId: CardInstance["cardId"]; reason: string } | undefined => {
+  const cards: CardInstance[] = [];
+  for (const player of Object.values(state.players)) {
+    cards.push(player.leader, ...player.characters);
+    if (player.stage !== undefined) {
+      cards.push(player.stage);
+    }
+  }
+
+  for (const card of cards) {
+    const resolved = state.cardManifest.cards[card.cardId];
+    if (resolved === undefined) {
+      return { cardId: card.cardId, reason: "missing-manifest" };
+    }
+    if (hasUnsupportedBoardCardSupport(resolved.support.status)) {
+      return { cardId: card.cardId, reason: "non-vanilla-support-status" };
+    }
+    if (resolved.support.effectDefinitionId !== undefined) {
+      return { cardId: card.cardId, reason: "effect-definition-present" };
+    }
+    if ((resolved.support.customHandlerIds?.length ?? 0) > 0) {
+      return { cardId: card.cardId, reason: "custom-handlers-present" };
+    }
+    if (hasNonEmptyText(resolved.effectText)) {
+      return { cardId: card.cardId, reason: "effect-text-present" };
+    }
+    if (hasNonEmptyText(resolved.triggerText)) {
+      return { cardId: card.cardId, reason: "trigger-text-present" };
+    }
+  }
+  return undefined;
+};
 
 const secondPlayerId = (
   state: GameState,
@@ -378,17 +430,32 @@ export const enterMainPhase = (state: GameState): EngineResult => {
   if (state.turn.phase !== "don") {
     return invalidPhaseTransition(state, "don");
   }
+  if (state.effectQueue.length > 0) {
+    return unsupportedStartOfMain(state, {
+      reason: "effect-queue-not-empty",
+      count: state.effectQueue.length,
+    });
+  }
+  if (state.deferredTriggers.length > 0) {
+    return unsupportedStartOfMain(state, {
+      reason: "deferred-triggers-not-empty",
+      count: state.deferredTriggers.length,
+    });
+  }
+  const unsupportedBoardCard = findUnsupportedBoardCard(state);
+  if (unsupportedBoardCard !== undefined) {
+    return unsupportedStartOfMain(state, unsupportedBoardCard);
+  }
   const turnPlayerId = state.turn.turnPlayerId;
-  const events: EngineEvent[] = [
-    createEvent(state, 1, "phaseEnded", {
-      phase: "don",
-      playerId: turnPlayerId,
-    }),
-    createEvent(state, 2, "phaseStarted", {
-      phase: "main",
-      playerId: turnPlayerId,
-    }),
-  ];
+  const events: EngineEvent[] = [];
+  appendEvent(events, state, "phaseEnded", {
+    phase: "don",
+    playerId: turnPlayerId,
+  });
+  appendEvent(events, state, "phaseStarted", {
+    phase: "main",
+    playerId: turnPlayerId,
+  });
 
   const nextState: GameState = {
     ...state,
