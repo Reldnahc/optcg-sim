@@ -402,6 +402,22 @@ test("enterMainPhase accepts known trigger-free path and exposes ordinary main a
   assert.notEqual(JSON.stringify(result.state), beforeHash);
 });
 
+test("legal-action reads after accepted start-of-main gate do not mutate state or append events", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  const result = enterMainPhase(state);
+  const beforeRead = JSON.stringify(result.state);
+  const journalLength = result.state.eventJournal.length;
+
+  const firstRead = getLegalActions(result.state, p1);
+  const secondRead = getLegalActions(result.state, p1);
+
+  assert.deepEqual(firstRead, secondRead);
+  assert.equal(JSON.stringify(result.state), beforeRead);
+  assert.equal(result.state.eventJournal.length, journalLength);
+});
+
 test("enterMainPhase rejects when effectQueue is non-empty without mutation or events", () => {
   const state = createActiveState();
   seedKnownTriggerFreeBoardManifest(state);
@@ -541,4 +557,35 @@ test("enterMainPhase is deterministic for accepted known trigger-free progressio
     resultB.events.map((event) => event.type),
   );
   assert.equal(resultA.stateHash, resultB.stateHash);
+});
+
+test("start-of-main smoke path deterministically reaches main action priority", () => {
+  const run = () => {
+    const state = createActiveState();
+    seedKnownTriggerFreeBoardManifest(state);
+    state.turn.phase = "don";
+    const result = enterMainPhase(state);
+    return {
+      eventTypes: result.events.map((event) => event.type),
+      finalStateHash: result.stateHash,
+      legalActionTypes: getLegalActions(result.state, p1).map(
+        (action) => action.type,
+      ),
+      pendingDecision: result.state.pendingDecision,
+      phase: result.state.turn.phase,
+    };
+  };
+
+  const first = run();
+  const second = run();
+
+  assert.deepEqual(first, second);
+  assert.deepEqual(first.eventTypes, [
+    "phaseEnded",
+    "phaseStarted",
+    "ruleProcessingChecked",
+  ]);
+  assert.equal(first.phase, "main");
+  assert.equal(first.pendingDecision, undefined);
+  assert.equal(first.legalActionTypes.includes("endMainPhase"), true);
 });
