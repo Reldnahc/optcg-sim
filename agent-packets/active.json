@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CLI-002B.md",
-      "storyId": "CLI-002B",
-      "storyPath": "stories/approved/CLI-002B-cli-automatic-phase-advancement.yaml",
-      "storySha256": "ea67562bea423bb385106f323a469cf63ad6ebe04c3357f59d8074bfc5cfccf1"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
