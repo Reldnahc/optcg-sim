@@ -360,3 +360,10 @@ test("TYP-001H relative runtime import/object-key smoke proof is not sufficient 
     Object.keys(relativeModule).length,
   );
 });
+
+test("ENG-012A match manifest export includes effect definition registry shape", () => {
+  type EffectDefinitionRegistry = PackageMatchCardManifest["effectDefinitions"];
+  const registry: EffectDefinitionRegistry = {};
+
+  expect(registry).toEqual({});
+});

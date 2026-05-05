@@ -7,6 +7,7 @@ import type {
   VariantKey,
   Zone,
 } from "./primitives.js";
+import type { EffectDefinition } from "./effects.js";
 
 export type CardCategory = "leader" | "character" | "event" | "stage" | "don";
 export type CardColor =
@@ -290,6 +291,7 @@ export interface MatchCardManifest {
   effectDefinitionsVersion: string;
   customHandlerVersion: string;
   banlistVersion: string;
+  effectDefinitions?: Record<string, EffectDefinition>;
   cards: Record<CardId, ResolvedCard>;
   createdAt: string;
 }

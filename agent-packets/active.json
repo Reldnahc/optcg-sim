@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-012A.md",
+      "storyId": "ENG-012A",
+      "storyPath": "stories/approved/ENG-012A-match-effect-definition-registry.yaml",
+      "storySha256": "e5460819fa5dd754e898b26213b9111b4143c884a45a2f6afe296015b4035e18"
+    }
+  ],
   "version": 1
 }
