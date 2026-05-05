@@ -355,6 +355,183 @@ describe("dispatchCliCommand", () => {
     assertSummaryOutput(result.output);
   });
 
+  test("dispatches respond pay selections for play-card payCost decisions", () => {
+    const state = bootMainPhaseFixtureMatch();
+    const actor = must(state.players[p1], "p1");
+    const character = must(actor.hand[0], "hand 0");
+    const don = must(actor.costArea[0], "cost area 0");
+    state.cardManifest.cards[character.cardId] = resolvedCard({
+      cardId: character.cardId,
+      category: "character",
+      cost: 1,
+      power: 3000,
+    });
+    const opened = dispatchCliCommand(state, "play 0");
+    assert.equal(opened.errors.length, 0);
+    assert.equal(opened.state.pendingDecision?.type, "payCost");
+
+    const result = dispatchCliCommand(opened.state, "respond pay:0");
+
+    assert.equal(result.errors.length, 0);
+    assert.equal(result.state.pendingDecision, undefined);
+    assert.equal(
+      must(result.state.players[p1], "p1").characters[0]?.instanceId,
+      character.instanceId,
+    );
+    assert.equal(
+      must(result.state.players[p1], "p1").costArea.find(
+        (card) => card.instanceId === don.instanceId,
+      )?.state,
+      "rested",
+    );
+    assertSummaryOutput(result.output);
+  });
+
+  test("dispatches respond cards selections for Character overflow decisions", () => {
+    const state = bootMainPhaseFixtureMatch();
+    const actor = must(state.players[p1], "p1");
+    const character = must(actor.hand[0], "hand 0");
+    const selectedSource = must(actor.hand[1], "existing character source");
+    actor.characters = Array.from({ length: 5 }, (_, index) => {
+      const source = must(actor.hand[(index % 4) + 1], "character source");
+      const existing: CardInstance = {
+        ...source,
+        instanceId:
+          `${String(source.instanceId)}:cli-existing:${String(index)}` as CardInstance["instanceId"],
+        zone: { zone: "characterArea", playerId: p1, slot: "character", index },
+        state: "active",
+        attachedDon: [],
+        turnPlayed: 1,
+      };
+      state.cardManifest.cards[existing.cardId] = resolvedCard({
+        cardId: existing.cardId,
+        category: "character",
+        cost: 0,
+        power: 2000,
+      });
+      return existing;
+    });
+    const selected = must(actor.characters[0], "selected character");
+    assert.equal(selected.cardId, selectedSource.cardId);
+    state.cardManifest.cards[character.cardId] = resolvedCard({
+      cardId: character.cardId,
+      category: "character",
+      cost: 0,
+      power: 3000,
+    });
+    const opened = dispatchCliCommand(state, "play 0");
+    assert.equal(opened.errors.length, 0);
+    assert.equal(opened.state.pendingDecision?.type, "selectCards");
+
+    const result = dispatchCliCommand(
+      opened.state,
+      "respond cards:character:0",
+    );
+
+    assert.equal(result.errors.length, 0);
+    assert.equal(result.state.pendingDecision, undefined);
+    const resolvedP1 = must(result.state.players[p1], "p1");
+    assert.equal(
+      resolvedP1.characters.some(
+        (card) => card.instanceId === selected.instanceId,
+      ),
+      false,
+    );
+    assert.equal(resolvedP1.characters[4]?.instanceId, character.instanceId);
+    assert.equal(
+      must(resolvedP1.trash[0], "trashed character").instanceId,
+      selected.instanceId,
+    );
+    assertSummaryOutput(result.output);
+  });
+
+  test("fails closed for malformed, stale, duplicate, or mismatched respond pay choices", () => {
+    const state = bootMainPhaseFixtureMatch();
+    const actor = must(state.players[p1], "p1");
+    const character = must(actor.hand[0], "hand 0");
+    state.cardManifest.cards[character.cardId] = resolvedCard({
+      cardId: character.cardId,
+      category: "character",
+      cost: 1,
+      power: 3000,
+    });
+    const opened = dispatchCliCommand(state, "play 0");
+    assert.equal(opened.errors.length, 0);
+    const before = stateSnapshot(opened.state);
+    const beforeHash = hashCanonicalStateValue(opened.state);
+    const assertClosed = (input: string): void => {
+      const result = dispatchCliCommand(opened.state, input);
+      assert.equal(result.state, opened.state);
+      assert.equal(result.stateHash, beforeHash);
+      assert.equal(stateSnapshot(opened.state), before);
+      assert.equal(result.errors.length > 0, true);
+      assertSummaryOutput(result.output);
+    };
+
+    assertClosed("respond pay:");
+    assertClosed("respond pay:0,0");
+    assertClosed("respond pay:99");
+    assertClosed("respond cards:character:0");
+
+    const mulligan = bootFixtureMatch().state;
+    const mulliganBefore = stateSnapshot(mulligan);
+    const wrongType = dispatchCliCommand(mulligan, "respond pay:0");
+    assert.equal(wrongType.state, mulligan);
+    assert.equal(stateSnapshot(mulligan), mulliganBefore);
+    assert.deepEqual(wrongType.errors, [
+      "No supported pending decision for respond pay:0.",
+    ]);
+  });
+
+  test("fails closed for malformed, stale, duplicate, or mismatched respond cards choices", () => {
+    const state = bootMainPhaseFixtureMatch();
+    const actor = must(state.players[p1], "p1");
+    const character = must(actor.hand[0], "hand 0");
+    actor.characters = Array.from({ length: 5 }, (_, index) => {
+      const source = must(actor.hand[(index % 4) + 1], "character source");
+      const existing: CardInstance = {
+        ...source,
+        instanceId:
+          `${String(source.instanceId)}:cli-existing:${String(index)}` as CardInstance["instanceId"],
+        zone: { zone: "characterArea", playerId: p1, slot: "character", index },
+        state: "active",
+        attachedDon: [],
+        turnPlayed: 1,
+      };
+      state.cardManifest.cards[existing.cardId] = resolvedCard({
+        cardId: existing.cardId,
+        category: "character",
+        cost: 0,
+        power: 2000,
+      });
+      return existing;
+    });
+    state.cardManifest.cards[character.cardId] = resolvedCard({
+      cardId: character.cardId,
+      category: "character",
+      cost: 0,
+      power: 3000,
+    });
+    const opened = dispatchCliCommand(state, "play 0");
+    assert.equal(opened.errors.length, 0);
+    const before = stateSnapshot(opened.state);
+    const beforeHash = hashCanonicalStateValue(opened.state);
+    const assertClosed = (input: string): void => {
+      const result = dispatchCliCommand(opened.state, input);
+      assert.equal(result.state, opened.state);
+      assert.equal(result.stateHash, beforeHash);
+      assert.equal(stateSnapshot(opened.state), before);
+      assert.equal(result.errors.length > 0, true);
+      assertSummaryOutput(result.output);
+    };
+
+    assertClosed("respond cards:");
+    assertClosed("respond cards:character:0,character:0");
+    assertClosed("respond cards:character:99");
+    assertClosed("respond cards:opponent-character:0");
+    assertClosed("respond pay:0");
+  });
+
   test("fails closed without mutation for stale play hand indexes", () => {
     const state = bootMainPhaseFixtureMatch();
     const before = stateSnapshot(state);
