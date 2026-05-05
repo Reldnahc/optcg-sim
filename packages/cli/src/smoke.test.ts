@@ -6,6 +6,7 @@ import {
   assertCliSmokePostActionOutputFields,
   assertCliSmokeScenarioResultMatchesFixture,
   loadCliSmokeFixtureFromFile,
+  runCliSmokeScenarioThroughCommandScript,
   runCliSmokeScenario,
 } from "./smoke.js";
 import type {
@@ -138,6 +139,23 @@ describe("CLI-001D terminal runner smoke scripts", () => {
 });
 
 describe("CLI-001H play-card terminal smoke scripts", () => {
+  test("executes play-card action scripts through command-script mode", async () => {
+    const fixture = loadCliSmokeFixtureFromFile(fixturePath);
+
+    for (const scenarioId of [
+      "vanilla-character-play",
+      "vanilla-stage-replacement",
+      "character-overflow-selection",
+    ]) {
+      const result = await runCliSmokeScenarioThroughCommandScript(
+        fixture,
+        scenarioId,
+      );
+
+      assertCliSmokeScenarioResultMatchesFixture(fixture, result);
+    }
+  });
+
   test("replays deterministic vanilla Character play from hand", () => {
     const fixture = loadCliSmokeFixtureFromFile(fixturePath);
     const scenario = findScenario(fixture, "vanilla-character-play");

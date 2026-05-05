@@ -13,6 +13,7 @@ import type { CardId, CardInstance, ResolvedCard } from "@optcg/types";
 import { bootFixtureMatch } from "./boot.js";
 import { dispatchCliCommand } from "./commands.js";
 import type { DispatchCliCommandResult } from "./commands.js";
+import { runCli } from "./cli.js";
 
 export interface CliSmokeManifestStats {
   manifestHash: string;
@@ -635,6 +636,86 @@ export const runCliSmokeScenario = (
     assertCliCommandAccepted(result, command);
     state = result.state;
     checkpoints.push(commandCheckpoint(command, result));
+  }
+
+  return {
+    scenarioId,
+    finalStateHash: hashCanonicalStateValue(state),
+    finalStatus: statusSnapshot(state.status),
+    checkpoints,
+  };
+};
+
+const createStringWriter = (): {
+  readonly output: () => string;
+  readonly writer: { write: (chunk: string | Uint8Array) => boolean };
+} => {
+  let value = "";
+  return {
+    output: () => value,
+    writer: {
+      write: (chunk: string | Uint8Array): boolean => {
+        value += String(chunk);
+        return true;
+      },
+    },
+  };
+};
+
+const emptyInput = (): AsyncIterable<string | Uint8Array> => ({
+  [Symbol.asyncIterator](): AsyncIterator<string | Uint8Array> {
+    return {
+      next: () => Promise.resolve({ done: true, value: undefined }),
+    };
+  },
+});
+
+export const runCliSmokeScenarioThroughCommandScript = async (
+  fixture: CliSmokeFixture,
+  scenarioId: string,
+): Promise<CliSmokeScenarioResult> => {
+  const scenario = findScenario(fixture, scenarioId);
+  let state = bootFixtureMatch().state;
+  assertManifestStats(fixture, state);
+  const checkpoints: CliSmokeCommandCheckpoint[] = [];
+
+  for (const command of scenario.bootCommands) {
+    const result = dispatchCliCommand(state, command);
+    assertCliCommandAccepted(result, command);
+    state = result.state;
+    checkpoints.push(commandCheckpoint(command, result));
+  }
+
+  state = applySetupScript(state, scenario.setupScript);
+
+  const stdout = createStringWriter();
+  const stderr = createStringWriter();
+  const scriptExitCode = await runCli(
+    ["--command-script", scenario.actionCommands.join(";")],
+    {
+      stdin: emptyInput(),
+      stdout: stdout.writer,
+      stderr: stderr.writer,
+    },
+    {
+      commandScriptInitialState: state,
+      onCommandScriptResult: ({ command, result }) => {
+        assertCliCommandAccepted(result, command);
+        state = result.state;
+        checkpoints.push(commandCheckpoint(command, result));
+      },
+    },
+  );
+
+  if (scriptExitCode !== 0) {
+    throw new Error(
+      `CLI smoke command script exited ${String(scriptExitCode)}: ${stderr.output()}`,
+    );
+  }
+  if (stderr.output().length > 0) {
+    throw new Error(
+      `CLI smoke command script wrote stderr: ${stderr.output()}`,
+    );
   }
 
   return {
