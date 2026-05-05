@@ -422,6 +422,30 @@ const dispatchAttack = (
   );
 };
 
+const playActor = (state: GameState): PlayerId =>
+  state.pendingDecision?.playerId ?? state.turn.turnPlayerId;
+
+const dispatchPlay = (
+  state: GameState,
+  command: Extract<CliCommand, { type: "play" }>,
+): DispatchCliCommandResult => {
+  const actor = playActor(state);
+  const player = state.players[actor];
+  const card = player?.hand[command.handIndex];
+  if (player === undefined || card === undefined) {
+    return resultFromState(state, [
+      `No hand card at index ${String(command.handIndex)} for ${String(actor)}.`,
+    ]);
+  }
+
+  return resultFromEngine(
+    applyAction(state, {
+      type: "playCard",
+      cardInstanceId: card.instanceId,
+    }),
+  );
+};
+
 export const dispatchCliCommand = (
   state: GameState,
   input: string,
@@ -464,9 +488,7 @@ export const dispatchCliCommand = (
       };
     }
     case "play":
-      return resultFromState(state, [
-        `play ${String(parsed.command.handIndex)} is unsupported by the current CLI story.`,
-      ]);
+      return dispatchPlay(state, parsed.command);
     case "counter":
       return resultFromState(state, [
         `counter ${String(parsed.command.handIndex)} is unsupported by the current CLI story.`,

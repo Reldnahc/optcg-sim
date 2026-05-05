@@ -3,11 +3,18 @@ import {
   advanceDonPhase,
   advanceDrawPhase,
   advanceRefreshPhase,
+  getLegalActions,
   hashCanonicalStateValue,
   respondToMulliganDecision,
   enterMainPhase,
 } from "@optcg/engine-core";
-import type { CardInstance, GameState, PlayerId } from "@optcg/types";
+import type {
+  CardId,
+  CardInstance,
+  GameState,
+  PlayerId,
+  ResolvedCard,
+} from "@optcg/types";
 import { describe, test } from "vitest";
 
 import { bootFixtureMatch } from "./boot.js";
@@ -60,6 +67,43 @@ const bootAttackFixtureMatch = (): GameState => {
 };
 
 const stateSnapshot = (state: GameState): string => JSON.stringify(state);
+
+const resolvedCard = (params: {
+  cardId: CardId;
+  category: "character" | "stage";
+  cost?: number;
+  power?: number;
+  supportStatus?: ResolvedCard["support"]["status"];
+}): ResolvedCard => ({
+  cardId: params.cardId,
+  language: "en",
+  name: String(params.cardId),
+  category: params.category,
+  set: "TEST",
+  setName: "Test Set",
+  released: true,
+  colors: ["red"],
+  attributes: [],
+  types: [],
+  printedKeywords: [],
+  variants: [],
+  legality: {},
+  officialFaq: [],
+  errata: [],
+  sourceTextHash: "source-hash",
+  behaviorHash: "behavior-hash",
+  support: {
+    cardId: params.cardId,
+    status: params.supportStatus ?? "vanilla-confirmed",
+    tested: true,
+    rulesVersion: "r1",
+    cardDataVersion: "fixture",
+    sourceTextHash: "source-hash",
+    behaviorHash: "behavior-hash",
+  },
+  ...(params.cost !== undefined ? { cost: params.cost } : {}),
+  ...(params.power !== undefined ? { power: params.power } : {}),
+});
 
 const assertSummaryOutput = (output: string): void => {
   assert.match(output, /State seq: \d+/u);
@@ -258,6 +302,111 @@ describe("dispatchCliCommand", () => {
     assertSummaryOutput(result.output);
   });
 
+  test("dispatches play using the selected hand card instance id", () => {
+    const state = bootMainPhaseFixtureMatch();
+    const actor = must(state.players[p1], "p1");
+    const character = must(actor.hand[0], "hand 0");
+    state.cardManifest.cards[character.cardId] = resolvedCard({
+      cardId: character.cardId,
+      category: "character",
+      cost: 0,
+      power: 2000,
+    });
+
+    const result = dispatchCliCommand(state, "play 0");
+
+    assert.equal(result.errors.length, 0);
+    assert.equal(
+      must(result.state.players[p1], "p1").characters[0]?.instanceId,
+      character.instanceId,
+    );
+    assert.equal(
+      must(result.state.players[p1], "p1").hand.some(
+        (card) => card.instanceId === character.instanceId,
+      ),
+      false,
+    );
+    assert.deepEqual(
+      result.events.map((event) => event.type),
+      ["cardRevealed", "cardMoved", "cardPlayed", "ruleProcessingChecked"],
+    );
+    assertSummaryOutput(result.output);
+  });
+
+  test("surfaces pending engine decisions created by play", () => {
+    const state = bootMainPhaseFixtureMatch();
+    const actor = must(state.players[p1], "p1");
+    const character = must(actor.hand[0], "hand 0");
+    state.cardManifest.cards[character.cardId] = resolvedCard({
+      cardId: character.cardId,
+      category: "character",
+      cost: 1,
+      power: 3000,
+    });
+
+    const result = dispatchCliCommand(state, "play 0");
+
+    assert.equal(result.errors.length, 0);
+    assert.equal(result.state.pendingDecision?.type, "payCost");
+    assert.equal(result.state.pendingDecision.playerId, p1);
+    assert.match(result.output, /Pending decision: payCost /u);
+    assert.match(result.output, /Legal actions for p1:/u);
+    assert.match(result.output, /respond-to-decision decision=/u);
+    assertSummaryOutput(result.output);
+  });
+
+  test("fails closed without mutation for stale play hand indexes", () => {
+    const state = bootMainPhaseFixtureMatch();
+    const before = stateSnapshot(state);
+    const beforeHash = hashCanonicalStateValue(state);
+
+    const result = dispatchCliCommand(state, "play 99");
+
+    assert.equal(result.state, state);
+    assert.equal(result.stateHash, beforeHash);
+    assert.equal(stateSnapshot(state), before);
+    assert.deepEqual(result.errors, ["No hand card at index 99 for p1."]);
+    assert.match(result.output, /CLI errors:\n {2}No hand card at index 99/u);
+    assertSummaryOutput(result.output);
+  });
+
+  test("surfaces illegal engine playCard errors without CLI-only mutation", () => {
+    const state = bootMainPhaseFixtureMatch();
+    const actor = must(state.players[p1], "p1");
+    const unsupported = must(actor.hand[0], "hand 0");
+    state.cardManifest.cards[unsupported.cardId] = resolvedCard({
+      cardId: unsupported.cardId,
+      category: "character",
+      cost: 0,
+      power: 2000,
+      supportStatus: "unsupported",
+    });
+    const before = stateSnapshot(state);
+    const beforeHash = hashCanonicalStateValue(state);
+    assert.equal(
+      getLegalActions(state, p1).some(
+        (action) =>
+          action.type === "playCard" &&
+          action.cardInstanceId === unsupported.instanceId,
+      ),
+      false,
+    );
+
+    const result = dispatchCliCommand(state, "play 0");
+
+    assert.equal(result.state, state);
+    assert.equal(result.stateHash, beforeHash);
+    assert.equal(stateSnapshot(state), before);
+    assert.deepEqual(result.errors, [
+      "illegalAction: playCard card is unsupported.",
+    ]);
+    assert.match(
+      result.output,
+      /Engine errors:\n {2}illegalAction: playCard card is unsupported/u,
+    );
+    assertSummaryOutput(result.output);
+  });
+
   test("dispatches concede through the engine action path", () => {
     const state = bootFixtureMatch().state;
     const result = dispatchCliCommand(state, "concede");
@@ -268,22 +417,16 @@ describe("dispatchCliCommand", () => {
     assertSummaryOutput(result.output);
   });
 
-  test("recognizes play and counter but fails closed without mutation", () => {
+  test("recognizes counter but fails closed without mutation", () => {
     const state = bootFixtureMatch().state;
     const before = stateSnapshot(state);
 
-    const play = dispatchCliCommand(state, "play 0");
     const counter = dispatchCliCommand(state, "counter 0");
 
-    assert.equal(play.state, state);
     assert.equal(counter.state, state);
-    assert.deepEqual(play.errors, [
-      "play 0 is unsupported by the current CLI story.",
-    ]);
     assert.deepEqual(counter.errors, [
       "counter 0 is unsupported by the current CLI story.",
     ]);
-    assert.match(play.output, /CLI errors:\n {2}play 0 is unsupported/u);
     assert.match(counter.output, /CLI errors:\n {2}counter 0 is unsupported/u);
     assert.equal(stateSnapshot(state), before);
   });
