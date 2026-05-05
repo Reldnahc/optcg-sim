@@ -200,6 +200,8 @@ The packet should be minimal but sufficient. Overloading agents with the full sp
 
 Approved stories may remain packetless while they are dormant backlog items. Once a story becomes active for implementation, reviewer assignment, or PR handoff, the repo should require a current checked-in packet and fail verification when that packet is missing or stale relative to the approved story.
 
+For implementation worker handoff, treat a story as worker-ready only after the parent has read `AGENTS.md`, the approved story, and the current active packet, then run `pnpm run packets:generate --story <stories/approved/...yaml> --activate` plus `pnpm run packets:verify` successfully.
+
 The active-story manifest should represent the current implementation or review handoff target only. A manifest with no active story is valid between stories, but a manifest with multiple active stories should fail verification because it makes ownership and review scope ambiguous.
 
 ## Suggested repo layout
@@ -249,7 +251,7 @@ Section Ref: `27-spec-driven-story-generation-workflow.s012`
 3. review and approve the decomposition and the stories,
 4. export approved stories to GitHub issues or draft issues as needed using `tools/spec_board_sync.ts`,
 5. build or refresh the checked-in packet for the active story,
-6. assign the active-story packet to agents,
+6. assign the active-story packet to agents only after worker-ready checks pass,
 7. implement or review the story from the packet,
 8. validate the resulting patch against the story and spec,
 9. after merge to `main`, run the packet completion command to move the completed story to `stories/done/`, mark it `done`, remove its active packet, and clear or replace the active-story manifest before the next story starts. For an explicitly approved parent-story integration branch workflow, substory PRs may merge into the parent integration branch first; defer completion until the parent PR lands on `main`, then complete all included substories with the multi-story packet completion command.

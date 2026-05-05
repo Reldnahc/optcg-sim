@@ -181,6 +181,9 @@ test("agents guidance requires parent orchestration plus separate reviewer subag
   const workflowGuidance = `${agents}\n${storyExecution}\n${reviewGate}`;
 
   assertMatchesAll(workflowGuidance, [
+    /worker-ready/i,
+    /`worker-ready` means the parent has read `AGENTS\.md`, the approved story, and the current active packet[\s\S]*packet generation and `pnpm run packets:verify`/i,
+    /run `pnpm run packets:generate --story <stories\/approved\/\.\.\.yaml> --activate` and `pnpm run packets:verify` before assigning an implementation worker/i,
     /spawn a worker subagent for the main implementation body/i,
     /parent agent stays mostly in orchestration mode/i,
     /parent agent remains in charge of the story itself/i,
@@ -204,6 +207,9 @@ test("agents guidance requires parent orchestration plus separate reviewer subag
     /Manual edits beyond the packet completion command output, including edits to packet files, `agent-packets\/active\.json`, tooling, tests, fixtures, specs, workflow docs, or story files, require full verification and separate reviewer subagent review/i,
     /small local glue work/i,
     /parent agent should not do the main implementation body/i,
+    /one worker subagent per active story by default/i,
+    /if a story appears to need multiple concurrent workers[\s\S]*split the story first unless the write scopes are clearly disjoint/i,
+    /if worker subagents are unavailable[\s\S]*record an explicit implementation note that parent implementation fallback was used/i,
     /run a separate reviewer subagent/i,
     /self-review by the implementation worker or the parent implementation coordinator does not satisfy the reviewer gate/i,
     /request human review only after the AI review record or explicit equivalent-human-review fallback record exists/i,

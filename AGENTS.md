@@ -40,15 +40,17 @@ For any implementation or review handoff:
 1. Read `AGENTS.md`, the approved story, and the active packet.
 2. Run `pnpm run packets:generate --story <stories/approved/...yaml> --activate` when activating or refreshing the story packet.
 3. Run `pnpm run packets:verify` immediately after packet generation and before worker assignment, reviewer assignment, implementation handoff, or PR handoff.
-4. Stay inside the story boundary and `allowed_touch_points`.
-5. Implement the story with its required tests.
-6. Run the story-specific tests and `pnpm verify`.
-7. Open the PR before reviewer-subagent review.
-8. Post the AI review record or equivalent human-review fallback.
-9. Post or update the revision response when reviewer-subagent review was used.
-10. Request human review only after review records are current.
-11. Merge only after the required human review gate is satisfied.
-12. Run `pnpm run packets:complete --story <stories/approved/...yaml>` after merge to `main`.
+4. Treat the story as `worker-ready` only after steps 1-3 are complete.
+5. Assign implementation workers only after `worker-ready`.
+6. Stay inside the story boundary and `allowed_touch_points`.
+7. Implement the story with its required tests.
+8. Run the story-specific tests and `pnpm verify`.
+9. Open the PR before reviewer-subagent review.
+10. Post the AI review record or equivalent human-review fallback.
+11. Post or update the revision response when reviewer-subagent review was used.
+12. Request human review only after review records are current.
+13. Merge only after the required human review gate is satisfied.
+14. Run `pnpm run packets:complete --story <stories/approved/...yaml>` after merge to `main`.
 
 ## Mandatory Procedures
 
