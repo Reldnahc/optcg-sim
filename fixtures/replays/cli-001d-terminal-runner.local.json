@@ -65,6 +65,99 @@
         "finalHash": "33bfc80652c18b905dfefae591a1d2dac0d77981f410c0507e75429f06a16726",
         "finalStatus": { "type": "completed", "winner": "p1" }
       }
+    },
+    {
+      "id": "vanilla-character-play",
+      "bootCommands": ["respond keep", "respond keep"],
+      "setupScript": [
+        {
+          "type": "advance-to-main-phase",
+          "turnPlayerId": "p1",
+          "globalTurn": 3
+        },
+        { "type": "set-active-don-count", "playerId": "p1", "count": 1 },
+        {
+          "type": "set-hand-card-metadata",
+          "playerId": "p1",
+          "handIndex": 0,
+          "category": "character",
+          "cost": 1,
+          "power": 3000
+        }
+      ],
+      "actionCommands": ["play 0", "respond pay:0"],
+      "expected": {
+        "checkpointHashes": [
+          "4958e94b631748cab0eaae6512699988a02ae76b2ef9ce63087acc49ece52f0b",
+          "3f6f00fd9842376e92d1dcdd0f40fdb154446ca195f4d1e14c612a9df6cbe465",
+          "ea1b47cbc7caf1ca42fccc1a3ab2c9c31ca0c20f746c2cf8a7ae902244ba9ef5",
+          "48be1f5cd3da675b44d9dc185a0ed197f459190e22a26777a9a2c6481bddcf5e"
+        ],
+        "finalHash": "48be1f5cd3da675b44d9dc185a0ed197f459190e22a26777a9a2c6481bddcf5e",
+        "finalStatus": { "type": "active" }
+      }
+    },
+    {
+      "id": "vanilla-stage-replacement",
+      "bootCommands": ["respond keep", "respond keep"],
+      "setupScript": [
+        {
+          "type": "advance-to-main-phase",
+          "turnPlayerId": "p1",
+          "globalTurn": 3
+        },
+        { "type": "set-active-don-count", "playerId": "p1", "count": 2 },
+        {
+          "type": "set-hand-card-metadata",
+          "playerId": "p1",
+          "handIndex": 1,
+          "category": "stage",
+          "cost": 2
+        },
+        { "type": "set-stage-from-hand", "playerId": "p1", "handIndex": 2 }
+      ],
+      "actionCommands": ["play 1", "respond pay:0,1"],
+      "expected": {
+        "checkpointHashes": [
+          "4958e94b631748cab0eaae6512699988a02ae76b2ef9ce63087acc49ece52f0b",
+          "3f6f00fd9842376e92d1dcdd0f40fdb154446ca195f4d1e14c612a9df6cbe465",
+          "24f763b2eb4986b851be0c75bdb39d55b8bba42c266d8cb2fde66b8f5c15a344",
+          "519a42f44a2e12d484333d8e402285be5d1a5c814e69124f7e2e9898b4d0e008"
+        ],
+        "finalHash": "519a42f44a2e12d484333d8e402285be5d1a5c814e69124f7e2e9898b4d0e008",
+        "finalStatus": { "type": "active" }
+      }
+    },
+    {
+      "id": "character-overflow-selection",
+      "bootCommands": ["respond keep", "respond keep"],
+      "setupScript": [
+        {
+          "type": "advance-to-main-phase",
+          "turnPlayerId": "p1",
+          "globalTurn": 3
+        },
+        {
+          "type": "set-hand-card-metadata",
+          "playerId": "p1",
+          "handIndex": 0,
+          "category": "character",
+          "cost": 0,
+          "power": 3000
+        },
+        { "type": "fill-character-area-from-hand", "playerId": "p1" }
+      ],
+      "actionCommands": ["play 0", "respond cards:character:0"],
+      "expected": {
+        "checkpointHashes": [
+          "4958e94b631748cab0eaae6512699988a02ae76b2ef9ce63087acc49ece52f0b",
+          "3f6f00fd9842376e92d1dcdd0f40fdb154446ca195f4d1e14c612a9df6cbe465",
+          "dc969edf36dd12939f9fb691c8bc2d0aa6e192032f61856a1672719c4e44b280",
+          "885e1bf17f8207c6d0763a0dbead9c67c2bdf43d8e8567ba6e1edffa2521991b"
+        ],
+        "finalHash": "885e1bf17f8207c6d0763a0dbead9c67c2bdf43d8e8567ba6e1edffa2521991b",
+        "finalStatus": { "type": "active" }
+      }
     }
   ]
 }

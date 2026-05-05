@@ -136,3 +136,59 @@ describe("CLI-001D terminal runner smoke scripts", () => {
     }
   });
 });
+
+describe("CLI-001H play-card terminal smoke scripts", () => {
+  test("replays deterministic vanilla Character play from hand", () => {
+    const fixture = loadCliSmokeFixtureFromFile(fixturePath);
+    const scenario = findScenario(fixture, "vanilla-character-play");
+
+    assert.equal(scenario.actionCommands[0], "play 0");
+    assert.ok(
+      scenario.actionCommands.includes("respond pay:0"),
+      "scenario must exercise nonzero-cost play-card payment",
+    );
+
+    const result = assertDeterministicScenario(
+      fixture,
+      "vanilla-character-play",
+    );
+
+    assert.equal(result.finalStatus.type, "active");
+  });
+
+  test("replays deterministic vanilla Stage replacement from hand", () => {
+    const fixture = loadCliSmokeFixtureFromFile(fixturePath);
+    const scenario = findScenario(fixture, "vanilla-stage-replacement");
+
+    assert.equal(scenario.actionCommands[0], "play 1");
+    assert.ok(
+      scenario.actionCommands.includes("respond pay:0,1"),
+      "scenario must exercise multi-DON play-card payment",
+    );
+
+    const result = assertDeterministicScenario(
+      fixture,
+      "vanilla-stage-replacement",
+    );
+
+    assert.equal(result.finalStatus.type, "active");
+  });
+
+  test("replays deterministic Character overflow selection from hand", () => {
+    const fixture = loadCliSmokeFixtureFromFile(fixturePath);
+    const scenario = findScenario(fixture, "character-overflow-selection");
+
+    assert.equal(scenario.actionCommands[0], "play 0");
+    assert.ok(
+      scenario.actionCommands.includes("respond cards:character:0"),
+      "scenario must exercise Character overflow card selection",
+    );
+
+    const result = assertDeterministicScenario(
+      fixture,
+      "character-overflow-selection",
+    );
+
+    assert.equal(result.finalStatus.type, "active");
+  });
+});
