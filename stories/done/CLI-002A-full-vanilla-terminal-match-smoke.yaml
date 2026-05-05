@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add a deterministic CLI command-script smoke that proves the terminal runner
   can play a complete vanilla match from normal fixture boot through legal CLI
