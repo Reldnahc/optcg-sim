@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Promote Rush and Rush: Character from computed-view keyword support into
   explicit battle action coverage, proving legal-action exposure and attack
