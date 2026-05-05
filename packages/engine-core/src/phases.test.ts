@@ -7,8 +7,10 @@ import type {
   EngineResult,
   MatchId,
   PlayerId,
+  ResolvedCard,
 } from "@optcg/types";
 
+import { getLegalActions } from "./actions.js";
 import { createInitialState } from "./initial-state.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
@@ -36,6 +38,73 @@ const eventPayload = (event: {
   payload: unknown;
 }): { phase?: string; playerId?: PlayerId } =>
   event.payload as { phase?: string; playerId?: PlayerId };
+
+const resolvedVanillaCard = (
+  cardId: CardId,
+  category: "leader" | "character" | "stage",
+): ResolvedCard => ({
+  cardId,
+  language: "en",
+  name: String(cardId),
+  category,
+  set: "TEST",
+  setName: "Test Set",
+  released: true,
+  colors: ["red"],
+  attributes: [],
+  types: [],
+  printedKeywords: [],
+  variants: [],
+  legality: {},
+  officialFaq: [],
+  errata: [],
+  sourceTextHash: "source-hash",
+  behaviorHash: "behavior-hash",
+  support: {
+    cardId,
+    status: "vanilla-confirmed",
+    tested: true,
+    rulesVersion: "r1",
+    cardDataVersion: "fixture",
+    sourceTextHash: "source-hash",
+    behaviorHash: "behavior-hash",
+  },
+});
+
+const seedKnownTriggerFreeBoardManifest = (
+  state: ReturnType<typeof createActiveState>,
+): void => {
+  const cards: Record<CardId, ResolvedCard> = {};
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  cards[p1State.leader.cardId] = resolvedVanillaCard(
+    p1State.leader.cardId,
+    "leader",
+  );
+  cards[p2State.leader.cardId] = resolvedVanillaCard(
+    p2State.leader.cardId,
+    "leader",
+  );
+  for (const card of p1State.characters) {
+    cards[card.cardId] = resolvedVanillaCard(card.cardId, "character");
+  }
+  for (const card of p2State.characters) {
+    cards[card.cardId] = resolvedVanillaCard(card.cardId, "character");
+  }
+  if (p1State.stage !== undefined) {
+    cards[p1State.stage.cardId] = resolvedVanillaCard(
+      p1State.stage.cardId,
+      "stage",
+    );
+  }
+  if (p2State.stage !== undefined) {
+    cards[p2State.stage.cardId] = resolvedVanillaCard(
+      p2State.stage.cardId,
+      "stage",
+    );
+  }
+  state.cardManifest.cards = cards;
+};
 
 const assertStrictlyIncreasingEventSeq = (
   events: readonly EngineEvent[],
@@ -299,6 +368,7 @@ test("invariant checks run after phase transitions", () => {
 
 test("refresh -> draw -> don -> main progression helper sequence", () => {
   const active = createActiveState();
+  seedKnownTriggerFreeBoardManifest(active);
   const refresh = advanceRefreshPhase(active);
   const draw = advanceDrawPhase(refresh.state);
   const don = advanceDonPhase(draw.state);
@@ -306,4 +376,245 @@ test("refresh -> draw -> don -> main progression helper sequence", () => {
 
   assert.equal(main.state.turn.phase, "main");
   assert.equal(main.errors, undefined);
+});
+
+test("enterMainPhase accepts known trigger-free path and exposes ordinary main actions", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+
+  const beforeHash = JSON.stringify(state);
+  const result = enterMainPhase(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.turn.phase, "main");
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(
+    result.events.some((event) => event.type === "phaseStarted"),
+    true,
+  );
+  assert.equal(
+    getLegalActions(result.state, p1).some(
+      (action) => action.type === "endMainPhase",
+    ),
+    true,
+  );
+  assert.notEqual(JSON.stringify(result.state), beforeHash);
+});
+
+test("enterMainPhase rejects non-active don-phase states without mutation or events", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  state.status = { type: "completed", winner: p1 };
+  const before = JSON.stringify(state);
+
+  const result = enterMainPhase(state);
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.equal(result.events.length, 0);
+  assert.equal(result.state.turn.phase, "don");
+  assert.equal(JSON.stringify(state), before);
+});
+
+test("legal-action reads after accepted start-of-main gate do not mutate state or append events", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  const result = enterMainPhase(state);
+  const beforeRead = JSON.stringify(result.state);
+  const journalLength = result.state.eventJournal.length;
+
+  const firstRead = getLegalActions(result.state, p1);
+  const secondRead = getLegalActions(result.state, p1);
+
+  assert.deepEqual(firstRead, secondRead);
+  assert.equal(JSON.stringify(result.state), beforeRead);
+  assert.equal(result.state.eventJournal.length, journalLength);
+});
+
+test("enterMainPhase rejects when effectQueue is non-empty without mutation or events", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  state.effectQueue = [{ id: "q1" } as never];
+  const before = JSON.stringify(state);
+
+  const result = enterMainPhase(state);
+
+  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
+  assert.equal(result.events.length, 0);
+  assert.equal(result.state.turn.phase, "don");
+  assert.equal(JSON.stringify(state), before);
+});
+
+test("enterMainPhase rejects when deferredTriggers is non-empty without mutation or events", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  state.deferredTriggers = [{ timingWindowId: "w1" } as never];
+  const before = JSON.stringify(state);
+
+  const result = enterMainPhase(state);
+
+  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
+  assert.equal(result.events.length, 0);
+  assert.equal(result.state.turn.phase, "don");
+  assert.equal(JSON.stringify(state), before);
+});
+
+test("enterMainPhase rejects when on-board manifest card has effectText", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  const leader = must(state.players[p1], "p1").leader;
+  state.cardManifest.cards[leader.cardId] = {
+    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
+    effectText: "[Start of Main Phase] draw 1",
+  };
+  const before = JSON.stringify(state);
+
+  const result = enterMainPhase(state);
+  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
+  assert.equal(result.events.length, 0);
+  assert.equal(JSON.stringify(state), before);
+});
+
+test("enterMainPhase rejects when on-board manifest card has triggerText", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  const leader = must(state.players[p1], "p1").leader;
+  state.cardManifest.cards[leader.cardId] = {
+    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
+    triggerText: "[Trigger] something",
+  };
+  const before = JSON.stringify(state);
+
+  const result = enterMainPhase(state);
+  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
+  assert.equal(result.events.length, 0);
+  assert.equal(JSON.stringify(state), before);
+});
+
+test("enterMainPhase rejects missing or unsupported manifest metadata", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  const leader = must(state.players[p1], "p1").leader;
+  const leaderCardId = leader.cardId;
+  const nextCards = { ...state.cardManifest.cards };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { [leaderCardId]: _removed, ...withoutLeader } = nextCards;
+  state.cardManifest.cards = withoutLeader;
+
+  const missing = enterMainPhase(state);
+  assert.equal(missing.errors?.[0]?.type, "effectRuntimeError");
+  assert.equal(missing.events.length, 0);
+  assert.equal(missing.state.turn.phase, "don");
+
+  seedKnownTriggerFreeBoardManifest(state);
+  state.cardManifest.cards[leader.cardId] = {
+    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
+    support: {
+      ...must(
+        state.cardManifest.cards[leader.cardId],
+        "leader manifest support",
+      ).support,
+      status: "implemented-dsl",
+    },
+  };
+  const nonVanilla = enterMainPhase(state);
+  assert.equal(nonVanilla.errors?.[0]?.type, "effectRuntimeError");
+
+  seedKnownTriggerFreeBoardManifest(state);
+  state.cardManifest.cards[leader.cardId] = {
+    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
+    support: {
+      ...must(
+        state.cardManifest.cards[leader.cardId],
+        "leader manifest support",
+      ).support,
+      effectDefinitionId: "effect-1",
+    },
+  };
+  const effectDefinition = enterMainPhase(state);
+  assert.equal(effectDefinition.errors?.[0]?.type, "effectRuntimeError");
+
+  seedKnownTriggerFreeBoardManifest(state);
+  state.cardManifest.cards[leader.cardId] = {
+    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
+    support: {
+      ...must(
+        state.cardManifest.cards[leader.cardId],
+        "leader manifest support",
+      ).support,
+      customHandlerIds: ["handler-1"],
+    },
+  };
+  const customHandler = enterMainPhase(state);
+  assert.equal(customHandler.errors?.[0]?.type, "effectRuntimeError");
+
+  seedKnownTriggerFreeBoardManifest(state);
+  state.cardManifest.cards[leader.cardId] = {
+    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
+    support: {
+      ...must(
+        state.cardManifest.cards[leader.cardId],
+        "leader manifest support",
+      ).support,
+      customHandlerIds: [],
+    },
+  };
+  const emptyCustomHandlers = enterMainPhase(state);
+  assert.equal(emptyCustomHandlers.errors?.[0]?.type, "effectRuntimeError");
+});
+
+test("enterMainPhase is deterministic for accepted known trigger-free progression", () => {
+  const stateA = createActiveState();
+  seedKnownTriggerFreeBoardManifest(stateA);
+  stateA.turn.phase = "don";
+  const stateB = createActiveState();
+  seedKnownTriggerFreeBoardManifest(stateB);
+  stateB.turn.phase = "don";
+
+  const resultA = enterMainPhase(stateA);
+  const resultB = enterMainPhase(stateB);
+
+  assert.deepEqual(
+    resultA.events.map((event) => event.type),
+    resultB.events.map((event) => event.type),
+  );
+  assert.equal(resultA.stateHash, resultB.stateHash);
+});
+
+test("start-of-main smoke path deterministically reaches main action priority", () => {
+  const run = () => {
+    const state = createActiveState();
+    seedKnownTriggerFreeBoardManifest(state);
+    state.turn.phase = "don";
+    const result = enterMainPhase(state);
+    return {
+      eventTypes: result.events.map((event) => event.type),
+      finalStateHash: result.stateHash,
+      legalActionTypes: getLegalActions(result.state, p1).map(
+        (action) => action.type,
+      ),
+      pendingDecision: result.state.pendingDecision,
+      phase: result.state.turn.phase,
+    };
+  };
+
+  const first = run();
+  const second = run();
+
+  assert.deepEqual(first, second);
+  assert.deepEqual(first.eventTypes, [
+    "phaseEnded",
+    "phaseStarted",
+    "ruleProcessingChecked",
+  ]);
+  assert.equal(first.phase, "main");
+  assert.equal(first.pendingDecision, undefined);
+  assert.equal(first.legalActionTypes.includes("endMainPhase"), true);
 });
