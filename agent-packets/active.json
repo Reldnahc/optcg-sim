@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CLI-001F.md",
-      "storyId": "CLI-001F",
-      "storyPath": "stories/approved/CLI-001F-play-card-decision-responses.yaml",
-      "storySha256": "17c4c1eb122193545fc10d2204a03f0172232ce7d3d01a6a1ec009c860225ea8"
+      "packetPath": "agent-packets/CLI-001G.md",
+      "storyId": "CLI-001G",
+      "storyPath": "stories/approved/CLI-001G-interactive-terminal-loop.yaml",
+      "storySha256": "1cf73cd179379bc4918f79716cf565552f8ae9226d5329d644e428f0456afd62"
     }
   ],
   "version": 1
