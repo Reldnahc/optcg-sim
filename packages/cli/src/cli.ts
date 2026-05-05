@@ -1,10 +1,21 @@
+import type { GameState } from "@optcg/types";
+
 import { bootFixtureMatch } from "./boot.js";
 import { dispatchCliCommand } from "./commands.js";
+import type { DispatchCliCommandResult } from "./commands.js";
 
 export interface CliIo {
   stdin: AsyncIterable<string | Uint8Array>;
   stdout: Pick<NodeJS.WriteStream, "write">;
   stderr: Pick<NodeJS.WriteStream, "write">;
+}
+
+export interface RunCliOptions {
+  commandScriptInitialState?: GameState;
+  onCommandScriptResult?: (entry: {
+    command: string;
+    result: DispatchCliCommandResult;
+  }) => void;
 }
 
 const defaultIo = (): CliIo => ({
@@ -32,8 +43,9 @@ const dispatchCommands = (
   commands: readonly string[],
   io: CliIo,
   printInitialState: boolean,
+  options: RunCliOptions,
 ): number => {
-  let state = bootFixtureMatch().state;
+  let state = options.commandScriptInitialState ?? bootFixtureMatch().state;
 
   if (printInitialState) {
     writeOutput(io, dispatchCliCommand(state, "show").output);
@@ -47,6 +59,7 @@ const dispatchCommands = (
     const result = dispatchCliCommand(state, command);
     state = result.state;
     writeOutput(io, result.output);
+    options.onCommandScriptResult?.({ command, result });
 
     if (isMatchComplete(state.status)) {
       return 0;
@@ -122,6 +135,7 @@ const dispatchInteractiveCommands = async (
 export const runCli = async (
   args: readonly string[],
   io: CliIo = defaultIo(),
+  options: RunCliOptions = {},
 ): Promise<number> => {
   if (
     args.length === 0 ||
@@ -142,7 +156,7 @@ export const runCli = async (
       .split(scriptCommandSeparatorPattern)
       .map((command) => command.trim())
       .filter((command) => command.length > 0);
-    return dispatchCommands(commands, io, false);
+    return dispatchCommands(commands, io, false, options);
   }
 
   if (args.length === 1 && args[0] === "--interactive") {
