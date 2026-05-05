@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { spawnSync } from "node:child_process";
-import { Readable } from "node:stream";
+import { PassThrough, Readable } from "node:stream";
 
 const createWriter = (): {
   readonly output: () => string;
@@ -18,6 +18,23 @@ const createWriter = (): {
       },
     },
   };
+};
+
+const waitForOutput = async (
+  output: () => string,
+  pattern: RegExp,
+  timeoutMs = 250,
+): Promise<void> => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (pattern.test(output())) {
+      return;
+    }
+    await new Promise((resolve) => {
+      setTimeout(resolve, 5);
+    });
+  }
+  assert.match(output(), pattern);
 };
 
 test("boot summary command exits without entering an interactive loop", () => {
@@ -132,6 +149,27 @@ test("interactive mode accepts injected input and exits cleanly on EOF", async (
   assert.match(stdout.output(), /State seq: 2/u);
   assert.match(stdout.output(), /State seq: 3/u);
   assert.match(stdout.output(), /State hash: [a-f0-9]+/u);
+});
+
+test("interactive mode dispatches a complete line before EOF", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdin = new PassThrough();
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const statusPromise = runCli(["--interactive"], {
+    stdin,
+    stdout: stdout.writer,
+    stderr: stderr.writer,
+  });
+
+  stdin.write("respond keep\n");
+  await waitForOutput(stdout.output, /State seq: 2/u);
+
+  stdin.end("exit\n");
+
+  assert.equal(await statusPromise, 0);
+  assert.equal(stderr.output(), "");
 });
 
 test("unsupported CLI argument exits nonzero with a deterministic error", async () => {

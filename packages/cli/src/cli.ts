@@ -56,18 +56,57 @@ const dispatchCommands = (
   return 0;
 };
 
-const readCommands = async (
-  input: AsyncIterable<string | Uint8Array>,
-): Promise<string[]> => {
-  const chunks: string[] = [];
-  for await (const chunk of input) {
-    chunks.push(String(chunk));
+const dispatchInteractiveCommand = (
+  state: ReturnType<typeof bootFixtureMatch>["state"],
+  command: string,
+  io: CliIo,
+): { readonly done: boolean; readonly state: typeof state } => {
+  const normalizedCommand = command.trim();
+  if (normalizedCommand.length === 0) {
+    return { done: false, state };
   }
-  return chunks
-    .join("")
-    .split(/\r?\n/u)
-    .map((command) => command.trim())
-    .filter((command) => command.length > 0);
+
+  if (isExitCommand(normalizedCommand)) {
+    return { done: true, state };
+  }
+
+  const result = dispatchCliCommand(state, normalizedCommand);
+  writeOutput(io, result.output);
+
+  return { done: isMatchComplete(result.state.status), state: result.state };
+};
+
+const dispatchInteractiveCommands = async (
+  input: AsyncIterable<string | Uint8Array>,
+  io: CliIo,
+): Promise<number> => {
+  let state = bootFixtureMatch().state;
+  let pendingInput = "";
+
+  writeOutput(io, dispatchCliCommand(state, "show").output);
+
+  for await (const chunk of input) {
+    pendingInput += String(chunk);
+
+    let lineEnding = /\r?\n/u.exec(pendingInput);
+    while (lineEnding !== null) {
+      const line = pendingInput.slice(0, lineEnding.index);
+      pendingInput = pendingInput.slice(
+        lineEnding.index + lineEnding[0].length,
+      );
+
+      const result = dispatchInteractiveCommand(state, line, io);
+      state = result.state;
+      if (result.done) {
+        return 0;
+      }
+
+      lineEnding = /\r?\n/u.exec(pendingInput);
+    }
+  }
+
+  dispatchInteractiveCommand(state, pendingInput, io);
+  return 0;
 };
 
 export const runCli = async (
@@ -97,8 +136,7 @@ export const runCli = async (
   }
 
   if (args.length === 1 && args[0] === "--interactive") {
-    const commands = await readCommands(io.stdin);
-    return dispatchCommands(commands, io, true);
+    return dispatchInteractiveCommands(io.stdin, io);
   }
 
   io.stderr.write(`Unsupported CLI argument: ${args.join(" ")}\n`);
