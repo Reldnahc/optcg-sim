@@ -24,6 +24,7 @@ import {
   toCardRef,
 } from "./action-state.js";
 import { computeView } from "./compute-view.js";
+import { detectPendingRuntimeWork } from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
@@ -257,8 +258,7 @@ export const resolveSupportedVanillaBattle = (
     );
   }
   if (
-    state.effectQueue.length > 0 ||
-    state.deferredTriggers.length > 0 ||
+    detectPendingRuntimeWork(state) !== undefined ||
     state.replacementState.length > 0
   ) {
     return unsupportedBattleResolution(

@@ -512,6 +512,101 @@ test("unsupported trigger/blocker/counter/doubleAttack/banish windows fail close
   });
 });
 
+test("supported vanilla battle rejects pending runtime queues without mutation or appended events", () => {
+  const run = (
+    mutate: (state: ReturnType<typeof setupAttackState>) => void,
+  ) => {
+    const state = setupAttackState();
+    const p1State = must(state.players[p1], "p1");
+    const p2State = must(state.players[p2], "p2");
+    state.battle = {
+      attacker: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        playerId: p1,
+      },
+      originalTarget: {
+        instanceId: p2State.leader.instanceId,
+        cardId: p2State.leader.cardId,
+        playerId: p2,
+      },
+      currentTarget: {
+        instanceId: p2State.leader.instanceId,
+        cardId: p2State.leader.cardId,
+        playerId: p2,
+      },
+      step: "attack",
+      damageCount: 1,
+    };
+    mutate(state);
+    const before = JSON.stringify(state);
+
+    const result = resolveSupportedVanillaBattle(state);
+
+    assert.deepEqual(result.errors, [
+      {
+        type: "illegalAction",
+        reason:
+          "Battle requires unsupported trigger or replacement processing.",
+      },
+    ]);
+    assert.deepEqual(result.events, []);
+    assert.equal(JSON.stringify(state), before);
+    assert.equal(JSON.stringify(result.state), before);
+  };
+
+  run((state) => {
+    state.effectQueue = [{ id: "queued-effect" } as never];
+  });
+  run((state) => {
+    state.deferredTriggers = [{ timingWindowId: "window-1" } as never];
+  });
+});
+
+test("supported vanilla battle preserves replacement fail-closed behavior", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  state.battle = {
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    step: "attack",
+    damageCount: 1,
+  };
+  state.replacementState.push({
+    processId: "replacement-process-1",
+    type: "damage",
+    usedReplacementIds: [],
+    payload: { hidden: "contents" },
+  });
+  const before = JSON.stringify(state);
+
+  const result = resolveSupportedVanillaBattle(state);
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Battle requires unsupported trigger or replacement processing.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+});
+
 test("applyAction declareAttack fails closed without mutation when vanilla continuation is unsupported", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");

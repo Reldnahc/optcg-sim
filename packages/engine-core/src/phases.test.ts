@@ -442,7 +442,17 @@ test("enterMainPhase rejects when effectQueue is non-empty without mutation or e
 
   const result = enterMainPhase(state);
 
-  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
+  assert.ok(result.errors !== undefined);
+  assert.equal(result.errors[0]?.type, "effectRuntimeError");
+  assert.deepEqual(result.errors[0], {
+    type: "effectRuntimeError",
+    effectId: "unsupported-effect-queue",
+    details: {
+      reason: "unsupported-pending-runtime-work",
+      kind: "effectQueue",
+      count: 1,
+    },
+  });
   assert.equal(result.events.length, 0);
   assert.equal(result.state.turn.phase, "don");
   assert.equal(JSON.stringify(state), before);
@@ -457,7 +467,17 @@ test("enterMainPhase rejects when deferredTriggers is non-empty without mutation
 
   const result = enterMainPhase(state);
 
-  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
+  assert.ok(result.errors !== undefined);
+  assert.equal(result.errors[0]?.type, "effectRuntimeError");
+  assert.deepEqual(result.errors[0], {
+    type: "effectRuntimeError",
+    effectId: "unsupported-deferred-triggers",
+    details: {
+      reason: "unsupported-pending-runtime-work",
+      kind: "deferredTriggers",
+      count: 1,
+    },
+  });
   assert.equal(result.events.length, 0);
   assert.equal(result.state.turn.phase, "don");
   assert.equal(JSON.stringify(state), before);

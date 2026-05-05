@@ -1218,6 +1218,65 @@ test("getLegalActions omits Event play for invalid timing text, trigger text, mi
   assert.equal(hasPlayCardAction(legal, unsupported), false);
 });
 
+test("Event effect execution remains unsupported and fails closed without mutation", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event with effect text");
+  state.cardManifest.cards[eventCard.cardId] = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Main] draw 1 card.",
+  });
+  const before = JSON.stringify(state);
+
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p1), eventCard),
+    false,
+  );
+  const result = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: eventCard.instanceId,
+  });
+
+  assert.deepEqual(result.errors, [
+    { type: "illegalAction", reason: "playCard card is unsupported." },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+});
+
+test("On Play effect execution remains unsupported and fails closed without mutation", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "on-play character");
+  state.cardManifest.cards[character.cardId] = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+    cost: 0,
+    power: 2000,
+    effectText: "[On Play] draw 1 card.",
+  });
+  const before = JSON.stringify(state);
+
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p1), character),
+    false,
+  );
+  const result = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: character.instanceId,
+  });
+
+  assert.deepEqual(result.errors, [
+    { type: "illegalAction", reason: "playCard card is unsupported." },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+});
+
 test("nonzero [Main] Event play creates payCost and valid payment moves card hand->trash with expected events", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");

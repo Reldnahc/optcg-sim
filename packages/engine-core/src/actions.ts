@@ -19,6 +19,7 @@ import {
   applyPlayCardDecisionResponse,
   getPlayCardLegalActions,
 } from "./play-card.js";
+import { detectPendingRuntimeWork } from "./effect-runtime.js";
 import {
   applyConcede,
   applyEndMainPhase,
@@ -34,6 +35,12 @@ export const getLegalActions = (
   }
 
   const actions: LegalAction[] = [{ type: "concede", playerId }];
+  if (
+    state.pendingDecision === undefined &&
+    detectPendingRuntimeWork(state) !== undefined
+  ) {
+    return actions;
+  }
   if (state.pendingDecision !== undefined) {
     actions.push(...getPlayCardLegalActions(state, playerId));
     return actions;
@@ -81,6 +88,12 @@ export const applyAction = (state: GameState, action: Action): EngineResult => {
     return illegalAction(
       state,
       "Phase actions are illegal while a decision is pending.",
+    );
+  }
+  if (detectPendingRuntimeWork(state) !== undefined) {
+    return illegalAction(
+      state,
+      "Phase actions are illegal while effect runtime work is pending.",
     );
   }
   if (action.type === "playCard") {

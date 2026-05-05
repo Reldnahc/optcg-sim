@@ -799,6 +799,15 @@ test("ENG-002F replay smoke fixture reproduces expected checkpoint and final has
   assert.equal(replayed.finalStateHash, fixture.expected.finalStateHash);
 });
 
+test("ENG-002F replay smoke final hash remains pinned", () => {
+  const fixture = loadFixtureV1();
+
+  assert.equal(
+    fixture.expected.finalStateHash,
+    "75efd0ce2db2d6f72ee3bd956592b22e5ecb7e0ed1a953d8863397e41946c0ef",
+  );
+});
+
 test("ENG-002F action-script drift changes final hash from fixture expectation", () => {
   const fixture = loadFixtureV1();
   const replayed = replayFixtureV1({
@@ -867,6 +876,39 @@ test("replay smoke fixture reproduces expected hashes for vanilla Leader damage,
   }
 });
 
+test("ENG-003E replay smoke final hashes remain pinned", () => {
+  const fixture = loadFixtureV2();
+
+  assert.deepEqual(
+    fixture.scenarios.map((scenario) => ({
+      id: scenario.id,
+      finalStateHash: scenario.expected.finalStateHash,
+    })),
+    [
+      {
+        id: "leader-damage",
+        finalStateHash:
+          "d3ee457413462fc735405186215c2626dac7f544e2bc6959670b814261102123",
+      },
+      {
+        id: "character-ko",
+        finalStateHash:
+          "fd5a9f852195e450265f6b555a1eac0953957d11c2694b8d7a9c89b3f3de25c0",
+      },
+      {
+        id: "leader-zero-life-defeat",
+        finalStateHash:
+          "884f88669c398876f2c1740c4f995afd0174d3cf2f1dab03714e652ff33cda93",
+      },
+      {
+        id: "deck-out-defeat",
+        finalStateHash:
+          "fddb4a48956ac5e9cee14d99faeb9e51ba46c73cd943ab712a72f18f70adec1d",
+      },
+    ],
+  );
+});
+
 test("action-script drift changes final hash from fixture expectation", () => {
   const fixture = loadFixtureV2();
   const scenario = must(fixture.scenarios[0], "scenario 0");
@@ -927,6 +969,39 @@ test("ENG-005C/ENG-006 replay smoke fixture reproduces paid Character, Stage rep
     assert.deepEqual(replayed.finalStatus, scenario.expected.finalStatus);
     assertPlayCardFinalState(replayed.finalState, scenario.expected.finalState);
   }
+});
+
+test("ENG-005C replay smoke final hashes remain pinned", () => {
+  const fixture = loadPlayCardFixture();
+
+  assert.deepEqual(
+    fixture.scenarios.map((scenario) => ({
+      id: scenario.id,
+      finalStateHash: scenario.expected.finalStateHash,
+    })),
+    [
+      {
+        id: "paid-character",
+        finalStateHash:
+          "44b92fdbdc0fe5126a1cf835915ffaa983f1068e4c4909ae1e4dc37092f71902",
+      },
+      {
+        id: "stage-replacement",
+        finalStateHash:
+          "47400b8386558c12b1285da9c026f74f16cb4d9fbccad331ebe31e24d7b8b993",
+      },
+      {
+        id: "character-overflow",
+        finalStateHash:
+          "4e25f4b591af1f23c15f7c9983c79a6db68a5c09137bed3dc7906e143068bb5d",
+      },
+      {
+        id: "paid-event",
+        finalStateHash:
+          "08ac1decd6cc538d110891bcb2ad6cd4510443bd7245b46a4bcb4bf7cd32469b",
+      },
+    ],
+  );
 });
 
 test("ENG-005C action-script drift changes final hash from play-card fixture expectation", () => {
