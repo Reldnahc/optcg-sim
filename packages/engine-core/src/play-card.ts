@@ -1,12 +1,10 @@
 import type {
   Action,
   CardInstance,
-  DecisionId,
   EngineEvent,
   EngineResult,
   GameState,
   LegalAction,
-  PaymentOption,
   PlayerId,
 } from "@optcg/types";
 
@@ -14,7 +12,6 @@ import {
   appendEvent,
   createEvent,
   illegalAction,
-  toDecisionId,
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
@@ -26,15 +23,22 @@ import {
   zonesEqual,
 } from "./action-state.js";
 import { assertGameStateInvariants } from "./invariants.js";
+import {
+  getCharacterOverflowDecisionId,
+  getPlayCardDecisionId,
+  getPlayCardDecisionPrompt,
+  getPlayCardPendingDecisionLegalActions,
+  parseCharacterOverflowDecisionInstanceId,
+  parsePlayCardDecisionInstanceId,
+} from "./play-card-legal-actions.js";
+import {
+  canResolveDestinationConflict,
+  getActiveDonCount,
+  getPlayableHandCards,
+  getSupportedPlayMetadata,
+  type SupportedPlayMetadata,
+} from "./play-card-support.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
-
-type SupportedPlayMetadata = {
-  category: "character" | "stage" | "event";
-  printedCost: number;
-};
-
-const playCardDecisionPrefix = "decision:playCard:cost:";
-const characterOverflowDecisionPrefix = "decision:playCard:overflow:";
 
 export const getPlayCardLegalActions = (
   state: GameState,
@@ -45,44 +49,7 @@ export const getPlayCardLegalActions = (
     return actions;
   }
   if (state.pendingDecision !== undefined) {
-    const decision = state.pendingDecision;
-    if (
-      decision.type === "payCost" &&
-      decision.playerId === playerId &&
-      parsePlayCardDecisionInstanceId(decision.id) !== null
-    ) {
-      const count = getRestDonCount(decision.paymentOptions);
-      if (count !== null) {
-        const player = state.players[playerId];
-        const activeDonIds = player.costArea
-          .filter((card) => card.state === "active")
-          .map((card) => card.instanceId);
-        const combos = chooseDonCombos(activeDonIds, count);
-        for (const combo of combos) {
-          actions.push({
-            type: "respondToDecision",
-            decisionId: decision.id,
-            response: {
-              type: "payment",
-              optionId: decision.paymentOptions[0]?.id ?? "restDon",
-              selectedDonInstanceIds: combo,
-            },
-          });
-        }
-      }
-    } else if (
-      decision.type === "selectCards" &&
-      decision.playerId === playerId &&
-      parseCharacterOverflowDecisionInstanceId(decision.id) !== null
-    ) {
-      for (const candidate of decision.candidates) {
-        actions.push({
-          type: "respondToDecision",
-          decisionId: decision.id,
-          response: { type: "cards", cards: [candidate.card] },
-        });
-      }
-    }
+    actions.push(...getPlayCardPendingDecisionLegalActions(state, playerId));
     return actions;
   }
   if (state.turn.phase !== "main" || state.turn.turnPlayerId !== playerId) {
@@ -242,19 +209,6 @@ export const applyPlayCardDecisionResponse = (
     return applyPlayCardPaymentResponse(state, action);
   }
   return null;
-};
-
-const canResolveDestinationConflict = (
-  player: GameState["players"][PlayerId],
-  category: SupportedPlayMetadata["category"],
-): boolean => {
-  if (category === "character") {
-    return player.characters.length <= 5;
-  }
-  if (category === "stage") {
-    return player.stage === undefined || player.stage.attachedDon.length === 0;
-  }
-  return true;
 };
 
 const createCharacterOverflowDecisionResult = (params: {
@@ -802,161 +756,4 @@ const applyPlayCardPaymentResponse = (
     supported,
     costArea: nextCostArea,
   });
-};
-
-const getSupportedPlayMetadata = (
-  state: GameState,
-  card: CardInstance,
-): SupportedPlayMetadata | null => {
-  const resolved = state.cardManifest.cards[card.cardId];
-  if (
-    resolved === undefined ||
-    resolved.support.status !== "vanilla-confirmed"
-  ) {
-    return null;
-  }
-  if (resolved.category === "character" || resolved.category === "stage") {
-    if (
-      hasUnsupportedPlayText(resolved.effectText) ||
-      hasUnsupportedPlayText(resolved.triggerText) ||
-      resolved.cost === undefined
-    ) {
-      return null;
-    }
-    return {
-      category: resolved.category,
-      printedCost: Math.max(0, resolved.cost),
-    };
-  }
-  if (resolved.category !== "event") {
-    return null;
-  }
-  if (resolved.cost === undefined) {
-    return null;
-  }
-  if ((resolved.effectText ?? "").trim() !== "[Main]") {
-    return null;
-  }
-  if (hasUnsupportedPlayText(resolved.triggerText)) {
-    return null;
-  }
-  return {
-    category: "event",
-    printedCost: Math.max(0, resolved.cost),
-  };
-};
-
-const hasUnsupportedPlayText = (text: string | undefined): boolean =>
-  text !== undefined && text.trim().length > 0;
-
-const getPlayableHandCards = (
-  state: GameState,
-  playerId: PlayerId,
-): CardInstance[] => {
-  const player = state.players[playerId];
-  if (player === undefined) {
-    return [];
-  }
-  const activeDonCount = getActiveDonCount(player.costArea);
-  return player.hand.filter((card) => {
-    const supported = getSupportedPlayMetadata(state, card);
-    if (supported === null) {
-      return false;
-    }
-    if (activeDonCount < supported.printedCost) {
-      return false;
-    }
-    return canResolveDestinationConflict(player, supported.category);
-  });
-};
-
-const getActiveDonCount = (costArea: readonly CardInstance[]): number =>
-  costArea.filter((card) => card.state === "active").length;
-
-const getPlayCardDecisionId = (
-  state: GameState,
-  card: CardInstance,
-): DecisionId =>
-  toDecisionId(
-    `${playCardDecisionPrefix}${String(card.instanceId)}:${String(state.seq + 1)}`,
-  );
-
-const getPlayCardDecisionPrompt = (card: CardInstance): string =>
-  `Pay cost to play ${String(card.cardId)}`;
-
-const parsePlayCardDecisionInstanceId = (
-  decisionId: DecisionId,
-): CardInstance["instanceId"] | null => {
-  return parseDecisionInstanceId(decisionId, playCardDecisionPrefix);
-};
-
-const getCharacterOverflowDecisionId = (
-  state: GameState,
-  card: CardInstance,
-): DecisionId =>
-  toDecisionId(
-    `${characterOverflowDecisionPrefix}${String(card.instanceId)}:${String(state.seq + 1)}`,
-  );
-
-const parseCharacterOverflowDecisionInstanceId = (
-  decisionId: DecisionId,
-): CardInstance["instanceId"] | null =>
-  parseDecisionInstanceId(decisionId, characterOverflowDecisionPrefix);
-
-const parseDecisionInstanceId = (
-  decisionId: DecisionId,
-  prefix: string,
-): CardInstance["instanceId"] | null => {
-  const value = String(decisionId);
-  if (!value.startsWith(prefix)) {
-    return null;
-  }
-  const suffix = value.slice(prefix.length);
-  const sequenceSeparator = suffix.lastIndexOf(":");
-  if (sequenceSeparator <= 0) {
-    return null;
-  }
-  return suffix.slice(0, sequenceSeparator) as CardInstance["instanceId"];
-};
-
-const chooseDonCombos = (
-  source: readonly CardInstance["instanceId"][],
-  count: number,
-): CardInstance["instanceId"][][] => {
-  if (count === 0) {
-    return [[]];
-  }
-  if (count > source.length) {
-    return [];
-  }
-  const result: CardInstance["instanceId"][][] = [];
-  const current: CardInstance["instanceId"][] = [];
-  const walk = (start: number): void => {
-    if (current.length === count) {
-      result.push([...current]);
-      return;
-    }
-    for (let i = start; i <= source.length - (count - current.length); i += 1) {
-      const candidate = source[i];
-      if (candidate === undefined) {
-        continue;
-      }
-      current.push(candidate);
-      walk(i + 1);
-      current.pop();
-    }
-  };
-  walk(0);
-  return result;
-};
-
-const getRestDonCount = (options: readonly PaymentOption[]): number | null => {
-  if (options.length !== 1) {
-    return null;
-  }
-  const option = options[0];
-  if (option === undefined || option.type !== "restDon") {
-    return null;
-  }
-  return option.count;
 };
