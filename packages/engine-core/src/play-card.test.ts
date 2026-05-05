@@ -1315,6 +1315,16 @@ test("zero-cost [Main] Event play resolves directly to trash with expected event
       "ruleProcessingChecked",
     ],
   );
+  assert.deepEqual(
+    result.events.map((event) => [event.type, event.visibility.type]),
+    [
+      ["cardRevealed", "public"],
+      ["cardMoved", "public"],
+      ["cardTrashed", "public"],
+      ["cardPlayed", "public"],
+      ["ruleProcessingChecked", "replayOnly"],
+    ],
+  );
 });
 
 test("Event legal actions are omitted during pending decision, active battle, and non-Event manifest category", () => {
