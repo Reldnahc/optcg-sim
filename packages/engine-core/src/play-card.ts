@@ -223,6 +223,12 @@ export const applyPlayCardDecisionResponse = (
   if (decision === undefined) {
     return null;
   }
+  if (decision.id !== action.decisionId) {
+    return illegalAction(
+      state,
+      "Decision id does not match current pending decision.",
+    );
+  }
   if (
     decision.type === "selectCards" &&
     parseCharacterOverflowDecisionInstanceId(decision.id) !== null
