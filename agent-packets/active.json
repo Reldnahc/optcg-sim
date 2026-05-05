@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CLI-001E.md",
+      "storyId": "CLI-001E",
+      "storyPath": "stories/approved/CLI-001E-play-card-command-dispatch.yaml",
+      "storySha256": "23b180c1fdd9e17b4ece1542a371c4c5fc972321ce99bccc6619d7277b5cc3ce"
+    }
+  ],
   "version": 1
 }
