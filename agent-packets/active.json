@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-019.md",
-      "storyId": "INF-019",
-      "storyPath": "stories/approved/INF-019-enforce-per-story-approval-review-gate.yaml",
-      "storySha256": "71870d6d7920f65b93268a20492415f7f77764324289a50868e48fc88bcd810e"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Make the generated-story workflow harder to misread by defining
   approval-ready as a distinct per-story review state and adding workflow tests
