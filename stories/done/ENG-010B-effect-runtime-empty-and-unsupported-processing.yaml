@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the first `effect-runtime.ts` processor surface: empty queues are a
   deterministic no-op and non-empty queues or deferred triggers fail closed

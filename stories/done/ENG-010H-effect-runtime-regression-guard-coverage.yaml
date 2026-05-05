@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add focused regression guard coverage proving play-card unsupported effect
   behavior and replay smoke hashes remain unchanged after the runtime scaffold

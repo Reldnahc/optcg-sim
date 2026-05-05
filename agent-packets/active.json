@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-010C.md",
-      "storyId": "ENG-010C",
-      "storyPath": "stories/approved/ENG-010C-effect-runtime-legal-action-gate.yaml",
-      "storySha256": "367ddb4adad1488d5fbe7b3f19f68476f569e43165df05003c0b39d4c5c72527"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the first focused effect-queue helper surface: validate pending
   `EffectQueueEntry` inputs and require explicit caller-supplied timing-window

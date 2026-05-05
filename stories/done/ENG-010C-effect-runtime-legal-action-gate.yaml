@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Ensure ordinary legal actions are not exposed while effect runtime work is
   pending, using the empty/unsupported runtime processor as the authority for

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Extend the effect queue helper surface from ENG-010A with pure grouping of
   validated pending entries by timing window, generation, ordering bucket, and

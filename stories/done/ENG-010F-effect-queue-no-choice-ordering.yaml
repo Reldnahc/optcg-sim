@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Extend the effect queue helper surface with deterministic no-choice ordering
   for validated and grouped pending entries, without resolving player-choice

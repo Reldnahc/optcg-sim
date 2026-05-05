@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Replace existing ad hoc effect-queue and deferred-trigger fail-closed checks
   in the start-of-main path with the shared runtime scaffold, while preserving
