@@ -1126,3 +1126,193 @@ test("respondToDecision rejects invalid payment variants without mutation", () =
   assert.equal(stale.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(staleState), staleBefore);
 });
+
+test("getLegalActions includes supported [Main] vanilla Event play only under main-phase turn-player constraints", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event");
+  const unsupported = must(p1State.hand[1], "unsupported");
+
+  state.cardManifest.cards[eventCard.cardId] = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 1,
+    effectText: " [Main] ",
+  });
+  state.cardManifest.cards[unsupported.cardId] = resolvedCard({
+    cardId: unsupported.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Main] draw 1",
+  });
+
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p1), eventCard),
+    true,
+  );
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p1), unsupported),
+    false,
+  );
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p2), eventCard),
+    false,
+  );
+
+  state.turn.phase = "don";
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p1), eventCard),
+    false,
+  );
+});
+
+test("getLegalActions omits Event play for invalid timing text, trigger text, missing manifest, and unsupported status", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const missingMain = must(p1State.hand[0], "missing-main");
+  const counter = must(p1State.hand[1], "counter");
+  const trigger = must(p1State.hand[2], "trigger");
+  const missingManifest = must(p1State.hand[3], "missing-manifest");
+  const unsupported = must(p1State.hand[4], "unsupported");
+
+  state.cardManifest.cards[missingMain.cardId] = resolvedCard({
+    cardId: missingMain.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "",
+  });
+  state.cardManifest.cards[counter.cardId] = resolvedCard({
+    cardId: counter.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Counter]",
+  });
+  state.cardManifest.cards[trigger.cardId] = resolvedCard({
+    cardId: trigger.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Main]",
+    triggerText: "[Trigger] something",
+  });
+  state.cardManifest.cards[unsupported.cardId] = {
+    ...resolvedCard({
+      cardId: unsupported.cardId,
+      category: "event",
+      cost: 1,
+      effectText: "[Main]",
+    }),
+    support: {
+      ...resolvedCard({
+        cardId: unsupported.cardId,
+        category: "event",
+      }).support,
+      status: "unsupported",
+    },
+  };
+
+  const legal = getPlayCardLegalActions(state, p1);
+  assert.equal(hasPlayCardAction(legal, missingMain), false);
+  assert.equal(hasPlayCardAction(legal, counter), false);
+  assert.equal(hasPlayCardAction(legal, trigger), false);
+  assert.equal(hasPlayCardAction(legal, missingManifest), false);
+  assert.equal(hasPlayCardAction(legal, unsupported), false);
+});
+
+test("nonzero [Main] Event play creates payCost and valid payment moves card hand->trash with expected events", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event");
+  state.cardManifest.cards[eventCard.cardId] = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 2,
+    effectText: "[Main]",
+  });
+
+  const opened = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: eventCard.instanceId,
+  });
+  assert.equal(opened.state.pendingDecision?.type, "payCost");
+  assert.deepEqual(
+    opened.events.map((event) => event.type),
+    ["cardRevealed", "decisionCreated"],
+  );
+  assert.equal(
+    respondToDecisionActions(getPlayCardLegalActions(opened.state, p2)).length,
+    0,
+  );
+
+  const p1Opened = must(opened.state.players[p1], "p1 opened");
+  const don0 = must(p1Opened.costArea[0], "don0");
+  const don1 = must(p1Opened.costArea[1], "don1");
+  const resolved = applyPlayCardTestAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "decision").id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [don0.instanceId, don1.instanceId],
+    },
+  });
+  assert.equal(resolved.errors, undefined);
+  const resolvedP1 = must(resolved.state.players[p1], "resolved p1");
+  assert.equal(
+    resolvedP1.hand.some((card) => card.instanceId === eventCard.instanceId),
+    false,
+  );
+  assert.equal(
+    must(resolvedP1.trash[0], "trash 0").instanceId,
+    eventCard.instanceId,
+  );
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    [
+      "costPaid",
+      "decisionResolved",
+      "cardMoved",
+      "cardTrashed",
+      "cardPlayed",
+      "ruleProcessingChecked",
+    ],
+  );
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("zero-cost [Main] Event play resolves directly to trash with expected events", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event");
+  state.cardManifest.cards[eventCard.cardId] = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 0,
+    effectText: "[Main]",
+  });
+
+  const result = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: eventCard.instanceId,
+  });
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  const resultP1 = must(result.state.players[p1], "result p1");
+  assert.equal(
+    resultP1.hand.some((card) => card.instanceId === eventCard.instanceId),
+    false,
+  );
+  assert.equal(
+    must(resultP1.trash[0], "trash 0").instanceId,
+    eventCard.instanceId,
+  );
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    [
+      "cardRevealed",
+      "cardMoved",
+      "cardTrashed",
+      "cardPlayed",
+      "ruleProcessingChecked",
+    ],
+  );
+});
