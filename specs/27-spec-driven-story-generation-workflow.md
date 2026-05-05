@@ -147,6 +147,9 @@ Generated or normalized stories must receive story-review agent review before th
 
 Required behavior:
 
+- approval-ready means the exact candidate story has a usable per-story story-review result,
+- set-level or decomposition-group story review does not satisfy per-story candidate approval review,
+- each candidate story needs its own usable story-review result before that exact story is presented for approval,
 - run a set-level story review before a decomposed story group is presented for human approval,
 - run per-story review before each candidate story is presented for approval,
 - use a story-review agent separate from any implementation worker or implementation patch reviewer,

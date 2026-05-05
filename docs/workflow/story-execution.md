@@ -25,6 +25,9 @@ Manual chat memory is not authority after reset. If reconstructed state conflict
 Use a pre-presentation story-review gate for generated or normalized story work:
 
 - Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready.
+- Approval-ready means the exact candidate story has a usable per-story story-review result, and material findings for that story are fixed, explicitly deferred, or recorded.
+- Set-level or decomposition-group story review does not satisfy per-story candidate approval review.
+- Each candidate story needs its own usable story-review result before the parent agent presents that exact story for approval.
 - Story-review agent model: `gpt-5.5` with `high` reasoning.
 - Run a set-level story review before presenting a decomposed story group.
 - Run per-story review before presenting each candidate story for approval.

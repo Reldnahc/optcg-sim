@@ -112,6 +112,9 @@ A skill should accelerate a workflow, not replace the authoritative story or pac
 Section Ref: `32-codex-agent-integration.s008`
 
 1. Before approving a generated or normalized story, run story-review subagents and resolve, explicitly defer, or record their findings.
+1. Approval-ready means the exact candidate story has a usable per-story story-review result.
+1. Set-level or decomposition-group story review does not satisfy per-story candidate approval review.
+1. Each candidate story needs its own usable story-review result before the parent agent presents that exact story for approval.
 1. Approve a story.
 1. Generate or refresh the checked-in packet for the active story.
 1. Run `node --experimental-strip-types tools/spec_board_sync.ts --story <path> --dry-run --write-preview`, then perform live sync when ready.
