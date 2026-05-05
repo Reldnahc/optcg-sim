@@ -117,10 +117,12 @@ Section Ref: `32-codex-agent-integration.s008`
 1. Each candidate story needs its own usable story-review result before the parent agent presents that exact story for approval.
 1. Approve a story.
 1. Generate or refresh the checked-in packet for the active story.
+1. Treat the story as worker-ready only after the parent reads `AGENTS.md`, the approved story, and the active packet, then runs `pnpm run packets:generate --story <stories/approved/...yaml> --activate` and `pnpm run packets:verify`.
 1. Run `node --experimental-strip-types tools/spec_board_sync.ts --story <path> --dry-run --write-preview`, then perform live sync when ready.
 1. Verify that the active story packet is present and current before worker assignment, reviewer assignment, or PR handoff.
 1. Have a parent Codex agent read the story, packet, and `AGENTS.md`, stay mostly in orchestration mode, and remain the owner of story authority, scope decisions, ambiguity handling, and review handoff.
 1. Spawn a worker subagent for the main implementation body of the story whenever delegation is available.
+1. Use one implementation worker subagent per active story by default; if more than one worker is needed, split the story first unless write scopes are explicitly disjoint and still reviewable.
 1. Allow the parent agent to do only small local glue work such as rebases, tiny integration edits, verification reruns, and PR administration.
 1. Follow the subagent model routing policy.
 1. Require tests and a short assumptions/blockers note.
@@ -134,6 +136,7 @@ Section Ref: `32-codex-agent-integration.s008`
    one verified packet-tool operation.
 
 The parent agent must not present stories as approval-ready until the story-review findings are resolved, explicitly deferred, or recorded.
+When worker subagents are unavailable, the parent may implement manually but must record an explicit implementation note that worker delegation was unavailable and parent implementation fallback was used.
 
 ## Codex packet footer
 

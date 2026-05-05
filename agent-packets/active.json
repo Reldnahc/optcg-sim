@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-020.md",
+      "storyId": "INF-020",
+      "storyPath": "stories/approved/INF-020-enforce-worker-agent-implementation-handoff.yaml",
+      "storySha256": "005244e4f203dd37ac64a790f142da8c37541bee54fa2b21e79dbff40501e085"
+    }
+  ],
   "version": 1
 }

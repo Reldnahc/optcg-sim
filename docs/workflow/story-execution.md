@@ -41,11 +41,13 @@ Use a pre-presentation story-review gate for generated or normalized story work:
 - Read `AGENTS.md` first, then the approved story, then the corresponding packet.
 - Implement only one approved story at a time.
 - Approved stories may exist without packets until they become active.
+- `worker-ready` means the parent has read `AGENTS.md`, the approved story, and the current active packet, then successfully run packet generation and `pnpm run packets:verify`.
 - Before implementation starts, before a worker or reviewer subagent is assigned, and before PR handoff begins, generate a current checked-in packet for the active story under `agent-packets/`.
 - Track active stories in `agent-packets/active.json` and keep the packet current relative to the approved story.
 - `agent-packets/active.json` may contain zero active stories or exactly one active story. It must never contain multiple active implementation or review handoff targets.
 - Use `pnpm run packets:generate --story <stories/approved/...yaml> --activate` to build or refresh the packet for the story you are activating.
 - Use `pnpm run packets:verify` immediately after generating or refreshing the packet, and before worker assignment, reviewer assignment, implementation handoff, or PR handoff, to fail fast on missing or stale active-story packets.
+- Run `pnpm run packets:generate --story <stories/approved/...yaml> --activate` and `pnpm run packets:verify` before assigning an implementation worker.
 - Use `pnpm run packets:complete --story <stories/approved/...yaml>` after a story is merged to move it to done history, remove its active packet, and clear it from `agent-packets/active.json`.
 - Stay inside the story's `scope`, `story_boundary`, and `allowed_touch_points`.
 - Do not silently absorb adjacent contract, engine, server, client, replay, or UI work just because it is nearby.
@@ -126,6 +128,6 @@ Parent orchestration rules:
 4. the parent agent may still do small local glue work such as rebases, tiny integration edits, verification reruns, PR comment posting, and branch or merge operations
 5. the parent agent remains in charge of the story itself: story selection, scope enforcement, packet authority, ambiguity handling, review handoff, and story-state transitions stay with the parent agent rather than the worker or reviewer subagents
 6. the parent agent should not do the main implementation body when a worker subagent is available for that story
-7. use one worker subagent per story by default; if a story appears to need multiple concurrent workers for the main implementation body, split the story first unless the write scopes are clearly disjoint and still reviewable
+7. use one worker subagent per active story by default; if a story appears to need multiple concurrent workers for the main implementation body, split the story first unless the write scopes are clearly disjoint and still reviewable
 
-If subagents are unavailable, follow the same boundaries manually and report that the delegation surface was unavailable.
+If worker subagents are unavailable, follow the same boundaries manually, report that the delegation surface was unavailable, and record an explicit implementation note that parent implementation fallback was used.
