@@ -151,6 +151,22 @@ test("interactive mode accepts injected input and exits cleanly on EOF", async (
   assert.match(stdout.output(), /State hash: [a-f0-9]+/u);
 });
 
+test("interactive mode decodes injected byte input before dispatching", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(["--interactive"], {
+    stdin: Readable.from([new TextEncoder().encode("respond keep\nexit\n")]),
+    stdout: stdout.writer,
+    stderr: stderr.writer,
+  });
+
+  assert.equal(status, 0);
+  assert.equal(stderr.output(), "");
+  assert.match(stdout.output(), /State seq: 2/u);
+});
+
 test("interactive mode dispatches a complete line before EOF", async () => {
   const { runCli } = await import("./cli.js");
   const stdin = new PassThrough();

@@ -82,11 +82,20 @@ const dispatchInteractiveCommands = async (
 ): Promise<number> => {
   let state = bootFixtureMatch().state;
   let pendingInput = "";
+  const decoder = new TextDecoder();
+
+  const decodeChunk = (chunk: string | Uint8Array): string => {
+    if (typeof chunk === "string") {
+      return `${decoder.decode()}${chunk}`;
+    }
+
+    return decoder.decode(chunk, { stream: true });
+  };
 
   writeOutput(io, dispatchCliCommand(state, "show").output);
 
   for await (const chunk of input) {
-    pendingInput += String(chunk);
+    pendingInput += decodeChunk(chunk);
 
     let lineEnding = /\r?\n/u.exec(pendingInput);
     while (lineEnding !== null) {
@@ -105,6 +114,7 @@ const dispatchInteractiveCommands = async (
     }
   }
 
+  pendingInput += decoder.decode();
   dispatchInteractiveCommand(state, pendingInput, io);
   return 0;
 };
