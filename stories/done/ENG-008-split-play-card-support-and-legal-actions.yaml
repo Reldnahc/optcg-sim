@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Reduce `play-card.ts` complexity after Character, Stage, overflow, and Event
   play support by extracting play-card support-policy and legal-action
