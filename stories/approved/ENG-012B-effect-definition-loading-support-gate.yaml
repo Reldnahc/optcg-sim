@@ -1,0 +1,72 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-012B
+epic_id: M1-001
+title: Load implemented DSL effect definitions from match manifest
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add pure engine-core helpers that resolve a card's reviewed `implemented-dsl`
+  effect definition from the match-local manifest and fail closed for missing,
+  mismatched, unsupported, custom, or unreviewed effect authority.
+story_boundary: >
+  Own only effect definition lookup and support-policy validation. Stop before
+  trigger detection, queue creation, primitive execution, pending decisions, or
+  play-card integration.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+spec_refs:
+  - 04-effect-runtime.s004 (Stable effect identity)
+  - 04-effect-runtime.s005 (Card implementation support)
+  - 05-effect-dsl-reference.s003 (Top-level definition)
+  - 05-effect-dsl-reference.s004 (Effect block)
+  - 05-effect-dsl-reference.s019 (Example: On Play draw 1)
+  - 05-effect-dsl-reference.s022 (Poneglyph text-to-DSL pipeline)
+  - 05-effect-dsl-reference.s029 (Schema coverage policy)
+  - 09-card-data-and-support-policy.s010 (Card implementation records)
+  - 09-card-data-and-support-policy.s011 (Support status behavior)
+  - 09-card-data-and-support-policy.s013 (Match-time card manifest)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+scope:
+  - "add named helpers to resolve `EffectDefinition` for a `ResolvedCard` whose support status is `implemented-dsl`"
+  - "require the card support `effectDefinitionId` to exist in the match-local effect definition registry"
+  - "require `EffectDefinition.cardId` and `implementationStatus` to agree with the card support record"
+  - "require support `cardDataVersion` to match the manifest `cardDataVersion` and support `effectDefinitionId` to exist in the manifest registry version identified by `effectDefinitionsVersion`"
+  - "require support `rulesVersion` and `sourceTextHash` to match the effect definition metadata `rulesVersion` and `sourceTextHash`"
+  - "require effect definition metadata `effectDefinitionsVersion` to match the manifest `effectDefinitionsVersion`"
+  - "require both support and definition metadata to be tested, and require human-review metadata via definition `reviewer` or generated-definition `reviewedBy`/`reviewedAt` before runtime support"
+  - "return deterministic content-safe errors for missing definition, mismatched card id, mismatched status, untested/unreviewed metadata, unsupported support status, `implemented-custom`, and vanilla cards with unexpected effect definitions"
+  - "keep helpers pure and independent from `GameState` mutation, queue creation, event creation, and live card-data access"
+non_scope:
+  - changing canonical types or contracts from ENG-012A
+  - parsing printed card text
+  - trigger detection from events
+  - source-presence checks
+  - effect execution
+  - play-card integration
+  - custom handlers
+dependencies:
+  - ENG-012A
+acceptance_criteria:
+  - "valid `implemented-dsl` support resolves the reviewed matching effect definition from the match-local registry"
+  - missing, mismatched, untested, unreviewed, unsupported, custom, and unexpected vanilla definition cases fail closed deterministically
+  - failure diagnostics do not expose hidden card state or hidden-zone contents
+  - helpers do not mutate input state or manifest data
+required_tests:
+  - "unit test for successful `implemented-dsl` lookup of a reviewed On Play draw definition"
+  - unit tests for missing definition id, missing registry entry, card id mismatch, support status mismatch, `cardDataVersion` mismatch, support/definition `rulesVersion` mismatch, support/definition `sourceTextHash` mismatch, definition `effectDefinitionsVersion` mismatch, untested support metadata, untested definition metadata, and unreviewed definition metadata
+  - "unit tests proving vanilla, unsupported, banned, and `implemented-custom` cards do not resolve through the DSL helper"
+  - unit test proving lookup does not mutate manifest/state inputs
+  - "`corepack pnpm --filter @optcg/engine-core typecheck` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - do not execute effects in this story
+  - keep diagnostics content-safe
+  - keep engine-core free of live Poneglyph/card-data access
+ambiguity_policy: fail_and_escalate
