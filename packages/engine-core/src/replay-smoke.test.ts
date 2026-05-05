@@ -33,6 +33,8 @@ const must = <T>(value: T | undefined, label: string): T => {
 type SetupStep =
   | { type: "setMainPhase"; turnPlayerId: string; globalTurn: number }
   | { type: "setCostAreaFromDonDeck"; playerId: string; count: number }
+  | { type: "setHandFromCardIds"; playerId: string; cardIds: string[] }
+  | { type: "setCardAsVanillaMainEvent"; cardId: string; cost: number }
   | {
       type: "addCharacterFromHand";
       playerId: string;
@@ -285,6 +287,20 @@ const reindexHand = (cards: CardInstance[], playerId: PlayerId) =>
     zone: { zone: "hand" as const, playerId, slot: "hand" as const, index },
   }));
 
+const createSetupHandCard = (
+  playerId: PlayerId,
+  cardId: CardId,
+  index: number,
+): CardInstance => ({
+  instanceId:
+    `setup:${String(playerId)}:hand:${String(cardId)}:${String(index)}` as InstanceId,
+  cardId,
+  owner: playerId,
+  controller: playerId,
+  zone: { zone: "hand", playerId, slot: "hand", index },
+  attachedDon: [],
+});
+
 const applySetupScript = (
   state: ReturnType<typeof runMulliganAndStart>,
   script: SetupStep[],
@@ -336,6 +352,32 @@ const applySetupScript = (
           index,
         },
       }));
+      continue;
+    }
+    if (step.type === "setHandFromCardIds") {
+      const playerId = toPlayerId(step.playerId);
+      const player = must(state.players[playerId], `player ${playerId}`);
+      player.hand = step.cardIds.map((cardIdValue, index) => {
+        const cardId = toCardId(cardIdValue);
+        assert.ok(
+          state.cardManifest.cards[cardId] !== undefined,
+          `missing manifest card ${cardIdValue}`,
+        );
+        return createSetupHandCard(playerId, cardId, index);
+      });
+      continue;
+    }
+    if (step.type === "setCardAsVanillaMainEvent") {
+      const cardId = toCardId(step.cardId);
+      const existing = state.cardManifest.cards[cardId];
+      assert.ok(existing !== undefined, `missing manifest card ${step.cardId}`);
+      state.cardManifest.cards[cardId] = {
+        ...existing,
+        category: "event",
+        cost: step.cost,
+        effectText: "[Main]",
+        triggerText: "",
+      };
       continue;
     }
     if (step.type === "addCharacterFromHand") {
@@ -876,7 +918,7 @@ test("fixture determinism rejects transport/audit keys and allows deterministic 
   );
 });
 
-test("ENG-005C replay smoke fixture reproduces paid Character, Stage replacement, and Character overflow hashes", () => {
+test("ENG-005C/ENG-006 replay smoke fixture reproduces paid Character, Stage replacement, Character overflow, and Event play hashes", () => {
   const fixture = loadPlayCardFixture();
   for (const scenario of fixture.scenarios) {
     const replayed = replayPlayCardScenario(fixture, scenario);

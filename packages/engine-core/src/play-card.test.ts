@@ -1238,6 +1238,37 @@ test("nonzero [Main] Event play creates payCost and valid payment moves card han
     opened.events.map((event) => event.type),
     ["cardRevealed", "decisionCreated"],
   );
+  assert.deepEqual(
+    respondToDecisionActions(getPlayCardLegalActions(opened.state, p1)).map(
+      (action) => action.response,
+    ),
+    [
+      {
+        type: "payment",
+        optionId: "restDon",
+        selectedDonInstanceIds: [
+          must(p1State.costArea[0], "legal don0").instanceId,
+          must(p1State.costArea[1], "legal don1").instanceId,
+        ],
+      },
+      {
+        type: "payment",
+        optionId: "restDon",
+        selectedDonInstanceIds: [
+          must(p1State.costArea[0], "legal don0").instanceId,
+          must(p1State.costArea[2], "legal don2").instanceId,
+        ],
+      },
+      {
+        type: "payment",
+        optionId: "restDon",
+        selectedDonInstanceIds: [
+          must(p1State.costArea[1], "legal don1").instanceId,
+          must(p1State.costArea[2], "legal don2").instanceId,
+        ],
+      },
+    ],
+  );
   assert.equal(
     respondToDecisionActions(getPlayCardLegalActions(opened.state, p2)).length,
     0,

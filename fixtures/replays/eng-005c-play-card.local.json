@@ -514,6 +514,59 @@
           "absentFromCharacters": ["p1-f"]
         }
       }
+    },
+    {
+      "id": "paid-event",
+      "setupScript": [
+        { "type": "setMainPhase", "turnPlayerId": "p1", "globalTurn": 3 },
+        { "type": "setCostAreaFromDonDeck", "playerId": "p1", "count": 3 },
+        { "type": "setCardAsVanillaMainEvent", "cardId": "p1-d", "cost": 2 },
+        {
+          "type": "setHandFromCardIds",
+          "playerId": "p1",
+          "cardIds": ["p1-d", "p1-a"]
+        }
+      ],
+      "actionScript": [
+        { "type": "playCardFromHand", "playerId": "p1", "handIndex": 0 },
+        {
+          "type": "respondToPayment",
+          "playerId": "p1",
+          "costAreaIndices": [0, 1]
+        }
+      ],
+      "expected": {
+        "checkpoints": [
+          {
+            "stateSeq": 3,
+            "actionSeq": 2,
+            "turnNumber": 3,
+            "fullStateHash": "3bbfa5b2b8888ff9763b06af0f7c8a9e815321b91701b7f04e12df2da9e6d0b0",
+            "snapshotRef": "paid-event:setup"
+          },
+          {
+            "stateSeq": 4,
+            "actionSeq": 3,
+            "turnNumber": 3,
+            "fullStateHash": "1a7dbae1bcd3ef4c156a37107ec461acf904d687f664e5b5f902573999fd039d",
+            "snapshotRef": "paid-event:action-1"
+          },
+          {
+            "stateSeq": 5,
+            "actionSeq": 4,
+            "turnNumber": 3,
+            "fullStateHash": "08ac1decd6cc538d110891bcb2ad6cd4510443bd7245b46a4bcb4bf7cd32469b",
+            "snapshotRef": "paid-event:action-2"
+          }
+        ],
+        "finalStateHash": "08ac1decd6cc538d110891bcb2ad6cd4510443bd7245b46a4bcb4bf7cd32469b",
+        "finalStatus": { "type": "active" },
+        "finalState": {
+          "paidDonIndices": [0, 1],
+          "characters": [],
+          "trash": ["p1-d"]
+        }
+      }
     }
   ]
 }
