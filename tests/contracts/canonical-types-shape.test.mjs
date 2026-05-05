@@ -131,3 +131,12 @@ test("ResolvedCard retains errata in normalized manifests", async () => {
     /export interface ResolvedCard\s*{[\s\S]*?\berrata:\s*NormalizedErrata\[];[\s\S]*?}/m,
   );
 });
+
+test("MatchCardManifest includes a string-keyed serializable effect definition registry", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+
+  assert.match(
+    canonicalTypes,
+    /export interface MatchCardManifest\s*{[\s\S]*?\beffectDefinitions\?:\s*Record<string,\s*EffectDefinition>;[\s\S]*?}/m,
+  );
+});

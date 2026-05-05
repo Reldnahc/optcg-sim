@@ -5,6 +5,7 @@ import type {
   CardCategory,
   CardColor,
   CardId,
+  EffectDefinition,
   CardImplementationRecord,
   CardMetadata,
   CardRef,
@@ -187,6 +188,7 @@ test("poneglyph and resolved/deck validation fixtures compile against canonical 
     effectDefinitionsVersion: "effects-v1",
     customHandlerVersion: "handlers-v1",
     banlistVersion: "banlist-v1",
+    effectDefinitions: {},
     cards: { [resolvedCard.cardId]: resolvedCard },
     createdAt: "2026-05-03T00:00:00.000Z",
   };
@@ -213,4 +215,98 @@ test("poneglyph and resolved/deck validation fixtures compile against canonical 
 
   expect(cardSnapshot.cardId).toBe(cardRef.cardId);
   expect(validationResult.valid).toBe(true);
+});
+
+test("match card manifest accepts an empty effect definition registry", () => {
+  const manifest: MatchCardManifest = {
+    manifestHash: "manifest-empty-effects",
+    source: "manual-test",
+    cardDataVersion: "2026-05-05",
+    effectDefinitionsVersion: "0.1.0",
+    customHandlerVersion: "handlers-v1",
+    banlistVersion: "banlist-v1",
+    effectDefinitions: {},
+    cards: {},
+    createdAt: "2026-05-05T00:00:00.000Z",
+  };
+
+  expect(manifest.effectDefinitions).toEqual({});
+});
+
+test("implemented-dsl support can reference a reviewed On Play draw effect definition from manifest registry", () => {
+  const cardId = "OP01-015" as CardId;
+  const effectDefinitionId = "op01-015.v2026-01-16.reviewed.on-play-draw-1";
+  const support: CardImplementationRecord = {
+    cardId,
+    status: "implemented-dsl",
+    effectDefinitionId,
+    tested: true,
+    rulesVersion: "2026-01-16",
+    cardDataVersion: "2026-01-16",
+    sourceTextHash: "sha256:test-op01-015",
+    behaviorHash: "sha256:behavior-op01-015",
+  };
+
+  const definition: EffectDefinition = {
+    cardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: "OP01-015:auto-on-play-1" as EffectDefinition["effects"][number]["id"],
+        category: "auto",
+        trigger: { type: "onPlay" },
+        optional: false,
+        oncePerTurn: false,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    ],
+    metadata: {
+      sourceTextHash: support.sourceTextHash,
+      rulesVersion: support.rulesVersion,
+      effectDefinitionsVersion: "0.1.0",
+      tested: true,
+      reviewer: "qa-reviewer",
+    },
+  };
+
+  const manifest: MatchCardManifest = {
+    manifestHash: "manifest-reviewed-effects",
+    source: "manual-test",
+    cardDataVersion: support.cardDataVersion,
+    effectDefinitionsVersion: definition.metadata.effectDefinitionsVersion,
+    customHandlerVersion: "handlers-v1",
+    banlistVersion: "banlist-v1",
+    effectDefinitions: {
+      [effectDefinitionId]: definition,
+    },
+    cards: {
+      [cardId]: {
+        cardId,
+        language: "en",
+        name: "Nami",
+        category: "character",
+        set: "OP01",
+        setName: "Romance Dawn",
+        released: true,
+        colors: ["red"],
+        attributes: ["wisdom"],
+        types: ["Straw Hat Crew"],
+        printedKeywords: [],
+        variants: [],
+        legality: {},
+        officialFaq: [],
+        errata: [],
+        sourceTextHash: support.sourceTextHash,
+        behaviorHash: support.behaviorHash,
+        support,
+      },
+    },
+    createdAt: "2026-05-05T00:00:00.000Z",
+  };
+
+  const linkedDefinition = (manifest.effectDefinitions ?? {})[
+    support.effectDefinitionId ?? ""
+  ];
+  expect(linkedDefinition?.cardId).toBe(support.cardId);
 });
