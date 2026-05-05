@@ -29,7 +29,7 @@ import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
 type SupportedPlayMetadata = {
-  category: "character" | "stage";
+  category: "character" | "stage" | "event";
   printedCost: number;
 };
 
@@ -251,7 +251,10 @@ const canResolveDestinationConflict = (
   if (category === "character") {
     return player.characters.length <= 5;
   }
-  return player.stage === undefined || player.stage.attachedDon.length === 0;
+  if (category === "stage") {
+    return player.stage === undefined || player.stage.attachedDon.length === 0;
+  }
+  return true;
 };
 
 const createCharacterOverflowDecisionResult = (params: {
@@ -312,7 +315,7 @@ const createPlayedCard = (params: {
   state: GameState;
   handCard: CardInstance;
   playerId: PlayerId;
-  category: SupportedPlayMetadata["category"];
+  category: Exclude<SupportedPlayMetadata["category"], "event">;
   characterIndex: number;
 }): CardInstance => {
   const { state, handCard, playerId, category, characterIndex } = params;
@@ -371,6 +374,80 @@ const placePlayedCardResult = (params: {
   let nextCharacters = player.characters;
   let nextTrash = player.trash;
   let nextCostArea = costArea;
+  if (supported.category === "event") {
+    const trashedEvent: CardInstance = {
+      ...handCard,
+      attachedDon: [],
+      zone: { zone: "trash", playerId, slot: "trash", index: 0 },
+    };
+    nextTrash = reindexZoneCards(
+      [trashedEvent, ...nextTrash],
+      "trash",
+      playerId,
+      "trash",
+    );
+    const nextPlayer = {
+      ...player,
+      costArea: nextCostArea,
+      hand: nextHand,
+      trash: nextTrash,
+    };
+    appendEvent(
+      state,
+      events,
+      "cardMoved",
+      {
+        instanceId: handCard.instanceId,
+        cardId: handCard.cardId,
+        from: handCard.zone,
+        to: trashedEvent.zone,
+        reason: "playCard",
+      },
+      { type: "public" },
+    );
+    appendEvent(
+      state,
+      events,
+      "cardTrashed",
+      {
+        playerId,
+        instanceId: handCard.instanceId,
+        cardId: handCard.cardId,
+        reason: "playCard",
+      },
+      { type: "public" },
+    );
+    appendEvent(
+      state,
+      events,
+      "cardPlayed",
+      {
+        playerId,
+        instanceId: handCard.instanceId,
+        cardId: handCard.cardId,
+        category: supported.category,
+      },
+      { type: "public" },
+    );
+    const nextStateBase: GameState = {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      actionSeq: state.actionSeq + 1,
+      players: { ...state.players, [playerId]: nextPlayer },
+    };
+    delete nextStateBase.pendingDecision;
+    const nextState = applyRuleProcessingCheckpoint({
+      state: nextStateBase,
+      events,
+      phase: "main",
+      createEvent: (seqOffset, type, payload, visibility) =>
+        createEvent(state, seqOffset, type, payload, visibility),
+    });
+    nextState.eventJournal = [...state.eventJournal, ...events];
+    assertGameStateInvariants(nextState);
+    return toEngineResult(nextState, events);
+  }
+
   if (
     supported.category === "character" &&
     selectedOverflowCharacterIndex !== undefined
@@ -738,20 +815,33 @@ const getSupportedPlayMetadata = (
   ) {
     return null;
   }
-  if (
-    hasUnsupportedPlayText(resolved.effectText) ||
-    hasUnsupportedPlayText(resolved.triggerText)
-  ) {
-    return null;
+  if (resolved.category === "character" || resolved.category === "stage") {
+    if (
+      hasUnsupportedPlayText(resolved.effectText) ||
+      hasUnsupportedPlayText(resolved.triggerText) ||
+      resolved.cost === undefined
+    ) {
+      return null;
+    }
+    return {
+      category: resolved.category,
+      printedCost: Math.max(0, resolved.cost),
+    };
   }
-  if (resolved.category !== "character" && resolved.category !== "stage") {
+  if (resolved.category !== "event") {
     return null;
   }
   if (resolved.cost === undefined) {
     return null;
   }
+  if ((resolved.effectText ?? "").trim() !== "[Main]") {
+    return null;
+  }
+  if (hasUnsupportedPlayText(resolved.triggerText)) {
+    return null;
+  }
   return {
-    category: resolved.category,
+    category: "event",
     printedCost: Math.max(0, resolved.cost),
   };
 };
