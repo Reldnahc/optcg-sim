@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-011.md",
+      "storyId": "ENG-011",
+      "storyPath": "stories/approved/ENG-011-rush-keyword-battle-integration.yaml",
+      "storySha256": "086abdc30dec42cabab81d73de84cf8619ebf6d59a85ad9949163121f40362a6"
+    }
+  ],
   "version": 1
 }
