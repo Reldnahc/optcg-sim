@@ -1,5 +1,9 @@
 import {
   applyAction,
+  advanceDonPhase,
+  advanceDrawPhase,
+  advanceRefreshPhase,
+  enterMainPhase,
   hashCanonicalStateValue,
   respondToMulliganDecision,
 } from "@optcg/engine-core";
@@ -246,6 +250,28 @@ const resultFromState = (
   };
 };
 
+const resultFromAdvancedState = (
+  state: GameState,
+  events: EngineResult["events"],
+  errors: string[],
+): DispatchCliCommandResult => {
+  const stateHash = hashCanonicalStateValue(state);
+  const errorOutput =
+    errors.length === 0
+      ? undefined
+      : `Engine errors:\n${errors.map((error) => `  ${error}`).join("\n")}`;
+  return {
+    state,
+    stateHash,
+    output:
+      errorOutput === undefined
+        ? renderStateSummary(state)
+        : `${errorOutput}\n${renderStateSummary(state)}`,
+    errors,
+    events,
+  };
+};
+
 const resultFromEngine = (result: EngineResult): DispatchCliCommandResult => {
   const engineErrors = result.errors?.map(describeEngineError) ?? [];
   const errorOutput =
@@ -262,6 +288,96 @@ const resultFromEngine = (result: EngineResult): DispatchCliCommandResult => {
     errors: engineErrors,
     events: result.events,
   };
+};
+
+const shouldStopCliPhaseAdvancement = (state: GameState): boolean =>
+  state.status.type !== "active" ||
+  state.pendingDecision !== undefined ||
+  state.turn.phase === "main";
+
+const engineResultErrors = (result: EngineResult): string[] =>
+  result.errors?.map(describeEngineError) ?? [];
+
+const appendEngineResult = (
+  current: {
+    state: GameState;
+    events: EngineResult["events"];
+    errors: string[];
+  },
+  result: EngineResult,
+): typeof current => ({
+  state: result.state,
+  events: [...current.events, ...result.events],
+  errors: [...current.errors, ...engineResultErrors(result)],
+});
+
+const advanceOneCliPhase = (
+  state: GameState,
+): {
+  state: GameState;
+  events: EngineResult["events"];
+  errors: string[];
+} | null => {
+  switch (state.turn.phase) {
+    case "refresh":
+      return appendEngineResult(
+        { state, events: [], errors: [] },
+        advanceRefreshPhase(state),
+      );
+    case "draw":
+      return appendEngineResult(
+        { state, events: [], errors: [] },
+        advanceDrawPhase(state),
+      );
+    case "don": {
+      const don = appendEngineResult(
+        { state, events: [], errors: [] },
+        advanceDonPhase(state),
+      );
+      if (don.errors.length > 0 || shouldStopCliPhaseAdvancement(don.state)) {
+        return don;
+      }
+      return appendEngineResult(don, enterMainPhase(don.state));
+    }
+    case "end":
+    case "main":
+      return null;
+  }
+};
+
+export const advanceCliCommandResultToActionPoint = (
+  result: DispatchCliCommandResult,
+): DispatchCliCommandResult => {
+  if (result.errors.length > 0 || shouldStopCliPhaseAdvancement(result.state)) {
+    return result;
+  }
+
+  let advanced = false;
+  let current = {
+    state: result.state,
+    events: result.events,
+    errors: result.errors,
+  };
+  while (!shouldStopCliPhaseAdvancement(current.state)) {
+    const next = advanceOneCliPhase(current.state);
+    if (next === null) {
+      break;
+    }
+
+    advanced = true;
+    current = {
+      state: next.state,
+      events: [...current.events, ...next.events],
+      errors: [...current.errors, ...next.errors],
+    };
+    if (next.errors.length > 0) {
+      break;
+    }
+  }
+
+  return advanced
+    ? resultFromAdvancedState(current.state, current.events, current.errors)
+    : result;
 };
 
 const commandActor = (

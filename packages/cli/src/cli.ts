@@ -1,7 +1,10 @@
 import type { GameState } from "@optcg/types";
 
 import { bootFixtureMatch } from "./boot.js";
-import { dispatchCliCommand } from "./commands.js";
+import {
+  advanceCliCommandResultToActionPoint,
+  dispatchCliCommand,
+} from "./commands.js";
 import type { DispatchCliCommandResult } from "./commands.js";
 
 export interface CliIo {
@@ -56,7 +59,9 @@ const dispatchCommands = (
       return 0;
     }
 
-    const result = dispatchCliCommand(state, command);
+    const result = advanceCliCommandResultToActionPoint(
+      dispatchCliCommand(state, command),
+    );
     state = result.state;
     writeOutput(io, result.output);
     options.onCommandScriptResult?.({ command, result });
@@ -83,7 +88,9 @@ const dispatchInteractiveCommand = (
     return { done: true, state };
   }
 
-  const result = dispatchCliCommand(state, normalizedCommand);
+  const result = advanceCliCommandResultToActionPoint(
+    dispatchCliCommand(state, normalizedCommand),
+  );
   writeOutput(io, result.output);
 
   return { done: isMatchComplete(result.state.status), state: result.state };
