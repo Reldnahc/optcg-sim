@@ -9,6 +9,7 @@ import type {
   EngineError,
   EngineResult,
   GameState,
+  InstanceId,
   PlayerId,
 } from "@optcg/types";
 
@@ -343,6 +344,14 @@ const dispatchRespond = (
   state: GameState,
   choice: string,
 ): DispatchCliCommandResult => {
+  if (choice.startsWith("pay:")) {
+    return dispatchPayCostResponse(state, choice);
+  }
+
+  if (choice.startsWith("cards:")) {
+    return dispatchCardsResponse(state, choice);
+  }
+
   if (choice !== "keep" && choice !== "mulligan") {
     return resultFromState(state, [`Unsupported respond choice: ${choice}.`]);
   }
@@ -359,6 +368,133 @@ const dispatchRespond = (
       type: "respondToDecision",
       decisionId: decision.id,
       response: { type: "mulligan", keep: choice === "keep" },
+    }),
+  );
+};
+
+const parseCommaSeparatedPayload = (
+  choice: string,
+  prefix: "pay:" | "cards:",
+): string[] | null => {
+  const payload = choice.slice(prefix.length);
+  if (payload.length === 0) {
+    return null;
+  }
+  const parts = payload.split(",");
+  return parts.some((part) => part.length === 0) ? null : parts;
+};
+
+const hasDuplicates = (values: readonly string[]): boolean =>
+  new Set(values).size !== values.length;
+
+const dispatchPayCostResponse = (
+  state: GameState,
+  choice: string,
+): DispatchCliCommandResult => {
+  const decision = state.pendingDecision;
+  if (decision === undefined || decision.type !== "payCost") {
+    return resultFromState(state, [
+      `No supported pending decision for respond ${choice}.`,
+    ]);
+  }
+
+  const indexParts = parseCommaSeparatedPayload(choice, "pay:");
+  if (indexParts === null) {
+    return resultFromState(state, [`Malformed respond choice: ${choice}.`]);
+  }
+  if (hasDuplicates(indexParts)) {
+    return resultFromState(state, [
+      `Duplicate DON!! selection in respond ${choice}.`,
+    ]);
+  }
+
+  const player = state.players[decision.playerId];
+  if (player === undefined) {
+    return resultFromState(state, [
+      `No supported pending decision for respond ${choice}.`,
+    ]);
+  }
+
+  const selectedDonInstanceIds: InstanceId[] = [];
+  for (const indexPart of indexParts) {
+    const index = parseNonNegativeInteger(indexPart);
+    if (index === null) {
+      return resultFromState(state, [`Malformed respond choice: ${choice}.`]);
+    }
+    const don = player.costArea[index];
+    if (don === undefined) {
+      return resultFromState(state, [
+        `Stale DON!! cost area reference in respond ${choice}.`,
+      ]);
+    }
+    selectedDonInstanceIds.push(don.instanceId);
+  }
+
+  return resultFromEngine(
+    applyAction(state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "payment",
+        optionId: "restDon",
+        selectedDonInstanceIds,
+      },
+    }),
+  );
+};
+
+const dispatchCardsResponse = (
+  state: GameState,
+  choice: string,
+): DispatchCliCommandResult => {
+  const decision = state.pendingDecision;
+  if (decision === undefined || decision.type !== "selectCards") {
+    return resultFromState(state, [
+      `No supported pending decision for respond ${choice}.`,
+    ]);
+  }
+
+  const cardRefParts = parseCommaSeparatedPayload(choice, "cards:");
+  if (cardRefParts === null) {
+    return resultFromState(state, [`Malformed respond choice: ${choice}.`]);
+  }
+
+  const cards: CardRef[] = [];
+  for (const cardRefPart of cardRefParts) {
+    const card = resolveCardReference(state, cardRefPart, decision.playerId);
+    if (card === null) {
+      return resultFromState(state, [
+        `Unsupported or stale card reference in respond ${choice}.`,
+      ]);
+    }
+    if (card.playerId !== decision.playerId) {
+      return resultFromState(state, [
+        `Unsupported or stale card reference in respond ${choice}.`,
+      ]);
+    }
+    if (
+      !decision.candidates.some(
+        (candidate) => candidate.card.instanceId === card.instanceId,
+      )
+    ) {
+      return resultFromState(state, [
+        `Unsupported or stale card reference in respond ${choice}.`,
+      ]);
+    }
+    cards.push(card);
+  }
+
+  if (hasDuplicates(cards.map((card) => String(card.instanceId)))) {
+    return resultFromState(state, [
+      `Duplicate card selection in respond ${choice}.`,
+    ]);
+  }
+
+  return resultFromEngine(
+    applyAction(state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards },
     }),
   );
 };
@@ -422,6 +558,30 @@ const dispatchAttack = (
   );
 };
 
+const playActor = (state: GameState): PlayerId =>
+  state.pendingDecision?.playerId ?? state.turn.turnPlayerId;
+
+const dispatchPlay = (
+  state: GameState,
+  command: Extract<CliCommand, { type: "play" }>,
+): DispatchCliCommandResult => {
+  const actor = playActor(state);
+  const player = state.players[actor];
+  const card = player?.hand[command.handIndex];
+  if (player === undefined || card === undefined) {
+    return resultFromState(state, [
+      `No hand card at index ${String(command.handIndex)} for ${String(actor)}.`,
+    ]);
+  }
+
+  return resultFromEngine(
+    applyAction(state, {
+      type: "playCard",
+      cardInstanceId: card.instanceId,
+    }),
+  );
+};
+
 export const dispatchCliCommand = (
   state: GameState,
   input: string,
@@ -464,9 +624,7 @@ export const dispatchCliCommand = (
       };
     }
     case "play":
-      return resultFromState(state, [
-        `play ${String(parsed.command.handIndex)} is unsupported by the current CLI story.`,
-      ]);
+      return dispatchPlay(state, parsed.command);
     case "counter":
       return resultFromState(state, [
         `counter ${String(parsed.command.handIndex)} is unsupported by the current CLI story.`,

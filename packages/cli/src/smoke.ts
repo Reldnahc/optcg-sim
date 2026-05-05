@@ -8,10 +8,12 @@ import {
   hashCanonicalStateValue,
 } from "@optcg/engine-core";
 import type { EngineResult, GameState, PlayerId } from "@optcg/types";
+import type { CardId, CardInstance, ResolvedCard } from "@optcg/types";
 
 import { bootFixtureMatch } from "./boot.js";
 import { dispatchCliCommand } from "./commands.js";
 import type { DispatchCliCommandResult } from "./commands.js";
+import { runCli } from "./cli.js";
 
 export interface CliSmokeManifestStats {
   manifestHash: string;
@@ -26,7 +28,18 @@ export type CliSmokeSetupStep =
       globalTurn: number;
     }
   | { type: "set-leader-life-count"; playerId: PlayerId; lifeCount: number }
-  | { type: "set-deck-empty"; playerId: PlayerId };
+  | { type: "set-deck-empty"; playerId: PlayerId }
+  | { type: "set-active-don-count"; playerId: PlayerId; count: number }
+  | {
+      type: "set-hand-card-metadata";
+      playerId: PlayerId;
+      handIndex: number;
+      category: "character" | "stage";
+      cost: number;
+      power?: number;
+    }
+  | { type: "set-stage-from-hand"; playerId: PlayerId; handIndex: number }
+  | { type: "fill-character-area-from-hand"; playerId: PlayerId };
 
 export interface CliSmokeScenarioExpected {
   checkpointHashes: readonly string[];
@@ -175,6 +188,44 @@ const parseSetupStep = (record: JsonRecord): CliSmokeSetupStep => {
       playerId: toPlayerId(readString(record, "playerId")),
     };
   }
+  if (type === "set-active-don-count") {
+    return {
+      type,
+      playerId: toPlayerId(readString(record, "playerId")),
+      count: readNumber(record, "count"),
+    };
+  }
+  if (type === "set-hand-card-metadata") {
+    const power = record["power"];
+    if (power !== undefined && typeof power !== "number") {
+      throw new Error("CLI smoke fixture power must be an integer.");
+    }
+    const category = readString(record, "category");
+    if (category !== "character" && category !== "stage") {
+      throw new Error("CLI smoke fixture category must be character or stage.");
+    }
+    return {
+      type,
+      playerId: toPlayerId(readString(record, "playerId")),
+      handIndex: readNumber(record, "handIndex"),
+      category,
+      cost: readNumber(record, "cost"),
+      ...(power !== undefined ? { power } : {}),
+    };
+  }
+  if (type === "set-stage-from-hand") {
+    return {
+      type,
+      playerId: toPlayerId(readString(record, "playerId")),
+      handIndex: readNumber(record, "handIndex"),
+    };
+  }
+  if (type === "fill-character-area-from-hand") {
+    return {
+      type,
+      playerId: toPlayerId(readString(record, "playerId")),
+    };
+  }
   throw new Error(`Unsupported CLI smoke fixture setup step ${type}.`);
 };
 
@@ -301,6 +352,155 @@ const setLeaderLifeCount = (
   }));
 };
 
+const resolvedSmokeCard = (params: {
+  cardId: CardId;
+  category: "character" | "stage";
+  cost: number;
+  power?: number;
+}): ResolvedCard => ({
+  cardId: params.cardId,
+  language: "en",
+  name: String(params.cardId),
+  category: params.category,
+  set: "CLI",
+  setName: "CLI Fixtures",
+  released: true,
+  colors: ["red"],
+  attributes: [],
+  types: [],
+  printedKeywords: [],
+  variants: [],
+  legality: {},
+  officialFaq: [],
+  errata: [],
+  sourceTextHash: `source:${String(params.cardId)}`,
+  behaviorHash: `behavior:${String(params.cardId)}`,
+  support: {
+    cardId: params.cardId,
+    status: "vanilla-confirmed",
+    tested: true,
+    rulesVersion: "r1",
+    cardDataVersion: "cli-fixture",
+    sourceTextHash: `source:${String(params.cardId)}`,
+    behaviorHash: `behavior:${String(params.cardId)}`,
+  },
+  cost: params.cost,
+  ...(params.power !== undefined ? { power: params.power } : {}),
+});
+
+const setActiveDonCount = (
+  state: GameState,
+  playerId: PlayerId,
+  count: number,
+): void => {
+  const player = mustPlayer(state, playerId);
+  const available = [...player.costArea, ...player.donDeck];
+  if (count < 0 || count > available.length) {
+    throw new Error(
+      `Cannot set ${String(playerId)} active DON!! to ${String(count)}.`,
+    );
+  }
+  const nextCostArea: CardInstance[] = available.slice(0, count).map(
+    (card, index): CardInstance => ({
+      ...card,
+      zone: { zone: "costArea", playerId, slot: "cost", index },
+      state: "active",
+    }),
+  );
+  const activeIds = new Set(nextCostArea.map((card) => card.instanceId));
+  player.costArea = nextCostArea;
+  player.donDeck = available
+    .filter((card) => !activeIds.has(card.instanceId))
+    .map(
+      (card, index): CardInstance => ({
+        ...card,
+        zone: { zone: "donDeck", playerId, slot: "donDeck", index },
+      }),
+    );
+};
+
+const setHandCardMetadata = (
+  state: GameState,
+  step: Extract<CliSmokeSetupStep, { type: "set-hand-card-metadata" }>,
+): void => {
+  const player = mustPlayer(state, step.playerId);
+  const card = player.hand[step.handIndex];
+  if (card === undefined) {
+    throw new Error(
+      `Missing ${String(step.playerId)} hand card ${String(step.handIndex)}.`,
+    );
+  }
+  state.cardManifest.cards[card.cardId] = resolvedSmokeCard({
+    cardId: card.cardId,
+    category: step.category,
+    cost: step.cost,
+    ...(step.power !== undefined ? { power: step.power } : {}),
+  });
+};
+
+const setStageFromHand = (
+  state: GameState,
+  playerId: PlayerId,
+  handIndex: number,
+): void => {
+  const player = mustPlayer(state, playerId);
+  const source = player.hand[handIndex];
+  if (source === undefined) {
+    throw new Error(
+      `Missing ${String(playerId)} stage source ${String(handIndex)}.`,
+    );
+  }
+  const stage: CardInstance = {
+    ...source,
+    instanceId:
+      `${String(source.instanceId)}:cli-smoke-existing-stage` as CardInstance["instanceId"],
+    zone: { zone: "stageArea", playerId, slot: "stage", index: 0 },
+    state: "active",
+    attachedDon: [],
+    turnPlayed: 1,
+  };
+  player.stage = stage;
+  state.cardManifest.cards[stage.cardId] = resolvedSmokeCard({
+    cardId: stage.cardId,
+    category: "stage",
+    cost: 0,
+  });
+};
+
+const fillCharacterAreaFromHand = (
+  state: GameState,
+  playerId: PlayerId,
+): void => {
+  const player = mustPlayer(state, playerId);
+  player.characters = Array.from({ length: 5 }, (_, index) => {
+    const handIndex = (index % 4) + 1;
+    const source = player.hand[handIndex];
+    if (source === undefined) {
+      throw new Error(
+        `Missing ${String(playerId)} character source ${String(handIndex)}.`,
+      );
+    }
+    const character: CardInstance = {
+      ...source,
+      instanceId:
+        `${String(source.instanceId)}:cli-smoke-existing-character:${String(
+          index,
+        )}` as CardInstance["instanceId"],
+      zone: { zone: "characterArea", playerId, slot: "character", index },
+      state: "active",
+      attachedDon: [],
+      turnPlayed: 1,
+    };
+    state.cardManifest.cards[character.cardId] = resolvedSmokeCard({
+      cardId: character.cardId,
+      category: "character",
+      cost: 0,
+      power: 2000,
+    });
+    return character;
+  });
+};
+
 const applySetupScript = (
   state: GameState,
   steps: readonly CliSmokeSetupStep[],
@@ -320,6 +520,18 @@ const applySetupScript = (
         break;
       case "set-deck-empty":
         mustPlayer(current, step.playerId).deck = [];
+        break;
+      case "set-active-don-count":
+        setActiveDonCount(current, step.playerId, step.count);
+        break;
+      case "set-hand-card-metadata":
+        setHandCardMetadata(current, step);
+        break;
+      case "set-stage-from-hand":
+        setStageFromHand(current, step.playerId, step.handIndex);
+        break;
+      case "fill-character-area-from-hand":
+        fillCharacterAreaFromHand(current, step.playerId);
         break;
     }
   }
@@ -424,6 +636,86 @@ export const runCliSmokeScenario = (
     assertCliCommandAccepted(result, command);
     state = result.state;
     checkpoints.push(commandCheckpoint(command, result));
+  }
+
+  return {
+    scenarioId,
+    finalStateHash: hashCanonicalStateValue(state),
+    finalStatus: statusSnapshot(state.status),
+    checkpoints,
+  };
+};
+
+const createStringWriter = (): {
+  readonly output: () => string;
+  readonly writer: { write: (chunk: string | Uint8Array) => boolean };
+} => {
+  let value = "";
+  return {
+    output: () => value,
+    writer: {
+      write: (chunk: string | Uint8Array): boolean => {
+        value += String(chunk);
+        return true;
+      },
+    },
+  };
+};
+
+const emptyInput = (): AsyncIterable<string | Uint8Array> => ({
+  [Symbol.asyncIterator](): AsyncIterator<string | Uint8Array> {
+    return {
+      next: () => Promise.resolve({ done: true, value: undefined }),
+    };
+  },
+});
+
+export const runCliSmokeScenarioThroughCommandScript = async (
+  fixture: CliSmokeFixture,
+  scenarioId: string,
+): Promise<CliSmokeScenarioResult> => {
+  const scenario = findScenario(fixture, scenarioId);
+  let state = bootFixtureMatch().state;
+  assertManifestStats(fixture, state);
+  const checkpoints: CliSmokeCommandCheckpoint[] = [];
+
+  for (const command of scenario.bootCommands) {
+    const result = dispatchCliCommand(state, command);
+    assertCliCommandAccepted(result, command);
+    state = result.state;
+    checkpoints.push(commandCheckpoint(command, result));
+  }
+
+  state = applySetupScript(state, scenario.setupScript);
+
+  const stdout = createStringWriter();
+  const stderr = createStringWriter();
+  const scriptExitCode = await runCli(
+    ["--command-script", scenario.actionCommands.join(";")],
+    {
+      stdin: emptyInput(),
+      stdout: stdout.writer,
+      stderr: stderr.writer,
+    },
+    {
+      commandScriptInitialState: state,
+      onCommandScriptResult: ({ command, result }) => {
+        assertCliCommandAccepted(result, command);
+        state = result.state;
+        checkpoints.push(commandCheckpoint(command, result));
+      },
+    },
+  );
+
+  if (scriptExitCode !== 0) {
+    throw new Error(
+      `CLI smoke command script exited ${String(scriptExitCode)}: ${stderr.output()}`,
+    );
+  }
+  if (stderr.output().length > 0) {
+    throw new Error(
+      `CLI smoke command script wrote stderr: ${stderr.output()}`,
+    );
   }
 
   return {
