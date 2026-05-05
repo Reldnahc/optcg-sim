@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add `playCard` legal-action generation and application for vanilla Character
   and Stage cards from the turn player's hand when the destination zone has

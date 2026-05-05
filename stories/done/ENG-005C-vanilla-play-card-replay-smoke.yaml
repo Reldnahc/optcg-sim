@@ -8,7 +8,7 @@ type: verification
 area: replay
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Add deterministic replay smoke coverage for the ENG-005 vanilla Character and
   Stage play-card path, including paid play, Stage replacement, and Character

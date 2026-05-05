@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Extend vanilla `playCard` from hand to handle occupied Stage Area replacement
   and full Character Area overflow using the canonical card-selection decision

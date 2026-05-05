@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-005C.md",
-      "storyId": "ENG-005C",
-      "storyPath": "stories/approved/ENG-005C-vanilla-play-card-replay-smoke.yaml",
-      "storySha256": "98bfb486ea79b2d6029ea1718999e99be2a7ebd80bb63b79418ddcf506586b34"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
