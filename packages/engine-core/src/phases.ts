@@ -11,6 +11,7 @@ import type {
   StateSeq,
 } from "@optcg/types";
 
+import { isMatchActive } from "./action-state.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
@@ -166,7 +167,7 @@ const findUnsupportedBoardCard = (
     if (resolved.support.effectDefinitionId !== undefined) {
       return { cardId: card.cardId, reason: "effect-definition-present" };
     }
-    if ((resolved.support.customHandlerIds?.length ?? 0) > 0) {
+    if (resolved.support.customHandlerIds !== undefined) {
       return { cardId: card.cardId, reason: "custom-handlers-present" };
     }
     if (hasNonEmptyText(resolved.effectText)) {
@@ -427,6 +428,18 @@ export const advanceDonPhase = (state: GameState): EngineResult => {
 };
 
 export const enterMainPhase = (state: GameState): EngineResult => {
+  if (!isMatchActive(state)) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        {
+          type: "illegalAction",
+          reason: "enterMainPhase is only legal while match is active.",
+        },
+      ],
+    );
+  }
   if (state.turn.phase !== "don") {
     return invalidPhaseTransition(state, "don");
   }

@@ -402,6 +402,21 @@ test("enterMainPhase accepts known trigger-free path and exposes ordinary main a
   assert.notEqual(JSON.stringify(result.state), beforeHash);
 });
 
+test("enterMainPhase rejects non-active don-phase states without mutation or events", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  state.status = { type: "completed", winner: p1 };
+  const before = JSON.stringify(state);
+
+  const result = enterMainPhase(state);
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.equal(result.events.length, 0);
+  assert.equal(result.state.turn.phase, "don");
+  assert.equal(JSON.stringify(state), before);
+});
+
 test("legal-action reads after accepted start-of-main gate do not mutate state or append events", () => {
   const state = createActiveState();
   seedKnownTriggerFreeBoardManifest(state);
@@ -539,6 +554,20 @@ test("enterMainPhase rejects missing or unsupported manifest metadata", () => {
   };
   const customHandler = enterMainPhase(state);
   assert.equal(customHandler.errors?.[0]?.type, "effectRuntimeError");
+
+  seedKnownTriggerFreeBoardManifest(state);
+  state.cardManifest.cards[leader.cardId] = {
+    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
+    support: {
+      ...must(
+        state.cardManifest.cards[leader.cardId],
+        "leader manifest support",
+      ).support,
+      customHandlerIds: [],
+    },
+  };
+  const emptyCustomHandlers = enterMainPhase(state);
+  assert.equal(emptyCustomHandlers.errors?.[0]?.type, "effectRuntimeError");
 });
 
 test("enterMainPhase is deterministic for accepted known trigger-free progression", () => {
