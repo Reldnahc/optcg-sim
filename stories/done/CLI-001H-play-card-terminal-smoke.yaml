@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Add CLI-level deterministic smoke coverage proving the terminal runner can
   drive vanilla play-card flows through command scripts after the play command,

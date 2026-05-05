@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: cli
 priority: high
-status: approved
+status: done
 summary: >
   Extend the existing `respond <choice>` CLI path beyond mulligan responses so
   one developer can answer play-card payment decisions and Character overflow

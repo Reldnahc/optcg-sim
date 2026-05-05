@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: cli
 priority: medium
-status: approved
+status: done
 summary: >
   Replace the boot-summary-only CLI entry behavior with a deterministic
   testable terminal loop that lets one developer play both sides using the

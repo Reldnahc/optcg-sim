@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: cli
 priority: high
-status: approved
+status: done
 summary: >
   Replace the current fail-closed `play <handIndex>` CLI placeholder with
   deterministic dispatch into the existing engine-core `playCard` action so the
