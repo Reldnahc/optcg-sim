@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type {
+  CardId,
+  EffectId,
+  EffectQueueEntry,
+  InstanceId,
+  QueueEntryId,
+  StateSeq,
+  TimingWindowId,
+} from "@optcg/types";
+
 import { createInitialState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";
 import { applyAction, getLegalActions } from "./actions.js";
@@ -15,7 +25,86 @@ import {
   must,
   p1,
   p2,
+  resolvedCard,
 } from "./action-test-fixtures.js";
+import {
+  setupFullCharacterPlayState,
+  setupMainPlayState,
+} from "./play-card-test-fixtures.js";
+
+const toCardId = (value: string): CardId => value as CardId;
+const toEffectId = (value: string): EffectId => value as EffectId;
+const toInstanceId = (value: string): InstanceId => value as InstanceId;
+const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
+const toStateSeq = (value: number): StateSeq => value as StateSeq;
+const toTimingWindowId = (value: string): TimingWindowId =>
+  value as TimingWindowId;
+
+const queuedEffect = (tag: string): EffectQueueEntry => ({
+  id: toQueueEntryId(`queue-${tag}`),
+  state: "pending",
+  timingWindowId: toTimingWindowId("timing-window-1"),
+  generation: 1,
+  controllerId: p1,
+  source: {
+    instanceId: toInstanceId(`hidden-instance-${tag}`),
+    cardId: toCardId(`hidden-card-${tag}`),
+    playerId: p1,
+    zone: { zone: "life", playerId: p1, slot: "life", index: 0 },
+  },
+  sourceSnapshot: {
+    instanceId: toInstanceId(`hidden-instance-${tag}`),
+    cardId: toCardId(`hidden-card-${tag}`),
+    ownerId: p1,
+    controllerId: p1,
+    zone: { zone: "life", playerId: p1, slot: "life", index: 0 },
+    category: "event",
+    colors: ["red"],
+    keywords: [],
+  },
+  effectBlockId: toEffectId(`hidden-effect-${tag}`),
+  orderingGroup: "turnPlayer",
+  createdAtEventSeq: 1,
+  queuedAtStateSeq: toStateSeq(1),
+  sourcePresencePolicy: "resolveFromLastKnownInformation",
+  causedBy: { type: "ruleProcess", name: `hidden-${tag}` },
+});
+
+const makeMainPhaseLegalActionState = () => {
+  const state = createActiveState();
+  state.turn.phase = "main";
+  const turnPlayer = must(state.players[p1], "p1");
+  const attachedDon = must(turnPlayer.donDeck[0], "p1 don");
+  turnPlayer.donDeck = turnPlayer.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+  }));
+  turnPlayer.costArea = [
+    {
+      ...attachedDon,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+      state: "active",
+    },
+  ];
+  turnPlayer.characters = [
+    {
+      ...must(turnPlayer.hand[0], "p1 hand card"),
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 0,
+      },
+      state: "active",
+      attachedDon: [],
+    },
+  ];
+  turnPlayer.hand = turnPlayer.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index },
+  }));
+  return state;
+};
 
 test("getLegalActions returns main-phase actions for turn player and concession-only for non-turn player", () => {
   const state = createActiveState();
@@ -92,6 +181,29 @@ test("getLegalActions in don phase before start-of-main acceptance exposes conce
   ]);
 });
 
+test("getLegalActions suppresses ordinary main-phase actions while effect queue work is pending", () => {
+  const state = makeMainPhaseLegalActionState();
+  state.effectQueue.push(queuedEffect("queue-a"));
+
+  assert.deepEqual(getLegalActions(state, p1), [
+    { type: "concede", playerId: p1 },
+  ]);
+});
+
+test("getLegalActions suppresses ordinary main-phase actions while deferred triggers are pending", () => {
+  const state = makeMainPhaseLegalActionState();
+  state.deferredTriggers.push({
+    timingWindowId: toTimingWindowId("hidden-window-a"),
+    generation: 1,
+    triggerIds: ["hidden-trigger-a"],
+    releasePolicy: "afterCurrentProcess",
+  });
+
+  assert.deepEqual(getLegalActions(state, p1), [
+    { type: "concede", playerId: p1 },
+  ]);
+});
+
 test("getLegalActions suppresses phase actions while a decision is pending", () => {
   const setup = createInitialState(createInput());
   const pending = startMulliganFlow(setup).state;
@@ -101,6 +213,134 @@ test("getLegalActions suppresses phase actions while a decision is pending", () 
   assert.deepEqual(getLegalActions(pending, p1), [
     { type: "concede", playerId: p1 },
   ]);
+});
+
+test("getLegalActions keeps pending-decision responses while runtime work is pending", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const card = must(p1State.hand[0], "card");
+  state.cardManifest.cards[card.cardId] = resolvedCard({
+    cardId: card.cardId,
+    category: "character",
+    cost: 2,
+    power: 3000,
+  });
+  const opened = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: card.instanceId,
+  });
+  opened.state.effectQueue.push(queuedEffect("pending-decision"));
+
+  const legal = getLegalActions(opened.state, p1);
+
+  assert.equal(
+    legal.some((action) => action.type === "respondToDecision"),
+    true,
+  );
+  assert.equal(
+    legal.some((action) => action.type === "endMainPhase"),
+    false,
+  );
+  assert.equal(
+    legal.some((action) => action.type === "attachDon"),
+    false,
+  );
+  assert.equal(
+    legal.some((action) => action.type === "playCard"),
+    false,
+  );
+  assert.equal(
+    legal.some((action) => action.type === "declareAttack"),
+    false,
+  );
+});
+
+test("getLegalActions does not mutate state or replace pending decisions while runtime work is pending", () => {
+  const state = makeMainPhaseLegalActionState();
+  const pendingDecision = startMulliganFlow(createInitialState(createInput()))
+    .state.pendingDecision;
+  assert.ok(pendingDecision !== undefined);
+  state.pendingDecision = pendingDecision;
+  state.effectQueue.push(queuedEffect("mutation"));
+  const before = structuredClone(state);
+
+  getLegalActions(state, p1);
+
+  assert.equal(state.pendingDecision, pendingDecision);
+  assert.deepEqual(state, before);
+});
+
+test("getLegalActions output is content-agnostic for hidden runtime work", () => {
+  const withFirstQueue = makeMainPhaseLegalActionState();
+  withFirstQueue.effectQueue.push(queuedEffect("first-hidden"));
+  const withSecondQueue = makeMainPhaseLegalActionState();
+  withSecondQueue.effectQueue.push(queuedEffect("second-hidden"));
+
+  assert.deepEqual(
+    getLegalActions(withFirstQueue, p1),
+    getLegalActions(withSecondQueue, p1),
+  );
+
+  const withFirstDeferred = makeMainPhaseLegalActionState();
+  withFirstDeferred.deferredTriggers.push({
+    timingWindowId: toTimingWindowId("first-hidden-window"),
+    generation: 1,
+    triggerIds: ["hidden-trigger-one"],
+    releasePolicy: "afterCurrentProcess",
+  });
+  const withSecondDeferred = makeMainPhaseLegalActionState();
+  withSecondDeferred.deferredTriggers.push({
+    timingWindowId: toTimingWindowId("second-hidden-window"),
+    generation: 1,
+    triggerIds: ["hidden-trigger-two"],
+    releasePolicy: "afterCurrentProcess",
+  });
+
+  assert.deepEqual(
+    getLegalActions(withFirstDeferred, p1),
+    getLegalActions(withSecondDeferred, p1),
+  );
+});
+
+test("getLegalActions keeps play-card payment and overflow responses unchanged when runtime queues are empty", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const card = must(p1State.hand[0], "card");
+  state.cardManifest.cards[card.cardId] = resolvedCard({
+    cardId: card.cardId,
+    category: "character",
+    cost: 2,
+    power: 3000,
+  });
+  const opened = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: card.instanceId,
+  });
+  const paymentLegal = getLegalActions(opened.state, p1);
+
+  assert.equal(
+    paymentLegal.filter((action) => action.type === "respondToDecision").length,
+    3,
+  );
+  assert.deepEqual(paymentLegal[0], { type: "concede", playerId: p1 });
+
+  const {
+    state: overflowState,
+    newCharacter,
+    existingCharacters,
+  } = setupFullCharacterPlayState(0);
+  const overflowOpened = applyAction(overflowState, {
+    type: "playCard",
+    cardInstanceId: newCharacter.instanceId,
+  });
+  const overflowLegal = getLegalActions(overflowOpened.state, p1);
+
+  assert.equal(
+    overflowLegal.filter((action) => action.type === "respondToDecision")
+      .length,
+    existingCharacters.length,
+  );
+  assert.deepEqual(overflowLegal[0], { type: "concede", playerId: p1 });
 });
 
 test("illegal actions return errors and do not mutate input state", () => {
@@ -132,4 +372,59 @@ test("pending decisions reject non-concession applyAction requests without mutat
 
   assert.equal(result.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(state), before);
+});
+
+test("pending runtime work rejects ordinary applyAction requests without mutation", () => {
+  const state = makeMainPhaseLegalActionState();
+  state.effectQueue.push(queuedEffect("apply-action"));
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, { type: "endMainPhase" });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Phase actions are illegal while effect runtime work is pending.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+});
+
+test("pending runtime work still allows concession and pending-decision responses", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const card = must(p1State.hand[0], "card");
+  state.cardManifest.cards[card.cardId] = resolvedCard({
+    cardId: card.cardId,
+    category: "character",
+    cost: 2,
+    power: 3000,
+  });
+  const pending = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: card.instanceId,
+  }).state;
+  pending.effectQueue.push(queuedEffect("decision-response"));
+  const decision = must(pending.pendingDecision, "pending decision");
+  const pendingP1 = must(pending.players[p1], "pending p1");
+
+  const response = applyAction(pending, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [
+        must(pendingP1.costArea[0], "don0").instanceId,
+        must(pendingP1.costArea[1], "don1").instanceId,
+      ],
+    },
+  });
+  assert.equal(response.errors, undefined);
+
+  const conceded = applyAction(pending, { type: "concede", playerId: p1 });
+  assert.equal(conceded.errors, undefined);
+  assert.deepEqual(conceded.state.status, { type: "completed", winner: p2 });
 });

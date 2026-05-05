@@ -1,0 +1,69 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-010F
+epic_id: M1-001
+title: Add no-choice effect queue ordering tie-breakers
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Extend the effect queue helper surface with deterministic no-choice ordering
+  for validated and grouped pending entries, without resolving player-choice
+  buckets or creating decisions.
+story_boundary: >
+  Own only deterministic ordering for ENG-010E groups that do not require player
+  choice. Stop before queue processing, trigger detection, source-presence
+  checks, pending decision creation, legal-action gating, or integration into
+  phase, play-card, or battle paths.
+allowed_touch_points:
+  - packages/engine-core/src/effect-queue-ordering.ts
+  - packages/engine-core/src/effect-queue-ordering.test.ts
+spec_refs:
+  - 02-engine-mechanics.s004 (Authority and official-rules defaults)
+  - 04-effect-runtime.s006 (Effect queue entry)
+  - 04-effect-runtime.s009 (Queue ordering)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s022 (Internal state sequencing)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+  - 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+  - 15-implementation-kickoff.s012 (Guardrails)
+scope:
+  - add named exports for ordering ENG-010E no-choice groups
+  - order by normalized timing-window rank, generation, turn-player before non-turn-player bucket, created event sequence, source instance id, and effect id as required by `04-effect-runtime.s009`
+  - return a deterministic fail-closed result when a choice-required group is passed to no-choice ordering
+  - preserve input queue arrays, groups, and entries without mutation
+  - keep helpers independent from `GameState` mutation, event creation, pending decision creation, rule processing, legal-action projection, and effect execution
+non_scope:
+  - validating raw queue entries or timing-window rank data beyond consuming ENG-010A/ENG-010E results
+  - creating `chooseTriggerOrder` or other pending decisions
+  - processing or executing queued effects
+  - integrating with phases, battle, play-card, actions, replay, CLI, server, client, database, Redis, WebSocket, React, live HTTP, or Poneglyph code
+dependencies:
+  - ENG-010E
+  - TYP-001F
+acceptance_criteria:
+  - lower timing-window rank sorts before higher timing-window rank for no-choice groups
+  - lower generation sorts before higher generation within the same timing window
+  - turn-player bucket sorts before non-turn-player bucket within the same generation
+  - created event sequence sorts before source instance id, then effect id tie-breakers for no-choice entries
+  - choice-required groups return deterministic fail-closed output rather than being tie-break ordered
+  - ordering is deterministic for identical validated and grouped input across repeated runs
+  - input queues, groups, and entries are not mutated
+  - engine-core boundary remains pure and package entrypoints are unchanged
+required_tests:
+  - unit test covering timing-window rank ordering for no-choice groups
+  - unit test covering generation ordering
+  - unit test covering turn-player before non-turn-player bucket ordering
+  - unit test covering created event sequence, source instance id, and effect id tie-breakers
+  - unit test proving choice-required groups fail closed instead of being tie-break ordered
+  - unit test proving input queue entries and groups are not mutated or reordered in place
+  - "`corepack pnpm --filter @optcg/engine-core typecheck` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - do not introduce `any`, routine non-null assertions, `@ts-ignore`, or `@ts-nocheck`
+  - do not export helper APIs from package entrypoints unless an existing production caller needs them
+  - keep engine-core deterministic and pure
+ambiguity_policy: fail_and_escalate

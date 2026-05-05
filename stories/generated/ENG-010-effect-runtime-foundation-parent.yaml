@@ -1,0 +1,90 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-010
+epic_id: M1-001
+title: Build effect runtime foundation
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: replaced
+summary: >
+  Start the Milestone 2 engine subseries by introducing effect queue validation,
+  grouping, no-choice ordering, fail-closed runtime processing, legal-action
+  gating, and integration scaffolding as separate child stories before
+  implementing blocker, counter, triggers, replacements, or card-specific
+  effects.
+story_boundary: >
+  This parent story is not implementable. It preserves the effect runtime
+  foundation context and is replaced by concern-scoped child stories ENG-010A
+  through ENG-010H.
+allowed_touch_points:
+  - packages/engine-core/**
+  - packages/types/**
+  - contracts/**
+  - fixtures/replays/**
+spec_refs:
+  - 02-engine-mechanics.s003 (Rule-processing checkpoints)
+  - 02-engine-mechanics.s004 (Authority and official-rules defaults)
+  - 02-engine-mechanics.s014 (Main Phase)
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s019 (Block Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s022 (End of Battle)
+  - 02-engine-mechanics.s023 (Damage processing)
+  - 02-engine-mechanics.s024 (Effect categories)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s017 (Canonical decision routing)
+  - 03-game-state-events-decisions.s018 (Canonical event visibility)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s021 (Invariant hooks)
+  - 03-game-state-events-decisions.s022 (Internal state sequencing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 04-effect-runtime.s002 (Overview)
+  - 04-effect-runtime.s003 (Effect categories)
+  - 04-effect-runtime.s004 (Stable effect identity)
+  - 04-effect-runtime.s005 (Card implementation support)
+  - 04-effect-runtime.s006 (Effect queue entry)
+  - 04-effect-runtime.s007 (Source presence policy)
+  - 04-effect-runtime.s008 (Trigger detection from events)
+  - 04-effect-runtime.s009 (Queue ordering)
+  - 04-effect-runtime.s010 (Queue processing)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 11-testing-quality.s010 (Golden replay tests)
+  - 11-testing-quality.s012 (Replay drift tests)
+  - 12-roadmap.s006 (Milestone 2: first effect runtime)
+  - 18-acceptance-tests.s004 (Milestone 2 - first effect runtime)
+scope:
+  - define the effect runtime foundation delivery group
+  - split pending queue validation, choice-bucket grouping, no-choice ordering, empty/unsupported queue processing, legal-action gating, start-of-main integration, battle integration, and regression guard coverage into child stories
+  - keep blocker, counter, life trigger, replacement, continuous-effect, and card-specific effect execution stories after this foundation group
+non_scope:
+  - direct implementation from this parent story
+  - approving or packetizing this parent story
+  - implementing blocker, counter, life trigger, replacement, continuous-effect, source-presence resolution, effect execution, or card-specific behavior
+  - server, client, database, Redis, WebSocket, React, live HTTP, or Poneglyph adapter behavior
+dependencies:
+  - ENG-007
+  - ENG-008
+  - TYP-001C
+  - TYP-001D
+  - TYP-001E
+  - TYP-001F
+  - TYP-001G
+acceptance_criteria:
+  - child stories exist for queue validation, choice-bucket grouping, no-choice ordering, empty/unsupported processing, legal-action gating, start-of-main integration, battle integration, and regression guard coverage
+  - this parent story remains non-implementable and is not packetized
+  - child stories can be story-reviewed as a set before any child approval
+required_tests:
+  - story-review agent must verify this parent is replaced by concern-scoped child stories before implementation begins
+repo_rules:
+  - do not approve or packetize this parent story
+  - approve only concern-scoped child stories for implementation
+  - implement one active child story at a time
+  - use a parent integration branch only if the human explicitly chooses multi-PR parent integration for the ENG-010 group
+  - keep engine-core deterministic and pure
+ambiguity_policy: fail_and_escalate

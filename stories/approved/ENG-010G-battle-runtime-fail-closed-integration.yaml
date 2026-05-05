@@ -1,0 +1,71 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-010G
+epic_id: M1-001
+title: Route vanilla battle pending-runtime fail-closed path through scaffold
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Replace supported vanilla battle's ad hoc pending runtime checks with shared
+  runtime pending-work detection while preserving battle-facing fail-closed
+  behavior.
+story_boundary: >
+  Own only supported vanilla battle handling of non-empty `effectQueue` and
+  `deferredTriggers`. Stop before changing start-of-main, play-card, replay
+  fixtures, trigger detection, queue execution, event sequencing, legal-action
+  gating, or blocker/counter/trigger/replacement/effect decisions.
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-actions.test.ts
+spec_refs:
+  - 02-engine-mechanics.s003 (Rule-processing checkpoints)
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s023 (Damage processing)
+  - 03-game-state-events-decisions.s002 (Game state)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s021 (Invariant hooks)
+  - 03-game-state-events-decisions.s022 (Internal state sequencing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 04-effect-runtime.s008 (Trigger detection from events)
+  - 04-effect-runtime.s009 (Queue ordering)
+  - 04-effect-runtime.s010 (Queue processing)
+  - 18-acceptance-tests.s004 (Milestone 2 - first effect runtime)
+scope:
+  - update supported vanilla battle resolution to use shared runtime pending-work detection for non-empty `effectQueue` and `deferredTriggers`
+  - preserve current battle-facing `illegalAction` classification, reason semantics, and no-mutation behavior for pending runtime work
+  - preserve current accepted vanilla battle behavior when runtime queues are empty
+non_scope:
+  - changing any accepted vanilla behavior
+  - changing start-of-main, play-card, replay smoke fixtures, replay validation, or legal-action gating
+  - changing event id format, event seq allocation, event visibility, state sequence increments, state hash behavior, rule-processing timing, or invariant timing
+  - implementing trigger detection, queue execution, source-presence policy, blocker, counter, life triggers, Event effects, On Play effects, replacement, continuous effects, or once-per-turn tracking
+  - changing replay schema, CLI grammar, server protocol, browser UI, database, Redis, WebSocket, React, live HTTP, or Poneglyph behavior
+dependencies:
+  - ENG-010B
+  - ENG-007
+acceptance_criteria:
+  - supported vanilla battle non-empty `effectQueue` fails through shared runtime pending-work detection with unchanged battle-facing `illegalAction` classification, current `reason` semantics, and no-mutation behavior
+  - supported vanilla battle non-empty `deferredTriggers` fails through shared runtime pending-work detection with unchanged battle-facing `illegalAction` classification, current `reason` semantics, and no-mutation behavior
+  - supported vanilla battle non-empty `replacementState` fail-closed behavior remains unchanged
+  - current accepted vanilla battle behavior is unchanged when runtime queues are empty
+required_tests:
+  - unit test proving supported vanilla battle with non-empty `effectQueue` fails with unchanged `illegalAction` classification, current `reason` semantics, and no mutation or appended events
+  - unit test proving supported vanilla battle with non-empty `deferredTriggers` fails with unchanged `illegalAction` classification, current `reason` semantics, and no mutation or appended events
+  - unit or existing test proving supported vanilla battle with non-empty `replacementState` preserves current fail-closed classification, reason semantics, and no mutation or appended events
+  - existing `packages/engine-core/src/battle-actions.test.ts` unsupported trigger/blocker/counter/doubleAttack/banish fail-closed tests must pass with unchanged assertions
+  - existing accepted vanilla battle tests in `packages/engine-core/src/battle-actions.test.ts` must pass with unchanged assertions
+  - "`corepack pnpm --filter @optcg/engine-core typecheck` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - keep the patch behavior-preserving; if any state hash, event sequence, event id, legal action, pending decision, or existing test expectation changes, stop and split or record the ambiguity
+  - fail closed on ambiguous timing-window, source-presence, trigger ordering, hidden-information, or replay behavior
+  - keep engine-core deterministic and pure
+ambiguity_policy: fail_and_escalate

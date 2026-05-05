@@ -13,6 +13,10 @@ import type {
 
 import { isMatchActive } from "./action-state.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
+import {
+  detectPendingRuntimeWork,
+  processEffectRuntime,
+} from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
@@ -443,17 +447,8 @@ export const enterMainPhase = (state: GameState): EngineResult => {
   if (state.turn.phase !== "don") {
     return invalidPhaseTransition(state, "don");
   }
-  if (state.effectQueue.length > 0) {
-    return unsupportedStartOfMain(state, {
-      reason: "effect-queue-not-empty",
-      count: state.effectQueue.length,
-    });
-  }
-  if (state.deferredTriggers.length > 0) {
-    return unsupportedStartOfMain(state, {
-      reason: "deferred-triggers-not-empty",
-      count: state.deferredTriggers.length,
-    });
+  if (detectPendingRuntimeWork(state) !== undefined) {
+    return processEffectRuntime(state);
   }
   const unsupportedBoardCard = findUnsupportedBoardCard(state);
   if (unsupportedBoardCard !== undefined) {

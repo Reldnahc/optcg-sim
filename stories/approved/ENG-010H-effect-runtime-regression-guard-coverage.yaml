@@ -1,0 +1,68 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-010H
+epic_id: M1-001
+title: Add effect runtime regression guard coverage
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add focused regression guard coverage proving play-card unsupported effect
+  behavior and replay smoke hashes remain unchanged after the runtime scaffold
+  integration stories.
+story_boundary: >
+  Own only test coverage for existing play-card unsupported effect behavior and
+  replay smoke hash stability. Stop before production behavior changes,
+  start-of-main changes, battle changes, trigger detection, queue execution,
+  legal-action gating, or replay schema changes.
+allowed_touch_points:
+  - packages/engine-core/src/play-card.test.ts
+  - packages/engine-core/src/replay-smoke.test.ts
+spec_refs:
+  - 02-engine-mechanics.s016 (Playing a card)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s022 (Internal state sequencing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 04-effect-runtime.s005 (Card implementation support)
+  - 04-effect-runtime.s010 (Queue processing)
+  - 09-card-data-and-support-policy.s010 (Card implementation records)
+  - 09-card-data-and-support-policy.s011 (Support status behavior)
+  - 11-testing-quality.s010 (Golden replay tests)
+  - 11-testing-quality.s012 (Replay drift tests)
+  - 15-implementation-kickoff.s012 (Guardrails)
+  - 18-acceptance-tests.s004 (Milestone 2 - first effect runtime)
+scope:
+  - add or tighten guard coverage proving supported Event card play remains supported where already supported
+  - add or tighten guard coverage proving Event effect execution and On Play effect execution remain unsupported and fail-closed where currently unsupported
+  - preserve replay smoke fixture hashes after ENG-010D and ENG-010G runtime scaffold integrations
+non_scope:
+  - changing production code
+  - changing accepted vanilla play-card behavior
+  - changing replay fixtures, replay schema, event id format, event seq allocation, event visibility, state sequence increments, state hash behavior, rule-processing timing, or invariant timing
+  - implementing trigger detection, queue execution, source-presence policy, blocker, counter, life triggers, Event effects, On Play effects, replacement, continuous effects, or once-per-turn tracking
+  - changing CLI grammar, server protocol, browser UI, database, Redis, WebSocket, React, live HTTP, or Poneglyph behavior
+dependencies:
+  - ENG-010D
+  - ENG-010G
+  - ENG-008
+acceptance_criteria:
+  - supported Event card play remains supported where already supported
+  - Event effect execution and On Play effect execution remain unsupported and fail-closed where currently unsupported
+  - replay smoke fixture hashes remain unchanged
+  - no production files are changed
+required_tests:
+  - unit or existing test coverage proving supported Event card play remains supported where already supported with unchanged accepted event output and state mutation semantics
+  - unit or existing test coverage proving Event effect execution remains unsupported and fail-closed with expected rejection type/reason, no state mutation, no emitted events, and legal-action omission where currently omitted
+  - unit or existing test coverage proving On Play effect execution remains unsupported and fail-closed with expected rejection type/reason, no state mutation, no emitted events, and legal-action omission where currently omitted
+  - existing `packages/engine-core/src/replay-smoke.test.ts` must pass with unchanged replay smoke fixture hashes
+  - "`corepack pnpm --filter @optcg/engine-core typecheck` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - keep the patch test-only; if production behavior must change, stop and split or record the ambiguity
+  - fail closed on ambiguous gameplay rule, timing-window, source-presence, support-policy, replay, or hidden-information behavior
+  - keep engine-core deterministic and pure
+ambiguity_policy: fail_and_escalate
