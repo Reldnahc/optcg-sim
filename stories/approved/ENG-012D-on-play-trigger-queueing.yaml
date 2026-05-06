@@ -1,0 +1,76 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-012D
+epic_id: M1-001
+title: Queue no-choice On Play DSL triggers from cardPlayed events
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Detect reviewed automatic `[On Play]` DSL effects from accepted `cardPlayed`
+  events and append pending effect queue entries without resolving them.
+story_boundary: >
+  Own only On Play trigger detection and pending queue entry construction for
+  no-choice implemented DSL effects. Stop before queue processing, primitive
+  execution, player-choice ordering decisions, or play-card integration.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - packages/engine-core/src/play-card-test-fixtures.ts
+spec_refs:
+  - 02-engine-mechanics.s016 (Playing a card)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 04-effect-runtime.s006 (Effect queue entry)
+  - 04-effect-runtime.s007 (Source presence policy)
+  - 04-effect-runtime.s008 (Trigger detection from events)
+  - 04-effect-runtime.s009 (Queue ordering)
+  - 04-effect-runtime.s011 (Conditions and costs)
+  - 05-effect-dsl-reference.s004 (Effect block)
+  - 05-effect-dsl-reference.s005 (Triggers)
+  - 05-effect-dsl-reference.s012 (Effects)
+  - 05-effect-dsl-reference.s019 (Example: On Play draw 1)
+  - 05-effect-dsl-reference.s029 (Schema coverage policy)
+  - 18-acceptance-tests.s004 (Milestone 2 - first effect runtime)
+scope:
+  - "inspect accepted `cardPlayed` events and match them to the played card's reviewed `implemented-dsl` effect definition"
+  - "require the played source from the `cardPlayed` event to still reify in state and match the source snapshot before queue mutation"
+  - 'enqueue automatic `trigger.type: "onPlay"` effect blocks with no cost, no condition, no optional flag, no once-per-turn flag, and no choice-requiring effect shape'
+  - populate deterministic queue entry ids, timing window ids, generation, controller, source ref, source snapshot, trigger event id, effect block id, ordering group, created event seq, queued state seq, source presence policy, and causality
+  - "emit a deterministic content-safe `effectQueued` event after each pending queue entry is appended"
+  - preserve existing no-runtime-work behavior when no On Play effects are found
+  - fail closed without partial mutation or events for missing/stale/mismatched source presence, multiple matching no-choice On Play effects from one source, optional effects, costs, conditions, choice/target/custom/sequence effects, and unsupported definition metadata
+non_scope:
+  - resolving or cancelling queue entries
+  - chooseTriggerOrder decision creation
+  - effect primitive execution
+  - detecting When Attacking, On Opponent Attack, On K.O., Trigger, replacement, or permanent effects
+  - play-card integration
+dependencies:
+  - ENG-012B
+  - ENG-010A
+  - ENG-010E
+acceptance_criteria:
+  - "a single supported no-choice On Play draw effect queues exactly one pending `EffectQueueEntry`"
+  - "queue mutation emits exactly one content-safe `effectQueued` event after the triggering `cardPlayed` event sequence"
+  - queue metadata is deterministic and sufficient for ENG-010 ordering helpers
+  - unsupported or choice-requiring On Play definitions fail closed without partial queue mutation
+  - stale, mismatched, or missing played-source presence fails closed without queue mutation or events
+  - no On Play definition leaves queues unchanged
+required_tests:
+  - "unit test for queueing one On Play draw effect from a `cardPlayed` event"
+  - "unit test asserting deterministic `effectQueued` event payload and event-journal sequencing"
+  - unit test proving no matching On Play effect leaves queue unchanged
+  - unit tests proving stale, mismatched, and missing source presence fail closed without partial mutation or events
+  - unit tests proving unsupported triggers/effect shapes, optional effects, costs, conditions, and multiple same-source On Play effects fail closed without partial mutation
+  - unit test proving queue entry metadata is deterministic across repeated runs
+  - "`corepack pnpm --filter @optcg/engine-core typecheck` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - do not execute queued effects in this story
+  - do not introduce player decisions in this story
+  - keep queue entry ids deterministic and replay-safe
+ambiguity_policy: fail_and_escalate

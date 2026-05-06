@@ -325,6 +325,7 @@ export interface MatchCardManifest {
   effectDefinitionsVersion: string;
   customHandlerVersion: string;
   banlistVersion: string;
+  effectDefinitions?: Record<string, EffectDefinition>;
   cards: Record<CardId, ResolvedCard>;
   createdAt: string;
 }

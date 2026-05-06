@@ -1,0 +1,85 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-012E
+epic_id: M1-001
+title: Process no-choice effect queue entries
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Replace the unsupported non-empty queue sentinel for a narrow supported path:
+  validated no-choice On Play draw queue entries can be ordered, resolved, and
+  removed while choice-required or unsupported runtime work still fails closed.
+story_boundary: >
+  Own only no-choice queue processing for supported On Play draw entries.
+  Stop before chooseTriggerOrder decisions, optional activation decisions,
+  target selection, replacement, simultaneous trigger choices, battle timing
+  windows, Event effects, or custom handlers.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/effect-queue-ordering.ts
+  - packages/engine-core/src/effect-queue-ordering.test.ts
+spec_refs:
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s021 (Invariant hooks)
+  - 02-engine-mechanics.s003 (Rule-processing checkpoints)
+  - 02-engine-mechanics.s035 (Exact win/loss conditions)
+  - 04-effect-runtime.s006 (Effect queue entry)
+  - 04-effect-runtime.s007 (Source presence policy)
+  - 04-effect-runtime.s009 (Queue ordering)
+  - 04-effect-runtime.s010 (Queue processing)
+  - 04-effect-runtime.s011 (Conditions and costs)
+  - 05-effect-dsl-reference.s012 (Effects)
+  - 05-effect-dsl-reference.s019 (Example: On Play draw 1)
+  - 11-testing-quality.s008 (Invariant tests)
+scope:
+  - process effect queues only when all pending entries are supported no-choice On Play draw entries
+  - validate and order entries through ENG-010A/ENG-010E/ENG-010F helper surfaces
+  - dequeue each selected entry, mark it resolving only for the local processing step, and remove resolved entries from `state.effectQueue` before returning
+  - execute the draw primitive from ENG-012C and append all emitted events in stable order
+  - re-run rule processing after each resolved primitive and stop if the match completes
+  - prove deck-out from drawing during an effect is detected at the queue processor's rule-processing checkpoint
+  - fail closed without mutation or events when source presence, definition lookup, ordering validation, choice-required groups, unsupported effect shapes, or deferred triggers are encountered
+non_scope:
+  - creating pending decisions
+  - resolving choices or optional effects
+  - trigger detection from events produced by resolved effects
+  - replacement effects
+  - continuous effects
+  - battle/runtime integration beyond preserving existing fail-closed behavior
+dependencies:
+  - ENG-012C
+  - ENG-012D
+  - ENG-010A
+  - ENG-010B
+  - ENG-010E
+  - ENG-010F
+acceptance_criteria:
+  - supported no-choice On Play draw queue entries resolve in deterministic order
+  - resolved entries are removed from `state.effectQueue` before the result is returned
+  - choice-required groups still fail closed instead of being silently ordered
+  - unsupported queued work and deferred triggers preserve ENG-010B fail-closed behavior
+  - source-presence failure rejects deterministically without mutation, events, or executing the draw
+  - state hash and event journal output are stable for identical inputs
+required_tests:
+  - unit test resolving one queued On Play draw entry
+  - unit test resolving multiple no-choice entries in ENG-010F order
+  - unit test proving resolved entries are removed from `state.effectQueue`
+  - unit test proving deck-out after a resolved draw effect is detected at the queue processor rule-processing checkpoint
+  - unit test proving choice-required groups fail closed without mutation
+  - "unit tests preserving unsupported `effectQueue`/`deferredTriggers` sentinel behavior for unsupported runtime work"
+  - unit test for source-presence failure before execution proving deterministic rejection without mutation or events
+  - unit test proving event journal and state hash stability for repeated identical input
+  - "`corepack pnpm --filter @optcg/engine-core typecheck` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - fail closed on ambiguous source-presence or queue-state mutation policy
+  - do not create pending decisions in this story
+  - keep engine-core deterministic and pure
+ambiguity_policy: fail_and_escalate

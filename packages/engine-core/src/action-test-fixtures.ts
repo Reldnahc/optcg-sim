@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type {
   CardId,
   EngineEventId,
+  EffectDefinition,
   MatchId,
   PlayerId,
   ResolvedCard,
@@ -74,7 +75,18 @@ export const resolvedCard = (params: {
   effectText?: string;
   triggerText?: string;
   printedKeywords?: ("rush" | "rushCharacter" | "doubleAttack")[];
+  support?: Partial<ResolvedCard["support"]>;
 }): ResolvedCard => {
+  const support: ResolvedCard["support"] = {
+    cardId: params.cardId,
+    status: "vanilla-confirmed",
+    tested: true,
+    rulesVersion: "r1",
+    cardDataVersion: "fixture",
+    sourceTextHash: "source-hash",
+    behaviorHash: "behavior-hash",
+    ...params.support,
+  };
   const base = {
     cardId: params.cardId,
     language: "en",
@@ -93,15 +105,7 @@ export const resolvedCard = (params: {
     errata: [],
     sourceTextHash: "source-hash",
     behaviorHash: "behavior-hash",
-    support: {
-      cardId: params.cardId,
-      status: "vanilla-confirmed",
-      tested: true,
-      rulesVersion: "r1",
-      cardDataVersion: "fixture",
-      sourceTextHash: "source-hash",
-      behaviorHash: "behavior-hash",
-    },
+    support,
     ...(params.power !== undefined ? { power: params.power } : {}),
     ...(params.cost !== undefined ? { cost: params.cost } : {}),
     ...(params.counter !== undefined ? { counter: params.counter } : {}),
@@ -114,6 +118,32 @@ export const resolvedCard = (params: {
   } satisfies ResolvedCard;
   return base;
 };
+
+export const reviewedOnPlayDrawDefinition = (
+  cardId: CardId,
+  support: ResolvedCard["support"],
+): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: "OP01-015:auto-on-play-1" as EffectDefinition["effects"][number]["id"],
+      category: "auto",
+      trigger: { type: "onPlay" },
+      optional: false,
+      oncePerTurn: false,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: { type: "draw", count: 1, player: "self" },
+    },
+  ],
+  metadata: {
+    sourceTextHash: support.sourceTextHash,
+    rulesVersion: support.rulesVersion,
+    effectDefinitionsVersion: "0.1.0",
+    tested: true,
+    reviewer: "qa-reviewer",
+  },
+});
 
 export const createActiveState = () => {
   const setup = createInitialState(createInput());
