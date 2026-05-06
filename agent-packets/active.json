@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CLI-002C.md",
+      "storyId": "CLI-002C",
+      "storyPath": "stories/approved/CLI-002C-strict-command-script-failures.yaml",
+      "storySha256": "3eff643f3333b351eede5ee52f3ede09449f2ad8d220ef4013fcb26b00e6409e"
+    }
+  ],
   "version": 1
 }

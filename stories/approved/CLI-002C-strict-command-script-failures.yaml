@@ -1,0 +1,78 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CLI-002C
+epic_id: M1-001
+title: Add strict command-script failure exit behavior
+type: implementation
+area: engine
+primary_concern: cli
+priority: high
+status: approved
+summary: >
+  Add an explicit strict mode for scripted CLI runs so automation can receive a
+  nonzero process status when any command parse or engine dispatch step fails,
+  while preserving current non-strict script and interactive developer behavior.
+story_boundary: >
+  Own only CLI command-script process status and error-output behavior for
+  existing command parsing and dispatch results. Do not add gameplay, command
+  grammar beyond the strict-mode flag, replay format, server/client protocol,
+  or hidden-information filtering.
+allowed_touch_points:
+  - packages/cli/src/cli.ts
+  - packages/cli/src/cli.test.ts
+spec_refs:
+  - 15-implementation-kickoff.s007 (Step 3 - CLI runner)
+  - 15-implementation-kickoff.s011 (Definition of done for kickoff)
+  - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+scope:
+  - add the exact strict command-script CLI form `--command-script <script> --strict`
+  - keep successful strict command scripts exiting 0
+  - make command parse errors exit nonzero when strict command-script mode is enabled
+  - make illegal or failed engine or CLI dispatch results exit nonzero when strict command-script mode is enabled
+  - write deterministic stderr details for strict failures including the failed command and error reason
+  - preserve existing stdout command-result output for the failed command on strict failures
+  - preserve existing non-strict command-script behavior for developer smoke scripts unless the strict option is used
+  - preserve interactive mode behavior, including continuing to print command errors without changing process status semantics
+non_scope:
+  - new gameplay behavior or engine dispatch semantics
+  - changing existing command grammar except adding the strict-mode option
+  - replay format, ReplayLog, ReplayHeader, persisted replay storage, rollback, recovery, or replay viewer
+  - match server, browser client, transport protocol, WebSocket, Redis, database, or hidden-information filtering behavior
+dependencies:
+  - CLI-002B
+  - SPEC-002
+acceptance_criteria:
+  - "`--command-script <script> --strict` with only successful commands exits 0"
+  - "`--command-script <script> --strict` exits nonzero when a command cannot be parsed"
+  - "`--command-script <script> --strict` exits nonzero when command dispatch returns an illegal engine action or other command error"
+  - strict command-script failure writes deterministic stderr including the failed command and error reason
+  - strict command-script failure preserves the existing stdout command-result output for the failed command
+  - non-strict `--command-script` keeps existing exit-0 behavior for command parse errors
+  - non-strict `--command-script` keeps existing exit-0 behavior for dispatch errors
+  - "`--interactive` behavior is unchanged for command parse or dispatch errors"
+  - no gameplay, replay format, server/client protocol, or hidden-info filtering behavior is added or changed
+required_tests:
+  - CLI test proving `--command-script <script> --strict` successful script exits 0 and writes no stderr
+  - CLI test proving `--command-script <script> --strict` parse error exits nonzero, preserves stdout command output, and writes useful stderr
+  - CLI test proving `--command-script <script> --strict` illegal engine action exits nonzero, preserves stdout command output, and writes useful stderr
+  - regression test proving non-strict command-script parse errors retain existing exit-0 behavior
+  - regression test proving non-strict command-script dispatch errors retain existing exit-0 behavior
+  - regression test proving interactive mode still returns 0 on EOF after a command error and still prints useful command error output
+  - run `corepack pnpm exec vitest run packages/cli/src/cli.test.ts`
+  - run `corepack pnpm --filter @optcg/cli test`
+  - run `corepack pnpm run typecheck`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate the packet before worker handoff
+  - run `corepack pnpm run packets:verify` before implementation and review handoff
+  - stay within allowed_touch_points
+  - use a worker subagent for implementation when the subagent surface is available
+  - open the PR before implementation-review
+  - run the implementation-review gate after the PR is opened
+  - do not add engine gameplay behavior in this story
+  - do not broaden replay, protocol, client, server, or hidden-information behavior in this story
+ambiguity_policy: fail_and_escalate
