@@ -74,6 +74,16 @@ test("package.json exposes the canonical contract lane for CI", async () => {
     "string",
     "missing test:hidden-info script",
   );
+  assert.equal(
+    typeof packageJson.scripts?.["stories:validate"],
+    "string",
+    "missing stories:validate script",
+  );
+  assert.match(
+    packageJson.scripts.contracts,
+    /pnpm run stories:validate/i,
+    "contracts should include committed story schema validation",
+  );
   assert.match(
     packageJson.scripts.verify,
     /pnpm run contracts/i,
@@ -124,7 +134,7 @@ test("ci workflow runs the canonical root commands and publishes coverage", asyn
   for (const command of requiredCommands) {
     const targetText =
       command === "pnpm contracts"
-        ? contractsJobBlock
+        ? workflow
         : command === "pnpm test:hidden-info"
           ? hiddenInfoJobBlock
           : workflow;

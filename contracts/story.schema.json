@@ -39,7 +39,7 @@
     },
     "story_schema_version": {
       "type": "string",
-      "minLength": 1
+      "enum": ["1.0.0"]
     },
     "id": {
       "type": "string",
@@ -58,6 +58,7 @@
       "enum": [
         "design",
         "implementation",
+        "specification",
         "verification",
         "refactor",
         "tooling",
@@ -76,7 +77,8 @@
         "database",
         "infra",
         "docs",
-        "security"
+        "security",
+        "types"
       ]
     },
     "primary_concern": {
@@ -91,6 +93,7 @@
         "ui",
         "cli",
         "docs",
+        "visibility",
         "verification"
       ]
     },
@@ -183,6 +186,40 @@
     "ambiguity_policy": {
       "type": "string",
       "enum": ["fail_and_escalate", "implement_if_clearly_implied"]
+    },
+    "blocked_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "child_stories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "concern", "depends_on"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9]*-[0-9]{3}[A-Z]?$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "concern": {
+            "type": "string",
+            "minLength": 1
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "minItems": 1
     }
   }
 }

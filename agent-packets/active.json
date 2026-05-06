@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-021.md",
+      "storyId": "INF-021",
+      "storyPath": "stories/approved/INF-021-enforce-committed-story-schema-validation.yaml",
+      "storySha256": "aefed5db6044711806bbeaef7592780ba33ab2f096a878e29b3352edf6b8273a"
+    }
+  ],
   "version": 1
 }

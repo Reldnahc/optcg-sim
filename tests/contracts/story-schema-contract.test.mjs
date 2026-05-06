@@ -61,12 +61,19 @@ test("story schema requires concern-first story boundary fields", async () => {
   }
 });
 
+test("story schema pins the supported story schema version", async () => {
+  const schema = await readJson("contracts/story.schema.json");
+
+  assert.deepEqual(schema.properties.story_schema_version.enum, ["1.0.0"]);
+});
+
 test("story schema enums match the canonical spec vocabulary", async () => {
   const schema = await readJson("contracts/story.schema.json");
 
   assert.deepEqual(schema.properties.type.enum, [
     "design",
     "implementation",
+    "specification",
     "verification",
     "refactor",
     "tooling",
@@ -83,6 +90,7 @@ test("story schema enums match the canonical spec vocabulary", async () => {
     "infra",
     "docs",
     "security",
+    "types",
   ]);
   assert.deepEqual(schema.properties.priority.enum, [
     "critical",
@@ -108,12 +116,15 @@ test("story schema enums match the canonical spec vocabulary", async () => {
     "ui",
     "cli",
     "docs",
+    "visibility",
     "verification",
   ]);
   assert.deepEqual(schema.properties.ambiguity_policy.enum, [
     "fail_and_escalate",
     "implement_if_clearly_implied",
   ]);
+  assert.equal(schema.properties.blocked_reason.type, "string");
+  assert.equal(schema.properties.child_stories.type, "array");
 });
 
 test("story schema accepts split-story letter suffixes without broad arbitrary suffixes", async () => {
