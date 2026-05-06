@@ -1,6 +1,7 @@
 import type {
   Action,
   CardInstance,
+  EngineError,
   EngineEvent,
   EngineResult,
   GameState,
@@ -38,6 +39,7 @@ import {
   getSupportedPlayMetadata,
   type SupportedPlayMetadata,
 } from "./play-card-support.js";
+import { processEffectRuntime } from "./effect-runtime.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
 export const getPlayCardLegalActions = (
@@ -50,6 +52,9 @@ export const getPlayCardLegalActions = (
   }
   if (state.pendingDecision !== undefined) {
     actions.push(...getPlayCardPendingDecisionLegalActions(state, playerId));
+    return actions;
+  }
+  if (hasPendingRuntimeWork(state)) {
     return actions;
   }
   if (state.turn.phase !== "main" || state.turn.turnPlayerId !== playerId) {
@@ -85,6 +90,9 @@ export const applyPlayCard = (
       state,
       "playCard.costPayment is illegal outside respondToDecision.",
     );
+  }
+  if (hasPendingRuntimeWork(state)) {
+    return illegalAction(state, "playCard requires no pending runtime work.");
   }
 
   const playerId = state.turn.turnPlayerId;
@@ -180,6 +188,64 @@ export const applyPlayCard = (
     supported,
     costArea: player.costArea,
   });
+};
+
+const hasPendingRuntimeWork = (state: GameState): boolean =>
+  state.effectQueue.length > 0 || state.deferredTriggers.length > 0;
+
+const shouldResolveOnPlayRuntime = (
+  state: GameState,
+  handCard: CardInstance,
+  supported: SupportedPlayMetadata,
+): boolean =>
+  supported.category === "character" &&
+  state.cardManifest.cards[handCard.cardId]?.support.status ===
+    "implemented-dsl";
+
+const resolvePlayCardEffectRuntime = (
+  originalState: GameState,
+  acceptedState: GameState,
+  acceptedEvents: EngineEvent[],
+  handCard: CardInstance,
+  supported: SupportedPlayMetadata,
+): EngineResult => {
+  if (!shouldResolveOnPlayRuntime(acceptedState, handCard, supported)) {
+    return toEngineResult(acceptedState, acceptedEvents);
+  }
+
+  const queued = processEffectRuntime(acceptedState);
+  if (queued.errors !== undefined) {
+    return toEngineResult(originalState, [], toErrorTuple(queued.errors));
+  }
+
+  const resolved = processEffectRuntime(queued.state);
+  if (resolved.errors !== undefined) {
+    return toEngineResult(originalState, [], toErrorTuple(resolved.errors));
+  }
+
+  const events = [...acceptedEvents, ...queued.events, ...resolved.events];
+  const stateWithJournal: GameState = {
+    ...resolved.state,
+    eventJournal: [...originalState.eventJournal, ...events],
+  };
+  assertGameStateInvariants(stateWithJournal);
+  return toEngineResult(stateWithJournal, events);
+};
+
+const toErrorTuple = (
+  errors: readonly EngineError[],
+): readonly [EngineError, ...EngineError[]] => {
+  const first = errors[0];
+  if (first === undefined) {
+    return [
+      {
+        type: "effectRuntimeError",
+        effectId: "play-card-effect-runtime",
+        details: { reason: "empty-runtime-error-list" },
+      },
+    ];
+  }
+  return [first, ...errors.slice(1)];
 };
 
 export const applyPlayCardDecisionResponse = (
@@ -399,7 +465,13 @@ const placePlayedCardResult = (params: {
     });
     nextState.eventJournal = [...state.eventJournal, ...events];
     assertGameStateInvariants(nextState);
-    return toEngineResult(nextState, events);
+    return resolvePlayCardEffectRuntime(
+      state,
+      nextState,
+      events,
+      handCard,
+      supported,
+    );
   }
 
   if (
@@ -555,7 +627,13 @@ const placePlayedCardResult = (params: {
   });
   nextState.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  return resolvePlayCardEffectRuntime(
+    state,
+    nextState,
+    events,
+    handCard,
+    supported,
+  );
 };
 
 const applyCharacterOverflowResponse = (
@@ -602,6 +680,12 @@ const applyCharacterOverflowResponse = (
   const supported = getSupportedPlayMetadata(state, handCard);
   if (supported === null || supported.category !== "character") {
     return illegalAction(state, "Decision card is unsupported.");
+  }
+  if (
+    shouldResolveOnPlayRuntime(state, handCard, supported) &&
+    hasPendingRuntimeWork(state)
+  ) {
+    return illegalAction(state, "playCard requires no pending runtime work.");
   }
   const selectedRef = action.response.cards[0];
   if (selectedRef === undefined) {
@@ -685,6 +769,12 @@ const applyPlayCardPaymentResponse = (
   const supported = getSupportedPlayMetadata(state, handCard);
   if (supported === null) {
     return illegalAction(state, "Decision card is unsupported.");
+  }
+  if (
+    shouldResolveOnPlayRuntime(state, handCard, supported) &&
+    hasPendingRuntimeWork(state)
+  ) {
+    return illegalAction(state, "playCard requires no pending runtime work.");
   }
   if (response.optionId !== "restDon") {
     return illegalAction(state, "Payment option mismatch.");

@@ -1,5 +1,10 @@
 import type { CardInstance, GameState, PlayerId } from "@optcg/types";
 
+import {
+  isSupportedNoChoiceOnPlayDrawEffect,
+  resolveImplementedDslEffectDefinition,
+} from "./effect-runtime.js";
+
 export type SupportedPlayMetadata = {
   category: "character" | "stage" | "event";
   printedCost: number;
@@ -23,10 +28,37 @@ export const getSupportedPlayMetadata = (
   card: CardInstance,
 ): SupportedPlayMetadata | null => {
   const resolved = state.cardManifest.cards[card.cardId];
-  if (
-    resolved === undefined ||
-    resolved.support.status !== "vanilla-confirmed"
-  ) {
+  if (resolved === undefined) {
+    return null;
+  }
+  if (resolved.support.status === "implemented-dsl") {
+    if (
+      resolved.category !== "character" ||
+      resolved.cost === undefined ||
+      hasUnsupportedPlayText(resolved.triggerText)
+    ) {
+      return null;
+    }
+    const lookup = resolveImplementedDslEffectDefinition(
+      resolved,
+      state.cardManifest,
+    );
+    if (!lookup.ok) {
+      return null;
+    }
+    if (lookup.definition.effects.length !== 1) {
+      return null;
+    }
+    const effect = lookup.definition.effects[0];
+    if (effect === undefined || !isSupportedNoChoiceOnPlayDrawEffect(effect)) {
+      return null;
+    }
+    return {
+      category: "character",
+      printedCost: Math.max(0, resolved.cost),
+    };
+  }
+  if (resolved.support.status !== "vanilla-confirmed") {
     return null;
   }
   if (resolved.category === "character" || resolved.category === "stage") {

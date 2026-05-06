@@ -341,7 +341,7 @@ export const executeNoChoiceEffectPrimitive = (
   return executeDrawEffect(state, entry, effect);
 };
 
-const isSupportedNoChoiceOnPlayEffect = (
+export const isSupportedNoChoiceOnPlayDrawEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
@@ -367,7 +367,12 @@ const isSupportedNoChoiceOnPlayEffect = (
   if (effect.sourcePresencePolicy === undefined) {
     return false;
   }
-  return effect.effect.type === "draw";
+  return (
+    effect.effect.type === "draw" &&
+    Number.isInteger(effect.effect.count) &&
+    effect.effect.count >= 0 &&
+    effect.effect.player === "self"
+  );
 };
 
 const findCardInstance = (
@@ -494,7 +499,7 @@ const queueOnPlayTriggers = (state: GameState): EngineResult | undefined => {
     if (onPlayEffects.length === 0) {
       continue;
     }
-    const matching = onPlayEffects.filter(isSupportedNoChoiceOnPlayEffect);
+    const matching = onPlayEffects.filter(isSupportedNoChoiceOnPlayDrawEffect);
     if (matching.length === 0) {
       return toEngineResult(
         state,
@@ -689,7 +694,7 @@ const resolveQueuedNoChoiceDrawEffect = (
   const match = lookup.definition.effects.find(
     (effect) => effect.id === entry.effectBlockId,
   );
-  if (match === undefined || !isSupportedNoChoiceOnPlayEffect(match)) {
+  if (match === undefined || !isSupportedNoChoiceOnPlayDrawEffect(match)) {
     return undefined;
   }
   return match.effect;

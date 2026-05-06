@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-012E.md",
-      "storyId": "ENG-012E",
-      "storyPath": "stories/approved/ENG-012E-no-choice-effect-queue-processing.yaml",
-      "storySha256": "8a93d025e47a1f0752c1552bb096dc4bd395bded47be0748e0886e5eb73cfa97"
+      "packetPath": "agent-packets/ENG-012F.md",
+      "storyId": "ENG-012F",
+      "storyPath": "stories/approved/ENG-012F-play-card-on-play-draw-integration.yaml",
+      "storySha256": "6a0689134e6e309bba71bed8606ae2d9dc20a24141c795e409e6a1fd2b305b57"
     }
   ],
   "version": 1

@@ -1,0 +1,80 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-012F
+epic_id: M1-001
+title: Integrate no-choice On Play draw with play-card
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Wire the supported no-choice On Play draw runtime vertical into accepted
+  Character play so M2-001 is proven through the public battle-neutral engine
+  action surface.
+story_boundary: >
+  Own only play-card integration for no-choice `[On Play] Draw N` on supported
+  `implemented-dsl` Character cards. Stop before Event effect execution,
+  optional/choice effects, target selection, trigger ordering decisions, battle
+  timing windows, replacements, continuous effects, or CLI/server/client changes.
+allowed_touch_points:
+  - packages/engine-core/src/play-card.ts
+  - packages/engine-core/src/play-card.test.ts
+  - packages/engine-core/src/play-card-legal-actions.ts
+  - packages/engine-core/src/play-card-support.ts
+  - packages/engine-core/src/play-card-test-fixtures.ts
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+spec_refs:
+  - 02-engine-mechanics.s003 (Rule-processing checkpoints)
+  - 02-engine-mechanics.s016 (Playing a card)
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 04-effect-runtime.s008 (Trigger detection from events)
+  - 04-effect-runtime.s010 (Queue processing)
+  - 05-effect-dsl-reference.s004 (Effect block)
+  - 05-effect-dsl-reference.s005 (Triggers)
+  - 05-effect-dsl-reference.s012 (Effects)
+  - 05-effect-dsl-reference.s019 (Example: On Play draw 1)
+  - 05-effect-dsl-reference.s029 (Schema coverage policy)
+  - 09-card-data-and-support-policy.s011 (Support status behavior)
+  - 18-acceptance-tests.s004 (Milestone 2 - first effect runtime)
+scope:
+  - "after accepted Character play emits `cardPlayed`, detect and queue supported no-choice On Play draw effects"
+  - resolve the supported no-choice queue before returning Main Phase action priority
+  - include draw/effect events in the same accepted engine result in deterministic order after play events
+  - preserve legal-action omission/rejection for unsupported effect definitions, choice-requiring On Play effects, Event effects, custom handlers, and unresolved runtime work
+  - preserve existing vanilla Character/Stage/Event play behavior when no supported On Play draw effect is present
+non_scope:
+  - "Event `[Main]` effect execution"
+  - "`[Counter]` Event timing"
+  - optional effects
+  - chooseTriggerOrder, chooseOptionalActivation, target selection, or replacement decisions
+  - When Attacking, On Opponent Attack, On K.O., life Trigger, blocker, counter, continuous effects, once-per-turn tracking
+  - CLI/server/client/replay schema changes
+dependencies:
+  - ENG-012E
+  - ENG-008
+acceptance_criteria:
+  - "playing a supported Character with `[On Play] Draw 1` queues and resolves the draw through `applyPlayCard`"
+  - returned events include play events, effect queue/resolution events, and draw events in stable order
+  - deck/hand changes reflect the draw after the played card leaves hand
+  - unsupported effect definitions and choice-requiring On Play effects still fail closed without partial mutation
+  - vanilla no-effect play behavior remains unchanged
+required_tests:
+  - "unit test proving `applyPlayCard` for `[On Play] Draw 1` mutates hand/deck/field as expected"
+  - unit test asserting deterministic event order for card play followed by On Play draw resolution
+  - unit test proving legal actions expose supported On Play draw Character play but omit/reject unsupported effect definitions
+  - unit tests proving choice-requiring, optional, custom, Event, and unsupported On Play effects fail closed without partial mutation
+  - existing vanilla play-card tests must pass without weakened assertions
+  - "`corepack pnpm exec vitest run packages/engine-core/src/play-card.test.ts packages/engine-core/src/effect-runtime.test.ts` must pass"
+  - "`corepack pnpm --filter @optcg/engine-core typecheck` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - do not silently execute unsupported effect shapes
+  - fail closed on timing-window, hidden-information, replay, or source-presence ambiguity
+  - keep engine-core deterministic and pure
+ambiguity_policy: fail_and_escalate
