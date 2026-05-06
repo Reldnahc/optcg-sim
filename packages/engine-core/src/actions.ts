@@ -11,6 +11,7 @@ import { isMatchActive } from "./action-state.js";
 import {
   applyBattleDecisionResponse,
   applyDeclareAttack,
+  applyUseCounter,
   getBattleDecisionLegalActions,
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
@@ -90,6 +91,9 @@ export const applyAction = (state: GameState, action: Action): EngineResult => {
   }
   if (action.type === "respondToDecision") {
     return applyRespondToDecision(state, action);
+  }
+  if (action.type === "useCounter") {
+    return applyUseCounter(state, action);
   }
   if (state.pendingDecision !== undefined) {
     return illegalAction(

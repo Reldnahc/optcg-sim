@@ -430,18 +430,20 @@ export const getBattleDecisionLegalActions = (
     if (
       decision.request.max !== 0 ||
       decision.candidates.length !== 0 ||
-      hasUnsupportedCounterWindow(state, decision.playerId) ||
-      getUnsupportedDamageStepContinuationReason(state) !== undefined
+      hasUnsupportedCounterWindow(state, decision.playerId)
     ) {
       return [];
     }
-    return [
-      {
+    const actions: LegalAction[] = [];
+    if (getUnsupportedDamageStepContinuationReason(state) === undefined) {
+      actions.push({
         type: "respondToDecision",
         decisionId: decision.id,
         response: { type: "cards", cards: [] },
-      },
-    ];
+      });
+    }
+    actions.push(...getLegalCharacterCounterActions(state, decision.playerId));
+    return actions;
   }
   if (battle.step !== "block" || decision.request.max !== 1) {
     return [];
@@ -461,6 +463,84 @@ export const getBattleDecisionLegalActions = (
       response: { type: "cards" as const, cards: [candidate.card] },
     })),
   ];
+};
+
+const getLegalCharacterCounterActions = (
+  state: GameState,
+  defenderId: PlayerId,
+): LegalAction[] => {
+  const battle = state.battle;
+  const defender = state.players[defenderId];
+  if (
+    battle === undefined ||
+    battle.step !== "counter" ||
+    defender === undefined
+  ) {
+    return [];
+  }
+  const target = reifyCardRef(state, battle.currentTarget);
+  if (
+    detectPendingRuntimeWork(state) !== undefined ||
+    state.replacementState.length > 0 ||
+    state.continuousEffects.length > 0 ||
+    hasUnsupportedBattleEffectMetadata(state) ||
+    !isSupportedBattleResolutionEnvelope(battle) ||
+    target === null ||
+    target.playerId !== defenderId ||
+    (!target.isLeader && target.card.state !== "rested")
+  ) {
+    return [];
+  }
+  const attacker = reifyCardRef(state, battle.attacker);
+  if (attacker === null) {
+    return [];
+  }
+  if (battle.blocker !== undefined) {
+    const blocker = reifyCardRef(state, battle.blocker);
+    if (
+      blocker === null ||
+      blocker.isLeader ||
+      !sameCardRef(battle.blocker, battle.currentTarget)
+    ) {
+      return [];
+    }
+  }
+  let view: ReturnType<typeof computeView>;
+  try {
+    view = computeView(state);
+  } catch {
+    return [];
+  }
+  if (Object.keys(view.restrictions).length > 0) {
+    return [];
+  }
+  const attackerView = view.cards[attacker.card.instanceId];
+  const targetView = view.cards[target.card.instanceId];
+  if (
+    attackerView?.currentPower === undefined ||
+    targetView?.currentPower === undefined ||
+    attackerView.keywords.includes("doubleAttack") ||
+    targetView.protectedFrom.length > 0
+  ) {
+    return [];
+  }
+  return defender.hand.flatMap((card) => {
+    const metadata = state.cardManifest.cards[card.cardId];
+    if (
+      metadata?.category !== "character" ||
+      metadata.counter === undefined ||
+      metadata.counter <= 0
+    ) {
+      return [];
+    }
+    return [
+      {
+        type: "useCounter" as const,
+        cardInstanceId: card.instanceId,
+        target: battle.currentTarget,
+      },
+    ];
+  });
 };
 
 const hasUnsupportedBlockDecisionState = (
@@ -690,6 +770,180 @@ const restBlocker = (
       ),
     },
   };
+};
+
+export const applyUseCounter = (
+  state: GameState,
+  action: Extract<Action, { type: "useCounter" }>,
+): EngineResult => {
+  const decision = state.pendingDecision;
+  const battle = state.battle;
+  if (
+    decision === undefined ||
+    decision.type !== "selectCards" ||
+    battle === undefined ||
+    battle.step !== "counter"
+  ) {
+    return illegalAction(state, "useCounter requires an active Counter Step.");
+  }
+  if (
+    decision.request.min !== 0 ||
+    decision.request.max !== 0 ||
+    decision.defaultResponse?.type !== "cards" ||
+    decision.defaultResponse.cards.length !== 0 ||
+    decision.candidates.length !== 0
+  ) {
+    return illegalAction(state, "Unsupported Counter Step decision envelope.");
+  }
+  if (
+    decision.playerId === state.turn.turnPlayerId ||
+    hasUnsupportedCounterWindow(state, decision.playerId)
+  ) {
+    return illegalAction(
+      state,
+      "Battle requires unsupported counter window handling.",
+    );
+  }
+  if (!sameCardRef(action.target, battle.currentTarget)) {
+    return illegalAction(
+      state,
+      "Counter target must be current battle target.",
+    );
+  }
+  const attacker = reifyCardRef(state, battle.attacker);
+  const target = reifyCardRef(state, battle.currentTarget);
+  if (attacker === null || target === null) {
+    return illegalAction(state, "Battle participants are stale or invalid.");
+  }
+  if (target.playerId !== decision.playerId) {
+    return illegalAction(
+      state,
+      "Counter target must be controlled by defender.",
+    );
+  }
+  if (battle.blocker !== undefined) {
+    const blocker = reifyCardRef(state, battle.blocker);
+    if (
+      blocker === null ||
+      blocker.isLeader ||
+      !sameCardRef(battle.blocker, battle.currentTarget)
+    ) {
+      return illegalAction(state, "Battle blocker is stale or invalid.");
+    }
+  }
+  if (
+    detectPendingRuntimeWork(state) !== undefined ||
+    state.replacementState.length > 0 ||
+    state.continuousEffects.length > 0
+  ) {
+    return illegalAction(
+      state,
+      "Battle requires unsupported trigger or replacement processing.",
+    );
+  }
+  if (hasUnsupportedBattleEffectMetadata(state)) {
+    return illegalAction(state, "Battle requires unsupported effect metadata.");
+  }
+  if (!target.isLeader && target.card.state !== "rested") {
+    return illegalAction(
+      state,
+      "Battle target is no longer a supported rested character target.",
+    );
+  }
+  if (!isSupportedBattleResolutionEnvelope(battle)) {
+    return illegalAction(
+      state,
+      "Battle requires unsupported blocker, step, or multi-damage behavior.",
+    );
+  }
+  const defender = state.players[decision.playerId];
+  if (defender === undefined) {
+    return illegalAction(state, "Decision player mismatch.");
+  }
+  const handIndex = defender.hand.findIndex(
+    (card) => card.instanceId === action.cardInstanceId,
+  );
+  const handCard = defender.hand[handIndex];
+  if (handIndex < 0 || handCard === undefined) {
+    return illegalAction(state, "Counter card must be in defender hand.");
+  }
+  const metadata = state.cardManifest.cards[handCard.cardId];
+  if (
+    metadata?.category !== "character" ||
+    metadata.counter === undefined ||
+    metadata.counter <= 0
+  ) {
+    return illegalAction(
+      state,
+      "Counter card must be a Character with counter.",
+    );
+  }
+
+  const counterValue = metadata.counter;
+  const trashedCard: CardInstance = {
+    ...handCard,
+    attachedDon: [],
+    zone: {
+      zone: "trash",
+      playerId: decision.playerId,
+      slot: "trash",
+      index: 0,
+    },
+  };
+  const nextHand = reindexZoneCards(
+    defender.hand.filter((_, index) => index !== handIndex),
+    "hand",
+    decision.playerId,
+    "hand",
+  );
+  const nextTrash = reindexZoneCards(
+    [trashedCard, ...defender.trash],
+    "trash",
+    decision.playerId,
+    "trash",
+  );
+  const events: EngineEvent[] = [];
+  appendEvent(state, events, "counterUsed", {
+    playerId: decision.playerId,
+    instanceId: handCard.instanceId,
+    cardId: handCard.cardId,
+    target: battle.currentTarget,
+    value: counterValue,
+  });
+  appendEvent(state, events, "cardMoved", {
+    instanceId: handCard.instanceId,
+    cardId: handCard.cardId,
+    from: handCard.zone,
+    to: trashedCard.zone,
+    reason: "counter",
+  });
+  appendEvent(state, events, "cardTrashed", {
+    playerId: decision.playerId,
+    instanceId: handCard.instanceId,
+    cardId: handCard.cardId,
+    reason: "counter",
+  });
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    players: {
+      ...state.players,
+      [decision.playerId]: {
+        ...defender,
+        hand: nextHand,
+        trash: nextTrash,
+      },
+    },
+    battle: {
+      ...battle,
+      counterPower: (battle.counterPower ?? 0) + counterValue,
+    },
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
 };
 
 export const applyBattleDecisionResponse = (

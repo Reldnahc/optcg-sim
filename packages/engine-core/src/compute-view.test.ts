@@ -644,6 +644,49 @@ test("active defender printed blocker has canBlock false outside block step", ()
   );
 });
 
+test("battle counter power contributes only during active battle", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  state.turn.phase = "main";
+  state.turn.turnPlayerId = p1;
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
+  p2State.characters = [
+    withCharacter(p2, toCardId("char-vanilla"), 0, { state: "rested" }),
+  ];
+  const target = must(p2State.characters[0], "target");
+  state.battle = {
+    attacker: {
+      instanceId: must(p1State.characters[0], "attacker").instanceId,
+      cardId: must(p1State.characters[0], "attacker").cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    step: "counter",
+    damageCount: 1,
+    counterPower: 2000,
+  };
+
+  const duringBattle = computeView(state);
+  assert.equal(duringBattle.cards[target.instanceId]?.currentPower, 5000);
+
+  delete state.battle;
+  const afterBattle = computeView(state);
+  assert.equal(afterBattle.cards[target.instanceId]?.currentPower, 3000);
+});
+
 test("active defender printed blocker has canBlock false for stale battle refs", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
