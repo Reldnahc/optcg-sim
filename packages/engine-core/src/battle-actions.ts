@@ -401,6 +401,21 @@ const hasUnsupportedBlockDecisionState = (
   ) {
     return true;
   }
+  const attackerHasBanish = attackerView.keywords.includes("banish");
+  if (target.isLeader && !attackerHasBanish) {
+    const targetPlayer = state.players[target.playerId];
+    const topLife = targetPlayer?.life[0];
+    const topLifeMeta =
+      topLife === undefined
+        ? undefined
+        : state.cardManifest.cards[topLife.card.cardId];
+    if (
+      topLifeMeta?.triggerText !== undefined &&
+      topLifeMeta.triggerText.length > 0
+    ) {
+      return true;
+    }
+  }
   return false;
 };
 
@@ -453,6 +468,7 @@ export const applyBattleDecisionResponse = (
   );
   const resumedState: GameState = {
     ...state,
+    actionSeq: state.actionSeq + 1,
     battle: { ...battle, step: "attack" },
     eventJournal: [...state.eventJournal, ...events],
   };

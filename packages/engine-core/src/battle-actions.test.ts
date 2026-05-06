@@ -1659,6 +1659,7 @@ test("empty block-step respondToDecision declines and resumes existing no-block 
   assert.equal(result.errors, undefined);
   assert.equal(result.state.pendingDecision, undefined);
   assert.equal(result.state.battle, undefined);
+  assert.equal(result.state.actionSeq, opened.state.actionSeq + 1);
   assert.equal(
     result.events.some((event) => event.type === "decisionResolved"),
     true,
@@ -1973,6 +1974,22 @@ test("legal blocker with unsupported continuation rejects declareAttack without 
         sourceTextHash: "source-hash",
         behaviorHash: "behavior-hash",
       },
+    };
+  });
+  run((state) => {
+    const p2State = must(state.players[p2], "p2");
+    const topLife = must(p2State.life[0], "top life");
+    p2State.life[0] = {
+      ...topLife,
+      card: { ...topLife.card, cardId: toCardId("trigger-life-block-step") },
+    };
+    state.cardManifest.cards[toCardId("trigger-life-block-step")] = {
+      ...resolvedCard({
+        cardId: toCardId("trigger-life-block-step"),
+        category: "character",
+        power: 1000,
+      }),
+      triggerText: "TRIGGER: draw 1",
     };
   });
 });
