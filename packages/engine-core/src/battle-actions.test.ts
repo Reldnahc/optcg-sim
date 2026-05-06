@@ -2381,6 +2381,26 @@ test("unsupported blocker activation states reject without mutation or events", 
     });
   });
   run((context) => {
+    const p2State = must(context.openedState.players[p2], "p2");
+    const counterEvent = must(p2State.hand[0], "counter event");
+    context.openedState.cardManifest.cards[counterEvent.cardId] = resolvedCard({
+      cardId: counterEvent.cardId,
+      category: "event",
+      effectText: "[Counter] Draw 1 card.",
+    });
+  });
+  run((context) => {
+    const p2State = must(context.openedState.players[p2], "p2");
+    const counterEvent = must(p2State.hand[0], "counter event");
+    context.openedState.cardManifest.cards[counterEvent.cardId] = resolvedCard({
+      cardId: counterEvent.cardId,
+      category: "event",
+    });
+    context.openedState.cardManifest.effectDefinitions = {
+      counterEvent: effectDefinition(counterEvent.cardId, { type: "counter" }),
+    };
+  });
+  run((context) => {
     context.openedState.replacementState.push({
       processId: "replacement-process-1",
       type: "damage",

@@ -723,6 +723,19 @@ const unsupportedBattleResolution = (
   reason: string,
 ): EngineResult => illegalAction(state, reason);
 
+const hasRawCounterText = (value: string | undefined): boolean =>
+  value !== undefined && /\bcounter\b/i.test(value);
+
+const hasCounterTriggerDefinition = (
+  state: GameState,
+  cardId: CardInstance["cardId"],
+): boolean =>
+  Object.values(state.cardManifest.effectDefinitions ?? {}).some(
+    (definition) =>
+      definition.cardId === cardId &&
+      definition.effects.some((effect) => effect.trigger.type === "counter"),
+  );
+
 const hasUnsupportedCounterWindow = (
   state: GameState,
   defenderId: PlayerId,
@@ -735,7 +748,11 @@ const hasUnsupportedCounterWindow = (
     const metadata = state.cardManifest.cards[card.cardId];
     return (
       metadata === undefined ||
-      (metadata.counter !== undefined && metadata.counter > 0)
+      (metadata.counter !== undefined && metadata.counter > 0) ||
+      (metadata.category === "event" &&
+        (hasRawCounterText(metadata.effectText) ||
+          hasRawCounterText(metadata.triggerText) ||
+          hasCounterTriggerDefinition(state, card.cardId)))
     );
   });
 };
