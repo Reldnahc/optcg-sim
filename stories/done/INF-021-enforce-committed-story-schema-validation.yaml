@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: critical
-status: approved
+status: done
 summary: >
   Add an executable validation lane that checks committed story files against
   the canonical story schema so malformed generated, approved, blocked, done,
