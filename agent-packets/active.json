@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-012F.md",
-      "storyId": "ENG-012F",
-      "storyPath": "stories/approved/ENG-012F-play-card-on-play-draw-integration.yaml",
-      "storySha256": "6a0689134e6e309bba71bed8606ae2d9dc20a24141c795e409e6a1fd2b305b57"
+      "packetPath": "agent-packets/ENG-012G.md",
+      "storyId": "ENG-012G",
+      "storyPath": "stories/approved/ENG-012G-effect-runtime-vertical-regression-guards.yaml",
+      "storySha256": "af2656e41aeca1ca94d4584664b368cfa8ae12430ac4531999c47078c17131af"
     }
   ],
   "version": 1
