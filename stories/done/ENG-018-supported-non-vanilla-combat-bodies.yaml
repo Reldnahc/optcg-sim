@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Let cards with supported combat-only metadata participate in normal combat
   even when their support status is `implemented-dsl`, while preserving
