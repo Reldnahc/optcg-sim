@@ -615,6 +615,19 @@ const sameCardRef = (left: CardRef, right: CardRef): boolean =>
   left.cardId === right.cardId &&
   left.playerId === right.playerId;
 
+export const expireBattleDurationStateForCleanup = (
+  state: GameState,
+): GameState => {
+  const cleanedState: GameState = {
+    ...state,
+    continuousEffects: state.continuousEffects.filter(
+      (effect) => effect.duration.type !== "thisBattle",
+    ),
+  };
+  delete cleanedState.battle;
+  return cleanedState;
+};
+
 const hasText = (value: string | undefined): boolean =>
   value !== undefined && value.trim().length > 0;
 
@@ -1674,10 +1687,7 @@ const finalizeSupportedEndOfBattleCleanup = ({
   immediateLosers?: PlayerId[];
   cleanupEventPosition?: "beforeRuleProcessing" | "afterRuleProcessing";
 }): EngineResult => {
-  const clearedBattleState: GameState = {
-    ...nextState,
-  };
-  delete clearedBattleState.battle;
+  const clearedBattleState = expireBattleDurationStateForCleanup(nextState);
   const createRuleProcessingInput = () =>
     immediateLosers === undefined
       ? {
