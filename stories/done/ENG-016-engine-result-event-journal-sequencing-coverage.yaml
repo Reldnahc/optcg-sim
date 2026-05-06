@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add broad regression coverage that exercises representative accepted engine
   paths and asserts EngineResult event sequencing, event ID uniqueness, appended
