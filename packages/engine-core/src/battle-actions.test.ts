@@ -15,7 +15,7 @@ import {
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
 } from "./battle-actions.js";
-import { applyAction } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import {
   must,
   p1,
@@ -149,6 +149,34 @@ const setupOpenedCharacterTargetBlockStepDecision = () => {
     attacker,
     originalTarget,
     defenderBlocker,
+    decision: must(opened.state.pendingDecision, "pending decision"),
+  };
+};
+
+const setupOpenedCounterStepPassDecision = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterCard = must(p2State.hand[0], "counter card");
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  return {
+    opened,
+    openedState: opened.state,
+    p1State,
+    p2State,
+    counterCard,
     decision: must(opened.state.pendingDecision, "pending decision"),
   };
 };
@@ -1663,7 +1691,7 @@ test("banish attacker with unsupported blocker metadata fails closed without mut
   runBlockerMetadata();
 });
 
-test("banish attacker with defender counter metadata fails closed without mutation", () => {
+test("banish attacker with defender Character Counter metadata opens counter-step pass decision", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -1682,7 +1710,6 @@ test("banish attacker with defender counter metadata fails closed without mutati
     power: 3000,
     counter: 1000,
   });
-  const before = JSON.stringify(state);
 
   const result = applyDeclareAttack(state, {
     type: "declareAttack",
@@ -1698,10 +1725,9 @@ test("banish attacker with defender counter metadata fails closed without mutati
     },
   });
 
-  assert.equal(result.errors?.[0]?.type, "illegalAction");
-  assert.deepEqual(result.events, []);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.battle?.step, "counter");
+  assert.equal(result.state.pendingDecision?.playerId, p2);
 });
 
 test("applyAction declareAttack fails closed without mutation when vanilla continuation is unsupported", () => {
@@ -1743,16 +1769,192 @@ test("applyAction declareAttack fails closed without mutation when vanilla conti
   assert.deepEqual(result.events, []);
 });
 
-test("applyAction declareAttack fails closed when defender has counter metadata in hand", () => {
+test("no-counter attack auto-passes counter step and resolves damage without pending decision", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
-  const counterCard = must(p2State.hand[0], "counter card");
-  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
-    cardId: counterCard.cardId,
-    category: "character",
-    power: 3000,
-    counter: 1000,
+  const beforeLife = p2State.life.length;
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.battle, undefined);
+  assert.equal(
+    must(result.state.players[p2], "p2").life.length,
+    beforeLife - 1,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "decisionCreated"),
+    false,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "damageDealt"),
+    true,
+  );
+});
+
+test("Character Counter metadata in defender hand opens counter-step pass decision", () => {
+  const { opened, p2State, decision } = setupOpenedCounterStepPassDecision();
+
+  assert.equal(opened.state.battle?.step, "counter");
+  assert.equal(
+    must(opened.state.players[p2], "p2").life.length,
+    p2State.life.length,
+  );
+  assert.deepEqual(decision, {
+    id: decision.id,
+    type: "selectCards",
+    playerId: p2,
+    prompt: "Pass Counter Step.",
+    causedBy: decision.causedBy,
+    visibility: { type: "public" },
+    request: {
+      timing: "onActivation",
+      chooser: "nonTurnPlayer",
+      player: "nonTurnPlayer",
+      zone: "hand",
+      filter: { categories: ["character"] },
+      min: 0,
+      max: 0,
+      allowFewerIfUnavailable: true,
+      visibility: "privateToChooser",
+    },
+    candidates: [],
+    defaultResponse: { type: "cards", cards: [] },
+  });
+  assert.deepEqual(
+    opened.events
+      .filter((event) => event.type === "decisionCreated")
+      .map((event) => event.payload),
+    [
+      {
+        decisionId: decision.id,
+        decisionType: "selectCards",
+        playerId: p2,
+      },
+    ],
+  );
+});
+
+test("counter-step legal actions expose only defender pass response", () => {
+  const { opened, decision } = setupOpenedCounterStepPassDecision();
+
+  assert.deepEqual(getLegalActions(opened.state, p2), [
+    { type: "concede", playerId: p2 },
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [] },
+    },
+  ]);
+  assert.deepEqual(getLegalActions(opened.state, p1), [
+    { type: "concede", playerId: p1 },
+  ]);
+});
+
+test("counter-step pass emits deterministic decisionResolved sequence and resumes damage", () => {
+  const { opened, p2State, decision } = setupOpenedCounterStepPassDecision();
+  const beforeLife = p2State.life.length;
+
+  const result = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.battle, undefined);
+  assert.equal(result.state.actionSeq, opened.state.actionSeq + 1);
+  assert.equal(
+    must(result.state.players[p2], "p2").life.length,
+    beforeLife - 1,
+  );
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "damageDealt",
+      "lifeTaken",
+      "cardMoved",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
+  );
+  assert.deepEqual(result.events[0]?.payload, {
+    decisionId: decision.id,
+    playerId: p2,
+  });
+  const replay = applyAction(structuredClone(opened.state), {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [] },
+  });
+  assert.equal(result.stateHash, replay.stateHash);
+  assert.deepEqual(result.events, replay.events);
+});
+
+test("counter-step pass rejects stale battle participants without mutation", () => {
+  const run = (
+    mutate: (
+      state: ReturnType<typeof setupOpenedCounterStepPassDecision>,
+    ) => void,
+  ) => {
+    const context = setupOpenedCounterStepPassDecision();
+    mutate(context);
+    const before = JSON.stringify(context.openedState);
+
+    const result = applyAction(context.openedState, {
+      type: "respondToDecision",
+      decisionId: context.decision.id,
+      response: { type: "cards", cards: [] },
+    });
+
+    assert.equal(result.errors?.[0]?.type, "illegalAction");
+    assert.deepEqual(result.events, []);
+    assert.equal(JSON.stringify(context.openedState), before);
+    assert.equal(JSON.stringify(result.state), before);
+  };
+
+  run((context) => {
+    const battle = must(context.openedState.battle, "battle");
+    context.openedState.battle = {
+      ...battle,
+      attacker: {
+        instanceId: "stale-attacker" as never,
+        cardId: context.p1State.leader.cardId,
+        playerId: p1,
+      },
+    };
+  });
+  run((context) => {
+    const battle = must(context.openedState.battle, "battle");
+    context.openedState.battle = {
+      ...battle,
+      currentTarget: {
+        instanceId: "stale-current-target" as never,
+        cardId: context.p2State.leader.cardId,
+        playerId: p2,
+      },
+    };
+  });
+});
+
+test("Counter Event metadata remains unsupported and does not auto-pass or mutate state", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
+    cardId: counterEvent.cardId,
+    category: "event",
+    effectText: "[Counter] Draw 1 card.",
   });
   const before = JSON.stringify(state);
 
@@ -2476,16 +2678,6 @@ test("unsupported blocker activation states reject without mutation or events", 
   });
   run((context) => {
     const p2State = must(context.openedState.players[p2], "p2");
-    const counterCard = must(p2State.hand[0], "counter card");
-    context.openedState.cardManifest.cards[counterCard.cardId] = resolvedCard({
-      cardId: counterCard.cardId,
-      category: "character",
-      power: 3000,
-      counter: 1000,
-    });
-  });
-  run((context) => {
-    const p2State = must(context.openedState.players[p2], "p2");
     const counterEvent = must(p2State.hand[0], "counter event");
     context.openedState.cardManifest.cards[counterEvent.cardId] = resolvedCard({
       cardId: counterEvent.cardId,
@@ -2733,12 +2925,11 @@ test("legal blocker with unsupported continuation rejects declareAttack without 
 
   run((state) => {
     const p2State = must(state.players[p2], "p2");
-    const counterCard = must(p2State.hand[0], "counter card");
-    state.cardManifest.cards[counterCard.cardId] = resolvedCard({
-      cardId: counterCard.cardId,
-      category: "character",
-      power: 3000,
-      counter: 1000,
+    const counterEvent = must(p2State.hand[0], "counter event");
+    state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
+      cardId: counterEvent.cardId,
+      category: "event",
+      effectText: "[Counter] Draw 1 card.",
     });
   });
   run((state) => {
