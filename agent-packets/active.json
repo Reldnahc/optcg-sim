@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-014E.md",
-      "storyId": "ENG-014E",
-      "storyPath": "stories/approved/ENG-014E-blocker-regression-guards.yaml",
-      "storySha256": "999d3f54b704c03161d0ddea2a8fec1301b205d9e0d9ea2f27059303e94ee583"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

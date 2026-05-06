@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Complete the supported Blocker vertical by resolving battles after a valid
   blocker activation: damage targets the redirected blocker, normal Character

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Extend the Block Step decision to allow choosing one legal blocker, then rest
   that blocker, record it on battle state, redirect the current target, and emit
