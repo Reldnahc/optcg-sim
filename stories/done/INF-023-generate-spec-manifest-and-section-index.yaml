@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: critical
-status: approved
+status: done
 summary: >
   Add deterministic tooling that generates and verifies the machine-readable
   spec package manifest and section index required by the v6 specification

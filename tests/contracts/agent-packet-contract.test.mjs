@@ -1507,16 +1507,52 @@ test("repo guidance documents active-story packet requirements", async () => {
 
 test("packet excerpt extraction keeps SECTION_REF-like lines inside fenced code blocks", async () => {
   const tempDir = await makeTempDir();
-  const outputPath = path.join(tempDir, "INF-023.md");
-  const storyPath = path.join(
-    repoRoot,
-    "stories/approved/INF-023-generate-spec-manifest-and-section-index.yaml",
+  const outputPath = path.join(tempDir, "packet.md");
+  const fencedExcerptStoryPath = path.join(
+    tempDir,
+    "fenced-excerpt-story.yaml",
+  );
+
+  await writeFile(
+    fencedExcerptStoryPath,
+    `spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-999
+epic_id: KICK-001
+title: Exercise packet fenced code excerpts
+type: tooling
+area: infra
+primary_concern: tooling
+priority: low
+status: approved
+summary: >
+  Exercise packet excerpt generation for spec sections containing SECTION_REF-like text inside fenced code blocks.
+story_boundary: >
+  Test-only story fixture for packet excerpt generation.
+allowed_touch_points:
+  - tools/**
+spec_refs:
+  - 28-machine-readable-conventions.s008 (Stable heading usage)
+scope:
+  - generate a packet excerpt for a section containing SECTION_REF-like text inside a fenced code block
+non_scope:
+  - implementation changes
+dependencies: []
+acceptance_criteria:
+  - packet excerpt includes text after fenced SECTION_REF-like lines
+required_tests:
+  - packet excerpt extraction regression test
+repo_rules:
+  - must pass packet generation
+ambiguity_policy: fail_and_escalate
+`,
   );
 
   const result = runPacketTool([
     "generate",
     "--story",
-    storyPath,
+    fencedExcerptStoryPath,
     "--output",
     outputPath,
   ]);

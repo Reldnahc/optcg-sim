@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-023.md",
-      "storyId": "INF-023",
-      "storyPath": "stories/approved/INF-023-generate-spec-manifest-and-section-index.yaml",
-      "storySha256": "8a27c7d59ba647299c30d7f4c34b50b667227aa7277251d9ea3a195930ece93e"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
