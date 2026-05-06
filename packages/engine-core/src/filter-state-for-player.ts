@@ -275,6 +275,29 @@ const toPublicLegalAction = (
   }
 };
 
+const publicLegalActionKey = (action: PublicLegalAction): string => {
+  if (action.type === "respondToDecision") {
+    return `${action.type}:${String(action.decisionId)}`;
+  }
+  return JSON.stringify(action);
+};
+
+const dedupePublicLegalActions = (
+  actions: PublicLegalAction[],
+): PublicLegalAction[] => {
+  const seen = new Set<string>();
+  const deduped: PublicLegalAction[] = [];
+  for (const action of actions) {
+    const key = publicLegalActionKey(action);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    deduped.push(action);
+  }
+  return deduped;
+};
+
 const toPublicRevealRecord = (
   state: GameState,
   playerId: PlayerId,
@@ -367,9 +390,11 @@ export const filterStateForPlayer = (
     opponent: toOpponentVisibleState(opponentState),
     ...(battle === undefined ? {} : { battle }),
     ...(pendingDecision === undefined ? {} : { pendingDecision }),
-    legalActions: getLegalActions(state, playerId)
-      .map((action) => toPublicLegalAction(state, playerId, action))
-      .filter((action): action is PublicLegalAction => action !== undefined),
+    legalActions: dedupePublicLegalActions(
+      getLegalActions(state, playerId)
+        .map((action) => toPublicLegalAction(state, playerId, action))
+        .filter((action): action is PublicLegalAction => action !== undefined),
+    ),
     revealedCards: toPublicRevealRecord(state, playerId),
     events: state.eventJournal.filter((event) =>
       isEventVisibleToPlayer(event, playerId),

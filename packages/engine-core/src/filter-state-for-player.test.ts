@@ -19,7 +19,8 @@ import {
   toEngineEventId,
   toStateSeq,
 } from "./action-test-fixtures.js";
-import { getLegalActions } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
+import { setupAttackState } from "./battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { createInitialState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";
@@ -222,6 +223,54 @@ test("projects legal actions without leaking hidden card identities", () => {
   )) {
     assert.equal(serialized.includes(String(selfLifeCard.card.cardId)), false);
   }
+});
+
+test("deduplicates public decision response markers without exposing response payloads", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  const defenderBlocker = must(p2State.characters[0], "defender blocker");
+  defenderBlocker.state = "active";
+  state.cardManifest.cards[defenderBlocker.cardId] = {
+    ...resolvedCard({
+      cardId: defenderBlocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assert.equal(opened.errors, undefined);
+  const pending = must(opened.state.pendingDecision, "block decision");
+
+  const engineResponses = getLegalActions(opened.state, p2).filter(
+    (action) => action.type === "respondToDecision",
+  );
+  assert.equal(engineResponses.length, 2);
+
+  const view = filterStateForPlayer(opened.state, p2);
+  assert.deepEqual(
+    view.legalActions.filter((action) => action.type === "respondToDecision"),
+    [{ type: "respondToDecision", decisionId: pending.id }],
+  );
+  assert.equal(JSON.stringify(view.legalActions).includes("response"), false);
+  assert.equal(
+    JSON.stringify(view.legalActions).includes(String(defenderBlocker.cardId)),
+    false,
+  );
 });
 
 test("filters event journal and revealed records by recipient visibility", () => {
