@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SEC-002.md",
+      "storyId": "SEC-002",
+      "storyPath": "stories/approved/SEC-002-production-player-view-real-state-regression.yaml",
+      "storySha256": "2b9cef6e8fc309741a2952e846a6fbba786fe45c8cb8a2baef54631685172015"
+    }
+  ],
   "version": 1
 }
