@@ -474,6 +474,45 @@ const hasThisBattleDuration = (value: unknown): boolean => {
   return Object.values(value).some((entry) => hasThisBattleDuration(entry));
 };
 
+const hasUnsupportedBattleEffectBody = (value: unknown): boolean => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const type = value["type"];
+  if (
+    type === "protectFromKO" ||
+    type === "cannotBeBlockedBy" ||
+    type === "cannotBeAttacked" ||
+    type === "cannotBlock"
+  ) {
+    return true;
+  }
+  if (type === "giveKeyword" && value["keyword"] === "unblockable") {
+    return true;
+  }
+
+  const operation = value["operation"];
+  if (isRecord(operation)) {
+    if (
+      operation["type"] === "protection" ||
+      operation["type"] === "restriction"
+    ) {
+      return true;
+    }
+    if (isRecord(operation["protection"])) {
+      return true;
+    }
+  }
+  if (isRecord(value["protection"])) {
+    return true;
+  }
+
+  return Object.values(value).some((entry) =>
+    hasUnsupportedBattleEffectBody(entry),
+  );
+};
+
 const hasUnsupportedBattleEffectMetadata = (state: GameState): boolean => {
   const combatCardIds = new Set<CardInstance["cardId"]>();
   for (const player of Object.values(state.players)) {
@@ -504,7 +543,8 @@ const hasUnsupportedBattleEffectMetadata = (state: GameState): boolean => {
         effect.trigger.type === "whenAttacking" ||
         effect.trigger.type === "onOpponentAttack" ||
         effect.category === "replacement" ||
-        hasThisBattleDuration(effect.effect)
+        hasThisBattleDuration(effect.effect) ||
+        hasUnsupportedBattleEffectBody(effect.effect)
       ) {
         return true;
       }

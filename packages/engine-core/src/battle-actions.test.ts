@@ -2441,6 +2441,71 @@ test("unsupported blocker activation states reject without mutation or events", 
     };
   });
   run((context) => {
+    context.openedState.cardManifest.effectDefinitions = {
+      protectFromKo: effectDefinition(
+        context.defenderBlocker.cardId,
+        { type: "onPlay" },
+        {
+          type: "protectFromKO",
+          target: { type: "self" },
+          duration: { type: "thisTurn" },
+        },
+      ),
+    };
+  });
+  run((context) => {
+    context.openedState.cardManifest.effectDefinitions = {
+      cannotBeBlockedBy: effectDefinition(
+        toCardId("leader-red"),
+        { type: "onPlay" },
+        {
+          type: "cannotBeBlockedBy",
+          target: { type: "self" },
+          filter: { categories: ["character"] },
+          duration: { type: "thisTurn" },
+        },
+      ),
+    };
+  });
+  run((context) => {
+    context.openedState.cardManifest.effectDefinitions = {
+      giveUnblockable: effectDefinition(
+        toCardId("leader-red"),
+        { type: "onPlay" },
+        {
+          type: "giveKeyword",
+          target: { type: "self" },
+          keyword: "unblockable",
+          duration: { type: "thisTurn" },
+        },
+      ),
+    };
+  });
+  run((context) => {
+    context.openedState.cardManifest.effectDefinitions = {
+      nestedProtection: effectDefinition(
+        context.defenderBlocker.cardId,
+        { type: "onPlay" },
+        {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "custom",
+                handler: "noop",
+                operation: {
+                  type: "protection",
+                  protection: { process: "ko" },
+                },
+              } as never,
+            },
+          ],
+        },
+      ),
+    };
+  });
+  run((context) => {
     context.openedState.continuousEffects = [
       { duration: { type: "thisBattle" } } as never,
     ];
