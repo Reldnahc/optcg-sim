@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  CardInstance,
+  CardSnapshot,
   CardId,
   CardSupportStatus,
   DeferredTriggerBucket,
@@ -26,12 +28,14 @@ import {
   p1,
   p2,
   resolvedCard,
+  toEngineEventId,
   reviewedOnPlayDrawDefinition,
 } from "./action-test-fixtures.js";
 import {
   detectPendingRuntimeWork,
   executeNoChoiceEffectPrimitive,
   type EffectDefinitionLookupFailureReason,
+  type OnPlayTriggerQueueingFailureReason,
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
@@ -457,6 +461,114 @@ const createManifest = (
   return manifest;
 };
 
+const withCardInZone = (params: {
+  state: ReturnType<typeof createActiveState>;
+  playerId: PlayerId;
+  card: CardInstance;
+  zone: "characterArea" | "stageArea";
+  index?: number;
+}): CardInstance => {
+  const { state, playerId, card, zone } = params;
+  const index = params.index ?? 0;
+  const placed: CardInstance =
+    zone === "characterArea"
+      ? {
+          ...card,
+          zone: { zone, playerId, slot: "character", index },
+          attachedDon: [],
+          state: "active",
+          turnPlayed: state.turn.globalTurn,
+        }
+      : {
+          ...card,
+          zone: { zone, playerId, slot: "stage", index: 0 },
+          attachedDon: [],
+          state: "active",
+        };
+  const player = must(state.players[playerId], "player");
+  if (zone === "characterArea") {
+    player.characters = [...player.characters, placed];
+  } else {
+    player.stage = placed;
+  }
+  return placed;
+};
+
+const toSourceSnapshot = (
+  card: CardInstance,
+  ownerId: PlayerId,
+  controllerId: PlayerId,
+): CardSnapshot => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  ownerId,
+  controllerId,
+  zone: card.zone,
+  category: card.zone.zone === "stageArea" ? "stage" : "character",
+  colors: ["red"],
+  keywords: [],
+});
+
+const appendCardPlayedEvent = (
+  state: ReturnType<typeof createActiveState>,
+  card: CardInstance,
+  category: "character" | "stage",
+) => {
+  const event = {
+    id: toEngineEventId(`event:${String(state.seq)}:1:cardPlayed`),
+    seq: state.eventJournal.length + 1,
+    type: "cardPlayed" as const,
+    payload: {
+      playerId: card.zone.playerId,
+      instanceId: card.instanceId,
+      cardId: card.cardId,
+      category,
+    },
+    visibility: { type: "public" as const },
+    causedBy: { type: "ruleProcess" as const, name: "turnFlow" },
+    createdAtStateSeq: state.seq,
+  };
+  state.eventJournal.push(event);
+};
+
+const setupOnPlayDefinition = (
+  state: ReturnType<typeof createActiveState>,
+  played: CardInstance,
+  definition: EffectDefinition,
+  effectDefinitionId = "def-on-play",
+): void => {
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
+  state.cardManifest.cards[played.cardId] = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: definition.metadata.rulesVersion,
+      sourceTextHash: definition.metadata.sourceTextHash,
+    },
+  });
+};
+
+const queueingState = (): {
+  state: ReturnType<typeof createActiveState>;
+  played: CardInstance;
+} => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "hand source");
+  const played = withCardInZone({
+    state,
+    playerId: p1,
+    card: source,
+    zone: "characterArea",
+  });
+  appendCardPlayedEvent(state, played, "character");
+  return { state, played };
+};
+
 const expectLookupFailure = (
   result: ReturnType<typeof resolveImplementedDslEffectDefinition>,
   reason: EffectDefinitionLookupFailureReason,
@@ -470,6 +582,21 @@ const expectLookupFailure = (
     reason,
     supportStatus,
   });
+};
+
+const expectOnPlayQueueingFailure = (
+  result: ReturnType<typeof processEffectRuntime>,
+  reason: OnPlayTriggerQueueingFailureReason,
+): void => {
+  assert.deepEqual(result.events, []);
+  assert.ok(result.errors !== undefined);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "on-play-trigger-queueing",
+      details: { reason },
+    },
+  ]);
 };
 
 test("resolves implemented-dsl support to a reviewed On Play draw definition", () => {
@@ -853,4 +980,385 @@ test("lookup helper does not mutate manifest or card inputs", () => {
 
   assert.deepEqual(manifest, beforeManifest);
   assert.deepEqual(card, beforeCard);
+});
+
+test("queues one supported no-choice On Play draw effect from an accepted cardPlayed event", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  setupOnPlayDefinition(
+    state,
+    played,
+    reviewedOnPlayDrawDefinition(played.cardId, supportCard.support),
+    "def-on-play-draw",
+  );
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  assert.equal(result.events.length, 1);
+  assert.equal(result.events[0]?.type, "effectQueued");
+  assert.equal(result.state.eventJournal.at(-1)?.type, "effectQueued");
+});
+
+test("effectQueued payload and queue metadata are deterministic across repeated runs", () => {
+  const run = () => {
+    const { state, played } = queueingState();
+    const supportCard = resolvedCard({
+      cardId: played.cardId,
+      category: "character",
+    });
+    setupOnPlayDefinition(
+      state,
+      played,
+      reviewedOnPlayDrawDefinition(played.cardId, supportCard.support),
+      "def-deterministic",
+    );
+    return processEffectRuntime(state);
+  };
+  const first = run();
+  const second = run();
+
+  assert.deepEqual(first.events, second.events);
+  assert.deepEqual(first.state.effectQueue, second.state.effectQueue);
+  const firstEvent = must(first.events[0], "effectQueued event");
+  assert.equal(firstEvent.createdAtStateSeq, first.state.seq);
+  assert.deepEqual(firstEvent.causedBy, {
+    type: "ruleProcess",
+    name: "effectRuntime:onPlayTriggerQueueing",
+  });
+  assert.deepEqual(first.state.effectQueue[0], {
+    id: "queue-entry:event:3:1:cardPlayed:OP01-015:auto-on-play-1",
+    state: "pending",
+    timingWindowId: "timing-window:event:3:1:cardPlayed",
+    generation: 0,
+    controllerId: p1,
+    source: {
+      instanceId: first.state.effectQueue[0]?.source.instanceId,
+      cardId: first.state.effectQueue[0]?.source.cardId,
+      playerId: p1,
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 0,
+      },
+    },
+    sourceSnapshot: toSourceSnapshot(
+      must(first.state.players[p1]?.characters[0], "queued source"),
+      p1,
+      p1,
+    ),
+    triggerEventId: "event:3:1:cardPlayed",
+    effectBlockId: "OP01-015:auto-on-play-1",
+    orderingGroup: "turnPlayer",
+    createdAtEventSeq:
+      first.state.eventJournal[first.state.eventJournal.length - 2]?.seq,
+    queuedAtStateSeq: toStateSeq(4),
+    sourcePresencePolicy: "mustRemainInSameZone",
+    causedBy: {
+      type: "ruleProcess",
+      name: "effectRuntime:onPlayTriggerQueueing",
+    },
+  });
+});
+
+test("no matching On Play effect leaves queue and events unchanged", () => {
+  const { state, played } = queueingState();
+  const baseCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    baseCard.support,
+  );
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...definition,
+      effects: [
+        {
+          ...must(definition.effects[0], "onPlay effect"),
+          trigger: { type: "whenAttacking" },
+        },
+      ],
+    },
+    "def-non-onplay",
+  );
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.state.effectQueue, before.effectQueue);
+  assert.deepEqual(result.state.eventJournal, before.eventJournal);
+});
+
+test("missing, stale, or mismatched source presence fails closed without queue mutation or events", () => {
+  const scenarios = ["missing", "stale", "mismatch"] as const;
+  for (const scenario of scenarios) {
+    const { state, played } = queueingState();
+    const baseCard = resolvedCard({
+      cardId: played.cardId,
+      category: "character",
+    });
+    setupOnPlayDefinition(
+      state,
+      played,
+      reviewedOnPlayDrawDefinition(played.cardId, baseCard.support),
+      `def-${scenario}`,
+    );
+    if (scenario === "missing") {
+      const player = must(state.players[p1], "p1");
+      player.characters = [];
+    } else if (scenario === "stale") {
+      const player = must(state.players[p1], "p1");
+      const c0 = must(player.characters[0], "c0");
+      player.characters = [
+        { ...c0, instanceId: toInstanceId("different-instance") },
+      ];
+    } else {
+      const event = must(
+        state.eventJournal[state.eventJournal.length - 1],
+        "cardPlayed",
+      );
+      event.payload = {
+        ...(event.payload as object),
+        cardId: toCardId("OP99-999"),
+      };
+    }
+    const before = structuredClone(state);
+
+    const result = processEffectRuntime(state);
+
+    expectOnPlayQueueingFailure(result, "source-presence-failed");
+    assert.deepEqual(result.state.effectQueue, before.effectQueue);
+    assert.deepEqual(result.state.eventJournal, before.eventJournal);
+  }
+});
+
+test("unsupported effect metadata and shapes fail closed without partial mutation or events", () => {
+  const cases: Array<{
+    name: string;
+    expectedReason: OnPlayTriggerQueueingFailureReason;
+    definition: (d: EffectDefinition) => EffectDefinition;
+  }> = [
+    {
+      name: "optional",
+      expectedReason: "unsupported-on-play-definition",
+      definition: (d) => ({
+        ...d,
+        effects: [{ ...must(d.effects[0], "onPlay effect"), optional: true }],
+      }),
+    },
+    {
+      name: "cost",
+      expectedReason: "unsupported-on-play-definition",
+      definition: (d) => ({
+        ...d,
+        effects: [
+          {
+            ...must(d.effects[0], "onPlay effect"),
+            cost: { type: "restSelf" },
+          },
+        ],
+      }),
+    },
+    {
+      name: "condition",
+      expectedReason: "unsupported-on-play-definition",
+      definition: (d) => ({
+        ...d,
+        effects: [
+          {
+            ...must(d.effects[0], "onPlay effect"),
+            condition: { type: "yourTurn" },
+          },
+        ],
+      }),
+    },
+    {
+      name: "unsupported-shape",
+      expectedReason: "unsupported-on-play-definition",
+      definition: (d) => ({
+        ...d,
+        effects: [
+          {
+            ...must(d.effects[0], "onPlay effect"),
+            effect: {
+              type: "choice",
+              chooser: "self",
+              options: [],
+              min: 0,
+              max: 0,
+            },
+          },
+        ],
+      }),
+    },
+    {
+      name: "multiple-on-play",
+      expectedReason: "multiple-on-play-effects",
+      definition: (d) => {
+        const first = must(d.effects[0], "onPlay effect");
+        return {
+          ...d,
+          effects: [
+            first,
+            { ...first, id: "OP01-015:auto-on-play-2" as EffectId },
+          ],
+        };
+      },
+    },
+  ];
+
+  for (const testCase of cases) {
+    const { state, played } = queueingState();
+    const baseCard = resolvedCard({
+      cardId: played.cardId,
+      category: "character",
+    });
+    const baseDefinition = reviewedOnPlayDrawDefinition(
+      played.cardId,
+      baseCard.support,
+    );
+    setupOnPlayDefinition(
+      state,
+      played,
+      testCase.definition(baseDefinition),
+      `def-${testCase.name}`,
+    );
+    const before = structuredClone(state);
+
+    const result = processEffectRuntime(state);
+
+    expectOnPlayQueueingFailure(result, testCase.expectedReason);
+    assert.deepEqual(
+      result.state.effectQueue,
+      before.effectQueue,
+      testCase.name,
+    );
+    assert.deepEqual(
+      result.state.eventJournal,
+      before.eventJournal,
+      testCase.name,
+    );
+  }
+});
+
+test("unreviewed On Play definition metadata fails closed without queue mutation or events", () => {
+  const { state, played } = queueingState();
+  const baseCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    baseCard.support,
+  );
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...definition,
+      metadata: {
+        sourceTextHash: definition.metadata.sourceTextHash,
+        rulesVersion: definition.metadata.rulesVersion,
+        effectDefinitionsVersion: definition.metadata.effectDefinitionsVersion,
+        tested: true,
+      },
+    },
+    "def-unreviewed-on-play",
+  );
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "effect-definition-lookup",
+      details: {
+        reason: "unreviewed-definition-metadata",
+        supportStatus: "implemented-dsl",
+      },
+    },
+  ]);
+  assert.deepEqual(result.state.effectQueue, before.effectQueue);
+  assert.deepEqual(result.state.eventJournal, before.eventJournal);
+});
+
+test("event cardPlayed entries are ignored by On Play trigger queueing", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const eventInHand = must(p1State.hand[0], "event source");
+  state.eventJournal.push({
+    id: toEngineEventId(`event:${String(state.seq)}:1:cardPlayed`),
+    seq: state.eventJournal.length + 1,
+    type: "cardPlayed",
+    payload: {
+      playerId: p1,
+      instanceId: eventInHand.instanceId,
+      cardId: eventInHand.cardId,
+      category: "event",
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "turnFlow" },
+    createdAtStateSeq: state.seq,
+  });
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.state.effectQueue, before.effectQueue);
+  assert.deepEqual(result.state.eventJournal, before.eventJournal);
+});
+
+test("queued source snapshot preserves CardInstance owner/controller", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  const p2State = must(state.players[p2], "p2");
+  const source = must(p2State.hand[0], "p2 hand source");
+  const placed = withCardInZone({
+    state,
+    playerId: p2,
+    card: source,
+    zone: "characterArea",
+  });
+  const controlledByP2OwnedByP1: CardInstance = {
+    ...placed,
+    owner: p1,
+    controller: p2,
+  };
+  p2State.characters = [controlledByP2OwnedByP1];
+  appendCardPlayedEvent(state, controlledByP2OwnedByP1, "character");
+
+  const supportCard = resolvedCard({
+    cardId: controlledByP2OwnedByP1.cardId,
+    category: "character",
+  });
+  setupOnPlayDefinition(
+    state,
+    controlledByP2OwnedByP1,
+    reviewedOnPlayDrawDefinition(
+      controlledByP2OwnedByP1.cardId,
+      supportCard.support,
+    ),
+    "def-snapshot-owner-controller",
+  );
+
+  const result = processEffectRuntime(state);
+  const queued = must(result.state.effectQueue[0], "queued entry");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(queued.sourceSnapshot.ownerId, p1);
+  assert.equal(queued.sourceSnapshot.controllerId, p2);
 });

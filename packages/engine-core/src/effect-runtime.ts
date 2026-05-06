@@ -167,6 +167,17 @@ interface EffectExecutionErrorDetails {
   reason: DrawExecutionFailureReason;
 }
 
+export type OnPlayTriggerQueueingFailureReason =
+  | "invalid-card-played-event"
+  | "source-presence-failed"
+  | "missing-card-definition"
+  | "unsupported-on-play-definition"
+  | "multiple-on-play-effects";
+
+interface OnPlayTriggerQueueingErrorDetails {
+  reason: OnPlayTriggerQueueingFailureReason;
+}
+
 const drawExecutionError = (
   effectId: string,
   reason: DrawExecutionFailureReason,
@@ -174,6 +185,14 @@ const drawExecutionError = (
   type: "effectRuntimeError",
   effectId,
   details: { reason } satisfies EffectExecutionErrorDetails,
+});
+
+const onPlayTriggerQueueingError = (
+  reason: OnPlayTriggerQueueingFailureReason,
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId: "on-play-trigger-queueing",
+  details: { reason } satisfies OnPlayTriggerQueueingErrorDetails,
 });
 
 const resolvePlayerId = (
@@ -311,6 +330,254 @@ export const executeNoChoiceEffectPrimitive = (
   return executeDrawEffect(state, entry, effect);
 };
 
+const isSupportedNoChoiceOnPlayEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} => {
+  if (effect.trigger.type !== "onPlay") {
+    return false;
+  }
+  if (effect.category !== "auto") {
+    return false;
+  }
+  if (effect.optional || effect.oncePerTurn) {
+    return false;
+  }
+  if (
+    effect.cost !== undefined ||
+    effect.condition !== undefined ||
+    effect.conditionTiming !== undefined ||
+    effect.failurePolicy !== undefined
+  ) {
+    return false;
+  }
+  if (effect.sourcePresencePolicy === undefined) {
+    return false;
+  }
+  return effect.effect.type === "draw";
+};
+
+const findCardInstance = (
+  state: GameState,
+  playerId: PlayerId,
+  instanceId: string,
+): CardInstance | undefined => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return undefined;
+  }
+  const zoneCards = [
+    player.leader,
+    player.stage,
+    ...player.characters,
+    ...player.hand,
+    ...player.deck,
+    ...player.trash,
+    ...player.costArea,
+    ...player.donDeck,
+  ];
+  return zoneCards.find((card) => card?.instanceId === instanceId);
+};
+
+const toSnapshot = (
+  card: CardInstance,
+  resolved: ResolvedCard,
+): EffectQueueEntry["sourceSnapshot"] => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  ownerId: card.owner,
+  controllerId: card.controller,
+  zone: card.zone,
+  category: resolved.category,
+  colors: resolved.colors,
+  ...(resolved.cost !== undefined ? { cost: resolved.cost } : {}),
+  ...(resolved.power !== undefined ? { power: resolved.power } : {}),
+  ...(resolved.counter !== undefined ? { counter: resolved.counter } : {}),
+  ...(resolved.life !== undefined ? { life: resolved.life } : {}),
+  keywords: resolved.printedKeywords,
+});
+
+const queueOnPlayTriggers = (state: GameState): EngineResult | undefined => {
+  if (state.effectQueue.length > 0 || state.deferredTriggers.length > 0) {
+    return undefined;
+  }
+  const acceptedCardPlayed = state.eventJournal.filter(
+    (event) =>
+      event.type === "cardPlayed" && event.createdAtStateSeq === state.seq,
+  );
+  if (acceptedCardPlayed.length === 0) {
+    return undefined;
+  }
+
+  const appended: EffectQueueEntry[] = [];
+  const events: EngineEvent[] = [];
+  for (const event of acceptedCardPlayed) {
+    const payload = event.payload as {
+      playerId?: PlayerId;
+      instanceId?: string;
+      cardId?: string;
+      category?: string;
+    };
+    if (
+      payload.playerId === undefined ||
+      payload.instanceId === undefined ||
+      payload.cardId === undefined ||
+      payload.category === undefined
+    ) {
+      return toEngineResult(
+        state,
+        [],
+        [onPlayTriggerQueueingError("invalid-card-played-event")],
+      );
+    }
+    if (payload.category !== "character" && payload.category !== "stage") {
+      continue;
+    }
+
+    const source = findCardInstance(
+      state,
+      payload.playerId,
+      payload.instanceId,
+    );
+    if (
+      source === undefined ||
+      source.cardId !== payload.cardId ||
+      source.zone.playerId !== payload.playerId
+    ) {
+      return toEngineResult(
+        state,
+        [],
+        [onPlayTriggerQueueingError("source-presence-failed")],
+      );
+    }
+    const expectedZone =
+      payload.category === "character" ? "characterArea" : "stageArea";
+    if (source.zone.zone !== expectedZone) {
+      return toEngineResult(
+        state,
+        [],
+        [onPlayTriggerQueueingError("source-presence-failed")],
+      );
+    }
+    const resolved = state.cardManifest.cards[source.cardId];
+    if (resolved === undefined) {
+      return toEngineResult(
+        state,
+        [],
+        [onPlayTriggerQueueingError("missing-card-definition")],
+      );
+    }
+
+    const lookup = resolveImplementedDslEffectDefinition(
+      resolved,
+      state.cardManifest,
+    );
+    if (!lookup.ok) {
+      return toEngineResult(state, [], [lookup.error]);
+    }
+    const onPlayEffects = lookup.definition.effects.filter(
+      (effect) => effect.trigger.type === "onPlay",
+    );
+    if (onPlayEffects.length === 0) {
+      continue;
+    }
+    const matching = onPlayEffects.filter(isSupportedNoChoiceOnPlayEffect);
+    if (matching.length === 0) {
+      return toEngineResult(
+        state,
+        [],
+        [onPlayTriggerQueueingError("unsupported-on-play-definition")],
+      );
+    }
+    if (matching.length !== 1) {
+      return toEngineResult(
+        state,
+        [],
+        [onPlayTriggerQueueingError("multiple-on-play-effects")],
+      );
+    }
+    if (lookup.definition.effects.length !== 1) {
+      return toEngineResult(
+        state,
+        [],
+        [onPlayTriggerQueueingError("unsupported-on-play-definition")],
+      );
+    }
+
+    for (const effectBlock of matching) {
+      const orderingGroup =
+        source.zone.playerId === state.turn.turnPlayerId
+          ? "turnPlayer"
+          : "nonTurnPlayer";
+      const queueId =
+        `queue-entry:${String(event.id)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
+      const timingWindowId =
+        `timing-window:${String(event.id)}` as EffectQueueEntry["timingWindowId"];
+      const entry: EffectQueueEntry = {
+        id: queueId,
+        state: "pending",
+        timingWindowId,
+        generation: 0,
+        controllerId: source.zone.playerId,
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: source.zone.playerId,
+          zone: source.zone,
+        },
+        sourceSnapshot: toSnapshot(source, resolved),
+        triggerEventId: event.id,
+        effectBlockId: effectBlock.id,
+        orderingGroup,
+        createdAtEventSeq: event.seq,
+        queuedAtStateSeq: toStateSeq(state.seq + 1),
+        sourcePresencePolicy: effectBlock.sourcePresencePolicy,
+        causedBy: {
+          type: "ruleProcess",
+          name: "effectRuntime:onPlayTriggerQueueing",
+        },
+      };
+      appended.push(entry);
+    }
+  }
+
+  if (appended.length === 0) {
+    return undefined;
+  }
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    effectQueue: [...state.effectQueue, ...appended],
+  };
+  for (const entry of appended) {
+    const beforeEventCount = events.length;
+    appendEvent(
+      state,
+      events,
+      "effectQueued",
+      {
+        queueEntryId: entry.id,
+        timingWindowId: entry.timingWindowId,
+        generation: entry.generation,
+        effectBlockId: entry.effectBlockId,
+        triggerEventId: entry.triggerEventId,
+        sourcePresencePolicy: entry.sourcePresencePolicy,
+        orderingGroup: entry.orderingGroup,
+      },
+      { type: "public" },
+    );
+    const event = events[beforeEventCount];
+    if (event !== undefined) {
+      event.causedBy = entry.causedBy;
+    }
+  }
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  return toEngineResult(nextState, events);
+};
+
 const unsupportedEffectIdByKind: Record<PendingRuntimeWorkKind, string> = {
   effectQueue: "unsupported-effect-queue",
   deferredTriggers: "unsupported-deferred-triggers",
@@ -329,6 +596,10 @@ const unsupportedPendingRuntimeWorkError = (
 });
 
 export const processEffectRuntime = (state: GameState): EngineResult => {
+  const queuedFromOnPlay = queueOnPlayTriggers(state);
+  if (queuedFromOnPlay !== undefined) {
+    return queuedFromOnPlay;
+  }
   const work = detectPendingRuntimeWork(state);
   if (work === undefined) {
     return toEngineResult(state, []);
