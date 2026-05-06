@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add deterministic lifecycle event coverage and production emission for
   supported no-choice effect queue resolution so replay and debug traces can

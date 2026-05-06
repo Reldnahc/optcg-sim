@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-017.md",
-      "storyId": "ENG-017",
-      "storyPath": "stories/approved/ENG-017-effect-runtime-lifecycle-events.yaml",
-      "storySha256": "41e73164772f4612f746c9b9a4af5215c0b177ec64e6689d22756020bc4bb572"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
