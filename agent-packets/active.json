@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-021A.md",
+      "storyId": "ENG-021A",
+      "storyPath": "stories/approved/ENG-021A-centralize-supported-end-of-battle-cleanup.yaml",
+      "storySha256": "dc114a7f5ba064093e7d3c450c13cc4315bb543ffb168ac35882c2fea9c40efb"
+    }
+  ],
   "version": 1
 }
