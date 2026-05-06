@@ -479,7 +479,49 @@ const getLegalCharacterCounterActions = (
     return [];
   }
   const target = reifyCardRef(state, battle.currentTarget);
-  if (target === null || target.playerId !== defenderId) {
+  if (
+    detectPendingRuntimeWork(state) !== undefined ||
+    state.replacementState.length > 0 ||
+    state.continuousEffects.length > 0 ||
+    hasUnsupportedBattleEffectMetadata(state) ||
+    !isSupportedBattleResolutionEnvelope(battle) ||
+    target === null ||
+    target.playerId !== defenderId ||
+    (!target.isLeader && target.card.state !== "rested")
+  ) {
+    return [];
+  }
+  const attacker = reifyCardRef(state, battle.attacker);
+  if (attacker === null) {
+    return [];
+  }
+  if (battle.blocker !== undefined) {
+    const blocker = reifyCardRef(state, battle.blocker);
+    if (
+      blocker === null ||
+      blocker.isLeader ||
+      !sameCardRef(battle.blocker, battle.currentTarget)
+    ) {
+      return [];
+    }
+  }
+  let view: ReturnType<typeof computeView>;
+  try {
+    view = computeView(state);
+  } catch {
+    return [];
+  }
+  if (Object.keys(view.restrictions).length > 0) {
+    return [];
+  }
+  const attackerView = view.cards[attacker.card.instanceId];
+  const targetView = view.cards[target.card.instanceId];
+  if (
+    attackerView?.currentPower === undefined ||
+    targetView?.currentPower === undefined ||
+    attackerView.keywords.includes("doubleAttack") ||
+    targetView.protectedFrom.length > 0
+  ) {
     return [];
   }
   return defender.hand.flatMap((card) => {

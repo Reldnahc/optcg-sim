@@ -1899,6 +1899,61 @@ test("counter-step legal actions suppress pass for unsupported continuation", ()
   assert.equal(context.openedState.battle?.step, "counter");
 });
 
+test("counter-step legal actions suppress Character Counter during replacement processing", () => {
+  const context = setupOpenedCounterStepPassDecision();
+  context.openedState.replacementState.push({
+    processId: "legal-counter-replacement-process",
+    type: "damage",
+    usedReplacementIds: [],
+    payload: { hidden: "replacement" },
+  });
+  const before = JSON.stringify(context.openedState);
+
+  assert.deepEqual(getLegalActions(context.openedState, p2), [
+    { type: "concede", playerId: p2 },
+  ]);
+  assert.equal(JSON.stringify(context.openedState), before);
+  assert.equal(context.openedState.pendingDecision?.id, context.decision.id);
+  assert.equal(context.openedState.battle?.step, "counter");
+});
+
+test("counter-step legal actions suppress Character Counter for active Character current target", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  const counterCard = must(p2State.hand[0], "counter card");
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(attacker, p1),
+    target: cardRef(target, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  const decision = must(opened.state.pendingDecision, "pending decision");
+  const openedTarget = must(
+    must(opened.state.players[p2], "opened p2").characters.find(
+      (character) => character.instanceId === target.instanceId,
+    ),
+    "opened target",
+  );
+  openedTarget.state = "active";
+  const before = JSON.stringify(opened.state);
+
+  assert.deepEqual(getLegalActions(opened.state, p2), [
+    { type: "concede", playerId: p2 },
+  ]);
+  assert.equal(JSON.stringify(opened.state), before);
+  assert.equal(opened.state.pendingDecision?.id, decision.id);
+  assert.equal(opened.state.battle?.step, "counter");
+});
+
 test("counter-step pass emits deterministic decisionResolved sequence and resumes damage", () => {
   const { opened, p2State, decision } = setupOpenedCounterStepPassDecision();
   const beforeLife = p2State.life.length;
