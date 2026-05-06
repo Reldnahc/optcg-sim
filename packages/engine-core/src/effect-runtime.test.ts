@@ -22,6 +22,7 @@ import type {
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import {
   createActiveState,
+  must,
   p1,
   p2,
   resolvedCard,
@@ -29,6 +30,7 @@ import {
 } from "./action-test-fixtures.js";
 import {
   detectPendingRuntimeWork,
+  executeNoChoiceEffectPrimitive,
   type EffectDefinitionLookupFailureReason,
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
@@ -82,6 +84,29 @@ const deferredTrigger = (): DeferredTriggerBucket => ({
   generation: 2,
   triggerIds: ["hidden-life-card", "hidden-instance-1"],
   releasePolicy: "afterCurrentProcess",
+});
+
+const queueDrawForP1 = (): EffectQueueEntry => ({
+  ...queuedEffect(toCardId("OP01-015")),
+  source: {
+    instanceId: toInstanceId("source-instance"),
+    cardId: toCardId("OP01-015"),
+    playerId: p1,
+    zone: { zone: "leaderArea", playerId: p1, slot: "leader", index: 0 },
+  },
+  sourceSnapshot: {
+    instanceId: toInstanceId("source-instance"),
+    cardId: toCardId("OP01-015"),
+    ownerId: p1,
+    controllerId: p1,
+    zone: { zone: "leaderArea", playerId: p1, slot: "leader", index: 0 },
+    category: "leader",
+    colors: ["red"],
+    cost: 1,
+    keywords: [],
+  },
+  controllerId: p1,
+  effectBlockId: toEffectId("OP01-015:auto-on-play-1"),
 });
 
 const withPendingDecision = (playerId: PlayerId = p2): PendingDecision => ({
@@ -216,6 +241,170 @@ test("effect queue failure does not mutate state or replace an existing pending 
   assert.equal(result.state.seq, before.seq);
   assert.deepEqual(result.state.eventJournal, before.eventJournal);
   assert.deepEqual(result.events, []);
+  assert.deepEqual(result.state, before);
+});
+
+test("direct draw primitive executes draw 1 from deck top into hand", () => {
+  const state = createActiveState();
+  const topDeck = state.players[p1]?.deck[0];
+  assert.ok(topDeck !== undefined);
+  const beforeDeck = state.players[p1]?.deck.length ?? 0;
+  const beforeHand = state.players[p1]?.hand.length ?? 0;
+
+  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
+    type: "draw",
+    count: 1,
+    player: "self",
+  });
+  const resultP1 = must(result.state.players[p1], "result p1");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(resultP1.deck.length, beforeDeck - 1);
+  assert.equal(resultP1.hand.length, beforeHand + 1);
+  assert.equal(
+    must(resultP1.hand[resultP1.hand.length - 1], "last p1 hand card")
+      .instanceId,
+    topDeck.instanceId,
+  );
+  assert.equal(result.events.length, 3);
+  const firstEvent = must(result.events[0], "first draw event");
+  assert.equal(firstEvent.type, "cardDrawn");
+  assert.equal(firstEvent.visibility.type, "public");
+});
+
+test("direct draw primitive preserves deck order when drawing multiple cards", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "player p1");
+  const handZero = must(p1State.hand[0], "p1 hand[0]");
+  const handOne = must(p1State.hand[1], "p1 hand[1]");
+  const first = {
+    ...handZero,
+    zone: {
+      zone: "deck" as const,
+      playerId: p1,
+      slot: "deck" as const,
+      index: 0,
+    },
+  };
+  const secondDeck = {
+    ...handOne,
+    zone: {
+      zone: "deck" as const,
+      playerId: p1,
+      slot: "deck" as const,
+      index: 1,
+    },
+  };
+  state.players[p1] = {
+    ...p1State,
+    deck: [first, secondDeck],
+    hand: p1State.hand.slice(2),
+  };
+  const top = must(state.players[p1]?.deck[0], "top deck");
+  const second = must(state.players[p1]?.deck[1], "second deck");
+
+  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
+    type: "draw",
+    count: 2,
+    player: "self",
+  });
+
+  const hand = result.state.players[p1]?.hand ?? [];
+  const lastTwo = hand.slice(-2);
+  assert.equal(lastTwo[0]?.instanceId, top.instanceId);
+  assert.equal(lastTwo[1]?.instanceId, second.instanceId);
+});
+
+test("direct draw visibility keeps identity private in public events and present in private events", () => {
+  const state = createActiveState();
+
+  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
+    type: "draw",
+    count: 1,
+    player: "self",
+  });
+  const publicMoved = result.events.find(
+    (event) => event.type === "cardMoved" && event.visibility.type === "public",
+  );
+  const privateMoved = result.events.find(
+    (event) =>
+      event.type === "cardMoved" && event.visibility.type === "private",
+  );
+  assert.ok(publicMoved !== undefined);
+  assert.ok(privateMoved !== undefined);
+  const publicPayload = JSON.stringify(publicMoved.payload);
+  const privatePayload = JSON.stringify(privateMoved.payload);
+
+  assert.ok(
+    !publicPayload.includes("instanceId") && !publicPayload.includes("cardId"),
+  );
+  assert.ok(privatePayload.includes("instanceId"));
+  assert.ok(privatePayload.includes("cardId"));
+});
+
+test("direct draw count zero is a no-op", () => {
+  const state = createActiveState();
+  const before = structuredClone(state);
+
+  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
+    type: "draw",
+    count: 0,
+    player: "self",
+  });
+
+  assert.deepEqual(result.state, before);
+  assert.deepEqual(result.events, []);
+});
+
+test("direct draw from empty deck is a no-op without deck-out ownership", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "player p1");
+  state.players[p1] = { ...p1State, deck: [] };
+
+  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
+    type: "draw",
+    count: 1,
+    player: "self",
+  });
+  const resultP1 = must(result.state.players[p1], "result p1");
+  const stateP1 = must(state.players[p1], "state p1");
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.events, []);
+  assert.equal(resultP1.hand.length, stateP1.hand.length);
+});
+
+test("direct unsupported effect shapes fail closed without mutation or events", () => {
+  const state = createActiveState();
+  const before = structuredClone(state);
+
+  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
+    type: "drawUpTo",
+    count: 1,
+    player: "self",
+  } as never);
+
+  assert.deepEqual(result.events, []);
+  assert.ok(result.errors !== undefined);
+  assert.equal(
+    must(result.errors[0], "runtime error").type,
+    "effectRuntimeError",
+  );
+  assert.deepEqual(result.state, before);
+});
+
+test("direct invalid draw count and unsupported player ref fail closed without mutation", () => {
+  const state = createActiveState();
+  const before = structuredClone(state);
+
+  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
+    type: "draw",
+    count: -1,
+    player: "mystery" as never,
+  });
+
+  assert.deepEqual(result.events, []);
+  assert.ok(result.errors !== undefined);
   assert.deepEqual(result.state, before);
 });
 

@@ -1,14 +1,21 @@
 import type {
   CardSupportStatus,
+  CardInstance,
+  Effect,
   EffectDefinition,
+  EffectQueueEntry,
   EngineError,
+  EngineEvent,
   EngineResult,
   GameState,
   MatchCardManifest,
+  PlayerId,
+  PlayerRef,
   ResolvedCard,
 } from "@optcg/types";
 
-import { toEngineResult } from "./action-results.js";
+import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import { getOpponentId, reindexZoneCards } from "./action-state.js";
 
 export type PendingRuntimeWorkKind = "effectQueue" | "deferredTriggers";
 
@@ -149,6 +156,159 @@ export const resolveImplementedDslEffectDefinition = (
   }
 
   return { ok: true, definition };
+};
+
+export type DrawExecutionFailureReason =
+  | "unsupported-effect-shape"
+  | "unsupported-player-ref"
+  | "invalid-draw-count";
+
+interface EffectExecutionErrorDetails {
+  reason: DrawExecutionFailureReason;
+}
+
+const drawExecutionError = (
+  effectId: string,
+  reason: DrawExecutionFailureReason,
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId,
+  details: { reason } satisfies EffectExecutionErrorDetails,
+});
+
+const resolvePlayerId = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  ref: PlayerRef,
+): PlayerId | undefined => {
+  switch (ref) {
+    case "self":
+    case "controller":
+      return entry.controllerId;
+    case "owner":
+      return entry.source.playerId;
+    case "turnPlayer":
+      return state.turn.turnPlayerId;
+    case "opponent":
+      return getOpponentId(state, entry.controllerId) ?? undefined;
+    case "nonTurnPlayer":
+      return getOpponentId(state, state.turn.turnPlayerId) ?? undefined;
+    default:
+      return undefined;
+  }
+};
+
+const executeDrawEffect = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: Extract<Effect, { type: "draw" }>,
+): EngineResult => {
+  if (!Number.isInteger(effect.count) || effect.count < 0) {
+    return toEngineResult(
+      state,
+      [],
+      [drawExecutionError(entry.effectBlockId, "invalid-draw-count")],
+    );
+  }
+
+  const playerId = resolvePlayerId(state, entry, effect.player);
+  if (playerId === undefined || state.players[playerId] === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [drawExecutionError(entry.effectBlockId, "unsupported-player-ref")],
+    );
+  }
+
+  if (effect.count === 0) {
+    return toEngineResult(state, []);
+  }
+
+  const player = state.players[playerId];
+  const events: EngineEvent[] = [];
+  let nextDeck = player.deck;
+  let nextHand = player.hand;
+  const maxDraw = Math.min(effect.count, nextDeck.length);
+  for (let index = 0; index < maxDraw; index += 1) {
+    const drawn = nextDeck[0];
+    if (drawn === undefined) {
+      break;
+    }
+    const remaining = nextDeck.slice(1).map((card, deckIndex) => ({
+      ...card,
+      zone: {
+        zone: "deck" as const,
+        playerId,
+        slot: "deck" as const,
+        index: deckIndex,
+      },
+    }));
+    const moved: CardInstance = {
+      ...drawn,
+      zone: {
+        zone: "hand" as const,
+        playerId,
+        slot: "hand" as const,
+        index: nextHand.length,
+      },
+    };
+    nextDeck = remaining;
+    nextHand = [...nextHand, moved];
+
+    appendEvent(state, events, "cardDrawn", { playerId });
+    appendEvent(
+      state,
+      events,
+      "cardMoved",
+      { from: "deck", to: "hand", playerId, reason: "draw" },
+      { type: "public" },
+    );
+    appendEvent(
+      state,
+      events,
+      "cardMoved",
+      {
+        from: { zone: "deck", playerId, slot: "deck", index: 0 },
+        to: moved.zone,
+        playerId,
+        reason: "draw",
+        instanceId: moved.instanceId,
+        cardId: moved.cardId,
+      },
+      { type: "private", playerId },
+    );
+  }
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    players: {
+      ...state.players,
+      [playerId]: {
+        ...player,
+        deck: reindexZoneCards(nextDeck, "deck", playerId, "deck"),
+        hand: reindexZoneCards(nextHand, "hand", playerId, "hand"),
+      },
+    },
+    eventJournal: [...state.eventJournal, ...events],
+  };
+
+  return toEngineResult(nextState, events);
+};
+
+export const executeNoChoiceEffectPrimitive = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: Effect,
+): EngineResult => {
+  if (effect.type !== "draw") {
+    return toEngineResult(
+      state,
+      [],
+      [drawExecutionError(entry.effectBlockId, "unsupported-effect-shape")],
+    );
+  }
+  return executeDrawEffect(state, entry, effect);
 };
 
 const unsupportedEffectIdByKind: Record<PendingRuntimeWorkKind, string> = {
