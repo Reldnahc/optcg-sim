@@ -1,0 +1,104 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-019
+epic_id: M1-001
+title: Build Counter Step rules slice
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Deliver the first supported Counter Step vertical after Block Step and before
+  Damage Step: defender pass timing, no-counter auto-pass, Character Counter
+  from hand, and Counter Event fail-closed handling.
+story_boundary: >
+  This parent story is not directly implementable. It defines the Counter Step
+  delivery group and should be replaced by child stories ENG-019A through
+  ENG-019C implemented one active substory at a time on a parent integration
+  branch.
+child_stories:
+  - id: ENG-019A
+    title: Open Counter Step pass window
+    concern: defender-owned Counter Step pass decision, no-counter auto-pass, and post-pass battle continuation
+    depends_on: [ENG-014D]
+  - id: ENG-019B
+    title: Apply Character Counter from hand
+    concern: legal Character Counter actions, hidden-hand safety, counter reveal/trash, temporary battle power, and repeated counter actions
+    depends_on: [ENG-019A]
+  - id: ENG-019C
+    title: Keep Counter Events fail closed
+    concern: deterministic unsupported Counter Event handling without resolving event effects
+    depends_on: [ENG-019B]
+allowed_touch_points:
+  - packages/types/src/runtime.ts
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/actions.test.ts
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - packages/engine-core/src/compute-view.ts
+  - packages/engine-core/src/compute-view.test.ts
+spec_refs:
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s019 (Block Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s022 (End of Battle)
+  - 03-game-state-events-decisions.s003 (Base state vs. computed view)
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s009 (Pending decisions)
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s016 (Action shape)
+  - 03-game-state-events-decisions.s017 (Canonical decision routing)
+  - 03-game-state-events-decisions.s018 (Canonical event visibility)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 06-visibility-security.s005 (Temporary reveal records)
+  - 06-visibility-security.s007 (Legal-action visibility)
+  - 09-card-data-and-support-policy.s010 (Card implementation record)
+  - 09-card-data-and-support-policy.s011 (Support policy by mode)
+  - 16-typescript-interface-draft.s011 (Poneglyph raw and normalized interfaces)
+  - 22-v6-implementation-tightening.s009 (Phase and battle timing)
+scope:
+  - define child stories for defender Counter Step pass timing, no-counter auto-pass, Character Counter from hand, and Counter Event fail-closed handling
+  - keep the delivery group on a parent integration branch so the Counter Step rules slice lands as one reviewed vertical
+  - preserve fail-closed behavior for defender-side opponent-attack effects, Life Triggers, On K.O., replacements, once-per-turn logic, protection, unsupported event effects, and server/client/UI behavior until their own stories
+non_scope:
+  - direct implementation from this parent story
+  - approving or packetizing this parent story as an active implementation story
+  - Life Triggers
+  - When Attacking or On Opponent Attack effects
+  - On K.O., End of Battle, replacement, protection, or once-per-turn behavior
+  - resolving Counter Event effects
+  - CLI command dispatch or terminal smoke coverage
+  - server, browser client, UI, database, Redis, WebSocket, replay schema, or hidden-info filtering redesign
+dependencies:
+  - ENG-014D
+  - ENG-018
+acceptance_criteria:
+  - child stories exist for Counter Step pass/auto-pass, Character Counter from hand, and Counter Event fail-closed handling
+  - this parent story remains non-implementable and is not packetized directly
+  - all child stories can be reviewed as a set before any child approval
+  - each child story also receives exact per-story story-review before approval or implementation
+  - only child stories ENG-019A through ENG-019C are presented as approval-ready implementation candidates for this rules parent
+required_tests:
+  - story-review agent must verify this parent is replaced by concern-scoped child stories before implementation begins
+repo_rules:
+  - do not approve or packetize this parent story
+  - approve only concern-scoped child stories for implementation
+  - a set-level story-review does not satisfy exact per-story story-review for a child
+  - run exact per-story story-review for each child story before moving it to approved or implementing it
+  - implement one active child story at a time
+  - use the parent integration branch workflow for the ENG-019 group
+  - child PRs target the ENG-019 parent integration branch, not main
+  - keep exactly one active packet while each child story is being implemented or reviewed
+  - do not run packets:complete for child stories until the parent branch has merged to main
+  - run full parent PR integration review and human review before merging ENG-019 to main
+  - after parent merge, run packets:complete-many for the ENG-019 child story set
+  - keep engine-core deterministic and pure
+ambiguity_policy: fail_and_escalate

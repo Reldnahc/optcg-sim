@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-019A.md",
+      "storyId": "ENG-019A",
+      "storyPath": "stories/approved/ENG-019A-counter-step-pass-window.yaml",
+      "storySha256": "5fb5145ece79affc4b5d9eb51b90d0855e907b2898d20b36a19556445c1376a4"
+    }
+  ],
   "version": 1
 }
