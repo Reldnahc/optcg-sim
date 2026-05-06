@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: visibility
 priority: high
-status: approved
+status: done
 summary: >
   Add the real engine-core `filterStateForPlayer` implementation that converts
   an authoritative `GameState` into a hidden-information-safe `PlayerView` for
