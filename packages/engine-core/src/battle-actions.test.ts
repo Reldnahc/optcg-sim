@@ -8,6 +8,7 @@ import {
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
 } from "./battle-actions.js";
+import { applyAction } from "./actions.js";
 import {
   must,
   p1,
@@ -1528,7 +1529,7 @@ test("applyAction declareAttack fails closed when defender has counter metadata 
   assert.deepEqual(result.events, []);
 });
 
-test("applyDeclareAttack fails closed without mutation when defender has would-be legal blocker during block step window", () => {
+test("applyDeclareAttack enters block step and opens defender decline decision when defender has would-be legal blocker", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -1542,8 +1543,6 @@ test("applyDeclareAttack fails closed without mutation when defender has would-b
     }),
     printedKeywords: ["blocker"],
   };
-  const before = JSON.stringify(state);
-
   const result = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
@@ -1558,13 +1557,223 @@ test("applyDeclareAttack fails closed without mutation when defender has would-b
     },
   });
 
-  assert.equal(result.errors?.[0]?.type, "illegalAction");
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
-  assert.deepEqual(result.events, []);
+  assert.equal(result.errors, undefined);
+  const battle = must(result.state.battle, "block step battle");
+  assert.equal(battle.step, "block");
+  assert.equal(battle.blocker, undefined);
+  assert.deepEqual(result.state.pendingDecision, {
+    id: must(result.state.pendingDecision, "pending decision").id,
+    type: "selectCards",
+    playerId: p2,
+    prompt: "Choose blocker or decline.",
+    causedBy: must(result.state.pendingDecision, "pending decision").causedBy,
+    visibility: { type: "public" },
+    request: {
+      timing: "onActivation",
+      chooser: "nonTurnPlayer",
+      player: "nonTurnPlayer",
+      zone: "characterArea",
+      filter: { categories: ["character"] },
+      min: 0,
+      max: 0,
+      allowFewerIfUnavailable: true,
+      visibility: "public",
+    },
+    candidates: [],
+    defaultResponse: { type: "cards", cards: [] },
+  });
+  assert.equal(
+    must(result.state.pendingDecision, "pending decision").causedBy.type,
+    "playerAction",
+  );
+  const decisionCreated = result.events.find(
+    (event) => event.type === "decisionCreated",
+  );
+  const createdEvent = must(decisionCreated, "decisionCreated event");
+  assert.deepEqual(createdEvent.visibility, { type: "public" });
+  assert.deepEqual(createdEvent.payload, {
+    decisionId: must(result.state.pendingDecision, "pending decision").id,
+    decisionType: "selectCards",
+    playerId: p2,
+  });
+  assert.deepEqual(
+    result.events.map((event) => event.seq),
+    [
+      state.eventJournal.length + 1,
+      state.eventJournal.length + 2,
+      state.eventJournal.length + 3,
+    ],
+  );
+  const replay = applyDeclareAttack(structuredClone(state), {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assert.equal(result.stateHash, replay.stateHash);
+  assert.deepEqual(result.events, replay.events);
 });
 
-test("ineligible printed blocker does not reject declareAttack solely due to blocker keyword", () => {
+test("empty block-step respondToDecision declines and resumes existing no-block battle resolution path", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const defenderBlocker = must(p2State.characters[0], "defender blocker");
+  defenderBlocker.state = "active";
+  state.cardManifest.cards[defenderBlocker.cardId] = {
+    ...resolvedCard({
+      cardId: defenderBlocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  const pending = must(opened.state.pendingDecision, "pending decision");
+
+  const result = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: pending.id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.battle, undefined);
+  assert.equal(result.state.actionSeq, opened.state.actionSeq + 1);
+  assert.equal(
+    result.events.some((event) => event.type === "decisionResolved"),
+    true,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "damageDealt"),
+    true,
+  );
+  const decisionResolved = result.events.find(
+    (event) => event.type === "decisionResolved",
+  );
+  const resolvedEvent = must(decisionResolved, "decisionResolved event");
+  assert.deepEqual(resolvedEvent.visibility, { type: "public" });
+  assert.deepEqual(resolvedEvent.payload, {
+    decisionId: pending.id,
+    playerId: p2,
+  });
+  assert.equal(result.events[0]?.type, "decisionResolved");
+  const replay = applyAction(structuredClone(opened.state), {
+    type: "respondToDecision",
+    decisionId: pending.id,
+    response: { type: "cards", cards: [] },
+  });
+  assert.equal(result.stateHash, replay.stateHash);
+  assert.deepEqual(result.events, replay.events);
+});
+
+test("rested, stale, non-blocker, and attacker-controlled cards do not open block-step decision", () => {
+  const runNoDecision = (
+    mutate: (state: ReturnType<typeof setupAttackState>) => void,
+  ) => {
+    const state = setupAttackState();
+    const p1State = must(state.players[p1], "p1");
+    const p2State = must(state.players[p2], "p2");
+    mutate(state);
+    const result = applyDeclareAttack(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        playerId: p1,
+      },
+      target: {
+        instanceId: p2State.leader.instanceId,
+        cardId: p2State.leader.cardId,
+        playerId: p2,
+      },
+    });
+    assert.equal(result.errors, undefined);
+    assert.equal(result.state.pendingDecision, undefined);
+    assert.equal(result.state.battle, undefined);
+    assert.equal(
+      result.events.some((event) => event.type === "decisionCreated"),
+      false,
+    );
+  };
+
+  runNoDecision((state) => {
+    const p2State = must(state.players[p2], "p2");
+    const blocker = must(p2State.characters[0], "rested blocker");
+    blocker.state = "rested";
+    state.cardManifest.cards[blocker.cardId] = {
+      ...resolvedCard({
+        cardId: blocker.cardId,
+        category: "character",
+        power: 3000,
+      }),
+      printedKeywords: ["blocker"],
+    };
+  });
+  runNoDecision((state) => {
+    const p2State = must(state.players[p2], "p2");
+    const blocker = must(p2State.characters[0], "stale blocker");
+    blocker.state = "active";
+    state.cardManifest.cards[blocker.cardId] = {
+      ...resolvedCard({
+        cardId: blocker.cardId,
+        category: "character",
+        power: 3000,
+      }),
+      printedKeywords: ["blocker"],
+    };
+    p2State.characters = [];
+  });
+  runNoDecision((state) => {
+    const p2State = must(state.players[p2], "p2");
+    const nonBlocker = must(p2State.characters[0], "non blocker");
+    nonBlocker.state = "active";
+    state.cardManifest.cards[nonBlocker.cardId] = resolvedCard({
+      cardId: nonBlocker.cardId,
+      category: "character",
+      power: 3000,
+      printedKeywords: [],
+    });
+  });
+  runNoDecision((state) => {
+    const p1State = must(state.players[p1], "p1");
+    const attackerControlled = must(
+      p1State.characters[0],
+      "attacker controlled blocker",
+    );
+    attackerControlled.state = "active";
+    state.cardManifest.cards[attackerControlled.cardId] = {
+      ...resolvedCard({
+        cardId: attackerControlled.cardId,
+        category: "character",
+        power: 3000,
+      }),
+      printedKeywords: ["blocker"],
+    };
+  });
+});
+
+test("ineligible printed blocker does not open block-step decision", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -1597,11 +1806,192 @@ test("ineligible printed blocker does not reject declareAttack solely due to blo
   });
 
   assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
   assert.equal(result.state.battle, undefined);
   assert.equal(
     result.events.some((event) => event.type === "damageDealt"),
     true,
   );
+});
+
+test("block-step decision rejects non-empty and stale responses without mutation", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const defenderBlocker = must(p2State.characters[0], "defender blocker");
+  defenderBlocker.state = "active";
+  state.cardManifest.cards[defenderBlocker.cardId] = {
+    ...resolvedCard({
+      cardId: defenderBlocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  }).state;
+  const decision = must(opened.pendingDecision, "pending decision");
+
+  const before = JSON.stringify(opened);
+  const nonEmpty = applyAction(opened, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "cards",
+      cards: [
+        {
+          instanceId: p1State.leader.instanceId,
+          cardId: p1State.leader.cardId,
+          playerId: p1,
+        },
+      ],
+    },
+  });
+  assert.equal(nonEmpty.errors?.[0]?.type, "illegalAction");
+  assert.equal(JSON.stringify(opened), before);
+
+  const stale = applyAction(opened, {
+    type: "respondToDecision",
+    decisionId: "decision:stale" as never,
+    response: { type: "cards", cards: [] },
+  });
+  assert.equal(stale.errors?.[0]?.type, "illegalAction");
+  assert.equal(JSON.stringify(opened), before);
+});
+
+test("legal blocker with unsupported continuation rejects declareAttack without mutation or events", () => {
+  const run = (
+    mutate: (state: ReturnType<typeof setupAttackState>) => void,
+  ) => {
+    const state = setupAttackState();
+    const p1State = must(state.players[p1], "p1");
+    const p2State = must(state.players[p2], "p2");
+    const defenderBlocker = must(p2State.characters[0], "defender blocker");
+    defenderBlocker.state = "active";
+    state.cardManifest.cards[defenderBlocker.cardId] = {
+      ...resolvedCard({
+        cardId: defenderBlocker.cardId,
+        category: "character",
+        power: 3000,
+      }),
+      printedKeywords: ["blocker"],
+    };
+    mutate(state);
+    const before = JSON.stringify(state);
+    const result = applyDeclareAttack(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        playerId: p1,
+      },
+      target: {
+        instanceId: p2State.leader.instanceId,
+        cardId: p2State.leader.cardId,
+        playerId: p2,
+      },
+    });
+    assert.equal(result.errors?.[0]?.type, "illegalAction");
+    assert.equal(JSON.stringify(state), before);
+    assert.equal(JSON.stringify(result.state), before);
+    assert.deepEqual(result.events, []);
+  };
+
+  run((state) => {
+    const p2State = must(state.players[p2], "p2");
+    const counterCard = must(p2State.hand[0], "counter card");
+    state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+      cardId: counterCard.cardId,
+      category: "character",
+      power: 3000,
+      counter: 1000,
+    });
+  });
+  run((state) => {
+    state.effectQueue = [{ id: "queued-effect" } as never];
+  });
+  run((state) => {
+    state.deferredTriggers = [{ timingWindowId: "window-1" } as never];
+  });
+  run((state) => {
+    state.replacementState.push({
+      processId: "replacement-process-1",
+      type: "damage",
+      usedReplacementIds: [],
+      payload: { hidden: "contents" },
+    });
+  });
+  run((state) => {
+    state.cardManifest.cards[toCardId("leader-red")] = {
+      ...resolvedCard({
+        cardId: toCardId("leader-red"),
+        category: "leader",
+        power: 5000,
+      }),
+      printedKeywords: ["doubleAttack"],
+    };
+  });
+  run((state) => {
+    state.cardManifest.cards[toCardId("leader-red")] = {
+      ...resolvedCard({
+        cardId: toCardId("leader-red"),
+        category: "leader",
+        power: 5000,
+      }),
+      printedKeywords: ["banish", "doubleAttack"],
+    };
+  });
+  run((state) => {
+    state.cardManifest.cards[toCardId("leader-red")] = resolvedCard({
+      cardId: toCardId("leader-red"),
+      category: "leader",
+      power: 5000,
+      printedKeywords: [],
+    });
+    state.cardManifest.cards[toCardId("leader-blue")] = {
+      ...resolvedCard({
+        cardId: toCardId("leader-blue"),
+        category: "leader",
+        power: 5000,
+      }),
+      support: {
+        cardId: toCardId("leader-blue"),
+        status: "unsupported",
+        tested: false,
+        rulesVersion: "r1",
+        cardDataVersion: "fixture",
+        sourceTextHash: "source-hash",
+        behaviorHash: "behavior-hash",
+      },
+    };
+  });
+  run((state) => {
+    const p2State = must(state.players[p2], "p2");
+    const topLife = must(p2State.life[0], "top life");
+    p2State.life[0] = {
+      ...topLife,
+      card: { ...topLife.card, cardId: toCardId("trigger-life-block-step") },
+    };
+    state.cardManifest.cards[toCardId("trigger-life-block-step")] = {
+      ...resolvedCard({
+        cardId: toCardId("trigger-life-block-step"),
+        category: "character",
+        power: 1000,
+      }),
+      triggerText: "TRIGGER: draw 1",
+    };
+  });
 });
 
 test("existing battle suppresses declareAttack legal actions and rejects applyAction", () => {

@@ -31,6 +31,7 @@ import {
   setupFullCharacterPlayState,
   setupMainPlayState,
 } from "./play-card-test-fixtures.js";
+import { setupAttackState } from "./battle-actions-test-fixtures.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -427,4 +428,47 @@ test("pending runtime work still allows concession and pending-decision response
   const conceded = applyAction(pending, { type: "concede", playerId: p1 });
   assert.equal(conceded.errors, undefined);
   assert.deepEqual(conceded.state.status, { type: "completed", winner: p2 });
+});
+
+test("getLegalActions exposes only defender empty decline response during block step decision", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const defenderBlocker = must(p2State.characters[0], "defender blocker");
+  defenderBlocker.state = "active";
+  state.cardManifest.cards[defenderBlocker.cardId] = {
+    ...resolvedCard({
+      cardId: defenderBlocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  const pending = must(opened.state.pendingDecision, "pending decision");
+
+  assert.deepEqual(getLegalActions(opened.state, p2), [
+    { type: "concede", playerId: p2 },
+    {
+      type: "respondToDecision",
+      decisionId: pending.id,
+      response: { type: "cards", cards: [] },
+    },
+  ]);
+  assert.deepEqual(getLegalActions(opened.state, p1), [
+    { type: "concede", playerId: p1 },
+  ]);
 });
