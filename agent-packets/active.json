@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-019B.md",
-      "storyId": "ENG-019B",
-      "storyPath": "stories/approved/ENG-019B-character-counter-from-hand.yaml",
-      "storySha256": "1851280463115e1cbdf22f7808e061f2bf2b8deb145302994bbb0ea4aaae7ec2"
+      "packetPath": "agent-packets/ENG-019C.md",
+      "storyId": "ENG-019C",
+      "storyPath": "stories/approved/ENG-019C-counter-event-fail-closed.yaml",
+      "storySha256": "0a398fa66ded0e8c907a57a2bd65b05fc59f204270daae82a9f709b62395dc0c"
     }
   ],
   "version": 1
