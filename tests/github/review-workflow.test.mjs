@@ -62,10 +62,57 @@ function extractCiWorkflowJobNames(workflow) {
     throw new Error("Unable to read CI workflow jobs");
   }
 
-  return Array.from(jobsMatch.groups.jobs.matchAll(/^\s{2}(?<job>[\w-]+):$/gm))
-    .map((match) => match.groups?.job)
-    .filter((job) => job !== undefined);
+  const lines = jobsMatch.groups.jobs.split(/\r?\n/);
+  const jobNames = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!/^ {2}[\w-]+:\s*$/.test(lines[index] ?? "")) {
+      continue;
+    }
+
+    const bodyLines = [];
+    index += 1;
+
+    while (
+      index < lines.length &&
+      !/^ {2}[\w-]+:\s*$/.test(lines[index] ?? "")
+    ) {
+      bodyLines.push(lines[index] ?? "");
+      index += 1;
+    }
+
+    index -= 1;
+
+    const nameLine = bodyLines.find((line) => /^ {4}name:\s*/.test(line));
+    const name = nameLine?.match(/^ {4}name:\s*(?<name>.+)$/)?.groups?.name;
+
+    if (!name) {
+      throw new Error("Unable to read CI workflow job display name");
+    }
+
+    jobNames.push(name.replace(/^["']|["']$/g, ""));
+  }
+
+  return jobNames;
 }
+
+test("ci workflow check extraction reads job display names instead of job ids", () => {
+  const workflow = `name: CI
+
+jobs:
+  quality-lane:
+    name: quality
+    runs-on: ubuntu-latest
+  hidden-info-lane:
+    name: hidden-info
+    runs-on: ubuntu-latest
+`;
+
+  assert.deepEqual(extractCiWorkflowJobNames(workflow), [
+    "quality",
+    "hidden-info",
+  ]);
+});
 
 function assertValidStoryId(storyId) {
   assert.match(storyId, /^[A-Z][A-Z0-9]*-\d{3}[A-Z]?$/);
