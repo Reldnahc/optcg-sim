@@ -39,6 +39,34 @@ function assertMatchesAll(text, patterns) {
   }
 }
 
+function extractBranchProtectionRequiredChecks(guide) {
+  const match = guide.match(
+    /## Required Status Checks[\s\S]*?Require the following checks before merge:\n\n(?<checks>(?:- `[^`]+`\n)+)/,
+  );
+
+  if (!match?.groups?.checks) {
+    throw new Error("Unable to read branch-protection required checks");
+  }
+
+  return match.groups.checks
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => line.match(/^- `(?<check>[^`]+)`$/)?.groups?.check)
+    .filter((check) => check !== undefined);
+}
+
+function extractCiWorkflowJobNames(workflow) {
+  const jobsMatch = workflow.match(/^jobs:\n(?<jobs>[\s\S]*)$/m);
+
+  if (!jobsMatch?.groups?.jobs) {
+    throw new Error("Unable to read CI workflow jobs");
+  }
+
+  return Array.from(jobsMatch.groups.jobs.matchAll(/^\s{2}(?<job>[\w-]+):$/gm))
+    .map((match) => match.groups?.job)
+    .filter((job) => job !== undefined);
+}
+
 function assertValidStoryId(storyId) {
   assert.match(storyId, /^[A-Z][A-Z0-9]*-\d{3}[A-Z]?$/);
 }
@@ -170,6 +198,21 @@ test("branch protection guide names the required status checks and subagent revi
   assert.doesNotMatch(guide, /codex\.cmd exec review/i);
   assert.doesNotMatch(guide, /Codex CLI/i);
   assert.doesNotMatch(guide, /@codex review/i);
+});
+
+test("branch protection required status checks exactly match ci workflow jobs", async () => {
+  const guide = await readActiveText(".github/branch-protection.md");
+  const workflow = await readActiveText(".github/workflows/ci.yml");
+
+  const requiredChecks = extractBranchProtectionRequiredChecks(guide);
+  const ciJobNames = extractCiWorkflowJobNames(workflow);
+
+  assert.deepEqual(requiredChecks, ciJobNames);
+  assert.equal(
+    requiredChecks.includes("hidden-info"),
+    true,
+    "hidden-info must be documented as a required status check",
+  );
 });
 
 test("agents guidance requires parent orchestration plus separate reviewer subagent before human review", async () => {
