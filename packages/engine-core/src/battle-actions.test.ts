@@ -1841,8 +1841,9 @@ test("Character Counter metadata in defender hand opens counter-step pass decisi
   );
 });
 
-test("counter-step legal actions expose only defender pass response", () => {
-  const { opened, decision } = setupOpenedCounterStepPassDecision();
+test("counter-step legal actions expose defender pass and Character Counters without leaking to attacker", () => {
+  const { opened, counterCard, decision } =
+    setupOpenedCounterStepPassDecision();
 
   assert.deepEqual(getLegalActions(opened.state, p2), [
     { type: "concede", playerId: p2 },
@@ -1850,6 +1851,11 @@ test("counter-step legal actions expose only defender pass response", () => {
       type: "respondToDecision",
       decisionId: decision.id,
       response: { type: "cards", cards: [] },
+    },
+    {
+      type: "useCounter",
+      cardInstanceId: counterCard.instanceId,
+      target: must(opened.state.battle, "battle").currentTarget,
     },
   ]);
   assert.deepEqual(getLegalActions(opened.state, p1), [
@@ -1882,6 +1888,11 @@ test("counter-step legal actions suppress pass for unsupported continuation", ()
 
   assert.deepEqual(getLegalActions(context.openedState, p2), [
     { type: "concede", playerId: p2 },
+    {
+      type: "useCounter",
+      cardInstanceId: context.counterCard.instanceId,
+      target: must(context.openedState.battle, "battle").currentTarget,
+    },
   ]);
   assert.equal(JSON.stringify(context.openedState), before);
   assert.equal(context.openedState.pendingDecision?.id, context.decision.id);
@@ -1929,6 +1940,279 @@ test("counter-step pass emits deterministic decisionResolved sequence and resume
   });
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(result.events, replay.events);
+});
+
+test("Character Counter moves from hand to trash, emits deterministic events, and keeps Counter Step open", () => {
+  const { opened, counterCard, decision } =
+    setupOpenedCounterStepPassDecision();
+  const target = must(opened.state.battle, "battle").currentTarget;
+
+  const result = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision?.id, decision.id);
+  assert.equal(result.state.battle?.step, "counter");
+  assert.equal(result.state.actionSeq, opened.state.actionSeq + 1);
+  assert.equal(
+    must(result.state.players[p2], "p2").hand.some(
+      (card) => card.instanceId === counterCard.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    must(result.state.players[p2], "p2").trash.some(
+      (card) => card.instanceId === counterCard.instanceId,
+    ),
+    true,
+  );
+  assert.deepEqual(
+    result.events.map((event) => ({
+      type: event.type,
+      payload: event.payload,
+      visibility: event.visibility,
+    })),
+    [
+      {
+        type: "counterUsed",
+        payload: {
+          playerId: p2,
+          instanceId: counterCard.instanceId,
+          cardId: counterCard.cardId,
+          target,
+          value: 1000,
+        },
+        visibility: { type: "public" },
+      },
+      {
+        type: "cardMoved",
+        payload: {
+          instanceId: counterCard.instanceId,
+          cardId: counterCard.cardId,
+          from: counterCard.zone,
+          to: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+          reason: "counter",
+        },
+        visibility: { type: "public" },
+      },
+      {
+        type: "cardTrashed",
+        payload: {
+          playerId: p2,
+          instanceId: counterCard.instanceId,
+          cardId: counterCard.cardId,
+          reason: "counter",
+        },
+        visibility: { type: "public" },
+      },
+    ],
+  );
+
+  const replay = applyAction(structuredClone(opened.state), {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target,
+  });
+  assert.equal(result.stateHash, replay.stateHash);
+  assert.deepEqual(result.events, replay.events);
+});
+
+test("Character Counter power changes Damage Step outcome after pass", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  const counterCard = must(p2State.hand[0], "counter card");
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 5000,
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 4000,
+  });
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 2000,
+  });
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(attacker, p1),
+    target: cardRef(target, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  const countered = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target: cardRef(target, p2),
+  });
+  assert.equal(countered.errors, undefined);
+
+  const result = applyAction(countered.state, {
+    type: "respondToDecision",
+    decisionId: must(countered.state.pendingDecision, "pending decision").id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.battle, undefined);
+  assert.equal(
+    must(result.state.players[p2], "p2").characters.some(
+      (character) => character.instanceId === target.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "cardKOd"),
+    false,
+  );
+});
+
+test("multiple Character Counters stack before pass", () => {
+  const { opened, counterCard } = setupOpenedCounterStepPassDecision();
+  const p2State = must(opened.state.players[p2], "p2");
+  const secondCounter = must(p2State.hand[1], "second counter");
+  opened.state.cardManifest.cards[secondCounter.cardId] = resolvedCard({
+    cardId: secondCounter.cardId,
+    category: "character",
+    power: 3000,
+    counter: 2000,
+  });
+  const target = must(opened.state.battle, "battle").currentTarget;
+
+  const first = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target,
+  });
+  assert.equal(first.errors, undefined);
+  const second = applyAction(first.state, {
+    type: "useCounter",
+    cardInstanceId: secondCounter.instanceId,
+    target,
+  });
+
+  assert.equal(second.errors, undefined);
+  assert.equal(second.state.battle?.counterPower, 3000);
+  assert.equal(
+    second.state.pendingDecision?.id,
+    opened.state.pendingDecision?.id,
+  );
+  assert.equal(
+    must(second.state.players[p2], "p2").trash.filter((card) =>
+      [counterCard.instanceId, secondCounter.instanceId].includes(
+        card.instanceId,
+      ),
+    ).length,
+    2,
+  );
+});
+
+test("illegal Character Counter attempts fail closed without mutation", () => {
+  const run = (
+    mutate: (
+      context: ReturnType<typeof setupOpenedCounterStepPassDecision>,
+    ) => {
+      cardInstanceId: CardInstance["instanceId"];
+      target: CardRef;
+    },
+  ) => {
+    const context = setupOpenedCounterStepPassDecision();
+    const action = mutate(context);
+    assertRejectsWithoutMutation(context.openedState, {
+      type: "useCounter",
+      cardInstanceId: action.cardInstanceId,
+      target: action.target,
+    });
+  };
+
+  run((context) => {
+    const battle = must(context.openedState.battle, "battle");
+    context.openedState.battle = {
+      ...battle,
+      currentTarget: {
+        instanceId: "stale-target" as never,
+        cardId: context.p2State.leader.cardId,
+        playerId: p2,
+      },
+    };
+    return {
+      cardInstanceId: context.counterCard.instanceId,
+      target: battle.currentTarget,
+    };
+  });
+  run((context) => ({
+    cardInstanceId: context.counterCard.instanceId,
+    target: cardRef(context.p1State.leader, p1),
+  }));
+  run((context) => ({
+    cardInstanceId: must(context.p1State.hand[0], "p1 hand").instanceId,
+    target: must(context.openedState.battle, "battle").currentTarget,
+  }));
+  run((context) => {
+    const p2State = must(context.openedState.players[p2], "p2");
+    p2State.hand = p2State.hand.filter(
+      (card) => card.instanceId !== context.counterCard.instanceId,
+    );
+    return {
+      cardInstanceId: context.counterCard.instanceId,
+      target: must(context.openedState.battle, "battle").currentTarget,
+    };
+  });
+  run((context) => {
+    context.openedState.cardManifest.cards[context.counterCard.cardId] =
+      resolvedCard({
+        cardId: context.counterCard.cardId,
+        category: "leader",
+        power: 5000,
+        counter: 1000,
+      });
+    return {
+      cardInstanceId: context.counterCard.instanceId,
+      target: must(context.openedState.battle, "battle").currentTarget,
+    };
+  });
+  run((context) => {
+    context.openedState.cardManifest.cards[context.counterCard.cardId] =
+      resolvedCard({
+        cardId: context.counterCard.cardId,
+        category: "character",
+        power: 3000,
+        counter: 0,
+      });
+    return {
+      cardInstanceId: context.counterCard.instanceId,
+      target: must(context.openedState.battle, "battle").currentTarget,
+    };
+  });
+  run((context) => {
+    context.openedState.cardManifest.cards[context.counterCard.cardId] =
+      resolvedCard({
+        cardId: context.counterCard.cardId,
+        category: "event",
+        counter: 1000,
+      });
+    return {
+      cardInstanceId: context.counterCard.instanceId,
+      target: must(context.openedState.battle, "battle").currentTarget,
+    };
+  });
+  run((context) => {
+    const battle = must(context.openedState.battle, "battle");
+    context.openedState.battle = { ...battle, step: "attack" };
+    return {
+      cardInstanceId: context.counterCard.instanceId,
+      target: battle.currentTarget,
+    };
+  });
 });
 
 test("counter-step pass rejects stale battle participants without mutation", () => {

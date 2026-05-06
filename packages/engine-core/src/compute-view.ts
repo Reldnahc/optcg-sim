@@ -196,12 +196,18 @@ const computeCardView = (
     card.controller === state.turn.turnPlayerId
       ? card.attachedDon.length * 1000
       : 0;
+  const counterBonus =
+    state.battle !== undefined &&
+    state.battle.currentTarget.instanceId === card.instanceId &&
+    state.battle.currentTarget.cardId === card.cardId
+      ? (state.battle.counterPower ?? 0)
+      : 0;
 
   return {
     instanceId: card.instanceId,
     cardId: card.cardId,
     basePower,
-    currentPower: basePower + donBonus,
+    currentPower: basePower + donBonus + counterBonus,
     keywords: [...metadata.printedKeywords] as Keyword[],
     canAttack: canAttackNow(state, card),
     canBlock: canBlockNow(state, card, metadata),
