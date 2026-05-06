@@ -11,7 +11,6 @@ import type {
 
 const unsupportedCombatKeywords = new Set<Keyword>([
   "doubleAttack",
-  "banish",
   "blocker",
   "unblockable",
 ]);

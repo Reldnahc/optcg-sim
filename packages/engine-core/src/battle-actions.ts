@@ -306,8 +306,8 @@ export const resolveSupportedVanillaBattle = (
       "Battle requires unsupported derived power metadata.",
     );
   }
+  const attackerHasBanish = attackerView.keywords.includes("banish");
   if (
-    attackerView.keywords.includes("banish") ||
     attackerView.keywords.includes("doubleAttack") ||
     targetView.protectedFrom.length > 0
   ) {
@@ -360,6 +360,7 @@ export const resolveSupportedVanillaBattle = (
       }
       const lifeMeta = nextState.cardManifest.cards[topLife.card.cardId];
       if (
+        !attackerHasBanish &&
         lifeMeta?.triggerText !== undefined &&
         lifeMeta.triggerText.length > 0
       ) {
@@ -371,18 +372,28 @@ export const resolveSupportedVanillaBattle = (
       const movedLifeCard: CardInstance = {
         ...topLife.card,
         zone: {
-          zone: "hand",
+          zone: attackerHasBanish ? "trash" : "hand",
           playerId: target.playerId,
-          slot: "hand",
+          slot: attackerHasBanish ? "trash" : "hand",
           index: 0,
         },
       };
-      const nextHand = reindexZoneCards(
-        [movedLifeCard, ...damaged.hand],
-        "hand",
-        target.playerId,
-        "hand",
-      );
+      const nextHand = attackerHasBanish
+        ? damaged.hand
+        : reindexZoneCards(
+            [movedLifeCard, ...damaged.hand],
+            "hand",
+            target.playerId,
+            "hand",
+          );
+      const nextTrash = attackerHasBanish
+        ? reindexZoneCards(
+            [movedLifeCard, ...damaged.trash],
+            "trash",
+            target.playerId,
+            "trash",
+          )
+        : damaged.trash;
       const nextLife = damaged.life.slice(1).map((lifeCard, index) => ({
         ...lifeCard,
         card: {
@@ -399,7 +410,12 @@ export const resolveSupportedVanillaBattle = (
         ...nextState,
         players: {
           ...nextState.players,
-          [target.playerId]: { ...damaged, hand: nextHand, life: nextLife },
+          [target.playerId]: {
+            ...damaged,
+            hand: nextHand,
+            life: nextLife,
+            trash: nextTrash,
+          },
         },
       };
       appendEvent(state, events, "damageDealt", {
@@ -423,9 +439,9 @@ export const resolveSupportedVanillaBattle = (
             index: 0,
           },
           to: {
-            zone: "hand",
+            zone: attackerHasBanish ? "trash" : "hand",
             playerId: target.playerId,
-            slot: "hand",
+            slot: attackerHasBanish ? "trash" : "hand",
             index: 0,
           },
           reason: "battleDamage",
