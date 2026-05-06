@@ -465,6 +465,25 @@ test("fails closed when implemented-dsl combat body has effect definition metada
   assert.throws(() => computeView(state), /unsupported.*effect definition/i);
 });
 
+test("fails closed when implemented-dsl combat body has support effect definition metadata without registry entry", () => {
+  const state = createState();
+  const manifest = {
+    ...state.cardManifest,
+    cards: { ...state.cardManifest.cards },
+  };
+  manifest.cards[toCardId("leader-red")] = {
+    ...must(manifest.cards[toCardId("leader-red")], "leader-red"),
+    support: {
+      ...must(manifest.cards[toCardId("leader-red")], "leader-red").support,
+      status: "implemented-dsl",
+      effectDefinitionId: "missing-definition",
+    },
+  };
+  state.cardManifest = manifest;
+
+  assert.throws(() => computeView(state), /unsupported.*effect definition/i);
+});
+
 test("fails closed when combat card has unsupported printed combat keywords", () => {
   const state = createState();
   const brokenManifest = {

@@ -54,6 +54,7 @@ const resolveCombatMetadata = (
     );
   }
   if (
+    resolved.support.effectDefinitionId !== undefined ||
     Object.values(state.cardManifest.effectDefinitions ?? {}).some(
       (definition) => definition.cardId === card.cardId,
     )
