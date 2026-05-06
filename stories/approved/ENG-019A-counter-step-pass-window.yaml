@@ -1,0 +1,81 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-019A
+epic_id: M1-001
+title: Open Counter Step pass window
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add the supported Counter Step timing scaffold after Attack/Block handling:
+  no-counter battles auto-pass safely, while battles with potential Character
+  Counter cards pause on a defender-owned pass decision before Damage Step.
+story_boundary: >
+  Own only Counter Step entry, defender pass routing, and safe no-counter
+  auto-pass. Do not implement using a counter card, resolving Counter Events,
+  opponent-attack effects, Life Triggers, replacements, On K.O., or CLI changes.
+allowed_touch_points:
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/actions.test.ts
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+spec_refs:
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s019 (Block Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s022 (End of Battle)
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s009 (Pending decisions)
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s016 (Action shape)
+  - 03-game-state-events-decisions.s017 (Canonical decision routing)
+  - 03-game-state-events-decisions.s018 (Canonical event visibility)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 06-visibility-security.s007 (Legal-action visibility)
+  - 22-v6-implementation-tightening.s009 (Phase and battle timing)
+scope:
+  - 'route supported post-Block Step battles through `battle.step: "counter"` before Damage Step'
+  - auto-pass Counter Step without creating a visible decision when the defender has no legal or potentially legal counter actions
+  - create a defender-owned pass decision when the defender has one or more Character cards in hand with positive counter metadata
+  - expose only the executable pass response to the defender in this scaffold story
+  - accept the pass response, emit deterministic decision events, re-check live attacker/current target, and continue to the supported Damage Step path
+  - preserve existing fail-closed behavior for unsupported adjacent timing windows without owning Counter Event-specific detection
+non_scope:
+  - using a Character Counter card
+  - resolving or paying Counter Events
+  - opponent-attack effects before ordinary counter actions
+  - Life Triggers, On K.O., End of Battle, replacements, protection, or once-per-turn behavior
+  - CLI, server, browser client, UI, database, Redis, WebSocket, or replay schema behavior
+dependencies:
+  - ENG-014D
+acceptance_criteria:
+  - battle resolution with no defender counter actions still reaches Damage Step behavior without exposing a counter decision
+  - battle resolution with a defender Character card with positive counter metadata pauses at Counter Step with a defender-owned pass decision
+  - only the defender can see and execute the Counter Step pass response
+  - accepting the pass response continues to supported Damage Step behavior and clears the battle when damage resolves
+  - stale attacker or current target during Counter Step pass fails closed or skips damage according to existing supported battle legality policy without mutation leaks
+  - opponent-attack effects, pending queues, deferred triggers, replacements, protection, and unsupported combat metadata remain fail-closed
+required_tests:
+  - unit test proving no-counter attack auto-passes through Counter Step and resolves damage without a pending decision
+  - unit test proving Character Counter metadata in defender hand opens a Counter Step pass decision instead of resolving damage immediately
+  - unit test proving defender legal actions include the pass response and attacker legal actions do not
+  - unit test proving pass response emits deterministic decisionResolved sequencing and resumes supported battle resolution
+  - regression tests proving unsupported adjacent timing windows do not auto-pass or mutate state
+  - "`corepack pnpm exec vitest run packages/engine-core/src/actions.test.ts packages/engine-core/src/battle-actions.test.ts` must pass"
+  - "`corepack pnpm --filter @optcg/engine-core typecheck` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - create the ENG-019A substory branch from the ENG-019 parent integration branch and open the ENG-019A PR against that parent branch
+  - generate and activate only the ENG-019A packet while implementing this story
+  - do not run packets:complete after merging only into the parent integration branch
+  - do not implement Character Counter card use in this story
+  - keep engine-core deterministic and pure
+ambiguity_policy: fail_and_escalate
