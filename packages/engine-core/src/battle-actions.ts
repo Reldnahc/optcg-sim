@@ -747,6 +747,11 @@ export const applyBattleDecisionResponse = (
         return illegalAction(state, "Battle blocker is stale or invalid.");
       }
     }
+    const unsupportedContinuationReason =
+      getUnsupportedDamageStepContinuationReason(state);
+    if (unsupportedContinuationReason !== undefined) {
+      return illegalAction(state, unsupportedContinuationReason);
+    }
 
     const events: EngineEvent[] = [];
     appendEvent(
@@ -962,6 +967,65 @@ const enterCounterStepOrAutoPass = (state: GameState): EngineResult | null => {
   };
   assertGameStateInvariants(nextState);
   return toEngineResult(nextState, events);
+};
+
+const getUnsupportedDamageStepContinuationReason = (
+  state: GameState,
+): string | undefined => {
+  const battle = state.battle;
+  if (battle === undefined || battle.step !== "counter") {
+    return "Battle requires unsupported blocker, step, or multi-damage behavior.";
+  }
+  const attacker = reifyCardRef(state, battle.attacker);
+  const target = reifyCardRef(state, battle.currentTarget);
+  if (attacker === null || target === null) {
+    return "Battle participants are stale or invalid.";
+  }
+
+  let view: ReturnType<typeof computeView>;
+  try {
+    view = computeView(state);
+  } catch {
+    return "Battle requires unsupported combat metadata.";
+  }
+  if (Object.keys(view.restrictions).length > 0) {
+    return "Battle requires unsupported restriction handling.";
+  }
+
+  const attackerView = view.cards[attacker.card.instanceId];
+  const targetView = view.cards[target.card.instanceId];
+  if (
+    attackerView?.currentPower === undefined ||
+    targetView?.currentPower === undefined
+  ) {
+    return "Battle requires unsupported derived power metadata.";
+  }
+  if (
+    attackerView.keywords.includes("doubleAttack") ||
+    targetView.protectedFrom.length > 0
+  ) {
+    return "Battle requires unsupported keyword or protection handling.";
+  }
+  if (
+    attackerView.currentPower >= targetView.currentPower &&
+    target.isLeader &&
+    !attackerView.keywords.includes("banish")
+  ) {
+    const targetPlayer = state.players[target.playerId];
+    const topLife = targetPlayer?.life[0];
+    const topLifeMeta =
+      topLife === undefined
+        ? undefined
+        : state.cardManifest.cards[topLife.card.cardId];
+    if (
+      topLifeMeta?.triggerText !== undefined &&
+      topLifeMeta.triggerText.length > 0
+    ) {
+      return "Life trigger reveal decisions are unsupported in this battle path.";
+    }
+  }
+
+  return undefined;
 };
 
 export const resolveSupportedVanillaBattle = (

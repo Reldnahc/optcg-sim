@@ -1946,6 +1946,43 @@ test("counter-step pass rejects stale battle participants without mutation", () 
   });
 });
 
+test("counter-step pass rejects unsupported life trigger damage without clearing decision", () => {
+  const context = setupOpenedCounterStepPassDecision();
+  const p2State = must(context.openedState.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  p2State.life[0] = {
+    ...topLife,
+    card: {
+      ...topLife.card,
+      cardId: toCardId("counter-pass-trigger-life"),
+    },
+  };
+  context.openedState.cardManifest.cards[
+    toCardId("counter-pass-trigger-life")
+  ] = {
+    ...resolvedCard({
+      cardId: toCardId("counter-pass-trigger-life"),
+      category: "character",
+      power: 1000,
+    }),
+    triggerText: "TRIGGER: draw 1 card",
+  };
+  const before = JSON.stringify(context.openedState);
+
+  const result = applyAction(context.openedState, {
+    type: "respondToDecision",
+    decisionId: context.decision.id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(context.openedState), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.state.pendingDecision?.id, context.decision.id);
+  assert.equal(result.state.battle?.step, "counter");
+});
+
 test("Counter Event metadata remains unsupported and does not auto-pass or mutate state", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
