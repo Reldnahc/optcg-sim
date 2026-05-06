@@ -795,14 +795,12 @@ export const applyUseCounter = (
   ) {
     return illegalAction(state, "Unsupported Counter Step decision envelope.");
   }
-  if (
-    decision.playerId === state.turn.turnPlayerId ||
-    hasUnsupportedCounterWindow(state, decision.playerId)
-  ) {
-    return illegalAction(
-      state,
-      "Battle requires unsupported counter window handling.",
-    );
+  const unsupportedCounterWindowReason =
+    decision.playerId === state.turn.turnPlayerId
+      ? "Battle requires unsupported counter window handling."
+      : getUnsupportedCounterWindowReason(state, decision.playerId);
+  if (unsupportedCounterWindowReason !== undefined) {
+    return illegalAction(state, unsupportedCounterWindowReason);
   }
   if (!sameCardRef(action.target, battle.currentTarget)) {
     return illegalAction(
@@ -978,14 +976,12 @@ export const applyBattleDecisionResponse = (
         "Unsupported Counter Step decision envelope.",
       );
     }
-    if (
-      decision.playerId === state.turn.turnPlayerId ||
-      hasUnsupportedCounterWindow(state, decision.playerId)
-    ) {
-      return illegalAction(
-        state,
-        "Battle requires unsupported counter window handling.",
-      );
+    const unsupportedCounterWindowReason =
+      decision.playerId === state.turn.turnPlayerId
+        ? "Battle requires unsupported counter window handling."
+        : getUnsupportedCounterWindowReason(state, decision.playerId);
+    if (unsupportedCounterWindowReason !== undefined) {
+      return illegalAction(state, unsupportedCounterWindowReason);
     }
     const attacker = reifyCardRef(state, battle.attacker);
     const target = reifyCardRef(state, battle.currentTarget);
@@ -1127,8 +1123,11 @@ const unsupportedBattleResolution = (
   reason: string,
 ): EngineResult => illegalAction(state, reason);
 
+const unsupportedCounterEventReason =
+  "Counter Events are unsupported in the Counter Step.";
+
 const hasRawCounterText = (value: string | undefined): boolean =>
-  value !== undefined && /\bcounter\b/i.test(value);
+  value !== undefined && /\[counter\]/i.test(value);
 
 const hasCounterTriggerDefinition = (
   state: GameState,
@@ -1140,26 +1139,48 @@ const hasCounterTriggerDefinition = (
       definition.effects.some((effect) => effect.trigger.type === "counter"),
   );
 
+const isUnsupportedCounterEventCandidate = (
+  state: GameState,
+  card: CardInstance,
+): boolean => {
+  const metadata = state.cardManifest.cards[card.cardId];
+  return (
+    metadata?.category === "event" &&
+    ((metadata.counter !== undefined && metadata.counter > 0) ||
+      hasRawCounterText(metadata.effectText) ||
+      hasRawCounterText(metadata.triggerText) ||
+      hasCounterTriggerDefinition(state, card.cardId))
+  );
+};
+
+const getUnsupportedCounterWindowReason = (
+  state: GameState,
+  defenderId: PlayerId,
+): string | undefined => {
+  const defender = state.players[defenderId];
+  if (defender === undefined) {
+    return "Battle requires unsupported counter window handling.";
+  }
+  for (const card of defender.hand) {
+    const metadata = state.cardManifest.cards[card.cardId];
+    if (metadata === undefined) {
+      return "Battle requires unsupported counter window handling.";
+    }
+    if (isUnsupportedCounterEventCandidate(state, card)) {
+      return unsupportedCounterEventReason;
+    }
+    if (hasCounterTriggerDefinition(state, card.cardId)) {
+      return "Battle requires unsupported counter window handling.";
+    }
+  }
+  return undefined;
+};
+
 const hasUnsupportedCounterWindow = (
   state: GameState,
   defenderId: PlayerId,
-): boolean => {
-  const defender = state.players[defenderId];
-  if (defender === undefined) {
-    return true;
-  }
-  return defender.hand.some((card) => {
-    const metadata = state.cardManifest.cards[card.cardId];
-    return (
-      metadata === undefined ||
-      hasCounterTriggerDefinition(state, card.cardId) ||
-      (metadata.category === "event" &&
-        ((metadata.counter !== undefined && metadata.counter > 0) ||
-          hasRawCounterText(metadata.effectText) ||
-          hasRawCounterText(metadata.triggerText)))
-    );
-  });
-};
+): boolean =>
+  getUnsupportedCounterWindowReason(state, defenderId) !== undefined;
 
 const hasPotentialCharacterCounterActions = (
   state: GameState,
@@ -1192,11 +1213,12 @@ const enterCounterStepOrAutoPass = (state: GameState): EngineResult | null => {
   if (target === null) {
     return illegalAction(state, "Battle participants are stale or invalid.");
   }
-  if (hasUnsupportedCounterWindow(counterState, target.playerId)) {
-    return unsupportedBattleResolution(
-      state,
-      "Battle requires unsupported counter window handling.",
-    );
+  const unsupportedCounterWindowReason = getUnsupportedCounterWindowReason(
+    counterState,
+    target.playerId,
+  );
+  if (unsupportedCounterWindowReason !== undefined) {
+    return unsupportedBattleResolution(state, unsupportedCounterWindowReason);
   }
   const decision = createCounterStepPassDecision(counterState);
   if (decision === null) {

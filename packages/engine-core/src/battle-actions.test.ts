@@ -2075,6 +2075,32 @@ test("Character Counter moves from hand to trash, emits deterministic events, an
   assert.deepEqual(result.events, replay.events);
 });
 
+test("useCounter with an Event card fails closed with unsupported Counter Event error and no mutation", () => {
+  const { openedState, counterCard } = setupOpenedCounterStepPassDecision();
+  openedState.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "event",
+    effectText: "[Counter] Draw 1 card.",
+  });
+  const before = JSON.stringify(openedState);
+
+  const result = applyAction(openedState, {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target: must(openedState.battle, "battle").currentTarget,
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Counter Events are unsupported in the Counter Step.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(openedState), before);
+  assert.equal(JSON.stringify(result.state), before);
+});
+
 test("Character Counter power changes Damage Step outcome after pass", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -2487,7 +2513,7 @@ test("counter-step pass rejects active Character target without clearing decisio
   assert.equal(result.state.battle?.step, "counter");
 });
 
-test("Counter Event metadata remains unsupported and does not auto-pass or mutate state", () => {
+test("raw [Counter] Event text prevents auto-pass with unsupported Counter Event error and no mutation", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -2513,7 +2539,43 @@ test("Counter Event metadata remains unsupported and does not auto-pass or mutat
     },
   });
 
-  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Counter Events are unsupported in the Counter Step.",
+    },
+  ]);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.deepEqual(result.events, []);
+});
+
+test("counter effect definition on defender Event prevents auto-pass with unsupported Counter Event error and no mutation", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
+    cardId: counterEvent.cardId,
+    category: "event",
+  });
+  state.cardManifest.effectDefinitions = {
+    counterEvent: effectDefinition(counterEvent.cardId, { type: "counter" }),
+  };
+  const before = JSON.stringify(state);
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Counter Events are unsupported in the Counter Step.",
+    },
+  ]);
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
   assert.deepEqual(result.events, []);
