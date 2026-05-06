@@ -1857,6 +1857,37 @@ test("counter-step legal actions expose only defender pass response", () => {
   ]);
 });
 
+test("counter-step legal actions suppress pass for unsupported continuation", () => {
+  const context = setupOpenedCounterStepPassDecision();
+  const p2State = must(context.openedState.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  p2State.life[0] = {
+    ...topLife,
+    card: {
+      ...topLife.card,
+      cardId: toCardId("counter-legal-trigger-life"),
+    },
+  };
+  context.openedState.cardManifest.cards[
+    toCardId("counter-legal-trigger-life")
+  ] = {
+    ...resolvedCard({
+      cardId: toCardId("counter-legal-trigger-life"),
+      category: "character",
+      power: 1000,
+    }),
+    triggerText: "TRIGGER: draw 1 card",
+  };
+  const before = JSON.stringify(context.openedState);
+
+  assert.deepEqual(getLegalActions(context.openedState, p2), [
+    { type: "concede", playerId: p2 },
+  ]);
+  assert.equal(JSON.stringify(context.openedState), before);
+  assert.equal(context.openedState.pendingDecision?.id, context.decision.id);
+  assert.equal(context.openedState.battle?.step, "counter");
+});
+
 test("counter-step pass emits deterministic decisionResolved sequence and resumes damage", () => {
   const { opened, p2State, decision } = setupOpenedCounterStepPassDecision();
   const beforeLife = p2State.life.length;

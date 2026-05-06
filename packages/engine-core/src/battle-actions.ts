@@ -430,7 +430,8 @@ export const getBattleDecisionLegalActions = (
     if (
       decision.request.max !== 0 ||
       decision.candidates.length !== 0 ||
-      hasUnsupportedCounterWindow(state, decision.playerId)
+      hasUnsupportedCounterWindow(state, decision.playerId) ||
+      getUnsupportedDamageStepContinuationReason(state) !== undefined
     ) {
       return [];
     }
