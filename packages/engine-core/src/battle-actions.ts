@@ -1032,6 +1032,23 @@ const getUnsupportedDamageStepContinuationReason = (
   }
   if (
     attackerView.currentPower >= targetView.currentPower &&
+    !target.isLeader
+  ) {
+    const targetPlayer = state.players[target.playerId];
+    const targetIndex = targetPlayer?.characters.findIndex(
+      (character) => character.instanceId === target.card.instanceId,
+    );
+    if (
+      targetPlayer === undefined ||
+      targetIndex === undefined ||
+      targetIndex < 0 ||
+      target.card.state !== "rested"
+    ) {
+      return "Battle target is no longer a supported rested character target.";
+    }
+  }
+  if (
+    attackerView.currentPower >= targetView.currentPower &&
     target.isLeader &&
     !attackerView.keywords.includes("banish")
   ) {
