@@ -61,6 +61,12 @@ test("story schema requires concern-first story boundary fields", async () => {
   }
 });
 
+test("story schema pins the supported story schema version", async () => {
+  const schema = await readJson("contracts/story.schema.json");
+
+  assert.deepEqual(schema.properties.story_schema_version.enum, ["1.0.0"]);
+});
+
 test("story schema enums match the canonical spec vocabulary", async () => {
   const schema = await readJson("contracts/story.schema.json");
 

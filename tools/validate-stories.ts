@@ -1,5 +1,6 @@
 import type { AnySchema, ErrorObject, ValidateFunction } from "ajv";
 import { Ajv2020 } from "ajv/dist/2020.js";
+import { spawnSync } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -63,6 +64,12 @@ export async function validateCommittedStories(
 }
 
 async function findStoryFiles(repoRoot: string) {
+  const trackedStoryFiles = findTrackedStoryFiles(repoRoot);
+
+  if (trackedStoryFiles) {
+    return trackedStoryFiles;
+  }
+
   const files: string[] = [];
 
   for (const directory of STORY_DIRECTORIES) {
@@ -70,6 +77,31 @@ async function findStoryFiles(repoRoot: string) {
   }
 
   return files.sort();
+}
+
+function findTrackedStoryFiles(repoRoot: string) {
+  const result = spawnSync("git", ["ls-files", "stories/**/*.yaml"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) {
+    return null;
+  }
+
+  return result.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && isStoryLifecyclePath(line))
+    .sort();
+}
+
+function isStoryLifecyclePath(relativePath: string) {
+  return STORY_DIRECTORIES.some(
+    (directory) =>
+      relativePath.startsWith(`${directory}/`) &&
+      relativePath.endsWith(".yaml"),
+  );
 }
 
 async function findYamlFiles(repoRoot: string, relativeDirectory: string) {

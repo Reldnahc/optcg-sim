@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,6 +25,16 @@ async function makeTempRepo() {
       "utf8",
     ),
   );
+  return tempRoot;
+}
+
+async function makeTempGitRepo() {
+  const tempRoot = await makeTempRepo();
+  const initResult = spawnSync("git", ["init"], {
+    cwd: tempRoot,
+    encoding: "utf8",
+  });
+  assert.equal(initResult.status, 0, initResult.stderr);
   return tempRoot;
 }
 
@@ -110,6 +121,50 @@ test("committed story validator reports deterministic schema diagnostics", async
   assert.match(
     result.diagnostics.join("\n"),
     /stories\/generated\/TST-001-invalid-story\.yaml: \/status must be equal to one of the allowed values/,
+  );
+});
+
+test("committed story validator ignores untracked story files", async () => {
+  const tempRoot = await makeTempGitRepo();
+  await writeStory(tempRoot, "stories/approved/TST-001-valid-story.yaml");
+  await writeStory(tempRoot, "stories/generated/TST-002-untracked-story.yaml", {
+    id: "TST-002",
+    status: "waiting",
+  });
+  const addResult = spawnSync(
+    "git",
+    [
+      "add",
+      "contracts/story.schema.json",
+      "stories/approved/TST-001-valid-story.yaml",
+    ],
+    {
+      cwd: tempRoot,
+      encoding: "utf8",
+    },
+  );
+  assert.equal(addResult.status, 0, addResult.stderr);
+
+  const result = await validateCommittedStories({ repoRoot: tempRoot });
+
+  assert.equal(result.ok, true, result.diagnostics.join("\n"));
+  assert.deepEqual(result.checkedFiles, [
+    "stories/approved/TST-001-valid-story.yaml",
+  ]);
+});
+
+test("committed story validator rejects unsupported story schema versions", async () => {
+  const tempRoot = await makeTempRepo();
+  await writeStory(tempRoot, "stories/generated/TST-001-invalid-story.yaml", {
+    story_schema_version: "2.0.0",
+  });
+
+  const result = await validateCommittedStories({ repoRoot: tempRoot });
+
+  assert.equal(result.ok, false);
+  assert.match(
+    result.diagnostics.join("\n"),
+    /stories\/generated\/TST-001-invalid-story\.yaml: \/story_schema_version must be equal to one of the allowed values/,
   );
 });
 
