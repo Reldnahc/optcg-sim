@@ -1,0 +1,74 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SPEC-002
+epic_id: M1-001
+title: Authorize strict CLI command-script failure semantics
+type: tooling
+area: docs
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Define the local/developer CLI contract for optional strict command-script
+  failure behavior so a follow-up CLI implementation story can rely on stable
+  specification authority.
+story_boundary: >
+  Own only the canonical spec wording for local/developer CLI command-script
+  failure semantics. Do not implement CLI behavior or change engine, gameplay,
+  replay, server, client, hidden-info, or database contracts.
+allowed_touch_points:
+  - specs/15-implementation-kickoff.md
+  - tests/contracts/spec-authority-gates.test.mjs
+spec_refs:
+  - 15-implementation-kickoff.s007 (Step 3 - CLI runner)
+  - 15-implementation-kickoff.s011 (Definition of done for kickoff)
+  - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+scope:
+  - update the CLI runner spec to say command-script mode may support the exact optional strict form `--command-script <script> --strict`
+  - define strict command-script parse failures as nonzero process exits
+  - define strict command-script engine or dispatch failures as nonzero process exits
+  - require strict failure diagnostics on stderr to include the failed command and error reason
+  - require strict failures to preserve the existing stdout command-result output for the failed command
+  - state that non-strict command-script behavior remains unchanged unless separately specified
+  - state that interactive developer behavior remains unchanged
+  - state that this is local/developer CLI behavior, not match-server protocol behavior
+non_scope:
+  - engine behavior
+  - gameplay rules
+  - CLI implementation changes
+  - match server protocol
+  - browser client behavior
+  - replay schema, ReplayLog, ReplayHeader, persisted replay storage, rollback, recovery, or replay viewer
+  - hidden-information filtering
+  - database contracts
+dependencies: []
+acceptance_criteria:
+  - "`15-implementation-kickoff.s007` defines optional strict command-script failure behavior for local/developer CLI automation using exact form `--command-script <script> --strict`"
+  - strict command-script parse errors are specified to exit nonzero
+  - strict command-script engine or dispatch errors are specified to exit nonzero
+  - strict failure diagnostics are specified as deterministic stderr including the failed command and error reason
+  - strict failures preserve the existing stdout command-result output for the failed command
+  - non-strict command-script and interactive developer behavior are explicitly preserved unless separately specified
+  - the spec text explicitly excludes match-server protocol, browser client, replay schema, hidden-info filtering, and database behavior
+  - no implementation package, engine behavior, gameplay rule, protocol, replay schema, hidden-info filter, or database contract is changed
+required_tests:
+  - update tests/contracts/spec-authority-gates.test.mjs to require the strict CLI command-script authority wording
+  - "update tests/contracts/spec-authority-gates.test.mjs to require the exact form `--command-script <script> --strict`"
+  - update tests/contracts/spec-authority-gates.test.mjs to require nonzero parse and engine/dispatch failure wording
+  - update tests/contracts/spec-authority-gates.test.mjs to require deterministic stderr failed-command and reason diagnostics plus stdout preservation wording
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run typecheck`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate the packet before implementation
+  - run `corepack pnpm run packets:verify` before implementation and review handoff
+  - stay within allowed_touch_points
+  - parent agent may implement this parent-owned authority edit directly
+  - open the PR before implementation-review
+  - run the implementation-review gate after the PR is opened
+  - do not implement CLI behavior in this SPEC story
+ambiguity_policy: fail_and_escalate

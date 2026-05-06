@@ -123,6 +123,18 @@ hash
 
 The CLI should print state sequence, current phase, pending decision, legal actions, and state hash after every action.
 
+For local/developer automation, command-script mode may support an optional
+strict flag using the exact form `--command-script <script> --strict`.
+In strict mode, command parse errors must exit nonzero. In strict mode, engine
+or CLI dispatch errors must exit nonzero. Strict failure diagnostics must be
+deterministic and useful: stderr must include the failed command and error
+reason, and stdout command-result output for the failed command must remain
+available. Non-strict command-script behavior remains unchanged unless a later
+spec section changes it. Interactive developer behavior remains unchanged.
+This is local/developer CLI behavior only, not match server protocol behavior,
+browser client behavior, replay schema behavior, hidden-information filtering,
+or database contracts.
+
 ## First milestone scope
 
 <!-- SECTION_REF: 15-implementation-kickoff.s008 -->

@@ -190,3 +190,36 @@ test("Milestone 1 exit gates require full vanilla CLI, local smoke hash reconstr
     "Completed match replay final hash matches",
   );
 });
+
+test("CLI runner spec authorizes optional strict command-script failure semantics only for local developer CLI", async () => {
+  const kickoff = await readText("specs/15-implementation-kickoff.md");
+  const cliRunner = extractSection(
+    kickoff,
+    "15-implementation-kickoff.s007",
+    "15-implementation-kickoff.s008",
+  );
+
+  for (const requiredText of [
+    "command-script mode may support an optional strict flag using the exact form `--command-script <script> --strict`",
+    "strict mode, command parse errors must exit nonzero",
+    "strict mode, engine or CLI dispatch errors must exit nonzero",
+    "diagnostics must be deterministic and useful",
+    "stderr must include the failed command and error reason",
+    "stdout command-result output for the failed command must remain available",
+    "Non-strict command-script behavior remains unchanged unless a later spec section changes it",
+    "Interactive developer behavior remains unchanged",
+    "This is local/developer CLI behavior only, not match server protocol behavior",
+  ]) {
+    assertContainsWords(cliRunner, requiredText);
+  }
+
+  for (const excludedScope of [
+    "match server protocol",
+    "browser client",
+    "replay schema",
+    "hidden-information filtering",
+    "database contracts",
+  ]) {
+    assertContainsWords(cliRunner, excludedScope);
+  }
+});
