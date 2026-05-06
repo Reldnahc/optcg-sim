@@ -430,7 +430,7 @@ test("pending runtime work still allows concession and pending-decision response
   assert.deepEqual(conceded.state.status, { type: "completed", winner: p2 });
 });
 
-test("getLegalActions exposes only defender empty decline response during block step decision", () => {
+test("getLegalActions exposes defender decline and legal blocker response during block step decision", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -466,6 +466,21 @@ test("getLegalActions exposes only defender empty decline response during block 
       type: "respondToDecision",
       decisionId: pending.id,
       response: { type: "cards", cards: [] },
+    },
+    {
+      type: "respondToDecision",
+      decisionId: pending.id,
+      response: {
+        type: "cards",
+        cards: [
+          {
+            instanceId: defenderBlocker.instanceId,
+            cardId: defenderBlocker.cardId,
+            playerId: p2,
+            zone: defenderBlocker.zone,
+          },
+        ],
+      },
     },
   ]);
   assert.deepEqual(getLegalActions(opened.state, p1), [

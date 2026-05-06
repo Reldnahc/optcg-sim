@@ -1,6 +1,8 @@
 import type {
   Action,
+  CardRef,
   CardInstance,
+  CardSelectionCandidate,
   DecisionId,
   EngineEvent,
   EngineResult,
@@ -270,18 +272,34 @@ const isPrintedBlocker = (state: GameState, card: CardInstance): boolean => {
   return metadata.printedKeywords.includes("blocker");
 };
 
-const hasWouldBeLegalDefenderBlocker = (
+const toPublicCardSelectionCandidate = (
+  card: CardInstance,
+  playerId: PlayerId,
+): CardSelectionCandidate => ({
+  card: toCardRef(card, playerId),
+  visibility: { type: "public" },
+});
+
+const getLegalBlockerCandidates = (
   state: GameState,
   defenderId: PlayerId,
-): boolean => {
+): CardSelectionCandidate[] => {
   const defender = state.players[defenderId];
   if (defender === undefined) {
-    return false;
+    return [];
   }
-  return defender.characters.some(
-    (character) =>
-      character.state === "active" && isPrintedBlocker(state, character),
-  );
+  const view = computeView(state);
+  return defender.characters
+    .filter((character) => {
+      const computed = view.cards[character.instanceId];
+      return (
+        character.controller === defenderId &&
+        character.state === "active" &&
+        isPrintedBlocker(state, character) &&
+        computed?.canBlock === true
+      );
+    })
+    .map((character) => toPublicCardSelectionCandidate(character, defenderId));
 };
 
 const createBlockStepDeclineDecision = (
@@ -295,14 +313,19 @@ const createBlockStepDeclineDecision = (
   if (target === null) {
     return null;
   }
-  if (
-    !hasWouldBeLegalDefenderBlocker(state, target.playerId) ||
-    hasUnsupportedBlockDecisionState(state, battle, target.playerId)
-  ) {
+  if (hasUnsupportedBlockDecisionState(state, battle, target.playerId)) {
     return null;
   }
   const attacker = reifyCardRef(state, battle.attacker);
   if (attacker === null) {
+    return null;
+  }
+  const blockStepState: GameState = {
+    ...state,
+    battle: { ...battle, step: "block" },
+  };
+  const candidates = getLegalBlockerCandidates(blockStepState, target.playerId);
+  if (candidates.length === 0) {
     return null;
   }
   return {
@@ -322,11 +345,11 @@ const createBlockStepDeclineDecision = (
       zone: "characterArea",
       filter: { categories: ["character"] },
       min: 0,
-      max: 0,
+      max: 1,
       allowFewerIfUnavailable: true,
       visibility: "public",
     },
-    candidates: [],
+    candidates,
     defaultResponse: { type: "cards", cards: [] },
   };
 };
@@ -342,7 +365,7 @@ export const getBattleDecisionLegalActions = (
     decision.playerId !== playerId ||
     state.battle?.step !== "block" ||
     decision.request.min !== 0 ||
-    decision.request.max !== 0 ||
+    decision.request.max !== 1 ||
     decision.defaultResponse?.type !== "cards" ||
     decision.defaultResponse.cards.length !== 0
   ) {
@@ -354,6 +377,11 @@ export const getBattleDecisionLegalActions = (
       decisionId: decision.id,
       response: { type: "cards", cards: [] },
     },
+    ...decision.candidates.map((candidate) => ({
+      type: "respondToDecision" as const,
+      decisionId: decision.id,
+      response: { type: "cards" as const, cards: [candidate.card] },
+    })),
   ];
 };
 
@@ -419,6 +447,56 @@ const hasUnsupportedBlockDecisionState = (
   return false;
 };
 
+const sameCardRef = (left: CardRef, right: CardRef): boolean =>
+  left.instanceId === right.instanceId &&
+  left.cardId === right.cardId &&
+  left.playerId === right.playerId;
+
+const isLegalBlockerSelection = (
+  state: GameState,
+  defenderId: PlayerId,
+  selected: CardRef,
+): boolean => {
+  const blocker = reifyCardRef(state, selected);
+  if (blocker === null || blocker.isLeader) {
+    return false;
+  }
+  if (
+    blocker.playerId !== defenderId ||
+    blocker.card.controller !== defenderId ||
+    blocker.card.zone.zone !== "characterArea" ||
+    blocker.card.state !== "active" ||
+    !isPrintedBlocker(state, blocker.card)
+  ) {
+    return false;
+  }
+  const candidates = getLegalBlockerCandidates(state, defenderId);
+  return candidates.some((candidate) => sameCardRef(candidate.card, selected));
+};
+
+const restBlocker = (
+  state: GameState,
+  defenderId: PlayerId,
+  blocker: CardRef,
+): GameState["players"] => {
+  const defender = state.players[defenderId];
+  if (defender === undefined) {
+    return state.players;
+  }
+  return {
+    ...state.players,
+    [defenderId]: {
+      ...defender,
+      characters: defender.characters.map((character) =>
+        character.instanceId === blocker.instanceId &&
+        character.cardId === blocker.cardId
+          ? { ...character, state: "rested" }
+          : character,
+      ),
+    },
+  };
+};
+
 export const applyBattleDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -433,15 +511,15 @@ export const applyBattleDecisionResponse = (
   ) {
     return null;
   }
-  if (action.response.type !== "cards" || action.response.cards.length !== 0) {
+  if (action.response.type !== "cards" || action.response.cards.length > 1) {
     return illegalAction(
       state,
-      "Block Step decline decision only supports empty card selection.",
+      "Block Step decision supports selecting zero or one blocker.",
     );
   }
   if (
     decision.request.min !== 0 ||
-    decision.request.max !== 0 ||
+    decision.request.max !== 1 ||
     decision.defaultResponse?.type !== "cards" ||
     decision.defaultResponse.cards.length !== 0
   ) {
@@ -466,6 +544,45 @@ export const applyBattleDecisionResponse = (
     { decisionId: decision.id, playerId: decision.playerId },
     { type: "public" },
   );
+  const selectedBlocker = action.response.cards[0];
+  if (selectedBlocker !== undefined) {
+    if (!isLegalBlockerSelection(state, decision.playerId, selectedBlocker)) {
+      return illegalAction(state, "Selected blocker is not legal.");
+    }
+    const selected = reifyCardRef(state, selectedBlocker);
+    if (selected === null || selected.isLeader) {
+      return illegalAction(state, "Selected blocker is not legal.");
+    }
+    const blockerRef = toCardRef(selected.card, selected.playerId);
+    const previousTarget = battle.currentTarget;
+    appendEvent(
+      state,
+      events,
+      "blockerActivated",
+      {
+        blocker: blockerRef,
+        previousTarget,
+        currentTarget: blockerRef,
+      },
+      { type: "public" },
+    );
+    const activatedState: GameState = {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      actionSeq: state.actionSeq + 1,
+      players: restBlocker(state, decision.playerId, blockerRef),
+      battle: {
+        ...battle,
+        blocker: blockerRef,
+        currentTarget: blockerRef,
+      },
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    delete activatedState.pendingDecision;
+    assertGameStateInvariants(activatedState);
+    return toEngineResult(activatedState, events);
+  }
+
   const resumedState: GameState = {
     ...state,
     actionSeq: state.actionSeq + 1,
