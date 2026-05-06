@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-019A.md",
-      "storyId": "ENG-019A",
-      "storyPath": "stories/approved/ENG-019A-counter-step-pass-window.yaml",
-      "storySha256": "5fb5145ece79affc4b5d9eb51b90d0855e907b2898d20b36a19556445c1376a4"
+      "packetPath": "agent-packets/ENG-019B.md",
+      "storyId": "ENG-019B",
+      "storyPath": "stories/approved/ENG-019B-character-counter-from-hand.yaml",
+      "storySha256": "1851280463115e1cbdf22f7808e061f2bf2b8deb145302994bbb0ea4aaae7ec2"
     }
   ],
   "version": 1
