@@ -190,7 +190,7 @@ test("non-empty deferred triggers fail closed with deterministic unsupported det
   ]);
 });
 
-test("effect queue has deterministic precedence over deferred triggers", () => {
+test("deferred trigger sentinel takes precedence when both queue and deferred work exist", () => {
   const state = createActiveState();
   state.effectQueue.push(queuedEffect());
   state.deferredTriggers.push(deferredTrigger());
@@ -201,10 +201,10 @@ test("effect queue has deterministic precedence over deferred triggers", () => {
   assert.equal(result.errors.length, 1);
   assert.deepEqual(result.errors[0], {
     type: "effectRuntimeError",
-    effectId: "unsupported-effect-queue",
+    effectId: "unsupported-deferred-triggers",
     details: {
       reason: "unsupported-pending-runtime-work",
-      kind: "effectQueue",
+      kind: "deferredTriggers",
       count: 1,
     },
   });
@@ -426,6 +426,39 @@ test("deferred trigger failure does not mutate state or replace an existing pend
   assert.equal(result.state.seq, before.seq);
   assert.deepEqual(result.state.eventJournal, before.eventJournal);
   assert.deepEqual(result.events, []);
+  assert.deepEqual(result.state, before);
+});
+
+test("supported queued draw with non-empty deferred triggers fails closed as deferred trigger sentinel", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  setupOnPlayDefinition(
+    state,
+    played,
+    reviewedOnPlayDrawDefinition(played.cardId, supportCard.support),
+    "def-mixed-queue-deferred",
+  );
+  const queued = processEffectRuntime(state);
+  queued.state.deferredTriggers.push(deferredTrigger());
+  const before = structuredClone(queued.state);
+
+  const result = processEffectRuntime(queued.state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "unsupported-deferred-triggers",
+      details: {
+        reason: "unsupported-pending-runtime-work",
+        kind: "deferredTriggers",
+        count: 1,
+      },
+    },
+  ]);
   assert.deepEqual(result.state, before);
 });
 

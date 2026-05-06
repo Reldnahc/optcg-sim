@@ -835,6 +835,18 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   if (queuedFromOnPlay !== undefined) {
     return queuedFromOnPlay;
   }
+  if (state.deferredTriggers.length > 0) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        unsupportedPendingRuntimeWorkError({
+          kind: "deferredTriggers",
+          count: state.deferredTriggers.length,
+        }),
+      ],
+    );
+  }
   const work = detectPendingRuntimeWork(state);
   if (work === undefined) {
     return toEngineResult(state, []);
