@@ -795,6 +795,45 @@ const processNoChoiceEffectQueue = (state: GameState): EngineResult => {
     nextState = resolution.state;
     allEvents.push(...resolution.events);
 
+    const resolvedEvents: EngineEvent[] = [];
+    const resolvedEventBaseState: GameState = {
+      ...nextState,
+      seq: toStateSeq(nextState.seq - 1),
+    };
+    appendEvent(
+      resolvedEventBaseState,
+      resolvedEvents,
+      "effectResolved",
+      {
+        queueEntryId: selected.id,
+        timingWindowId: selected.timingWindowId,
+        generation: selected.generation,
+        effectBlockId: selected.effectBlockId,
+        ...(selected.triggerEventId !== undefined
+          ? { triggerEventId: selected.triggerEventId }
+          : {}),
+        sourcePresencePolicy: selected.sourcePresencePolicy,
+        orderingGroup: selected.orderingGroup,
+        status: "resolved" as const,
+      },
+      { type: "public" },
+    );
+    const resolvedEvent = resolvedEvents[0];
+    if (resolvedEvent !== undefined) {
+      resolvedEvent.causedBy = {
+        type: "effect",
+        queueEntryId: selected.id,
+        effectId: selected.effectBlockId,
+      };
+    }
+    if (resolvedEvent !== undefined) {
+      nextState = {
+        ...nextState,
+        eventJournal: [...nextState.eventJournal, resolvedEvent],
+      };
+      allEvents.push(resolvedEvent);
+    }
+
     const checkpointEvents: EngineEvent[] = [];
     const checkpointEventBaseState: GameState = {
       ...nextState,

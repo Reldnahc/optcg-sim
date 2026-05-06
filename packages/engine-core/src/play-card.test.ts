@@ -1450,6 +1450,7 @@ test("Character On Play draw events are deterministic after card play events", (
       "cardDrawn",
       "cardMoved",
       "cardMoved",
+      "effectResolved",
       "ruleProcessingChecked",
     ],
   );
