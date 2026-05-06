@@ -163,6 +163,72 @@ const runBlockerThenCounterScript = () => {
     ),
     true,
   );
+
+  const controlState = setupAttackState();
+  const controlP1 = must(controlState.players[p1], "control p1");
+  const controlP2 = must(controlState.players[p2], "control p2");
+  const controlAttacker = must(controlP1.characters[0], "control attacker");
+  const controlBlocker = must(controlP2.characters[0], "control blocker");
+  controlState.cardManifest.cards[controlAttacker.cardId] = resolvedCard({
+    cardId: controlAttacker.cardId,
+    category: "character",
+    power: 4500,
+  });
+  controlState.cardManifest.cards[controlBlocker.cardId] = {
+    ...resolvedCard({
+      cardId: controlBlocker.cardId,
+      category: "character",
+      power: 4000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+  controlBlocker.state = "active";
+  controlAttacker.state = "active";
+  const controlOpened = applyAction(controlState, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: controlAttacker.instanceId,
+      cardId: controlAttacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: controlP2.leader.instanceId,
+      cardId: controlP2.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assertAcceptedResult(controlState, controlOpened, "blocker control declare");
+  const controlBlocked = applyAction(controlOpened.state, {
+    type: "respondToDecision",
+    decisionId: must(controlOpened.state.pendingDecision, "control block").id,
+    response: {
+      type: "cards",
+      cards: [
+        {
+          instanceId: controlBlocker.instanceId,
+          cardId: controlBlocker.cardId,
+          playerId: p2,
+          zone: controlBlocker.zone,
+        },
+      ],
+    },
+  });
+  assertAcceptedResult(
+    controlOpened.state,
+    controlBlocked,
+    "blocker control resolution",
+  );
+  assert.equal(controlBlocked.state.battle, undefined);
+  assert.equal(
+    controlBlocked.events.some((event) => event.type === "cardKOd"),
+    true,
+  );
+  assert.equal(
+    must(controlBlocked.state.players[p2], "control p2 after").characters.some(
+      (character) => character.instanceId === controlBlocker.instanceId,
+    ),
+    false,
+  );
   return [opened, blocked, countered, pass];
 };
 
@@ -268,6 +334,46 @@ const runCounterChangesOutcomeScript = () => {
   );
   assert.equal(
     passed.events.some((event) => event.type === "cardKOd"),
+    false,
+  );
+
+  const controlState = setupAttackState();
+  const controlP1 = must(controlState.players[p1], "control p1");
+  const controlP2 = must(controlState.players[p2], "control p2");
+  const controlAttacker = must(controlP1.characters[0], "control attacker");
+  const controlTarget = must(controlP2.characters[0], "control target");
+  controlState.cardManifest.cards[controlAttacker.cardId] = resolvedCard({
+    cardId: controlAttacker.cardId,
+    category: "character",
+    power: 5000,
+  });
+  controlState.cardManifest.cards[controlTarget.cardId] = resolvedCard({
+    cardId: controlTarget.cardId,
+    category: "character",
+    power: 4000,
+  });
+  const control = applyAction(controlState, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: controlAttacker.instanceId,
+      cardId: controlAttacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: controlTarget.instanceId,
+      cardId: controlTarget.cardId,
+      playerId: p2,
+    },
+  });
+  assertAcceptedResult(controlState, control, "counter-outcome control");
+  assert.equal(
+    control.events.some((event) => event.type === "cardKOd"),
+    true,
+  );
+  assert.equal(
+    must(control.state.players[p2], "control p2 after").characters.some(
+      (character) => character.instanceId === controlTarget.instanceId,
+    ),
     false,
   );
   return [opened, countered, passed];
