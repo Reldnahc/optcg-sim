@@ -1,0 +1,79 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-014C
+epic_id: M1-001
+title: Apply Blocker selection and target redirection
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Extend the Block Step decision to allow choosing one legal blocker, then rest
+  that blocker, record it on battle state, redirect the current target, and emit
+  `blockerActivated` without resolving damage yet.
+story_boundary: >
+  Own only blocker candidate exposure, blocker-selection response validation,
+  activation mutation, and the activation event. Stop before resolving
+  blocked-battle damage, Counter Step actions, On Block effects, Unblockable,
+  replacement effects, or effect-runtime queueing.
+allowed_touch_points:
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/actions.test.ts
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+spec_refs:
+  - 02-engine-mechanics.s019 (Block Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s025 (Keyword behavior)
+  - 03-game-state-events-decisions.s003 (Base state vs. computed view)
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s009 (Pending decisions)
+  - 03-game-state-events-decisions.s013 (Targets and card selections)
+  - 03-game-state-events-decisions.s016 (Action shape)
+  - 03-game-state-events-decisions.s017 (Canonical decision routing)
+  - 03-game-state-events-decisions.s018 (Canonical event visibility)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+scope:
+  - "extend the ENG-014B Block Step `selectCards` pending decision to expose exactly the currently legal active defender-controlled printed Blocker candidates with `min: 0` and `max: 1`"
+  - accept blocker selection only through `respondToDecision` for the defender-owned Block Step pending decision
+  - leave raw `activateBlocker` phase actions unsupported unless they are internally reused behind the decision response
+  - "validate the selected CardRef reifies to an active defender-controlled Character with printed `blocker` and `canBlock: true`"
+  - rest the blocker, set `battle.blocker`, redirect `battle.currentTarget` to the blocker, clear the pending decision, and emit public `blockerActivated`
+  - keep `battle.originalTarget` unchanged for replay/debugging
+  - 'after accepted activation, leave battle active at `battle.step: "block"` for ENG-014D to resolve rather than silently skipping Counter/On Block timing'
+  - reject stale, rested, non-Blocker, attacker-controlled, already-used, wrong-step, no-battle, pending runtime, replacement-state, unsupported metadata, and forged/multi-card selection cases without mutation or events
+non_scope:
+  - resolving damage against the blocker
+  - auto-skipping Counter Step or implementing Counter actions
+  - On Block effect queueing
+  - Unblockable, replacement, protection, effect-runtime queueing, replay schema, CLI/server/client behavior
+dependencies:
+  - ENG-014B
+acceptance_criteria:
+  - valid blocker response rests the blocker and redirects `battle.currentTarget`
+  - 'accepted activation records `battle.blocker`, preserves `battle.originalTarget`, clears pending decision, and leaves `battle.step: "block"`'
+  - accepted activation emits public `decisionResolved` and exactly one public `blockerActivated` event with deterministic payloads, event sequence, visibility, and state hash
+  - invalid blocker activations reject without mutation or events
+  - no damage, K.O., Life movement, battle clearing, pending queue creation, or step advancement occurs in this story
+required_tests:
+  - unit test for successful blocker selection response mutation and exact `decisionResolved` plus `blockerActivated` event payloads
+  - unit test proving original target remains unchanged while current target becomes blocker
+  - unit test asserting no step advancement, no pending decision, no effect queue, no battle clearing, no damage events, and stable state hash after accepted activation
+  - unit tests proving stale, rested, non-Blocker, attacker-controlled, wrong-step, already-blocked, forged, multi-card, wrong-decision, and no-battle activations reject without mutation
+  - unit tests proving pending runtime work, replacement state, Unblockable, Double Attack/Banish unsupported combinations, unsupported support metadata, and missing support metadata reject without mutation
+  - "`corepack pnpm exec vitest run packages/engine-core/src/actions.test.ts packages/engine-core/src/battle-actions.test.ts` must pass"
+  - "`corepack pnpm --filter @optcg/engine-core typecheck` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - create the ENG-014C substory branch from the approved ENG-014 parent integration branch and open the ENG-014C PR against that parent branch after human approval of the parent workflow
+  - do not resolve blocked-battle damage in this story
+  - fail closed on ambiguous timing, hidden information, or source-presence behavior
+  - keep engine-core deterministic and pure
+ambiguity_policy: fail_and_escalate
