@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-021A.md",
-      "storyId": "ENG-021A",
-      "storyPath": "stories/approved/ENG-021A-centralize-supported-end-of-battle-cleanup.yaml",
-      "storySha256": "dc114a7f5ba064093e7d3c450c13cc4315bb543ffb168ac35882c2fea9c40efb"
+      "packetPath": "agent-packets/ENG-021B.md",
+      "storyId": "ENG-021B",
+      "storyPath": "stories/approved/ENG-021B-expire-battle-duration-state-at-cleanup.yaml",
+      "storySha256": "af102d92656e78b425d9fcfc6a25cfaca41f92e6374119bc58ed8e9c62a66812"
     }
   ],
   "version": 1
