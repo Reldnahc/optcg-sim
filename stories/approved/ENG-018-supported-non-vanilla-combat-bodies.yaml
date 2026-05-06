@@ -1,0 +1,107 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-018
+epic_id: KICK-001
+title: Allow supported non-vanilla cards as combat bodies
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Let cards with supported combat-only metadata participate in normal combat
+  even when their support status is `implemented-dsl`, while preserving
+  fail-closed behavior for unsupported keywords, unsupported timings, and
+  unsupported effect bodies.
+story_boundary: >
+  Own only the engine-core support-policy gate used by computed combat view and
+  supported battle resolution for Leader/Character combat bodies. Preserve the
+  existing vanilla, Rush, Banish, and landed Blocker behavior. Do not redesign
+  the support registry, add new gameplay keywords, add new effect-runtime
+  primitives, or broaden unsupported timing/effect handling.
+allowed_touch_points:
+  - packages/engine-core/src/compute-view.ts
+  - packages/engine-core/src/compute-view.test.ts
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/actions.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - stories/approved/ENG-018-supported-non-vanilla-combat-bodies.yaml
+  - agent-packets/ENG-018.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s007 (Card categories)
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s019 (Block Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s023 (Damage processing)
+  - 02-engine-mechanics.s025 (Keyword behavior)
+  - 03-game-state-events-decisions.s004 (Engine result)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 04-effect-runtime.s005 (Card implementation support)
+  - 09-card-data-and-support-policy.s010 (Card implementation record)
+  - 09-card-data-and-support-policy.s011 (Support policy by mode)
+  - 09-card-data-and-support-policy.s013 (Match-time card manifest)
+  - 11-testing-quality.s004 (Primitive tests)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 18-acceptance-tests.s004 (Milestone 2 - first effect runtime)
+scope:
+  - preserve current vanilla combat legality and supported battle resolution
+  - preserve current Rush and Rush: Character attack legality and battle-action behavior
+  - preserve current Banish Leader-damage behavior and fail-closed combinations
+  - preserve landed ENG-014 Blocker behavior, including Block Step candidate and activation rules, for supported combat-body metadata
+  - replace the blanket combat rejection of non-`vanilla-confirmed` support status with a narrow combat-body policy that allows `vanilla-confirmed` and `implemented-dsl` Leader/Character cards only when their combat-relevant metadata is supported
+  - define supported combat-relevant printed keywords for this story as only `rush`, `rushCharacter`, `banish`, and `blocker`
+  - keep unsupported printed keywords, including `doubleAttack` and `unblockable`, fail-closed for computed combat view, legal actions, and battle application
+  - allow `implemented-dsl` Leader/Character cards with no printed keywords, no `effectText`, no `triggerText`, and no combat-card effect definition to act as normal no-keyword combat bodies
+  - allow `implemented-dsl` Leader/Character cards with only supported printed combat keywords and no combat-card effect definition to be attackers, targets, or Blocker candidates
+  - keep non-combat implemented effect-definition cards fail-closed as combat bodies in this story; for example, an On Play draw Character remains unsupported for combat-body use until a separate story explicitly authorizes non-combat implemented-effect bodies during combat
+  - keep `implemented-dsl` cards with unsupported combat timings or effect bodies fail-closed, including `counter`, `whenAttacking`, `onOpponentAttack`, `onBlock`, `onKO`, `endOfBattle`, replacement effects, battle-duration effects, protection/restriction bodies, unsupported keyword-granting bodies, or any effect definition present on a combat card
+  - preserve existing fail-closed behavior for `implemented-custom`, `unsupported`, `banned-in-simulator`, missing manifest metadata, missing power, pending runtime work, replacement state, continuous effects, unsupported counter windows, and unsupported life-trigger decisions
+non_scope:
+  - support registry redesign
+  - new gameplay keywords or new keyword behavior
+  - Double Attack, Unblockable, Counter, Trigger, On K.O., On Block, End of Battle, When Attacking, On Opponent Attack, replacement, protection, restriction, or battle-duration effect implementation
+  - new effect-runtime DSL primitives, target selection, triggers, replacements, or custom handlers
+  - deck validation, match server, browser client, spectator mode, replay viewer, rollback, recovery, persisted replay storage, database, or CLI behavior
+dependencies:
+  - ENG-012G
+  - ENG-013
+  - ENG-014E
+  - ENG-017
+acceptance_criteria:
+  - vanilla Leader/Character combat legality and supported battle resolution continue to pass existing tests
+  - Rush and Rush: Character continue to pass existing legal-action and battle-action tests
+  - Banish continues to pass existing Leader-damage, trigger-skip, visibility, and fail-closed tests
+  - landed Blocker behavior continues to work for eligible supported combat bodies according to ENG-014 behavior
+  - an `implemented-dsl` Leader/Character with no printed keywords, no `effectText`, no `triggerText`, and no combat-card effect definition can be used as a normal no-keyword combat body without being rejected solely because it is not `vanilla-confirmed`
+  - an `implemented-dsl` Rush or Banish card with no combat-card effect definition can use the already-supported Rush or Banish combat behavior without being rejected solely because it is not `vanilla-confirmed`
+  - an `implemented-dsl` Blocker card with no combat-card effect definition can use landed ENG-014 Blocker legal-action and activation behavior without being rejected solely because it is not `vanilla-confirmed`
+  - an `implemented-dsl` card with a non-combat effect definition such as supported On Play draw remains fail-closed for combat-body use in this story
+  - unsupported printed keywords still fail closed without mutation or legal actions
+  - "`implemented-dsl` cards with unsupported combat timings or unsupported combat effect bodies still fail closed without mutation or legal actions"
+  - no new support status, gameplay keyword, event type, effect primitive, server/client/CLI/replay/schema behavior, or deck-validation behavior is added
+required_tests:
+  - add or update packages/engine-core/src/compute-view.test.ts for `implemented-dsl` combat-body support and unsupported keyword fail-closed behavior
+  - add or update packages/engine-core/src/battle-actions.test.ts for no-keyword/no-effect-definition `implemented-dsl` combat bodies, Rush, Banish, Blocker, unsupported keyword, unsupported timing, and unsupported effect-body paths
+  - add or update packages/engine-core/src/actions.test.ts to prove `getLegalActions()` exposes and omits `declareAttack` plus Blocker decision responses for supported `implemented-dsl` bodies and unsupported metadata
+  - update test fixtures so supported combat keyword fixtures cover `rush`, `rushCharacter`, `banish`, and `blocker`, and unsupported keyword fixtures cover at least `doubleAttack` and `unblockable`
+  - run corepack pnpm exec vitest run packages/engine-core/src/compute-view.test.ts packages/engine-core/src/battle-actions.test.ts packages/engine-core/src/actions.test.ts
+  - run corepack pnpm run test -- packages/engine-core/src
+  - run corepack pnpm run typecheck
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving the story to approved or implementing
+  - generate and activate the packet before worker handoff
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - if implementation requires support-registry redesign, new keywords, new effect-runtime primitives, unsupported timing/effect behavior, replay schema changes, server/client/CLI changes, or deck-validation changes, stop and split or record the ambiguity
+  - fail closed on gameplay, replay, and hidden-information ambiguity
+  - implementation-review gate is required after the PR is opened
+ambiguity_policy: fail_and_escalate

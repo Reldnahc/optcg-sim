@@ -74,7 +74,14 @@ export const resolvedCard = (params: {
   counter?: number;
   effectText?: string;
   triggerText?: string;
-  printedKeywords?: ("rush" | "rushCharacter" | "doubleAttack" | "banish")[];
+  printedKeywords?: (
+    | "rush"
+    | "rushCharacter"
+    | "doubleAttack"
+    | "banish"
+    | "blocker"
+    | "unblockable"
+  )[];
   support?: Partial<ResolvedCard["support"]>;
 }): ResolvedCard => {
   const support: ResolvedCard["support"] = {

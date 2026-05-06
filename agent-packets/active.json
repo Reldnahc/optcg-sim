@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-018.md",
+      "storyId": "ENG-018",
+      "storyPath": "stories/approved/ENG-018-supported-non-vanilla-combat-bodies.yaml",
+      "storySha256": "ef9798613df7cdff0bf119b052ddea586ab1a94e2524c036ffe81a91fdc93300"
+    }
+  ],
   "version": 1
 }

@@ -389,6 +389,82 @@ test("fails closed when combat card support status is not vanilla-confirmed", ()
   assert.throws(() => computeView(state), /unsupported.*status/i);
 });
 
+test("supports implemented-dsl combat body with supported keywords and no effect metadata", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  state.turn.phase = "main";
+  state.turn.turnPlayerId = p1;
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  p1State.characters = [
+    withCharacter(p1, toCardId("char-rush"), 0, { turnPlayed: 3 }),
+  ];
+  p2State.characters = [withCharacter(p2, toCardId("char-vanilla"), 0)];
+  const manifest = {
+    ...state.cardManifest,
+    cards: { ...state.cardManifest.cards },
+  };
+  manifest.cards[toCardId("char-rush")] = {
+    ...must(manifest.cards[toCardId("char-rush")], "char-rush"),
+    support: {
+      ...must(manifest.cards[toCardId("char-rush")], "char-rush").support,
+      status: "implemented-dsl",
+    },
+  };
+  state.cardManifest = manifest;
+
+  const view = computeView(state);
+  assert.deepEqual(
+    view.legalAttackTargets[
+      must(p1State.characters[0], "p1 attacker").instanceId
+    ],
+    [p2State.leader.instanceId],
+  );
+});
+
+test("fails closed when implemented-dsl combat body has effect definition metadata", () => {
+  const state = createState();
+  const manifest = {
+    ...state.cardManifest,
+    cards: { ...state.cardManifest.cards },
+  };
+  manifest.cards[toCardId("leader-red")] = {
+    ...must(manifest.cards[toCardId("leader-red")], "leader-red"),
+    support: {
+      ...must(manifest.cards[toCardId("leader-red")], "leader-red").support,
+      status: "implemented-dsl",
+    },
+  };
+  manifest.effectDefinitions = {
+    "leader-red:on-play": {
+      cardId: toCardId("leader-red"),
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: "leader-red:on-play:1" as never,
+          category: "auto",
+          trigger: { type: "onPlay" },
+          optional: false,
+          oncePerTurn: false,
+          sourcePresencePolicy: "mustRemainInSameZone",
+          effect: { type: "draw", count: 1, player: "self" },
+        },
+      ],
+      metadata: {
+        sourceTextHash: "source-hash",
+        rulesVersion: "r1",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+      },
+    },
+  };
+  state.cardManifest = manifest;
+
+  assert.throws(() => computeView(state), /unsupported.*effect definition/i);
+});
+
 test("fails closed when combat card has unsupported printed combat keywords", () => {
   const state = createState();
   const brokenManifest = {
