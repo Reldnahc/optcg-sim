@@ -14,8 +14,19 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import {
+  appendEvent,
+  createEvent,
+  toEngineResult,
+  toStateSeq,
+} from "./action-results.js";
 import { getOpponentId, reindexZoneCards } from "./action-state.js";
+import {
+  groupValidatedEffectQueueEntries,
+  orderNoChoiceEffectQueueGroups,
+  validateEffectQueueOrderingInput,
+} from "./effect-queue-ordering.js";
+import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
 export type PendingRuntimeWorkKind = "effectQueue" | "deferredTriggers";
 
@@ -595,14 +606,253 @@ const unsupportedPendingRuntimeWorkError = (
   } satisfies UnsupportedPendingRuntimeWorkDetails,
 });
 
+const inferTimingWindowRanks = (
+  entries: readonly EffectQueueEntry[],
+): Array<{
+  timingWindowId: EffectQueueEntry["timingWindowId"];
+  rank: number;
+}> => {
+  const minCreatedAtSeqByWindow = new Map<
+    EffectQueueEntry["timingWindowId"],
+    number
+  >();
+  for (const entry of entries) {
+    const existing = minCreatedAtSeqByWindow.get(entry.timingWindowId);
+    if (existing === undefined || entry.createdAtEventSeq < existing) {
+      minCreatedAtSeqByWindow.set(
+        entry.timingWindowId,
+        entry.createdAtEventSeq,
+      );
+    }
+  }
+
+  return [...minCreatedAtSeqByWindow.entries()]
+    .sort((left, right) => {
+      const seqDifference = left[1] - right[1];
+      if (seqDifference !== 0) {
+        return seqDifference;
+      }
+      if (left[0] < right[0]) {
+        return -1;
+      }
+      if (left[0] > right[0]) {
+        return 1;
+      }
+      return 0;
+    })
+    .map(([timingWindowId], rank) => ({ timingWindowId, rank }));
+};
+
+const isSourcePresentForQueueEntry = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): boolean => {
+  if (entry.sourcePresencePolicy !== "mustRemainInSameZone") {
+    return false;
+  }
+  const source = findCardInstance(
+    state,
+    entry.source.playerId,
+    entry.source.instanceId,
+  );
+  if (source === undefined) {
+    return false;
+  }
+  const expectedZone = entry.source.zone;
+  if (expectedZone === undefined) {
+    return false;
+  }
+  return (
+    source.cardId === entry.source.cardId &&
+    source.zone.zone === expectedZone.zone &&
+    source.zone.playerId === expectedZone.playerId &&
+    source.zone.slot === expectedZone.slot &&
+    source.zone.index === expectedZone.index
+  );
+};
+
+const resolveQueuedNoChoiceDrawEffect = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): Extract<Effect, { type: "draw" }> | undefined => {
+  const resolved = state.cardManifest.cards[entry.source.cardId];
+  if (resolved === undefined) {
+    return undefined;
+  }
+  const lookup = resolveImplementedDslEffectDefinition(
+    resolved,
+    state.cardManifest,
+  );
+  if (!lookup.ok) {
+    return undefined;
+  }
+  const match = lookup.definition.effects.find(
+    (effect) => effect.id === entry.effectBlockId,
+  );
+  if (match === undefined || !isSupportedNoChoiceOnPlayEffect(match)) {
+    return undefined;
+  }
+  return match.effect;
+};
+
+const processNoChoiceEffectQueue = (state: GameState): EngineResult => {
+  const validated = validateEffectQueueOrderingInput(
+    state.effectQueue,
+    inferTimingWindowRanks(state.effectQueue),
+  );
+  if (!validated.ok) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        unsupportedPendingRuntimeWorkError({
+          kind: "effectQueue",
+          count: state.effectQueue.length,
+        }),
+      ],
+    );
+  }
+
+  const ordered = orderNoChoiceEffectQueueGroups(
+    groupValidatedEffectQueueEntries(validated),
+  );
+  if (!ordered.ok) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        unsupportedPendingRuntimeWorkError({
+          kind: "effectQueue",
+          count: state.effectQueue.length,
+        }),
+      ],
+    );
+  }
+
+  const originalState = state;
+  let nextState = state;
+  const allEvents: EngineEvent[] = [];
+  for (const selected of ordered.entries) {
+    if (!isSourcePresentForQueueEntry(nextState, selected)) {
+      return toEngineResult(
+        originalState,
+        [],
+        [
+          unsupportedPendingRuntimeWorkError({
+            kind: "effectQueue",
+            count: originalState.effectQueue.length,
+          }),
+        ],
+      );
+    }
+    const drawEffect = resolveQueuedNoChoiceDrawEffect(nextState, selected);
+    if (drawEffect === undefined) {
+      return toEngineResult(
+        originalState,
+        [],
+        [
+          unsupportedPendingRuntimeWorkError({
+            kind: "effectQueue",
+            count: originalState.effectQueue.length,
+          }),
+        ],
+      );
+    }
+
+    const resolvingEntry: EffectQueueEntry = {
+      ...selected,
+      state: "resolving",
+    };
+    nextState = {
+      ...nextState,
+      effectQueue: nextState.effectQueue.filter(
+        (entry) => entry.id !== selected.id,
+      ),
+    };
+
+    const resolution = executeNoChoiceEffectPrimitive(
+      nextState,
+      resolvingEntry,
+      drawEffect,
+    );
+    if (resolution.errors !== undefined) {
+      return toEngineResult(
+        originalState,
+        [],
+        [
+          unsupportedPendingRuntimeWorkError({
+            kind: "effectQueue",
+            count: originalState.effectQueue.length,
+          }),
+        ],
+      );
+    }
+    nextState = resolution.state;
+    allEvents.push(...resolution.events);
+
+    const checkpointEvents: EngineEvent[] = [];
+    const checkpointEventBaseState: GameState = {
+      ...nextState,
+      seq: toStateSeq(nextState.seq - 1),
+    };
+    nextState = applyRuleProcessingCheckpoint({
+      state: nextState,
+      events: checkpointEvents,
+      phase: nextState.turn.phase,
+      createEvent: (seqOffset, type, payload, visibility) => ({
+        ...createEvent(
+          checkpointEventBaseState,
+          seqOffset,
+          type,
+          payload,
+          visibility,
+        ),
+        causedBy: {
+          type: "effect",
+          queueEntryId: selected.id,
+          effectId: selected.effectBlockId,
+        },
+      }),
+    });
+    if (checkpointEvents.length > 0) {
+      nextState = {
+        ...nextState,
+        eventJournal: [...nextState.eventJournal, ...checkpointEvents],
+      };
+      allEvents.push(...checkpointEvents);
+    }
+
+    if (nextState.status.type !== "active") {
+      return toEngineResult(nextState, allEvents);
+    }
+  }
+
+  return toEngineResult(nextState, allEvents);
+};
+
 export const processEffectRuntime = (state: GameState): EngineResult => {
   const queuedFromOnPlay = queueOnPlayTriggers(state);
   if (queuedFromOnPlay !== undefined) {
     return queuedFromOnPlay;
   }
+  if (state.deferredTriggers.length > 0) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        unsupportedPendingRuntimeWorkError({
+          kind: "deferredTriggers",
+          count: state.deferredTriggers.length,
+        }),
+      ],
+    );
+  }
   const work = detectPendingRuntimeWork(state);
   if (work === undefined) {
     return toEngineResult(state, []);
+  }
+  if (work.kind === "effectQueue") {
+    return processNoChoiceEffectQueue(state);
   }
   return toEngineResult(state, [], [unsupportedPendingRuntimeWorkError(work)]);
 };
