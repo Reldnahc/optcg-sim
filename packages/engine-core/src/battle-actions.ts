@@ -359,16 +359,21 @@ export const getBattleDecisionLegalActions = (
   playerId: PlayerId,
 ): LegalAction[] => {
   const decision = state.pendingDecision;
+  const battle = state.battle;
   if (
     decision === undefined ||
     decision.type !== "selectCards" ||
     decision.playerId !== playerId ||
-    state.battle?.step !== "block" ||
+    battle === undefined ||
+    battle.step !== "block" ||
     decision.request.min !== 0 ||
     decision.request.max !== 1 ||
     decision.defaultResponse?.type !== "cards" ||
     decision.defaultResponse.cards.length !== 0
   ) {
+    return [];
+  }
+  if (hasUnsupportedBlockDecisionState(state, battle, decision.playerId)) {
     return [];
   }
   return [

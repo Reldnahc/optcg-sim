@@ -559,7 +559,6 @@ test("getLegalActions exposes no blocker responses outside the active defender b
   assertNoBlockerResponses(nonBlockerDecision);
 
   const pendingRuntimeWork = openBlockerDecision();
-  delete pendingRuntimeWork.pendingDecision;
   pendingRuntimeWork.effectQueue.push(queuedEffect("blocker-runtime-work"));
   assertNoBlockerResponses(pendingRuntimeWork);
 });
