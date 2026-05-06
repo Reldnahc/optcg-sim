@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Preserve deterministic fail-closed handling for `[Counter]` Events during the
   supported Counter Step slice so event cards are not silently skipped or

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Allow the defender to use Character cards with counter value from hand during
   the Counter Step, reveal/trash the card, add temporary battle power, and keep
