@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-020.md",
-      "storyId": "ENG-020",
-      "storyPath": "stories/approved/ENG-020-counter-integration-battle-pipeline-regression.yaml",
-      "storySha256": "bf13e58cedfc98f88c40f1d1ab978d6a312dfb63d502cf994b1adb58f2c60690"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

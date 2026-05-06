@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add focused integration regression coverage proving the landed Counter Step
   rules compose with the supported battle pipeline, existing Blocker, Banish,
