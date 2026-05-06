@@ -256,6 +256,53 @@ test("strict command-script mode exits nonzero for dispatch errors with determin
   );
 });
 
+test("strict command-script mode exits nonzero for engine illegal actions with deterministic diagnostics", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(["--command-script", "pass", "--strict"], {
+    stdin: Readable.from([]),
+    stdout: stdout.writer,
+    stderr: stderr.writer,
+  });
+
+  assert.equal(status, 1);
+  assert.match(
+    stdout.output(),
+    /illegalAction: Phase actions are illegal while a decision is pending\./u,
+  );
+  assert.match(stdout.output(), /State seq: 1/u);
+  assert.equal(
+    stderr.output(),
+    [
+      "Strict command-script failure:",
+      "  command: pass",
+      "  error: illegalAction: Phase actions are illegal while a decision is pending.",
+      "",
+    ].join("\n"),
+  );
+});
+
+test("strict command-script mode rejects a missing script before the strict flag", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(["--command-script", "--strict"], {
+    stdin: Readable.from([]),
+    stdout: stdout.writer,
+    stderr: stderr.writer,
+  });
+
+  assert.equal(status, 1);
+  assert.equal(stdout.output(), "");
+  assert.equal(
+    stderr.output(),
+    "--command-script requires a command sequence.\n",
+  );
+});
+
 test("non-strict command-script mode keeps exit-zero behavior for parse errors", async () => {
   const { runCli } = await import("./cli.js");
   const stdout = createWriter();

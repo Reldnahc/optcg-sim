@@ -168,7 +168,11 @@ export const runCli = async (
   if (args.length >= 1 && args[0] === "--command-script") {
     const script = args[1];
     const strict = args.length === 3 && args[2] === "--strict";
-    if ((args.length !== 2 && !strict) || script === undefined) {
+    if (
+      (args.length !== 2 && !strict) ||
+      script === undefined ||
+      script === "--strict"
+    ) {
       io.stderr.write("--command-script requires a command sequence.\n");
       return 1;
     }
