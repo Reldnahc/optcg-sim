@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-014C.md",
-      "storyId": "ENG-014C",
-      "storyPath": "stories/approved/ENG-014C-blocker-selection-activation.yaml",
-      "storySha256": "a31670d04d0881e7ad678b26e7e8a03ef208debcabd4d0890976e0dc4ea67957"
+      "packetPath": "agent-packets/ENG-014D.md",
+      "storyId": "ENG-014D",
+      "storyPath": "stories/approved/ENG-014D-blocked-battle-resolution.yaml",
+      "storySha256": "8f21a0d6cf84a8fd07ae56b1b8622b9847ae8c4c2b21363068c25fbbe618bb48"
     }
   ],
   "version": 1
