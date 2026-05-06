@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/SPEC-002.md",
-      "storyId": "SPEC-002",
-      "storyPath": "stories/approved/SPEC-002-authorize-strict-cli-command-script-failures.yaml",
-      "storySha256": "bc93429b5c8565f34d92eafef6a5b91b4e3999d01aa2b18b2f09e67a9973e58b"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
