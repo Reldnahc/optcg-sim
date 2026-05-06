@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add focused regression coverage for the first executable effect-runtime
   vertical after play-card integration, proving unsupported paths remain

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Replace the unsupported non-empty queue sentinel for a narrow supported path:
   validated no-choice On Play draw queue entries can be ordered, resolved, and

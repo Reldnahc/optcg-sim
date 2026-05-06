@@ -8,7 +8,7 @@ type: implementation
 area: types
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the missing match-local authority surface that lets engine-core resolve
   `implemented-dsl` card support records to immutable effect definitions without

@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-012G.md",
-      "storyId": "ENG-012G",
-      "storyPath": "stories/approved/ENG-012G-effect-runtime-vertical-regression-guards.yaml",
-      "storySha256": "af2656e41aeca1ca94d4584664b368cfa8ae12430ac4531999c47078c17131af"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

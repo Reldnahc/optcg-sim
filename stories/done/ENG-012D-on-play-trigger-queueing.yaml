@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Detect reviewed automatic `[On Play]` DSL effects from accepted `cardPlayed`
   events and append pending effect queue entries without resolving them.

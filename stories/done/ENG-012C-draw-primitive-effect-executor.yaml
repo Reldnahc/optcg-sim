@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the first real DSL primitive executor for no-choice `draw` effects,
   including deterministic state mutation, events, and hidden-information-safe

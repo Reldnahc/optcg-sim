@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Wire the supported no-choice On Play draw runtime vertical into accepted
   Character play so M2-001 is proven through the public battle-neutral engine

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add pure engine-core helpers that resolve a card's reviewed `implemented-dsl`
   effect definition from the match-local manifest and fail closed for missing,
