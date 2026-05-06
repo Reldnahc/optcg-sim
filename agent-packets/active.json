@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SPEC-001.md",
+      "storyId": "SPEC-001",
+      "storyPath": "stories/approved/SPEC-001-clarify-m1-replay-scope.yaml",
+      "storySha256": "c976ee1f0648863a0ffe657d3b26db8a6e559b926fc30a97c8077eb437520e1e"
+    }
+  ],
   "version": 1
 }

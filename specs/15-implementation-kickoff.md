@@ -215,11 +215,15 @@ Section Ref: `15-implementation-kickoff.s011`
 - Every atomic mutation emits at least one `EngineEvent` or has an explicit no-event reason.
 - Event journal seq is strictly increasing.
 - `hashGameState()` is stable across repeated runs with the same seed.
-- Golden replay reconstructs final hash.
+- Local deterministic CLI command/decision script smoke from fixture boot
+  reproduces script-defined state-hash checkpoints and final hash, without
+  requiring production ReplayCheckpoint artifacts.
 - production `filterStateForPlayer` hidden-info tests consume real engine output
   and prove opponent hand, deck order, face-down life, RNG, and effect queue
   internals stay hidden.
-- Milestone 1 does not include server, client, Poneglyph live adapter, Redis, ranked, or broad card pool work.
+- Milestone 1 does not include server, client, Poneglyph live adapter, Redis,
+  ranked, broad card pool work, or production ReplayLog, ReplayHeader, persisted
+  replay storage, rollback, recovery, version migration, or replay viewer.
 
 ## Guardrails
 
