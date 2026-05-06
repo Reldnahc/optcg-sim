@@ -16,6 +16,7 @@ Require the following checks before merge:
 
 - `quality`
 - `test`
+- `hidden-info`
 - `contracts`
 - `coverage`
 

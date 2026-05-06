@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-022.md",
+      "storyId": "INF-022",
+      "storyPath": "stories/approved/INF-022-add-hidden-info-to-branch-protection-required-check.yaml",
+      "storySha256": "f908550348466f59bb84c9da2bc0940c495b018c71e5f7685979b26d1bd9dd1c"
+    }
+  ],
   "version": 1
 }
