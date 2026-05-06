@@ -1,0 +1,117 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-014
+epic_id: M1-001
+title: Build Blocker battle interaction vertical
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Deliver printed Blocker as a parent integration story: defender-side blocker
+  eligibility, Block Step choice routing, blocker activation, target redirection,
+  blocked-battle resolution, and regression guards across the existing
+  battle-action surface.
+story_boundary: >
+  This parent story is not directly implementable. It defines the Blocker
+  delivery group and should be replaced by child stories ENG-014A through
+  ENG-014E implemented one active substory at a time on a parent integration
+  branch.
+child_stories:
+  - id: ENG-014A
+    title: Compute supported Blocker eligibility
+    concern: computed combat view and pre-action fail-closed guard
+    depends_on: [ENG-013]
+  - id: ENG-014B
+    title: Open Block Step decline decision
+    concern: Block Step pause, defender decision routing, and executable decline/pass path
+    depends_on: [ENG-014A]
+  - id: ENG-014C
+    title: Apply Blocker selection and target redirection
+    concern: legal blocker selection response, resting, redirection, and activation event
+    depends_on: [ENG-014B]
+  - id: ENG-014D
+    title: Resolve supported blocked battles
+    concern: deterministic blocked-battle damage, K.O., DON return, and cleanup
+    depends_on: [ENG-014C]
+  - id: ENG-014E
+    title: Add Blocker vertical regression guards
+    concern: cross-child verification and fail-closed regression coverage
+    depends_on: [ENG-014D]
+allowed_touch_points:
+  - packages/engine-core/src/compute-view.ts
+  - packages/engine-core/src/compute-view.test.ts
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/actions.test.ts
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/replay-smoke.test.ts
+  - fixtures/replays/**
+  - tests/hidden-info/**
+spec_refs:
+  - 02-engine-mechanics.s004 (Authority and official-rules defaults)
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s019 (Block Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s022 (End of Battle)
+  - 02-engine-mechanics.s025 (Keyword behavior)
+  - 02-engine-mechanics.s036 (DON!! card mechanics)
+  - 03-game-state-events-decisions.s003 (Base state vs. computed view)
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s009 (Pending decisions)
+  - 03-game-state-events-decisions.s013 (Targets and card selections)
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s016 (Action shape)
+  - 03-game-state-events-decisions.s017 (Canonical decision routing)
+  - 03-game-state-events-decisions.s018 (Canonical event visibility)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 04-effect-runtime.s008 (Trigger detection from events)
+  - 06-visibility-security.s003 (Player zone visibility)
+  - 06-visibility-security.s007 (Legal-action visibility)
+  - 06-visibility-security.s017 (Filter checklist)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 18-acceptance-tests.s004 (Milestone 2 - first effect runtime)
+scope:
+  - define child stories for computed Blocker eligibility, Block Step decision/decline routing, blocker selection/activation, blocked-battle resolution, and regression guards
+  - keep Blocker delivery on a parent integration branch so the mechanic lands as one reviewed vertical
+  - preserve fail-closed behavior for On Block effects, Counter Step actions, Unblockable, replacement effects, pending runtime queues, deferred triggers, Double Attack combinations, and unsupported timing windows until their own stories
+non_scope:
+  - direct implementation from this parent story
+  - approving or packetizing this parent story as an active implementation story
+  - Counter Step actions or Counter Events
+  - Unblockable support
+  - On Block, When Attacking, On Opponent Attack, On K.O., End of Battle, or other effect-runtime queueing
+  - replacement effects, protection effects, continuous effects, Double Attack, Life Trigger decisions, replay schema changes, CLI/server/client/database behavior
+dependencies:
+  - ENG-003C
+  - ENG-003D
+  - ENG-010G
+  - ENG-011
+  - ENG-013
+acceptance_criteria:
+  - child stories exist for computed Blocker eligibility, executable Block Step decline routing, blocker selection/activation, blocked-battle resolution, and regression guards
+  - this parent story remains non-implementable and is not packetized directly
+  - all child stories can be reviewed as a set before any child approval
+  - only child stories ENG-014A through ENG-014E are presented as approval-ready implementation or verification candidates
+required_tests:
+  - story-review agent must verify this parent is replaced by concern-scoped child stories before implementation begins
+repo_rules:
+  - do not approve or packetize this parent story
+  - approve only concern-scoped child stories for implementation
+  - implement one active child story at a time
+  - use the parent integration branch workflow for the ENG-014 group only if the human explicitly approves parent-level human review for ENG-014
+  - child PRs target the ENG-014 parent integration branch, not main
+  - keep exactly one active packet while each child story is being implemented or reviewed
+  - do not run packets:complete for child stories until the parent branch has merged to main
+  - run full parent PR integration review and human review before merging ENG-014 to main
+  - after parent merge, run packets:complete-many for the ENG-014 child story set
+  - keep engine-core deterministic and pure
+ambiguity_policy: fail_and_escalate

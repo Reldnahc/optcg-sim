@@ -92,6 +92,12 @@ const createManifest = (): MatchCardManifest => {
       power: 3000,
       printedKeywords: ["rushCharacter"],
     }),
+    [toCardId("char-blocker")]: resolvedCard({
+      cardId: toCardId("char-blocker"),
+      category: "character",
+      power: 3000,
+      printedKeywords: ["blocker"],
+    }),
     [toCardId("don-1")]: resolvedCard({
       cardId: toCardId("don-1"),
       category: "don",
@@ -392,6 +398,232 @@ test("fails closed when combat card has unsupported printed combat keywords", ()
   brokenManifest.cards[toCardId("leader-red")] = {
     ...must(brokenManifest.cards[toCardId("leader-red")], "leader-red"),
     printedKeywords: ["doubleAttack"],
+  };
+  state.cardManifest = brokenManifest;
+
+  assert.throws(() => computeView(state), /unsupported.*keyword/i);
+});
+
+test("active defender blocker character has canBlock true only during block step", () => {
+  const state = createState();
+  const p2State = must(state.players[p2], "p2 state");
+  state.turn.phase = "main";
+  state.turn.turnPlayerId = p1;
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  p2State.characters = [withCharacter(p2, toCardId("char-blocker"), 0)];
+  state.battle = {
+    attacker: {
+      instanceId: must(state.players[p1], "p1 state").leader.instanceId,
+      cardId: must(state.players[p1], "p1 state").leader.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    step: "block",
+    damageCount: 1,
+  };
+
+  const view = computeView(state);
+  assert.equal(
+    view.cards[must(p2State.characters[0], "p2 blocker").instanceId]?.canBlock,
+    true,
+  );
+});
+
+test("canBlock remains false for ineligible blocker and non-blocker contexts", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  state.turn.phase = "main";
+  state.turn.turnPlayerId = p1;
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  p1State.characters = [withCharacter(p1, toCardId("char-blocker"), 0)];
+  p2State.characters = [
+    withCharacter(p2, toCardId("char-blocker"), 0, { state: "rested" }),
+    withCharacter(p2, toCardId("char-vanilla"), 1),
+  ];
+  state.battle = {
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    step: "block",
+    damageCount: 1,
+  };
+
+  const view = computeView(state);
+  assert.equal(view.cards[p1State.leader.instanceId]?.canBlock, false);
+  assert.equal(
+    view.cards[must(p1State.characters[0], "p1 blocker").instanceId]?.canBlock,
+    false,
+  );
+  assert.equal(
+    view.cards[must(p2State.characters[0], "p2 rested blocker").instanceId]
+      ?.canBlock,
+    false,
+  );
+  assert.equal(
+    view.cards[must(p2State.characters[1], "p2 non-blocker").instanceId]
+      ?.canBlock,
+    false,
+  );
+
+  delete state.battle;
+  const outOfBattleView = computeView(state);
+  assert.equal(
+    outOfBattleView.cards[
+      must(p2State.characters[0], "p2 rested blocker 2").instanceId
+    ]?.canBlock,
+    false,
+  );
+});
+
+test("active defender printed blocker has canBlock false outside block step", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  state.turn.phase = "main";
+  state.turn.turnPlayerId = p1;
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  p2State.characters = [withCharacter(p2, toCardId("char-blocker"), 0)];
+  state.battle = {
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    step: "attack",
+    damageCount: 1,
+  };
+
+  const inBattleAttackStep = computeView(state);
+  assert.equal(
+    inBattleAttackStep.cards[
+      must(p2State.characters[0], "p2 active blocker").instanceId
+    ]?.canBlock,
+    false,
+  );
+
+  delete state.battle;
+  const outOfBattle = computeView(state);
+  assert.equal(
+    outOfBattle.cards[
+      must(p2State.characters[0], "p2 active blocker 2").instanceId
+    ]?.canBlock,
+    false,
+  );
+});
+
+test("active defender printed blocker has canBlock false for stale battle refs", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  state.turn.phase = "main";
+  state.turn.turnPlayerId = p1;
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  p2State.characters = [withCharacter(p2, toCardId("char-blocker"), 0)];
+
+  state.battle = {
+    attacker: {
+      instanceId: "stale-attacker" as CardInstance["instanceId"],
+      cardId: toCardId("leader-red"),
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    step: "block",
+    damageCount: 1,
+  };
+  const staleAttackerView = computeView(state);
+  assert.equal(
+    staleAttackerView.cards[
+      must(p2State.characters[0], "p2 active blocker stale attacker").instanceId
+    ]?.canBlock,
+    false,
+  );
+
+  state.battle = {
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: "stale-target" as CardInstance["instanceId"],
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+    step: "block",
+    damageCount: 1,
+  };
+  const staleTargetView = computeView(state);
+  assert.equal(
+    staleTargetView.cards[
+      must(p2State.characters[0], "p2 active blocker stale target").instanceId
+    ]?.canBlock,
+    false,
+  );
+});
+
+test("fails closed for unsupported unblockable keyword while blocker metadata is supported", () => {
+  const state = createState();
+  const brokenManifest = {
+    ...state.cardManifest,
+    cards: { ...state.cardManifest.cards },
+  };
+  brokenManifest.cards[toCardId("leader-red")] = {
+    ...must(brokenManifest.cards[toCardId("leader-red")], "leader-red"),
+    printedKeywords: ["unblockable"],
   };
   state.cardManifest = brokenManifest;
 
