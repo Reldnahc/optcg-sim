@@ -1,6 +1,7 @@
 import type {
   Action,
   CardInstance,
+  DecisionId,
   EngineEvent,
   EngineResult,
   GameState,
@@ -13,6 +14,7 @@ import {
   createEvent,
   illegalAction,
   rebaseEvents,
+  toDecisionId,
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
@@ -134,31 +136,6 @@ export const applyDeclareAttack = (
       "declareAttack target is not legal for attacker.",
     );
   }
-  try {
-    const blockCheckState: GameState = {
-      ...state,
-      battle: {
-        attacker: toCardRef(attacker.card, attacker.playerId),
-        originalTarget: toCardRef(target.card, target.playerId),
-        currentTarget: toCardRef(target.card, target.playerId),
-        step: "block",
-        damageCount: 1,
-      },
-    };
-    const blockView = computeView(blockCheckState);
-    if (Object.values(blockView.cards).some((cardView) => cardView.canBlock)) {
-      return illegalAction(
-        state,
-        "declareAttack requires unsupported blocker activation handling.",
-      );
-    }
-  } catch {
-    return illegalAction(
-      state,
-      "declareAttack is unsupported for current combat metadata.",
-    );
-  }
-
   const nextPlayer = state.players[attacker.playerId];
   if (nextPlayer === undefined) {
     return illegalAction(
@@ -222,6 +199,32 @@ export const applyDeclareAttack = (
   if (declaredResult.state.status.type !== "active") {
     return declaredResult;
   }
+  const blockDecision = createBlockStepDeclineDecision(declaredResult.state);
+  if (blockDecision !== null) {
+    const blockEvents = [...events];
+    appendEvent(
+      state,
+      blockEvents,
+      "decisionCreated",
+      {
+        decisionId: blockDecision.id,
+        decisionType: blockDecision.type,
+        playerId: blockDecision.playerId,
+      },
+      { type: "public" },
+    );
+    const blockState: GameState = {
+      ...declaredResult.state,
+      battle: {
+        ...mustBattle(declaredResult.state),
+        step: "block",
+      },
+      pendingDecision: blockDecision,
+      eventJournal: [...state.eventJournal, ...blockEvents],
+    };
+    return toEngineResult(blockState, blockEvents);
+  }
+
   const resolved = resolveSupportedVanillaBattle(declaredResult.state);
   if (resolved.errors !== undefined) {
     const firstError = resolved.errors[0];
@@ -241,6 +244,224 @@ export const applyDeclareAttack = (
     eventJournal: [...state.eventJournal, ...events, ...resolutionEvents],
   };
   return toEngineResult(finalState, [...events, ...resolutionEvents]);
+};
+
+const mustBattle = (state: GameState): NonNullable<GameState["battle"]> => {
+  const battle = state.battle;
+  if (battle === undefined) {
+    throw new Error("battle is required");
+  }
+  return battle;
+};
+
+const getBlockStepDecisionId = (
+  state: GameState,
+  attacker: CardInstance,
+): DecisionId =>
+  toDecisionId(
+    `decision:blockStep:decline:${String(attacker.instanceId)}:${String(state.seq + 1)}`,
+  );
+
+const isPrintedBlocker = (state: GameState, card: CardInstance): boolean => {
+  const metadata = state.cardManifest.cards[card.cardId];
+  if (metadata?.category !== "character") {
+    return false;
+  }
+  return metadata.printedKeywords.includes("blocker");
+};
+
+const hasWouldBeLegalDefenderBlocker = (
+  state: GameState,
+  defenderId: PlayerId,
+): boolean => {
+  const defender = state.players[defenderId];
+  if (defender === undefined) {
+    return false;
+  }
+  return defender.characters.some(
+    (character) =>
+      character.state === "active" && isPrintedBlocker(state, character),
+  );
+};
+
+const createBlockStepDeclineDecision = (
+  state: GameState,
+): NonNullable<GameState["pendingDecision"]> | null => {
+  const battle = state.battle;
+  if (battle === undefined || battle.step !== "attack") {
+    return null;
+  }
+  const target = reifyCardRef(state, battle.currentTarget);
+  if (target === null) {
+    return null;
+  }
+  if (
+    !hasWouldBeLegalDefenderBlocker(state, target.playerId) ||
+    hasUnsupportedBlockDecisionState(state, battle, target.playerId)
+  ) {
+    return null;
+  }
+  const attacker = reifyCardRef(state, battle.attacker);
+  if (attacker === null) {
+    return null;
+  }
+  return {
+    id: getBlockStepDecisionId(state, attacker.card),
+    type: "selectCards",
+    playerId: target.playerId,
+    prompt: "Choose blocker or decline.",
+    causedBy: {
+      type: "playerAction",
+      actionId: `action:${String(state.actionSeq)}`,
+    },
+    visibility: { type: "public" },
+    request: {
+      timing: "onActivation",
+      chooser: "nonTurnPlayer",
+      player: "nonTurnPlayer",
+      zone: "characterArea",
+      filter: { categories: ["character"] },
+      min: 0,
+      max: 0,
+      allowFewerIfUnavailable: true,
+      visibility: "public",
+    },
+    candidates: [],
+    defaultResponse: { type: "cards", cards: [] },
+  };
+};
+
+export const getBattleDecisionLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): LegalAction[] => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "selectCards" ||
+    decision.playerId !== playerId ||
+    state.battle?.step !== "block" ||
+    decision.request.min !== 0 ||
+    decision.request.max !== 0 ||
+    decision.defaultResponse?.type !== "cards" ||
+    decision.defaultResponse.cards.length !== 0
+  ) {
+    return [];
+  }
+  return [
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [] },
+    },
+  ];
+};
+
+const hasUnsupportedBlockDecisionState = (
+  state: GameState,
+  battle: NonNullable<GameState["battle"]>,
+  defenderId: PlayerId,
+): boolean => {
+  if (
+    detectPendingRuntimeWork(state) !== undefined ||
+    state.replacementState.length > 0 ||
+    battle.blocker !== undefined ||
+    battle.damageCount !== 1
+  ) {
+    return true;
+  }
+  if (hasUnsupportedCounterWindow(state, defenderId)) {
+    return true;
+  }
+  let view: ReturnType<typeof computeView>;
+  try {
+    view = computeView(state);
+  } catch {
+    return true;
+  }
+  const attacker = reifyCardRef(state, battle.attacker);
+  const target = reifyCardRef(state, battle.currentTarget);
+  if (attacker === null || target === null) {
+    return true;
+  }
+  const attackerView = view.cards[attacker.card.instanceId];
+  const targetView = view.cards[target.card.instanceId];
+  if (
+    attackerView?.currentPower === undefined ||
+    targetView?.currentPower === undefined
+  ) {
+    return true;
+  }
+  if (Object.keys(view.restrictions).length > 0) {
+    return true;
+  }
+  if (
+    attackerView.keywords.includes("doubleAttack") ||
+    targetView.protectedFrom.length > 0
+  ) {
+    return true;
+  }
+  return false;
+};
+
+export const applyBattleDecisionResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  const battle = state.battle;
+  if (
+    decision === undefined ||
+    decision.type !== "selectCards" ||
+    battle === undefined ||
+    battle.step !== "block"
+  ) {
+    return null;
+  }
+  if (action.response.type !== "cards" || action.response.cards.length !== 0) {
+    return illegalAction(
+      state,
+      "Block Step decline decision only supports empty card selection.",
+    );
+  }
+  if (
+    decision.request.min !== 0 ||
+    decision.request.max !== 0 ||
+    decision.defaultResponse?.type !== "cards" ||
+    decision.defaultResponse.cards.length !== 0
+  ) {
+    return illegalAction(state, "Unsupported Block Step decision envelope.");
+  }
+  const defender = state.players[decision.playerId];
+  if (defender === undefined || decision.playerId === state.turn.turnPlayerId) {
+    return illegalAction(state, "Decision player mismatch.");
+  }
+  if (hasUnsupportedBlockDecisionState(state, battle, decision.playerId)) {
+    return illegalAction(
+      state,
+      "Battle requires unsupported blocker, counter, or replacement handling.",
+    );
+  }
+
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionResolved",
+    { decisionId: decision.id, playerId: decision.playerId },
+    { type: "public" },
+  );
+  const resumedState: GameState = {
+    ...state,
+    battle: { ...battle, step: "attack" },
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  delete resumedState.pendingDecision;
+  const resolved = resolveSupportedVanillaBattle(resumedState);
+  if (resolved.errors !== undefined) {
+    return resolved;
+  }
+  return toEngineResult(resolved.state, [...events, ...resolved.events]);
 };
 
 const unsupportedBattleResolution = (

@@ -9,7 +9,9 @@ import type {
 import { illegalAction } from "./action-results.js";
 import { isMatchActive } from "./action-state.js";
 import {
+  applyBattleDecisionResponse,
   applyDeclareAttack,
+  getBattleDecisionLegalActions,
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
 } from "./battle-actions.js";
@@ -43,6 +45,7 @@ export const getLegalActions = (
   }
   if (state.pendingDecision !== undefined) {
     actions.push(...getPlayCardLegalActions(state, playerId));
+    actions.push(...getBattleDecisionLegalActions(state, playerId));
     return actions;
   }
 
@@ -71,6 +74,10 @@ const applyRespondToDecision = (
   const playCardResult = applyPlayCardDecisionResponse(state, action);
   if (playCardResult !== null) {
     return playCardResult;
+  }
+  const battleResult = applyBattleDecisionResponse(state, action);
+  if (battleResult !== null) {
+    return battleResult;
   }
   return illegalAction(state, "Unsupported decision type.");
 };
