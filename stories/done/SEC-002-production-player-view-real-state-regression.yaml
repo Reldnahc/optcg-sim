@@ -8,7 +8,7 @@ type: verification
 area: security
 primary_concern: visibility
 priority: critical
-status: approved
+status: done
 summary: >
   Prove the production `filterStateForPlayer` path remains hidden-info safe on
   representative real engine and CLI `GameState` outputs, not only static JSON
