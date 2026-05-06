@@ -1440,7 +1440,6 @@ export const resolveSupportedVanillaBattle = (
     ...state,
     seq: toStateSeq(state.seq + 1),
   };
-  delete nextState.battle;
 
   if (attackerView.currentPower >= targetView.currentPower) {
     if (target.isLeader) {
@@ -1455,26 +1454,13 @@ export const resolveSupportedVanillaBattle = (
           target: target.card.instanceId,
           amount: 1,
         });
-        nextState = applyRuleProcessingCheckpoint({
-          state: nextState,
+        return finalizeSupportedEndOfBattleCleanup({
+          state,
+          nextState,
           events,
-          phase: "main",
-          createEvent: (seqOffset, type, payload, visibility) =>
-            createEvent(state, seqOffset, type, payload, visibility),
           immediateLosers: [target.playerId],
+          cleanupEventPosition: "afterRuleProcessing",
         });
-        events.push(
-          createEvent(
-            state,
-            events.length + 1,
-            "effectResolved",
-            { systemStep: "endBattle", battleCleared: true },
-            { type: "replayOnly" },
-          ),
-        );
-        nextState.eventJournal = [...state.eventJournal, ...events];
-        assertGameStateInvariants(nextState);
-        return toEngineResult(nextState, events);
       }
       const lifeMeta = nextState.cardManifest.cards[topLife.card.cardId];
       if (
@@ -1668,23 +1654,81 @@ export const resolveSupportedVanillaBattle = (
     }
   }
 
-  events.push(
-    createEvent(
-      state,
-      events.length + 1,
-      "effectResolved",
-      { systemStep: "endBattle", battleCleared: true },
-      { type: "replayOnly" },
-    ),
-  );
-  nextState = applyRuleProcessingCheckpoint({
-    state: nextState,
+  return finalizeSupportedEndOfBattleCleanup({
+    state,
+    nextState,
     events,
-    phase: "main",
-    createEvent: (seqOffset, type, payload, visibility) =>
-      createEvent(state, seqOffset, type, payload, visibility),
   });
-  nextState.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+};
+
+const finalizeSupportedEndOfBattleCleanup = ({
+  state,
+  nextState,
+  events,
+  immediateLosers,
+  cleanupEventPosition = "beforeRuleProcessing",
+}: {
+  state: GameState;
+  nextState: GameState;
+  events: EngineEvent[];
+  immediateLosers?: PlayerId[];
+  cleanupEventPosition?: "beforeRuleProcessing" | "afterRuleProcessing";
+}): EngineResult => {
+  const clearedBattleState: GameState = {
+    ...nextState,
+  };
+  delete clearedBattleState.battle;
+  const createRuleProcessingInput = () =>
+    immediateLosers === undefined
+      ? {
+          state: clearedBattleState,
+          events,
+          phase: "main" as const,
+          createEvent: (
+            seqOffset: number,
+            type: EngineEvent["type"],
+            payload: unknown,
+            visibility?: EngineEvent["visibility"],
+          ) => createEvent(state, seqOffset, type, payload, visibility),
+        }
+      : {
+          state: clearedBattleState,
+          events,
+          phase: "main" as const,
+          createEvent: (
+            seqOffset: number,
+            type: EngineEvent["type"],
+            payload: unknown,
+            visibility?: EngineEvent["visibility"],
+          ) => createEvent(state, seqOffset, type, payload, visibility),
+          immediateLosers,
+        };
+
+  let finalizedState: GameState;
+  if (cleanupEventPosition === "beforeRuleProcessing") {
+    events.push(
+      createEvent(
+        state,
+        events.length + 1,
+        "effectResolved",
+        { systemStep: "endBattle", battleCleared: true },
+        { type: "replayOnly" },
+      ),
+    );
+    finalizedState = applyRuleProcessingCheckpoint(createRuleProcessingInput());
+  } else {
+    finalizedState = applyRuleProcessingCheckpoint(createRuleProcessingInput());
+    events.push(
+      createEvent(
+        state,
+        events.length + 1,
+        "effectResolved",
+        { systemStep: "endBattle", battleCleared: true },
+        { type: "replayOnly" },
+      ),
+    );
+  }
+  finalizedState.eventJournal = [...state.eventJournal, ...events];
+  assertGameStateInvariants(finalizedState);
+  return toEngineResult(finalizedState, events);
 };
