@@ -973,13 +973,37 @@ const getUnsupportedDamageStepContinuationReason = (
   state: GameState,
 ): string | undefined => {
   const battle = state.battle;
-  if (battle === undefined || battle.step !== "counter") {
+  if (
+    battle === undefined ||
+    battle.step !== "counter" ||
+    !isSupportedBattleResolutionEnvelope(battle)
+  ) {
     return "Battle requires unsupported blocker, step, or multi-damage behavior.";
+  }
+  if (
+    detectPendingRuntimeWork(state) !== undefined ||
+    state.replacementState.length > 0 ||
+    state.continuousEffects.length > 0
+  ) {
+    return "Battle requires unsupported trigger or replacement processing.";
+  }
+  if (hasUnsupportedBattleEffectMetadata(state)) {
+    return "Battle requires unsupported effect metadata.";
   }
   const attacker = reifyCardRef(state, battle.attacker);
   const target = reifyCardRef(state, battle.currentTarget);
   if (attacker === null || target === null) {
     return "Battle participants are stale or invalid.";
+  }
+  if (battle.blocker !== undefined) {
+    const blocker = reifyCardRef(state, battle.blocker);
+    if (
+      blocker === null ||
+      blocker.isLeader ||
+      !sameCardRef(battle.blocker, battle.currentTarget)
+    ) {
+      return "Battle blocker is stale or invalid.";
+    }
   }
 
   let view: ReturnType<typeof computeView>;

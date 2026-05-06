@@ -1983,6 +1983,30 @@ test("counter-step pass rejects unsupported life trigger damage without clearing
   assert.equal(result.state.battle?.step, "counter");
 });
 
+test("counter-step pass rejects replacement processing without clearing decision", () => {
+  const context = setupOpenedCounterStepPassDecision();
+  context.openedState.replacementState.push({
+    processId: "counter-pass-replacement-process",
+    type: "damage",
+    usedReplacementIds: [],
+    payload: { hidden: "replacement" },
+  });
+  const before = JSON.stringify(context.openedState);
+
+  const result = applyAction(context.openedState, {
+    type: "respondToDecision",
+    decisionId: context.decision.id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(context.openedState), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.state.pendingDecision?.id, context.decision.id);
+  assert.equal(result.state.battle?.step, "counter");
+});
+
 test("Counter Event metadata remains unsupported and does not auto-pass or mutate state", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
