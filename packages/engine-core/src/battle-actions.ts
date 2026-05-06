@@ -789,6 +789,25 @@ export const applyUseCounter = (
       return illegalAction(state, "Battle blocker is stale or invalid.");
     }
   }
+  if (
+    detectPendingRuntimeWork(state) !== undefined ||
+    state.replacementState.length > 0 ||
+    state.continuousEffects.length > 0
+  ) {
+    return illegalAction(
+      state,
+      "Battle requires unsupported trigger or replacement processing.",
+    );
+  }
+  if (hasUnsupportedBattleEffectMetadata(state)) {
+    return illegalAction(state, "Battle requires unsupported effect metadata.");
+  }
+  if (!target.isLeader && target.card.state !== "rested") {
+    return illegalAction(
+      state,
+      "Battle target is no longer a supported rested character target.",
+    );
+  }
   if (!isSupportedBattleResolutionEnvelope(battle)) {
     return illegalAction(
       state,
