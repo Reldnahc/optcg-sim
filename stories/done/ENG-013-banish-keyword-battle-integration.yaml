@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Promote printed Banish from a fail-closed combat keyword into the narrow
   supported Leader-damage path: when a Banish attacker deals battle damage to a
