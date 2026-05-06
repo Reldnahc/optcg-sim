@@ -380,21 +380,38 @@ test("direct draw from empty deck is a no-op without deck-out ownership", () => 
 
 test("direct unsupported effect shapes fail closed without mutation or events", () => {
   const state = createActiveState();
-  const before = structuredClone(state);
+  const cases = [
+    { type: "drawUpTo", count: 1, player: "self" },
+    { type: "custom", handler: "unsupported-handler" },
+    {
+      type: "replacement",
+      when: { type: "cardWouldBeKOd", target: "self" },
+      instead: { type: "draw", count: 1, player: "self" },
+    },
+    {
+      type: "modifyPower",
+      target: "self",
+      value: 1000,
+      duration: "thisBattle",
+    },
+  ] as const;
 
-  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
-    type: "drawUpTo",
-    count: 1,
-    player: "self",
-  } as never);
+  for (const effect of cases) {
+    const before = structuredClone(state);
+    const result = executeNoChoiceEffectPrimitive(
+      state,
+      queueDrawForP1(),
+      effect as never,
+    );
 
-  assert.deepEqual(result.events, []);
-  assert.ok(result.errors !== undefined);
-  assert.equal(
-    must(result.errors[0], "runtime error").type,
-    "effectRuntimeError",
-  );
-  assert.deepEqual(result.state, before);
+    assert.deepEqual(result.events, []);
+    assert.ok(result.errors !== undefined);
+    assert.equal(
+      must(result.errors[0], "runtime error").type,
+      "effectRuntimeError",
+    );
+    assert.deepEqual(result.state, before);
+  }
 });
 
 test("direct invalid draw count and unsupported player ref fail closed without mutation", () => {

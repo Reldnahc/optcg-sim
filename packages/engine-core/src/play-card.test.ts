@@ -1455,6 +1455,8 @@ test("Character On Play draw events are deterministic after card play events", (
   );
   assert.deepEqual(first.events, second.events);
   assert.equal(first.stateHash, second.stateHash);
+  assert.equal(first.stateHash, hashCanonicalStateValue(first.state));
+  assert.equal(second.stateHash, hashCanonicalStateValue(second.state));
   assert.equal(
     first.events.every(
       (event, index, events) =>
@@ -1522,6 +1524,60 @@ test("choice optional custom Event and unsupported On Play effects fail closed w
           {
             ...must(definition.effects[0], "effect"),
             effect: { type: "drawUpTo" as const, count: 1, player: "self" },
+          },
+        ],
+      }),
+    },
+    {
+      name: "replacement",
+      mutate: (
+        definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,
+      ) => ({
+        ...definition,
+        effects: [
+          {
+            ...must(definition.effects[0], "effect"),
+            effect: {
+              type: "replacement" as const,
+              when: {
+                type: "wouldMoveZone",
+                target: { type: "self" },
+              },
+              instead: { type: "draw", count: 1, player: "self" },
+            },
+          },
+        ],
+      }),
+    },
+    {
+      name: "continuous-battle-duration",
+      mutate: (
+        definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,
+      ) => ({
+        ...definition,
+        effects: [
+          {
+            ...must(definition.effects[0], "effect"),
+            effect: {
+              type: "modifyPower" as const,
+              target: { type: "self" },
+              value: 1000,
+              duration: { type: "thisBattle" },
+            },
+          },
+        ],
+      }),
+    },
+    {
+      name: "battle-timing-trigger",
+      mutate: (
+        definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,
+      ) => ({
+        ...definition,
+        effects: [
+          {
+            ...must(definition.effects[0], "effect"),
+            trigger: { type: "endOfBattle" },
           },
         ],
       }),

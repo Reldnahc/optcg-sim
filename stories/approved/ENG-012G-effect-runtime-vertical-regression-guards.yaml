@@ -1,0 +1,70 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-012G
+epic_id: M1-001
+title: Add first executable effect runtime regression guards
+type: verification
+area: engine
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Add focused regression coverage for the first executable effect-runtime
+  vertical after play-card integration, proving unsupported paths remain
+  fail-closed and M2-001 stays deterministic.
+story_boundary: >
+  Own only test and fixture coverage for the completed ENG-012 vertical. Stop
+  before adding production behavior or broadening runtime support.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/play-card.test.ts
+  - packages/engine-core/src/actions.test.ts
+  - fixtures/effect-dsl/valid/**
+  - fixtures/effect-dsl/invalid/**
+  - tests/contracts/**
+spec_refs:
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s015 (Legal actions)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s023 (Error handling inside the engine)
+  - 04-effect-runtime.s010 (Queue processing)
+  - 05-effect-dsl-reference.s012 (Effects)
+  - 05-effect-dsl-reference.s019 (Example: On Play draw 1)
+  - 05-effect-dsl-reference.s029 (Schema coverage policy)
+  - 11-testing-quality.s004 (Unit tests per DSL primitive)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 11-testing-quality.s010 (Golden replay tests)
+  - 11-testing-quality.s012 (Replay drift tests)
+  - 18-acceptance-tests.s004 (Milestone 2 - first effect runtime)
+scope:
+  - add or tighten tests proving M2-001 On Play draw queues and resolves through the supported action path
+  - add regression tests proving unsupported effect types, choice-required queues, deferred triggers, Event effects, custom handlers, and replacement/continuous/battle timing effects remain fail-closed
+  - construct non-fixture-authorable unsupported shapes as test-only in-memory objects rather than committed canonical effect DSL fixtures
+  - add hash-stability coverage only if existing fixture conventions support it without schema changes
+  - preserve all existing replay smoke hashes and do not add replay fixtures in this story
+non_scope:
+  - production code changes
+  - new runtime primitives
+  - CLI/server/client behavior
+  - replay fixture or replay schema changes
+  - approving additional runtime behavior beyond no-choice On Play draw
+dependencies:
+  - ENG-012F
+acceptance_criteria:
+  - no production files are changed
+  - M2-001 has explicit regression coverage at the action/runtime boundary
+  - unsupported runtime paths remain fail-closed with no partial mutation
+  - state hash and event journal stability coverage exists for the supported vertical
+required_tests:
+  - regression test for On Play draw action/runtime event ordering and final state hash stability
+  - regression test proving unresolved runtime work still gates ordinary legal actions
+  - regression tests for unsupported Event/custom/choice/replacement/continuous/battle effect shapes, using committed fixtures only when the schema supports the fixture shape
+  - existing replay smoke tests pass with unchanged hashes
+  - "`corepack pnpm --filter @optcg/engine-core typecheck` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - keep this story test-only
+  - if production behavior must change, stop and split or record the ambiguity
+  - fail closed on replay or hidden-information ambiguity
+ambiguity_policy: fail_and_escalate
