@@ -384,13 +384,11 @@ const findCardInstance = (
 const toSnapshot = (
   card: CardInstance,
   resolved: ResolvedCard,
-  ownerId: PlayerId,
-  controllerId: PlayerId,
 ): EffectQueueEntry["sourceSnapshot"] => ({
   instanceId: card.instanceId,
   cardId: card.cardId,
-  ownerId,
-  controllerId,
+  ownerId: card.owner,
+  controllerId: card.controller,
   zone: card.zone,
   category: resolved.category,
   colors: resolved.colors,
@@ -426,13 +424,16 @@ const queueOnPlayTriggers = (state: GameState): EngineResult | undefined => {
       payload.playerId === undefined ||
       payload.instanceId === undefined ||
       payload.cardId === undefined ||
-      (payload.category !== "character" && payload.category !== "stage")
+      payload.category === undefined
     ) {
       return toEngineResult(
         state,
         [],
         [onPlayTriggerQueueingError("invalid-card-played-event")],
       );
+    }
+    if (payload.category !== "character" && payload.category !== "stage") {
+      continue;
     }
 
     const source = findCardInstance(
@@ -526,12 +527,7 @@ const queueOnPlayTriggers = (state: GameState): EngineResult | undefined => {
           playerId: source.zone.playerId,
           zone: source.zone,
         },
-        sourceSnapshot: toSnapshot(
-          source,
-          resolved,
-          payload.playerId,
-          payload.playerId,
-        ),
+        sourceSnapshot: toSnapshot(source, resolved),
         triggerEventId: event.id,
         effectBlockId: effectBlock.id,
         orderingGroup,

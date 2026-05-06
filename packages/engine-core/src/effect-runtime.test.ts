@@ -1293,3 +1293,72 @@ test("unreviewed On Play definition metadata fails closed without queue mutation
   assert.deepEqual(result.state.effectQueue, before.effectQueue);
   assert.deepEqual(result.state.eventJournal, before.eventJournal);
 });
+
+test("event cardPlayed entries are ignored by On Play trigger queueing", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const eventInHand = must(p1State.hand[0], "event source");
+  state.eventJournal.push({
+    id: toEngineEventId(`event:${String(state.seq)}:1:cardPlayed`),
+    seq: state.eventJournal.length + 1,
+    type: "cardPlayed",
+    payload: {
+      playerId: p1,
+      instanceId: eventInHand.instanceId,
+      cardId: eventInHand.cardId,
+      category: "event",
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "turnFlow" },
+    createdAtStateSeq: state.seq,
+  });
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.state.effectQueue, before.effectQueue);
+  assert.deepEqual(result.state.eventJournal, before.eventJournal);
+});
+
+test("queued source snapshot preserves CardInstance owner/controller", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  const p2State = must(state.players[p2], "p2");
+  const source = must(p2State.hand[0], "p2 hand source");
+  const placed = withCardInZone({
+    state,
+    playerId: p2,
+    card: source,
+    zone: "characterArea",
+  });
+  const controlledByP2OwnedByP1: CardInstance = {
+    ...placed,
+    owner: p1,
+    controller: p2,
+  };
+  p2State.characters = [controlledByP2OwnedByP1];
+  appendCardPlayedEvent(state, controlledByP2OwnedByP1, "character");
+
+  const supportCard = resolvedCard({
+    cardId: controlledByP2OwnedByP1.cardId,
+    category: "character",
+  });
+  setupOnPlayDefinition(
+    state,
+    controlledByP2OwnedByP1,
+    reviewedOnPlayDrawDefinition(
+      controlledByP2OwnedByP1.cardId,
+      supportCard.support,
+    ),
+    "def-snapshot-owner-controller",
+  );
+
+  const result = processEffectRuntime(state);
+  const queued = must(result.state.effectQueue[0], "queued entry");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(queued.sourceSnapshot.ownerId, p1);
+  assert.equal(queued.sourceSnapshot.controllerId, p2);
+});
