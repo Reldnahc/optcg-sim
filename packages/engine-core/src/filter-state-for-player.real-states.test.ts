@@ -135,42 +135,161 @@ const assertPublicZonesVisible = (
   const opponentState = must(state.players[opponent], `${label} opponent`);
   const view = filterStateForPlayer(state, recipient);
 
-  assert.equal(view.self.leader.cardId, recipientState.leader.cardId, label);
-  assert.equal(
-    view.opponent.leader.cardId,
-    opponentState.leader.cardId,
+  const assertVisibleCardPayload = (
+    expected: {
+      instanceId: string;
+      cardId: string;
+      owner: string;
+      controller: string;
+      zone: unknown;
+      attachedDon: readonly unknown[];
+      state?: string;
+      turnPlayed?: number;
+    },
+    actual: {
+      instanceId: string;
+      cardId: string;
+      owner: string;
+      controller: string;
+      zone: unknown;
+      attachedDonCount: number;
+      state?: string;
+      turnPlayed?: number;
+    },
+    cardLabel: string,
+  ) => {
+    assert.equal(
+      actual.instanceId,
+      expected.instanceId,
+      `${cardLabel} instance`,
+    );
+    assert.equal(actual.cardId, expected.cardId, `${cardLabel} cardId`);
+    assert.equal(actual.owner, expected.owner, `${cardLabel} owner`);
+    assert.equal(
+      actual.controller,
+      expected.controller,
+      `${cardLabel} controller`,
+    );
+    assert.deepEqual(actual.zone, expected.zone, `${cardLabel} zone`);
+    assert.equal(
+      actual.attachedDonCount,
+      expected.attachedDon.length,
+      `${cardLabel} attachedDonCount`,
+    );
+    if (expected.state !== undefined || actual.state !== undefined) {
+      assert.equal(actual.state, expected.state, `${cardLabel} state`);
+    }
+    if (expected.turnPlayed !== undefined || actual.turnPlayed !== undefined) {
+      assert.equal(
+        actual.turnPlayed,
+        expected.turnPlayed,
+        `${cardLabel} turnPlayed`,
+      );
+    }
+  };
+
+  assertVisibleCardPayload(
+    recipientState.leader,
+    view.self.leader,
+    `${label} self leader`,
+  );
+  assertVisibleCardPayload(
+    opponentState.leader,
+    view.opponent.leader,
     `${label} opponent leader`,
   );
+
   assert.equal(
     view.self.characters.length,
     recipientState.characters.length,
     `${label} self characters`,
   );
+  for (const expected of recipientState.characters) {
+    const actual = view.self.characters.find(
+      (card) => card.instanceId === expected.instanceId,
+    );
+    assert.ok(actual, `${label} self character must be visible`);
+    assertVisibleCardPayload(expected, actual, `${label} self character`);
+  }
+
   assert.equal(
     view.opponent.characters.length,
     opponentState.characters.length,
     `${label} opponent characters`,
   );
+  for (const expected of opponentState.characters) {
+    const actual = view.opponent.characters.find(
+      (card) => card.instanceId === expected.instanceId,
+    );
+    assert.ok(actual, `${label} opponent character must be visible`);
+    assertVisibleCardPayload(expected, actual, `${label} opponent character`);
+  }
+
   assert.equal(
     view.self.costArea.length,
     recipientState.costArea.length,
     `${label} self costArea`,
   );
+  for (const expected of recipientState.costArea) {
+    const actual = view.self.costArea.find(
+      (card) => card.instanceId === expected.instanceId,
+    );
+    assert.ok(actual, `${label} self cost card must be visible`);
+    assertVisibleCardPayload(expected, actual, `${label} self cost card`);
+  }
+
   assert.equal(
     view.opponent.costArea.length,
     opponentState.costArea.length,
     `${label} opponent costArea`,
   );
-  assert.equal(view.self.trash.length, recipientState.trash.length, label);
-  assert.equal(view.opponent.trash.length, opponentState.trash.length, label);
+  for (const expected of opponentState.costArea) {
+    const actual = view.opponent.costArea.find(
+      (card) => card.instanceId === expected.instanceId,
+    );
+    assert.ok(actual, `${label} opponent cost card must be visible`);
+    assertVisibleCardPayload(expected, actual, `${label} opponent cost card`);
+  }
+
+  assert.equal(
+    view.self.trash.length,
+    recipientState.trash.length,
+    `${label} self trash`,
+  );
+  for (const expected of recipientState.trash) {
+    const actual = view.self.trash.find(
+      (card) => card.instanceId === expected.instanceId,
+    );
+    assert.ok(actual, `${label} self trash card must be visible`);
+    assertVisibleCardPayload(expected, actual, `${label} self trash card`);
+  }
+
+  assert.equal(
+    view.opponent.trash.length,
+    opponentState.trash.length,
+    `${label} opponent trash`,
+  );
+  for (const expected of opponentState.trash) {
+    const actual = view.opponent.trash.find(
+      (card) => card.instanceId === expected.instanceId,
+    );
+    assert.ok(actual, `${label} opponent trash card must be visible`);
+    assertVisibleCardPayload(expected, actual, `${label} opponent trash card`);
+  }
 
   if (recipientState.stage !== undefined) {
-    assert.equal(view.self.stage?.cardId, recipientState.stage.cardId, label);
+    assert.ok(view.self.stage, `${label} self stage should be visible`);
+    assertVisibleCardPayload(
+      recipientState.stage,
+      view.self.stage,
+      `${label} self stage`,
+    );
   }
   if (opponentState.stage !== undefined) {
-    assert.equal(
-      view.opponent.stage?.cardId,
-      opponentState.stage.cardId,
+    assert.ok(view.opponent.stage, `${label} opponent stage should be visible`);
+    assertVisibleCardPayload(
+      opponentState.stage,
+      view.opponent.stage,
       `${label} opponent stage`,
     );
   }
@@ -185,6 +304,26 @@ const assertNoHiddenLeak = (
   const recipientState = must(state.players[recipient], `${label} recipient`);
   const opponentState = must(state.players[opponent], `${label} opponent`);
   const view = filterStateForPlayer(state, recipient);
+  const publicVisibleCardIds = new Set<string>([
+    ...view.self.hand.map((card) => String(card.cardId)),
+    String(view.self.leader.cardId),
+    String(view.opponent.leader.cardId),
+    ...view.self.characters.map((card) => String(card.cardId)),
+    ...view.opponent.characters.map((card) => String(card.cardId)),
+    ...view.self.costArea.map((card) => String(card.cardId)),
+    ...view.opponent.costArea.map((card) => String(card.cardId)),
+    ...view.self.trash.map((card) => String(card.cardId)),
+    ...view.opponent.trash.map((card) => String(card.cardId)),
+    ...view.self.life.faceUpCards.map((card) => String(card.cardId)),
+    ...view.opponent.life.faceUpCards.map((card) => String(card.cardId)),
+    ...(view.self.stage === undefined ? [] : [String(view.self.stage.cardId)]),
+    ...(view.opponent.stage === undefined
+      ? []
+      : [String(view.opponent.stage.cardId)]),
+    ...view.revealedCards.flatMap((record) =>
+      record.cards.map((card) => String(card.cardId)),
+    ),
+  ]);
 
   assert.equal(view.self.hand.length, recipientState.hand.length, label);
   assert.equal(view.opponent.handCount, opponentState.hand.length, label);
@@ -194,19 +333,33 @@ const assertNoHiddenLeak = (
   assert.equal(view.opponent.donDeckCount, opponentState.donDeck.length, label);
 
   for (const card of recipientState.hand) {
+    const visible = view.self.hand.find(
+      (entry) => entry.instanceId === card.instanceId,
+    );
+    assert.ok(visible, `${label} recipient hand card must remain visible`);
+    assert.equal(visible.cardId, card.cardId, `${label} self hand cardId`);
+    assert.equal(visible.owner, card.owner, `${label} self hand owner`);
     assert.equal(
-      view.self.hand.some((visible) => visible.instanceId === card.instanceId),
-      true,
-      `${label} recipient hand card must remain visible`,
+      visible.controller,
+      card.controller,
+      `${label} self hand controller`,
+    );
+    assert.deepEqual(visible.zone, card.zone, `${label} self hand zone`);
+    assert.equal(
+      visible.attachedDonCount,
+      card.attachedDon.length,
+      `${label} self hand attachedDonCount`,
     );
   }
 
   for (const card of opponentState.hand) {
-    assertNoScalarValue(
-      view,
-      String(card.cardId),
-      `${label} opponent hand card id must stay hidden`,
-    );
+    if (!publicVisibleCardIds.has(String(card.cardId))) {
+      assertNoScalarValue(
+        view,
+        String(card.cardId),
+        `${label} opponent hand card id must stay hidden`,
+      );
+    }
     assertNoScalarValue(
       view,
       String(card.instanceId),
@@ -215,11 +368,13 @@ const assertNoHiddenLeak = (
   }
 
   for (const card of recipientState.deck) {
-    assertNoScalarValue(
-      view,
-      String(card.cardId),
-      `${label} recipient deck card id must stay hidden`,
-    );
+    if (!publicVisibleCardIds.has(String(card.cardId))) {
+      assertNoScalarValue(
+        view,
+        String(card.cardId),
+        `${label} recipient deck card id must stay hidden`,
+      );
+    }
     assertNoScalarValue(
       view,
       String(card.instanceId),
@@ -227,11 +382,13 @@ const assertNoHiddenLeak = (
     );
   }
   for (const card of opponentState.deck) {
-    assertNoScalarValue(
-      view,
-      String(card.cardId),
-      `${label} opponent deck card id must stay hidden`,
-    );
+    if (!publicVisibleCardIds.has(String(card.cardId))) {
+      assertNoScalarValue(
+        view,
+        String(card.cardId),
+        `${label} opponent deck card id must stay hidden`,
+      );
+    }
     assertNoScalarValue(
       view,
       String(card.instanceId),
@@ -239,11 +396,13 @@ const assertNoHiddenLeak = (
     );
   }
   for (const card of recipientState.donDeck) {
-    assertNoScalarValue(
-      view,
-      String(card.cardId),
-      `${label} recipient DON deck card id must stay hidden`,
-    );
+    if (!publicVisibleCardIds.has(String(card.cardId))) {
+      assertNoScalarValue(
+        view,
+        String(card.cardId),
+        `${label} recipient DON deck card id must stay hidden`,
+      );
+    }
     assertNoScalarValue(
       view,
       String(card.instanceId),
@@ -251,11 +410,13 @@ const assertNoHiddenLeak = (
     );
   }
   for (const card of opponentState.donDeck) {
-    assertNoScalarValue(
-      view,
-      String(card.cardId),
-      `${label} opponent DON deck card id must stay hidden`,
-    );
+    if (!publicVisibleCardIds.has(String(card.cardId))) {
+      assertNoScalarValue(
+        view,
+        String(card.cardId),
+        `${label} opponent DON deck card id must stay hidden`,
+      );
+    }
     assertNoScalarValue(
       view,
       String(card.instanceId),
@@ -264,11 +425,13 @@ const assertNoHiddenLeak = (
   }
 
   for (const lifeCard of recipientState.life.filter((card) => !card.faceUp)) {
-    assertNoScalarValue(
-      view,
-      String(lifeCard.card.cardId),
-      `${label} recipient face-down life card id must stay hidden`,
-    );
+    if (!publicVisibleCardIds.has(String(lifeCard.card.cardId))) {
+      assertNoScalarValue(
+        view,
+        String(lifeCard.card.cardId),
+        `${label} recipient face-down life card id must stay hidden`,
+      );
+    }
     assertNoScalarValue(
       view,
       String(lifeCard.card.instanceId),
@@ -276,11 +439,13 @@ const assertNoHiddenLeak = (
     );
   }
   for (const lifeCard of opponentState.life.filter((card) => !card.faceUp)) {
-    assertNoScalarValue(
-      view,
-      String(lifeCard.card.cardId),
-      `${label} opponent face-down life card id must stay hidden`,
-    );
+    if (!publicVisibleCardIds.has(String(lifeCard.card.cardId))) {
+      assertNoScalarValue(
+        view,
+        String(lifeCard.card.cardId),
+        `${label} opponent face-down life card id must stay hidden`,
+      );
+    }
     assertNoScalarValue(
       view,
       String(lifeCard.card.instanceId),
@@ -438,6 +603,49 @@ const createStagePresentState = (): GameState => {
   return result.state;
 };
 
+const createFaceUpLifeState = (): GameState => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  must(p1State.life[0], "p1 life 0").faceUp = true;
+  must(p2State.life[0], "p2 life 0").faceUp = true;
+  return state;
+};
+
+const assertFaceUpLifeVisible = (
+  state: GameState,
+  recipient: PlayerId,
+  label: string,
+): void => {
+  const opponent = recipient === p1 ? p2 : p1;
+  const view = filterStateForPlayer(state, recipient);
+  const recipientState = must(state.players[recipient], `${label} recipient`);
+  const opponentState = must(state.players[opponent], `${label} opponent`);
+
+  for (const lifeCard of recipientState.life.filter((card) => card.faceUp)) {
+    const visible = view.self.life.faceUpCards.find(
+      (card) => card.instanceId === lifeCard.card.instanceId,
+    );
+    assert.ok(visible, `${label} self face-up life card visible`);
+    assert.equal(
+      visible.cardId,
+      lifeCard.card.cardId,
+      `${label} self face-up life cardId`,
+    );
+  }
+  for (const lifeCard of opponentState.life.filter((card) => card.faceUp)) {
+    const visible = view.opponent.life.faceUpCards.find(
+      (card) => card.instanceId === lifeCard.card.instanceId,
+    );
+    assert.ok(visible, `${label} opponent face-up life card visible`);
+    assert.equal(
+      visible.cardId,
+      lifeCard.card.cardId,
+      `${label} opponent face-up life cardId`,
+    );
+  }
+};
+
 test("real engine states stay hidden-info safe across phase and battle progression", () => {
   const bootState = createInitialState(createInput());
   const mulliganState = startMulliganFlow(bootState).state;
@@ -446,6 +654,7 @@ test("real engine states stay hidden-info safe across phase and battle progressi
   const afterAttackDamage = createAfterAttackDamageState();
   const afterBlocker = createAfterBlockerState();
   const withStage = createStagePresentState();
+  const withFaceUpLife = createFaceUpLifeState();
   const completed = applyAction(createActiveState(), {
     type: "concede",
     playerId: p1,
@@ -459,6 +668,7 @@ test("real engine states stay hidden-info safe across phase and battle progressi
     ["after-attack-damage", afterAttackDamage],
     ["after-blocker", afterBlocker],
     ["stage-present", withStage],
+    ["face-up-life", withFaceUpLife],
     ["completed-match", completed],
   ];
 
@@ -468,4 +678,6 @@ test("real engine states stay hidden-info safe across phase and battle progressi
     assertPublicZonesVisible(state, p1, `${label}:p1`);
     assertPublicZonesVisible(state, p2, `${label}:p2`);
   }
+  assertFaceUpLifeVisible(withFaceUpLife, p1, "face-up-life:p1");
+  assertFaceUpLifeVisible(withFaceUpLife, p2, "face-up-life:p2");
 });

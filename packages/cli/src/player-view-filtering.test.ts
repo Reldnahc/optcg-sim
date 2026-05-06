@@ -108,6 +108,28 @@ test("bootFixtureMatch state filters without hidden-info leaks", () => {
     assert.ok(opponentState);
 
     const view = filterStateForPlayer(state, recipient);
+    const publicVisibleCardIds = new Set<string>([
+      ...view.self.hand.map((card) => String(card.cardId)),
+      String(view.self.leader.cardId),
+      String(view.opponent.leader.cardId),
+      ...view.self.characters.map((card) => String(card.cardId)),
+      ...view.opponent.characters.map((card) => String(card.cardId)),
+      ...view.self.costArea.map((card) => String(card.cardId)),
+      ...view.opponent.costArea.map((card) => String(card.cardId)),
+      ...view.self.trash.map((card) => String(card.cardId)),
+      ...view.opponent.trash.map((card) => String(card.cardId)),
+      ...view.self.life.faceUpCards.map((card) => String(card.cardId)),
+      ...view.opponent.life.faceUpCards.map((card) => String(card.cardId)),
+      ...(view.self.stage === undefined
+        ? []
+        : [String(view.self.stage.cardId)]),
+      ...(view.opponent.stage === undefined
+        ? []
+        : [String(view.opponent.stage.cardId)]),
+      ...view.revealedCards.flatMap((record) =>
+        record.cards.map((card) => String(card.cardId)),
+      ),
+    ]);
     assert.equal(view.self.hand.length, recipientState.hand.length);
     assert.equal(view.opponent.handCount, opponentState.hand.length);
     assert.equal(view.self.deckCount, recipientState.deck.length);
@@ -116,15 +138,66 @@ test("bootFixtureMatch state filters without hidden-info leaks", () => {
     assert.equal(view.opponent.donDeckCount, opponentState.donDeck.length);
 
     for (const card of recipientState.hand) {
-      assert.equal(
-        view.self.hand.some(
-          (visible) => visible.instanceId === card.instanceId,
-        ),
-        true,
+      const visible = view.self.hand.find(
+        (entry) => entry.instanceId === card.instanceId,
       );
+      assert.ok(visible);
+      assert.equal(visible.cardId, card.cardId);
+      assert.equal(visible.owner, card.owner);
+      assert.equal(visible.controller, card.controller);
+      assert.deepEqual(visible.zone, card.zone);
+      assert.equal(visible.attachedDonCount, card.attachedDon.length);
+    }
+    assert.equal(view.self.leader.instanceId, recipientState.leader.instanceId);
+    assert.equal(view.self.leader.cardId, recipientState.leader.cardId);
+    assert.equal(view.self.leader.owner, recipientState.leader.owner);
+    assert.equal(view.self.leader.controller, recipientState.leader.controller);
+    assert.deepEqual(view.self.leader.zone, recipientState.leader.zone);
+    assert.equal(
+      view.self.leader.attachedDonCount,
+      recipientState.leader.attachedDon.length,
+    );
+    assert.equal(
+      view.opponent.leader.instanceId,
+      opponentState.leader.instanceId,
+    );
+    assert.equal(view.opponent.leader.cardId, opponentState.leader.cardId);
+    assert.equal(view.opponent.leader.owner, opponentState.leader.owner);
+    assert.equal(
+      view.opponent.leader.controller,
+      opponentState.leader.controller,
+    );
+    assert.deepEqual(view.opponent.leader.zone, opponentState.leader.zone);
+    assert.equal(
+      view.opponent.leader.attachedDonCount,
+      opponentState.leader.attachedDon.length,
+    );
+    assert.equal(view.self.characters.length, recipientState.characters.length);
+    assert.equal(
+      view.opponent.characters.length,
+      opponentState.characters.length,
+    );
+    assert.equal(view.self.costArea.length, recipientState.costArea.length);
+    assert.equal(view.opponent.costArea.length, opponentState.costArea.length);
+    assert.equal(view.self.trash.length, recipientState.trash.length);
+    assert.equal(view.opponent.trash.length, opponentState.trash.length);
+    if (recipientState.stage !== undefined) {
+      assert.ok(view.self.stage);
+      assert.equal(view.self.stage.instanceId, recipientState.stage.instanceId);
+      assert.equal(view.self.stage.cardId, recipientState.stage.cardId);
+    }
+    if (opponentState.stage !== undefined) {
+      assert.ok(view.opponent.stage);
+      assert.equal(
+        view.opponent.stage.instanceId,
+        opponentState.stage.instanceId,
+      );
+      assert.equal(view.opponent.stage.cardId, opponentState.stage.cardId);
     }
     for (const card of opponentState.hand) {
-      assertNoScalarValue(view, String(card.cardId), "opponent hand card id");
+      if (!publicVisibleCardIds.has(String(card.cardId))) {
+        assertNoScalarValue(view, String(card.cardId), "opponent hand card id");
+      }
       assertNoScalarValue(
         view,
         String(card.instanceId),
@@ -132,11 +205,15 @@ test("bootFixtureMatch state filters without hidden-info leaks", () => {
       );
     }
     for (const card of [...recipientState.deck, ...opponentState.deck]) {
-      assertNoScalarValue(view, String(card.cardId), "deck card id");
+      if (!publicVisibleCardIds.has(String(card.cardId))) {
+        assertNoScalarValue(view, String(card.cardId), "deck card id");
+      }
       assertNoScalarValue(view, String(card.instanceId), "deck instance id");
     }
     for (const card of [...recipientState.donDeck, ...opponentState.donDeck]) {
-      assertNoScalarValue(view, String(card.cardId), "DON deck card id");
+      if (!publicVisibleCardIds.has(String(card.cardId))) {
+        assertNoScalarValue(view, String(card.cardId), "DON deck card id");
+      }
       assertNoScalarValue(
         view,
         String(card.instanceId),
@@ -144,11 +221,13 @@ test("bootFixtureMatch state filters without hidden-info leaks", () => {
       );
     }
     for (const lifeCard of recipientState.life.filter((card) => !card.faceUp)) {
-      assertNoScalarValue(
-        view,
-        String(lifeCard.card.cardId),
-        "recipient face-down life card id",
-      );
+      if (!publicVisibleCardIds.has(String(lifeCard.card.cardId))) {
+        assertNoScalarValue(
+          view,
+          String(lifeCard.card.cardId),
+          "recipient face-down life card id",
+        );
+      }
       assertNoScalarValue(
         view,
         String(lifeCard.card.instanceId),
@@ -156,11 +235,13 @@ test("bootFixtureMatch state filters without hidden-info leaks", () => {
       );
     }
     for (const lifeCard of opponentState.life.filter((card) => !card.faceUp)) {
-      assertNoScalarValue(
-        view,
-        String(lifeCard.card.cardId),
-        "opponent face-down life card id",
-      );
+      if (!publicVisibleCardIds.has(String(lifeCard.card.cardId))) {
+        assertNoScalarValue(
+          view,
+          String(lifeCard.card.cardId),
+          "opponent face-down life card id",
+        );
+      }
       assertNoScalarValue(
         view,
         String(lifeCard.card.instanceId),
