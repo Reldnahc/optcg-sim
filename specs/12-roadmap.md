@@ -102,11 +102,13 @@ Exit criteria:
 - Damage, life-to-hand, K.O., deck-out, and concession endings work.
 - Every accepted action has stable state hash output.
 - Event journal seq is strictly increasing.
-- Golden replay reconstructs final hash.
+- Local deterministic CLI command/decision script smoke from fixture boot
+  reproduces script-defined state-hash checkpoints and final hash, without
+  requiring production ReplayCheckpoint artifacts.
 - production `filterStateForPlayer` hidden-info tests consume real engine output.
 - Invariant tests pass after every accepted action.
 
-Milestone 1 does not include server, client, Poneglyph live adapter, Redis, ranked, or broad card pool work.
+Milestone 1 does not include server, client, Poneglyph live adapter, Redis, ranked, broad card pool work, or production ReplayLog, ReplayHeader, persisted replay storage, rollback, recovery, version migration, or replay viewer.
 
 ## Milestone 2: first effect runtime
 

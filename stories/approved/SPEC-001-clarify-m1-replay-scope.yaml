@@ -1,0 +1,74 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SPEC-001
+epic_id: KICK-001
+title: Clarify Milestone 1 replay scope as deterministic CLI smoke hash reconstruction
+type: tooling
+area: docs
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Replace Milestone 1 production-style golden replay reconstruction wording with
+  a narrower local deterministic CLI command/decision smoke requirement, while
+  keeping production replay reconstruction in the later replay/rollback/recovery
+  milestone.
+story_boundary: >
+  Own only canonical spec wording and contract/spec tests that describe the M1
+  replay-scope gate. Do not change engine behavior, CLI behavior, replay
+  fixtures, database schema, production replay contracts, or replay/rollback
+  milestone behavior.
+allowed_touch_points:
+  - specs/12-roadmap.md
+  - specs/15-implementation-kickoff.md
+  - tests/contracts/spec-authority-gates.test.mjs
+  - stories/approved/SPEC-001-clarify-m1-replay-scope.yaml
+  - agent-packets/SPEC-001.md
+  - agent-packets/active.json
+spec_refs:
+  - 08-replay-rollback-recovery.s003 (Replay header)
+  - 08-replay-rollback-recovery.s004 (Replay log)
+  - 08-replay-rollback-recovery.s006 (Checkpoints)
+  - 12-roadmap.s005 (Milestone 1: terminal engine)
+  - 12-roadmap.s010 (Milestone 6: replay/rollback/recovery)
+  - 15-implementation-kickoff.s007 (Step 3 - CLI runner)
+  - 15-implementation-kickoff.s011 (Definition of done for kickoff)
+  - 24-story-schema.s026 (Approval rule)
+scope:
+  - update Milestone 1 roadmap exit criteria to require a local deterministic CLI command/decision script smoke from fixture boot that reproduces script-defined state-hash checkpoints and a final hash, without requiring production ReplayCheckpoint artifacts
+  - update kickoff definition-of-done text to use the same local deterministic CLI smoke hash reconstruction requirement
+  - ensure Milestone 1 explicitly excludes production ReplayLog, ReplayHeader, persisted replay storage, rollback, recovery, version migration, and replay viewer requirements
+  - keep completed-match replay final-hash reconstruction in the later replay/rollback/recovery milestone
+  - update the contract/spec test that currently requires the old M1 "Golden replay reconstructs final hash" wording
+non_scope:
+  - engine behavior changes
+  - CLI behavior changes
+  - replay fixture changes or expected hash updates
+  - database schema or migration changes
+  - production ReplayLog, ReplayHeader, replay storage, rollback, recovery, version migration, or replay viewer contracts
+  - moving completed-match production replay reconstruction out of the later replay/rollback/recovery milestone
+dependencies:
+  - INF-018
+acceptance_criteria:
+  - Milestone 1 roadmap and kickoff text require deterministic CLI command/decision script smoke reconstruction from fixture boot with script-defined state-hash checkpoints and final hash, without requiring production ReplayCheckpoint artifacts
+  - Milestone 1 text no longer requires production-style golden replay reconstruction or completed-match replay reconstruction
+  - Milestone 1 non-scope explicitly excludes production ReplayLog, ReplayHeader, persisted replay storage, rollback, recovery, version migration, and replay viewer requirements
+  - Milestone 6 continues to require completed-match replay final hash matching
+  - contract/spec tests enforce the new M1 replay-scope wording and reject the old golden replay wording as an M1 gate
+required_tests:
+  - update tests/contracts/spec-authority-gates.test.mjs to require the new local deterministic CLI smoke hash reconstruction language
+  - update tests/contracts/spec-authority-gates.test.mjs to assert the old "Golden replay reconstructs final hash" wording is absent from Milestone 1 gate text
+  - update tests/contracts/spec-authority-gates.test.mjs to assert Milestone 6 still requires completed-match replay final hash matching
+  - corepack pnpm run test:contracts
+  - corepack pnpm run typecheck
+  - corepack pnpm run verify
+repo_rules:
+  - do not change engine behavior, CLI behavior, replay fixtures, database schema, or production replay contracts
+  - stay within allowed_touch_points
+  - do not broaden Milestone 1 into server, client, Poneglyph live adapter, Redis, ranked, broad card pool, or production replay systems
+  - story-review must pass before moving the story to approved or implementation begins
+  - must pass corepack pnpm run test:contracts
+  - must pass corepack pnpm run typecheck
+  - must pass corepack pnpm run verify
+ambiguity_policy: fail_and_escalate

@@ -21,6 +21,18 @@ function assertContainsWords(text, phrase) {
   assert.match(text, new RegExp(pattern));
 }
 
+function extractSection(text, sectionRef, nextSectionRef) {
+  const startMarker = `Section Ref: \`${sectionRef}\``;
+  const start = text.indexOf(startMarker);
+  assert.notEqual(start, -1, `missing section ${sectionRef}`);
+
+  const endMarker = `Section Ref: \`${nextSectionRef}\``;
+  const end = text.indexOf(endMarker, start + startMarker.length);
+  assert.notEqual(end, -1, `missing following section ${nextSectionRef}`);
+
+  return text.slice(start, end);
+}
+
 test("spec authority index separates canonical and historical files", async () => {
   const index = await readText("specs/README.md");
 
@@ -121,10 +133,25 @@ test("Effect DSL policy classifies schema-supported and planned primitives", asy
   }
 });
 
-test("Milestone 1 exit gates require full vanilla CLI, replay, sequencing, and real filterStateForPlayer tests", async () => {
+test("Milestone 1 exit gates require full vanilla CLI, local smoke hash reconstruction, sequencing, and real filterStateForPlayer tests", async () => {
   const roadmap = await readText("specs/12-roadmap.md");
   const kickoff = await readText("specs/15-implementation-kickoff.md");
-  const milestoneOneGateTexts = [roadmap, kickoff];
+  const roadmapMilestoneOne = extractSection(
+    roadmap,
+    "12-roadmap.s005",
+    "12-roadmap.s006",
+  );
+  const roadmapMilestoneSix = extractSection(
+    roadmap,
+    "12-roadmap.s010",
+    "12-roadmap.s011",
+  );
+  const kickoffDone = extractSection(
+    kickoff,
+    "15-implementation-kickoff.s011",
+    "15-implementation-kickoff.s012",
+  );
+  const milestoneOneGateTexts = [roadmapMilestoneOne, kickoffDone];
 
   for (const requiredGate of [
     "CLI can play a complete vanilla match through normal legal actions",
@@ -135,7 +162,8 @@ test("Milestone 1 exit gates require full vanilla CLI, replay, sequencing, and r
     "Damage, life-to-hand, K.O., deck-out, and concession endings work",
     "Every accepted action has stable state hash output",
     "Event journal seq is strictly increasing",
-    "Golden replay reconstructs final hash",
+    "Local deterministic CLI command/decision script smoke from fixture boot reproduces script-defined state-hash checkpoints and final hash",
+    "without requiring production ReplayCheckpoint artifacts",
     "production `filterStateForPlayer` hidden-info tests consume real engine output",
   ]) {
     for (const text of milestoneOneGateTexts) {
@@ -146,7 +174,19 @@ test("Milestone 1 exit gates require full vanilla CLI, replay, sequencing, and r
   for (const text of milestoneOneGateTexts) {
     assertContainsWords(
       text,
-      "Milestone 1 does not include server, client, Poneglyph live adapter, Redis, ranked, or broad card pool work",
+      "Milestone 1 does not include server, client, Poneglyph live adapter, Redis, ranked",
     );
+    assertContainsWords(text, "broad card pool work");
+    assertContainsWords(
+      text,
+      "production ReplayLog, ReplayHeader, persisted replay storage, rollback, recovery, version migration, or replay viewer",
+    );
+    assert.doesNotMatch(text, /Golden replay reconstructs final hash/);
+    assert.doesNotMatch(text, /Completed match replay final hash matches/);
   }
+
+  assertContainsWords(
+    roadmapMilestoneSix,
+    "Completed match replay final hash matches",
+  );
 });
