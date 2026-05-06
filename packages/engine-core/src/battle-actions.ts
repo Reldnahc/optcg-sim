@@ -134,6 +134,30 @@ export const applyDeclareAttack = (
       "declareAttack target is not legal for attacker.",
     );
   }
+  try {
+    const blockCheckState: GameState = {
+      ...state,
+      battle: {
+        attacker: toCardRef(attacker.card, attacker.playerId),
+        originalTarget: toCardRef(target.card, target.playerId),
+        currentTarget: toCardRef(target.card, target.playerId),
+        step: "block",
+        damageCount: 1,
+      },
+    };
+    const blockView = computeView(blockCheckState);
+    if (Object.values(blockView.cards).some((cardView) => cardView.canBlock)) {
+      return illegalAction(
+        state,
+        "declareAttack requires unsupported blocker activation handling.",
+      );
+    }
+  } catch {
+    return illegalAction(
+      state,
+      "declareAttack is unsupported for current combat metadata.",
+    );
+  }
 
   const nextPlayer = state.players[attacker.playerId];
   if (nextPlayer === undefined) {

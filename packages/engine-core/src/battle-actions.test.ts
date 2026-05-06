@@ -1528,6 +1528,82 @@ test("applyAction declareAttack fails closed when defender has counter metadata 
   assert.deepEqual(result.events, []);
 });
 
+test("applyDeclareAttack fails closed without mutation when defender has would-be legal blocker during block step window", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const defenderBlocker = must(p2State.characters[0], "defender blocker");
+  defenderBlocker.state = "active";
+  state.cardManifest.cards[defenderBlocker.cardId] = {
+    ...resolvedCard({
+      cardId: defenderBlocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+  const before = JSON.stringify(state);
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.deepEqual(result.events, []);
+});
+
+test("ineligible printed blocker does not reject declareAttack solely due to blocker keyword", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attackerControlledBlocker = must(
+    p1State.characters[0],
+    "attacker controlled blocker",
+  );
+  attackerControlledBlocker.state = "rested";
+  state.cardManifest.cards[attackerControlledBlocker.cardId] = {
+    ...resolvedCard({
+      cardId: attackerControlledBlocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.battle, undefined);
+  assert.equal(
+    result.events.some((event) => event.type === "damageDealt"),
+    true,
+  );
+});
+
 test("existing battle suppresses declareAttack legal actions and rejects applyAction", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
