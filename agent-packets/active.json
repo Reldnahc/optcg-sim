@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-013.md",
+      "storyId": "ENG-013",
+      "storyPath": "stories/approved/ENG-013-banish-keyword-battle-integration.yaml",
+      "storySha256": "f4428d126d718f3d7e76ed0ebe022db85be85a9b8b6c40ac84b9a5a0f36606ab"
+    }
+  ],
   "version": 1
 }
