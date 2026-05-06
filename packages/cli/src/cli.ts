@@ -47,6 +47,7 @@ const dispatchCommands = (
   io: CliIo,
   printInitialState: boolean,
   options: RunCliOptions,
+  strict: boolean,
 ): number => {
   let state = options.commandScriptInitialState ?? bootFixtureMatch().state;
 
@@ -65,6 +66,18 @@ const dispatchCommands = (
     state = result.state;
     writeOutput(io, result.output);
     options.onCommandScriptResult?.({ command, result });
+
+    if (strict && result.errors.length > 0) {
+      io.stderr.write(
+        [
+          "Strict command-script failure:",
+          `  command: ${command}`,
+          ...result.errors.map((error) => `  error: ${error}`),
+          "",
+        ].join("\n"),
+      );
+      return 1;
+    }
 
     if (isMatchComplete(state.status)) {
       return 0;
@@ -154,7 +167,8 @@ export const runCli = async (
 
   if (args.length >= 1 && args[0] === "--command-script") {
     const script = args[1];
-    if (args.length !== 2 || script === undefined) {
+    const strict = args.length === 3 && args[2] === "--strict";
+    if ((args.length !== 2 && !strict) || script === undefined) {
       io.stderr.write("--command-script requires a command sequence.\n");
       return 1;
     }
@@ -163,7 +177,7 @@ export const runCli = async (
       .split(scriptCommandSeparatorPattern)
       .map((command) => command.trim())
       .filter((command) => command.length > 0);
-    return dispatchCommands(commands, io, false, options);
+    return dispatchCommands(commands, io, false, options, strict);
   }
 
   if (args.length === 1 && args[0] === "--interactive") {

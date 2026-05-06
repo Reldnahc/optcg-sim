@@ -181,6 +181,113 @@ test("command-script mode dispatches a deterministic command sequence", async ()
   assert.match(stdout.output(), /State hash: [a-f0-9]+/u);
 });
 
+test("strict command-script mode exits zero for a successful command sequence", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(
+    ["--command-script", "respond keep;respond keep;hash", "--strict"],
+    {
+      stdin: Readable.from([]),
+      stdout: stdout.writer,
+      stderr: stderr.writer,
+    },
+  );
+
+  assert.equal(status, 0);
+  assert.equal(stderr.output(), "");
+  assert.match(stdout.output(), /State hash: [a-f0-9]+/u);
+});
+
+test("strict command-script mode exits nonzero for parse errors with deterministic diagnostics", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(
+    ["--command-script", "respond keep;unknown-command", "--strict"],
+    {
+      stdin: Readable.from([]),
+      stdout: stdout.writer,
+      stderr: stderr.writer,
+    },
+  );
+
+  assert.equal(status, 1);
+  assert.match(stdout.output(), /State seq: 2/u);
+  assert.match(stdout.output(), /Unsupported command: unknown-command\./u);
+  assert.equal(
+    stderr.output(),
+    [
+      "Strict command-script failure:",
+      "  command: unknown-command",
+      "  error: Unsupported command: unknown-command.",
+      "",
+    ].join("\n"),
+  );
+});
+
+test("strict command-script mode exits nonzero for dispatch errors with deterministic diagnostics", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(
+    ["--command-script", "respond keep;respond nope", "--strict"],
+    {
+      stdin: Readable.from([]),
+      stdout: stdout.writer,
+      stderr: stderr.writer,
+    },
+  );
+
+  assert.equal(status, 1);
+  assert.match(stdout.output(), /State seq: 2/u);
+  assert.match(stdout.output(), /Unsupported respond choice: nope\./u);
+  assert.equal(
+    stderr.output(),
+    [
+      "Strict command-script failure:",
+      "  command: respond nope",
+      "  error: Unsupported respond choice: nope.",
+      "",
+    ].join("\n"),
+  );
+});
+
+test("non-strict command-script mode keeps exit-zero behavior for parse errors", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(["--command-script", "unknown-command"], {
+    stdin: Readable.from([]),
+    stdout: stdout.writer,
+    stderr: stderr.writer,
+  });
+
+  assert.equal(status, 0);
+  assert.equal(stderr.output(), "");
+  assert.match(stdout.output(), /Unsupported command: unknown-command\./u);
+});
+
+test("non-strict command-script mode keeps exit-zero behavior for dispatch errors", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(["--command-script", "respond nope"], {
+    stdin: Readable.from([]),
+    stdout: stdout.writer,
+    stderr: stderr.writer,
+  });
+
+  assert.equal(status, 0);
+  assert.equal(stderr.output(), "");
+  assert.match(stdout.output(), /Unsupported respond choice: nope\./u);
+});
+
 test("command-script mode advances completed mulligans to main phase action priority", async () => {
   const { runCli } = await import("./cli.js");
   const stdout = createWriter();
@@ -325,6 +432,23 @@ test("interactive mode accepts injected input and exits cleanly on EOF", async (
   assert.match(stdout.output(), /State seq: 2/u);
   assert.match(stdout.output(), /State seq: 7/u);
   assert.match(stdout.output(), /State hash: [a-f0-9]+/u);
+});
+
+test("interactive mode keeps exit-zero behavior for command errors on EOF", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(["--interactive"], {
+    stdin: Readable.from(["respond nope"]),
+    stdout: stdout.writer,
+    stderr: stderr.writer,
+  });
+
+  assert.equal(status, 0);
+  assert.equal(stderr.output(), "");
+  assert.match(stdout.output(), /State seq: 1/u);
+  assert.match(stdout.output(), /Unsupported respond choice: nope\./u);
 });
 
 test("interactive mode decodes injected byte input before dispatching", async () => {
