@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: generated
+status: approved
 summary: >
   Add the supported Block Step pause and an executable defender decline/pass
   path using the existing `PendingDecision` / `respondToDecision` routing, so a
