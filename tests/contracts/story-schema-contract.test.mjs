@@ -67,6 +67,7 @@ test("story schema enums match the canonical spec vocabulary", async () => {
   assert.deepEqual(schema.properties.type.enum, [
     "design",
     "implementation",
+    "specification",
     "verification",
     "refactor",
     "tooling",
@@ -83,6 +84,7 @@ test("story schema enums match the canonical spec vocabulary", async () => {
     "infra",
     "docs",
     "security",
+    "types",
   ]);
   assert.deepEqual(schema.properties.priority.enum, [
     "critical",
@@ -108,12 +110,15 @@ test("story schema enums match the canonical spec vocabulary", async () => {
     "ui",
     "cli",
     "docs",
+    "visibility",
     "verification",
   ]);
   assert.deepEqual(schema.properties.ambiguity_policy.enum, [
     "fail_and_escalate",
     "implement_if_clearly_implied",
   ]);
+  assert.equal(schema.properties.blocked_reason.type, "string");
+  assert.equal(schema.properties.child_stories.type, "array");
 });
 
 test("story schema accepts split-story letter suffixes without broad arbitrary suffixes", async () => {
