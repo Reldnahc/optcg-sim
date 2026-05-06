@@ -27,3 +27,4 @@ export {
   resolveSupportedVanillaBattle,
 } from "./actions.js";
 export { computeView } from "./compute-view.js";
+export { filterStateForPlayer } from "./filter-state-for-player.js";

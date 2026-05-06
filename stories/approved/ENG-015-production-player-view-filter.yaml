@@ -22,6 +22,7 @@ allowed_touch_points:
   - packages/engine-core/src/filter-state-for-player.ts
   - packages/engine-core/src/filter-state-for-player.test.ts
   - packages/engine-core/src/index.ts
+  - packages/engine-core/src/package-boundary.test.ts
 spec_refs:
   - 00-project-overview.s011 (Hidden information is a security boundary)
   - 00-project-overview.s016 (Launch blockers)
@@ -75,6 +76,7 @@ required_tests:
   - "focused engine-core test for recipient-only pending decisions and public decision projection"
   - "focused engine-core test for legal-action projection that includes actions without leaking hidden opponent card identities"
   - "focused engine-core test for recipient-filtered event and reveal visibility"
+  - "package boundary test update proving `filterStateForPlayer` is exported from `@optcg/engine-core`"
   - "run `corepack pnpm exec vitest run packages/engine-core/src/filter-state-for-player.test.ts tests/hidden-info`"
   - "run `corepack pnpm --filter @optcg/engine-core typecheck`"
   - "run `corepack pnpm run packets:verify`"

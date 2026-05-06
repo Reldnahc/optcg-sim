@@ -15,6 +15,7 @@ import {
   collectGameStateInvariantViolations,
   computeView,
   createInitialState,
+  filterStateForPlayer,
   GameStateInvariantError,
   getLegalActions,
   hashCanonicalStateValue,
@@ -41,6 +42,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "computeView",
     "createInitialState",
     "enterMainPhase",
+    "filterStateForPlayer",
     "getLegalActions",
     "hashCanonicalStateValue",
     "initializeRng",
@@ -75,6 +77,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     collectGameStateInvariantViolations,
   );
   assert.equal(engineCorePackage.computeView, computeView);
+  assert.equal(engineCorePackage.filterStateForPlayer, filterStateForPlayer);
   assert.equal(engineCorePackage.createInitialState, createInitialState);
   assert.equal(
     engineCorePackage.assertGameStateInvariants,
