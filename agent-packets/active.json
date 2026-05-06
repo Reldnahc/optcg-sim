@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-016.md",
+      "storyId": "ENG-016",
+      "storyPath": "stories/approved/ENG-016-engine-result-event-journal-sequencing-coverage.yaml",
+      "storySha256": "9612f075714b7900f34c57008f90fe9cf4b906d35dc35a90197ef1a54b9fa2c3"
+    }
+  ],
   "version": 1
 }
