@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-014A.md",
+      "storyId": "ENG-014A",
+      "storyPath": "stories/approved/ENG-014A-computed-blocker-eligibility.yaml",
+      "storySha256": "3db52ed68dd86f0c2bdcb17e4e7c26eb714ba5a00e43c855820d04ea0b4c17bb"
+    }
+  ],
   "version": 1
 }
