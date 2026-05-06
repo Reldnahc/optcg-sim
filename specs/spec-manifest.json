@@ -1,0 +1,421 @@
+{
+  "spec_version": "v6",
+  "spec_package_name": "optcg-md-specs-v6",
+  "package_identity": {
+    "specVersion": "v6",
+    "specPackageName": "optcg-md-specs-v6",
+    "supersedes": ["v5"],
+    "createdFrom": "optcg-md-specs-v5-tightening-pass-queues-formats-ranked-poneglyph-legality.zip",
+    "rulesAuthority": "Official comprehensive rules v1.2.0, last updated 2026-01-16, plus official card wording and rulings/errata",
+    "poneglyphFixtureApiVersion": "0.1.0",
+    "poneglyphFixtureCards": [
+      "OP01-060 Donquixote Doflamingo",
+      "OP05-091 Rebecca"
+    ],
+    "canonicalTypeContract": "contracts/canonical-types.ts",
+    "canonicalDslSchema": "contracts/effect-dsl.schema.json",
+    "canonicalDatabaseContract": "contracts/database-schema-v6.sql",
+    "canonicalStorySchema": "contracts/story.schema.json",
+    "implementationPatchLog": "22-v6-implementation-tightening.md",
+    "machineReadableManifest": "spec-manifest.json",
+    "machineReadableConventions": "28-machine-readable-conventions.md",
+    "githubBoardGuide": "31-github-board-and-story-ops.md",
+    "codexIntegrationGuide": "32-codex-agent-integration.md"
+  },
+  "canonical_document_order": [
+    "SPEC_VERSION.md",
+    "spec-manifest.json",
+    "README.md",
+    "00-project-overview.md",
+    "01-system-architecture.md",
+    "02-engine-mechanics.md",
+    "03-game-state-events-decisions.md",
+    "04-effect-runtime.md",
+    "05-effect-dsl-reference.md",
+    "06-visibility-security.md",
+    "07-match-server-protocol.md",
+    "08-replay-rollback-recovery.md",
+    "09-card-data-and-support-policy.md",
+    "10-database-schema.md",
+    "11-testing-quality.md",
+    "12-roadmap.md",
+    "13-legal-content-risk.md",
+    "14-glossary.md",
+    "15-implementation-kickoff.md",
+    "16-typescript-interface-draft.md",
+    "17-first-card-fixtures.md",
+    "18-acceptance-tests.md",
+    "19-poneglyph-api-contract.md",
+    "20-card-implementation-examples.md",
+    "21-v3-tightening-notes.md",
+    "22-v6-implementation-tightening.md",
+    "23-repo-tooling-and-enforcement.md",
+    "24-story-schema.md",
+    "25-story-template.md",
+    "26-agent-packet-template.md",
+    "27-spec-driven-story-generation-workflow.md",
+    "28-machine-readable-conventions.md",
+    "29-game-types-queues-and-lobbies.md",
+    "30-formats-and-ranked-competition.md",
+    "31-github-board-and-story-ops.md",
+    "32-codex-agent-integration.md",
+    "contracts/canonical-types.ts",
+    "contracts/effect-dsl.schema.json",
+    "contracts/database-schema-v6.sql",
+    "contracts/story.schema.json"
+  ],
+  "documents": [
+    {
+      "path": "SPEC_VERSION.md",
+      "doc_id": "SPEC_VERSION",
+      "doc_title": "Specification Version Manifest",
+      "doc_type": "manifest",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "README.md",
+      "doc_id": "README",
+      "doc_title": "Spec Authority Index",
+      "doc_type": "spec-index",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "00-project-overview.md",
+      "doc_id": "00-project-overview",
+      "doc_title": "Project Overview",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "01-system-architecture.md",
+      "doc_id": "01-system-architecture",
+      "doc_title": "System Architecture",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "02-engine-mechanics.md",
+      "doc_id": "02-engine-mechanics",
+      "doc_title": "Engine Mechanics",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "03-game-state-events-decisions.md",
+      "doc_id": "03-game-state-events-decisions",
+      "doc_title": "Game State Events Decisions",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "04-effect-runtime.md",
+      "doc_id": "04-effect-runtime",
+      "doc_title": "Effect Runtime",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "05-effect-dsl-reference.md",
+      "doc_id": "05-effect-dsl-reference",
+      "doc_title": "Effect Dsl Reference",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "06-visibility-security.md",
+      "doc_id": "06-visibility-security",
+      "doc_title": "Visibility Security",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "07-match-server-protocol.md",
+      "doc_id": "07-match-server-protocol",
+      "doc_title": "Match Server Protocol",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "08-replay-rollback-recovery.md",
+      "doc_id": "08-replay-rollback-recovery",
+      "doc_title": "Replay Rollback Recovery",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "09-card-data-and-support-policy.md",
+      "doc_id": "09-card-data-and-support-policy",
+      "doc_title": "Card Data And Support Policy",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "10-database-schema.md",
+      "doc_id": "10-database-schema",
+      "doc_title": "Database Schema",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "11-testing-quality.md",
+      "doc_id": "11-testing-quality",
+      "doc_title": "Testing Quality",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "12-roadmap.md",
+      "doc_id": "12-roadmap",
+      "doc_title": "Roadmap",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "13-legal-content-risk.md",
+      "doc_id": "13-legal-content-risk",
+      "doc_title": "Legal Content Risk",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "14-glossary.md",
+      "doc_id": "14-glossary",
+      "doc_title": "Glossary",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "15-implementation-kickoff.md",
+      "doc_id": "15-implementation-kickoff",
+      "doc_title": "Implementation Kickoff",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "16-typescript-interface-draft.md",
+      "doc_id": "16-typescript-interface-draft",
+      "doc_title": "Typescript Interface Draft",
+      "doc_type": "historical-reference",
+      "status": "historical",
+      "machine_readable": true
+    },
+    {
+      "path": "17-first-card-fixtures.md",
+      "doc_id": "17-first-card-fixtures",
+      "doc_title": "First Card Fixtures",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "18-acceptance-tests.md",
+      "doc_id": "18-acceptance-tests",
+      "doc_title": "Acceptance Tests",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "19-poneglyph-api-contract.md",
+      "doc_id": "19-poneglyph-api-contract",
+      "doc_title": "Poneglyph Api Contract",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "20-card-implementation-examples.md",
+      "doc_id": "20-card-implementation-examples",
+      "doc_title": "Card Implementation Examples",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "21-v3-tightening-notes.md",
+      "doc_id": "21-v3-tightening-notes",
+      "doc_title": "V3 Tightening Notes",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "22-v6-implementation-tightening.md",
+      "doc_id": "22-v6-implementation-tightening",
+      "doc_title": "V5 Implementation Tightening",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "23-repo-tooling-and-enforcement.md",
+      "doc_id": "23-repo-tooling-and-enforcement",
+      "doc_title": "Repo Tooling And Enforcement",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "24-story-schema.md",
+      "doc_id": "24-story-schema",
+      "doc_title": "Story Schema",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "25-story-template.md",
+      "doc_id": "25-story-template",
+      "doc_title": "Story Template",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "26-agent-packet-template.md",
+      "doc_id": "26-agent-packet-template",
+      "doc_title": "Agent Packet Template",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "27-spec-driven-story-generation-workflow.md",
+      "doc_id": "27-spec-driven-story-generation-workflow",
+      "doc_title": "Spec Driven Story Generation Workflow",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "28-machine-readable-conventions.md",
+      "doc_id": "28-machine-readable-conventions",
+      "doc_title": "Machine Readable Conventions",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "29-game-types-queues-and-lobbies.md",
+      "doc_id": "29-game-types-queues-and-lobbies",
+      "doc_title": "Game Types Queues And Lobbies",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "30-formats-and-ranked-competition.md",
+      "doc_id": "30-formats-and-ranked-competition",
+      "doc_title": "Formats And Ranked Competition",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "31-github-board-and-story-ops.md",
+      "doc_id": "31-github-board-and-story-ops",
+      "doc_title": "GitHub Board And Story Operations",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "32-codex-agent-integration.md",
+      "doc_id": "32-codex-agent-integration",
+      "doc_title": "Codex Agent Integration",
+      "doc_type": "spec-section",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "adr/0001-event-journal-over-last-action.md",
+      "doc_id": "0001-event-journal-over-last-action",
+      "doc_title": "ADR 0001 Event Journal Over Last Action",
+      "doc_type": "adr",
+      "status": "supporting",
+      "machine_readable": true
+    },
+    {
+      "path": "adr/0002-client-view-engine-split.md",
+      "doc_id": "0002-client-view-engine-split",
+      "doc_title": "ADR 0002 Client View Engine Split",
+      "doc_type": "adr",
+      "status": "supporting",
+      "machine_readable": true
+    },
+    {
+      "path": "adr/0003-continuous-effects-computed-view.md",
+      "doc_id": "0003-continuous-effects-computed-view",
+      "doc_title": "ADR 0003 Continuous Effects Computed View",
+      "doc_type": "adr",
+      "status": "supporting",
+      "machine_readable": true
+    },
+    {
+      "path": "adr/0004-explicit-card-support-status.md",
+      "doc_id": "0004-explicit-card-support-status",
+      "doc_title": "ADR 0004 Explicit Card Support Status",
+      "doc_type": "adr",
+      "status": "supporting",
+      "machine_readable": true
+    },
+    {
+      "path": "source-coverage-matrix.md",
+      "doc_id": "source-coverage-matrix",
+      "doc_title": "Source Coverage Matrix",
+      "doc_type": "traceability",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "source-map.md",
+      "doc_id": "source-map",
+      "doc_title": "Source Map",
+      "doc_type": "traceability",
+      "status": "canonical",
+      "machine_readable": true
+    },
+    {
+      "path": "source-original-pdfs/original-optcg-effect-system.md",
+      "doc_id": "original-optcg-effect-system",
+      "doc_title": "Original OPTCG Effect System Source Extract",
+      "doc_type": "source-extract",
+      "status": "supporting",
+      "machine_readable": true
+    },
+    {
+      "path": "source-original-pdfs/original-optcg-engine-spec.md",
+      "doc_id": "original-optcg-engine-spec",
+      "doc_title": "Original OPTCG Engine Spec Source Extract",
+      "doc_type": "source-extract",
+      "status": "supporting",
+      "machine_readable": true
+    },
+    {
+      "path": "source-original-pdfs/original-optcg-simulator-plan.md",
+      "doc_id": "original-optcg-simulator-plan",
+      "doc_title": "Original OPTCG Simulator Plan Source Extract",
+      "doc_type": "source-extract",
+      "status": "supporting",
+      "machine_readable": true
+    }
+  ]
+}

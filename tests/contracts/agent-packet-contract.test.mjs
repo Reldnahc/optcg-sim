@@ -1504,3 +1504,37 @@ test("repo guidance documents active-story packet requirements", async () => {
   assert.match(packageJson, /"packets:complete"/);
   assert.match(packageJson, /"packets:complete-many"/);
 });
+
+test("packet excerpt extraction keeps SECTION_REF-like lines inside fenced code blocks", async () => {
+  const tempDir = await makeTempDir();
+  const outputPath = path.join(tempDir, "INF-023.md");
+  const storyPath = path.join(
+    repoRoot,
+    "stories/approved/INF-023-generate-spec-manifest-and-section-index.yaml",
+  );
+
+  const result = runPacketTool([
+    "generate",
+    "--story",
+    storyPath,
+    "--output",
+    outputPath,
+  ]);
+
+  assert.equal(
+    result.status,
+    0,
+    `expected packet build to pass\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
+  );
+
+  const packet = await readFile(outputPath, "utf8");
+  assert.match(
+    packet,
+    /### 28-machine-readable-conventions\.s008 \(Stable heading usage\)/,
+  );
+  assert.match(packet, /Preferred reference formats:/);
+  assert.match(
+    packet,
+    /Fallback format when a section ref is unavailable should be:/,
+  );
+});

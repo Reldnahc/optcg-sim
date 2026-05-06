@@ -910,8 +910,10 @@ function renderSpecExcerpts(sections: SpecSection[]) {
 
   for (const [index, section] of sections.entries()) {
     lines.push(`### ${section.ref} (${section.heading})`);
-    lines.push("");
-    lines.push(section.body);
+    if (section.body !== "") {
+      lines.push("");
+      lines.push(section.body);
+    }
 
     if (index < sections.length - 1) {
       lines.push("");
@@ -1023,9 +1025,17 @@ async function readSpecSection(filePath: string, ref: string) {
   const source = await readUtf8(filePath);
   const lines = source.split(/\r?\n/);
   let currentHeading = path.basename(filePath);
+  let inCodeFence = false;
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = readRequiredLine(lines, index, "reading spec lines");
+    if (isCodeFenceLine(line)) {
+      inCodeFence = !inCodeFence;
+      continue;
+    }
+    if (inCodeFence) {
+      continue;
+    }
     const headingMatch = line.match(/^#{1,6}\s+(.+)$/);
 
     if (headingMatch) {
@@ -1058,6 +1068,7 @@ async function readSpecSection(filePath: string, ref: string) {
     }
 
     let endIndex = startIndex;
+    let inSectionCodeFence = false;
 
     while (endIndex < lines.length) {
       const currentLine = readRequiredLine(
@@ -1066,11 +1077,17 @@ async function readSpecSection(filePath: string, ref: string) {
         "scanning spec section body",
       );
 
-      if (currentLine.startsWith("<!-- SECTION_REF:")) {
+      if (isCodeFenceLine(currentLine)) {
+        inSectionCodeFence = !inSectionCodeFence;
+        endIndex += 1;
+        continue;
+      }
+
+      if (!inSectionCodeFence && currentLine.startsWith("<!-- SECTION_REF:")) {
         break;
       }
 
-      if (isHeadingForNextSection(lines, endIndex)) {
+      if (!inSectionCodeFence && isHeadingForNextSection(lines, endIndex)) {
         break;
       }
 
@@ -1095,14 +1112,32 @@ async function readSpecSection(filePath: string, ref: string) {
 function isHeadingForNextSection(lines: string[], index: number) {
   const currentLine = lines[index];
 
-  if (currentLine === undefined || !/^#{1,6}\s+/.test(currentLine)) {
+  if (
+    currentLine === undefined ||
+    isCodeFenceLine(currentLine) ||
+    !/^#{1,6}\s+/.test(currentLine)
+  ) {
     return false;
   }
 
   let cursor = index + 1;
+  let inCodeFence = false;
 
-  while (cursor < lines.length && isBlankLine(lines[cursor])) {
+  while (cursor < lines.length) {
+    const line = lines[cursor];
+    if (line !== undefined && isCodeFenceLine(line)) {
+      inCodeFence = !inCodeFence;
+      cursor += 1;
+      continue;
+    }
+    if (!inCodeFence && !isBlankLine(line)) {
+      break;
+    }
     cursor += 1;
+  }
+
+  if (inCodeFence) {
+    return false;
   }
 
   return lines[cursor]?.startsWith("<!-- SECTION_REF:") ?? false;
@@ -1261,6 +1296,10 @@ function isIndentedBlock(line: string | undefined) {
 
 function isBlankLine(line: string | undefined) {
   return line?.trim() === "";
+}
+
+function isCodeFenceLine(line: string) {
+  return /^\s*(```|~~~)/.test(line);
 }
 
 function parseListValue(line: string) {

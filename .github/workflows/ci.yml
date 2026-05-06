@@ -80,6 +80,8 @@ jobs:
           cache: pnpm
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: Verify generated spec metadata artifacts
+        run: pnpm run specs:verify-metadata
       - name: Run contract lane
         run: pnpm contracts
 
