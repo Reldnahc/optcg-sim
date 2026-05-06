@@ -11,7 +11,6 @@ import type {
 
 const unsupportedCombatKeywords = new Set<Keyword>([
   "doubleAttack",
-  "blocker",
   "unblockable",
 ]);
 
@@ -112,6 +111,45 @@ const legalTargetsForAttacker = (
   return targets;
 };
 
+const isCardRefLive = (
+  state: GameState,
+  ref: {
+    instanceId: InstanceId;
+    cardId: CardInstance["cardId"];
+    playerId: PlayerId;
+  },
+): boolean => {
+  const player = state.players[ref.playerId];
+  if (player === undefined) return false;
+  if (
+    player.leader.instanceId === ref.instanceId &&
+    player.leader.cardId === ref.cardId
+  ) {
+    return true;
+  }
+  return player.characters.some(
+    (character) =>
+      character.instanceId === ref.instanceId &&
+      character.cardId === ref.cardId,
+  );
+};
+
+const canBlockNow = (
+  state: GameState,
+  card: CardInstance,
+  metadata: ResolvedCard & { power: number },
+): boolean => {
+  if (card.zone.zone !== "characterArea") return false;
+  if (card.state !== "active") return false;
+  if (!metadata.printedKeywords.includes("blocker")) return false;
+  const battle = state.battle;
+  if (battle === undefined || battle.step !== "block") return false;
+  if (!isCardRefLive(state, battle.attacker)) return false;
+  if (!isCardRefLive(state, battle.currentTarget)) return false;
+  const defenderId = battle.currentTarget.playerId;
+  return card.controller === defenderId;
+};
+
 const computeCardView = (
   state: GameState,
   card: CardInstance,
@@ -130,7 +168,7 @@ const computeCardView = (
     currentPower: basePower + donBonus,
     keywords: [...metadata.printedKeywords] as Keyword[],
     canAttack: canAttackNow(state, card),
-    canBlock: false,
+    canBlock: canBlockNow(state, card, metadata),
     cannotBeAttacked: false,
     protectedFrom: [],
   };
