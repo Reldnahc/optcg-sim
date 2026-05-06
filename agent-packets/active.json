@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-012C.md",
-      "storyId": "ENG-012C",
-      "storyPath": "stories/approved/ENG-012C-draw-primitive-effect-executor.yaml",
-      "storySha256": "35e6db2bf2c59b2639dfad82fe1a7a6c9aaca35a792879f7fe1a4b6eccb0d51b"
+      "packetPath": "agent-packets/ENG-012D.md",
+      "storyId": "ENG-012D",
+      "storyPath": "stories/approved/ENG-012D-on-play-trigger-queueing.yaml",
+      "storySha256": "8bc6d5c1a63011154b66ba9521aabac75494257712536626379701e24aa349e3"
     }
   ],
   "version": 1
