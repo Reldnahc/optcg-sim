@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-014D.md",
-      "storyId": "ENG-014D",
-      "storyPath": "stories/approved/ENG-014D-blocked-battle-resolution.yaml",
-      "storySha256": "8f21a0d6cf84a8fd07ae56b1b8622b9847ae8c4c2b21363068c25fbbe618bb48"
+      "packetPath": "agent-packets/ENG-014E.md",
+      "storyId": "ENG-014E",
+      "storyPath": "stories/approved/ENG-014E-blocker-regression-guards.yaml",
+      "storySha256": "999d3f54b704c03161d0ddea2a8fec1301b205d9e0d9ea2f27059303e94ee583"
     }
   ],
   "version": 1
