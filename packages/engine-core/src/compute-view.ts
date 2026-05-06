@@ -13,6 +13,12 @@ const unsupportedCombatKeywords = new Set<Keyword>([
   "doubleAttack",
   "unblockable",
 ]);
+const supportedDslCombatKeywords = new Set<Keyword>([
+  "rush",
+  "rushCharacter",
+  "banish",
+  "blocker",
+]);
 
 const isLeaderOrCharacter = (
   card: CardInstance,
@@ -39,10 +45,40 @@ const resolveCombatMetadata = (
       `Missing combat power metadata for ${String(card.cardId)}.`,
     );
   }
-  if (resolved.support.status !== "vanilla-confirmed") {
+  if (
+    resolved.support.status !== "vanilla-confirmed" &&
+    resolved.support.status !== "implemented-dsl"
+  ) {
     throw new TypeError(
       `Unsupported support status ${resolved.support.status} for ${String(card.cardId)}.`,
     );
+  }
+  if (
+    resolved.support.effectDefinitionId !== undefined ||
+    Object.values(state.cardManifest.effectDefinitions ?? {}).some(
+      (definition) => definition.cardId === card.cardId,
+    )
+  ) {
+    throw new TypeError(
+      `Unsupported combat effect definition for ${String(card.cardId)}.`,
+    );
+  }
+  if (resolved.support.status === "implemented-dsl") {
+    if (
+      (resolved.effectText ?? "").trim().length > 0 ||
+      (resolved.triggerText ?? "").trim().length > 0
+    ) {
+      throw new TypeError(
+        `Unsupported combat text metadata for ${String(card.cardId)}.`,
+      );
+    }
+    for (const keyword of resolved.printedKeywords) {
+      if (!supportedDslCombatKeywords.has(keyword)) {
+        throw new TypeError(
+          `Unsupported combat keyword ${keyword} for ${String(card.cardId)}.`,
+        );
+      }
+    }
   }
   for (const keyword of resolved.printedKeywords) {
     if (unsupportedCombatKeywords.has(keyword)) {
