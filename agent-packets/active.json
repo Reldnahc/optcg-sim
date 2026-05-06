@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-012D.md",
-      "storyId": "ENG-012D",
-      "storyPath": "stories/approved/ENG-012D-on-play-trigger-queueing.yaml",
-      "storySha256": "8bc6d5c1a63011154b66ba9521aabac75494257712536626379701e24aa349e3"
+      "packetPath": "agent-packets/ENG-012E.md",
+      "storyId": "ENG-012E",
+      "storyPath": "stories/approved/ENG-012E-no-choice-effect-queue-processing.yaml",
+      "storySha256": "8a93d025e47a1f0752c1552bb096dc4bd395bded47be0748e0886e5eb73cfa97"
     }
   ],
   "version": 1
