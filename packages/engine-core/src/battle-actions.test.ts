@@ -6,6 +6,7 @@ import type {
   CardInstance,
   CardRef,
   DecisionId,
+  EffectDefinition,
   PlayerId,
 } from "@optcg/types";
 
@@ -29,6 +30,37 @@ const cardRef = (card: CardInstance, playerId: PlayerId) => ({
   cardId: card.cardId,
   playerId,
   zone: card.zone,
+});
+
+const effectDefinition = (
+  cardId: CardId,
+  trigger: EffectDefinition["effects"][number]["trigger"],
+  effect: EffectDefinition["effects"][number]["effect"] = {
+    type: "draw",
+    count: 1,
+    player: "self",
+  },
+): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: `${String(cardId)}:effect:1` as EffectDefinition["effects"][number]["id"],
+      category: "auto",
+      trigger,
+      optional: false,
+      oncePerTurn: false,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect,
+    },
+  ],
+  metadata: {
+    sourceTextHash: "source-hash",
+    rulesVersion: "r1",
+    effectDefinitionsVersion: "fixture",
+    tested: true,
+    reviewer: "qa-reviewer",
+  },
 });
 
 const setupOpenedBlockStepDecision = () => {
@@ -56,6 +88,66 @@ const setupOpenedBlockStepDecision = () => {
     openedState: opened.state,
     p1State,
     p2State,
+    defenderBlocker,
+    decision: must(opened.state.pendingDecision, "pending decision"),
+  };
+};
+
+const setupOpenedCharacterTargetBlockStepDecision = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const originalTarget = must(p2State.characters[0], "original target");
+  const blockerSource = must(p2State.hand[0], "blocker source");
+  const defenderBlocker = {
+    ...blockerSource,
+    zone: {
+      zone: "characterArea" as const,
+      playerId: p2,
+      slot: "character" as const,
+      index: 1,
+    },
+    state: "active" as const,
+    attachedDon: [],
+    turnPlayed: 1,
+  };
+  p2State.characters.push(defenderBlocker);
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+  });
+  state.cardManifest.cards[originalTarget.cardId] = resolvedCard({
+    cardId: originalTarget.cardId,
+    category: "character",
+    power: 3000,
+  });
+  state.cardManifest.cards[defenderBlocker.cardId] = {
+    ...resolvedCard({
+      cardId: defenderBlocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(attacker, p1),
+    target: cardRef(originalTarget, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  return {
+    opened,
+    openedState: opened.state,
+    p1State,
+    p2State,
+    attacker,
+    originalTarget,
     defenderBlocker,
     decision: must(opened.state.pendingDecision, "pending decision"),
   };
@@ -1721,11 +1813,12 @@ test("empty block-step respondToDecision declines and resumes existing no-block 
   assert.deepEqual(result.events, replay.events);
 });
 
-test("blocker selection response rests blocker, redirects target, and emits exact public events", () => {
+test("blocker selection response K.O.s blocker, clears battle, and preserves original Leader life", () => {
   const { opened, p2State, defenderBlocker, decision } =
     setupOpenedBlockStepDecision();
   const originalTarget = cardRef(p2State.leader, p2);
   const blocker = cardRef(defenderBlocker, p2);
+  const beforeLife = p2State.life.length;
 
   const result = applyAction(opened.state, {
     type: "respondToDecision",
@@ -1736,14 +1829,19 @@ test("blocker selection response rests blocker, redirects target, and emits exac
   assert.equal(result.errors, undefined);
   assert.equal(result.state.pendingDecision, undefined);
   assert.equal(result.state.actionSeq, opened.state.actionSeq + 1);
-  const battle = must(result.state.battle, "battle");
-  assert.equal(battle.step, "block");
-  assert.deepEqual(battle.blocker, blocker);
-  assert.deepEqual(battle.originalTarget, originalTarget);
-  assert.deepEqual(battle.currentTarget, blocker);
+  assert.equal(result.state.battle, undefined);
+  assert.equal(must(result.state.players[p2], "p2").life.length, beforeLife);
   assert.equal(
-    must(result.state.players[p2], "p2").characters[0]?.state,
-    "rested",
+    must(result.state.players[p2], "p2").characters.some(
+      (character) => character.instanceId === defenderBlocker.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    must(result.state.players[p2], "p2").trash.some(
+      (card) => card.instanceId === defenderBlocker.instanceId,
+    ),
+    true,
   );
   assert.deepEqual(
     result.events.map((event) => ({
@@ -1766,11 +1864,216 @@ test("blocker selection response rests blocker, redirects target, and emits exac
         },
         visibility: { type: "public" },
       },
+      {
+        type: "damageDealt",
+        payload: {
+          attacker: opened.state.battle?.attacker.instanceId,
+          target: blocker.instanceId,
+          amount: 1,
+        },
+        visibility: { type: "public" },
+      },
+      {
+        type: "cardKOd",
+        payload: { playerId: p2, instanceId: blocker.instanceId },
+        visibility: { type: "public" },
+      },
+      {
+        type: "cardMoved",
+        payload: {
+          from: defenderBlocker.zone,
+          to: {
+            zone: "trash",
+            playerId: p2,
+            slot: "trash",
+            index: 0,
+          },
+          reason: "ko",
+        },
+        visibility: { type: "public" },
+      },
+      {
+        type: "effectResolved",
+        payload: { systemStep: "endBattle", battleCleared: true },
+        visibility: { type: "replayOnly" },
+      },
+      {
+        type: "ruleProcessingChecked",
+        payload: { phase: "main", result: "ok" },
+        visibility: { type: "replayOnly" },
+      },
     ],
   );
 });
 
-test("accepted blocker activation does not advance battle, queue effects, clear battle, or resolve damage", () => {
+test("attached DON!! returns rested when a blocker is K.O.'d", () => {
+  const { opened, defenderBlocker, decision } = setupOpenedBlockStepDecision();
+  const openedP2 = must(opened.state.players[p2], "opened p2");
+  const don = must(openedP2.donDeck[0], "p2 don");
+  openedP2.donDeck = openedP2.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p2, slot: "donDeck", index },
+  }));
+  openedP2.costArea = [
+    {
+      ...don,
+      zone: { zone: "costArea", playerId: p2, slot: "cost", index: 0 },
+      state: "active",
+    },
+  ];
+  const openedBlocker = must(openedP2.characters[0], "opened blocker");
+  openedP2.characters[0] = {
+    ...openedBlocker,
+    attachedDon: [don.instanceId],
+  };
+  const blocker = cardRef(defenderBlocker, p2);
+
+  const result = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [blocker] },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    must(result.state.players[p2], "p2").costArea.find(
+      (card) => card.instanceId === don.instanceId,
+    )?.state,
+    "rested",
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "donReturned" &&
+        (event.payload as { donInstanceId?: unknown }).donInstanceId ===
+          don.instanceId &&
+        event.visibility.type === "replayOnly",
+    ),
+    true,
+  );
+});
+
+test("original Character target is not K.O.'d after being blocked", () => {
+  const { opened, originalTarget, defenderBlocker, decision } =
+    setupOpenedCharacterTargetBlockStepDecision();
+  const blocker = cardRef(defenderBlocker, p2);
+
+  const result = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [blocker] },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    must(result.state.players[p2], "p2").characters.some(
+      (character) => character.instanceId === originalTarget.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    must(result.state.players[p2], "p2").trash.some(
+      (card) => card.instanceId === originalTarget.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "cardKOd" &&
+        (event.payload as { instanceId?: unknown }).instanceId ===
+          originalTarget.instanceId,
+    ),
+    false,
+  );
+});
+
+test("lower-power attack into blocker clears battle without K.O. or Life movement", () => {
+  const context = setupOpenedBlockStepDecision();
+  context.opened.state.cardManifest.cards[toCardId("leader-red")] =
+    resolvedCard({
+      cardId: toCardId("leader-red"),
+      category: "leader",
+      power: 2000,
+    });
+  context.opened.state.cardManifest.cards[context.defenderBlocker.cardId] = {
+    ...resolvedCard({
+      cardId: context.defenderBlocker.cardId,
+      category: "character",
+      power: 7000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+  const blocker = cardRef(context.defenderBlocker, p2);
+  const beforeLife = must(context.opened.state.players[p2], "p2").life.length;
+
+  const result = applyAction(context.opened.state, {
+    type: "respondToDecision",
+    decisionId: context.decision.id,
+    response: { type: "cards", cards: [blocker] },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.battle, undefined);
+  assert.equal(must(result.state.players[p2], "p2").life.length, beforeLife);
+  assert.equal(
+    must(result.state.players[p2], "p2").characters.some(
+      (character) => character.instanceId === blocker.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    result.events.some((event) =>
+      ["damageDealt", "lifeTaken", "cardKOd", "cardMoved"].includes(event.type),
+    ),
+    false,
+  );
+});
+
+test("Banish attacker blocked by Character causes no Life movement or Life trashing", () => {
+  const { opened, defenderBlocker, decision } = setupOpenedBlockStepDecision();
+  const openedP2 = must(opened.state.players[p2], "opened p2");
+  const expectedLifeCards = openedP2.life.map((lifeCard) => lifeCard.card);
+  opened.state.cardManifest.cards[toCardId("leader-red")] = {
+    ...resolvedCard({
+      cardId: toCardId("leader-red"),
+      category: "leader",
+      power: 5000,
+    }),
+    printedKeywords: ["banish"],
+  };
+  const blocker = cardRef(defenderBlocker, p2);
+
+  const result = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [blocker] },
+  });
+
+  const nextP2 = must(result.state.players[p2], "p2");
+  assert.equal(result.errors, undefined);
+  assert.equal(nextP2.life.length, expectedLifeCards.length);
+  assert.deepEqual(
+    nextP2.life.map((lifeCard) => lifeCard.card.instanceId),
+    expectedLifeCards.map((card) => card.instanceId),
+  );
+  assert.equal(
+    expectedLifeCards.some((lifeCard) =>
+      nextP2.trash.some((card) => card.instanceId === lifeCard.instanceId),
+    ),
+    false,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === defenderBlocker.instanceId),
+    true,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "lifeTaken"),
+    false,
+  );
+});
+
+test("supported blocked-battle resolution is deterministic", () => {
   const { opened, defenderBlocker, decision } = setupOpenedBlockStepDecision();
   const blocker = cardRef(defenderBlocker, p2);
 
@@ -1786,19 +2089,39 @@ test("accepted blocker activation does not advance battle, queue effects, clear 
   });
 
   assert.equal(result.errors, undefined);
-  assert.equal(must(result.state.battle, "battle").step, "block");
-  assert.equal(result.state.pendingDecision, undefined);
-  assert.deepEqual(result.state.effectQueue, []);
-  assert.notEqual(result.state.battle, undefined);
-  assert.equal(
-    result.events.some((event) =>
-      ["damageDealt", "lifeTaken", "cardKOd", "cardMoved"].includes(event.type),
-    ),
-    false,
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "blockerActivated",
+      "damageDealt",
+      "cardKOd",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
   );
-  assert.equal(
-    result.events.some((event) => event.type === "effectQueued"),
-    false,
+  assert.deepEqual(
+    result.events.map((event) => event.visibility),
+    [
+      { type: "public" },
+      { type: "public" },
+      { type: "public" },
+      { type: "public" },
+      { type: "public" },
+      { type: "replayOnly" },
+      { type: "replayOnly" },
+    ],
+  );
+  assert.deepEqual(
+    result.events.map((event) => event.seq),
+    result.events.map(
+      (_, index) => opened.state.eventJournal.length + index + 1,
+    ),
+  );
+  assert.deepEqual(
+    result.state.eventJournal.slice(-result.events.length),
+    result.events,
   );
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(result.events, replay.events);
@@ -2043,6 +2366,21 @@ test("unsupported blocker activation states reject without mutation or events", 
     context.openedState.effectQueue = [{ id: "queued-effect" } as never];
   });
   run((context) => {
+    context.openedState.deferredTriggers = [
+      { timingWindowId: "window-1" } as never,
+    ];
+  });
+  run((context) => {
+    const p2State = must(context.openedState.players[p2], "p2");
+    const counterCard = must(p2State.hand[0], "counter card");
+    context.openedState.cardManifest.cards[counterCard.cardId] = resolvedCard({
+      cardId: counterCard.cardId,
+      category: "character",
+      power: 3000,
+      counter: 1000,
+    });
+  });
+  run((context) => {
     context.openedState.replacementState.push({
       processId: "replacement-process-1",
       type: "damage",
@@ -2068,6 +2406,68 @@ test("unsupported blocker activation states reject without mutation or events", 
         power: 5000,
       }),
       printedKeywords: ["banish", "doubleAttack"],
+    };
+  });
+  run((context) => {
+    context.openedState.cardManifest.cards[context.defenderBlocker.cardId] = {
+      ...resolvedCard({
+        cardId: context.defenderBlocker.cardId,
+        category: "character",
+        power: 3000,
+        effectText: "[On Block] Draw 1 card.",
+      }),
+      printedKeywords: ["blocker"],
+    };
+  });
+  run((context) => {
+    context.openedState.cardManifest.effectDefinitions = {
+      onBlock: effectDefinition(context.defenderBlocker.cardId, {
+        type: "onBlock",
+      }),
+    };
+  });
+  run((context) => {
+    context.openedState.cardManifest.effectDefinitions = {
+      onKo: effectDefinition(context.defenderBlocker.cardId, {
+        type: "onKO",
+      }),
+    };
+  });
+  run((context) => {
+    context.openedState.cardManifest.effectDefinitions = {
+      endOfBattle: effectDefinition(context.defenderBlocker.cardId, {
+        type: "endOfBattle",
+      }),
+    };
+  });
+  run((context) => {
+    context.openedState.continuousEffects = [
+      { duration: { type: "thisBattle" } } as never,
+    ];
+  });
+  run((context) => {
+    context.openedState.continuousEffects = [
+      {
+        duration: { type: "thisTurn" },
+        modifier: {
+          layer: "rules",
+          operation: {
+            type: "protection",
+            protection: { process: "ko" },
+          },
+        },
+      } as never,
+    ];
+  });
+  run((context) => {
+    const battle = must(context.openedState.battle, "battle");
+    context.openedState.battle = {
+      ...battle,
+      currentTarget: {
+        instanceId: "stale-current-target" as never,
+        cardId: context.p2State.leader.cardId,
+        playerId: p2,
+      },
     };
   });
   run((context) => {

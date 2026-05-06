@@ -393,8 +393,10 @@ const hasUnsupportedBlockDecisionState = (
   if (
     detectPendingRuntimeWork(state) !== undefined ||
     state.replacementState.length > 0 ||
+    state.continuousEffects.length > 0 ||
     battle.blocker !== undefined ||
-    battle.damageCount !== 1
+    battle.damageCount !== 1 ||
+    (battle.step !== "attack" && battle.step !== "block")
   ) {
     return true;
   }
@@ -410,6 +412,9 @@ const hasUnsupportedBlockDecisionState = (
   const attacker = reifyCardRef(state, battle.attacker);
   const target = reifyCardRef(state, battle.currentTarget);
   if (attacker === null || target === null) {
+    return true;
+  }
+  if (hasUnsupportedBattleEffectMetadata(state)) {
     return true;
   }
   const attackerView = view.cards[attacker.card.instanceId];
@@ -451,6 +456,77 @@ const sameCardRef = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
   left.cardId === right.cardId &&
   left.playerId === right.playerId;
+
+const hasText = (value: string | undefined): boolean =>
+  value !== undefined && value.trim().length > 0;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const hasThisBattleDuration = (value: unknown): boolean => {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const duration = value["duration"];
+  if (isRecord(duration) && duration["type"] === "thisBattle") {
+    return true;
+  }
+  return Object.values(value).some((entry) => hasThisBattleDuration(entry));
+};
+
+const hasUnsupportedBattleEffectMetadata = (state: GameState): boolean => {
+  const combatCardIds = new Set<CardInstance["cardId"]>();
+  for (const player of Object.values(state.players)) {
+    combatCardIds.add(player.leader.cardId);
+    for (const character of player.characters) {
+      combatCardIds.add(character.cardId);
+    }
+  }
+
+  for (const cardId of combatCardIds) {
+    if (hasText(state.cardManifest.cards[cardId]?.effectText)) {
+      return true;
+    }
+  }
+
+  for (const definition of Object.values(
+    state.cardManifest.effectDefinitions ?? {},
+  )) {
+    if (!combatCardIds.has(definition.cardId)) {
+      continue;
+    }
+    for (const effect of definition.effects) {
+      if (
+        effect.trigger.type === "counter" ||
+        effect.trigger.type === "onBlock" ||
+        effect.trigger.type === "onKO" ||
+        effect.trigger.type === "endOfBattle" ||
+        effect.trigger.type === "whenAttacking" ||
+        effect.trigger.type === "onOpponentAttack" ||
+        effect.category === "replacement" ||
+        hasThisBattleDuration(effect.effect)
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+const isSupportedBattleResolutionEnvelope = (
+  battle: NonNullable<GameState["battle"]>,
+): boolean => {
+  if (battle.damageCount !== 1) {
+    return false;
+  }
+  if (battle.blocker === undefined) {
+    return battle.step === "attack";
+  }
+  return (
+    battle.step === "block" && sameCardRef(battle.blocker, battle.currentTarget)
+  );
+};
 
 const isLegalBlockerSelection = (
   state: GameState,
@@ -568,7 +644,6 @@ export const applyBattleDecisionResponse = (
     );
     const activatedState: GameState = {
       ...state,
-      seq: toStateSeq(state.seq + 1),
       actionSeq: state.actionSeq + 1,
       players: restBlocker(state, decision.playerId, blockerRef),
       battle: {
@@ -579,8 +654,14 @@ export const applyBattleDecisionResponse = (
       eventJournal: [...state.eventJournal, ...events],
     };
     delete activatedState.pendingDecision;
-    assertGameStateInvariants(activatedState);
-    return toEngineResult(activatedState, events);
+    const resolved = resolveSupportedVanillaBattle(activatedState);
+    if (resolved.errors !== undefined) {
+      const firstError = resolved.errors[0];
+      return firstError === undefined
+        ? illegalAction(state, "Battle resolution failed.")
+        : toEngineResult(state, [], [firstError]);
+    }
+    return toEngineResult(resolved.state, [...events, ...resolved.events]);
   }
 
   const resumedState: GameState = {
@@ -625,11 +706,7 @@ export const resolveSupportedVanillaBattle = (
   if (state.battle === undefined) {
     return illegalAction(state, "No active battle to resolve.");
   }
-  if (
-    state.battle.blocker !== undefined ||
-    state.battle.damageCount !== 1 ||
-    state.battle.step !== "attack"
-  ) {
+  if (!isSupportedBattleResolutionEnvelope(state.battle)) {
     return unsupportedBattleResolution(
       state,
       "Battle requires unsupported blocker, step, or multi-damage behavior.",
@@ -637,11 +714,18 @@ export const resolveSupportedVanillaBattle = (
   }
   if (
     detectPendingRuntimeWork(state) !== undefined ||
-    state.replacementState.length > 0
+    state.replacementState.length > 0 ||
+    state.continuousEffects.length > 0
   ) {
     return unsupportedBattleResolution(
       state,
       "Battle requires unsupported trigger or replacement processing.",
+    );
+  }
+  if (hasUnsupportedBattleEffectMetadata(state)) {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported effect metadata.",
     );
   }
 
@@ -649,6 +733,16 @@ export const resolveSupportedVanillaBattle = (
   const target = reifyCardRef(state, state.battle.currentTarget);
   if (attacker === null || target === null) {
     return illegalAction(state, "Battle participants are stale or invalid.");
+  }
+  if (state.battle.blocker !== undefined) {
+    const blocker = reifyCardRef(state, state.battle.blocker);
+    if (
+      blocker === null ||
+      blocker.isLeader ||
+      !sameCardRef(state.battle.blocker, state.battle.currentTarget)
+    ) {
+      return illegalAction(state, "Battle blocker is stale or invalid.");
+    }
   }
   if (hasUnsupportedCounterWindow(state, target.playerId)) {
     return unsupportedBattleResolution(
