@@ -279,7 +279,7 @@ test("ENG-016: accepted engine paths keep EngineResult/eventJournal sequencing a
       );
       assert.equal(
         played.events.some((event) => event.type === "effectResolved"),
-        false,
+        true,
       );
       assert.equal(
         played.events.some((event) => event.type === "cardDrawn"),

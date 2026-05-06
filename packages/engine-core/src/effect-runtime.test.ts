@@ -1436,6 +1436,35 @@ test("resolves one queued supported On Play draw entry and removes it from effec
   assert.equal(result.state.effectQueue.length, 0);
   assert.equal(afterP1.deck.length, beforeDeck - 1);
   assert.equal(afterP1.hand.length, beforeHand + 1);
+  const eventTypes = result.events.map((event) => event.type);
+  assert.deepEqual(eventTypes.slice(0, 5), [
+    "cardDrawn",
+    "cardMoved",
+    "cardMoved",
+    "effectResolved",
+    "ruleProcessingChecked",
+  ]);
+  const resolvedEvent = result.events.find(
+    (event) => event.type === "effectResolved",
+  );
+  const queuedEntry = must(queued.state.effectQueue[0], "queued entry");
+  assert.ok(resolvedEvent !== undefined);
+  assert.equal(resolvedEvent.createdAtStateSeq, result.state.seq);
+  assert.deepEqual(resolvedEvent.payload, {
+    queueEntryId: queuedEntry.id,
+    timingWindowId: queuedEntry.timingWindowId,
+    generation: queuedEntry.generation,
+    effectBlockId: queuedEntry.effectBlockId,
+    triggerEventId: queuedEntry.triggerEventId,
+    sourcePresencePolicy: queuedEntry.sourcePresencePolicy,
+    orderingGroup: queuedEntry.orderingGroup,
+    status: "resolved",
+  });
+  assert.deepEqual(resolvedEvent.causedBy, {
+    type: "effect",
+    queueEntryId: queuedEntry.id,
+    effectId: queuedEntry.effectBlockId,
+  });
   const checkpointEvent = result.events.find(
     (event) => event.type === "ruleProcessingChecked",
   );
@@ -1443,9 +1472,13 @@ test("resolves one queued supported On Play draw entry and removes it from effec
   assert.equal(checkpointEvent.createdAtStateSeq, result.state.seq);
   assert.deepEqual(checkpointEvent.causedBy, {
     type: "effect",
-    queueEntryId: must(queued.state.effectQueue[0], "queued entry").id,
-    effectId: must(queued.state.effectQueue[0], "queued entry").effectBlockId,
+    queueEntryId: queuedEntry.id,
+    effectId: queuedEntry.effectBlockId,
   });
+  assert.deepEqual(
+    result.state.eventJournal.slice(-result.events.length),
+    result.events,
+  );
 });
 
 test("resolves multiple no-choice queued entries in deterministic ENG-010F order", () => {
@@ -1669,10 +1702,14 @@ test("queued source-presence failure rejects without mutation or events", () => 
   const before = structuredClone(state);
 
   const result = processEffectRuntime(state);
+  const eventTypes = result.events.map((event) => event.type as string);
 
   assert.deepEqual(result.events, []);
   assert.ok(result.errors !== undefined);
   assert.deepEqual(result.state, before);
+  assert.equal(eventTypes.includes("effectResolved"), false);
+  assert.equal(eventTypes.includes("effectCancelled"), false);
+  assert.equal(eventTypes.includes("effectCanceled"), false);
 });
 
 test("queued resolution keeps event journal and state hash stable for identical input", () => {
