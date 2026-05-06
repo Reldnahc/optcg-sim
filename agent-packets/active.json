@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-015.md",
+      "storyId": "ENG-015",
+      "storyPath": "stories/approved/ENG-015-production-player-view-filter.yaml",
+      "storySha256": "21e475821be1bf73080fa796989799946f37a4d37bbe6b133dd8b28c7a21a4da"
+    }
+  ],
   "version": 1
 }
