@@ -8,7 +8,7 @@ type: design
 area: docs
 primary_concern: docs
 priority: medium
-status: approved
+status: done
 summary: >
   Add a concise root README that orients humans and agents to the repository,
   points to the authoritative specs and workflow docs, documents local setup and

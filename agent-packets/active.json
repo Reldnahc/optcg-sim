@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/DOC-001.md",
-      "storyId": "DOC-001",
-      "storyPath": "stories/approved/DOC-001-root-readme-onboarding.yaml",
-      "storySha256": "a613084f7ecbd1a66a4167055e3b693f7e477e876bb6623c370a52e69b523319"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
