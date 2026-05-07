@@ -23,6 +23,7 @@ import {
   getPlayCardLegalActions,
 } from "./play-card.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
+import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
 import {
   applyConcede,
   applyEndMainPhase,
@@ -79,6 +80,13 @@ const applyRespondToDecision = (
   const battleResult = applyBattleDecisionResponse(state, action);
   if (battleResult !== null) {
     return battleResult;
+  }
+  const triggerOrderResult = applyChooseTriggerOrderDecisionResponse(
+    state,
+    action,
+  );
+  if (triggerOrderResult !== null) {
+    return triggerOrderResult;
   }
   return illegalAction(state, "Unsupported decision type.");
 };
