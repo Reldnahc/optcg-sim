@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-028B.md",
-      "storyId": "ENG-028B",
-      "storyPath": "stories/approved/ENG-028B-resolve-life-trigger-decline-to-hand.yaml",
-      "storySha256": "54d6c32798313d0358bbce58d9ed900f47d2c56aadf9d4cc291540b412c4ce8b"
+      "packetPath": "agent-packets/ENG-028C.md",
+      "storyId": "ENG-028C",
+      "storyPath": "stories/approved/ENG-028C-handle-activated-life-trigger-no-zone.yaml",
+      "storySha256": "f86cfc243a0661ceda2d1033e2f285d0433148c29eaedc69a5821d80e889323b"
     }
   ],
   "version": 1
