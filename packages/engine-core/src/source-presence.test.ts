@@ -570,6 +570,50 @@ test("noSourceRequired does not require live source-zone presence", () => {
   });
 });
 
+test("noSourceRequired accepts independently of live source location or snapshot identity", () => {
+  const state = createActiveState();
+  const source = p1Leader(state);
+  const player = must(state.players[p1], "p1");
+  const movedState: GameState = {
+    ...state,
+    players: {
+      ...state.players,
+      [p1]: {
+        ...player,
+        leader: {
+          ...source,
+          cardId: toCardId("OP99-997"),
+          controller: p2,
+          zone: { zone: "trash", playerId: p1, slot: "trash", index: 0 },
+        },
+      },
+    },
+  };
+  const entry = queueEntry(source, {
+    source: {
+      instanceId: toInstanceId("not-live-anywhere"),
+      cardId: toCardId("OP99-998"),
+      playerId: p1,
+    },
+    sourceSnapshot: {
+      ...sourceSnapshot(source),
+      instanceId: toInstanceId("snapshot-not-live-anywhere"),
+      cardId: toCardId("OP99-999"),
+      controllerId: p2,
+    },
+    sourcePresencePolicy: "noSourceRequired",
+  });
+  const beforeHash = hashCanonicalStateValue(movedState);
+
+  assert.deepEqual(evaluateQueuedEffectSourcePresence(movedState, entry), {
+    ok: true,
+    policy: "noSourceRequired",
+    sourcePresence: "absent",
+    sourceBasis: "notRequired",
+  });
+  assert.equal(hashCanonicalStateValue(movedState), beforeHash);
+});
+
 test("source presence results are deterministic and do not include hidden identifiers", () => {
   const state = createActiveState();
   const source = p1Leader(state);

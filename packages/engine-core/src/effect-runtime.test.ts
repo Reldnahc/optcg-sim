@@ -1977,6 +1977,105 @@ test("queued source-presence failure rejects without mutation or events", () => 
   assert.equal(eventTypes.includes("effectCanceled"), false);
 });
 
+test("noSourceRequired queued entries with unsupported work fail closed without mutation or events", () => {
+  const cases: Array<{
+    name: string;
+    setup: (state: ReturnType<typeof createActiveState>) => EffectQueueEntry;
+  }> = [
+    {
+      name: "missing effect definition",
+      setup: (state) => {
+        const entry = {
+          ...queueDrawForP1(),
+          sourcePresencePolicy: "noSourceRequired" as const,
+          effectBlockId: toEffectId("missing-no-source-required-effect"),
+        };
+        state.cardManifest.effectDefinitionsVersion = "0.1.0";
+        state.cardManifest.effectDefinitions = {};
+        state.cardManifest.cards[entry.source.cardId] = resolvedCard({
+          cardId: entry.source.cardId,
+          category: "character",
+          support: {
+            status: "implemented-dsl",
+            effectDefinitionId: "missing-no-source-required-definition",
+            rulesVersion: "missing-no-source-required-rules",
+            sourceTextHash: "missing-no-source-required-source",
+          },
+        });
+        return entry;
+      },
+    },
+    {
+      name: "unsupported no-choice primitive",
+      setup: (state) => {
+        const entry = {
+          ...queueDrawForP1(),
+          sourcePresencePolicy: "noSourceRequired" as const,
+        };
+        const supportCard = resolvedCard({
+          cardId: entry.source.cardId,
+          category: "character",
+        });
+        const definition = reviewedOnPlayDrawDefinition(
+          entry.source.cardId,
+          supportCard.support,
+        );
+        setupOnPlayDefinition(
+          state,
+          {
+            ...must(state.players[p1], "p1").leader,
+            cardId: entry.source.cardId,
+          },
+          {
+            ...definition,
+            effects: [
+              {
+                ...must(definition.effects[0], "noSourceRequired effect"),
+                effect: {
+                  type: "choice",
+                  chooser: "self",
+                  options: [],
+                  min: 0,
+                  max: 0,
+                },
+              },
+            ],
+          },
+          "def-no-source-required-unsupported-primitive",
+        );
+        return entry;
+      },
+    },
+  ];
+
+  for (const testCase of cases) {
+    const state = createActiveState();
+    state.effectQueue = [testCase.setup(state)];
+    const before = structuredClone(state);
+    const beforeHash = hashCanonicalStateValue(state);
+
+    const first = processEffectRuntime(state);
+    const second = processEffectRuntime(structuredClone(before));
+
+    assert.deepEqual(first.events, [], testCase.name);
+    assert.deepEqual(first.errors, [
+      {
+        type: "effectRuntimeError",
+        effectId: "unsupported-effect-queue",
+        details: {
+          reason: "unsupported-pending-runtime-work",
+          kind: "effectQueue",
+          count: 1,
+        },
+      },
+    ]);
+    assert.deepEqual(first.events, second.events, testCase.name);
+    assert.deepEqual(first.errors, second.errors, testCase.name);
+    assert.deepEqual(first.state, before, testCase.name);
+    assert.equal(hashCanonicalStateValue(first.state), beforeHash);
+  }
+});
+
 test("queued resolution keeps event journal and state hash stable for identical input", () => {
   const run = () => {
     const state = createActiveState();
