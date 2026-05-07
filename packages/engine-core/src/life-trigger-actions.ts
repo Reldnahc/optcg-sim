@@ -37,6 +37,8 @@ const hasUnsupportedShape = (effect: EffectBlock): boolean =>
   effect.effect.type !== "draw" ||
   effect.cost !== undefined ||
   effect.condition !== undefined ||
+  effect.conditionTiming !== undefined ||
+  effect.failurePolicy !== undefined ||
   effect.optional === true ||
   effect.oncePerTurn === true;
 

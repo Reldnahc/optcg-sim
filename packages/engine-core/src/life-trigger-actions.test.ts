@@ -97,3 +97,89 @@ test("getSupportedLifeTriggerDecision rejects unsupported trigger metadata", () 
     undefined,
   );
 });
+
+test("getSupportedLifeTriggerDecision rejects trigger metadata with conditionTiming", () => {
+  const state = setupAttackState();
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const cardId = toCardId("trigger-life-condition-timing");
+  const definition = effectDefinition(cardId, { type: "trigger" });
+  const effect = must(definition.effects[0], "effect");
+  const unsupported = {
+    ...definition,
+    effects: [
+      {
+        ...effect,
+        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+        conditionTiming: "activation" as const,
+      },
+    ],
+  };
+
+  topLife.card.cardId = cardId;
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "character",
+    power: 1000,
+    triggerText: "TRIGGER: draw 1",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-trigger-condition-timing",
+      rulesVersion: unsupported.metadata.rulesVersion,
+      sourceTextHash: unsupported.metadata.sourceTextHash,
+    },
+  });
+  state.cardManifest.effectDefinitionsVersion =
+    unsupported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-trigger-condition-timing": unsupported,
+  };
+
+  assert.equal(
+    getSupportedLifeTriggerDecision(state, p2, topLife.card),
+    undefined,
+  );
+});
+
+test("getSupportedLifeTriggerDecision rejects trigger metadata with failurePolicy", () => {
+  const state = setupAttackState();
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const cardId = toCardId("trigger-life-failure-policy");
+  const definition = effectDefinition(cardId, { type: "trigger" });
+  const effect = must(definition.effects[0], "effect");
+  const unsupported = {
+    ...definition,
+    effects: [
+      {
+        ...effect,
+        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+        failurePolicy: "requiresAll" as const,
+      },
+    ],
+  };
+
+  topLife.card.cardId = cardId;
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "character",
+    power: 1000,
+    triggerText: "TRIGGER: draw 1",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-trigger-failure-policy",
+      rulesVersion: unsupported.metadata.rulesVersion,
+      sourceTextHash: unsupported.metadata.sourceTextHash,
+    },
+  });
+  state.cardManifest.effectDefinitionsVersion =
+    unsupported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-trigger-failure-policy": unsupported,
+  };
+
+  assert.equal(
+    getSupportedLifeTriggerDecision(state, p2, topLife.card),
+    undefined,
+  );
+});
