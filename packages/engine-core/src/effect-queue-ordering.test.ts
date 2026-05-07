@@ -15,6 +15,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  findEarliestChoiceRequiredEffectQueueGroup,
   groupValidatedEffectQueueEntries,
   orderNoChoiceEffectQueueGroups,
   validateEffectQueueOrderingInput,
@@ -352,6 +353,119 @@ test("identifies single-entry groups as no-choice buckets", () => {
 
   assert.equal(group.requiresChooseTriggerOrder, false);
   assert.equal(group.choicePlayerId, undefined);
+});
+
+test("finds earliest choice-required group by timing window then generation", () => {
+  const entries = [
+    queueEntry("younger-window-1", "w2", { controllerId: p1 }),
+    queueEntry("younger-window-2", "w2", { controllerId: p1 }),
+    queueEntry("older-window-lower-generation-1", "w1", {
+      controllerId: p3,
+      generation: 0,
+    }),
+    queueEntry("older-window-lower-generation-2", "w1", {
+      controllerId: p3,
+      generation: 0,
+    }),
+    queueEntry("older-window-1", "w1", {
+      controllerId: p2,
+      generation: 1,
+    }),
+    queueEntry("older-window-2", "w1", {
+      controllerId: p2,
+      generation: 1,
+    }),
+  ];
+  const validated = validateEffectQueueOrderingInput(entries, [
+    { timingWindowId: toTimingWindowId("w1"), rank: 0 },
+    { timingWindowId: toTimingWindowId("w2"), rank: 1 },
+  ]);
+  assert.equal(validated.ok, true);
+
+  const earliest = findEarliestChoiceRequiredEffectQueueGroup(
+    groupValidatedEffectQueueEntries(validated),
+  );
+
+  assert.ok(earliest !== undefined);
+  assert.equal(earliest.timingWindowId, toTimingWindowId("w1"));
+  assert.equal(earliest.generation, 0);
+  assert.equal(earliest.controllerId, p3);
+  assert.equal(earliest.orderingGroup, "turnPlayer");
+});
+
+test("prefers turn-player choice-required group before non-turn-player group", () => {
+  const entries = [
+    queueEntry("non-turn-1", "w1", {
+      controllerId: p2,
+      orderingGroup: "nonTurnPlayer",
+    }),
+    queueEntry("non-turn-2", "w1", {
+      controllerId: p2,
+      orderingGroup: "nonTurnPlayer",
+    }),
+    queueEntry("turn-1", "w1", {
+      controllerId: p1,
+      orderingGroup: "turnPlayer",
+    }),
+    queueEntry("turn-2", "w1", {
+      controllerId: p1,
+      orderingGroup: "turnPlayer",
+    }),
+  ];
+  const validated = validateEffectQueueOrderingInput(entries, [
+    { timingWindowId: toTimingWindowId("w1"), rank: 0 },
+  ]);
+  assert.equal(validated.ok, true);
+
+  const earliest = findEarliestChoiceRequiredEffectQueueGroup(
+    groupValidatedEffectQueueEntries(validated),
+  );
+
+  assert.ok(earliest !== undefined);
+  assert.equal(earliest.controllerId, p1);
+  assert.equal(earliest.orderingGroup, "turnPlayer");
+});
+
+test("returns undefined when every group is single-entry", () => {
+  const entries = [
+    queueEntry("q1", "w1", { controllerId: p1, orderingGroup: "turnPlayer" }),
+    queueEntry("q2", "w1", {
+      controllerId: p2,
+      orderingGroup: "nonTurnPlayer",
+    }),
+    queueEntry("q3", "w2", { controllerId: p3, orderingGroup: "turnPlayer" }),
+  ];
+  const validated = validateEffectQueueOrderingInput(entries, [
+    { timingWindowId: toTimingWindowId("w1"), rank: 0 },
+    { timingWindowId: toTimingWindowId("w2"), rank: 1 },
+  ]);
+  assert.equal(validated.ok, true);
+
+  const earliest = findEarliestChoiceRequiredEffectQueueGroup(
+    groupValidatedEffectQueueEntries(validated),
+  );
+
+  assert.equal(earliest, undefined);
+});
+
+test("choice-required group detection does not mutate queue groups", () => {
+  const entries = [
+    queueEntry("q1", "w2", { controllerId: p1 }),
+    queueEntry("q2", "w2", { controllerId: p1 }),
+    queueEntry("q3", "w1", { controllerId: p2 }),
+    queueEntry("q4", "w1", { controllerId: p2 }),
+  ];
+  const validated = validateEffectQueueOrderingInput(entries, [
+    { timingWindowId: toTimingWindowId("w1"), rank: 0 },
+    { timingWindowId: toTimingWindowId("w2"), rank: 1 },
+  ]);
+  assert.equal(validated.ok, true);
+  const groups = groupValidatedEffectQueueEntries(validated);
+  const before = JSON.stringify(groups);
+
+  findEarliestChoiceRequiredEffectQueueGroup(groups);
+
+  assert.equal(JSON.stringify(groups), before);
 });
 
 test("grouping is deterministic for identical validated inputs", () => {
