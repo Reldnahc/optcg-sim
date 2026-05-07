@@ -11,6 +11,7 @@ import {
   appendEvent,
   createEvent,
   illegalAction,
+  rebaseEvents,
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
@@ -444,7 +445,12 @@ export const resolveSupportedVanillaBattle = (
       if (resolved.errors !== undefined) {
         return toEngineResult(state, [], toErrorTuple(resolved.errors));
       }
-      events.push(...resolved.events);
+      const runtimeEvents = rebaseEvents(
+        state,
+        resolved.events,
+        events.length + 1,
+      );
+      events.push(...runtimeEvents);
       nextState = {
         ...resolved.state,
         eventJournal: [...state.eventJournal, ...events],

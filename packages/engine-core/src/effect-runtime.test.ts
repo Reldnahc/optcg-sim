@@ -2320,6 +2320,75 @@ test("resolves queued supported On K.O. draw from last-known source snapshot", (
   });
 });
 
+test("queued On K.O. draw with unsupported source-presence policy fails closed without mutation", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const definition = setupOnKODefinition(state, source);
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        {
+          ...onKOEffect,
+          sourcePresencePolicy: "noSourceRequired",
+        },
+      ],
+    },
+  };
+  const entry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId("queue-entry-on-ko-unsupported-policy"),
+    timingWindowId: toTimingWindowId("timing-window-on-ko-unsupported-policy"),
+    controllerId: p2,
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p2,
+      zone: source.zone,
+    },
+    sourceSnapshot: {
+      ...toSourceSnapshot(source, p2, p2),
+      power: 3000,
+    },
+    effectBlockId: onKOEffect.id,
+    orderingGroup: "nonTurnPlayer",
+    sourcePresencePolicy: "noSourceRequired",
+  };
+  state.effectQueue = [entry];
+  const before = structuredClone(state);
+  const beforeHash = hashCanonicalStateValue(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "unsupported-effect-queue",
+      details: {
+        reason: "unsupported-pending-runtime-work",
+        kind: "effectQueue",
+        count: 1,
+      },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+  assert.equal(result.stateHash, beforeHash);
+});
+
 test("queued source-presence policy mismatch with effect definition fails closed without mutation or events", () => {
   const state = createActiveState();
   const entry: EffectQueueEntry = {

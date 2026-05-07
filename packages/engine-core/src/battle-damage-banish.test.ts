@@ -716,6 +716,10 @@ test("reviewed supported On K.O. metadata resolves after battle K.O. events", ()
   assert.equal(effectQueuedIndex > cardMovedIndex, true);
   assert.equal(onKOResolvedIndex > effectQueuedIndex, true);
   assert.equal(
+    result.events.map((event) => event.id).length,
+    new Set(result.events.map((event) => event.id)).size,
+  );
+  assert.equal(
     result.events.filter((event) => event.type === "effectResolved").length,
     2,
   );
