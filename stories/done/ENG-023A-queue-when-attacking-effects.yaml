@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Queue and resolve supported attacker When Attacking effects immediately after
   attackDeclared during attack declaration.

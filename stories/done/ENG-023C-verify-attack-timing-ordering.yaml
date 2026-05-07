@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add regression coverage proving attacker timing resolves before defender
   attack-response timing and preserves deterministic battle sequencing.

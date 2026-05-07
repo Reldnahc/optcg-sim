@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Fail closed for unsupported attack-timing effects without mutating state,
   leaking hidden information, or weakening existing battle guards.

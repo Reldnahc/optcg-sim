@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-023D.md",
-      "storyId": "ENG-023D",
-      "storyPath": "stories/approved/ENG-023D-guard-unsupported-attack-timing-effects.yaml",
-      "storySha256": "34694487dd31a20f6d00ced43b435b52e892873cd567a143063fdf793f0b11ee"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

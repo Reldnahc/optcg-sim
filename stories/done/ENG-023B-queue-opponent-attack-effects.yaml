@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Queue and resolve supported defender On Your Opponent's Attack effects after
   Block Step and before ordinary Counter Step actions or Counter Step pass
