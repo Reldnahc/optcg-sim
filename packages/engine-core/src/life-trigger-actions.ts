@@ -1,13 +1,16 @@
 import type {
   Action,
+  CardRef,
   CardInstance,
   ConfirmLifeTriggerDecision,
   EffectBlock,
+  EffectQueueEntry,
   EngineError,
   EngineEvent,
   EngineResult,
   GameState,
   PlayerId,
+  ResolvedCard,
 } from "@optcg/types";
 
 import {
@@ -68,12 +71,11 @@ const isExactSupportedTriggerDefinition = (
   return isSupportedTriggerEffect(effect);
 };
 
-export const getSupportedLifeTriggerDecision = (
+const resolveSupportedLifeTriggerEffect = (
   state: GameState,
-  damagedPlayerId: PlayerId,
-  card: CardInstance,
-): ConfirmLifeTriggerDecision | undefined => {
-  const resolved = state.cardManifest.cards[card.cardId];
+  cardId: CardInstance["cardId"],
+): { resolved: ResolvedCard; effect: EffectBlock } | undefined => {
+  const resolved = state.cardManifest.cards[cardId];
   if (resolved === undefined || !hasLifeTriggerText(resolved.triggerText)) {
     return undefined;
   }
@@ -85,6 +87,21 @@ export const getSupportedLifeTriggerDecision = (
     !lookup.ok ||
     !isExactSupportedTriggerDefinition(lookup.definition.effects)
   ) {
+    return undefined;
+  }
+  const effect = lookup.definition.effects[0];
+  if (effect === undefined) {
+    return undefined;
+  }
+  return { resolved, effect };
+};
+
+export const getSupportedLifeTriggerDecision = (
+  state: GameState,
+  damagedPlayerId: PlayerId,
+  card: CardInstance,
+): ConfirmLifeTriggerDecision | undefined => {
+  if (resolveSupportedLifeTriggerEffect(state, card.cardId) === undefined) {
     return undefined;
   }
   return {
@@ -127,30 +144,32 @@ const isCardInNormalZone = (
     );
   });
 
-export const applyLifeTriggerDecisionResponse = (
+const toSourceSnapshot = (
+  card: CardRef,
+  resolved: ResolvedCard,
+): EffectQueueEntry["sourceSnapshot"] => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  ownerId: card.playerId,
+  controllerId: card.playerId,
+  zone: card.zone ?? {
+    zone: "noZone",
+    playerId: card.playerId,
+    slot: "temporary",
+  },
+  category: resolved.category,
+  colors: resolved.colors,
+  ...(resolved.cost !== undefined ? { cost: resolved.cost } : {}),
+  ...(resolved.power !== undefined ? { power: resolved.power } : {}),
+  ...(resolved.counter !== undefined ? { counter: resolved.counter } : {}),
+  ...(resolved.life !== undefined ? { life: resolved.life } : {}),
+  keywords: resolved.printedKeywords,
+});
+
+const validateDecisionCard = (
   state: GameState,
-  action: Extract<Action, { type: "respondToDecision" }>,
-): EngineResult | null => {
-  const decision = state.pendingDecision;
-  if (decision === undefined || decision.type !== "confirmLifeTrigger") {
-    return null;
-  }
-  if (action.response.type !== "lifeTrigger") {
-    return toEngineResult(
-      state,
-      [],
-      invalidDecision(
-        "Response type must be lifeTrigger for confirmLifeTrigger.",
-      ),
-    );
-  }
-  if (action.response.choice !== "addToHand") {
-    return toEngineResult(
-      state,
-      [],
-      invalidDecision("Life Trigger activation is unsupported."),
-    );
-  }
+  decision: ConfirmLifeTriggerDecision,
+): EngineResult | undefined => {
   if (decision.card.playerId !== decision.playerId) {
     return toEngineResult(
       state,
@@ -171,6 +190,186 @@ export const applyLifeTriggerDecisionResponse = (
       [],
       invalidDecision("Life Trigger card is stale for current state."),
     );
+  }
+  return undefined;
+};
+
+const applyActivatedTriggerResponse = (
+  state: GameState,
+  decision: ConfirmLifeTriggerDecision,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult => {
+  const validation = validateDecisionCard(state, decision);
+  if (validation !== undefined) {
+    return validation;
+  }
+  const supported = resolveSupportedLifeTriggerEffect(
+    state,
+    decision.card.cardId,
+  );
+  if (supported === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision(
+        `Life Trigger card ${String(
+          decision.card.cardId,
+        )} is unsupported for activation.`,
+      ),
+    );
+  }
+  const sourcePresencePolicy = supported.effect.sourcePresencePolicy;
+  if (sourcePresencePolicy === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision(
+        `Life Trigger card ${String(
+          decision.card.cardId,
+        )} is unsupported for activation.`,
+      ),
+    );
+  }
+
+  const noZone = {
+    zone: "noZone" as const,
+    playerId: decision.playerId,
+    slot: "temporary" as const,
+  };
+  const source: CardRef = {
+    instanceId: decision.card.instanceId,
+    cardId: decision.card.cardId,
+    playerId: decision.playerId,
+    zone: noZone,
+  };
+  const revealId = `reveal:life-trigger:${String(
+    decision.card.instanceId,
+  )}:${String(state.seq + 1)}`;
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionResolved",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+      responseType: action.response.type,
+    },
+    { type: "private", playerId: decision.playerId },
+  );
+  appendEvent(
+    state,
+    events,
+    "cardRevealed",
+    {
+      revealId,
+      cards: [source],
+      origin: "lifeDamage",
+      reason: "lifeTriggerActivated",
+    },
+    { type: "public" },
+  );
+  appendEvent(
+    state,
+    events,
+    "triggerActivated",
+    {
+      playerId: decision.playerId,
+      card: source,
+      revealId,
+      effectBlockId: supported.effect.id,
+    },
+    { type: "public" },
+  );
+  const triggerEvent = events[events.length - 1];
+  const triggerEventId = triggerEvent?.id;
+  const triggerEventSeq = triggerEvent?.seq ?? state.eventJournal.length + 1;
+  const queueEntry: EffectQueueEntry = {
+    id: `queue-entry:life-trigger:${String(decision.id)}:${String(
+      supported.effect.id,
+    )}` as EffectQueueEntry["id"],
+    state: "pending",
+    timingWindowId: `timing-window:life-trigger:${String(
+      decision.id,
+    )}` as EffectQueueEntry["timingWindowId"],
+    generation: 0,
+    controllerId: decision.playerId,
+    source,
+    sourceSnapshot: toSourceSnapshot(source, supported.resolved),
+    ...(triggerEventId !== undefined ? { triggerEventId } : {}),
+    effectBlockId: supported.effect.id,
+    orderingGroup:
+      decision.playerId === state.turn.turnPlayerId
+        ? "turnPlayer"
+        : "nonTurnPlayer",
+    createdAtEventSeq: triggerEventSeq,
+    queuedAtStateSeq: toStateSeq(state.seq + 1),
+    sourcePresencePolicy,
+    causedBy: { type: "decision", decisionId: decision.id },
+  };
+  appendEvent(
+    state,
+    events,
+    "effectQueued",
+    {
+      queueEntryId: queueEntry.id,
+      timingWindowId: queueEntry.timingWindowId,
+      generation: queueEntry.generation,
+      effectBlockId: queueEntry.effectBlockId,
+      triggerEventId: queueEntry.triggerEventId,
+      sourcePresencePolicy: queueEntry.sourcePresencePolicy,
+      orderingGroup: queueEntry.orderingGroup,
+    },
+    { type: "public" },
+  );
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    effectQueue: [...state.effectQueue, queueEntry],
+    revealedCards: [
+      ...state.revealedCards,
+      {
+        id: revealId,
+        cards: [source],
+        visibility: { type: "public" },
+        origin: "lifeDamage",
+        createdAtStateSeq: toStateSeq(state.seq + 1),
+        cleanupPolicy: "trashAfterResolution",
+      },
+    ],
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  delete nextState.pendingDecision;
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
+};
+
+export const applyLifeTriggerDecisionResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  if (decision === undefined || decision.type !== "confirmLifeTrigger") {
+    return null;
+  }
+  if (action.response.type !== "lifeTrigger") {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision(
+        "Response type must be lifeTrigger for confirmLifeTrigger.",
+      ),
+    );
+  }
+  if (action.response.choice === "activateTrigger") {
+    return applyActivatedTriggerResponse(state, decision, action);
+  }
+  const validation = validateDecisionCard(state, decision);
+  if (validation !== undefined) {
+    return validation;
   }
   const player = state.players[decision.playerId];
   if (player === undefined) {

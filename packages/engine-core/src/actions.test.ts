@@ -459,6 +459,11 @@ test("getLegalActions exposes confirmLifeTrigger respondToDecision only to decis
     {
       type: "respondToDecision",
       decisionId: toDecisionId("decision:life-trigger"),
+      response: { type: "lifeTrigger", choice: "activateTrigger" },
+    },
+    {
+      type: "respondToDecision",
+      decisionId: toDecisionId("decision:life-trigger"),
       response: { type: "lifeTrigger", choice: "addToHand" },
     },
   ]);

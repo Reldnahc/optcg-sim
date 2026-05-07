@@ -1407,7 +1407,7 @@ test("respondToDecision addToHand declines life trigger and moves taken card to 
   );
 });
 
-test("respondToDecision addToHand rejects unsupported life trigger responses without mutation", () => {
+test("respondToDecision addToHand rejects malformed life trigger responses without mutation", () => {
   const opened = applySupportedLifeTriggerAttack();
   const pendingDecision = must(
     opened.result.state.pendingDecision,
@@ -1415,11 +1415,6 @@ test("respondToDecision addToHand rejects unsupported life trigger responses wit
   );
   const before = JSON.stringify(opened.result.state);
 
-  const activate = applyAction(opened.result.state, {
-    type: "respondToDecision",
-    decisionId: pendingDecision.id,
-    response: { type: "lifeTrigger", choice: "activateTrigger" },
-  });
   const malformed = applyAction(opened.result.state, {
     type: "respondToDecision",
     decisionId: pendingDecision.id,
@@ -1437,12 +1432,6 @@ test("respondToDecision addToHand rejects unsupported life trigger responses wit
     response: { type: "lifeTrigger", choice: "addToHand" },
   });
 
-  assert.deepEqual(activate.errors, [
-    {
-      type: "invalidDecisionResponse",
-      reason: "Life Trigger activation is unsupported.",
-    },
-  ]);
   assert.deepEqual(malformed.errors, [
     {
       type: "invalidDecisionResponse",
@@ -1455,13 +1444,11 @@ test("respondToDecision addToHand rejects unsupported life trigger responses wit
       reason: "Life Trigger card metadata is missing.",
     },
   ]);
-  assert.equal(JSON.stringify(activate.state), before);
   assert.equal(JSON.stringify(malformed.state), before);
   assert.equal(
     JSON.stringify(missingCard.state),
     JSON.stringify(missingCardState),
   );
-  assert.deepEqual(activate.events, []);
   assert.deepEqual(malformed.events, []);
   assert.deepEqual(missingCard.events, []);
 });
