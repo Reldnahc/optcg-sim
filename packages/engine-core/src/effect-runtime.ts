@@ -27,6 +27,7 @@ import {
   validateEffectQueueOrderingInput,
 } from "./effect-queue-ordering.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
+import { evaluateQueuedEffectSourcePresence } from "./source-presence.js";
 
 export type PendingRuntimeWorkKind = "effectQueue" | "deferredTriggers";
 
@@ -379,7 +380,7 @@ export const executeNoChoiceEffectPrimitive = (
   return executeDrawEffect(state, entry, effect);
 };
 
-const isSupportedNoChoiceDrawTriggerEffect = (
+const isNoChoiceDrawTriggerEffect = (
   effect: EffectDefinition["effects"][number],
   triggerType: "onPlay" | "whenAttacking" | "onOpponentAttack",
 ): effect is EffectDefinition["effects"][number] & {
@@ -403,9 +404,6 @@ const isSupportedNoChoiceDrawTriggerEffect = (
   ) {
     return false;
   }
-  if (effect.sourcePresencePolicy !== "mustRemainInSameZone") {
-    return false;
-  }
   return (
     effect.effect.type === "draw" &&
     Number.isInteger(effect.effect.count) &&
@@ -413,6 +411,16 @@ const isSupportedNoChoiceDrawTriggerEffect = (
     effect.effect.player === "self"
   );
 };
+
+const isSupportedNoChoiceDrawTriggerEffect = (
+  effect: EffectDefinition["effects"][number],
+  triggerType: "onPlay" | "whenAttacking" | "onOpponentAttack",
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} =>
+  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
+  isNoChoiceDrawTriggerEffect(effect, triggerType);
 
 export const isSupportedNoChoiceOnPlayDrawEffect = (
   effect: EffectDefinition["effects"][number],
@@ -434,6 +442,16 @@ export const isSupportedNoChoiceOnOpponentAttackDrawEffect = (
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: Extract<Effect, { type: "draw" }>;
 } => isSupportedNoChoiceDrawTriggerEffect(effect, "onOpponentAttack");
+
+const isSupportedQueuedNoChoiceDrawEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} =>
+  isNoChoiceDrawTriggerEffect(effect, "onPlay") ||
+  isNoChoiceDrawTriggerEffect(effect, "whenAttacking") ||
+  isNoChoiceDrawTriggerEffect(effect, "onOpponentAttack");
 
 const findCardInstance = (
   state: GameState,
@@ -1179,34 +1197,6 @@ const inferTimingWindowRanks = (
     .map(([timingWindowId], rank) => ({ timingWindowId, rank }));
 };
 
-const isSourcePresentForQueueEntry = (
-  state: GameState,
-  entry: EffectQueueEntry,
-): boolean => {
-  if (entry.sourcePresencePolicy !== "mustRemainInSameZone") {
-    return false;
-  }
-  const source = findCardInstance(
-    state,
-    entry.source.playerId,
-    entry.source.instanceId,
-  );
-  if (source === undefined) {
-    return false;
-  }
-  const expectedZone = entry.source.zone;
-  if (expectedZone === undefined) {
-    return false;
-  }
-  return (
-    source.cardId === entry.source.cardId &&
-    source.zone.zone === expectedZone.zone &&
-    source.zone.playerId === expectedZone.playerId &&
-    source.zone.slot === expectedZone.slot &&
-    source.zone.index === expectedZone.index
-  );
-};
-
 const resolveQueuedNoChoiceDrawEffect = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -1227,9 +1217,8 @@ const resolveQueuedNoChoiceDrawEffect = (
   );
   if (
     match === undefined ||
-    (!isSupportedNoChoiceOnPlayDrawEffect(match) &&
-      !isSupportedNoChoiceWhenAttackingDrawEffect(match) &&
-      !isSupportedNoChoiceOnOpponentAttackDrawEffect(match))
+    match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
+    !isSupportedQueuedNoChoiceDrawEffect(match)
   ) {
     return undefined;
   }
@@ -1290,7 +1279,11 @@ const processNoChoiceEffectQueue = (state: GameState): EngineResult => {
   let nextState = state;
   const allEvents: EngineEvent[] = [];
   for (const selected of ordered.entries) {
-    if (!isSourcePresentForQueueEntry(nextState, selected)) {
+    const sourcePresence = evaluateQueuedEffectSourcePresence(
+      nextState,
+      selected,
+    );
+    if (!sourcePresence.ok) {
       return toEngineResult(
         originalState,
         [],
