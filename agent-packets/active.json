@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-027C.md",
-      "storyId": "ENG-027C",
-      "storyPath": "stories/approved/ENG-027C-resolve-ko-effects-from-trash-or-lki.yaml",
-      "storySha256": "9cec197a72d026c09f437320d23225387f7edcec1dd0a71f373fa15c3abe17d7"
+      "packetPath": "agent-packets/ENG-027D.md",
+      "storyId": "ENG-027D",
+      "storyPath": "stories/approved/ENG-027D-verify-ko-trigger-resolution-safety.yaml",
+      "storySha256": "c956c1d6acabdf84f20a4fb0bce2e58097f4021ab208580c429c2682db9ce3be"
     }
   ],
   "version": 1
