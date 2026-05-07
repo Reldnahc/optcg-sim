@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-024C.md",
-      "storyId": "ENG-024C",
-      "storyPath": "stories/approved/ENG-024C-regress-destination-and-lki-source-presence.yaml",
-      "storySha256": "172c93cfc418db0e8c3c0dc48d2b99dd075babec67f7c138ece418360a54cbb6"
+      "packetPath": "agent-packets/ENG-024D.md",
+      "storyId": "ENG-024D",
+      "storyPath": "stories/approved/ENG-024D-regress-no-source-required-policy.yaml",
+      "storySha256": "cce850d99dfd2d8aafd8301ce2b3ae9aa96c7df1ed25e90ca1304537e417c243"
     }
   ],
   "version": 1
