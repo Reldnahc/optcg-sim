@@ -345,6 +345,145 @@ test("resolveFromDestinationZone uses entry source zone as the expected live des
   });
 });
 
+test("resolveFromDestinationZone fails closed for unsupported live destination states", () => {
+  const state = createActiveState();
+  const source = p1Leader(state);
+  const destinationSource: CardInstance = {
+    ...source,
+    zone: { zone: "trash", playerId: p1, slot: "trash", index: 0 },
+  };
+  const entry = queueEntry(destinationSource, {
+    sourcePresencePolicy: "resolveFromDestinationZone",
+  });
+  const stateWithDestinationSource: GameState = {
+    ...state,
+    players: {
+      ...state.players,
+      [p1]: {
+        ...must(state.players[p1], "p1"),
+        leader: destinationSource,
+      },
+    },
+  };
+  const beforeHash = hashCanonicalStateValue(stateWithDestinationSource);
+  const cases: Array<{
+    name: string;
+    entry: EffectQueueEntry;
+    state: GameState;
+    reason:
+      | "missingExpectedSourceZone"
+      | "liveSourceIdentityMismatch"
+      | "liveSourceNotInExpectedZone";
+  }> = [
+    {
+      name: "missing entry source zone",
+      entry: {
+        ...entry,
+        source: {
+          instanceId: destinationSource.instanceId,
+          cardId: destinationSource.cardId,
+          playerId: p1,
+        },
+      },
+      state: stateWithDestinationSource,
+      reason: "missingExpectedSourceZone",
+    },
+    {
+      name: "card identity mismatch",
+      entry,
+      state: {
+        ...stateWithDestinationSource,
+        players: {
+          ...stateWithDestinationSource.players,
+          [p1]: {
+            ...must(stateWithDestinationSource.players[p1], "p1"),
+            leader: {
+              ...destinationSource,
+              cardId: toCardId("OP99-998"),
+            },
+          },
+        },
+      },
+      reason: "liveSourceIdentityMismatch",
+    },
+    {
+      name: "controller identity mismatch",
+      entry,
+      state: {
+        ...stateWithDestinationSource,
+        players: {
+          ...stateWithDestinationSource.players,
+          [p1]: {
+            ...must(stateWithDestinationSource.players[p1], "p1"),
+            leader: {
+              ...destinationSource,
+              controller: p2,
+            },
+          },
+        },
+      },
+      reason: "liveSourceIdentityMismatch",
+    },
+    {
+      name: "live source outside expected destination zone",
+      entry,
+      state: {
+        ...stateWithDestinationSource,
+        players: {
+          ...stateWithDestinationSource.players,
+          [p1]: {
+            ...must(stateWithDestinationSource.players[p1], "p1"),
+            leader: source,
+          },
+        },
+      },
+      reason: "liveSourceNotInExpectedZone",
+    },
+  ];
+
+  for (const testCase of cases) {
+    assert.deepEqual(
+      evaluateQueuedEffectSourcePresence(testCase.state, testCase.entry),
+      {
+        ok: false,
+        policy: "resolveFromDestinationZone",
+        sourcePresence: "failClosed",
+        reason: testCase.reason,
+      },
+      testCase.name,
+    );
+  }
+  assert.equal(hashCanonicalStateValue(stateWithDestinationSource), beforeHash);
+});
+
+test("resolveFromLastKnownInformation uses source snapshot after live source leaves original zone", () => {
+  const state = createActiveState();
+  const source = p1Leader(state);
+  const entry = queueEntry(source, {
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+  });
+  const movedState: GameState = {
+    ...state,
+    players: {
+      ...state.players,
+      [p1]: {
+        ...must(state.players[p1], "p1"),
+        leader: {
+          ...source,
+          zone: { zone: "trash", playerId: p1, slot: "trash", index: 0 },
+        },
+      },
+    },
+  };
+
+  assert.deepEqual(evaluateQueuedEffectSourcePresence(movedState, entry), {
+    ok: true,
+    policy: "resolveFromLastKnownInformation",
+    sourcePresence: "absent",
+    sourceBasis: "lastKnownInformation",
+  });
+});
+
 test("resolveFromLastKnownInformation accepts only matching source snapshot identity", () => {
   const state = createActiveState();
   const source = p1Leader(state);
