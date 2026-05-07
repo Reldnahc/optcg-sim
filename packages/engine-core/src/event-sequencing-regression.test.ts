@@ -443,6 +443,30 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
   };
 
   const openedForDecline = openLifeTrigger();
+  const expectedOpenedSignature = {
+    eventSeq: [5, 6, 7, 8, 9, 10, 11],
+    eventIds: [
+      "event:3:1:attackDeclared",
+      "event:3:2:ruleProcessingChecked",
+      "event:3:3:damageDealt",
+      "event:3:4:lifeTaken",
+      "event:3:5:decisionCreated",
+      "event:3:6:effectResolved",
+      "event:3:7:ruleProcessingChecked",
+    ],
+    eventTypes: [
+      "attackDeclared",
+      "ruleProcessingChecked",
+      "damageDealt",
+      "lifeTaken",
+      "decisionCreated",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
+    stateHash:
+      "8af0563c1e8eee5c9f61b42c891ce6c9f0fcf6a3f867d0cb2722465da2988315",
+  };
+  assert.deepEqual(signature(openedForDecline), expectedOpenedSignature);
   const declineDecision = must(
     openedForDecline.state.pendingDecision,
     "ENG-028 decline decision",
@@ -458,8 +482,20 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
     "ENG-028 life trigger decline",
   );
   assert.equal(declined.stateHash, hashCanonicalStateValue(declined.state));
+  assert.deepEqual(signature(declined), {
+    eventSeq: [12, 13, 14],
+    eventIds: [
+      "event:4:1:decisionResolved",
+      "event:4:2:cardMoved",
+      "event:4:3:cardMoved",
+    ],
+    eventTypes: ["decisionResolved", "cardMoved", "cardMoved"],
+    stateHash:
+      "30dd6cc15428f02db57f644cef0e2d5fcf717f47967a90c7671c97917a7357a9",
+  });
 
   const openedForActivation = openLifeTrigger();
+  assert.deepEqual(signature(openedForActivation), expectedOpenedSignature);
   const activateDecision = must(
     openedForActivation.state.pendingDecision,
     "ENG-028 activation decision",
@@ -477,19 +513,39 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
   assert.equal(activated.stateHash, hashCanonicalStateValue(activated.state));
   assert.equal(activated.state.effectQueue.length, 0);
   assert.equal(activated.state.revealedCards.length, 0);
-  for (const eventType of [
-    "cardRevealed",
-    "triggerActivated",
-    "effectQueued",
-    "effectResolved",
-    "cardTrashed",
-  ] as const) {
-    assert.equal(
-      activated.events.some((event) => event.type === eventType),
-      true,
-      `ENG-028 activation should include ${eventType}`,
-    );
-  }
+  assert.deepEqual(signature(activated), {
+    eventSeq: [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+    eventIds: [
+      "event:4:1:decisionResolved",
+      "event:4:2:cardRevealed",
+      "event:4:3:triggerActivated",
+      "event:4:4:effectQueued",
+      "event:5:1:cardDrawn",
+      "event:5:2:cardMoved",
+      "event:5:3:cardMoved",
+      "event:5:1:effectResolved",
+      "event:5:1:ruleProcessingChecked",
+      "event:5:2:gameEnded",
+      "event:5:1:cardMoved",
+      "event:5:2:cardTrashed",
+    ],
+    eventTypes: [
+      "decisionResolved",
+      "cardRevealed",
+      "triggerActivated",
+      "effectQueued",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+      "gameEnded",
+      "cardMoved",
+      "cardTrashed",
+    ],
+    stateHash:
+      "3e1606fce04f3e7e6dde0d05d053a69f1399e3288ffad97a2bd3a316a80e7c75",
+  });
 
   return {
     results: [openedForDecline, declined, openedForActivation, activated],

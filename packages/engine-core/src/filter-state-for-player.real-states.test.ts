@@ -554,9 +554,12 @@ const assertNoHiddenLeak = (
       "response",
       "defaultResponse",
       "queueEntryId",
+      "effectBlockId",
       "orderedIds",
       "triggerIds",
       "sourceSnapshot",
+      "sourcePresencePolicy",
+      "orderingGroup",
       "candidates",
       "paymentOptions",
       "targetOptions",
@@ -853,6 +856,8 @@ test("real life trigger views keep decline, activation, no-zone, and adjacent hi
   const { opened, lifeCardId, adjacentLifeId, hiddenHandId, hiddenDeckId } =
     createLifeTriggerDecisionState();
   const pending = must(opened.state.pendingDecision, "life trigger decision");
+  assertNoHiddenLeak(opened.state, p1, "life-trigger-open:p1");
+  assertNoHiddenLeak(opened.state, p2, "life-trigger-open:p2");
   const attackerDecisionView = filterStateForPlayer(opened.state, p1);
   const defenderDecisionView = filterStateForPlayer(opened.state, p2);
 
@@ -892,6 +897,8 @@ test("real life trigger views keep decline, activation, no-zone, and adjacent hi
     response: { type: "lifeTrigger", choice: "addToHand" },
   });
   assert.equal(declined.errors, undefined);
+  assertNoHiddenLeak(declined.state, p1, "life-trigger-decline:p1");
+  assertNoHiddenLeak(declined.state, p2, "life-trigger-decline:p2");
   const attackerDeclineView = filterStateForPlayer(declined.state, p1);
   assert.deepEqual(attackerDeclineView.revealedCards, []);
   assertNoScalarValue(
@@ -917,15 +924,35 @@ test("real life trigger views keep decline, activation, no-zone, and adjacent hi
     activatedP2.trash.some((card) => card.cardId === lifeCardId),
     true,
   );
+  assertNoHiddenLeak(activated.state, p1, "life-trigger-activation:p1");
+  assertNoHiddenLeak(activated.state, p2, "life-trigger-activation:p2");
+
+  const attackerActivationView = filterStateForPlayer(activated.state, p1);
+  const defenderActivationView = filterStateForPlayer(activated.state, p2);
+  const attackerPublicTrigger = attackerActivationView.opponent.trash.find(
+    (card) => card.cardId === lifeCardId,
+  );
+  const defenderPublicTrigger = defenderActivationView.self.trash.find(
+    (card) => card.cardId === lifeCardId,
+  );
+  assert.ok(
+    attackerPublicTrigger,
+    "attacker activation view must show activated trigger in opponent trash",
+  );
+  assert.ok(
+    defenderPublicTrigger,
+    "defender activation view must show activated trigger in self trash",
+  );
+  assert.equal(
+    attackerPublicTrigger.instanceId,
+    defenderPublicTrigger.instanceId,
+    "activated trigger public trash identity should match for both players",
+  );
 
   for (const recipient of [p1, p2] as const) {
     const view = filterStateForPlayer(activated.state, recipient);
     const serialized = JSON.stringify(view);
-    assert.equal(
-      serialized.includes(String(lifeCardId)),
-      true,
-      `${String(recipient)} must see activated trigger identity`,
-    );
+    assert.deepEqual(view.revealedCards, []);
     assert.equal(serialized.includes("queueEntryId"), false);
     assert.equal(serialized.includes("sourceSnapshot"), false);
     assert.equal(serialized.includes("sourcePresencePolicy"), false);

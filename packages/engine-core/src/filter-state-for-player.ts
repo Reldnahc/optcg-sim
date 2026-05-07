@@ -91,6 +91,36 @@ const toPlayerEventCausedBy = (
   return causedBy;
 };
 
+const playerEventPayloadForbiddenKeys = new Set([
+  "queueEntryId",
+  "effectBlockId",
+  "triggerIds",
+  "sourceSnapshot",
+  "orderedIds",
+  "sourcePresencePolicy",
+  "orderingGroup",
+  "generation",
+]);
+
+const toPlayerEventPayload = (payload: unknown): unknown => {
+  if (payload === null || payload === undefined) {
+    return payload;
+  }
+  if (Array.isArray(payload)) {
+    return payload.map(toPlayerEventPayload);
+  }
+  if (typeof payload !== "object") {
+    return payload;
+  }
+
+  const publicEntries = Object.entries(payload).flatMap(([key, value]) =>
+    playerEventPayloadForbiddenKeys.has(key)
+      ? []
+      : [[key, toPlayerEventPayload(value)] as const],
+  );
+  return Object.fromEntries(publicEntries);
+};
+
 const toPlayerEvent = (event: EngineEvent): EngineEvent => {
   const causedBy = toPlayerEventCausedBy(event.causedBy);
   const base = {
@@ -111,7 +141,7 @@ const toPlayerEvent = (event: EngineEvent): EngineEvent => {
   if (event.type === "effectResolved") {
     return { ...base, payload: { status: "resolved" } };
   }
-  return { ...base, payload: event.payload };
+  return { ...base, payload: toPlayerEventPayload(event.payload) };
 };
 
 const toPublicDecision = (
