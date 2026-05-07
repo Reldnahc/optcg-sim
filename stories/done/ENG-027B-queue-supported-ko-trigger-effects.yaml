@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Convert supported K.O. trigger candidates into deterministic effect queue
   entries after battle K.O. resolution.

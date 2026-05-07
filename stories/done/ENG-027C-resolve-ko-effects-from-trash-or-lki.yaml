@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Resolve supported no-choice K.O. effects using existing source-presence
   policies for trash and last-known-information cases.

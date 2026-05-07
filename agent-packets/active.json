@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-027D.md",
-      "storyId": "ENG-027D",
-      "storyPath": "stories/approved/ENG-027D-verify-ko-trigger-resolution-safety.yaml",
-      "storySha256": "c956c1d6acabdf84f20a4fb0bce2e58097f4021ab208580c429c2682db9ce3be"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

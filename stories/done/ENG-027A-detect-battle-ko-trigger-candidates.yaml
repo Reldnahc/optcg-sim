@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Detect supported K.O. trigger candidates from battle K.O. event batches
   without queueing or resolving them yet.

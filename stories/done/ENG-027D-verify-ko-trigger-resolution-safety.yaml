@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Prove supported K.O. trigger resolution composes with battle cleanup,
   deterministic event sequencing, stable state hashes, and PlayerView filtering.
