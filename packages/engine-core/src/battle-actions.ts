@@ -23,7 +23,10 @@ import {
   reifyCardRef,
   toCardRef,
 } from "./action-state.js";
-import { withAttackTimingCombatMetadataHidden } from "./attack-timing.js";
+import {
+  withAllAttackTimingCombatMetadataHidden,
+  withAttackTimingCombatMetadataHidden,
+} from "./attack-timing.js";
 import { resolveSupportedVanillaBattle } from "./battle-resolution.js";
 import { expireBattleDurationStateForCleanup } from "./battle-support.js";
 import {
@@ -63,7 +66,8 @@ export const getDeclareAttackLegalActions = (
   }
   const actions: LegalAction[] = [];
   try {
-    const view = computeView(state);
+    const legalActionState = withAllAttackTimingCombatMetadataHidden(state);
+    const view = computeView(legalActionState);
     for (const [attackerId, targetIds] of Object.entries(
       view.legalAttackTargets,
     )) {
@@ -336,9 +340,15 @@ const resolveAttackTimingEffects = (
     return toEngineResult(originalState, [], toErrorTuple(resolved.errors));
   }
 
-  const events = [...declaredEvents, ...queued.events, ...resolved.events];
+  const runtimeEvents = rebaseEvents(
+    originalState,
+    [...queued.events, ...resolved.events],
+    declaredEvents.length + 1,
+  );
+  const events = [...declaredEvents, ...runtimeEvents];
   const stateWithJournal: GameState = {
     ...resolved.state,
+    seq: declaredState.seq,
     cardManifest: originalState.cardManifest,
     eventJournal: [...originalState.eventJournal, ...events],
   };

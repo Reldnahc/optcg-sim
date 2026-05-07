@@ -64,6 +64,25 @@ test("getLegalActions includes Leader-to-Leader declareAttack for turn player", 
   );
 });
 
+test("ENG-023A: getLegalActions includes supported When Attacking attacker", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  withWhenAttackingDrawEffect(state, p1State.leader);
+
+  const legal = getDeclareAttackLegalActions(state, p1);
+
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.attacker.instanceId === p1State.leader.instanceId &&
+        action.target.instanceId === p2State.leader.instanceId,
+    ),
+    true,
+  );
+});
+
 test("getLegalActions includes Character-to-rested-Character declareAttack and excludes active characters", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -272,6 +291,9 @@ test("ENG-023A: attacker When Attacking no-choice effect resolves after attackDe
     sourcePresencePolicy: "mustRemainInSameZone",
     orderingGroup: "turnPlayer",
   });
+  for (const event of result.events) {
+    assert.equal(event.createdAtStateSeq, result.state.seq);
+  }
 });
 
 test("ENG-023A: attacker When Attacking resolves before defender block decision", () => {

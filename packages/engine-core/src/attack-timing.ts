@@ -41,20 +41,26 @@ const sanitizeResolvedCardForCombatView = (
 
 const sanitizedManifestForAttackTiming = (
   manifest: MatchCardManifest,
-  attackerCardId: CardId,
+  attackerCardIds: ReadonlySet<CardId>,
 ): MatchCardManifest => {
-  const attackerMetadata = manifest.cards[attackerCardId];
-  if (
-    attackerMetadata === undefined ||
-    !definitionSupportsAttackTimingSanitization(manifest, attackerMetadata)
-  ) {
+  const supportedCardIds = new Set<CardId>();
+  for (const attackerCardId of attackerCardIds) {
+    const attackerMetadata = manifest.cards[attackerCardId];
+    if (
+      attackerMetadata !== undefined &&
+      definitionSupportsAttackTimingSanitization(manifest, attackerMetadata)
+    ) {
+      supportedCardIds.add(attackerCardId);
+    }
+  }
+  if (supportedCardIds.size === 0) {
     return manifest;
   }
 
   const nextDefinitions = Object.fromEntries(
     Object.entries(manifest.effectDefinitions ?? {}).filter(
       ([, definition]) =>
-        definition.cardId !== attackerCardId ||
+        !supportedCardIds.has(definition.cardId) ||
         !hasOnlyWhenAttackingEffects(definition),
     ),
   );
@@ -62,12 +68,17 @@ const sanitizedManifestForAttackTiming = (
   const { effectDefinitions, ...manifestWithoutDefinitions } = manifest;
   void effectDefinitions;
 
+  const nextCards: MatchCardManifest["cards"] = { ...manifest.cards };
+  for (const cardId of supportedCardIds) {
+    const metadata = manifest.cards[cardId];
+    if (metadata !== undefined) {
+      nextCards[cardId] = sanitizeResolvedCardForCombatView(metadata);
+    }
+  }
+
   return {
     ...manifestWithoutDefinitions,
-    cards: {
-      ...manifest.cards,
-      [attackerCardId]: sanitizeResolvedCardForCombatView(attackerMetadata),
-    },
+    cards: nextCards,
     ...(Object.keys(nextDefinitions).length > 0
       ? { effectDefinitions: nextDefinitions }
       : {}),
@@ -83,7 +94,26 @@ export const withAttackTimingCombatMetadataHidden = (
   }
   const cardManifest = sanitizedManifestForAttackTiming(
     state.cardManifest,
-    attacker.cardId,
+    new Set([attacker.cardId]),
+  );
+  return cardManifest === state.cardManifest
+    ? state
+    : { ...state, cardManifest };
+};
+
+export const withAllAttackTimingCombatMetadataHidden = (
+  state: GameState,
+): GameState => {
+  const combatCardIds = new Set<CardId>();
+  for (const player of Object.values(state.players)) {
+    combatCardIds.add(player.leader.cardId);
+    for (const character of player.characters) {
+      combatCardIds.add(character.cardId);
+    }
+  }
+  const cardManifest = sanitizedManifestForAttackTiming(
+    state.cardManifest,
+    combatCardIds,
   );
   return cardManifest === state.cardManifest
     ? state
