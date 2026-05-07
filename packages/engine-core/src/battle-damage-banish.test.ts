@@ -1138,7 +1138,7 @@ test("banish attacker with unsupported blocker metadata fails closed without mut
   runBlockerMetadata();
 });
 
-test("applyAction declareAttack fails closed without mutation when vanilla continuation is unsupported", () => {
+test("applyAction declareAttack creates life trigger decision for supported trigger life damage", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
