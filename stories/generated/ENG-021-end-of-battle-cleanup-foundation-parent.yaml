@@ -1,0 +1,100 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-021
+epic_id: KICK-001
+title: Build End of Battle cleanup foundation
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Make supported End of Battle cleanup explicit and deterministic after battle
+  timing and damage work completes, while preserving existing fail-closed
+  boundaries for unsupported effects.
+story_boundary: >
+  This parent story is not directly implementable. It defines the End of Battle
+  cleanup delivery group and should be replaced by child stories ENG-021A
+  through ENG-021D implemented one active substory at a time on a parent
+  integration branch.
+child_stories:
+  - id: ENG-021A
+    title: Centralize supported End of Battle cleanup
+    concern: explicit cleanup helper or equivalent centralized path after supported battle work
+    depends_on: [ENG-020]
+  - id: ENG-021B
+    title: Expire battle-duration state at cleanup
+    concern: Character Counter battle power and existing thisBattle continuous-effect records expire through cleanup without enabling unsupported effect behavior
+    depends_on: [ENG-021A]
+  - id: ENG-021C
+    title: Guard battle-context clear timing
+    concern: regression coverage proving battle context clears only after supported timing and damage work emits its events
+    depends_on: [ENG-021B]
+  - id: ENG-021D
+    title: Verify cleanup across supported battle mechanics
+    concern: integration coverage across vanilla damage, Character K.O., Blocker, Counter, and Banish paths
+    depends_on: [ENG-021C]
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+spec_refs:
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s019 (Block Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s022 (End of Battle)
+  - 02-engine-mechanics.s023 (Damage processing)
+  - 03-game-state-events-decisions.s003 (Base state vs. computed view)
+  - 03-game-state-events-decisions.s004 (Engine result shape)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s021 (Invariant hooks)
+  - 04-effect-runtime.s014 (Continuous effects as computed view)
+  - 04-effect-runtime.s015 (Duration expiration)
+  - 11-testing-quality.s007 (Interaction tests)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 11-testing-quality.s010 (Golden replay tests)
+scope:
+  - define child stories for explicit supported End of Battle cleanup, battle-duration expiration, battle-context clearing regressions, and cross-mechanic cleanup integration coverage
+  - keep the delivery group on a parent integration branch so cleanup behavior lands as one reviewed vertical
+  - ensure supported battle resolution keeps battle context until battle timing and damage work is complete, then expires battle-duration state, appends deterministic cleanup events, clears battle context, runs rule processing, and returns to Main Phase
+  - preserve existing fail-closed behavior for unsupported End of Battle triggers, Life Triggers, On K.O., replacement effects, protection, custom handlers, production replay schema, and server/client/UI behavior
+non_scope:
+  - direct implementation from this parent story
+  - approving or packetizing this parent story as an active implementation story
+  - new card effects or new effect-runtime DSL primitives
+  - Life Triggers
+  - On K.O.
+  - replacement effects
+  - production replay schema, rollback, recovery, or replay viewer behavior
+  - match server, browser client, spectator mode, UI, database, Redis, or WebSocket behavior
+dependencies:
+  - ENG-020
+acceptance_criteria:
+  - child stories exist for explicit cleanup path, battle-duration expiration, battle-context clear timing, and integration coverage across supported battle mechanics
+  - this parent story remains non-implementable and is not packetized directly
+  - all child stories can be story-reviewed as a set before any child approval
+  - each child story also receives exact per-story story-review before approval or implementation
+  - only child stories ENG-021A through ENG-021D are presented as approval-ready implementation candidates for this rules parent
+required_tests:
+  - story-review agent must verify this parent is replaced by concern-scoped child stories before implementation begins
+repo_rules:
+  - do not approve or packetize this parent story
+  - approve only concern-scoped child stories for implementation
+  - a set-level story-review does not satisfy exact per-story story-review for a child
+  - run exact per-story story-review for each child story before moving it to approved or implementing it
+  - implement one active child story at a time
+  - use the parent integration branch workflow for the ENG-021 group
+  - child PRs target the ENG-021 parent integration branch, not main
+  - keep exactly one active packet while each child story is being implemented or reviewed
+  - do not run packets:complete for child stories until the parent branch has merged to main
+  - run full parent PR integration review and human review before merging ENG-021 to main
+  - after parent merge, run packets:complete-many for the ENG-021 child story set
+  - keep engine-core deterministic and pure
+ambiguity_policy: fail_and_escalate

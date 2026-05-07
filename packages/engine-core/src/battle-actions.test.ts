@@ -5,6 +5,7 @@ import type {
   CardId,
   CardInstance,
   CardRef,
+  ContinuousEffectRecord,
   DecisionId,
   EffectDefinition,
   PlayerId,
@@ -12,6 +13,7 @@ import type {
 
 import {
   applyDeclareAttack,
+  expireBattleDurationStateForCleanup,
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
 } from "./battle-actions.js";
@@ -62,6 +64,38 @@ const effectDefinition = (
     reviewer: "qa-reviewer",
   },
 });
+
+const continuousEffectRecord = (
+  state: ReturnType<typeof setupAttackState>,
+  id: string,
+  duration: ContinuousEffectRecord["duration"],
+): ContinuousEffectRecord => {
+  const source = must(state.players[p1], "p1").leader;
+  return {
+    id,
+    source: cardRef(source, p1),
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: source.zone,
+      category: "leader",
+      colors: ["red"],
+      power: 5000,
+      keywords: [],
+    },
+    controller: p1,
+    modifier: {
+      layer: "powerAdd",
+      target: { type: "self" },
+      operation: { type: "addPower", value: 1000 },
+    },
+    duration,
+    createdBy: { type: "ruleProcess", name: "test" },
+    createdAtStateSeq: state.seq,
+  };
+};
 
 const setupOpenedBlockStepDecision = () => {
   const state = setupAttackState();
@@ -749,6 +783,37 @@ test("resolveSupportedVanillaBattle rejects when no active battle", () => {
   const result = resolveSupportedVanillaBattle(state);
   assert.equal(result.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(state), before);
+});
+
+test("End of Battle cleanup removes thisBattle effects and preserves longer durations", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const thisBattle = continuousEffectRecord(state, "effect-this-battle", {
+    type: "thisBattle",
+  });
+  const thisTurn = continuousEffectRecord(state, "effect-this-turn", {
+    type: "thisTurn",
+  });
+  const permanent = continuousEffectRecord(state, "effect-permanent", {
+    type: "permanent",
+  });
+  state.battle = {
+    attacker: cardRef(p1State.leader, p1),
+    originalTarget: cardRef(p2State.leader, p2),
+    currentTarget: cardRef(p2State.leader, p2),
+    step: "counter",
+    damageCount: 1,
+    counterPower: 2000,
+  };
+  state.continuousEffects = [thisBattle, thisTurn, permanent];
+  const before = structuredClone(state);
+
+  const cleaned = expireBattleDurationStateForCleanup(state);
+
+  assert.equal(cleaned.battle, undefined);
+  assert.deepEqual(cleaned.continuousEffects, [thisTurn, permanent]);
+  assert.deepEqual(state, before);
 });
 
 test("leader damage at 0 life completes the match for the attacker", () => {
@@ -1442,6 +1507,13 @@ test("supported vanilla battle rejects pending runtime queues without mutation o
   run((state) => {
     state.deferredTriggers = [{ timingWindowId: "window-1" } as never];
   });
+  run((state) => {
+    state.continuousEffects = [
+      continuousEffectRecord(state, "active-continuous-effect", {
+        type: "thisBattle",
+      }),
+    ];
+  });
 });
 
 test("banish attacker with pending runtime queue or deferred trigger fails closed without mutation", () => {
@@ -1997,6 +2069,37 @@ test("counter-step pass emits deterministic decisionResolved sequence and resume
   assert.deepEqual(result.events, replay.events);
 });
 
+test("leader damage at zero life still routes through end-of-battle cleanup ordering", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  p2State.life = [];
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.battle, undefined);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    [
+      "attackDeclared",
+      "ruleProcessingChecked",
+      "damageDealt",
+      "ruleProcessingChecked",
+      "gameEnded",
+      "effectResolved",
+    ],
+  );
+  assert.deepEqual(result.events[5]?.payload, {
+    systemStep: "endBattle",
+    battleCleared: true,
+  });
+});
+
 test("Character Counter moves from hand to trash, emits deterministic events, and keeps Counter Step open", () => {
   const { opened, counterCard, decision } =
     setupOpenedCounterStepPassDecision();
@@ -2136,6 +2239,7 @@ test("Character Counter power changes Damage Step outcome after pass", () => {
     target: cardRef(target, p2),
   });
   assert.equal(countered.errors, undefined);
+  assert.equal(countered.state.battle?.counterPower, 2000);
 
   const result = applyAction(countered.state, {
     type: "respondToDecision",
@@ -2145,6 +2249,7 @@ test("Character Counter power changes Damage Step outcome after pass", () => {
 
   assert.equal(result.errors, undefined);
   assert.equal(result.state.battle, undefined);
+  assert.equal(JSON.stringify(result.state).includes("counterPower"), false);
   assert.equal(
     must(result.state.players[p2], "p2").characters.some(
       (character) => character.instanceId === target.instanceId,
@@ -2320,6 +2425,29 @@ test("Character Counter rejects replacement processing without clearing decision
   assert.equal(result.state.battle?.step, "counter");
 });
 
+test("Character Counter rejects active continuous effects without clearing decision", () => {
+  const context = setupOpenedCounterStepPassDecision();
+  context.openedState.continuousEffects = [
+    continuousEffectRecord(context.openedState, "use-counter-continuous", {
+      type: "thisBattle",
+    }),
+  ];
+  const before = JSON.stringify(context.openedState);
+
+  const result = applyAction(context.openedState, {
+    type: "useCounter",
+    cardInstanceId: context.counterCard.instanceId,
+    target: must(context.openedState.battle, "battle").currentTarget,
+  });
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(context.openedState), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.state.pendingDecision?.id, context.decision.id);
+  assert.equal(result.state.battle?.step, "counter");
+});
+
 test("Character Counter rejects active Character current target without clearing decision", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -2454,6 +2582,29 @@ test("counter-step pass rejects replacement processing without clearing decision
     usedReplacementIds: [],
     payload: { hidden: "replacement" },
   });
+  const before = JSON.stringify(context.openedState);
+
+  const result = applyAction(context.openedState, {
+    type: "respondToDecision",
+    decisionId: context.decision.id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(context.openedState), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.state.pendingDecision?.id, context.decision.id);
+  assert.equal(result.state.battle?.step, "counter");
+});
+
+test("counter-step pass rejects active continuous effects without clearing decision", () => {
+  const context = setupOpenedCounterStepPassDecision();
+  context.openedState.continuousEffects = [
+    continuousEffectRecord(context.openedState, "pass-continuous", {
+      type: "thisBattle",
+    }),
+  ];
   const before = JSON.stringify(context.openedState);
 
   const result = applyAction(context.openedState, {

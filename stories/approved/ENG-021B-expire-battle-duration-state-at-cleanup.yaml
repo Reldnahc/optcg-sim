@@ -1,0 +1,78 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-021B
+epic_id: KICK-001
+title: Expire battle-duration state at cleanup
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Make End of Battle cleanup expire supported battle-duration state
+  deterministically without enabling unsupported continuous-effect or card-effect
+  behavior.
+story_boundary: >
+  Own only battle-duration expiration inside the centralized End of Battle
+  cleanup path. Treat existing Character Counter battle power as supported
+  battle-duration state, and expire canonical `thisBattle` continuous-effect
+  records when cleanup is invoked. Do not make continuous effects affect combat
+  calculations or implement new card effects.
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - stories/approved/ENG-021B-expire-battle-duration-state-at-cleanup.yaml
+  - agent-packets/ENG-021B.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s022 (End of Battle)
+  - 03-game-state-events-decisions.s003 (Base state vs. computed view)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s021 (Invariant hooks)
+  - 04-effect-runtime.s014 (Continuous effects as computed view)
+  - 04-effect-runtime.s015 (Duration expiration)
+  - 11-testing-quality.s008 (Invariant tests)
+scope:
+  - expire existing Character Counter battle power through battle-context cleanup by ensuring no `counterPower` survives after End of Battle
+  - remove canonical continuous-effect records with `duration.type: thisBattle` when the centralized cleanup path is invoked
+  - preserve non-`thisBattle` continuous-effect records unchanged during End of Battle cleanup
+  - preserve the current fail-closed guard for all active `continuousEffects` during supported battle resolution, including `resolveSupportedVanillaBattle`, Counter pass, Blocker activation, and `useCounter` continuation paths
+  - exercise `thisBattle` cleanup only when the centralized cleanup helper is legitimately reached by supported battle state or through focused cleanup-helper tests, not by weakening continuous-effect fail-closed behavior before cleanup
+  - preserve event ordering, state hash stability, and invariant behavior
+non_scope:
+  - applying continuous effects to computed combat power, restrictions, protection, keywords, or costs
+  - creating continuous-effect records from card effects
+  - authorizing battle resolution that would ignore active unsupported continuous-effect semantics
+  - new card effects or new effect-runtime DSL primitives
+  - Life Triggers, On K.O., replacement effects, protection effects, End of Battle trigger resolution, server/client/UI, production replay schema, or CLI behavior
+dependencies:
+  - ENG-021A
+acceptance_criteria:
+  - End of Battle cleanup clears battle context and any supported Character Counter `counterPower`
+  - End of Battle cleanup removes `continuousEffects` entries with `duration.type: thisBattle`
+  - End of Battle cleanup preserves non-`thisBattle` continuous-effect entries
+  - current battle resolution still fails closed before cleanup whenever any active `continuousEffects` are present in `resolveSupportedVanillaBattle`, Counter pass, Blocker, or `useCounter` continuation paths
+  - event ordering, eventJournal suffix equality, invariants, and state hash stability are preserved
+required_tests:
+  - add or update packages/engine-core/src/battle-actions.test.ts coverage proving Character Counter battle power expires after cleanup
+  - add focused cleanup-helper coverage proving `thisBattle` continuous-effect records are removed and non-`thisBattle` records are preserved when cleanup is invoked
+  - add or preserve negative accepted-battle coverage proving active `continuousEffects` still fail closed before supported battle resolution, Counter pass, Blocker, or `useCounter` continuations can ignore them
+  - run corepack pnpm exec vitest run packages/engine-core/src/battle-actions.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-021B packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-021 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if implementation requires continuous-effect combat application or new card-effect behavior, split or record the blocker
+  - implementation-review gate is required after the PR is opened
+ambiguity_policy: fail_and_escalate

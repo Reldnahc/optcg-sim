@@ -1,0 +1,85 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-021D
+epic_id: KICK-001
+title: Verify cleanup across supported battle mechanics
+type: verification
+area: engine
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Add integration coverage proving the centralized End of Battle cleanup path
+  composes with supported vanilla damage, Character K.O., Blocker, Character
+  Counter, and Banish battle paths.
+story_boundary: >
+  Own only integration regression coverage and minimal test helper adjustments
+  for supported battle cleanup composition. Do not add new battle mechanics,
+  legal actions, card effects, production replay schema, or server/client/UI
+  behavior.
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - stories/approved/ENG-021D-verify-cleanup-across-supported-battle-mechanics.yaml
+  - agent-packets/ENG-021D.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s019 (Block Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s022 (End of Battle)
+  - 02-engine-mechanics.s023 (Damage processing)
+  - 02-engine-mechanics.s025 (Keyword behavior)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 03-game-state-events-decisions.s021 (Invariant hooks)
+  - 11-testing-quality.s007 (Interaction tests)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 11-testing-quality.s010 (Golden replay tests)
+scope:
+  - add integration coverage proving cleanup after supported vanilla Leader damage
+  - add integration coverage proving cleanup after supported Character K.O.
+  - add integration coverage proving cleanup after supported Blocker redirection and blocked battle resolution
+  - add integration coverage proving cleanup after supported Character Counter changes battle power and expires at cleanup
+  - add integration coverage proving cleanup after supported Banish Leader damage moves life to trash and clears battle context
+  - assert unsupported End of Battle triggers remain fail-closed or are explicitly recorded as non-scope without new behavior
+  - assert event ordering, eventJournal suffix equality, invariants, and state hash stability for covered accepted scripts
+non_scope:
+  - new card effects or new effect-runtime DSL primitives
+  - Life Triggers
+  - On K.O.
+  - replacement effects
+  - production replay schema, rollback, recovery, or replay viewer behavior
+  - new legal actions
+  - match server, browser client, spectator mode, UI, database, Redis, WebSocket, or CLI behavior
+dependencies:
+  - ENG-021C
+acceptance_criteria:
+  - supported vanilla Leader damage, Character K.O., Blocker, Character Counter, and Banish paths all route through the centralized cleanup behavior and finish with no battle context
+  - Character Counter battle-duration power does not survive cleanup
+  - Banish cleanup preserves the existing Leader life-to-trash behavior and does not affect unrelated Character battle outcomes
+  - unsupported End of Battle trigger metadata remains fail-closed without mutation or is explicitly documented as non-scope if current support cannot reach it safely
+  - event ordering, event IDs, eventJournal suffix equality, invariant validity, and repeated-script state hash stability are covered for accepted integration scripts
+required_tests:
+  - add or update packages/engine-core/src/battle-pipeline-regression.test.ts integration coverage for vanilla damage, Character K.O., Blocker, Counter, and Banish cleanup paths
+  - add or update packages/engine-core/src/event-sequencing-regression.test.ts if needed to include the centralized cleanup event in accepted path sequencing assertions
+  - run corepack pnpm exec vitest run packages/engine-core/src/battle-pipeline-regression.test.ts packages/engine-core/src/event-sequencing-regression.test.ts packages/engine-core/src/battle-actions.test.ts
+  - run corepack pnpm run test -- packages/engine-core/src
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-021D packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-021 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if implementation requires new battle mechanics or new effect behavior, split or record the blocker
+  - implementation-review gate is required after the PR is opened
+ambiguity_policy: fail_and_escalate
