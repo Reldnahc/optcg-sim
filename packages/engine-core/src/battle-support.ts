@@ -1,5 +1,10 @@
 import type { CardInstance, CardRef, GameState } from "@optcg/types";
 
+import {
+  isSupportedNoChoiceOnOpponentAttackDrawEffect,
+  isSupportedNoChoiceWhenAttackingDrawEffect,
+} from "./effect-runtime.js";
+
 export const sameCardRef = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
   left.cardId === right.cardId &&
@@ -98,6 +103,12 @@ export const hasUnsupportedBattleEffectMetadata = (
       continue;
     }
     for (const effect of definition.effects) {
+      if (
+        isSupportedNoChoiceWhenAttackingDrawEffect(effect) ||
+        isSupportedNoChoiceOnOpponentAttackDrawEffect(effect)
+      ) {
+        continue;
+      }
       if (
         effect.trigger.type === "counter" ||
         effect.trigger.type === "onBlock" ||

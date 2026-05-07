@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  EngineError,
   EngineEvent,
   EngineResult,
   GameState,
@@ -14,15 +15,22 @@ import {
   toStateSeq,
 } from "./action-results.js";
 import { reifyCardRef, reindexZoneCards } from "./action-state.js";
+import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import {
   expireBattleDurationStateForCleanup,
   hasUnsupportedBattleEffectMetadata,
   isSupportedBattleResolutionEnvelope,
   sameCardRef,
 } from "./battle-support.js";
-import { enterCounterStepOrAutoPass } from "./battle-counter-actions.js";
+import {
+  createCounterStepPassDecision,
+  getUnsupportedCounterWindowReason,
+} from "./battle-counter-actions.js";
 import { computeView } from "./compute-view.js";
-import { detectPendingRuntimeWork } from "./effect-runtime.js";
+import {
+  detectPendingRuntimeWork,
+  processDefenderOpponentAttackTiming,
+} from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
@@ -31,13 +39,30 @@ const unsupportedBattleResolution = (
   reason: string,
 ): EngineResult => illegalAction(state, reason);
 
+const toErrorTuple = (
+  errors: readonly EngineError[],
+): readonly [EngineError, ...EngineError[]] => {
+  const first = errors[0];
+  if (first === undefined) {
+    return [
+      {
+        type: "effectRuntimeError",
+        effectId: "battle-resolution",
+        details: { reason: "empty-runtime-error-list" },
+      },
+    ];
+  }
+  return [first, ...errors.slice(1)];
+};
+
 export const resolveSupportedVanillaBattle = (
   state: GameState,
 ): EngineResult => {
-  if (state.battle === undefined) {
+  let resolutionState = state;
+  if (resolutionState.battle === undefined) {
     return illegalAction(state, "No active battle to resolve.");
   }
-  if (!isSupportedBattleResolutionEnvelope(state.battle)) {
+  if (!isSupportedBattleResolutionEnvelope(resolutionState.battle)) {
     return unsupportedBattleResolution(
       state,
       "Battle requires unsupported blocker, step, or multi-damage behavior.",
@@ -53,38 +78,64 @@ export const resolveSupportedVanillaBattle = (
       "Battle requires unsupported trigger or replacement processing.",
     );
   }
-  if (hasUnsupportedBattleEffectMetadata(state)) {
+  if (
+    hasUnsupportedBattleEffectMetadata(
+      withAllAttackTimingCombatMetadataHidden(state),
+    )
+  ) {
     return unsupportedBattleResolution(
       state,
       "Battle requires unsupported effect metadata.",
     );
   }
 
-  const attacker = reifyCardRef(state, state.battle.attacker);
-  const target = reifyCardRef(state, state.battle.currentTarget);
-  if (attacker === null || target === null) {
+  const initialBattle = resolutionState.battle;
+  const initialAttacker = reifyCardRef(resolutionState, initialBattle.attacker);
+  const initialTarget = reifyCardRef(
+    resolutionState,
+    initialBattle.currentTarget,
+  );
+  if (initialAttacker === null || initialTarget === null) {
     return illegalAction(state, "Battle participants are stale or invalid.");
   }
-  if (state.battle.blocker !== undefined) {
-    const blocker = reifyCardRef(state, state.battle.blocker);
+  if (initialBattle.blocker !== undefined) {
+    const blocker = reifyCardRef(resolutionState, initialBattle.blocker);
     if (
       blocker === null ||
       blocker.isLeader ||
-      !sameCardRef(state.battle.blocker, state.battle.currentTarget)
+      !sameCardRef(initialBattle.blocker, initialBattle.currentTarget)
     ) {
       return illegalAction(state, "Battle blocker is stale or invalid.");
     }
   }
-  if (state.battle.step !== "counter") {
-    const counterStepResult = enterCounterStepOrAutoPass(state);
-    if (counterStepResult !== null) {
-      return counterStepResult;
+  const events: EngineEvent[] = [];
+  if (initialBattle.step !== "counter") {
+    const counterStep = enterCounterStepAfterDefenderTiming(state);
+    if (counterStep.result !== undefined) {
+      return counterStep.result;
     }
+    resolutionState = counterStep.state;
+    events.push(...counterStep.events);
   }
 
+  const battle = resolutionState.battle;
+  if (battle === undefined) {
+    return illegalAction(state, "No active battle to resolve.");
+  }
+  const attacker = reifyCardRef(resolutionState, battle.attacker);
+  const target = reifyCardRef(resolutionState, battle.currentTarget);
+  if (attacker === null || target === null) {
+    return finalizeSupportedEndOfBattleCleanup({
+      state,
+      nextState: resolutionState,
+      events,
+    });
+  }
+
+  const combatState = withAllAttackTimingCombatMetadataHidden(resolutionState);
   let view: ReturnType<typeof computeView>;
   try {
-    view = computeView(state);
+    view = computeView(combatState);
   } catch {
     return unsupportedBattleResolution(
       state,
@@ -120,10 +171,9 @@ export const resolveSupportedVanillaBattle = (
     );
   }
 
-  const events: EngineEvent[] = [];
   let nextState: GameState = {
-    ...state,
-    seq: toStateSeq(state.seq + 1),
+    ...resolutionState,
+    seq: toStateSeq(resolutionState.seq + 1),
   };
 
   if (attackerView.currentPower >= targetView.currentPower) {
@@ -339,11 +389,97 @@ export const resolveSupportedVanillaBattle = (
     }
   }
 
-  return finalizeSupportedEndOfBattleCleanup({
+  return finalizeSupportedEndOfBattleCleanup({ state, nextState, events });
+};
+
+const enterCounterStepAfterDefenderTiming = (
+  state: GameState,
+):
+  | { state: GameState; events: EngineEvent[]; result?: undefined }
+  | { result: EngineResult; state?: undefined; events?: undefined } => {
+  const battle = state.battle;
+  if (battle === undefined) {
+    return { result: illegalAction(state, "No active battle to resolve.") };
+  }
+  const counterState: GameState = {
+    ...state,
+    battle: { ...battle, step: "counter" },
+  };
+  const target = reifyCardRef(counterState, battle.currentTarget);
+  if (target === null) {
+    return {
+      result: illegalAction(state, "Battle participants are stale or invalid."),
+    };
+  }
+  const unsupportedCounterWindowReason = getUnsupportedCounterWindowReason(
+    counterState,
+    target.playerId,
+  );
+  if (unsupportedCounterWindowReason !== undefined) {
+    return {
+      result: unsupportedBattleResolution(
+        state,
+        unsupportedCounterWindowReason,
+      ),
+    };
+  }
+
+  const defenderTiming = processDefenderOpponentAttackTiming(counterState);
+  if (defenderTiming.errors !== undefined) {
+    return {
+      result: toEngineResult(state, [], toErrorTuple(defenderTiming.errors)),
+    };
+  }
+  const events = [...defenderTiming.events];
+  if (defenderTiming.state.status.type !== "active") {
+    return { result: defenderTiming };
+  }
+  if (!battleParticipantsRemainLegal(defenderTiming.state)) {
+    return {
+      result: finalizeSupportedEndOfBattleCleanup({
+        state,
+        nextState: defenderTiming.state,
+        events,
+      }),
+    };
+  }
+
+  const decision = createCounterStepPassDecision(
+    withAllAttackTimingCombatMetadataHidden(defenderTiming.state),
+  );
+  if (decision === null) {
+    return { state: defenderTiming.state, events };
+  }
+
+  appendEvent(
     state,
-    nextState,
     events,
-  });
+    "decisionCreated",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+    },
+    { type: "public" },
+  );
+  const nextState: GameState = {
+    ...defenderTiming.state,
+    pendingDecision: decision,
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  assertGameStateInvariants(nextState);
+  return { result: toEngineResult(nextState, events) };
+};
+
+const battleParticipantsRemainLegal = (state: GameState): boolean => {
+  const battle = state.battle;
+  if (battle === undefined) {
+    return true;
+  }
+  return (
+    reifyCardRef(state, battle.attacker) !== null &&
+    reifyCardRef(state, battle.currentTarget) !== null
+  );
 };
 
 const finalizeSupportedEndOfBattleCleanup = ({

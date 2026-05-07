@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import type { CardId, CardInstance, PlayerId } from "@optcg/types";
 
+import { applyAction } from "./actions.js";
 import {
   applyDeclareAttack,
   getDeclareAttackLegalActions,
@@ -18,6 +19,7 @@ import {
   effectDefinition,
   setupAttackState,
   withMultipleWhenAttackingDrawEffects,
+  withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
 } from "./battle-actions-test-fixtures.js";
 
@@ -407,6 +409,207 @@ test("ENG-023A: multiple same-player attacker When Attacking effects fail closed
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   withMultipleWhenAttackingDrawEffects(state, p1State.leader);
+  const before = JSON.stringify(state);
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+});
+
+test("ENG-023B: defender On Your Opponent's Attack resolves before Counter Step pass decision", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const definition = withOnOpponentAttackDrawEffect(state, p2State.leader);
+  const effect = must(definition.effects[0], "On Opponent Attack effect");
+  ensureDeckHasAtLeast(state, p2, 2);
+  const counterCard = must(p2State.hand[0], "counter card");
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+  const beforeP2Deck = p2State.deck.length;
+  const beforeP2Hand = p2State.hand.length;
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.battle?.step, "counter");
+  assert.equal(result.state.pendingDecision?.playerId, p2);
+  assert.equal(
+    must(result.state.players[p2], "result p2").deck.length,
+    beforeP2Deck - 1,
+  );
+  assert.equal(
+    must(result.state.players[p2], "result p2").hand.length,
+    beforeP2Hand + 1,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "damageDealt"),
+    false,
+  );
+
+  const attackDeclaredIndex = result.events.findIndex(
+    (event) => event.type === "attackDeclared",
+  );
+  const effectQueuedIndex = result.events.findIndex(
+    (event) => event.type === "effectQueued",
+  );
+  const effectResolvedIndex = result.events.findIndex((event) => {
+    const payload = event.payload as Partial<{ effectBlockId: string }>;
+    return (
+      event.type === "effectResolved" && payload.effectBlockId === effect.id
+    );
+  });
+  const decisionCreatedIndex = result.events.findIndex(
+    (event) => event.type === "decisionCreated",
+  );
+
+  assert.notEqual(attackDeclaredIndex, -1);
+  assert.notEqual(effectQueuedIndex, -1);
+  assert.notEqual(effectResolvedIndex, -1);
+  assert.notEqual(decisionCreatedIndex, -1);
+  assert.ok(attackDeclaredIndex < effectQueuedIndex);
+  assert.ok(effectQueuedIndex < effectResolvedIndex);
+  assert.ok(effectResolvedIndex < decisionCreatedIndex);
+
+  const attackDeclared = must(
+    result.events[attackDeclaredIndex],
+    "attackDeclared event",
+  );
+  const effectQueued = must(result.events[effectQueuedIndex], "effectQueued");
+  assert.deepEqual(effectQueued.payload, {
+    queueEntryId: `queue-entry:${String(attackDeclared.id)}:onOpponentAttack:${String(effect.id)}`,
+    timingWindowId: `timing-window:${String(attackDeclared.id)}:onOpponentAttack`,
+    generation: 0,
+    effectBlockId: effect.id,
+    triggerEventId: attackDeclared.id,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    orderingGroup: "nonTurnPlayer",
+  });
+});
+
+test("ENG-023B: defender timing waits until Block Step response completes", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const blocker = must(p2State.characters[0], "defender blocker");
+  blocker.state = "active";
+  state.cardManifest.cards[blocker.cardId] = {
+    ...resolvedCard({
+      cardId: blocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+  const definition = withOnOpponentAttackDrawEffect(state, p2State.leader);
+  const effect = must(definition.effects[0], "On Opponent Attack effect");
+  ensureDeckHasAtLeast(state, p2, 2);
+  const beforeP2Hand = p2State.hand.length;
+  const beforeP2Deck = p2State.deck.length;
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.battle?.step, "block");
+  assert.equal(
+    opened.events.some((event) => event.type === "effectQueued"),
+    false,
+  );
+  assert.equal(
+    must(opened.state.players[p2], "opened p2").hand.length,
+    beforeP2Hand,
+  );
+
+  const declined = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "block decision").id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(
+    must(declined.state.players[p2], "declined p2").hand.length,
+    beforeP2Hand + 2,
+  );
+  assert.equal(
+    must(declined.state.players[p2], "declined p2").deck.length,
+    beforeP2Deck - 1,
+  );
+  const decisionResolvedIndex = declined.events.findIndex(
+    (event) => event.type === "decisionResolved",
+  );
+  const effectQueuedIndex = declined.events.findIndex(
+    (event) => event.type === "effectQueued",
+  );
+  const effectResolvedIndex = declined.events.findIndex((event) => {
+    const payload = event.payload as Partial<{ effectBlockId: string }>;
+    return (
+      event.type === "effectResolved" && payload.effectBlockId === effect.id
+    );
+  });
+  const damageIndex = declined.events.findIndex(
+    (event) => event.type === "damageDealt",
+  );
+
+  assert.notEqual(decisionResolvedIndex, -1);
+  assert.notEqual(effectQueuedIndex, -1);
+  assert.notEqual(effectResolvedIndex, -1);
+  assert.notEqual(damageIndex, -1);
+  assert.ok(decisionResolvedIndex < effectQueuedIndex);
+  assert.ok(effectQueuedIndex < effectResolvedIndex);
+  assert.ok(effectResolvedIndex < damageIndex);
+});
+
+test("ENG-023B: multiple same-player defender attack timing effects fail closed without mutation", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const defenderCharacter = must(p2State.characters[0], "defender character");
+  withOnOpponentAttackDrawEffect(state, p2State.leader, "def-opp-leader");
+  withOnOpponentAttackDrawEffect(state, defenderCharacter, "def-opp-character");
   const before = JSON.stringify(state);
 
   const result = applyDeclareAttack(state, {

@@ -7,12 +7,17 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-const hasOnlyWhenAttackingEffects = (
+const isAttackTimingTrigger = (
+  trigger: EffectDefinition["effects"][number]["trigger"],
+): boolean =>
+  trigger.type === "whenAttacking" || trigger.type === "onOpponentAttack";
+
+const hasOnlyAttackTimingEffects = (
   definition: EffectDefinition | undefined,
 ): definition is EffectDefinition =>
   definition !== undefined &&
   definition.effects.length > 0 &&
-  definition.effects.every((effect) => effect.trigger.type === "whenAttacking");
+  definition.effects.every((effect) => isAttackTimingTrigger(effect.trigger));
 
 const definitionSupportsAttackTimingSanitization = (
   manifest: MatchCardManifest,
@@ -22,7 +27,7 @@ const definitionSupportsAttackTimingSanitization = (
   if (effectDefinitionId === undefined) {
     return false;
   }
-  return hasOnlyWhenAttackingEffects(
+  return hasOnlyAttackTimingEffects(
     manifest.effectDefinitions?.[effectDefinitionId],
   );
 };
@@ -61,7 +66,7 @@ const sanitizedManifestForAttackTiming = (
     Object.entries(manifest.effectDefinitions ?? {}).filter(
       ([, definition]) =>
         !supportedCardIds.has(definition.cardId) ||
-        !hasOnlyWhenAttackingEffects(definition),
+        !hasOnlyAttackTimingEffects(definition),
     ),
   );
 
