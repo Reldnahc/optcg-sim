@@ -1143,19 +1143,45 @@ test("applyAction declareAttack fails closed without mutation when vanilla conti
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   const topLife = must(p2State.life[0], "top life");
+  const lifeCardId = toCardId("trigger-life");
   p2State.life[0] = {
     ...topLife,
-    card: { ...topLife.card, cardId: toCardId("trigger-life") },
+    card: { ...topLife.card, cardId: lifeCardId },
   };
-  state.cardManifest.cards[toCardId("trigger-life")] = {
+  const definition = effectDefinition(lifeCardId, { type: "trigger" });
+  const effect = must(definition.effects[0], "trigger effect");
+  const supported = {
+    ...definition,
+    effects: [
+      {
+        ...effect,
+        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+      },
+    ],
+  };
+  state.cardManifest.cards[lifeCardId] = {
     ...resolvedCard({
-      cardId: toCardId("trigger-life"),
+      cardId: lifeCardId,
       category: "character",
       power: 1000,
     }),
-    triggerText: "TRIGGER: do a thing",
+    triggerText: "TRIGGER: draw 1 card",
+    support: {
+      cardId: lifeCardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def-life-trigger",
+      tested: true,
+      rulesVersion: supported.metadata.rulesVersion,
+      cardDataVersion: "fixture",
+      sourceTextHash: supported.metadata.sourceTextHash,
+      behaviorHash: "behavior-hash",
+    },
   };
-  const before = JSON.stringify(state);
+  state.cardManifest.effectDefinitionsVersion =
+    supported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-life-trigger": supported,
+  };
 
   const result = applyDeclareAttack(state, {
     type: "declareAttack",
@@ -1171,8 +1197,16 @@ test("applyAction declareAttack fails closed without mutation when vanilla conti
     },
   });
 
-  assert.equal(result.errors?.[0]?.type, "illegalAction");
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
-  assert.deepEqual(result.events, []);
+  assert.equal(result.errors, undefined);
+  const pendingDecision = must(
+    result.state.pendingDecision,
+    "pending decision",
+  );
+  assert.equal(pendingDecision.type, "confirmLifeTrigger");
+  assert.deepEqual(pendingDecision.options, ["activateTrigger", "addToHand"]);
+  assert.equal(pendingDecision.playerId, p2);
+  assert.equal(
+    result.events.some((event) => event.type === "decisionCreated"),
+    true,
+  );
 });

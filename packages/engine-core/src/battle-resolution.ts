@@ -36,6 +36,7 @@ import {
   queueBattleKOTriggers,
 } from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
+import { getSupportedLifeTriggerDecision } from "./life-trigger-actions.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
 const unsupportedBattleResolution = (
@@ -223,10 +224,18 @@ export const resolveSupportedVanillaBattle = (
         });
       }
       const lifeMeta = nextState.cardManifest.cards[topLife.card.cardId];
+      const supportedLifeTriggerDecision = attackerHasBanish
+        ? undefined
+        : getSupportedLifeTriggerDecision(
+            nextState,
+            target.playerId,
+            topLife.card,
+          );
       if (
         !attackerHasBanish &&
         lifeMeta?.triggerText !== undefined &&
-        lifeMeta.triggerText.length > 0
+        lifeMeta.triggerText.length > 0 &&
+        supportedLifeTriggerDecision === undefined
       ) {
         return unsupportedBattleResolution(
           state,
@@ -330,6 +339,23 @@ export const resolveSupportedVanillaBattle = (
         },
         { type: "private", playerId: target.playerId },
       );
+      if (supportedLifeTriggerDecision !== undefined) {
+        appendEvent(
+          state,
+          events,
+          "decisionCreated",
+          {
+            decisionId: supportedLifeTriggerDecision.id,
+            decisionType: supportedLifeTriggerDecision.type,
+            playerId: supportedLifeTriggerDecision.playerId,
+          },
+          { type: "public" },
+        );
+        nextState = {
+          ...nextState,
+          pendingDecision: supportedLifeTriggerDecision,
+        };
+      }
     } else {
       const defender = nextState.players[target.playerId];
       if (defender === undefined) {
