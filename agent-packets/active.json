@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-024A.md",
+      "storyId": "ENG-024A",
+      "storyPath": "stories/approved/ENG-024A-add-source-presence-policy-helper.yaml",
+      "storySha256": "31346d75040d520e92e187afb5562b9f163c9b75b9d438fe24bd18fca6928dff"
+    }
+  ],
   "version": 1
 }
