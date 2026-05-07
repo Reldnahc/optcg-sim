@@ -534,6 +534,42 @@ export const isSupportedNoChoiceOnKODrawEffect = (
   effect.trigger.type === "onKO" &&
   isNoChoiceDrawEffectShape(effect);
 
+const isSupportedNoChoiceLifeTriggerDrawEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} => {
+  if (
+    effect.sourcePresencePolicy !== "resolveFromLastKnownInformation" &&
+    effect.sourcePresencePolicy !== "noSourceRequired"
+  ) {
+    return false;
+  }
+  if (effect.trigger.type !== "trigger") {
+    return false;
+  }
+  if (effect.category !== "auto") {
+    return false;
+  }
+  if (effect.optional !== undefined || effect.oncePerTurn !== undefined) {
+    return false;
+  }
+  if (
+    effect.cost !== undefined ||
+    effect.condition !== undefined ||
+    effect.conditionTiming !== undefined ||
+    effect.failurePolicy !== undefined
+  ) {
+    return false;
+  }
+  return (
+    effect.effect.type === "draw" &&
+    effect.effect.count === 1 &&
+    effect.effect.player === "self"
+  );
+};
+
 const isSupportedQueuedNoChoiceOnKODrawEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
@@ -551,6 +587,7 @@ const isSupportedQueuedNoChoiceDrawEffect = (
   isNoChoiceDrawTriggerEffect(effect, "whenAttacking") ||
   isNoChoiceDrawTriggerEffect(effect, "onOpponentAttack") ||
   isSupportedQueuedNoChoiceOnKODrawEffect(effect) ||
+  isSupportedNoChoiceLifeTriggerDrawEffect(effect) ||
   (effect.trigger.type === "custom" && isNoChoiceDrawEffectShape(effect));
 
 const findCardInstance = (
@@ -1595,6 +1632,96 @@ const resolveQueuedNoChoiceDrawEffect = (
   return match.effect;
 };
 
+const isLifeTriggerResolutionEntry = (entry: EffectQueueEntry): boolean =>
+  entry.source.zone?.zone === "noZone" ||
+  entry.sourceSnapshot.zone.zone === "noZone";
+
+const cleanupResolvedLifeTrigger = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): { state: GameState; events: EngineEvent[] } => {
+  if (!isLifeTriggerResolutionEntry(entry)) {
+    return { state, events: [] };
+  }
+  const player = state.players[entry.controllerId];
+  if (player === undefined) {
+    return { state, events: [] };
+  }
+  const trashed: CardInstance = {
+    instanceId: entry.source.instanceId,
+    cardId: entry.source.cardId,
+    owner: entry.sourceSnapshot.ownerId,
+    controller: entry.sourceSnapshot.controllerId,
+    attachedDon: [],
+    zone: {
+      zone: "trash",
+      playerId: entry.controllerId,
+      slot: "trash",
+      index: 0,
+    },
+  };
+  const events: EngineEvent[] = [];
+  const eventBaseState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq - 1),
+  };
+  appendEvent(
+    eventBaseState,
+    events,
+    "cardMoved",
+    {
+      instanceId: trashed.instanceId,
+      cardId: trashed.cardId,
+      from: entry.source.zone,
+      to: trashed.zone,
+      reason: "lifeTriggerResolved",
+    },
+    { type: "public" },
+  );
+  appendEvent(
+    eventBaseState,
+    events,
+    "cardTrashed",
+    {
+      playerId: entry.controllerId,
+      instanceId: trashed.instanceId,
+      cardId: trashed.cardId,
+      reason: "lifeTriggerResolved",
+    },
+    { type: "public" },
+  );
+  for (const event of events) {
+    event.causedBy = {
+      type: "effect",
+      queueEntryId: entry.id,
+      effectId: entry.effectBlockId,
+    };
+  }
+  const nextState: GameState = {
+    ...state,
+    players: {
+      ...state.players,
+      [entry.controllerId]: {
+        ...player,
+        trash: reindexZoneCards(
+          [trashed, ...player.trash],
+          "trash",
+          entry.controllerId,
+          "trash",
+        ),
+      },
+    },
+    revealedCards: state.revealedCards.filter(
+      (record) =>
+        !record.cards.some(
+          (card) => card.instanceId === entry.source.instanceId,
+        ),
+    ),
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  return { state: nextState, events };
+};
+
 const fieldTriggerSources = (state: GameState): CardInstance[] =>
   Object.values(state.players).flatMap((player) => [
     player.leader,
@@ -1892,6 +2019,10 @@ const resolveQueueEntriesInOrder = (
       allEvents.push(...checkpointEvents);
     }
 
+    const cleanup = cleanupResolvedLifeTrigger(nextState, selected);
+    nextState = cleanup.state;
+    allEvents.push(...cleanup.events);
+
     if (nextState.status.type !== "active") {
       return toEngineResult(nextState, allEvents);
     }
@@ -1899,6 +2030,7 @@ const resolveQueueEntriesInOrder = (
     const triggered = queueEffectResolvedCustomTriggers(nextState, selected, [
       ...resolution.events,
       ...resolvedEvents,
+      ...cleanup.events,
     ]);
     if (triggered !== undefined) {
       if (triggered.errors !== undefined) {
