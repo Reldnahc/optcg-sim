@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-027B.md",
-      "storyId": "ENG-027B",
-      "storyPath": "stories/approved/ENG-027B-queue-supported-ko-trigger-effects.yaml",
-      "storySha256": "d34e507f8ea46dc0b0af3e3cef8be04d9625677f38f6ba5c3d4e48c8a10a1fd7"
+      "packetPath": "agent-packets/ENG-027C.md",
+      "storyId": "ENG-027C",
+      "storyPath": "stories/approved/ENG-027C-resolve-ko-effects-from-trash-or-lki.yaml",
+      "storySha256": "9cec197a72d026c09f437320d23225387f7edcec1dd0a71f373fa15c3abe17d7"
     }
   ],
   "version": 1
