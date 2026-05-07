@@ -29,9 +29,9 @@ import {
 } from "./battle-counter-actions.js";
 import { computeView } from "./compute-view.js";
 import {
-  detectBattleKOTriggerCandidates,
   detectPendingRuntimeWork,
   processDefenderOpponentAttackTiming,
+  queueBattleKOTriggers,
 } from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
@@ -429,10 +429,11 @@ export const resolveSupportedVanillaBattle = (
   }
 
   if (shouldDetectBattleKOTriggers) {
-    const koCandidates = detectBattleKOTriggerCandidates(nextState, events);
-    if (!koCandidates.ok) {
-      return toEngineResult(state, [], [koCandidates.error]);
+    const queued = queueBattleKOTriggers(nextState, state, events);
+    if (!queued.ok) {
+      return toEngineResult(state, [], [queued.error]);
     }
+    nextState = queued.state;
   }
 
   return finalizeSupportedEndOfBattleCleanup({ state, nextState, events });

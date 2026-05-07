@@ -1827,6 +1827,66 @@ test("detects one supported On K.O. candidate from a battle K.O. event batch", (
   assert.deepEqual(state, before);
 });
 
+test("detects last-known On K.O. candidates with the field source snapshot", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  const definition = setupOnKODefinition(state, source);
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        {
+          ...onKOEffect,
+          sourcePresencePolicy: "resolveFromLastKnownInformation",
+        },
+      ],
+    },
+  };
+  const trashedSource: CardInstance = {
+    ...source,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+  };
+  p2State.characters = [];
+  p2State.trash = [trashedSource];
+  const events = appendBattleKOEvents(state, source);
+  const before = structuredClone(state);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.candidates, [
+    {
+      effectBlockId: onKOEffect.id,
+      controllerId: p2,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p2,
+        zone: source.zone,
+      },
+      sourceSnapshot: {
+        ...toSourceSnapshot(source, p2, p2),
+        power: 3000,
+      },
+      triggerEventId: events[0]?.id,
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      causedBy: {
+        type: "ruleProcess",
+        name: "effectRuntime:onKOTriggerCandidateDetection",
+      },
+    },
+  ]);
+  assert.deepEqual(state, before);
+});
+
 test("rejects battle K.O. event batches whose move event lacks the K.O.'d card identity", () => {
   const state = createActiveState();
   const p2State = must(state.players[p2], "p2");
