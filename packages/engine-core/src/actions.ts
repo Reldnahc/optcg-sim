@@ -46,6 +46,19 @@ export const getLegalActions = (
     return actions;
   }
   if (state.pendingDecision !== undefined) {
+    if (
+      state.pendingDecision.type === "chooseTriggerOrder" &&
+      state.pendingDecision.playerId === playerId
+    ) {
+      actions.push({
+        type: "respondToDecision",
+        decisionId: state.pendingDecision.id,
+        response: {
+          type: "orderedIds",
+          ids: [...state.pendingDecision.triggerIds],
+        },
+      });
+    }
     actions.push(...getPlayCardLegalActions(state, playerId));
     actions.push(...getBattleDecisionLegalActions(state, playerId));
     return actions;

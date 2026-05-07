@@ -408,6 +408,32 @@ test("respondToDecision rejects stale decision id for pending chooseTriggerOrder
   assert.equal(JSON.stringify(result.state), before);
 });
 
+test("getLegalActions exposes chooseTriggerOrder response only for the decision player", () => {
+  const state = createActiveState();
+  state.pendingDecision = {
+    id: toDecisionId("decision:choose-trigger-order"),
+    type: "chooseTriggerOrder",
+    playerId: p1,
+    prompt: "Choose trigger resolution order.",
+    causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
+    visibility: { type: "public" },
+    triggerIds: [toQueueEntryId("queue-a"), toQueueEntryId("queue-b")],
+    constraints: { mustUseAll: true },
+  };
+
+  assert.deepEqual(getLegalActions(state, p1), [
+    { type: "concede", playerId: p1 },
+    {
+      type: "respondToDecision",
+      decisionId: toDecisionId("decision:choose-trigger-order"),
+      response: { type: "orderedIds", ids: ["queue-a", "queue-b"] },
+    },
+  ]);
+  assert.deepEqual(getLegalActions(state, p2), [
+    { type: "concede", playerId: p2 },
+  ]);
+});
+
 test("pending runtime work rejects ordinary applyAction requests without mutation", () => {
   const state = makeMainPhaseLegalActionState();
   state.effectQueue.push(queuedEffect("apply-action"));
