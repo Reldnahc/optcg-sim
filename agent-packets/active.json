@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-021C.md",
-      "storyId": "ENG-021C",
-      "storyPath": "stories/approved/ENG-021C-guard-battle-context-clear-timing.yaml",
-      "storySha256": "fd92ba717adeefbf3fa734844ace3e611cd193f040c5ef2d20a7c98305e303e4"
+      "packetPath": "agent-packets/ENG-021D.md",
+      "storyId": "ENG-021D",
+      "storyPath": "stories/approved/ENG-021D-verify-cleanup-across-supported-battle-mechanics.yaml",
+      "storySha256": "b0e565c112c93173a43ad2ad269772f4df92576feee80c2efab5c97cc59524ca"
     }
   ],
   "version": 1
