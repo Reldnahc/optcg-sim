@@ -415,6 +415,46 @@ const isNoChoiceDrawTriggerEffect = (
   );
 };
 
+const isNoChoiceDrawEffectShape = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} => {
+  if (effect.category !== "auto") {
+    return false;
+  }
+  if (effect.optional || effect.oncePerTurn) {
+    return false;
+  }
+  if (
+    effect.cost !== undefined ||
+    effect.condition !== undefined ||
+    effect.conditionTiming !== undefined ||
+    effect.failurePolicy !== undefined
+  ) {
+    return false;
+  }
+  return (
+    effect.effect.type === "draw" &&
+    Number.isInteger(effect.effect.count) &&
+    effect.effect.count >= 0 &&
+    effect.effect.player === "self"
+  );
+};
+
+const isSupportedEffectResolvedCustomDrawEffect = (
+  effect: EffectDefinition["effects"][number],
+  eventName: string,
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} =>
+  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
+  effect.trigger.type === "custom" &&
+  effect.trigger.event === eventName &&
+  isNoChoiceDrawEffectShape(effect);
+
 const isSupportedNoChoiceDrawTriggerEffect = (
   effect: EffectDefinition["effects"][number],
   triggerType: "onPlay" | "whenAttacking" | "onOpponentAttack",
@@ -454,7 +494,8 @@ const isSupportedQueuedNoChoiceDrawEffect = (
 } =>
   isNoChoiceDrawTriggerEffect(effect, "onPlay") ||
   isNoChoiceDrawTriggerEffect(effect, "whenAttacking") ||
-  isNoChoiceDrawTriggerEffect(effect, "onOpponentAttack");
+  isNoChoiceDrawTriggerEffect(effect, "onOpponentAttack") ||
+  (effect.trigger.type === "custom" && isNoChoiceDrawEffectShape(effect));
 
 const findCardInstance = (
   state: GameState,
@@ -1228,6 +1269,133 @@ const resolveQueuedNoChoiceDrawEffect = (
   return match.effect;
 };
 
+const fieldTriggerSources = (state: GameState): CardInstance[] =>
+  Object.values(state.players).flatMap((player) => [
+    player.leader,
+    ...player.characters,
+    ...(player.stage === undefined ? [] : [player.stage]),
+  ]);
+
+const queueEffectResolvedCustomTriggers = (
+  state: GameState,
+  resolvedEntry: EffectQueueEntry,
+  resolutionEvents: readonly EngineEvent[],
+): EngineResult | undefined => {
+  const effectResolved = resolutionEvents.find(
+    (event) => event.type === "effectResolved",
+  );
+  if (effectResolved === undefined) {
+    return undefined;
+  }
+  const eventName = `effectResolved:${String(resolvedEntry.effectBlockId)}`;
+  const appended: EffectQueueEntry[] = [];
+  const events: EngineEvent[] = [];
+
+  for (const source of fieldTriggerSources(state)) {
+    const resolved = state.cardManifest.cards[source.cardId];
+    if (
+      resolved === undefined ||
+      resolved.support.effectDefinitionId === undefined
+    ) {
+      continue;
+    }
+    const lookup = resolveImplementedDslEffectDefinition(
+      resolved,
+      state.cardManifest,
+    );
+    if (!lookup.ok) {
+      return toEngineResult(state, [], [lookup.error]);
+    }
+    const matching = lookup.definition.effects.filter((effect) =>
+      isSupportedEffectResolvedCustomDrawEffect(effect, eventName),
+    );
+    if (matching.length === 0) {
+      continue;
+    }
+    if (matching.length !== 1) {
+      return toEngineResult(
+        state,
+        [],
+        [
+          unsupportedPendingRuntimeWorkError({
+            kind: "effectQueue",
+            count: state.effectQueue.length,
+          }),
+        ],
+      );
+    }
+
+    for (const effectBlock of matching) {
+      const orderingGroup =
+        source.controller === state.turn.turnPlayerId
+          ? "turnPlayer"
+          : "nonTurnPlayer";
+      const queueId =
+        `queue-entry:${String(effectResolved.id)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
+      const entry: EffectQueueEntry = {
+        id: queueId,
+        state: "pending",
+        timingWindowId: resolvedEntry.timingWindowId,
+        generation: resolvedEntry.generation + 1,
+        controllerId: source.controller,
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: source.controller,
+          zone: source.zone,
+        },
+        sourceSnapshot: toSnapshot(source, resolved),
+        triggerEventId: effectResolved.id,
+        effectBlockId: effectBlock.id,
+        orderingGroup,
+        createdAtEventSeq: effectResolved.seq,
+        queuedAtStateSeq: toStateSeq(state.seq + 1),
+        sourcePresencePolicy: effectBlock.sourcePresencePolicy,
+        causedBy: {
+          type: "effect",
+          queueEntryId: resolvedEntry.id,
+          effectId: resolvedEntry.effectBlockId,
+        },
+      };
+      appended.push(entry);
+    }
+  }
+
+  if (appended.length === 0) {
+    return undefined;
+  }
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    effectQueue: [...state.effectQueue, ...appended],
+  };
+  for (const entry of appended) {
+    const beforeEventCount = events.length;
+    appendEvent(
+      state,
+      events,
+      "effectQueued",
+      {
+        queueEntryId: entry.id,
+        timingWindowId: entry.timingWindowId,
+        generation: entry.generation,
+        effectBlockId: entry.effectBlockId,
+        triggerEventId: entry.triggerEventId,
+        sourcePresencePolicy: entry.sourcePresencePolicy,
+        orderingGroup: entry.orderingGroup,
+      },
+      { type: "public" },
+    );
+    const queuedEvent = events[beforeEventCount];
+    if (queuedEvent !== undefined) {
+      queuedEvent.causedBy = entry.causedBy;
+    }
+  }
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  return toEngineResult(nextState, events);
+};
+
 const toErrorTuple = (
   errors: readonly EngineError[],
 ): readonly [EngineError, ...EngineError[]] => {
@@ -1401,6 +1569,18 @@ const resolveQueueEntriesInOrder = (
     if (nextState.status.type !== "active") {
       return toEngineResult(nextState, allEvents);
     }
+
+    const triggered = queueEffectResolvedCustomTriggers(nextState, selected, [
+      ...resolution.events,
+      ...resolvedEvents,
+    ]);
+    if (triggered !== undefined) {
+      if (triggered.errors !== undefined) {
+        return triggered;
+      }
+      nextState = triggered.state;
+      allEvents.push(...triggered.events);
+    }
   }
 
   return toEngineResult(nextState, allEvents);
@@ -1529,7 +1709,22 @@ const processNoChoiceEffectQueue = (
     );
   }
 
-  return resolveQueueEntriesInOrder(state, ordered.entries);
+  const firstEntry = ordered.entries[0];
+  if (firstEntry === undefined) {
+    return toEngineResult(state, []);
+  }
+  const resolved = resolveQueueEntriesInOrder(state, [firstEntry]);
+  if (
+    resolved.errors !== undefined ||
+    resolved.state.status.type !== "active"
+  ) {
+    return resolved;
+  }
+  const continued = processNoChoiceEffectQueue(resolved.state);
+  return {
+    ...continued,
+    events: [...resolved.events, ...continued.events],
+  };
 };
 
 export const processDefenderOpponentAttackTiming = (
