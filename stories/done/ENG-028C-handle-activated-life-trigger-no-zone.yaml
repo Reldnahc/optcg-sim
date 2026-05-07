@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Validate activateTrigger responses, reveal the Life card publicly, and hold it
   in no zone while supported Trigger resolution is pending.

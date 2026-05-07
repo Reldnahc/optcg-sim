@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: visibility
 priority: high
-status: approved
+status: done
 summary: >
   Prove life-trigger reveal, decline, activation, no-zone, legal-action, event,
   and PlayerView projections preserve hidden information.

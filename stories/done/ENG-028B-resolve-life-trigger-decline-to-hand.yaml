@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Validate addToHand life-trigger responses and complete the hidden
   life-to-hand path for declined Trigger cards.

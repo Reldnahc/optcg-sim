@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Resolve a supported no-choice life Trigger effect from no zone and trash the
   activated Trigger card afterward.

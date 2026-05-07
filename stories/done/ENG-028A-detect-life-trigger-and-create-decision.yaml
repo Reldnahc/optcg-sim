@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Detect a supported Trigger card taken from Life by ordinary Leader damage and
   pause with a confirmLifeTrigger decision for the damaged player.
