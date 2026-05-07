@@ -8,7 +8,7 @@ type: implementation
 area: security
 primary_concern: visibility
 priority: critical
-status: approved
+status: done
 summary: >
   Repair the production PlayerView event projection so public or recipient
   visible engine events do not expose effect queue internals such as queue entry

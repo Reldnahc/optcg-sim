@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/SEC-003.md",
-      "storyId": "SEC-003",
-      "storyPath": "stories/approved/SEC-003-filter-player-view-effect-event-payloads.yaml",
-      "storySha256": "4f58df820e8003fb99bc0cf535dc6425c76ac859a1e0d451fcf66f887a6cb536"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
