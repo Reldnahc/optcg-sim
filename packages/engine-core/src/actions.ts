@@ -23,6 +23,7 @@ import {
   getPlayCardLegalActions,
 } from "./play-card.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
+import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
 import {
   applyConcede,
   applyEndMainPhase,
@@ -45,6 +46,19 @@ export const getLegalActions = (
     return actions;
   }
   if (state.pendingDecision !== undefined) {
+    if (
+      state.pendingDecision.type === "chooseTriggerOrder" &&
+      state.pendingDecision.playerId === playerId
+    ) {
+      actions.push({
+        type: "respondToDecision",
+        decisionId: state.pendingDecision.id,
+        response: {
+          type: "orderedIds",
+          ids: [...state.pendingDecision.triggerIds],
+        },
+      });
+    }
     actions.push(...getPlayCardLegalActions(state, playerId));
     actions.push(...getBattleDecisionLegalActions(state, playerId));
     return actions;
@@ -79,6 +93,13 @@ const applyRespondToDecision = (
   const battleResult = applyBattleDecisionResponse(state, action);
   if (battleResult !== null) {
     return battleResult;
+  }
+  const triggerOrderResult = applyChooseTriggerOrderDecisionResponse(
+    state,
+    action,
+  );
+  if (triggerOrderResult !== null) {
+    return triggerOrderResult;
   }
   return illegalAction(state, "Unsupported decision type.");
 };

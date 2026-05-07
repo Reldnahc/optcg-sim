@@ -469,6 +469,8 @@ const assertNoHiddenLeak = (
       "serverOnly",
       "response",
       "defaultResponse",
+      "triggerIds",
+      "sourceSnapshot",
       "candidates",
       "paymentOptions",
       "targetOptions",
