@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-024D.md",
-      "storyId": "ENG-024D",
-      "storyPath": "stories/approved/ENG-024D-regress-no-source-required-policy.yaml",
-      "storySha256": "cce850d99dfd2d8aafd8301ce2b3ae9aa96c7df1ed25e90ca1304537e417c243"
+      "packetPath": "agent-packets/ENG-024E.md",
+      "storyId": "ENG-024E",
+      "storyPath": "stories/approved/ENG-024E-integrate-source-presence-policy-in-queue-processing.yaml",
+      "storySha256": "2c9a090e748cb44cd32218ab5adeefe2f4f8cf1ca4d551c9891c966890c71d56"
     }
   ],
   "version": 1
