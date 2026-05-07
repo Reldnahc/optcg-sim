@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add engine-side validation for chooseTriggerOrder orderedIds responses without
   yet resuming queued effect processing after a valid response.

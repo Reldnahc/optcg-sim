@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Resume effect queue processing deterministically after a valid same-player
   trigger order choice.

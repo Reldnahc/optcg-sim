@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add deterministic queue-ordering helper coverage for detecting the next
   same-player timing bucket that requires chooseTriggerOrder.

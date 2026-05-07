@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: visibility
 priority: high
-status: approved
+status: done
 summary: >
   Expose chooseTriggerOrder decisions and legal responses only through
   hidden-info-safe PlayerView and legal-action surfaces.
