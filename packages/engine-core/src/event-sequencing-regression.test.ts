@@ -32,6 +32,7 @@ import { createInitialState } from "./initial-state.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
 import {
   setupAttackState,
+  effectDefinition,
   withOnKODrawEffect,
   withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
@@ -382,6 +383,119 @@ const runEng027dOnKOTriggerBattleScript = () => {
   return { results: [resolved] };
 };
 
+const runEng028LifeTriggerDeclineAndActivationScripts = () => {
+  const openLifeTrigger = () => {
+    const state = setupAttackState();
+    const p1State = must(state.players[p1], "ENG-028 p1");
+    const p2State = must(state.players[p2], "ENG-028 p2");
+    const topLife = must(p2State.life[0], "ENG-028 top life");
+    const lifeCardId = "eng-028-life-trigger" as typeof topLife.card.cardId;
+    const definition = effectDefinition(lifeCardId, { type: "trigger" });
+    const effect = must(definition.effects[0], "ENG-028 trigger effect");
+    const effectWithoutFlags = { ...effect };
+    delete effectWithoutFlags.optional;
+    delete effectWithoutFlags.oncePerTurn;
+    const supported = {
+      ...definition,
+      effects: [
+        {
+          ...effectWithoutFlags,
+          sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+        },
+      ],
+    };
+    p2State.life[0] = {
+      ...topLife,
+      card: { ...topLife.card, cardId: lifeCardId },
+    };
+    state.cardManifest.cards[lifeCardId] = resolvedCard({
+      cardId: lifeCardId,
+      category: "character",
+      power: 1000,
+      triggerText: "TRIGGER: draw 1 card",
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: "def-eng-028-life-trigger",
+        rulesVersion: supported.metadata.rulesVersion,
+        sourceTextHash: supported.metadata.sourceTextHash,
+      },
+    });
+    state.cardManifest.effectDefinitionsVersion =
+      supported.metadata.effectDefinitionsVersion;
+    state.cardManifest.effectDefinitions = {
+      "def-eng-028-life-trigger": supported,
+    };
+    const opened = applyAction(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        playerId: p1,
+      },
+      target: {
+        instanceId: p2State.leader.instanceId,
+        cardId: p2State.leader.cardId,
+        playerId: p2,
+      },
+    });
+    assertAcceptedSequencing(state, opened, "ENG-028 life trigger decision");
+    return opened;
+  };
+
+  const openedForDecline = openLifeTrigger();
+  const declineDecision = must(
+    openedForDecline.state.pendingDecision,
+    "ENG-028 decline decision",
+  );
+  const declined = applyAction(openedForDecline.state, {
+    type: "respondToDecision",
+    decisionId: declineDecision.id,
+    response: { type: "lifeTrigger", choice: "addToHand" },
+  });
+  assertAcceptedSequencing(
+    openedForDecline.state,
+    declined,
+    "ENG-028 life trigger decline",
+  );
+  assert.equal(declined.stateHash, hashCanonicalStateValue(declined.state));
+
+  const openedForActivation = openLifeTrigger();
+  const activateDecision = must(
+    openedForActivation.state.pendingDecision,
+    "ENG-028 activation decision",
+  );
+  const activated = applyAction(openedForActivation.state, {
+    type: "respondToDecision",
+    decisionId: activateDecision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+  assertAcceptedSequencing(
+    openedForActivation.state,
+    activated,
+    "ENG-028 life trigger activation",
+  );
+  assert.equal(activated.stateHash, hashCanonicalStateValue(activated.state));
+  assert.equal(activated.state.effectQueue.length, 0);
+  assert.equal(activated.state.revealedCards.length, 0);
+  for (const eventType of [
+    "cardRevealed",
+    "triggerActivated",
+    "effectQueued",
+    "effectResolved",
+    "cardTrashed",
+  ] as const) {
+    assert.equal(
+      activated.events.some((event) => event.type === eventType),
+      true,
+      `ENG-028 activation should include ${eventType}`,
+    );
+  }
+
+  return {
+    results: [openedForDecline, declined, openedForActivation, activated],
+  };
+};
+
 test("ENG-016: accepted engine paths keep EngineResult/eventJournal sequencing and deterministic hashes", () => {
   assertDeterministicScript("mulligan", () => {
     const setup = createInitialState(createInput());
@@ -588,6 +702,11 @@ test("ENG-016: accepted engine paths keep EngineResult/eventJournal sequencing a
   assertDeterministicScript(
     "supported battle K.O. draw trigger and cleanup",
     runEng027dOnKOTriggerBattleScript,
+  );
+
+  assertDeterministicScript(
+    "life trigger decline and activation paths",
+    runEng028LifeTriggerDeclineAndActivationScripts,
   );
 
   assertDeterministicScript("concession terminal result", () => {
