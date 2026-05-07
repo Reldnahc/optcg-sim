@@ -1,6 +1,7 @@
 import type {
   Action,
   CardInstance,
+  EngineError,
   EngineEvent,
   EngineResult,
   GameState,
@@ -22,6 +23,7 @@ import {
   reifyCardRef,
   toCardRef,
 } from "./action-state.js";
+import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import { resolveSupportedVanillaBattle } from "./battle-resolution.js";
 import { expireBattleDurationStateForCleanup } from "./battle-support.js";
 import {
@@ -35,6 +37,10 @@ import {
   getCounterStepDecisionLegalActions,
 } from "./battle-counter-actions.js";
 import { computeView } from "./compute-view.js";
+import {
+  detectPendingRuntimeWork,
+  processEffectRuntime,
+} from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
@@ -57,7 +63,8 @@ export const getDeclareAttackLegalActions = (
   }
   const actions: LegalAction[] = [];
   try {
-    const view = computeView(state);
+    const legalActionState = withAllAttackTimingCombatMetadataHidden(state);
+    const view = computeView(legalActionState);
     for (const [attackerId, targetIds] of Object.entries(
       view.legalAttackTargets,
     )) {
@@ -131,9 +138,10 @@ export const applyDeclareAttack = (
     );
   }
 
+  const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
   let legalTargets: readonly CardInstance["instanceId"][];
   try {
-    const computed = computeView(state);
+    const computed = computeView(combatMetadataState);
     legalTargets = computed.legalAttackTargets[attacker.card.instanceId] ?? [];
   } catch {
     return illegalAction(
@@ -145,6 +153,12 @@ export const applyDeclareAttack = (
     return illegalAction(
       state,
       "declareAttack target is not legal for attacker.",
+    );
+  }
+  if (detectPendingRuntimeWork(state) !== undefined) {
+    return illegalAction(
+      state,
+      "declareAttack requires no pending runtime work.",
     );
   }
   const nextPlayer = state.players[attacker.playerId];
@@ -210,9 +224,26 @@ export const applyDeclareAttack = (
   if (declaredResult.state.status.type !== "active") {
     return declaredResult;
   }
-  const blockDecision = createBlockStepDeclineDecision(declaredResult.state);
+  const attackTimingResult = resolveAttackTimingEffects(
+    state,
+    declaredResult.state,
+    events,
+  );
+  if (attackTimingResult.errors !== undefined) {
+    return attackTimingResult;
+  }
+  if (attackTimingResult.state.status.type !== "active") {
+    return attackTimingResult;
+  }
+  if (!battleParticipantsRemainLegal(attackTimingResult.state)) {
+    return cleanupBattleAfterAttackTiming(state, attackTimingResult);
+  }
+
+  const blockDecision = createBlockStepDeclineDecision(
+    withAllAttackTimingCombatMetadataHidden(attackTimingResult.state),
+  );
   if (blockDecision !== null) {
-    const blockEvents = [...events];
+    const blockEvents = [...attackTimingResult.events];
     appendEvent(
       state,
       blockEvents,
@@ -225,9 +256,9 @@ export const applyDeclareAttack = (
       { type: "public" },
     );
     const blockState: GameState = {
-      ...declaredResult.state,
+      ...attackTimingResult.state,
       battle: {
-        ...mustBattle(declaredResult.state),
+        ...mustBattle(attackTimingResult.state),
         step: "block",
       },
       pendingDecision: blockDecision,
@@ -236,7 +267,7 @@ export const applyDeclareAttack = (
     return toEngineResult(blockState, blockEvents);
   }
 
-  const resolved = resolveSupportedVanillaBattle(declaredResult.state);
+  const resolved = resolveSupportedVanillaBattle(attackTimingResult.state);
   if (resolved.errors !== undefined) {
     const firstError = resolved.errors[0];
     return firstError === undefined
@@ -246,16 +277,138 @@ export const applyDeclareAttack = (
   const resolutionEvents = rebaseEvents(
     state,
     resolved.events,
-    events.length + 1,
+    attackTimingResult.events.length + 1,
   );
   const finalState: GameState = {
     ...resolved.state,
+    cardManifest: state.cardManifest,
     seq: nextState.seq,
     actionSeq: nextState.actionSeq,
-    eventJournal: [...state.eventJournal, ...events, ...resolutionEvents],
+    eventJournal: [
+      ...state.eventJournal,
+      ...attackTimingResult.events,
+      ...resolutionEvents,
+    ],
   };
-  return toEngineResult(finalState, [...events, ...resolutionEvents]);
+  return toEngineResult(finalState, [
+    ...attackTimingResult.events,
+    ...resolutionEvents,
+  ]);
 };
+
+const toErrorTuple = (
+  errors: readonly EngineError[],
+): readonly [EngineError, ...EngineError[]] => {
+  const first = errors[0];
+  if (first === undefined) {
+    return [
+      {
+        type: "effectRuntimeError",
+        effectId: "attack-timing-effect-runtime",
+        details: { reason: "empty-runtime-error-list" },
+      },
+    ];
+  }
+  return [first, ...errors.slice(1)];
+};
+
+const resolveAttackTimingEffects = (
+  originalState: GameState,
+  declaredState: GameState,
+  declaredEvents: EngineEvent[],
+): EngineResult => {
+  const queued = processEffectRuntime(declaredState);
+  if (queued.errors !== undefined) {
+    return toEngineResult(originalState, [], toErrorTuple(queued.errors));
+  }
+
+  const resolved = processEffectRuntime(queued.state);
+  if (resolved.errors !== undefined) {
+    return toEngineResult(originalState, [], toErrorTuple(resolved.errors));
+  }
+
+  const runtimeEvents = rebaseEvents(
+    originalState,
+    [...queued.events, ...resolved.events],
+    declaredEvents.length + 1,
+  );
+  const events = [...declaredEvents, ...runtimeEvents];
+  const stateWithJournal: GameState = {
+    ...resolved.state,
+    seq: declaredState.seq,
+    cardManifest: originalState.cardManifest,
+    eventJournal: [...originalState.eventJournal, ...events],
+  };
+  assertGameStateInvariants(stateWithJournal);
+  return toEngineResult(stateWithJournal, events);
+};
+
+const battleParticipantsRemainLegal = (state: GameState): boolean => {
+  const battle = state.battle;
+  if (battle === undefined) {
+    return true;
+  }
+  return (
+    reifyCardRef(state, battle.attacker) !== null &&
+    reifyCardRef(state, battle.currentTarget) !== null
+  );
+};
+
+const cleanupBattleAfterAttackTiming = (
+  originalState: GameState,
+  attackTimingResult: EngineResult,
+): EngineResult => {
+  const events = [...attackTimingResult.events];
+  appendEvent(
+    originalState,
+    events,
+    "effectResolved",
+    { systemStep: "endBattle", battleCleared: true },
+    { type: "replayOnly" },
+  );
+  const cleanedState = expireBattleDurationStateForCleanup(
+    attackTimingResult.state,
+  );
+  const finalizedState = applyRuleProcessingCheckpoint({
+    state: cleanedState,
+    events,
+    phase: "main",
+    createEvent: (seqOffset, type, payload, visibility) =>
+      createEvent(originalState, seqOffset, type, payload, visibility),
+  });
+  const stateWithJournal: GameState = {
+    ...finalizedState,
+    cardManifest: originalState.cardManifest,
+    eventJournal: [...originalState.eventJournal, ...events],
+  };
+  assertGameStateInvariants(stateWithJournal);
+  return toEngineResult(stateWithJournal, events);
+};
+
+const withOriginalManifestResult = (
+  result: EngineResult,
+  originalState: GameState,
+): EngineResult => {
+  const stateWithManifest: GameState = {
+    ...result.state,
+    cardManifest: originalState.cardManifest,
+  };
+  return result.errors === undefined
+    ? toEngineResult(stateWithManifest, result.events)
+    : toEngineResult(
+        stateWithManifest,
+        result.events,
+        toErrorTuple(result.errors),
+      );
+};
+
+const hideCurrentAttackTimingCombatMetadata = (state: GameState): GameState =>
+  withAllAttackTimingCombatMetadataHidden(state);
+
+const resolveSupportedBattleWithAttackTimingMetadata = (
+  state: GameState,
+): EngineResult =>
+  withOriginalManifestResult(resolveSupportedVanillaBattle(state), state);
 
 const mustBattle = (state: GameState): NonNullable<GameState["battle"]> => {
   const battle = state.battle;
@@ -268,26 +421,40 @@ const mustBattle = (state: GameState): NonNullable<GameState["battle"]> => {
 export const getBattleDecisionLegalActions = (
   state: GameState,
   playerId: PlayerId,
-): LegalAction[] => [
-  ...getCounterStepDecisionLegalActions(state, playerId),
-  ...getBlockStepDecisionLegalActions(state, playerId),
-];
+): LegalAction[] => {
+  const actionState = hideCurrentAttackTimingCombatMetadata(state);
+  return [
+    ...getCounterStepDecisionLegalActions(actionState, playerId),
+    ...getBlockStepDecisionLegalActions(actionState, playerId),
+  ];
+};
 
 export const applyBattleDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
 ): EngineResult | null => {
+  const actionState = hideCurrentAttackTimingCombatMetadata(state);
+  const resolveWithOriginalManifest = (
+    resolverState: GameState,
+  ): EngineResult =>
+    resolveSupportedBattleWithAttackTimingMetadata({
+      ...resolverState,
+      cardManifest: state.cardManifest,
+    });
   const counterResponse = applyCounterStepDecisionResponse(
-    state,
+    actionState,
     action,
-    resolveSupportedVanillaBattle,
+    resolveWithOriginalManifest,
   );
   if (counterResponse !== null) {
-    return counterResponse;
+    return withOriginalManifestResult(counterResponse, state);
   }
-  return applyBlockStepDecisionResponse(
-    state,
+  const blockResponse = applyBlockStepDecisionResponse(
+    actionState,
     action,
-    resolveSupportedVanillaBattle,
+    resolveWithOriginalManifest,
   );
+  return blockResponse === null
+    ? null
+    : withOriginalManifestResult(blockResponse, state);
 };

@@ -17,6 +17,7 @@ import {
   toStateSeq,
 } from "./action-results.js";
 import { reifyCardRef, reindexZoneCards } from "./action-state.js";
+import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import {
   hasUnsupportedBattleEffectMetadata,
   isSupportedBattleResolutionEnvelope,
@@ -129,12 +130,13 @@ const getLegalCharacterCounterActions = (
   ) {
     return [];
   }
+  const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
   const target = reifyCardRef(state, battle.currentTarget);
   if (
     detectPendingRuntimeWork(state) !== undefined ||
     state.replacementState.length > 0 ||
     state.continuousEffects.length > 0 ||
-    hasUnsupportedBattleEffectMetadata(state) ||
+    hasUnsupportedBattleEffectMetadata(combatMetadataState) ||
     !isSupportedBattleResolutionEnvelope(battle) ||
     target === null ||
     target.playerId !== defenderId ||
@@ -158,7 +160,7 @@ const getLegalCharacterCounterActions = (
   }
   let view: ReturnType<typeof computeView>;
   try {
-    view = computeView(state);
+    view = computeView(combatMetadataState);
   } catch {
     return [];
   }
@@ -261,7 +263,8 @@ export const applyUseCounter = (
       "Battle requires unsupported trigger or replacement processing.",
     );
   }
-  if (hasUnsupportedBattleEffectMetadata(state)) {
+  const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
+  if (hasUnsupportedBattleEffectMetadata(combatMetadataState)) {
     return illegalAction(state, "Battle requires unsupported effect metadata.");
   }
   if (!target.isLeader && target.card.state !== "rested") {
@@ -590,7 +593,8 @@ const getUnsupportedDamageStepContinuationReason = (
   ) {
     return "Battle requires unsupported trigger or replacement processing.";
   }
-  if (hasUnsupportedBattleEffectMetadata(state)) {
+  const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
+  if (hasUnsupportedBattleEffectMetadata(combatMetadataState)) {
     return "Battle requires unsupported effect metadata.";
   }
   const attacker = reifyCardRef(state, battle.attacker);
@@ -611,7 +615,7 @@ const getUnsupportedDamageStepContinuationReason = (
 
   let view: ReturnType<typeof computeView>;
   try {
-    view = computeView(state);
+    view = computeView(combatMetadataState);
   } catch {
     return "Battle requires unsupported combat metadata.";
   }
