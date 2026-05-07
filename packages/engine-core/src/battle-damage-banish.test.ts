@@ -17,6 +17,7 @@ import {
   effectDefinition,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
+import { filterStateForPlayer } from "./filter-state-for-player.js";
 test("supported declareAttack resolves vanilla battle internally without continuation action", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -1144,6 +1145,7 @@ test("applyAction declareAttack creates life trigger decision for supported trig
   const p2State = must(state.players[p2], "p2");
   const topLife = must(p2State.life[0], "top life");
   const lifeCardId = toCardId("trigger-life");
+  const beforeLifeCount = p2State.life.length;
   p2State.life[0] = {
     ...topLife,
     card: { ...topLife.card, cardId: lifeCardId },
@@ -1217,7 +1219,25 @@ test("applyAction declareAttack creates life trigger decision for supported trig
     nextP2.trash.some((card) => card.cardId === lifeCardId),
     false,
   );
-  assert.equal(nextP2.life[0]?.card.cardId, lifeCardId);
+  assert.equal(
+    nextP2.life.some((lifeCard) => lifeCard.card.cardId === lifeCardId),
+    false,
+  );
+  assert.equal(pendingDecision.card.cardId, lifeCardId);
+  assert.equal(pendingDecision.card.zone, undefined);
+  assert.equal(nextP2.life.length, beforeLifeCount - 1);
+  assert.equal(
+    filterStateForPlayer(result.state, p1).opponent.life.count,
+    beforeLifeCount - 1,
+  );
+  assert.equal(
+    filterStateForPlayer(result.state, p2).self.life.count,
+    beforeLifeCount - 1,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "lifeTaken"),
+    true,
+  );
   assert.equal(
     result.events.some(
       (event) =>

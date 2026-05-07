@@ -341,6 +341,32 @@ export const resolveSupportedVanillaBattle = (
           { type: "private", playerId: target.playerId },
         );
       } else {
+        const nextLife = damaged.life.slice(1).map((lifeCard, index) => ({
+          ...lifeCard,
+          card: {
+            ...lifeCard.card,
+            zone: {
+              zone: "life",
+              playerId: target.playerId,
+              slot: "life",
+              index,
+            },
+          },
+        }));
+        nextState = {
+          ...nextState,
+          players: {
+            ...nextState.players,
+            [target.playerId]: {
+              ...damaged,
+              life: nextLife,
+            },
+          },
+        };
+        appendEvent(state, events, "lifeTaken", {
+          damagedPlayerId: target.playerId,
+          amount: 1,
+        });
         appendEvent(
           state,
           events,

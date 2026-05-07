@@ -8,7 +8,6 @@ import type {
 } from "@optcg/types";
 
 import { toDecisionId } from "./action-results.js";
-import { toCardRef } from "./action-state.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
   triggerText !== undefined && triggerText.trim().length > 0;
@@ -88,7 +87,11 @@ export const getSupportedLifeTriggerDecision = (
     prompt: "Activate life trigger?",
     causedBy: { type: "ruleProcess", name: "battle:lifeTriggerDecision" },
     visibility: { type: "public" },
-    card: toCardRef(card, damagedPlayerId),
+    card: {
+      instanceId: card.instanceId,
+      cardId: card.cardId,
+      playerId: damagedPlayerId,
+    },
     options: ["activateTrigger", "addToHand"],
   };
 };
