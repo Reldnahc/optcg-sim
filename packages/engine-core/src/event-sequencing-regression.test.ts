@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EngineEvent, EngineResult, GameState } from "@optcg/types";
+import type {
+  EngineEvent,
+  EngineResult,
+  GameState,
+  PlayerId,
+} from "@optcg/types";
 
 import {
   applyAction,
@@ -20,9 +25,15 @@ import {
   resolvedCard,
   reviewedOnPlayDrawDefinition,
 } from "./action-test-fixtures.js";
+import { getLegalActions } from "./actions.js";
+import { hashCanonicalStateValue } from "./canonical-state.js";
 import { createInitialState } from "./initial-state.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+import {
+  setupAttackState,
+  withOnOpponentAttackDrawEffect,
+  withWhenAttackingDrawEffect,
+} from "./battle-actions-test-fixtures.js";
 
 const assertStrictlyIncreasingSeq = (
   events: readonly EngineEvent[],
@@ -89,6 +100,213 @@ const assertDeterministicScript = (
     second.results.map(signature),
     `${name} should be deterministic`,
   );
+};
+
+const ensureDeckHasAtLeast = (
+  state: ReturnType<typeof setupAttackState>,
+  playerId: PlayerId,
+  count: number,
+) => {
+  const player = must(state.players[playerId], "deck owner");
+  if (player.deck.length >= count) {
+    return;
+  }
+  const needed = count - player.deck.length;
+  const moved = player.hand.slice(0, needed).map((card, index) => ({
+    ...card,
+    zone: {
+      zone: "deck" as const,
+      playerId,
+      slot: "deck" as const,
+      index: player.deck.length + index,
+    },
+  }));
+  player.deck = [...player.deck, ...moved];
+  player.hand = player.hand.slice(needed).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand" as const, playerId, slot: "hand" as const, index },
+  }));
+};
+
+const effectEventIndex = (
+  events: readonly EngineEvent[],
+  eventType: "effectQueued" | "effectResolved",
+  effectBlockId: string,
+  label: string,
+) => {
+  const index = events.findIndex((event) => {
+    const payload = event.payload as Partial<{ effectBlockId: string }>;
+    return event.type === eventType && payload.effectBlockId === effectBlockId;
+  });
+  assert.notEqual(index, -1, `${label} should emit ${eventType}`);
+  return index;
+};
+
+const eventIndex = (
+  events: readonly EngineEvent[],
+  eventType: EngineEvent["type"],
+  label: string,
+) => {
+  const index = events.findIndex((event) => event.type === eventType);
+  assert.notEqual(index, -1, `${label} should emit ${eventType}`);
+  return index;
+};
+
+const assertEng023cAttackTimingOrder = (
+  opened: EngineResult,
+  attackerEffectBlockId: string,
+  defenderEffectBlockId: string,
+) => {
+  const attackDeclaredIndex = eventIndex(
+    opened.events,
+    "attackDeclared",
+    "ENG-023C attack timing",
+  );
+  const attackerQueuedIndex = effectEventIndex(
+    opened.events,
+    "effectQueued",
+    attackerEffectBlockId,
+    "ENG-023C attacker timing",
+  );
+  const attackerResolvedIndex = effectEventIndex(
+    opened.events,
+    "effectResolved",
+    attackerEffectBlockId,
+    "ENG-023C attacker timing",
+  );
+  const defenderQueuedIndex = effectEventIndex(
+    opened.events,
+    "effectQueued",
+    defenderEffectBlockId,
+    "ENG-023C defender timing",
+  );
+  const defenderResolvedIndex = effectEventIndex(
+    opened.events,
+    "effectResolved",
+    defenderEffectBlockId,
+    "ENG-023C defender timing",
+  );
+  const decisionCreatedIndex = eventIndex(
+    opened.events,
+    "decisionCreated",
+    "ENG-023C Counter Step",
+  );
+
+  assert.ok(attackDeclaredIndex < attackerQueuedIndex);
+  assert.ok(attackerQueuedIndex < attackerResolvedIndex);
+  assert.ok(attackerResolvedIndex < defenderQueuedIndex);
+  assert.ok(defenderQueuedIndex < defenderResolvedIndex);
+  assert.ok(defenderResolvedIndex < decisionCreatedIndex);
+  assert.equal(
+    opened.events.some((event) => event.type === "damageDealt"),
+    false,
+  );
+};
+
+const runEng023cAttackTimingCounterScript = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "ENG-023C p1");
+  const p2State = must(state.players[p2], "ENG-023C p2");
+  const attackerDefinition = withWhenAttackingDrawEffect(
+    state,
+    p1State.leader,
+    "def-eng-023c-seq-when-attacking",
+  );
+  const defenderDefinition = withOnOpponentAttackDrawEffect(
+    state,
+    p2State.leader,
+    "def-eng-023c-seq-on-opponent-attack",
+  );
+  const attackerEffect = must(
+    attackerDefinition.effects[0],
+    "ENG-023C attacker effect",
+  );
+  const defenderEffect = must(
+    defenderDefinition.effects[0],
+    "ENG-023C defender effect",
+  );
+  ensureDeckHasAtLeast(state, p1, 2);
+  ensureDeckHasAtLeast(state, p2, 2);
+  const counterCard = must(p2State.hand[0], "ENG-023C counter card");
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+
+  assert.equal(
+    getLegalActions(state, p2).some((action) => action.type === "useCounter"),
+    false,
+  );
+  assert.equal(
+    getLegalActions(state, p2).some(
+      (action) => action.type === "respondToDecision",
+    ),
+    false,
+  );
+
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assertAcceptedSequencing(state, opened, "ENG-023C attack timing open");
+  assert.equal(opened.stateHash, hashCanonicalStateValue(opened.state));
+  assert.equal(opened.state.battle?.step, "counter");
+  assert.equal(opened.state.pendingDecision?.playerId, p2);
+  assertEng023cAttackTimingOrder(opened, attackerEffect.id, defenderEffect.id);
+  assert.equal(
+    getLegalActions(opened.state, p1).some(
+      (action) => action.type === "useCounter",
+    ),
+    false,
+  );
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) => action.type === "useCounter",
+    ),
+    true,
+  );
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) => action.type === "respondToDecision",
+    ),
+    true,
+  );
+
+  const countered = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target: must(opened.state.battle, "ENG-023C counter battle").currentTarget,
+  });
+  assertAcceptedSequencing(opened.state, countered, "ENG-023C counter use");
+  assert.equal(countered.stateHash, hashCanonicalStateValue(countered.state));
+  assert.equal(
+    countered.events.some((event) => event.type === "counterUsed"),
+    true,
+  );
+
+  const passed = applyAction(countered.state, {
+    type: "respondToDecision",
+    decisionId: must(
+      countered.state.pendingDecision,
+      "ENG-023C counter decision",
+    ).id,
+    response: { type: "cards", cards: [] },
+  });
+  assertAcceptedSequencing(countered.state, passed, "ENG-023C counter pass");
+  assert.equal(passed.stateHash, hashCanonicalStateValue(passed.state));
+
+  return { results: [opened, countered, passed] };
 };
 
 test("ENG-016: accepted engine paths keep EngineResult/eventJournal sequencing and deterministic hashes", () => {
@@ -235,6 +453,11 @@ test("ENG-016: accepted engine paths keep EngineResult/eventJournal sequencing a
     );
     return { results: [opened, blocked] };
   });
+
+  assertDeterministicScript(
+    "declare attack with attacker timing, defender timing, and Counter Step",
+    runEng023cAttackTimingCounterScript,
+  );
 
   assertDeterministicScript(
     "supported on-play draw and effect queue processing",
