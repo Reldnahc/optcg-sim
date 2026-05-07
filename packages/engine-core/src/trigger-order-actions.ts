@@ -7,6 +7,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import { processEffectRuntimeAfterTriggerOrderChoice } from "./effect-runtime.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -136,7 +137,11 @@ export const applyChooseTriggerOrderDecisionResponse = (
       invalidDecision("orderedIds must exactly match triggerIds."),
     );
   }
-  if (resolveCurrentGroupEntries(state, decision.triggerIds) === null) {
+  const currentGroupEntries = resolveCurrentGroupEntries(
+    state,
+    decision.triggerIds,
+  );
+  if (currentGroupEntries === null) {
     return toEngineResult(
       state,
       [],
@@ -144,6 +149,22 @@ export const applyChooseTriggerOrderDecisionResponse = (
         "chooseTriggerOrder triggerIds are stale for current effectQueue.",
       ),
     );
+  }
+  const decisionIdsByResponseId = new Map<
+    string,
+    GameState["effectQueue"][number]["id"]
+  >(currentGroupEntries.map((entry) => [entry.id, entry.id]));
+  const orderedIds: GameState["effectQueue"][number]["id"][] = [];
+  for (const responseId of action.response.ids) {
+    const queueEntryId = decisionIdsByResponseId.get(responseId);
+    if (queueEntryId === undefined) {
+      return toEngineResult(
+        state,
+        [],
+        invalidDecision("orderedIds must exactly match triggerIds."),
+      );
+    }
+    orderedIds.push(queueEntryId);
   }
 
   const events: EngineEvent[] = [];
@@ -168,12 +189,16 @@ export const applyChooseTriggerOrderDecisionResponse = (
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
-    effectQueue: reorderSelectedTriggerGroup(
-      state.effectQueue,
-      action.response.ids,
-    ),
+    effectQueue: reorderSelectedTriggerGroup(state.effectQueue, orderedIds),
     eventJournal: [...state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;
-  return toEngineResult(nextState, events);
+  const resumed = processEffectRuntimeAfterTriggerOrderChoice(
+    nextState,
+    orderedIds,
+  );
+  return {
+    ...resumed,
+    events: [...events, ...resumed.events],
+  };
 };

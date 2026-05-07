@@ -105,7 +105,17 @@ test("valid orderedIds response clears pending decision and reorders only select
     },
   });
 
-  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "unsupported-effect-queue",
+      details: {
+        reason: "unsupported-pending-runtime-work",
+        kind: "effectQueue",
+        count: 4,
+      },
+    },
+  ]);
   assert.equal(result.state.pendingDecision, undefined);
   assert.deepEqual(
     result.state.effectQueue.map((entry) => entry.id),
