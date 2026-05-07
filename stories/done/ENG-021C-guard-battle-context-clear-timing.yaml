@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add regression coverage proving supported battle context is cleared only after
   timing, damage, cleanup, rule-processing, and event-journal work completes.

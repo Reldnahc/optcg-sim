@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Route supported battle resolution through an explicit End of Battle cleanup
   helper or equivalent centralized path after supported timing and damage work

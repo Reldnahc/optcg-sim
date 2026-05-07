@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Make End of Battle cleanup expire supported battle-duration state
   deterministically without enabling unsupported continuous-effect or card-effect

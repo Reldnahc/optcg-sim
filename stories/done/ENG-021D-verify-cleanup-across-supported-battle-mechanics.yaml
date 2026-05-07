@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add integration coverage proving the centralized End of Battle cleanup path
   composes with supported vanilla damage, Character K.O., Blocker, Character

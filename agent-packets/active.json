@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-021D.md",
-      "storyId": "ENG-021D",
-      "storyPath": "stories/approved/ENG-021D-verify-cleanup-across-supported-battle-mechanics.yaml",
-      "storySha256": "b0e565c112c93173a43ad2ad269772f4df92576feee80c2efab5c97cc59524ca"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
