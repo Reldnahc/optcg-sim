@@ -1205,6 +1205,25 @@ test("applyAction declareAttack fails closed without mutation when vanilla conti
   assert.equal(pendingDecision.type, "confirmLifeTrigger");
   assert.deepEqual(pendingDecision.options, ["activateTrigger", "addToHand"]);
   assert.equal(pendingDecision.playerId, p2);
+  const nextP2 = must(result.state.players[p2], "next p2");
+  assert.equal(
+    nextP2.hand.some((card) => card.cardId === lifeCardId),
+    false,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.cardId === lifeCardId),
+    false,
+  );
+  assert.equal(nextP2.life[0]?.card.cardId, lifeCardId);
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "cardMoved" &&
+        event.visibility.type === "private" &&
+        (event.payload as { cardId?: string }).cardId === lifeCardId,
+    ),
+    false,
+  );
   assert.equal(
     result.events.some((event) => event.type === "decisionCreated"),
     true,

@@ -242,104 +242,105 @@ export const resolveSupportedVanillaBattle = (
           "Life trigger reveal decisions are unsupported in this battle path.",
         );
       }
-      const movedLifeCard: CardInstance = {
-        ...topLife.card,
-        zone: {
-          zone: attackerHasBanish ? "trash" : "hand",
-          playerId: target.playerId,
-          slot: attackerHasBanish ? "trash" : "hand",
-          index: 0,
-        },
-      };
-      const nextHand = attackerHasBanish
-        ? damaged.hand
-        : reindexZoneCards(
-            [movedLifeCard, ...damaged.hand],
-            "hand",
-            target.playerId,
-            "hand",
-          );
-      const nextTrash = attackerHasBanish
-        ? reindexZoneCards(
-            [movedLifeCard, ...damaged.trash],
-            "trash",
-            target.playerId,
-            "trash",
-          )
-        : damaged.trash;
-      const nextLife = damaged.life.slice(1).map((lifeCard, index) => ({
-        ...lifeCard,
-        card: {
-          ...lifeCard.card,
-          zone: {
-            zone: "life",
-            playerId: target.playerId,
-            slot: "life",
-            index,
-          },
-        },
-      }));
-      nextState = {
-        ...nextState,
-        players: {
-          ...nextState.players,
-          [target.playerId]: {
-            ...damaged,
-            hand: nextHand,
-            life: nextLife,
-            trash: nextTrash,
-          },
-        },
-      };
       appendEvent(state, events, "damageDealt", {
         attacker: attacker.card.instanceId,
         target: target.card.instanceId,
         amount: 1,
       });
-      appendEvent(state, events, "lifeTaken", {
-        damagedPlayerId: target.playerId,
-        amount: 1,
-      });
-      appendEvent(
-        state,
-        events,
-        "cardMoved",
-        {
-          from: {
-            zone: "life",
-            playerId: target.playerId,
-            slot: "life",
-            index: 0,
-          },
-          to: {
+      if (supportedLifeTriggerDecision === undefined) {
+        const movedLifeCard: CardInstance = {
+          ...topLife.card,
+          zone: {
             zone: attackerHasBanish ? "trash" : "hand",
             playerId: target.playerId,
             slot: attackerHasBanish ? "trash" : "hand",
             index: 0,
           },
-          reason: "battleDamage",
-        },
-        { type: "public" },
-      );
-      appendEvent(
-        state,
-        events,
-        "cardMoved",
-        {
-          instanceId: movedLifeCard.instanceId,
-          cardId: movedLifeCard.cardId,
-          from: {
-            zone: "life",
-            playerId: target.playerId,
-            slot: "life",
-            index: 0,
+        };
+        const nextHand = attackerHasBanish
+          ? damaged.hand
+          : reindexZoneCards(
+              [movedLifeCard, ...damaged.hand],
+              "hand",
+              target.playerId,
+              "hand",
+            );
+        const nextTrash = attackerHasBanish
+          ? reindexZoneCards(
+              [movedLifeCard, ...damaged.trash],
+              "trash",
+              target.playerId,
+              "trash",
+            )
+          : damaged.trash;
+        const nextLife = damaged.life.slice(1).map((lifeCard, index) => ({
+          ...lifeCard,
+          card: {
+            ...lifeCard.card,
+            zone: {
+              zone: "life",
+              playerId: target.playerId,
+              slot: "life",
+              index,
+            },
           },
-          to: movedLifeCard.zone,
-          reason: "battleDamage",
-        },
-        { type: "private", playerId: target.playerId },
-      );
-      if (supportedLifeTriggerDecision !== undefined) {
+        }));
+        nextState = {
+          ...nextState,
+          players: {
+            ...nextState.players,
+            [target.playerId]: {
+              ...damaged,
+              hand: nextHand,
+              life: nextLife,
+              trash: nextTrash,
+            },
+          },
+        };
+        appendEvent(state, events, "lifeTaken", {
+          damagedPlayerId: target.playerId,
+          amount: 1,
+        });
+        appendEvent(
+          state,
+          events,
+          "cardMoved",
+          {
+            from: {
+              zone: "life",
+              playerId: target.playerId,
+              slot: "life",
+              index: 0,
+            },
+            to: {
+              zone: attackerHasBanish ? "trash" : "hand",
+              playerId: target.playerId,
+              slot: attackerHasBanish ? "trash" : "hand",
+              index: 0,
+            },
+            reason: "battleDamage",
+          },
+          { type: "public" },
+        );
+        appendEvent(
+          state,
+          events,
+          "cardMoved",
+          {
+            instanceId: movedLifeCard.instanceId,
+            cardId: movedLifeCard.cardId,
+            from: {
+              zone: "life",
+              playerId: target.playerId,
+              slot: "life",
+              index: 0,
+            },
+            to: movedLifeCard.zone,
+            reason: "battleDamage",
+          },
+          { type: "private", playerId: target.playerId },
+        );
+      } else {
         appendEvent(
           state,
           events,
