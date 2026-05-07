@@ -1,0 +1,84 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: DOC-002
+epic_id: M1-001
+title: Close terminal engine foundation
+type: verification
+area: docs
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Formally close the terminal engine foundation by documenting the acceptance
+  evidence that already exists, updating stable milestone-level status wording,
+  and recording later-milestone follow-ups without changing engine, CLI, replay,
+  server, client, card-data, database, or story workflow behavior.
+story_boundary: >
+  Own only milestone closeout verification documentation and stable onboarding
+  status text. The closeout must map terminal-engine acceptance lines to
+  existing tests, fixtures, or done stories; it must not add gameplay behavior,
+  change completed story history, or treat later replay/server/client/card-data
+  work as terminal-engine blockers.
+allowed_touch_points:
+  - README.md
+  - epics/M1-001-terminal-engine-foundation.md
+  - stories/generated/DOC-002-terminal-engine-foundation-closeout.yaml
+  - stories/approved/DOC-002-terminal-engine-foundation-closeout.yaml
+  - agent-packets/DOC-002.md
+  - agent-packets/active.json
+spec_refs:
+  - 00-project-overview.s015
+  - 12-roadmap.s003
+  - 12-roadmap.s005
+  - 12-roadmap.s006
+  - 15-implementation-kickoff.s011
+  - 18-acceptance-tests.s003
+  - 27-spec-driven-story-generation-workflow.s012
+  - 32-codex-agent-integration.s004
+  - 32-codex-agent-integration.s008
+scope:
+  - map every terminal-engine exit criterion in `12-roadmap.s005` and kickoff done line in `15-implementation-kickoff.s011` to existing tests, fixtures, done stories, or explicit later-milestone non-scope
+  - confirm the closeout is evidence-only and requires no new engine, CLI, effect runtime, replay, server, client, card-data, database, or workflow behavior
+  - confirm deterministic CLI/full vanilla terminal smoke coverage exists through existing CLI command-script tests and fixtures
+  - confirm production-style `ReplayLog`, `ReplayHeader`, persisted replay storage, rollback, recovery, version migration, and replay viewer remain outside this closeout scope
+  - confirm event sequencing coverage and real production `filterStateForPlayer` coverage exist in current tests and done stories
+  - update `epics/M1-001-terminal-engine-foundation.md` status/closeout wording if the epic file convention supports it, using the current closeout date and without rewriting completed story history
+  - update the root `README.md` with stable milestone-level status and current development focus
+  - record any remaining non-blocking follow-ups as later-milestone work, not terminal-engine blockers
+non_scope:
+  - changing engine behavior, CLI behavior, effect runtime behavior, story workflow machinery, production replay contracts, server/client/card-data/database behavior, or hidden-info filtering behavior
+  - adding new gameplay tests, replay fixtures, CLI fixtures, package scripts, workflow tooling, CI jobs, or generated metadata behavior
+  - backdating completion, rewriting completed story history, moving existing done stories, or editing done story files
+  - adding a daily status log, active story handoff, branch/PR tracker, blocker tracker, or detailed acceptance matrix to the root README
+  - implementing production `ReplayLog`, `ReplayHeader`, persisted replay storage, rollback, recovery, version migration, replay viewer, server protocol, browser client, card-data adapter, deck builder, matchmaking, or database features
+dependencies:
+  - CLI-002A
+  - CLI-002B
+  - CLI-002C
+  - ENG-015
+  - ENG-016
+  - SEC-002
+  - SPEC-001
+acceptance_criteria:
+  - story-review independently confirms there is no actual terminal-engine acceptance gap before this story moves to implementation
+  - "`epics/M1-001-terminal-engine-foundation.md` records a closeout section or equivalent status wording with a current-date closeout and an acceptance evidence map"
+  - "every `12-roadmap.s005` terminal-engine exit criterion and `15-implementation-kickoff.s011` done line is mapped to existing tests, fixtures, done stories, or explicit later-milestone non-scope"
+  - the closeout documentation states that no new gameplay, CLI, effect runtime, replay, server, client, card-data, database, or workflow behavior was required
+  - deterministic CLI/full vanilla terminal smoke, event sequencing, stable hashes, and real production `filterStateForPlayer` coverage are identified with concrete existing evidence
+  - production replay storage, rollback, recovery, version migration, replay viewer, server/client, ranked, broad card pool, and Poneglyph live adapter work are recorded as outside this terminal-engine closeout
+  - "`README.md` reports stable milestone-level status and current development focus without daily status, active handoff, branch/PR tracking, blockers, or detailed acceptance tracking"
+  - remaining non-blocking follow-ups are recorded as later-milestone work rather than terminal-engine blockers
+required_tests:
+  - "`corepack pnpm run format:check` must pass"
+  - "`corepack pnpm run packets:verify` must pass after packet activation"
+  - "`corepack pnpm run stories:validate` must pass"
+  - "`corepack pnpm run verify` must pass"
+repo_rules:
+  - do not skip story-review; if story-review finds an actual terminal-engine acceptance gap, stop before implementation and report the blocker
+  - generated or normalized story must receive per-story story-review before it is presented as approval-ready
+  - after story-review passes, move or leave the story in `stories/approved/`, generate and activate its packet, and run `packets:verify` before implementation
+  - keep the implementation to `README.md`, `epics/M1-001-terminal-engine-foundation.md`, and story/packet lifecycle files
+  - use existing tests, fixtures, and done stories as evidence; do not add new gameplay or runtime verification to make the closeout pass
+  - run the normal implementation-review gate after opening the PR
+ambiguity_policy: fail_and_escalate

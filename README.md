@@ -106,10 +106,15 @@ onboarding specs:
 
 ## Current Stable Development Focus
 
-The stable focus is proving the deterministic local engine and CLI path before
-building broad infrastructure. That includes engine state, legal actions,
-events, hidden-info-safe `PlayerView` filtering, battle timing, representative
-effect queue behavior, state hashes, and local verification coverage.
+The terminal engine foundation is closed as of 2026-05-07. The repo has the
+deterministic local engine and CLI path needed before broad infrastructure:
+engine state, legal actions, vanilla terminal match smoke, events,
+hidden-info-safe `PlayerView` filtering, battle timing, state hashes, and local
+verification coverage.
+
+The stable focus after that closeout is the first effect-runtime foundation:
+explicit supported sample effects, deterministic effect queue behavior,
+trigger-ordering coverage, and hidden-info-safe views for effect-driven states.
 
 ## Not Yet
 
