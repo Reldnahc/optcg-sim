@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add regression coverage proving deterministic effect queue ordering when a
   turn-player effect creates another turn-player effect while a non-turn-player
