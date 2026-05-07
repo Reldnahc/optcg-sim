@@ -631,8 +631,7 @@ const findMatchingKOMoveEvent = (
     const to = zoneRefFromUnknown(payload.to);
     return (
       payload.reason === "ko" &&
-      (payload.instanceId === undefined ||
-        payload.instanceId === koPayload.instanceId) &&
+      payload.instanceId === koPayload.instanceId &&
       from?.zone === "characterArea" &&
       from.playerId === koPayload.playerId &&
       to?.zone === "trash" &&

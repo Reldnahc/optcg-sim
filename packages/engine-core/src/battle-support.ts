@@ -12,6 +12,7 @@ import {
   isSupportedNoChoiceOnKODrawEffect,
   isSupportedNoChoiceOnOpponentAttackDrawEffect,
   isSupportedNoChoiceWhenAttackingDrawEffect,
+  resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
 
 export const sameCardRef = (left: CardRef, right: CardRef): boolean =>
@@ -95,33 +96,6 @@ const isSupportedBattleRuntimeEffect = (
   isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
   isSupportedNoChoiceOnKODrawEffect(effect);
 
-const hasSupportedBattleRuntimeDefinitionForText = (
-  state: GameState,
-  cardId: CardInstance["cardId"],
-): boolean => {
-  const card = state.cardManifest.cards[cardId];
-  const effectDefinitionId = card?.support.effectDefinitionId;
-  if (
-    card?.support.status !== "implemented-dsl" ||
-    effectDefinitionId === undefined
-  ) {
-    return false;
-  }
-  const definition = state.cardManifest.effectDefinitions?.[effectDefinitionId];
-  if (
-    definition === undefined ||
-    definition.cardId !== cardId ||
-    definition.implementationStatus !== "implemented-dsl" ||
-    !definition.metadata.tested ||
-    (definition.metadata.reviewer === undefined &&
-      (definition.metadata.reviewedBy === undefined ||
-        definition.metadata.reviewedAt === undefined))
-  ) {
-    return false;
-  }
-  return definition.effects.every(isSupportedBattleRuntimeEffect);
-};
-
 const hasOnlySupportedBattleRuntimeEffects = (
   definition: EffectDefinition | undefined,
 ): definition is EffectDefinition =>
@@ -129,18 +103,30 @@ const hasOnlySupportedBattleRuntimeEffects = (
   definition.effects.length > 0 &&
   definition.effects.every(isSupportedBattleRuntimeEffect);
 
-const supportsBattleRuntimeSanitization = (
+const hasSupportedBattleRuntimeDefinition = (
   manifest: MatchCardManifest,
-  card: { support?: ResolvedCard["support"] },
-): boolean => {
-  const effectDefinitionId = card.support?.effectDefinitionId;
-  if (effectDefinitionId === undefined) {
+  card: ResolvedCard | undefined,
+): card is ResolvedCard => {
+  if (card === undefined) {
     return false;
   }
-  return hasOnlySupportedBattleRuntimeEffects(
-    manifest.effectDefinitions?.[effectDefinitionId],
-  );
+  const lookup = resolveImplementedDslEffectDefinition(card, manifest);
+  return lookup.ok && hasOnlySupportedBattleRuntimeEffects(lookup.definition);
 };
+
+const hasSupportedBattleRuntimeDefinitionForText = (
+  state: GameState,
+  cardId: CardInstance["cardId"],
+): boolean =>
+  hasSupportedBattleRuntimeDefinition(
+    state.cardManifest,
+    state.cardManifest.cards[cardId],
+  );
+
+const supportsBattleRuntimeSanitization = (
+  manifest: MatchCardManifest,
+  card: ResolvedCard | undefined,
+): card is ResolvedCard => hasSupportedBattleRuntimeDefinition(manifest, card);
 
 const sanitizeResolvedCardForCombatView = (
   card: ResolvedCard,

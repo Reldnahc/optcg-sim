@@ -638,6 +638,8 @@ const appendBattleKOEvents = (
     seq: state.eventJournal.length + 2,
     type: "cardMoved" as const,
     payload: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
       from: source.zone,
       to: {
         zone: "trash",
@@ -1822,6 +1824,51 @@ test("detects one supported On K.O. candidate from a battle K.O. event batch", (
       },
     },
   ]);
+  assert.deepEqual(state, before);
+});
+
+test("rejects battle K.O. event batches whose move event lacks the K.O.'d card identity", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  setupOnKODefinition(state, source);
+  const trashedSource: CardInstance = {
+    ...source,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+  };
+  p2State.characters = [];
+  p2State.trash = [trashedSource];
+  const events = appendBattleKOEvents(state, source).map((event) =>
+    event.type === "cardMoved"
+      ? {
+          ...event,
+          payload: {
+            from: event.payload.from,
+            to: event.payload.to,
+            reason: event.payload.reason,
+          },
+        }
+      : event,
+  );
+  const before = structuredClone(state);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: {
+      type: "effectRuntimeError",
+      effectId: "on-ko-trigger-candidate-detection",
+      details: {
+        reason: "invalid-ko-event-batch",
+      },
+    },
+  });
   assert.deepEqual(state, before);
 });
 

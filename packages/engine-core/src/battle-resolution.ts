@@ -57,6 +57,22 @@ const toErrorTuple = (
   return [first, ...errors.slice(1)];
 };
 
+const hasOnKODefinitionMetadata = (
+  state: GameState,
+  card: CardInstance,
+): boolean => {
+  const resolved = state.cardManifest.cards[card.cardId];
+  const effectDefinitionId = resolved?.support.effectDefinitionId;
+  if (effectDefinitionId === undefined) {
+    return false;
+  }
+  return (
+    state.cardManifest.effectDefinitions?.[effectDefinitionId]?.effects.some(
+      (effect) => effect.trigger.type === "onKO",
+    ) ?? false
+  );
+};
+
 export const resolveSupportedVanillaBattle = (
   state: GameState,
 ): EngineResult => {
@@ -181,6 +197,7 @@ export const resolveSupportedVanillaBattle = (
     ...resolutionState,
     seq: toStateSeq(resolutionState.seq + 1),
   };
+  let shouldDetectBattleKOTriggers = false;
 
   if (attackerView.currentPower >= targetView.currentPower) {
     if (target.isLeader) {
@@ -378,11 +395,27 @@ export const resolveSupportedVanillaBattle = (
         playerId: target.playerId,
         instanceId: target.card.instanceId,
       });
-      appendEvent(state, events, "cardMoved", {
+      shouldDetectBattleKOTriggers = hasOnKODefinitionMetadata(
+        state,
+        target.card,
+      );
+      const koMovePayload = {
         from: target.card.zone,
         to: trashedCard.zone,
         reason: "ko",
-      });
+      };
+      appendEvent(
+        state,
+        events,
+        "cardMoved",
+        shouldDetectBattleKOTriggers
+          ? {
+              instanceId: trashedCard.instanceId,
+              cardId: trashedCard.cardId,
+              ...koMovePayload,
+            }
+          : koMovePayload,
+      );
       for (const donId of koCard.attachedDon) {
         appendEvent(
           state,
@@ -395,9 +428,11 @@ export const resolveSupportedVanillaBattle = (
     }
   }
 
-  const koCandidates = detectBattleKOTriggerCandidates(nextState, events);
-  if (!koCandidates.ok) {
-    return toEngineResult(state, [], [koCandidates.error]);
+  if (shouldDetectBattleKOTriggers) {
+    const koCandidates = detectBattleKOTriggerCandidates(nextState, events);
+    if (!koCandidates.ok) {
+      return toEngineResult(state, [], [koCandidates.error]);
+    }
   }
 
   return finalizeSupportedEndOfBattleCleanup({ state, nextState, events });
