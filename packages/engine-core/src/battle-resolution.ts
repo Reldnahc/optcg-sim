@@ -21,6 +21,7 @@ import {
   hasUnsupportedBattleEffectMetadata,
   isSupportedBattleResolutionEnvelope,
   sameCardRef,
+  withSupportedBattleRuntimeMetadataHidden,
 } from "./battle-support.js";
 import {
   createCounterStepPassDecision,
@@ -28,6 +29,7 @@ import {
 } from "./battle-counter-actions.js";
 import { computeView } from "./compute-view.js";
 import {
+  detectBattleKOTriggerCandidates,
   detectPendingRuntimeWork,
   processDefenderOpponentAttackTiming,
 } from "./effect-runtime.js";
@@ -80,7 +82,9 @@ export const resolveSupportedVanillaBattle = (
   }
   if (
     hasUnsupportedBattleEffectMetadata(
-      withAllAttackTimingCombatMetadataHidden(state),
+      withSupportedBattleRuntimeMetadataHidden(
+        withAllAttackTimingCombatMetadataHidden(state),
+      ),
     )
   ) {
     return unsupportedBattleResolution(
@@ -132,7 +136,9 @@ export const resolveSupportedVanillaBattle = (
     });
   }
 
-  const combatState = withAllAttackTimingCombatMetadataHidden(resolutionState);
+  const combatState = withSupportedBattleRuntimeMetadataHidden(
+    withAllAttackTimingCombatMetadataHidden(resolutionState),
+  );
   let view: ReturnType<typeof computeView>;
   try {
     view = computeView(combatState);
@@ -387,6 +393,11 @@ export const resolveSupportedVanillaBattle = (
         );
       }
     }
+  }
+
+  const koCandidates = detectBattleKOTriggerCandidates(nextState, events);
+  if (!koCandidates.ok) {
+    return toEngineResult(state, [], [koCandidates.error]);
   }
 
   return finalizeSupportedEndOfBattleCleanup({ state, nextState, events });
