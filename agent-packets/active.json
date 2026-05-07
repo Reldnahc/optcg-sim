@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-027A.md",
+      "storyId": "ENG-027A",
+      "storyPath": "stories/approved/ENG-027A-detect-battle-ko-trigger-candidates.yaml",
+      "storySha256": "52fdb8ae29105d1bc1efd5a6b7a4a321a77a3d07e2087c0fdf937b9975359117"
+    }
+  ],
   "version": 1
 }
