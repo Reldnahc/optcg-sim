@@ -534,6 +534,13 @@ export const isSupportedNoChoiceOnKODrawEffect = (
   effect.trigger.type === "onKO" &&
   isNoChoiceDrawEffectShape(effect);
 
+const isSupportedQueuedNoChoiceOnKODrawEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} => isSupportedNoChoiceOnKODrawEffect(effect);
+
 const isSupportedQueuedNoChoiceDrawEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
@@ -543,6 +550,7 @@ const isSupportedQueuedNoChoiceDrawEffect = (
   isNoChoiceDrawTriggerEffect(effect, "onPlay") ||
   isNoChoiceDrawTriggerEffect(effect, "whenAttacking") ||
   isNoChoiceDrawTriggerEffect(effect, "onOpponentAttack") ||
+  isSupportedQueuedNoChoiceOnKODrawEffect(effect) ||
   (effect.trigger.type === "custom" && isNoChoiceDrawEffectShape(effect));
 
 const findCardInstance = (

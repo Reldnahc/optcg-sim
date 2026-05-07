@@ -1789,6 +1789,10 @@ test("detects one supported On K.O. candidate from a battle K.O. event batch", (
     card: must(p2State.hand[0], "K.O. source"),
     zone: "characterArea",
   });
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
   const definition = setupOnKODefinition(state, source);
   const trashedSource: CardInstance = {
     ...source,
@@ -1836,6 +1840,10 @@ test("detects last-known On K.O. candidates with the field source snapshot", () 
     card: must(p2State.hand[0], "K.O. source"),
     zone: "characterArea",
   });
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
   const definition = setupOnKODefinition(state, source);
   const onKOEffect = must(definition.effects[0], "onKO effect");
   state.cardManifest.effectDefinitions = {
@@ -2162,6 +2170,223 @@ test("resolves queued supported draw from last-known source presence", () => {
     result.state.eventJournal.slice(-result.events.length),
     result.events,
   );
+});
+
+test("resolves queued supported On K.O. draw from trash destination presence", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const definition = setupOnKODefinition(state, source);
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  const trashedSource: CardInstance = {
+    ...source,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+  };
+  p2State.characters = [];
+  p2State.trash = [trashedSource];
+  const entry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId("queue-entry-on-ko-trash"),
+    timingWindowId: toTimingWindowId("timing-window-on-ko-trash"),
+    controllerId: p2,
+    source: {
+      instanceId: trashedSource.instanceId,
+      cardId: trashedSource.cardId,
+      playerId: p2,
+      zone: trashedSource.zone,
+    },
+    sourceSnapshot: {
+      ...toSourceSnapshot(trashedSource, p2, p2),
+      power: 3000,
+    },
+    effectBlockId: onKOEffect.id,
+    orderingGroup: "nonTurnPlayer",
+    sourcePresencePolicy: "resolveFromDestinationZone",
+  };
+  state.effectQueue = [entry];
+  const beforeDeck = p2State.deck.length;
+  const beforeHand = p2State.hand.length;
+
+  const result = processEffectRuntime(state);
+  const afterP2 = must(result.state.players[p2], "p2 result");
+  const resolvedEvent = result.events.find(
+    (event) => event.type === "effectResolved",
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(afterP2.deck.length, beforeDeck - 1);
+  assert.equal(afterP2.hand.length, beforeHand + 1);
+  assert.deepEqual(result.events.map((event) => event.type).slice(0, 5), [
+    "cardDrawn",
+    "cardMoved",
+    "cardMoved",
+    "effectResolved",
+    "ruleProcessingChecked",
+  ]);
+  assert.ok(resolvedEvent !== undefined);
+  assert.deepEqual(resolvedEvent.payload, {
+    queueEntryId: entry.id,
+    timingWindowId: entry.timingWindowId,
+    generation: entry.generation,
+    effectBlockId: entry.effectBlockId,
+    sourcePresencePolicy: "resolveFromDestinationZone",
+    orderingGroup: entry.orderingGroup,
+    status: "resolved",
+  });
+});
+
+test("resolves queued supported On K.O. draw from last-known source snapshot", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const definition = setupOnKODefinition(state, source);
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        {
+          ...onKOEffect,
+          sourcePresencePolicy: "resolveFromLastKnownInformation",
+        },
+      ],
+    },
+  };
+  p2State.characters = [];
+  const entry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId("queue-entry-on-ko-lki"),
+    timingWindowId: toTimingWindowId("timing-window-on-ko-lki"),
+    controllerId: p2,
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p2,
+      zone: source.zone,
+    },
+    sourceSnapshot: {
+      ...toSourceSnapshot(source, p2, p2),
+      power: 3000,
+    },
+    effectBlockId: onKOEffect.id,
+    orderingGroup: "nonTurnPlayer",
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+  };
+  state.effectQueue = [entry];
+  const beforeDeck = p2State.deck.length;
+  const beforeHand = p2State.hand.length;
+
+  const result = processEffectRuntime(state);
+  const afterP2 = must(result.state.players[p2], "p2 result");
+  const resolvedEvent = result.events.find(
+    (event) => event.type === "effectResolved",
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(afterP2.deck.length, beforeDeck - 1);
+  assert.equal(afterP2.hand.length, beforeHand + 1);
+  assert.ok(resolvedEvent !== undefined);
+  assert.deepEqual(resolvedEvent.payload, {
+    queueEntryId: entry.id,
+    timingWindowId: entry.timingWindowId,
+    generation: entry.generation,
+    effectBlockId: entry.effectBlockId,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    orderingGroup: entry.orderingGroup,
+    status: "resolved",
+  });
+});
+
+test("queued On K.O. draw with unsupported source-presence policy fails closed without mutation", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const definition = setupOnKODefinition(state, source);
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        {
+          ...onKOEffect,
+          sourcePresencePolicy: "noSourceRequired",
+        },
+      ],
+    },
+  };
+  const entry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId("queue-entry-on-ko-unsupported-policy"),
+    timingWindowId: toTimingWindowId("timing-window-on-ko-unsupported-policy"),
+    controllerId: p2,
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p2,
+      zone: source.zone,
+    },
+    sourceSnapshot: {
+      ...toSourceSnapshot(source, p2, p2),
+      power: 3000,
+    },
+    effectBlockId: onKOEffect.id,
+    orderingGroup: "nonTurnPlayer",
+    sourcePresencePolicy: "noSourceRequired",
+  };
+  state.effectQueue = [entry];
+  const before = structuredClone(state);
+  const beforeHash = hashCanonicalStateValue(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "unsupported-effect-queue",
+      details: {
+        reason: "unsupported-pending-runtime-work",
+        kind: "effectQueue",
+        count: 1,
+      },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+  assert.equal(result.stateHash, beforeHash);
 });
 
 test("queued source-presence policy mismatch with effect definition fails closed without mutation or events", () => {
