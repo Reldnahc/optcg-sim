@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-023C.md",
-      "storyId": "ENG-023C",
-      "storyPath": "stories/approved/ENG-023C-verify-attack-timing-ordering.yaml",
-      "storySha256": "614dca7ee1f46defa099bc3afcc4b706bcf18bd68cdf480a132a897c9ff0742e"
+      "packetPath": "agent-packets/ENG-023B.md",
+      "storyId": "ENG-023B",
+      "storyPath": "stories/approved/ENG-023B-queue-opponent-attack-effects.yaml",
+      "storySha256": "fd6ba932fb8234ff07b0cdbd5f84b51f9bea547b5d064dbc7b9fa78a87070e7b"
     }
   ],
   "version": 1
