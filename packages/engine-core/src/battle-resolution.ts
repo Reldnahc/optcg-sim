@@ -36,7 +36,10 @@ import {
   queueBattleKOTriggers,
 } from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
-import { getSupportedLifeTriggerDecision } from "./life-trigger-actions.js";
+import {
+  getSupportedLifeTriggerDecision,
+  hasLifeTriggerText,
+} from "./life-trigger-actions.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
 const unsupportedBattleResolution = (
@@ -233,8 +236,7 @@ export const resolveSupportedVanillaBattle = (
           );
       if (
         !attackerHasBanish &&
-        lifeMeta?.triggerText !== undefined &&
-        lifeMeta.triggerText.length > 0 &&
+        hasLifeTriggerText(lifeMeta?.triggerText) &&
         supportedLifeTriggerDecision === undefined
       ) {
         return unsupportedBattleResolution(

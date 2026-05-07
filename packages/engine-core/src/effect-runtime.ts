@@ -1632,15 +1632,38 @@ const resolveQueuedNoChoiceDrawEffect = (
   return match.effect;
 };
 
-const isLifeTriggerResolutionEntry = (entry: EffectQueueEntry): boolean =>
-  entry.source.zone?.zone === "noZone" ||
-  entry.sourceSnapshot.zone.zone === "noZone";
+const isLifeTriggerResolutionEntry = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): boolean => {
+  const isNoZoneSource =
+    entry.source.zone?.zone === "noZone" ||
+    entry.sourceSnapshot.zone.zone === "noZone";
+  if (!isNoZoneSource) {
+    return false;
+  }
+  if (
+    !String(entry.id).startsWith("queue-entry:life-trigger:") ||
+    !String(entry.timingWindowId).startsWith("timing-window:life-trigger:")
+  ) {
+    return false;
+  }
+  if (entry.causedBy.type !== "decision") {
+    return false;
+  }
+  return state.revealedCards.some(
+    (record) =>
+      record.origin === "lifeDamage" &&
+      record.cleanupPolicy === "trashAfterResolution" &&
+      record.cards.some((card) => card.instanceId === entry.source.instanceId),
+  );
+};
 
 const cleanupResolvedLifeTrigger = (
   state: GameState,
   entry: EffectQueueEntry,
 ): { state: GameState; events: EngineEvent[] } => {
-  if (!isLifeTriggerResolutionEntry(entry)) {
+  if (!isLifeTriggerResolutionEntry(state, entry)) {
     return { state, events: [] };
   }
   const player = state.players[entry.controllerId];
