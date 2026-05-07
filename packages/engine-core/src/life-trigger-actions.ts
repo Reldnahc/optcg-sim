@@ -20,7 +20,10 @@ import {
   toStateSeq,
 } from "./action-results.js";
 import { reindexZoneCards } from "./action-state.js";
-import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
+import {
+  processEffectRuntime,
+  resolveImplementedDslEffectDefinition,
+} from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
@@ -125,6 +128,22 @@ export const getSupportedLifeTriggerDecision = (
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
 ];
+
+const toErrorTuple = (
+  errors: readonly EngineError[],
+): readonly [EngineError, ...EngineError[]] => {
+  const first = errors[0];
+  if (first === undefined) {
+    return [
+      {
+        type: "effectRuntimeError",
+        effectId: "life-trigger-effect-runtime",
+        details: { reason: "empty-runtime-error-list" },
+      },
+    ];
+  }
+  return [first, ...errors.slice(1)];
+};
 
 const isCardInNormalZone = (
   state: GameState,
@@ -344,7 +363,11 @@ const applyActivatedTriggerResponse = (
   };
   delete nextState.pendingDecision;
   assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  const resolved = processEffectRuntime(nextState);
+  if (resolved.errors !== undefined) {
+    return toEngineResult(state, [], toErrorTuple(resolved.errors));
+  }
+  return toEngineResult(resolved.state, [...events, ...resolved.events]);
 };
 
 export const applyLifeTriggerDecisionResponse = (
