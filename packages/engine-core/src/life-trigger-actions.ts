@@ -39,8 +39,8 @@ const hasUnsupportedShape = (effect: EffectBlock): boolean =>
   effect.condition !== undefined ||
   effect.conditionTiming !== undefined ||
   effect.failurePolicy !== undefined ||
-  effect.optional === true ||
-  effect.oncePerTurn === true;
+  effect.optional !== undefined ||
+  effect.oncePerTurn !== undefined;
 
 const isExactSupportedTriggerDefinition = (
   definition: EffectDefinition | undefined,

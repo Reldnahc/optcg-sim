@@ -1150,11 +1150,14 @@ test("applyAction declareAttack creates life trigger decision for supported trig
   };
   const definition = effectDefinition(lifeCardId, { type: "trigger" });
   const effect = must(definition.effects[0], "trigger effect");
+  const effectWithoutFlags = { ...effect };
+  delete effectWithoutFlags.optional;
+  delete effectWithoutFlags.oncePerTurn;
   const supported = {
     ...definition,
     effects: [
       {
-        ...effect,
+        ...effectWithoutFlags,
         sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
       },
     ],
