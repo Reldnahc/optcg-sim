@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-024B.md",
-      "storyId": "ENG-024B",
-      "storyPath": "stories/approved/ENG-024B-regress-same-zone-source-presence.yaml",
-      "storySha256": "de6ce71144884f863e4ba3510020808288fcfaa5fee3ce07d92766f6dce13871"
+      "packetPath": "agent-packets/ENG-024C.md",
+      "storyId": "ENG-024C",
+      "storyPath": "stories/approved/ENG-024C-regress-destination-and-lki-source-presence.yaml",
+      "storySha256": "172c93cfc418db0e8c3c0dc48d2b99dd075babec67f7c138ece418360a54cbb6"
     }
   ],
   "version": 1
