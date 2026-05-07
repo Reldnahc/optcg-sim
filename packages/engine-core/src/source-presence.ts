@@ -103,6 +103,14 @@ const evaluateLiveZonePresence = (
       reason: "liveSourceIdentityMismatch",
     };
   }
+  if (liveSource.controller !== entry.source.playerId) {
+    return {
+      ok: false,
+      policy: entry.sourcePresencePolicy,
+      sourcePresence: "failClosed",
+      reason: "liveSourceIdentityMismatch",
+    };
+  }
   if (!zonesMatch(liveSource.zone, expectedZone)) {
     return {
       ok: false,

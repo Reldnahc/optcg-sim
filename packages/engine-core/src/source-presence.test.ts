@@ -16,7 +16,8 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { createActiveState, must, p1 } from "./action-test-fixtures.js";
+import { hashCanonicalStateValue } from "./canonical-state.js";
+import { createActiveState, must, p1, p2 } from "./action-test-fixtures.js";
 import { evaluateQueuedEffectSourcePresence } from "./source-presence.js";
 
 const toCardId = (value: string): CardId => value as CardId;
@@ -129,6 +130,165 @@ test("mustRemainInSameZone accepts only a live source in entry source zone", () 
     policy: "mustRemainInSameZone",
     sourcePresence: "failClosed",
     reason: "liveSourceNotInExpectedZone",
+  });
+});
+
+test("mustRemainInSameZone accepts matching live source instance, card, player, and zone data", () => {
+  const state = createActiveState();
+  const source = p1Leader(state);
+  const entry = queueEntry(source, {
+    source: sourceRef(source, p1),
+    sourceSnapshot: sourceSnapshot(source, p1),
+    sourcePresencePolicy: "mustRemainInSameZone",
+  });
+
+  assert.deepEqual(evaluateQueuedEffectSourcePresence(state, entry), {
+    ok: true,
+    policy: "mustRemainInSameZone",
+    sourcePresence: "present",
+    sourceBasis: "liveZone",
+  });
+});
+
+test("mustRemainInSameZone rejects missing live source for current queue-entry source data", () => {
+  const state = createActiveState();
+  const source = p1Leader(state);
+  const entry = queueEntry(source, {
+    source: {
+      ...sourceRef(source, p1),
+      instanceId: toInstanceId("missing-live-source"),
+    },
+    sourceSnapshot: {
+      ...sourceSnapshot(source, p1),
+      instanceId: toInstanceId("missing-live-source"),
+    },
+    sourcePresencePolicy: "mustRemainInSameZone",
+  });
+
+  assert.deepEqual(evaluateQueuedEffectSourcePresence(state, entry), {
+    ok: false,
+    policy: "mustRemainInSameZone",
+    sourcePresence: "failClosed",
+    reason: "liveSourceNotFound",
+  });
+});
+
+test("mustRemainInSameZone rejects mismatched live source identity data", () => {
+  const state = createActiveState();
+  const source = p1Leader(state);
+  const entry = queueEntry(source, {
+    sourcePresencePolicy: "mustRemainInSameZone",
+  });
+  const player = must(state.players[p1], "p1");
+  state.players[p1] = {
+    ...player,
+    leader: {
+      ...source,
+      controller: toPlayerId("other-controller"),
+    },
+  };
+
+  assert.deepEqual(evaluateQueuedEffectSourcePresence(state, entry), {
+    ok: false,
+    policy: "mustRemainInSameZone",
+    sourcePresence: "failClosed",
+    reason: "liveSourceIdentityMismatch",
+  });
+});
+
+test("mustRemainInSameZone represents current same-zone trigger source expectations", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const playedSource: CardInstance = {
+    ...must(p1State.hand[0], "played source"),
+    zone: {
+      zone: "characterArea",
+      playerId: p1,
+      slot: "character",
+      index: 0,
+    },
+  };
+  const whenAttackingSource = p1State.leader;
+  const opponentAttackSource = p2State.leader;
+  const sourceCases: Array<{
+    effectBlockId: EffectId;
+    playerId: PlayerId;
+    source: CardInstance;
+  }> = [
+    {
+      effectBlockId: toEffectId("fixture-on-play"),
+      playerId: p1,
+      source: playedSource,
+    },
+    {
+      effectBlockId: toEffectId("fixture-when-attacking"),
+      playerId: p1,
+      source: whenAttackingSource,
+    },
+    {
+      effectBlockId: toEffectId("fixture-on-opponent-attack"),
+      playerId: p2,
+      source: opponentAttackSource,
+    },
+  ];
+  const sameZoneState: GameState = {
+    ...state,
+    players: {
+      ...state.players,
+      [p1]: {
+        ...p1State,
+        characters: [playedSource],
+        hand: p1State.hand.slice(1).map((card, index) => ({
+          ...card,
+          zone: { zone: "hand", playerId: p1, slot: "hand", index },
+        })),
+      },
+    },
+  };
+
+  for (const { effectBlockId, playerId, source } of sourceCases) {
+    assert.deepEqual(
+      evaluateQueuedEffectSourcePresence(
+        sameZoneState,
+        queueEntry(source, {
+          effectBlockId,
+          controllerId: playerId,
+          source: sourceRef(source, playerId),
+          sourceSnapshot: sourceSnapshot(source, playerId),
+          sourcePresencePolicy: "mustRemainInSameZone",
+        }),
+      ),
+      {
+        ok: true,
+        policy: "mustRemainInSameZone",
+        sourcePresence: "present",
+        sourceBasis: "liveZone",
+      },
+      effectBlockId,
+    );
+  }
+});
+
+test("mustRemainInSameZone accepted checks are deterministic and leave fixture state hash stable", () => {
+  const state = createActiveState();
+  const source = p1Leader(state);
+  const entry = queueEntry(source, {
+    sourcePresencePolicy: "mustRemainInSameZone",
+  });
+  const beforeHash = hashCanonicalStateValue(state);
+
+  const first = evaluateQueuedEffectSourcePresence(state, entry);
+  const second = evaluateQueuedEffectSourcePresence(state, entry);
+  const afterHash = hashCanonicalStateValue(state);
+
+  assert.deepEqual(first, second);
+  assert.equal(afterHash, beforeHash);
+  assert.deepEqual(first, {
+    ok: true,
+    policy: "mustRemainInSameZone",
+    sourcePresence: "present",
+    sourceBasis: "liveZone",
   });
 });
 
