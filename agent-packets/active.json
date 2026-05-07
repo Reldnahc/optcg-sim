@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-028A.md",
-      "storyId": "ENG-028A",
-      "storyPath": "stories/approved/ENG-028A-detect-life-trigger-and-create-decision.yaml",
-      "storySha256": "a15b34c01992197ca8cd9d7d7eb8cc9e43d54f41769e1b7ab3a20de87b7d3c64"
+      "packetPath": "agent-packets/ENG-028B.md",
+      "storyId": "ENG-028B",
+      "storyPath": "stories/approved/ENG-028B-resolve-life-trigger-decline-to-hand.yaml",
+      "storySha256": "54d6c32798313d0358bbce58d9ed900f47d2c56aadf9d4cc291540b412c4ce8b"
     }
   ],
   "version": 1
