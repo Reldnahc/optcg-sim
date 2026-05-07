@@ -26,6 +26,10 @@ import {
 import { computeView } from "./compute-view.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
+import {
+  getSupportedLifeTriggerDecision,
+  hasLifeTriggerText,
+} from "./life-trigger-actions.js";
 
 type BattleResolver = (state: GameState) => EngineResult;
 
@@ -662,12 +666,12 @@ const getUnsupportedDamageStepContinuationReason = (
     const targetPlayer = state.players[target.playerId];
     const topLife = targetPlayer?.life[0];
     const topLifeMeta =
-      topLife === undefined
-        ? undefined
-        : state.cardManifest.cards[topLife.card.cardId];
+      topLife && state.cardManifest.cards[topLife.card.cardId];
     if (
-      topLifeMeta?.triggerText !== undefined &&
-      topLifeMeta.triggerText.length > 0
+      topLife !== undefined &&
+      hasLifeTriggerText(topLifeMeta?.triggerText) &&
+      getSupportedLifeTriggerDecision(state, target.playerId, topLife.card) ===
+        undefined
     ) {
       return "Life trigger reveal decisions are unsupported in this battle path.";
     }

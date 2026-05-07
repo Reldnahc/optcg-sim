@@ -17,6 +17,7 @@ import {
   effectDefinition,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
+import { filterStateForPlayer } from "./filter-state-for-player.js";
 test("supported declareAttack resolves vanilla battle internally without continuation action", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -1138,24 +1139,54 @@ test("banish attacker with unsupported blocker metadata fails closed without mut
   runBlockerMetadata();
 });
 
-test("applyAction declareAttack fails closed without mutation when vanilla continuation is unsupported", () => {
+test("applyAction declareAttack creates life trigger decision for supported trigger life damage", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   const topLife = must(p2State.life[0], "top life");
+  const lifeCardId = toCardId("trigger-life");
+  const beforeLifeCount = p2State.life.length;
   p2State.life[0] = {
     ...topLife,
-    card: { ...topLife.card, cardId: toCardId("trigger-life") },
+    card: { ...topLife.card, cardId: lifeCardId },
   };
-  state.cardManifest.cards[toCardId("trigger-life")] = {
+  const definition = effectDefinition(lifeCardId, { type: "trigger" });
+  const effect = must(definition.effects[0], "trigger effect");
+  const effectWithoutFlags = { ...effect };
+  delete effectWithoutFlags.optional;
+  delete effectWithoutFlags.oncePerTurn;
+  const supported = {
+    ...definition,
+    effects: [
+      {
+        ...effectWithoutFlags,
+        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+      },
+    ],
+  };
+  state.cardManifest.cards[lifeCardId] = {
     ...resolvedCard({
-      cardId: toCardId("trigger-life"),
+      cardId: lifeCardId,
       category: "character",
       power: 1000,
     }),
-    triggerText: "TRIGGER: do a thing",
+    triggerText: "TRIGGER: draw 1 card",
+    support: {
+      cardId: lifeCardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def-life-trigger",
+      tested: true,
+      rulesVersion: supported.metadata.rulesVersion,
+      cardDataVersion: "fixture",
+      sourceTextHash: supported.metadata.sourceTextHash,
+      behaviorHash: "behavior-hash",
+    },
   };
-  const before = JSON.stringify(state);
+  state.cardManifest.effectDefinitionsVersion =
+    supported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-life-trigger": supported,
+  };
 
   const result = applyDeclareAttack(state, {
     type: "declareAttack",
@@ -1171,8 +1202,66 @@ test("applyAction declareAttack fails closed without mutation when vanilla conti
     },
   });
 
-  assert.equal(result.errors?.[0]?.type, "illegalAction");
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
-  assert.deepEqual(result.events, []);
+  assert.equal(result.errors, undefined);
+  const pendingDecision = must(
+    result.state.pendingDecision,
+    "pending decision",
+  );
+  assert.equal(pendingDecision.type, "confirmLifeTrigger");
+  assert.deepEqual(pendingDecision.options, ["activateTrigger", "addToHand"]);
+  assert.equal(pendingDecision.playerId, p2);
+  const nextP2 = must(result.state.players[p2], "next p2");
+  assert.equal(
+    nextP2.hand.some((card) => card.cardId === lifeCardId),
+    false,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.cardId === lifeCardId),
+    false,
+  );
+  assert.equal(
+    nextP2.life.some((lifeCard) => lifeCard.card.cardId === lifeCardId),
+    false,
+  );
+  assert.equal(pendingDecision.card.cardId, lifeCardId);
+  assert.equal(pendingDecision.card.zone, undefined);
+  assert.equal(nextP2.life.length, beforeLifeCount - 1);
+  assert.equal(
+    filterStateForPlayer(result.state, p1).opponent.life.count,
+    beforeLifeCount - 1,
+  );
+  assert.equal(
+    filterStateForPlayer(result.state, p2).self.life.count,
+    beforeLifeCount - 1,
+  );
+  const opponentView = filterStateForPlayer(result.state, p1);
+  assert.equal(
+    JSON.stringify(opponentView.events).includes("confirmLifeTrigger"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(opponentView.events).includes(String(pendingDecision.id)),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(opponentView.events).includes(String(lifeCardId)),
+    false,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "lifeTaken"),
+    true,
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "cardMoved" &&
+        event.visibility.type === "private" &&
+        (event.payload as { cardId?: string }).cardId === lifeCardId,
+    ),
+    false,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "decisionCreated"),
+    true,
+  );
 });

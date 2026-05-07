@@ -25,6 +25,10 @@ import {
 import { hasUnsupportedCounterWindow } from "./battle-counter-actions.js";
 import { computeView } from "./compute-view.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
+import {
+  getSupportedLifeTriggerDecision,
+  hasLifeTriggerText,
+} from "./life-trigger-actions.js";
 
 type BattleResolver = (state: GameState) => EngineResult;
 
@@ -216,12 +220,12 @@ const hasUnsupportedBlockDecisionState = (
     const targetPlayer = state.players[target.playerId];
     const topLife = targetPlayer?.life[0];
     const topLifeMeta =
-      topLife === undefined
-        ? undefined
-        : state.cardManifest.cards[topLife.card.cardId];
+      topLife && state.cardManifest.cards[topLife.card.cardId];
     if (
-      topLifeMeta?.triggerText !== undefined &&
-      topLifeMeta.triggerText.length > 0
+      topLife !== undefined &&
+      hasLifeTriggerText(topLifeMeta?.triggerText) &&
+      getSupportedLifeTriggerDecision(state, target.playerId, topLife.card) ===
+        undefined
     ) {
       return true;
     }
