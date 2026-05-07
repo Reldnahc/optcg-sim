@@ -1,0 +1,109 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-023
+epic_id: KICK-001
+title: Attack timing trigger foundation parent
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Deliver deterministic attack-timing trigger queueing after attack declaration
+  through concern-scoped child stories.
+story_boundary: >
+  This parent story is not directly implementable. It coordinates the first
+  supported attack-timing trigger slice while preserving existing Blocker,
+  Counter, damage, hidden-info, and public action contracts.
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-counter-actions.ts
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/battle-support.ts
+  - packages/engine-core/src/attack-timing.ts
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/battle-declare-attack.test.ts
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - stories/generated/ENG-023-attack-timing-trigger-foundation-parent.yaml
+  - stories/approved/ENG-023A-queue-when-attacking-effects.yaml
+  - stories/approved/ENG-023B-queue-opponent-attack-effects.yaml
+  - stories/approved/ENG-023C-verify-attack-timing-ordering.yaml
+  - stories/approved/ENG-023D-guard-unsupported-attack-timing-effects.yaml
+spec_refs:
+  - 02-engine-mechanics.s017 (Battle sequence)
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s022 (End of Battle)
+  - 02-engine-mechanics.s041 (Timing windows)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 04-effect-runtime.s007 (Source presence policy)
+  - 04-effect-runtime.s008 (Trigger detection from events)
+  - 09-card-data-and-support-policy.s011 (Support policy by mode)
+  - 11-testing-quality.s007 (Interaction tests)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+  - 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+scope:
+  - queue supported attack-timing effects deterministically from attackDeclared-derived timing windows
+  - preserve source presence policy for attack-timing effects using mustRemainInSameZone
+  - preserve existing Blocker, Counter, Banish, damage, End of Battle cleanup, event sequencing, state hash, and hidden-info behavior except where attack-timing queueing explicitly affects battle continuation
+  - prove attacker timing resolves before defender opponent-attack timing, and defender opponent-attack timing resolves before ordinary Counter Step actions
+  - fail closed for unsupported attack-timing effects without mutating state or leaking hidden information
+non_scope:
+  - direct implementation from this parent story
+  - approving or packetizing this parent story as an active implementation story
+  - Counter implementation changes
+  - Blocker changes
+  - Life Triggers
+  - On K.O.
+  - replacement effects
+  - target selection unless already supported
+  - server, browser client, UI, database, Redis, WebSocket, replay schema, or CLI behavior
+dependencies:
+  - ENG-022
+child_stories:
+  - id: ENG-023A
+    title: Queue When Attacking effects
+    concern: Queue and resolve supported attacker When Attacking effects immediately after attackDeclared.
+    depends_on: [ENG-022]
+  - id: ENG-023B
+    title: Queue opponent attack effects
+    concern: Queue and resolve supported defender On Your Opponent's Attack effects after Block Step and before ordinary Counter Step actions or Counter Step pass decisions.
+    depends_on: [ENG-023A]
+  - id: ENG-023C
+    title: Verify attack timing ordering
+    concern: Add regression coverage proving attacker timing resolves before defender attack-response timing and preserves event/hash sequencing.
+    depends_on: [ENG-023B]
+  - id: ENG-023D
+    title: Guard unsupported attack timing effects
+    concern: Fail closed for unsupported attack-timing effects without leaking hidden information or mutating state.
+    depends_on: [ENG-023C]
+acceptance_criteria:
+  - child stories exist and pass set-level and per-story story-review before implementation
+  - attacker When Attacking effects queue after attackDeclared and resolve before defender attack-response timing
+  - defender On Your Opponent's Attack effects queue after attacker timing and before ordinary Counter Step actions
+  - source presence and unsupported-effect fail-closed behavior remain deterministic
+  - final parent branch passes packet verification, focused attack/battle/effect tests, engine-core typecheck, coverage, and full verify
+required_tests:
+  - story-review agent must verify this parent is replaced by concern-scoped child stories before implementation begins
+repo_rules:
+  - story-review must pass before presenting this story group as approval-ready
+  - use the parent integration branch workflow if this parent story is approved
+  - do not approve or packetize this parent story as an active implementation story
+  - approve only ENG-023A through ENG-023D as implementation candidates
+  - a set-level story-review does not satisfy exact per-story story-review for any child
+  - run exact per-story story-review for each child story before moving it to approved or implementing it
+  - implement one active substory packet at a time
+  - substory PRs target the parent integration branch
+  - do not run packets:complete for substories until the parent branch lands on main
+  - run full parent PR integration review and human review before merging ENG-023 to main
+  - after parent merge, run packets:complete-many for ENG-023A through ENG-023D
+  - if attack timing requires Counter, Blocker, target-selection, Life Trigger, On K.O., or replacement behavior changes, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate

@@ -1,0 +1,89 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-023D
+epic_id: KICK-001
+title: Guard unsupported attack timing effects
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Fail closed for unsupported attack-timing effects without mutating state,
+  leaking hidden information, or weakening existing battle guards.
+story_boundary: >
+  Own only unsupported When Attacking and On Your Opponent's Attack guard
+  behavior in the attack-timing queueing path and supporting regression tests.
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-counter-actions.ts
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/battle-support.ts
+  - packages/engine-core/src/attack-timing.ts
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/battle-declare-attack.test.ts
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - stories/approved/ENG-023D-guard-unsupported-attack-timing-effects.yaml
+  - agent-packets/ENG-023D.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s018 (Attack Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 02-engine-mechanics.s041 (Timing windows)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s006 (Event visibility)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 04-effect-runtime.s007 (Source presence policy)
+  - 04-effect-runtime.s008 (Trigger detection from events)
+  - 06-visibility-security.s023 (Hidden information acceptance tests)
+  - 09-card-data-and-support-policy.s011 (Support policy by mode)
+  - 11-testing-quality.s007 (Interaction tests)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+  - 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+scope:
+  - fail closed when matching When Attacking or On Your Opponent's Attack definitions require unsupported choices, costs, target selection, custom handlers, optional choices, or unsupported primitives
+  - fail closed when attack-timing source presence cannot be proven under mustRemainInSameZone
+  - preserve existing unsupported battle metadata guards for unrelated battle timing, triggers, replacements, continuous effects, and runtime queue work
+  - ensure unsupported attack-timing diagnostics are deterministic and do not expose hidden hand, deck, or face-down life identities
+  - keep accepted supported attack-timing behavior from ENG-023A through ENG-023C unchanged
+non_scope:
+  - adding new supported effect primitives
+  - Counter implementation changes
+  - Blocker changes
+  - Life Triggers
+  - On K.O.
+  - replacement effects
+  - target selection unless already supported
+  - server/client/UI, database, Redis, WebSocket, replay schema, or CLI behavior
+dependencies:
+  - ENG-023C
+acceptance_criteria:
+  - unsupported attacker When Attacking effects reject deterministically without mutation
+  - unsupported defender On Your Opponent's Attack effects reject deterministically without mutation
+  - unsupported attack-timing errors do not leak hidden card identities
+  - existing unsupported battle guard tests still pass
+  - supported attack-timing ordering regressions remain green
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/battle-declare-attack.test.ts packages/engine-core/src/battle-pipeline-regression.test.ts packages/engine-core/src/effect-runtime.test.ts packages/engine-core/src/event-sequencing-regression.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-023D packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-023 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - changes to battle-counter-actions.ts or battle-resolution.ts are limited to unsupported attack-timing guard integration at Counter Step entry
+  - if support requires new effect primitives, target selection, Counter action semantics, Blocker semantics, Life Trigger, On K.O., or replacement behavior, stop and split or record the blocker
+  - implementation-review gate is required after the PR is opened
+ambiguity_policy: fail_and_escalate
