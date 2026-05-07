@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-022B.md",
-      "storyId": "ENG-022B",
-      "storyPath": "stories/approved/ENG-022B-extract-battle-support-and-guards.yaml",
-      "storySha256": "bb3efa7b4af3aeaab902d9816c596fc5f378dc489776de707c10031f854226df"
+      "packetPath": "agent-packets/ENG-022C.md",
+      "storyId": "ENG-022C",
+      "storyPath": "stories/approved/ENG-022C-extract-block-and-counter-step-actions.yaml",
+      "storySha256": "4e5b63ca250f19f3cb0b0b91cfe76fa18accdbde4f2bf441287644eefeb3946c"
     }
   ],
   "version": 1
