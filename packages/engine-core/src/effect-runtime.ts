@@ -240,6 +240,10 @@ export type DetectBattleKOTriggerCandidatesResult =
   | { ok: true; candidates: BattleKOTriggerCandidate[] }
   | { ok: false; error: EngineError };
 
+export type QueueBattleKOTriggersResult =
+  | { ok: true; state: GameState }
+  | { ok: false; error: EngineError };
+
 const drawExecutionError = (
   effectId: string,
   reason: DrawExecutionFailureReason,
@@ -773,6 +777,92 @@ export const detectBattleKOTriggerCandidates = (
   }
 
   return { ok: true, candidates };
+};
+
+export const queueBattleKOTriggers = (
+  state: GameState,
+  eventBaseState: GameState,
+  events: EngineEvent[],
+): QueueBattleKOTriggersResult => {
+  const detected = detectBattleKOTriggerCandidates(state, events);
+  if (!detected.ok) {
+    return detected;
+  }
+  if (detected.candidates.length === 0) {
+    return { ok: true, state };
+  }
+
+  const appended: EffectQueueEntry[] = [];
+  for (const candidate of detected.candidates) {
+    const triggerEvent = events.find(
+      (event) => event.id === candidate.triggerEventId,
+    );
+    if (triggerEvent === undefined) {
+      return {
+        ok: false,
+        error: onKOTriggerCandidateDetectionError("invalid-ko-event-batch"),
+      };
+    }
+
+    const orderingGroup =
+      candidate.controllerId === state.turn.turnPlayerId
+        ? "turnPlayer"
+        : "nonTurnPlayer";
+    const entry: EffectQueueEntry = {
+      id: `queue-entry:${String(candidate.triggerEventId)}:${String(
+        candidate.effectBlockId,
+      )}` as EffectQueueEntry["id"],
+      state: "pending",
+      timingWindowId:
+        `timing-window:${String(candidate.triggerEventId)}:onKO` as EffectQueueEntry["timingWindowId"],
+      generation: 0,
+      controllerId: candidate.controllerId,
+      source: candidate.source,
+      sourceSnapshot: candidate.sourceSnapshot,
+      triggerEventId: candidate.triggerEventId,
+      effectBlockId: candidate.effectBlockId,
+      orderingGroup,
+      createdAtEventSeq: triggerEvent.seq,
+      queuedAtStateSeq: state.seq,
+      sourcePresencePolicy: candidate.sourcePresencePolicy,
+      causedBy: {
+        type: "ruleProcess",
+        name: "effectRuntime:onKOTriggerQueueing",
+      },
+    };
+    appended.push(entry);
+  }
+
+  for (const entry of appended) {
+    const beforeEventCount = events.length;
+    appendEvent(
+      eventBaseState,
+      events,
+      "effectQueued",
+      {
+        queueEntryId: entry.id,
+        timingWindowId: entry.timingWindowId,
+        generation: entry.generation,
+        effectBlockId: entry.effectBlockId,
+        triggerEventId: entry.triggerEventId,
+        sourcePresencePolicy: entry.sourcePresencePolicy,
+        orderingGroup: entry.orderingGroup,
+      },
+      { type: "public" },
+    );
+    const queuedEvent = events[beforeEventCount];
+    if (queuedEvent !== undefined) {
+      queuedEvent.causedBy = entry.causedBy;
+    }
+  }
+
+  return {
+    ok: true,
+    state: {
+      ...state,
+      effectQueue: [...state.effectQueue, ...appended],
+    },
+  };
 };
 
 const queueOnPlayTriggers = (state: GameState): EngineResult | undefined => {
