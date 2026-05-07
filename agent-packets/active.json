@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-028D.md",
-      "storyId": "ENG-028D",
-      "storyPath": "stories/approved/ENG-028D-resolve-simple-life-trigger-effect.yaml",
-      "storySha256": "783fc0ddc6073332a80df032fb4dc7b50b0c18ab6ce3959185bb5071762faa3d"
+      "packetPath": "agent-packets/ENG-028E.md",
+      "storyId": "ENG-028E",
+      "storyPath": "stories/approved/ENG-028E-verify-life-trigger-hidden-info.yaml",
+      "storySha256": "b1ae98775d58c3c302ecceb00b0d4566ef02cd945c0dc4f46cbc45ced182da9d"
     }
   ],
   "version": 1
