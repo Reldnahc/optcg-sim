@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-025A.md",
-      "storyId": "ENG-025A",
-      "storyPath": "stories/approved/ENG-025A-detect-same-player-trigger-order-buckets.yaml",
-      "storySha256": "f9fec57146234a6180966e0482af79b05752f4b4c5d68d6c3116285d85d7c258"
+      "packetPath": "agent-packets/ENG-025B.md",
+      "storyId": "ENG-025B",
+      "storyPath": "stories/approved/ENG-025B-create-trigger-order-decision.yaml",
+      "storySha256": "cb5f5be5772c2189a461f9aacf2ed4aaf5a06ce399fb61eb41598ce534718b9a"
     }
   ],
   "version": 1
