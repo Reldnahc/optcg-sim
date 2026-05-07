@@ -376,7 +376,7 @@ export const resolveSupportedVanillaBattle = (
             decisionType: supportedLifeTriggerDecision.type,
             playerId: supportedLifeTriggerDecision.playerId,
           },
-          { type: "public" },
+          { type: "private", playerId: target.playerId },
         );
         nextState = {
           ...nextState,

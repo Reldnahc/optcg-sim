@@ -1234,6 +1234,19 @@ test("applyAction declareAttack creates life trigger decision for supported trig
     filterStateForPlayer(result.state, p2).self.life.count,
     beforeLifeCount - 1,
   );
+  const opponentView = filterStateForPlayer(result.state, p1);
+  assert.equal(
+    JSON.stringify(opponentView.events).includes("confirmLifeTrigger"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(opponentView.events).includes(String(pendingDecision.id)),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(opponentView.events).includes(String(lifeCardId)),
+    false,
+  );
   assert.equal(
     result.events.some((event) => event.type === "lifeTaken"),
     true,
