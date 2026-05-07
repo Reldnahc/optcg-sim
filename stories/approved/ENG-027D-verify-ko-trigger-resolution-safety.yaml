@@ -1,0 +1,85 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-027D
+epic_id: KICK-001
+title: Verify K.O. trigger resolution safety
+type: verification
+area: engine
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Prove supported K.O. trigger resolution composes with battle cleanup,
+  deterministic event sequencing, stable state hashes, and PlayerView filtering.
+story_boundary: >
+  Own only integration/regression coverage and the smallest necessary repair if
+  the regression exposes a landed bug in the supported K.O. trigger path. Do not
+  add new K.O. trigger behavior beyond ENG-027A through ENG-027C.
+allowed_touch_points:
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - packages/engine-core/src/filter-state-for-player.test.ts
+  - packages/engine-core/src/filter-state-for-player.real-states.test.ts
+  - packages/engine-core/src/filter-state-for-player.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - stories/approved/ENG-027D-verify-ko-trigger-resolution-safety.yaml
+  - agent-packets/ENG-027D.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 04-effect-runtime.s006 (Effect queue entry)
+  - 04-effect-runtime.s007 (Source presence policy)
+  - 04-effect-runtime.s008 (Trigger detection from events)
+  - 04-effect-runtime.s009 (Effect queue ordering)
+  - 04-effect-runtime.s010 (Queue processing)
+  - 06-visibility-security.s004 (PlayerView shape)
+  - 11-testing-quality.s007 (Interaction tests)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 11-testing-quality.s011 (Hidden-information tests)
+  - 18-acceptance-tests.s004 (Effect runtime acceptance tests)
+scope:
+  - verify battle K.O. can queue and resolve a supported no-choice K.O. effect before final visible continuation completes
+  - verify K.O. trigger resolution composes with End of Battle cleanup and does not leave battle context, thisBattle modifiers, pending queues, or stale decisions behind
+  - verify event sequencing remains strictly increasing in EngineResult.events and state.eventJournal
+  - verify repeated equivalent states produce stable hashes
+  - verify PlayerView output omits effectQueue internals, sourceSnapshot internals, queue entry IDs, trigger ordering internals, and hidden card identities
+  - verify unsupported K.O. effect shapes still fail closed without mutation
+non_scope:
+  - new K.O. trigger behavior beyond ENG-027A through ENG-027C
+  - Life Triggers
+  - replacement effects
+  - target selection
+  - custom handlers
+  - optional activation
+  - once-per-turn behavior
+  - server/client/UI
+  - replay schema or replay storage
+dependencies:
+  - ENG-027C
+acceptance_criteria:
+  - integration tests cover supported K.O. trigger queue and resolution from a real battle K.O. state
+  - supported K.O. trigger paths leave no unsupported pending runtime work after resolution and cleanup
+  - EngineResult.events and state.eventJournal are strictly increasing by seq with unique event IDs in the result
+  - repeated equivalent battle K.O. states produce the same event type/order summary and final state hash
+  - filterStateForPlayer for both players does not expose effectQueue internals, queue entry IDs, source snapshots, trigger ordering internals, or hidden card identities
+  - unsupported K.O. effect metadata still fails closed without mutation
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/battle-pipeline-regression.test.ts packages/engine-core/src/event-sequencing-regression.test.ts packages/engine-core/src/filter-state-for-player.test.ts packages/engine-core/src/filter-state-for-player.real-states.test.ts packages/engine-core/src/effect-runtime.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-027D packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-027 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if verification requires new gameplay behavior rather than a narrow repair to landed ENG-027 behavior, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate

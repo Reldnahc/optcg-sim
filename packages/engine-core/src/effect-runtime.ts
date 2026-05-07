@@ -203,6 +203,13 @@ export type OnOpponentAttackTriggerQueueingFailureReason =
   | "unsupported-on-opponent-attack-definition"
   | "multiple-on-opponent-attack-effects";
 
+export type OnKOTriggerCandidateDetectionFailureReason =
+  | "invalid-ko-event-batch"
+  | "source-presence-failed"
+  | "missing-card-definition"
+  | "unsupported-on-ko-definition"
+  | "multiple-on-ko-effects";
+
 interface OnPlayTriggerQueueingErrorDetails {
   reason: OnPlayTriggerQueueingFailureReason;
 }
@@ -214,6 +221,28 @@ interface WhenAttackingTriggerQueueingErrorDetails {
 interface OnOpponentAttackTriggerQueueingErrorDetails {
   reason: OnOpponentAttackTriggerQueueingFailureReason;
 }
+
+interface OnKOTriggerCandidateDetectionErrorDetails {
+  reason: OnKOTriggerCandidateDetectionFailureReason;
+}
+
+export interface BattleKOTriggerCandidate {
+  effectBlockId: EffectDefinition["effects"][number]["id"];
+  controllerId: PlayerId;
+  source: EffectQueueEntry["source"];
+  sourceSnapshot: EffectQueueEntry["sourceSnapshot"];
+  triggerEventId: EngineEvent["id"];
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  causedBy: EffectQueueEntry["causedBy"];
+}
+
+export type DetectBattleKOTriggerCandidatesResult =
+  | { ok: true; candidates: BattleKOTriggerCandidate[] }
+  | { ok: false; error: EngineError };
+
+export type QueueBattleKOTriggersResult =
+  | { ok: true; state: GameState }
+  | { ok: false; error: EngineError };
 
 const drawExecutionError = (
   effectId: string,
@@ -246,6 +275,14 @@ const onOpponentAttackTriggerQueueingError = (
   type: "effectRuntimeError",
   effectId: "on-opponent-attack-trigger-queueing",
   details: { reason } satisfies OnOpponentAttackTriggerQueueingErrorDetails,
+});
+
+const onKOTriggerCandidateDetectionError = (
+  reason: OnKOTriggerCandidateDetectionFailureReason,
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId: "on-ko-trigger-candidate-detection",
+  details: { reason } satisfies OnKOTriggerCandidateDetectionErrorDetails,
 });
 
 const resolvePlayerId = (
@@ -486,6 +523,24 @@ export const isSupportedNoChoiceOnOpponentAttackDrawEffect = (
   effect: Extract<Effect, { type: "draw" }>;
 } => isSupportedNoChoiceDrawTriggerEffect(effect, "onOpponentAttack");
 
+export const isSupportedNoChoiceOnKODrawEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} =>
+  (effect.sourcePresencePolicy === "resolveFromDestinationZone" ||
+    effect.sourcePresencePolicy === "resolveFromLastKnownInformation") &&
+  effect.trigger.type === "onKO" &&
+  isNoChoiceDrawEffectShape(effect);
+
+const isSupportedQueuedNoChoiceOnKODrawEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} => isSupportedNoChoiceOnKODrawEffect(effect);
+
 const isSupportedQueuedNoChoiceDrawEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
@@ -495,6 +550,7 @@ const isSupportedQueuedNoChoiceDrawEffect = (
   isNoChoiceDrawTriggerEffect(effect, "onPlay") ||
   isNoChoiceDrawTriggerEffect(effect, "whenAttacking") ||
   isNoChoiceDrawTriggerEffect(effect, "onOpponentAttack") ||
+  isSupportedQueuedNoChoiceOnKODrawEffect(effect) ||
   (effect.trigger.type === "custom" && isNoChoiceDrawEffectShape(effect));
 
 const findCardInstance = (
@@ -519,6 +575,15 @@ const findCardInstance = (
   return zoneCards.find((card) => card?.instanceId === instanceId);
 };
 
+const findCardInstanceInTrash = (
+  state: GameState,
+  playerId: PlayerId,
+  instanceId: string,
+): CardInstance | undefined => {
+  const player = state.players[playerId];
+  return player?.trash.find((card) => card.instanceId === instanceId);
+};
+
 const attackEventCardRefMatches = (
   ref: {
     playerId?: PlayerId;
@@ -534,6 +599,59 @@ const attackEventCardRefMatches = (
   ref.cardId === card.cardId &&
   ref.zone !== undefined &&
   zonesEqual(ref.zone, card.zone);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const zoneRefFromUnknown = (
+  value: unknown,
+): CardInstance["zone"] | undefined => {
+  if (!isRecord(value) || typeof value["zone"] !== "string") {
+    return undefined;
+  }
+  return {
+    zone: value["zone"] as CardInstance["zone"]["zone"],
+    ...(typeof value["playerId"] === "string"
+      ? { playerId: value["playerId"] as PlayerId }
+      : {}),
+    ...(typeof value["slot"] === "string"
+      ? { slot: value["slot"] as NonNullable<CardInstance["zone"]["slot"]> }
+      : {}),
+    ...(typeof value["index"] === "number" ? { index: value["index"] } : {}),
+  };
+};
+
+const findMatchingKOMoveEvent = (
+  koEvent: EngineEvent,
+  events: readonly EngineEvent[],
+): EngineEvent | undefined => {
+  const koPayload = koEvent.payload as {
+    playerId?: PlayerId;
+    instanceId?: string;
+  };
+  const matches = events.filter((event) => {
+    if (event.type !== "cardMoved") {
+      return false;
+    }
+    const payload = event.payload as {
+      from?: unknown;
+      to?: unknown;
+      reason?: string;
+      instanceId?: string;
+    };
+    const from = zoneRefFromUnknown(payload.from);
+    const to = zoneRefFromUnknown(payload.to);
+    return (
+      payload.reason === "ko" &&
+      payload.instanceId === koPayload.instanceId &&
+      from?.zone === "characterArea" &&
+      from.playerId === koPayload.playerId &&
+      to?.zone === "trash" &&
+      to.playerId === koPayload.playerId
+    );
+  });
+  return matches.length === 1 ? matches[0] : undefined;
+};
 
 const toSnapshot = (
   card: CardInstance,
@@ -552,6 +670,214 @@ const toSnapshot = (
   ...(resolved.life !== undefined ? { life: resolved.life } : {}),
   keywords: resolved.printedKeywords,
 });
+
+export const detectBattleKOTriggerCandidates = (
+  state: GameState,
+  events: readonly EngineEvent[],
+): DetectBattleKOTriggerCandidatesResult => {
+  const candidates: BattleKOTriggerCandidate[] = [];
+  const koEvents = events.filter((event) => event.type === "cardKOd");
+
+  for (const event of koEvents) {
+    const payload = event.payload as {
+      playerId?: PlayerId;
+      instanceId?: string;
+    };
+    if (payload.playerId === undefined || payload.instanceId === undefined) {
+      return {
+        ok: false,
+        error: onKOTriggerCandidateDetectionError("invalid-ko-event-batch"),
+      };
+    }
+    const movedEvent = findMatchingKOMoveEvent(event, events);
+    if (movedEvent === undefined) {
+      return {
+        ok: false,
+        error: onKOTriggerCandidateDetectionError("invalid-ko-event-batch"),
+      };
+    }
+
+    const source = findCardInstanceInTrash(
+      state,
+      payload.playerId,
+      payload.instanceId,
+    );
+    const movedPayload = movedEvent.payload as { from?: unknown; to?: unknown };
+    const origin = zoneRefFromUnknown(movedPayload.from);
+    const destination = zoneRefFromUnknown(movedPayload.to);
+    if (
+      source === undefined ||
+      origin === undefined ||
+      destination === undefined ||
+      source.zone.zone !== "trash" ||
+      !zonesEqual(source.zone, destination)
+    ) {
+      return {
+        ok: false,
+        error: onKOTriggerCandidateDetectionError("source-presence-failed"),
+      };
+    }
+
+    const resolved = state.cardManifest.cards[source.cardId];
+    if (resolved === undefined) {
+      return {
+        ok: false,
+        error: onKOTriggerCandidateDetectionError("missing-card-definition"),
+      };
+    }
+    if (resolved.support.effectDefinitionId === undefined) {
+      continue;
+    }
+
+    const lookup = resolveImplementedDslEffectDefinition(
+      resolved,
+      state.cardManifest,
+    );
+    if (!lookup.ok) {
+      return { ok: false, error: lookup.error };
+    }
+    const onKOEffects = lookup.definition.effects.filter(
+      (effect) => effect.trigger.type === "onKO",
+    );
+    if (onKOEffects.length === 0) {
+      continue;
+    }
+    const matching = onKOEffects.filter(isSupportedNoChoiceOnKODrawEffect);
+    if (matching.length === 0 || lookup.definition.effects.length !== 1) {
+      return {
+        ok: false,
+        error: onKOTriggerCandidateDetectionError(
+          "unsupported-on-ko-definition",
+        ),
+      };
+    }
+    if (matching.length !== 1) {
+      return {
+        ok: false,
+        error: onKOTriggerCandidateDetectionError("multiple-on-ko-effects"),
+      };
+    }
+
+    const effectBlock = matching[0];
+    if (effectBlock === undefined) {
+      return {
+        ok: false,
+        error: onKOTriggerCandidateDetectionError(
+          "unsupported-on-ko-definition",
+        ),
+      };
+    }
+    const candidateSource =
+      effectBlock.sourcePresencePolicy === "resolveFromLastKnownInformation"
+        ? { ...source, zone: origin }
+        : source;
+    candidates.push({
+      effectBlockId: effectBlock.id,
+      controllerId: candidateSource.controller,
+      source: {
+        instanceId: candidateSource.instanceId,
+        cardId: candidateSource.cardId,
+        playerId: payload.playerId,
+        zone: candidateSource.zone,
+      },
+      sourceSnapshot: toSnapshot(candidateSource, resolved),
+      triggerEventId: event.id,
+      sourcePresencePolicy: effectBlock.sourcePresencePolicy,
+      causedBy: {
+        type: "ruleProcess",
+        name: "effectRuntime:onKOTriggerCandidateDetection",
+      },
+    });
+  }
+
+  return { ok: true, candidates };
+};
+
+export const queueBattleKOTriggers = (
+  state: GameState,
+  eventBaseState: GameState,
+  events: EngineEvent[],
+): QueueBattleKOTriggersResult => {
+  const detected = detectBattleKOTriggerCandidates(state, events);
+  if (!detected.ok) {
+    return detected;
+  }
+  if (detected.candidates.length === 0) {
+    return { ok: true, state };
+  }
+
+  const appended: EffectQueueEntry[] = [];
+  for (const candidate of detected.candidates) {
+    const triggerEvent = events.find(
+      (event) => event.id === candidate.triggerEventId,
+    );
+    if (triggerEvent === undefined) {
+      return {
+        ok: false,
+        error: onKOTriggerCandidateDetectionError("invalid-ko-event-batch"),
+      };
+    }
+
+    const orderingGroup =
+      candidate.controllerId === state.turn.turnPlayerId
+        ? "turnPlayer"
+        : "nonTurnPlayer";
+    const entry: EffectQueueEntry = {
+      id: `queue-entry:${String(candidate.triggerEventId)}:${String(
+        candidate.effectBlockId,
+      )}` as EffectQueueEntry["id"],
+      state: "pending",
+      timingWindowId:
+        `timing-window:${String(candidate.triggerEventId)}:onKO` as EffectQueueEntry["timingWindowId"],
+      generation: 0,
+      controllerId: candidate.controllerId,
+      source: candidate.source,
+      sourceSnapshot: candidate.sourceSnapshot,
+      triggerEventId: candidate.triggerEventId,
+      effectBlockId: candidate.effectBlockId,
+      orderingGroup,
+      createdAtEventSeq: triggerEvent.seq,
+      queuedAtStateSeq: state.seq,
+      sourcePresencePolicy: candidate.sourcePresencePolicy,
+      causedBy: {
+        type: "ruleProcess",
+        name: "effectRuntime:onKOTriggerQueueing",
+      },
+    };
+    appended.push(entry);
+  }
+
+  for (const entry of appended) {
+    const beforeEventCount = events.length;
+    appendEvent(
+      eventBaseState,
+      events,
+      "effectQueued",
+      {
+        queueEntryId: entry.id,
+        timingWindowId: entry.timingWindowId,
+        generation: entry.generation,
+        effectBlockId: entry.effectBlockId,
+        triggerEventId: entry.triggerEventId,
+        sourcePresencePolicy: entry.sourcePresencePolicy,
+        orderingGroup: entry.orderingGroup,
+      },
+      { type: "public" },
+    );
+    const queuedEvent = events[beforeEventCount];
+    if (queuedEvent !== undefined) {
+      queuedEvent.causedBy = entry.causedBy;
+    }
+  }
+
+  return {
+    ok: true,
+    state: {
+      ...state,
+      effectQueue: [...state.effectQueue, ...appended],
+    },
+  };
+};
 
 const queueOnPlayTriggers = (state: GameState): EngineResult | undefined => {
   if (state.effectQueue.length > 0 || state.deferredTriggers.length > 0) {

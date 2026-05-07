@@ -1,0 +1,83 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-027C
+epic_id: KICK-001
+title: Resolve K.O. effects from trash or last-known info
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Resolve supported no-choice K.O. effects using existing source-presence
+  policies for trash and last-known-information cases.
+story_boundary: >
+  Own only no-choice K.O. effect resolution for effect primitives already
+  supported by the runtime and only through existing source-presence policy
+  evaluation. Do not add target selection, replacement behavior, custom
+  handlers, optional activation, or new effect primitives.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/source-presence.test.ts
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/battle-damage-banish.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - stories/approved/ENG-027C-resolve-ko-effects-from-trash-or-lki.yaml
+  - agent-packets/ENG-027C.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s041 (Auto-effect timing details)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 04-effect-runtime.s006 (Effect queue entry)
+  - 04-effect-runtime.s007 (Source presence policy)
+  - 04-effect-runtime.s009 (Effect queue ordering)
+  - 04-effect-runtime.s010 (Queue processing)
+  - 04-effect-runtime.s011 (Conditions and costs)
+  - 05-effect-dsl-reference.s005 (Triggers)
+  - 05-effect-dsl-reference.s012 (Effects)
+  - 05-effect-dsl-reference.s029 (Schema coverage policy)
+  - 09-card-data-and-support-policy.s011 (Support policy by mode)
+  - 18-acceptance-tests.s004 (Effect runtime acceptance tests)
+  - 11-testing-quality.s007 (Interaction tests)
+scope:
+  - allow queued onKO no-choice draw effects to resolve through existing queue processing
+  - support resolveFromDestinationZone when the K.O.'d source is provably in trash at resolution
+  - support resolveFromLastKnownInformation using sourceSnapshot when the source is no longer resolvable live but snapshot identity/controller matches
+  - preserve existing lifecycle event behavior for effectResolved and cancellation/fail-closed cases
+  - run rule processing after K.O. effect resolution using existing queue checkpoint behavior
+  - fail closed for unsupported onKO effect bodies, missing source proof, optional effects, costs, conditions, target selection, replacement effects, and custom handlers
+non_scope:
+  - new effect primitives beyond currently supported no-choice draw
+  - target selection
+  - Life Triggers
+  - replacement effects
+  - custom handlers
+  - optional activation
+  - once-per-turn behavior
+  - server/client/UI
+dependencies:
+  - ENG-027B
+acceptance_criteria:
+  - queued K.O. no-choice draw effects resolve from trash when using resolveFromDestinationZone
+  - queued K.O. no-choice draw effects resolve from sourceSnapshot when using resolveFromLastKnownInformation and live source proof is absent
+  - unsupported source-presence cases fail closed through existing runtime errors or cancellation events without hidden-information leaks
+  - rule processing still runs after K.O. effect resolution
+  - repeated equivalent states produce stable event summaries and state hashes
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/effect-runtime.test.ts packages/engine-core/src/source-presence.test.ts packages/engine-core/src/battle-damage-banish.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-027C packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-027 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if resolution requires new primitives, target selection, Life Triggers, replacement effects, custom handlers, optional activation, or schema changes, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate
