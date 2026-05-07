@@ -1,0 +1,85 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-027A
+epic_id: KICK-001
+title: Detect battle K.O. trigger candidates
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Detect supported K.O. trigger candidates from battle K.O. event batches
+  without queueing or resolving them yet.
+story_boundary: >
+  Own only candidate detection and fail-closed guard behavior for battle K.O.
+  event batches. Do not add queue processing, effect resolution, new effect
+  primitives, target selection, or replacement behavior in this story.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/battle-support.ts
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/battle-damage-banish.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - stories/approved/ENG-027A-detect-battle-ko-trigger-candidates.yaml
+  - agent-packets/ENG-027A.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s041 (Auto-effect timing details)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 04-effect-runtime.s006 (Effect queue entry)
+  - 04-effect-runtime.s007 (Source presence policy)
+  - 04-effect-runtime.s008 (Trigger detection from events)
+  - 05-effect-dsl-reference.s003 (Top-level definition)
+  - 05-effect-dsl-reference.s004 (Effect block)
+  - 05-effect-dsl-reference.s005 (Triggers)
+  - 05-effect-dsl-reference.s012 (Effects)
+  - 05-effect-dsl-reference.s029 (Schema coverage policy)
+  - 09-card-data-and-support-policy.s011 (Support policy by mode)
+  - 18-acceptance-tests.s004 (Effect runtime acceptance tests)
+  - 11-testing-quality.s007 (Interaction tests)
+scope:
+  - introduce or expose a narrowly named engine helper for detecting K.O. trigger candidates from a battle K.O. event batch
+  - detect candidates only from supported character battle K.O. events that include cardKOd and the matching ko cardMoved event
+  - require the triggering card to have reviewed implemented-dsl support and exactly one onKO auto effect candidate
+  - update the battle support metadata guard so reviewed supported onKO definitions can reach the K.O. candidate detector while unsupported onKO definitions still fail closed before mutation
+  - record source and sourceSnapshot data needed by later queueing stories without leaking hidden zones
+  - fail closed for missing definitions, unsupported support metadata, multiple onKO effects, unsupported source-presence policy, optional effects, costs, conditions, target selection, replacement effects, or unsupported effect bodies
+  - preserve existing battle behavior until a later child story consumes the candidates
+non_scope:
+  - queueing K.O. trigger entries
+  - resolving K.O. effects
+  - changing battle cleanup timing
+  - Life Triggers
+  - replacement effects
+  - target selection
+  - custom handlers
+  - optional activation
+  - server/client/UI
+dependencies:
+  - ENG-026
+acceptance_criteria:
+  - supported battle K.O. event batches produce deterministic K.O. trigger candidates with stable source and sourceSnapshot data
+  - reviewed supported onKO metadata no longer trips the generic unsupported battle-effect guard before K.O. event detection
+  - unsupported onKO metadata still fails closed before mutation through the battle support guard or candidate detector
+  - unsupported or ambiguous K.O. definitions return deterministic effect runtime errors and do not mutate GameState
+  - existing vanilla K.O., Blocker, Counter, Banish, and attack-timing supported paths remain unchanged when no supported onKO candidate exists
+  - tests cover supported candidate detection and at least one unsupported onKO fail-closed path
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/effect-runtime.test.ts packages/engine-core/src/battle-damage-banish.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-027A packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-027 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if detection requires target selection, Life Triggers, replacement effects, custom handlers, or queue schema changes, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate

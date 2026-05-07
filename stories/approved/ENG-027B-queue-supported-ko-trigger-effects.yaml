@@ -1,0 +1,84 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-027B
+epic_id: KICK-001
+title: Queue supported K.O. trigger effects
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Convert supported K.O. trigger candidates into deterministic effect queue
+  entries after battle K.O. resolution.
+story_boundary: >
+  Own only K.O. trigger queue entry creation and battle handoff after K.O.
+  events. Do not resolve K.O. effects, add new primitives, or broaden battle
+  damage behavior in this story.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/battle-damage-banish.test.ts
+  - packages/engine-core/src/battle-blocker.test.ts
+  - packages/engine-core/src/battle-counter.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - stories/approved/ENG-027B-queue-supported-ko-trigger-effects.yaml
+  - agent-packets/ENG-027B.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s041 (Auto-effect timing details)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 04-effect-runtime.s006 (Effect queue entry)
+  - 04-effect-runtime.s007 (Source presence policy)
+  - 04-effect-runtime.s008 (Trigger detection from events)
+  - 04-effect-runtime.s009 (Effect queue ordering)
+  - 05-effect-dsl-reference.s005 (Triggers)
+  - 05-effect-dsl-reference.s029 (Schema coverage policy)
+  - 09-card-data-and-support-policy.s011 (Support policy by mode)
+  - 18-acceptance-tests.s004 (Effect runtime acceptance tests)
+  - 11-testing-quality.s007 (Interaction tests)
+scope:
+  - enqueue supported K.O. trigger candidates after the battle K.O. cardKOd/cardMoved events are emitted
+  - allocate deterministic queue entry IDs, timing window IDs, triggerEventId, generation, orderingGroup, createdAtEventSeq, queuedAtStateSeq, and causedBy data
+  - preserve event ordering so K.O. battle events precede effectQueued events
+  - use the candidate's source-presence policy without overriding it
+  - leave trigger-order decision creation and queue processing to existing runtime paths or later child stories; this story only appends supported K.O. entries to the queue
+  - keep unsupported onKO candidates fail-closed without partial mutation
+non_scope:
+  - resolving queued K.O. effects
+  - creating or resolving chooseTriggerOrder decisions
+  - adding new effect primitives
+  - changing source-presence helper semantics
+  - Life Triggers
+  - replacement effects
+  - target selection
+  - custom handlers
+  - optional activation
+  - server/client/UI
+dependencies:
+  - ENG-027A
+acceptance_criteria:
+  - a supported battle K.O. emits cardKOd/cardMoved before any K.O. effectQueued event
+  - queued K.O. entries are deterministic across repeated equivalent states
+  - turn-player and non-turn-player orderingGroup values follow existing queue-ordering rules
+  - queue entry source data supports resolveFromDestinationZone and resolveFromLastKnownInformation in later stories
+  - unsupported K.O. definitions remain fail-closed without mutation
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/effect-runtime.test.ts packages/engine-core/src/battle-damage-banish.test.ts packages/engine-core/src/battle-blocker.test.ts packages/engine-core/src/battle-counter.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-027B packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-027 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if queueing requires immediate resolution, target selection, Life Triggers, replacement effects, custom handlers, or schema changes, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate
