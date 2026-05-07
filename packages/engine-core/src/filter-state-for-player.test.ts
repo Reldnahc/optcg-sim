@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  DecisionId,
   EngineEvent,
   GameState,
   InstanceId,
+  QueueEntryId,
   PublicLegalAction,
 } from "@optcg/types";
 
@@ -38,6 +40,9 @@ const withEvent = (
   visibility,
   createdAtStateSeq: toStateSeq(state.seq),
 });
+
+const toDecisionId = (value: string): DecisionId => value as DecisionId;
+const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
 
 test("filters hidden information and keeps public zones", () => {
   const state = createActiveState();
@@ -172,6 +177,116 @@ test("shows pending decision only to the recipient with public shape", () => {
       : { timeoutMs: decision.timeoutMs }),
   });
   assert.equal(forOpponent.pendingDecision, undefined);
+});
+
+test("chooseTriggerOrder projection stays metadata-only and hides private ids from non-recipient", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  const hiddenOpponentHandCard = must(p2State.hand[0], "hidden opponent hand");
+  const hiddenSelfDeckCard = must(p1State.deck[0], "hidden self deck");
+  const hiddenOpponentLifeCard = must(
+    p2State.life.find((card) => !card.faceUp),
+    "hidden opponent face-down life",
+  ).card;
+
+  state.effectQueue.push({
+    id: toQueueEntryId("queue-hidden-a"),
+    state: "pending",
+    timingWindowId: "timing-hidden" as never,
+    generation: 1,
+    controllerId: p1,
+    source: {
+      instanceId: hiddenOpponentLifeCard.instanceId,
+      cardId: hiddenOpponentLifeCard.cardId,
+      playerId: p2,
+      zone: hiddenOpponentLifeCard.zone,
+    },
+    sourceSnapshot: {
+      instanceId: hiddenOpponentLifeCard.instanceId,
+      cardId: hiddenOpponentLifeCard.cardId,
+      ownerId: p2,
+      controllerId: p2,
+      zone: hiddenOpponentLifeCard.zone,
+      category: "event",
+      colors: ["red"],
+      keywords: [],
+    },
+    effectBlockId: "effect-hidden" as never,
+    orderingGroup: "turnPlayer",
+    createdAtEventSeq: 1,
+    queuedAtStateSeq: toStateSeq(state.seq),
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    causedBy: { type: "ruleProcess", name: "hidden" },
+  });
+  state.pendingDecision = {
+    id: toDecisionId("decision:choose-trigger-order"),
+    type: "chooseTriggerOrder",
+    playerId: p1,
+    prompt: "Choose trigger resolution order.",
+    causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
+    visibility: { type: "public" },
+    triggerIds: [toQueueEntryId("queue-hidden-a")],
+    constraints: { mustUseAll: true },
+  };
+
+  const forDecisionPlayer = filterStateForPlayer(state, p1);
+  const forOpponent = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(forDecisionPlayer.pendingDecision, {
+    id: toDecisionId("decision:choose-trigger-order"),
+    type: "chooseTriggerOrder",
+    playerId: p1,
+    prompt: "Choose trigger resolution order.",
+    causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
+  });
+  assert.deepEqual(
+    forDecisionPlayer.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [
+      {
+        type: "respondToDecision",
+        decisionId: toDecisionId("decision:choose-trigger-order"),
+      },
+    ],
+  );
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("triggerIds"), false);
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("orderedIds"), false);
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("effectQueue"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("sourceSnapshot"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes(
+      String(hiddenOpponentHandCard.cardId),
+    ),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes(
+      String(hiddenSelfDeckCard.cardId),
+    ),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes(
+      String(hiddenOpponentLifeCard.cardId),
+    ),
+    false,
+  );
+
+  assert.equal(forOpponent.pendingDecision, undefined);
+  assert.deepEqual(
+    forOpponent.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
 });
 
 test("projects legal actions without leaking hidden card identities", () => {
