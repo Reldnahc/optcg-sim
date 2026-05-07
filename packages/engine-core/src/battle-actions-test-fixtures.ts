@@ -116,6 +116,41 @@ export const withOnOpponentAttackDrawEffect = (
   return definition;
 };
 
+export const withOnKODrawEffect = (
+  state: ReturnType<typeof setupAttackState>,
+  source: CardInstance,
+  effectDefinitionId = "def-on-ko-draw",
+  sourcePresencePolicy:
+    | "resolveFromDestinationZone"
+    | "resolveFromLastKnownInformation" = "resolveFromDestinationZone",
+): EffectDefinition => {
+  const definition = effectDefinition(source.cardId, { type: "onKO" });
+  const onKOEffect = must(definition.effects[0], "On K.O. effect");
+  const onKODefinition: EffectDefinition = {
+    ...definition,
+    effects: [{ ...onKOEffect, sourcePresencePolicy }],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    onKODefinition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: onKODefinition,
+  };
+  state.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    power: 3000,
+    effectText: "[On K.O.] Draw 1 card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: onKODefinition.metadata.rulesVersion,
+      sourceTextHash: onKODefinition.metadata.sourceTextHash,
+    },
+  });
+  return onKODefinition;
+};
+
 export const withMultipleWhenAttackingDrawEffects = (
   state: ReturnType<typeof setupAttackState>,
   source: CardInstance,
