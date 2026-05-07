@@ -694,10 +694,12 @@ export const detectBattleKOTriggerCandidates = (
       payload.playerId,
       payload.instanceId,
     );
-    const movedPayload = movedEvent.payload as { to?: unknown };
+    const movedPayload = movedEvent.payload as { from?: unknown; to?: unknown };
+    const origin = zoneRefFromUnknown(movedPayload.from);
     const destination = zoneRefFromUnknown(movedPayload.to);
     if (
       source === undefined ||
+      origin === undefined ||
       destination === undefined ||
       source.zone.zone !== "trash" ||
       !zonesEqual(source.zone, destination)
@@ -757,16 +759,20 @@ export const detectBattleKOTriggerCandidates = (
         ),
       };
     }
+    const candidateSource =
+      effectBlock.sourcePresencePolicy === "resolveFromLastKnownInformation"
+        ? { ...source, zone: origin }
+        : source;
     candidates.push({
       effectBlockId: effectBlock.id,
-      controllerId: source.controller,
+      controllerId: candidateSource.controller,
       source: {
-        instanceId: source.instanceId,
-        cardId: source.cardId,
+        instanceId: candidateSource.instanceId,
+        cardId: candidateSource.cardId,
         playerId: payload.playerId,
-        zone: source.zone,
+        zone: candidateSource.zone,
       },
-      sourceSnapshot: toSnapshot(source, resolved),
+      sourceSnapshot: toSnapshot(candidateSource, resolved),
       triggerEventId: event.id,
       sourcePresencePolicy: effectBlock.sourcePresencePolicy,
       causedBy: {
