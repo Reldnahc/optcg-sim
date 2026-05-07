@@ -1,0 +1,91 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-028D
+epic_id: KICK-001
+title: Resolve simple life trigger effect
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Resolve a supported no-choice life Trigger effect from no zone and trash the
+  activated Trigger card afterward.
+story_boundary: >
+  Own only the supported no-choice activated Trigger resolution path and
+  trash-after-resolution cleanup. Do not add new effect primitives, complex
+  Trigger effects, replacement behavior, target selection, or search/look/reveal
+  primitives.
+allowed_touch_points:
+  - packages/engine-core/src/life-trigger-actions.ts
+  - packages/engine-core/src/life-trigger-actions.test.ts
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/battle-damage-banish.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - packages/engine-core/src/filter-state-for-player.ts
+  - packages/engine-core/src/filter-state-for-player.real-states.test.ts
+  - stories/approved/ENG-028D-resolve-simple-life-trigger-effect.yaml
+  - agent-packets/ENG-028D.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s023
+  - 02-engine-mechanics.s040
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s018
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s008
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s010
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s012
+  - 06-visibility-security.s005
+  - 06-visibility-security.s006
+  - 11-testing-quality.s007
+  - 18-acceptance-tests.s004
+scope:
+  - support exactly one implemented-dsl auto Trigger effect block with trigger type trigger, sourcePresencePolicy resolveFromLastKnownInformation or noSourceRequired, effect type draw, count 1, player self, and no cost, condition, optional flag, once-per-turn usage, target selection, replacement behavior, custom handler, or source-moving behavior
+  - resolve the activated Trigger through deterministic runtime events and rule-processing checkpoints
+  - move the activated Trigger card to trash after supported resolution for this exact supported draw-1 shape
+  - expire the temporary reveal/no-zone runtime state after resolution cleanup
+  - preserve Banish behavior as no Trigger path
+  - fail closed without mutation for unsupported Trigger effect bodies, costs, conditions, target selection, optional effects, replacement effects, or custom handlers
+  - fail closed without mutation for source-moving Trigger effects or any Trigger shape outside the exact supported draw-1 contract
+non_scope:
+  - new effect primitives beyond the currently supported no-choice path
+  - Banish changes
+  - Double Attack or multiple damage handling
+  - replacement effects
+  - complex Trigger effects
+  - search, look, or reveal primitives
+  - target selection
+  - optional effects beyond the life-trigger confirm decision
+  - server/client/UI
+dependencies:
+  - ENG-028C
+acceptance_criteria:
+  - an activated implemented-dsl draw-1 Trigger with no cost, condition, optional flag, once-per-turn usage, target selection, replacement behavior, custom handler, or source-moving behavior resolves deterministically from no zone
+  - the activated Trigger card is trashed after supported draw-1 resolution
+  - reveal/no-zone transient state is cleaned up after resolution
+  - rule processing still runs after the Trigger effect resolution
+  - every other Trigger body, including costs, conditions, optional effects, targets, search/look/reveal, replacement, custom handlers, and source-moving effects, fails closed without mutation
+  - event sequencing and final state hash are stable for identical Trigger activation scenarios
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/life-trigger-actions.test.ts packages/engine-core/src/effect-runtime.test.ts packages/engine-core/src/battle-damage-banish.test.ts packages/engine-core/src/event-sequencing-regression.test.ts packages/engine-core/src/filter-state-for-player.real-states.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-028D packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-028 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if supported resolution requires new DSL primitives, replacement behavior, search/look/reveal primitives, or target selection, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate
