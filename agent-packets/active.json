@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-025D.md",
-      "storyId": "ENG-025D",
-      "storyPath": "stories/approved/ENG-025D-resume-trigger-queue-after-order-choice.yaml",
-      "storySha256": "9acb59deb520999100b5684994ab8efb8cdb7f8f8c3e62994328dcb91e6a8b70"
+      "packetPath": "agent-packets/ENG-025E.md",
+      "storyId": "ENG-025E",
+      "storyPath": "stories/approved/ENG-025E-project-trigger-order-decision-safely.yaml",
+      "storySha256": "64709935e1b4effcf5f845e190de1e9b48a790d1569fbb5f6d6d9563c7ec5f06"
     }
   ],
   "version": 1
