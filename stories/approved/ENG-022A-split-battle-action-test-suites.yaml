@@ -1,0 +1,70 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-022A
+epic_id: KICK-001
+title: Split battle action test suites
+type: refactor
+area: engine
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Split the oversized battle-actions test file into focused battle test suites
+  without changing production behavior.
+story_boundary: >
+  Own only test relocation and minimal shared test-helper extraction for battle
+  action coverage. Do not modify production battle implementation in this
+  story.
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-declare-attack.test.ts
+  - packages/engine-core/src/battle-damage-banish.test.ts
+  - packages/engine-core/src/battle-counter.test.ts
+  - packages/engine-core/src/battle-blocker.test.ts
+  - packages/engine-core/src/battle-cleanup.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - stories/approved/ENG-022A-split-battle-action-test-suites.yaml
+  - agent-packets/ENG-022A.md
+  - agent-packets/active.json
+spec_refs:
+  - 11-testing-quality.s002 (Testing goals)
+  - 11-testing-quality.s007 (Interaction tests)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+scope:
+  - move declare-attack, Rush, and combat-body legality tests into a focused declare-attack suite
+  - move vanilla damage, Character K.O., Banish, life movement, and cleanup helper tests into focused damage or cleanup suites
+  - move Character Counter and Counter Step tests into a focused counter suite
+  - move Blocker and Block Step tests into a focused blocker suite
+  - extract only shared test helpers needed to avoid duplication across the split suites
+  - preserve existing test assertions, coverage intent, and fixture behavior
+non_scope:
+  - production source changes
+  - new behavior tests for rules not already covered
+  - changing public APIs, action payloads, event payloads, hidden-info behavior, state hashing, or fail-closed semantics
+dependencies: []
+acceptance_criteria:
+  - battle-actions.test.ts is materially reduced by moving cohesive groups into focused test files
+  - moved tests still exercise the same production APIs and assertions
+  - no production files are changed
+  - focused battle test command and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/battle-actions.test.ts packages/engine-core/src/battle-declare-attack.test.ts packages/engine-core/src/battle-damage-banish.test.ts packages/engine-core/src/battle-counter.test.ts packages/engine-core/src/battle-blocker.test.ts packages/engine-core/src/battle-cleanup.test.ts packages/engine-core/src/battle-pipeline-regression.test.ts packages/engine-core/src/event-sequencing-regression.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-022A packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-022 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if implementation requires production changes, stop and split or record the blocker
+  - implementation-review gate is required after the PR is opened
+ambiguity_policy: fail_and_escalate

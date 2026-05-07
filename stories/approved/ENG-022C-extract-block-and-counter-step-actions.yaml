@@ -1,0 +1,72 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-022C
+epic_id: KICK-001
+title: Extract block and counter step actions
+type: refactor
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Move Block Step and Counter Step action handling out of battle-actions.ts
+  behind the stable public facade.
+story_boundary: >
+  Own only behavior-preserving extraction of Block Step and Counter Step
+  handlers, legal-action helpers, and their private support from
+  battle-actions.ts into focused engine modules.
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-support.ts
+  - packages/engine-core/src/battle-block-actions.ts
+  - packages/engine-core/src/battle-counter-actions.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-counter.test.ts
+  - packages/engine-core/src/battle-blocker.test.ts
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - stories/approved/ENG-022C-extract-block-and-counter-step-actions.yaml
+  - agent-packets/ENG-022C.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s024 (Module ownership)
+  - 02-engine-mechanics.s019 (Block Step)
+  - 02-engine-mechanics.s020 (Counter Step)
+  - 11-testing-quality.s007 (Interaction tests)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+  - 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+scope:
+  - extract Block Step decision creation, blocker candidates, blocker selection validation, blocker activation, and block-step decision response handling into battle-block-actions.ts or equivalent
+  - extract Counter Step decision creation, Character Counter legal actions, useCounter handling, Counter Event fail-closed checks, counter pass handling, and counter-step decision response handling into battle-counter-actions.ts or equivalent
+  - keep getBattleDecisionLegalActions, applyUseCounter, and applyBattleDecisionResponse exported from battle-actions.ts for existing callers
+  - preserve event ordering, decision IDs, fail-closed errors, pending decision behavior, and state hashes
+non_scope:
+  - changing declareAttack handling, damage resolution, End of Battle cleanup, Banish, Rush, or combat-body support
+  - adding Counter Event support or new legal actions
+  - weakening unsupported continuation, replacement, trigger, or continuous-effect guards
+dependencies:
+  - ENG-022B
+acceptance_criteria:
+  - Block Step and Counter Step production code live in focused modules
+  - battle-actions.ts remains a stable public facade for existing imports
+  - counter and blocker test suites pass without assertion changes caused by behavior drift
+  - event sequencing and regression tests still pass
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/battle-counter.test.ts packages/engine-core/src/battle-blocker.test.ts packages/engine-core/src/battle-pipeline-regression.test.ts packages/engine-core/src/event-sequencing-regression.test.ts packages/engine-core/src/battle-actions.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-022C packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-022 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if extraction requires behavior changes, stop and split or record the blocker
+  - implementation-review gate is required after the PR is opened
+ambiguity_policy: fail_and_escalate
