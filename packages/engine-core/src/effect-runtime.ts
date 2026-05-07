@@ -1566,6 +1566,10 @@ const resolveQueueEntriesInOrder = (
       allEvents.push(...checkpointEvents);
     }
 
+    if (nextState.status.type !== "active") {
+      return toEngineResult(nextState, allEvents);
+    }
+
     const triggered = queueEffectResolvedCustomTriggers(nextState, selected, [
       ...resolution.events,
       ...resolvedEvents,
@@ -1576,10 +1580,6 @@ const resolveQueueEntriesInOrder = (
       }
       nextState = triggered.state;
       allEvents.push(...triggered.events);
-    }
-
-    if (nextState.status.type !== "active") {
-      return toEngineResult(nextState, allEvents);
     }
   }
 

@@ -2367,6 +2367,64 @@ test("deck-out from queued draw is detected at queue rule-processing checkpoint"
   assert.ok(result.events.some((event) => event.type === "gameEnded"));
 });
 
+test("terminal queue rule-processing checkpoint suppresses effect-resolved follow-up triggers", () => {
+  const { state, played } = queueingState();
+  const p1State = must(state.players[p1], "p1");
+  const triggerSource = withCardInZone({
+    state,
+    playerId: p1,
+    card: {
+      ...must(p1State.hand[1], "p1 trigger source"),
+      cardId: toCardId("deckout-trigger-source"),
+    },
+    zone: "characterArea",
+    index: 1,
+  });
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const resolvedEffectId = must(definition.effects[0], "draw effect").id;
+  setupOnPlayDefinition(
+    state,
+    played,
+    definition,
+    "def-queue-resolve-terminal-before-follow-up",
+  );
+  setupCustomEffectResolvedDefinition(
+    state,
+    triggerSource,
+    `effectResolved:${String(resolvedEffectId)}`,
+    "def-terminal-follow-up",
+  );
+  const queued = processEffectRuntime(state);
+  const queuedP1State = must(queued.state.players[p1], "queued p1");
+  queued.state.players[p1] = { ...queuedP1State, deck: [] };
+
+  const result = processEffectRuntime(queued.state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.status.type, "completed");
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.ok(result.events.some((event) => event.type === "gameEnded"));
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        (
+          event.payload as {
+            effectBlockId?: EffectId;
+          }
+        ).effectBlockId === toEffectId("deckout-trigger-source:auto-on-play-1"),
+    ),
+    false,
+  );
+});
+
 test("choice-required queued groups create chooseTriggerOrder decision and decisionCreated event", () => {
   const state = createActiveState();
   state.effectQueue = [
