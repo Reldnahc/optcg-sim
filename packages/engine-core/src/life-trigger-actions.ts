@@ -2,12 +2,12 @@ import type {
   CardInstance,
   ConfirmLifeTriggerDecision,
   EffectBlock,
-  EffectDefinition,
   GameState,
   PlayerId,
 } from "@optcg/types";
 
 import { toDecisionId } from "./action-results.js";
+import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
   triggerText !== undefined && triggerText.trim().length > 0;
@@ -42,12 +42,12 @@ const hasUnsupportedShape = (effect: EffectBlock): boolean =>
   effect.oncePerTurn !== undefined;
 
 const isExactSupportedTriggerDefinition = (
-  definition: EffectDefinition | undefined,
+  effects: readonly EffectBlock[],
 ): boolean => {
-  if (definition === undefined || definition.effects.length !== 1) {
+  if (effects.length !== 1) {
     return false;
   }
-  const effect = definition.effects[0];
+  const effect = effects[0];
   if (effect === undefined) {
     return false;
   }
@@ -66,16 +66,14 @@ export const getSupportedLifeTriggerDecision = (
   if (resolved === undefined || !hasLifeTriggerText(resolved.triggerText)) {
     return undefined;
   }
-  const support = resolved.support;
-  if (support.status !== "implemented-dsl") {
-    return undefined;
-  }
-  const definitionId = support.effectDefinitionId;
-  if (definitionId === undefined) {
-    return undefined;
-  }
-  const definition = state.cardManifest.effectDefinitions?.[definitionId];
-  if (!isExactSupportedTriggerDefinition(definition)) {
+  const lookup = resolveImplementedDslEffectDefinition(
+    resolved,
+    state.cardManifest,
+  );
+  if (
+    !lookup.ok ||
+    !isExactSupportedTriggerDefinition(lookup.definition.effects)
+  ) {
     return undefined;
   }
   return {

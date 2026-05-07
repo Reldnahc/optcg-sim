@@ -101,6 +101,52 @@ test("getSupportedLifeTriggerDecision rejects unsupported trigger metadata", () 
   );
 });
 
+test("getSupportedLifeTriggerDecision rejects untested support metadata before checking trigger shape", () => {
+  const state = setupAttackState();
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const cardId = toCardId("trigger-life-untested-support");
+  const definition = effectDefinition(cardId, { type: "trigger" });
+  const effect = must(definition.effects[0], "effect");
+  const effectWithoutFlags = { ...effect };
+  delete effectWithoutFlags.optional;
+  delete effectWithoutFlags.oncePerTurn;
+  const supportedShape = {
+    ...definition,
+    effects: [
+      {
+        ...effectWithoutFlags,
+        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+      },
+    ],
+  };
+
+  topLife.card.cardId = cardId;
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "character",
+    power: 1000,
+    triggerText: "TRIGGER: draw 1",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-untested-life-trigger",
+      tested: false,
+      rulesVersion: supportedShape.metadata.rulesVersion,
+      sourceTextHash: supportedShape.metadata.sourceTextHash,
+    },
+  });
+  state.cardManifest.effectDefinitionsVersion =
+    supportedShape.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-untested-life-trigger": supportedShape,
+  };
+
+  assert.equal(
+    getSupportedLifeTriggerDecision(state, p2, topLife.card),
+    undefined,
+  );
+});
+
 test("getSupportedLifeTriggerDecision rejects trigger metadata with conditionTiming", () => {
   const state = setupAttackState();
   const p2State = must(state.players[p2], "p2");
