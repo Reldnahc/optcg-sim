@@ -17,6 +17,7 @@ import type {
   PlayerId,
   PendingDecision,
   QueueEntryId,
+  SourcePresencePolicy,
   StateSeq,
   TimingWindowId,
 } from "@optcg/types";
@@ -34,6 +35,7 @@ import {
 import {
   detectPendingRuntimeWork,
   executeNoChoiceEffectPrimitive,
+  isSupportedNoChoiceOnPlayDrawEffect,
   type EffectDefinitionLookupFailureReason,
   type OnPlayTriggerQueueingFailureReason,
   processDefenderOpponentAttackTiming,
@@ -1609,6 +1611,25 @@ test("unreviewed On Play definition metadata fails closed without queue mutation
   assert.deepEqual(result.state.eventJournal, before.eventJournal);
 });
 
+test("public no-choice draw trigger support remains limited to same-zone source presence", () => {
+  const baseCard = resolvedCard({
+    cardId: toCardId("OP01-015"),
+    category: "character",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    toCardId("OP01-015"),
+    baseCard.support,
+  );
+  const sameZoneEffect = must(definition.effects[0], "same-zone effect");
+  const lkiEffect: EffectDefinition["effects"][number] = {
+    ...sameZoneEffect,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+  };
+
+  assert.equal(isSupportedNoChoiceOnPlayDrawEffect(sameZoneEffect), true);
+  assert.equal(isSupportedNoChoiceOnPlayDrawEffect(lkiEffect), false);
+});
+
 test("event cardPlayed entries are ignored by On Play trigger queueing", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1");
@@ -1744,6 +1765,132 @@ test("resolves one queued supported On Play draw entry and removes it from effec
     result.state.eventJournal.slice(-result.events.length),
     result.events,
   );
+});
+
+test("resolves queued supported draw from last-known source presence", () => {
+  const state = createActiveState();
+  const supportCard = resolvedCard({
+    cardId: queueDrawForP1().source.cardId,
+    category: "character",
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    queueDrawForP1().source.cardId,
+    supportCard.support,
+  );
+  const definition: EffectDefinition = {
+    ...baseDefinition,
+    effects: [
+      {
+        ...must(baseDefinition.effects[0], "lki draw effect"),
+        sourcePresencePolicy: "resolveFromLastKnownInformation",
+      },
+    ],
+  };
+  const entry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    source: {
+      ...queueDrawForP1().source,
+      instanceId: toInstanceId("source-no-longer-live"),
+    },
+    sourceSnapshot: {
+      ...queueDrawForP1().sourceSnapshot,
+      instanceId: toInstanceId("source-no-longer-live"),
+    },
+  };
+  setupOnPlayDefinition(
+    state,
+    {
+      ...must(state.players[p1], "p1").leader,
+      cardId: entry.source.cardId,
+    },
+    definition,
+    "def-queue-lki-draw",
+  );
+  state.effectQueue = [entry];
+  const beforeDeck = must(state.players[p1], "p1").deck.length;
+  const beforeHand = must(state.players[p1], "p1").hand.length;
+
+  const result = processEffectRuntime(state);
+  const afterP1 = must(result.state.players[p1], "p1 result");
+  const resolvedEvent = result.events.find(
+    (event) => event.type === "effectResolved",
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(afterP1.deck.length, beforeDeck - 1);
+  assert.equal(afterP1.hand.length, beforeHand + 1);
+  assert.deepEqual(result.events.map((event) => event.type).slice(0, 5), [
+    "cardDrawn",
+    "cardMoved",
+    "cardMoved",
+    "effectResolved",
+    "ruleProcessingChecked",
+  ]);
+  assert.ok(resolvedEvent !== undefined);
+  assert.deepEqual(resolvedEvent.payload, {
+    queueEntryId: entry.id,
+    timingWindowId: entry.timingWindowId,
+    generation: entry.generation,
+    effectBlockId: entry.effectBlockId,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    orderingGroup: entry.orderingGroup,
+    status: "resolved",
+  });
+  assert.deepEqual(
+    result.state.eventJournal.slice(-result.events.length),
+    result.events,
+  );
+});
+
+test("queued source-presence policy mismatch with effect definition fails closed without mutation or events", () => {
+  const state = createActiveState();
+  const entry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    sourcePresencePolicy: "noSourceRequired",
+    source: {
+      ...queueDrawForP1().source,
+      instanceId: toInstanceId("not-live-for-policy-mismatch"),
+    },
+    sourceSnapshot: {
+      ...queueDrawForP1().sourceSnapshot,
+      instanceId: toInstanceId("not-live-for-policy-mismatch"),
+    },
+  };
+  const supportCard = resolvedCard({
+    cardId: entry.source.cardId,
+    category: "character",
+  });
+  setupOnPlayDefinition(
+    state,
+    {
+      ...must(state.players[p1], "p1").leader,
+      cardId: entry.source.cardId,
+    },
+    reviewedOnPlayDrawDefinition(entry.source.cardId, supportCard.support),
+    "def-policy-mismatch",
+  );
+  state.effectQueue = [entry];
+  const before = structuredClone(state);
+  const beforeHash = hashCanonicalStateValue(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "unsupported-effect-queue",
+      details: {
+        reason: "unsupported-pending-runtime-work",
+        kind: "effectQueue",
+        count: 1,
+      },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+  assert.equal(hashCanonicalStateValue(result.state), beforeHash);
 });
 
 test("resolves multiple no-choice queued entries in deterministic ENG-010F order", () => {
@@ -1977,7 +2124,12 @@ test("queued source-presence failure rejects without mutation or events", () => 
   assert.equal(eventTypes.includes("effectCanceled"), false);
 });
 
-test("noSourceRequired queued entries with unsupported work fail closed without mutation or events", () => {
+test("queued entries with centralized source-presence policies still fail closed for unsupported work", () => {
+  const sourcePresencePolicies: SourcePresencePolicy[] = [
+    "resolveFromDestinationZone",
+    "resolveFromLastKnownInformation",
+    "noSourceRequired",
+  ];
   const cases: Array<{
     name: string;
     setup: (state: ReturnType<typeof createActiveState>) => EffectQueueEntry;
@@ -2048,31 +2200,39 @@ test("noSourceRequired queued entries with unsupported work fail closed without 
     },
   ];
 
-  for (const testCase of cases) {
-    const state = createActiveState();
-    state.effectQueue = [testCase.setup(state)];
-    const before = structuredClone(state);
-    const beforeHash = hashCanonicalStateValue(state);
-
-    const first = processEffectRuntime(state);
-    const second = processEffectRuntime(structuredClone(before));
-
-    assert.deepEqual(first.events, [], testCase.name);
-    assert.deepEqual(first.errors, [
-      {
-        type: "effectRuntimeError",
-        effectId: "unsupported-effect-queue",
-        details: {
-          reason: "unsupported-pending-runtime-work",
-          kind: "effectQueue",
-          count: 1,
+  for (const policy of sourcePresencePolicies) {
+    for (const testCase of cases) {
+      const state = createActiveState();
+      state.effectQueue = [
+        {
+          ...testCase.setup(state),
+          sourcePresencePolicy: policy,
         },
-      },
-    ]);
-    assert.deepEqual(first.events, second.events, testCase.name);
-    assert.deepEqual(first.errors, second.errors, testCase.name);
-    assert.deepEqual(first.state, before, testCase.name);
-    assert.equal(hashCanonicalStateValue(first.state), beforeHash);
+      ];
+      const before = structuredClone(state);
+      const beforeHash = hashCanonicalStateValue(state);
+      const assertionLabel = `${policy}: ${testCase.name}`;
+
+      const first = processEffectRuntime(state);
+      const second = processEffectRuntime(structuredClone(before));
+
+      assert.deepEqual(first.events, [], assertionLabel);
+      assert.deepEqual(first.errors, [
+        {
+          type: "effectRuntimeError",
+          effectId: "unsupported-effect-queue",
+          details: {
+            reason: "unsupported-pending-runtime-work",
+            kind: "effectQueue",
+            count: 1,
+          },
+        },
+      ]);
+      assert.deepEqual(first.events, second.events, assertionLabel);
+      assert.deepEqual(first.errors, second.errors, assertionLabel);
+      assert.deepEqual(first.state, before, assertionLabel);
+      assert.equal(hashCanonicalStateValue(first.state), beforeHash);
+    }
   }
 });
 
