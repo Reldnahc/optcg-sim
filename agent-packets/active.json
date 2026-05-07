@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-026.md",
+      "storyId": "ENG-026",
+      "storyPath": "stories/approved/ENG-026-verify-effect-queue-abc-ordering.yaml",
+      "storySha256": "849d4c8023d115cf7f6c1fc0ad9257056511dc58c89aa64629510a941390988b"
+    }
+  ],
   "version": 1
 }
