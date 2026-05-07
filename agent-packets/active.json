@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-024E.md",
-      "storyId": "ENG-024E",
-      "storyPath": "stories/approved/ENG-024E-integrate-source-presence-policy-in-queue-processing.yaml",
-      "storySha256": "2c9a090e748cb44cd32218ab5adeefe2f4f8cf1ca4d551c9891c966890c71d56"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add deterministic coverage for destination-zone and last-known-information
   source-presence policies without adding new timing implementations.

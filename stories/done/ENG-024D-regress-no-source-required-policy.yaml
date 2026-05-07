@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add deterministic coverage for noSourceRequired policy behavior under the
   existing effect queue entry shape.

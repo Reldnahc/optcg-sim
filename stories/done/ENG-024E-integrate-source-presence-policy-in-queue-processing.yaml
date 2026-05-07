@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Use the centralized source-presence policy helper in existing no-choice queue
   processing and preserve lifecycle/event behavior.

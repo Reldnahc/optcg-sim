@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add a centralized engine-core helper for evaluating queued-effect
   source-presence policies without changing queue processor behavior.
