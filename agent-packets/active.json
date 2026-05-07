@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-023A.md",
+      "storyId": "ENG-023A",
+      "storyPath": "stories/approved/ENG-023A-queue-when-attacking-effects.yaml",
+      "storySha256": "db46d2e5a3b4ff804b0e46a87354e58fbb474bdb71a95b0d00342ea457dbc600"
+    }
+  ],
   "version": 1
 }
