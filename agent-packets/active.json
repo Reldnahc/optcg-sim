@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-027A.md",
-      "storyId": "ENG-027A",
-      "storyPath": "stories/approved/ENG-027A-detect-battle-ko-trigger-candidates.yaml",
-      "storySha256": "52fdb8ae29105d1bc1efd5a6b7a4a321a77a3d07e2087c0fdf937b9975359117"
+      "packetPath": "agent-packets/ENG-027B.md",
+      "storyId": "ENG-027B",
+      "storyPath": "stories/approved/ENG-027B-queue-supported-ko-trigger-effects.yaml",
+      "storySha256": "d34e507f8ea46dc0b0af3e3cef8be04d9625677f38f6ba5c3d4e48c8a10a1fd7"
     }
   ],
   "version": 1
