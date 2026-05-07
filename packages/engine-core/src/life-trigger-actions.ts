@@ -1,13 +1,24 @@
 import type {
+  Action,
   CardInstance,
   ConfirmLifeTriggerDecision,
   EffectBlock,
+  EngineError,
+  EngineEvent,
+  EngineResult,
   GameState,
   PlayerId,
 } from "@optcg/types";
 
-import { toDecisionId } from "./action-results.js";
+import {
+  appendEvent,
+  toDecisionId,
+  toEngineResult,
+  toStateSeq,
+} from "./action-results.js";
+import { reindexZoneCards } from "./action-state.js";
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
+import { assertGameStateInvariants } from "./invariants.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
   triggerText !== undefined && triggerText.trim().length > 0;
@@ -92,4 +103,155 @@ export const getSupportedLifeTriggerDecision = (
     },
     options: ["activateTrigger", "addToHand"],
   };
+};
+
+const invalidDecision = (reason: string): readonly [EngineError] => [
+  { type: "invalidDecisionResponse", reason },
+];
+
+const isCardInNormalZone = (
+  state: GameState,
+  instanceId: CardInstance["instanceId"],
+): boolean =>
+  Object.values(state.players).some((player) => {
+    if (player.leader.instanceId === instanceId) return true;
+    if (player.stage?.instanceId === instanceId) return true;
+    return (
+      player.deck.some((card) => card.instanceId === instanceId) ||
+      player.donDeck.some((card) => card.instanceId === instanceId) ||
+      player.hand.some((card) => card.instanceId === instanceId) ||
+      player.trash.some((card) => card.instanceId === instanceId) ||
+      player.characters.some((card) => card.instanceId === instanceId) ||
+      player.costArea.some((card) => card.instanceId === instanceId) ||
+      player.life.some((lifeCard) => lifeCard.card.instanceId === instanceId)
+    );
+  });
+
+export const applyLifeTriggerDecisionResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  if (decision === undefined || decision.type !== "confirmLifeTrigger") {
+    return null;
+  }
+  if (action.response.type !== "lifeTrigger") {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision(
+        "Response type must be lifeTrigger for confirmLifeTrigger.",
+      ),
+    );
+  }
+  if (action.response.choice !== "addToHand") {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Life Trigger activation is unsupported."),
+    );
+  }
+  if (decision.card.playerId !== decision.playerId) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Life Trigger card player does not match decision."),
+    );
+  }
+  if (state.cardManifest.cards[decision.card.cardId] === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Life Trigger card metadata is missing."),
+    );
+  }
+  if (isCardInNormalZone(state, decision.card.instanceId)) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Life Trigger card is stale for current state."),
+    );
+  }
+  const player = state.players[decision.playerId];
+  if (player === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Life Trigger decision player is missing."),
+    );
+  }
+
+  const movedCard: CardInstance = {
+    instanceId: decision.card.instanceId,
+    cardId: decision.card.cardId,
+    owner: decision.playerId,
+    controller: decision.playerId,
+    attachedDon: [],
+    zone: {
+      zone: "hand",
+      playerId: decision.playerId,
+      slot: "hand",
+      index: 0,
+    },
+  };
+  const nextHand = reindexZoneCards(
+    [movedCard, ...player.hand],
+    "hand",
+    decision.playerId,
+    "hand",
+  );
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionResolved",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+      responseType: action.response.type,
+    },
+    { type: "private", playerId: decision.playerId },
+  );
+  appendEvent(
+    state,
+    events,
+    "cardMoved",
+    {
+      from: { zone: "life", playerId: decision.playerId, slot: "life" },
+      to: movedCard.zone,
+      reason: "battleDamage",
+    },
+    { type: "public" },
+  );
+  appendEvent(
+    state,
+    events,
+    "cardMoved",
+    {
+      instanceId: movedCard.instanceId,
+      cardId: movedCard.cardId,
+      from: { zone: "life", playerId: decision.playerId, slot: "life" },
+      to: movedCard.zone,
+      reason: "lifeTriggerDeclined",
+    },
+    { type: "private", playerId: decision.playerId },
+  );
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    players: {
+      ...state.players,
+      [decision.playerId]: {
+        ...player,
+        hand: nextHand,
+      },
+    },
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  delete nextState.pendingDecision;
+  assertGameStateInvariants(nextState);
+  return toEngineResult(nextState, events);
 };
