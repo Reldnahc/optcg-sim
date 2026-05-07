@@ -5,6 +5,7 @@ import type {
   CardInstance,
   ContinuousEffectRecord,
   EffectDefinition,
+  EffectId,
   PlayerId,
 } from "@optcg/types";
 
@@ -56,6 +57,61 @@ export const effectDefinition = (
     reviewer: "qa-reviewer",
   },
 });
+
+export const withWhenAttackingDrawEffect = (
+  state: ReturnType<typeof setupAttackState>,
+  source: CardInstance,
+  effectDefinitionId = "def-when-attacking-draw",
+): EffectDefinition => {
+  const definition = effectDefinition(source.cardId, { type: "whenAttacking" });
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: definition,
+  };
+  const category = source.zone.zone === "leaderArea" ? "leader" : "character";
+  state.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category,
+    power: category === "leader" ? 5000 : 7000,
+    effectText: "[When Attacking] Draw 1 card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: definition.metadata.rulesVersion,
+      sourceTextHash: definition.metadata.sourceTextHash,
+    },
+  });
+  return definition;
+};
+
+export const withMultipleWhenAttackingDrawEffects = (
+  state: ReturnType<typeof setupAttackState>,
+  source: CardInstance,
+): EffectDefinition => {
+  const definition = withWhenAttackingDrawEffect(
+    state,
+    source,
+    "def-multiple-when-attacking-draw",
+  );
+  const first = must(definition.effects[0], "first When Attacking effect");
+  const multiple: EffectDefinition = {
+    ...definition,
+    effects: [
+      first,
+      {
+        ...first,
+        id: `${String(source.cardId)}:effect:2` as EffectId,
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-multiple-when-attacking-draw": multiple,
+  };
+  return multiple;
+};
 
 export const withAttackManifest = (
   state: ReturnType<typeof createActiveState>,

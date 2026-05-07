@@ -185,8 +185,19 @@ export type OnPlayTriggerQueueingFailureReason =
   | "unsupported-on-play-definition"
   | "multiple-on-play-effects";
 
+export type WhenAttackingTriggerQueueingFailureReason =
+  | "invalid-attack-declared-event"
+  | "source-presence-failed"
+  | "missing-card-definition"
+  | "unsupported-when-attacking-definition"
+  | "multiple-when-attacking-effects";
+
 interface OnPlayTriggerQueueingErrorDetails {
   reason: OnPlayTriggerQueueingFailureReason;
+}
+
+interface WhenAttackingTriggerQueueingErrorDetails {
+  reason: WhenAttackingTriggerQueueingFailureReason;
 }
 
 const drawExecutionError = (
@@ -204,6 +215,14 @@ const onPlayTriggerQueueingError = (
   type: "effectRuntimeError",
   effectId: "on-play-trigger-queueing",
   details: { reason } satisfies OnPlayTriggerQueueingErrorDetails,
+});
+
+const whenAttackingTriggerQueueingError = (
+  reason: WhenAttackingTriggerQueueingFailureReason,
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId: "when-attacking-trigger-queueing",
+  details: { reason } satisfies WhenAttackingTriggerQueueingErrorDetails,
 });
 
 const resolvePlayerId = (
@@ -341,13 +360,14 @@ export const executeNoChoiceEffectPrimitive = (
   return executeDrawEffect(state, entry, effect);
 };
 
-export const isSupportedNoChoiceOnPlayDrawEffect = (
+const isSupportedNoChoiceDrawTriggerEffect = (
   effect: EffectDefinition["effects"][number],
+  triggerType: "onPlay" | "whenAttacking",
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: Extract<Effect, { type: "draw" }>;
 } => {
-  if (effect.trigger.type !== "onPlay") {
+  if (effect.trigger.type !== triggerType) {
     return false;
   }
   if (effect.category !== "auto") {
@@ -364,7 +384,7 @@ export const isSupportedNoChoiceOnPlayDrawEffect = (
   ) {
     return false;
   }
-  if (effect.sourcePresencePolicy === undefined) {
+  if (effect.sourcePresencePolicy !== "mustRemainInSameZone") {
     return false;
   }
   return (
@@ -374,6 +394,20 @@ export const isSupportedNoChoiceOnPlayDrawEffect = (
     effect.effect.player === "self"
   );
 };
+
+export const isSupportedNoChoiceOnPlayDrawEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} => isSupportedNoChoiceDrawTriggerEffect(effect, "onPlay");
+
+export const isSupportedNoChoiceWhenAttackingDrawEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} => isSupportedNoChoiceDrawTriggerEffect(effect, "whenAttacking");
 
 const findCardInstance = (
   state: GameState,
@@ -594,6 +628,194 @@ const queueOnPlayTriggers = (state: GameState): EngineResult | undefined => {
   return toEngineResult(nextState, events);
 };
 
+const queueWhenAttackingTriggers = (
+  state: GameState,
+): EngineResult | undefined => {
+  if (state.effectQueue.length > 0 || state.deferredTriggers.length > 0) {
+    return undefined;
+  }
+  const attackDeclaredEvents = state.eventJournal.filter(
+    (event) =>
+      event.type === "attackDeclared" && event.createdAtStateSeq === state.seq,
+  );
+  if (attackDeclaredEvents.length === 0) {
+    return undefined;
+  }
+
+  const appended: EffectQueueEntry[] = [];
+  const events: EngineEvent[] = [];
+  for (const event of attackDeclaredEvents) {
+    const payload = event.payload as {
+      attacker?: {
+        playerId?: PlayerId;
+        instanceId?: string;
+        cardId?: string;
+      };
+    };
+    const attackerPayload = payload.attacker;
+    if (
+      attackerPayload?.playerId === undefined ||
+      attackerPayload.instanceId === undefined ||
+      attackerPayload.cardId === undefined
+    ) {
+      return toEngineResult(
+        state,
+        [],
+        [whenAttackingTriggerQueueingError("invalid-attack-declared-event")],
+      );
+    }
+    if (attackerPayload.playerId !== state.turn.turnPlayerId) {
+      return toEngineResult(
+        state,
+        [],
+        [whenAttackingTriggerQueueingError("invalid-attack-declared-event")],
+      );
+    }
+
+    const source = findCardInstance(
+      state,
+      attackerPayload.playerId,
+      attackerPayload.instanceId,
+    );
+    if (
+      source === undefined ||
+      source.cardId !== attackerPayload.cardId ||
+      source.zone.playerId !== attackerPayload.playerId ||
+      (source.zone.zone !== "leaderArea" &&
+        source.zone.zone !== "characterArea")
+    ) {
+      return toEngineResult(
+        state,
+        [],
+        [whenAttackingTriggerQueueingError("source-presence-failed")],
+      );
+    }
+    const resolved = state.cardManifest.cards[source.cardId];
+    if (resolved === undefined) {
+      return toEngineResult(
+        state,
+        [],
+        [whenAttackingTriggerQueueingError("missing-card-definition")],
+      );
+    }
+    if (resolved.support.effectDefinitionId === undefined) {
+      continue;
+    }
+
+    const lookup = resolveImplementedDslEffectDefinition(
+      resolved,
+      state.cardManifest,
+    );
+    if (!lookup.ok) {
+      return toEngineResult(state, [], [lookup.error]);
+    }
+    const whenAttackingEffects = lookup.definition.effects.filter(
+      (effect) => effect.trigger.type === "whenAttacking",
+    );
+    if (whenAttackingEffects.length === 0) {
+      continue;
+    }
+    const matching = whenAttackingEffects.filter(
+      isSupportedNoChoiceWhenAttackingDrawEffect,
+    );
+    if (matching.length === 0) {
+      return toEngineResult(
+        state,
+        [],
+        [
+          whenAttackingTriggerQueueingError(
+            "unsupported-when-attacking-definition",
+          ),
+        ],
+      );
+    }
+    if (matching.length !== 1) {
+      return toEngineResult(
+        state,
+        [],
+        [whenAttackingTriggerQueueingError("multiple-when-attacking-effects")],
+      );
+    }
+    if (lookup.definition.effects.length !== 1) {
+      return toEngineResult(
+        state,
+        [],
+        [
+          whenAttackingTriggerQueueingError(
+            "unsupported-when-attacking-definition",
+          ),
+        ],
+      );
+    }
+
+    for (const effectBlock of matching) {
+      const queueId =
+        `queue-entry:${String(event.id)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
+      const timingWindowId =
+        `timing-window:${String(event.id)}` as EffectQueueEntry["timingWindowId"];
+      const entry: EffectQueueEntry = {
+        id: queueId,
+        state: "pending",
+        timingWindowId,
+        generation: 0,
+        controllerId: source.zone.playerId,
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: source.zone.playerId,
+          zone: source.zone,
+        },
+        sourceSnapshot: toSnapshot(source, resolved),
+        triggerEventId: event.id,
+        effectBlockId: effectBlock.id,
+        orderingGroup: "turnPlayer",
+        createdAtEventSeq: event.seq,
+        queuedAtStateSeq: toStateSeq(state.seq + 1),
+        sourcePresencePolicy: effectBlock.sourcePresencePolicy,
+        causedBy: {
+          type: "ruleProcess",
+          name: "effectRuntime:whenAttackingTriggerQueueing",
+        },
+      };
+      appended.push(entry);
+    }
+  }
+
+  if (appended.length === 0) {
+    return undefined;
+  }
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    effectQueue: [...state.effectQueue, ...appended],
+  };
+  for (const entry of appended) {
+    const beforeEventCount = events.length;
+    appendEvent(
+      state,
+      events,
+      "effectQueued",
+      {
+        queueEntryId: entry.id,
+        timingWindowId: entry.timingWindowId,
+        generation: entry.generation,
+        effectBlockId: entry.effectBlockId,
+        triggerEventId: entry.triggerEventId,
+        sourcePresencePolicy: entry.sourcePresencePolicy,
+        orderingGroup: entry.orderingGroup,
+      },
+      { type: "public" },
+    );
+    const queuedEvent = events[beforeEventCount];
+    if (queuedEvent !== undefined) {
+      queuedEvent.causedBy = entry.causedBy;
+    }
+  }
+  nextState.eventJournal = [...state.eventJournal, ...events];
+  return toEngineResult(nextState, events);
+};
+
 const unsupportedEffectIdByKind: Record<PendingRuntimeWorkKind, string> = {
   effectQueue: "unsupported-effect-queue",
   deferredTriggers: "unsupported-deferred-triggers",
@@ -694,7 +916,11 @@ const resolveQueuedNoChoiceDrawEffect = (
   const match = lookup.definition.effects.find(
     (effect) => effect.id === entry.effectBlockId,
   );
-  if (match === undefined || !isSupportedNoChoiceOnPlayDrawEffect(match)) {
+  if (
+    match === undefined ||
+    (!isSupportedNoChoiceOnPlayDrawEffect(match) &&
+      !isSupportedNoChoiceWhenAttackingDrawEffect(match))
+  ) {
     return undefined;
   }
   return match.effect;
@@ -878,6 +1104,10 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   const queuedFromOnPlay = queueOnPlayTriggers(state);
   if (queuedFromOnPlay !== undefined) {
     return queuedFromOnPlay;
+  }
+  const queuedFromWhenAttacking = queueWhenAttackingTriggers(state);
+  if (queuedFromWhenAttacking !== undefined) {
+    return queuedFromWhenAttacking;
   }
   if (state.deferredTriggers.length > 0) {
     return toEngineResult(

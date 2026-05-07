@@ -17,7 +17,36 @@ import {
 import {
   effectDefinition,
   setupAttackState,
+  withMultipleWhenAttackingDrawEffects,
+  withWhenAttackingDrawEffect,
 } from "./battle-actions-test-fixtures.js";
+
+const ensureDeckHasAtLeast = (
+  state: ReturnType<typeof setupAttackState>,
+  playerId: PlayerId,
+  count: number,
+) => {
+  const player = must(state.players[playerId], "deck owner");
+  if (player.deck.length >= count) {
+    return;
+  }
+  const needed = count - player.deck.length;
+  const moved = player.hand.slice(0, needed).map((card, index) => ({
+    ...card,
+    zone: {
+      zone: "deck" as const,
+      playerId,
+      slot: "deck" as const,
+      index: player.deck.length + index,
+    },
+  }));
+  player.deck = [...player.deck, ...moved];
+  player.hand = player.hand.slice(needed).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand" as const, playerId, slot: "hand" as const, index },
+  }));
+};
+
 test("getLegalActions includes Leader-to-Leader declareAttack for turn player", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -161,6 +190,173 @@ test("played-this-turn rush character attacks leader through battle action surfa
     result.events.some((event) => event.type === "damageDealt"),
     true,
   );
+});
+
+test("ENG-023A: attacker When Attacking no-choice effect resolves after attackDeclared before damage", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = p1State.leader;
+  const target = p2State.leader;
+  const definition = withWhenAttackingDrawEffect(state, attacker);
+  const effect = must(definition.effects[0], "When Attacking effect");
+  ensureDeckHasAtLeast(state, p1, 2);
+  const beforeP1Deck = p1State.deck.length;
+  const beforeP1Hand = p1State.hand.length;
+  const beforeP2Life = p2State.life.length;
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(
+    must(result.state.players[p1], "result p1").deck.length,
+    beforeP1Deck - 1,
+  );
+  assert.equal(
+    must(result.state.players[p1], "result p1").hand.length,
+    beforeP1Hand + 1,
+  );
+  assert.equal(
+    must(result.state.players[p2], "result p2").life.length,
+    beforeP2Life - 1,
+  );
+
+  const attackDeclaredIndex = result.events.findIndex(
+    (event) => event.type === "attackDeclared",
+  );
+  const effectQueuedIndex = result.events.findIndex(
+    (event) => event.type === "effectQueued",
+  );
+  const effectResolvedIndex = result.events.findIndex((event) => {
+    const payload = event.payload as Partial<{ effectBlockId: string }>;
+    return (
+      event.type === "effectResolved" && payload.effectBlockId === effect.id
+    );
+  });
+  const damageIndex = result.events.findIndex(
+    (event) => event.type === "damageDealt",
+  );
+
+  assert.notEqual(attackDeclaredIndex, -1);
+  assert.notEqual(effectQueuedIndex, -1);
+  assert.notEqual(effectResolvedIndex, -1);
+  assert.notEqual(damageIndex, -1);
+  assert.ok(attackDeclaredIndex < effectQueuedIndex);
+  assert.ok(effectQueuedIndex < effectResolvedIndex);
+  assert.ok(effectResolvedIndex < damageIndex);
+
+  const attackDeclared = must(
+    result.events[attackDeclaredIndex],
+    "attackDeclared event",
+  );
+  const effectQueued = must(result.events[effectQueuedIndex], "effectQueued");
+  assert.deepEqual(effectQueued.payload, {
+    queueEntryId: `queue-entry:${String(attackDeclared.id)}:${String(effect.id)}`,
+    timingWindowId: `timing-window:${String(attackDeclared.id)}`,
+    generation: 0,
+    effectBlockId: effect.id,
+    triggerEventId: attackDeclared.id,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    orderingGroup: "turnPlayer",
+  });
+});
+
+test("ENG-023A: attacker When Attacking resolves before defender block decision", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const blocker = must(p2State.characters[0], "defender blocker");
+  blocker.state = "active";
+  state.cardManifest.cards[blocker.cardId] = {
+    ...resolvedCard({
+      cardId: blocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+  const definition = withWhenAttackingDrawEffect(state, p1State.leader);
+  const effect = must(definition.effects[0], "When Attacking effect");
+  ensureDeckHasAtLeast(state, p1, 2);
+  const beforeP1Hand = p1State.hand.length;
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision?.type, "selectCards");
+  assert.equal(
+    must(result.state.players[p1], "result p1").hand.length,
+    beforeP1Hand + 1,
+  );
+  const resolvedIndex = result.events.findIndex((event) => {
+    const payload = event.payload as Partial<{ effectBlockId: string }>;
+    return (
+      event.type === "effectResolved" && payload.effectBlockId === effect.id
+    );
+  });
+  const decisionIndex = result.events.findIndex(
+    (event) => event.type === "decisionCreated",
+  );
+  const damageIndex = result.events.findIndex(
+    (event) => event.type === "damageDealt",
+  );
+
+  assert.notEqual(resolvedIndex, -1);
+  assert.notEqual(decisionIndex, -1);
+  assert.ok(resolvedIndex < decisionIndex);
+  assert.equal(damageIndex, -1);
+});
+
+test("ENG-023A: multiple same-player attacker When Attacking effects fail closed without mutation", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  withMultipleWhenAttackingDrawEffects(state, p1State.leader);
+  const before = JSON.stringify(state);
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
 });
 
 test("played-this-turn rush character attacks rested character through battle action surface", () => {
