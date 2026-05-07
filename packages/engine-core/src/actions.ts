@@ -67,6 +67,11 @@ export const getLegalActions = (
       actions.push({
         type: "respondToDecision",
         decisionId: state.pendingDecision.id,
+        response: { type: "lifeTrigger", choice: "activateTrigger" },
+      });
+      actions.push({
+        type: "respondToDecision",
+        decisionId: state.pendingDecision.id,
         response: { type: "lifeTrigger", choice: "addToHand" },
       });
     }

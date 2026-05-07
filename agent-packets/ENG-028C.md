@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-028C -->
 <!-- agent-packet:story-path stories/approved/ENG-028C-handle-activated-life-trigger-no-zone.yaml -->
-<!-- agent-packet:story-sha256 f86cfc243a0661ceda2d1033e2f285d0433148c29eaedc69a5821d80e889323b -->
+<!-- agent-packet:story-sha256 f79b5b5ff5a9cf340ab0c514607fa8ace33dda22323db4dd082fb139c83d6e12 -->
 
 # Story Packet
 
@@ -615,6 +615,7 @@ Own only the activated life-trigger transition from decision to public reveal an
 - clear the confirmLifeTrigger pending decision, keep the activated card in no-zone/transient runtime state, and create only the deterministic pending/resolving runtime record required for later Trigger effect execution without executing the effect body or trash cleanup
 - keep no-zone data hidden-info safe while exposing the public reveal to both players
 - fail closed without mutation if the Trigger definition is unsupported for no-zone activation
+- update existing battle-damage life-trigger regression coverage only to remove the stale unconditional activation-unsupported assertion
 
 ## Out of Scope
 
@@ -635,6 +636,7 @@ Own only the activated life-trigger transition from decision to public reveal an
 - packages/engine-core/src/life-trigger-actions.test.ts
 - packages/engine-core/src/actions.ts
 - packages/engine-core/src/actions.test.ts
+- packages/engine-core/src/battle-damage-banish.test.ts
 - packages/engine-core/src/effect-runtime.ts
 - packages/engine-core/src/effect-runtime.test.ts
 - packages/engine-core/src/filter-state-for-player.ts
