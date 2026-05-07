@@ -44,6 +44,46 @@ export interface EffectQueueGroup {
   choicePlayerId?: PlayerId;
 }
 
+const compareCodeUnitOrder = (left: string, right: string): number => {
+  if (left < right) {
+    return -1;
+  }
+  if (left > right) {
+    return 1;
+  }
+  return 0;
+};
+
+const compareEffectQueueGroups = (
+  left: Pick<
+    EffectQueueGroup,
+    "timingWindowRank" | "generation" | "orderingGroup" | "controllerId"
+  >,
+  right: Pick<
+    EffectQueueGroup,
+    "timingWindowRank" | "generation" | "orderingGroup" | "controllerId"
+  >,
+): number => {
+  const rankDifference = left.timingWindowRank - right.timingWindowRank;
+  if (rankDifference !== 0) {
+    return rankDifference;
+  }
+
+  const generationDifference = left.generation - right.generation;
+  if (generationDifference !== 0) {
+    return generationDifference;
+  }
+
+  const orderingGroupDifference =
+    orderingGroupRank(left.orderingGroup) -
+    orderingGroupRank(right.orderingGroup);
+  if (orderingGroupDifference !== 0) {
+    return orderingGroupDifference;
+  }
+
+  return compareCodeUnitOrder(left.controllerId, right.controllerId);
+};
+
 export type NoChoiceEffectQueueOrderingResult =
   | { ok: true; entries: readonly EffectQueueEntry[] }
   | { ok: false; reason: "choiceRequired"; controllerId: PlayerId };
@@ -209,43 +249,15 @@ export const groupValidatedEffectQueueEntries = (
             requiresChooseTriggerOrder,
           };
     })
-    .sort((left, right) => {
-      const rankDifference = left.timingWindowRank - right.timingWindowRank;
-      if (rankDifference !== 0) {
-        return rankDifference;
-      }
-
-      const generationDifference = left.generation - right.generation;
-      if (generationDifference !== 0) {
-        return generationDifference;
-      }
-
-      const orderingGroupDifference =
-        orderingGroupRank(left.orderingGroup) -
-        orderingGroupRank(right.orderingGroup);
-      if (orderingGroupDifference !== 0) {
-        return orderingGroupDifference;
-      }
-
-      if (left.controllerId < right.controllerId) {
-        return -1;
-      }
-      if (left.controllerId > right.controllerId) {
-        return 1;
-      }
-      return 0;
-    });
+    .sort(compareEffectQueueGroups);
 };
 
-const compareCodeUnitOrder = (left: string, right: string): number => {
-  if (left < right) {
-    return -1;
-  }
-  if (left > right) {
-    return 1;
-  }
-  return 0;
-};
+export const findEarliestChoiceRequiredEffectQueueGroup = (
+  groups: readonly EffectQueueGroup[],
+): EffectQueueGroup | undefined =>
+  [...groups]
+    .sort(compareEffectQueueGroups)
+    .find((group) => group.requiresChooseTriggerOrder);
 
 const compareNoChoiceEntries = (
   left: { group: EffectQueueGroup; entry: EffectQueueEntry },
