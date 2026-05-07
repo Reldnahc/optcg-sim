@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EngineEvent, EngineResult, GameState } from "@optcg/types";
+import type {
+  CardId,
+  EffectDefinition,
+  EngineEvent,
+  EngineResult,
+  GameState,
+} from "@optcg/types";
 
 import { applyAction, getLegalActions } from "./actions.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
@@ -153,6 +159,36 @@ const assertRepeatedScriptStable = (
     `${name} repeated script state hashes and event ordering should be stable`,
   );
 };
+
+const effectDefinition = (
+  cardId: CardId,
+  trigger: EffectDefinition["effects"][number]["trigger"],
+): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: `${String(cardId)}:effect:1` as EffectDefinition["effects"][number]["id"],
+      category: "auto",
+      trigger,
+      optional: false,
+      oncePerTurn: false,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "draw",
+        count: 1,
+        player: "self",
+      },
+    },
+  ],
+  metadata: {
+    sourceTextHash: "source-hash",
+    rulesVersion: "r1",
+    effectDefinitionsVersion: "fixture",
+    tested: true,
+    reviewer: "qa-reviewer",
+  },
+});
 
 const runNoCounterLeaderAttackScript = () => {
   const state = setupAttackState();
@@ -969,4 +1005,404 @@ test("ENG-021C: battle context is retained while pending and cleared only after 
     "ENG-021C Leader damage",
     runEng021cLeaderDamageCleanupScript,
   );
+});
+
+const runEng021dVanillaLeaderDamageCleanupScript = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "ENG-021D damage p1");
+  const p2State = must(state.players[p2], "ENG-021D damage p2");
+  const topLife = must(p2State.life[0], "ENG-021D top life").card.instanceId;
+  const beforeLife = p2State.life.length;
+
+  const damaged = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assertNoBattleContextAfterCleanup(
+    state,
+    damaged,
+    "ENG-021D vanilla Leader damage cleanup",
+    ["damageDealt", "lifeTaken", "cardMoved"],
+  );
+  assert.equal(
+    must(damaged.state.players[p2], "ENG-021D damaged p2").life.length,
+    beforeLife - 1,
+  );
+  assert.equal(
+    must(damaged.state.players[p2], "ENG-021D damaged p2").hand.some(
+      (card) => card.instanceId === topLife,
+    ),
+    true,
+  );
+
+  return [damaged] as const;
+};
+
+const runEng021dCharacterKoCleanupScript = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "ENG-021D character p1");
+  const p2State = must(state.players[p2], "ENG-021D character p2");
+  const attacker = must(p1State.characters[0], "ENG-021D attacker");
+  const target = must(p2State.characters[0], "ENG-021D target");
+  const beforeLife = p2State.life.length;
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 3000,
+  });
+
+  const knockedOut = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+  });
+  assertNoBattleContextAfterCleanup(
+    state,
+    knockedOut,
+    "ENG-021D Character K.O. cleanup",
+    ["damageDealt", "cardKOd", "cardMoved"],
+  );
+  assert.equal(
+    must(knockedOut.state.players[p2], "ENG-021D K.O. p2").characters.some(
+      (character) => character.instanceId === target.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    must(knockedOut.state.players[p2], "ENG-021D K.O. p2").trash.some(
+      (card) => card.instanceId === target.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    must(knockedOut.state.players[p2], "ENG-021D K.O. p2").life.length,
+    beforeLife,
+  );
+
+  return [knockedOut] as const;
+};
+
+const runEng021dBlockerRedirectCleanupScript = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "ENG-021D block p1");
+  const p2State = must(state.players[p2], "ENG-021D block p2");
+  const attacker = p1State.leader;
+  const blocker = must(p2State.characters[0], "ENG-021D blocker");
+  blocker.state = "active";
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "leader",
+    power: 5000,
+  });
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+  state.cardManifest.cards[blocker.cardId] = {
+    ...resolvedCard({
+      cardId: blocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assertAcceptedResult(state, opened, "ENG-021D pending Block Step");
+  const openedBattle = must(
+    opened.state.battle,
+    "ENG-021D opened block battle",
+  );
+  assert.equal(openedBattle.step, "block");
+  assert.equal(
+    openedBattle.currentTarget.instanceId,
+    p2State.leader.instanceId,
+  );
+  assertNoCleanupEvent(opened, "ENG-021D pending Block Step");
+
+  const blocked = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "ENG-021D block decision")
+      .id,
+    response: {
+      type: "cards",
+      cards: [
+        {
+          instanceId: blocker.instanceId,
+          cardId: blocker.cardId,
+          playerId: p2,
+          zone: blocker.zone,
+        },
+      ],
+    },
+  });
+  assertNoBattleContextAfterCleanup(
+    opened.state,
+    blocked,
+    "ENG-021D blocker redirection cleanup",
+    [
+      "decisionResolved",
+      "blockerActivated",
+      "damageDealt",
+      "cardKOd",
+      "cardMoved",
+    ],
+  );
+  assertJournalEventOrder(
+    blocked.state,
+    "blockerActivated",
+    "damageDealt",
+    "ENG-021D blocker redirection cleanup",
+  );
+  const blockerEvent = must(
+    blocked.events.find((event) => event.type === "blockerActivated"),
+    "ENG-021D blocker event",
+  );
+  const blockerPayload = blockerEvent.payload as Partial<{
+    previousTarget: { instanceId: string };
+    currentTarget: { instanceId: string };
+  }>;
+  assert.equal(
+    blockerPayload.previousTarget?.instanceId,
+    p2State.leader.instanceId,
+  );
+  assert.equal(blockerPayload.currentTarget?.instanceId, blocker.instanceId);
+  assert.equal(
+    must(blocked.state.players[p2], "ENG-021D blocked p2").characters.some(
+      (character) => character.instanceId === blocker.instanceId,
+    ),
+    false,
+  );
+
+  return [opened, blocked] as const;
+};
+
+const runEng021dCounterPowerCleanupScript = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "ENG-021D counter p1");
+  const p2State = must(state.players[p2], "ENG-021D counter p2");
+  const attacker = must(p1State.characters[0], "ENG-021D counter attacker");
+  const target = must(p2State.characters[0], "ENG-021D counter target");
+  const counterCard = must(p2State.hand[0], "ENG-021D counter card");
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 5000,
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 4000,
+  });
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 2000,
+  });
+
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+  });
+  assertAcceptedResult(state, opened, "ENG-021D counter open");
+  assert.equal(opened.state.battle?.step, "counter");
+
+  const countered = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target: must(opened.state.battle, "ENG-021D counter battle").currentTarget,
+  });
+  assertAcceptedResult(opened.state, countered, "ENG-021D counter use");
+  assert.equal(countered.state.battle?.counterPower, 2000);
+  assertNoCleanupEvent(countered, "ENG-021D counter use");
+
+  const passed = applyAction(countered.state, {
+    type: "respondToDecision",
+    decisionId: must(
+      countered.state.pendingDecision,
+      "ENG-021D counter decision",
+    ).id,
+    response: { type: "cards", cards: [] },
+  });
+  assertNoBattleContextAfterCleanup(
+    countered.state,
+    passed,
+    "ENG-021D counter power cleanup",
+    ["decisionResolved"],
+  );
+  assert.equal(
+    must(passed.state.players[p2], "ENG-021D counter p2 after").characters.some(
+      (character) => character.instanceId === target.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    passed.events.some((event) => event.type === "cardKOd"),
+    false,
+  );
+  assert.equal(JSON.stringify(passed.state).includes("counterPower"), false);
+
+  return [opened, countered, passed] as const;
+};
+
+const runEng021dBanishLeaderDamageCleanupScript = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "ENG-021D banish p1");
+  const p2State = must(state.players[p2], "ENG-021D banish p2");
+  const topLife = must(p2State.life[0], "ENG-021D banish top life").card
+    .instanceId;
+  const beforeLife = p2State.life.length;
+  state.cardManifest.cards[p1State.leader.cardId] = {
+    ...resolvedCard({
+      cardId: p1State.leader.cardId,
+      category: "leader",
+      power: 5000,
+    }),
+    printedKeywords: ["banish"],
+  };
+
+  const damaged = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assertNoBattleContextAfterCleanup(
+    state,
+    damaged,
+    "ENG-021D Banish Leader damage cleanup",
+    ["damageDealt", "lifeTaken", "cardMoved"],
+  );
+  assert.equal(
+    must(damaged.state.players[p2], "ENG-021D banish p2 after").life.length,
+    beforeLife - 1,
+  );
+  assert.equal(
+    must(damaged.state.players[p2], "ENG-021D banish p2 after").trash.some(
+      (card) => card.instanceId === topLife,
+    ),
+    true,
+  );
+  assert.equal(
+    must(damaged.state.players[p2], "ENG-021D banish p2 after").hand.some(
+      (card) => card.instanceId === topLife,
+    ),
+    false,
+  );
+
+  return [damaged] as const;
+};
+
+const assertEng021dEndOfBattleTriggerMetadataFailsClosed = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "ENG-021D eob p1");
+  const p2State = must(state.players[p2], "ENG-021D eob p2");
+  state.cardManifest.effectDefinitions = {
+    endOfBattle: effectDefinition(p2State.leader.cardId, {
+      type: "endOfBattle",
+    }),
+  };
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  const error = must(result.errors?.[0], "ENG-021D end of battle error");
+  assert.equal(error.type, "illegalAction");
+  assert.equal(
+    error.reason,
+    "declareAttack is unsupported for current combat metadata.",
+  );
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.state.battle, undefined);
+};
+
+test("ENG-021D: supported battle cleanup composes across accepted mechanics", () => {
+  const scripts = [
+    [
+      "ENG-021D vanilla Leader damage",
+      runEng021dVanillaLeaderDamageCleanupScript,
+    ],
+    ["ENG-021D Character K.O.", runEng021dCharacterKoCleanupScript],
+    [
+      "ENG-021D Blocker redirection and resolution",
+      runEng021dBlockerRedirectCleanupScript,
+    ],
+    ["ENG-021D Character Counter power", runEng021dCounterPowerCleanupScript],
+    [
+      "ENG-021D Banish Leader damage",
+      runEng021dBanishLeaderDamageCleanupScript,
+    ],
+  ] as const;
+
+  for (const [name, script] of scripts) {
+    assertRepeatedScriptStable(name, script);
+  }
+
+  assertEng021dEndOfBattleTriggerMetadataFailsClosed();
 });
