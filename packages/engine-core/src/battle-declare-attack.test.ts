@@ -572,6 +572,154 @@ test("ENG-023B: character Counter is usable after attacker and defender attack t
   );
 });
 
+test("ENG-023C: attacker attack timing resolves before defender attack timing and Counter Step", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attackerDefinition = withWhenAttackingDrawEffect(
+    state,
+    p1State.leader,
+    "def-eng-023c-when-attacking",
+  );
+  const defenderDefinition = withOnOpponentAttackDrawEffect(
+    state,
+    p2State.leader,
+    "def-eng-023c-on-opponent-attack",
+  );
+  const attackerEffect = must(
+    attackerDefinition.effects[0],
+    "ENG-023C attacker effect",
+  );
+  const defenderEffect = must(
+    defenderDefinition.effects[0],
+    "ENG-023C defender effect",
+  );
+  ensureDeckHasAtLeast(state, p1, 2);
+  ensureDeckHasAtLeast(state, p2, 2);
+  const counterCard = must(p2State.hand[0], "ENG-023C counter card");
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+  const beforeP1Hand = p1State.hand.length;
+  const beforeP2Hand = p2State.hand.length;
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.battle?.step, "counter");
+  assert.equal(result.state.pendingDecision?.type, "selectCards");
+  assert.equal(result.state.pendingDecision.playerId, p2);
+  assert.equal(
+    must(result.state.players[p1], "ENG-023C result p1").hand.length,
+    beforeP1Hand + 1,
+  );
+  assert.equal(
+    must(result.state.players[p2], "ENG-023C result p2").hand.length,
+    beforeP2Hand + 1,
+  );
+
+  const effectEventIndex = (
+    eventType: "effectQueued" | "effectResolved",
+    effectBlockId: string,
+  ) =>
+    result.events.findIndex((event) => {
+      const payload = event.payload as Partial<{ effectBlockId: string }>;
+      return (
+        event.type === eventType && payload.effectBlockId === effectBlockId
+      );
+    });
+  const attackDeclaredIndex = result.events.findIndex(
+    (event) => event.type === "attackDeclared",
+  );
+  const attackerQueuedIndex = effectEventIndex(
+    "effectQueued",
+    attackerEffect.id,
+  );
+  const attackerResolvedIndex = effectEventIndex(
+    "effectResolved",
+    attackerEffect.id,
+  );
+  const defenderQueuedIndex = effectEventIndex(
+    "effectQueued",
+    defenderEffect.id,
+  );
+  const defenderResolvedIndex = effectEventIndex(
+    "effectResolved",
+    defenderEffect.id,
+  );
+  const decisionCreatedIndex = result.events.findIndex(
+    (event) => event.type === "decisionCreated",
+  );
+  const damageIndex = result.events.findIndex(
+    (event) => event.type === "damageDealt",
+  );
+
+  assert.notEqual(attackDeclaredIndex, -1);
+  assert.notEqual(attackerQueuedIndex, -1);
+  assert.notEqual(attackerResolvedIndex, -1);
+  assert.notEqual(defenderQueuedIndex, -1);
+  assert.notEqual(defenderResolvedIndex, -1);
+  assert.notEqual(decisionCreatedIndex, -1);
+  assert.equal(damageIndex, -1);
+  assert.ok(attackDeclaredIndex < attackerQueuedIndex);
+  assert.ok(attackerQueuedIndex < attackerResolvedIndex);
+  assert.ok(attackerResolvedIndex < defenderQueuedIndex);
+  assert.ok(defenderQueuedIndex < defenderResolvedIndex);
+  assert.ok(defenderResolvedIndex < decisionCreatedIndex);
+
+  const attackDeclared = must(
+    result.events[attackDeclaredIndex],
+    "ENG-023C attackDeclared event",
+  );
+  const attackerQueued = must(
+    result.events[attackerQueuedIndex],
+    "ENG-023C attacker effectQueued",
+  );
+  assert.deepEqual(attackerQueued.payload, {
+    queueEntryId: `queue-entry:${String(attackDeclared.id)}:${String(
+      attackerEffect.id,
+    )}`,
+    timingWindowId: `timing-window:${String(attackDeclared.id)}`,
+    generation: 0,
+    effectBlockId: attackerEffect.id,
+    triggerEventId: attackDeclared.id,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    orderingGroup: "turnPlayer",
+  });
+  const defenderQueued = must(
+    result.events[defenderQueuedIndex],
+    "ENG-023C defender effectQueued",
+  );
+  assert.deepEqual(defenderQueued.payload, {
+    queueEntryId: `queue-entry:${String(
+      attackDeclared.id,
+    )}:onOpponentAttack:${String(defenderEffect.id)}`,
+    timingWindowId: `timing-window:${String(
+      attackDeclared.id,
+    )}:onOpponentAttack`,
+    generation: 0,
+    effectBlockId: defenderEffect.id,
+    triggerEventId: attackDeclared.id,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    orderingGroup: "nonTurnPlayer",
+  });
+});
+
 test("ENG-023B: defender timing waits until Block Step response completes", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
