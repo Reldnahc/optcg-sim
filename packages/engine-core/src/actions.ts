@@ -23,6 +23,7 @@ import {
   getPlayCardLegalActions,
 } from "./play-card.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
+import { applyLifeTriggerDecisionResponse } from "./life-trigger-actions.js";
 import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
 import {
   applyConcede,
@@ -59,6 +60,21 @@ export const getLegalActions = (
         },
       });
     }
+    if (
+      state.pendingDecision.type === "confirmLifeTrigger" &&
+      state.pendingDecision.playerId === playerId
+    ) {
+      actions.push({
+        type: "respondToDecision",
+        decisionId: state.pendingDecision.id,
+        response: { type: "lifeTrigger", choice: "activateTrigger" },
+      });
+      actions.push({
+        type: "respondToDecision",
+        decisionId: state.pendingDecision.id,
+        response: { type: "lifeTrigger", choice: "addToHand" },
+      });
+    }
     actions.push(...getPlayCardLegalActions(state, playerId));
     actions.push(...getBattleDecisionLegalActions(state, playerId));
     return actions;
@@ -93,6 +109,10 @@ const applyRespondToDecision = (
   const battleResult = applyBattleDecisionResponse(state, action);
   if (battleResult !== null) {
     return battleResult;
+  }
+  const lifeTriggerResult = applyLifeTriggerDecisionResponse(state, action);
+  if (lifeTriggerResult !== null) {
+    return lifeTriggerResult;
   }
   const triggerOrderResult = applyChooseTriggerOrderDecisionResponse(
     state,

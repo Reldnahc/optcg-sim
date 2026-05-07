@@ -180,6 +180,54 @@ test("shows pending decision only to the recipient with public shape", () => {
   assert.equal(forOpponent.pendingDecision, undefined);
 });
 
+test("confirmLifeTrigger projection is private to decision player and does not leak card identity", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2 state");
+  const lifeCard = must(p2State.life[0], "top life").card;
+  state.pendingDecision = {
+    id: toDecisionId("decision:life-trigger"),
+    type: "confirmLifeTrigger",
+    playerId: p2,
+    prompt: "Activate life trigger?",
+    causedBy: { type: "ruleProcess", name: "battle:lifeTriggerDecision" },
+    visibility: { type: "public" },
+    card: {
+      instanceId: lifeCard.instanceId,
+      cardId: toCardId("hidden-life-trigger-card"),
+      playerId: p2,
+      zone: lifeCard.zone,
+    },
+    options: ["activateTrigger", "addToHand"],
+  };
+
+  const forDecisionPlayer = filterStateForPlayer(state, p2);
+  const forOpponent = filterStateForPlayer(state, p1);
+
+  assert.equal(forDecisionPlayer.pendingDecision?.type, "confirmLifeTrigger");
+  assert.deepEqual(
+    forDecisionPlayer.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [
+      {
+        type: "respondToDecision",
+        decisionId: toDecisionId("decision:life-trigger"),
+      },
+    ],
+  );
+  assert.equal(forOpponent.pendingDecision, undefined);
+  assert.deepEqual(
+    forOpponent.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+  assert.equal(
+    JSON.stringify(forOpponent).includes("hidden-life-trigger-card"),
+    false,
+  );
+});
+
 test("chooseTriggerOrder projection stays metadata-only and hides private ids from non-recipient", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1 state");

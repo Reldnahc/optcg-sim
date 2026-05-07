@@ -434,6 +434,44 @@ test("getLegalActions exposes chooseTriggerOrder response only for the decision 
   ]);
 });
 
+test("getLegalActions exposes confirmLifeTrigger respondToDecision only to decision player", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2");
+  const lifeCard = must(p2State.life[0], "top life").card;
+  state.pendingDecision = {
+    id: toDecisionId("decision:life-trigger"),
+    type: "confirmLifeTrigger",
+    playerId: p2,
+    prompt: "Activate life trigger?",
+    causedBy: { type: "ruleProcess", name: "battle:lifeTriggerDecision" },
+    visibility: { type: "public" },
+    card: {
+      instanceId: lifeCard.instanceId,
+      cardId: lifeCard.cardId,
+      playerId: p2,
+      zone: lifeCard.zone,
+    },
+    options: ["activateTrigger", "addToHand"],
+  };
+
+  assert.deepEqual(getLegalActions(state, p2), [
+    { type: "concede", playerId: p2 },
+    {
+      type: "respondToDecision",
+      decisionId: toDecisionId("decision:life-trigger"),
+      response: { type: "lifeTrigger", choice: "activateTrigger" },
+    },
+    {
+      type: "respondToDecision",
+      decisionId: toDecisionId("decision:life-trigger"),
+      response: { type: "lifeTrigger", choice: "addToHand" },
+    },
+  ]);
+  assert.deepEqual(getLegalActions(state, p1), [
+    { type: "concede", playerId: p1 },
+  ]);
+});
+
 test("pending runtime work rejects ordinary applyAction requests without mutation", () => {
   const state = makeMainPhaseLegalActionState();
   state.effectQueue.push(queuedEffect("apply-action"));

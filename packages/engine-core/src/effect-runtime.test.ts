@@ -2438,6 +2438,81 @@ test("queued source-presence policy mismatch with effect definition fails closed
   assert.equal(hashCanonicalStateValue(result.state), beforeHash);
 });
 
+test("non-Life Trigger no-zone queued effects resolve without Life Trigger trash cleanup", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const cardId = toCardId("non-life-no-zone-source");
+  const noZone = {
+    zone: "noZone" as const,
+    playerId: p1,
+    slot: "temporary" as const,
+  };
+  const supportCard = resolvedCard({
+    cardId,
+    category: "character",
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    cardId,
+    supportCard.support,
+  );
+  const customEffect = {
+    ...must(baseDefinition.effects[0], "non-Life Trigger no-zone effect"),
+    trigger: { type: "custom" as const, event: "nonLifeNoZone" },
+    sourcePresencePolicy: "noSourceRequired" as const,
+  };
+  setupOnPlayDefinition(
+    state,
+    { ...must(state.players[p1], "p1").leader, cardId },
+    {
+      ...baseDefinition,
+      effects: [customEffect],
+    },
+    "def-non-life-no-zone",
+  );
+  const entry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId("queue-entry:non-life:no-zone"),
+    timingWindowId: toTimingWindowId("timing-window:non-life:no-zone"),
+    source: {
+      instanceId: toInstanceId("non-life-no-zone-instance"),
+      cardId,
+      playerId: p1,
+      zone: noZone,
+    },
+    sourceSnapshot: {
+      ...queueDrawForP1().sourceSnapshot,
+      instanceId: toInstanceId("non-life-no-zone-instance"),
+      cardId,
+      zone: noZone,
+      category: "character",
+    },
+    effectBlockId: customEffect.id,
+    sourcePresencePolicy: "noSourceRequired",
+    causedBy: { type: "ruleProcess", name: "non-life-no-zone" },
+  };
+  state.effectQueue = [entry];
+  const beforeP1 = must(state.players[p1], "p1 before");
+  const beforeDeck = beforeP1.deck.length;
+  const beforeHand = beforeP1.hand.length;
+
+  const result = processEffectRuntime(state);
+  const afterP1 = must(result.state.players[p1], "p1 result");
+  const eventTypes = result.events.map((event) => event.type);
+  const serializedEvents = JSON.stringify(result.events);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(afterP1.deck.length, beforeDeck - 1);
+  assert.equal(afterP1.hand.length, beforeHand + 1);
+  assert.equal(
+    afterP1.trash.some((card) => card.instanceId === entry.source.instanceId),
+    false,
+  );
+  assert.equal(eventTypes.includes("effectResolved"), true);
+  assert.equal(eventTypes.includes("cardTrashed"), false);
+  assert.equal(serializedEvents.includes("lifeTriggerResolved"), false);
+});
+
 test("resolves multiple no-choice queued entries in deterministic ENG-010F order", () => {
   const state = createActiveState();
   const p1Source = must(must(state.players[p1], "p1").hand[0], "p1 source");
