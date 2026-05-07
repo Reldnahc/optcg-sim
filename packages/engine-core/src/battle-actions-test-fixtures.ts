@@ -86,6 +86,36 @@ export const withWhenAttackingDrawEffect = (
   return definition;
 };
 
+export const withOnOpponentAttackDrawEffect = (
+  state: ReturnType<typeof setupAttackState>,
+  source: CardInstance,
+  effectDefinitionId = "def-on-opponent-attack-draw",
+): EffectDefinition => {
+  const definition = effectDefinition(source.cardId, {
+    type: "onOpponentAttack",
+  });
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: definition,
+  };
+  const category = source.zone.zone === "leaderArea" ? "leader" : "character";
+  state.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category,
+    power: category === "leader" ? 5000 : 3000,
+    effectText: "[On Your Opponent's Attack] Draw 1 card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: definition.metadata.rulesVersion,
+      sourceTextHash: definition.metadata.sourceTextHash,
+    },
+  });
+  return definition;
+};
+
 export const withMultipleWhenAttackingDrawEffects = (
   state: ReturnType<typeof setupAttackState>,
   source: CardInstance,

@@ -267,10 +267,7 @@ export const applyDeclareAttack = (
     return toEngineResult(blockState, blockEvents);
   }
 
-  const resolutionInput = withAllAttackTimingCombatMetadataHidden(
-    attackTimingResult.state,
-  );
-  const resolved = resolveSupportedVanillaBattle(resolutionInput);
+  const resolved = resolveSupportedVanillaBattle(attackTimingResult.state);
   if (resolved.errors !== undefined) {
     const firstError = resolved.errors[0];
     return firstError === undefined
@@ -411,10 +408,7 @@ const hideCurrentAttackTimingCombatMetadata = (state: GameState): GameState =>
 const resolveSupportedBattleWithAttackTimingMetadata = (
   state: GameState,
 ): EngineResult =>
-  withOriginalManifestResult(
-    resolveSupportedVanillaBattle(hideCurrentAttackTimingCombatMetadata(state)),
-    state,
-  );
+  withOriginalManifestResult(resolveSupportedVanillaBattle(state), state);
 
 const mustBattle = (state: GameState): NonNullable<GameState["battle"]> => {
   const battle = state.battle;
@@ -440,10 +434,17 @@ export const applyBattleDecisionResponse = (
   action: Extract<Action, { type: "respondToDecision" }>,
 ): EngineResult | null => {
   const actionState = hideCurrentAttackTimingCombatMetadata(state);
+  const resolveWithOriginalManifest = (
+    resolverState: GameState,
+  ): EngineResult =>
+    resolveSupportedBattleWithAttackTimingMetadata({
+      ...resolverState,
+      cardManifest: state.cardManifest,
+    });
   const counterResponse = applyCounterStepDecisionResponse(
     actionState,
     action,
-    resolveSupportedBattleWithAttackTimingMetadata,
+    resolveWithOriginalManifest,
   );
   if (counterResponse !== null) {
     return withOriginalManifestResult(counterResponse, state);
@@ -451,7 +452,7 @@ export const applyBattleDecisionResponse = (
   const blockResponse = applyBlockStepDecisionResponse(
     actionState,
     action,
-    resolveSupportedBattleWithAttackTimingMetadata,
+    resolveWithOriginalManifest,
   );
   return blockResponse === null
     ? null
