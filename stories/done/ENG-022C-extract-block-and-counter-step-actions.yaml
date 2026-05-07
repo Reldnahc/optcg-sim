@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Move Block Step and Counter Step action handling out of battle-actions.ts
   behind the stable public facade.

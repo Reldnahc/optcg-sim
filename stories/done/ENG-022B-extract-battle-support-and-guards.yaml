@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Move shared battle support helpers and unsupported metadata guards out of the
   oversized battle action module without changing behavior.

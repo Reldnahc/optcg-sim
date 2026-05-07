@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Split the oversized battle-actions test file into focused battle test suites
   without changing production behavior.
