@@ -614,12 +614,14 @@ test("lower-power attack causes no K.O. and no life movement", () => {
   assert.equal(must(result.state.players[p2], "p2").life.length, beforeLife);
 });
 
-test("reviewed supported On K.O. metadata queues after battle K.O. events without resolving", () => {
+test("reviewed supported On K.O. metadata resolves after battle K.O. events", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   const attacker = must(p1State.characters[0], "attacker");
   const target = must(p2State.characters[0], "target");
+  const beforeDeck = p2State.deck.length;
+  const beforeHand = p2State.hand.length;
   state.cardManifest.cards[attacker.cardId] = resolvedCard({
     cardId: attacker.cardId,
     category: "character",
@@ -680,10 +682,9 @@ test("reviewed supported On K.O. metadata queues after battle K.O. events withou
   assert.equal(result.errors, undefined);
   assert.equal(replay.errors, undefined);
   assert.deepEqual(replay.events, result.events);
-  assert.deepEqual(replay.state.effectQueue, result.state.effectQueue);
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.deepEqual(replay.state.effectQueue, []);
   assert.equal(replay.stateHash, result.stateHash);
-  assert.equal(result.state.effectQueue.length, 1);
-  const queued = must(result.state.effectQueue[0], "queued On K.O. effect");
   const cardKOdIndex = result.events.findIndex(
     (event) => event.type === "cardKOd",
   );
@@ -699,78 +700,59 @@ test("reviewed supported On K.O. metadata queues after battle K.O. events withou
     result.events[effectQueuedIndex],
     "effectQueued event",
   );
+  const onKOResolved = result.events.find(
+    (event) =>
+      event.type === "effectResolved" &&
+      (event.payload as { effectBlockId?: unknown }).effectBlockId ===
+        onKOEffect.id,
+  );
+  const onKOResolvedIndex = result.events.findIndex(
+    (event) => event === onKOResolved,
+  );
+  const nextP2 = must(result.state.players[p2], "p2");
 
   assert.equal(cardKOdIndex >= 0, true);
   assert.equal(cardMovedIndex > cardKOdIndex, true);
   assert.equal(effectQueuedIndex > cardMovedIndex, true);
+  assert.equal(onKOResolvedIndex > effectQueuedIndex, true);
   assert.equal(
     result.events.filter((event) => event.type === "effectResolved").length,
-    1,
+    2,
   );
-  assert.deepEqual(queued, {
-    id: `queue-entry:${String(cardKOd.id)}:${String(onKOEffect.id)}`,
-    state: "pending",
-    timingWindowId: `timing-window:${String(cardKOd.id)}:onKO`,
-    generation: 0,
-    controllerId: p2,
-    source: {
-      instanceId: target.instanceId,
-      cardId: target.cardId,
-      playerId: p2,
-      zone: {
-        zone: "trash",
-        playerId: p2,
-        slot: "trash",
-        index: 0,
-      },
-    },
-    sourceSnapshot: {
-      instanceId: target.instanceId,
-      cardId: target.cardId,
-      ownerId: p2,
-      controllerId: p2,
-      zone: {
-        zone: "trash",
-        playerId: p2,
-        slot: "trash",
-        index: 0,
-      },
-      category: "character",
-      colors: ["red"],
-      power: 3000,
-      keywords: [],
-    },
-    triggerEventId: cardKOd.id,
-    effectBlockId: onKOEffect.id,
-    orderingGroup: "nonTurnPlayer",
-    createdAtEventSeq: cardKOd.seq,
-    queuedAtStateSeq: result.state.seq,
-    sourcePresencePolicy: "resolveFromDestinationZone",
-    causedBy: {
-      type: "ruleProcess",
-      name: "effectRuntime:onKOTriggerQueueing",
-    },
-  });
+  const queuedId = `queue-entry:${String(cardKOd.id)}:${String(onKOEffect.id)}`;
+  const timingWindowId = `timing-window:${String(cardKOd.id)}:onKO`;
   assert.deepEqual(effectQueued.payload, {
-    queueEntryId: queued.id,
-    timingWindowId: queued.timingWindowId,
-    generation: queued.generation,
-    effectBlockId: queued.effectBlockId,
-    triggerEventId: queued.triggerEventId,
-    sourcePresencePolicy: queued.sourcePresencePolicy,
-    orderingGroup: queued.orderingGroup,
+    queueEntryId: queuedId,
+    timingWindowId,
+    generation: 0,
+    effectBlockId: onKOEffect.id,
+    triggerEventId: cardKOd.id,
+    sourcePresencePolicy: "resolveFromDestinationZone",
+    orderingGroup: "nonTurnPlayer",
   });
-  assert.deepEqual(effectQueued.causedBy, queued.causedBy);
-  assert.equal(effectQueued.createdAtStateSeq, result.state.seq);
+  assert.deepEqual(effectQueued.causedBy, {
+    type: "ruleProcess",
+    name: "effectRuntime:onKOTriggerQueueing",
+  });
+  assert.ok(onKOResolved !== undefined);
+  assert.deepEqual(onKOResolved.payload, {
+    queueEntryId: queuedId,
+    timingWindowId,
+    generation: 0,
+    effectBlockId: onKOEffect.id,
+    triggerEventId: cardKOd.id,
+    sourcePresencePolicy: "resolveFromDestinationZone",
+    orderingGroup: "nonTurnPlayer",
+    status: "resolved",
+  });
   assert.equal(
     (cardMoved.payload as { instanceId?: unknown }).instanceId,
     target.instanceId,
   );
-  assert.equal(must(result.state.players[p2], "p2").characters.length, 0);
-  assert.equal(
-    must(result.state.players[p2], "p2").trash[0]?.instanceId,
-    target.instanceId,
-  );
+  assert.equal(nextP2.characters.length, 0);
+  assert.equal(nextP2.trash[0]?.instanceId, target.instanceId);
+  assert.equal(nextP2.deck.length, beforeDeck - 1);
+  assert.equal(nextP2.hand.length, beforeHand + 1);
 });
 
 test("invalid supported battle runtime metadata on a non-K.O. combat participant fails closed", () => {

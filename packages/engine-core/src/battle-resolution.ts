@@ -31,6 +31,7 @@ import { computeView } from "./compute-view.js";
 import {
   detectPendingRuntimeWork,
   processDefenderOpponentAttackTiming,
+  processEffectRuntime,
   queueBattleKOTriggers,
 } from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
@@ -434,6 +435,21 @@ export const resolveSupportedVanillaBattle = (
       return toEngineResult(state, [], [queued.error]);
     }
     nextState = queued.state;
+    if (nextState.effectQueue.length > 0) {
+      const runtimeState: GameState = {
+        ...nextState,
+        eventJournal: [...state.eventJournal, ...events],
+      };
+      const resolved = processEffectRuntime(runtimeState);
+      if (resolved.errors !== undefined) {
+        return toEngineResult(state, [], toErrorTuple(resolved.errors));
+      }
+      events.push(...resolved.events);
+      nextState = {
+        ...resolved.state,
+        eventJournal: [...state.eventJournal, ...events],
+      };
+    }
   }
 
   return finalizeSupportedEndOfBattleCleanup({ state, nextState, events });

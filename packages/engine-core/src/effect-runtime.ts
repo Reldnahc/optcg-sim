@@ -543,6 +543,7 @@ const isSupportedQueuedNoChoiceDrawEffect = (
   isNoChoiceDrawTriggerEffect(effect, "onPlay") ||
   isNoChoiceDrawTriggerEffect(effect, "whenAttacking") ||
   isNoChoiceDrawTriggerEffect(effect, "onOpponentAttack") ||
+  (effect.trigger.type === "onKO" && isNoChoiceDrawEffectShape(effect)) ||
   (effect.trigger.type === "custom" && isNoChoiceDrawEffectShape(effect));
 
 const findCardInstance = (
