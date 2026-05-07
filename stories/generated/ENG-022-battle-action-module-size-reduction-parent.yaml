@@ -1,0 +1,104 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-022
+epic_id: KICK-001
+title: Battle action module size reduction parent
+type: refactor
+area: engine
+primary_concern: verification
+priority: high
+status: generated
+summary: >
+  Reduce the size and coupling of battle action implementation and tests through
+  behavior-preserving module and test-suite splits.
+story_boundary: >
+  Coordinate a refactor-only story series for battle action source and tests.
+  The parent is not directly implementable. Substories must preserve existing
+  exported behavior, event ordering, state hashes, hidden-info safety, and
+  fail-closed guards.
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-block-actions.ts
+  - packages/engine-core/src/battle-counter-actions.ts
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/battle-support.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-declare-attack.test.ts
+  - packages/engine-core/src/battle-damage-banish.test.ts
+  - packages/engine-core/src/battle-counter.test.ts
+  - packages/engine-core/src/battle-blocker.test.ts
+  - packages/engine-core/src/battle-cleanup.test.ts
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - stories/generated/ENG-022-battle-action-module-size-reduction-parent.yaml
+  - stories/approved/ENG-022A-split-battle-action-test-suites.yaml
+  - stories/approved/ENG-022B-extract-battle-support-and-guards.yaml
+  - stories/approved/ENG-022C-extract-block-and-counter-step-actions.yaml
+  - stories/approved/ENG-022D-extract-supported-battle-resolution.yaml
+spec_refs:
+  - 01-system-architecture.s021 (Development workflow)
+  - 01-system-architecture.s024 (Module ownership)
+  - 11-testing-quality.s002 (Testing goals)
+  - 11-testing-quality.s007 (Interaction tests)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+  - 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+scope:
+  - split oversized battle test coverage into focused package-local test suites without changing assertions or behavior intent
+  - extract shared battle guard, metadata, and cleanup support from the oversized production module
+  - extract Block Step and Counter Step action handling into focused production modules while keeping the public battle action API stable
+  - extract supported damage and End of Battle resolution into a focused production module while preserving event ordering and state hash behavior
+  - keep each substory behavior-preserving and independently reviewable
+non_scope:
+  - new rules behavior, legal actions, keywords, effects, triggers, replacement effects, replay schema, hidden-info filtering, server/client/UI, database, Redis, WebSocket, or CLI behavior
+  - changing public action names or action payload contracts
+  - weakening fail-closed guards for unsupported battle, effect, trigger, replacement, or metadata states
+  - broad formatting-only churn outside the files named by each active substory
+dependencies: []
+child_stories:
+  - id: ENG-022A
+    title: Split battle action test suites
+    concern: Move cohesive groups of battle action tests out of the oversized battle-actions test file.
+    depends_on: []
+  - id: ENG-022B
+    title: Extract battle support and guards
+    concern: Move shared battle support helpers and unsupported metadata guards into focused production support modules.
+    depends_on: [ENG-022A]
+  - id: ENG-022C
+    title: Extract block and counter step actions
+    concern: Move Block Step and Counter Step action handlers into focused production modules behind the stable battle-actions facade.
+    depends_on: [ENG-022B]
+  - id: ENG-022D
+    title: Extract supported battle resolution
+    concern: Move supported damage and End of Battle resolution into a focused production module behind the stable battle-actions facade.
+    depends_on: [ENG-022C]
+acceptance_criteria:
+  - each child story passes story-review before approval
+  - each child story keeps behavior equivalent under existing and moved tests
+  - final parent branch has smaller focused battle action implementation and test files with stable public exports
+  - final parent branch passes packet verification, focused battle tests, engine-core typecheck, and full verify
+required_tests:
+  - each child story must run its story-specific focused tests
+  - each child story must run corepack pnpm --filter @optcg/engine-core typecheck
+  - each child story must run corepack pnpm run packets:verify
+  - each child story must run corepack pnpm run coverage
+  - each child story must run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before presenting this story group as approval-ready
+  - use the parent integration branch workflow if this parent story is approved
+  - do not approve or packetize this parent story as an active implementation story
+  - approve only ENG-022A through ENG-022D as implementation candidates
+  - a set-level story-review does not satisfy exact per-story story-review for any child
+  - run exact per-story story-review for each child story before moving it to approved or implementing it
+  - implement one active substory packet at a time
+  - substory PRs target the parent integration branch
+  - do not run packets:complete for substories until the parent branch lands on main
+  - run full parent PR integration review and human review before merging ENG-022 to main
+  - after parent merge, run packets:complete-many for ENG-022A through ENG-022D
+  - if a split requires behavior changes or new rules behavior, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate

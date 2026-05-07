@@ -1,0 +1,71 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-022B
+epic_id: KICK-001
+title: Extract battle support and guards
+type: refactor
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Move shared battle support helpers and unsupported metadata guards out of the
+  oversized battle action module without changing behavior.
+story_boundary: >
+  Own only extraction of shared pure helpers, support predicates, and
+  unsupported battle metadata guards from battle-actions.ts into focused engine
+  modules. Public battle action exports must remain stable.
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-support.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-declare-attack.test.ts
+  - packages/engine-core/src/battle-damage-banish.test.ts
+  - packages/engine-core/src/battle-counter.test.ts
+  - packages/engine-core/src/battle-blocker.test.ts
+  - packages/engine-core/src/battle-cleanup.test.ts
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - stories/approved/ENG-022B-extract-battle-support-and-guards.yaml
+  - agent-packets/ENG-022B.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s024 (Module ownership)
+  - 11-testing-quality.s002 (Testing goals)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+  - 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+scope:
+  - extract CardRef comparison, text/record checks, thisBattle duration checks, unsupported battle effect body checks, and unsupported battle metadata checks into battle-support.ts or equivalent
+  - extract supported battle resolution envelope checks only if they remain behavior-identical
+  - keep battle-actions.ts public exports and imported call sites stable
+  - preserve all existing unsupported metadata fail-closed behavior
+non_scope:
+  - changing action handling, legal action output, event creation, state mutation, damage resolution, Block Step, Counter Step, or cleanup behavior
+  - weakening unsupported effect, trigger, replacement, continuous-effect, or metadata guards
+  - new rules behavior or new tests beyond behavior-equivalence regression checks
+dependencies:
+  - ENG-022A
+acceptance_criteria:
+  - battle-support.ts or equivalent owns extracted support/guard helpers
+  - battle-actions.ts delegates to extracted helpers without changing public exports
+  - existing guard tests still pass and prove fail-closed behavior is unchanged
+  - full verify passes
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/battle-actions.test.ts packages/engine-core/src/battle-declare-attack.test.ts packages/engine-core/src/battle-damage-banish.test.ts packages/engine-core/src/battle-counter.test.ts packages/engine-core/src/battle-blocker.test.ts packages/engine-core/src/battle-cleanup.test.ts packages/engine-core/src/battle-pipeline-regression.test.ts packages/engine-core/src/event-sequencing-regression.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-022B packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-022 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if extraction reveals behavior ambiguity, stop and report the blocker
+  - implementation-review gate is required after the PR is opened
+ambiguity_policy: fail_and_escalate

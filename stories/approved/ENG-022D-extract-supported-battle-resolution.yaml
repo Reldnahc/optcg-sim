@@ -1,0 +1,74 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-022D
+epic_id: KICK-001
+title: Extract supported battle resolution
+type: refactor
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Move supported damage and End of Battle resolution out of battle-actions.ts
+  behind the stable public facade.
+story_boundary: >
+  Own only behavior-preserving extraction of supported battle resolution,
+  damage, Banish, Character K.O., rule-processing continuation, and centralized
+  End of Battle cleanup code into a focused engine module.
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-support.ts
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-damage-banish.test.ts
+  - packages/engine-core/src/battle-cleanup.test.ts
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - stories/approved/ENG-022D-extract-supported-battle-resolution.yaml
+  - agent-packets/ENG-022D.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s024 (Module ownership)
+  - 02-engine-mechanics.s021 (Damage Step)
+  - 02-engine-mechanics.s022 (End of Battle)
+  - 02-engine-mechanics.s023 (Damage processing)
+  - 03-game-state-events-decisions.s005 (Event journal)
+  - 03-game-state-events-decisions.s020 (State hashing)
+  - 11-testing-quality.s007 (Interaction tests)
+  - 11-testing-quality.s008 (Invariant tests)
+  - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+  - 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+scope:
+  - extract resolveSupportedVanillaBattle and its private damage, life movement, Character K.O., Banish, rule-processing, and End of Battle cleanup helpers into battle-resolution.ts or equivalent
+  - keep resolveSupportedVanillaBattle and expireBattleDurationStateForCleanup exported from battle-actions.ts for existing callers
+  - preserve event ordering, event IDs, eventJournal suffix equality, rule-processing checkpoints, invariants, state hashes, and fail-closed behavior
+  - keep battle-actions.ts as the stable public facade after extraction
+non_scope:
+  - new damage behavior, Banish behavior, cleanup behavior, triggers, replacement effects, On K.O., replay schema, server/client/UI, database, Redis, WebSocket, or CLI behavior
+  - changing public action or EngineResult contracts
+  - weakening unsupported runtime queue, trigger, replacement, continuous-effect, or metadata fail-closed guards
+dependencies:
+  - ENG-022C
+acceptance_criteria:
+  - supported battle resolution production code lives in a focused module
+  - battle-actions.ts public exports remain stable
+  - damage, Banish, Character K.O., cleanup, event sequencing, and pipeline regression tests pass
+  - full verify passes without behavior-driven assertion updates
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/battle-damage-banish.test.ts packages/engine-core/src/battle-cleanup.test.ts packages/engine-core/src/battle-pipeline-regression.test.ts packages/engine-core/src/event-sequencing-regression.test.ts packages/engine-core/src/battle-actions.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-022D packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-022 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if extraction requires behavior changes, stop and split or record the blocker
+  - implementation-review gate is required after the PR is opened
+ambiguity_policy: fail_and_escalate

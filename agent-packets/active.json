@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-022A.md",
+      "storyId": "ENG-022A",
+      "storyPath": "stories/approved/ENG-022A-split-battle-action-test-suites.yaml",
+      "storySha256": "68d80164e94c6d15a1831e18cb38ab063f8254725852e5ed169c2c516cf89006"
+    }
+  ],
   "version": 1
 }
