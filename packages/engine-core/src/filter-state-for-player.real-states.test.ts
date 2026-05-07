@@ -3,7 +3,11 @@ import { test } from "vitest";
 
 import type { GameState, PlayerId } from "@optcg/types";
 
-import { applyAction, getLegalActions } from "./actions.js";
+import {
+  applyAction,
+  getLegalActions,
+  resolveSupportedVanillaBattle,
+} from "./actions.js";
 import {
   createActiveState,
   createInput,
@@ -12,7 +16,10 @@ import {
   p2,
   resolvedCard,
 } from "./action-test-fixtures.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+import {
+  setupAttackState,
+  withOnKODrawEffect,
+} from "./battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { createInitialState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";
@@ -587,6 +594,47 @@ const createAfterBlockerState = (): GameState => {
   return blocked.state;
 };
 
+const createAfterOnKOTriggerBattleState = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "On K.O. p1");
+  const p2State = must(state.players[p2], "On K.O. p2");
+  const attacker = must(p1State.characters[0], "On K.O. attacker");
+  const target = must(p2State.characters[0], "On K.O. target");
+  const hiddenDrawnCard = must(p2State.deck[0], "On K.O. hidden drawn card");
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+  });
+  const definition = withOnKODrawEffect(state, target, "def-filter-real-on-ko");
+  const effectId = must(definition.effects[0], "On K.O. effect").id;
+  state.battle = {
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    step: "counter",
+    damageCount: 1,
+  };
+  const result = resolveSupportedVanillaBattle(state);
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.battle, undefined);
+  return { state: result.state, hiddenDrawnCard, effectId };
+};
+
 const createStagePresentState = (): GameState => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");
@@ -684,4 +732,42 @@ test("real engine states stay hidden-info safe across phase and battle progressi
   }
   assertFaceUpLifeVisible(withFaceUpLife, p1, "face-up-life:p1");
   assertFaceUpLifeVisible(withFaceUpLife, p2, "face-up-life:p2");
+});
+
+test("real K.O. trigger battle views omit runtime queue internals and hidden draw identity", () => {
+  const { state, hiddenDrawnCard, effectId } =
+    createAfterOnKOTriggerBattleState();
+
+  for (const recipient of [p1, p2] as const) {
+    assertNoHiddenLeak(
+      state,
+      recipient,
+      `On K.O. trigger:${String(recipient)}`,
+    );
+    const view = filterStateForPlayer(state, recipient);
+    const serialized = JSON.stringify(view);
+    assert.equal(serialized.includes("queue-entry:"), false);
+    assert.equal(serialized.includes("timing-window:"), false);
+    assert.equal(serialized.includes("queueEntryId"), false);
+    assert.equal(serialized.includes("effectBlockId"), false);
+    assert.equal(serialized.includes("sourcePresencePolicy"), false);
+    assert.equal(serialized.includes("sourceSnapshot"), false);
+    assert.equal(serialized.includes("triggerIds"), false);
+    assert.equal(serialized.includes("orderedIds"), false);
+    assert.equal(serialized.includes("orderingGroup"), false);
+    assert.equal(serialized.includes('"generation"'), false);
+    assert.equal(serialized.includes(String(effectId)), false);
+  }
+
+  const p1View = filterStateForPlayer(state, p1);
+  assertNoScalarValue(
+    p1View,
+    String(hiddenDrawnCard.instanceId),
+    "p1 must not see opponent's On K.O. drawn card instance id",
+  );
+  assertNoScalarValue(
+    p1View,
+    String(hiddenDrawnCard.cardId),
+    "p1 must not see opponent's On K.O. drawn card id",
+  );
 });

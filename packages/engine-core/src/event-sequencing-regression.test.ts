@@ -15,6 +15,7 @@ import {
   advanceRefreshPhase,
   advanceDrawPhase,
   advanceDonPhase,
+  resolveSupportedVanillaBattle,
 } from "./index.js";
 import {
   createActiveState,
@@ -31,6 +32,7 @@ import { createInitialState } from "./initial-state.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
 import {
   setupAttackState,
+  withOnKODrawEffect,
   withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
 } from "./battle-actions-test-fixtures.js";
@@ -309,6 +311,77 @@ const runEng023cAttackTimingCounterScript = () => {
   return { results: [opened, countered, passed] };
 };
 
+const runEng027dOnKOTriggerBattleScript = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "ENG-027D sequencing p1");
+  const p2State = must(state.players[p2], "ENG-027D sequencing p2");
+  const attacker = must(p1State.characters[0], "ENG-027D sequencing attacker");
+  const target = must(p2State.characters[0], "ENG-027D sequencing target");
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+  });
+  const definition = withOnKODrawEffect(
+    state,
+    target,
+    "def-eng-027d-seq-on-ko",
+  );
+  const effectBlockId = must(
+    definition.effects[0],
+    "ENG-027D sequencing On K.O. effect",
+  ).id;
+  state.battle = {
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    step: "counter",
+    damageCount: 1,
+  };
+
+  const resolved = resolveSupportedVanillaBattle(state);
+  assertAcceptedSequencing(state, resolved, "ENG-027D On K.O. battle");
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+  assert.equal(resolved.state.effectQueue.length, 0);
+  assert.equal(resolved.state.deferredTriggers.length, 0);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.battle, undefined);
+
+  const cardKOdIndex = eventIndex(
+    resolved.events,
+    "cardKOd",
+    "ENG-027D On K.O. battle",
+  );
+  const effectQueuedIndex = effectEventIndex(
+    resolved.events,
+    "effectQueued",
+    effectBlockId,
+    "ENG-027D On K.O. battle",
+  );
+  const effectResolvedIndex = effectEventIndex(
+    resolved.events,
+    "effectResolved",
+    effectBlockId,
+    "ENG-027D On K.O. battle",
+  );
+  assert.ok(cardKOdIndex < effectQueuedIndex);
+  assert.ok(effectQueuedIndex < effectResolvedIndex);
+
+  return { results: [resolved] };
+};
+
 test("ENG-016: accepted engine paths keep EngineResult/eventJournal sequencing and deterministic hashes", () => {
   assertDeterministicScript("mulligan", () => {
     const setup = createInitialState(createInput());
@@ -510,6 +583,11 @@ test("ENG-016: accepted engine paths keep EngineResult/eventJournal sequencing a
       );
       return { results: [played] };
     },
+  );
+
+  assertDeterministicScript(
+    "supported battle K.O. draw trigger and cleanup",
+    runEng027dOnKOTriggerBattleScript,
   );
 
   assertDeterministicScript("concession terminal result", () => {
