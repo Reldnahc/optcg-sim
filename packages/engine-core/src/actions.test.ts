@@ -377,6 +377,37 @@ test("pending decisions reject non-concession applyAction requests without mutat
   assert.equal(JSON.stringify(state), before);
 });
 
+test("respondToDecision rejects stale decision id for pending chooseTriggerOrder without mutation", () => {
+  const state = createActiveState();
+  state.pendingDecision = {
+    id: toDecisionId("decision:choose-trigger-order"),
+    type: "chooseTriggerOrder",
+    playerId: p1,
+    prompt: "Choose trigger resolution order.",
+    causedBy: { type: "ruleProcess", name: "effectRuntime:chooseTriggerOrder" },
+    visibility: { type: "public" },
+    triggerIds: [toQueueEntryId("queue-a"), toQueueEntryId("queue-b")],
+    constraints: { mustUseAll: true },
+  };
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: toDecisionId("decision:stale"),
+    response: { type: "orderedIds", ids: ["queue-b", "queue-a"] },
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Decision id does not match current pending decision.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+});
+
 test("pending runtime work rejects ordinary applyAction requests without mutation", () => {
   const state = makeMainPhaseLegalActionState();
   state.effectQueue.push(queuedEffect("apply-action"));
