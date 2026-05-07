@@ -21,6 +21,7 @@ import {
   hasUnsupportedBattleEffectMetadata,
   isSupportedBattleResolutionEnvelope,
   sameCardRef,
+  withSupportedBattleRuntimeMetadataHidden,
 } from "./battle-support.js";
 import {
   createCounterStepPassDecision,
@@ -28,6 +29,7 @@ import {
 } from "./battle-counter-actions.js";
 import { computeView } from "./compute-view.js";
 import {
+  detectBattleKOTriggerCandidates,
   detectPendingRuntimeWork,
   processDefenderOpponentAttackTiming,
 } from "./effect-runtime.js";
@@ -55,6 +57,22 @@ const toErrorTuple = (
   return [first, ...errors.slice(1)];
 };
 
+const hasOnKODefinitionMetadata = (
+  state: GameState,
+  card: CardInstance,
+): boolean => {
+  const resolved = state.cardManifest.cards[card.cardId];
+  const effectDefinitionId = resolved?.support.effectDefinitionId;
+  if (effectDefinitionId === undefined) {
+    return false;
+  }
+  return (
+    state.cardManifest.effectDefinitions?.[effectDefinitionId]?.effects.some(
+      (effect) => effect.trigger.type === "onKO",
+    ) ?? false
+  );
+};
+
 export const resolveSupportedVanillaBattle = (
   state: GameState,
 ): EngineResult => {
@@ -80,7 +98,9 @@ export const resolveSupportedVanillaBattle = (
   }
   if (
     hasUnsupportedBattleEffectMetadata(
-      withAllAttackTimingCombatMetadataHidden(state),
+      withSupportedBattleRuntimeMetadataHidden(
+        withAllAttackTimingCombatMetadataHidden(state),
+      ),
     )
   ) {
     return unsupportedBattleResolution(
@@ -132,7 +152,9 @@ export const resolveSupportedVanillaBattle = (
     });
   }
 
-  const combatState = withAllAttackTimingCombatMetadataHidden(resolutionState);
+  const combatState = withSupportedBattleRuntimeMetadataHidden(
+    withAllAttackTimingCombatMetadataHidden(resolutionState),
+  );
   let view: ReturnType<typeof computeView>;
   try {
     view = computeView(combatState);
@@ -175,6 +197,7 @@ export const resolveSupportedVanillaBattle = (
     ...resolutionState,
     seq: toStateSeq(resolutionState.seq + 1),
   };
+  let shouldDetectBattleKOTriggers = false;
 
   if (attackerView.currentPower >= targetView.currentPower) {
     if (target.isLeader) {
@@ -372,11 +395,27 @@ export const resolveSupportedVanillaBattle = (
         playerId: target.playerId,
         instanceId: target.card.instanceId,
       });
-      appendEvent(state, events, "cardMoved", {
+      shouldDetectBattleKOTriggers = hasOnKODefinitionMetadata(
+        state,
+        target.card,
+      );
+      const koMovePayload = {
         from: target.card.zone,
         to: trashedCard.zone,
         reason: "ko",
-      });
+      };
+      appendEvent(
+        state,
+        events,
+        "cardMoved",
+        shouldDetectBattleKOTriggers
+          ? {
+              instanceId: trashedCard.instanceId,
+              cardId: trashedCard.cardId,
+              ...koMovePayload,
+            }
+          : koMovePayload,
+      );
       for (const donId of koCard.attachedDon) {
         appendEvent(
           state,
@@ -386,6 +425,13 @@ export const resolveSupportedVanillaBattle = (
           { type: "replayOnly" },
         );
       }
+    }
+  }
+
+  if (shouldDetectBattleKOTriggers) {
+    const koCandidates = detectBattleKOTriggerCandidates(nextState, events);
+    if (!koCandidates.ok) {
+      return toEngineResult(state, [], [koCandidates.error]);
     }
   }
 

@@ -1,8 +1,18 @@
-import type { CardInstance, CardRef, GameState } from "@optcg/types";
+import type {
+  CardId,
+  CardInstance,
+  CardRef,
+  EffectDefinition,
+  GameState,
+  MatchCardManifest,
+  ResolvedCard,
+} from "@optcg/types";
 
 import {
+  isSupportedNoChoiceOnKODrawEffect,
   isSupportedNoChoiceOnOpponentAttackDrawEffect,
   isSupportedNoChoiceWhenAttackingDrawEffect,
+  resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
 
 export const sameCardRef = (left: CardRef, right: CardRef): boolean =>
@@ -79,6 +89,115 @@ const hasUnsupportedBattleEffectBody = (value: unknown): boolean => {
   );
 };
 
+const isSupportedBattleRuntimeEffect = (
+  effect: EffectDefinition["effects"][number],
+): boolean =>
+  isSupportedNoChoiceWhenAttackingDrawEffect(effect) ||
+  isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
+  isSupportedNoChoiceOnKODrawEffect(effect);
+
+const hasOnlySupportedBattleRuntimeEffects = (
+  definition: EffectDefinition | undefined,
+): definition is EffectDefinition =>
+  definition !== undefined &&
+  definition.effects.length > 0 &&
+  definition.effects.every(isSupportedBattleRuntimeEffect);
+
+const hasSupportedBattleRuntimeDefinition = (
+  manifest: MatchCardManifest,
+  card: ResolvedCard | undefined,
+): card is ResolvedCard => {
+  if (card === undefined) {
+    return false;
+  }
+  const lookup = resolveImplementedDslEffectDefinition(card, manifest);
+  return lookup.ok && hasOnlySupportedBattleRuntimeEffects(lookup.definition);
+};
+
+const hasSupportedBattleRuntimeDefinitionForText = (
+  state: GameState,
+  cardId: CardInstance["cardId"],
+): boolean =>
+  hasSupportedBattleRuntimeDefinition(
+    state.cardManifest,
+    state.cardManifest.cards[cardId],
+  );
+
+const supportsBattleRuntimeSanitization = (
+  manifest: MatchCardManifest,
+  card: ResolvedCard | undefined,
+): card is ResolvedCard => hasSupportedBattleRuntimeDefinition(manifest, card);
+
+const sanitizeResolvedCardForCombatView = (
+  card: ResolvedCard,
+): ResolvedCard => {
+  const sanitizedSupport: ResolvedCard["support"] = { ...card.support };
+  delete sanitizedSupport.effectDefinitionId;
+
+  const { effectText, triggerText, ...cardWithoutText } = card;
+  void effectText;
+  void triggerText;
+  return { ...cardWithoutText, support: sanitizedSupport };
+};
+
+export const withSupportedBattleRuntimeMetadataHidden = (
+  state: GameState,
+): GameState => {
+  const combatCardIds = new Set<CardId>();
+  for (const player of Object.values(state.players)) {
+    combatCardIds.add(player.leader.cardId);
+    for (const character of player.characters) {
+      combatCardIds.add(character.cardId);
+    }
+  }
+
+  const supportedCardIds = new Set<CardId>();
+  for (const cardId of combatCardIds) {
+    const metadata = state.cardManifest.cards[cardId];
+    if (
+      metadata !== undefined &&
+      supportsBattleRuntimeSanitization(state.cardManifest, metadata)
+    ) {
+      supportedCardIds.add(cardId);
+    }
+  }
+  if (supportedCardIds.size === 0) {
+    return state;
+  }
+
+  const nextDefinitions = Object.fromEntries(
+    Object.entries(state.cardManifest.effectDefinitions ?? {}).filter(
+      ([, definition]) =>
+        !supportedCardIds.has(definition.cardId) ||
+        !hasOnlySupportedBattleRuntimeEffects(definition),
+    ),
+  );
+  const { effectDefinitions, ...manifestWithoutDefinitions } =
+    state.cardManifest;
+  void effectDefinitions;
+
+  const nextCards: MatchCardManifest["cards"] = {
+    ...state.cardManifest.cards,
+  };
+  for (const cardId of supportedCardIds) {
+    const metadata = state.cardManifest.cards[cardId];
+    if (metadata !== undefined) {
+      nextCards[cardId] = sanitizeResolvedCardForCombatView(metadata);
+    }
+  }
+
+  return {
+    ...state,
+    cardManifest: {
+      ...manifestWithoutDefinitions,
+      cards: nextCards,
+      ...(Object.keys(nextDefinitions).length > 0
+        ? { effectDefinitions: nextDefinitions }
+        : {}),
+    },
+  };
+};
+
 export const hasUnsupportedBattleEffectMetadata = (
   state: GameState,
 ): boolean => {
@@ -91,7 +210,10 @@ export const hasUnsupportedBattleEffectMetadata = (
   }
 
   for (const cardId of combatCardIds) {
-    if (hasText(state.cardManifest.cards[cardId]?.effectText)) {
+    if (
+      hasText(state.cardManifest.cards[cardId]?.effectText) &&
+      !hasSupportedBattleRuntimeDefinitionForText(state, cardId)
+    ) {
       return true;
     }
   }
@@ -105,7 +227,8 @@ export const hasUnsupportedBattleEffectMetadata = (
     for (const effect of definition.effects) {
       if (
         isSupportedNoChoiceWhenAttackingDrawEffect(effect) ||
-        isSupportedNoChoiceOnOpponentAttackDrawEffect(effect)
+        isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
+        isSupportedNoChoiceOnKODrawEffect(effect)
       ) {
         continue;
       }

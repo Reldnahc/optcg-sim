@@ -14,6 +14,7 @@ import {
 } from "./action-test-fixtures.js";
 import {
   continuousEffectRecord,
+  effectDefinition,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 test("supported declareAttack resolves vanilla battle internally without continuation action", () => {
@@ -611,6 +612,151 @@ test("lower-power attack causes no K.O. and no life movement", () => {
   assert.equal(result.errors, undefined);
   assert.equal(must(result.state.players[p2], "p2").characters.length, 1);
   assert.equal(must(result.state.players[p2], "p2").life.length, beforeLife);
+});
+
+test("reviewed supported On K.O. metadata allows battle K.O. candidate detection without queueing", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+  });
+  const definition = effectDefinition(target.cardId, { type: "onKO" });
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  const onKODefinition = {
+    ...definition,
+    effects: [
+      {
+        ...onKOEffect,
+        sourcePresencePolicy: "resolveFromDestinationZone" as const,
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    onKODefinition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-supported-on-ko": onKODefinition,
+  };
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 3000,
+    effectText: "[On K.O.] Draw 1 card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-supported-on-ko",
+      rulesVersion: onKODefinition.metadata.rulesVersion,
+      sourceTextHash: onKODefinition.metadata.sourceTextHash,
+    },
+  });
+
+  state.battle = {
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    step: "counter",
+    damageCount: 1,
+  };
+
+  const result = resolveSupportedVanillaBattle(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(must(result.state.players[p2], "p2").characters.length, 0);
+  assert.equal(
+    must(result.state.players[p2], "p2").trash[0]?.instanceId,
+    target.instanceId,
+  );
+});
+
+test("invalid supported battle runtime metadata on a non-K.O. combat participant fails closed", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  const definition = effectDefinition(attacker.cardId, { type: "onKO" });
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  const onKODefinition = {
+    ...definition,
+    effects: [
+      {
+        ...onKOEffect,
+        sourcePresencePolicy: "resolveFromDestinationZone" as const,
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    onKODefinition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-invalid-attacker-on-ko": onKODefinition,
+  };
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+    effectText: "[On K.O.] Draw 1 card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-invalid-attacker-on-ko",
+      rulesVersion: "mismatched-rules-version",
+      sourceTextHash: onKODefinition.metadata.sourceTextHash,
+    },
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 3000,
+  });
+
+  state.battle = {
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    step: "counter",
+    damageCount: 1,
+  };
+  const before = JSON.stringify(state);
+
+  const result = resolveSupportedVanillaBattle(state);
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Battle requires unsupported effect metadata.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
 });
 
 test("supported vanilla battle rejects pending runtime queues without mutation or appended events", () => {

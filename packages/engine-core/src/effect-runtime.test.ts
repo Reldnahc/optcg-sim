@@ -35,6 +35,7 @@ import {
 } from "./action-test-fixtures.js";
 import {
   detectPendingRuntimeWork,
+  detectBattleKOTriggerCandidates,
   executeNoChoiceEffectPrimitive,
   isSupportedNoChoiceOnPlayDrawEffect,
   type EffectDefinitionLookupFailureReason,
@@ -616,6 +617,45 @@ const appendAttackDeclaredEvent = (
   state.eventJournal.push(event);
 };
 
+const appendBattleKOEvents = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+) => {
+  const koEvent = {
+    id: toEngineEventId(`event:${String(state.seq)}:1:cardKOd`),
+    seq: state.eventJournal.length + 1,
+    type: "cardKOd" as const,
+    payload: {
+      playerId: source.zone.playerId,
+      instanceId: source.instanceId,
+    },
+    visibility: { type: "public" as const },
+    causedBy: { type: "ruleProcess" as const, name: "battleResolution" },
+    createdAtStateSeq: state.seq,
+  };
+  const movedEvent = {
+    id: toEngineEventId(`event:${String(state.seq)}:2:cardMoved`),
+    seq: state.eventJournal.length + 2,
+    type: "cardMoved" as const,
+    payload: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      from: source.zone,
+      to: {
+        zone: "trash",
+        playerId: source.zone.playerId,
+        slot: "trash",
+        index: 0,
+      },
+      reason: "ko",
+    },
+    visibility: { type: "public" as const },
+    causedBy: { type: "ruleProcess" as const, name: "battleResolution" },
+    createdAtStateSeq: state.seq,
+  };
+  return [koEvent, movedEvent];
+};
+
 const setupOnOpponentAttackDefinition = (
   state: ReturnType<typeof createActiveState>,
   source: CardInstance,
@@ -703,6 +743,46 @@ const setupWhenAttackingDefinition = (
     definition.metadata.effectDefinitionsVersion;
   state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
   state.cardManifest.cards[attacker.cardId] = supportCard;
+  return definition;
+};
+
+const setupOnKODefinition = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+  effectDefinitionId = "def-on-ko",
+): EffectDefinition => {
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    power: 3000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "on-ko-rules",
+      sourceTextHash: "on-ko-source",
+    },
+  });
+  const onPlay = reviewedOnPlayDrawDefinition(
+    source.cardId,
+    supportCard.support,
+  );
+  const definition: EffectDefinition = {
+    ...onPlay,
+    effects: [
+      {
+        ...must(onPlay.effects[0], "draw effect"),
+        trigger: { type: "onKO" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: definition,
+  };
+  state.cardManifest.cards[source.cardId] = supportCard;
   return definition;
 };
 
@@ -1697,6 +1777,145 @@ test("event cardPlayed entries are ignored by On Play trigger queueing", () => {
   assert.deepEqual(result.events, []);
   assert.deepEqual(result.state.effectQueue, before.effectQueue);
   assert.deepEqual(result.state.eventJournal, before.eventJournal);
+});
+
+test("detects one supported On K.O. candidate from a battle K.O. event batch", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  const definition = setupOnKODefinition(state, source);
+  const trashedSource: CardInstance = {
+    ...source,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+  };
+  p2State.characters = [];
+  p2State.trash = [trashedSource];
+  const events = appendBattleKOEvents(state, source);
+  const before = structuredClone(state);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.candidates, [
+    {
+      effectBlockId: must(definition.effects[0], "onKO effect").id,
+      controllerId: p2,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p2,
+        zone: trashedSource.zone,
+      },
+      sourceSnapshot: {
+        ...toSourceSnapshot(trashedSource, p2, p2),
+        power: 3000,
+      },
+      triggerEventId: events[0]?.id,
+      sourcePresencePolicy: "resolveFromDestinationZone",
+      causedBy: {
+        type: "ruleProcess",
+        name: "effectRuntime:onKOTriggerCandidateDetection",
+      },
+    },
+  ]);
+  assert.deepEqual(state, before);
+});
+
+test("rejects battle K.O. event batches whose move event lacks the K.O.'d card identity", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  setupOnKODefinition(state, source);
+  const trashedSource: CardInstance = {
+    ...source,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+  };
+  p2State.characters = [];
+  p2State.trash = [trashedSource];
+  const events = appendBattleKOEvents(state, source).map((event) =>
+    event.type === "cardMoved"
+      ? {
+          ...event,
+          payload: {
+            from: event.payload.from,
+            to: event.payload.to,
+            reason: event.payload.reason,
+          },
+        }
+      : event,
+  );
+  const before = structuredClone(state);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: {
+      type: "effectRuntimeError",
+      effectId: "on-ko-trigger-candidate-detection",
+      details: {
+        reason: "invalid-ko-event-batch",
+      },
+    },
+  });
+  assert.deepEqual(state, before);
+});
+
+test("unsupported On K.O. definitions fail candidate detection without mutation", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  const definition = setupOnKODefinition(state, source);
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        {
+          ...must(definition.effects[0], "onKO effect"),
+          optional: true,
+        },
+      ],
+    },
+  };
+  const trashedSource: CardInstance = {
+    ...source,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+  };
+  p2State.characters = [];
+  p2State.trash = [trashedSource];
+  const events = appendBattleKOEvents(state, source);
+  const before = structuredClone(state);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: {
+      type: "effectRuntimeError",
+      effectId: "on-ko-trigger-candidate-detection",
+      details: {
+        reason: "unsupported-on-ko-definition",
+      },
+    },
+  });
+  assert.deepEqual(state, before);
 });
 
 test("queued source snapshot preserves CardInstance owner/controller", () => {
