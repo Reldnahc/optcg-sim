@@ -43,7 +43,115 @@ const assertAcceptedResult = (
     result.state.eventJournal,
     `${label} full eventJournal`,
   );
+  assert.equal(
+    new Set(result.state.eventJournal.map((event) => event.id)).size,
+    result.state.eventJournal.length,
+    `${label} full eventJournal event ids should be unique`,
+  );
   assertGameStateInvariants(result.state);
+};
+
+const cleanupEventIndex = (events: readonly EngineEvent[], label: string) => {
+  const index = events.findIndex((event) => {
+    const payload = event.payload as Partial<{
+      battleCleared: boolean;
+      systemStep: string;
+    }>;
+    return (
+      event.type === "effectResolved" &&
+      payload.systemStep === "endBattle" &&
+      payload.battleCleared === true
+    );
+  });
+  assert.notEqual(index, -1, `${label} should emit End of Battle cleanup`);
+  return index;
+};
+
+const lastEventIndex = (
+  events: readonly EngineEvent[],
+  type: EngineEvent["type"],
+  label: string,
+) => {
+  const index = events.findLastIndex((event) => event.type === type);
+  assert.notEqual(index, -1, `${label} should emit ${type}`);
+  return index;
+};
+
+const assertCleanupAfterEventTypes = (
+  result: EngineResult,
+  eventTypes: readonly EngineEvent["type"][],
+  label: string,
+) => {
+  const cleanupIndex = cleanupEventIndex(result.events, label);
+  for (const type of eventTypes) {
+    assert.ok(
+      cleanupIndex > lastEventIndex(result.events, type, label),
+      `${label} cleanup should be after ${type}`,
+    );
+  }
+};
+
+const assertNoBattleContextAfterCleanup = (
+  previousState: GameState,
+  result: EngineResult,
+  label: string,
+  eventTypesBeforeCleanup: readonly EngineEvent["type"][],
+) => {
+  assertAcceptedResult(previousState, result, label);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.battle, undefined);
+  assertCleanupAfterEventTypes(result, eventTypesBeforeCleanup, label);
+};
+
+const assertJournalEventOrder = (
+  state: GameState,
+  earlierType: EngineEvent["type"],
+  laterType: EngineEvent["type"],
+  label: string,
+) => {
+  const earlierIndex = lastEventIndex(state.eventJournal, earlierType, label);
+  const laterIndex = lastEventIndex(state.eventJournal, laterType, label);
+  assert.ok(
+    laterIndex > earlierIndex,
+    `${label} ${laterType} should be after ${earlierType} in eventJournal`,
+  );
+};
+
+const assertNoCleanupEvent = (result: EngineResult, label: string) => {
+  assert.equal(
+    result.events.some((event) => {
+      const payload = event.payload as Partial<{
+        battleCleared: boolean;
+        systemStep: string;
+      }>;
+      return (
+        event.type === "effectResolved" &&
+        payload.systemStep === "endBattle" &&
+        payload.battleCleared === true
+      );
+    }),
+    false,
+    `${label} should not clear battle while a decision is pending`,
+  );
+};
+
+const resultSignature = (result: EngineResult) => ({
+  seq: result.events.map((event) => event.seq),
+  ids: result.events.map((event) => event.id),
+  types: result.events.map((event) => event.type),
+  stateHash: result.stateHash,
+  journalHash: hashCanonicalStateValue(result.state),
+});
+
+const assertRepeatedScriptStable = (
+  name: string,
+  script: () => readonly EngineResult[],
+) => {
+  assert.deepEqual(
+    script().map(resultSignature),
+    script().map(resultSignature),
+    `${name} repeated script state hashes and event ordering should be stable`,
+  );
 };
 
 const runNoCounterLeaderAttackScript = () => {
@@ -644,5 +752,221 @@ test("ENG-020: battle/counter pipeline regressions preserve expected behavior an
     unsupported.state.battle,
     undefined,
     "unsupported continuation should fail closed before battle starts",
+  );
+});
+
+const runEng021cBlockerCleanupScript = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "ENG-021C block p1");
+  const p2State = must(state.players[p2], "ENG-021C block p2");
+  const blocker = must(p2State.characters[0], "ENG-021C blocker");
+  blocker.state = "active";
+  state.cardManifest.cards[p1State.leader.cardId] = resolvedCard({
+    cardId: p1State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+  state.cardManifest.cards[blocker.cardId] = {
+    ...resolvedCard({
+      cardId: blocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assertAcceptedResult(state, opened, "ENG-021C pending Block Step");
+  const blockBattle = must(opened.state.battle, "ENG-021C block battle");
+  const blockDecision = must(
+    opened.state.pendingDecision,
+    "ENG-021C block decision",
+  );
+  assert.equal(blockBattle.step, "block");
+  assert.equal(blockBattle.blocker, undefined);
+  assert.equal(blockDecision.playerId, p2);
+  assertNoCleanupEvent(opened, "ENG-021C pending Block Step");
+
+  const blocked = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: blockDecision.id,
+    response: {
+      type: "cards",
+      cards: [
+        {
+          instanceId: blocker.instanceId,
+          cardId: blocker.cardId,
+          playerId: p2,
+          zone: blocker.zone,
+        },
+      ],
+    },
+  });
+  assertNoBattleContextAfterCleanup(
+    opened.state,
+    blocked,
+    "ENG-021C blocker K.O. cleanup",
+    ["blockerActivated", "damageDealt", "cardKOd", "cardMoved"],
+  );
+  assert.equal(
+    must(blocked.state.players[p2], "ENG-021C blocked p2").characters.some(
+      (character) => character.instanceId === blocker.instanceId,
+    ),
+    false,
+  );
+
+  return [opened, blocked] as const;
+};
+
+const runEng021cCounterNoDamageCleanupScript = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "ENG-021C counter p1");
+  const p2State = must(state.players[p2], "ENG-021C counter p2");
+  const counterCard = must(p2State.hand[0], "ENG-021C counter card");
+  state.cardManifest.cards[p1State.leader.cardId] = resolvedCard({
+    cardId: p1State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assertAcceptedResult(state, opened, "ENG-021C pending Counter Step");
+  const counterBattle = must(
+    opened.state.battle,
+    "ENG-021C pending counter battle",
+  );
+  const counterDecision = must(
+    opened.state.pendingDecision,
+    "ENG-021C pending counter decision",
+  );
+  assert.equal(counterBattle.step, "counter");
+  assert.equal(counterDecision.playerId, p2);
+  assertNoCleanupEvent(opened, "ENG-021C pending Counter Step");
+
+  const countered = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target: counterBattle.currentTarget,
+  });
+  assertAcceptedResult(opened.state, countered, "ENG-021C counter use");
+  assert.equal(countered.state.battle?.step, "counter");
+  assert.equal(countered.state.pendingDecision?.id, counterDecision.id);
+  assertNoCleanupEvent(countered, "ENG-021C counter use");
+
+  const passed = applyAction(countered.state, {
+    type: "respondToDecision",
+    decisionId: must(
+      countered.state.pendingDecision,
+      "ENG-021C counter decision",
+    ).id,
+    response: { type: "cards", cards: [] },
+  });
+  assertNoBattleContextAfterCleanup(
+    countered.state,
+    passed,
+    "ENG-021C no-damage comparison cleanup",
+    ["decisionResolved"],
+  );
+  assert.equal(
+    passed.events.some((event) =>
+      ["damageDealt", "lifeTaken", "cardKOd", "cardMoved"].includes(event.type),
+    ),
+    false,
+  );
+  assertJournalEventOrder(
+    passed.state,
+    "counterUsed",
+    "effectResolved",
+    "ENG-021C no-damage comparison cleanup",
+  );
+
+  return [opened, countered, passed] as const;
+};
+
+const runEng021cLeaderDamageCleanupScript = () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "ENG-021C damage p1");
+  const p2State = must(state.players[p2], "ENG-021C damage p2");
+  const beforeLife = p2State.life.length;
+
+  const damaged = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assertNoBattleContextAfterCleanup(
+    state,
+    damaged,
+    "ENG-021C leader damage cleanup",
+    ["damageDealt", "lifeTaken", "cardMoved"],
+  );
+  assert.equal(
+    must(damaged.state.players[p2], "ENG-021C damaged p2").life.length,
+    beforeLife - 1,
+  );
+
+  return [damaged] as const;
+};
+
+test("ENG-021C: battle context is retained while pending and cleared only after supported cleanup", () => {
+  assertRepeatedScriptStable(
+    "ENG-021C Block Step blocker K.O.",
+    runEng021cBlockerCleanupScript,
+  );
+  assertRepeatedScriptStable(
+    "ENG-021C Counter Step no-damage comparison",
+    runEng021cCounterNoDamageCleanupScript,
+  );
+  assertRepeatedScriptStable(
+    "ENG-021C Leader damage",
+    runEng021cLeaderDamageCleanupScript,
   );
 });
