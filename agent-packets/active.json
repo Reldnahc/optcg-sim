@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/DOC-002.md",
-      "storyId": "DOC-002",
-      "storyPath": "stories/approved/DOC-002-terminal-engine-foundation-closeout.yaml",
-      "storySha256": "aa9a3a12499604f56d90b97bcce94ec74a382056077576267477a454728936e3"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

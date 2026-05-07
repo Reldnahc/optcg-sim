@@ -8,7 +8,7 @@ type: verification
 area: docs
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Formally close the terminal engine foundation by documenting the acceptance
   evidence that already exists, updating stable milestone-level status wording,
