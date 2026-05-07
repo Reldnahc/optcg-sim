@@ -36,6 +36,7 @@ import {
   executeNoChoiceEffectPrimitive,
   type EffectDefinitionLookupFailureReason,
   type OnPlayTriggerQueueingFailureReason,
+  processDefenderOpponentAttackTiming,
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
@@ -595,11 +596,13 @@ const appendAttackDeclaredEvent = (
         instanceId: attacker.instanceId,
         cardId: attacker.cardId,
         playerId: attacker.zone.playerId,
+        zone: attacker.zone,
       },
       target: {
         instanceId: target.instanceId,
         cardId: target.cardId,
         playerId: p2,
+        zone: target.zone,
       },
     },
     visibility: { type: "public" as const },
@@ -607,6 +610,41 @@ const appendAttackDeclaredEvent = (
     createdAtStateSeq: state.seq,
   };
   state.eventJournal.push(event);
+};
+
+const setupOnOpponentAttackDefinition = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+  effectDefinitionId = "def-on-opponent-attack",
+): EffectDefinition => {
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "on-opponent-attack-rules",
+      sourceTextHash: "on-opponent-attack-source",
+    },
+  });
+  const onPlay = reviewedOnPlayDrawDefinition(
+    source.cardId,
+    supportCard.support,
+  );
+  const definition: EffectDefinition = {
+    ...onPlay,
+    effects: [
+      {
+        ...must(onPlay.effects[0], "draw effect"),
+        trigger: { type: "onOpponentAttack" },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  return definition;
 };
 
 const setupOnPlayDefinition = (
@@ -700,6 +738,45 @@ const attackQueueingState = (): {
   const definition = setupWhenAttackingDefinition(state, attacker);
   appendAttackDeclaredEvent(state, attacker);
   return { state, attacker, definition };
+};
+
+const opponentAttackQueueingState = (): {
+  state: ReturnType<typeof createActiveState>;
+  attacker: CardInstance;
+  target: CardInstance;
+  definition: EffectDefinition;
+} => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = p1State.leader;
+  const target = p2State.leader;
+  const definition = setupOnOpponentAttackDefinition(state, target);
+  state.battle = {
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+      zone: attacker.zone,
+    },
+    originalTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+      zone: target.zone,
+    },
+    currentTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+      zone: target.zone,
+    },
+    step: "counter",
+    damageCount: 1,
+  };
+  appendAttackDeclaredEvent(state, attacker);
+  return { state, attacker, target, definition };
 };
 
 const expectLookupFailure = (
@@ -1247,6 +1324,88 @@ test("attackDeclared source presence failure rejects When Attacking queueing wit
     {
       type: "effectRuntimeError",
       effectId: "when-attacking-trigger-queueing",
+      details: {
+        reason: "source-presence-failed",
+      },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+});
+
+test("attackDeclared stale attacker zone rejects When Attacking queueing without mutation or events", () => {
+  const { state, attacker } = attackQueueingState();
+  const event = must(state.eventJournal.at(-1), "attackDeclared");
+  const payload = event.payload as {
+    attacker: {
+      instanceId: string;
+      cardId: CardId;
+      playerId: PlayerId;
+      zone: CardInstance["zone"];
+    };
+    target: {
+      instanceId: string;
+      cardId: CardId;
+      playerId: PlayerId;
+      zone: CardInstance["zone"];
+    };
+  };
+  event.payload = {
+    ...payload,
+    attacker: {
+      ...payload.attacker,
+      zone: { ...attacker.zone, index: (attacker.zone.index ?? 0) + 1 },
+    },
+  };
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "when-attacking-trigger-queueing",
+      details: {
+        reason: "source-presence-failed",
+      },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+});
+
+test("attackDeclared stale target zone rejects On Your Opponent's Attack queueing without mutation or events", () => {
+  const { state, target } = opponentAttackQueueingState();
+  const event = must(state.eventJournal.at(-1), "attackDeclared");
+  const payload = event.payload as {
+    attacker: {
+      instanceId: string;
+      cardId: CardId;
+      playerId: PlayerId;
+      zone: CardInstance["zone"];
+    };
+    target: {
+      instanceId: string;
+      cardId: CardId;
+      playerId: PlayerId;
+      zone: CardInstance["zone"];
+    };
+  };
+  event.payload = {
+    ...payload,
+    target: {
+      ...payload.target,
+      zone: { ...target.zone, index: (target.zone.index ?? 0) + 1 },
+    },
+  };
+  const before = structuredClone(state);
+
+  const result = processDefenderOpponentAttackTiming(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "on-opponent-attack-trigger-queueing",
       details: {
         reason: "source-presence-failed",
       },

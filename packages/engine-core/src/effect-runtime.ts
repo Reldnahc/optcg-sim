@@ -20,7 +20,7 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { getOpponentId, reindexZoneCards } from "./action-state.js";
+import { getOpponentId, reindexZoneCards, zonesEqual } from "./action-state.js";
 import {
   groupValidatedEffectQueueEntries,
   orderNoChoiceEffectQueueGroups,
@@ -457,6 +457,22 @@ const findCardInstance = (
   return zoneCards.find((card) => card?.instanceId === instanceId);
 };
 
+const attackEventCardRefMatches = (
+  ref: {
+    playerId?: PlayerId;
+    instanceId?: string;
+    cardId?: string;
+    zone?: CardInstance["zone"];
+  },
+  card: CardInstance,
+  playerId: PlayerId,
+): boolean =>
+  ref.playerId === playerId &&
+  ref.instanceId === card.instanceId &&
+  ref.cardId === card.cardId &&
+  ref.zone !== undefined &&
+  zonesEqual(ref.zone, card.zone);
+
 const toSnapshot = (
   card: CardInstance,
   resolved: ResolvedCard,
@@ -676,6 +692,7 @@ const queueWhenAttackingTriggers = (
         playerId?: PlayerId;
         instanceId?: string;
         cardId?: string;
+        zone?: CardInstance["zone"];
       };
     };
     const attackerPayload = payload.attacker;
@@ -707,6 +724,11 @@ const queueWhenAttackingTriggers = (
       source === undefined ||
       source.cardId !== attackerPayload.cardId ||
       source.zone.playerId !== attackerPayload.playerId ||
+      !attackEventCardRefMatches(
+        attackerPayload,
+        source,
+        state.turn.turnPlayerId,
+      ) ||
       (source.zone.zone !== "leaderArea" &&
         source.zone.zone !== "characterArea")
     ) {
@@ -890,25 +912,55 @@ const queueOnOpponentAttackTriggers = (
         playerId?: PlayerId;
         instanceId?: string;
         cardId?: string;
+        zone?: CardInstance["zone"];
       };
       target?: {
         playerId?: PlayerId;
         instanceId?: string;
         cardId?: string;
+        zone?: CardInstance["zone"];
       };
     };
+    const attackerPayload = payload.attacker;
+    const targetPayload = payload.target;
     if (
-      payload.attacker?.playerId !== state.turn.turnPlayerId ||
-      payload.attacker.instanceId === undefined ||
-      payload.attacker.cardId === undefined ||
-      payload.target?.playerId !== defenderId ||
-      payload.target.instanceId === undefined ||
-      payload.target.cardId === undefined
+      attackerPayload?.playerId !== state.turn.turnPlayerId ||
+      attackerPayload.instanceId === undefined ||
+      attackerPayload.cardId === undefined ||
+      targetPayload?.playerId !== defenderId ||
+      targetPayload.instanceId === undefined ||
+      targetPayload.cardId === undefined
     ) {
       return toEngineResult(
         state,
         [],
         [onOpponentAttackTriggerQueueingError("invalid-attack-declared-event")],
+      );
+    }
+    const attackingSource = findCardInstance(
+      state,
+      state.turn.turnPlayerId,
+      attackerPayload.instanceId,
+    );
+    const attackedTarget = findCardInstance(
+      state,
+      defenderId,
+      targetPayload.instanceId,
+    );
+    if (
+      attackingSource === undefined ||
+      attackedTarget === undefined ||
+      !attackEventCardRefMatches(
+        attackerPayload,
+        attackingSource,
+        state.turn.turnPlayerId,
+      ) ||
+      !attackEventCardRefMatches(targetPayload, attackedTarget, defenderId)
+    ) {
+      return toEngineResult(
+        state,
+        [],
+        [onOpponentAttackTriggerQueueingError("source-presence-failed")],
       );
     }
 

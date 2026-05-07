@@ -49,6 +49,46 @@ const ensureDeckHasAtLeast = (
   }));
 };
 
+const hiddenLeakSentinels = [
+  "hidden-attacker-hand-card",
+  "hidden-defender-deck-card",
+  "hidden-defender-life-card",
+] as const;
+
+const seedHiddenLeakSentinels = (
+  state: ReturnType<typeof setupAttackState>,
+) => {
+  const p1State = must(state.players[p1], "p1 hidden sentinel player");
+  const p2State = must(state.players[p2], "p2 hidden sentinel player");
+  const p1Hand = must(p1State.hand[0], "p1 hidden hand card");
+  const p2Deck = must(p2State.deck[0], "p2 hidden deck card");
+  const p2Life = must(p2State.life[0], "p2 hidden life card");
+  p1State.hand[0] = {
+    ...p1Hand,
+    cardId: toCardId("hidden-attacker-hand-card"),
+  };
+  p2State.deck[0] = {
+    ...p2Deck,
+    cardId: toCardId("hidden-defender-deck-card"),
+  };
+  p2State.life[0] = {
+    ...p2Life,
+    card: {
+      ...p2Life.card,
+      cardId: toCardId("hidden-defender-life-card"),
+    },
+  };
+};
+
+const assertNoHiddenLeakInErrors = (
+  errors: ReturnType<typeof applyDeclareAttack>["errors"],
+) => {
+  const serialized = JSON.stringify(errors);
+  for (const sentinel of hiddenLeakSentinels) {
+    assert.equal(serialized.includes(sentinel), false, sentinel);
+  }
+};
+
 test("getLegalActions includes Leader-to-Leader declareAttack for turn player", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -427,6 +467,56 @@ test("ENG-023A: multiple same-player attacker When Attacking effects fail closed
 
   assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
   assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+});
+
+test("ENG-023D: unsupported attacker When Attacking choice fails closed without mutation or hidden identity leakage", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const definition = withWhenAttackingDrawEffect(state, p1State.leader);
+  const first = must(definition.effects[0], "When Attacking effect");
+  definition.effects = [
+    {
+      ...first,
+      effect: {
+        type: "choice",
+        chooser: "self",
+        options: [],
+        min: 0,
+        max: 0,
+      },
+    },
+  ];
+  seedHiddenLeakSentinels(state);
+  const before = JSON.stringify(state);
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "when-attacking-trigger-queueing",
+      details: {
+        reason: "unsupported-when-attacking-definition",
+      },
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assertNoHiddenLeakInErrors(result.errors);
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
 });
@@ -830,6 +920,53 @@ test("ENG-023B: multiple same-player defender attack timing effects fail closed 
 
   assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
   assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+});
+
+test("ENG-023D: unsupported defender On Your Opponent's Attack custom effect fails closed without mutation or hidden identity leakage", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const definition = withOnOpponentAttackDrawEffect(state, p2State.leader);
+  const first = must(definition.effects[0], "On Opponent Attack effect");
+  definition.effects = [
+    {
+      ...first,
+      effect: {
+        type: "custom",
+        handler: "hidden-defender-deck-card",
+      },
+    },
+  ];
+  seedHiddenLeakSentinels(state);
+  const before = JSON.stringify(state);
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "on-opponent-attack-trigger-queueing",
+      details: {
+        reason: "unsupported-on-opponent-attack-definition",
+      },
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assertNoHiddenLeakInErrors(result.errors);
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
 });
