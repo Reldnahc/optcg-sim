@@ -3,7 +3,7 @@ import { test } from "vitest";
 
 import type { CardId, CardInstance, PlayerId } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import {
   applyDeclareAttack,
   getDeclareAttackLegalActions,
@@ -516,6 +516,60 @@ test("ENG-023B: defender On Your Opponent's Attack resolves before Counter Step 
     sourcePresencePolicy: "mustRemainInSameZone",
     orderingGroup: "nonTurnPlayer",
   });
+});
+
+test("ENG-023B: character Counter is usable after attacker and defender attack timing resolve", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  withWhenAttackingDrawEffect(state, p1State.leader);
+  withOnOpponentAttackDrawEffect(state, p2State.leader);
+  ensureDeckHasAtLeast(state, p1, 2);
+  ensureDeckHasAtLeast(state, p2, 2);
+  const counterCard = must(p2State.hand[0], "counter card");
+  state.cardManifest.cards[counterCard.cardId] = resolvedCard({
+    cardId: counterCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.battle?.step, "counter");
+  const legalCounter = getLegalActions(opened.state, p2).find(
+    (action) =>
+      action.type === "useCounter" &&
+      action.cardInstanceId === counterCard.instanceId,
+  );
+  assert.notEqual(legalCounter, undefined);
+
+  const countered = applyAction(
+    opened.state,
+    must(legalCounter, "legal counter action"),
+  );
+
+  assert.equal(countered.errors, undefined);
+  const counterBattle = must(countered.state.battle, "counter battle");
+  assert.equal(counterBattle.step, "counter");
+  assert.equal(counterBattle.counterPower, 1000);
+  assert.equal(
+    countered.events.some((event) => event.type === "counterUsed"),
+    true,
+  );
 });
 
 test("ENG-023B: defender timing waits until Block Step response completes", () => {
