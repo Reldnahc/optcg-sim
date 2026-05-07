@@ -12,6 +12,7 @@ import type {
   MatchCardManifest,
   PlayerId,
   PlayerRef,
+  QueueEntryId,
   ResolvedCard,
 } from "@optcg/types";
 
@@ -1243,93 +1244,28 @@ const toErrorTuple = (
   return [first, ...errors.slice(1)];
 };
 
-const processNoChoiceEffectQueue = (state: GameState): EngineResult => {
-  if (state.pendingDecision !== undefined) {
-    return toEngineResult(state, []);
+const hasExactIds = (
+  expectedIds: readonly QueueEntryId[],
+  receivedIds: readonly QueueEntryId[],
+): boolean => {
+  if (expectedIds.length !== receivedIds.length) {
+    return false;
   }
-  const validated = validateEffectQueueOrderingInput(
-    state.effectQueue,
-    inferTimingWindowRanks(state.effectQueue),
-  );
-  if (!validated.ok) {
-    return toEngineResult(
-      state,
-      [],
-      [
-        unsupportedPendingRuntimeWorkError({
-          kind: "effectQueue",
-          count: state.effectQueue.length,
-        }),
-      ],
-    );
+  if (new Set(receivedIds).size !== receivedIds.length) {
+    return false;
   }
+  const expected = new Set(expectedIds);
+  return receivedIds.every((id) => expected.has(id));
+};
 
-  const grouped = groupValidatedEffectQueueEntries(validated);
-  const earliestChoiceGroup =
-    findEarliestChoiceRequiredEffectQueueGroup(grouped);
-  if (earliestChoiceGroup !== undefined) {
-    const triggerIds = earliestChoiceGroup.entries.map((entry) => entry.id);
-    const decisionId =
-      `decision:chooseTriggerOrder:${earliestChoiceGroup.timingWindowId}:${String(
-        earliestChoiceGroup.generation,
-      )}:${earliestChoiceGroup.orderingGroup}:${earliestChoiceGroup.controllerId}` as DecisionId;
-    const causedBy = {
-      type: "ruleProcess",
-      name: "effectRuntime:chooseTriggerOrder",
-    } as const;
-    const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
-      id: decisionId,
-      type: "chooseTriggerOrder",
-      playerId: earliestChoiceGroup.controllerId,
-      prompt: "Choose trigger resolution order.",
-      causedBy,
-      visibility: { type: "public" },
-      triggerIds,
-      constraints: { mustUseAll: true },
-    };
-    const events: EngineEvent[] = [];
-    appendEvent(
-      state,
-      events,
-      "decisionCreated",
-      {
-        decisionId: pendingDecision.id,
-        decisionType: pendingDecision.type,
-        playerId: pendingDecision.playerId,
-      },
-      { type: "public" },
-    );
-    const created = events[0];
-    if (created !== undefined) {
-      created.causedBy = causedBy;
-    }
-    const nextState: GameState = {
-      ...state,
-      seq: toStateSeq(state.seq + 1),
-      pendingDecision,
-      eventJournal: [...state.eventJournal, ...events],
-    };
-    return toEngineResult(nextState, events);
-  }
-
-  const ordered = orderNoChoiceEffectQueueGroups(grouped);
-  if (!ordered.ok) {
-    return toEngineResult(
-      state,
-      [],
-      [
-        unsupportedPendingRuntimeWorkError({
-          kind: "effectQueue",
-          count: state.effectQueue.length,
-        }),
-      ],
-    );
-  }
-
+const resolveQueueEntriesInOrder = (
+  state: GameState,
+  entries: readonly EffectQueueEntry[],
+): EngineResult => {
   const originalState = state;
   let nextState = state;
   const allEvents: EngineEvent[] = [];
-  for (const selected of ordered.entries) {
+  for (const selected of entries) {
     const sourcePresence = evaluateQueuedEffectSourcePresence(
       nextState,
       selected,
@@ -1470,6 +1406,132 @@ const processNoChoiceEffectQueue = (state: GameState): EngineResult => {
   return toEngineResult(nextState, allEvents);
 };
 
+const processNoChoiceEffectQueue = (
+  state: GameState,
+  orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
+): EngineResult => {
+  if (state.pendingDecision !== undefined) {
+    return toEngineResult(state, []);
+  }
+  const validated = validateEffectQueueOrderingInput(
+    state.effectQueue,
+    inferTimingWindowRanks(state.effectQueue),
+  );
+  if (!validated.ok) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        unsupportedPendingRuntimeWorkError({
+          kind: "effectQueue",
+          count: state.effectQueue.length,
+        }),
+      ],
+    );
+  }
+
+  const grouped = groupValidatedEffectQueueEntries(validated);
+  const earliestChoiceGroup =
+    findEarliestChoiceRequiredEffectQueueGroup(grouped);
+  if (earliestChoiceGroup !== undefined) {
+    if (orderedCurrentChoiceGroupIds !== undefined) {
+      const expectedIds = earliestChoiceGroup.entries.map((entry) => entry.id);
+      if (!hasExactIds(expectedIds, orderedCurrentChoiceGroupIds)) {
+        return toEngineResult(
+          state,
+          [],
+          [
+            unsupportedPendingRuntimeWorkError({
+              kind: "effectQueue",
+              count: state.effectQueue.length,
+            }),
+          ],
+        );
+      }
+      const selectedById = new Map(
+        earliestChoiceGroup.entries.map((entry) => [entry.id, entry]),
+      );
+      const selectedEntries = orderedCurrentChoiceGroupIds.map((id) => {
+        const entry = selectedById.get(id);
+        if (entry === undefined) {
+          throw new Error("Ordered choice id missing from validated group.");
+        }
+        return entry;
+      });
+      const resolved = resolveQueueEntriesInOrder(state, selectedEntries);
+      if (
+        resolved.errors !== undefined ||
+        resolved.state.status.type !== "active"
+      ) {
+        return resolved;
+      }
+      const continued = processNoChoiceEffectQueue(resolved.state);
+      return {
+        ...continued,
+        events: [...resolved.events, ...continued.events],
+      };
+    }
+    const triggerIds = earliestChoiceGroup.entries.map((entry) => entry.id);
+    const decisionId =
+      `decision:chooseTriggerOrder:${earliestChoiceGroup.timingWindowId}:${String(
+        earliestChoiceGroup.generation,
+      )}:${earliestChoiceGroup.orderingGroup}:${earliestChoiceGroup.controllerId}` as DecisionId;
+    const causedBy = {
+      type: "ruleProcess",
+      name: "effectRuntime:chooseTriggerOrder",
+    } as const;
+    const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
+      id: decisionId,
+      type: "chooseTriggerOrder",
+      playerId: earliestChoiceGroup.controllerId,
+      prompt: "Choose trigger resolution order.",
+      causedBy,
+      visibility: { type: "public" },
+      triggerIds,
+      constraints: { mustUseAll: true },
+    };
+    const events: EngineEvent[] = [];
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: pendingDecision.id,
+        decisionType: pendingDecision.type,
+        playerId: pendingDecision.playerId,
+      },
+      { type: "public" },
+    );
+    const created = events[0];
+    if (created !== undefined) {
+      created.causedBy = causedBy;
+    }
+    const nextState: GameState = {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      pendingDecision,
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    return toEngineResult(nextState, events);
+  }
+
+  const ordered = orderNoChoiceEffectQueueGroups(grouped);
+  if (!ordered.ok) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        unsupportedPendingRuntimeWorkError({
+          kind: "effectQueue",
+          count: state.effectQueue.length,
+        }),
+      ],
+    );
+  }
+
+  return resolveQueueEntriesInOrder(state, ordered.entries);
+};
+
 export const processDefenderOpponentAttackTiming = (
   state: GameState,
 ): EngineResult => {
@@ -1518,3 +1580,8 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   }
   return toEngineResult(state, [], [unsupportedPendingRuntimeWorkError(work)]);
 };
+
+export const processEffectRuntimeAfterTriggerOrderChoice = (
+  state: GameState,
+  orderedIds: readonly QueueEntryId[],
+): EngineResult => processNoChoiceEffectQueue(state, orderedIds);
