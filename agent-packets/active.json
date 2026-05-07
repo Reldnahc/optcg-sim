@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-024A.md",
-      "storyId": "ENG-024A",
-      "storyPath": "stories/approved/ENG-024A-add-source-presence-policy-helper.yaml",
-      "storySha256": "31346d75040d520e92e187afb5562b9f163c9b75b9d438fe24bd18fca6928dff"
+      "packetPath": "agent-packets/ENG-024B.md",
+      "storyId": "ENG-024B",
+      "storyPath": "stories/approved/ENG-024B-regress-same-zone-source-presence.yaml",
+      "storySha256": "de6ce71144884f863e4ba3510020808288fcfaa5fee3ce07d92766f6dce13871"
     }
   ],
   "version": 1
