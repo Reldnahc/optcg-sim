@@ -23,10 +23,7 @@ import {
   reifyCardRef,
   toCardRef,
 } from "./action-state.js";
-import {
-  withAllAttackTimingCombatMetadataHidden,
-  withAttackTimingCombatMetadataHidden,
-} from "./attack-timing.js";
+import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
 import { resolveSupportedVanillaBattle } from "./battle-resolution.js";
 import { expireBattleDurationStateForCleanup } from "./battle-support.js";
 import {
@@ -141,10 +138,7 @@ export const applyDeclareAttack = (
     );
   }
 
-  const combatMetadataState = withAttackTimingCombatMetadataHidden(
-    state,
-    attacker.card,
-  );
+  const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
   let legalTargets: readonly CardInstance["instanceId"][];
   try {
     const computed = computeView(combatMetadataState);
@@ -246,10 +240,7 @@ export const applyDeclareAttack = (
   }
 
   const blockDecision = createBlockStepDeclineDecision(
-    withAttackTimingCombatMetadataHidden(
-      attackTimingResult.state,
-      reifyCurrentBattleAttacker(attackTimingResult.state),
-    ),
+    withAllAttackTimingCombatMetadataHidden(attackTimingResult.state),
   );
   if (blockDecision !== null) {
     const blockEvents = [...attackTimingResult.events];
@@ -276,9 +267,8 @@ export const applyDeclareAttack = (
     return toEngineResult(blockState, blockEvents);
   }
 
-  const resolutionInput = withAttackTimingCombatMetadataHidden(
+  const resolutionInput = withAllAttackTimingCombatMetadataHidden(
     attackTimingResult.state,
-    reifyCurrentBattleAttacker(attackTimingResult.state),
   );
   const resolved = resolveSupportedVanillaBattle(resolutionInput);
   if (resolved.errors !== undefined) {
@@ -356,16 +346,6 @@ const resolveAttackTimingEffects = (
   return toEngineResult(stateWithJournal, events);
 };
 
-const reifyCurrentBattleAttacker = (
-  state: GameState,
-): CardInstance | undefined => {
-  const battle = state.battle;
-  if (battle === undefined) {
-    return undefined;
-  }
-  return reifyCardRef(state, battle.attacker)?.card;
-};
-
 const battleParticipantsRemainLegal = (state: GameState): boolean => {
   const battle = state.battle;
   if (battle === undefined) {
@@ -426,10 +406,7 @@ const withOriginalManifestResult = (
 };
 
 const hideCurrentAttackTimingCombatMetadata = (state: GameState): GameState =>
-  withAttackTimingCombatMetadataHidden(
-    state,
-    reifyCurrentBattleAttacker(state),
-  );
+  withAllAttackTimingCombatMetadataHidden(state);
 
 const resolveSupportedBattleWithAttackTimingMetadata = (
   state: GameState,

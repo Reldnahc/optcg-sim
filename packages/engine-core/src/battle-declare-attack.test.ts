@@ -83,6 +83,54 @@ test("ENG-023A: getLegalActions includes supported When Attacking attacker", () 
   );
 });
 
+test("ENG-023A: non-attacking combat card When Attacking metadata does not make legal attack fail", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const nonAttackingCharacter = must(
+    p1State.characters[0],
+    "non-attacking character",
+  );
+  withWhenAttackingDrawEffect(state, nonAttackingCharacter);
+  ensureDeckHasAtLeast(state, p1, 2);
+  const beforeP2Life = p2State.life.length;
+
+  const legal = getDeclareAttackLegalActions(state, p1);
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.attacker.instanceId === p1State.leader.instanceId &&
+        action.target.instanceId === p2State.leader.instanceId,
+    ),
+    true,
+  );
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.events.some((event) => event.type === "effectQueued"),
+    false,
+  );
+  assert.equal(
+    must(result.state.players[p2], "result p2").life.length,
+    beforeP2Life - 1,
+  );
+});
+
 test("getLegalActions includes Character-to-rested-Character declareAttack and excludes active characters", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");

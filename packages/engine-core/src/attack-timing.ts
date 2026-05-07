@@ -16,9 +16,9 @@ const hasOnlyWhenAttackingEffects = (
 
 const definitionSupportsAttackTimingSanitization = (
   manifest: MatchCardManifest,
-  card: ResolvedCard,
+  card: { support?: ResolvedCard["support"] },
 ): boolean => {
-  const effectDefinitionId = card.support.effectDefinitionId;
+  const effectDefinitionId = card.support?.effectDefinitionId;
   if (effectDefinitionId === undefined) {
     return false;
   }
