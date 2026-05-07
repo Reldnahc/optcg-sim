@@ -512,3 +512,24 @@ test("activated life trigger fails closed without mutation when trigger metadata
   assert.deepEqual(result.events, []);
   assert.deepEqual(result.state, before);
 });
+
+test("malformed lifeTrigger choice fails closed without declining to hand", () => {
+  const { state } = openSupportedLifeTriggerDecision();
+  const decision = must(state.pendingDecision, "life trigger decision");
+  const before = structuredClone(state);
+
+  const result = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "bogus" as never },
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "Life Trigger choice is unsupported.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.state, before);
+});

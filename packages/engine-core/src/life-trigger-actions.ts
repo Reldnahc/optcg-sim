@@ -364,8 +364,16 @@ export const applyLifeTriggerDecisionResponse = (
       ),
     );
   }
-  if (action.response.choice === "activateTrigger") {
+  const choice: string = action.response.choice;
+  if (choice === "activateTrigger") {
     return applyActivatedTriggerResponse(state, decision, action);
+  }
+  if (choice !== "addToHand") {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Life Trigger choice is unsupported."),
+    );
   }
   const validation = validateDecisionCard(state, decision);
   if (validation !== undefined) {
