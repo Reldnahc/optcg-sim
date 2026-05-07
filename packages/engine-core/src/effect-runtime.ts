@@ -1,6 +1,7 @@
 import type {
   CardSupportStatus,
   CardInstance,
+  DecisionId,
   Effect,
   EffectDefinition,
   EffectQueueEntry,
@@ -22,6 +23,7 @@ import {
 } from "./action-results.js";
 import { getOpponentId, reindexZoneCards, zonesEqual } from "./action-state.js";
 import {
+  findEarliestChoiceRequiredEffectQueueGroup,
   groupValidatedEffectQueueEntries,
   orderNoChoiceEffectQueueGroups,
   validateEffectQueueOrderingInput,
@@ -1242,6 +1244,9 @@ const toErrorTuple = (
 };
 
 const processNoChoiceEffectQueue = (state: GameState): EngineResult => {
+  if (state.pendingDecision !== undefined) {
+    return toEngineResult(state, []);
+  }
   const validated = validateEffectQueueOrderingInput(
     state.effectQueue,
     inferTimingWindowRanks(state.effectQueue),
@@ -1259,9 +1264,55 @@ const processNoChoiceEffectQueue = (state: GameState): EngineResult => {
     );
   }
 
-  const ordered = orderNoChoiceEffectQueueGroups(
-    groupValidatedEffectQueueEntries(validated),
-  );
+  const grouped = groupValidatedEffectQueueEntries(validated);
+  const earliestChoiceGroup =
+    findEarliestChoiceRequiredEffectQueueGroup(grouped);
+  if (earliestChoiceGroup !== undefined) {
+    const triggerIds = earliestChoiceGroup.entries.map((entry) => entry.id);
+    const decisionId =
+      `decision:chooseTriggerOrder:${earliestChoiceGroup.timingWindowId}:${String(
+        earliestChoiceGroup.generation,
+      )}:${earliestChoiceGroup.orderingGroup}:${earliestChoiceGroup.controllerId}` as DecisionId;
+    const causedBy = {
+      type: "ruleProcess",
+      name: "effectRuntime:chooseTriggerOrder",
+    } as const;
+    const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
+      id: decisionId,
+      type: "chooseTriggerOrder",
+      playerId: earliestChoiceGroup.controllerId,
+      prompt: "Choose trigger resolution order.",
+      causedBy,
+      visibility: { type: "public" },
+      triggerIds,
+      constraints: { mustUseAll: true },
+    };
+    const events: EngineEvent[] = [];
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: pendingDecision.id,
+        decisionType: pendingDecision.type,
+        playerId: pendingDecision.playerId,
+      },
+      { type: "public" },
+    );
+    const created = events[0];
+    if (created !== undefined) {
+      created.causedBy = causedBy;
+    }
+    const nextState: GameState = {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      pendingDecision,
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    return toEngineResult(nextState, events);
+  }
+
+  const ordered = orderNoChoiceEffectQueueGroups(grouped);
   if (!ordered.ok) {
     return toEngineResult(
       state,

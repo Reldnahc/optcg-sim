@@ -2063,7 +2063,7 @@ test("deck-out from queued draw is detected at queue rule-processing checkpoint"
   assert.ok(result.events.some((event) => event.type === "gameEnded"));
 });
 
-test("choice-required queued groups fail closed without state mutation or events", () => {
+test("choice-required queued groups create chooseTriggerOrder decision and decisionCreated event", () => {
   const state = createActiveState();
   state.effectQueue = [
     {
@@ -2087,13 +2087,122 @@ test("choice-required queued groups fail closed without state mutation or events
       },
     },
   ];
-  const before = structuredClone(state);
+  const beforeQueue = structuredClone(state.effectQueue);
+  const beforeSeq = state.seq;
+  const beforeJournalLength = state.eventJournal.length;
 
   const result = processEffectRuntime(state);
+  const decision = must(result.state.pendingDecision, "pending decision");
+  const decisionCreated = result.events.find(
+    (event) => event.type === "decisionCreated",
+  );
 
+  assert.equal(result.errors, undefined);
+  assert.equal(decision.type, "chooseTriggerOrder");
+  assert.equal(decision.playerId, p1);
+  assert.deepEqual(decision.triggerIds, [
+    toQueueEntryId("queue-entry-a"),
+    toQueueEntryId("queue-entry-b"),
+  ]);
+  assert.deepEqual(decision.constraints, { mustUseAll: true });
+  assert.deepEqual(result.state.effectQueue, beforeQueue);
+  assert.equal(result.state.seq, toStateSeq(beforeSeq + 1));
+  assert.equal(result.events.length, 1);
+  assert.ok(decisionCreated !== undefined);
+  assert.equal(decisionCreated.visibility.type, "public");
+  assert.deepEqual(decisionCreated.causedBy, {
+    type: "ruleProcess",
+    name: "effectRuntime:chooseTriggerOrder",
+  });
+  assert.deepEqual(decisionCreated.payload, {
+    decisionId: decision.id,
+    decisionType: "chooseTriggerOrder",
+    playerId: p1,
+  });
+  assert.deepEqual(
+    result.state.eventJournal.slice(beforeJournalLength),
+    result.events,
+  );
+});
+
+test("existing chooseTriggerOrder pending decision pauses runtime without recreating the decision", () => {
+  const state = createActiveState();
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-a"),
+      timingWindowId: toTimingWindowId("window-choice"),
+      source: { ...queueDrawForP1().source, instanceId: toInstanceId("src-a") },
+      sourceSnapshot: {
+        ...queueDrawForP1().sourceSnapshot,
+        instanceId: toInstanceId("src-a"),
+      },
+    },
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-b"),
+      timingWindowId: toTimingWindowId("window-choice"),
+      source: { ...queueDrawForP1().source, instanceId: toInstanceId("src-b") },
+      sourceSnapshot: {
+        ...queueDrawForP1().sourceSnapshot,
+        instanceId: toInstanceId("src-b"),
+      },
+    },
+  ];
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const before = structuredClone(paused.state);
+
+  const result = processEffectRuntime(paused.state);
+
+  assert.equal(result.errors, undefined);
   assert.deepEqual(result.events, []);
-  assert.ok(result.errors !== undefined);
   assert.deepEqual(result.state, before);
+  assert.equal(result.stateHash, hashCanonicalStateValue(before));
+});
+
+test("choice-required decision creation is deterministic for identical input", () => {
+  const run = () => {
+    const state = createActiveState();
+    state.effectQueue = [
+      {
+        ...queueDrawForP1(),
+        id: toQueueEntryId("queue-entry-a"),
+        timingWindowId: toTimingWindowId("window-choice"),
+        source: {
+          ...queueDrawForP1().source,
+          instanceId: toInstanceId("src-a"),
+        },
+        sourceSnapshot: {
+          ...queueDrawForP1().sourceSnapshot,
+          instanceId: toInstanceId("src-a"),
+        },
+      },
+      {
+        ...queueDrawForP1(),
+        id: toQueueEntryId("queue-entry-b"),
+        timingWindowId: toTimingWindowId("window-choice"),
+        source: {
+          ...queueDrawForP1().source,
+          instanceId: toInstanceId("src-b"),
+        },
+        sourceSnapshot: {
+          ...queueDrawForP1().sourceSnapshot,
+          instanceId: toInstanceId("src-b"),
+        },
+      },
+    ];
+    return processEffectRuntime(state);
+  };
+
+  const first = run();
+  const second = run();
+
+  assert.equal(first.errors, undefined);
+  assert.equal(second.errors, undefined);
+  assert.deepEqual(first.events, second.events);
+  assert.deepEqual(first.state.pendingDecision, second.state.pendingDecision);
+  assert.equal(first.stateHash, second.stateHash);
 });
 
 test("queued source-presence failure rejects without mutation or events", () => {
