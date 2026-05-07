@@ -78,6 +78,42 @@ const isEventVisibleToPlayer = (
   (event.visibility.type === "private" &&
     event.visibility.playerId === playerId);
 
+const toPlayerEventCausedBy = (
+  causedBy: EngineEvent["causedBy"],
+): EngineEvent["causedBy"] | undefined => {
+  if (
+    causedBy === undefined ||
+    causedBy.type === "effect" ||
+    "queueEntryId" in causedBy
+  ) {
+    return undefined;
+  }
+  return causedBy;
+};
+
+const toPlayerEvent = (event: EngineEvent): EngineEvent => {
+  const causedBy = toPlayerEventCausedBy(event.causedBy);
+  const base = {
+    id: event.id,
+    seq: event.seq,
+    type: event.type,
+    ...(event.actor === undefined ? {} : { actor: event.actor }),
+    ...(event.source === undefined ? {} : { source: event.source }),
+    ...(event.affected === undefined ? {} : { affected: event.affected }),
+    visibility: event.visibility,
+    createdAtStateSeq: event.createdAtStateSeq,
+    ...(causedBy === undefined ? {} : { causedBy }),
+  };
+
+  if (event.type === "effectQueued") {
+    return { ...base, payload: { status: "queued" } };
+  }
+  if (event.type === "effectResolved") {
+    return { ...base, payload: { status: "resolved" } };
+  }
+  return { ...base, payload: event.payload };
+};
+
 const toPublicDecision = (
   state: GameState,
   playerId: PlayerId,
@@ -396,9 +432,9 @@ export const filterStateForPlayer = (
         .filter((action): action is PublicLegalAction => action !== undefined),
     ),
     revealedCards: toPublicRevealRecord(state, playerId),
-    events: state.eventJournal.filter((event) =>
-      isEventVisibleToPlayer(event, playerId),
-    ),
+    events: state.eventJournal
+      .filter((event) => isEventVisibleToPlayer(event, playerId))
+      .map(toPlayerEvent),
     timers,
   };
 };
