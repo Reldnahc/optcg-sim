@@ -1700,6 +1700,11 @@ const createSelectTargetsDecisionForQueuedEffect = (
   state: GameState,
   entry: EffectQueueEntry,
   request: TargetRequest,
+  options: {
+    rollbackState: GameState;
+    priorEvents: readonly EngineEvent[];
+    errorCount: number;
+  },
 ): EngineResult => {
   const resolved = resolvePublicTargetCandidates(state, request, {
     sourceControllerId: entry.controllerId,
@@ -1707,12 +1712,12 @@ const createSelectTargetsDecisionForQueuedEffect = (
   const chooserId = resolvePlayerId(state, entry, request.chooser);
   if (!resolved.ok || chooserId === undefined) {
     return toEngineResult(
-      state,
+      options.rollbackState,
       [],
       [
         unsupportedPendingRuntimeWorkError({
           kind: "effectQueue",
-          count: state.effectQueue.length,
+          count: options.errorCount,
         }),
       ],
     );
@@ -1756,7 +1761,7 @@ const createSelectTargetsDecisionForQueuedEffect = (
     pendingDecision,
     eventJournal: [...state.eventJournal, ...events],
   };
-  return toEngineResult(nextState, events);
+  return toEngineResult(nextState, [...options.priorEvents, ...events]);
 };
 
 const isLifeTriggerResolutionEntry = (
@@ -2059,6 +2064,11 @@ const resolveQueueEntriesInOrder = (
         nextState,
         selected,
         targetRequest,
+        {
+          rollbackState: originalState,
+          priorEvents: allEvents,
+          errorCount: originalState.effectQueue.length,
+        },
       );
     }
     const drawEffect = resolveQueuedNoChoiceDrawEffect(nextState, selected);

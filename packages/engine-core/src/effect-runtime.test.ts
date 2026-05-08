@@ -959,6 +959,86 @@ const targetSelectionQueueState = (
   return { state, entry, request, targets: [firstTarget, secondTarget] };
 };
 
+const mixedOrderedDrawThenTargetState = (
+  request: TargetRequest = publicCharacterTargetRequest(),
+): {
+  state: ReturnType<typeof createActiveState>;
+  drawEntry: EffectQueueEntry;
+  targetEntry: EffectQueueEntry;
+} => {
+  const { state, entry: targetEntry } = targetSelectionQueueState(request);
+  const p1State = must(state.players[p1], "p1");
+  const drawSource = withCardInZone({
+    state,
+    playerId: p1,
+    card: {
+      ...must(p1State.hand[2], "draw source"),
+      cardId: toCardId("mixed-draw-source-card"),
+    },
+    zone: "characterArea",
+    index: 1,
+  });
+  p1State.deck = [
+    {
+      ...must(p1State.hand[3], "mixed draw deck refill"),
+      cardId: toCardId("mixed-draw-deck-card"),
+      zone: { zone: "deck", playerId: p1, slot: "deck", index: 0 },
+    },
+    {
+      ...must(p1State.hand[4], "mixed draw deck buffer"),
+      cardId: toCardId("mixed-draw-deck-buffer"),
+      zone: { zone: "deck", playerId: p1, slot: "deck", index: 1 },
+    },
+  ];
+  const drawSupport = resolvedCard({
+    cardId: drawSource.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-mixed-draw",
+      rulesVersion: "mixed-draw-rules",
+      sourceTextHash: "mixed-draw-source",
+    },
+  });
+  const drawDefinition = reviewedOnPlayDrawDefinition(
+    drawSource.cardId,
+    drawSupport.support,
+  );
+  const drawEntry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId("queue-entry-mixed-draw"),
+    timingWindowId: targetEntry.timingWindowId,
+    generation: targetEntry.generation,
+    controllerId: p1,
+    source: {
+      instanceId: drawSource.instanceId,
+      cardId: drawSource.cardId,
+      playerId: p1,
+      zone: drawSource.zone,
+    },
+    sourceSnapshot: toSourceSnapshot(drawSource, p1, p1),
+    effectBlockId: must(drawDefinition.effects[0], "draw effect").id,
+    orderingGroup: "turnPlayer",
+    createdAtEventSeq: 1,
+    queuedAtStateSeq: toStateSeq(state.seq),
+    sourcePresencePolicy: "mustRemainInSameZone",
+    causedBy: { type: "ruleProcess", name: "mixed-draw-target-test" },
+  };
+  const normalizedTargetEntry: EffectQueueEntry = {
+    ...targetEntry,
+    id: toQueueEntryId("queue-entry-mixed-target"),
+    createdAtEventSeq: 2,
+    causedBy: { type: "ruleProcess", name: "mixed-draw-target-test" },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-mixed-draw": drawDefinition,
+  };
+  state.cardManifest.cards[drawSource.cardId] = drawSupport;
+  state.effectQueue = [drawEntry, normalizedTargetEntry];
+  return { state, drawEntry, targetEntry: normalizedTargetEntry };
+};
+
 const attackQueueingState = (): {
   state: ReturnType<typeof createActiveState>;
   attacker: CardInstance;
@@ -3214,6 +3294,104 @@ test("unsupported queued target request fails closed without mutating state", ()
   ]);
   assert.deepEqual(result.state, before);
   assert.equal(hashCanonicalStateValue(result.state), beforeHash);
+});
+
+test("ordered draw before target pause preserves prior runtime events in returned result", () => {
+  const { state, drawEntry, targetEntry } = mixedOrderedDrawThenTargetState();
+  const paused = processEffectRuntime(state);
+  const pendingDecision = must(
+    paused.state.pendingDecision,
+    "choose order decision",
+  );
+  assert.equal(pendingDecision.type, "chooseTriggerOrder");
+  const beforeJournalLength = paused.state.eventJournal.length;
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: pendingDecision.id,
+    response: {
+      type: "orderedIds",
+      ids: [drawEntry.id, targetEntry.id],
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+      "decisionCreated",
+    ],
+  );
+  assert.equal(result.state.pendingDecision?.type, "selectTargets");
+  assert.deepEqual(
+    result.events
+      .filter((event) => event.type === "effectResolved")
+      .map(
+        (event) =>
+          (event.payload as { queueEntryId: QueueEntryId }).queueEntryId,
+      ),
+    [drawEntry.id],
+  );
+  assert.deepEqual(
+    result.state.effectQueue.map((entry) => entry.id),
+    [targetEntry.id],
+  );
+  assert.deepEqual(
+    result.state.eventJournal.slice(beforeJournalLength),
+    result.events,
+  );
+});
+
+test("unsupported ordered target after draw fails closed without keeping partial draw mutation", () => {
+  const { state, drawEntry, targetEntry } = mixedOrderedDrawThenTargetState(
+    publicCharacterTargetRequest({ visibility: "privateToChooser" }),
+  );
+  const paused = processEffectRuntime(state);
+  const pendingDecision = must(
+    paused.state.pendingDecision,
+    "choose order decision",
+  );
+  assert.equal(pendingDecision.type, "chooseTriggerOrder");
+  const beforeP1 = structuredClone(must(paused.state.players[p1], "p1"));
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: pendingDecision.id,
+    response: {
+      type: "orderedIds",
+      ids: [drawEntry.id, targetEntry.id],
+    },
+  });
+
+  const afterP1 = must(result.state.players[p1], "p1 result");
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "unsupported-effect-queue",
+      details: {
+        reason: "unsupported-pending-runtime-work",
+        kind: "effectQueue",
+        count: 2,
+      },
+    },
+  ]);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["decisionResolved"],
+  );
+  assert.equal(afterP1.deck.length, beforeP1.deck.length);
+  assert.equal(afterP1.hand.length, beforeP1.hand.length);
+  assert.deepEqual(
+    result.state.effectQueue.map((entry) => entry.id),
+    [drawEntry.id, targetEntry.id],
+  );
+  assert.equal(result.state.pendingDecision, undefined);
 });
 
 test("choice-required queued groups create chooseTriggerOrder decision and decisionCreated event", () => {
