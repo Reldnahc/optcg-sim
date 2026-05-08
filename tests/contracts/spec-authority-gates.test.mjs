@@ -274,8 +274,32 @@ test("root license and README scope MIT source publication to repository-owned m
     "## License",
     "repository's own source code, specifications, documentation, tests, and tooling are licensed under the MIT License",
     "[LICENSE](LICENSE)",
-    "does not grant rights to third-party card names, card text, images, set symbols, trademarks, logos, or other third-party content",
+    "does not grant rights to third-party card names, card text, images, trademarks, logos, or other third-party content",
   ]) {
     assertContainsWords(readme, requiredReadmeText);
   }
+});
+
+test("root disclaimer states unofficial third-party content ownership boundary", async () => {
+  const disclaimer = await readText("DISCLAIMER.md");
+  const readme = await readText("README.md");
+
+  for (const requiredDisclaimerText of [
+    "This project is unofficial",
+    "not affiliated with, endorsed by, sponsored by, or approved by any ONE PIECE or ONE PIECE Card Game rightsholder",
+    "does not own or claim rights to ONE PIECE, the ONE PIECE Card Game, related game assets, card names, card text, card images, artwork, characters, logos, trademarks, or other third-party content",
+    "Third-party names, images, text, and marks remain the property of their respective owners",
+  ]) {
+    assertContainsWords(disclaimer, requiredDisclaimerText);
+  }
+
+  for (const requiredReadmeText of [
+    "## Disclaimer",
+    "[DISCLAIMER.md](DISCLAIMER.md)",
+  ]) {
+    assertContainsWords(readme, requiredReadmeText);
+  }
+
+  assert.doesNotMatch(disclaimer, /set symbols/i);
+  assert.doesNotMatch(readme, /set symbols/i);
 });

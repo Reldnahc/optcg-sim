@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/DOC-003.md",
+      "storyId": "DOC-003",
+      "storyPath": "stories/approved/DOC-003-add-root-disclaimer.yaml",
+      "storySha256": "a0bd9f8a84662d72923af4dc07b22789d0a7038cd9a909a73d162076a752ff10"
+    }
+  ],
   "version": 1
 }

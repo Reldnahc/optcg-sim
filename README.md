@@ -27,7 +27,12 @@ This repository's own source code, specifications, documentation, tests, and
 tooling are licensed under the MIT License; see [LICENSE](LICENSE).
 
 This license does not grant rights to third-party card names, card text,
-images, set symbols, trademarks, logos, or other third-party content.
+images, trademarks, logos, or other third-party content.
+
+## Disclaimer
+
+This is an unofficial project. See [DISCLAIMER.md](DISCLAIMER.md) for the
+third-party content and ownership disclaimer.
 
 ## Local Setup
 
