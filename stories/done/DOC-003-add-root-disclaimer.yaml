@@ -8,7 +8,7 @@ type: implementation
 area: docs
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Add a concise root disclaimer that makes clear this repository does not own
   or claim rights to ONE PIECE, the ONE PIECE Card Game, related game assets,
