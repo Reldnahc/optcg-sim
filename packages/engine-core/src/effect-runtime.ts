@@ -1603,6 +1603,20 @@ const unsupportedPendingRuntimeWorkError = (
   } satisfies UnsupportedPendingRuntimeWorkDetails,
 });
 
+export const failUnsupportedTargetEffectContinuation = (
+  state: GameState,
+): EngineResult =>
+  toEngineResult(
+    state,
+    [],
+    [
+      unsupportedPendingRuntimeWorkError({
+        kind: "effectQueue",
+        count: state.effectQueue.length,
+      }),
+    ],
+  );
+
 const inferTimingWindowRanks = (
   entries: readonly EffectQueueEntry[],
 ): Array<{

@@ -12,6 +12,7 @@ import type {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { zonesEqual } from "./action-state.js";
+import { failUnsupportedTargetEffectContinuation } from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { resolvePublicTargetCandidates } from "./target-selection.js";
 
@@ -238,5 +239,10 @@ export const applySelectTargetsDecisionResponse = (
   };
   delete nextState.pendingDecision;
   assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  const unsupportedContinuation =
+    failUnsupportedTargetEffectContinuation(nextState);
+  return {
+    ...unsupportedContinuation,
+    events: [...events, ...unsupportedContinuation.events],
+  };
 };
