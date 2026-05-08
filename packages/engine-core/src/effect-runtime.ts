@@ -11,7 +11,6 @@ import type {
   GameState,
   MatchCardManifest,
   PlayerId,
-  PlayerRef,
   QueueEntryId,
   ResolvedCard,
   Target,
@@ -25,16 +24,35 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { getOpponentId, reindexZoneCards, zonesEqual } from "./action-state.js";
+import { reindexZoneCards, zonesEqual } from "./action-state.js";
 import {
   findEarliestChoiceRequiredEffectQueueGroup,
   groupValidatedEffectQueueEntries,
   orderNoChoiceEffectQueueGroups,
   validateEffectQueueOrderingInput,
 } from "./effect-queue-ordering.js";
+import {
+  executeNoChoiceEffectPrimitive,
+  isSupportedEffectResolvedCustomDrawEffect,
+  isSupportedNoChoiceOnKODrawEffect,
+  isSupportedNoChoiceOnOpponentAttackDrawEffect,
+  isSupportedNoChoiceOnPlayDrawEffect,
+  isSupportedNoChoiceWhenAttackingDrawEffect,
+  isSupportedQueuedNoChoiceDrawEffect,
+  resolvePlayerId,
+} from "./effect-runtime-primitives.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 import { evaluateQueuedEffectSourcePresence } from "./source-presence.js";
 import { resolvePublicTargetCandidates } from "./target-selection.js";
+
+export type { DrawExecutionFailureReason } from "./effect-runtime-primitives.js";
+export {
+  executeNoChoiceEffectPrimitive,
+  isSupportedNoChoiceOnKODrawEffect,
+  isSupportedNoChoiceOnOpponentAttackDrawEffect,
+  isSupportedNoChoiceOnPlayDrawEffect,
+  isSupportedNoChoiceWhenAttackingDrawEffect,
+} from "./effect-runtime-primitives.js";
 
 export type PendingRuntimeWorkKind = "effectQueue" | "deferredTriggers";
 
@@ -177,15 +195,6 @@ export const resolveImplementedDslEffectDefinition = (
   return { ok: true, definition };
 };
 
-export type DrawExecutionFailureReason =
-  | "unsupported-effect-shape"
-  | "unsupported-player-ref"
-  | "invalid-draw-count";
-
-interface EffectExecutionErrorDetails {
-  reason: DrawExecutionFailureReason;
-}
-
 export type OnPlayTriggerQueueingFailureReason =
   | "invalid-card-played-event"
   | "source-presence-failed"
@@ -248,15 +257,6 @@ export type QueueBattleKOTriggersResult =
   | { ok: true; state: GameState }
   | { ok: false; error: EngineError };
 
-const drawExecutionError = (
-  effectId: string,
-  reason: DrawExecutionFailureReason,
-): EngineError => ({
-  type: "effectRuntimeError",
-  effectId,
-  details: { reason } satisfies EffectExecutionErrorDetails,
-});
-
 const onPlayTriggerQueueingError = (
   reason: OnPlayTriggerQueueingFailureReason,
 ): EngineError => ({
@@ -288,311 +288,6 @@ const onKOTriggerCandidateDetectionError = (
   effectId: "on-ko-trigger-candidate-detection",
   details: { reason } satisfies OnKOTriggerCandidateDetectionErrorDetails,
 });
-
-const resolvePlayerId = (
-  state: GameState,
-  entry: EffectQueueEntry,
-  ref: PlayerRef,
-): PlayerId | undefined => {
-  switch (ref) {
-    case "self":
-    case "controller":
-      return entry.controllerId;
-    case "owner":
-      return entry.source.playerId;
-    case "turnPlayer":
-      return state.turn.turnPlayerId;
-    case "opponent":
-      return getOpponentId(state, entry.controllerId) ?? undefined;
-    case "nonTurnPlayer":
-      return getOpponentId(state, state.turn.turnPlayerId) ?? undefined;
-    default:
-      return undefined;
-  }
-};
-
-const executeDrawEffect = (
-  state: GameState,
-  entry: EffectQueueEntry,
-  effect: Extract<Effect, { type: "draw" }>,
-): EngineResult => {
-  if (!Number.isInteger(effect.count) || effect.count < 0) {
-    return toEngineResult(
-      state,
-      [],
-      [drawExecutionError(entry.effectBlockId, "invalid-draw-count")],
-    );
-  }
-
-  const playerId = resolvePlayerId(state, entry, effect.player);
-  if (playerId === undefined || state.players[playerId] === undefined) {
-    return toEngineResult(
-      state,
-      [],
-      [drawExecutionError(entry.effectBlockId, "unsupported-player-ref")],
-    );
-  }
-
-  if (effect.count === 0) {
-    return toEngineResult(state, []);
-  }
-
-  const player = state.players[playerId];
-  const events: EngineEvent[] = [];
-  let nextDeck = player.deck;
-  let nextHand = player.hand;
-  const maxDraw = Math.min(effect.count, nextDeck.length);
-  for (let index = 0; index < maxDraw; index += 1) {
-    const drawn = nextDeck[0];
-    if (drawn === undefined) {
-      break;
-    }
-    const remaining = nextDeck.slice(1).map((card, deckIndex) => ({
-      ...card,
-      zone: {
-        zone: "deck" as const,
-        playerId,
-        slot: "deck" as const,
-        index: deckIndex,
-      },
-    }));
-    const moved: CardInstance = {
-      ...drawn,
-      zone: {
-        zone: "hand" as const,
-        playerId,
-        slot: "hand" as const,
-        index: nextHand.length,
-      },
-    };
-    nextDeck = remaining;
-    nextHand = [...nextHand, moved];
-
-    appendEvent(state, events, "cardDrawn", { playerId });
-    appendEvent(
-      state,
-      events,
-      "cardMoved",
-      { from: "deck", to: "hand", playerId, reason: "draw" },
-      { type: "public" },
-    );
-    appendEvent(
-      state,
-      events,
-      "cardMoved",
-      {
-        from: { zone: "deck", playerId, slot: "deck", index: 0 },
-        to: moved.zone,
-        playerId,
-        reason: "draw",
-        instanceId: moved.instanceId,
-        cardId: moved.cardId,
-      },
-      { type: "private", playerId },
-    );
-  }
-
-  const nextState: GameState = {
-    ...state,
-    seq: toStateSeq(state.seq + 1),
-    players: {
-      ...state.players,
-      [playerId]: {
-        ...player,
-        deck: reindexZoneCards(nextDeck, "deck", playerId, "deck"),
-        hand: reindexZoneCards(nextHand, "hand", playerId, "hand"),
-      },
-    },
-    eventJournal: [...state.eventJournal, ...events],
-  };
-
-  return toEngineResult(nextState, events);
-};
-
-export const executeNoChoiceEffectPrimitive = (
-  state: GameState,
-  entry: EffectQueueEntry,
-  effect: Effect,
-): EngineResult => {
-  if (effect.type !== "draw") {
-    return toEngineResult(
-      state,
-      [],
-      [drawExecutionError(entry.effectBlockId, "unsupported-effect-shape")],
-    );
-  }
-  return executeDrawEffect(state, entry, effect);
-};
-
-const isNoChoiceDrawTriggerEffect = (
-  effect: EffectDefinition["effects"][number],
-  triggerType: "onPlay" | "whenAttacking" | "onOpponentAttack",
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} => {
-  if (effect.trigger.type !== triggerType) {
-    return false;
-  }
-  if (effect.category !== "auto") {
-    return false;
-  }
-  if (effect.optional || effect.oncePerTurn) {
-    return false;
-  }
-  if (
-    effect.cost !== undefined ||
-    effect.condition !== undefined ||
-    effect.conditionTiming !== undefined ||
-    effect.failurePolicy !== undefined
-  ) {
-    return false;
-  }
-  return (
-    effect.effect.type === "draw" &&
-    Number.isInteger(effect.effect.count) &&
-    effect.effect.count >= 0 &&
-    effect.effect.player === "self"
-  );
-};
-
-const isNoChoiceDrawEffectShape = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} => {
-  if (effect.category !== "auto") {
-    return false;
-  }
-  if (effect.optional || effect.oncePerTurn) {
-    return false;
-  }
-  if (
-    effect.cost !== undefined ||
-    effect.condition !== undefined ||
-    effect.conditionTiming !== undefined ||
-    effect.failurePolicy !== undefined
-  ) {
-    return false;
-  }
-  return (
-    effect.effect.type === "draw" &&
-    Number.isInteger(effect.effect.count) &&
-    effect.effect.count >= 0 &&
-    effect.effect.player === "self"
-  );
-};
-
-const isSupportedEffectResolvedCustomDrawEffect = (
-  effect: EffectDefinition["effects"][number],
-  eventName: string,
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} =>
-  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
-  effect.trigger.type === "custom" &&
-  effect.trigger.event === eventName &&
-  isNoChoiceDrawEffectShape(effect);
-
-const isSupportedNoChoiceDrawTriggerEffect = (
-  effect: EffectDefinition["effects"][number],
-  triggerType: "onPlay" | "whenAttacking" | "onOpponentAttack",
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} =>
-  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
-  isNoChoiceDrawTriggerEffect(effect, triggerType);
-
-export const isSupportedNoChoiceOnPlayDrawEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} => isSupportedNoChoiceDrawTriggerEffect(effect, "onPlay");
-
-export const isSupportedNoChoiceWhenAttackingDrawEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} => isSupportedNoChoiceDrawTriggerEffect(effect, "whenAttacking");
-
-export const isSupportedNoChoiceOnOpponentAttackDrawEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} => isSupportedNoChoiceDrawTriggerEffect(effect, "onOpponentAttack");
-
-export const isSupportedNoChoiceOnKODrawEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} =>
-  (effect.sourcePresencePolicy === "resolveFromDestinationZone" ||
-    effect.sourcePresencePolicy === "resolveFromLastKnownInformation") &&
-  effect.trigger.type === "onKO" &&
-  isNoChoiceDrawEffectShape(effect);
-
-const isSupportedNoChoiceLifeTriggerDrawEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} => {
-  if (
-    effect.sourcePresencePolicy !== "resolveFromLastKnownInformation" &&
-    effect.sourcePresencePolicy !== "noSourceRequired"
-  ) {
-    return false;
-  }
-  if (effect.trigger.type !== "trigger") {
-    return false;
-  }
-  if (effect.category !== "auto") {
-    return false;
-  }
-  if (effect.optional !== undefined || effect.oncePerTurn !== undefined) {
-    return false;
-  }
-  if (
-    effect.cost !== undefined ||
-    effect.condition !== undefined ||
-    effect.conditionTiming !== undefined ||
-    effect.failurePolicy !== undefined
-  ) {
-    return false;
-  }
-  return (
-    effect.effect.type === "draw" &&
-    effect.effect.count === 1 &&
-    effect.effect.player === "self"
-  );
-};
-
-const isSupportedQueuedNoChoiceOnKODrawEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} => isSupportedNoChoiceOnKODrawEffect(effect);
-
-const isSupportedQueuedNoChoiceDrawEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "draw" }>;
-} =>
-  isNoChoiceDrawTriggerEffect(effect, "onPlay") ||
-  isNoChoiceDrawTriggerEffect(effect, "whenAttacking") ||
-  isNoChoiceDrawTriggerEffect(effect, "onOpponentAttack") ||
-  isSupportedQueuedNoChoiceOnKODrawEffect(effect) ||
-  isSupportedNoChoiceLifeTriggerDrawEffect(effect) ||
-  (effect.trigger.type === "custom" && isNoChoiceDrawEffectShape(effect));
 
 const isSupportedTargetChoiceEffectShape = (
   effect: EffectDefinition["effects"][number],
