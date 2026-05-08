@@ -253,16 +253,33 @@ test("valid selectTargets response clears the pending decision and preserves que
   const { state, targets, queueEntry } = setupSelectTargetsDecision();
   const decision = must(state.pendingDecision, "pending decision");
   const beforeQueue = structuredClone(state.effectQueue);
+  const beforeP2Characters = structuredClone(
+    must(state.players[p2], "p2").characters,
+  );
 
   const result = applyAction(
     state,
     respondWithTargets(decision.id, [must(targets[1], "target 1")]),
   );
 
-  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "unsupported-effect-queue",
+      details: {
+        reason: "unsupported-pending-runtime-work",
+        kind: "effectQueue",
+        count: 1,
+      },
+    },
+  ]);
   assert.equal(result.state.pendingDecision, undefined);
   assert.deepEqual(result.state.effectQueue, beforeQueue);
   assert.deepEqual(result.state.effectQueue, [queueEntry]);
+  assert.deepEqual(
+    must(result.state.players[p2], "result p2").characters,
+    beforeP2Characters,
+  );
   assert.deepEqual(
     result.events.map((event) => event.type),
     ["decisionResolved"],
@@ -413,7 +430,17 @@ test("allowFewerIfUnavailable permits fewer than min only when current candidate
     ]),
   );
 
-  assert.equal(accepted.errors, undefined);
+  assert.deepEqual(accepted.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "unsupported-effect-queue",
+      details: {
+        reason: "unsupported-pending-runtime-work",
+        kind: "effectQueue",
+        count: 1,
+      },
+    },
+  ]);
   assert.equal(accepted.state.pendingDecision, undefined);
 
   const available = setupSelectTargetsDecision(request, [
