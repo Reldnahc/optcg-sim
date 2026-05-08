@@ -3254,7 +3254,16 @@ test("supported queued target request creates selectTargets decision without res
     getLegalActions(result.state, p1).filter(
       (action) => action.type === "respondToDecision",
     ),
-    [],
+    [
+      {
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: {
+          type: "targets",
+          targets: [must(decision.candidates[0], "first candidate").card],
+        },
+      },
+    ],
   );
 });
 

@@ -9,6 +9,7 @@ import type {
   InstanceId,
   QueueEntryId,
   PublicLegalAction,
+  TimingWindowId,
 } from "@optcg/types";
 
 import {
@@ -44,6 +45,8 @@ const withEvent = (
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
 const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
+const toTimingWindowId = (value: string): TimingWindowId =>
+  value as TimingWindowId;
 
 test("filters hidden information and keeps public zones", () => {
   const state = createActiveState();
@@ -350,6 +353,41 @@ test("selectTargets projection stays metadata-only and does not expose candidate
     index: 0,
   };
   p2State.characters.push(target);
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+  });
+  state.effectQueue = [
+    {
+      id: toQueueEntryId("queue-entry-select-targets"),
+      state: "pending",
+      timingWindowId: toTimingWindowId("timing-window-select-targets"),
+      generation: 1,
+      controllerId: p1,
+      source: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        playerId: p1,
+        zone: p1State.leader.zone,
+      },
+      sourceSnapshot: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: p1State.leader.zone,
+        category: "leader",
+        colors: ["red"],
+        keywords: [],
+      },
+      effectBlockId: "effect-select-targets" as EffectId,
+      orderingGroup: "turnPlayer",
+      createdAtEventSeq: 1,
+      queuedAtStateSeq: toStateSeq(state.seq),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: { type: "ruleProcess", name: "selectTargets:view-test" },
+    },
+  ];
   const hiddenOpponentHandCard = must(p2State.hand[0], "hidden opponent hand");
   const hiddenSelfDeckCard = must(p1State.deck[0], "hidden self deck");
   state.pendingDecision = {
@@ -404,8 +442,14 @@ test("selectTargets projection stays metadata-only and does not expose candidate
     forDecisionPlayer.legalActions.filter(
       (action) => action.type === "respondToDecision",
     ),
-    [],
+    [
+      {
+        type: "respondToDecision",
+        decisionId: toDecisionId("decision:select-targets"),
+      },
+    ],
   );
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("response"), false);
   assert.equal(JSON.stringify(forDecisionPlayer).includes("candidates"), false);
   assert.equal(JSON.stringify(forDecisionPlayer).includes("request"), false);
   assert.equal(
