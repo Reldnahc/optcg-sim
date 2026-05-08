@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Add a lightweight ESLint max-lines guard for normal source, test, tool, and
   contract TypeScript/JavaScript files so new code cannot grow past 1000
