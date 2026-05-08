@@ -1,4 +1,4 @@
-﻿import assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type { QueueEntryId } from "./effect-runtime-queue-processing-test-support.js";
