@@ -73,7 +73,7 @@ Poneglyph is explicitly covered in:
 - `09-card-data-and-support-policy.md` - detailed integration policy.
 - `10-database-schema.md` - persisted Poneglyph IDs and variants.
 - `12-roadmap.md` - original and revised build order.
-- `13-legal-content-risk.md` - content/image/text handling risk.
+- `13-content-publication-policy.md` - content/image/text handling policy.
 
 ## Poneglyph OpenAPI / supplied card examples
 

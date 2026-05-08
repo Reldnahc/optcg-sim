@@ -33,6 +33,14 @@ function extractSection(text, sectionRef, nextSectionRef) {
   return text.slice(start, end);
 }
 
+function extractSectionToEnd(text, sectionRef) {
+  const startMarker = `Section Ref: \`${sectionRef}\``;
+  const start = text.indexOf(startMarker);
+  assert.notEqual(start, -1, `missing section ${sectionRef}`);
+
+  return text.slice(start);
+}
+
 test("spec authority index separates canonical and historical files", async () => {
   const index = await readText("specs/README.md");
 
@@ -221,5 +229,30 @@ test("CLI runner spec authorizes optional strict command-script failure semantic
     "database contracts",
   ]) {
     assertContainsWords(cliRunner, excludedScope);
+  }
+});
+
+test("content publication policy spec authorizes MIT source repository publication without public simulator launch", async () => {
+  const publicationPolicy = await readText(
+    "specs/13-content-publication-policy.md",
+  );
+  const publication = extractSectionToEnd(
+    publicationPolicy,
+    "13-content-publication-policy.s013",
+  );
+
+  for (const requiredText of [
+    "repository's own source code, specifications, documentation, tests, and tooling may be licensed under the MIT License when a root `LICENSE` file is present",
+    "source repository may be made public on GitHub after the root `LICENSE` file and README license note land",
+    "Source repository publication is not a public simulator launch",
+    "public alpha",
+    "public gameplay availability",
+    "package publication",
+    "deployment",
+    "production service availability",
+    "Neither the MIT source license nor making the repository public grants rights to redistribute, add, license, or use third-party card names, card text, images, set symbols, trademarks, logos, or other third-party content",
+    "follow-up license implementation story must use an explicitly human-confirmed copyright holder and year",
+  ]) {
+    assertContainsWords(publication, requiredText);
   }
 });

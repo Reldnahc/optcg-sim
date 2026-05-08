@@ -22,33 +22,33 @@ This file records where the original PDF topics are represented in the Markdown 
 
 Section Ref: `source-coverage-matrix.s002`
 
-| Original section                    | Rebuilt location                                                                                                                                       |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1. Project Overview                 | `00-project-overview.md`, `README.md`                                                                                                                  |
-| 2. High-Level Architecture          | `01-system-architecture.md`                                                                                                                            |
-| 3. Module Breakdown                 | `01-system-architecture.md`                                                                                                                            |
-| 3.1 Card Data Layer / Poneglyph     | `09-card-data-and-support-policy.md`, `01-system-architecture.md`, `10-database-schema.md`                                                             |
-| 3.2 Game Rules Engine               | `02-engine-mechanics.md`, `03-game-state-events-decisions.md`, `04-effect-runtime.md`                                                                  |
-| 3.3 Match Server                    | `07-match-server-protocol.md`, `08-replay-rollback-recovery.md`                                                                                        |
-| 3.4 Platform API                    | `01-system-architecture.md`, `10-database-schema.md`, `12-roadmap.md`                                                                                  |
-| 3.5 Frontend Client                 | `01-system-architecture.md`, `06-visibility-security.md`, `07-match-server-protocol.md`                                                                |
-| 3.6 Bot / AI                        | `01-system-architecture.md`, `12-roadmap.md`                                                                                                           |
-| 4. Shared Contracts & Communication | `01-system-architecture.md`, `03-game-state-events-decisions.md`, `07-match-server-protocol.md`, `16-typescript-interface-draft.md`                    |
-| 5. Tech Stack                       | `01-system-architecture.md`                                                                                                                            |
-| 6. Team & Ownership Model           | `01-system-architecture.md`, `12-roadmap.md`                                                                                                           |
-| Workflow rules                      | `01-system-architecture.md`                                                                                                                            |
-| 7. Development Phases               | `12-roadmap.md`                                                                                                                                        |
-| 8. Key Design Principles            | `README.md`, `00-project-overview.md`, `01-system-architecture.md`                                                                                     |
-| 9. Rollback System                  | `08-replay-rollback-recovery.md`                                                                                                                       |
-| 10. Anti-Cheat System               | `06-visibility-security.md`, `07-match-server-protocol.md`                                                                                             |
-| 11. Spectator Information Model     | `06-visibility-security.md`, `07-match-server-protocol.md`                                                                                             |
-| 12. Observability & Metrics         | `01-system-architecture.md`, `07-match-server-protocol.md`, `08-replay-rollback-recovery.md`, `11-testing-quality.md`                                  |
-| 13. Match Server Crash Recovery     | `08-replay-rollback-recovery.md`, `07-match-server-protocol.md`                                                                                        |
-| 14. Database Schema                 | `10-database-schema.md`                                                                                                                                |
-| 14.9 Redis vs Postgres              | `10-database-schema.md`, `08-replay-rollback-recovery.md`, `09-card-data-and-support-policy.md`                                                        |
-| 15. Risks & Mitigations             | `12-roadmap.md`, `13-legal-content-risk.md`                                                                                                            |
-| 16. Next Steps                      | `12-roadmap.md`, `15-implementation-kickoff.md`                                                                                                        |
-| 17. Design Sweep List               | `source-original-pdfs/original-optcg-simulator-plan.md`; incorporated across `12-roadmap.md`, `15-implementation-kickoff.md`, `18-acceptance-tests.md` |
+| Original section                      | Rebuilt location                                                                                                                                       |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Project Overview                   | `00-project-overview.md`, `README.md`                                                                                                                  |
+| 2. High-Level Architecture            | `01-system-architecture.md`                                                                                                                            |
+| 3. Module Breakdown                   | `01-system-architecture.md`                                                                                                                            |
+| 3.1 Card Data Layer / Poneglyph       | `09-card-data-and-support-policy.md`, `01-system-architecture.md`, `10-database-schema.md`                                                             |
+| 3.2 Game Rules Engine                 | `02-engine-mechanics.md`, `03-game-state-events-decisions.md`, `04-effect-runtime.md`                                                                  |
+| 3.3 Match Server                      | `07-match-server-protocol.md`, `08-replay-rollback-recovery.md`                                                                                        |
+| 3.4 Platform API                      | `01-system-architecture.md`, `10-database-schema.md`, `12-roadmap.md`                                                                                  |
+| 3.5 Frontend Client                   | `01-system-architecture.md`, `06-visibility-security.md`, `07-match-server-protocol.md`                                                                |
+| 3.6 Bot / AI                          | `01-system-architecture.md`, `12-roadmap.md`                                                                                                           |
+| 4. Shared Contracts & Communication   | `01-system-architecture.md`, `03-game-state-events-decisions.md`, `07-match-server-protocol.md`, `16-typescript-interface-draft.md`                    |
+| 5. Tech Stack                         | `01-system-architecture.md`                                                                                                                            |
+| 6. Team & Ownership Model             | `01-system-architecture.md`, `12-roadmap.md`                                                                                                           |
+| Workflow rules                        | `01-system-architecture.md`                                                                                                                            |
+| 7. Development Phases                 | `12-roadmap.md`                                                                                                                                        |
+| 8. Key Design Principles              | `README.md`, `00-project-overview.md`, `01-system-architecture.md`                                                                                     |
+| 9. Rollback System                    | `08-replay-rollback-recovery.md`                                                                                                                       |
+| 10. Anti-Cheat System                 | `06-visibility-security.md`, `07-match-server-protocol.md`                                                                                             |
+| 11. Spectator Information Model       | `06-visibility-security.md`, `07-match-server-protocol.md`                                                                                             |
+| 12. Observability & Metrics           | `01-system-architecture.md`, `07-match-server-protocol.md`, `08-replay-rollback-recovery.md`, `11-testing-quality.md`                                  |
+| 13. Match Server Crash Recovery       | `08-replay-rollback-recovery.md`, `07-match-server-protocol.md`                                                                                        |
+| 14. Database Schema                   | `10-database-schema.md`                                                                                                                                |
+| 14.9 Redis vs Postgres                | `10-database-schema.md`, `08-replay-rollback-recovery.md`, `09-card-data-and-support-policy.md`                                                        |
+| 15. Publication and mitigation policy | `12-roadmap.md`, `13-content-publication-policy.md`                                                                                                    |
+| 16. Next Steps                        | `12-roadmap.md`, `15-implementation-kickoff.md`                                                                                                        |
+| 17. Design Sweep List                 | `source-original-pdfs/original-optcg-simulator-plan.md`; incorporated across `12-roadmap.md`, `15-implementation-kickoff.md`, `18-acceptance-tests.md` |
 
 ## `optcg-engine-spec.pdf`
 

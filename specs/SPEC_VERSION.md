@@ -91,7 +91,7 @@ Section Ref: `SPEC_VERSION.s005`
 14. `10-database-schema.md`
 15. `11-testing-quality.md`
 16. `12-roadmap.md`
-17. `13-legal-content-risk.md`
+17. `13-content-publication-policy.md`
 18. `14-glossary.md`
 19. `15-implementation-kickoff.md`
 20. `16-typescript-interface-draft.md`

@@ -39,7 +39,7 @@
     "10-database-schema.md",
     "11-testing-quality.md",
     "12-roadmap.md",
-    "13-legal-content-risk.md",
+    "13-content-publication-policy.md",
     "14-glossary.md",
     "15-implementation-kickoff.md",
     "16-typescript-interface-draft.md",
@@ -186,9 +186,9 @@
       "machine_readable": true
     },
     {
-      "path": "13-legal-content-risk.md",
-      "doc_id": "13-legal-content-risk",
-      "doc_title": "Legal Content Risk",
+      "path": "13-content-publication-policy.md",
+      "doc_id": "13-content-publication-policy",
+      "doc_title": "Content Publication Policy",
       "doc_type": "spec-section",
       "status": "canonical",
       "machine_readable": true
