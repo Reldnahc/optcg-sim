@@ -164,10 +164,6 @@ const queueingState = (): {
     card: source,
     zone: "characterArea",
   });
-  p1State.hand = p1State.hand.slice(1).map((card, index) => ({
-    ...card,
-    zone: { zone: "hand", playerId: p1, slot: "hand", index },
-  }));
   appendCardPlayedEvent(state, played, "character");
   return { state, played };
 };
