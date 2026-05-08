@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-030D.md",
-      "storyId": "ENG-030D",
-      "storyPath": "stories/approved/ENG-030D-split-queue-processing-tests.yaml",
-      "storySha256": "a9c7972a264b734acc54749bbbdbce6e66c65aea237c605284d64a4a1a572eeb"
+      "packetPath": "agent-packets/ENG-030E.md",
+      "storyId": "ENG-030E",
+      "storyPath": "stories/approved/ENG-030E-extract-effect-primitive-helpers.yaml",
+      "storySha256": "b00be4907ed817d031ba1803aadc93ecbe273e954df74ca957eb7b34a4d23847"
     }
   ],
   "version": 1
