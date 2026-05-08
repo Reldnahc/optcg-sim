@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move pending-decision action dispatcher tests into a focused suite without
   changing decision routing, stale-decision rejection, decision-recipient

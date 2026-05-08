@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-035E.md",
-      "storyId": "ENG-035E",
-      "storyPath": "stories/approved/ENG-035E-split-unsupported-action-fail-closed-tests.yaml",
-      "storySha256": "cf53d880cd2f16e9471553f3200a96e2498278bf717ecd8266acaa83d480da92"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

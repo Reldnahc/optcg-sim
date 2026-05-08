@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move battle legal-action projection tests into a focused suite without
   changing Blocker, declareAttack, combat metadata, decision-recipient, or

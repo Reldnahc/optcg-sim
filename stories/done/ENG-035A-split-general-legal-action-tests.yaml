@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move general getLegalActions main-phase, phase, turn-player, and concession
   tests out of actions.test.ts into a focused action dispatcher test file,

@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move unsupported and illegal action fail-closed tests into a focused suite
   without changing error behavior, mutation safety, unsupported combat metadata
