@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-032E.md",
-      "storyId": "ENG-032E",
-      "storyPath": "stories/approved/ENG-032E-split-banish-damage-tests.yaml",
-      "storySha256": "0ac11b4276f84190d09c52762d8f5c883422ed972d83728050bc8eb450e009c5"
+      "packetPath": "agent-packets/ENG-032F.md",
+      "storyId": "ENG-032F",
+      "storyPath": "stories/approved/ENG-032F-split-character-ko-tests.yaml",
+      "storySha256": "6624fceffef0885b80f07963485350de8d314b3c44bbdb852b467ca3a5a0d234"
     }
   ],
   "version": 1
