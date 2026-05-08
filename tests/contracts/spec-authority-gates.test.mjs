@@ -256,3 +256,26 @@ test("content publication policy spec authorizes MIT source repository publicati
     assertContainsWords(publication, requiredText);
   }
 });
+
+test("root license and README scope MIT source publication to repository-owned material", async () => {
+  const license = await readText("LICENSE");
+  const readme = await readText("README.md");
+
+  for (const requiredLicenseText of [
+    "MIT License",
+    "Copyright (c) 2026 Chandler Lee",
+    "Permission is hereby granted, free of charge, to any person obtaining a copy",
+    'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND',
+  ]) {
+    assertContainsWords(license, requiredLicenseText);
+  }
+
+  for (const requiredReadmeText of [
+    "## License",
+    "repository's own source code, specifications, documentation, tests, and tooling are licensed under the MIT License",
+    "[LICENSE](LICENSE)",
+    "does not grant rights to third-party card names, card text, images, set symbols, trademarks, logos, or other third-party content",
+  ]) {
+    assertContainsWords(readme, requiredReadmeText);
+  }
+});
