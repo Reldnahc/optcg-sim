@@ -1,0 +1,74 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-026
+epic_id: KICK-001
+title: Add source file size guardrails
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: approved
+summary: >
+  Add a lightweight ESLint max-lines guard for normal source, test, tool, and
+  contract TypeScript/JavaScript files so new code cannot grow past 1000
+  nonblank, noncomment lines, while documenting 800+ line files as
+  review-suspect guidance instead of a hard lint failure.
+story_boundary: >
+  Own file-size lint guardrails and review guidance only. Do not split existing
+  source files, refactor production behavior, add function/class length limits,
+  or change gameplay behavior in this story.
+allowed_touch_points:
+  - eslint.config.mjs
+  - .github/pull_request_template.md
+  - tests/lint/**
+  - tests/fixtures/eslint/**
+  - tests/github/**
+  - stories/generated/**
+  - stories/approved/**
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s007 (ESLint enforcement)
+  - 23-repo-tooling-and-enforcement.s010 (Test tooling requirements)
+  - 23-repo-tooling-and-enforcement.s011 (Contract and fixture validation)
+  - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+  - 23-repo-tooling-and-enforcement.s022 (Required implementation sequence for tooling)
+  - 23-repo-tooling-and-enforcement.s023 (Definition of done for repo tooling)
+  - 32-codex-agent-integration.s010 (Review flow)
+  - 32-codex-agent-integration.s013 (Merge gate recommendation)
+scope:
+  - "configure ESLint `max-lines` as an error with `max: 1000`, `skipBlankLines: true`, and `skipComments: true`"
+  - "scope the max-lines guard to normal code files under `packages/`, `tools/`, `tests/`, and `contracts/**/*.ts`"
+  - "exclude specs, fixtures, generated machine-readable manifests, copied source/source-original docs, and JSON/YAML/SQL/Markdown artifacts from the max-lines guard"
+  - "add exact-path temporary allowlist entries only for any existing checked-in guarded files that already exceed 1000 effective lines, with comments requiring future split/refactor stories"
+  - "add tests proving the hard max, skip options, explicit allowlist behavior, and broad artifact exclusions"
+  - "add review guidance that 800+ line files are suspect and require explanation when a story grows them"
+  - "update the PR template with a small file-responsibility checklist item"
+non_scope:
+  - production code refactors
+  - existing large-file splits
+  - hard max-lines rules for specs, fixtures, JSON, YAML, SQL, Markdown, source PDFs, or source-original copied docs
+  - arbitrary function or class line-count limits
+  - weakening existing lint, typecheck, test, packet, or review rules
+  - gameplay behavior changes
+dependencies:
+  - INF-003
+  - INF-008
+acceptance_criteria:
+  - ESLint rejects guarded normal source/test/tool/contract code files over 1000 nonblank, noncomment lines
+  - ESLint ignores blank lines and comments when enforcing the 1000-line cap
+  - existing oversized guarded files, if any, are handled through exact-path temporary allowlist entries with future split/refactor comments instead of global disablement
+  - broad generated, spec, fixture, copied-source, JSON, YAML, SQL, and Markdown artifacts are not subject to the max-lines guard
+  - review guidance records that 800+ line files are suspect and require story-level explanation when they grow
+  - the PR template includes a concise file-responsibility checklist item
+required_tests:
+  - lint workflow test proving `max-lines` is configured with hard max 1000
+  - lint workflow test proving `skipBlankLines` and `skipComments` are enabled
+  - lint workflow test proving temporary oversized-file allowlist entries are exact paths, not broad globs
+  - lint workflow test proving broad generated/spec/fixture/artifact paths and non-code artifacts are excluded from the guard
+  - review workflow test proving the PR template includes the file-responsibility checklist item
+repo_rules:
+  - keep the max-lines rule scoped to normal code files and exact temporary exceptions only
+  - do not hide current oversized code behind broad globs or directory-level disables
+  - 800+ line files are review-suspect guidance only; the hard lint failure remains 1000 effective lines
+  - implementation review must stop and report a blocker if the allowlist is too broad or the rule is too disruptive
+ambiguity_policy: fail_and_escalate

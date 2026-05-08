@@ -12,6 +12,7 @@
 - [ ] The patch stays inside the approved story boundary and allowed touch points.
 - [ ] No uncited behavior was introduced.
 - [ ] Adjacent concerns were not silently absorbed.
+- [ ] File responsibility checked: guarded source, test, tool, or contract files at 800+ effective lines are explained here or have a follow-up split/refactor story.
 
 ## Tests Run
 

@@ -3,6 +3,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
+import eslintConfig, {
+  sourceFileSizeGuardTemporaryAllowlist,
+} from "../../eslint.config.mjs";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -35,6 +38,27 @@ async function createRepoEslint() {
   });
 }
 
+function getSourceFileSizeGuardConfig() {
+  const guardConfig = eslintConfig.find(
+    (config) => config.name === "source-file-size-guard",
+  );
+
+  assert.ok(guardConfig, "missing source file size guard config");
+
+  return guardConfig;
+}
+
+function getMaxLinesRuleOptions() {
+  const guardConfig = getSourceFileSizeGuardConfig();
+  const rule = guardConfig.rules?.["max-lines"];
+
+  assert.ok(Array.isArray(rule), "max-lines rule should use array options");
+  assert.equal(rule[0], "error");
+  assert.equal(typeof rule[1], "object");
+
+  return rule[1];
+}
+
 test("package.json defines a real eslint-based lint script", async () => {
   const packageJson = await readJson("package.json");
 
@@ -65,6 +89,110 @@ test("eslint config file exists", async () => {
   );
 
   assert.equal(typeof contents, "string");
+});
+
+test("eslint max-lines guard uses hard max 1000 for normal code files", () => {
+  const guardConfig = getSourceFileSizeGuardConfig();
+  const ruleOptions = getMaxLinesRuleOptions();
+
+  assert.equal(ruleOptions.max, 1000);
+  assert.deepEqual(guardConfig.files, [
+    "packages/**/*.{ts,mts,cts,js,mjs,cjs}",
+    "tools/**/*.{ts,mts,cts,js,mjs,cjs}",
+    "tests/**/*.{ts,mts,cts,js,mjs,cjs}",
+    "contracts/**/*.ts",
+  ]);
+});
+
+test("eslint max-lines guard skips blank lines and comments", () => {
+  const ruleOptions = getMaxLinesRuleOptions();
+
+  assert.equal(ruleOptions.skipBlankLines, true);
+  assert.equal(ruleOptions.skipComments, true);
+});
+
+test("eslint max-lines temporary allowlist is exact-path only", () => {
+  assert.ok(Array.isArray(sourceFileSizeGuardTemporaryAllowlist));
+
+  for (const allowlistedPath of sourceFileSizeGuardTemporaryAllowlist) {
+    assert.doesNotMatch(
+      allowlistedPath,
+      /[*{}[\]?]/,
+      "temporary max-lines allowlist must not use globs",
+    );
+    assert.doesNotMatch(
+      allowlistedPath,
+      /(^|\/)(specs|fixtures)(\/|$)/,
+      "temporary max-lines allowlist must not target broad artifact directories",
+    );
+    assert.match(
+      allowlistedPath,
+      /^(packages|tools|tests|contracts)\//,
+      "temporary max-lines allowlist entries must be repo-relative guarded code paths",
+    );
+  }
+});
+
+test("eslint max-lines guard excludes broad generated spec fixture and artifact paths", () => {
+  const guardConfig = getSourceFileSizeGuardConfig();
+
+  assert.ok(
+    guardConfig.ignores?.includes("**/fixtures/**"),
+    "fixtures should be excluded from source file size guard",
+  );
+  assert.ok(
+    guardConfig.ignores?.includes("**/generated/**"),
+    "generated machine-readable outputs should be excluded from source file size guard",
+  );
+  assert.ok(
+    guardConfig.ignores?.includes("**/*.generated.{ts,mts,cts,js,mjs,cjs}"),
+    "generated code artifacts should be excluded from source file size guard",
+  );
+  assert.ok(
+    guardConfig.files.every((filePattern) => !filePattern.startsWith("specs/")),
+    "spec docs and copied source artifacts should not be in the guarded code scope",
+  );
+  assert.ok(
+    guardConfig.files.every(
+      (filePattern) => !/[.](json|ya?ml|sql|md)$/.test(filePattern),
+    ),
+    "JSON, YAML, SQL, and Markdown artifacts should not be guarded",
+  );
+});
+
+test("eslint max-lines guard rejects oversized guarded code", async () => {
+  const eslint = await createRepoEslint();
+  const oversizedSource = Array.from(
+    { length: 1001 },
+    (_, index) => `export const value${index} = ${index};`,
+  ).join("\n");
+  const results = await eslint.lintText(oversizedSource, {
+    filePath: path.join(repoRoot, "packages/example/src/oversized.js"),
+  });
+  const messages = results.flatMap((result) =>
+    result.messages.map((message) => message.ruleId),
+  );
+
+  assert.ok(messages.includes("max-lines"));
+});
+
+test("eslint max-lines guard does not count blank lines or comments", async () => {
+  const eslint = await createRepoEslint();
+  const commentAndBlankLines = Array.from(
+    { length: 1001 },
+    (_, index) => `// documentation line ${index}\n`,
+  ).join("\n");
+  const results = await eslint.lintText(
+    `${commentAndBlankLines}\nexport const compactSource = true;\n`,
+    {
+      filePath: path.join(repoRoot, "packages/example/src/comment-heavy.js"),
+    },
+  );
+  const maxLinesMessages = results.flatMap((result) =>
+    result.messages.filter((message) => message.ruleId === "max-lines"),
+  );
+
+  assert.equal(maxLinesMessages.length, 0);
 });
 
 test("eslint ignores rule-testing fixtures during repo-wide linting", async () => {
