@@ -1,0 +1,78 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-034
+epic_id: KICK-001
+title: Replay smoke boundaries
+type: refactor
+area: engine
+primary_concern: verification
+priority: medium
+status: generated
+summary: >
+  Split oversized local replay smoke tests into focused fixture suites without
+  changing CLI smoke scripts, replay fixtures, hash expectations, replay scope,
+  or engine behavior.
+story_boundary: >
+  This parent story is not directly implementable. It coordinates
+  behavior-preserving test-organization child stories for replay smoke tests
+  that exceed the repo size threshold.
+allowed_touch_points:
+  - stories/generated/ENG-034-replay-smoke-boundaries-parent.yaml
+  - stories/generated/ENG-034A-*.yaml
+  - stories/generated/ENG-034B-*.yaml
+  - stories/generated/ENG-034C-*.yaml
+  - stories/generated/ENG-034D-*.yaml
+spec_refs:
+  - 03-game-state-events-decisions.s020
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+  - 18-acceptance-tests.s004
+  - 23-repo-tooling-and-enforcement.s016
+scope:
+  - split replay-smoke.test.ts by existing fixture group without changing fixture contents or expected hashes
+  - preserve deterministic command and decision script smoke behavior
+  - preserve drift rejection and metadata determinism assertions
+  - keep production ReplayLog, rollback, recovery, storage, and replay viewer behavior out of scope
+non_scope:
+  - changing replay fixtures
+  - changing checkpoint or final hash values
+  - changing CLI command behavior
+  - adding production ReplayLog, rollback, recovery, storage, or replay viewer behavior
+  - changing engine behavior
+dependencies: []
+child_stories:
+  - id: ENG-034A
+    title: Split terminal replay smoke tests
+    concern: Move terminal and vanilla replay smoke tests into focused files with no hash or behavior change.
+    depends_on: []
+  - id: ENG-034B
+    title: Split play-card replay smoke tests
+    concern: Move paid Character, Stage replacement, overflow, and Event play replay smoke tests into focused files with no hash or behavior change.
+    depends_on: [ENG-034A]
+  - id: ENG-034C
+    title: Split replay drift tests
+    concern: Move action-script, payment-selection, overflow-response, and manifest-stat drift tests into focused files.
+    depends_on: [ENG-034B]
+  - id: ENG-034D
+    title: Split replay metadata determinism tests
+    concern: Move transport/audit metadata rejection and deterministic manifest timestamp tests into focused files.
+    depends_on: [ENG-034C]
+acceptance_criteria:
+  - every child story is explicitly behavior-preserving and includes no replay, CLI, or engine behavior change
+  - expected checkpoint and final hashes remain unchanged
+  - moved tests continue to fail for the same drift cases and pass for the same fixture cases
+  - parent integration review confirms replay-smoke.test.ts is smaller or records a justified exception
+required_tests:
+  - run corepack pnpm run stories:validate
+  - run corepack pnpm run packets:verify for each active child story
+  - run focused replay smoke tests for each child story
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify before parent PR handoff
+repo_rules:
+  - do not approve, packetize, or activate ENG-034 itself as an implementation story
+  - story-review must confirm the child split is behavior-preserving before any child is approved
+  - child stories must be implemented one at a time on a parent integration branch
+  - no child may change replay fixture data or expected hashes
+  - line-count reduction is secondary to preserving deterministic replay coverage
+ambiguity_policy: fail_and_escalate
