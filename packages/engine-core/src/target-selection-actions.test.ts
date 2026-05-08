@@ -169,6 +169,14 @@ const invalidResponseCases: Array<{
     reason: "Response type must be targets for selectTargets.",
   },
   {
+    name: "malformed target element",
+    response: () => ({
+      type: "targets",
+      targets: [null as unknown as CardRef],
+    }),
+    reason: "Response targets must be CardRef values.",
+  },
+  {
     name: "duplicate target",
     response: (targets) => ({
       type: "targets",
@@ -337,6 +345,39 @@ test("rejects selectTargets response when the queued effect entry is no longer p
     ),
     [],
   );
+});
+
+test("fails closed for unsupported non-effect selectTargets causality", () => {
+  const { state, targets } = setupSelectTargetsDecision();
+  const decision = must(state.pendingDecision, "pending decision");
+  state.pendingDecision = {
+    ...decision,
+    causedBy: { type: "ruleProcess", name: "unsupported-selectTargets-test" },
+  };
+  const before = structuredClone(state);
+  const beforeHash = hashCanonicalStateValue(state);
+
+  assert.deepEqual(
+    getLegalActions(state, p1).filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+
+  const result = applyAction(
+    state,
+    respondWithTargets(decision.id, [must(targets[0], "target 0")]),
+  );
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "Selected targets must be current legal targets.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.state, before);
+  assert.equal(result.stateHash, beforeHash);
 });
 
 test("allowFewerIfUnavailable permits fewer than min only when current candidates are below min", () => {

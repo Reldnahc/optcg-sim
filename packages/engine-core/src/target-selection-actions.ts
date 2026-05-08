@@ -26,6 +26,19 @@ const cardRefMatches = (left: CardRef, right: CardRef): boolean =>
   ((left.zone === undefined && right.zone === undefined) ||
     (left.zone !== undefined && zonesEqual(left.zone, right.zone)));
 
+const isCardRef = (value: unknown): value is CardRef => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const candidate = value as Partial<CardRef>;
+  return (
+    typeof candidate.instanceId === "string" &&
+    typeof candidate.cardId === "string" &&
+    typeof candidate.playerId === "string" &&
+    (candidate.zone === undefined || typeof candidate.zone === "object")
+  );
+};
+
 const hasDuplicateTargets = (targets: readonly CardRef[]): boolean =>
   targets.some((target, index) =>
     targets
@@ -47,7 +60,7 @@ const currentCandidatesForDecision = (
 ): TargetCandidate[] | null => {
   const causedBy = decision.causedBy;
   if (causedBy.type !== "effect") {
-    return [...decision.candidates];
+    return null;
   }
   const entry = state.effectQueue.find(
     (candidate) => candidate.id === causedBy.queueEntryId,
@@ -184,6 +197,13 @@ export const applySelectTargetsDecisionResponse = (
       state,
       [],
       invalidDecision("Response targets must be an array."),
+    );
+  }
+  if (!targets.every(isCardRef)) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Response targets must be CardRef values."),
     );
   }
   const validation = validateTargetsResponse(state, decision, targets);
