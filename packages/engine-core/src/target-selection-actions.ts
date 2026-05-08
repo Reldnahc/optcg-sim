@@ -30,12 +30,13 @@ const isCardRef = (value: unknown): value is CardRef => {
   if (typeof value !== "object" || value === null) {
     return false;
   }
-  const candidate = value as Partial<CardRef>;
+  const candidate = value as Record<string, unknown>;
+  const zone = candidate["zone"];
   return (
-    typeof candidate.instanceId === "string" &&
-    typeof candidate.cardId === "string" &&
-    typeof candidate.playerId === "string" &&
-    (candidate.zone === undefined || typeof candidate.zone === "object")
+    typeof candidate["instanceId"] === "string" &&
+    typeof candidate["cardId"] === "string" &&
+    typeof candidate["playerId"] === "string" &&
+    (zone === undefined || (typeof zone === "object" && zone !== null))
   );
 };
 

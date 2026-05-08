@@ -177,6 +177,19 @@ const invalidResponseCases: Array<{
     reason: "Response targets must be CardRef values.",
   },
   {
+    name: "malformed target zone",
+    response: (targets) => ({
+      type: "targets",
+      targets: [
+        {
+          ...must(targets[0], "t0"),
+          zone: null,
+        } as unknown as CardRef,
+      ],
+    }),
+    reason: "Response targets must be CardRef values.",
+  },
+  {
     name: "duplicate target",
     response: (targets) => ({
       type: "targets",
