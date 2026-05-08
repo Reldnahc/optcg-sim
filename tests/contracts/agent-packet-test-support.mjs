@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -216,4 +217,12 @@ export function readPacketRawBullets(packet, heading) {
     .split(/\r?\n/)
     .filter((line) => line.startsWith("- "))
     .map((line) => line.slice(2));
+}
+
+export function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+export function toCrlf(value) {
+  return value.replace(/\r?\n/g, "\r\n");
 }
