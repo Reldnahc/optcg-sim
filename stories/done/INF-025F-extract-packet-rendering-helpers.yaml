@@ -8,7 +8,7 @@ type: refactor
 area: infra
 primary_concern: tooling
 priority: medium
-status: approved
+status: done
 summary: >
   Extract packet rendering and spec excerpt helpers from build-agent-packet.ts
   without changing generated packet markdown, metadata, supplemental constraints,
