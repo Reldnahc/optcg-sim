@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: medium
-status: approved
+status: done
 summary: >
   Extract trigger source lookup, event matching, zone-ref parsing, and snapshot
   helpers from effect-runtime-trigger-queueing.ts without changing trigger

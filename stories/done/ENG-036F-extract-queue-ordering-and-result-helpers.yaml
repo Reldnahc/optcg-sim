@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: medium
-status: approved
+status: done
 summary: >
   Extract queue ordering, trigger-order continuation, target-decision, and
   result assembly helpers from effect-runtime-queue-processing.ts without

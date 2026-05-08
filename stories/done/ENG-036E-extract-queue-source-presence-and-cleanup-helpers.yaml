@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: medium
-status: approved
+status: done
 summary: >
   Extract queued source-presence validation and Life Trigger cleanup helpers
   from effect-runtime-queue-processing.ts without changing fail-closed

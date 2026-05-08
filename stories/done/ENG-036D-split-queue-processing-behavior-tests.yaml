@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move queue processing tests out of effect-runtime-queue-processing.test.ts
   into focused behavior suites without changing assertions, fixtures, runtime

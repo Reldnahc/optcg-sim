@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: medium
-status: approved
+status: done
 summary: >
   Extract On Play, attacking, opponent-attack, K.O., and effect-resolved
   trigger queueing helper bodies from effect-runtime-trigger-queueing.ts into
