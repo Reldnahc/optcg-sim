@@ -123,6 +123,7 @@ function copyTransientPacketToolModules(targetRepoRoot) {
   const cleanupPaths = [];
 
   for (const fileName of [
+    "agent-packet-lifecycle.ts",
     "agent-packet-parser.ts",
     "agent-packet-renderer.ts",
   ]) {
