@@ -1,0 +1,84 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-035
+epic_id: KICK-001
+title: Action dispatcher test boundaries
+type: refactor
+area: engine
+primary_concern: verification
+priority: medium
+status: approved
+summary: >
+  Split oversized action dispatcher tests into focused suites without changing
+  action dispatch, legal action generation, pending-decision routing,
+  fail-closed behavior, hidden-information behavior, or engine state mutation.
+story_boundary: >
+  This parent story is not directly implementable. It coordinates
+  behavior-preserving test-organization child stories for actions.test.ts,
+  which exceeds the repo size threshold.
+allowed_touch_points:
+  - stories/generated/ENG-035-action-dispatcher-test-boundaries-parent.yaml
+  - stories/generated/ENG-035A-*.yaml
+  - stories/generated/ENG-035B-*.yaml
+  - stories/generated/ENG-035C-*.yaml
+  - stories/generated/ENG-035D-*.yaml
+  - stories/generated/ENG-035E-*.yaml
+spec_refs:
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s017
+  - 06-visibility-security.s007
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+  - 23-repo-tooling-and-enforcement.s016
+scope:
+  - split actions.test.ts by existing legal-action and action-dispatch behavior groups
+  - preserve pending-decision gating, runtime-work suppression, concession behavior, and battle legal-action projection assertions
+  - keep helper extraction local to tests unless story-review approves a focused shared test helper
+  - preserve public getLegalActions and applyAction behavior exactly
+non_scope:
+  - changing action dispatch behavior
+  - changing legal-action availability
+  - changing pending-decision response behavior
+  - changing runtime-work suppression behavior
+  - changing hidden-information or PlayerView behavior
+  - server/client/UI/replay behavior
+dependencies: []
+child_stories:
+  - id: ENG-035A
+    title: Split general legal-action tests
+    concern: Move main-phase, turn-player, phase, concession, and ordinary legal-action gating tests into focused files.
+    depends_on: []
+  - id: ENG-035B
+    title: Split pending-decision dispatcher tests
+    concern: Move pending-decision suppression, stale decision, and decision-recipient response tests into focused files.
+    depends_on: [ENG-035A]
+  - id: ENG-035C
+    title: Split runtime-work dispatcher tests
+    concern: Move effectQueue and deferred-trigger suppression tests into focused files with no behavior change.
+    depends_on: [ENG-035B]
+  - id: ENG-035D
+    title: Split battle legal-action projection tests
+    concern: Move Blocker, declareAttack, and combat metadata legal-action tests into focused files.
+    depends_on: [ENG-035C]
+  - id: ENG-035E
+    title: Split unsupported action fail-closed tests
+    concern: Move illegal action and unsupported combat metadata mutation-safety tests into focused files.
+    depends_on: [ENG-035D]
+acceptance_criteria:
+  - every child story is explicitly behavior-preserving and includes no dispatcher or legal-action behavior change
+  - moved tests continue to exercise the same scenarios with the same expected outcomes
+  - parent integration review confirms actions.test.ts is smaller or records a justified exception
+required_tests:
+  - run corepack pnpm run stories:validate
+  - run corepack pnpm run packets:verify for each active child story
+  - run focused action dispatcher tests for each child story
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify before parent PR handoff
+repo_rules:
+  - do not approve, packetize, or activate ENG-035 itself as an implementation story
+  - story-review must confirm the child split is behavior-preserving before any child is approved
+  - child stories must be implemented one at a time on a parent integration branch
+  - no child may change action dispatch or legal-action behavior
+  - line-count reduction is secondary to preserving behavior and reviewability
+ambiguity_policy: fail_and_escalate
