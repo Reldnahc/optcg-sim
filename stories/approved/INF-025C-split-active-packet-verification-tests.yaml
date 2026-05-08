@@ -1,0 +1,59 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-025C
+epic_id: KICK-001
+title: Split active packet verification tests
+type: refactor
+area: infra
+primary_concern: verification
+priority: medium
+status: approved
+summary: >
+  Move active packet verification and activation contract tests into a focused
+  file without changing manifest validation, packet freshness checks, or
+  fail-closed CLI behavior.
+story_boundary: >
+  Own only behavior-preserving test organization for active manifest,
+  activation, verification, stale packet, canonical path, and dormant story
+  coverage currently in agent-packet-contract.test.mjs.
+allowed_touch_points:
+  - tests/contracts/agent-packet-contract.test.mjs
+  - tests/contracts/agent-packet-verification-contract.test.mjs
+  - tests/contracts/agent-packet-test-support.mjs
+  - stories/generated/INF-025C-split-active-packet-verification-tests.yaml
+  - stories/approved/INF-025C-split-active-packet-verification-tests.yaml
+  - agent-packets/INF-025C.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s016
+  - 11-testing-quality.s008
+scope:
+  - move active packet presence, freshness, metadata, and required-section verification coverage
+  - move letter-suffixed story ID packet path coverage
+  - move activation replacement and multiple-active-story rejection coverage
+  - move approved-status drift, checked-in path, checked-in manifest, and dormant-story coverage
+  - preserve every assertion, stderr expectation, manifest shape, and CLI argument
+non_scope:
+  - changing tools/build-agent-packet.ts
+  - changing active manifest semantics, canonical path rules, packet verification behavior, or CLI output
+  - moving completion lifecycle tests
+dependencies:
+  - INF-025B
+acceptance_criteria:
+  - verification-focused contract tests cover the same active packet scenarios
+  - agent-packet-contract.test.mjs no longer contains the moved verification-only scenarios
+  - all fail-closed stderr and manifest assertions remain covered
+  - focused verification contract test, contracts, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run tests/contracts/agent-packet-verification-contract.test.mjs tests/contracts/agent-packet-contract.test.mjs
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run contracts
+  - run corepack pnpm run verify
+repo_rules:
+  - target the INF-025 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving test organization story; if active packet behavior changes appear necessary, stop and record an ambiguity
+ambiguity_policy: fail_and_escalate

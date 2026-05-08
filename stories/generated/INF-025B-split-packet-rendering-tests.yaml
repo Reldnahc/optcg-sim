@@ -1,0 +1,58 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-025B
+epic_id: KICK-001
+title: Split packet rendering tests
+type: refactor
+area: infra
+primary_concern: verification
+priority: medium
+status: generated
+summary: >
+  Move packet rendering and spec excerpt contract tests into focused files
+  without changing generated packet markdown or supplemental constraint output.
+story_boundary: >
+  Own only behavior-preserving test organization for canonical packet rendering,
+  annotated spec refs, checked-in spec discovery, and fenced SECTION_REF excerpt
+  behavior currently in agent-packet-contract.test.mjs.
+allowed_touch_points:
+  - tests/contracts/agent-packet-contract.test.mjs
+  - tests/contracts/agent-packet-rendering-contract.test.mjs
+  - tests/contracts/agent-packet-test-support.mjs
+  - stories/generated/INF-025B-split-packet-rendering-tests.yaml
+  - stories/approved/INF-025B-split-packet-rendering-tests.yaml
+  - agent-packets/INF-025B.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s016
+  - 11-testing-quality.s008
+scope:
+  - move canonical packet section rendering coverage into agent-packet-rendering-contract.test.mjs
+  - move annotated spec-ref label normalization coverage into agent-packet-rendering-contract.test.mjs
+  - move checked-in spec document discovery coverage into agent-packet-rendering-contract.test.mjs
+  - move fenced SECTION_REF excerpt retention coverage into agent-packet-rendering-contract.test.mjs
+  - preserve every assertion and generated packet expectation
+non_scope:
+  - changing tools/build-agent-packet.ts
+  - changing packet markdown content, metadata, supplemental constraints, spec discovery semantics, or CLI output
+  - moving active verification or completion lifecycle tests
+dependencies:
+  - INF-025A
+acceptance_criteria:
+  - rendering-focused contract tests cover the same canonical rendering and excerpt scenarios
+  - agent-packet-contract.test.mjs no longer contains the moved rendering-only scenarios
+  - generated packet content assertions remain identical in meaning and expected values
+  - focused rendering contract test, contracts, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run tests/contracts/agent-packet-rendering-contract.test.mjs tests/contracts/agent-packet-contract.test.mjs
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run contracts
+  - run corepack pnpm run verify
+repo_rules:
+  - target the INF-025 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving test organization story; if packet output changes appear necessary, stop and record an ambiguity
+ambiguity_policy: fail_and_escalate
