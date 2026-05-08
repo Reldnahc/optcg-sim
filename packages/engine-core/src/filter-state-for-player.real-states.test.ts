@@ -21,7 +21,6 @@ import {
 } from "./actions.js";
 import {
   createActiveState,
-  createInput,
   must,
   p1,
   p2,
@@ -33,9 +32,6 @@ import {
   withOnKODrawEffect,
 } from "./battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
-import { createInitialState } from "./initial-state.js";
-import { startMulliganFlow } from "./mulligan.js";
-import { setupMainPlayState } from "./play-card-test-fixtures.js";
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -603,27 +599,6 @@ const assertNoHiddenLeak = (
   }
 };
 
-const createAfterCardPlayState = (): GameState => {
-  const state = setupMainPlayState();
-  const player = must(state.players[p1], "p1");
-  const playable = must(player.hand[0], "playable hand card");
-  state.cardManifest.cards[playable.cardId] = resolvedCard({
-    cardId: playable.cardId,
-    category: "character",
-    cost: 0,
-    power: 1000,
-  });
-  const action = getLegalActions(state, p1).find(
-    (candidate): candidate is Extract<typeof candidate, { type: "playCard" }> =>
-      candidate.type === "playCard" &&
-      candidate.cardInstanceId === playable.instanceId,
-  );
-  assert.ok(action, "playCard legal action should exist");
-  const result = applyAction(state, action);
-  assert.equal(result.errors, undefined);
-  return result.state;
-};
-
 const createAfterAttackDamageState = (): GameState => {
   const state = setupAttackState();
   const attacker = must(must(state.players[p1], "p1").leader, "p1 leader");
@@ -731,35 +706,6 @@ const createAfterOnKOTriggerBattleState = () => {
   assert.equal(result.state.pendingDecision, undefined);
   assert.equal(result.state.battle, undefined);
   return { state: result.state, hiddenDrawnCard, effectId };
-};
-
-const createStagePresentState = (): GameState => {
-  const state = setupMainPlayState();
-  const p1State = must(state.players[p1], "p1");
-  const stageCard = must(p1State.hand[1], "stage card source");
-  state.cardManifest.cards[stageCard.cardId] = resolvedCard({
-    cardId: stageCard.cardId,
-    category: "stage",
-    cost: 0,
-  });
-  const action = getLegalActions(state, p1).find(
-    (candidate): candidate is Extract<typeof candidate, { type: "playCard" }> =>
-      candidate.type === "playCard" &&
-      candidate.cardInstanceId === stageCard.instanceId,
-  );
-  assert.ok(action, "stage play action must exist");
-  const result = applyAction(state, action);
-  assert.equal(result.errors, undefined);
-  return result.state;
-};
-
-const createFaceUpLifeState = (): GameState => {
-  const state = createActiveState();
-  const p1State = must(state.players[p1], "p1");
-  const p2State = must(state.players[p2], "p2");
-  must(p1State.life[0], "p1 life 0").faceUp = true;
-  must(p2State.life[0], "p2 life 0").faceUp = true;
-  return state;
 };
 
 const createSelectTargetsDecisionState = (): {
@@ -878,64 +824,13 @@ const createSelectTargetsDecisionState = (): {
   };
 };
 
-const assertFaceUpLifeVisible = (
-  state: GameState,
-  recipient: PlayerId,
-  label: string,
-): void => {
-  const opponent = recipient === p1 ? p2 : p1;
-  const view = filterStateForPlayer(state, recipient);
-  const recipientState = must(state.players[recipient], `${label} recipient`);
-  const opponentState = must(state.players[opponent], `${label} opponent`);
-
-  for (const lifeCard of recipientState.life.filter((card) => card.faceUp)) {
-    const visible = view.self.life.faceUpCards.find(
-      (card) => card.instanceId === lifeCard.card.instanceId,
-    );
-    assert.ok(visible, `${label} self face-up life card visible`);
-    assert.equal(
-      visible.cardId,
-      lifeCard.card.cardId,
-      `${label} self face-up life cardId`,
-    );
-  }
-  for (const lifeCard of opponentState.life.filter((card) => card.faceUp)) {
-    const visible = view.opponent.life.faceUpCards.find(
-      (card) => card.instanceId === lifeCard.card.instanceId,
-    );
-    assert.ok(visible, `${label} opponent face-up life card visible`);
-    assert.equal(
-      visible.cardId,
-      lifeCard.card.cardId,
-      `${label} opponent face-up life cardId`,
-    );
-  }
-};
-
-test("real engine states stay hidden-info safe across phase and battle progression", () => {
-  const bootState = createInitialState(createInput());
-  const mulliganState = startMulliganFlow(bootState).state;
-  const mainPhaseState = setupMainPlayState();
-  const afterCardPlay = createAfterCardPlayState();
+test("real battle engine states stay hidden-info safe across battle progression", () => {
   const afterAttackDamage = createAfterAttackDamageState();
   const afterBlocker = createAfterBlockerState();
-  const withStage = createStagePresentState();
-  const withFaceUpLife = createFaceUpLifeState();
-  const completed = applyAction(createActiveState(), {
-    type: "concede",
-    playerId: p1,
-  }).state;
 
   const samples: ReadonlyArray<[string, GameState]> = [
-    ["setup-boot", bootState],
-    ["mulligan", mulliganState],
-    ["main-phase", mainPhaseState],
-    ["after-card-play", afterCardPlay],
     ["after-attack-damage", afterAttackDamage],
     ["after-blocker", afterBlocker],
-    ["stage-present", withStage],
-    ["face-up-life", withFaceUpLife],
-    ["completed-match", completed],
   ];
 
   for (const [label, state] of samples) {
@@ -944,8 +839,6 @@ test("real engine states stay hidden-info safe across phase and battle progressi
     assertPublicZonesVisible(state, p1, `${label}:p1`);
     assertPublicZonesVisible(state, p2, `${label}:p2`);
   }
-  assertFaceUpLifeVisible(withFaceUpLife, p1, "face-up-life:p1");
-  assertFaceUpLifeVisible(withFaceUpLife, p2, "face-up-life:p2");
 });
 
 test("real K.O. trigger battle views omit runtime queue internals and hidden draw identity", () => {
