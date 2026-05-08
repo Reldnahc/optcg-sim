@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-033B.md",
-      "storyId": "ENG-033B",
-      "storyPath": "stories/approved/ENG-033B-split-battle-real-state-visibility-tests.yaml",
-      "storySha256": "ce9096ea9743044807d241faf7b5fa3ec3ab38d6f3b0c08e1ed1591330a4622a"
+      "packetPath": "agent-packets/ENG-033C.md",
+      "storyId": "ENG-033C",
+      "storyPath": "stories/approved/ENG-033C-split-trigger-real-state-visibility-tests.yaml",
+      "storySha256": "368058ea89fcb6e5cf479e445944259527926f354e7a891cff9304a92108f0ec"
     }
   ],
   "version": 1
