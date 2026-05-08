@@ -8,7 +8,7 @@ type: refactor
 area: contracts
 primary_concern: contract
 priority: medium
-status: approved
+status: done
 summary: >
   Split the oversized canonical TypeScript contract into focused domain
   modules while preserving the `contracts/canonical-types.ts` compatibility
