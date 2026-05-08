@@ -93,7 +93,8 @@ export function runPacketTool(args, options = {}) {
 }
 
 export function runPacketToolFromRepo(targetRepoRoot, args, options = {}) {
-  const cleanupParserModule = copyTransientParserModule(targetRepoRoot);
+  const cleanupTransientModules =
+    copyTransientPacketToolModules(targetRepoRoot);
 
   try {
     return spawnSync(
@@ -110,28 +111,37 @@ export function runPacketToolFromRepo(targetRepoRoot, args, options = {}) {
       },
     );
   } finally {
-    cleanupParserModule();
+    cleanupTransientModules();
   }
 }
 
-function copyTransientParserModule(targetRepoRoot) {
-  const targetParserPath = path.join(
-    targetRepoRoot,
-    "tools",
-    "agent-packet-parser.ts",
-  );
-
-  if (targetRepoRoot === repoRoot || existsSync(targetParserPath)) {
+function copyTransientPacketToolModules(targetRepoRoot) {
+  if (targetRepoRoot === repoRoot) {
     return () => {};
   }
 
-  mkdirSync(path.dirname(targetParserPath), { recursive: true });
-  copyFileSync(
-    path.join(repoRoot, "tools", "agent-packet-parser.ts"),
-    targetParserPath,
-  );
+  const cleanupPaths = [];
 
-  return () => rmSync(targetParserPath, { force: true });
+  for (const fileName of [
+    "agent-packet-parser.ts",
+    "agent-packet-renderer.ts",
+  ]) {
+    const targetPath = path.join(targetRepoRoot, "tools", fileName);
+
+    if (existsSync(targetPath)) {
+      continue;
+    }
+
+    mkdirSync(path.dirname(targetPath), { recursive: true });
+    copyFileSync(path.join(repoRoot, "tools", fileName), targetPath);
+    cleanupPaths.push(targetPath);
+  }
+
+  return () => {
+    for (const cleanupPath of cleanupPaths) {
+      rmSync(cleanupPath, { force: true });
+    }
+  };
 }
 
 export async function makeTempRepoFixture() {
