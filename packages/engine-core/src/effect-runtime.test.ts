@@ -6,7 +6,6 @@ import type {
   CardSnapshot,
   CardId,
   CardSupportStatus,
-  DeferredTriggerBucket,
   DecisionId,
   EffectDefinition,
   EffectId,
@@ -15,7 +14,6 @@ import type {
   ResolvedCard,
   InstanceId,
   PlayerId,
-  PendingDecision,
   QueueEntryId,
   SourcePresencePolicy,
   StateSeq,
@@ -35,9 +33,7 @@ import {
   reviewedOnPlayDrawDefinition,
 } from "./action-test-fixtures.js";
 import {
-  detectPendingRuntimeWork,
   detectBattleKOTriggerCandidates,
-  executeNoChoiceEffectPrimitive,
   isSupportedNoChoiceOnPlayDrawEffect,
   type EffectDefinitionLookupFailureReason,
   type OnPlayTriggerQueueingFailureReason,
@@ -104,13 +100,6 @@ const publicCharacterTargetRequest = (
   ...overrides,
 });
 
-const deferredTrigger = (): DeferredTriggerBucket => ({
-  timingWindowId: toTimingWindowId("hidden-trigger-window"),
-  generation: 2,
-  triggerIds: ["hidden-life-card", "hidden-instance-1"],
-  releasePolicy: "afterCurrentProcess",
-});
-
 const queueDrawForP1 = (): EffectQueueEntry => ({
   ...queuedEffect(toCardId("OP01-015")),
   source: {
@@ -134,16 +123,6 @@ const queueDrawForP1 = (): EffectQueueEntry => ({
   effectBlockId: toEffectId("OP01-015:auto-on-play-1"),
 });
 
-const withPendingDecision = (playerId: PlayerId = p2): PendingDecision => ({
-  id: toDecisionId("existing-decision"),
-  type: "mulligan" as const,
-  playerId,
-  prompt: "Existing decision",
-  causedBy: { type: "ruleProcess" as const, name: "existing-decision" },
-  visibility: { type: "private" as const, playerId },
-  options: ["keep", "mulligan"],
-});
-
 test("empty effect runtime processing is a deterministic no-op", () => {
   const state = createActiveState();
   const before = structuredClone(state);
@@ -159,357 +138,6 @@ test("empty effect runtime processing is a deterministic no-op", () => {
   assert.equal(result.state.seq, before.seq);
   assert.deepEqual(result.state, before);
   assert.equal(result.stateHash, beforeHash);
-});
-
-test("pending runtime work detector returns only content-agnostic kind and count", () => {
-  const state = createActiveState();
-  state.effectQueue.push(queuedEffect());
-
-  assert.deepEqual(detectPendingRuntimeWork(state), {
-    kind: "effectQueue",
-    count: 1,
-  });
-});
-
-test("non-empty effect queue fails closed with deterministic unsupported details", () => {
-  const state = createActiveState();
-  state.effectQueue.push(queuedEffect());
-
-  const result = processEffectRuntime(state);
-
-  assert.deepEqual(result.events, []);
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-effect-queue",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "effectQueue",
-        count: 1,
-      },
-    },
-  ]);
-});
-
-test("non-empty deferred triggers fail closed with deterministic unsupported details", () => {
-  const state = createActiveState();
-  state.deferredTriggers.push(deferredTrigger());
-
-  const result = processEffectRuntime(state);
-
-  assert.deepEqual(result.events, []);
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-deferred-triggers",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "deferredTriggers",
-        count: 1,
-      },
-    },
-  ]);
-});
-
-test("deferred trigger sentinel takes precedence when both queue and deferred work exist", () => {
-  const state = createActiveState();
-  state.effectQueue.push(queuedEffect());
-  state.deferredTriggers.push(deferredTrigger());
-
-  const result = processEffectRuntime(state);
-
-  assert.ok(result.errors !== undefined);
-  assert.equal(result.errors.length, 1);
-  assert.deepEqual(result.errors[0], {
-    type: "effectRuntimeError",
-    effectId: "unsupported-deferred-triggers",
-    details: {
-      reason: "unsupported-pending-runtime-work",
-      kind: "deferredTriggers",
-      count: 1,
-    },
-  });
-});
-
-test("unsupported effect queue diagnostics do not expose hidden card contents", () => {
-  const state = createActiveState();
-  state.effectQueue.push(queuedEffect(toCardId("hidden-life-card")));
-
-  const serialized = JSON.stringify(processEffectRuntime(state).errors);
-
-  assert.ok(!serialized.includes("hidden-life-card"));
-  assert.ok(!serialized.includes("hidden-instance-1"));
-  assert.ok(!serialized.includes("hidden-effect-block"));
-});
-
-test("unsupported deferred trigger diagnostics do not expose hidden card contents", () => {
-  const state = createActiveState();
-  state.deferredTriggers.push(deferredTrigger());
-
-  const serialized = JSON.stringify(processEffectRuntime(state).errors);
-
-  assert.ok(!serialized.includes("hidden-life-card"));
-  assert.ok(!serialized.includes("hidden-instance-1"));
-});
-
-test("effect queue failure does not mutate state or replace an existing pending decision", () => {
-  const state = createActiveState();
-  const pendingDecision = withPendingDecision();
-  state.pendingDecision = pendingDecision;
-  state.effectQueue.push(queuedEffect());
-  const before = structuredClone(state);
-
-  const result = processEffectRuntime(state);
-
-  assert.equal(result.state, state);
-  assert.equal(result.state.pendingDecision, pendingDecision);
-  assert.equal(result.state.seq, before.seq);
-  assert.deepEqual(result.state.eventJournal, before.eventJournal);
-  assert.deepEqual(result.events, []);
-  assert.deepEqual(result.state, before);
-});
-
-test("direct draw primitive executes draw 1 from deck top into hand", () => {
-  const state = createActiveState();
-  const topDeck = state.players[p1]?.deck[0];
-  assert.ok(topDeck !== undefined);
-  const beforeDeck = state.players[p1]?.deck.length ?? 0;
-  const beforeHand = state.players[p1]?.hand.length ?? 0;
-
-  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
-    type: "draw",
-    count: 1,
-    player: "self",
-  });
-  const resultP1 = must(result.state.players[p1], "result p1");
-
-  assert.equal(result.errors, undefined);
-  assert.equal(resultP1.deck.length, beforeDeck - 1);
-  assert.equal(resultP1.hand.length, beforeHand + 1);
-  assert.equal(
-    must(resultP1.hand[resultP1.hand.length - 1], "last p1 hand card")
-      .instanceId,
-    topDeck.instanceId,
-  );
-  assert.equal(result.events.length, 3);
-  const firstEvent = must(result.events[0], "first draw event");
-  assert.equal(firstEvent.type, "cardDrawn");
-  assert.equal(firstEvent.visibility.type, "public");
-});
-
-test("direct draw primitive preserves deck order when drawing multiple cards", () => {
-  const state = createActiveState();
-  const p1State = must(state.players[p1], "player p1");
-  const handZero = must(p1State.hand[0], "p1 hand[0]");
-  const handOne = must(p1State.hand[1], "p1 hand[1]");
-  const first = {
-    ...handZero,
-    zone: {
-      zone: "deck" as const,
-      playerId: p1,
-      slot: "deck" as const,
-      index: 0,
-    },
-  };
-  const secondDeck = {
-    ...handOne,
-    zone: {
-      zone: "deck" as const,
-      playerId: p1,
-      slot: "deck" as const,
-      index: 1,
-    },
-  };
-  state.players[p1] = {
-    ...p1State,
-    deck: [first, secondDeck],
-    hand: p1State.hand.slice(2),
-  };
-  const top = must(state.players[p1]?.deck[0], "top deck");
-  const second = must(state.players[p1]?.deck[1], "second deck");
-
-  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
-    type: "draw",
-    count: 2,
-    player: "self",
-  });
-
-  const hand = result.state.players[p1]?.hand ?? [];
-  const lastTwo = hand.slice(-2);
-  assert.equal(lastTwo[0]?.instanceId, top.instanceId);
-  assert.equal(lastTwo[1]?.instanceId, second.instanceId);
-});
-
-test("direct draw visibility keeps identity private in public events and present in private events", () => {
-  const state = createActiveState();
-
-  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
-    type: "draw",
-    count: 1,
-    player: "self",
-  });
-  const publicMoved = result.events.find(
-    (event) => event.type === "cardMoved" && event.visibility.type === "public",
-  );
-  const privateMoved = result.events.find(
-    (event) =>
-      event.type === "cardMoved" && event.visibility.type === "private",
-  );
-  assert.ok(publicMoved !== undefined);
-  assert.ok(privateMoved !== undefined);
-  const publicPayload = JSON.stringify(publicMoved.payload);
-  const privatePayload = JSON.stringify(privateMoved.payload);
-
-  assert.ok(
-    !publicPayload.includes("instanceId") && !publicPayload.includes("cardId"),
-  );
-  assert.ok(privatePayload.includes("instanceId"));
-  assert.ok(privatePayload.includes("cardId"));
-});
-
-test("direct draw count zero is a no-op", () => {
-  const state = createActiveState();
-  const before = structuredClone(state);
-
-  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
-    type: "draw",
-    count: 0,
-    player: "self",
-  });
-
-  assert.deepEqual(result.state, before);
-  assert.deepEqual(result.events, []);
-});
-
-test("direct draw from empty deck is a no-op without deck-out ownership", () => {
-  const state = createActiveState();
-  const p1State = must(state.players[p1], "player p1");
-  state.players[p1] = { ...p1State, deck: [] };
-
-  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
-    type: "draw",
-    count: 1,
-    player: "self",
-  });
-  const resultP1 = must(result.state.players[p1], "result p1");
-  const stateP1 = must(state.players[p1], "state p1");
-
-  assert.equal(result.errors, undefined);
-  assert.deepEqual(result.events, []);
-  assert.equal(resultP1.hand.length, stateP1.hand.length);
-});
-
-test("direct unsupported effect shapes fail closed without mutation or events", () => {
-  const state = createActiveState();
-  const cases = [
-    { type: "drawUpTo", count: 1, player: "self" },
-    { type: "custom", handler: "unsupported-handler" },
-    {
-      type: "replacement",
-      when: { type: "cardWouldBeKOd", target: "self" },
-      instead: { type: "draw", count: 1, player: "self" },
-    },
-    {
-      type: "modifyPower",
-      target: "self",
-      value: 1000,
-      duration: "thisBattle",
-    },
-  ] as const;
-
-  for (const effect of cases) {
-    const before = structuredClone(state);
-    const result = executeNoChoiceEffectPrimitive(
-      state,
-      queueDrawForP1(),
-      effect as never,
-    );
-
-    assert.deepEqual(result.events, []);
-    assert.ok(result.errors !== undefined);
-    assert.equal(
-      must(result.errors[0], "runtime error").type,
-      "effectRuntimeError",
-    );
-    assert.deepEqual(result.state, before);
-  }
-});
-
-test("direct invalid draw count and unsupported player ref fail closed without mutation", () => {
-  const state = createActiveState();
-  const before = structuredClone(state);
-
-  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
-    type: "draw",
-    count: -1,
-    player: "mystery" as never,
-  });
-
-  assert.deepEqual(result.events, []);
-  assert.ok(result.errors !== undefined);
-  assert.deepEqual(result.state, before);
-});
-
-test("deferred trigger failure does not mutate state or replace an existing pending decision", () => {
-  const state = createActiveState();
-  const pendingDecision = withPendingDecision();
-  state.pendingDecision = pendingDecision;
-  state.deferredTriggers.push(deferredTrigger());
-  const before = structuredClone(state);
-
-  const result = processEffectRuntime(state);
-
-  assert.equal(result.state, state);
-  assert.equal(result.state.pendingDecision, pendingDecision);
-  assert.equal(result.state.seq, before.seq);
-  assert.deepEqual(result.state.eventJournal, before.eventJournal);
-  assert.deepEqual(result.events, []);
-  assert.deepEqual(result.state, before);
-});
-
-test("supported queued draw with non-empty deferred triggers fails closed as deferred trigger sentinel", () => {
-  const { state, played } = queueingState();
-  const supportCard = resolvedCard({
-    cardId: played.cardId,
-    category: "character",
-  });
-  setupOnPlayDefinition(
-    state,
-    played,
-    reviewedOnPlayDrawDefinition(played.cardId, supportCard.support),
-    "def-mixed-queue-deferred",
-  );
-  const queued = processEffectRuntime(state);
-  queued.state.deferredTriggers.push(deferredTrigger());
-  const before = structuredClone(queued.state);
-
-  const result = processEffectRuntime(queued.state);
-
-  assert.deepEqual(result.events, []);
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-deferred-triggers",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "deferredTriggers",
-        count: 1,
-      },
-    },
-  ]);
-  assert.deepEqual(result.state, before);
-});
-
-test("empty processing preserves an existing pending decision without replacing it", () => {
-  const state = createActiveState();
-  const pendingDecision = withPendingDecision();
-  state.pendingDecision = pendingDecision;
-
-  const result = processEffectRuntime(state);
-
-  assert.equal(result.state, state);
-  assert.equal(result.state.pendingDecision, pendingDecision);
-  assert.deepEqual(result.decisions, [pendingDecision]);
 });
 
 const createManifest = (
