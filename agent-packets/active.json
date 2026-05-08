@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-029B.md",
-      "storyId": "ENG-029B",
-      "storyPath": "stories/approved/ENG-029B-create-select-targets-decision.yaml",
-      "storySha256": "a5b571abfc8ed772c8d1c3bd6fa1fac136c7587a2f28cc28d759cf80c217bfb1"
+      "packetPath": "agent-packets/ENG-029C.md",
+      "storyId": "ENG-029C",
+      "storyPath": "stories/approved/ENG-029C-validate-select-targets-response.yaml",
+      "storySha256": "e14c8b5ab3b7932ddae790cd4b705bf619ff8ed34b48d90ef9f3f8df45d84f76"
     }
   ],
   "version": 1
