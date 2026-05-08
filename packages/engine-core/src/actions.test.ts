@@ -1,10 +1,34 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { getLegalActions } from "./actions.js";
-import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
+import { applyAction, getLegalActions } from "./actions.js";
+import {
+  createActiveState,
+  must,
+  p1,
+  p2,
+  resolvedCard,
+} from "./action-test-fixtures.js";
 import { setupAttackState } from "./battle-actions-test-fixtures.js";
 import { toDecisionId } from "./action-dispatcher-test-support.js";
+
+test("illegal actions return errors and do not mutate input state", () => {
+  const state = createActiveState();
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, {
+    type: "attachDon",
+    donInstanceId: "missing-don" as never,
+    target: {
+      instanceId: must(state.players[p1], "p1").leader.instanceId,
+      cardId: must(state.players[p1], "p1").leader.cardId,
+      playerId: p1,
+    },
+  });
+
+  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.equal(JSON.stringify(state), before);
+});
 
 test("getLegalActions omits declareAttack and blocker responses for unsupported implemented-dsl combat metadata", () => {
   const state = setupAttackState();
