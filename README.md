@@ -21,6 +21,14 @@ safe views, stable events, state hashes, and testable card/effect behavior.
 - `agent-packets/` - active checked-in story packet handoffs.
 - `tests/` - repo-level hidden-info, contract, CI, and fixture tests.
 
+## License
+
+This repository's own source code, specifications, documentation, tests, and
+tooling are licensed under the MIT License; see [LICENSE](LICENSE).
+
+This license does not grant rights to third-party card names, card text,
+images, set symbols, trademarks, logos, or other third-party content.
+
 ## Local Setup
 
 Use the package manager declared in `package.json`:

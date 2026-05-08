@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-024.md",
+      "storyId": "INF-024",
+      "storyPath": "stories/approved/INF-024-add-mit-license-and-publish-repository.yaml",
+      "storySha256": "8607b499a402b997fa5f334b6323b6d65ea9c81af769e8587583ebef81cbf049"
+    }
+  ],
   "version": 1
 }
