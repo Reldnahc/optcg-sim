@@ -19,11 +19,12 @@ import type {
   QueueEntryId,
   SourcePresencePolicy,
   StateSeq,
+  TargetRequest,
   TimingWindowId,
 } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "./canonical-state.js";
-import { applyAction } from "./index.js";
+import { applyAction, getLegalActions } from "./index.js";
 import {
   createActiveState,
   must,
@@ -87,6 +88,20 @@ const queuedEffect = (
   queuedAtStateSeq: toStateSeq(7),
   sourcePresencePolicy: "resolveFromLastKnownInformation",
   causedBy: { type: "ruleProcess", name: "hidden-trigger" },
+});
+
+const publicCharacterTargetRequest = (
+  overrides: Partial<TargetRequest> = {},
+): TargetRequest => ({
+  timing: "onResolution",
+  chooser: "self",
+  player: "opponent",
+  zone: "characterArea",
+  min: 1,
+  max: 1,
+  allowFewerIfUnavailable: false,
+  visibility: "public",
+  ...overrides,
 });
 
 const deferredTrigger = (): DeferredTriggerBucket => ({
@@ -841,6 +856,107 @@ const queueingState = (): {
   });
   appendCardPlayedEvent(state, played, "character");
   return { state, played };
+};
+
+const targetSelectionQueueState = (
+  request: TargetRequest = publicCharacterTargetRequest(),
+): {
+  state: ReturnType<typeof createActiveState>;
+  entry: EffectQueueEntry;
+  request: TargetRequest;
+  targets: readonly CardInstance[];
+} => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  const firstTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "first target"),
+    zone: "characterArea",
+    index: 0,
+  });
+  const secondTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[1], "second target"),
+    zone: "characterArea",
+    index: 1,
+  });
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-target-selection",
+      rulesVersion: "target-selection-rules",
+      sourceTextHash: "target-selection-source",
+    },
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    source.cardId,
+    supportCard.support,
+  );
+  const effectBlockId = toEffectId("target-selection-effect");
+  const definition: EffectDefinition = {
+    ...baseDefinition,
+    effects: [
+      {
+        ...must(baseDefinition.effects[0], "base effect"),
+        id: effectBlockId,
+        effect: { type: "ko", target: { type: "choose", request } },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-target-selection": definition,
+  };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  state.cardManifest.cards[firstTarget.cardId] = resolvedCard({
+    cardId: firstTarget.cardId,
+    category: "character",
+    cost: 2,
+    power: 3000,
+  });
+  state.cardManifest.cards[secondTarget.cardId] = resolvedCard({
+    cardId: secondTarget.cardId,
+    category: "character",
+    cost: 4,
+    power: 5000,
+  });
+
+  const entry: EffectQueueEntry = {
+    id: toQueueEntryId("queue-entry-target-selection"),
+    state: "pending",
+    timingWindowId: toTimingWindowId("window-target-selection"),
+    generation: 0,
+    controllerId: p1,
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    sourceSnapshot: toSourceSnapshot(source, p1, p1),
+    effectBlockId,
+    orderingGroup: "turnPlayer",
+    createdAtEventSeq: 1,
+    queuedAtStateSeq: toStateSeq(state.seq),
+    sourcePresencePolicy: "mustRemainInSameZone",
+    causedBy: { type: "ruleProcess", name: "target-selection-test" },
+  };
+  state.effectQueue = [entry];
+
+  return { state, entry, request, targets: [firstTarget, secondTarget] };
 };
 
 const attackQueueingState = (): {
@@ -3002,6 +3118,102 @@ test("terminal queue rule-processing checkpoint suppresses effect-resolved follo
     ),
     false,
   );
+});
+
+test("supported queued target request creates selectTargets decision without resolving the effect", () => {
+  const { state, entry, request, targets } = targetSelectionQueueState();
+  const beforeQueue = structuredClone(state.effectQueue);
+  const beforeSeq = state.seq;
+  const beforeJournalLength = state.eventJournal.length;
+
+  const result = processEffectRuntime(state);
+
+  const decision = must(result.state.pendingDecision, "pending decision");
+  const decisionCreated = result.events.find(
+    (event) => event.type === "decisionCreated",
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.equal(decision.type, "selectTargets");
+  assert.equal(
+    decision.id,
+    toDecisionId("decision:selectTargets:queue-entry-target-selection"),
+  );
+  assert.equal(decision.playerId, p1);
+  assert.equal(decision.prompt, "Select targets.");
+  assert.deepEqual(decision.causedBy, {
+    type: "effect",
+    queueEntryId: entry.id,
+    effectId: entry.effectBlockId,
+  });
+  assert.deepEqual(decision.request, request);
+  assert.deepEqual(
+    decision.candidates.map((candidate) => candidate.card.instanceId),
+    targets.map((target) => target.instanceId),
+  );
+  assert.deepEqual(
+    decision.candidates.map((candidate) => candidate.visibility),
+    [{ type: "public" }, { type: "public" }],
+  );
+  assert.deepEqual(result.state.effectQueue, beforeQueue);
+  assert.equal(result.state.seq, toStateSeq(beforeSeq + 1));
+  assert.equal(result.events.length, 1);
+  assert.ok(decisionCreated !== undefined);
+  assert.equal(decisionCreated.visibility.type, "public");
+  assert.deepEqual(decisionCreated.causedBy, decision.causedBy);
+  assert.deepEqual(decisionCreated.payload, {
+    decisionId: decision.id,
+    decisionType: "selectTargets",
+    playerId: p1,
+  });
+  assert.deepEqual(
+    result.state.eventJournal.slice(beforeJournalLength),
+    result.events,
+  );
+  assert.deepEqual(
+    getLegalActions(result.state, p1).filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+});
+
+test("selectTargets decision creation is deterministic for identical queued target input", () => {
+  const run = () => processEffectRuntime(targetSelectionQueueState().state);
+
+  const first = run();
+  const second = run();
+
+  assert.equal(first.errors, undefined);
+  assert.equal(second.errors, undefined);
+  assert.deepEqual(first.events, second.events);
+  assert.deepEqual(first.state.pendingDecision, second.state.pendingDecision);
+  assert.equal(first.stateHash, second.stateHash);
+});
+
+test("unsupported queued target request fails closed without mutating state", () => {
+  const { state } = targetSelectionQueueState(
+    publicCharacterTargetRequest({ visibility: "privateToChooser" }),
+  );
+  const before = structuredClone(state);
+  const beforeHash = hashCanonicalStateValue(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "unsupported-effect-queue",
+      details: {
+        reason: "unsupported-pending-runtime-work",
+        kind: "effectQueue",
+        count: 1,
+      },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+  assert.equal(hashCanonicalStateValue(result.state), beforeHash);
 });
 
 test("choice-required queued groups create chooseTriggerOrder decision and decisionCreated event", () => {
