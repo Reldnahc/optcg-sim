@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-032J.md",
-      "storyId": "ENG-032J",
-      "storyPath": "stories/approved/ENG-032J-split-battle-life-trigger-tests.yaml",
-      "storySha256": "e5910ec21fb9f47bfd0e89d2f37200975d8e73d329e87c6b4d7fa9f4b5b204b4"
+      "packetPath": "agent-packets/ENG-032G.md",
+      "storyId": "ENG-032G",
+      "storyPath": "stories/approved/ENG-032G-split-blocker-tests.yaml",
+      "storySha256": "a8753a6e4ddb1abfec9231d4c25589b6bb92c8df0df40e5b528582d201ad0b1a"
     }
   ],
   "version": 1
