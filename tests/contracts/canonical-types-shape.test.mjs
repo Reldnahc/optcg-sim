@@ -10,11 +10,25 @@ const repoRoot = path.resolve(
   "..",
 );
 
+const canonicalModuleFiles = [
+  "primitives.ts",
+  "card-metadata.ts",
+  "events.ts",
+  "view.ts",
+  "game-state.ts",
+  "effects.ts",
+  "decisions.ts",
+  "runtime.ts",
+];
+
 async function readCanonicalTypes() {
-  return readFile(
-    path.join(repoRoot, "contracts", "canonical-types.ts"),
-    "utf8",
+  const moduleSources = await Promise.all(
+    canonicalModuleFiles.map((fileName) =>
+      readFile(path.join(repoRoot, "contracts", fileName), "utf8"),
+    ),
   );
+
+  return moduleSources.join("\n");
 }
 
 test("GameState keeps the once-per-turn ledger in canonical state", async () => {

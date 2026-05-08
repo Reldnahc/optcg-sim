@@ -1,6 +1,29 @@
 import { expect, test } from "vitest";
 import { EXPORT_OWNERSHIP_MANIFEST } from "./export-ownership.manifest.js";
 
+const canonicalModuleFiles = [
+  "primitives.ts",
+  "card-metadata.ts",
+  "events.ts",
+  "view.ts",
+  "game-state.ts",
+  "effects.ts",
+  "decisions.ts",
+  "runtime.ts",
+];
+
+async function readCanonicalModuleSources(): Promise<string[]> {
+  const { readFile } = await import("node:fs/promises");
+
+  return Promise.all(
+    canonicalModuleFiles.map((fileName) =>
+      readFile(new URL(`../../../contracts/${fileName}`, import.meta.url), {
+        encoding: "utf8",
+      }),
+    ),
+  );
+}
+
 import type {
   Action as PackageAction,
   AtomicMutation as PackageAtomicMutation,
@@ -157,13 +180,7 @@ import type {
 } from "@optcg/types";
 
 test("TYP-001H ownership manifest keys exactly match canonical export type/interface names", async () => {
-  const canonicalPath = new URL(
-    "../../../contracts/canonical-types.ts",
-    import.meta.url,
-  );
-  const canonicalSource = await import("node:fs/promises").then((fs) =>
-    fs.readFile(canonicalPath, "utf8"),
-  );
+  const canonicalSource = (await readCanonicalModuleSources()).join("\n");
 
   const canonicalNames = [
     ...canonicalSource.matchAll(
