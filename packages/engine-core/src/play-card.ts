@@ -26,12 +26,15 @@ import {
 import { assertGameStateInvariants } from "./invariants.js";
 import {
   getCharacterOverflowDecisionId,
-  getPlayCardDecisionId,
-  getPlayCardDecisionPrompt,
   getPlayCardPendingDecisionLegalActions,
   parseCharacterOverflowDecisionInstanceId,
-  parsePlayCardDecisionInstanceId,
 } from "./play-card-legal-actions.js";
+import {
+  createPlayCardPaymentDecisionResult,
+  getPlayCardPaymentContext,
+  isPlayCardPaymentDecisionId,
+  validatePlayCardPaymentSelection,
+} from "./play-card-payment.js";
 import {
   canResolveDestinationConflict,
   getActiveDonCount,
@@ -134,38 +137,13 @@ export const applyPlayCard = (
   );
 
   if (supported.printedCost > 0) {
-    const decisionId = getPlayCardDecisionId(state, handCard);
-    const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
-      id: decisionId,
-      type: "payCost",
-      playerId,
-      prompt: getPlayCardDecisionPrompt(handCard),
-      causedBy: {
-        type: "playerAction",
-        actionId: `action:${String(state.actionSeq + 1)}`,
-      },
-      visibility: { type: "public" },
-      cost: { type: "restDon", count: supported.printedCost },
-      paymentOptions: [
-        { id: "restDon", type: "restDon", count: supported.printedCost },
-      ],
-    };
-    appendEvent(
+    return createPlayCardPaymentDecisionResult({
       state,
       events,
-      "decisionCreated",
-      { decisionId, decisionType: "payCost", playerId },
-      { type: "public" },
-    );
-    const nextState: GameState = {
-      ...state,
-      seq: toStateSeq(state.seq + 1),
-      actionSeq: state.actionSeq + 1,
-      pendingDecision,
-      eventJournal: [...state.eventJournal, ...events],
-    };
-    assertGameStateInvariants(nextState);
-    return toEngineResult(nextState, events);
+      playerId,
+      handCard,
+      printedCost: supported.printedCost,
+    });
   }
 
   if (supported.category === "character" && player.characters.length >= 5) {
@@ -268,10 +246,7 @@ export const applyPlayCardDecisionResponse = (
   ) {
     return applyCharacterOverflowResponse(state, action);
   }
-  if (
-    decision.type === "payCost" &&
-    parsePlayCardDecisionInstanceId(decision.id) !== null
-  ) {
+  if (decision.type === "payCost" && isPlayCardPaymentDecisionId(decision.id)) {
     return applyPlayCardPaymentResponse(state, action);
   }
   return null;
@@ -736,75 +711,27 @@ const applyPlayCardPaymentResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
 ): EngineResult => {
-  const decision = state.pendingDecision;
-  if (decision === undefined || decision.type !== "payCost") {
-    return illegalAction(state, "Unsupported decision type.");
+  const context = getPlayCardPaymentContext(state, action);
+  if (!context.ok) {
+    return context.result;
   }
-  if (action.response.type !== "payment") {
-    return illegalAction(state, "Unsupported decision response.");
-  }
-  const response = action.response;
-  if (decision.playerId !== state.turn.turnPlayerId) {
-    return illegalAction(state, "Decision player mismatch.");
-  }
-
-  const playCardInstanceId = parsePlayCardDecisionInstanceId(decision.id);
-  if (playCardInstanceId === null) {
-    return illegalAction(state, "Unsupported payCost decision context.");
-  }
-  const player = state.players[decision.playerId];
-  if (player === undefined) {
-    return illegalAction(state, "Decision player does not exist.");
-  }
-  const handIndex = player.hand.findIndex(
-    (card) => card.instanceId === playCardInstanceId,
-  );
-  if (handIndex < 0) {
-    return illegalAction(state, "Decision card reference is stale.");
-  }
-  const handCard = player.hand[handIndex];
-  if (handCard === undefined) {
-    return illegalAction(state, "Decision card not found.");
-  }
-  const supported = getSupportedPlayMetadata(state, handCard);
-  if (supported === null) {
-    return illegalAction(state, "Decision card is unsupported.");
-  }
+  const { decision, response, player, handIndex, handCard, supported } =
+    context;
   if (
     shouldResolveOnPlayRuntime(state, handCard, supported) &&
     hasPendingRuntimeWork(state)
   ) {
     return illegalAction(state, "playCard requires no pending runtime work.");
   }
-  if (response.optionId !== "restDon") {
-    return illegalAction(state, "Payment option mismatch.");
+  const payment = validatePlayCardPaymentSelection({
+    state,
+    response,
+    player,
+    supported,
+  });
+  if (!payment.ok) {
+    return payment.result;
   }
-  const selected = response.selectedDonInstanceIds;
-  if (selected === undefined || selected.length !== supported.printedCost) {
-    return illegalAction(state, "Payment DON!! selection count mismatch.");
-  }
-  if (new Set(selected).size !== selected.length) {
-    return illegalAction(state, "Payment DON!! selection contains duplicates.");
-  }
-  const costAreaById = new Map(
-    player.costArea.map((card) => [card.instanceId, card]),
-  );
-  for (const donId of selected) {
-    const don = costAreaById.get(donId);
-    if (don === undefined || don.state !== "active") {
-      return illegalAction(state, "Payment DON!! selection is invalid.");
-    }
-  }
-  if (!canResolveDestinationConflict(player, supported.category)) {
-    return illegalAction(state, "playCard destination conflict is invalid.");
-  }
-
-  const restedSet = new Set(selected);
-  const nextCostArea = player.costArea.map((card) =>
-    restedSet.has(card.instanceId)
-      ? { ...card, state: "rested" as const }
-      : card,
-  );
   const events: EngineEvent[] = [];
   appendEvent(
     state,
@@ -813,7 +740,7 @@ const applyPlayCardPaymentResponse = (
     {
       playerId: decision.playerId,
       optionId: "restDon",
-      selectedDonInstanceIds: selected,
+      selectedDonInstanceIds: payment.selectedDonInstanceIds,
     },
     { type: "public" },
   );
@@ -826,7 +753,7 @@ const applyPlayCardPaymentResponse = (
   );
 
   if (supported.category === "character" && player.characters.length >= 5) {
-    const paidPlayer = { ...player, costArea: nextCostArea };
+    const paidPlayer = { ...player, costArea: payment.nextCostArea };
     return createCharacterOverflowDecisionResult({
       state,
       events,
@@ -844,6 +771,6 @@ const applyPlayCardPaymentResponse = (
     handIndex,
     handCard,
     supported,
-    costArea: nextCostArea,
+    costArea: payment.nextCostArea,
   });
 };

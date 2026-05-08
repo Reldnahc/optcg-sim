@@ -1,0 +1,81 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-031G
+epic_id: KICK-001
+title: Extract card-play payment helpers
+type: refactor
+area: engine
+primary_concern: rules
+priority: medium
+status: approved
+summary: >
+  Extract cohesive card-play payment decision and payment response helpers from
+  play-card.ts into a focused module without changing legal actions, decisions,
+  errors, events, state hashes, runtime behavior, or public exports.
+story_boundary: >
+  Own only behavior-preserving production helper extraction for card-play
+  payment logic currently inside play-card.ts. Do not extract placement, Stage
+  replacement, Character overflow, Event placement, or On Play runtime helpers
+  in this story.
+allowed_touch_points:
+  - packages/engine-core/src/play-card.ts
+  - packages/engine-core/src/play-card-payment.ts
+  - packages/engine-core/src/play-card.test.ts
+  - packages/engine-core/src/play-card-payment.test.ts
+  - packages/engine-core/src/play-card-stage-replacement.test.ts
+  - packages/engine-core/src/play-card-character-overflow.test.ts
+  - packages/engine-core/src/play-card-event.test.ts
+  - packages/engine-core/src/play-card-on-play-runtime.test.ts
+  - stories/generated/ENG-031G-extract-card-play-helper-modules.yaml
+  - stories/approved/ENG-031G-extract-card-play-helper-modules.yaml
+  - agent-packets/ENG-031G.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 06-visibility-security.s007
+  - 11-testing-quality.s008
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s016
+scope:
+  - move existing payCost decision creation and payment response validation helpers into play-card-payment.ts only when behavior remains equivalent
+  - keep payment helper inputs and outputs explicit enough that play-card.ts still owns action routing and card placement orchestration
+  - preserve exported API from play-card.ts for existing consumers by re-exporting or keeping wrapper exports as needed
+  - preserve legal-action projection, decision IDs, decision response validation, errors, event ordering, event visibility, zone reindexing, state hashes, runtime integration, and hidden-information behavior
+  - update internal imports only as required by extraction
+non_scope:
+  - changing card play behavior
+  - changing payment semantics
+  - extracting placement helpers
+  - changing Stage replacement behavior
+  - extracting Stage replacement helpers
+  - changing Character overflow behavior
+  - extracting Character overflow helpers
+  - changing Event play behavior
+  - extracting Event placement helpers
+  - changing On Play runtime behavior
+  - extracting On Play runtime helpers
+  - changing public contracts, decision response shapes, event schema, visibility, or state hash behavior
+dependencies:
+  - ENG-031F
+acceptance_criteria:
+  - play-card-payment.ts owns extracted payment decision and payment response helper logic from play-card.ts
+  - play-card.ts remains behavior-compatible for all existing imports and tests
+  - no legal-action, decision, event, error, state hash, runtime, or hidden-information output changes
+  - focused tests, coverage, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/play-card.test.ts packages/engine-core/src/play-card-legality.test.ts packages/engine-core/src/play-card-payment.test.ts packages/engine-core/src/play-card-stage-replacement.test.ts packages/engine-core/src/play-card-character-overflow.test.ts packages/engine-core/src/play-card-event.test.ts packages/engine-core/src/play-card-on-play-runtime.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-031G packet while implementing this story
+  - target the ENG-031 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving payment-helper extraction story; if any behavior delta or non-payment extraction appears necessary, stop and split or record an ambiguity
+ambiguity_policy: fail_and_escalate

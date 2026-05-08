@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-031G.md",
+      "storyId": "ENG-031G",
+      "storyPath": "stories/approved/ENG-031G-extract-card-play-helper-modules.yaml",
+      "storySha256": "3ee3b89937218fa77c8cdeb332fa837973acd947a4d0fda313d085df617f2bb5"
+    }
+  ],
   "version": 1
 }
