@@ -10,11 +10,25 @@ const repoRoot = path.resolve(
   "..",
 );
 
+const canonicalModuleFiles = [
+  "types/primitives.ts",
+  "types/card-metadata.ts",
+  "types/events.ts",
+  "types/view.ts",
+  "types/game-state.ts",
+  "types/effects.ts",
+  "types/decisions.ts",
+  "types/runtime.ts",
+];
+
 async function readCanonicalTypes() {
-  return readFile(
-    path.join(repoRoot, "contracts", "canonical-types.ts"),
-    "utf8",
+  const moduleSources = await Promise.all(
+    canonicalModuleFiles.map((fileName) =>
+      readFile(path.join(repoRoot, "contracts", fileName), "utf8"),
+    ),
   );
+
+  return moduleSources.join("\n");
 }
 
 test("GameState keeps the once-per-turn ledger in canonical state", async () => {
@@ -78,6 +92,17 @@ test("CardInstance relies on the GameState once-per-turn ledger", async () => {
 
   assert.ok(cardInstanceBlockMatch, "missing CardInstance interface");
   assert.doesNotMatch(cardInstanceBlockMatch[0], /\boncePerTurnUsed\??:/);
+});
+
+test("BattleState keeps the canonical combat damage fields unchanged", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+  const battleStateBlockMatch = canonicalTypes.match(
+    /export interface BattleState\s*{[\s\S]*?}/m,
+  );
+
+  assert.ok(battleStateBlockMatch, "missing BattleState interface");
+  assert.match(battleStateBlockMatch[0], /\bdamageCount:\s*number;/);
+  assert.doesNotMatch(battleStateBlockMatch[0], /\bcounterPower\??:/);
 });
 
 test("PoneglyphCardDetail preserves the raw API payload shape", async () => {

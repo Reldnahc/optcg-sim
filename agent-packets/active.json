@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-037.md",
+      "storyId": "ENG-037",
+      "storyPath": "stories/approved/ENG-037-canonical-contract-type-boundaries.yaml",
+      "storySha256": "2871c5bf2c03f7c1b0cbe9737316e4e4afbffdf6488ef0495b300ccdc8329006"
+    }
+  ],
   "version": 1
 }
