@@ -22,6 +22,10 @@ import {
   applyPlayCardDecisionResponse,
   getPlayCardLegalActions,
 } from "./play-card.js";
+import {
+  applySelectTargetsDecisionResponse,
+  getSelectTargetsLegalActions,
+} from "./target-selection-actions.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
 import { applyLifeTriggerDecisionResponse } from "./life-trigger-actions.js";
 import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
@@ -75,6 +79,7 @@ export const getLegalActions = (
         response: { type: "lifeTrigger", choice: "addToHand" },
       });
     }
+    actions.push(...getSelectTargetsLegalActions(state, playerId));
     actions.push(...getPlayCardLegalActions(state, playerId));
     actions.push(...getBattleDecisionLegalActions(state, playerId));
     return actions;
@@ -120,6 +125,13 @@ const applyRespondToDecision = (
   );
   if (triggerOrderResult !== null) {
     return triggerOrderResult;
+  }
+  const targetSelectionResult = applySelectTargetsDecisionResponse(
+    state,
+    action,
+  );
+  if (targetSelectionResult !== null) {
+    return targetSelectionResult;
   }
   return illegalAction(state, "Unsupported decision type.");
 };

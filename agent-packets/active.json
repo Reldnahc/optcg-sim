@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-029E.md",
+      "storyId": "ENG-029E",
+      "storyPath": "stories/approved/ENG-029E-verify-target-candidate-visibility.yaml",
+      "storySha256": "041f17951212bbe52d63fa25337f58b05282fcb7d4daeb14d84b1b94649258c3"
+    }
+  ],
   "version": 1
 }

@@ -9,6 +9,7 @@ import type {
   InstanceId,
   QueueEntryId,
   PublicLegalAction,
+  TimingWindowId,
 } from "@optcg/types";
 
 import {
@@ -44,6 +45,8 @@ const withEvent = (
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
 const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
+const toTimingWindowId = (value: string): TimingWindowId =>
+  value as TimingWindowId;
 
 test("filters hidden information and keeps public zones", () => {
   const state = createActiveState();
@@ -336,6 +339,145 @@ test("chooseTriggerOrder projection stays metadata-only and hides private ids fr
     ),
     [],
   );
+});
+
+test("selectTargets projection stays metadata-only and does not expose candidate arrays or legal responses", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  const target = must(p2State.hand.shift(), "opponent target");
+  target.zone = {
+    zone: "characterArea",
+    playerId: p2,
+    slot: "character",
+    index: 0,
+  };
+  p2State.characters.push(target);
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+  });
+  state.effectQueue = [
+    {
+      id: toQueueEntryId("queue-entry-select-targets"),
+      state: "pending",
+      timingWindowId: toTimingWindowId("timing-window-select-targets"),
+      generation: 1,
+      controllerId: p1,
+      source: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        playerId: p1,
+        zone: p1State.leader.zone,
+      },
+      sourceSnapshot: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: p1State.leader.zone,
+        category: "leader",
+        colors: ["red"],
+        keywords: [],
+      },
+      effectBlockId: "effect-select-targets" as EffectId,
+      orderingGroup: "turnPlayer",
+      createdAtEventSeq: 1,
+      queuedAtStateSeq: toStateSeq(state.seq),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: { type: "ruleProcess", name: "selectTargets:view-test" },
+    },
+  ];
+  const hiddenOpponentHandCard = must(p2State.hand[0], "hidden opponent hand");
+  const hiddenSelfDeckCard = must(p1State.deck[0], "hidden self deck");
+  state.pendingDecision = {
+    id: toDecisionId("decision:select-targets"),
+    type: "selectTargets",
+    playerId: p1,
+    prompt: "Select targets.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-entry-select-targets"),
+      effectId: "effect-select-targets" as EffectId,
+    },
+    visibility: { type: "public" },
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      player: "opponent",
+      zone: "characterArea",
+      min: 1,
+      max: 1,
+      allowFewerIfUnavailable: false,
+      visibility: "public",
+    },
+    candidates: [
+      {
+        card: {
+          instanceId: target.instanceId,
+          cardId: target.cardId,
+          playerId: p2,
+          zone: target.zone,
+        },
+        visibility: { type: "public" },
+      },
+    ],
+  };
+
+  const forDecisionPlayer = filterStateForPlayer(state, p1);
+  const forOpponent = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(forDecisionPlayer.pendingDecision, {
+    id: toDecisionId("decision:select-targets"),
+    type: "selectTargets",
+    playerId: p1,
+    prompt: "Select targets.",
+    causedBy: { type: "ruleProcess", name: "privateCausality" },
+  });
+  assert.deepEqual(
+    forDecisionPlayer.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [
+      {
+        type: "respondToDecision",
+        decisionId: toDecisionId("decision:select-targets"),
+      },
+    ],
+  );
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("response"), false);
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("candidates"), false);
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("request"), false);
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("queueEntryId"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("effect-select-targets"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes(
+      String(hiddenOpponentHandCard.cardId),
+    ),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes(
+      String(hiddenSelfDeckCard.cardId),
+    ),
+    false,
+  );
+
+  assert.equal(forOpponent.pendingDecision, undefined);
+  assert.deepEqual(
+    forOpponent.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+  assert.equal(JSON.stringify(forOpponent).includes("candidates"), false);
+  assert.equal(JSON.stringify(forOpponent).includes("request"), false);
 });
 
 test("projects legal actions without leaking hidden card identities", () => {

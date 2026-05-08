@@ -1,0 +1,84 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-029B
+epic_id: KICK-001
+title: Create selectTargets decision
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Pause supported target-requiring effect work with a deterministic selectTargets
+  pending decision for the chooser.
+story_boundary: >
+  Own only selectTargets decision creation for supported target requests after
+  candidate resolution. Do not expose selectTargets legal actions, validate
+  response payloads, or resolve target effects.
+allowed_touch_points:
+  - packages/engine-core/src/target-selection.ts
+  - packages/engine-core/src/target-selection.test.ts
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/filter-state-for-player.ts
+  - packages/engine-core/src/filter-state-for-player.test.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - stories/approved/ENG-029B-create-select-targets-decision.yaml
+  - agent-packets/ENG-029B.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s013
+  - 03-game-state-events-decisions.s009
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s008
+  - 06-visibility-security.s004
+  - 06-visibility-security.s007
+  - 11-testing-quality.s008
+  - 18-acceptance-tests.s004
+scope:
+  - detect supported effect work that requires a choose target request already accepted by the ENG-029A candidate resolver
+  - create a deterministic selectTargets PendingDecision for the resolved chooser with request, internal candidates, prompt, and causedBy metadata
+  - keep getLegalActions from exposing selectTargets respondToDecision actions until ENG-029C adds executable response validation
+  - project PlayerView through the existing minimal PublicDecision shape without exposing candidate arrays unless later spec authority adds a public target-candidate DTO
+  - preserve the current fail-closed unsupported-effect behavior when target candidate resolution fails
+  - leave response validation and effect resolution for later child stories
+non_scope:
+  - exposing selectTargets legal actions
+  - validating selected target responses
+  - applying target effects after a response
+  - enumerating every possible target combination as legal actions
+  - search, look, or reveal transient sets
+  - adding public target candidate fields to PlayerView or PublicDecision
+  - privateToChooser candidate exposure beyond internal authoritative PendingDecision state
+  - replacement effects
+  - optional activation
+  - custom handlers
+  - server/client/UI
+dependencies:
+  - ENG-029A
+acceptance_criteria:
+  - supported target-requiring effect work pauses with exactly one selectTargets decision for the chooser
+  - decision id, causedBy, candidate order, and state hash are deterministic for identical inputs
+  - getLegalActions does not expose selectTargets respondToDecision actions before ENG-029C adds executable response validation
+  - recipient PlayerView receives only the existing minimal PublicDecision metadata for the selectTargets decision
+  - non-chooser PlayerView receives no pending decision and no legal action that reveals target candidates
+  - unsupported or ambiguous target requests still fail closed without mutation
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/target-selection.test.ts packages/engine-core/src/effect-runtime.test.ts packages/engine-core/src/filter-state-for-player.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-029B packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-029 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if decision creation requires exposing executable target legal actions, response validation, resolving target effects, optional activation, replacement effects, or custom handlers, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate
