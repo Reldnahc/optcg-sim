@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Prove target candidate decisions and views do not leak hidden or private
   candidate information.

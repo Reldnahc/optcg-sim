@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Expose executable selectTargets respondToDecision actions and validate their
   payloads against the active decision and current target legality.
