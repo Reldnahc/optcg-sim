@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing cross-mechanic battle pipeline regression tests out of
   battle-pipeline-regression.test.ts into focused regression files without

@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing declare-attack legal-action and rejection tests out of
   battle-declare-attack.test.ts into a focused legality test file without

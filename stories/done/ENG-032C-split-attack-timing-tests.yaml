@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing When Attacking and On Your Opponent's Attack tests out of
   battle-declare-attack.test.ts into a focused attack-timing test file without

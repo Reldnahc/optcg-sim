@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing Rush and Rush Character legality tests out of
   battle-declare-attack.test.ts into a focused Rush test file without changing

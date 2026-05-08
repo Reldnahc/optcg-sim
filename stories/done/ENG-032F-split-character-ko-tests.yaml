@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing Character K.O. and On K.O. battle tests out of
   battle-damage-banish.test.ts into a focused Character K.O. test file without

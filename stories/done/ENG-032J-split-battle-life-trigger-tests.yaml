@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing battle-damage Life Trigger decision and response tests out of
   battle-damage-banish.test.ts into a focused battle Life Trigger test file

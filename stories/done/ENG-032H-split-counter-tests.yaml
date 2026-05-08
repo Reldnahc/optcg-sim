@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing Counter pass, Character Counter, unsupported Counter Event, and
   fail-closed tests out of battle-counter.test.ts into focused Counter test

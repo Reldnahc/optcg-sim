@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing Blocker open, decline, selection, deterministic, invalid, and
   unsupported-path tests out of battle-blocker.test.ts into focused Blocker test
