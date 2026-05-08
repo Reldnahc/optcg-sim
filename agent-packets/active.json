@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-030E.md",
-      "storyId": "ENG-030E",
-      "storyPath": "stories/approved/ENG-030E-extract-effect-primitive-helpers.yaml",
-      "storySha256": "b00be4907ed817d031ba1803aadc93ecbe273e954df74ca957eb7b34a4d23847"
+      "packetPath": "agent-packets/ENG-030F.md",
+      "storyId": "ENG-030F",
+      "storyPath": "stories/approved/ENG-030F-extract-trigger-queueing-helpers.yaml",
+      "storySha256": "ff91b1d2a0ecf11228c3c11a89d3d5fcb8d2a7e3e32c64c291336530b4c695bb"
     }
   ],
   "version": 1
