@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-025F.md",
-      "storyId": "INF-025F",
-      "storyPath": "stories/approved/INF-025F-extract-packet-rendering-helpers.yaml",
-      "storySha256": "f9fe9c43faa12d59a55250f29d1b4cb4c01ec163f2a465130bfb678e1857e65a"
+      "packetPath": "agent-packets/INF-025G.md",
+      "storyId": "INF-025G",
+      "storyPath": "stories/approved/INF-025G-extract-packet-lifecycle-helpers.yaml",
+      "storySha256": "51074a4fc79c34ac23dc391a5549543cafa978f03193008445e53cc32273f00c"
     }
   ],
   "version": 1
