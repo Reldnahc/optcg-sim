@@ -91,6 +91,15 @@ const toPlayerEventCausedBy = (
   return causedBy;
 };
 
+const toPublicDecisionCausedBy = (
+  causedBy: PublicDecision["causedBy"],
+): PublicDecision["causedBy"] => {
+  if (causedBy.type === "effect" || "queueEntryId" in causedBy) {
+    return { type: "ruleProcess", name: "privateCausality" };
+  }
+  return causedBy;
+};
+
 const playerEventPayloadForbiddenKeys = new Set([
   "queueEntryId",
   "effectBlockId",
@@ -157,7 +166,7 @@ const toPublicDecision = (
     type: pending.type,
     playerId: pending.playerId,
     prompt: pending.prompt,
-    causedBy: pending.causedBy,
+    causedBy: toPublicDecisionCausedBy(pending.causedBy),
     ...(pending.timeoutMs === undefined
       ? {}
       : { timeoutMs: pending.timeoutMs }),

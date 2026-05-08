@@ -377,6 +377,58 @@ test("rejects selectTargets response when the queued effect entry is no longer p
   );
 });
 
+test.each([
+  {
+    name: "private candidate visibility",
+    request: publicCharacterTargetRequest({ visibility: "privateToChooser" }),
+  },
+  {
+    name: "ambiguous candidate visibility",
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      player: "opponent",
+      zone: "characterArea",
+      min: 1,
+      max: 1,
+      allowFewerIfUnavailable: false,
+    } satisfies TargetRequest,
+  },
+])("fails closed for $name in selectTargets legal actions", ({ request }) => {
+  const { state, targets } = setupSelectTargetsDecision(request);
+  const decision = must(state.pendingDecision, "pending decision");
+  const before = structuredClone(state);
+  const beforeHash = hashCanonicalStateValue(state);
+
+  assert.deepEqual(
+    getLegalActions(state, p1).filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+  assert.deepEqual(
+    getLegalActions(state, p2).filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+
+  const result = applyAction(
+    state,
+    respondWithTargets(decision.id, [must(targets[0], "target 0")]),
+  );
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "Selected targets must be current legal targets.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.state, before);
+  assert.equal(result.stateHash, beforeHash);
+});
+
 test("fails closed for unsupported non-effect selectTargets causality", () => {
   const { state, targets } = setupSelectTargetsDecision();
   const decision = must(state.pendingDecision, "pending decision");
