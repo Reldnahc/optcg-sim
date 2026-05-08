@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-036C.md",
-      "storyId": "ENG-036C",
-      "storyPath": "stories/approved/ENG-036C-extract-trigger-category-queueing-helpers.yaml",
-      "storySha256": "c36ac1c8a32afec10f878842a606f3f7ff1a53f754bbadb96bf39ed9400def27"
+      "packetPath": "agent-packets/ENG-036D.md",
+      "storyId": "ENG-036D",
+      "storyPath": "stories/approved/ENG-036D-split-queue-processing-behavior-tests.yaml",
+      "storySha256": "f9eb4c3f68e19ae416000eaddc8d79be25ef53d73fdd108b0535a7deb460d370"
     }
   ],
   "version": 1
