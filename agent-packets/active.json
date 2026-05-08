@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-031A.md",
-      "storyId": "ENG-031A",
-      "storyPath": "stories/approved/ENG-031A-split-play-card-legality-tests.yaml",
-      "storySha256": "d6f9481e0b0277c9cedfbbbf3f410b6e29689d98cfd6251c5547d8a991886dfa"
+      "packetPath": "agent-packets/ENG-031B.md",
+      "storyId": "ENG-031B",
+      "storyPath": "stories/approved/ENG-031B-split-play-card-payment-tests.yaml",
+      "storySha256": "261a63b4dac6835c7d73b46f321a3444e2d2cf886fcc517e7c1cd0b77a98ba70"
     }
   ],
   "version": 1
