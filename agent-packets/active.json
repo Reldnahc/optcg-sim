@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-036A.md",
+      "storyId": "ENG-036A",
+      "storyPath": "stories/approved/ENG-036A-split-trigger-queueing-behavior-tests.yaml",
+      "storySha256": "2f2026d195291e7dc824fac47e77516de1a077521f0f35f1791ddbf333d71369"
+    }
+  ],
   "version": 1
 }
