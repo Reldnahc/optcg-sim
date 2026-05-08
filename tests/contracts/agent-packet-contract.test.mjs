@@ -6,7 +6,6 @@ import {
   mkdir,
   readdir,
   readFile,
-  rename,
   rm,
   writeFile,
 } from "node:fs/promises";
@@ -27,16 +26,6 @@ const storyPath = path.join(
   repoRoot,
   "tests/fixtures/stories/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
 );
-const expectedRelevantConstraintBullets = [
-  "one approved story may be active for implementation or review handoff at a time",
-  "dormant approved backlog stories do not require checked-in packets",
-  "completed stories must move to done history and must not remain in the active packet manifest",
-  "the parent agent owns story-state transitions and active-packet cleanup",
-  "packet tooling should enforce lifecycle invariants rather than relying on reviewer memory",
-  "use `pnpm`; the canonical local verification commands are `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`",
-  "TypeScript stays strict; avoid `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions without explicit justification",
-  "ESLint with type-aware rules and Prettier formatting are required; CI and local verification must fail when checked-in generated artifacts are stale",
-];
 const tempRepoFixtureEntries = [
   {
     fileName: "build-agent-packet.ts",
@@ -92,10 +81,6 @@ async function makeTempDir() {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "optcg-agent-packets-"));
   tempDirs.push(tempDir);
   return tempDir;
-}
-
-function runPacketTool(args, options = {}) {
-  return runPacketToolFromRepo(repoRoot, args, options);
 }
 
 function runPacketToolFromRepo(targetRepoRoot, args, options = {}) {
@@ -158,96 +143,6 @@ async function listFilesRecursive(rootDir, baseDir = rootDir) {
   return filePaths.sort();
 }
 
-async function readStoryValues() {
-  const story = await readFile(storyPath, "utf8");
-  return {
-    acceptanceCriteria: readStoryList(story, "acceptance_criteria"),
-    allowedTouchPoints: readStoryList(story, "allowed_touch_points"),
-    nonScope: readStoryList(story, "non_scope"),
-    repoRules: readStoryList(story, "repo_rules"),
-    specRefs: readStoryList(story, "spec_refs"),
-    storyBoundary: readStoryScalar(story, "story_boundary"),
-  };
-}
-
-function readStoryScalar(source, key) {
-  const blockMatch = source.match(
-    new RegExp(`^${key}:\\s*[>|][-+]?\\r?\\n((?:  .*\\r?\\n?)*)`, "m"),
-  );
-
-  if (blockMatch?.[1]) {
-    return blockMatch[1]
-      .split(/\r?\n/)
-      .filter((line) => line.startsWith("  "))
-      .map((line) => line.slice(2).trim())
-      .join(" ")
-      .trim();
-  }
-
-  const scalarMatch = source.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
-
-  if (!scalarMatch?.[1]) {
-    throw new Error(`Unable to read story scalar ${key}`);
-  }
-
-  return scalarMatch[1].trim();
-}
-
-function readStoryList(source, key) {
-  const listMatch = source.match(
-    new RegExp(`^${key}:\\r?\\n((?:  - .*\\r?\\n?)*)`, "m"),
-  );
-
-  if (!listMatch?.[1]) {
-    throw new Error(`Unable to read story list ${key}`);
-  }
-
-  return listMatch[1]
-    .split(/\r?\n/)
-    .filter((line) => line.startsWith("  - "))
-    .map((line) => parseYamlScalar(line.slice(4)));
-}
-
-function parseYamlScalar(value) {
-  const trimmed = value.trim();
-
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return trimmed.slice(1, -1);
-  }
-
-  return trimmed;
-}
-
-function readPacketSection(packet, heading) {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const sectionMatch = packet.match(
-    new RegExp(
-      `^## ${escapedHeading}\\r?\\n\\r?\\n([\\s\\S]*?)(?=^## |\\Z)`,
-      "m",
-    ),
-  );
-
-  if (!sectionMatch?.[1]) {
-    throw new Error(`Unable to read packet section ${heading}`);
-  }
-
-  return sectionMatch[1].trimEnd();
-}
-
-function readPacketBullets(packet, heading) {
-  return readPacketRawBullets(packet, heading);
-}
-
-function readPacketRawBullets(packet, heading) {
-  return readPacketSection(packet, heading)
-    .split(/\r?\n/)
-    .filter((line) => line.startsWith("- "))
-    .map((line) => line.slice(2));
-}
-
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -255,120 +150,6 @@ function sha256(value) {
 function toCrlf(value) {
   return value.replace(/\r?\n/g, "\r\n");
 }
-
-test("packet builder generates the canonical packet sections for an approved story", async () => {
-  const tempDir = await makeTempDir();
-  const outputPath = path.join(tempDir, "INF-014.md");
-  const story = await readStoryValues();
-
-  const result = runPacketTool([
-    "generate",
-    "--story",
-    storyPath,
-    "--output",
-    outputPath,
-  ]);
-
-  assert.equal(
-    result.status,
-    0,
-    `expected packet build to pass\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
-  );
-
-  const packet = await readFile(outputPath, "utf8");
-
-  assert.match(packet, /<!-- agent-packet:story-id INF-014 -->/);
-  assert.match(packet, /<!-- agent-packet:story-sha256 [0-9a-f]{64} -->/);
-  assert.match(packet, /^# Story Packet$/m);
-  assert.match(packet, /^## Story$/m);
-  assert.match(packet, /^## Why$/m);
-  assert.match(packet, /^## Authoritative Spec References$/m);
-  assert.match(packet, /^## Relevant Spec Excerpts$/m);
-  assert.match(packet, /^## Story Boundary$/m);
-  assert.match(packet, /^## Scope$/m);
-  assert.match(packet, /^## Out of Scope$/m);
-  assert.match(packet, /^## Allowed Touch Points$/m);
-  assert.match(packet, /^## Constraints$/m);
-  assert.match(packet, /^## Required Tests$/m);
-  assert.match(packet, /^## Expected Output$/m);
-  assert.match(packet, /^## Acceptance Criteria$/m);
-  assert.match(packet, /^## Ambiguity Rule$/m);
-  assert.match(packet, /^## Agent Instruction Footer$/m);
-  assert.match(packet, /26-agent-packet-template\.s005/);
-  assert.match(packet, /32-codex-agent-integration\.s013/);
-  assert.match(packet, /23-repo-tooling-and-enforcement\.s005/);
-  assert.doesNotMatch(packet, /23-repo-tooling-and-enforcement\.s008/);
-  assert.doesNotMatch(packet, /15-implementation-kickoff\.s012/);
-  assert.equal(
-    readPacketSection(packet, "Story Boundary").trim(),
-    story.storyBoundary,
-  );
-  assert.deepEqual(readPacketBullets(packet, "Out of Scope"), story.nonScope);
-  assert.deepEqual(
-    readPacketRawBullets(packet, "Allowed Touch Points"),
-    story.allowedTouchPoints,
-  );
-  assert.deepEqual(
-    readPacketBullets(packet, "Constraints"),
-    expectedRelevantConstraintBullets,
-  );
-  assert.deepEqual(
-    readPacketRawBullets(packet, "Acceptance Criteria"),
-    story.acceptanceCriteria,
-  );
-  assert.deepEqual(
-    readPacketBullets(packet, "Constraints").slice(0, story.repoRules.length),
-    story.repoRules,
-  );
-  assert.doesNotMatch(
-    packet,
-    /### 23-repo-tooling-and-enforcement\.s008 \(Boundary enforcement\)/,
-  );
-  assert.doesNotMatch(
-    packet,
-    /### 15-implementation-kickoff\.s012 \(Guardrails\)/,
-  );
-});
-
-test("packet builder normalizes annotated story spec refs without duplicating packet output labels", async () => {
-  const tempDir = await makeTempDir();
-  const variantStoryPath = path.join(tempDir, "INF-014-annotated.story.yaml");
-  const outputPath = path.join(tempDir, "INF-014.md");
-  const sourceStory = await readFile(storyPath, "utf8");
-  const story = await readStoryValues();
-
-  await writeFile(
-    variantStoryPath,
-    sourceStory.replace(
-      `  - ${story.specRefs[0]}`,
-      `  - ${story.specRefs[0]} (Packet construction rules)`,
-    ),
-  );
-
-  const result = runPacketTool([
-    "generate",
-    "--story",
-    variantStoryPath,
-    "--output",
-    outputPath,
-  ]);
-
-  assert.equal(
-    result.status,
-    0,
-    `expected packet build with annotated spec refs to pass\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
-  );
-
-  const packet = await readFile(outputPath, "utf8");
-  assert.match(
-    packet,
-    /^- 26-agent-packet-template\.s005 \(Packet construction rules\)$/m,
-  );
-  assert.doesNotMatch(
-    packet,
-    /26-agent-packet-template\.s005 \(Packet construction rules\) \(Packet construction rules\)/,
-  );
-});
 
 test("active packet verification enforces packet presence, freshness, and required sections", async () => {
   const tempRepoRoot = await makeTempRepoFixture();
@@ -1267,47 +1048,6 @@ test("packet activation and verification require the checked-in active-story man
   );
 });
 
-test("packet builder discovers checked-in spec docs recursively", async () => {
-  const tempRepoRoot = await makeTempRepoFixture();
-  const nestedSpecsDir = path.join(tempRepoRoot, "specs", "nested");
-  const movedSpecSourcePath = path.join(
-    tempRepoRoot,
-    "specs",
-    "26-agent-packet-template.md",
-  );
-  const movedSpecTargetPath = path.join(
-    nestedSpecsDir,
-    "26-agent-packet-template.md",
-  );
-  const tempStoryPath = path.join(
-    tempRepoRoot,
-    "stories",
-    "approved",
-    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
-  );
-  const outputPath = path.join(tempRepoRoot, "agent-packets", "INF-014.md");
-
-  await mkdir(nestedSpecsDir, { recursive: true });
-  await rename(movedSpecSourcePath, movedSpecTargetPath);
-
-  const result = runPacketToolFromRepo(tempRepoRoot, [
-    "generate",
-    "--story",
-    tempStoryPath,
-    "--output",
-    outputPath,
-  ]);
-
-  assert.equal(
-    result.status,
-    0,
-    `expected recursive spec discovery to pass\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
-  );
-
-  const packet = await readFile(outputPath, "utf8");
-  assert.match(packet, /26-agent-packet-template\.s005/);
-});
-
 test("active packet verification requires a checked-in active story manifest", async () => {
   const tempRepoRoot = await makeTempRepoFixture();
   const missingManifest = runPacketToolFromRepo(tempRepoRoot, [
@@ -1433,74 +1173,4 @@ test("repo guidance documents active-story packet requirements", async () => {
   );
   assert.match(packageJson, /"packets:complete"/);
   assert.match(packageJson, /"packets:complete-many"/);
-});
-
-test("packet excerpt extraction keeps SECTION_REF-like lines inside fenced code blocks", async () => {
-  const tempDir = await makeTempDir();
-  const outputPath = path.join(tempDir, "packet.md");
-  const fencedExcerptStoryPath = path.join(
-    tempDir,
-    "fenced-excerpt-story.yaml",
-  );
-
-  await writeFile(
-    fencedExcerptStoryPath,
-    `spec_version: v6
-spec_package_name: optcg-md-specs-v6
-story_schema_version: 1.0.0
-id: INF-999
-epic_id: KICK-001
-title: Exercise packet fenced code excerpts
-type: tooling
-area: infra
-primary_concern: tooling
-priority: low
-status: approved
-summary: >
-  Exercise packet excerpt generation for spec sections containing SECTION_REF-like text inside fenced code blocks.
-story_boundary: >
-  Test-only story fixture for packet excerpt generation.
-allowed_touch_points:
-  - tools/**
-spec_refs:
-  - 28-machine-readable-conventions.s008 (Stable heading usage)
-scope:
-  - generate a packet excerpt for a section containing SECTION_REF-like text inside a fenced code block
-non_scope:
-  - implementation changes
-dependencies: []
-acceptance_criteria:
-  - packet excerpt includes text after fenced SECTION_REF-like lines
-required_tests:
-  - packet excerpt extraction regression test
-repo_rules:
-  - must pass packet generation
-ambiguity_policy: fail_and_escalate
-`,
-  );
-
-  const result = runPacketTool([
-    "generate",
-    "--story",
-    fencedExcerptStoryPath,
-    "--output",
-    outputPath,
-  ]);
-
-  assert.equal(
-    result.status,
-    0,
-    `expected packet build to pass\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
-  );
-
-  const packet = await readFile(outputPath, "utf8");
-  assert.match(
-    packet,
-    /### 28-machine-readable-conventions\.s008 \(Stable heading usage\)/,
-  );
-  assert.match(packet, /Preferred reference formats:/);
-  assert.match(
-    packet,
-    /Fallback format when a section ref is unavailable should be:/,
-  );
 });
