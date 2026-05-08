@@ -7,6 +7,17 @@ const nodeGlobals = {
   ...globals.node,
 };
 
+const sourceFileSizeGuardFiles = [
+  "packages/**/*.{ts,mts,cts,js,mjs,cjs}",
+  "tools/**/*.{ts,mts,cts,js,mjs,cjs}",
+  "tests/**/*.{ts,mts,cts,js,mjs,cjs}",
+  "contracts/**/*.ts",
+];
+
+export const sourceFileSizeGuardTemporaryAllowlist = [
+  // Add exact repo-relative file paths only. Each entry needs a future split/refactor story.
+];
+
 const typedConfigs = [
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.strictTypeChecked,
@@ -64,6 +75,26 @@ export default [
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "error",
       "@typescript-eslint/switch-exhaustiveness-check": "error",
+    },
+  },
+  {
+    name: "source-file-size-guard",
+    files: sourceFileSizeGuardFiles,
+    ignores: [
+      "**/fixtures/**",
+      "**/generated/**",
+      "**/*.generated.{ts,mts,cts,js,mjs,cjs}",
+      ...sourceFileSizeGuardTemporaryAllowlist,
+    ],
+    rules: {
+      "max-lines": [
+        "error",
+        {
+          max: 1000,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
     },
   },
   {

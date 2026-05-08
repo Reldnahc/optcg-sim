@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-026.md",
+      "storyId": "INF-026",
+      "storyPath": "stories/approved/INF-026-source-file-size-guardrails.yaml",
+      "storySha256": "65e29398c81b58fce4ec7b03c14f24a31caf55bbf0a9b4747c90baf2e8179dc3"
+    }
+  ],
   "version": 1
 }
