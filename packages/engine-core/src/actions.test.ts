@@ -1,25 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type {
-  CardId,
-  DecisionId,
-  EffectId,
-  EffectQueueEntry,
-  InstanceId,
-  QueueEntryId,
-  StateSeq,
-  TimingWindowId,
-} from "@optcg/types";
-
 import { createInitialState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";
 import { applyAction, getLegalActions } from "./actions.js";
-import {
-  advanceDonPhase,
-  advanceDrawPhase,
-  advanceRefreshPhase,
-} from "./phases.js";
 import {
   createActiveState,
   createInput,
@@ -33,156 +17,14 @@ import {
   setupMainPlayState,
 } from "./play-card-test-fixtures.js";
 import { setupAttackState } from "./battle-actions-test-fixtures.js";
-
-const toCardId = (value: string): CardId => value as CardId;
-const toDecisionId = (value: string): DecisionId => value as DecisionId;
-const toEffectId = (value: string): EffectId => value as EffectId;
-const toInstanceId = (value: string): InstanceId => value as InstanceId;
-const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
-const toStateSeq = (value: number): StateSeq => value as StateSeq;
-const toTimingWindowId = (value: string): TimingWindowId =>
-  value as TimingWindowId;
-
-const queuedEffect = (tag: string): EffectQueueEntry => ({
-  id: toQueueEntryId(`queue-${tag}`),
-  state: "pending",
-  timingWindowId: toTimingWindowId("timing-window-1"),
-  generation: 1,
-  controllerId: p1,
-  source: {
-    instanceId: toInstanceId(`hidden-instance-${tag}`),
-    cardId: toCardId(`hidden-card-${tag}`),
-    playerId: p1,
-    zone: { zone: "life", playerId: p1, slot: "life", index: 0 },
-  },
-  sourceSnapshot: {
-    instanceId: toInstanceId(`hidden-instance-${tag}`),
-    cardId: toCardId(`hidden-card-${tag}`),
-    ownerId: p1,
-    controllerId: p1,
-    zone: { zone: "life", playerId: p1, slot: "life", index: 0 },
-    category: "event",
-    colors: ["red"],
-    keywords: [],
-  },
-  effectBlockId: toEffectId(`hidden-effect-${tag}`),
-  orderingGroup: "turnPlayer",
-  createdAtEventSeq: 1,
-  queuedAtStateSeq: toStateSeq(1),
-  sourcePresencePolicy: "resolveFromLastKnownInformation",
-  causedBy: { type: "ruleProcess", name: `hidden-${tag}` },
-});
-
-const makeMainPhaseLegalActionState = () => {
-  const state = createActiveState();
-  state.turn.phase = "main";
-  const turnPlayer = must(state.players[p1], "p1");
-  const attachedDon = must(turnPlayer.donDeck[0], "p1 don");
-  turnPlayer.donDeck = turnPlayer.donDeck.slice(1).map((card, index) => ({
-    ...card,
-    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
-  }));
-  turnPlayer.costArea = [
-    {
-      ...attachedDon,
-      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
-      state: "active",
-    },
-  ];
-  turnPlayer.characters = [
-    {
-      ...must(turnPlayer.hand[0], "p1 hand card"),
-      zone: {
-        zone: "characterArea",
-        playerId: p1,
-        slot: "character",
-        index: 0,
-      },
-      state: "active",
-      attachedDon: [],
-    },
-  ];
-  turnPlayer.hand = turnPlayer.hand.slice(1).map((card, index) => ({
-    ...card,
-    zone: { zone: "hand", playerId: p1, slot: "hand", index },
-  }));
-  return state;
-};
-
-test("getLegalActions returns main-phase actions for turn player and concession-only for non-turn player", () => {
-  const state = createActiveState();
-  state.turn.phase = "main";
-  const turnPlayer = must(state.players[p1], "p1");
-  const attachedDon = must(turnPlayer.donDeck[0], "p1 don");
-  turnPlayer.donDeck = turnPlayer.donDeck.slice(1).map((card, index) => ({
-    ...card,
-    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
-  }));
-  turnPlayer.costArea = [
-    {
-      ...attachedDon,
-      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
-      state: "active",
-    },
-  ];
-  turnPlayer.characters = [
-    {
-      ...must(turnPlayer.hand[0], "p1 hand card"),
-      zone: {
-        zone: "characterArea",
-        playerId: p1,
-        slot: "character",
-        index: 0,
-      },
-      state: "active",
-      attachedDon: [],
-    },
-  ];
-  turnPlayer.hand = turnPlayer.hand.slice(1).map((card, index) => ({
-    ...card,
-    zone: { zone: "hand", playerId: p1, slot: "hand", index },
-  }));
-
-  const forTurnPlayer = getLegalActions(state, p1);
-  assert.equal(
-    forTurnPlayer.some((action) => action.type === "endMainPhase"),
-    true,
-  );
-  assert.equal(
-    forTurnPlayer.some((action) => action.type === "concede"),
-    true,
-  );
-  assert.equal(
-    forTurnPlayer.filter((action) => action.type === "attachDon").length,
-    2,
-  );
-
-  const forNonTurnPlayer = getLegalActions(state, p2);
-  assert.deepEqual(forNonTurnPlayer, [{ type: "concede", playerId: p2 }]);
-});
-
-test("getLegalActions outside main phase still includes concession", () => {
-  const state = createActiveState();
-  state.turn.phase = "draw";
-
-  assert.deepEqual(getLegalActions(state, p1), [
-    { type: "concede", playerId: p1 },
-  ]);
-  assert.deepEqual(getLegalActions(state, p2), [
-    { type: "concede", playerId: p2 },
-  ]);
-});
-
-test("getLegalActions in don phase before start-of-main acceptance exposes concession only", () => {
-  const active = createActiveState();
-  const refresh = advanceRefreshPhase(active);
-  const draw = advanceDrawPhase(refresh.state);
-  const don = advanceDonPhase(draw.state);
-
-  assert.deepEqual(getLegalActions(don.state, p1), [
-    { type: "concede", playerId: p1 },
-  ]);
-});
+import {
+  makeMainPhaseLegalActionState,
+  queuedEffect,
+  toCardId,
+  toDecisionId,
+  toQueueEntryId,
+  toTimingWindowId,
+} from "./action-dispatcher-test-support.js";
 
 test("getLegalActions suppresses ordinary main-phase actions while effect queue work is pending", () => {
   const state = makeMainPhaseLegalActionState();
