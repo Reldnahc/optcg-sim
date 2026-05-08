@@ -1,0 +1,65 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-034B
+epic_id: KICK-001
+title: Split play-card replay smoke tests
+type: refactor
+area: engine
+primary_concern: verification
+priority: medium
+status: approved
+summary: >
+  Move paid Character, Stage replacement, Character overflow, and Event play
+  replay smoke pass/final-hash assertions into a focused play-card replay smoke
+  test file without changing replay fixtures, expected hashes, CLI behavior, or
+  engine behavior.
+story_boundary: >
+  Own only behavior-preserving test organization for the existing ENG-005C and
+  ENG-006 play-card replay smoke fixture reproduction, final-state, and
+  final-hash pinning assertions.
+allowed_touch_points:
+  - packages/engine-core/src/replay-smoke.test.ts
+  - packages/engine-core/src/replay-smoke-play-card.test.ts
+  - packages/engine-core/src/replay-smoke-test-support.ts
+  - stories/generated/ENG-034B-split-play-card-replay-smoke-tests.yaml
+  - stories/approved/ENG-034B-split-play-card-replay-smoke-tests.yaml
+  - agent-packets/ENG-034B.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s020
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+  - 18-acceptance-tests.s004
+  - 23-repo-tooling-and-enforcement.s016
+scope:
+  - move the ENG-005C/ENG-006 play-card fixture reproduction, final-state, and final-hash pinning assertions into replay-smoke-play-card.test.ts
+  - preserve paid Character, Stage replacement, Character overflow, and Event play fixture coverage exactly
+  - preserve expected checkpoint hashes, final hashes, fixture contents, and assertion semantics
+non_scope:
+  - changing replay fixtures
+  - changing checkpoint or final hash values
+  - changing CLI command behavior
+  - changing engine behavior
+  - moving drift or metadata determinism assertions
+  - adding production ReplayLog, rollback, recovery, storage, or replay viewer behavior
+dependencies:
+  - ENG-034A
+acceptance_criteria:
+  - replay-smoke-play-card.test.ts covers the existing ENG-005C/ENG-006 play-card fixture reproduction, final-state, and final-hash assertions
+  - replay-smoke.test.ts no longer contains those moved play-card pass/final-hash assertion groups
+  - no replay fixture files, expected hashes, production files, CLI smoke scripts, or engine behavior change
+  - focused replay smoke tests, coverage, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/replay-smoke.test.ts packages/engine-core/src/replay-smoke-play-card.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-034B packet while implementing this story
+  - target the ENG-034 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving test organization story; if a production change appears necessary, stop and split or record an ambiguity
+ambiguity_policy: fail_and_escalate
