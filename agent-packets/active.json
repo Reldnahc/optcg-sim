@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-031D.md",
-      "storyId": "ENG-031D",
-      "storyPath": "stories/approved/ENG-031D-split-character-overflow-tests.yaml",
-      "storySha256": "d5c1f119b24bd901f820dd16f911eb4ec996a9d8e286ab2f73c9610b143166a0"
+      "packetPath": "agent-packets/ENG-031E.md",
+      "storyId": "ENG-031E",
+      "storyPath": "stories/approved/ENG-031E-split-event-play-tests.yaml",
+      "storySha256": "d1cfd173bc94651ccb55f4071f42af02683eac466ad4796de97800437b3bbbc9"
     }
   ],
   "version": 1
