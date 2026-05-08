@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Add explicit specification authority for licensing this repository's own
   source code under MIT and making the source repository public without treating
