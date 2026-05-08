@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing effect queue processing, ordering, trigger-order response, and
   hash stability tests out of effect-runtime.test.ts into focused test files

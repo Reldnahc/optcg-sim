@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: medium
-status: approved
+status: done
 summary: >
   Extract existing trigger candidate detection and trigger queueing helpers from
   effect-runtime.ts into focused modules without changing trigger queueing,

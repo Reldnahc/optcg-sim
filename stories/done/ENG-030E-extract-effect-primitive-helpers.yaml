@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: medium
-status: approved
+status: done
 summary: >
   Extract existing effect primitive execution helpers from effect-runtime.ts
   into a focused module without changing primitive behavior, errors, events,

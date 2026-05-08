@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing implemented-DSL support and effect metadata lookup tests out of
   effect-runtime.test.ts into a focused test file without changing runtime

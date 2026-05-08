@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing pending-runtime sentinel and direct draw primitive tests out of
   effect-runtime.test.ts into focused test files without changing runtime
