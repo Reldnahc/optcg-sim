@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-025D.md",
-      "storyId": "INF-025D",
-      "storyPath": "stories/approved/INF-025D-split-packet-completion-lifecycle-tests.yaml",
-      "storySha256": "09c8e275b73b37cfed109c4e0585b3cd2f76561f8a0bd4301bcd41ca7e1fa9ee"
+      "packetPath": "agent-packets/INF-025E.md",
+      "storyId": "INF-025E",
+      "storyPath": "stories/approved/INF-025E-extract-packet-parser-helpers.yaml",
+      "storySha256": "38e8b5ce467d00e115f13cf750bd1669598e154b508895d507b00a5ecb03f782"
     }
   ],
   "version": 1
