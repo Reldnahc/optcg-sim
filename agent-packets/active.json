@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-035A.md",
-      "storyId": "ENG-035A",
-      "storyPath": "stories/approved/ENG-035A-split-general-legal-action-tests.yaml",
-      "storySha256": "b21a5f6c5291870b31dc919d928ed4690d79cd9d8420922a9bef5b43dd7048ca"
+      "packetPath": "agent-packets/ENG-035B.md",
+      "storyId": "ENG-035B",
+      "storyPath": "stories/approved/ENG-035B-split-pending-decision-dispatcher-tests.yaml",
+      "storySha256": "a6bd38289764f10b4dc0c9a43e1498944c90b58ee13dda2ca9ac6759e3a18efb"
     }
   ],
   "version": 1
