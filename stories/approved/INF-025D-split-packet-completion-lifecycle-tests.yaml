@@ -1,0 +1,58 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-025D
+epic_id: KICK-001
+title: Split packet completion lifecycle tests
+type: refactor
+area: infra
+primary_concern: verification
+priority: medium
+status: approved
+summary: >
+  Move packet completion and complete-many lifecycle contract tests into a
+  focused file without changing story movement, packet deletion, or manifest
+  cleanup behavior.
+story_boundary: >
+  Own only behavior-preserving test organization for packet completion,
+  inactive completion rejection, and complete-many lifecycle coverage currently
+  in agent-packet-contract.test.mjs.
+allowed_touch_points:
+  - tests/contracts/agent-packet-contract.test.mjs
+  - tests/contracts/agent-packet-completion-contract.test.mjs
+  - tests/contracts/agent-packet-test-support.mjs
+  - stories/generated/INF-025D-split-packet-completion-lifecycle-tests.yaml
+  - stories/approved/INF-025D-split-packet-completion-lifecycle-tests.yaml
+  - agent-packets/INF-025D.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s016
+  - 11-testing-quality.s008
+scope:
+  - move single-story packet completion coverage into agent-packet-completion-contract.test.mjs
+  - move inactive completion rejection coverage into agent-packet-completion-contract.test.mjs
+  - move complete-many lifecycle coverage into agent-packet-completion-contract.test.mjs
+  - remove agent-packet-contract.test.mjs if it has no remaining assertions
+  - preserve every assertion, fixture write, file-list expectation, manifest expectation, and CLI stderr expectation
+non_scope:
+  - changing tools/build-agent-packet.ts
+  - changing completion, complete-many, story lifecycle, manifest cleanup, or CLI output behavior
+dependencies:
+  - INF-025C
+acceptance_criteria:
+  - completion-focused contract tests cover the same lifecycle scenarios
+  - agent-packet-contract.test.mjs has no remaining assertions and is removed or contains only a justified compatibility shim
+  - story movement, packet deletion, unchanged-file hash, and manifest cleanup assertions remain covered
+  - focused completion contract test, contracts, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run tests/contracts/agent-packet-completion-contract.test.mjs tests/contracts/agent-packet-parser-contract.test.mjs tests/contracts/agent-packet-rendering-contract.test.mjs tests/contracts/agent-packet-verification-contract.test.mjs
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run contracts
+  - run corepack pnpm run verify
+repo_rules:
+  - target the INF-025 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving test organization story; if lifecycle behavior changes appear necessary, stop and record an ambiguity
+ambiguity_policy: fail_and_escalate

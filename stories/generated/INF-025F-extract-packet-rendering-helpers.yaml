@@ -1,0 +1,59 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-025F
+epic_id: KICK-001
+title: Extract packet rendering helpers
+type: refactor
+area: infra
+primary_concern: tooling
+priority: medium
+status: generated
+summary: >
+  Extract packet rendering and spec excerpt helpers from build-agent-packet.ts
+  without changing generated packet markdown, metadata, supplemental constraints,
+  or spec excerpt selection.
+story_boundary: >
+  Own only behavior-preserving extraction of packet rendering, supplemental
+  constraint, spec section loading, and markdown excerpt helpers. Generated
+  packet content must remain byte-equivalent for covered fixtures.
+allowed_touch_points:
+  - tools/build-agent-packet.ts
+  - tools/agent-packet-renderer.ts
+  - tools/agent-packet-parser.ts
+  - tests/contracts/agent-packet-rendering-contract.test.mjs
+  - tests/contracts/agent-packet-test-support.mjs
+  - stories/generated/INF-025F-extract-packet-rendering-helpers.yaml
+  - stories/approved/INF-025F-extract-packet-rendering-helpers.yaml
+  - agent-packets/INF-025F.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s016
+  - 11-testing-quality.s008
+scope:
+  - extract packet construction and rendering helpers into a focused rendering module
+  - extract spec document discovery and SECTION_REF excerpt loading helpers used by packet rendering
+  - preserve supplemental constraint selection and output ordering
+  - preserve generated packet content byte-for-byte for covered fixtures
+non_scope:
+  - changing parser behavior beyond import compatibility
+  - changing active manifest, verification, completion, lifecycle, story schema, workflow docs, CLI command names, CLI arguments, or output paths
+dependencies:
+  - INF-025E
+acceptance_criteria:
+  - rendering helper extraction reduces build-agent-packet.ts while preserving packet output
+  - rendering-focused contract tests pass without expectation changes
+  - parser-focused contract tests still pass after import compatibility changes
+  - contracts and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run tests/contracts/agent-packet-rendering-contract.test.mjs tests/contracts/agent-packet-parser-contract.test.mjs
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run contracts
+  - run corepack pnpm run verify
+repo_rules:
+  - target the INF-025 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving extraction story; if generated packet content changes, stop and record an ambiguity
+ambiguity_policy: fail_and_escalate

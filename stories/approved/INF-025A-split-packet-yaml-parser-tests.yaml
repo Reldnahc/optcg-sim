@@ -1,0 +1,56 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-025A
+epic_id: KICK-001
+title: Split packet YAML parser tests
+type: refactor
+area: infra
+primary_concern: verification
+priority: medium
+status: approved
+summary: >
+  Move packet YAML parsing contract tests into a focused file and extract shared
+  contract-test support without changing parser behavior or packet CLI output.
+story_boundary: >
+  Own only behavior-preserving test organization for folded block-scalar and
+  inline empty-array story YAML parsing coverage currently in
+  agent-packet-contract.test.mjs.
+allowed_touch_points:
+  - tests/contracts/agent-packet-contract.test.mjs
+  - tests/contracts/agent-packet-parser-contract.test.mjs
+  - tests/contracts/agent-packet-test-support.mjs
+  - stories/generated/INF-025A-split-packet-yaml-parser-tests.yaml
+  - stories/approved/INF-025A-split-packet-yaml-parser-tests.yaml
+  - agent-packets/INF-025A.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s016
+  - 11-testing-quality.s008
+scope:
+  - move folded block-scalar packet builder coverage into agent-packet-parser-contract.test.mjs
+  - move inline empty-array YAML field coverage into agent-packet-parser-contract.test.mjs
+  - extract shared test fixture helpers only as needed for moved tests
+  - preserve every assertion, fixture path, CLI argument, and expected output
+non_scope:
+  - changing tools/build-agent-packet.ts
+  - changing parser behavior, story schema, packet content, manifest semantics, or CLI output
+  - moving rendering, verification, activation, or completion lifecycle tests
+dependencies: []
+acceptance_criteria:
+  - parser-focused contract tests cover the same folded block-scalar and inline empty-array scenarios
+  - agent-packet-contract.test.mjs no longer contains the moved parser-only scenarios
+  - moved tests use the same packet CLI path and expected outcomes
+  - focused parser contract test, contracts, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run tests/contracts/agent-packet-parser-contract.test.mjs tests/contracts/agent-packet-contract.test.mjs
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run contracts
+  - run corepack pnpm run verify
+repo_rules:
+  - target the INF-025 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving test organization story; if behavior changes appear necessary, stop and record an ambiguity
+ambiguity_policy: fail_and_escalate
