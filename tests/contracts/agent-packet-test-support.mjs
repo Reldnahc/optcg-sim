@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -127,6 +127,28 @@ export async function makeTempRepoFixture() {
   }
 
   return tempRepoRoot;
+}
+
+export async function listFilesRecursive(rootDir, baseDir = rootDir) {
+  const entries = await readdir(rootDir, { withFileTypes: true });
+  const filePaths = [];
+
+  for (const entry of entries) {
+    const entryPath = path.join(rootDir, entry.name);
+
+    if (entry.isDirectory()) {
+      filePaths.push(...(await listFilesRecursive(entryPath, baseDir)));
+      continue;
+    }
+
+    if (entry.isFile()) {
+      filePaths.push(
+        path.relative(baseDir, entryPath).split(path.sep).join("/"),
+      );
+    }
+  }
+
+  return filePaths.sort();
 }
 
 export async function readStoryValues(readFile) {
