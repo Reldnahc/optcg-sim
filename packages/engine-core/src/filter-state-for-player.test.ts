@@ -432,11 +432,7 @@ test("selectTargets projection stays metadata-only and does not expose candidate
     type: "selectTargets",
     playerId: p1,
     prompt: "Select targets.",
-    causedBy: {
-      type: "effect",
-      queueEntryId: toQueueEntryId("queue-entry-select-targets"),
-      effectId: "effect-select-targets" as EffectId,
-    },
+    causedBy: { type: "ruleProcess", name: "privateCausality" },
   });
   assert.deepEqual(
     forDecisionPlayer.legalActions.filter(
@@ -452,6 +448,14 @@ test("selectTargets projection stays metadata-only and does not expose candidate
   assert.equal(JSON.stringify(forDecisionPlayer).includes("response"), false);
   assert.equal(JSON.stringify(forDecisionPlayer).includes("candidates"), false);
   assert.equal(JSON.stringify(forDecisionPlayer).includes("request"), false);
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("queueEntryId"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("effect-select-targets"),
+    false,
+  );
   assert.equal(
     JSON.stringify(forDecisionPlayer).includes(
       String(hiddenOpponentHandCard.cardId),

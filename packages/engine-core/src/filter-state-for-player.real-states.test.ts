@@ -1,7 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition, GameState, PlayerId } from "@optcg/types";
+import type {
+  CardRef,
+  DecisionId,
+  EffectDefinition,
+  EffectId,
+  GameState,
+  PlayerId,
+  QueueEntryId,
+  StateSeq,
+  TargetRequest,
+  TimingWindowId,
+} from "@optcg/types";
 
 import {
   applyAction,
@@ -25,6 +36,13 @@ import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { createInitialState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
+
+const toDecisionId = (value: string): DecisionId => value as DecisionId;
+const toEffectId = (value: string): EffectId => value as EffectId;
+const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
+const toStateSeq = (value: number): StateSeq => value as StateSeq;
+const toTimingWindowId = (value: string): TimingWindowId =>
+  value as TimingWindowId;
 
 const findScalarPaths = (
   value: unknown,
@@ -744,6 +762,122 @@ const createFaceUpLifeState = (): GameState => {
   return state;
 };
 
+const createSelectTargetsDecisionState = (): {
+  state: GameState;
+  target: CardRef;
+  hiddenOpponentHandId: string;
+  hiddenOpponentDeckId: string;
+  hiddenOpponentLifeId: string;
+} => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "selectTargets p1");
+  const p2State = must(state.players[p2], "selectTargets p2");
+  const targetSource = must(p2State.hand.shift(), "target source");
+  const hiddenOpponentHandId = String(
+    must(p2State.hand[0], "hidden opponent hand").cardId,
+  );
+  const hiddenOpponentDeckId = String(
+    must(p2State.deck[0], "hidden opponent deck").cardId,
+  );
+  const hiddenOpponentLifeId = String(
+    must(
+      p2State.life.find((lifeCard) => !lifeCard.faceUp),
+      "hidden opponent life",
+    ).card.cardId,
+  );
+  const targetCardId = targetSource.cardId;
+  const target = {
+    ...targetSource,
+    owner: p2,
+    controller: p2,
+    zone: {
+      zone: "characterArea" as const,
+      playerId: p2,
+      slot: "character" as const,
+      index: 0,
+    },
+    attachedDon: [],
+    state: "active" as const,
+  };
+  p2State.characters = [target];
+  p2State.hand = p2State.hand.map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  state.cardManifest.cards[targetCardId] = resolvedCard({
+    cardId: targetCardId,
+    category: "character",
+    power: 3000,
+  });
+
+  const queueEntryId = toQueueEntryId("real-select-targets-private-queue");
+  const effectId = toEffectId("real-select-targets-private-effect");
+  state.effectQueue = [
+    {
+      id: queueEntryId,
+      state: "pending",
+      timingWindowId: toTimingWindowId("real-select-targets-private-timing"),
+      generation: 1,
+      controllerId: p1,
+      source: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        playerId: p1,
+        zone: p1State.leader.zone,
+      },
+      sourceSnapshot: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: p1State.leader.zone,
+        category: "leader",
+        colors: ["red"],
+        keywords: [],
+      },
+      effectBlockId: effectId,
+      orderingGroup: "turnPlayer",
+      createdAtEventSeq: 1,
+      queuedAtStateSeq: toStateSeq(state.seq),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: { type: "ruleProcess", name: "real-selectTargets" },
+    },
+  ];
+  const request: TargetRequest = {
+    timing: "onResolution",
+    chooser: "self",
+    player: "opponent",
+    zone: "characterArea",
+    min: 1,
+    max: 1,
+    allowFewerIfUnavailable: false,
+    visibility: "public",
+  };
+  const targetRef = {
+    instanceId: target.instanceId,
+    cardId: target.cardId,
+    playerId: p2,
+    zone: target.zone,
+  };
+  state.pendingDecision = {
+    id: toDecisionId("real-select-targets-decision"),
+    type: "selectTargets",
+    playerId: p1,
+    prompt: "Select a target.",
+    causedBy: { type: "effect", queueEntryId, effectId },
+    visibility: { type: "public" },
+    request,
+    candidates: [{ card: targetRef, visibility: { type: "public" } }],
+  };
+  return {
+    state,
+    target: targetRef,
+    hiddenOpponentHandId,
+    hiddenOpponentDeckId,
+    hiddenOpponentLifeId,
+  };
+};
+
 const assertFaceUpLifeVisible = (
   state: GameState,
   recipient: PlayerId,
@@ -850,6 +984,77 @@ test("real K.O. trigger battle views omit runtime queue internals and hidden dra
     String(hiddenDrawnCard.cardId),
     "p1 must not see opponent's On K.O. drawn card id",
   );
+});
+
+test("real selectTargets views omit candidates, legal responses, and private queue metadata", () => {
+  const {
+    state,
+    target,
+    hiddenOpponentHandId,
+    hiddenOpponentDeckId,
+    hiddenOpponentLifeId,
+  } = createSelectTargetsDecisionState();
+
+  assertNoHiddenLeak(state, p1, "real-selectTargets:p1");
+  assertNoHiddenLeak(state, p2, "real-selectTargets:p2");
+
+  const recipientView = filterStateForPlayer(state, p1);
+  const opponentView = filterStateForPlayer(state, p2);
+  assert.deepEqual(recipientView.pendingDecision, {
+    id: toDecisionId("real-select-targets-decision"),
+    type: "selectTargets",
+    playerId: p1,
+    prompt: "Select a target.",
+    causedBy: { type: "ruleProcess", name: "privateCausality" },
+  });
+  assert.deepEqual(
+    recipientView.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [
+      {
+        type: "respondToDecision",
+        decisionId: toDecisionId("real-select-targets-decision"),
+      },
+    ],
+  );
+  assert.equal(opponentView.pendingDecision, undefined);
+  assert.deepEqual(
+    opponentView.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+
+  assert.equal(
+    recipientView.opponent.characters[0]?.instanceId,
+    target.instanceId,
+  );
+  assert.equal(
+    JSON.stringify(recipientView).includes(hiddenOpponentHandId),
+    false,
+  );
+  for (const view of [recipientView, opponentView]) {
+    const serialized = JSON.stringify(view);
+    assert.equal(serialized.includes("candidates"), false);
+    assert.equal(serialized.includes("request"), false);
+    assert.equal(serialized.includes("response"), false);
+    assert.equal(serialized.includes("queueEntryId"), false);
+    assert.equal(
+      serialized.includes("real-select-targets-private-queue"),
+      false,
+    );
+    assert.equal(
+      serialized.includes("real-select-targets-private-effect"),
+      false,
+    );
+    assert.equal(
+      serialized.includes("real-select-targets-private-timing"),
+      false,
+    );
+    assert.equal(serialized.includes(hiddenOpponentDeckId), false);
+    assert.equal(serialized.includes(hiddenOpponentLifeId), false);
+  }
 });
 
 test("real life trigger views keep decline, activation, no-zone, and adjacent hidden state safe", () => {

@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-029D.md",
-      "storyId": "ENG-029D",
-      "storyPath": "stories/approved/ENG-029D-integrate-simple-target-effect.yaml",
-      "storySha256": "d910b3cc733b763813ed982736ff09d9d4e34058d48498155f7aae55dc54d35c"
+      "packetPath": "agent-packets/ENG-029E.md",
+      "storyId": "ENG-029E",
+      "storyPath": "stories/approved/ENG-029E-verify-target-candidate-visibility.yaml",
+      "storySha256": "041f17951212bbe52d63fa25337f58b05282fcb7d4daeb14d84b1b94649258c3"
     }
   ],
   "version": 1
