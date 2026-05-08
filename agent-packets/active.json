@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-034A.md",
+      "storyId": "ENG-034A",
+      "storyPath": "stories/approved/ENG-034A-split-terminal-replay-smoke-tests.yaml",
+      "storySha256": "61b9a360c68c8cd9d15b96f04fae3e5a6dd26493739c8fd98cd40a7f77974916"
+    }
+  ],
   "version": 1
 }
