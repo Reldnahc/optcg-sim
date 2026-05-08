@@ -1,0 +1,69 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-032J
+epic_id: KICK-001
+title: Split battle Life Trigger tests
+type: refactor
+area: engine
+primary_concern: verification
+priority: medium
+status: generated
+summary: >
+  Move existing battle-damage Life Trigger decision and response tests out of
+  battle-damage-banish.test.ts into a focused battle Life Trigger test file
+  without changing assertions, fixtures, events, state hashes, or behavior.
+story_boundary: >
+  Own only behavior-preserving test-file organization for battle-damage Life
+  Trigger decision creation, add-to-hand decline resolution, and malformed
+  response rejection coverage currently in battle-damage-banish.test.ts.
+allowed_touch_points:
+  - packages/engine-core/src/battle-damage-banish.test.ts
+  - packages/engine-core/src/battle-damage-life-trigger.test.ts
+  - stories/generated/ENG-032J-split-battle-life-trigger-tests.yaml
+  - stories/approved/ENG-032J-split-battle-life-trigger-tests.yaml
+  - agent-packets/ENG-032J.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s006
+  - 02-engine-mechanics.s007
+  - 02-engine-mechanics.s021
+  - 02-engine-mechanics.s023
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s018
+  - 03-game-state-events-decisions.s020
+  - 06-visibility-security.s004
+  - 06-visibility-security.s007
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s016
+scope:
+  - move applyAction declareAttack supported trigger life damage decision creation coverage from battle-damage-banish.test.ts, preserving that the damaged defending player owns the pending decision
+  - move respondToDecision addToHand decline resolution and hidden hand movement coverage from battle-damage-banish.test.ts, preserving that the declined trigger card moves to the damaged defending player's hand
+  - move malformed Life Trigger response rejection and mutation-safety coverage from battle-damage-banish.test.ts
+  - preserve decision IDs, event ordering, hidden-information visibility, state hash, and mutation expectations
+non_scope:
+  - changing production code
+  - changing Life Trigger, damage, Banish, K.O., or decision response behavior
+  - moving vanilla damage, Banish, Character K.O., Blocker, Counter, attack timing, or pipeline regression tests
+dependencies:
+  - ENG-032F
+acceptance_criteria:
+  - battle-damage-banish.test.ts no longer contains the moved battle Life Trigger test groups
+  - battle-damage-life-trigger.test.ts covers the same battle Life Trigger scenarios with behavior-equivalent expectations
+  - no production files change
+  - focused tests, coverage, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/battle-damage-banish.test.ts packages/engine-core/src/battle-damage-character-ko.test.ts packages/engine-core/src/battle-damage-life-trigger.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-032J packet while implementing this story
+  - target the ENG-032 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving test organization story; if a production change appears necessary, stop and split or record an ambiguity
+ambiguity_policy: fail_and_escalate

@@ -1,0 +1,123 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-032
+epic_id: KICK-001
+title: Battle test suite boundaries
+type: refactor
+area: engine
+primary_concern: verification
+priority: medium
+status: generated
+summary: >
+  Split oversized battle test suites by existing battle behavior area without
+  changing battle legality, timing, damage, Blocker, Counter, Banish, K.O.,
+  event, state hash, or hidden-information behavior.
+story_boundary: >
+  This parent story is not directly implementable. It coordinates
+  behavior-preserving test-organization child stories for battle test files that
+  exceed the repo size threshold.
+allowed_touch_points:
+  - stories/generated/ENG-032-battle-test-suite-boundaries-parent.yaml
+  - stories/generated/ENG-032A-*.yaml
+  - stories/generated/ENG-032B-*.yaml
+  - stories/generated/ENG-032C-*.yaml
+  - stories/generated/ENG-032D-*.yaml
+  - stories/generated/ENG-032E-*.yaml
+  - stories/generated/ENG-032F-*.yaml
+  - stories/generated/ENG-032G-*.yaml
+  - stories/generated/ENG-032H-*.yaml
+  - stories/generated/ENG-032I-*.yaml
+  - stories/generated/ENG-032J-*.yaml
+spec_refs:
+  - 02-engine-mechanics.s005
+  - 02-engine-mechanics.s006
+  - 02-engine-mechanics.s007
+  - 02-engine-mechanics.s008
+  - 02-engine-mechanics.s018
+  - 02-engine-mechanics.s019
+  - 02-engine-mechanics.s020
+  - 02-engine-mechanics.s021
+  - 02-engine-mechanics.s022
+  - 02-engine-mechanics.s023
+  - 02-engine-mechanics.s025
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s018
+  - 03-game-state-events-decisions.s020
+  - 06-visibility-security.s004
+  - 06-visibility-security.s007
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+scope:
+  - split battle-declare-attack.test.ts by existing declare attack, Rush, attack timing, and rejection behavior
+  - split battle-damage-banish.test.ts by existing vanilla damage, Banish, character K.O., On K.O., fail-closed, and Life Trigger behavior
+  - split battle-blocker.test.ts by existing Blocker open, decline, selection, deterministic, invalid, and unsupported paths
+  - split battle-counter.test.ts by existing Counter pass, Character Counter, unsupported Counter Event, and fail-closed paths
+  - split battle-pipeline-regression.test.ts by existing cross-mechanic regression groups
+  - preserve battle event ordering, state hash stability, hidden-information guarantees, and all current assertions
+non_scope:
+  - adding new battle mechanics
+  - changing battle timing, attack legality, Blocker, Counter, Banish, K.O., Life Trigger, or cleanup behavior
+  - changing effect runtime behavior
+  - changing legal-action or PlayerView projection behavior
+  - server/client/UI/replay behavior
+dependencies: []
+child_stories:
+  - id: ENG-032A
+    title: Split declare attack legality tests
+    concern: Move declare attack legal action and rejection tests into focused files with no behavior change.
+    depends_on: []
+  - id: ENG-032B
+    title: Split Rush legality tests
+    concern: Move Rush and Rush Character legality tests into focused files with no behavior change.
+    depends_on: [ENG-032A]
+  - id: ENG-032C
+    title: Split attack timing tests
+    concern: Move When Attacking and On Opponent Attack tests into focused files with no behavior change.
+    depends_on: [ENG-032B]
+  - id: ENG-032D
+    title: Split vanilla damage tests
+    concern: Move normal Leader damage, Life movement, terminal damage, and public/private damage event tests into focused files.
+    depends_on: [ENG-032C]
+  - id: ENG-032E
+    title: Split Banish damage tests
+    concern: Move Banish-specific Life-to-trash and trigger-suppression tests into focused files with no behavior change.
+    depends_on: [ENG-032D]
+  - id: ENG-032F
+    title: Split Character K.O. tests
+    concern: Move character K.O., attached DON return, reindexing, and On K.O. battle tests into focused files.
+    depends_on: [ENG-032E]
+  - id: ENG-032J
+    title: Split battle Life Trigger tests
+    concern: Move battle-damage Life Trigger decision and response tests into focused files with no behavior change.
+    depends_on: [ENG-032F]
+  - id: ENG-032G
+    title: Split Blocker tests
+    concern: Move Blocker open, decline, selection, deterministic, invalid, and unsupported path tests into focused files.
+    depends_on: [ENG-032J]
+  - id: ENG-032H
+    title: Split Counter tests
+    concern: Move Counter pass, Character Counter, unsupported Counter Event, and fail-closed tests into focused files.
+    depends_on: [ENG-032G]
+  - id: ENG-032I
+    title: Split battle pipeline regression tests
+    concern: Move cross-mechanic battle pipeline regressions into focused files by mechanic group.
+    depends_on: [ENG-032H]
+acceptance_criteria:
+  - every child story is explicitly behavior-preserving and includes no battle behavior change
+  - moved tests continue to exercise the same scenarios with the same expected outcomes
+  - battle event ordering, state hash stability, hidden-info assertions, and fail-closed assertions remain covered
+  - parent integration review confirms the targeted battle test files are smaller or records justified exceptions
+required_tests:
+  - run corepack pnpm run stories:validate
+  - run corepack pnpm run packets:verify for each active child story
+  - run focused battle test files for each child story
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify before parent PR handoff
+repo_rules:
+  - do not approve, packetize, or activate ENG-032 itself as an implementation story
+  - story-review must confirm the child split is behavior-preserving before any child is approved
+  - child stories must be implemented one at a time on a parent integration branch
+  - no child may add or alter battle rules behavior
+  - line-count reduction is secondary to preserving behavior and reviewability
+ambiguity_policy: fail_and_escalate

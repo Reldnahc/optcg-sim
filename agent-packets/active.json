@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-032I.md",
+      "storyId": "ENG-032I",
+      "storyPath": "stories/approved/ENG-032I-split-battle-pipeline-regression-tests.yaml",
+      "storySha256": "35a78f70d933c68cd263f82667cbfda7d27234c3b920566364dac44e7e30008a"
+    }
+  ],
   "version": 1
 }
