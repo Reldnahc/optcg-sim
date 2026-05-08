@@ -1,0 +1,99 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-031
+epic_id: KICK-001
+title: Card play boundaries
+type: refactor
+area: engine
+primary_concern: verification
+priority: medium
+status: approved
+summary: >
+  Split oversized card-play implementation and test files into focused modules
+  without changing play-card legality, payment, placement, event, state hash,
+  or runtime behavior.
+story_boundary: >
+  This parent story is not directly implementable. It coordinates
+  behavior-preserving refactor and test-organization child stories for
+  play-card files that exceed the repo size threshold.
+allowed_touch_points:
+  - stories/generated/ENG-031-card-play-boundaries-parent.yaml
+  - stories/generated/ENG-031A-*.yaml
+  - stories/generated/ENG-031B-*.yaml
+  - stories/generated/ENG-031C-*.yaml
+  - stories/generated/ENG-031D-*.yaml
+  - stories/generated/ENG-031E-*.yaml
+  - stories/generated/ENG-031F-*.yaml
+  - stories/generated/ENG-031G-*.yaml
+spec_refs:
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 06-visibility-security.s007
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s016
+scope:
+  - split packages/engine-core/src/play-card.test.ts by existing card-play behavior areas without changing assertions or fixture meaning
+  - extract cohesive helpers from packages/engine-core/src/play-card.ts only when behavior and public action handling remain equivalent
+  - preserve legal actions, payment decisions, overflow decisions, Stage replacement, Event play, On Play runtime integration, event ordering, and state hashes
+  - keep hidden-information and legal-action projection behavior unchanged
+  - reduce the largest play-card files toward focused files under the repo size threshold, or record story-review-approved exceptions
+non_scope:
+  - adding new card play rules
+  - adding new Event, On Play, payment, or overflow behavior
+  - changing cost payment semantics
+  - changing decision response shapes
+  - changing effect runtime behavior beyond import-preserving helper extraction
+  - server/client/UI/replay behavior
+dependencies: []
+child_stories:
+  - id: ENG-031A
+    title: Split play-card legality tests
+    concern: Move legal action and precondition tests into focused files with no behavior change.
+    depends_on: []
+  - id: ENG-031B
+    title: Split play-card payment tests
+    concern: Move payment decision and response validation tests into focused files with no behavior change.
+    depends_on: [ENG-031A]
+  - id: ENG-031C
+    title: Split Stage replacement tests
+    concern: Move Stage replacement and occupied-stage payment tests into focused files with no behavior change.
+    depends_on: [ENG-031B]
+  - id: ENG-031D
+    title: Split Character overflow tests
+    concern: Move Character overflow decision and response tests into focused files with no behavior change.
+    depends_on: [ENG-031C]
+  - id: ENG-031E
+    title: Split Event play tests
+    concern: Move Event legal action, payment, execution, and event ordering tests into focused files with no behavior change.
+    depends_on: [ENG-031D]
+  - id: ENG-031F
+    title: Split On Play runtime tests
+    concern: Move On Play draw and unsupported On Play tests into focused files with no behavior change.
+    depends_on: [ENG-031E]
+  - id: ENG-031G
+    title: Extract card-play helper modules
+    concern: Extract payment, placement, Stage replacement, or overflow helpers from play-card.ts without changing behavior.
+    depends_on: [ENG-031F]
+acceptance_criteria:
+  - every child story is explicitly behavior-preserving and includes no card-play behavior change
+  - moved tests continue to exercise the same scenarios with the same expected outcomes
+  - extracted helpers preserve current action dispatch, errors, events, mutation ordering, and state hashes
+  - parent integration review confirms play-card.ts and play-card.test.ts are smaller or records a justified exception
+required_tests:
+  - run corepack pnpm run stories:validate
+  - run corepack pnpm run packets:verify for each active child story
+  - run focused play-card tests for each child story
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify before parent PR handoff
+repo_rules:
+  - do not approve, packetize, or activate ENG-031 itself as an implementation story
+  - story-review must confirm the child split is behavior-preserving before any child is approved
+  - child stories must be implemented one at a time on a parent integration branch
+  - no child may add new gameplay, payment, Event, Stage, overflow, or On Play behavior
+  - line-count reduction is secondary to preserving behavior and reviewability
+ambiguity_policy: fail_and_escalate
