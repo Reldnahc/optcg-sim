@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SPEC-003.md",
+      "storyId": "SPEC-003",
+      "storyPath": "stories/approved/SPEC-003-authorize-source-repository-publication.yaml",
+      "storySha256": "142fd7f1ca7a347546088c644d587593978aae738f7a515b0d63256ee074d401"
+    }
+  ],
   "version": 1
 }

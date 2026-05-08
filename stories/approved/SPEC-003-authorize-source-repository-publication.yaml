@@ -1,0 +1,87 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SPEC-003
+epic_id: KICK-001
+title: Authorize source repository publication
+type: specification
+area: docs
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Add explicit specification authority for licensing this repository's own
+  source code under MIT and making the source repository public without treating
+  that action as a public simulator launch.
+story_boundary: >
+  Own only the canonical spec wording that distinguishes source repository
+  publication from product launch and states the source-code licensing boundary.
+  Do not add the license file, change GitHub visibility, publish packages,
+  change code behavior, or create product/legal policies outside the narrow
+  source repository publication authority.
+allowed_touch_points:
+  - specs/13-legal-content-risk.md
+  - specs/13-content-publication-policy.md
+  - specs/section-index.json
+  - specs/spec-manifest.json
+  - specs/SPEC_VERSION.md
+  - specs/source-map.md
+  - specs/source-coverage-matrix.md
+  - tests/contracts/spec-authority-gates.test.mjs
+  - stories/generated/SPEC-003-authorize-source-repository-publication.yaml
+  - stories/approved/SPEC-003-authorize-source-repository-publication.yaml
+  - agent-packets/SPEC-003.md
+  - agent-packets/active.json
+spec_refs:
+  - 13-content-publication-policy.s002
+  - 13-content-publication-policy.s006
+  - 13-content-publication-policy.s008
+  - 13-content-publication-policy.s010
+  - 13-content-publication-policy.s011
+  - 28-machine-readable-conventions.s008
+  - 28-machine-readable-conventions.s009
+  - 28-machine-readable-conventions.s011
+  - 27-spec-driven-story-generation-workflow.s012
+  - 32-codex-agent-integration.s004
+  - 32-codex-agent-integration.s008
+scope:
+  - rename the content policy spec document to a neutral publication-policy name while preserving its substantive policy content
+  - add a new stable section to `specs/13-content-publication-policy.md` authorizing the repository's own source code, specs, docs, tests, and tooling to be MIT licensed when a root `LICENSE` file is present
+  - state that the repository may be made public on GitHub after the root license file and README license note land
+  - state that source repository publication is not a public simulator launch, public alpha, public ranked play, public unranked play, public custom lobbies, package publication, deployment, or production service availability
+  - state that neither the source license nor making the repository public grants rights to redistribute, add, license, or use third-party card names, card text, images, set symbols, trademarks, logos, or other third-party content
+  - state that any follow-up license implementation story must use an explicitly human-confirmed copyright holder and year
+  - add a contract/spec authority test that fails if the source-publication authority wording is removed or weakened
+non_scope:
+  - adding `LICENSE`, README license wording, package metadata, or GitHub visibility changes
+  - choosing the final copyright holder/year
+  - creating terms of service, privacy policy, takedown process, content moderation policy, branding policy, asset policy, or official legal advice
+  - changing gameplay, engine, CLI, server, client, replay, database, hidden-info filtering, deployment, CI, branch protection, package publishing, or GitHub repository settings
+dependencies: []
+acceptance_criteria:
+  - "`specs/13-content-publication-policy.md` has a neutral filename/title/doc_id and clearly authorizes MIT licensing for this repository's own source code, specs, docs, tests, and tooling when a root `LICENSE` file is present"
+  - the new spec wording clearly allows making the GitHub source repository public after license/README license artifacts land
+  - the new spec wording clearly says repository publication is not public simulator launch, public alpha, public gameplay availability, package publication, deployment, or production service availability
+  - the new spec wording clearly excludes third-party card names, card text, images, set symbols, trademarks, logos, and other third-party content from both the repository source license and repository-publication authority
+  - the new spec wording requires explicit human confirmation of copyright holder and year for the license implementation story
+  - contract/spec authority tests pin the key source-publication authority phrases
+  - generated spec metadata and packet references use the neutral `13-content-publication-policy` identity
+  - no license file, README license note, GitHub visibility change, runtime code, package metadata, CI setting, or product legal policy is changed
+required_tests:
+  - update `tests/contracts/spec-authority-gates.test.mjs` to require the source repository publication authority wording
+  - run `corepack pnpm run specs:generate-metadata`
+  - run `corepack pnpm run specs:verify-metadata`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run typecheck`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate the packet before implementation
+  - run `corepack pnpm run packets:verify` before implementation and review handoff
+  - stay within allowed_touch_points
+  - parent agent may implement this parent-owned authority edit directly
+  - open the PR before implementation-review
+  - run the implementation-review gate after the PR is opened
+  - do not add the MIT license file or change GitHub visibility in this SPEC story
+ambiguity_policy: fail_and_escalate

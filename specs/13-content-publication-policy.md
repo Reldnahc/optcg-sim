@@ -1,38 +1,38 @@
 ---
 spec_version: "v6"
 spec_package_name: "optcg-md-specs-v6"
-doc_id: "13-legal-content-risk"
-doc_title: "Legal Content Risk"
+doc_id: "13-content-publication-policy"
+doc_title: "Content Publication Policy"
 doc_type: "spec-section"
 status: "canonical"
 machine_readable: true
 ---
 
-# Legal and Content Risk
+# Content Publication Policy
 
-<!-- SECTION_REF: 13-legal-content-risk.s001 -->
+<!-- SECTION_REF: 13-content-publication-policy.s001 -->
 
-Section Ref: `13-legal-content-risk.s001`
+Section Ref: `13-content-publication-policy.s001`
 
 ## Purpose
 
-<!-- SECTION_REF: 13-legal-content-risk.s002 -->
+<!-- SECTION_REF: 13-content-publication-policy.s002 -->
 
-Section Ref: `13-legal-content-risk.s002`
+Section Ref: `13-content-publication-policy.s002`
 
 A public simulator using official card names, text, images, set symbols, and trademarks carries legal and platform risk. This document is not legal advice. It is a product-risk checklist to resolve before public launch.
 
 ## Risk areas
 
-<!-- SECTION_REF: 13-legal-content-risk.s003 -->
+<!-- SECTION_REF: 13-content-publication-policy.s003 -->
 
-Section Ref: `13-legal-content-risk.s003`
+Section Ref: `13-content-publication-policy.s003`
 
 ### Card images
 
-<!-- SECTION_REF: 13-legal-content-risk.s004 -->
+<!-- SECTION_REF: 13-content-publication-policy.s004 -->
 
-Section Ref: `13-legal-content-risk.s004`
+Section Ref: `13-content-publication-policy.s004`
 
 Questions to answer:
 
@@ -51,17 +51,17 @@ Lower-risk fallback:
 
 ### Card text
 
-<!-- SECTION_REF: 13-legal-content-risk.s005 -->
+<!-- SECTION_REF: 13-content-publication-policy.s005 -->
 
-Section Ref: `13-legal-content-risk.s005`
+Section Ref: `13-content-publication-policy.s005`
 
 Printed card text may also be protected content. If stored locally, track source and update policy. Consider minimizing local storage to IDs + effect implementation overlays, loading display text from user/client-side sources where appropriate.
 
 ### Trademarks and branding
 
-<!-- SECTION_REF: 13-legal-content-risk.s006 -->
+<!-- SECTION_REF: 13-content-publication-policy.s006 -->
 
-Section Ref: `13-legal-content-risk.s006`
+Section Ref: `13-content-publication-policy.s006`
 
 Avoid using official logos or names in a way that implies endorsement.
 
@@ -74,9 +74,9 @@ Checklist:
 
 ### Monetization
 
-<!-- SECTION_REF: 13-legal-content-risk.s007 -->
+<!-- SECTION_REF: 13-content-publication-policy.s007 -->
 
-Section Ref: `13-legal-content-risk.s007`
+Section Ref: `13-content-publication-policy.s007`
 
 Monetization increases risk. Before any monetization:
 
@@ -87,9 +87,9 @@ Monetization increases risk. Before any monetization:
 
 ### Takedown process
 
-<!-- SECTION_REF: 13-legal-content-risk.s008 -->
+<!-- SECTION_REF: 13-content-publication-policy.s008 -->
 
-Section Ref: `13-legal-content-risk.s008`
+Section Ref: `13-content-publication-policy.s008`
 
 Before public launch, define:
 
@@ -101,9 +101,9 @@ Before public launch, define:
 
 ## Content operating modes
 
-<!-- SECTION_REF: 13-legal-content-risk.s009 -->
+<!-- SECTION_REF: 13-content-publication-policy.s009 -->
 
-Section Ref: `13-legal-content-risk.s009`
+Section Ref: `13-content-publication-policy.s009`
 
 | Mode                  | Description                                             | Use case                           |
 | --------------------- | ------------------------------------------------------- | ---------------------------------- |
@@ -115,9 +115,9 @@ Section Ref: `13-legal-content-risk.s009`
 
 ## Launch blockers
 
-<!-- SECTION_REF: 13-legal-content-risk.s010 -->
+<!-- SECTION_REF: 13-content-publication-policy.s010 -->
 
-Section Ref: `13-legal-content-risk.s010`
+Section Ref: `13-content-publication-policy.s010`
 
 Do not launch public ranked/tournament play until these decisions are made:
 
@@ -130,9 +130,9 @@ Do not launch public ranked/tournament play until these decisions are made:
 
 ## Practical recommendation
 
-<!-- SECTION_REF: 13-legal-content-risk.s011 -->
+<!-- SECTION_REF: 13-content-publication-policy.s011 -->
 
-Section Ref: `13-legal-content-risk.s011`
+Section Ref: `13-content-publication-policy.s011`
 
 For early development:
 
@@ -146,9 +146,9 @@ This keeps the engine work unblocked while leaving room to adjust content strate
 
 ## Poneglyph-specific content questions
 
-<!-- SECTION_REF: 13-legal-content-risk.s012 -->
+<!-- SECTION_REF: 13-content-publication-policy.s012 -->
 
-Section Ref: `13-legal-content-risk.s012`
+Section Ref: `13-content-publication-policy.s012`
 
 Because the architecture uses Poneglyph as the card-data source, decide these before public launch:
 
@@ -161,3 +161,19 @@ Because the architecture uses Poneglyph as the card-data source, decide these be
 - Does the takedown process disable image display, card text display, or both?
 
 v4 product choice: images are enabled. Keep an operational image kill-switch and graceful fallback behavior if image availability or legal posture changes.
+
+## Source repository publication
+
+<!-- SECTION_REF: 13-content-publication-policy.s013 -->
+
+Section Ref: `13-content-publication-policy.s013`
+
+The repository's own source code, specifications, documentation, tests, and tooling may be licensed under the MIT License when a root `LICENSE` file is present.
+
+The source repository may be made public on GitHub after the root `LICENSE` file and README license note land.
+
+Source repository publication is not a public simulator launch, public alpha, public gameplay availability, public ranked play, public unranked play, public custom lobbies, package publication, deployment, or production service availability.
+
+Neither the MIT source license nor making the repository public grants rights to redistribute, add, license, or use third-party card names, card text, images, set symbols, trademarks, logos, or other third-party content.
+
+A follow-up license implementation story must use an explicitly human-confirmed copyright holder and year.
