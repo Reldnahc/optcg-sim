@@ -75,6 +75,16 @@ export const getLegalActions = (
         response: { type: "lifeTrigger", choice: "addToHand" },
       });
     }
+    if (
+      state.pendingDecision.type === "selectTargets" &&
+      state.pendingDecision.playerId === playerId
+    ) {
+      actions.push({
+        type: "respondToDecision",
+        decisionId: state.pendingDecision.id,
+        response: { type: "targets", targets: [] },
+      });
+    }
     actions.push(...getPlayCardLegalActions(state, playerId));
     actions.push(...getBattleDecisionLegalActions(state, playerId));
     return actions;

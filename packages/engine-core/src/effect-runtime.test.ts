@@ -19,6 +19,7 @@ import type {
   QueueEntryId,
   SourcePresencePolicy,
   StateSeq,
+  TargetRequest,
   TimingWindowId,
 } from "@optcg/types";
 
@@ -118,6 +119,122 @@ const queueDrawForP1 = (): EffectQueueEntry => ({
   controllerId: p1,
   effectBlockId: toEffectId("OP01-015:auto-on-play-1"),
 });
+
+const publicOpponentCharacterTargetRequest = (): TargetRequest => ({
+  timing: "onResolution",
+  chooser: "self",
+  player: "opponent",
+  zone: "characterArea",
+  min: 1,
+  max: 1,
+  allowFewerIfUnavailable: false,
+  visibility: "public",
+});
+
+const targetSelectionDefinition = (
+  cardId: CardId,
+  support: ResolvedCard["support"],
+  request: TargetRequest = publicOpponentCharacterTargetRequest(),
+): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: toEffectId("target-ko-effect"),
+      category: "auto",
+      trigger: { type: "custom", event: "targetSelectionFixture" },
+      optional: false,
+      oncePerTurn: false,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: { type: "ko", target: { type: "choose", request } },
+    },
+  ],
+  metadata: {
+    sourceTextHash: support.sourceTextHash,
+    rulesVersion: support.rulesVersion,
+    effectDefinitionsVersion: "fixture",
+    tested: true,
+    reviewer: "qa-reviewer",
+  },
+});
+
+const queueTargetSelectionForP1 = (): EffectQueueEntry => ({
+  ...queueDrawForP1(),
+  id: toQueueEntryId("queue-entry:target-selection"),
+  effectBlockId: toEffectId("target-ko-effect"),
+  sourcePresencePolicy: "mustRemainInSameZone",
+});
+
+const addSupportedTargetSelectionSource = (
+  state: ReturnType<typeof createActiveState>,
+  request: TargetRequest = publicOpponentCharacterTargetRequest(),
+): void => {
+  const sourceCardId = toCardId("target-selection-source");
+  const support: ResolvedCard["support"] = {
+    cardId: sourceCardId,
+    status: "implemented-dsl",
+    tested: true,
+    rulesVersion: "r1",
+    cardDataVersion: "fixture",
+    sourceTextHash: "target-selection-source-hash",
+    behaviorHash: "target-selection-behavior-hash",
+    effectDefinitionId: "target-selection-definition",
+  };
+  state.cardManifest.cards[sourceCardId] = resolvedCard({
+    cardId: sourceCardId,
+    category: "leader",
+    cost: 1,
+    support,
+  });
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "target-selection-definition": targetSelectionDefinition(
+      sourceCardId,
+      support,
+      request,
+    ),
+  };
+  const source = must(state.players[p1], "p1").leader;
+  source.cardId = sourceCardId;
+  state.effectQueue.push({
+    ...queueTargetSelectionForP1(),
+    source: {
+      instanceId: source.instanceId,
+      cardId: sourceCardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: sourceCardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: source.zone,
+      category: "leader",
+      colors: ["red"],
+      cost: 1,
+      keywords: [],
+    },
+  });
+};
+
+const placeOpponentTargetCharacters = (
+  state: ReturnType<typeof createActiveState>,
+): void => {
+  const player = must(state.players[p2], "p2");
+  const characterIds = [toCardId("target-a"), toCardId("target-b")];
+  player.characters = characterIds.map((cardId, index) => {
+    const source = must(player.hand[index], `p2 hand ${String(index)}`);
+    return {
+      ...source,
+      cardId,
+      owner: p2,
+      controller: p2,
+      zone: { zone: "characterArea", playerId: p2, slot: "character", index },
+      attachedDon: [],
+    };
+  });
+};
 
 const withPendingDecision = (playerId: PlayerId = p2): PendingDecision => ({
   id: toDecisionId("existing-decision"),
@@ -252,6 +369,79 @@ test("effect queue failure does not mutate state or replace an existing pending 
   assert.deepEqual(result.state.eventJournal, before.eventJournal);
   assert.deepEqual(result.events, []);
   assert.deepEqual(result.state, before);
+});
+
+test("supported target-requiring queued effect pauses with deterministic selectTargets decision", () => {
+  const firstState = createActiveState();
+  const secondState = createActiveState();
+  placeOpponentTargetCharacters(firstState);
+  placeOpponentTargetCharacters(secondState);
+  addSupportedTargetSelectionSource(firstState);
+  addSupportedTargetSelectionSource(secondState);
+
+  const first = processEffectRuntime(firstState);
+  const second = processEffectRuntime(secondState);
+
+  assert.equal(first.errors, undefined);
+  assert.equal(first.events.length, 1);
+  const event = must(first.events[0], "decision created event");
+  const decision = must(first.state.pendingDecision, "selectTargets decision");
+  assert.equal(event.type, "decisionCreated");
+  assert.equal(first.state.effectQueue.length, 1);
+  assert.equal(decision.type, "selectTargets");
+  assert.equal(decision.playerId, p1);
+  assert.equal(
+    decision.id,
+    "decision:selectTargets:queue-entry:target-selection:target-ko-effect:p1",
+  );
+  assert.deepEqual(decision.causedBy, {
+    type: "effect",
+    queueEntryId: "queue-entry:target-selection",
+    effectId: "target-ko-effect",
+  });
+  assert.deepEqual(event.causedBy, decision.causedBy);
+  assert.deepEqual(
+    decision.candidates.map((candidate) => candidate.card),
+    must(firstState.players[p2], "p2").characters.map((card) => ({
+      instanceId: card.instanceId,
+      cardId: card.cardId,
+      playerId: p2,
+      zone: card.zone,
+    })),
+  );
+  assert.deepEqual(second.state.pendingDecision, first.state.pendingDecision);
+  assert.equal(
+    hashCanonicalStateValue(second.state),
+    hashCanonicalStateValue(first.state),
+  );
+});
+
+test("target candidate resolution failure for queued effect fails closed without mutation", () => {
+  const state = createActiveState();
+  placeOpponentTargetCharacters(state);
+  addSupportedTargetSelectionSource(state, {
+    ...publicOpponentCharacterTargetRequest(),
+    visibility: "privateToChooser",
+  });
+  const before = structuredClone(state);
+  const beforeHash = hashCanonicalStateValue(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "unsupported-effect-queue",
+      details: {
+        reason: "unsupported-pending-runtime-work",
+        kind: "effectQueue",
+        count: 1,
+      },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+  assert.equal(hashCanonicalStateValue(state), beforeHash);
 });
 
 test("direct draw primitive executes draw 1 from deck top into hand", () => {

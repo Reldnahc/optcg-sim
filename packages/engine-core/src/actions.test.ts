@@ -472,6 +472,56 @@ test("getLegalActions exposes confirmLifeTrigger respondToDecision only to decis
   ]);
 });
 
+test("getLegalActions exposes selectTargets placeholder response only to decision player", () => {
+  const state = createActiveState();
+  const target = must(state.players[p2], "p2").leader;
+  state.pendingDecision = {
+    id: toDecisionId("decision:select-targets"),
+    type: "selectTargets",
+    playerId: p1,
+    prompt: "Select targets.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-entry:target-selection"),
+      effectId: toEffectId("target-ko-effect"),
+    },
+    visibility: { type: "public" },
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      player: "opponent",
+      zone: "leaderArea",
+      min: 1,
+      max: 1,
+      allowFewerIfUnavailable: false,
+      visibility: "public",
+    },
+    candidates: [
+      {
+        card: {
+          instanceId: target.instanceId,
+          cardId: target.cardId,
+          playerId: p2,
+          zone: target.zone,
+        },
+        visibility: { type: "public" },
+      },
+    ],
+  };
+
+  assert.deepEqual(getLegalActions(state, p1), [
+    { type: "concede", playerId: p1 },
+    {
+      type: "respondToDecision",
+      decisionId: toDecisionId("decision:select-targets"),
+      response: { type: "targets", targets: [] },
+    },
+  ]);
+  assert.deepEqual(getLegalActions(state, p2), [
+    { type: "concede", playerId: p2 },
+  ]);
+});
+
 test("pending runtime work rejects ordinary applyAction requests without mutation", () => {
   const state = makeMainPhaseLegalActionState();
   state.effectQueue.push(queuedEffect("apply-action"));

@@ -14,6 +14,7 @@ import type {
   PlayerRef,
   QueueEntryId,
   ResolvedCard,
+  TargetRequest,
 } from "@optcg/types";
 
 import {
@@ -31,6 +32,7 @@ import {
 } from "./effect-queue-ordering.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 import { evaluateQueuedEffectSourcePresence } from "./source-presence.js";
+import { resolvePublicTargetCandidates } from "./target-selection.js";
 
 export type PendingRuntimeWorkKind = "effectQueue" | "deferredTriggers";
 
@@ -589,6 +591,45 @@ const isSupportedQueuedNoChoiceDrawEffect = (
   isSupportedQueuedNoChoiceOnKODrawEffect(effect) ||
   isSupportedNoChoiceLifeTriggerDrawEffect(effect) ||
   (effect.trigger.type === "custom" && isNoChoiceDrawEffectShape(effect));
+
+const chooseTargetRequestForEffect = (
+  effect: Effect,
+): TargetRequest | undefined => {
+  if (!("target" in effect)) {
+    return undefined;
+  }
+  const target = effect.target;
+  if (
+    typeof target !== "object" ||
+    !("type" in target) ||
+    target.type !== "choose"
+  ) {
+    return undefined;
+  }
+  return target.request;
+};
+
+const isSupportedQueuedTargetChoiceEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+} => {
+  if (effect.category !== "auto") {
+    return false;
+  }
+  if (effect.optional || effect.oncePerTurn) {
+    return false;
+  }
+  if (
+    effect.cost !== undefined ||
+    effect.condition !== undefined ||
+    effect.conditionTiming !== undefined ||
+    effect.failurePolicy !== undefined
+  ) {
+    return false;
+  }
+  return chooseTargetRequestForEffect(effect.effect) !== undefined;
+};
 
 const findCardInstance = (
   state: GameState,
@@ -1632,6 +1673,98 @@ const resolveQueuedNoChoiceDrawEffect = (
   return match.effect;
 };
 
+const resolveQueuedTargetChoiceRequest = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): TargetRequest | undefined => {
+  const resolved = state.cardManifest.cards[entry.source.cardId];
+  if (resolved === undefined) {
+    return undefined;
+  }
+  const lookup = resolveImplementedDslEffectDefinition(
+    resolved,
+    state.cardManifest,
+  );
+  if (!lookup.ok) {
+    return undefined;
+  }
+  const match = lookup.definition.effects.find(
+    (effect) => effect.id === entry.effectBlockId,
+  );
+  if (
+    match === undefined ||
+    match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
+    !isSupportedQueuedTargetChoiceEffect(match)
+  ) {
+    return undefined;
+  }
+  return chooseTargetRequestForEffect(match.effect);
+};
+
+const pauseForSelectTargetsDecision = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  request: TargetRequest,
+): EngineResult => {
+  const candidates = resolvePublicTargetCandidates(state, request, {
+    sourceControllerId: entry.controllerId,
+  });
+  const chooserId = resolvePlayerId(state, entry, request.chooser);
+  if (!candidates.ok || chooserId === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        unsupportedPendingRuntimeWorkError({
+          kind: "effectQueue",
+          count: state.effectQueue.length,
+        }),
+      ],
+    );
+  }
+
+  const causedBy = {
+    type: "effect",
+    queueEntryId: entry.id,
+    effectId: entry.effectBlockId,
+  } as const;
+  const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
+    id: `decision:selectTargets:${String(entry.id)}:${String(
+      entry.effectBlockId,
+    )}:${String(chooserId)}` as DecisionId,
+    type: "selectTargets",
+    playerId: chooserId,
+    prompt: "Select targets.",
+    causedBy,
+    visibility: { type: "public" },
+    request,
+    candidates: candidates.candidates,
+  };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: pendingDecision.id,
+      decisionType: pendingDecision.type,
+      playerId: pendingDecision.playerId,
+    },
+    { type: "public" },
+  );
+  const created = events[0];
+  if (created !== undefined) {
+    created.causedBy = causedBy;
+  }
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    pendingDecision,
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  return toEngineResult(nextState, events);
+};
+
 const isLifeTriggerResolutionEntry = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -1924,6 +2057,17 @@ const resolveQueueEntriesInOrder = (
             count: originalState.effectQueue.length,
           }),
         ],
+      );
+    }
+    const targetChoiceRequest = resolveQueuedTargetChoiceRequest(
+      nextState,
+      selected,
+    );
+    if (targetChoiceRequest !== undefined) {
+      return pauseForSelectTargetsDecision(
+        nextState,
+        selected,
+        targetChoiceRequest,
       );
     }
     const drawEffect = resolveQueuedNoChoiceDrawEffect(nextState, selected);

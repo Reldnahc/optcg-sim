@@ -43,6 +43,7 @@ const withEvent = (
 });
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
+const toEffectId = (value: string): EffectId => value as EffectId;
 const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
 
 test("filters hidden information and keeps public zones", () => {
@@ -224,6 +225,88 @@ test("confirmLifeTrigger projection is private to decision player and does not l
   );
   assert.equal(
     JSON.stringify(forOpponent).includes("hidden-life-trigger-card"),
+    false,
+  );
+});
+
+test("selectTargets projection is metadata-only and does not leak internal candidates", () => {
+  const state = createActiveState();
+  const hiddenCandidateCardId = toCardId("hidden-target-candidate");
+  const target = must(state.players[p2], "p2").leader;
+  state.pendingDecision = {
+    id: toDecisionId("decision:select-targets"),
+    type: "selectTargets",
+    playerId: p1,
+    prompt: "Select targets.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-entry:target-selection"),
+      effectId: toEffectId("target-ko-effect"),
+    },
+    visibility: { type: "public" },
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      player: "opponent",
+      zone: "leaderArea",
+      min: 1,
+      max: 1,
+      allowFewerIfUnavailable: false,
+      visibility: "public",
+    },
+    candidates: [
+      {
+        card: {
+          instanceId: target.instanceId,
+          cardId: hiddenCandidateCardId,
+          playerId: p2,
+          zone: target.zone,
+        },
+        visibility: { type: "public" },
+      },
+    ],
+  };
+
+  const forDecisionPlayer = filterStateForPlayer(state, p1);
+  const forOpponent = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(forDecisionPlayer.pendingDecision, {
+    id: toDecisionId("decision:select-targets"),
+    type: "selectTargets",
+    playerId: p1,
+    prompt: "Select targets.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-entry:target-selection"),
+      effectId: toEffectId("target-ko-effect"),
+    },
+  });
+  assert.deepEqual(
+    forDecisionPlayer.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [
+      {
+        type: "respondToDecision",
+        decisionId: toDecisionId("decision:select-targets"),
+      },
+    ],
+  );
+  assert.equal(forOpponent.pendingDecision, undefined);
+  assert.deepEqual(
+    forOpponent.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("candidates"), false);
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("request"), false);
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes(String(hiddenCandidateCardId)),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forOpponent).includes(String(hiddenCandidateCardId)),
     false,
   );
 });
