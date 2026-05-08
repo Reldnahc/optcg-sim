@@ -11,14 +11,14 @@ const repoRoot = path.resolve(
 );
 
 const canonicalModuleFiles = [
-  "primitives.ts",
-  "card-metadata.ts",
-  "events.ts",
-  "view.ts",
-  "game-state.ts",
-  "effects.ts",
-  "decisions.ts",
-  "runtime.ts",
+  "types/primitives.ts",
+  "types/card-metadata.ts",
+  "types/events.ts",
+  "types/view.ts",
+  "types/game-state.ts",
+  "types/effects.ts",
+  "types/decisions.ts",
+  "types/runtime.ts",
 ];
 
 const exportNamePattern = /export\s+(?:type|interface)\s+([A-Za-z0-9_]+)/g;

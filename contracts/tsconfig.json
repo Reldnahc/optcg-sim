@@ -9,5 +9,5 @@
     "declarationMap": false,
     "sourceMap": false
   },
-  "include": ["*.ts"]
+  "include": ["canonical-types.ts", "types/**/*.ts"]
 }

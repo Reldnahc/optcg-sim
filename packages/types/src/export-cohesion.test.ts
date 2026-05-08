@@ -2,14 +2,14 @@ import { expect, test } from "vitest";
 import { EXPORT_OWNERSHIP_MANIFEST } from "./export-ownership.manifest.js";
 
 const canonicalModuleFiles = [
-  "primitives.ts",
-  "card-metadata.ts",
-  "events.ts",
-  "view.ts",
-  "game-state.ts",
-  "effects.ts",
-  "decisions.ts",
-  "runtime.ts",
+  "types/primitives.ts",
+  "types/card-metadata.ts",
+  "types/events.ts",
+  "types/view.ts",
+  "types/game-state.ts",
+  "types/effects.ts",
+  "types/decisions.ts",
+  "types/runtime.ts",
 ];
 
 async function readCanonicalModuleSources(): Promise<string[]> {

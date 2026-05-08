@@ -20,14 +20,14 @@ story_boundary: >
   validation semantics, or consumer-facing import paths.
 allowed_touch_points:
   - contracts/canonical-types.ts
-  - contracts/primitives.ts
-  - contracts/card-metadata.ts
-  - contracts/events.ts
-  - contracts/view.ts
-  - contracts/game-state.ts
-  - contracts/effects.ts
-  - contracts/decisions.ts
-  - contracts/runtime.ts
+  - contracts/types/primitives.ts
+  - contracts/types/card-metadata.ts
+  - contracts/types/events.ts
+  - contracts/types/view.ts
+  - contracts/types/game-state.ts
+  - contracts/types/effects.ts
+  - contracts/types/decisions.ts
+  - contracts/types/runtime.ts
   - contracts/tsconfig.json
   - packages/types/src/export-cohesion.test.ts
   - tests/contracts/canonical-types-shape.test.mjs
@@ -52,7 +52,7 @@ spec_refs:
   - 28-machine-readable-conventions.s002
 scope:
   - keep `contracts/canonical-types.ts` as the compatibility barrel for the canonical TypeScript contract
-  - move primitive, card metadata, deck/loadout, event, view, game state, effect DSL, decision, action, and runtime helper declarations into focused `contracts/*.ts` modules
+  - move primitive, card metadata, deck/loadout, event, view, game state, effect DSL, decision, action, and runtime helper declarations into focused `contracts/types/*.ts` modules
   - update contract typechecking to include the focused canonical modules
   - update export-surface and shape tests so they validate declarations across the module set instead of relying on one physical file
   - keep `@optcg/types` public exports and ownership manifest semantics unchanged
@@ -67,7 +67,7 @@ dependencies:
   - TYP-002
 acceptance_criteria:
   - "`contracts/canonical-types.ts` still exposes every existing canonical type/interface name through type-only exports"
-  - focused `contracts/*.ts` modules compile under the contracts TypeScript project with strict settings
+  - focused `contracts/types/*.ts` modules compile under the contracts TypeScript project with strict settings
   - package export-cohesion coverage compares the ownership manifest to the canonical module export surface, not only one source file
   - existing canonical shape tests continue to validate the same contract declarations after the split
   - no consumer-facing package exports, gameplay behavior, schema validation, or hidden-information behavior changes
