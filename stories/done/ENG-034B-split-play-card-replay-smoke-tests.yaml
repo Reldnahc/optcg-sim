@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move paid Character, Stage replacement, Character overflow, and Event play
   replay smoke pass/final-hash assertions into a focused play-card replay smoke

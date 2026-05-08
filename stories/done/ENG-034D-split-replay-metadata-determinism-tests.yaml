@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move replay transport/audit metadata rejection and deterministic manifest
   timestamp assertions into a focused replay metadata test file without

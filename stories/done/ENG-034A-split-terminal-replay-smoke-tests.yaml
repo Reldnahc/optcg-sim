@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move terminal and vanilla-combat replay smoke assertions out of
   replay-smoke.test.ts into focused replay smoke test files, with shared

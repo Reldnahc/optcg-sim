@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move replay drift rejection assertions into a focused replay drift test file
   without changing replay fixtures, expected hashes, drift cases, CLI behavior,

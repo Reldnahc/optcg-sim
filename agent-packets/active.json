@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-034D.md",
-      "storyId": "ENG-034D",
-      "storyPath": "stories/approved/ENG-034D-split-replay-metadata-determinism-tests.yaml",
-      "storySha256": "712592dcfa8b0794e2820be42c78926270ceb1cb52e54a99ed0b94621086af30"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
