@@ -1,0 +1,70 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-031F
+epic_id: KICK-001
+title: Split On Play runtime tests
+type: refactor
+area: engine
+primary_concern: verification
+priority: medium
+status: approved
+summary: >
+  Move existing Character On Play runtime integration and unsupported On Play
+  tests out of play-card.test.ts into a focused On Play runtime test file
+  without changing assertions, fixtures, errors, events, state hashes, runtime
+  queue behavior, or behavior.
+story_boundary: >
+  Own only behavior-preserving test-file organization for Character On Play
+  effect-runtime integration coverage currently in play-card.test.ts.
+allowed_touch_points:
+  - packages/engine-core/src/play-card.test.ts
+  - packages/engine-core/src/play-card-on-play-runtime.test.ts
+  - packages/engine-core/src/play-card-event.test.ts
+  - stories/generated/ENG-031F-split-on-play-runtime-tests.yaml
+  - stories/approved/ENG-031F-split-on-play-runtime-tests.yaml
+  - agent-packets/ENG-031F.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 06-visibility-security.s007
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s016
+scope:
+  - move supported implemented-dsl Character On Play draw legal-action coverage into play-card-on-play-runtime.test.ts
+  - move zero-cost Character On Play draw play resolution coverage into play-card-on-play-runtime.test.ts
+  - move deterministic On Play draw event ordering coverage into play-card-on-play-runtime.test.ts
+  - move optional custom Event and unsupported On Play fail-closed coverage into play-card-on-play-runtime.test.ts
+  - move On Play text without supported implemented-dsl definition fail-closed coverage into play-card-on-play-runtime.test.ts
+  - move implemented-dsl payCost continuation pending-runtime-work rejection coverage into play-card-on-play-runtime.test.ts if not already moved by prior stories
+  - preserve existing runtime queue, event order, visibility, mutation, error, and state hash expectations
+non_scope:
+  - changing production code
+  - changing On Play runtime behavior
+  - adding new On Play effect support
+  - changing Event play, payment, Stage replacement, or Character overflow behavior
+dependencies:
+  - ENG-031E
+acceptance_criteria:
+  - play-card-on-play-runtime.test.ts owns existing Character On Play runtime integration coverage
+  - moved tests preserve the same scenarios and expected outcomes
+  - no production files change
+  - focused tests, coverage, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/play-card.test.ts packages/engine-core/src/play-card-on-play-runtime.test.ts packages/engine-core/src/play-card-event.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-031F packet while implementing this story
+  - target the ENG-031 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving test organization story; if a production change appears necessary, stop and split or record an ambiguity
+ambiguity_policy: fail_and_escalate
