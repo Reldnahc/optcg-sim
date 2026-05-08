@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-036B.md",
-      "storyId": "ENG-036B",
-      "storyPath": "stories/approved/ENG-036B-extract-trigger-source-lookup-helpers.yaml",
-      "storySha256": "9ec34d87730ab99f2f702e7f1b104f1b8c9505227f98bb4e7eb9cfbef9f1a720"
+      "packetPath": "agent-packets/ENG-036C.md",
+      "storyId": "ENG-036C",
+      "storyPath": "stories/approved/ENG-036C-extract-trigger-category-queueing-helpers.yaml",
+      "storySha256": "c36ac1c8a32afec10f878842a606f3f7ff1a53f754bbadb96bf39ed9400def27"
     }
   ],
   "version": 1
