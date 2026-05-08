@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-030A.md",
+      "storyId": "ENG-030A",
+      "storyPath": "stories/approved/ENG-030A-split-runtime-sentinel-and-draw-tests.yaml",
+      "storySha256": "5d029ab9b85b4256e130ecdcf179547ba6794a12620db4f921ef5124990bfc01"
+    }
+  ],
   "version": 1
 }
