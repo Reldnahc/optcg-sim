@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -92,19 +93,45 @@ export function runPacketTool(args, options = {}) {
 }
 
 export function runPacketToolFromRepo(targetRepoRoot, args, options = {}) {
-  return spawnSync(
-    process.execPath,
-    [
-      "--experimental-strip-types",
-      path.join(targetRepoRoot, "tools/build-agent-packet.ts"),
-      ...args,
-    ],
-    {
-      cwd: targetRepoRoot,
-      encoding: "utf8",
-      ...options,
-    },
+  const cleanupParserModule = copyTransientParserModule(targetRepoRoot);
+
+  try {
+    return spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        path.join(targetRepoRoot, "tools/build-agent-packet.ts"),
+        ...args,
+      ],
+      {
+        cwd: targetRepoRoot,
+        encoding: "utf8",
+        ...options,
+      },
+    );
+  } finally {
+    cleanupParserModule();
+  }
+}
+
+function copyTransientParserModule(targetRepoRoot) {
+  const targetParserPath = path.join(
+    targetRepoRoot,
+    "tools",
+    "agent-packet-parser.ts",
   );
+
+  if (targetRepoRoot === repoRoot || existsSync(targetParserPath)) {
+    return () => {};
+  }
+
+  mkdirSync(path.dirname(targetParserPath), { recursive: true });
+  copyFileSync(
+    path.join(repoRoot, "tools", "agent-packet-parser.ts"),
+    targetParserPath,
+  );
+
+  return () => rmSync(targetParserPath, { force: true });
 }
 
 export async function makeTempRepoFixture() {
