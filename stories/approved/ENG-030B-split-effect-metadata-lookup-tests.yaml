@@ -1,0 +1,68 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-030B
+epic_id: KICK-001
+title: Split effect metadata lookup tests
+type: refactor
+area: engine
+primary_concern: verification
+priority: medium
+status: approved
+summary: >
+  Move existing implemented-DSL support and effect metadata lookup tests out of
+  effect-runtime.test.ts into a focused test file without changing runtime
+  behavior, assertions, fixtures, errors, event output, or contracts.
+story_boundary: >
+  Own only behavior-preserving test-file organization for implemented-DSL
+  support, effect definition lookup, and metadata validation tests currently
+  covered by effect-runtime.test.ts.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/effect-runtime-support.test.ts
+  - stories/generated/ENG-030B-split-effect-metadata-lookup-tests.yaml
+  - stories/approved/ENG-030B-split-effect-metadata-lookup-tests.yaml
+  - agent-packets/ENG-030B.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+  - 23-repo-tooling-and-enforcement.s006
+scope:
+  - move implemented-DSL support lookup tests from effect-runtime.test.ts into effect-runtime-support.test.ts
+  - move effect definition metadata mismatch, missing registry, vanilla support, implemented custom support, untested, unreviewed, unsupported, and banned support tests into the focused file
+  - move support lookup immutability tests into the focused file
+  - preserve existing test behavior and expected failure details
+  - keep production code unchanged
+non_scope:
+  - changing support policy
+  - changing effect definition lookup behavior or error details
+  - changing effect DSL schema or canonical types
+  - changing runtime queueing or primitive execution behavior
+  - changing production code
+dependencies:
+  - ENG-030A
+acceptance_criteria:
+  - effect-runtime.test.ts no longer contains effect support metadata lookup test groups
+  - effect-runtime-support.test.ts covers the same scenarios and expected outcomes
+  - no production files change
+  - focused tests, coverage, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/effect-runtime.test.ts packages/engine-core/src/effect-runtime-support.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-030B packet while implementing this story
+  - target the ENG-030 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving test organization story; if production behavior changes appear necessary, stop and split or record an ambiguity
+ambiguity_policy: fail_and_escalate

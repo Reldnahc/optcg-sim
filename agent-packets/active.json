@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-030G.md",
+      "storyId": "ENG-030G",
+      "storyPath": "stories/approved/ENG-030G-extract-queue-processing-helpers.yaml",
+      "storySha256": "86f00f4f8c4de2bb1959cff6635fee28d5e0a66c0f759c99528fcef52b1e1278"
+    }
+  ],
   "version": 1
 }

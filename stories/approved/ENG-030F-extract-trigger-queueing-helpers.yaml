@@ -1,0 +1,72 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-030F
+epic_id: KICK-001
+title: Extract trigger queueing helpers
+type: refactor
+area: engine
+primary_concern: rules
+priority: medium
+status: approved
+summary: >
+  Extract existing trigger candidate detection and trigger queueing helpers from
+  effect-runtime.ts into focused modules without changing trigger queueing,
+  source-presence, queue entries, lifecycle events, state hashes, or visibility.
+story_boundary: >
+  Own only behavior-preserving production helper extraction for trigger
+  queueing logic currently inside effect-runtime.ts. Do not add or alter trigger
+  categories, source-presence policy, or queue semantics.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing.test.ts
+  - packages/engine-core/src/effect-runtime-ko-triggers.test.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - stories/generated/ENG-030F-extract-trigger-queueing-helpers.yaml
+  - stories/approved/ENG-030F-extract-trigger-queueing-helpers.yaml
+  - agent-packets/ENG-030F.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s008
+  - 04-effect-runtime.s009
+  - 06-visibility-security.s006
+  - 11-testing-quality.s008
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s008
+scope:
+  - move existing On Play, attack timing, On K.O., and effect-runtime-local trigger queueing helpers into effect-runtime-trigger-queueing.ts when behavior remains equivalent
+  - preserve exported API from effect-runtime.ts for existing consumers by re-exporting or keeping wrapper exports as needed
+  - preserve source-presence checks, queue entry payloads, lifecycle events, state hashes, and hidden-information behavior
+  - update internal imports only as required by extraction
+non_scope:
+  - adding new trigger categories
+  - extracting Life Trigger queue entry construction that lives outside effect-runtime.ts
+  - changing trigger detection or queueing behavior
+  - changing source-presence behavior
+  - changing effect queue entry shape or lifecycle event payloads
+  - changing queue processing behavior
+dependencies:
+  - ENG-030E
+acceptance_criteria:
+  - effect-runtime-trigger-queueing.ts owns extracted trigger queueing helper logic
+  - effect-runtime.ts remains behavior-compatible for all existing imports and tests
+  - no event, error, queue entry, state hash, or hidden-information output changes
+  - focused tests, coverage, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-trigger-queueing.test.ts packages/engine-core/src/effect-runtime-ko-triggers.test.ts packages/engine-core/src/effect-runtime.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-030F packet while implementing this story
+  - target the ENG-030 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving production refactor story; if any behavior delta appears, stop and split or record an ambiguity
+ambiguity_policy: fail_and_escalate
