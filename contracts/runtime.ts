@@ -95,7 +95,6 @@ export interface BattleState {
   blocker?: CardRef;
   step: BattleStep;
   damageCount: number;
-  counterPower?: number;
 }
 
 export interface TurnState {

@@ -94,6 +94,17 @@ test("CardInstance relies on the GameState once-per-turn ledger", async () => {
   assert.doesNotMatch(cardInstanceBlockMatch[0], /\boncePerTurnUsed\??:/);
 });
 
+test("BattleState keeps the canonical combat damage fields unchanged", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+  const battleStateBlockMatch = canonicalTypes.match(
+    /export interface BattleState\s*{[\s\S]*?}/m,
+  );
+
+  assert.ok(battleStateBlockMatch, "missing BattleState interface");
+  assert.match(battleStateBlockMatch[0], /\bdamageCount:\s*number;/);
+  assert.doesNotMatch(battleStateBlockMatch[0], /\bcounterPower\??:/);
+});
+
 test("PoneglyphCardDetail preserves the raw API payload shape", async () => {
   const canonicalTypes = await readCanonicalTypes();
   const rawPoneglyphBlockMatch = canonicalTypes.match(
