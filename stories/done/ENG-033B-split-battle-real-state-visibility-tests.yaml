@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: visibility
 priority: medium
-status: approved
+status: done
 summary: >
   Move battle real-state PlayerView visibility assertions out of
   filter-state-for-player.real-states.test.ts into a focused battle visibility

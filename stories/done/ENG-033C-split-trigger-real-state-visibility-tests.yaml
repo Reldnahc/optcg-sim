@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: visibility
 priority: medium
-status: approved
+status: done
 summary: >
   Move Life Trigger, no-zone, On K.O., revealed-card, and adjacent hidden-state
   real-state PlayerView visibility assertions out of
