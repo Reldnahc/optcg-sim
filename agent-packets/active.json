@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-032C.md",
-      "storyId": "ENG-032C",
-      "storyPath": "stories/approved/ENG-032C-split-attack-timing-tests.yaml",
-      "storySha256": "09fc990fa4be2bfde68c0e52d0bb40b1dd700f2d5e4a8686bdd423bebd5b4529"
+      "packetPath": "agent-packets/ENG-032D.md",
+      "storyId": "ENG-032D",
+      "storyPath": "stories/approved/ENG-032D-split-vanilla-damage-tests.yaml",
+      "storySha256": "cc19a7e9b8cb623036d947eb876026df2d27a1954b457d25c7ad13bb2e0abfd6"
     }
   ],
   "version": 1
