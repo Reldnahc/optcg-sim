@@ -1,0 +1,76 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-036E
+epic_id: KICK-001
+title: Extract queue source-presence and cleanup helpers
+type: refactor
+area: engine
+primary_concern: rules
+priority: medium
+status: generated
+summary: >
+  Extract queued source-presence validation and Life Trigger cleanup helpers
+  from effect-runtime-queue-processing.ts without changing fail-closed
+  behavior, cleanup events, queue resolution, state hashes, or visibility.
+story_boundary: >
+  Own only behavior-preserving production helper extraction for queued
+  source-presence and Life Trigger cleanup logic. Do not move queue ordering,
+  target-decision, or result assembly bodies in this story.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime-queue-processing.ts
+  - packages/engine-core/src/effect-runtime-queue-source-presence.ts
+  - packages/engine-core/src/effect-runtime-life-trigger-cleanup.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-source-presence.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-stability.test.ts
+  - stories/generated/ENG-036E-extract-queue-source-presence-and-cleanup-helpers.yaml
+  - stories/approved/ENG-036E-extract-queue-source-presence-and-cleanup-helpers.yaml
+  - agent-packets/ENG-036E.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s004
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s016
+  - 04-effect-runtime.s017
+  - 06-visibility-security.s005
+  - 06-visibility-security.s006
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s008
+scope:
+  - move queued source-presence validation into effect-runtime-queue-source-presence.ts
+  - move Life Trigger resolution detection, trash cleanup event emission, and revealed-card cleanup logic into effect-runtime-life-trigger-cleanup.ts
+  - preserve all cleanup event payloads, state sequence behavior, zone reindexing, revealed-card filtering, errors, and no-mutation fail-closed paths
+  - update package-internal imports only as required by the extraction
+non_scope:
+  - changing source-presence policy semantics
+  - changing Life Trigger cleanup behavior or event visibility
+  - changing queue ordering, target-decision, trigger-order, or result assembly behavior
+  - changing trigger queueing or effect primitive execution behavior
+  - adding new exported public API beyond package-internal helper exports
+dependencies:
+  - ENG-036D
+acceptance_criteria:
+  - focused helper modules own queued source-presence and Life Trigger cleanup logic
+  - effect-runtime-queue-processing.ts remains behavior-compatible for createEffectRuntimeQueueProcessing consumers
+  - no event, error, queue entry, state hash, ordering, decision, or hidden-information output changes
+  - focused queue processing tests, coverage, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts packages/engine-core/src/effect-runtime-queue-processing-source-presence.test.ts packages/engine-core/src/effect-runtime-queue-processing-stability.test.ts packages/engine-core/src/life-trigger-actions.test.ts packages/engine-core/src/event-sequencing-regression.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-036E packet while implementing this story
+  - target the ENG-036 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving production refactor story; if any behavior delta appears, stop and split or record an ambiguity
+ambiguity_policy: fail_and_escalate
