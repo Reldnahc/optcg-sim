@@ -73,11 +73,11 @@ child_stories:
     depends_on: [ENG-028E]
   - id: ENG-029B
     title: Create selectTargets decision
-    concern: Pause supported target-requiring effect work with a deterministic selectTargets pending decision for the chooser.
+    concern: Pause supported target-requiring effect work with a deterministic selectTargets pending decision for the chooser without exposing executable target responses yet.
     depends_on: [ENG-029A]
   - id: ENG-029C
     title: Validate selectTargets response
-    concern: Validate respondToDecision target answers against the active decision and current candidate legality, then resume deterministically.
+    concern: Expose executable selectTargets legal actions only after adding response validation, then validate target answers against current candidate legality and resume deterministically.
     depends_on: [ENG-029B]
   - id: ENG-029D
     title: Guard target effect primitive gap

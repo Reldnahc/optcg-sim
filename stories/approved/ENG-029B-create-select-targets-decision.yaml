@@ -14,15 +14,13 @@ summary: >
   pending decision for the chooser.
 story_boundary: >
   Own only selectTargets decision creation for supported target requests after
-  candidate resolution. Do not validate response payloads or resolve target
-  effects.
+  candidate resolution. Do not expose selectTargets legal actions, validate
+  response payloads, or resolve target effects.
 allowed_touch_points:
   - packages/engine-core/src/target-selection.ts
   - packages/engine-core/src/target-selection.test.ts
   - packages/engine-core/src/effect-runtime.ts
   - packages/engine-core/src/effect-runtime.test.ts
-  - packages/engine-core/src/actions.ts
-  - packages/engine-core/src/actions.test.ts
   - packages/engine-core/src/filter-state-for-player.ts
   - packages/engine-core/src/filter-state-for-player.test.ts
   - packages/engine-core/src/action-test-fixtures.ts
@@ -44,11 +42,12 @@ spec_refs:
 scope:
   - detect supported effect work that requires a choose target request already accepted by the ENG-029A candidate resolver
   - create a deterministic selectTargets PendingDecision for the resolved chooser with request, internal candidates, prompt, and causedBy metadata
-  - expose a legal respondToDecision action only to the decision player while a selectTargets decision is pending
+  - keep getLegalActions from exposing selectTargets respondToDecision actions until ENG-029C adds executable response validation
   - project PlayerView through the existing minimal PublicDecision shape without exposing candidate arrays unless later spec authority adds a public target-candidate DTO
   - preserve the current fail-closed unsupported-effect behavior when target candidate resolution fails
   - leave response validation and effect resolution for later child stories
 non_scope:
+  - exposing selectTargets legal actions
   - validating selected target responses
   - applying target effects after a response
   - enumerating every possible target combination as legal actions
@@ -64,12 +63,12 @@ dependencies:
 acceptance_criteria:
   - supported target-requiring effect work pauses with exactly one selectTargets decision for the chooser
   - decision id, causedBy, candidate order, and state hash are deterministic for identical inputs
-  - getLegalActions exposes respondToDecision only to the chooser while the decision is pending
+  - getLegalActions does not expose selectTargets respondToDecision actions before ENG-029C adds executable response validation
   - recipient PlayerView receives only the existing minimal PublicDecision metadata for the selectTargets decision
   - non-chooser PlayerView receives no pending decision and no legal action that reveals target candidates
   - unsupported or ambiguous target requests still fail closed without mutation
 required_tests:
-  - run corepack pnpm exec vitest run packages/engine-core/src/target-selection.test.ts packages/engine-core/src/effect-runtime.test.ts packages/engine-core/src/actions.test.ts packages/engine-core/src/filter-state-for-player.test.ts
+  - run corepack pnpm exec vitest run packages/engine-core/src/target-selection.test.ts packages/engine-core/src/effect-runtime.test.ts packages/engine-core/src/filter-state-for-player.test.ts
   - run corepack pnpm --filter @optcg/engine-core typecheck
   - run corepack pnpm run packets:verify
   - run corepack pnpm run coverage
@@ -81,5 +80,5 @@ repo_rules:
   - stay within allowed_touch_points
   - target the ENG-029 parent integration branch
   - do not run packets:complete after merging only into the parent integration branch
-  - if decision creation requires response validation, resolving target effects, optional activation, replacement effects, or custom handlers, stop and split or record the blocker
+  - if decision creation requires exposing executable target legal actions, response validation, resolving target effects, optional activation, replacement effects, or custom handlers, stop and split or record the blocker
 ambiguity_policy: fail_and_escalate
