@@ -1,0 +1,66 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-032I
+epic_id: KICK-001
+title: Split battle pipeline regression tests
+type: refactor
+area: engine
+primary_concern: verification
+priority: medium
+status: approved
+summary: >
+  Move existing cross-mechanic battle pipeline regression tests out of
+  battle-pipeline-regression.test.ts into focused regression files without
+  changing assertions, fixtures, events, state hashes, or behavior.
+story_boundary: >
+  Own only behavior-preserving test-file organization for cross-mechanic battle
+  pipeline regression coverage currently in battle-pipeline-regression.test.ts.
+allowed_touch_points:
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/battle-pipeline-counter-regression.test.ts
+  - packages/engine-core/src/battle-pipeline-cleanup-regression.test.ts
+  - packages/engine-core/src/battle-pipeline-ko-regression.test.ts
+  - stories/generated/ENG-032I-split-battle-pipeline-regression-tests.yaml
+  - stories/approved/ENG-032I-split-battle-pipeline-regression-tests.yaml
+  - agent-packets/ENG-032I.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s006
+  - 02-engine-mechanics.s008
+  - 03-game-state-events-decisions.s018
+  - 03-game-state-events-decisions.s020
+  - 06-visibility-security.s007
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s016
+scope:
+  - move ENG-020 battle/counter pipeline regression coverage from battle-pipeline-regression.test.ts into a focused counter regression file
+  - move ENG-021C and ENG-021D battle cleanup regression coverage from battle-pipeline-regression.test.ts into a focused cleanup regression file
+  - move ENG-027D battle K.O. trigger regression coverage from battle-pipeline-regression.test.ts into a focused K.O. regression file
+  - preserve cross-mechanic event ordering, state hash, and mutation expectations
+non_scope:
+  - changing production code
+  - changing battle pipeline, cleanup, Counter, K.O., or trigger behavior
+  - moving focused declare-attack, Rush, attack timing, damage, Banish, Character K.O., Blocker, or Counter unit tests
+dependencies:
+  - ENG-032H
+acceptance_criteria:
+  - battle-pipeline-regression.test.ts no longer contains the moved cross-mechanic regression groups
+  - focused battle pipeline regression files cover the same scenarios with behavior-equivalent expectations
+  - no production files change
+  - focused tests, coverage, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/battle-pipeline-regression.test.ts packages/engine-core/src/battle-pipeline-counter-regression.test.ts packages/engine-core/src/battle-pipeline-cleanup-regression.test.ts packages/engine-core/src/battle-pipeline-ko-regression.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-032I packet while implementing this story
+  - target the ENG-032 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving test organization story; if a production change appears necessary, stop and split or record an ambiguity
+ambiguity_policy: fail_and_escalate
