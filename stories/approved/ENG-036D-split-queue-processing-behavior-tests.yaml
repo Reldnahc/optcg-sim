@@ -1,0 +1,76 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-036D
+epic_id: KICK-001
+title: Split queue processing behavior tests
+type: refactor
+area: engine
+primary_concern: verification
+priority: medium
+status: approved
+summary: >
+  Move queue processing tests out of effect-runtime-queue-processing.test.ts
+  into focused behavior suites without changing assertions, fixtures, runtime
+  events, decisions, errors, state hashes, or queue ordering.
+story_boundary: >
+  Own only behavior-preserving test organization for existing queue processing
+  coverage. Production runtime code may not change in this story.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime-queue-processing.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-ordering.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-targets.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-source-presence.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-stability.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-test-support.ts
+  - stories/generated/ENG-036D-split-queue-processing-behavior-tests.yaml
+  - stories/approved/ENG-036D-split-queue-processing-behavior-tests.yaml
+  - agent-packets/ENG-036D.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s004
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s016
+  - 06-visibility-security.s006
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+  - 23-repo-tooling-and-enforcement.s016
+scope:
+  - move existing no-choice draw, last-known source, On K.O., and non-Life Trigger no-zone processing without Life Trigger trash cleanup tests into a no-choice focused suite
+  - move existing deterministic ordering, A/B/C ordering, deck-out checkpoint, and terminal checkpoint tests into an ordering focused suite
+  - move existing selectTargets decision, deterministic target decision, unsupported target, and draw-before-target pause tests into a target focused suite
+  - move existing queued source-presence failure and unsupported source-presence policy tests into a source-presence focused suite
+  - move existing event journal and state hash stability tests into a stability focused suite
+  - extract shared test builders only into effect-runtime-queue-processing-test-support.ts when assertions remain unchanged
+non_scope:
+  - changing effect-runtime-queue-processing.ts
+  - changing queue ordering, no-choice processing, target decisions, source-presence behavior, Life Trigger cleanup, events, errors, state hashes, or visibility
+  - changing trigger queueing or primitive execution behavior
+  - changing production engine, server, client, replay, or CLI code
+dependencies:
+  - ENG-036C
+acceptance_criteria:
+  - focused queue processing suites cover the same scenarios and expected outcomes as the original test file
+  - effect-runtime-queue-processing.test.ts is removed or reduced to a justified minimal compatibility shim
+  - helper extraction remains test-local and behavior-preserving
+  - focused queue processing tests, coverage, and full verify pass
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts packages/engine-core/src/effect-runtime-queue-processing-ordering.test.ts packages/engine-core/src/effect-runtime-queue-processing-targets.test.ts packages/engine-core/src/effect-runtime-queue-processing-source-presence.test.ts packages/engine-core/src/effect-runtime-queue-processing-stability.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-036D packet while implementing this story
+  - target the ENG-036 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - this is a behavior-preserving test organization story; if production changes appear necessary, stop and split or record an ambiguity
+ambiguity_policy: fail_and_escalate

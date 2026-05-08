@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-036F.md",
+      "storyId": "ENG-036F",
+      "storyPath": "stories/approved/ENG-036F-extract-queue-ordering-and-result-helpers.yaml",
+      "storySha256": "037215efda25214a6cb16271cdffa36aac9a9e707a4e33d27057fac9eaaf777c"
+    }
+  ],
   "version": 1
 }
