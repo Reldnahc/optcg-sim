@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-035A.md",
+      "storyId": "ENG-035A",
+      "storyPath": "stories/approved/ENG-035A-split-general-legal-action-tests.yaml",
+      "storySha256": "b21a5f6c5291870b31dc919d928ed4690d79cd9d8420922a9bef5b43dd7048ca"
+    }
+  ],
   "version": 1
 }
