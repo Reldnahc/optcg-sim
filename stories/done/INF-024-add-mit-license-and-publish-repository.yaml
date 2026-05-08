@@ -8,7 +8,7 @@ type: implementation
 area: infra
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Add the repository-level MIT license and perform the explicit GitHub
   repository visibility change needed to make the source repository public.
