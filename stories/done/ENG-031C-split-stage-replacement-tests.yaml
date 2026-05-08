@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing Stage replacement and occupied-stage payment tests out of
   play-card.test.ts into a focused Stage replacement test file without changing

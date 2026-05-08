@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing Character On Play runtime integration and unsupported On Play
   tests out of play-card.test.ts into a focused On Play runtime test file

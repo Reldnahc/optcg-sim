@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing Event card play legal action, payment, execution, visibility,
   reindexing, rejection, determinism, and state-hash tests out of

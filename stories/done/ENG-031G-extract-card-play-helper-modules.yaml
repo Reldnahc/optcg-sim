@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: medium
-status: approved
+status: done
 summary: >
   Extract cohesive card-play payment decision and payment response helpers from
   play-card.ts into a focused module without changing legal actions, decisions,

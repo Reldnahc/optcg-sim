@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing Character overflow decision and response tests out of
   play-card.test.ts into a focused Character overflow test file without

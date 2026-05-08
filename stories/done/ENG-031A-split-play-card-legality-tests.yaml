@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing play-card legal-action and initial rejection/precondition tests
   out of play-card.test.ts into a focused legality test file without changing

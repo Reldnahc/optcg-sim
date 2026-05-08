@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Move existing generic play-card payment decision and payment response
   validation tests out of play-card.test.ts into a focused payment test file
