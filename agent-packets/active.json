@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-033A.md",
+      "storyId": "ENG-033A",
+      "storyPath": "stories/approved/ENG-033A-split-baseline-real-state-visibility-tests.yaml",
+      "storySha256": "18389e36118ca75409d23a4d7cd5f1d8dfce7b842f459535b7dcced443dd607d"
+    }
+  ],
   "version": 1
 }
