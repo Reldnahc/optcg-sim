@@ -92,8 +92,12 @@ const toPlayerEventCausedBy = (
 };
 
 const toPublicDecisionCausedBy = (
-  causedBy: PublicDecision["causedBy"],
+  pending: NonNullable<GameState["pendingDecision"]>,
 ): PublicDecision["causedBy"] => {
+  const causedBy = pending.causedBy;
+  if (pending.type !== "selectTargets") {
+    return causedBy;
+  }
   if (causedBy.type === "effect" || "queueEntryId" in causedBy) {
     return { type: "ruleProcess", name: "privateCausality" };
   }
@@ -166,7 +170,7 @@ const toPublicDecision = (
     type: pending.type,
     playerId: pending.playerId,
     prompt: pending.prompt,
-    causedBy: toPublicDecisionCausedBy(pending.causedBy),
+    causedBy: toPublicDecisionCausedBy(pending),
     ...(pending.timeoutMs === undefined
       ? {}
       : { timeoutMs: pending.timeoutMs }),
