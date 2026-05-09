@@ -3,28 +3,22 @@ spec_package_name: optcg-md-specs-v6
 story_schema_version: 1.0.0
 id: INF-027F
 epic_id: KICK-001
-title: Add safe merged branch cleanup and closeout tests
+title: Add safe merged branch cleanup
 type: tooling
 area: infra
-primary_concern: verification
+primary_concern: tooling
 priority: high
 status: generated
 summary: >
   Add safe deletion of merged story/substory branches after packet lifecycle
-  cleanup succeeds, then close the parent with integration tests and
-  documentation checks proving narrow bypass, no-cleanup-PR policy, metadata
-  binding, and ordinary branch protection.
+  cleanup succeeds, with strict guards for protected, unmerged, unrelated, and
+  malformed branch requests.
 story_boundary: >
-  Own branch cleanup after successful packet lifecycle cleanup plus closeout
-  verification for the automation series. Do not add new cleanup behavior beyond
-  gaps found inside this story boundary; split if tests reveal missing behavior
-  owned by earlier stories.
+  Own branch cleanup after successful packet lifecycle cleanup only. Do not add
+  final closeout documentation sweeps, cleanup PR creation, packet lifecycle
+  command changes, or broad branch-protection redesign in this story.
 allowed_touch_points:
-  - .github/branch-protection.md
-  - .github/pull_request_template.md
   - .github/workflows/post-merge-packet-cleanup.yml
-  - docs/workflow/story-execution.md
-  - docs/workflow/parent-integration-branches.md
   - package.json
   - tools/post-merge-cleanup.ts
   - tools/post-merge-cleanup/**
@@ -49,10 +43,10 @@ scope:
   - delete the merged PR head branch only when associated with the merged PR
   - for parent cleanup, delete parent integration branch only after parent PR merge and lifecycle cleanup success
   - delete optional substory branches only when metadata lists them and they are already merged as required by policy
-  - support dry-run/log output for branch cleanup decisions
+  - support dry-run/log output explaining allowed, skipped, rejected, and failed branch cleanup decisions
   - leave clear log/comment if branch deletion fails after successful packet cleanup without rolling back packet cleanup
-  - verify package scripts, workflow, PR template, workflow docs, and branch-protection docs all agree with the final policy
 non_scope:
+  - final closeout documentation consistency sweeps
   - deleting unmerged branches
   - deleting protected branches
   - cleanup of arbitrary old branches
@@ -64,28 +58,23 @@ dependencies:
   - INF-027E
 acceptance_criteria:
   - branch cleanup does not run when packet cleanup fails
-  - protected branch names are never deleted
-  - unrelated or unmerged branches are never deleted
-  - dry-run output explains every branch cleanup decision
+  - "`main`, `master`, release branch patterns, API-reported protected branches, unrelated branches, and unmerged branches are never deleted"
+  - dry-run output explains every allowed, skipped, rejected, and failed branch cleanup decision
   - successful packet cleanup can be followed by safe deletion of the merged PR branch
-  - branch deletion failure after packet cleanup is reported without rollback
-  - integration tests cover workflow trigger, trusted checkout, preflight, privileged push, verification-before-push, branch deletion ordering, and no cleanup PRs
-  - docs and PR template agree on cleanup metadata shape and reviewer responsibility
-  - branch-protection docs name the exact cleanup actor/workflow and preserve normal PR gates
+  - successful parent packet cleanup can be followed by safe deletion of the parent integration branch
+  - successful parent packet cleanup can be followed by safe deletion of listed, already-merged substory branches
+  - branch deletion failure after packet cleanup is reported without rolling back packet cleanup
 required_tests:
   - branch cleanup test for cleanup-failure skip
-  - branch cleanup test for protected branch rejection
-  - branch cleanup test for unrelated and unmerged branch rejection
+  - branch cleanup tests for `main`, `master`, release branch pattern, API-reported protected branch, unrelated branch, and unmerged branch rejection
+  - branch cleanup dry-run/log tests for allowed, skipped, rejected, and failed deletion decisions
   - branch cleanup test for valid merged story branch deletion request
+  - branch cleanup test for valid parent integration branch deletion request after parent cleanup succeeds
+  - branch cleanup test for valid listed merged substory branch deletion request after parent cleanup succeeds
+  - branch cleanup test proving deletion failure after packet cleanup is reported without rollback
   - workflow test proving branch deletion runs only after packet cleanup and verification gates
-  - package script/tool exposure test for cleanup validation
-  - GitHub workflow test for trigger, permissions, trusted checkout, preflight-before-privileged-push, verification before push, and no cleanup PRs
-  - PR template cleanup metadata and reviewer responsibility test
-  - parent integration docs automation test
-  - branch-protection bypass documentation test
 repo_rules:
   - use the repo-approved GitHub integration surface for branch deletion
   - deletion must be opt-in through cleanup metadata and safety validation
   - fail safe if branch association or merge state cannot be established
-  - if closeout finds missing behavior outside this story boundary, stop and split instead of absorbing it
 ambiguity_policy: fail_and_escalate

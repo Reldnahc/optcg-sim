@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: generated
+status: approved
 summary: >
   Add the post-merge GitHub Actions workflow shell that runs after PRs merge to
   main, checks out trusted main/default-branch code, reads cleanup metadata,

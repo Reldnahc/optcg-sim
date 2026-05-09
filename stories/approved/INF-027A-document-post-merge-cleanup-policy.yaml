@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: docs
 priority: high
-status: generated
+status: approved
 summary: >
   Update checked-in workflow, PR-template, and branch-protection guidance to use
   the SPEC-004 post-merge cleanup authority without adding GitHub Actions,

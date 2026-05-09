@@ -1,0 +1,75 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-027G
+epic_id: KICK-001
+title: Close cleanup automation docs and tests
+type: tooling
+area: infra
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Close the post-merge cleanup automation series with integration tests and
+  documentation consistency checks proving workflow wiring, metadata contract,
+  narrow bypass, manual fallback, and no automation-created cleanup PR policy.
+story_boundary: >
+  Own final closeout verification and documentation consistency only. Do not add
+  new parser behavior, PR evidence binding behavior, privileged push behavior,
+  or branch deletion behavior beyond gaps found inside this story boundary;
+  split if tests reveal missing behavior owned by earlier stories.
+allowed_touch_points:
+  - .github/branch-protection.md
+  - .github/pull_request_template.md
+  - .github/workflows/post-merge-packet-cleanup.yml
+  - docs/workflow/story-execution.md
+  - docs/workflow/parent-integration-branches.md
+  - tests/github/**
+  - tests/contracts/**
+  - stories/generated/INF-027G-*.yaml
+  - stories/approved/INF-027G-*.yaml
+  - agent-packets/INF-027G.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 26-agent-packet-template.s005
+  - 27-spec-driven-story-generation-workflow.s015
+  - 32-codex-agent-integration.s013
+scope:
+  - verify package scripts and tools expose cleanup validation behavior through already-implemented commands
+  - verify workflow trigger, permissions, checkout behavior, fail-closed preflight, privileged push ordering, verification, final diff revalidation, and branch deletion ordering
+  - verify PR template contains required cleanup metadata fields and reviewer responsibility language
+  - verify parent integration docs no longer require humans to manually run cleanup when automation succeeds
+  - verify docs explicitly say automation-created cleanup PRs are not created
+  - verify docs preserve the normal PR and reviewer path for manual edits beyond pure packet-completion output
+  - verify branch-protection docs document the required narrow bypass actor/workflow/token
+  - verify ordinary branch protection remains required for normal PRs
+non_scope:
+  - new parser behavior beyond test-discovered gaps
+  - new PR evidence binding behavior beyond test-discovered gaps
+  - new privileged cleanup push behavior beyond test-discovered gaps
+  - new branch deletion behavior beyond test-discovered gaps
+  - remote GitHub branch-protection mutation
+  - cleanup PR creation by automation
+  - GitHub board or issue automation
+dependencies:
+  - INF-027F
+acceptance_criteria:
+  - integration tests cover workflow trigger, trusted checkout, preflight, privileged push, verification-before-push, final diff revalidation, branch deletion ordering, and no automation-created cleanup PRs
+  - docs and PR template agree on cleanup metadata shape and reviewer responsibility
+  - branch-protection docs name the exact cleanup actor/workflow/token and preserve normal PR gates
+  - docs describe automated cleanup as the normal path after successful story or parent PR merge
+  - docs preserve manual fallback only for operational failure
+  - docs preserve normal PR and reviewer path for manual edits beyond pure packet-completion command output
+required_tests:
+  - package script/tool exposure test for cleanup validation
+  - GitHub workflow test for trigger, permissions, trusted checkout, preflight-before-privileged-push, verification before push, final diff revalidation, branch deletion ordering, and no automation-created cleanup PRs
+  - PR template cleanup metadata and reviewer responsibility test
+  - parent integration docs automation test
+  - workflow docs test proving manual fallback is operational only and manual edits beyond pure packet-completion output use the normal PR/reviewer path
+  - branch-protection bypass documentation test
+repo_rules:
+  - closeout changes must not widen cleanup bypass, metadata authority, privileged push, or branch deletion scope
+  - if closeout finds missing behavior outside this story boundary, stop and split instead of absorbing it
+ambiguity_policy: fail_and_escalate

@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: generated
+status: approved
 summary: >
   Replace routine manual post-merge packet completion with a safe post-merge
   workflow series that first adds specification authority, then binds cleanup
