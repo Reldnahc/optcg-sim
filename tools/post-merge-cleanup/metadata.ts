@@ -21,6 +21,8 @@ export function parseCleanupMetadataLines(lines: string[]): CleanupMetadata {
   const stories: string[] = [];
   const branches: string[] = [];
   let activeList: "stories" | "branches" | null = null;
+  let sawStories = false;
+  let sawBranches = false;
 
   for (const line of lines) {
     if (line.trim() === "") {
@@ -40,11 +42,23 @@ export function parseCleanupMetadataLines(lines: string[]): CleanupMetadata {
     }
 
     if (line === "  stories:") {
+      if (sawStories) {
+        throw new Error(
+          "Malformed cleanup metadata: duplicate stories section.",
+        );
+      }
+      sawStories = true;
       activeList = "stories";
       continue;
     }
 
     if (line === "  branches:") {
+      if (sawBranches) {
+        throw new Error(
+          "Malformed cleanup metadata: duplicate branches section.",
+        );
+      }
+      sawBranches = true;
       activeList = "branches";
       continue;
     }

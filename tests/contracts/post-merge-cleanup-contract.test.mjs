@@ -74,6 +74,30 @@ Post-merge cleanup:
 `),
     /Ambiguous/,
   );
+  assert.throws(
+    () =>
+      parseCleanupMetadataBlock(`Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/A.yaml
+  stories:
+    - stories/approved/B.yaml
+`),
+    /duplicate stories/i,
+  );
+  assert.throws(
+    () =>
+      parseCleanupMetadataBlock(`Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/A.yaml
+  branches:
+    - story/a
+  branches:
+    - story/b
+`),
+    /duplicate branches/i,
+  );
 });
 
 test("validator fails for duplicate, broad-glob, outside, generated, and done paths", async () => {
