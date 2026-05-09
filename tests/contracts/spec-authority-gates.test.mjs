@@ -257,6 +257,64 @@ test("content publication policy spec authorizes MIT source repository publicati
   }
 });
 
+test("specs authorize only a narrow post-merge packet cleanup bypass", async () => {
+  const toolingSpec = await readText(
+    "specs/23-repo-tooling-and-enforcement.md",
+  );
+  const workflowSpec = await readText(
+    "specs/27-spec-driven-story-generation-workflow.md",
+  );
+  const codexSpec = await readText("specs/32-codex-agent-integration.md");
+
+  const mergeGates = extractSection(
+    toolingSpec,
+    "23-repo-tooling-and-enforcement.s016",
+    "23-repo-tooling-and-enforcement.s017",
+  );
+  const completionChecks = extractSection(
+    workflowSpec,
+    "27-spec-driven-story-generation-workflow.s015",
+    "27-spec-driven-story-generation-workflow.s016",
+  );
+  const mergeGateRecommendation = extractSection(
+    codexSpec,
+    "32-codex-agent-integration.s013",
+    "32-codex-agent-integration.s014",
+  );
+
+  for (const requiredText of [
+    "Ordinary protected-branch changes still require a pull request, at least one human review, and passing required checks",
+    "dedicated GitHub App actor `optcg-packet-cleanup[bot]`",
+    "workflow `.github/workflows/post-merge-packet-cleanup.yml`",
+    "token `POST_MERGE_PACKET_CLEANUP_TOKEN`",
+    "only to push exact packet-completion command output to `main` after a reviewed pull request has merged",
+    "must not be available to arbitrary GitHub Actions workflows, human users, broad admin roles, implementation changes, docs changes, tooling changes, or ordinary development pushes",
+  ]) {
+    assertContainsWords(mergeGates, requiredText);
+  }
+
+  for (const requiredText of [
+    "Post-merge cleanup metadata is a reviewed cleanup request, not standalone authority to mutate story state",
+    "must bind the requested cleanup to reviewed pull-request evidence, the merge state, trusted checked-in approved story files, current packet evidence, and, for parent cleanup, included substory evidence",
+    "fail closed when cleanup metadata is absent, malformed, stale, unbound to reviewed evidence, or names a story that is not eligible for completion",
+    "The cleanup workflow must check out trusted `main` or default-branch code, not unreviewed pull-request branch code",
+    "must not open a cleanup pull request",
+    "Manual fallback is only for operational failure",
+    "Branch deletion may run only after packet lifecycle cleanup succeeds and only for associated merged, unprotected story or substory branches",
+  ]) {
+    assertContainsWords(completionChecks, requiredText);
+    assertContainsWords(mergeGateRecommendation, requiredText);
+  }
+
+  for (const prohibitedPattern of [
+    /arbitrary GitHub Actions workflows to bypass branch protection/i,
+    /human users .* use this cleanup bypass/i,
+  ]) {
+    assert.doesNotMatch(completionChecks, prohibitedPattern);
+    assert.doesNotMatch(mergeGateRecommendation, prohibitedPattern);
+  }
+});
+
 test("root license and README scope MIT source publication to repository-owned material", async () => {
   const license = await readText("LICENSE");
   const readme = await readText("README.md");

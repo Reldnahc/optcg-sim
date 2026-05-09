@@ -26,6 +26,14 @@ These names must stay aligned with `.github/workflows/ci.yml`.
 
 - Do not allow direct pushes to protected branches.
 - Allow force pushes only if there is an explicit emergency process outside normal development.
+- Ordinary protected-branch changes still require pull requests, Code Owner review, at least one approval, conversation resolution, and required status checks.
+- The only post-merge lifecycle bypass is the dedicated GitHub App actor `optcg-packet-cleanup[bot]` running workflow `.github/workflows/post-merge-packet-cleanup.yml` with token `POST_MERGE_PACKET_CLEANUP_TOKEN`, only to push exact packet-completion command output to `main` after a reviewed pull request has merged.
+- Cleanup metadata is a reviewed cleanup request, not standalone authority. The cleanup workflow must bind cleanup metadata to reviewed pull-request evidence, merge state, trusted checked-in approved story files, current packet evidence, and parent/substory inclusion evidence.
+- The cleanup workflow must fail closed when metadata is absent, malformed, stale, unbound, or ineligible.
+- The cleanup workflow must not open cleanup pull requests. Manual fallback is only for operational failure.
+- The cleanup workflow may delete branches only after packet lifecycle cleanup succeeds, and only for associated merged, unprotected story or substory branches.
+- Do not expose the cleanup token to ordinary development pushes, broad admin roles, human-user development paths, or other workflows.
+- If remote GitHub rulesets or branch-protection settings cannot be changed from this repository, apply this exact bypass actor setting in GitHub before enabling the privileged cleanup push.
 
 ## Review Record
 

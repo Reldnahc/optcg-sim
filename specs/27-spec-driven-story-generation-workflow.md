@@ -310,6 +310,22 @@ Before human review is requested on a parent PR, the PR body or a handoff commen
 
 A commit that contains only the exact file changes produced by the packet completion command is a generated lifecycle cleanup and does not need a separate reviewer-subagent pass. Run the repo verification command before pushing that cleanup. If cleanup requires any manual edit beyond the command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, it is no longer pure generated cleanup and should receive the normal reviewer-subagent pass before push or merge.
 
+Post-merge cleanup metadata is a reviewed cleanup request, not standalone
+authority to mutate story state. Cleanup automation must bind the requested
+cleanup to reviewed pull-request evidence, the merge state, trusted checked-in
+approved story files, current packet evidence, and, for parent cleanup, included
+substory evidence before packet completion runs. It must fail closed when
+cleanup metadata is absent, malformed, stale, unbound to reviewed evidence, or
+names a story that is not eligible for completion.
+
+The cleanup workflow must check out trusted `main` or default-branch code, not
+unreviewed pull-request branch code. A direct cleanup commit may be pushed only
+by the dedicated cleanup actor after packet-completion output is proven exact
+and repo-approved verification passes. The automation must not open a cleanup
+pull request. Manual fallback is only for operational failure, not the normal
+path. Branch deletion may run only after packet lifecycle cleanup succeeds and
+only for associated merged, unprotected story or substory branches.
+
 ## First practical adoption step
 
 <!-- SECTION_REF: 27-spec-driven-story-generation-workflow.s016 -->

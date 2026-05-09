@@ -248,6 +248,30 @@ test("branch protection guide names the required status checks and subagent revi
   assert.doesNotMatch(guide, /@codex review/i);
 });
 
+test("branch protection guide documents only the exact packet cleanup bypass", async () => {
+  const guide = await readActiveText(".github/branch-protection.md");
+
+  assertMatchesAll(guide, [
+    /ordinary protected-branch changes still require pull requests, Code Owner review, at least one approval, conversation resolution, and required status checks/i,
+    /dedicated GitHub App actor `optcg-packet-cleanup\[bot\]`/i,
+    /workflow `.github\/workflows\/post-merge-packet-cleanup\.yml`/i,
+    /token `POST_MERGE_PACKET_CLEANUP_TOKEN`/i,
+    /only to push exact packet-completion command output to `main` after a reviewed pull request has merged/i,
+    /cleanup metadata is a reviewed cleanup request, not standalone authority/i,
+    /bind cleanup metadata to reviewed pull-request evidence, merge state, trusted checked-in approved story files, current packet evidence, and parent\/substory inclusion evidence/i,
+    /fail closed when metadata is absent, malformed, stale, unbound, or ineligible/i,
+    /must not open cleanup pull requests/i,
+    /manual fallback is only for operational failure/i,
+    /delete branches only after packet lifecycle cleanup succeeds/i,
+    /associated merged, unprotected story or substory branches/i,
+    /If remote GitHub rulesets or branch-protection settings cannot be changed from this repository, apply this exact bypass actor setting in GitHub before enabling the privileged cleanup push/i,
+  ]);
+
+  assert.doesNotMatch(guide, /allow arbitrary GitHub Actions workflows/i);
+  assert.doesNotMatch(guide, /allow broad admin roles/i);
+  assert.doesNotMatch(guide, /human users.*as a normal development path/i);
+});
+
 test("branch protection required status checks exactly match ci workflow jobs", async () => {
   const guide = await readActiveText(".github/branch-protection.md");
   const workflow = await readActiveText(".github/workflows/ci.yml");
