@@ -14,10 +14,64 @@ export type CleanupStoryValidation = {
 };
 
 export type CleanupDryRunPlan = {
+  boundStories: CleanupStoryValidation[];
   branches: string[];
-  localOnly: true;
+  mergeSha: string;
+  mergedPrNumber: number;
   mode: CleanupMode;
-  notAuthorizingUntil: "INF-027C-reviewed-pr-evidence-and-merge-state-binding";
   statement: string;
-  stories: CleanupStoryValidation[];
+  verificationInputs: {
+    metadataSource: string;
+    requiredReviewId: string;
+    requiredReviewSubmittedAt: string;
+    trustedBaseBranch: string;
+    trustedMainSha: string;
+  };
+};
+
+export type CleanupMetadataSourceEvidence = {
+  contentSha256: string;
+  durable?: boolean;
+  kind: string;
+  sourceId: string;
+  updatedAt: string;
+};
+
+export type CleanupHumanReviewEvidence = {
+  decision: string;
+  id: string;
+  isMergeGate: boolean;
+  reviewerKind: "human" | "bot";
+  sourceRefs: string[];
+  submittedAt: string;
+};
+
+export type CleanupStoryBindingEvidence = {
+  packetPath: string;
+  storyId: string;
+  storyPath: string;
+  substoryAiReviewRecordId?: string;
+  substoryPrNumber?: number;
+};
+
+export type CleanupParentLifecycleEvidence = {
+  cleanupPlanRecordedAt: string;
+  includedStories: CleanupStoryBindingEvidence[];
+  parentIntegrationReviewRecordId: string;
+  parentRevisionResponseId: string;
+};
+
+export type CleanupEvidenceInput = {
+  baseBranch: string;
+  changedFiles: string[];
+  defaultBranch: string;
+  mergeSha: string;
+  merged: boolean;
+  mergedAt: string;
+  metadataSource: CleanupMetadataSourceEvidence;
+  metadataSourceRef: string;
+  prNumber: number;
+  reviews: CleanupHumanReviewEvidence[];
+  stories: CleanupStoryBindingEvidence[];
+  parentLifecycle?: CleanupParentLifecycleEvidence;
 };

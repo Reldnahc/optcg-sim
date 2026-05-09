@@ -6,6 +6,7 @@ import type * as PacketParser from "../agent-packet-parser.js";
 import type * as PacketLifecycle from "../agent-packet-lifecycle.js";
 import type {
   CleanupDryRunPlan,
+  CleanupEvidenceInput,
   CleanupMetadata,
   CleanupStoryValidation,
 } from "./types.js";
@@ -21,25 +22,427 @@ const { fileExists, sha256, toManifestPath }: typeof PacketLifecycle =
 const APPROVED_PREFIX = "stories/approved/";
 
 export async function buildCleanupDryRunPlan(options: {
+  evidence: CleanupEvidenceInput;
   metadata: CleanupMetadata;
+  metadataSourceRef: string;
   repoRoot: string;
+  trustedMainSha: string;
 }): Promise<CleanupDryRunPlan> {
   validateStoryCardinality(options.metadata);
   const stories = await validateStories(
     options.repoRoot,
     options.metadata.stories,
   );
+  const requiredReview = validateEvidenceBinding({
+    evidence: options.evidence,
+    metadata: options.metadata,
+    metadataSourceRef: options.metadataSourceRef,
+    stories,
+    trustedMainSha: options.trustedMainSha,
+  });
+  const sortedBranches = [...options.metadata.branches].sort((a, b) =>
+    a.localeCompare(b),
+  );
 
   return {
-    branches: options.metadata.branches,
-    localOnly: true,
+    boundStories: stories,
+    branches: sortedBranches,
+    mergeSha: options.evidence.mergeSha,
+    mergedPrNumber: options.evidence.prNumber,
     mode: options.metadata.mode,
-    notAuthorizingUntil:
-      "INF-027C-reviewed-pr-evidence-and-merge-state-binding",
     statement:
-      "Local dry-run only. This output is not cleanup-authorizing until INF-027C binds reviewed PR evidence and merge state.",
-    stories,
+      "Cleanup metadata is bound to reviewed PR evidence, trusted story/packet state, and merge state.",
+    verificationInputs: {
+      metadataSource: options.evidence.metadataSourceRef,
+      requiredReviewId: requiredReview.id,
+      requiredReviewSubmittedAt: requiredReview.submittedAt,
+      trustedBaseBranch: options.evidence.baseBranch,
+      trustedMainSha: options.trustedMainSha,
+    },
   };
+}
+
+function validateEvidenceBinding(options: {
+  evidence: CleanupEvidenceInput;
+  metadata: CleanupMetadata;
+  metadataSourceRef: string;
+  stories: CleanupStoryValidation[];
+  trustedMainSha: string;
+}) {
+  const { evidence, metadata, metadataSourceRef, stories, trustedMainSha } =
+    options;
+  validateEvidenceShape(evidence);
+  if (!evidence.merged) {
+    throw new Error("Merged PR evidence is required.");
+  }
+  if (evidence.baseBranch !== evidence.defaultBranch) {
+    throw new Error("Merged PR target branch must be the default branch.");
+  }
+  if (evidence.mergeSha !== trustedMainSha) {
+    throw new Error(
+      "Merged PR SHA must match the trusted checked-out default branch.",
+    );
+  }
+  if (evidence.metadataSourceRef !== buildSourceRef(evidence.metadataSource)) {
+    throw new Error("Metadata source reference must match source evidence.");
+  }
+  if (
+    evidence.metadataSource.kind !== "pr-body" &&
+    evidence.metadataSource.kind !== "handoff-comment"
+  ) {
+    throw new Error(
+      "Cleanup metadata source must be a PR body or durable handoff comment.",
+    );
+  }
+  if (metadataSourceRef !== evidence.metadataSourceRef) {
+    throw new Error(
+      "Cleanup metadata must come from the reviewed PR metadata source.",
+    );
+  }
+  if (
+    evidence.metadataSource.kind === "handoff-comment" &&
+    !evidence.metadataSource.durable
+  ) {
+    throw new Error("Handoff metadata source must be durable.");
+  }
+  const mergedAtMs = parseCanonicalInstantMillis(
+    evidence.mergedAt,
+    "cleanup evidence mergedAt",
+  );
+  const metadataUpdatedAtMs = parseCanonicalInstantMillis(
+    evidence.metadataSource.updatedAt,
+    "cleanup evidence metadataSource.updatedAt",
+  );
+
+  const humanGateReviews = evidence.reviews
+    .filter(
+      (review) =>
+        review.reviewerKind === "human" &&
+        review.isMergeGate &&
+        (review.decision === "approved" ||
+          review.decision === "fallback-approved"),
+    )
+    .filter(
+      (review) =>
+        parseCanonicalInstantMillis(
+          review.submittedAt,
+          "cleanup evidence review.submittedAt",
+        ) <= mergedAtMs,
+    )
+    .sort(
+      (a, b) =>
+        parseCanonicalInstantMillis(
+          a.submittedAt,
+          "cleanup evidence review.submittedAt",
+        ) -
+        parseCanonicalInstantMillis(
+          b.submittedAt,
+          "cleanup evidence review.submittedAt",
+        ),
+    );
+  const requiredReview = humanGateReviews.at(-1);
+  if (!requiredReview) {
+    throw new Error("Missing required human merge-gate review before merge.");
+  }
+  const requiredReviewSubmittedAtMs = parseCanonicalInstantMillis(
+    requiredReview.submittedAt,
+    "cleanup evidence review.submittedAt",
+  );
+
+  const sourceRef = evidence.metadataSourceRef;
+  const requiredReferencesSource =
+    requiredReview.sourceRefs.includes(sourceRef);
+  if (!requiredReferencesSource) {
+    throw new Error(
+      "Required human merge-gate review must reference the exact metadata source.",
+    );
+  }
+
+  if (metadataUpdatedAtMs > requiredReviewSubmittedAtMs) {
+    const laterReview = humanGateReviews.find(
+      (review) =>
+        parseCanonicalInstantMillis(
+          review.submittedAt,
+          "cleanup evidence review.submittedAt",
+        ) >= metadataUpdatedAtMs && review.sourceRefs.includes(sourceRef),
+    );
+    if (!laterReview) {
+      throw new Error(
+        "Metadata source changed after required review point without later human merge-gate review of the exact updated source.",
+      );
+    }
+  }
+
+  validateStoryAssociation({ evidence, metadata, stories });
+  if (metadata.mode === "parent") {
+    validateParentEvidence({
+      evidence,
+      requiredReviewSubmittedAtMs,
+      stories,
+    });
+  }
+  return requiredReview;
+}
+
+function validateStoryAssociation(options: {
+  evidence: CleanupEvidenceInput;
+  metadata: CleanupMetadata;
+  stories: CleanupStoryValidation[];
+}) {
+  const storyBindingByPath = new Map(
+    options.evidence.stories.map((story) => [story.storyPath, story]),
+  );
+  const changedFiles = new Set(options.evidence.changedFiles);
+  for (const story of options.stories) {
+    const binding = storyBindingByPath.get(story.storyPath);
+    if (!binding) {
+      throw new Error(
+        `Requested story ${story.storyPath} is not associated with merged PR evidence.`,
+      );
+    }
+    if (binding.storyId !== story.storyId) {
+      throw new Error(
+        `Requested story ${story.storyPath} does not match PR story id evidence.`,
+      );
+    }
+    if (binding.packetPath !== story.packetPath) {
+      throw new Error(
+        `Requested story ${story.storyPath} does not match PR packet evidence.`,
+      );
+    }
+    if (
+      !changedFiles.has(story.storyPath) ||
+      !changedFiles.has(story.packetPath)
+    ) {
+      throw new Error(
+        `Merged PR changed artifacts must include ${story.storyPath} and ${story.packetPath}.`,
+      );
+    }
+  }
+}
+
+function validateParentEvidence(options: {
+  evidence: CleanupEvidenceInput;
+  requiredReviewSubmittedAtMs: number;
+  stories: CleanupStoryValidation[];
+}) {
+  const parent = options.evidence.parentLifecycle;
+  if (!parent) {
+    throw new Error("Parent cleanup evidence is required for parent mode.");
+  }
+  if (
+    !parent.parentIntegrationReviewRecordId ||
+    !parent.parentRevisionResponseId
+  ) {
+    throw new Error(
+      "Parent cleanup evidence is missing integration review or revision response.",
+    );
+  }
+  if (
+    parseCanonicalInstantMillis(
+      parent.cleanupPlanRecordedAt,
+      "cleanup evidence parentLifecycle.cleanupPlanRecordedAt",
+    ) > options.requiredReviewSubmittedAtMs
+  ) {
+    throw new Error(
+      "Parent cleanup plan must be recorded before the required human merge-gate review.",
+    );
+  }
+  const byPath = new Map(
+    parent.includedStories.map((story) => [story.storyPath, story]),
+  );
+  for (const story of options.stories) {
+    const child = byPath.get(story.storyPath);
+    if (!child) {
+      throw new Error(
+        `Parent evidence missing included-substory entry for ${story.storyPath}.`,
+      );
+    }
+    if (!child.substoryPrNumber || !child.substoryAiReviewRecordId) {
+      throw new Error(
+        `Parent evidence missing substory PR or AI review record for ${story.storyPath}.`,
+      );
+    }
+    if (
+      child.storyId !== story.storyId ||
+      child.packetPath !== story.packetPath
+    ) {
+      throw new Error(
+        `Parent evidence included-substory entry does not match trusted story/packet evidence for ${story.storyPath}.`,
+      );
+    }
+  }
+}
+
+function buildSourceRef(source: CleanupEvidenceInput["metadataSource"]) {
+  return `${source.kind}:${source.sourceId}:${source.contentSha256}`;
+}
+
+function validateEvidenceShape(evidence: CleanupEvidenceInput) {
+  const root = requireRecord(evidence, "cleanup evidence");
+  requireNumber(root["prNumber"], "cleanup evidence prNumber");
+  requireBoolean(root["merged"], "cleanup evidence merged");
+  requireString(root["mergeSha"], "cleanup evidence mergeSha");
+  requireCanonicalInstant(root["mergedAt"], "cleanup evidence mergedAt");
+  requireString(root["baseBranch"], "cleanup evidence baseBranch");
+  requireString(root["defaultBranch"], "cleanup evidence defaultBranch");
+  requireString(
+    root["metadataSourceRef"],
+    "cleanup evidence metadataSourceRef",
+  );
+  requireStringArray(root["changedFiles"], "cleanup evidence changedFiles");
+
+  const source = requireRecord(
+    root["metadataSource"],
+    "cleanup evidence metadataSource",
+  );
+  requireString(
+    source["contentSha256"],
+    "cleanup evidence metadataSource.contentSha256",
+  );
+  requireString(source["kind"], "cleanup evidence metadataSource.kind");
+  requireString(source["sourceId"], "cleanup evidence metadataSource.sourceId");
+  requireCanonicalInstant(
+    source["updatedAt"],
+    "cleanup evidence metadataSource.updatedAt",
+  );
+  if (source["durable"] !== undefined) {
+    requireBoolean(
+      source["durable"],
+      "cleanup evidence metadataSource.durable",
+    );
+  }
+
+  const reviews = requireRecordArray(
+    root["reviews"],
+    "cleanup evidence reviews",
+  );
+  for (const review of reviews) {
+    requireString(review["decision"], "cleanup evidence review.decision");
+    requireString(review["id"], "cleanup evidence review.id");
+    requireBoolean(
+      review["isMergeGate"],
+      "cleanup evidence review.isMergeGate",
+    );
+    requireString(
+      review["reviewerKind"],
+      "cleanup evidence review.reviewerKind",
+    );
+    requireStringArray(
+      review["sourceRefs"],
+      "cleanup evidence review.sourceRefs",
+    );
+    requireCanonicalInstant(
+      review["submittedAt"],
+      "cleanup evidence review.submittedAt",
+    );
+  }
+
+  validateStoryBindingEvidenceArray(
+    root["stories"],
+    "cleanup evidence stories",
+  );
+
+  if (root["parentLifecycle"] !== undefined) {
+    const parent = requireRecord(
+      root["parentLifecycle"],
+      "cleanup evidence parentLifecycle",
+    );
+    requireCanonicalInstant(
+      parent["cleanupPlanRecordedAt"],
+      "cleanup evidence parentLifecycle.cleanupPlanRecordedAt",
+    );
+    requireString(
+      parent["parentIntegrationReviewRecordId"],
+      "cleanup evidence parentLifecycle.parentIntegrationReviewRecordId",
+    );
+    requireString(
+      parent["parentRevisionResponseId"],
+      "cleanup evidence parentLifecycle.parentRevisionResponseId",
+    );
+    validateStoryBindingEvidenceArray(
+      parent["includedStories"],
+      "cleanup evidence parentLifecycle.includedStories",
+    );
+  }
+}
+
+function validateStoryBindingEvidenceArray(value: unknown, label: string) {
+  const stories = requireRecordArray(value, label);
+  for (const story of stories) {
+    requireString(story["packetPath"], `${label} packetPath`);
+    requireString(story["storyId"], `${label} storyId`);
+    requireString(story["storyPath"], `${label} storyPath`);
+    if (story["substoryAiReviewRecordId"] !== undefined) {
+      requireString(
+        story["substoryAiReviewRecordId"],
+        `${label} substoryAiReviewRecordId`,
+      );
+    }
+    if (story["substoryPrNumber"] !== undefined) {
+      requireNumber(story["substoryPrNumber"], `${label} substoryPrNumber`);
+    }
+  }
+}
+
+function requireRecord(value: unknown, label: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`Malformed cleanup evidence: ${label} must be an object.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function requireRecordArray(value: unknown, label: string) {
+  if (!Array.isArray(value)) {
+    throw new Error(`Malformed cleanup evidence: ${label} must be an array.`);
+  }
+  return value.map((entry, index) =>
+    requireRecord(entry, `${label}[${String(index)}]`),
+  );
+}
+
+function requireString(value: unknown, label: string): asserts value is string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`Malformed cleanup evidence: ${label} must be a string.`);
+  }
+}
+
+function requireCanonicalInstant(value: unknown, label: string) {
+  requireString(value, label);
+  parseCanonicalInstantMillis(value, label);
+}
+
+function parseCanonicalInstantMillis(value: string, label: string) {
+  const millis = Date.parse(value);
+  if (!Number.isFinite(millis) || new Date(millis).toISOString() !== value) {
+    throw new Error(
+      `Malformed cleanup evidence: ${label} must be a canonical UTC timestamp.`,
+    );
+  }
+  return millis;
+}
+
+function requireStringArray(value: unknown, label: string) {
+  if (
+    !Array.isArray(value) ||
+    value.some((entry) => typeof entry !== "string")
+  ) {
+    throw new Error(
+      `Malformed cleanup evidence: ${label} must be a string array.`,
+    );
+  }
+}
+
+function requireBoolean(value: unknown, label: string) {
+  if (typeof value !== "boolean") {
+    throw new Error(`Malformed cleanup evidence: ${label} must be a boolean.`);
+  }
+}
+
+function requireNumber(value: unknown, label: string) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    throw new Error(`Malformed cleanup evidence: ${label} must be an integer.`);
+  }
 }
 
 function validateStoryCardinality(metadata: CleanupMetadata) {

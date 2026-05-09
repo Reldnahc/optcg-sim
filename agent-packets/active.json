@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-027B.md",
-      "storyId": "INF-027B",
-      "storyPath": "stories/approved/INF-027B-add-cleanup-metadata-parser-and-validator.yaml",
-      "storySha256": "ac0026613d70914161f10e17e205917a1f44db0c57da86d77a603dce3f190015"
+      "packetPath": "agent-packets/INF-027C.md",
+      "storyId": "INF-027C",
+      "storyPath": "stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml",
+      "storySha256": "be0df723e2614e430943d107990e090fa8519215a55231e603b4cdad9afc5cf0"
     }
   ],
   "version": 1
