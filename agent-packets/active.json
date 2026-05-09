@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-032.md",
-      "storyId": "INF-032",
-      "storyPath": "stories/approved/INF-032-prevent-missing-cleanup-metadata-merge.yaml",
-      "storySha256": "4cdc067a2d377910dfd497c9e4888defadc7bdf30ca44be0a7205b1892c8ad3a"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

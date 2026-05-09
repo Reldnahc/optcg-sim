@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Add a pre-merge enforcement path that fails pull requests to the default
   branch when reviewed post-merge cleanup metadata is missing, malformed, or
