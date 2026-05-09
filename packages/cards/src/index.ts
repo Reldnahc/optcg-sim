@@ -39,6 +39,17 @@ export type {
 export { createPoneglyphClient } from "./poneglyph-client.js";
 export { validatePoneglyphCardDetail } from "./poneglyph-schema.js";
 export {
+  getRepresentativeFixtureSupportMetadata,
+  hasCheckedInRepresentativePoneglyphFixture,
+  isRepresentativeFixtureStatusSupported,
+  listRepresentativeFixtureIds,
+  loadCheckedInRepresentativePoneglyphFixture,
+} from "./representative-fixtures.js";
+export type {
+  RepresentativeFixtureId,
+  RepresentativeFixtureSupportMetadata,
+} from "./representative-fixtures.js";
+export {
   REDIS_CARD_DATA_CACHE_DEFERRED,
   createFileCardDataCache,
   createInMemoryCardDataCache,
