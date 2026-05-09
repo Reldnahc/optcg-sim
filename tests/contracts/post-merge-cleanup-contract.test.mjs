@@ -225,6 +225,12 @@ test("PR evidence binding accepts valid parent cleanup with multiple child stori
   const tempRoot = await makeTempRepo([
     { id: "INF-601", fileName: "INF-601-a.yaml" },
     { id: "INF-602", fileName: "INF-602-b.yaml" },
+    {
+      childStoryIds: ["INF-601", "INF-602"],
+      id: "CARD-001",
+      fileName: "CARD-001-parent.yaml",
+      writePacket: false,
+    },
   ]);
   const plan = await buildCleanupDryRunPlan({
     evidence: buildParentEvidence(),
@@ -240,6 +246,17 @@ test("PR evidence binding accepts valid parent cleanup with multiple child stori
   });
   assert.equal(plan.mode, "parent");
   assert.equal(plan.boundStories.length, 2);
+  assert.deepEqual(plan.boundParentStory, {
+    storyId: "CARD-001",
+    storyPath: "stories/approved/CARD-001-parent.yaml",
+    storySha256: sha256(
+      renderStoryYaml({
+        childStoryIds: ["INF-601", "INF-602"],
+        id: "CARD-001",
+        status: "approved",
+      }),
+    ),
+  });
 });
 
 test("rejects metadata that does not match merged PR story evidence", async () => {
@@ -832,6 +849,7 @@ async function makeTempRepo(stories, options = {}) {
       story.fileName,
     );
     const storySource = renderStoryYaml({
+      childStoryIds: story.childStoryIds,
       id: story.id,
       status: story.status ?? "approved",
     });
@@ -930,6 +948,7 @@ function buildParentEvidence() {
       "agent-packets/INF-601.md",
       "stories/approved/INF-602-b.yaml",
       "agent-packets/INF-602.md",
+      "stories/approved/CARD-001-parent.yaml",
     ],
     prNumber: 700,
     stories: [
@@ -1002,5 +1021,6 @@ required_tests:
 repo_rules:
   - fail closed
 ambiguity_policy: fail_and_escalate
+${options.childStoryIds ? `child_stories:\n${options.childStoryIds.map((id) => `  - ${id}`).join("\n")}\n` : ""}
 `;
 }

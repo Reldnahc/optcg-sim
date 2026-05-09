@@ -26,12 +26,17 @@ test("execution selects the exact packet completion command from the bound plan"
     stories: [buildStory("INF-501", "one")],
   });
   const parentPlan = buildPlan({
+    boundParentStory: buildParentStory(),
     packetCommand: {
       args: [
         "--story",
         "stories/approved/INF-501-one.yaml",
         "--story",
         "stories/approved/INF-502-two.yaml",
+        "--parent-story",
+        "stories/approved/CARD-001-parent.yaml",
+        "--parent-story-sha256",
+        "5".repeat(64),
       ],
       command: "packets:complete-many",
     },
@@ -48,18 +53,34 @@ test("execution selects the exact packet completion command from the bound plan"
     ],
     command: "corepack",
   });
-  assert.deepEqual(selectPacketCompletionCommand(parentPlan), {
-    args: [
-      "pnpm",
-      "run",
-      "packets:complete-many",
-      "--story",
-      "stories/approved/INF-501-one.yaml",
-      "--story",
-      "stories/approved/INF-502-two.yaml",
-    ],
-    command: "corepack",
-  });
+  assert.throws(
+    () => selectPacketCompletionCommand(parentPlan),
+    /requires a bound cleanup plan file/i,
+  );
+  assert.deepEqual(
+    selectPacketCompletionCommand(
+      parentPlan,
+      ".cleanup/bound-cleanup-plan.json",
+    ),
+    {
+      args: [
+        "pnpm",
+        "run",
+        "packets:complete-many",
+        "--story",
+        "stories/approved/INF-501-one.yaml",
+        "--story",
+        "stories/approved/INF-502-two.yaml",
+        "--parent-story",
+        "stories/approved/CARD-001-parent.yaml",
+        "--parent-story-sha256",
+        "5".repeat(64),
+        "--bound-cleanup-plan",
+        ".cleanup/bound-cleanup-plan.json",
+      ],
+      command: "corepack",
+    },
+  );
 });
 
 test("execution rejects dirty worktrees before packet completion starts", () => {
@@ -185,6 +206,144 @@ test("execution rejects stale bound plans before packet completion", async () =>
   );
 });
 
+test("execution rejects stale parent path or sha evidence before packet completion", async () => {
+  const repoRoot = await createFixtureRepo();
+  const story = buildStory("INF-501", "one");
+  const parent = buildParentStory();
+  await writeFixtureStory(repoRoot, story, "approved");
+  await writeFixturePacket(repoRoot, story, "packet v1\n");
+  await writeParentStory(repoRoot, parent, ["INF-501"], "approved");
+  git(repoRoot, ["add", "."]);
+  git(repoRoot, ["commit", "-m", "fixture"]);
+  const trustedMainSha = git(repoRoot, ["rev-parse", "HEAD"]);
+  const plan = buildPlan({
+    boundParentStory: {
+      ...parent,
+      storySha256: sha256(renderParentStory(parent, ["INF-501"], "approved")),
+    },
+    mergedPullRequest: {
+      baseBranch: "main",
+      mergeSha: trustedMainSha,
+      number: 77,
+    },
+    packetCommand: {
+      args: [
+        "--story",
+        story.storyPath,
+        "--parent-story",
+        parent.storyPath,
+        "--parent-story-sha256",
+        sha256(renderParentStory(parent, ["INF-501"], "approved")),
+      ],
+      command: "packets:complete-many",
+    },
+    stories: [
+      {
+        ...story,
+        packetSha256: sha256("packet v1\n"),
+        storySha256: sha256(renderStory(story, "approved")),
+      },
+    ],
+  });
+
+  await validateBoundCleanupPlanForExecution({
+    plan,
+    repoRoot,
+    trustedMainSha,
+  });
+
+  await writeParentStory(repoRoot, parent, ["INF-999"], "approved");
+  await assert.rejects(
+    () =>
+      validateBoundCleanupPlanForExecution({
+        plan,
+        repoRoot,
+        trustedMainSha,
+      }),
+    /stale parent story evidence/i,
+  );
+
+  await rm(path.join(repoRoot, parent.storyPath));
+  await assert.rejects(
+    () =>
+      validateBoundCleanupPlanForExecution({
+        plan,
+        repoRoot,
+        trustedMainSha,
+      }),
+    /Missing required cleanup file: approved parent story/i,
+  );
+});
+
+test("execution rejects packetized parent story closeout", async () => {
+  const repoRoot = await createFixtureRepo();
+  const story = buildStory("INF-501", "one");
+  const parent = buildParentStory();
+  const parentSource = renderParentStory(parent, ["INF-501"], "approved");
+  await writeFixtureStory(repoRoot, story, "approved");
+  await writeFixturePacket(repoRoot, story, "packet v1\n");
+  await writeParentStory(repoRoot, parent, ["INF-501"], "approved");
+  await mkdir(path.join(repoRoot, "agent-packets"), { recursive: true });
+  await writeFile(path.join(repoRoot, "agent-packets", "CARD-001.md"), "no\n");
+  git(repoRoot, ["add", "."]);
+  git(repoRoot, ["commit", "-m", "fixture"]);
+  const trustedMainSha = git(repoRoot, ["rev-parse", "HEAD"]);
+  const plan = buildPlan({
+    boundParentStory: {
+      ...parent,
+      storySha256: sha256(parentSource),
+    },
+    mergedPullRequest: {
+      baseBranch: "main",
+      mergeSha: trustedMainSha,
+      number: 77,
+    },
+    packetCommand: {
+      args: [
+        "--story",
+        story.storyPath,
+        "--parent-story",
+        parent.storyPath,
+        "--parent-story-sha256",
+        sha256(parentSource),
+      ],
+      command: "packets:complete-many",
+    },
+    stories: [
+      {
+        ...story,
+        packetSha256: sha256("packet v1\n"),
+        storySha256: sha256(renderStory(story, "approved")),
+      },
+    ],
+  });
+
+  await assert.rejects(
+    () =>
+      validateBoundCleanupPlanForExecution({
+        plan,
+        repoRoot,
+        trustedMainSha,
+      }),
+    /parent story CARD-001 is packetized/i,
+  );
+
+  await rm(path.join(repoRoot, story.storyPath));
+  await rm(path.join(repoRoot, story.packetPath));
+  await rm(path.join(repoRoot, parent.storyPath));
+  await writeFixtureStory(repoRoot, story, "done");
+  await writeParentStory(repoRoot, parent, ["INF-501"], "done");
+  await writeFile(
+    path.join(repoRoot, "agent-packets", "active.json"),
+    `${JSON.stringify({ activeStories: [], version: 1 }, null, 2)}\n`,
+  );
+
+  await assert.rejects(
+    () => validatePacketCompletionDiff({ plan, repoRoot }),
+    /parent story CARD-001 is packetized/i,
+  );
+});
+
 test("execution accepts only exact packet completion lifecycle output", async () => {
   const repoRoot = await createFixtureRepo();
   const story = buildStory("INF-501", "one");
@@ -259,6 +418,49 @@ test("execution rejects unexpected paths and manual lifecycle edits", async () =
   await assert.rejects(
     () => validatePacketCompletionDiff({ plan, repoRoot }),
     /Unexpected cleanup output path|does not match exact packet completion output/,
+  );
+});
+
+test("execution rejects parent story closeout that is not bound in the plan", async () => {
+  const repoRoot = await createFixtureRepo();
+  const story = buildStory("INF-501", "one");
+  const parent = buildParentStory();
+  const approvedStory = renderStory(story, "approved");
+  const packetSource = "packet v1\n";
+  await writeFixtureStory(repoRoot, story, "approved");
+  await writeFixturePacket(repoRoot, story, packetSource);
+  await writeActiveManifest(repoRoot, story);
+  await writeParentStory(repoRoot, parent, ["INF-501"], "approved");
+  git(repoRoot, ["add", "."]);
+  git(repoRoot, ["commit", "-m", "fixture"]);
+  const plan = buildPlan({
+    mergedPullRequest: {
+      baseBranch: "main",
+      mergeSha: git(repoRoot, ["rev-parse", "HEAD"]),
+      number: 77,
+    },
+    stories: [
+      {
+        ...story,
+        packetSha256: sha256(packetSource),
+        storySha256: sha256(approvedStory),
+      },
+    ],
+  });
+
+  await rm(path.join(repoRoot, story.storyPath));
+  await rm(path.join(repoRoot, story.packetPath));
+  await writeFixtureStory(repoRoot, story, "done");
+  await rm(path.join(repoRoot, parent.storyPath));
+  await writeParentStory(repoRoot, parent, ["INF-501"], "done");
+  await writeFile(
+    path.join(repoRoot, "agent-packets", "active.json"),
+    `${JSON.stringify({ activeStories: [], version: 1 }, null, 2)}\n`,
+  );
+
+  await assert.rejects(
+    () => validatePacketCompletionDiff({ plan, repoRoot }),
+    /Unexpected cleanup output path: stories\/approved\/CARD-001-parent\.yaml/,
   );
 });
 
@@ -407,6 +609,14 @@ function buildStory(storyId, slug) {
   };
 }
 
+function buildParentStory() {
+  return {
+    storyId: "CARD-001",
+    storyPath: "stories/approved/CARD-001-parent.yaml",
+    storySha256: "5".repeat(64),
+  };
+}
+
 function git(repoRoot, args) {
   const result = spawnSync("git", args, {
     cwd: repoRoot,
@@ -457,4 +667,17 @@ async function writeFixtureStory(repoRoot, story, status, suffix = "") {
       : path.join(repoRoot, story.storyPath);
   await mkdir(path.dirname(storyPath), { recursive: true });
   await writeFile(storyPath, renderStory(story, status, suffix));
+}
+
+function renderParentStory(story, childStoryIds, status) {
+  return `id: ${story.storyId}\nstatus: ${status}\nchild_stories:\n${childStoryIds.map((id) => `  - ${id}`).join("\n")}\n`;
+}
+
+async function writeParentStory(repoRoot, story, childStoryIds, status) {
+  const storyPath =
+    status === "done"
+      ? path.join(repoRoot, "stories", "done", path.basename(story.storyPath))
+      : path.join(repoRoot, story.storyPath);
+  await mkdir(path.dirname(storyPath), { recursive: true });
+  await writeFile(storyPath, renderParentStory(story, childStoryIds, status));
 }

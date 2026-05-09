@@ -14,7 +14,14 @@ export type CleanupStoryValidation = {
   storySha256: string;
 };
 
+export type CleanupParentStoryValidation = {
+  storyId: string;
+  storyPath: string;
+  storySha256: string;
+};
+
 export type CleanupDryRunPlan = {
+  boundParentStory?: CleanupParentStoryValidation;
   boundStories: CleanupStoryValidation[];
   branches: string[];
   mergeSha: string;
@@ -49,6 +56,7 @@ export type BoundCleanupPlan = {
     requiredReviewSubmittedAt: string;
   };
   stories: CleanupStoryValidation[];
+  boundParentStory?: CleanupParentStoryValidation;
   branches: string[];
   packetCommand: {
     args: string[];

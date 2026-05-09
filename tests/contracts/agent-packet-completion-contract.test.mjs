@@ -343,3 +343,230 @@ test("complete-many completes explicit approved stories including inactive prede
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   assert.deepEqual(manifest.activeStories, []);
 });
+
+test("complete-many closes a bound non-packetized parent story only with parent cleanup evidence", async () => {
+  const tempRepoRoot = await makeTempRepoFixture();
+  const manifestPath = path.join(tempRepoRoot, "agent-packets", "active.json");
+  const childStoryPath = path.join(
+    tempRepoRoot,
+    "stories",
+    "approved",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+  );
+  const parentStoryPath = path.join(
+    tempRepoRoot,
+    "stories",
+    "approved",
+    "CARD-001-parent-cleanup.yaml",
+  );
+  const doneParentStoryPath = path.join(
+    tempRepoRoot,
+    "stories",
+    "done",
+    "CARD-001-parent-cleanup.yaml",
+  );
+  const parentStorySource = `id: CARD-001
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+epic_id: CARD
+title: Parent cleanup
+type: tooling
+area: infra
+primary_concern: tooling
+priority: low
+status: approved
+summary: Fixture.
+story_boundary: Fixture.
+allowed_touch_points:
+  - tools/**
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s010
+scope:
+  - fixture
+non_scope:
+  - none
+dependencies: []
+acceptance_criteria:
+  - fixture
+required_tests:
+  - fixture
+repo_rules:
+  - fail closed
+ambiguity_policy: fail_and_escalate
+child_stories:
+  - INF-014
+`;
+  await writeFile(parentStoryPath, parentStorySource);
+
+  const buildResult = runPacketToolFromRepo(tempRepoRoot, [
+    "generate",
+    "--story",
+    childStoryPath,
+    "--manifest",
+    manifestPath,
+    "--activate",
+  ]);
+  assert.equal(buildResult.status, 0);
+
+  const unguardedParentResult = runPacketToolFromRepo(tempRepoRoot, [
+    "complete-many",
+    "--story",
+    childStoryPath,
+    "--story",
+    parentStoryPath,
+    "--manifest",
+    manifestPath,
+  ]);
+  assert.notEqual(unguardedParentResult.status, 0);
+  assert.match(
+    unguardedParentResult.stderr,
+    /missing packet|approved story path/i,
+  );
+
+  const missingShaResult = runPacketToolFromRepo(tempRepoRoot, [
+    "complete-many",
+    "--story",
+    childStoryPath,
+    "--parent-story",
+    parentStoryPath,
+    "--manifest",
+    manifestPath,
+  ]);
+  assert.notEqual(missingShaResult.status, 0);
+  assert.match(missingShaResult.stderr, /parent-story-sha256/i);
+
+  const parentStorySha256 = sha256(parentStorySource);
+  const unboundParentResult = runPacketToolFromRepo(tempRepoRoot, [
+    "complete-many",
+    "--story",
+    childStoryPath,
+    "--parent-story",
+    parentStoryPath,
+    "--parent-story-sha256",
+    parentStorySha256,
+    "--manifest",
+    manifestPath,
+  ]);
+  assert.notEqual(unboundParentResult.status, 0);
+  assert.match(unboundParentResult.stderr, /bound-cleanup-plan/i);
+
+  const boundCleanupPlanPath = path.join(
+    tempRepoRoot,
+    "bound-cleanup-plan.json",
+  );
+  await writeFile(
+    boundCleanupPlanPath,
+    `${JSON.stringify(
+      {
+        boundParentStory: {
+          storyId: "CARD-001",
+          storyPath: "stories/approved/CARD-001-parent-cleanup.yaml",
+          storySha256: parentStorySha256,
+        },
+        packetCommand: {
+          args: [
+            "--story",
+            "stories/approved/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+            "--parent-story",
+            "stories/approved/CARD-001-parent-cleanup.yaml",
+            "--parent-story-sha256",
+            parentStorySha256,
+          ],
+          command: "packets:complete-many",
+        },
+        schemaVersion: "post-merge-cleanup-plan.v1",
+        status: "valid",
+        stories: [
+          {
+            storyId: "INF-014",
+            storyPath:
+              "stories/approved/INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+          },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  const packetizedParentRoot = await makeTempRepoFixture();
+  const packetizedManifestPath = path.join(
+    packetizedParentRoot,
+    "agent-packets",
+    "active.json",
+  );
+  const packetizedChildStoryPath = path.join(
+    packetizedParentRoot,
+    "stories",
+    "approved",
+    "INF-014-story-lifecycle-and-active-packet-cleanup.yaml",
+  );
+  const packetizedParentStoryPath = path.join(
+    packetizedParentRoot,
+    "stories",
+    "approved",
+    "CARD-001-parent-cleanup.yaml",
+  );
+  await writeFile(packetizedParentStoryPath, parentStorySource);
+  await mkdir(path.join(packetizedParentRoot, "agent-packets"), {
+    recursive: true,
+  });
+  await writeFile(
+    path.join(packetizedParentRoot, "agent-packets", "CARD-001.md"),
+    "parent packet\n",
+  );
+  const packetizedBuildResult = runPacketToolFromRepo(packetizedParentRoot, [
+    "generate",
+    "--story",
+    packetizedChildStoryPath,
+    "--manifest",
+    packetizedManifestPath,
+    "--activate",
+  ]);
+  assert.equal(packetizedBuildResult.status, 0);
+  const packetizedPlanPath = path.join(
+    packetizedParentRoot,
+    "bound-cleanup-plan.json",
+  );
+  await writeFile(
+    packetizedPlanPath,
+    await readFile(boundCleanupPlanPath, "utf8"),
+  );
+  const packetizedParentResult = runPacketToolFromRepo(packetizedParentRoot, [
+    "complete-many",
+    "--story",
+    packetizedChildStoryPath,
+    "--parent-story",
+    packetizedParentStoryPath,
+    "--parent-story-sha256",
+    parentStorySha256,
+    "--bound-cleanup-plan",
+    packetizedPlanPath,
+    "--manifest",
+    packetizedManifestPath,
+  ]);
+  assert.notEqual(packetizedParentResult.status, 0);
+  assert.match(packetizedParentResult.stderr, /non-packetized/i);
+
+  const completeManyResult = runPacketToolFromRepo(tempRepoRoot, [
+    "complete-many",
+    "--story",
+    childStoryPath,
+    "--parent-story",
+    parentStoryPath,
+    "--parent-story-sha256",
+    parentStorySha256,
+    "--bound-cleanup-plan",
+    boundCleanupPlanPath,
+    "--manifest",
+    manifestPath,
+  ]);
+  assert.equal(
+    completeManyResult.status,
+    0,
+    `expected complete-many parent closeout to pass\nstdout:\n${completeManyResult.stdout ?? ""}\nstderr:\n${completeManyResult.stderr ?? ""}`,
+  );
+  await assert.rejects(() => readFile(parentStoryPath, "utf8"));
+  assert.match(await readFile(doneParentStoryPath, "utf8"), /^status: done$/m);
+});

@@ -97,7 +97,7 @@ Use this section only when the PR merges a parent integration branch into `main`
 - [ ] Post-merge cleanup metadata lists every substory that automation must complete after merge to `main`
 - [ ] Active packet state is explained if non-empty: `agent-packets/active.json` is only the current or most recent substory handoff pointer until post-merge cleanup, not the list of unfinished substories
 
-Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` do not use this pull-request review artifact path. If cleanup includes any manual edit beyond that command output, use the normal PR checklist above.
+Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` do not use this pull-request review artifact path. For validated parent-mode cleanup, exact packet-completion command output may also include command-owned bound parent story closeout from the cleanup plan. If cleanup includes any manual edit beyond that command output, use the normal PR checklist above.
 
 ## Assumptions and Risks
 

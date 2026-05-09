@@ -17,14 +17,25 @@ const { validateBoundCleanupPlanArtifact }: typeof Validator = createRequire(
 const ACTIVE_MANIFEST_PATH = "agent-packets/active.json";
 const CLEANUP_WORKSPACE_PREFIX = ".cleanup/";
 
-export function selectPacketCompletionCommand(plan: BoundCleanupPlan) {
+export function selectPacketCompletionCommand(
+  plan: BoundCleanupPlan,
+  planFile?: string,
+) {
   assertPacketCommandMatchesStories(plan);
+  if (plan.boundParentStory && !planFile) {
+    throw new Error(
+      "Bound parent cleanup execution requires a bound cleanup plan file.",
+    );
+  }
+  const boundPlanArgs =
+    plan.boundParentStory && planFile ? ["--bound-cleanup-plan", planFile] : [];
   return {
     args: [
       "pnpm",
       "run",
       plan.packetCommand.command,
       ...plan.packetCommand.args,
+      ...boundPlanArgs,
     ],
     command: "corepack",
   };
@@ -97,12 +108,46 @@ export async function validateBoundCleanupPlanForExecution(options: {
       );
     }
   }
+  if (plan.boundParentStory) {
+    const parentStoryPath = resolveRepoPath(
+      options.repoRoot,
+      plan.boundParentStory.storyPath,
+    );
+    const parentStorySource = await readRequiredFile(
+      parentStoryPath,
+      `approved parent story ${plan.boundParentStory.storyPath}`,
+    );
+    const doneParentPath = resolveRepoPath(
+      options.repoRoot,
+      toDoneStoryPath(plan.boundParentStory.storyPath),
+    );
+    const parentPacketPath = resolveRepoPath(
+      options.repoRoot,
+      toPacketPath(plan.boundParentStory.storyId),
+    );
+    if (sha256(parentStorySource) !== plan.boundParentStory.storySha256) {
+      throw new Error(
+        `Bound cleanup plan has stale parent story evidence for ${plan.boundParentStory.storyId}.`,
+      );
+    }
+    if (await fileExists(doneParentPath)) {
+      throw new Error(
+        `Bound cleanup plan is stale: done parent story already exists for ${plan.boundParentStory.storyId}.`,
+      );
+    }
+    if (await fileExists(parentPacketPath)) {
+      throw new Error(
+        `Bound cleanup plan is invalid: parent story ${plan.boundParentStory.storyId} is packetized.`,
+      );
+    }
+  }
 
   return plan;
 }
 
 export async function executePacketCleanupPlan(options: {
   plan: unknown;
+  planFile?: string;
   repoRoot: string;
   trustedMainSha: string;
 }) {
@@ -110,7 +155,7 @@ export async function executePacketCleanupPlan(options: {
   assertCleanWorktreeStatus(
     git(options.repoRoot, ["status", "--porcelain=v1"]),
   );
-  const command = selectPacketCompletionCommand(plan);
+  const command = selectPacketCompletionCommand(plan, options.planFile);
   execFileSync(command.command, command.args, {
     cwd: options.repoRoot,
     stdio: "inherit",
@@ -168,16 +213,33 @@ export async function validatePacketCompletionDiff(options: {
   for (const story of options.plan.stories) {
     await validateStoryLifecycleOutput(options.repoRoot, story);
   }
+  if (options.plan.boundParentStory) {
+    await validateParentStoryLifecycleOutput(
+      options.repoRoot,
+      options.plan.boundParentStory,
+    );
+  }
   await validateActiveManifestOutput(options.repoRoot, options.plan);
 }
 
 function assertPacketCommandMatchesStories(plan: BoundCleanupPlan) {
-  const expectedArgs = plan.stories.flatMap((story) => [
+  const storyArgs = plan.stories.flatMap((story) => [
     "--story",
     story.storyPath,
   ]);
+  const expectedArgs = plan.boundParentStory
+    ? [
+        ...storyArgs,
+        "--parent-story",
+        plan.boundParentStory.storyPath,
+        "--parent-story-sha256",
+        plan.boundParentStory.storySha256,
+      ]
+    : storyArgs;
   const expectedCommand =
-    plan.stories.length === 1 ? "packets:complete" : "packets:complete-many";
+    plan.stories.length === 1 && !plan.boundParentStory
+      ? "packets:complete"
+      : "packets:complete-many";
 
   if (
     plan.packetCommand.command !== expectedCommand ||
@@ -185,6 +247,52 @@ function assertPacketCommandMatchesStories(plan: BoundCleanupPlan) {
   ) {
     throw new Error(
       "Bound cleanup plan packet command does not match listed stories.",
+    );
+  }
+}
+
+async function validateParentStoryLifecycleOutput(
+  repoRoot: string,
+  story: NonNullable<BoundCleanupPlan["boundParentStory"]>,
+) {
+  const headStorySource = gitRaw(repoRoot, ["show", `HEAD:${story.storyPath}`]);
+
+  if (sha256(headStorySource) !== story.storySha256) {
+    throw new Error(
+      `HEAD parent story evidence does not match bound cleanup plan for ${story.storyId}.`,
+    );
+  }
+  if (gitPathExists(repoRoot, toPacketPath(story.storyId))) {
+    throw new Error(
+      `HEAD parent story ${story.storyId} is packetized and cannot be closed as a non-packetized parent.`,
+    );
+  }
+  if (await fileExists(resolveRepoPath(repoRoot, story.storyPath))) {
+    throw new Error(
+      `Approved parent story remains after packet completion for ${story.storyId}.`,
+    );
+  }
+
+  const expectedDoneSource = headStorySource.replace(
+    /^status:\s+approved$/m,
+    "status: done",
+  );
+  if (expectedDoneSource === headStorySource) {
+    throw new Error(
+      `HEAD approved parent story cannot be converted to done for ${story.storyId}.`,
+    );
+  }
+  const doneStoryPath = toDoneStoryPath(story.storyPath);
+  const doneStorySource = await readRequiredFile(
+    resolveRepoPath(repoRoot, doneStoryPath),
+    `done parent story ${doneStoryPath}`,
+  );
+  if (
+    normalizeLineEndings(doneStorySource) !==
+    normalizeLineEndings(expectedDoneSource)
+  ) {
+    throw new Error(
+      `Done parent story ${doneStoryPath} does not match exact packet completion output.`,
     );
   }
 }
@@ -331,6 +439,12 @@ function expectedAllowedPaths(plan: BoundCleanupPlan) {
       toDoneStoryPath(story.storyPath),
       story.packetPath,
     ]),
+    ...(plan.boundParentStory
+      ? [
+          plan.boundParentStory.storyPath,
+          toDoneStoryPath(plan.boundParentStory.storyPath),
+        ]
+      : []),
   ]);
 }
 
@@ -402,6 +516,19 @@ function resolveRepoPath(repoRoot: string, repoPath: string) {
 
 function toDoneStoryPath(storyPath: string) {
   return `stories/done/${path.posix.basename(storyPath)}`;
+}
+
+function toPacketPath(storyId: string) {
+  return `agent-packets/${storyId}.md`;
+}
+
+function gitPathExists(repoRoot: string, repoPath: string) {
+  try {
+    execFileSync("git", ["-C", repoRoot, "cat-file", "-e", `HEAD:${repoPath}`]);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function toPortablePath(filePath: string) {
