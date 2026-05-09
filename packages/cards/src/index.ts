@@ -38,3 +38,15 @@ export type {
 } from "./poneglyph-client.js";
 export { createPoneglyphClient } from "./poneglyph-client.js";
 export { validatePoneglyphCardDetail } from "./poneglyph-schema.js";
+export {
+  REDIS_CARD_DATA_CACHE_DEFERRED,
+  createFileCardDataCache,
+  createInMemoryCardDataCache,
+} from "./cache.js";
+export type {
+  CardDataCache,
+  CardDataCacheLookupOptions,
+  CardDataCacheWriteOptions,
+  FileCardDataCacheOptions,
+  InMemoryCardDataCacheOptions,
+} from "./cache.js";
