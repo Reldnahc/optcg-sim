@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-002F.md",
-      "storyId": "CARD-002F",
-      "storyPath": "stories/approved/CARD-002F-cards-backed-playerview-hidden-info-regression.yaml",
-      "storySha256": "afab02b397d7d047a9bc4b01ee56b2de73d3d028938a0c367b6ae8ad02e648c3"
+      "packetPath": "agent-packets/CARD-002G.md",
+      "storyId": "CARD-002G",
+      "storyPath": "stories/approved/CARD-002G-future-effect-story-manifest-guidance.yaml",
+      "storySha256": "5a74d143692ab2a18432749f8716f922a2513141c8b6ce0355cfc726f8190829"
     }
   ],
   "version": 1
