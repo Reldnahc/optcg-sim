@@ -393,6 +393,28 @@ test("post-merge cleanup workflow gates the privileged direct push on a validate
   assert.doesNotMatch(workflow, /gh pr create/);
 });
 
+test("post-merge cleanup workflow deletes branches only after packet cleanup gates", async () => {
+  const workflow = await readActiveText(
+    ".github/workflows/post-merge-packet-cleanup.yml",
+  );
+  const pushIndex = workflow.indexOf("Push direct cleanup commit");
+  const branchIndex = workflow.indexOf("Delete safe merged cleanup branches");
+
+  assertMatchesAll(workflow, [
+    /Delete safe merged cleanup branches/,
+    /String\(story\.storyId\)\.toLowerCase\(\)/,
+    /associatedBranches\.add\(branch\)/,
+    /--branch-cleanup-plan-file \.cleanup\/bound-cleanup-plan\.json/,
+    /github\.rest\.git\.deleteRef/,
+  ]);
+  assert.ok(pushIndex > -1, "missing direct push step");
+  assert.ok(
+    branchIndex > pushIndex,
+    "branch deletion must run after cleanup push",
+  );
+  assert.doesNotMatch(workflow, /deleteRef[\s\S]*main/);
+});
+
 test("agents guidance requires parent orchestration plus separate reviewer subagent before human review", async () => {
   const agents = await readActiveText("AGENTS.md");
   const storyExecution = await readActiveText(

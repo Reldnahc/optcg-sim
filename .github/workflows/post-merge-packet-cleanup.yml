@@ -178,6 +178,83 @@ jobs:
       - name: Push direct cleanup commit
         run: git push origin HEAD:${{ github.event.repository.default_branch }}
 
+      - name: Build branch cleanup state
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("node:fs");
+            const plan = JSON.parse(fs.readFileSync(".cleanup/bound-cleanup-plan.json", "utf8"));
+            const pr = context.payload.pull_request;
+            const branchStates = [];
+            const associatedBranches = new Set([pr.head.ref]);
+            for (const story of plan.stories) {
+              const storyId = String(story.storyId).toLowerCase();
+              for (const branch of plan.branches) {
+                if (String(branch).toLowerCase().includes(storyId)) {
+                  associatedBranches.add(branch);
+                }
+              }
+            }
+
+            for (const branch of plan.branches) {
+              try {
+                const branchResponse = await github.rest.repos.getBranch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  branch,
+                });
+                const compareResponse = await github.rest.repos.compareCommitsWithBasehead({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  basehead: `${context.payload.repository.default_branch}...${branch}`,
+                });
+                branchStates.push({
+                  aheadByDefault: compareResponse.data.ahead_by,
+                  associatedWithCleanup: associatedBranches.has(branch),
+                  name: branch,
+                  protected: branchResponse.data.protected === true,
+                });
+              } catch (error) {
+                core.warning(`Unable to inspect cleanup branch ${branch}: ${error.message}`);
+              }
+            }
+
+            fs.writeFileSync(".cleanup/branch-cleanup-state.json", `${JSON.stringify({
+              branchStates,
+              mergedPrHeadBranch: pr.head.ref,
+              packetCleanupSucceeded: true,
+            }, null, 2)}\n`);
+
+      - name: Validate branch cleanup decisions
+        run: >
+          node --experimental-strip-types tools/post-merge-cleanup.ts
+          --branch-cleanup-plan-file .cleanup/bound-cleanup-plan.json
+          --branch-cleanup-state-json-file .cleanup/branch-cleanup-state.json
+          --branch-cleanup-output-file .cleanup/branch-cleanup-decisions.json
+
+      - name: Delete safe merged cleanup branches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("node:fs");
+            const cleanup = JSON.parse(fs.readFileSync(".cleanup/branch-cleanup-decisions.json", "utf8"));
+            core.info(cleanup.log);
+            for (const decision of cleanup.decisions) {
+              if (decision.status !== "allowed") {
+                continue;
+              }
+              try {
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${decision.branch}`,
+                });
+                core.info(`Deleted merged cleanup branch ${decision.branch}.`);
+              } catch (error) {
+                core.warning(`Failed to delete merged cleanup branch ${decision.branch}: ${error.message}`);
+              }
+            }
+
       - name: Log cleanup success
         if: ${{ success() }}
         run: echo "Post-merge packet cleanup completed with one direct cleanup commit to the default branch."
