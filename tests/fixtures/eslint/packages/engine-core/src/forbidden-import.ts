@@ -1,6 +1,11 @@
 import { clientOnlyValue } from "../../../client/src/example";
+import * as browserPackage from "@optcg/browser";
 import * as cardsPackage from "@optcg/cards";
 import * as representativeFixtures from "@optcg/cards/representative-fixtures";
+import * as clientPackage from "@optcg/client";
+import * as serverPackage from "@optcg/server";
+import * as uiPackage from "@optcg/ui";
+import * as viewEnginePackage from "@optcg/view-engine";
 import React from "react";
 import Redis from "redis";
 import { Client as PgClient } from "pg";
@@ -15,8 +20,13 @@ import { uiOnlyValue } from "../../../ui/src/example";
 import { viewEngineOnlyValue } from "../../../view-engine/src/example";
 
 export const forbiddenReference = clientOnlyValue;
+export const forbiddenBrowserPackage = browserPackage;
 export const forbiddenCardsPackage = cardsPackage;
 export const forbiddenRepresentativeFixtures = representativeFixtures;
+export const forbiddenClientPackage = clientPackage;
+export const forbiddenServerPackage = serverPackage;
+export const forbiddenUiPackage = uiPackage;
+export const forbiddenViewEnginePackage = viewEnginePackage;
 export const forbiddenReact = React;
 export const forbiddenRedis = Redis;
 export const forbiddenPgClient = PgClient;

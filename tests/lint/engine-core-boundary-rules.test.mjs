@@ -31,6 +31,11 @@ test("engine-core import boundaries include cards package and external-data clie
 
   for (const requiredPath of [
     "@optcg/cards",
+    "@optcg/browser",
+    "@optcg/client",
+    "@optcg/server",
+    "@optcg/ui",
+    "@optcg/view-engine",
     "react",
     "redis",
     "pg",

@@ -282,6 +282,11 @@ test("eslint rejects forbidden engine-core imports", async () => {
   const requiredForbiddenSources = [
     "@optcg/cards",
     "@optcg/cards/representative-fixtures",
+    "@optcg/browser",
+    "@optcg/client",
+    "@optcg/server",
+    "@optcg/ui",
+    "@optcg/view-engine",
     "react",
     "redis",
     "pg",
