@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-030.md",
-      "storyId": "INF-030",
-      "storyPath": "stories/approved/INF-030-ignore-cleanup-workspace.yaml",
-      "storySha256": "193227f1475812bc230a6b985f2b60033b392a86f9fe77be38644f6d0c7c2b3d"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
