@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Make parent-mode cleanup tooling read the canonical object-form
   `child_stories[].id` shape so schema-valid parent stories can be closed by
