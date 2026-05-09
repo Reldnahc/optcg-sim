@@ -43,6 +43,11 @@ async function main() {
     const repoRoot = findRepoRoot();
     const executePlanFile = parseSinglePathArg(args, "--execute-plan-file");
     const finalizePlanFile = parseSinglePathArg(args, "--finalize-plan-file");
+    const sourceRefPreview = await parseSourceRefPreview(args);
+    if (sourceRefPreview !== null) {
+      process.stdout.write(`${JSON.stringify(sourceRefPreview, null, 2)}\n`);
+      return;
+    }
     const branchCleanupPlanFile = parseSinglePathArg(
       args,
       "--branch-cleanup-plan-file",
@@ -257,6 +262,95 @@ function parsePreflightPlanFile(args: string[]) {
   return preflightPlanFile;
 }
 
+async function parseSourceRefPreview(args: string[]) {
+  if (!args.includes("--print-source-ref")) {
+    return null;
+  }
+
+  let kind: string | null = null;
+  let sourceId: string | null = null;
+  let metadataSource: string | null = null;
+  let metadataSourceFile: string | null = null;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === "--print-source-ref" || token === "--") {
+      continue;
+    }
+
+    if (token === "--metadata-source-kind") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --metadata-source-kind.");
+      }
+      kind = value;
+      index += 1;
+      continue;
+    }
+
+    if (token === "--metadata-source-id") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --metadata-source-id.");
+      }
+      sourceId = value;
+      index += 1;
+      continue;
+    }
+
+    if (token === "--metadata-source") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --metadata-source.");
+      }
+      metadataSource = value;
+      index += 1;
+      continue;
+    }
+
+    if (token === "--metadata-source-file") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --metadata-source-file.");
+      }
+      metadataSourceFile = resolveCliPath(value, process.cwd());
+      index += 1;
+      continue;
+    }
+
+    throw new Error(
+      `Unexpected argument for source-ref preview: ${String(token)}`,
+    );
+  }
+
+  if (kind !== "pr-body" && kind !== "handoff-comment") {
+    throw new Error(
+      "Source-ref preview requires --metadata-source-kind pr-body or handoff-comment.",
+    );
+  }
+  if (sourceId === null) {
+    throw new Error("Source-ref preview requires --metadata-source-id.");
+  }
+  if ((metadataSource === null) === (metadataSourceFile === null)) {
+    throw new Error(
+      "Source-ref preview requires exactly one --metadata-source or --metadata-source-file.",
+    );
+  }
+
+  const source =
+    metadataSourceFile !== null
+      ? await readFile(metadataSourceFile, "utf8")
+      : (metadataSource ?? "");
+  const sourceHash = sha256(source);
+  return {
+    kind,
+    metadataSourceRef: `${kind}:${sourceId}:${sourceHash}`,
+    sha256: sourceHash,
+    sourceId,
+  };
+}
+
 async function parseMetadataInput(
   args: string[],
   evidence: CleanupEvidenceInput,
@@ -285,6 +379,16 @@ async function parseMetadataInput(
     if (token === "--preflight-plan-file") {
       index += 1;
       continue;
+    }
+
+    if (
+      token === "--print-source-ref" ||
+      token === "--metadata-source-kind" ||
+      token === "--metadata-source-id"
+    ) {
+      throw new Error(
+        "Source-ref preview arguments cannot be combined with cleanup validation.",
+      );
     }
 
     if (token === "--mode" || token === "--story" || token === "--branch") {

@@ -28,7 +28,7 @@ The separate reviewer subagent run is a repo-level first-pass gate before human 
 
 Passing AI review does not replace human review.
 
-Cleanup metadata is a reviewed request, not standalone authority. Reviewers confirm the metadata matches the reviewed story scope before merge; automation must bind cleanup metadata to reviewed PR evidence and trusted checked-in story and packet state before any direct cleanup commit.
+Cleanup metadata is a reviewed request, not standalone authority. Reviewers confirm the metadata matches the reviewed story scope before merge; automation must bind cleanup metadata to reviewed PR evidence and trusted checked-in story and packet state before any direct cleanup commit. Before approval, reviewers confirm the exact cleanup metadata source ref (`pr-body:<source-id>:<sha256>` or `handoff-comment:<comment-id>:<sha256>`) computed from the PR body or durable handoff comment source, and the human merge-gate review or equivalent fallback record must name that exact ref.
 
 For parent-story integration branch work, passing AI review permits the parent agent to merge a substory PR into the parent integration branch only after CI, packet verification, AI review records, and revision response records are complete. It does not permit merging the parent integration branch to `main` without human review.
 
