@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-001D.md",
-      "storyId": "CARD-001D",
-      "storyPath": "stories/approved/CARD-001D-simulator-overlay-support-merge.yaml",
-      "storySha256": "a61ee5ef25309768064d1f99a0c9329798a3fe91b7fea7d09b21dfd6b101fb7c"
+      "packetPath": "agent-packets/CARD-001E.md",
+      "storyId": "CARD-001E",
+      "storyPath": "stories/approved/CARD-001E-manifest-builder-deck-validation.yaml",
+      "storySha256": "5becb48c0c331c883cd1737e222bec13a9758d190aa3dd5765088f133ca74ae6"
     }
   ],
   "version": 1

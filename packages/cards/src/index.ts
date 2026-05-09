@@ -8,6 +8,21 @@ export {
 } from "./normalization.js";
 export type { NormalizedPoneglyphCard } from "./normalization.js";
 export {
+  buildMatchCardManifest,
+  computeMatchCardManifestHash,
+  createManifestVersions,
+  deckValidationContractDeferrals,
+  validateDecklist,
+  validateLoadout,
+} from "./manifest.js";
+export type {
+  BuildMatchCardManifestInput,
+  DeckValidationMode,
+  ManifestVersions,
+  ValidateDecklistInput,
+  ValidateLoadoutInput,
+} from "./manifest.js";
+export {
   mergeSimulatorOverlay,
   validateSimulatorOverlay,
   validateSimulatorOverlayRegistry,
