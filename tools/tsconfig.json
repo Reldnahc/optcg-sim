@@ -8,6 +8,7 @@
   },
   "files": [
     "build-agent-packet.ts",
+    "post-merge-cleanup.ts",
     "spec-metadata.ts",
     "validate-stories.ts",
     "validate-effect-dsl-fixtures.ts",
