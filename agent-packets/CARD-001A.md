@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id CARD-001A -->
 <!-- agent-packet:story-path stories/approved/CARD-001A-cards-package-skeleton-poneglyph-fixtures.yaml -->
-<!-- agent-packet:story-sha256 bced2dd81c0ee3a9b39f877d3d4afc495f1b6e91506ac55be0221244b64699af -->
+<!-- agent-packet:story-sha256 5cee4f6ee92331fc412bcf432e375127f9c73662572230d3486d16de8cfaef7e -->
 
 # Story Packet
 
@@ -504,6 +504,7 @@ Own package skeleton, build/test wiring, and static fixture placement only. Do n
 
 <!-- prettier-ignore -->
 - package.json
+- pnpm-lock.yaml
 - packages/cards/**
 - fixtures/poneglyph/**
 - tests/contracts/**

@@ -19,6 +19,7 @@ story_boundary: >
   cache adapters, or engine-core imports in this story.
 allowed_touch_points:
   - package.json
+  - pnpm-lock.yaml
   - packages/cards/**
   - fixtures/poneglyph/**
   - tests/contracts/**
