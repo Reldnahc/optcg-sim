@@ -237,12 +237,12 @@ function buildEvidence(options) {
     prNumber: 27,
     reviews: [
       {
-        decision: "approved",
-        id: "rvw-27",
+        decision: "merged",
+        id: "merge-actor-27",
         isMergeGate: true,
         reviewerKind: "human",
-        sourceRefs: [metadataSourceRef],
-        submittedAt: "2026-01-01T12:00:00.000Z",
+        sourceRefs: [],
+        submittedAt: "2026-01-02T00:00:00.000Z",
       },
     ],
     stories: [

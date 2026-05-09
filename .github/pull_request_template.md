@@ -24,8 +24,8 @@
 Cleanup metadata is a reviewed request, not standalone authority.
 
 - [ ] Reviewers confirm this metadata matches the reviewed story scope before merge.
-- [ ] Confirm the exact cleanup metadata source ref before merge. Compute it before human review with `corepack pnpm cleanup:validate-dry-run -- --print-source-ref --metadata-source-kind pr-body --metadata-source-id <source-id> --metadata-source-file <file>` or `--metadata-source-kind handoff-comment --metadata-source-id <comment-id>`.
-- [ ] The human merge-gate approval or equivalent fallback review names the exact `pr-body:<source-id>:<sha256>` or `handoff-comment:<comment-id>:<sha256>` ref for the metadata source being reviewed.
+- [ ] The human-controlled merge to `main` authorizes the cleanup metadata snapshot; the workflow computes the metadata source ref for audit.
+- [ ] Equivalent fallback review, if used because merge actor evidence is unavailable, confirms the cleanup metadata source was reviewed before fallback approval.
 - [ ] Manual edits beyond pure packet-completion output still use the normal PR and reviewer path.
 - [ ] Automation-created cleanup pull requests are not created.
 

@@ -118,6 +118,109 @@ test("PR evidence binding accepts valid single-story cleanup", async () => {
   assert.equal(plan.boundStories.length, 1);
 });
 
+test("PR evidence binding accepts human merge evidence without pasted metadata source refs", async () => {
+  const tempRoot = await makeTempRepo([
+    { id: "INF-501", fileName: "INF-501-story.yaml" },
+  ]);
+  const evidence = buildSingleEvidence();
+  evidence.reviews = [
+    {
+      decision: "merged",
+      id: "merge-actor-501",
+      isMergeGate: true,
+      reviewerKind: "human",
+      sourceRefs: [],
+      submittedAt: evidence.mergedAt,
+    },
+  ];
+
+  const plan = await buildCleanupDryRunPlan({
+    evidence,
+    metadata: {
+      branches: ["story/inf-501"],
+      mode: "single",
+      stories: ["stories/approved/INF-501-story.yaml"],
+    },
+    repoRoot: tempRoot,
+  });
+
+  assert.equal(plan.verificationInputs.requiredReviewId, "merge-actor-501");
+  assert.equal(
+    plan.verificationInputs.requiredReviewSubmittedAt,
+    evidence.mergedAt,
+  );
+});
+
+test("PR evidence binding rejects bot-only merge evidence for privileged cleanup", async () => {
+  const tempRoot = await makeTempRepo([
+    { id: "INF-501", fileName: "INF-501-story.yaml" },
+  ]);
+  const evidence = buildSingleEvidence();
+  evidence.reviews = [
+    {
+      decision: "merged",
+      id: "merge-actor-501",
+      isMergeGate: true,
+      reviewerKind: "bot",
+      sourceRefs: [],
+      submittedAt: evidence.mergedAt,
+    },
+  ];
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence,
+        metadata: {
+          branches: ["story/inf-501"],
+          mode: "single",
+          stories: ["stories/approved/INF-501-story.yaml"],
+        },
+        repoRoot: tempRoot,
+      }),
+    /Missing required human merge-gate review/,
+  );
+});
+
+test("PR evidence binding rejects bot merge even when a prior human approval exists", async () => {
+  const tempRoot = await makeTempRepo([
+    { id: "INF-501", fileName: "INF-501-story.yaml" },
+  ]);
+  const evidence = buildSingleEvidence();
+  evidence.reviews = [
+    {
+      decision: "approved",
+      id: "rvw-1",
+      isMergeGate: true,
+      reviewerKind: "human",
+      sourceRefs: [],
+      submittedAt: "2026-01-01T12:00:00.000Z",
+    },
+    {
+      decision: "merged",
+      id: "merge-actor-501",
+      isMergeGate: true,
+      reviewerKind: "bot",
+      sourceRefs: [],
+      submittedAt: evidence.mergedAt,
+    },
+  ];
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence,
+        metadata: {
+          branches: ["story/inf-501"],
+          mode: "single",
+          stories: ["stories/approved/INF-501-story.yaml"],
+        },
+        repoRoot: tempRoot,
+      }),
+    /Missing required human merge-gate review/,
+  );
+});
+
 test("PR evidence binding accepts valid parent cleanup with multiple child stories", async () => {
   const tempRoot = await makeTempRepo([
     { id: "INF-601", fileName: "INF-601-a.yaml" },
@@ -318,11 +421,43 @@ test("rejects post-review metadata mutation without later human review", async (
         },
         repoRoot: tempRoot,
       }),
-    /changed after required review point/,
+    /changed after merge/,
   );
 });
 
-test("accepts durable handoff comment when explicitly referenced by human merge-gate review", async () => {
+test("rejects metadata source mutation after merge evidence", async () => {
+  const tempRoot = await makeTempRepo([
+    { id: "INF-501", fileName: "INF-501-story.yaml" },
+  ]);
+  const evidence = buildSingleEvidence();
+  evidence.metadataSource.updatedAt = "2026-01-02T00:00:01.000Z";
+  evidence.reviews = [
+    {
+      decision: "merged",
+      id: "merge-actor-501",
+      isMergeGate: true,
+      reviewerKind: "human",
+      sourceRefs: [],
+      submittedAt: evidence.mergedAt,
+    },
+  ];
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence,
+        metadata: {
+          branches: [],
+          mode: "single",
+          stories: ["stories/approved/INF-501-story.yaml"],
+        },
+        repoRoot: tempRoot,
+      }),
+    /changed after merge/,
+  );
+});
+
+test("accepts durable handoff comment with human merge evidence", async () => {
   const tempRoot = await makeTempRepo([
     { id: "INF-501", fileName: "INF-501-story.yaml" },
   ]);
@@ -335,7 +470,16 @@ test("accepts durable handoff comment when explicitly referenced by human merge-
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
   evidence.metadataSourceRef = "handoff-comment:comment-77:meta-2";
-  evidence.reviews[0].sourceRefs = ["handoff-comment:comment-77:meta-2"];
+  evidence.reviews = [
+    {
+      decision: "merged",
+      id: "merge-actor-501",
+      isMergeGate: true,
+      reviewerKind: "human",
+      sourceRefs: [],
+      submittedAt: evidence.mergedAt,
+    },
+  ];
   const plan = await buildCleanupDryRunPlan({
     evidence,
     metadata: {
@@ -348,34 +492,6 @@ test("accepts durable handoff comment when explicitly referenced by human merge-
   assert.equal(
     plan.verificationInputs.metadataSource,
     "handoff-comment:comment-77:meta-2",
-  );
-});
-
-test("rejects durable handoff comment not explicitly referenced by human merge-gate review", async () => {
-  const tempRoot = await makeTempRepo([
-    { id: "INF-501", fileName: "INF-501-story.yaml" },
-  ]);
-  const evidence = buildSingleEvidence();
-  evidence.metadataSource = {
-    contentSha256: "meta-2",
-    durable: true,
-    kind: "handoff-comment",
-    sourceId: "comment-77",
-    updatedAt: "2026-01-01T00:00:00.000Z",
-  };
-  evidence.metadataSourceRef = "handoff-comment:comment-77:meta-2";
-  await assert.rejects(
-    () =>
-      buildCleanupDryRunPlan({
-        evidence,
-        metadata: {
-          branches: [],
-          mode: "single",
-          stories: ["stories/approved/INF-501-story.yaml"],
-        },
-        repoRoot: tempRoot,
-      }),
-    /must reference the exact metadata source/,
   );
 });
 
@@ -438,7 +554,7 @@ test("rejects parent cleanup plan recorded after required human review", async (
     { id: "INF-602", fileName: "INF-602-b.yaml" },
   ]);
   const evidence = buildParentEvidence();
-  evidence.parentLifecycle.cleanupPlanRecordedAt = "2026-01-01T13:00:00.000Z";
+  evidence.parentLifecycle.cleanupPlanRecordedAt = "2026-01-02T00:00:01.000Z";
   await assert.rejects(
     () =>
       buildCleanupDryRunPlan({
@@ -642,12 +758,12 @@ test("package script exposes reviewed cleanup validation behavior", () => {
     prNumber: 27,
     reviews: [
       {
-        decision: "approved",
-        id: "rvw-27",
+        decision: "merged",
+        id: "merge-actor-27",
         isMergeGate: true,
         reviewerKind: "human",
-        sourceRefs: [`pr-body:pr-27-body:${metadataSourceSha}`],
-        submittedAt: "2026-01-01T12:00:00.000Z",
+        sourceRefs: [],
+        submittedAt: "2026-01-02T00:00:00.000Z",
       },
     ],
     stories: [
@@ -768,12 +884,12 @@ function buildSingleEvidence() {
     prNumber: 501,
     reviews: [
       {
-        decision: "approved",
-        id: "rvw-1",
+        decision: "merged",
+        id: "merge-actor-501",
         isMergeGate: true,
         reviewerKind: "human",
-        sourceRefs: ["pr-body:pr-501-body:meta-1"],
-        submittedAt: "2026-01-01T12:00:00.000Z",
+        sourceRefs: [],
+        submittedAt: "2026-01-02T00:00:00.000Z",
       },
     ],
     stories: [
