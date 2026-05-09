@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-027A.md",
+      "storyId": "INF-027A",
+      "storyPath": "stories/approved/INF-027A-document-post-merge-cleanup-policy.yaml",
+      "storySha256": "7fcf173ef95921b8f26e8304758b89310a9166774157a7ea68584ec3be850977"
+    }
+  ],
   "version": 1
 }

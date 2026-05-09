@@ -14,11 +14,12 @@ summary: >
   the SPEC-004 post-merge cleanup authority without adding GitHub Actions,
   parser code, branch deletion code, or packet lifecycle command changes.
 story_boundary: >
-  Own documentation and PR-template policy for post-merge cleanup automation
-  only. Do not add GitHub Actions, metadata parser code, branch deletion code,
-  remote repository setting changes, or packet lifecycle command changes in
-  this story.
+  Own documentation, PR-template, and root agent-instruction policy for
+  post-merge cleanup automation only. Do not add GitHub Actions, metadata
+  parser code, branch deletion code, remote repository setting changes, or
+  packet lifecycle command changes in this story.
 allowed_touch_points:
+  - AGENTS.md
   - .github/branch-protection.md
   - .github/pull_request_template.md
   - docs/workflow/story-execution.md
@@ -44,6 +45,7 @@ scope:
   - document the exact narrow branch-protection bypass actor/workflow semantics required by SPEC-004
   - document branch deletion safety rules and cleanup-failure branch deletion skip behavior
   - update the PR template with explicit cleanup metadata fields and review-responsibility text
+  - update root agent instructions so they do not require manual packet cleanup when automation succeeds
 non_scope:
   - GitHub Actions workflow creation
   - metadata parser implementation
@@ -64,10 +66,12 @@ acceptance_criteria:
   - docs say direct cleanup commits are allowed only for exact packet-completion command output after verification
   - docs say automation fails closed unless metadata binds to reviewed PR evidence and trusted checked-in story/packet state
   - docs say branch deletion occurs only after packet cleanup succeeds and never for protected, unrelated, or unmerged branches
+  - root agent instructions align with the automated-normal, manual-operational-fallback cleanup policy
 required_tests:
   - review workflow test proving PR template cleanup metadata fields and reviewer responsibility exist
   - branch-protection test proving narrow bypass actor/workflow documentation exists and ordinary protections remain
   - workflow docs test proving no-cleanup-PR, operational fallback, metadata binding, and branch deletion safety language exists
+  - root agent instruction test proving manual packet completion is operational fallback once cleanup automation succeeds
 repo_rules:
   - no GitHub Actions workflow may be added in this story
   - no parser, PR evidence binding, or branch cleanup code may be added in this story

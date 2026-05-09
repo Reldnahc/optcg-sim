@@ -19,6 +19,38 @@
 - [ ] `pnpm verify`
 - [ ] Story-specific tests:
 
+## Post-Merge Cleanup
+
+Cleanup metadata is a reviewed request, not standalone authority.
+
+- [ ] Reviewers confirm this metadata matches the reviewed story scope before merge.
+- [ ] Manual edits beyond pure packet-completion output still use the normal PR and reviewer path.
+- [ ] Automation-created cleanup pull requests are not created.
+
+Single-story PRs:
+
+```yaml
+Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/<STORY-ID>-<slug>.yaml
+  branches:
+    - <head-branch>
+```
+
+Parent PRs:
+
+```yaml
+Post-merge cleanup:
+  mode: parent
+  stories:
+    - stories/approved/<CHILD-A>.yaml
+    - stories/approved/<CHILD-B>.yaml
+  branches:
+    - <parent-integration-branch>
+    - <optional-substory-branch>
+```
+
 ## Review
 
 - [ ] AI review completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed
@@ -59,6 +91,7 @@ Use this section only when the PR merges a parent integration branch into `main`
 - [ ] Current parent branch `pnpm verify` result:
 - [ ] Human review is explicitly required before merge to `main`
 - [ ] Post-merge lifecycle cleanup plan is recorded: `pnpm run packets:complete-many ...`
+- [ ] Post-merge cleanup metadata lists every substory that automation must complete after merge to `main`
 - [ ] Active packet state is explained if non-empty: `agent-packets/active.json` is only the current or most recent substory handoff pointer until post-merge cleanup, not the list of unfinished substories
 
 Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` do not use this pull-request review artifact path. If cleanup includes any manual edit beyond that command output, use the normal PR checklist above.

@@ -50,7 +50,7 @@ For any implementation or review handoff:
 11. Post or update the revision response when reviewer-subagent review was used.
 12. Request human review only after review records are current.
 13. Merge only after the required human review gate is satisfied.
-14. Run `pnpm run packets:complete --story <stories/approved/...yaml>` after merge to `main`.
+14. Confirm post-merge packet cleanup automation completed the listed story cleanup after merge to `main`, or run manual packet-completion cleanup only as the operational fallback when automation fails or is unavailable.
 
 ## Mandatory Procedures
 
@@ -77,9 +77,13 @@ Before implementation starts, before a worker or reviewer subagent is assigned, 
 
 Use `pnpm run packets:generate --story <stories/approved/...yaml> --activate` to build or refresh the packet for the story you are activating.
 
-Use `pnpm run packets:complete --story <stories/approved/...yaml>` after a story is merged to move it to done history, remove its active packet, and clear it from `agent-packets/active.json`.
+Post-merge packet cleanup automation is the normal path after a reviewed story PR or parent PR merges. Cleanup metadata is a reviewed request, not standalone authority.
+
+Use `pnpm run packets:complete --story <stories/approved/...yaml>` after a story is merged only as the operational fallback when automation fails or is unavailable. For parent cleanup fallback, use `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>`. Do not run manual packet completion after automation has already completed the listed story cleanup.
 
 A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` does not require a separate reviewer subagent run.
+
+Automation-created cleanup pull requests are not created.
 
 If cleanup requires any manual edit beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, run full verification and a separate reviewer subagent before pushing or merging.
 
