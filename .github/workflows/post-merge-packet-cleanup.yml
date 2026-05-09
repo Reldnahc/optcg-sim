@@ -1,0 +1,475 @@
+name: Post-merge packet cleanup
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  preflight:
+    name: cleanup-preflight
+    if: ${{ github.event.pull_request.merged == true && github.event.pull_request.base.ref == github.event.repository.default_branch }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Build cleanup evidence
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const crypto = require("node:crypto");
+            const fs = require("node:fs");
+
+            const pr = context.payload.pull_request;
+            if (!pr || !pr.merged) {
+              core.setFailed("Post-merge cleanup preflight requires a merged pull request.");
+              return;
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              pull_number: pr.number,
+              repo: context.repo.repo,
+            });
+            const changedFiles = files.map((file) => file.filename);
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              issue_number: pr.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner: context.repo.owner,
+              pull_number: pr.number,
+              repo: context.repo.repo,
+            });
+            const hash = (source) => crypto.createHash("sha256").update(source).digest("hex");
+            const storyIdFromPath = (storyPath) => {
+              const match = storyPath.match(/^stories\/approved\/([A-Z][A-Z0-9]*-\d{3}[A-Z]?)-[^/]+\.yaml$/);
+              if (!match) {
+                throw new Error(`Cannot derive story id from cleanup path: ${storyPath}.`);
+              }
+              return match[1];
+            };
+            const parseMetadata = (source) => {
+              const lines = source.replace(/\r\n/g, "\n").split("\n");
+              let mode = null;
+              const stories = [];
+              const branches = [];
+              let activeList = null;
+              let found = false;
+              for (let index = 0; index < lines.length; index += 1) {
+                if (lines[index].trim() !== "Post-merge cleanup:") {
+                  continue;
+                }
+                if (found) {
+                  throw new Error("Ambiguous Post-merge cleanup metadata block; expected exactly one.");
+                }
+                found = true;
+                for (let offset = index + 1; offset < lines.length; offset += 1) {
+                  const line = lines[offset];
+                  if (!line.startsWith("  ") && line.trim() !== "") {
+                    break;
+                  }
+                  const modeMatch = line.match(/^ {2}mode:\s*(single|parent)\s*$/);
+                  if (modeMatch) {
+                    mode = modeMatch[1];
+                    activeList = null;
+                    continue;
+                  }
+                  if (line === "  stories:") {
+                    activeList = "stories";
+                    continue;
+                  }
+                  if (line === "  branches:") {
+                    activeList = "branches";
+                    continue;
+                  }
+                  const itemMatch = line.match(/^ {4}-\s+(.+)\s*$/);
+                  if (itemMatch && activeList === "stories") {
+                    stories.push(itemMatch[1].trim());
+                    continue;
+                  }
+                  if (itemMatch && activeList === "branches") {
+                    branches.push(itemMatch[1].trim());
+                    continue;
+                  }
+                  if (line.trim() !== "") {
+                    throw new Error(`Malformed cleanup metadata line: ${line}`);
+                  }
+                }
+              }
+              if (!found) {
+                return null;
+              }
+              if (!mode || stories.length === 0) {
+                throw new Error("Malformed cleanup metadata: missing mode or stories.");
+              }
+              return { branches, mode, stories };
+            };
+            const candidates = [];
+            const addCandidate = ({ source, kind, sourceId, updatedAt, durable }) => {
+              if (!source || source.trim() === "") {
+                return;
+              }
+              const metadata = parseMetadata(source);
+              if (!metadata) {
+                return;
+              }
+              const contentSha256 = hash(source);
+              candidates.push({
+                metadata,
+                source,
+                sourceEvidence: {
+                  contentSha256,
+                  ...(durable === undefined ? {} : { durable }),
+                  kind,
+                  sourceId,
+                  updatedAt: new Date(updatedAt).toISOString(),
+                },
+                sourceRef: `${kind}:${sourceId}:${contentSha256}`,
+              });
+            };
+            addCandidate({
+              kind: "pr-body",
+              source: pr.body || "",
+              sourceId: `pr-${pr.number}-body`,
+              updatedAt: pr.updated_at,
+            });
+            for (const comment of comments) {
+              const source = comment.body || "";
+              if (!source.trimStart().startsWith("Post-merge cleanup:")) {
+                continue;
+              }
+              addCandidate({
+                durable: true,
+                kind: "handoff-comment",
+                source,
+                sourceId: String(comment.id),
+                updatedAt: comment.updated_at,
+              });
+            }
+            const sourceRefsInBody = (body) => candidates
+              .filter((candidate) => body && body.includes(candidate.sourceRef))
+              .map((candidate) => candidate.sourceRef);
+            const reviewEvidence = [{
+              decision: "merged",
+              id: `merge-actor-${pr.number}`,
+              isMergeGate: pr.merged === true,
+              reviewerKind: context.payload.sender?.type === "Bot" ? "bot" : "human",
+              sourceRefs: [],
+              submittedAt: new Date(pr.merged_at).toISOString(),
+            }, ...reviews.map((review) => ({
+              decision: review.state === "APPROVED" ? "approved" : review.state.toLowerCase(),
+              id: String(review.id),
+              isMergeGate: review.state === "APPROVED",
+              reviewerKind: review.user?.type === "Bot" ? "bot" : "human",
+              sourceRefs: sourceRefsInBody(review.body || ""),
+              submittedAt: new Date(review.submitted_at).toISOString(),
+            }))];
+            for (const comment of comments) {
+              if (!comment.body || !comment.body.includes("## Equivalent Human Review Fallback")) {
+                continue;
+              }
+              const hasStrictFallbackCleanupApproval =
+                /^- Fallback human reviewer:\s*\S.+$/m.test(comment.body) &&
+                /^- Cleanup metadata source reviewed before fallback approval:\s*\S.+$/m.test(comment.body);
+              if (!hasStrictFallbackCleanupApproval) {
+                continue;
+              }
+              reviewEvidence.push({
+                decision: "fallback-approved",
+                id: `fallback-comment-${comment.id}`,
+                isMergeGate: true,
+                reviewerKind: "human",
+                sourceRefs: sourceRefsInBody(comment.body || ""),
+                submittedAt: new Date(comment.updated_at).toISOString(),
+              });
+            }
+            if (candidates.length !== 1) {
+              throw new Error("Expected exactly one cleanup metadata source from the PR body or a durable handoff comment.");
+            }
+            const selected = candidates[0];
+            const metadataReview = reviewEvidence
+              .filter((review) =>
+                review.reviewerKind === "human" &&
+                review.isMergeGate &&
+                ["fallback-approved", "merged"].includes(review.decision) &&
+                Date.parse(review.submittedAt) <= Date.parse(pr.merged_at)
+              )
+              .sort((left, right) => left.submittedAt.localeCompare(right.submittedAt))
+              .at(-1);
+            if (!metadataReview) {
+              throw new Error("Missing human merge-gate cleanup approval.");
+            }
+            if (Date.parse(selected.sourceEvidence.updatedAt) > Date.parse(pr.merged_at)) {
+              throw new Error("Cleanup metadata source changed after merge.");
+            }
+            if (metadataReview.decision !== "merged" && Date.parse(selected.sourceEvidence.updatedAt) > Date.parse(metadataReview.submittedAt)) {
+              throw new Error("Cleanup metadata source changed after fallback review.");
+            }
+            const storyPaths = selected.metadata.stories.map((storyPath) => ({
+              storyId: storyIdFromPath(storyPath),
+              storyPath,
+            }));
+            const stories = storyPaths.map((story) => ({
+              packetPath: `agent-packets/${story.storyId}.md`,
+              storyId: story.storyId,
+              storyPath: story.storyPath,
+            }));
+            const buildParentLifecycle = () => {
+              const evidenceSources = [
+                { body: pr.body || "", updatedAt: pr.updated_at },
+                ...comments.map((comment) => ({
+                  body: comment.body || "",
+                  updatedAt: comment.updated_at,
+                })),
+              ];
+              const findScalar = (pattern) => {
+                let latest = null;
+                for (const source of evidenceSources) {
+                  const value = source.body.match(pattern)?.[1];
+                  if (value) {
+                    const updatedAt = new Date(source.updatedAt).toISOString();
+                    if (!latest || Date.parse(updatedAt) > Date.parse(latest.updatedAt)) {
+                      latest = { updatedAt, value };
+                    }
+                  }
+                }
+                return latest;
+              };
+              const parentReview = findScalar(/^Parent integration AI review record:\s*(\S+)\s*$/m);
+              const parentRevision = findScalar(/^Parent revision response:\s*(\S+)\s*$/m);
+              if (!parentReview || !parentRevision) {
+                throw new Error("Parent cleanup evidence is missing integration review or revision response.");
+              }
+              const substoryRecords = new Map();
+              const substoryPattern = /^Substory AI review record:\s*\n {2}story:\s*(stories\/approved\/[^\s]+\.yaml)\s*\n {2}pr:\s*(\d+)\s*\n {2}record:\s*(\S+)\s*$/gm;
+              for (const source of evidenceSources) {
+                for (const match of source.body.matchAll(substoryPattern)) {
+                  const updatedAt = new Date(source.updatedAt).toISOString();
+                  const previous = substoryRecords.get(match[1]);
+                  if (previous && Date.parse(previous.updatedAt) >= Date.parse(updatedAt)) {
+                    continue;
+                  }
+                  substoryRecords.set(match[1], {
+                    substoryAiReviewRecordId: match[3],
+                    substoryPrNumber: Number(match[2]),
+                    updatedAt,
+                  });
+                }
+              }
+              const lifecycleUpdatedAtValues = [
+                parentReview.updatedAt,
+                parentRevision.updatedAt,
+              ];
+              const includedStories = stories.map((story) => {
+                const record = substoryRecords.get(story.storyPath);
+                if (!record) {
+                  throw new Error(`Missing durable substory PR review evidence for ${story.storyPath}.`);
+                }
+                lifecycleUpdatedAtValues.push(record.updatedAt);
+                return {
+                  packetPath: story.packetPath,
+                  storyId: story.storyId,
+                  storyPath: story.storyPath,
+                  substoryAiReviewRecordId: record.substoryAiReviewRecordId,
+                  substoryPrNumber: record.substoryPrNumber,
+                };
+              });
+              const cleanupPlanRecordedAt = new Date(
+                Math.max(...lifecycleUpdatedAtValues.map((value) => Date.parse(value))),
+              ).toISOString();
+              if (Date.parse(cleanupPlanRecordedAt) > Date.parse(metadataReview.submittedAt)) {
+                throw new Error("Parent lifecycle evidence changed after required review point.");
+              }
+              return {
+                cleanupPlanRecordedAt,
+                includedStories,
+                parentIntegrationReviewRecordId: parentReview.value,
+                parentRevisionResponseId: parentRevision.value,
+              };
+            };
+            fs.writeFileSync("cleanup-metadata.md", selected.source);
+            core.info(`Reviewed cleanup metadata source ref: ${selected.sourceRef}`);
+
+            const evidence = {
+              baseBranch: pr.base.ref,
+              changedFiles,
+              defaultBranch: context.payload.repository.default_branch,
+              mergeSha: pr.merge_commit_sha,
+              merged: pr.merged === true,
+              mergedAt: new Date(pr.merged_at).toISOString(),
+              metadataSource: selected.sourceEvidence,
+              metadataSourceRef: selected.sourceRef,
+              prNumber: pr.number,
+              reviews: reviewEvidence,
+              stories,
+              ...(selected.metadata.mode === "parent" ? { parentLifecycle: buildParentLifecycle() } : {}),
+            };
+
+            fs.writeFileSync("cleanup-evidence.json", `${JSON.stringify(evidence, null, 2)}\n`);
+
+      - name: Validate cleanup metadata and write preflight plan
+        run: >
+          node --experimental-strip-types tools/post-merge-cleanup.ts
+          --metadata-source-file cleanup-metadata.md
+          --evidence-json-file cleanup-evidence.json
+          --preflight-plan-file bound-cleanup-plan.json
+
+      - name: Upload bound cleanup plan
+        if: ${{ success() && hashFiles('bound-cleanup-plan.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bound-cleanup-plan.json
+          path: bound-cleanup-plan.json
+          if-no-files-found: error
+
+  cleanup:
+    name: cleanup-direct-push
+    needs: preflight
+    if: ${{ needs.preflight.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out trusted default branch for cleanup
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          token: ${{ secrets.POST_MERGE_PACKET_CLEANUP_TOKEN }}
+          persist-credentials: true
+
+      - name: Configure cleanup actor
+        run: |
+          git config user.name "optcg-packet-cleanup[bot]"
+          git config user.email "optcg-packet-cleanup[bot]@users.noreply.github.com"
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Download validated cleanup plan
+        uses: actions/download-artifact@v4
+        with:
+          name: bound-cleanup-plan.json
+          path: .cleanup
+
+      - name: Execute validated packet cleanup
+        run: >
+          node --experimental-strip-types tools/post-merge-cleanup.ts
+          --execute-plan-file .cleanup/bound-cleanup-plan.json
+
+      - name: Run repo verification before push
+        run: corepack pnpm verify
+
+      - name: Revalidate cleanup diff after verification
+        run: >
+          node --experimental-strip-types tools/post-merge-cleanup.ts
+          --finalize-plan-file .cleanup/bound-cleanup-plan.json
+
+      - name: Push direct cleanup commit
+        run: git push origin HEAD:${{ github.event.repository.default_branch }}
+
+      - name: Build branch cleanup state
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("node:fs");
+            const plan = JSON.parse(fs.readFileSync(".cleanup/bound-cleanup-plan.json", "utf8"));
+            const pr = context.payload.pull_request;
+            const branchStates = [];
+            const associatedBranches = new Set([pr.head.ref]);
+            for (const story of plan.stories) {
+              const storyId = String(story.storyId).toLowerCase();
+              for (const branch of plan.branches) {
+                if (String(branch).toLowerCase().includes(storyId)) {
+                  associatedBranches.add(branch);
+                }
+              }
+            }
+
+            for (const branch of plan.branches) {
+              try {
+                const branchResponse = await github.rest.repos.getBranch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  branch,
+                });
+                const compareResponse = await github.rest.repos.compareCommitsWithBasehead({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  basehead: `${context.payload.repository.default_branch}...${branch}`,
+                });
+                branchStates.push({
+                  aheadByDefault: compareResponse.data.ahead_by,
+                  associatedWithCleanup: associatedBranches.has(branch),
+                  name: branch,
+                  protected: branchResponse.data.protected === true,
+                });
+              } catch (error) {
+                core.warning(`Unable to inspect cleanup branch ${branch}: ${error.message}`);
+              }
+            }
+
+            fs.writeFileSync(".cleanup/branch-cleanup-state.json", `${JSON.stringify({
+              branchStates,
+              mergedPrHeadBranch: pr.head.ref,
+              packetCleanupSucceeded: true,
+            }, null, 2)}\n`);
+
+      - name: Validate branch cleanup decisions
+        run: >
+          node --experimental-strip-types tools/post-merge-cleanup.ts
+          --branch-cleanup-plan-file .cleanup/bound-cleanup-plan.json
+          --branch-cleanup-state-json-file .cleanup/branch-cleanup-state.json
+          --branch-cleanup-output-file .cleanup/branch-cleanup-decisions.json
+
+      - name: Delete safe merged cleanup branches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("node:fs");
+            const cleanup = JSON.parse(fs.readFileSync(".cleanup/branch-cleanup-decisions.json", "utf8"));
+            core.info(cleanup.log);
+            for (const decision of cleanup.decisions) {
+              if (decision.status !== "allowed") {
+                continue;
+              }
+              try {
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${decision.branch}`,
+                });
+                core.info(`Deleted merged cleanup branch ${decision.branch}.`);
+              } catch (error) {
+                core.warning(`Failed to delete merged cleanup branch ${decision.branch}: ${error.message}`);
+              }
+            }
+
+      - name: Log cleanup success
+        if: ${{ success() }}
+        run: echo "Post-merge packet cleanup completed with one direct cleanup commit to the default branch."
+
+      - name: Log cleanup failure
+        if: ${{ failure() }}
+        run: echo "Post-merge packet cleanup failed closed. Use the documented manual fallback only after investigating this workflow run."

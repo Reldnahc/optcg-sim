@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-027I.md",
+      "storyId": "INF-027I",
+      "storyPath": "stories/approved/INF-027I-treat-human-merge-as-cleanup-approval.yaml",
+      "storySha256": "51be0b4f4fd8a867d53e4d2a6ec8c4a39355149655925a5fabc4e5b4078361f6"
+    }
+  ],
   "version": 1
 }

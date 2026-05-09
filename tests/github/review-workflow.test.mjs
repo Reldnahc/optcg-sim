@@ -272,6 +272,67 @@ test("branch protection guide documents only the exact packet cleanup bypass", a
   assert.doesNotMatch(guide, /human users.*as a normal development path/i);
 });
 
+test("pull request template declares reviewed post-merge cleanup metadata", async () => {
+  const prTemplate = await readActiveText(".github/pull_request_template.md");
+
+  assertMatchesAll(prTemplate, [
+    /^## Post-Merge Cleanup$/m,
+    /Cleanup metadata is a reviewed request, not standalone authority/i,
+    /Reviewers confirm this metadata matches the reviewed story scope before merge/i,
+    /The human-controlled merge to `main` authorizes the cleanup metadata snapshot/i,
+    /Single-story PRs:/i,
+    /Post-merge cleanup:\s*\n\s*mode: single\s*\n\s*stories:\s*\n\s*- stories\/approved\/<STORY-ID>-<slug>\.yaml\s*\n\s*branches:\s*\n\s*- <head-branch>/i,
+    /Parent PRs:/i,
+    /Post-merge cleanup:\s*\n\s*mode: parent\s*\n\s*stories:\s*\n\s*- stories\/approved\/<CHILD-A>\.yaml\s*\n\s*- stories\/approved\/<CHILD-B>\.yaml\s*\n\s*branches:\s*\n\s*- <parent-integration-branch>\s*\n\s*- <optional-substory-branch>/i,
+  ]);
+  assert.doesNotMatch(
+    prTemplate,
+    /Confirm the exact cleanup metadata source ref before merge/i,
+  );
+  assert.doesNotMatch(prTemplate, /names the exact `pr-body:/i);
+});
+
+test("workflow docs describe automated packet cleanup policy and fallback boundaries", async () => {
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const workflowGuidance = `${storyExecution}\n${parentBranches}\n${reviewGate}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /post-merge packet cleanup automation is the normal path after a reviewed story PR or parent PR merges/i,
+    /manual fallback is only for operational failure/i,
+    /automation-created cleanup pull requests are not created/i,
+    /manual edits beyond pure packet-completion output still use the normal PR and reviewer path/i,
+    /cleanup metadata is a reviewed request, not standalone authority/i,
+    /computed metadata source ref is audit evidence/i,
+    /durable handoff comment/i,
+    /bind cleanup metadata to reviewed PR evidence and trusted checked-in story and packet state/i,
+    /direct cleanup commits are allowed only for exact packet-completion command output after repo verification passes/i,
+    /branch deletion runs only after packet cleanup succeeds/i,
+    /never deletes protected, unrelated, or unmerged branches/i,
+  ]);
+  assert.doesNotMatch(
+    workflowGuidance,
+    /must reference the exact cleanup metadata source ref/i,
+  );
+});
+
+test("root agent instructions treat manual packet completion as automation fallback", async () => {
+  const agentInstructions = await readActiveText("AGENTS.md");
+
+  assertMatchesAll(agentInstructions, [
+    /Post-merge packet cleanup automation is the normal path after a reviewed story PR or parent PR merges/i,
+    /manual packet-completion cleanup only as the operational fallback when automation fails or is unavailable/i,
+    /Do not run manual packet completion after automation has already completed the listed story cleanup/i,
+    /cleanup metadata is a reviewed request, not standalone authority/i,
+    /automation-created cleanup pull requests are not created/i,
+  ]);
+});
+
 test("branch protection required status checks exactly match ci workflow jobs", async () => {
   const guide = await readActiveText(".github/branch-protection.md");
   const workflow = await readActiveText(".github/workflows/ci.yml");
@@ -285,6 +346,86 @@ test("branch protection required status checks exactly match ci workflow jobs", 
     true,
     "hidden-info must be documented as a required status check",
   );
+});
+
+test("post-merge cleanup preflight workflow is non-privileged and fail-closed", async () => {
+  const workflow = await readActiveText(
+    ".github/workflows/post-merge-packet-cleanup.yml",
+  );
+
+  assertMatchesAll(workflow, [
+    /pull_request:\s*\n\s*branches:\s*\n\s*- main\s*\n\s*types:\s*\n\s*- closed/i,
+    /permissions:\s*\n\s*contents: read\s*\n\s*pull-requests: read/i,
+    /github\.event\.pull_request\.merged == true && github\.event\.pull_request\.base\.ref == github\.event\.repository\.default_branch/i,
+    /uses: actions\/checkout@v4/i,
+    /ref: \$\{\{ github\.event\.repository\.default_branch \}\}/i,
+    /persist-credentials: false/i,
+    /tools\/post-merge-cleanup\.ts/i,
+    /--metadata-source-file cleanup-metadata\.md/i,
+    /--evidence-json-file cleanup-evidence\.json/i,
+    /--preflight-plan-file bound-cleanup-plan\.json/i,
+    /Date\.parse\(review\.submittedAt\) <= Date\.parse\(pr\.merged_at\)/i,
+    /uses: actions\/upload-artifact@v4/i,
+    /name: bound-cleanup-plan\.json/i,
+  ]);
+
+  assert.doesNotMatch(workflow, /gh pr create/);
+});
+
+test("post-merge cleanup workflow gates the privileged direct push on a validated plan", async () => {
+  const workflow = await readActiveText(
+    ".github/workflows/post-merge-packet-cleanup.yml",
+  );
+  const verifyIndex = workflow.indexOf("Run repo verification before push");
+  const revalidateIndex = workflow.indexOf(
+    "Revalidate cleanup diff after verification",
+  );
+  const pushIndex = workflow.indexOf("Push direct cleanup commit");
+
+  assertMatchesAll(workflow, [
+    /cleanup:\s*\n\s*name: cleanup-direct-push\s*\n\s*needs: preflight/i,
+    /if: \$\{\{ needs\.preflight\.result == 'success' \}\}/i,
+    /permissions:\s*\n\s*contents: write/i,
+    /token: \$\{\{ secrets\.POST_MERGE_PACKET_CLEANUP_TOKEN \}\}/i,
+    /persist-credentials: true/i,
+    /uses: actions\/download-artifact@v4/i,
+    /name: bound-cleanup-plan\.json/i,
+    /path: \.cleanup/i,
+    /--execute-plan-file \.cleanup\/bound-cleanup-plan\.json/i,
+    /git push origin HEAD:\$\{\{ github\.event\.repository\.default_branch \}\}/i,
+  ]);
+  assert.ok(verifyIndex > -1, "missing verification step");
+  assert.ok(
+    revalidateIndex > verifyIndex,
+    "diff must be revalidated after verification",
+  );
+  assert.ok(
+    pushIndex > revalidateIndex,
+    "push must run after final diff validation",
+  );
+  assert.doesNotMatch(workflow, /gh pr create/);
+});
+
+test("post-merge cleanup workflow deletes branches only after packet cleanup gates", async () => {
+  const workflow = await readActiveText(
+    ".github/workflows/post-merge-packet-cleanup.yml",
+  );
+  const pushIndex = workflow.indexOf("Push direct cleanup commit");
+  const branchIndex = workflow.indexOf("Delete safe merged cleanup branches");
+
+  assertMatchesAll(workflow, [
+    /Delete safe merged cleanup branches/,
+    /String\(story\.storyId\)\.toLowerCase\(\)/,
+    /associatedBranches\.add\(branch\)/,
+    /--branch-cleanup-plan-file \.cleanup\/bound-cleanup-plan\.json/,
+    /github\.rest\.git\.deleteRef/,
+  ]);
+  assert.ok(pushIndex > -1, "missing direct push step");
+  assert.ok(
+    branchIndex > pushIndex,
+    "branch deletion must run after cleanup push",
+  );
+  assert.doesNotMatch(workflow, /deleteRef[\s\S]*main/);
 });
 
 test("agents guidance requires parent orchestration plus separate reviewer subagent before human review", async () => {
@@ -355,7 +496,8 @@ test("agents guidance exposes a concise root checklist and links detailed workfl
     /Open the PR before reviewer-subagent review/i,
     /Post the AI review record or equivalent human-review fallback/i,
     /Request human review only after review records are current/i,
-    /Run `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` after merge to `main`/i,
+    /Confirm post-merge packet cleanup automation completed the listed story cleanup after merge to `main`/i,
+    /manual packet-completion cleanup only as the operational fallback when automation fails or is unavailable/i,
     /docs\/workflow\/story-execution\.md/i,
     /docs\/workflow\/review-gate\.md/i,
     /docs\/workflow\/parent-integration-branches\.md/i,

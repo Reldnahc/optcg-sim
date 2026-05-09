@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: generated
+status: approved
 summary: >
   Replace routine manual post-merge packet completion with a safe post-merge
   workflow series that first adds specification authority, then binds cleanup
@@ -87,6 +87,14 @@ child_stories:
     title: Close cleanup automation docs and tests
     concern: Add final integration tests and documentation consistency checks proving no automation-created cleanup PRs, narrow bypass, metadata binding, and ordinary branch protection.
     depends_on: [INF-027F]
+  - id: INF-027H
+    title: Bind parent cleanup evidence and reviewed metadata source
+    concern: Add durable handoff-comment metadata support, source-ref audit computation, and parent lifecycle evidence required by parent cleanup validation.
+    depends_on: [INF-027G]
+  - id: INF-027I
+    title: Treat human merge as cleanup metadata approval
+    concern: Remove the manual source-ref paste requirement while preserving internal metadata hashing, human-controlled merge authority, parent lifecycle evidence, and fail-closed packet cleanup validation.
+    depends_on: [INF-027H]
 acceptance_criteria:
   - SPEC-004 is done and provides enough spec authority for the narrow cleanup bypass before INF-027A is approved
   - cleanup metadata is treated as a cleanup request and never as sufficient authority by itself

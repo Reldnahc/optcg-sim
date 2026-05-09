@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: generated
+status: approved
 summary: >
   Extend cleanup validation so PR cleanup metadata is treated only as a cleanup
   request and must be bound to reviewed PR evidence, merge state, trusted

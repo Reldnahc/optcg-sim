@@ -20,13 +20,15 @@ Code review is required. Use this flow unless a higher-authority story or packet
 12. before assigning any revision worker or re-reviewer, fetch the current PR comments, review comments, review threads, and checks, then include unresolved findings and prior dispositions in the handoff
 13. if no usable reviewer subagent run remains for the patch after the available reviewer-subagent surfaces were found unavailable, timed out, or failed, record an equivalent human-review fallback explicitly rather than silently skipping the review gate
 14. fix the material findings or post a revision response comment that records the disposition of each unresolved item
-15. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, and after the revision response comment is up to date when a separate reviewer subagent run was used
+15. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, after the revision response comment is up to date when a separate reviewer subagent run was used, and after reviewers confirm any post-merge cleanup metadata matches the reviewed story scope
 16. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes unless the PR is a substory PR targeting an approved parent integration branch; in that case, human review is deferred to the parent PR
 17. if review finds multi-concern drift, split the story or narrow the patch before merge
 
 The separate reviewer subagent run is a repo-level first-pass gate before human review. It does not replace the merge-gate requirement for a durable review record or equivalent human review step.
 
 Passing AI review does not replace human review.
+
+Cleanup metadata is a reviewed request, not standalone authority. Reviewers confirm the metadata matches the reviewed story scope before merge; automation must bind cleanup metadata to reviewed PR evidence and trusted checked-in story and packet state before any direct cleanup commit. The human-controlled merge to `main` authorizes the cleanup metadata snapshot at merge time, and the computed metadata source ref is audit evidence rather than a manual approval field. If merge actor evidence is unavailable and an equivalent human-review fallback is used, the fallback record must confirm the cleanup metadata source was reviewed before fallback approval.
 
 For parent-story integration branch work, passing AI review permits the parent agent to merge a substory PR into the parent integration branch only after CI, packet verification, AI review records, and revision response records are complete. It does not permit merging the parent integration branch to `main` without human review.
 
