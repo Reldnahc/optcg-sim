@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Remove the manual requirement for human reviewers to paste an exact cleanup
   metadata source ref into the approval text. The post-merge cleanup workflow

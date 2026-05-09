@@ -49,7 +49,15 @@ test("post-merge cleanup workflow wiring preserves all cleanup gates", async () 
   const preflightIndex = workflow.indexOf(
     "Validate cleanup metadata and write preflight plan",
   );
+  const setupNodeIndex = workflow.indexOf("Set up Node for cleanup tooling");
+  const cleanupJobIndex = workflow.indexOf(
+    "cleanup:\n    name: cleanup-direct-push",
+  );
   const executeIndex = workflow.indexOf("Execute validated packet cleanup");
+  const cleanupSetupNodeIndex = workflow.indexOf(
+    "Set up Node for cleanup tooling",
+    cleanupJobIndex,
+  );
   const verifyIndex = workflow.indexOf("Run repo verification before push");
   const revalidateIndex = workflow.indexOf(
     "Revalidate cleanup diff after verification",
@@ -60,6 +68,7 @@ test("post-merge cleanup workflow wiring preserves all cleanup gates", async () 
   assertMatchesAll(workflow, [
     /pull_request:\s*\n\s*branches:\s*\n\s*- main\s*\n\s*types:\s*\n\s*- closed/i,
     /Check out trusted default branch[\s\S]*ref: \$\{\{ github\.event\.repository\.default_branch \}\}[\s\S]*persist-credentials: false/i,
+    /Set up Node for cleanup tooling[\s\S]*uses: actions\/setup-node@v4[\s\S]*node-version: lts\/\*/i,
     /cleanup:\s*\n\s*name: cleanup-direct-push\s*\n\s*needs: preflight/i,
     /token: \$\{\{ secrets\.POST_MERGE_PACKET_CLEANUP_TOKEN \}\}/,
     /--execute-plan-file \.cleanup\/bound-cleanup-plan\.json/,
@@ -68,6 +77,20 @@ test("post-merge cleanup workflow wiring preserves all cleanup gates", async () 
     /github\.rest\.git\.deleteRef/,
   ]);
   assert.ok(preflightIndex > -1, "missing preflight validation");
+  assert.ok(setupNodeIndex > -1, "missing Node setup for cleanup tooling");
+  assert.ok(
+    setupNodeIndex < preflightIndex,
+    "Node setup must happen before cleanup TypeScript tooling runs",
+  );
+  assert.ok(cleanupJobIndex > -1, "missing cleanup direct-push job");
+  assert.ok(
+    cleanupSetupNodeIndex > cleanupJobIndex,
+    "cleanup direct-push job must set up Node",
+  );
+  assert.ok(
+    cleanupSetupNodeIndex < executeIndex,
+    "cleanup job Node setup must happen before cleanup TypeScript tooling runs",
+  );
   assert.ok(
     executeIndex > preflightIndex,
     "packet cleanup must follow preflight",

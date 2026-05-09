@@ -37,10 +37,11 @@ const {
 ) as typeof Validator;
 
 async function main() {
-  const args = process.argv.slice(2);
+  const parsedRoot = parseRepoRootArg(process.argv.slice(2));
+  const args = parsedRoot.args;
 
   try {
-    const repoRoot = findRepoRoot();
+    const repoRoot = parsedRoot.repoRoot ?? findRepoRoot();
     const executePlanFile = parseSinglePathArg(args, "--execute-plan-file");
     const finalizePlanFile = parseSinglePathArg(args, "--finalize-plan-file");
     const sourceRefPreview = await parseSourceRefPreview(args);
@@ -218,6 +219,34 @@ function requireRecord(value: unknown, label: string): Record<string, unknown> {
     throw new Error(`${label} must be an object.`);
   }
   return value as Record<string, unknown>;
+}
+
+function parseRepoRootArg(args: string[]) {
+  let repoRoot: string | null = null;
+  const remainingArgs: string[] = [];
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token === undefined) {
+      throw new Error("Unexpected missing CLI token.");
+    }
+    if (token !== "--repo-root") {
+      remainingArgs.push(token);
+      continue;
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith("--")) {
+      throw new Error("Missing value for --repo-root.");
+    }
+    if (repoRoot !== null) {
+      throw new Error("Ambiguous cleanup input: provide only one --repo-root.");
+    }
+    repoRoot = resolveCliPath(value, process.cwd());
+    index += 1;
+  }
+
+  return { args: remainingArgs, repoRoot };
 }
 
 function parseSinglePathArg(args: string[], flag: string) {

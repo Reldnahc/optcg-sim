@@ -1,6 +1,7 @@
 import type { AnySchema, ErrorObject, ValidateFunction } from "ajv";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -93,7 +94,33 @@ function findTrackedStoryFiles(repoRoot: string) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line !== "" && isStoryLifecyclePath(line))
+    .flatMap((line) => resolvePendingLifecycleMove(repoRoot, line))
     .sort();
+}
+
+function resolvePendingLifecycleMove(repoRoot: string, relativePath: string) {
+  if (existsSync(path.join(repoRoot, relativePath))) {
+    return [relativePath];
+  }
+
+  const movedToDonePath = toPendingDonePath(relativePath);
+  if (
+    movedToDonePath !== null &&
+    existsSync(path.join(repoRoot, movedToDonePath))
+  ) {
+    return [movedToDonePath];
+  }
+
+  return [relativePath];
+}
+
+function toPendingDonePath(relativePath: string) {
+  const approvedPrefix = "stories/approved/";
+  if (!relativePath.startsWith(approvedPrefix)) {
+    return null;
+  }
+
+  return `stories/done/${relativePath.slice(approvedPrefix.length)}`;
 }
 
 function isStoryLifecyclePath(relativePath: string) {

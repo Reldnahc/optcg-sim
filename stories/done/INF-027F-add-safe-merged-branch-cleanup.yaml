@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Add safe deletion of merged story/substory branches after packet lifecycle
   cleanup succeeds, with strict guards for protected, unmerged, unrelated, and

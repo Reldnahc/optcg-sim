@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, unlink, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -150,6 +150,38 @@ test("committed story validator ignores untracked story files", async () => {
   assert.equal(result.ok, true, result.diagnostics.join("\n"));
   assert.deepEqual(result.checkedFiles, [
     "stories/approved/TST-001-valid-story.yaml",
+  ]);
+});
+
+test("committed story validator follows pending approved-to-done cleanup moves", async () => {
+  const tempRoot = await makeTempGitRepo();
+  await writeStory(tempRoot, "stories/approved/TST-001-valid-story.yaml");
+  const addResult = spawnSync(
+    "git",
+    [
+      "add",
+      "contracts/story.schema.json",
+      "stories/approved/TST-001-valid-story.yaml",
+    ],
+    {
+      cwd: tempRoot,
+      encoding: "utf8",
+    },
+  );
+  assert.equal(addResult.status, 0, addResult.stderr);
+
+  await unlink(
+    path.join(tempRoot, "stories", "approved", "TST-001-valid-story.yaml"),
+  );
+  await writeStory(tempRoot, "stories/done/TST-001-valid-story.yaml", {
+    status: "done",
+  });
+
+  const result = await validateCommittedStories({ repoRoot: tempRoot });
+
+  assert.equal(result.ok, true, result.diagnostics.join("\n"));
+  assert.deepEqual(result.checkedFiles, [
+    "stories/done/TST-001-valid-story.yaml",
   ]);
 });
 

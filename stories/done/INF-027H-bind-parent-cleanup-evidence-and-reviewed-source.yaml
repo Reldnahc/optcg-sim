@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Fix the post-merge cleanup workflow evidence gap found during parent
   integration review by making the workflow use a reviewed, durable cleanup

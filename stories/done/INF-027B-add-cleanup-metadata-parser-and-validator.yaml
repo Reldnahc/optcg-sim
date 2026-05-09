@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Add dry-run tooling that parses post-merge cleanup metadata or explicit CLI
   arguments and fails closed unless the requested single-story or parent cleanup
