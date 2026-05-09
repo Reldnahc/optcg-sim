@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,12 +19,16 @@ const repoRoot = path.resolve(
 test("preflight writes bound cleanup plan artifact only after validation passes", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-plan-"));
   const planFile = path.join(tempRoot, "bound-cleanup-plan.json");
-  const metadataSource = renderMetadataSource(
-    "INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence",
-  );
-  const evidence = buildEvidence({ metadataSource });
+  const fixture = await makeCleanupFixture();
+  const metadataSource = renderMetadataSource(fixture.storySlug);
+  const evidence = buildEvidence({ ...fixture, metadataSource });
 
-  const run = runPreflight({ evidence, metadataSource, planFile });
+  const run = runPreflight({
+    evidence,
+    metadataSource,
+    planFile,
+    repoRoot: fixture.repoRoot,
+  });
 
   assert.equal(run.status, 0, run.stderr);
   const artifact = validateBoundCleanupPlanArtifact(
@@ -37,10 +41,7 @@ test("preflight writes bound cleanup plan artifact only after validation passes"
   assert.equal(artifact.packetCommand.command, "packets:complete");
   assert.match(artifact.reviewEvidenceSource.contentSha256, /^[0-9a-f]{64}$/);
   assert.match(artifact.stories[0].packetSha256, /^[0-9a-f]{64}$/);
-  assert.deepEqual(artifact.packetCommand.args, [
-    "--story",
-    "stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml",
-  ]);
+  assert.deepEqual(artifact.packetCommand.args, ["--story", fixture.storyPath]);
   assert.equal(artifact.verificationCommand, "corepack pnpm verify");
   assert.match(artifact.inputsHash, /^[0-9a-f]{64}$/);
 });
@@ -48,9 +49,8 @@ test("preflight writes bound cleanup plan artifact only after validation passes"
 test("source-ref preview computes the same PR body ref used by preflight validation", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-ref-"));
   const planFile = path.join(tempRoot, "bound-cleanup-plan.json");
-  const metadataSource = renderMetadataSource(
-    "INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence",
-  );
+  const fixture = await makeCleanupFixture();
+  const metadataSource = renderMetadataSource(fixture.storySlug);
   const preview = runSourceRefPreview({
     id: "pr-27-body",
     kind: "pr-body",
@@ -60,13 +60,19 @@ test("source-ref preview computes the same PR body ref used by preflight validat
   assert.equal(preview.status, 0, preview.stderr);
   const parsedPreview = JSON.parse(preview.stdout);
   const evidence = buildEvidence({
+    ...fixture,
     metadataSource,
     metadataSourceKind: "pr-body",
     metadataSourceRef: parsedPreview.metadataSourceRef,
     sourceId: "pr-27-body",
   });
 
-  const run = runPreflight({ evidence, metadataSource, planFile });
+  const run = runPreflight({
+    evidence,
+    metadataSource,
+    planFile,
+    repoRoot: fixture.repoRoot,
+  });
 
   assert.equal(run.status, 0, run.stderr);
   const artifact = validateBoundCleanupPlanArtifact(
@@ -80,9 +86,8 @@ test("handoff-comment metadata source file binds to previewed source ref", async
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-handoff-"));
   const planFile = path.join(tempRoot, "bound-cleanup-plan.json");
   const metadataFile = path.join(tempRoot, "handoff-comment.md");
-  const metadataSource = renderMetadataSource(
-    "INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence",
-  );
+  const fixture = await makeCleanupFixture();
+  const metadataSource = renderMetadataSource(fixture.storySlug);
   await writeFile(metadataFile, metadataSource);
   const preview = runSourceRefPreview({
     file: metadataFile,
@@ -92,6 +97,7 @@ test("handoff-comment metadata source file binds to previewed source ref", async
   assert.equal(preview.status, 0, preview.stderr);
   const parsedPreview = JSON.parse(preview.stdout);
   const evidence = buildEvidence({
+    ...fixture,
     metadataSource,
     metadataSourceKind: "handoff-comment",
     metadataSourceRef: parsedPreview.metadataSourceRef,
@@ -102,6 +108,7 @@ test("handoff-comment metadata source file binds to previewed source ref", async
     evidence,
     metadataSourceFile: metadataFile,
     planFile,
+    repoRoot: fixture.repoRoot,
   });
 
   assert.equal(run.status, 0, run.stderr);
@@ -206,22 +213,26 @@ test("bound cleanup plan schema rejects unexpected top-level fields", () => {
 });
 
 function buildEvidence(options) {
-  const trustedMainSha = spawnSync("git", ["rev-parse", "HEAD"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-  }).stdout.trim();
+  const trustedMainSha =
+    options.trustedMainSha ??
+    spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    }).stdout.trim();
   const metadataSourceSha = sha256(options.metadataSource);
   const metadataSourceKind = options.metadataSourceKind ?? "pr-body";
   const sourceId = options.sourceId ?? "pr-27-body";
+  const storyId = options.storyId ?? "INF-027C";
+  const storyPath =
+    options.storyPath ??
+    "stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml";
+  const packetPath = options.packetPath ?? "agent-packets/INF-027C.md";
   const metadataSourceRef =
     options.metadataSourceRef ??
     `${metadataSourceKind}:${sourceId}:${metadataSourceSha}`;
   return {
     baseBranch: "main",
-    changedFiles: [
-      "stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml",
-      "agent-packets/INF-027C.md",
-    ],
+    changedFiles: [storyPath, packetPath],
     defaultBranch: "main",
     mergeSha: trustedMainSha,
     merged: true,
@@ -247,10 +258,9 @@ function buildEvidence(options) {
     ],
     stories: [
       {
-        packetPath: "agent-packets/INF-027C.md",
-        storyId: "INF-027C",
-        storyPath:
-          "stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml",
+        packetPath,
+        storyId,
+        storyPath,
       },
     ],
   };
@@ -277,6 +287,9 @@ function runPreflight(options) {
       "--experimental-strip-types",
       "tools/post-merge-cleanup.ts",
       "--",
+      ...(options.repoRoot === undefined
+        ? []
+        : ["--repo-root", options.repoRoot]),
       ...sourceArgs,
       "--evidence-json",
       JSON.stringify(options.evidence),
@@ -285,6 +298,91 @@ function runPreflight(options) {
     ],
     { cwd: repoRoot, encoding: "utf8" },
   );
+}
+
+async function makeCleanupFixture() {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-cleanup-"));
+  const storyId = "INF-701";
+  const storyFileName = "INF-701-cleanup-fixture.yaml";
+  const storyPath = `stories/approved/${storyFileName}`;
+  const packetPath = `agent-packets/${storyId}.md`;
+  await mkdir(path.join(fixtureRoot, "stories", "approved"), {
+    recursive: true,
+  });
+  await mkdir(path.join(fixtureRoot, "agent-packets"), { recursive: true });
+  const storySource = renderStoryYaml(storyId);
+  await writeFile(path.join(fixtureRoot, storyPath), storySource);
+  await writeFile(
+    path.join(fixtureRoot, packetPath),
+    `<!-- agent-packet:story-id ${storyId} -->
+<!-- agent-packet:story-path ${storyPath} -->
+<!-- agent-packet:story-sha256 ${sha256(storySource)} -->
+
+# Story Packet
+`,
+  );
+  const trustedMainSha = initializeGitRepo(fixtureRoot);
+  return {
+    packetPath,
+    repoRoot: fixtureRoot,
+    storyId,
+    storyPath,
+    storySlug: storyFileName.replace(/\.yaml$/, ""),
+    trustedMainSha,
+  };
+}
+
+function initializeGitRepo(fixtureRoot) {
+  for (const args of [
+    ["init", "-b", "main"],
+    ["config", "user.name", "Fixture User"],
+    ["config", "user.email", "fixture@example.com"],
+    ["add", "."],
+    ["commit", "-m", "fixture"],
+  ]) {
+    const run = spawnSync("git", args, {
+      cwd: fixtureRoot,
+      encoding: "utf8",
+    });
+    assert.equal(run.status, 0, run.stderr);
+  }
+  return spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: fixtureRoot,
+    encoding: "utf8",
+  }).stdout.trim();
+}
+
+function renderStoryYaml(storyId) {
+  return `spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ${storyId}
+epic_id: KICK-001
+title: Cleanup fixture
+type: tooling
+area: infra
+primary_concern: tooling
+priority: low
+status: approved
+summary: Fixture.
+story_boundary: Fixture.
+allowed_touch_points:
+  - tools/**
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s010
+scope:
+  - fixture
+non_scope:
+  - none
+dependencies: []
+acceptance_criteria:
+  - fixture
+required_tests:
+  - fixture
+repo_rules:
+  - fail closed
+ambiguity_policy: fail_and_escalate
+`;
 }
 
 function runSourceRefPreview(options) {

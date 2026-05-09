@@ -720,7 +720,7 @@ test("validator fails for duplicate, broad-glob, outside, generated, and done pa
   );
 });
 
-test("package script exposes reviewed cleanup validation behavior", () => {
+test("package script exposes reviewed cleanup validation behavior", async () => {
   const packageJson = JSON.parse(
     readFileSync(path.join(repoRoot, "package.json"), "utf8"),
   );
@@ -729,24 +729,23 @@ test("package script exposes reviewed cleanup validation behavior", () => {
     "node --experimental-strip-types tools/post-merge-cleanup.ts",
   );
 
+  const tempRoot = await makeTempRepo([
+    {
+      fileName: "INF-501-story.yaml",
+      id: "INF-501",
+    },
+  ]);
+  const trustedMainSha = initializeGitRepo(tempRoot);
   const metadataSource = `Post-merge cleanup:
   mode: single
   stories:
-    - stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml
+    - stories/approved/INF-501-story.yaml
   branches:
-    - story/inf-027c-cleanup-reviewed-pr-evidence-binding
+    - story/inf-501-cleanup-fixture
 `;
-  const trustedMainSha = spawnSync("git", ["rev-parse", "HEAD"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-  }).stdout.trim();
   const metadataSourceSha = sha256(metadataSource);
   const evidence = {
     ...buildSingleEvidence(),
-    changedFiles: [
-      "stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml",
-      "agent-packets/INF-027C.md",
-    ],
     mergeSha: trustedMainSha,
     metadataSource: {
       contentSha256: metadataSourceSha,
@@ -768,10 +767,9 @@ test("package script exposes reviewed cleanup validation behavior", () => {
     ],
     stories: [
       {
-        packetPath: "agent-packets/INF-027C.md",
-        storyId: "INF-027C",
-        storyPath:
-          "stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml",
+        packetPath: "agent-packets/INF-501.md",
+        storyId: "INF-501",
+        storyPath: "stories/approved/INF-501-story.yaml",
       },
     ],
   };
@@ -781,6 +779,8 @@ test("package script exposes reviewed cleanup validation behavior", () => {
       "--experimental-strip-types",
       "tools/post-merge-cleanup.ts",
       "--",
+      "--repo-root",
+      tempRoot,
       "--pr-body",
       metadataSource,
       "--evidence-json",
@@ -793,7 +793,7 @@ test("package script exposes reviewed cleanup validation behavior", () => {
   const output = JSON.parse(run.stdout);
   assert.equal(output.mode, "single");
   assert.equal(output.mergedPrNumber, 27);
-  assert.equal(output.boundStories[0].storyId, "INF-027C");
+  assert.equal(output.boundStories[0].storyId, "INF-501");
   assert.equal(output.verificationInputs.trustedMainSha, trustedMainSha);
 });
 
@@ -851,6 +851,26 @@ async function makeTempRepo(stories, options = {}) {
     );
   }
   return tempRoot;
+}
+
+function initializeGitRepo(tempRoot) {
+  for (const args of [
+    ["init", "-b", "main"],
+    ["config", "user.name", "Fixture User"],
+    ["config", "user.email", "fixture@example.com"],
+    ["add", "."],
+    ["commit", "-m", "fixture"],
+  ]) {
+    const run = spawnSync("git", args, {
+      cwd: tempRoot,
+      encoding: "utf8",
+    });
+    assert.equal(run.status, 0, run.stderr);
+  }
+  return spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: tempRoot,
+    encoding: "utf8",
+  }).stdout.trim();
 }
 
 function buildCleanupDryRunPlan(options) {

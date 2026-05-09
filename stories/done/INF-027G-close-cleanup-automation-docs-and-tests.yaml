@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Close the post-merge cleanup automation series with integration tests and
   documentation consistency checks proving workflow wiring, metadata contract,

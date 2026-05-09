@@ -1,0 +1,104 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-028
+epic_id: KICK-001
+title: Repair post-merge cleanup first-run blockers
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: approved
+summary: >
+  Repair the first-run failures discovered after post-merge packet cleanup
+  automation merged: ensure the cleanup workflow runs on a Node version that
+  supports checked-in TypeScript tooling, and ensure cleanup validation tests do
+  not depend on an approved story file that successful cleanup removes.
+story_boundary: >
+  Own the immediate post-merge cleanup automation repair and the exact INF-027
+  manual packet-cleanup fallback required because automation failed. Do not
+  redesign cleanup metadata, branch protection, packet completion semantics, or
+  gameplay behavior.
+allowed_touch_points:
+  - .github/workflows/post-merge-packet-cleanup.yml
+  - tools/post-merge-cleanup.ts
+  - tools/validate-stories.ts
+  - tests/contracts/post-merge-cleanup-contract.test.mjs
+  - tests/contracts/post-merge-cleanup-preflight-contract.test.mjs
+  - tests/contracts/committed-story-validation.test.mjs
+  - tests/github/post-merge-cleanup-closeout.test.mjs
+  - tests/fixtures/post-merge-cleanup/**
+  - agent-packets/INF-027A.md
+  - agent-packets/INF-027B.md
+  - agent-packets/INF-027C.md
+  - agent-packets/INF-027D.md
+  - agent-packets/INF-027E.md
+  - agent-packets/INF-027F.md
+  - agent-packets/INF-027G.md
+  - agent-packets/INF-027H.md
+  - agent-packets/INF-027I.md
+  - agent-packets/INF-028.md
+  - agent-packets/active.json
+  - stories/approved/INF-027A-document-post-merge-cleanup-policy.yaml
+  - stories/approved/INF-027B-add-cleanup-metadata-parser-and-validator.yaml
+  - stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml
+  - stories/approved/INF-027D-add-non-privileged-post-merge-cleanup-preflight-workflow.yaml
+  - stories/approved/INF-027E-add-privileged-direct-packet-cleanup-push.yaml
+  - stories/approved/INF-027F-add-safe-merged-branch-cleanup.yaml
+  - stories/approved/INF-027G-close-cleanup-automation-docs-and-tests.yaml
+  - stories/approved/INF-027H-bind-parent-cleanup-evidence-and-reviewed-source.yaml
+  - stories/approved/INF-027I-treat-human-merge-as-cleanup-approval.yaml
+  - stories/approved/INF-028-repair-post-merge-cleanup-first-run.yaml
+  - stories/done/INF-027A-document-post-merge-cleanup-policy.yaml
+  - stories/done/INF-027B-add-cleanup-metadata-parser-and-validator.yaml
+  - stories/done/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml
+  - stories/done/INF-027D-add-non-privileged-post-merge-cleanup-preflight-workflow.yaml
+  - stories/done/INF-027E-add-privileged-direct-packet-cleanup-push.yaml
+  - stories/done/INF-027F-add-safe-merged-branch-cleanup.yaml
+  - stories/done/INF-027G-close-cleanup-automation-docs-and-tests.yaml
+  - stories/done/INF-027H-bind-parent-cleanup-evidence-and-reviewed-source.yaml
+  - stories/done/INF-027I-treat-human-merge-as-cleanup-approval.yaml
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s010
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 27-spec-driven-story-generation-workflow.s015
+  - 32-codex-agent-integration.s013
+scope:
+  - "add Node setup to the post-merge packet cleanup workflow before any `node --experimental-strip-types` command runs"
+  - "preserve the workflow's trusted default-branch checkout, fail-closed validation, direct-push policy, and cleanup actor/token behavior"
+  - "update cleanup validation tests so they do not require an approved INF-027 story file after that story has been completed"
+  - "keep cleanup tests representative of real approved-story validation without depending on lifecycle state for already-completed stories"
+  - "add a narrow cleanup CLI test seam, if needed, so tests can validate against temporary repository fixtures without changing production workflow inputs"
+  - "repair committed-story validation for pre-commit packet cleanup moves from `stories/approved` to `stories/done` without broadly validating unrelated untracked story drafts"
+  - "include the exact manual packet-completion fallback output for INF-027A through INF-027I because the merged automation failed operationally"
+non_scope:
+  - cleanup metadata schema redesign
+  - branch-protection policy changes
+  - packet completion command semantic changes
+  - cleanup pull request creation
+  - arbitrary branch deletion changes
+  - gameplay, engine, replay, client, or server behavior
+dependencies:
+  - INF-027I
+acceptance_criteria:
+  - the cleanup workflow installs/configures a Node runtime compatible with `node --experimental-strip-types`
+  - the cleanup workflow still checks out trusted main/default-branch code and does not run unreviewed PR branch code
+  - post-merge cleanup tests pass after INF-027A through INF-027I have been moved from approved to done
+  - cleanup tests still prove valid approved-story metadata is accepted using stable test-owned fixtures or setup
+  - any cleanup CLI test seam is opt-in and production workflow invocations continue using the checked-out repository root by default
+  - story validation accepts a packet-completion move from approved to done before commit while still ignoring unrelated untracked story files
+  - the INF-027 manual fallback cleanup diff is limited to exact packet completion output
+  - "`pnpm verify` passes with INF-027 cleanup applied"
+required_tests:
+  - workflow structure test proving post-merge cleanup sets up Node before TypeScript tooling commands
+  - cleanup validation test proving accepted story metadata does not depend on completed INF-027 approved story files
+  - story validation test proving tracked approved-to-done lifecycle moves validate the done story before commit
+  - "`pnpm run packets:verify`"
+  - "`pnpm verify`"
+repo_rules:
+  - do not weaken cleanup validation, required checks, typecheck, lint, or test rules
+  - do not broaden the cleanup actor/token permissions
+  - do not make cleanup tests pass by disabling lifecycle validation
+  - preserve exact INF-027 manual cleanup output unless verification requires a separately reviewed tooling/test fix
+ambiguity_policy: fail_and_escalate
