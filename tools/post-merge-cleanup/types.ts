@@ -29,6 +29,30 @@ export type CleanupDryRunPlan = {
   };
 };
 
+export type BoundCleanupPlan = {
+  schemaVersion: "post-merge-cleanup-plan.v1";
+  status: "valid";
+  generatedAt: string;
+  mergedPullRequest: {
+    baseBranch: string;
+    mergeSha: string;
+    number: number;
+  };
+  metadataSource: string;
+  reviewEvidenceSource: {
+    requiredReviewId: string;
+    requiredReviewSubmittedAt: string;
+  };
+  stories: CleanupStoryValidation[];
+  branches: string[];
+  packetCommand: {
+    args: string[];
+    command: "packets:complete" | "packets:complete-many";
+  };
+  verificationCommand: "corepack pnpm verify";
+  inputsHash: string;
+};
+
 export type CleanupMetadataSourceEvidence = {
   contentSha256: string;
   durable?: boolean;

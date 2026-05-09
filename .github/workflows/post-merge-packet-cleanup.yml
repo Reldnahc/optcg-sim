@@ -1,0 +1,126 @@
+name: Post-merge packet cleanup preflight
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  preflight:
+    name: cleanup-preflight
+    if: ${{ github.event.pull_request.merged == true && github.event.pull_request.base.ref == github.event.repository.default_branch }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Build cleanup evidence
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const crypto = require("node:crypto");
+            const fs = require("node:fs");
+
+            const pr = context.payload.pull_request;
+            if (!pr || !pr.merged) {
+              core.setFailed("Post-merge cleanup preflight requires a merged pull request.");
+              return;
+            }
+
+            const metadataSource = pr.body || "";
+            fs.writeFileSync("cleanup-metadata.md", metadataSource);
+            const metadataSourceHash = crypto.createHash("sha256").update(metadataSource).digest("hex");
+            const metadataSourceRef = `pr-body:pr-${pr.number}-body:${metadataSourceHash}`;
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              pull_number: pr.number,
+              repo: context.repo.repo,
+            });
+            const changedFiles = files.map((file) => file.filename);
+
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner: context.repo.owner,
+              pull_number: pr.number,
+              repo: context.repo.repo,
+            });
+
+            const storyPaths = [];
+            const lines = metadataSource.replace(/\r\n/g, "\n").split("\n");
+            for (let index = 0; index < lines.length; index += 1) {
+              if (lines[index].trim() !== "Post-merge cleanup:") {
+                continue;
+              }
+              for (let offset = index + 1; offset < lines.length; offset += 1) {
+                const line = lines[offset];
+                if (!line.startsWith("  ") && line.trim() !== "") {
+                  break;
+                }
+                const match = line.match(/^ {4}-\s+(stories\/approved\/([A-Z][A-Z0-9]*-\d{3}[A-Z]?)-[^/]+\.yaml)\s*$/);
+                if (match) {
+                  storyPaths.push({ storyId: match[2], storyPath: match[1] });
+                }
+              }
+            }
+
+            const evidence = {
+              baseBranch: pr.base.ref,
+              changedFiles,
+              defaultBranch: context.payload.repository.default_branch,
+              mergeSha: pr.merge_commit_sha,
+              merged: pr.merged === true,
+              mergedAt: new Date(pr.merged_at).toISOString(),
+              metadataSource: {
+                contentSha256: metadataSourceHash,
+                kind: "pr-body",
+                sourceId: `pr-${pr.number}-body`,
+                updatedAt: new Date(pr.updated_at).toISOString(),
+              },
+              metadataSourceRef,
+              prNumber: pr.number,
+              reviews: reviews.map((review) => ({
+                decision: review.state === "APPROVED" ? "approved" : review.state.toLowerCase(),
+                id: String(review.id),
+                isMergeGate: review.state === "APPROVED",
+                reviewerKind: review.user?.type === "Bot" ? "bot" : "human",
+                sourceRefs: review.body && review.body.includes(metadataSourceRef) ? [metadataSourceRef] : [],
+                submittedAt: new Date(review.submitted_at).toISOString(),
+              })),
+              stories: storyPaths.map((story) => ({
+                packetPath: `agent-packets/${story.storyId}.md`,
+                storyId: story.storyId,
+                storyPath: story.storyPath,
+              })),
+            };
+
+            fs.writeFileSync("cleanup-evidence.json", `${JSON.stringify(evidence, null, 2)}\n`);
+
+      - name: Validate cleanup metadata and write preflight plan
+        run: >
+          node --experimental-strip-types tools/post-merge-cleanup.ts
+          --pr-body-file cleanup-metadata.md
+          --evidence-json-file cleanup-evidence.json
+          --preflight-plan-file bound-cleanup-plan.json
+
+      - name: Upload bound cleanup plan
+        if: ${{ success() && hashFiles('bound-cleanup-plan.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bound-cleanup-plan.json
+          path: bound-cleanup-plan.json
+          if-no-files-found: error

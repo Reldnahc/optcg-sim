@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import path from "node:path";
 
 import type * as PacketLifecycle from "./agent-packet-lifecycle.js";
 import type * as Metadata from "./post-merge-cleanup/metadata.js";
@@ -17,9 +18,10 @@ const { findRepoRoot, resolveCliPath, sha256 }: typeof PacketLifecycle =
 const { parseCleanupMetadataBlock }: typeof Metadata = createRequire(
   import.meta.url,
 )("./post-merge-cleanup/metadata.ts") as typeof Metadata;
-const { buildCleanupDryRunPlan }: typeof Validator = createRequire(
-  import.meta.url,
-)("./post-merge-cleanup/validator.ts") as typeof Validator;
+const { buildBoundCleanupPlan, buildCleanupDryRunPlan }: typeof Validator =
+  createRequire(import.meta.url)(
+    "./post-merge-cleanup/validator.ts",
+  ) as typeof Validator;
 
 async function main() {
   const args = process.argv.slice(2);
@@ -29,6 +31,7 @@ async function main() {
     const evidence = await parseEvidenceInput(args);
     const metadataInput = await parseMetadataInput(args, evidence);
     const trustedMainSha = readTrustedHeadSha(repoRoot);
+    const preflightPlanFile = parsePreflightPlanFile(args);
     const plan = await buildCleanupDryRunPlan({
       evidence,
       metadata: metadataInput.metadata,
@@ -37,12 +40,56 @@ async function main() {
       trustedMainSha,
     });
 
+    if (preflightPlanFile !== null) {
+      const artifact = buildBoundCleanupPlan({
+        generatedAt: new Date().toISOString(),
+        inputsHash: buildInputsHash({
+          evidence,
+          metadata: metadataInput.metadata,
+          metadataSourceRef: metadataInput.metadataSourceRef,
+          trustedMainSha,
+        }),
+        plan,
+      });
+      await mkdir(path.dirname(preflightPlanFile), { recursive: true });
+      await writeFile(
+        preflightPlanFile,
+        `${JSON.stringify(artifact, null, 2)}\n`,
+      );
+      process.stdout.write(
+        `${JSON.stringify({ planFile: preflightPlanFile, status: "valid" }, null, 2)}\n`,
+      );
+      return;
+    }
+
     process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${message}\n`);
     process.exitCode = 1;
   }
+}
+
+function parsePreflightPlanFile(args: string[]) {
+  let preflightPlanFile: string | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token !== "--preflight-plan-file") {
+      continue;
+    }
+    const value = args[index + 1];
+    if (!value || value.startsWith("--")) {
+      throw new Error("Missing value for --preflight-plan-file.");
+    }
+    if (preflightPlanFile !== null) {
+      throw new Error(
+        "Ambiguous cleanup input: provide only one preflight plan file.",
+      );
+    }
+    preflightPlanFile = resolveCliPath(value, process.cwd());
+    index += 1;
+  }
+  return preflightPlanFile;
 }
 
 async function parseMetadataInput(
@@ -66,6 +113,11 @@ async function parseMetadataInput(
     }
 
     if (token === "--evidence-json" || token === "--evidence-json-file") {
+      index += 1;
+      continue;
+    }
+
+    if (token === "--preflight-plan-file") {
       index += 1;
       continue;
     }
@@ -147,6 +199,24 @@ async function parseMetadataInput(
     metadata: parseCleanupMetadataBlock(source),
     metadataSourceRef: buildSourceRef(evidence),
   };
+}
+
+function buildInputsHash(value: unknown) {
+  return sha256(JSON.stringify(sortJson(value)));
+}
+
+function sortJson(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sortJson(entry));
+  }
+  if (typeof value !== "object" || value === null) {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => [key, sortJson(entry)]),
+  );
 }
 
 async function parseEvidenceInput(
