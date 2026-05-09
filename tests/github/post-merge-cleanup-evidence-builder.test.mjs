@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { sha256 } from "../../tools/agent-packet-lifecycle.ts";
-import { buildWorkflowCleanupEvidence } from "../../tools/post-merge-cleanup/metadata.ts";
+import {
+  buildWorkflowCleanupEvidence,
+  validateWorkflowCleanupMetadataGuard,
+} from "../../tools/post-merge-cleanup/metadata.ts";
 
 const metadataSource = `Post-merge cleanup:
   mode: parent
@@ -238,6 +241,111 @@ Parent revision response: parent-revision-700
   assert.throws(
     () => buildWorkflowCleanupEvidence(inputs),
     /Missing durable substory PR review evidence/,
+  );
+});
+
+test("pre-merge cleanup metadata guard rejects missing metadata", () => {
+  const inputs = buildFixtureInputs();
+  inputs.pullRequest.body = "";
+  inputs.issueComments = [];
+
+  assert.throws(
+    () => validateWorkflowCleanupMetadataGuard(inputs),
+    /Missing Post-merge cleanup metadata source/,
+  );
+});
+
+test("pre-merge cleanup metadata guard rejects duplicate metadata sources", () => {
+  const inputs = buildFixtureInputs();
+  inputs.pullRequest.body = metadataSource;
+
+  assert.throws(
+    () => validateWorkflowCleanupMetadataGuard(inputs),
+    /Ambiguous cleanup metadata sources/,
+  );
+});
+
+test("pre-merge cleanup metadata guard reports malformed cleanup metadata", () => {
+  const inputs = buildFixtureInputs();
+  inputs.pullRequest.body = `Post-merge cleanup:
+  stories:
+    - stories/approved/INF-601-a.yaml
+`;
+  inputs.issueComments = [];
+
+  assert.throws(
+    () => validateWorkflowCleanupMetadataGuard(inputs),
+    /Malformed cleanup metadata source pr-body:pr-700-body: Malformed cleanup metadata: missing mode/,
+  );
+});
+
+test("pre-merge cleanup metadata guard accepts valid single-story metadata without parent lifecycle evidence", () => {
+  const inputs = buildFixtureInputs();
+  const source = `Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/INF-601-a.yaml
+  branches:
+    - story/inf-601
+`;
+  inputs.pullRequest.body = source;
+  inputs.issueComments = [];
+
+  const result = validateWorkflowCleanupMetadataGuard(inputs);
+
+  assert.equal(result.metadata.mode, "single");
+  assert.equal(
+    result.metadataSourceRef,
+    `pr-body:pr-700-body:${sha256(source)}`,
+  );
+  assert.equal(result.parentLifecycle, undefined);
+});
+
+test("pre-merge cleanup metadata guard rejects parent metadata without substory review evidence", () => {
+  const inputs = buildFixtureInputs();
+  inputs.issueComments = [
+    {
+      body: metadataSource,
+      createdAt: "2026-01-01T09:00:00.000Z",
+      id: 900,
+      updatedAt: "2026-01-01T09:00:00.000Z",
+      userType: "User",
+    },
+    {
+      body: `Parent integration AI review record: parent-ai-review-700
+Parent revision response: parent-revision-700
+`,
+      createdAt: "2026-01-01T09:30:00.000Z",
+      id: 901,
+      updatedAt: "2026-01-01T09:30:00.000Z",
+      userType: "User",
+    },
+  ];
+
+  assert.throws(
+    () => validateWorkflowCleanupMetadataGuard(inputs),
+    /Missing durable substory PR review evidence/,
+  );
+});
+
+test("pre-merge cleanup metadata guard accepts parent metadata with lifecycle evidence", () => {
+  const result = validateWorkflowCleanupMetadataGuard(buildFixtureInputs());
+
+  assert.equal(result.metadata.mode, "parent");
+  assert.equal(result.parentLifecycle?.includedStories.length, 2);
+  assert.equal(
+    result.parentLifecycle?.parentIntegrationReviewRecordId,
+    "parent-ai-review-700",
+  );
+});
+
+test("pre-merge cleanup metadata guard ignores untrusted handoff comment authors", () => {
+  const inputs = buildFixtureInputs();
+  inputs.issueComments[0].authorAssociation = "NONE";
+
+  assert.throws(
+    () => validateWorkflowCleanupMetadataGuard(inputs),
+    /Missing Post-merge cleanup metadata source/,
   );
 });
 

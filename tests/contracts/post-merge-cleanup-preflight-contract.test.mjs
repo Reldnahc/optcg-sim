@@ -133,6 +133,66 @@ test("failed preflight does not write bound cleanup plan artifact", async () => 
   assert.throws(() => readFileSync(planFile, "utf8"));
 });
 
+test("agent handoff guard rejects a PR body with missing cleanup metadata", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-handoff-"));
+  const prBodyFile = path.join(tempRoot, "pr-body.md");
+  await writeFile(prBodyFile, "## Summary\n\nMissing cleanup metadata.\n");
+
+  const run = spawnSync(
+    process.execPath,
+    [
+      "--experimental-strip-types",
+      "tools/post-merge-cleanup.ts",
+      "--",
+      "--validate-cleanup-handoff",
+      "--pr-number",
+      "237",
+      "--pr-body-file",
+      prBodyFile,
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /Missing Post-merge cleanup metadata source/);
+});
+
+test("agent handoff guard accepts valid single-story cleanup metadata", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-handoff-ok-"));
+  const prBodyFile = path.join(tempRoot, "pr-body.md");
+  await writeFile(
+    prBodyFile,
+    `Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/INF-701-cleanup-fixture.yaml
+  branches:
+    - story/inf-701
+`,
+  );
+
+  const run = spawnSync(
+    process.execPath,
+    [
+      "--experimental-strip-types",
+      "tools/post-merge-cleanup.ts",
+      "--",
+      "--validate-cleanup-handoff",
+      "--pr-number",
+      "237",
+      "--pr-body-file",
+      prBodyFile,
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const output = JSON.parse(run.stdout);
+  assert.equal(output.status, "valid");
+  assert.equal(output.metadata.mode, "single");
+  assert.match(output.metadataSourceRef, /^pr-body:pr-237-body:[0-9a-f]{64}$/);
+});
+
 test("bound cleanup plan schema rejects unexpected top-level fields", () => {
   const validArtifact = {
     branches: [],

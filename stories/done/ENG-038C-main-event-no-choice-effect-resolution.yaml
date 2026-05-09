@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Queue and resolve the first supported no-choice Main Event effect after the
   Event is played to trash.

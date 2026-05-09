@@ -20,6 +20,9 @@ const { findRepoRoot, resolveCliPath, sha256 }: typeof PacketLifecycle =
 const { parseCleanupMetadataBlock }: typeof Metadata = createRequire(
   import.meta.url,
 )("./post-merge-cleanup/metadata.ts") as typeof Metadata;
+const { validateWorkflowCleanupMetadataGuard }: typeof Metadata = createRequire(
+  import.meta.url,
+)("./post-merge-cleanup/metadata.ts") as typeof Metadata;
 const { evaluateBranchCleanup, renderBranchCleanupLog }: typeof BranchCleanup =
   createRequire(import.meta.url)(
     "./post-merge-cleanup/branch-cleanup.ts",
@@ -47,6 +50,14 @@ async function main() {
     const sourceRefPreview = await parseSourceRefPreview(args);
     if (sourceRefPreview !== null) {
       process.stdout.write(`${JSON.stringify(sourceRefPreview, null, 2)}\n`);
+      return;
+    }
+    const handoffGuard = await parseCleanupHandoffGuard(args);
+    if (handoffGuard !== null) {
+      const result = validateWorkflowCleanupMetadataGuard(handoffGuard);
+      process.stdout.write(
+        `${JSON.stringify({ status: "valid", ...result }, null, 2)}\n`,
+      );
       return;
     }
     const branchCleanupPlanFile = parseSinglePathArg(
@@ -154,6 +165,164 @@ async function main() {
     process.stderr.write(`${message}\n`);
     process.exitCode = 1;
   }
+}
+
+async function parseCleanupHandoffGuard(
+  args: string[],
+): Promise<Metadata.WorkflowCleanupMetadataGuardInput | null> {
+  const handoffJsonFile = parseSinglePathArg(
+    args,
+    "--validate-cleanup-handoff-json-file",
+  );
+  if (handoffJsonFile !== null) {
+    return parseCleanupHandoffJson(
+      JSON.parse(await readFile(handoffJsonFile, "utf8")) as unknown,
+    );
+  }
+
+  if (!args.includes("--validate-cleanup-handoff")) {
+    return null;
+  }
+
+  let prNumber: number | null = null;
+  let prBody: string | null = null;
+  let prBodyFile: string | null = null;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === "--validate-cleanup-handoff" || token === "--") {
+      continue;
+    }
+
+    if (token === "--pr-number") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --pr-number.");
+      }
+      const parsed = Number(value);
+      if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+        throw new Error("--pr-number must be a positive integer.");
+      }
+      prNumber = parsed;
+      index += 1;
+      continue;
+    }
+
+    if (token === "--pr-body") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --pr-body.");
+      }
+      prBody = value;
+      index += 1;
+      continue;
+    }
+
+    if (token === "--pr-body-file") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --pr-body-file.");
+      }
+      prBodyFile = resolveCliPath(value, process.cwd());
+      index += 1;
+      continue;
+    }
+
+    throw new Error(`Unexpected cleanup handoff argument: ${String(token)}`);
+  }
+
+  if (prNumber === null) {
+    throw new Error("Cleanup handoff validation requires --pr-number.");
+  }
+  if ((prBody === null) === (prBodyFile === null)) {
+    throw new Error(
+      "Cleanup handoff validation requires exactly one --pr-body or --pr-body-file.",
+    );
+  }
+
+  return {
+    issueComments: [],
+    pullRequest: {
+      body:
+        prBodyFile === null
+          ? (prBody ?? "")
+          : await readFile(prBodyFile, "utf8"),
+      number: prNumber,
+      updatedAt: "1970-01-01T00:00:00.000Z",
+    },
+  };
+}
+
+function parseCleanupHandoffJson(
+  value: unknown,
+): Metadata.WorkflowCleanupMetadataGuardInput {
+  const root = requireRecord(value, "cleanup handoff input");
+  const pullRequest = requireRecord(
+    root["pullRequest"],
+    "cleanup handoff pullRequest",
+  );
+  const issueComments = root["issueComments"];
+  if (!Array.isArray(issueComments)) {
+    throw new Error("Cleanup handoff issueComments must be an array.");
+  }
+  return {
+    issueComments: issueComments.map((comment) =>
+      parseWorkflowIssueComment(comment),
+    ),
+    pullRequest: {
+      body: requireJsonString(pullRequest["body"], "pullRequest.body"),
+      number: requireJsonInteger(pullRequest["number"], "pullRequest.number"),
+      updatedAt: requireJsonString(
+        pullRequest["updatedAt"],
+        "pullRequest.updatedAt",
+      ),
+    },
+  };
+}
+
+function parseWorkflowIssueComment(
+  value: unknown,
+): Metadata.WorkflowIssueCommentInput {
+  const root = requireRecord(value, "cleanup handoff issue comment");
+  const comment: Metadata.WorkflowIssueCommentInput = {
+    body: requireJsonString(root["body"], "issueComments[].body"),
+    createdAt: requireJsonString(
+      root["createdAt"],
+      "issueComments[].createdAt",
+    ),
+    id: requireJsonStringOrNumber(root["id"], "issueComments[].id"),
+    updatedAt: requireJsonString(
+      root["updatedAt"],
+      "issueComments[].updatedAt",
+    ),
+    userType: requireJsonString(root["userType"], "issueComments[].userType"),
+  };
+  if (typeof root["authorAssociation"] === "string") {
+    comment.authorAssociation = root["authorAssociation"];
+  }
+  return comment;
+}
+
+function requireJsonString(value: unknown, label: string) {
+  if (typeof value !== "string") {
+    throw new Error(`Cleanup handoff ${label} must be a string.`);
+  }
+  return value;
+}
+
+function requireJsonStringOrNumber(value: unknown, label: string) {
+  if (typeof value !== "string" && typeof value !== "number") {
+    throw new Error(`Cleanup handoff ${label} must be a string or number.`);
+  }
+  return value;
+}
+
+function requireJsonInteger(value: unknown, label: string) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    throw new Error(`Cleanup handoff ${label} must be an integer.`);
+  }
+  return value;
 }
 
 function parseBranchCleanupState(value: unknown) {

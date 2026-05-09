@@ -33,6 +33,10 @@ test("cleanup validation tool remains exposed through package scripts", async ()
     "node --experimental-strip-types tools/post-merge-cleanup.ts",
   );
   assert.equal(
+    packageJson.scripts["cleanup:validate-handoff"],
+    "node --experimental-strip-types tools/post-merge-cleanup.ts -- --validate-cleanup-handoff",
+  );
+  assert.equal(
     packageJson.scripts["packets:complete"],
     "node --experimental-strip-types tools/build-agent-packet.ts complete",
   );
@@ -40,6 +44,25 @@ test("cleanup validation tool remains exposed through package scripts", async ()
     packageJson.scripts["packets:complete-many"],
     "node --experimental-strip-types tools/build-agent-packet.ts complete-many",
   );
+});
+
+test("cleanup metadata guard workflow runs trusted base code before merge", async () => {
+  const workflow = await readActiveText(
+    ".github/workflows/cleanup-metadata-guard.yml",
+  );
+
+  assertMatchesAll(workflow, [
+    /^name:\s*Cleanup metadata guard$/m,
+    /pull_request_target:/,
+    /issue_comment:\s*\n\s*types:\s*\n\s*- created\s*\n\s*- edited\s*\n\s*- deleted/i,
+    /types:\s*\n\s*- opened\s*\n\s*- edited\s*\n\s*- synchronize\s*\n\s*- reopened\s*\n\s*- ready_for_review/i,
+    /ref: \$\{\{ github\.event\.repository\.default_branch \}\}/,
+    /persist-credentials: false/,
+    /github\.rest\.pulls\.get/,
+    /authorAssociation: comment\.author_association/,
+    /cleanup-guard-input\.json/,
+    /--validate-cleanup-handoff-json-file cleanup-guard-input\.json/,
+  ]);
 });
 
 test("post-merge cleanup workflow wiring preserves all cleanup gates", async () => {
@@ -164,12 +187,14 @@ test("branch-protection docs preserve narrow cleanup bypass and normal PR gates"
   assertMatchesAll(guide, [
     /Ordinary protected-branch changes still require pull requests, Code Owner review, at least one approval, conversation resolution, and required status checks/i,
     /dedicated GitHub App actor `optcg-packet-cleanup\[bot\]`/i,
+    /cleanup-metadata-guard/,
     /workflow `.github\/workflows\/post-merge-packet-cleanup\.yml`/i,
     /token `POST_MERGE_PACKET_CLEANUP_TOKEN`/i,
     /only to push exact packet-completion command output to `main` after a reviewed pull request has merged/i,
     /must not open cleanup pull requests/i,
     /may delete branches only after packet lifecycle cleanup succeeds, and only for associated merged, unprotected story or substory branches/i,
     /Do not expose the cleanup token to ordinary development pushes, broad admin roles, human-user development paths, or other workflows/i,
+    /remote GitHub rulesets or branch-protection settings cannot be changed from this repository/i,
   ]);
   assert.doesNotMatch(guide, /allow arbitrary GitHub Actions workflows/i);
 });

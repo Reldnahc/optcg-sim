@@ -22,6 +22,15 @@ Require the following checks before merge:
 
 These names must stay aligned with `.github/workflows/ci.yml`.
 
+Also require this trusted cleanup metadata guard before merge:
+
+- `cleanup-metadata-guard`
+
+This name must stay aligned with `.github/workflows/cleanup-metadata-guard.yml`.
+If remote GitHub rulesets or branch-protection settings cannot be changed from
+this repository, add `cleanup-metadata-guard` as a required status check in
+GitHub before relying on post-merge packet cleanup automation.
+
 ## Push Restrictions
 
 - Do not allow direct pushes to protected branches.

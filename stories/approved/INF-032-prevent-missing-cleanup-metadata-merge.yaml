@@ -1,0 +1,101 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-032
+epic_id: KICK-001
+title: Prevent PR merge without cleanup metadata
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: approved
+summary: >
+  Add a pre-merge enforcement path that fails pull requests to the default
+  branch when reviewed post-merge cleanup metadata is missing, malformed, or
+  incomplete for the PR shape, and add an agent handoff guard so PR authors are
+  forced to leave the cleanup metadata in place before review and merge.
+story_boundary: >
+  Own pre-merge and agent-handoff validation for cleanup metadata and required
+  parent cleanup evidence only. Do not weaken post-merge cleanup fail-closed
+  behavior, change packet completion semantics, create cleanup PRs, or broaden
+  cleanup authority.
+allowed_touch_points:
+  - .github/workflows/ci.yml
+  - .github/workflows/cleanup-metadata-guard.yml
+  - .github/workflows/post-merge-packet-cleanup.yml
+  - .github/branch-protection.md
+  - .github/pull_request_template.md
+  - docs/workflow/review-gate.md
+  - docs/workflow/parent-integration-branches.md
+  - docs/workflow/story-execution.md
+  - tools/post-merge-cleanup.ts
+  - tools/post-merge-cleanup/metadata.ts
+  - tools/post-merge-cleanup/types.ts
+  - package.json
+  - tests/ci/github-workflows.test.mjs
+  - tests/contracts/post-merge-cleanup-*.test.mjs
+  - tests/github/post-merge-cleanup-evidence-builder.test.mjs
+  - tests/github/post-merge-cleanup-closeout.test.mjs
+  - tests/fixtures/post-merge-cleanup/**
+  - stories/generated/INF-032-prevent-missing-cleanup-metadata-merge.yaml
+  - stories/approved/INF-032-prevent-missing-cleanup-metadata-merge.yaml
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s002
+  - 23-repo-tooling-and-enforcement.s010
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 27-spec-driven-story-generation-workflow.s015
+scope:
+  - "add a CI or required-check validation path that runs before merge on pull requests targeting the default branch"
+  - "make the pre-merge validation path run from trusted default-branch or base-branch workflow/tooling code, not from PR-head code that the author can weaken in the same pull request"
+  - "add an agent-facing validation command or workflow guard that PR authors run before PR handoff, review handoff, or human review request"
+  - "make the agent-facing guard fail when the PR body or durable handoff comment does not contain exactly one cleanup metadata source"
+  - "make the pre-merge check reject PRs with zero or multiple `Post-merge cleanup:` metadata sources"
+  - "make the pre-merge check reject malformed cleanup metadata before the post-merge workflow can be reached"
+  - "make parent-mode validation require the durable parent lifecycle evidence needed by post-merge cleanup: parent integration AI review record, parent revision response, and one substory AI review record for each listed story"
+  - "reuse or extract the same metadata and parent-evidence parsing logic used by post-merge cleanup so pre-merge and post-merge behavior cannot drift"
+  - "document the exact PR author handoff required before PR handoff, review handoff, human review, and merge"
+  - "update the checked-in branch-protection guidance so the cleanup metadata guard is listed as a required status check, or explicitly record any out-of-repo GitHub ruleset change that cannot be applied by the story patch"
+  - "add tests proving the missing-metadata failure that caused the ENG-038 cleanup miss is caught pre-merge"
+non_scope:
+  - relaxing post-merge cleanup validation
+  - allowing post-merge comments to authorize cleanup for an already-merged PR
+  - changing `packets:complete` or `packets:complete-many` semantics
+  - creating cleanup pull requests
+  - changing branch deletion policy
+  - changing story schema shape
+  - gameplay, engine, replay, server, client, or UI behavior
+dependencies:
+  - INF-027H
+  - INF-027I
+acceptance_criteria:
+  - PR authors have a documented command or mechanical guard that fails before review handoff when cleanup metadata is missing
+  - pull requests to the default branch fail a required pre-merge check when no cleanup metadata source is present
+  - the pre-merge required check uses trusted default-branch or base-branch validation code and cannot be bypassed by modifying PR-head workflow or tooling files
+  - pull requests fail pre-merge when cleanup metadata exists in more than one source
+  - malformed cleanup metadata fails pre-merge with a clear action-oriented error
+  - the repo's branch-protection guidance lists the cleanup metadata guard as required, or records an explicit out-of-repo branch-protection/ruleset follow-up if the repository setting cannot be changed in code
+  - parent-mode cleanup metadata fails pre-merge unless parent lifecycle evidence covers every listed substory
+  - single-story cleanup metadata remains supported without parent lifecycle evidence
+  - the pre-merge validator and post-merge workflow share parser or fixture coverage so accepted pre-merge metadata is accepted by post-merge cleanup
+  - docs and the PR template make the cleanup metadata/evidence handoff mandatory before review handoff and before human review is requested
+required_tests:
+  - workflow or tool test proving the agent-facing handoff guard rejects a PR handoff with missing cleanup metadata
+  - GitHub workflow test proving the CI workflow contains a pre-merge cleanup metadata validation step or job
+  - GitHub workflow test proving the required pre-merge cleanup metadata check runs from trusted default-branch or base-branch code rather than PR-head code
+  - branch-protection documentation test proving the cleanup metadata guard is included in required status check guidance or an explicit external ruleset follow-up is recorded
+  - GitHub evidence-builder or contract test proving a PR with no cleanup metadata fails before merge
+  - GitHub evidence-builder or contract test proving duplicate cleanup metadata sources fail before merge
+  - GitHub evidence-builder or contract test proving malformed cleanup metadata fails before merge with a clear message
+  - GitHub evidence-builder or contract test proving parent-mode metadata without substory review evidence fails before merge
+  - GitHub evidence-builder or contract test proving valid single-story cleanup metadata passes the pre-merge validation path
+  - workflow docs and PR-template tests proving cleanup metadata is mandatory before human review
+  - "`pnpm run test -- tests/github tests/contracts/post-merge-cleanup-contract.test.mjs tests/contracts/post-merge-cleanup-preflight-contract.test.mjs tests/ci/github-workflows.test.mjs`"
+  - "`pnpm verify`"
+repo_rules:
+  - keep post-merge cleanup fail-closed when metadata is absent, malformed, stale, or unreviewed
+  - do not make arbitrary issue comments authoritative
+  - do not let pre-merge validation use untrusted PR-head workflow or tooling code for required cleanup metadata enforcement
+  - do not allow cleanup metadata to be inferred from changed files alone
+  - do not present this generated story as approval-ready until story-review has run and findings are resolved or recorded
+ambiguity_policy: fail_and_escalate
