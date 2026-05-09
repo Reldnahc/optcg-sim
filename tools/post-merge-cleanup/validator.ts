@@ -5,6 +5,7 @@ import path from "node:path";
 import type * as PacketParser from "../agent-packet-parser.js";
 import type * as PacketLifecycle from "../agent-packet-lifecycle.js";
 import type {
+  BoundCleanupPlan,
   CleanupDryRunPlan,
   CleanupEvidenceInput,
   CleanupMetadata,
@@ -20,6 +21,8 @@ const { fileExists, sha256, toManifestPath }: typeof PacketLifecycle =
   ) as typeof PacketLifecycle;
 
 const APPROVED_PREFIX = "stories/approved/";
+const BOUND_CLEANUP_PLAN_SCHEMA_VERSION = "post-merge-cleanup-plan.v1";
+const VERIFICATION_COMMAND = "corepack pnpm verify";
 
 export async function buildCleanupDryRunPlan(options: {
   evidence: CleanupEvidenceInput;
@@ -60,6 +63,206 @@ export async function buildCleanupDryRunPlan(options: {
       trustedMainSha: options.trustedMainSha,
     },
   };
+}
+
+export function buildBoundCleanupPlan(options: {
+  generatedAt: string;
+  inputsHash: string;
+  plan: CleanupDryRunPlan;
+}): BoundCleanupPlan {
+  parseCanonicalInstantMillis(
+    options.generatedAt,
+    "bound cleanup plan generatedAt",
+  );
+  requireHash(options.inputsHash, "bound cleanup plan inputsHash");
+
+  const command =
+    options.plan.mode === "single"
+      ? {
+          args: ["--story", options.plan.boundStories[0]?.storyPath ?? ""],
+          command: "packets:complete" as const,
+        }
+      : {
+          args: options.plan.boundStories.flatMap((story) => [
+            "--story",
+            story.storyPath,
+          ]),
+          command: "packets:complete-many" as const,
+        };
+
+  if (command.args.some((arg) => arg.length === 0)) {
+    throw new Error(
+      "Bound cleanup plan cannot be built with empty packet command args.",
+    );
+  }
+
+  return {
+    branches: [...options.plan.branches],
+    generatedAt: options.generatedAt,
+    inputsHash: options.inputsHash,
+    mergedPullRequest: {
+      baseBranch: options.plan.verificationInputs.trustedBaseBranch,
+      mergeSha: options.plan.mergeSha,
+      number: options.plan.mergedPrNumber,
+    },
+    metadataSource: {
+      contentSha256: readSourceHash(
+        options.plan.verificationInputs.metadataSource,
+      ),
+      ref: options.plan.verificationInputs.metadataSource,
+    },
+    packetCommand: command,
+    reviewEvidenceSource: {
+      contentSha256: options.inputsHash,
+      requiredReviewId: options.plan.verificationInputs.requiredReviewId,
+      requiredReviewSubmittedAt:
+        options.plan.verificationInputs.requiredReviewSubmittedAt,
+    },
+    schemaVersion: BOUND_CLEANUP_PLAN_SCHEMA_VERSION,
+    status: "valid",
+    stories: [...options.plan.boundStories],
+    verificationCommand: VERIFICATION_COMMAND,
+  };
+}
+
+export function validateBoundCleanupPlanArtifact(
+  value: unknown,
+): BoundCleanupPlan {
+  const root = requireRecord(value, "bound cleanup plan");
+  const expectedKeys = [
+    "branches",
+    "generatedAt",
+    "inputsHash",
+    "mergedPullRequest",
+    "metadataSource",
+    "packetCommand",
+    "reviewEvidenceSource",
+    "schemaVersion",
+    "status",
+    "stories",
+    "verificationCommand",
+  ];
+  rejectUnexpectedKeys(root, expectedKeys, "bound cleanup plan");
+  if (root["schemaVersion"] !== BOUND_CLEANUP_PLAN_SCHEMA_VERSION) {
+    throw new Error("Malformed bound cleanup plan: unknown schema version.");
+  }
+  if (root["status"] !== "valid") {
+    throw new Error("Malformed bound cleanup plan: status must be valid.");
+  }
+  requireCanonicalInstant(
+    root["generatedAt"],
+    "bound cleanup plan generatedAt",
+  );
+  requireHash(root["inputsHash"], "bound cleanup plan inputsHash");
+  const metadataSource = requireRecord(
+    root["metadataSource"],
+    "bound cleanup plan metadataSource",
+  );
+  rejectUnexpectedKeys(
+    metadataSource,
+    ["contentSha256", "ref"],
+    "bound cleanup plan metadataSource",
+  );
+  requireHash(
+    metadataSource["contentSha256"],
+    "bound cleanup plan metadataSource.contentSha256",
+  );
+  requireString(metadataSource["ref"], "bound cleanup plan metadataSource.ref");
+  requireStringArray(root["branches"], "bound cleanup plan branches");
+
+  const mergedPullRequest = requireRecord(
+    root["mergedPullRequest"],
+    "bound cleanup plan mergedPullRequest",
+  );
+  rejectUnexpectedKeys(
+    mergedPullRequest,
+    ["baseBranch", "mergeSha", "number"],
+    "bound cleanup plan mergedPullRequest",
+  );
+  requireString(
+    mergedPullRequest["baseBranch"],
+    "bound cleanup plan mergedPullRequest.baseBranch",
+  );
+  requireString(
+    mergedPullRequest["mergeSha"],
+    "bound cleanup plan mergedPullRequest.mergeSha",
+  );
+  requireNumber(
+    mergedPullRequest["number"],
+    "bound cleanup plan mergedPullRequest.number",
+  );
+
+  const reviewEvidenceSource = requireRecord(
+    root["reviewEvidenceSource"],
+    "bound cleanup plan reviewEvidenceSource",
+  );
+  rejectUnexpectedKeys(
+    reviewEvidenceSource,
+    ["contentSha256", "requiredReviewId", "requiredReviewSubmittedAt"],
+    "bound cleanup plan reviewEvidenceSource",
+  );
+  requireHash(
+    reviewEvidenceSource["contentSha256"],
+    "bound cleanup plan reviewEvidenceSource.contentSha256",
+  );
+  requireString(
+    reviewEvidenceSource["requiredReviewId"],
+    "bound cleanup plan reviewEvidenceSource.requiredReviewId",
+  );
+  requireCanonicalInstant(
+    reviewEvidenceSource["requiredReviewSubmittedAt"],
+    "bound cleanup plan reviewEvidenceSource.requiredReviewSubmittedAt",
+  );
+
+  const packetCommand = requireRecord(
+    root["packetCommand"],
+    "bound cleanup plan packetCommand",
+  );
+  rejectUnexpectedKeys(
+    packetCommand,
+    ["args", "command"],
+    "bound cleanup plan packetCommand",
+  );
+  if (
+    packetCommand["command"] !== "packets:complete" &&
+    packetCommand["command"] !== "packets:complete-many"
+  ) {
+    throw new Error("Malformed bound cleanup plan: packet command is invalid.");
+  }
+  requireStringArray(
+    packetCommand["args"],
+    "bound cleanup plan packetCommand.args",
+  );
+  if (root["verificationCommand"] !== VERIFICATION_COMMAND) {
+    throw new Error(
+      "Malformed bound cleanup plan: verification command is invalid.",
+    );
+  }
+
+  const storyRecords = requireRecordArray(
+    root["stories"],
+    "bound cleanup plan stories",
+  );
+  const seenStoryIds = new Set<string>();
+  for (const story of storyRecords) {
+    rejectUnexpectedKeys(
+      story,
+      ["packetPath", "packetSha256", "storyId", "storyPath", "storySha256"],
+      "bound cleanup plan stories[]",
+    );
+    requireString(story["packetPath"], "bound cleanup plan story packetPath");
+    requireHash(story["packetSha256"], "bound cleanup plan story packetSha256");
+    requireString(story["storyId"], "bound cleanup plan story storyId");
+    requireString(story["storyPath"], "bound cleanup plan story storyPath");
+    requireHash(story["storySha256"], "bound cleanup plan story storySha256");
+    validateCanonicalStoryPath(story["storyPath"]);
+    if (seenStoryIds.has(story["storyId"])) {
+      throw new Error("Malformed bound cleanup plan: duplicate story id.");
+    }
+    seenStoryIds.add(story["storyId"]);
+  }
+
+  return root as BoundCleanupPlan;
 }
 
 function validateEvidenceBinding(options: {
@@ -278,6 +481,12 @@ function buildSourceRef(source: CleanupEvidenceInput["metadataSource"]) {
   return `${source.kind}:${source.sourceId}:${source.contentSha256}`;
 }
 
+function readSourceHash(sourceRef: string) {
+  const sourceHash = sourceRef.split(":").at(-1) ?? "";
+  requireHash(sourceHash, "bound cleanup plan metadataSource.contentSha256");
+  return sourceHash;
+}
+
 function validateEvidenceShape(evidence: CleanupEvidenceInput) {
   const root = requireRecord(evidence, "cleanup evidence");
   requireNumber(root["prNumber"], "cleanup evidence prNumber");
@@ -445,6 +654,28 @@ function requireNumber(value: unknown, label: string) {
   }
 }
 
+function requireHash(value: unknown, label: string) {
+  requireString(value, label);
+  if (!/^[0-9a-f]{64}$/.test(value)) {
+    throw new Error(
+      `Malformed cleanup evidence: ${label} must be a sha256 hash.`,
+    );
+  }
+}
+
+function rejectUnexpectedKeys(
+  record: Record<string, unknown>,
+  expectedKeys: string[],
+  label: string,
+) {
+  const expected = new Set(expectedKeys);
+  for (const key of Object.keys(record)) {
+    if (!expected.has(key)) {
+      throw new Error(`Malformed ${label}: unexpected top-level field ${key}.`);
+    }
+  }
+}
+
 function validateStoryCardinality(metadata: CleanupMetadata) {
   if (metadata.mode === "single" && metadata.stories.length !== 1) {
     throw new Error("Single-mode cleanup requires exactly one story.");
@@ -577,6 +808,7 @@ async function validatePacketEvidence(options: {
   }
 
   return {
+    packetSha256: sha256(packetSource),
     packetPath: packetPathLabel,
     storyId: options.storyId,
     storyPath: options.storyPath,

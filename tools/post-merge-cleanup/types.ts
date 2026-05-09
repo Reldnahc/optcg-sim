@@ -7,6 +7,7 @@ export type CleanupMetadata = {
 };
 
 export type CleanupStoryValidation = {
+  packetSha256: string;
   packetPath: string;
   storyId: string;
   storyPath: string;
@@ -27,6 +28,34 @@ export type CleanupDryRunPlan = {
     trustedBaseBranch: string;
     trustedMainSha: string;
   };
+};
+
+export type BoundCleanupPlan = {
+  schemaVersion: "post-merge-cleanup-plan.v1";
+  status: "valid";
+  generatedAt: string;
+  mergedPullRequest: {
+    baseBranch: string;
+    mergeSha: string;
+    number: number;
+  };
+  metadataSource: {
+    contentSha256: string;
+    ref: string;
+  };
+  reviewEvidenceSource: {
+    contentSha256: string;
+    requiredReviewId: string;
+    requiredReviewSubmittedAt: string;
+  };
+  stories: CleanupStoryValidation[];
+  branches: string[];
+  packetCommand: {
+    args: string[];
+    command: "packets:complete" | "packets:complete-many";
+  };
+  verificationCommand: "corepack pnpm verify";
+  inputsHash: string;
 };
 
 export type CleanupMetadataSourceEvidence = {

@@ -336,6 +336,32 @@ test("branch protection required status checks exactly match ci workflow jobs", 
   );
 });
 
+test("post-merge cleanup preflight workflow is non-privileged and fail-closed", async () => {
+  const workflow = await readActiveText(
+    ".github/workflows/post-merge-packet-cleanup.yml",
+  );
+
+  assertMatchesAll(workflow, [
+    /pull_request:\s*\n\s*branches:\s*\n\s*- main\s*\n\s*types:\s*\n\s*- closed/i,
+    /permissions:\s*\n\s*contents: read\s*\n\s*pull-requests: read/i,
+    /github\.event\.pull_request\.merged == true && github\.event\.pull_request\.base\.ref == github\.event\.repository\.default_branch/i,
+    /uses: actions\/checkout@v4/i,
+    /ref: \$\{\{ github\.event\.repository\.default_branch \}\}/i,
+    /persist-credentials: false/i,
+    /tools\/post-merge-cleanup\.ts/i,
+    /--pr-body-file cleanup-metadata\.md/i,
+    /--evidence-json-file cleanup-evidence\.json/i,
+    /--preflight-plan-file bound-cleanup-plan\.json/i,
+    /uses: actions\/upload-artifact@v4/i,
+    /name: bound-cleanup-plan\.json/i,
+  ]);
+
+  assert.doesNotMatch(workflow, /POST_MERGE_PACKET_CLEANUP_TOKEN/);
+  assert.doesNotMatch(workflow, /packets:complete/);
+  assert.doesNotMatch(workflow, /git push/);
+  assert.doesNotMatch(workflow, /gh pr create/);
+});
+
 test("agents guidance requires parent orchestration plus separate reviewer subagent before human review", async () => {
   const agents = await readActiveText("AGENTS.md");
   const storyExecution = await readActiveText(

@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-027C.md",
-      "storyId": "INF-027C",
-      "storyPath": "stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml",
-      "storySha256": "be0df723e2614e430943d107990e090fa8519215a55231e603b4cdad9afc5cf0"
+      "packetPath": "agent-packets/INF-027D.md",
+      "storyId": "INF-027D",
+      "storyPath": "stories/approved/INF-027D-add-non-privileged-post-merge-cleanup-preflight-workflow.yaml",
+      "storySha256": "305e32b36c51797f8834a2108f79cea61a7629dce672abbfe0ba78af7159f3bb"
     }
   ],
   "version": 1
