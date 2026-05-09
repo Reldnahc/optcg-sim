@@ -1,0 +1,70 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-002G
+epic_id: CARD-002
+title: Add future effect story manifest guidance
+type: implementation
+area: docs
+primary_concern: docs
+priority: medium
+status: approved
+summary: >
+  Add workflow guidance so future Main Event, Counter Event, optional effects,
+  once-per-turn, permanent modifier, replacement, multi-damage, and
+  search/reveal stories use the representative cards-produced manifest by
+  default and justify synthetic one-off manifests when needed.
+story_boundary: >
+  Own future-story guidance for manifest fixture selection only. Do not
+  implement effect runtime behavior, card effects, server/client behavior,
+  manifest fixture changes, or package-boundary enforcement in this story.
+allowed_touch_points:
+  - docs/**
+  - docs/workflow/**
+  - stories/generated/CARD-002G-future-effect-story-manifest-guidance.yaml
+  - stories/approved/CARD-002G-future-effect-story-manifest-guidance.yaml
+  - agent-packets/CARD-002G.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s039
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s013
+  - 04-effect-runtime.s014
+  - 04-effect-runtime.s017
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 24-story-schema.s016
+  - 27-spec-driven-story-generation-workflow.s015
+scope:
+  - document that upcoming effect-runtime stories should use the representative cards-produced manifest by default
+  - identify Main Event, Counter Event, optional effects, once-per-turn, permanent modifier, replacement, multi-damage, and search/reveal story families as default consumers
+  - document when a synthetic one-off manifest is allowed for narrow edge cases
+  - require the story or PR to explain any synthetic one-off manifest exception
+  - keep unsupported gameplay status honest rather than using fixture adoption to imply support
+non_scope:
+  - implementing Main Event, Counter Event, optional effects, once-per-turn, permanent modifier, replacement, multi-damage, or search/reveal behavior
+  - changing representative fixture contents
+  - package-boundary enforcement
+  - CLI or hidden-info tests
+  - server, client, UI, or protocol work
+dependencies:
+  - CARD-001
+  - CARD-002A
+  - CARD-002B
+acceptance_criteria:
+  - future-story guidance names the representative cards-produced manifest as the default
+  - guidance requires a documented reason for any synthetic one-off manifest
+  - guidance prevents unsupported fixture cards from being presented as implemented gameplay
+required_tests:
+  - documentation link or markdown lint check if the repo has one
+  - "`corepack pnpm run stories:validate`"
+  - full `corepack pnpm verify`
+repo_rules:
+  - keep this story documentation-only except for required story and packet files
+  - do not mention roadmap milestone names in the title or scope
+  - do not implement gameplay behavior
+ambiguity_policy: fail_and_escalate
