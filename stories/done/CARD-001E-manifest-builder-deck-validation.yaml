@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Build MatchCardManifest values from resolved cards, overlays, and effect
   definitions, and add a deck/loadout validation helper that fails closed for

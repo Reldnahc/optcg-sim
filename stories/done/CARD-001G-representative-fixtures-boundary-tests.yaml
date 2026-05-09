@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add representative card fixtures for upcoming engine/effect stories and
   mechanical package-boundary tests proving engine-core remains isolated from

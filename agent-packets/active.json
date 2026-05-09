@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CARD-001G.md",
-      "storyId": "CARD-001G",
-      "storyPath": "stories/approved/CARD-001G-representative-fixtures-boundary-tests.yaml",
-      "storySha256": "229d63f9cf14c8d536aa1544802566b7532d2aac45900efa2452ccab73f52d46"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

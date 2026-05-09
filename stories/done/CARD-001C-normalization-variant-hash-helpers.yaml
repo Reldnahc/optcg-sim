@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Normalize validated Poneglyph card-detail records into the repo's resolved
   card metadata shape, including variant keys/indexes and stable printed-text
