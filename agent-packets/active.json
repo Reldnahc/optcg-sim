@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-002A.md",
+      "storyId": "CARD-002A",
+      "storyPath": "stories/approved/CARD-002A-document-cards-produced-manifest-adoption-policy.yaml",
+      "storySha256": "f18345b6885eaa26dc50360d6b2ba63fa842eb5aa71ad87a0919039fb7c70362"
+    }
+  ],
   "version": 1
 }
