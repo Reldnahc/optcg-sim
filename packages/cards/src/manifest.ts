@@ -207,14 +207,24 @@ function applyManifestOverlay(
   card: ResolvedCard,
   overlay: ResolvedCardOverlay | undefined,
 ): ResolvedCard {
+  const manifestCard = toManifestCard(card);
+
   if (overlay === undefined) {
-    return card;
+    return manifestCard;
   }
-  assertOverlayReferencesCard(card.cardId, overlay);
+  assertOverlayReferencesCard(manifestCard.cardId, overlay);
   return {
-    ...card,
+    ...manifestCard,
     support: overlay.support,
   };
+}
+
+function toManifestCard(card: ResolvedCard): ResolvedCard {
+  const { raw: auditPayload, ...manifestCard } = card as ResolvedCard & {
+    raw?: unknown;
+  };
+  void auditPayload;
+  return manifestCard;
 }
 
 function assertOverlayReferencesCard(

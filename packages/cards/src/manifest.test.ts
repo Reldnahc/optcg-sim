@@ -200,6 +200,23 @@ describe("match card manifest construction", () => {
     expect(manifest.effectDefinitions?.["op01-002.draw"]).toEqual(definition);
     expect(changedDefinition.manifestHash).not.toBe(manifest.manifestHash);
   });
+
+  it("keeps raw Poneglyph detail out of manifest cards", () => {
+    const card = {
+      ...createResolvedCard(toCardId("OP01-027")),
+      raw: { card_number: "OP01-027" },
+    } satisfies ResolvedCard & { raw: unknown };
+
+    const manifest = buildManifest([card]);
+    const manifestCard = manifest.cards[card.cardId];
+
+    if (manifestCard === undefined) {
+      throw new Error("Expected manifest to include OP01-027.");
+    }
+
+    expect("raw" in card).toBe(true);
+    expect("raw" in manifestCard).toBe(false);
+  });
 });
 
 describe("deck validation", () => {

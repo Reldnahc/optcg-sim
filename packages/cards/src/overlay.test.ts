@@ -52,6 +52,14 @@ describe("simulator overlay merge", () => {
     );
   });
 
+  it("keeps raw Poneglyph detail out of the merged engine-facing card", async () => {
+    const normalized = await normalizedRebecca();
+    const merged = mergeSimulatorOverlay(normalized);
+
+    expect(normalized.raw).toBeDefined();
+    expect("raw" in merged.card).toBe(false);
+  });
+
   it("preserves sourceTextHash and behaviorHash from overlay support metadata", async () => {
     const normalized = await normalizedRebecca();
     const merged = mergeSimulatorOverlay(normalized, {

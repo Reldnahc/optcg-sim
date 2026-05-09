@@ -155,13 +155,21 @@ export function mergeSimulatorOverlay(
 
   return {
     card: {
-      ...normalized,
+      ...toEngineCardBase(normalized),
       support: overlay.support,
     },
     errataOverrideDeferral:
       "Current contracts expose simulator ruling notes but no errata override field; CARD-001D records this as an explicit deferral.",
     overlay,
   };
+}
+
+function toEngineCardBase(
+  normalized: NormalizedPoneglyphCard,
+): Omit<ResolvedCard, "support"> {
+  const { raw: auditPayload, ...card } = normalized;
+  void auditPayload;
+  return card;
 }
 
 function normalizeSupport(
