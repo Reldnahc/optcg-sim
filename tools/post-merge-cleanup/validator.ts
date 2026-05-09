@@ -6,6 +6,7 @@ import type * as PacketParser from "../agent-packet-parser.js";
 import type * as PacketLifecycle from "../agent-packet-lifecycle.js";
 import type {
   CleanupDryRunPlan,
+  CleanupEvidenceInput,
   CleanupMetadata,
   CleanupStoryValidation,
 } from "./types.js";
@@ -21,6 +22,7 @@ const { fileExists, sha256, toManifestPath }: typeof PacketLifecycle =
 const APPROVED_PREFIX = "stories/approved/";
 
 export async function buildCleanupDryRunPlan(options: {
+  evidence: CleanupEvidenceInput;
   metadata: CleanupMetadata;
   repoRoot: string;
 }): Promise<CleanupDryRunPlan> {
@@ -29,17 +31,177 @@ export async function buildCleanupDryRunPlan(options: {
     options.repoRoot,
     options.metadata.stories,
   );
+  const requiredReview = validateEvidenceBinding({
+    evidence: options.evidence,
+    metadata: options.metadata,
+    stories,
+  });
+  const sortedBranches = [...options.metadata.branches].sort((a, b) =>
+    a.localeCompare(b),
+  );
 
   return {
-    branches: options.metadata.branches,
-    localOnly: true,
+    boundStories: stories,
+    branches: sortedBranches,
+    mergeSha: options.evidence.mergeSha,
+    mergedPrNumber: options.evidence.prNumber,
     mode: options.metadata.mode,
-    notAuthorizingUntil:
-      "INF-027C-reviewed-pr-evidence-and-merge-state-binding",
     statement:
-      "Local dry-run only. This output is not cleanup-authorizing until INF-027C binds reviewed PR evidence and merge state.",
-    stories,
+      "Cleanup metadata is bound to reviewed PR evidence, trusted story/packet state, and merge state.",
+    verificationInputs: {
+      metadataSource: options.evidence.metadataSourceRef,
+      requiredReviewId: requiredReview.id,
+      requiredReviewSubmittedAt: requiredReview.submittedAt,
+      trustedBaseBranch: options.evidence.baseBranch,
+    },
   };
+}
+
+function validateEvidenceBinding(options: {
+  evidence: CleanupEvidenceInput;
+  metadata: CleanupMetadata;
+  stories: CleanupStoryValidation[];
+}) {
+  const { evidence, metadata, stories } = options;
+  if (!evidence.merged) {
+    throw new Error("Merged PR evidence is required.");
+  }
+  if (evidence.baseBranch !== evidence.defaultBranch) {
+    throw new Error("Merged PR target branch must be the default branch.");
+  }
+  if (evidence.metadataSourceRef !== buildSourceRef(evidence.metadataSource)) {
+    throw new Error("Metadata source reference must match source evidence.");
+  }
+  if (
+    evidence.metadataSource.kind === "handoff-comment" &&
+    !evidence.metadataSource.durable
+  ) {
+    throw new Error("Handoff metadata source must be durable.");
+  }
+
+  const humanGateReviews = evidence.reviews
+    .filter(
+      (review) =>
+        review.reviewerKind === "human" &&
+        review.isMergeGate &&
+        (review.decision === "approved" ||
+          review.decision === "fallback-approved"),
+    )
+    .filter((review) => review.submittedAt <= evidence.mergedAt)
+    .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+  const requiredReview = humanGateReviews.at(-1);
+  if (!requiredReview) {
+    throw new Error("Missing required human merge-gate review before merge.");
+  }
+
+  const sourceRef = evidence.metadataSourceRef;
+  const requiredReferencesSource =
+    requiredReview.sourceRefs.includes(sourceRef);
+  if (!requiredReferencesSource) {
+    throw new Error(
+      "Required human merge-gate review must reference the exact metadata source.",
+    );
+  }
+
+  if (evidence.metadataSource.updatedAt > requiredReview.submittedAt) {
+    const laterReview = humanGateReviews.find(
+      (review) =>
+        review.submittedAt >= evidence.metadataSource.updatedAt &&
+        review.sourceRefs.includes(sourceRef),
+    );
+    if (!laterReview) {
+      throw new Error(
+        "Metadata source changed after required review point without later human merge-gate review of the exact updated source.",
+      );
+    }
+  }
+
+  validateStoryAssociation({ evidence, metadata, stories });
+  if (metadata.mode === "parent") {
+    validateParentEvidence({ evidence, requiredReview, stories });
+  }
+  return requiredReview;
+}
+
+function validateStoryAssociation(options: {
+  evidence: CleanupEvidenceInput;
+  metadata: CleanupMetadata;
+  stories: CleanupStoryValidation[];
+}) {
+  const storyBindingByPath = new Map(
+    options.evidence.stories.map((story) => [story.storyPath, story]),
+  );
+  const changedFiles = new Set(options.evidence.changedFiles);
+  for (const story of options.stories) {
+    const binding = storyBindingByPath.get(story.storyPath);
+    if (!binding) {
+      throw new Error(
+        `Requested story ${story.storyPath} is not associated with merged PR evidence.`,
+      );
+    }
+    if (binding.storyId !== story.storyId) {
+      throw new Error(
+        `Requested story ${story.storyPath} does not match PR story id evidence.`,
+      );
+    }
+    if (binding.packetPath !== story.packetPath) {
+      throw new Error(
+        `Requested story ${story.storyPath} does not match PR packet evidence.`,
+      );
+    }
+    if (
+      !changedFiles.has(story.storyPath) ||
+      !changedFiles.has(story.packetPath)
+    ) {
+      throw new Error(
+        `Merged PR changed artifacts must include ${story.storyPath} and ${story.packetPath}.`,
+      );
+    }
+  }
+}
+
+function validateParentEvidence(options: {
+  evidence: CleanupEvidenceInput;
+  requiredReview: CleanupEvidenceInput["reviews"][number];
+  stories: CleanupStoryValidation[];
+}) {
+  const parent = options.evidence.parentLifecycle;
+  if (!parent) {
+    throw new Error("Parent cleanup evidence is required for parent mode.");
+  }
+  if (
+    !parent.parentIntegrationReviewRecordId ||
+    !parent.parentRevisionResponseId
+  ) {
+    throw new Error(
+      "Parent cleanup evidence is missing integration review or revision response.",
+    );
+  }
+  if (parent.cleanupPlanRecordedAt > options.requiredReview.submittedAt) {
+    throw new Error(
+      "Parent cleanup plan must be recorded before the required human merge-gate review.",
+    );
+  }
+  const byPath = new Map(
+    parent.includedStories.map((story) => [story.storyPath, story]),
+  );
+  for (const story of options.stories) {
+    const child = byPath.get(story.storyPath);
+    if (!child) {
+      throw new Error(
+        `Parent evidence missing included-substory entry for ${story.storyPath}.`,
+      );
+    }
+    if (!child.substoryPrNumber || !child.substoryAiReviewRecordId) {
+      throw new Error(
+        `Parent evidence missing substory PR or AI review record for ${story.storyPath}.`,
+      );
+    }
+  }
+}
+
+function buildSourceRef(source: CleanupEvidenceInput["metadataSource"]) {
+  return `${source.kind}:${source.sourceId}:${source.contentSha256}`;
 }
 
 function validateStoryCardinality(metadata: CleanupMetadata) {

@@ -4,7 +4,10 @@ import { createRequire } from "node:module";
 import type * as PacketLifecycle from "./agent-packet-lifecycle.js";
 import type * as Metadata from "./post-merge-cleanup/metadata.js";
 import type * as Validator from "./post-merge-cleanup/validator.js";
-import type { CleanupMetadata } from "./post-merge-cleanup/types.js";
+import type {
+  CleanupEvidenceInput,
+  CleanupMetadata,
+} from "./post-merge-cleanup/types.js";
 
 const { findRepoRoot, resolveCliPath }: typeof PacketLifecycle = createRequire(
   import.meta.url,
@@ -21,8 +24,10 @@ async function main() {
 
   try {
     const repoRoot = findRepoRoot();
+    const evidence = await parseEvidenceInput(args);
     const metadata = await parseMetadataInput(args);
     const plan = await buildCleanupDryRunPlan({
+      evidence,
       metadata,
       repoRoot,
     });
@@ -50,6 +55,11 @@ async function parseMetadataInput(args: string[]): Promise<CleanupMetadata> {
     }
 
     if (token === "--") {
+      continue;
+    }
+
+    if (token === "--evidence-json" || token === "--evidence-json-file") {
+      index += 1;
       continue;
     }
 
@@ -140,6 +150,62 @@ async function parseMetadataInput(args: string[]): Promise<CleanupMetadata> {
     mode,
     stories,
   };
+}
+
+async function parseEvidenceInput(
+  args: string[],
+): Promise<CleanupEvidenceInput> {
+  let evidenceJson: string | null = null;
+  let evidenceJsonFile: string | null = null;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === "--evidence-json") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --evidence-json.");
+      }
+      evidenceJson = value;
+      index += 1;
+      continue;
+    }
+
+    if (token === "--evidence-json-file") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --evidence-json-file.");
+      }
+      evidenceJsonFile = resolveCliPath(value, process.cwd());
+      index += 1;
+      continue;
+    }
+  }
+
+  if (evidenceJson !== null && evidenceJsonFile !== null) {
+    throw new Error(
+      "Ambiguous evidence input: provide only one of --evidence-json or --evidence-json-file.",
+    );
+  }
+
+  if (evidenceJson === null && evidenceJsonFile === null) {
+    throw new Error(
+      "Missing required PR evidence input: provide --evidence-json or --evidence-json-file.",
+    );
+  }
+
+  const source =
+    evidenceJsonFile !== null
+      ? await readFile(evidenceJsonFile, "utf8")
+      : (evidenceJson ?? "");
+
+  try {
+    return JSON.parse(source) as CleanupEvidenceInput;
+  } catch (error) {
+    throw new Error(
+      `Malformed evidence JSON: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 await main();

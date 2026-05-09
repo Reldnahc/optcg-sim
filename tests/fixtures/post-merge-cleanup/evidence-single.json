@@ -1,0 +1,36 @@
+{
+  "prNumber": 501,
+  "merged": true,
+  "mergeSha": "abc123",
+  "mergedAt": "2026-01-02T00:00:00.000Z",
+  "baseBranch": "main",
+  "defaultBranch": "main",
+  "metadataSourceRef": "pr-body:pr-501-body:meta-1",
+  "metadataSource": {
+    "kind": "pr-body",
+    "sourceId": "pr-501-body",
+    "contentSha256": "meta-1",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "reviews": [
+    {
+      "id": "rvw-1",
+      "reviewerKind": "human",
+      "isMergeGate": true,
+      "decision": "approved",
+      "submittedAt": "2026-01-01T12:00:00.000Z",
+      "sourceRefs": ["pr-body:pr-501-body:meta-1"]
+    }
+  ],
+  "stories": [
+    {
+      "storyId": "INF-501",
+      "storyPath": "stories/approved/INF-501-story.yaml",
+      "packetPath": "agent-packets/INF-501.md"
+    }
+  ],
+  "changedFiles": [
+    "stories/approved/INF-501-story.yaml",
+    "agent-packets/INF-501.md"
+  ]
+}
