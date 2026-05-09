@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-034.md",
+      "storyId": "INF-034",
+      "storyPath": "stories/approved/INF-034-support-object-child-stories-in-parent-cleanup.yaml",
+      "storySha256": "ad0bfd7c51927659fe5ebdeee14ab9f9d5cedf2e494b76cb9acbdacb1ace0c3c"
+    }
+  ],
   "version": 1
 }

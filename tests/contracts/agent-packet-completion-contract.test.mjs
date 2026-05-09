@@ -395,7 +395,10 @@ repo_rules:
   - fail closed
 ambiguity_policy: fail_and_escalate
 child_stories:
-  - INF-014
+  - id: INF-014
+    title: Child story
+    concern: child concern
+    depends_on: []
 `;
   await writeFile(parentStoryPath, parentStorySource);
 
