@@ -54,6 +54,26 @@ Use a pre-presentation story-review gate for generated or normalized story work:
 - If the needed work crosses concerns, stop and split the story or raise the ambiguity instead of broadening the patch.
 - Supporting tests, fixtures, snapshots, and docs for the same concern are allowed in the same story.
 
+## Card Manifest Fixture Policy
+
+For card-data integration work, cards-produced `MatchCardManifest` fixtures are
+the default local integration surface for engine, CLI, hidden-info, and future
+effect-runtime work.
+
+- `@optcg/cards` may produce match manifests by resolving Poneglyph data,
+  simulator overlays, and implementation metadata.
+- `@optcg/engine-core` consumes only plain `MatchCardManifest` data. Engine
+  actions must not fetch live Poneglyph data or call `@optcg/cards`.
+- Root integration tests may import `@optcg/cards` and `@optcg/engine-core`
+  together when the test is explicitly exercising the produced-manifest
+  integration boundary.
+- Engine package tests may load plain JSON or data fixtures but must not import
+  `@optcg/cards`.
+- CLI tests may load local fixture manifests but must not require live Poneglyph
+  or Redis.
+- Synthetic one-off manifests require a story or PR explanation when the
+  representative fixture is insufficient.
+
 ## Story Lifecycle Rules
 
 - The parent agent owns story-state transitions and active-packet cleanup.
