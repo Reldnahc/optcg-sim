@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-028.md",
-      "storyId": "INF-028",
-      "storyPath": "stories/approved/INF-028-repair-post-merge-cleanup-first-run.yaml",
-      "storySha256": "51f2d3bf251bf8848bd9206cf09f8bcec52142ed35d851e7e0dab95682077c63"
+      "packetPath": "agent-packets/INF-029.md",
+      "storyId": "INF-029",
+      "storyPath": "stories/approved/INF-029-repair-cleanup-packet-command.yaml",
+      "storySha256": "291db7df45d5729d32884be56d330582097cf35de7116428caa770ecc207d05e"
     }
   ],
   "version": 1

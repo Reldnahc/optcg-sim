@@ -24,7 +24,6 @@ export function selectPacketCompletionCommand(plan: BoundCleanupPlan) {
       "pnpm",
       "run",
       plan.packetCommand.command,
-      "--",
       ...plan.packetCommand.args,
     ],
     command: "corepack",
