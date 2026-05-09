@@ -71,6 +71,7 @@ function validateEvidenceBinding(options: {
 }) {
   const { evidence, metadata, metadataSourceRef, stories, trustedMainSha } =
     options;
+  validateEvidenceShape(evidence);
   if (!evidence.merged) {
     throw new Error("Merged PR evidence is required.");
   }
@@ -236,6 +237,155 @@ function validateParentEvidence(options: {
 
 function buildSourceRef(source: CleanupEvidenceInput["metadataSource"]) {
   return `${source.kind}:${source.sourceId}:${source.contentSha256}`;
+}
+
+function validateEvidenceShape(evidence: CleanupEvidenceInput) {
+  const root = requireRecord(evidence, "cleanup evidence");
+  requireNumber(root["prNumber"], "cleanup evidence prNumber");
+  requireBoolean(root["merged"], "cleanup evidence merged");
+  requireString(root["mergeSha"], "cleanup evidence mergeSha");
+  requireString(root["mergedAt"], "cleanup evidence mergedAt");
+  requireString(root["baseBranch"], "cleanup evidence baseBranch");
+  requireString(root["defaultBranch"], "cleanup evidence defaultBranch");
+  requireString(
+    root["metadataSourceRef"],
+    "cleanup evidence metadataSourceRef",
+  );
+  requireStringArray(root["changedFiles"], "cleanup evidence changedFiles");
+
+  const source = requireRecord(
+    root["metadataSource"],
+    "cleanup evidence metadataSource",
+  );
+  requireString(
+    source["contentSha256"],
+    "cleanup evidence metadataSource.contentSha256",
+  );
+  requireString(source["kind"], "cleanup evidence metadataSource.kind");
+  requireString(source["sourceId"], "cleanup evidence metadataSource.sourceId");
+  requireString(
+    source["updatedAt"],
+    "cleanup evidence metadataSource.updatedAt",
+  );
+  if (source["durable"] !== undefined) {
+    requireBoolean(
+      source["durable"],
+      "cleanup evidence metadataSource.durable",
+    );
+  }
+
+  const reviews = requireRecordArray(
+    root["reviews"],
+    "cleanup evidence reviews",
+  );
+  for (const review of reviews) {
+    requireString(review["decision"], "cleanup evidence review.decision");
+    requireString(review["id"], "cleanup evidence review.id");
+    requireBoolean(
+      review["isMergeGate"],
+      "cleanup evidence review.isMergeGate",
+    );
+    requireString(
+      review["reviewerKind"],
+      "cleanup evidence review.reviewerKind",
+    );
+    requireStringArray(
+      review["sourceRefs"],
+      "cleanup evidence review.sourceRefs",
+    );
+    requireString(review["submittedAt"], "cleanup evidence review.submittedAt");
+  }
+
+  validateStoryBindingEvidenceArray(
+    root["stories"],
+    "cleanup evidence stories",
+  );
+
+  if (root["parentLifecycle"] !== undefined) {
+    const parent = requireRecord(
+      root["parentLifecycle"],
+      "cleanup evidence parentLifecycle",
+    );
+    requireString(
+      parent["cleanupPlanRecordedAt"],
+      "cleanup evidence parentLifecycle.cleanupPlanRecordedAt",
+    );
+    requireString(
+      parent["parentIntegrationReviewRecordId"],
+      "cleanup evidence parentLifecycle.parentIntegrationReviewRecordId",
+    );
+    requireString(
+      parent["parentRevisionResponseId"],
+      "cleanup evidence parentLifecycle.parentRevisionResponseId",
+    );
+    validateStoryBindingEvidenceArray(
+      parent["includedStories"],
+      "cleanup evidence parentLifecycle.includedStories",
+    );
+  }
+}
+
+function validateStoryBindingEvidenceArray(value: unknown, label: string) {
+  const stories = requireRecordArray(value, label);
+  for (const story of stories) {
+    requireString(story["packetPath"], `${label} packetPath`);
+    requireString(story["storyId"], `${label} storyId`);
+    requireString(story["storyPath"], `${label} storyPath`);
+    if (story["substoryAiReviewRecordId"] !== undefined) {
+      requireString(
+        story["substoryAiReviewRecordId"],
+        `${label} substoryAiReviewRecordId`,
+      );
+    }
+    if (story["substoryPrNumber"] !== undefined) {
+      requireNumber(story["substoryPrNumber"], `${label} substoryPrNumber`);
+    }
+  }
+}
+
+function requireRecord(value: unknown, label: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`Malformed cleanup evidence: ${label} must be an object.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function requireRecordArray(value: unknown, label: string) {
+  if (!Array.isArray(value)) {
+    throw new Error(`Malformed cleanup evidence: ${label} must be an array.`);
+  }
+  return value.map((entry, index) =>
+    requireRecord(entry, `${label}[${String(index)}]`),
+  );
+}
+
+function requireString(value: unknown, label: string) {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`Malformed cleanup evidence: ${label} must be a string.`);
+  }
+}
+
+function requireStringArray(value: unknown, label: string) {
+  if (
+    !Array.isArray(value) ||
+    value.some((entry) => typeof entry !== "string")
+  ) {
+    throw new Error(
+      `Malformed cleanup evidence: ${label} must be a string array.`,
+    );
+  }
+}
+
+function requireBoolean(value: unknown, label: string) {
+  if (typeof value !== "boolean") {
+    throw new Error(`Malformed cleanup evidence: ${label} must be a boolean.`);
+  }
+}
+
+function requireNumber(value: unknown, label: string) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    throw new Error(`Malformed cleanup evidence: ${label} must be an integer.`);
+  }
 }
 
 function validateStoryCardinality(metadata: CleanupMetadata) {

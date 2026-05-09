@@ -203,6 +203,45 @@ test("rejects unsupported reviewed metadata source kind from untrusted evidence 
   );
 });
 
+test("rejects malformed boolean fields from untrusted evidence JSON", async () => {
+  const tempRoot = await makeTempRepo([
+    { id: "INF-501", fileName: "INF-501-story.yaml" },
+  ]);
+  const stringMergedEvidence = buildSingleEvidence();
+  stringMergedEvidence.merged = "false";
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: stringMergedEvidence,
+        metadata: {
+          branches: [],
+          mode: "single",
+          stories: ["stories/approved/INF-501-story.yaml"],
+        },
+        repoRoot: tempRoot,
+      }),
+    /merged must be a boolean/,
+  );
+
+  const stringMergeGateEvidence = buildSingleEvidence();
+  stringMergeGateEvidence.reviews[0].isMergeGate = "false";
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: stringMergeGateEvidence,
+        metadata: {
+          branches: [],
+          mode: "single",
+          stories: ["stories/approved/INF-501-story.yaml"],
+        },
+        repoRoot: tempRoot,
+      }),
+    /review\.isMergeGate must be a boolean/,
+  );
+});
+
 test("rejects merge SHA that does not match trusted default-branch checkout", async () => {
   const tempRoot = await makeTempRepo([
     { id: "INF-501", fileName: "INF-501-story.yaml" },
