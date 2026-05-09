@@ -1,4 +1,4 @@
-name: Post-merge packet cleanup preflight
+name: Post-merge packet cleanup
 
 on:
   pull_request:
@@ -129,3 +129,59 @@ jobs:
           name: bound-cleanup-plan.json
           path: bound-cleanup-plan.json
           if-no-files-found: error
+
+  cleanup:
+    name: cleanup-direct-push
+    needs: preflight
+    if: ${{ needs.preflight.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out trusted default branch for cleanup
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          token: ${{ secrets.POST_MERGE_PACKET_CLEANUP_TOKEN }}
+          persist-credentials: true
+
+      - name: Configure cleanup actor
+        run: |
+          git config user.name "optcg-packet-cleanup[bot]"
+          git config user.email "optcg-packet-cleanup[bot]@users.noreply.github.com"
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Download validated cleanup plan
+        uses: actions/download-artifact@v4
+        with:
+          name: bound-cleanup-plan.json
+          path: .cleanup
+
+      - name: Execute validated packet cleanup
+        run: >
+          node --experimental-strip-types tools/post-merge-cleanup.ts
+          --execute-plan-file .cleanup/bound-cleanup-plan.json
+
+      - name: Run repo verification before push
+        run: corepack pnpm verify
+
+      - name: Revalidate cleanup diff after verification
+        run: >
+          node --experimental-strip-types tools/post-merge-cleanup.ts
+          --finalize-plan-file .cleanup/bound-cleanup-plan.json
+
+      - name: Push direct cleanup commit
+        run: git push origin HEAD:${{ github.event.repository.default_branch }}
+
+      - name: Log cleanup success
+        if: ${{ success() }}
+        run: echo "Post-merge packet cleanup completed with one direct cleanup commit to the default branch."
+
+      - name: Log cleanup failure
+        if: ${{ failure() }}
+        run: echo "Post-merge packet cleanup failed closed. Use the documented manual fallback only after investigating this workflow run."

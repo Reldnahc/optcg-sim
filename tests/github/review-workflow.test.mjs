@@ -356,9 +356,40 @@ test("post-merge cleanup preflight workflow is non-privileged and fail-closed", 
     /name: bound-cleanup-plan\.json/i,
   ]);
 
-  assert.doesNotMatch(workflow, /POST_MERGE_PACKET_CLEANUP_TOKEN/);
-  assert.doesNotMatch(workflow, /packets:complete/);
-  assert.doesNotMatch(workflow, /git push/);
+  assert.doesNotMatch(workflow, /gh pr create/);
+});
+
+test("post-merge cleanup workflow gates the privileged direct push on a validated plan", async () => {
+  const workflow = await readActiveText(
+    ".github/workflows/post-merge-packet-cleanup.yml",
+  );
+  const verifyIndex = workflow.indexOf("Run repo verification before push");
+  const revalidateIndex = workflow.indexOf(
+    "Revalidate cleanup diff after verification",
+  );
+  const pushIndex = workflow.indexOf("Push direct cleanup commit");
+
+  assertMatchesAll(workflow, [
+    /cleanup:\s*\n\s*name: cleanup-direct-push\s*\n\s*needs: preflight/i,
+    /if: \$\{\{ needs\.preflight\.result == 'success' \}\}/i,
+    /permissions:\s*\n\s*contents: write/i,
+    /token: \$\{\{ secrets\.POST_MERGE_PACKET_CLEANUP_TOKEN \}\}/i,
+    /persist-credentials: true/i,
+    /uses: actions\/download-artifact@v4/i,
+    /name: bound-cleanup-plan\.json/i,
+    /path: \.cleanup/i,
+    /--execute-plan-file \.cleanup\/bound-cleanup-plan\.json/i,
+    /git push origin HEAD:\$\{\{ github\.event\.repository\.default_branch \}\}/i,
+  ]);
+  assert.ok(verifyIndex > -1, "missing verification step");
+  assert.ok(
+    revalidateIndex > verifyIndex,
+    "diff must be revalidated after verification",
+  );
+  assert.ok(
+    pushIndex > revalidateIndex,
+    "push must run after final diff validation",
+  );
   assert.doesNotMatch(workflow, /gh pr create/);
 });
 

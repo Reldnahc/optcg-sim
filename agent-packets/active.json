@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-027D.md",
-      "storyId": "INF-027D",
-      "storyPath": "stories/approved/INF-027D-add-non-privileged-post-merge-cleanup-preflight-workflow.yaml",
-      "storySha256": "305e32b36c51797f8834a2108f79cea61a7629dce672abbfe0ba78af7159f3bb"
+      "packetPath": "agent-packets/INF-027E.md",
+      "storyId": "INF-027E",
+      "storyPath": "stories/approved/INF-027E-add-privileged-direct-packet-cleanup-push.yaml",
+      "storySha256": "43ccff61f706605a6d42ef82afec0aad8a70851a17df0cb6cebe99257e252ae1"
     }
   ],
   "version": 1
