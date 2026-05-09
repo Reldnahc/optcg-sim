@@ -1,0 +1,88 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-038C
+epic_id: KICK-001
+title: Resolve no-choice Main Event effects
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Queue and resolve the first supported no-choice Main Event effect after the
+  Event is played to trash.
+story_boundary: >
+  Own only no-choice Main Event effect queueing and resolution for the current
+  supported primitive surface. Stop before target-based Event resolution,
+  Counter Events, Life Triggers, replacement effects, optional activation,
+  once-per-turn, custom handlers, CLI, server, client, or UI behavior.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime-primitives.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-main-event.ts
+  - packages/engine-core/src/effect-runtime-queue-processing.ts
+  - packages/engine-core/src/effect-runtime-queue-results.ts
+  - packages/engine-core/src/play-card.ts
+  - packages/engine-core/src/play-card-support.ts
+  - packages/engine-core/src/play-card-event.test.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-main-event.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing.test.ts
+  - packages/engine-core/src/effect-runtime.test.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - stories/approved/ENG-038C-main-event-no-choice-effect-resolution.yaml
+  - agent-packets/ENG-038C.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s016
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s003
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s008
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s011
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+scope:
+  - detect supported no-choice Main Event effects from the accepted `cardPlayed` Event after the Event has moved to trash
+  - queue the effect with `resolveFromDestinationZone` source-presence policy and deterministic queue identity
+  - resolve only the current supported no-choice primitive shape, such as draw, through the existing effect runtime executor
+  - include effect queue, effect resolution, draw, movement, and rule-processing events in deterministic order after Event play events
+  - roll back the whole Event play result on unsupported or failed Event runtime work instead of leaving partial mutation
+  - keep Character On Play, Stage, vanilla Event, Life Trigger, attack timing, K.O., and target-selection behavior unchanged
+non_scope:
+  - target-based Event effect resolution
+  - Counter Events
+  - Life Trigger changes
+  - replacement effects
+  - optional activation
+  - once-per-turn tracking
+  - custom handlers
+  - new effect primitives beyond the existing no-choice primitive surface
+  - server/client/UI
+dependencies:
+  - ENG-038B
+acceptance_criteria:
+  - playing a supported no-choice Main Event queues and resolves its effect after the Event is in trash
+  - the source-presence check accepts the Event in trash and rejects stale or mismatched source data
+  - deck, hand, trash, event journal, pending runtime work, and state hash match the resolved no-choice effect outcome
+  - unsupported Main Event effect shapes fail closed without partial mutation or legal-action broadening
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/play-card-event.test.ts packages/engine-core/src/effect-runtime-trigger-queueing-main-event.test.ts packages/engine-core/src/effect-runtime-queue-processing.test.ts packages/engine-core/src/effect-runtime.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-038C packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-038 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if no-choice Event resolution requires a new primitive, custom handler, optional activation, or target decision, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate

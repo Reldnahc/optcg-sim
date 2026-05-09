@@ -1,0 +1,127 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-038
+epic_id: KICK-001
+title: Main Event card foundation
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Deliver the first narrow playable `[Main]` Event card path through
+  concern-scoped child stories.
+story_boundary: >
+  This parent story is not directly implementable. It coordinates supported
+  `[Main]` Event legality, support gating, cost payment, hand-to-trash play,
+  no-choice effect resolution, explicit target-effect deferral, and
+  Event-specific sequencing, state-hash, and PlayerView safety coverage.
+allowed_touch_points:
+  - stories/generated/ENG-038-main-event-card-foundation-parent.yaml
+  - stories/generated/ENG-038A-main-event-legal-action-support-gate.yaml
+  - stories/generated/ENG-038B-main-event-cost-and-trash-movement.yaml
+  - stories/generated/ENG-038C-main-event-no-choice-effect-resolution.yaml
+  - stories/generated/ENG-038D-main-event-target-effect-boundary.yaml
+  - stories/generated/ENG-038E-main-event-regression-smoke-coverage.yaml
+  - stories/approved/ENG-038A-main-event-legal-action-support-gate.yaml
+  - stories/approved/ENG-038B-main-event-cost-and-trash-movement.yaml
+  - stories/approved/ENG-038C-main-event-no-choice-effect-resolution.yaml
+  - stories/approved/ENG-038D-main-event-target-effect-boundary.yaml
+  - stories/approved/ENG-038E-main-event-regression-smoke-coverage.yaml
+spec_refs:
+  - 02-engine-mechanics.s014
+  - 02-engine-mechanics.s016
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s003
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s008
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 06-visibility-security.s003
+  - 06-visibility-security.s004
+  - 06-visibility-security.s006
+  - 06-visibility-security.s007
+  - 06-visibility-security.s017
+  - 06-visibility-security.s023
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+scope:
+  - decompose the first supported `[Main]` Event path into approved child stories
+  - expose legal play actions only for supported `[Main]` Events during the controller's Main Phase outside battle and outside pending runtime work
+  - support `implemented-dsl` Main Events only when the reviewed effect definition is within the current narrow supported runtime shape
+  - pay Event printed cost through the existing DON payment decision and response path
+  - move the played Event from hand to trash before its effect resolves
+  - queue and resolve a no-choice Main Event effect only when its effect definition is supported by the existing primitive surface
+  - defer target-based Main Event effect resolution because the current target-selection path validates selections but has no supported target-effect primitive continuation
+  - prove event sequencing, state hash determinism, replay-relevant events, and PlayerView hidden-information safety for the supported path
+  - explicitly record CLI smoke as not appropriate for this story set because it would require CLI fixture or harness expansion
+non_scope:
+  - direct implementation from this parent story
+  - approving or packetizing this parent story as an active implementation story
+  - Counter Events
+  - Life Trigger changes
+  - replacement effects
+  - optional activation
+  - once-per-turn tracking
+  - custom handlers
+  - new target-effect gameplay primitives unless a child story-review explicitly confirms the current path already supports the exact primitive
+  - server/client/UI
+dependencies:
+  - ENG-006
+  - ENG-012F
+  - ENG-024E
+  - ENG-029D
+  - ENG-031E
+child_stories:
+  - id: ENG-038A
+    title: Gate and expose supported Main Event legal actions
+    concern: Add the reviewed support-gate and legal-action boundary for implemented Main Events without resolving their effects yet.
+    depends_on: [ENG-031E]
+  - id: ENG-038B
+    title: Pay Main Event cost and trash the played Event
+    concern: Prove implemented Main Events use the existing DON payment path and move hand to trash before effect work.
+    depends_on: [ENG-038A]
+  - id: ENG-038C
+    title: Resolve no-choice Main Event effects
+    concern: Queue and resolve the first supported no-choice Main Event effect from trash using the existing effect runtime primitives.
+    depends_on: [ENG-038B]
+  - id: ENG-038D
+    title: Check Main Event target-effect boundary
+    concern: Record target-based Main Event resolution as deferred and keep the primitive gap fail-closed.
+    depends_on: [ENG-038C]
+  - id: ENG-038E
+    title: Verify Main Event sequencing and visibility
+    concern: Add integration regression coverage for event sequencing, state hash stability, and PlayerView safety; CLI smoke is deferred.
+    depends_on: [ENG-038D]
+acceptance_criteria:
+  - child stories exist and pass set-level and exact per-story story-review before implementation
+  - child stories cover support gating, legal actions, payment, hand-to-trash movement, no-choice effect resolution, explicit target-effect deferral, sequencing, state hash, and PlayerView safety
+  - no child story broadens into Counter Events, Life Triggers, replacement effects, optional activation, once-per-turn, custom handlers, CLI fixture or harness expansion, server/client/UI, or unsupported target primitives
+  - parent integration review confirms all children compose into one narrow playable `[Main]` Event path
+required_tests:
+  - run corepack pnpm run stories:validate
+  - run corepack pnpm run packets:verify for each active child story
+  - run story-specific engine tests named by each child story
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify before parent PR handoff
+repo_rules:
+  - do not approve, packetize, or activate ENG-038 itself as an implementation story
+  - approve and implement only ENG-038A through ENG-038E as child stories
+  - story-review must pass before presenting this story group as approval-ready
+  - a set-level story-review does not satisfy exact per-story story-review for any child
+  - run exact per-story story-review for each child story before moving it to approved or implementing it
+  - use a parent integration branch
+  - open child PRs into the parent integration branch
+  - keep one active child packet at a time
+  - substory human review is deferred only because the user explicitly requested the parent integration branch workflow for this group
+  - do not run packets:complete for children until the parent branch lands on main
+  - run parent integration review before merging to main
+  - after the parent branch merges to main, rely on post-merge cleanup automation or run packets:complete-many only as the documented fallback
+ambiguity_policy: fail_and_escalate

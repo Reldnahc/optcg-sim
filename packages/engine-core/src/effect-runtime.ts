@@ -26,6 +26,7 @@ export type {
 export {
   executeNoChoiceEffectPrimitive,
   isSupportedNoChoiceOnKODrawEffect,
+  isSupportedNoChoiceMainEventDrawEffect,
   isSupportedNoChoiceOnOpponentAttackDrawEffect,
   isSupportedNoChoiceOnPlayDrawEffect,
   isSupportedNoChoiceWhenAttackingDrawEffect,
@@ -198,6 +199,7 @@ export const detectBattleKOTriggerCandidates =
   triggerQueueing.detectBattleKOTriggerCandidates;
 export const queueBattleKOTriggers = triggerQueueing.queueBattleKOTriggers;
 const queueOnPlayTriggers = triggerQueueing.queueOnPlayTriggers;
+const queueMainEventTriggers = triggerQueueing.queueMainEventTriggers;
 const queueWhenAttackingTriggers = triggerQueueing.queueWhenAttackingTriggers;
 const queueOnOpponentAttackTriggers =
   triggerQueueing.queueOnOpponentAttackTriggers;
@@ -252,6 +254,10 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   const queuedFromOnPlay = queueOnPlayTriggers(state);
   if (queuedFromOnPlay !== undefined) {
     return queuedFromOnPlay;
+  }
+  const queuedFromMainEvent = queueMainEventTriggers(state);
+  if (queuedFromMainEvent !== undefined) {
+    return queuedFromMainEvent;
   }
   const queuedFromWhenAttacking = queueWhenAttackingTriggers(state);
   if (queuedFromWhenAttacking !== undefined) {

@@ -1,0 +1,81 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-038E
+epic_id: KICK-001
+title: Verify Main Event sequencing and visibility
+type: verification
+area: engine
+primary_concern: verification
+priority: high
+status: generated
+summary: >
+  Add end-to-end regression coverage for the supported Main Event path's event
+  sequencing, state hash stability, and hidden-information safety.
+story_boundary: >
+  Own only verification for the Main Event path delivered by ENG-038A through
+  ENG-038D. Do not add new gameplay behavior, support gates, effect primitives,
+  protocol behavior, server/client/UI changes, CLI fixture changes, or CLI features.
+allowed_touch_points:
+  - packages/engine-core/src/play-card-event.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - packages/engine-core/src/filter-state-for-player.real-states-baseline.test.ts
+  - packages/engine-core/src/filter-state-for-player.real-states-targeting.test.ts
+  - tests/hidden-info/**
+  - stories/approved/ENG-038E-main-event-regression-smoke-coverage.yaml
+  - agent-packets/ENG-038E.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s020
+  - 06-visibility-security.s003
+  - 06-visibility-security.s004
+  - 06-visibility-security.s006
+  - 06-visibility-security.s007
+  - 06-visibility-security.s017
+  - 06-visibility-security.s023
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+scope:
+  - verify the supported Main Event path emits strictly increasing EngineResult and state event-journal sequences
+  - verify identical supported Main Event play inputs produce stable state hashes and no drift in replay-relevant event order
+  - verify PlayerView projection does not expose opponent hand card IDs, deck order, face-down life, RNG state, effect queue internals, private decision candidates, or legal-action leaks after Main Event play and effect resolution
+  - verify public Event trash movement remains visible through public trash state while drawn cards remain private to the drawing player
+  - record CLI smoke as not appropriate for this story set because current CLI command fixtures cannot exercise supported Event effects without CLI fixture or harness expansion
+non_scope:
+  - changing gameplay behavior
+  - adding support for more Event effect shapes
+  - adding CLI features or command syntax
+  - CLI smoke coverage for supported Main Events
+  - CLI fixture or harness expansion
+  - replay schema, replay storage, server protocol, browser client, or UI behavior
+  - Counter Events
+  - Life Trigger changes
+  - replacement effects
+  - optional activation
+  - once-per-turn tracking
+  - custom handlers
+dependencies:
+  - ENG-038D
+acceptance_criteria:
+  - sequencing and state-hash regression tests cover the supported Main Event path
+  - PlayerView and hidden-info assertions cover Main Event legal actions, played Event trash visibility, and private draw results
+  - CLI smoke is explicitly recorded as not appropriate for the current CLI surface and deferred to a later CLI verification story if needed
+  - no production gameplay files change in this verification story unless story-review records a narrow test-helper need
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/play-card-event.test.ts packages/engine-core/src/event-sequencing-regression.test.ts packages/engine-core/src/filter-state-for-player.real-states-baseline.test.ts packages/engine-core/src/filter-state-for-player.real-states-targeting.test.ts
+  - run corepack pnpm exec vitest run tests/hidden-info
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-038E packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-038 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if verification exposes a gameplay gap, stop and split or return to the owning child story rather than patching behavior here
+ambiguity_policy: fail_and_escalate

@@ -1,6 +1,7 @@
 import type { CardInstance, GameState, PlayerId } from "@optcg/types";
 
 import {
+  isSupportedNoChoiceMainEventDrawEffect,
   isSupportedNoChoiceOnPlayDrawEffect,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
@@ -33,7 +34,6 @@ export const getSupportedPlayMetadata = (
   }
   if (resolved.support.status === "implemented-dsl") {
     if (
-      resolved.category !== "character" ||
       resolved.cost === undefined ||
       hasUnsupportedPlayText(resolved.triggerText)
     ) {
@@ -50,13 +50,28 @@ export const getSupportedPlayMetadata = (
       return null;
     }
     const effect = lookup.definition.effects[0];
-    if (effect === undefined || !isSupportedNoChoiceOnPlayDrawEffect(effect)) {
+    if (effect === undefined) {
       return null;
     }
-    return {
-      category: "character",
-      printedCost: Math.max(0, resolved.cost),
-    };
+    if (resolved.category === "character") {
+      if (!isSupportedNoChoiceOnPlayDrawEffect(effect)) {
+        return null;
+      }
+      return {
+        category: "character",
+        printedCost: Math.max(0, resolved.cost),
+      };
+    }
+    if (resolved.category === "event") {
+      if (!isSupportedNoChoiceMainEventDrawEffect(effect)) {
+        return null;
+      }
+      return {
+        category: "event",
+        printedCost: Math.max(0, resolved.cost),
+      };
+    }
+    return null;
   }
   if (resolved.support.status !== "vanilla-confirmed") {
     return null;

@@ -281,6 +281,16 @@ export const isSupportedNoChoiceOnKODrawEffect = (
   effect.trigger.type === "onKO" &&
   isNoChoiceDrawEffectShape(effect);
 
+export const isSupportedNoChoiceMainEventDrawEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "draw" }>;
+} =>
+  effect.sourcePresencePolicy === "resolveFromDestinationZone" &&
+  effect.trigger.type === "main" &&
+  isNoChoiceDrawEffectShape(effect);
+
 const isSupportedNoChoiceLifeTriggerDrawEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
@@ -334,5 +344,6 @@ export const isSupportedQueuedNoChoiceDrawEffect = (
   isNoChoiceDrawTriggerEffect(effect, "whenAttacking") ||
   isNoChoiceDrawTriggerEffect(effect, "onOpponentAttack") ||
   isSupportedQueuedNoChoiceOnKODrawEffect(effect) ||
+  isSupportedNoChoiceMainEventDrawEffect(effect) ||
   isSupportedNoChoiceLifeTriggerDrawEffect(effect) ||
   (effect.trigger.type === "custom" && isNoChoiceDrawEffectShape(effect));

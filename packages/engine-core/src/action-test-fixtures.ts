@@ -28,6 +28,31 @@ export const must = <T>(value: T | undefined, label: string): T => {
   return value;
 };
 
+export const valueContainsScalar = (
+  value: unknown,
+  target: string,
+): boolean => {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return String(value) === target;
+  }
+  if (value === null || value === undefined) {
+    return false;
+  }
+  if (Array.isArray(value)) {
+    return value.some((item) => valueContainsScalar(item, target));
+  }
+  if (typeof value === "object") {
+    return Object.values(value).some((item) =>
+      valueContainsScalar(item, target),
+    );
+  }
+  return false;
+};
+
 export const createInput = () => ({
   matchId: toMatchId("match-actions-1"),
   firstPlayerId: p1,
@@ -152,6 +177,30 @@ export const reviewedOnPlayDrawDefinition = (
   },
 });
 
+export const reviewedMainEventDrawDefinition = (
+  cardId: CardId,
+  support: ResolvedCard["support"],
+): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: "OP01-099:event-main-1" as EffectDefinition["effects"][number]["id"],
+      category: "auto",
+      trigger: { type: "main" },
+      sourcePresencePolicy: "resolveFromDestinationZone",
+      effect: { type: "draw", count: 1, player: "self" },
+    },
+  ],
+  metadata: {
+    sourceTextHash: support.sourceTextHash,
+    rulesVersion: support.rulesVersion,
+    effectDefinitionsVersion: "0.1.0",
+    tested: true,
+    reviewer: "qa-reviewer",
+  },
+});
+
 export const createActiveState = () => {
   const setup = createInitialState(createInput());
   const started = startMulliganFlow(setup);
@@ -165,4 +214,26 @@ export const createActiveState = () => {
     decisionId: must(first.state.pendingDecision, "second decision").id,
     response: { type: "mulligan", keep: true },
   }).state;
+};
+
+export const addExtraDeckCard = (
+  state: ReturnType<typeof createActiveState>,
+  playerId: PlayerId = p1,
+): void => {
+  const player = must(state.players[playerId], "player");
+  const topDeck = must(player.deck[0], "top deck");
+  player.deck = [
+    ...player.deck,
+    {
+      ...topDeck,
+      instanceId:
+        `${String(topDeck.instanceId)}:extra` as typeof topDeck.instanceId,
+      zone: {
+        zone: "deck",
+        playerId,
+        slot: "deck",
+        index: player.deck.length,
+      },
+    },
+  ];
 };

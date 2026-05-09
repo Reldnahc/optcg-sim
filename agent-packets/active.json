@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-038E.md",
+      "storyId": "ENG-038E",
+      "storyPath": "stories/approved/ENG-038E-main-event-regression-smoke-coverage.yaml",
+      "storySha256": "77fbb6e540910bc8607257c033a5b2090cf3593fb37c6274bc8f052a977e1ad9"
+    }
+  ],
   "version": 1
 }
