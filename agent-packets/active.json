@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-001E.md",
-      "storyId": "CARD-001E",
-      "storyPath": "stories/approved/CARD-001E-manifest-builder-deck-validation.yaml",
-      "storySha256": "5becb48c0c331c883cd1737e222bec13a9758d190aa3dd5765088f133ca74ae6"
+      "packetPath": "agent-packets/CARD-001F.md",
+      "storyId": "CARD-001F",
+      "storyPath": "stories/approved/CARD-001F-card-data-cache-abstraction.yaml",
+      "storySha256": "bcad24356465f1626499822ca4c46f86a54a9d7763c2735c83e72870d93bf1a5"
     }
   ],
   "version": 1
