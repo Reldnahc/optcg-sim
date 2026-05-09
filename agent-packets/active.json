@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-027G.md",
-      "storyId": "INF-027G",
-      "storyPath": "stories/approved/INF-027G-close-cleanup-automation-docs-and-tests.yaml",
-      "storySha256": "a22f01a6422411dfc5540906b02c5e4c3b1c8dcddadc826e33d65b7116d60b41"
+      "packetPath": "agent-packets/INF-027H.md",
+      "storyId": "INF-027H",
+      "storyPath": "stories/approved/INF-027H-bind-parent-cleanup-evidence-and-reviewed-source.yaml",
+      "storySha256": "b9bd7c0e4183334470d8a4c5ff1ef67dd1663015eb7007728cc69023dc8688b2"
     }
   ],
   "version": 1

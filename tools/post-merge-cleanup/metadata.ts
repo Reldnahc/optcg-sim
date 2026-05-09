@@ -1,6 +1,19 @@
-import type { CleanupMetadata, CleanupMode } from "./types.js";
+import { createRequire } from "node:module";
+
+import type * as PacketLifecycle from "../agent-packet-lifecycle.js";
+import type {
+  CleanupEvidenceInput,
+  CleanupHumanReviewEvidence,
+  CleanupMetadata,
+  CleanupMetadataSourceEvidence,
+  CleanupMode,
+  CleanupStoryBindingEvidence,
+} from "./types.js";
 
 const METADATA_HEADER = "Post-merge cleanup:";
+const { sha256 }: typeof PacketLifecycle = createRequire(import.meta.url)(
+  "../agent-packet-lifecycle.ts",
+) as typeof PacketLifecycle;
 
 export function parseCleanupMetadataBlock(prBody: string): CleanupMetadata {
   const sections = findMetadataSections(prBody);
@@ -125,4 +138,417 @@ function findMetadataSections(prBody: string) {
   }
 
   return sections;
+}
+
+export type WorkflowPullRequestInput = {
+  baseRef: string;
+  body: string;
+  createdAt: string;
+  headRef: string;
+  mergeCommitSha: string;
+  merged: boolean;
+  mergedAt: string;
+  number: number;
+  updatedAt: string;
+};
+
+export type WorkflowReviewInput = {
+  body: string;
+  id: number | string;
+  state: string;
+  submittedAt: string;
+  userType: string;
+};
+
+export type WorkflowIssueCommentInput = {
+  body: string;
+  createdAt: string;
+  id: number | string;
+  updatedAt: string;
+  userType: string;
+};
+
+export type WorkflowChangedFileInput = {
+  filename: string;
+};
+
+export type WorkflowCleanupEvidenceInput = {
+  changedFiles: WorkflowChangedFileInput[];
+  defaultBranch: string;
+  issueComments: WorkflowIssueCommentInput[];
+  pullRequest: WorkflowPullRequestInput;
+  reviews: WorkflowReviewInput[];
+};
+
+type MetadataSourceCandidate = {
+  body: string;
+  metadata: CleanupMetadata;
+  source: CleanupMetadataSourceEvidence;
+  sourceRef: string;
+};
+
+export function buildWorkflowCleanupEvidence(
+  input: WorkflowCleanupEvidenceInput,
+): CleanupEvidenceInput {
+  const candidates = buildMetadataSourceCandidates(input);
+  const reviewEvidence = buildReviewEvidence(input, candidates);
+  const reviewedCandidates = candidates.filter((candidate) =>
+    reviewEvidence.some(
+      (review) =>
+        review.reviewerKind === "human" &&
+        review.isMergeGate &&
+        (review.decision === "approved" ||
+          review.decision === "fallback-approved") &&
+        review.sourceRefs.includes(candidate.sourceRef),
+    ),
+  );
+
+  if (reviewedCandidates.length === 0) {
+    throw new Error(
+      "No reviewed cleanup metadata source references were found.",
+    );
+  }
+  if (reviewedCandidates.length > 1) {
+    throw new Error("Ambiguous reviewed cleanup metadata sources were found.");
+  }
+
+  const selected = reviewedCandidates[0];
+  if (!selected) {
+    throw new Error(
+      "No reviewed cleanup metadata source references were found.",
+    );
+  }
+  const requiredReview = findLatestHumanGateReview(
+    reviewEvidence,
+    selected.sourceRef,
+    input.pullRequest.mergedAt,
+  );
+  if (!requiredReview) {
+    throw new Error(
+      "No reviewed cleanup metadata source references were found.",
+    );
+  }
+  if (
+    Date.parse(selected.source.updatedAt) >
+    Date.parse(requiredReview.submittedAt)
+  ) {
+    throw new Error(
+      "Cleanup metadata source changed after required review point.",
+    );
+  }
+
+  const stories = buildStoryBindings(selected.metadata.stories);
+  const evidence: CleanupEvidenceInput = {
+    baseBranch: input.pullRequest.baseRef,
+    changedFiles: input.changedFiles.map((file) => file.filename),
+    defaultBranch: input.defaultBranch,
+    mergeSha: input.pullRequest.mergeCommitSha,
+    merged: input.pullRequest.merged,
+    mergedAt: normalizeInstant(input.pullRequest.mergedAt),
+    metadataSource: selected.source,
+    metadataSourceRef: selected.sourceRef,
+    prNumber: input.pullRequest.number,
+    reviews: reviewEvidence,
+    stories,
+  };
+
+  if (selected.metadata.mode === "parent") {
+    evidence.parentLifecycle = buildParentLifecycle({
+      evidenceSources: [
+        {
+          body: input.pullRequest.body,
+          updatedAt: input.pullRequest.updatedAt,
+        },
+        ...input.issueComments.map((comment) => ({
+          body: comment.body,
+          updatedAt: comment.updatedAt,
+        })),
+      ],
+      requiredReviewSubmittedAt: requiredReview.submittedAt,
+      storyBindings: stories,
+    });
+  }
+
+  return evidence;
+}
+
+function buildMetadataSourceCandidates(input: WorkflowCleanupEvidenceInput) {
+  const candidates: MetadataSourceCandidate[] = [];
+  addCandidate(candidates, {
+    body: input.pullRequest.body,
+    durable: undefined,
+    kind: "pr-body",
+    sourceId: `pr-${String(input.pullRequest.number)}-body`,
+    updatedAt: input.pullRequest.updatedAt,
+  });
+
+  for (const comment of input.issueComments) {
+    if (!isExactMetadataSource(comment.body)) {
+      continue;
+    }
+    addCandidate(candidates, {
+      body: comment.body,
+      durable: true,
+      kind: "handoff-comment",
+      sourceId: String(comment.id),
+      updatedAt: comment.updatedAt,
+    });
+  }
+
+  return candidates;
+}
+
+function addCandidate(
+  candidates: MetadataSourceCandidate[],
+  options: {
+    body: string;
+    durable: boolean | undefined;
+    kind: "pr-body" | "handoff-comment";
+    sourceId: string;
+    updatedAt: string;
+  },
+) {
+  if (options.body.trim() === "") {
+    return;
+  }
+  let metadata: CleanupMetadata;
+  try {
+    metadata = parseCleanupMetadataBlock(options.body);
+  } catch {
+    return;
+  }
+  const contentSha256 = sha256(options.body);
+  const source: CleanupMetadataSourceEvidence = {
+    contentSha256,
+    kind: options.kind,
+    sourceId: options.sourceId,
+    updatedAt: normalizeInstant(options.updatedAt),
+  };
+  if (options.durable !== undefined) {
+    source.durable = options.durable;
+  }
+  candidates.push({
+    body: options.body,
+    metadata,
+    source,
+    sourceRef: `${options.kind}:${options.sourceId}:${contentSha256}`,
+  });
+}
+
+function buildReviewEvidence(
+  input: WorkflowCleanupEvidenceInput,
+  candidates: MetadataSourceCandidate[],
+) {
+  const reviewEvidence: CleanupHumanReviewEvidence[] = input.reviews.map(
+    (review) => ({
+      decision:
+        review.state === "APPROVED" ? "approved" : review.state.toLowerCase(),
+      id: String(review.id),
+      isMergeGate: review.state === "APPROVED",
+      reviewerKind: review.userType === "Bot" ? "bot" : "human",
+      sourceRefs: sourceRefsInBody(review.body, candidates),
+      submittedAt: normalizeInstant(review.submittedAt),
+    }),
+  );
+
+  for (const comment of input.issueComments) {
+    if (!comment.body.includes("## Equivalent Human Review Fallback")) {
+      continue;
+    }
+    const sourceRefs = sourceRefsInBody(comment.body, candidates);
+    if (sourceRefs.length === 0) {
+      continue;
+    }
+    const hasFallbackHumanReviewer =
+      /^- Fallback human reviewer:\s*\S.+$/m.test(comment.body);
+    reviewEvidence.push({
+      decision: "fallback-approved",
+      id: `fallback-comment-${String(comment.id)}`,
+      isMergeGate: true,
+      reviewerKind:
+        hasFallbackHumanReviewer || comment.userType !== "Bot"
+          ? "human"
+          : "bot",
+      sourceRefs,
+      submittedAt: normalizeInstant(comment.updatedAt),
+    });
+  }
+
+  return reviewEvidence;
+}
+
+function sourceRefsInBody(body: string, candidates: MetadataSourceCandidate[]) {
+  return candidates
+    .filter((candidate) => body.includes(candidate.sourceRef))
+    .map((candidate) => candidate.sourceRef);
+}
+
+function findLatestHumanGateReview(
+  reviews: CleanupHumanReviewEvidence[],
+  sourceRef: string,
+  mergedAt: string,
+) {
+  const mergedAtMs = Date.parse(mergedAt);
+  return reviews
+    .filter(
+      (review) =>
+        review.reviewerKind === "human" &&
+        review.isMergeGate &&
+        (review.decision === "approved" ||
+          review.decision === "fallback-approved") &&
+        review.sourceRefs.includes(sourceRef) &&
+        Date.parse(review.submittedAt) <= mergedAtMs,
+    )
+    .sort((left, right) => left.submittedAt.localeCompare(right.submittedAt))
+    .at(-1);
+}
+
+function buildStoryBindings(storyPaths: string[]) {
+  return storyPaths.map((storyPath) => {
+    const storyId = storyIdFromPath(storyPath);
+    return {
+      packetPath: `agent-packets/${storyId}.md`,
+      storyId,
+      storyPath,
+    };
+  });
+}
+
+function buildParentLifecycle(options: {
+  evidenceSources: Array<{ body: string; updatedAt: string }>;
+  requiredReviewSubmittedAt: string;
+  storyBindings: CleanupStoryBindingEvidence[];
+}) {
+  const parentIntegrationReview = findParentLifecycleScalar(
+    options.evidenceSources,
+    /^Parent integration AI review record:\s*(\S+)\s*$/m,
+  );
+  if (!parentIntegrationReview) {
+    throw new Error("Missing parent integration AI review record.");
+  }
+  const parentRevisionResponse = findParentLifecycleScalar(
+    options.evidenceSources,
+    /^Parent revision response:\s*(\S+)\s*$/m,
+  );
+  if (!parentRevisionResponse) {
+    throw new Error("Missing parent revision response.");
+  }
+  const substoryReviewByPath = parseSubstoryReviewRecords(
+    options.evidenceSources,
+  );
+  const lifecycleUpdatedAtValues = [
+    parentIntegrationReview.updatedAt,
+    parentRevisionResponse.updatedAt,
+  ];
+  const includedStories = options.storyBindings.map((story) => {
+    const review = substoryReviewByPath.get(story.storyPath);
+    if (!review) {
+      throw new Error(
+        `Missing durable substory PR review evidence for ${story.storyPath}.`,
+      );
+    }
+    lifecycleUpdatedAtValues.push(review.updatedAt);
+    return {
+      ...story,
+      substoryAiReviewRecordId: review.recordId,
+      substoryPrNumber: review.prNumber,
+    };
+  });
+  const cleanupPlanRecordedAt = latestInstant(lifecycleUpdatedAtValues);
+  if (
+    Date.parse(cleanupPlanRecordedAt) >
+    Date.parse(options.requiredReviewSubmittedAt)
+  ) {
+    throw new Error(
+      "Parent lifecycle evidence changed after required review point.",
+    );
+  }
+
+  return {
+    cleanupPlanRecordedAt,
+    includedStories,
+    parentIntegrationReviewRecordId: parentIntegrationReview.value,
+    parentRevisionResponseId: parentRevisionResponse.value,
+  };
+}
+
+function parseSubstoryReviewRecords(
+  evidenceSources: Array<{ body: string; updatedAt: string }>,
+) {
+  const records = new Map<
+    string,
+    { prNumber: number; recordId: string; updatedAt: string }
+  >();
+  const pattern =
+    /^Substory AI review record:\s*\n {2}story:\s*(stories\/approved\/[^\s]+\.yaml)\s*\n {2}pr:\s*(\d+)\s*\n {2}record:\s*(\S+)\s*$/gm;
+  for (const source of evidenceSources) {
+    for (const match of source.body.matchAll(pattern)) {
+      const storyPath = match[1];
+      const prNumber = Number(match[2]);
+      const recordId = match[3];
+      if (!storyPath || !Number.isSafeInteger(prNumber) || !recordId) {
+        continue;
+      }
+      const updatedAt = normalizeInstant(source.updatedAt);
+      const previous = records.get(storyPath);
+      if (previous && Date.parse(previous.updatedAt) >= Date.parse(updatedAt)) {
+        continue;
+      }
+      records.set(storyPath, {
+        prNumber,
+        recordId,
+        updatedAt,
+      });
+    }
+  }
+  return records;
+}
+
+function findParentLifecycleScalar(
+  evidenceSources: Array<{ body: string; updatedAt: string }>,
+  pattern: RegExp,
+) {
+  let latest: { updatedAt: string; value: string } | null = null;
+  for (const source of evidenceSources) {
+    const match = source.body.match(pattern);
+    const value = match?.[1];
+    if (!value) {
+      continue;
+    }
+    const updatedAt = normalizeInstant(source.updatedAt);
+    if (latest && Date.parse(latest.updatedAt) >= Date.parse(updatedAt)) {
+      continue;
+    }
+    latest = { updatedAt, value };
+  }
+  return latest;
+}
+
+function latestInstant(values: string[]) {
+  return new Date(
+    Math.max(...values.map((value) => Date.parse(value))),
+  ).toISOString();
+}
+
+function storyIdFromPath(storyPath: string) {
+  const match = storyPath.match(
+    /^stories\/approved\/([A-Z][A-Z0-9]*-\d{3}[A-Z]?)-[^/]+\.yaml$/,
+  );
+  const storyId = match?.[1];
+  if (!storyId) {
+    throw new Error(`Cannot derive story id from cleanup path: ${storyPath}.`);
+  }
+  return storyId;
+}
+
+function isExactMetadataSource(source: string) {
+  return source.trimStart().startsWith(METADATA_HEADER);
+}
+
+function normalizeInstant(value: string) {
+  const millis = Date.parse(value);
+  if (!Number.isFinite(millis)) {
+    throw new Error(`Invalid GitHub timestamp: ${value}.`);
+  }
+  return new Date(millis).toISOString();
 }

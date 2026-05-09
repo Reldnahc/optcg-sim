@@ -16,5 +16,6 @@
 - Verdict:
 - Blocking issues or follow-up before human review:
 - Human merge-gate review record (approval link or equivalent human review step reference):
+- Exact cleanup metadata source ref confirmed before fallback approval (`pr-body:<source-id>:<sha256>` or `handoff-comment:<comment-id>:<sha256>`):
 
 Use this comment when no usable reviewer-subagent run remains after the available reviewer-subagent surfaces were found unavailable, timed out, or failed. Record the attempted reviewer-subagent surfaces and failure modes, confirm that implementation-worker self-review and parent-coordinator self-review did not serve as the AI review gate, then document the equivalent human review that satisfied the fallback before broader human review is requested.
