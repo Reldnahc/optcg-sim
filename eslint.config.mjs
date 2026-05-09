@@ -124,7 +124,12 @@ export default [
         "error",
         {
           paths: [
+            "@optcg/browser",
             "@optcg/cards",
+            "@optcg/client",
+            "@optcg/server",
+            "@optcg/ui",
+            "@optcg/view-engine",
             "react",
             "redis",
             "pg",
@@ -140,6 +145,7 @@ export default [
             "**/browser/**",
             "**/client/**",
             "**/server/**",
+            "**/ui/**",
             "**/view-engine/**",
           ],
         },

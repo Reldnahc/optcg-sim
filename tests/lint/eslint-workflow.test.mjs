@@ -280,6 +280,13 @@ test("eslint rejects forbidden engine-core imports", async () => {
     .map((message) => message.message)
     .join("\n");
   const requiredForbiddenSources = [
+    "@optcg/cards",
+    "@optcg/cards/representative-fixtures",
+    "@optcg/browser",
+    "@optcg/client",
+    "@optcg/server",
+    "@optcg/ui",
+    "@optcg/view-engine",
     "react",
     "redis",
     "pg",
@@ -287,9 +294,12 @@ test("eslint rejects forbidden engine-core imports", async () => {
     "axios",
     "undici",
     "node-fetch",
+    "../../../cards/src/poneglyph-client",
     "../../../browser/src/example",
     "../../../client/src/example",
     "../../../server/src/example",
+    "../../../ui/src/example",
+    "../../../view-engine/src/example",
   ];
 
   assert.equal(
