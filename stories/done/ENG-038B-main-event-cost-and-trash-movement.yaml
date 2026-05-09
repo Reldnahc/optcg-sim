@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Prove supported Main Events use the existing DON payment path and move from
   hand to trash as part of play.

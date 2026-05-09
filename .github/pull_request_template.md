@@ -23,6 +23,7 @@
 
 Cleanup metadata is a reviewed request, not standalone authority.
 
+- [ ] PR author left exactly one `Post-merge cleanup:` metadata source in the PR body or a durable handoff comment before review handoff.
 - [ ] Reviewers confirm this metadata matches the reviewed story scope before merge.
 - [ ] The human-controlled merge to `main` authorizes the cleanup metadata snapshot; the workflow computes the metadata source ref for audit.
 - [ ] Equivalent fallback review, if used because merge actor evidence is unavailable, confirms the cleanup metadata source was reviewed before fallback approval.

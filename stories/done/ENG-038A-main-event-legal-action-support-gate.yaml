@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the narrow implemented-dsl support gate and legal-action exposure for
   playable `[Main]` Event cards.

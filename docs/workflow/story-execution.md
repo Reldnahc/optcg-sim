@@ -63,6 +63,8 @@ Use a pre-presentation story-review gate for generated or normalized story work:
 - Activating a new story replaces the previous active manifest entry instead of accumulating multiple active stories.
 - Completing a story must use the packet completion command so story movement, packet removal, and manifest cleanup happen as one verified operation.
 - Cleanup metadata is a reviewed request, not standalone authority.
+- PR authors must leave exactly one `Post-merge cleanup:` metadata source in the PR body or a durable handoff comment before PR handoff, reviewer handoff, or human review request.
+- The cleanup metadata guard is a required pre-merge check for pull requests targeting the default branch and must run from trusted default-branch or base-branch validation code, not PR-head-modifiable workflow or tooling code.
 - Automation must bind cleanup metadata to reviewed PR evidence and trusted checked-in story and packet state before it runs a packet completion command.
 - The human-controlled merge to `main` is the cleanup approval signal. The workflow snapshots the PR-body or durable handoff-comment cleanup metadata at merge time; the computed metadata source ref is audit evidence and humans do not paste that ref into approval text.
 - If merge actor evidence is unavailable and an equivalent human-review fallback is used, the fallback record must confirm the cleanup metadata source was reviewed before fallback approval.

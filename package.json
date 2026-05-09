@@ -22,6 +22,7 @@
     "packets:generate": "node --experimental-strip-types tools/build-agent-packet.ts generate",
     "packets:verify": "node --experimental-strip-types tools/build-agent-packet.ts verify-active",
     "cleanup:validate-dry-run": "node --experimental-strip-types tools/post-merge-cleanup.ts",
+    "cleanup:validate-handoff": "node --experimental-strip-types tools/post-merge-cleanup.ts -- --validate-cleanup-handoff",
     "typecheck": "corepack pnpm exec tsc -p packages/types/tsconfig.json --noEmit && corepack pnpm exec tsc -p packages/engine-core/tsconfig.json --noEmit && corepack pnpm exec tsc -p packages/cli/tsconfig.json --noEmit && corepack pnpm exec tsc -p tools/tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run",
     "test:hidden-info": "corepack pnpm exec vitest run tests/hidden-info",

@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add end-to-end regression coverage for the supported Main Event path's event
   sequencing, state hash stability, and hidden-information safety.

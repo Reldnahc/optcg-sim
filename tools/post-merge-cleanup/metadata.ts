@@ -161,6 +161,7 @@ export type WorkflowReviewInput = {
 };
 
 export type WorkflowIssueCommentInput = {
+  authorAssociation?: string;
   body: string;
   createdAt: string;
   id: number | string;
@@ -179,6 +180,18 @@ export type WorkflowCleanupEvidenceInput = {
   issueComments: WorkflowIssueCommentInput[];
   pullRequest: WorkflowPullRequestInput;
   reviews: WorkflowReviewInput[];
+};
+
+export type WorkflowCleanupMetadataGuardInput = {
+  issueComments: WorkflowIssueCommentInput[];
+  pullRequest: Pick<WorkflowPullRequestInput, "body" | "number" | "updatedAt">;
+};
+
+export type WorkflowCleanupMetadataGuardResult = {
+  metadata: CleanupMetadata;
+  metadataSource: CleanupMetadataSourceEvidence;
+  metadataSourceRef: string;
+  parentLifecycle?: NonNullable<CleanupEvidenceInput["parentLifecycle"]>;
 };
 
 type MetadataSourceCandidate = {
@@ -261,12 +274,63 @@ export function buildWorkflowCleanupEvidence(
   return evidence;
 }
 
-function buildMetadataSourceCandidates(input: WorkflowCleanupEvidenceInput) {
+export function validateWorkflowCleanupMetadataGuard(
+  input: WorkflowCleanupMetadataGuardInput,
+): WorkflowCleanupMetadataGuardResult {
+  const candidates = buildMetadataSourceCandidates(input, {
+    reportMalformed: true,
+  });
+
+  if (candidates.length === 0) {
+    throw new Error(
+      "Missing Post-merge cleanup metadata source. Add exactly one Post-merge cleanup block to the PR body or a durable handoff comment.",
+    );
+  }
+  if (candidates.length > 1) {
+    throw new Error("Ambiguous cleanup metadata sources were found.");
+  }
+
+  const selected = candidates[0];
+  if (!selected) {
+    throw new Error("Missing Post-merge cleanup metadata source.");
+  }
+
+  const result: WorkflowCleanupMetadataGuardResult = {
+    metadata: selected.metadata,
+    metadataSource: selected.source,
+    metadataSourceRef: selected.sourceRef,
+  };
+
+  if (selected.metadata.mode === "parent") {
+    result.parentLifecycle = buildParentLifecycle({
+      evidenceSources: [
+        {
+          body: input.pullRequest.body,
+          updatedAt: input.pullRequest.updatedAt,
+        },
+        ...input.issueComments.map((comment) => ({
+          body: comment.body,
+          updatedAt: comment.updatedAt,
+        })),
+      ],
+      requiredReviewSubmittedAt: null,
+      storyBindings: buildStoryBindings(selected.metadata.stories),
+    });
+  }
+
+  return result;
+}
+
+function buildMetadataSourceCandidates(
+  input: WorkflowCleanupMetadataGuardInput,
+  options: { reportMalformed?: boolean } = {},
+) {
   const candidates: MetadataSourceCandidate[] = [];
   addCandidate(candidates, {
     body: input.pullRequest.body,
     durable: undefined,
     kind: "pr-body",
+    reportMalformed: options.reportMalformed ?? false,
     sourceId: `pr-${String(input.pullRequest.number)}-body`,
     updatedAt: input.pullRequest.updatedAt,
   });
@@ -275,10 +339,14 @@ function buildMetadataSourceCandidates(input: WorkflowCleanupEvidenceInput) {
     if (!isExactMetadataSource(comment.body)) {
       continue;
     }
+    if (!isTrustedHandoffCommentAuthor(comment)) {
+      continue;
+    }
     addCandidate(candidates, {
       body: comment.body,
       durable: true,
       kind: "handoff-comment",
+      reportMalformed: options.reportMalformed ?? false,
       sourceId: String(comment.id),
       updatedAt: comment.updatedAt,
     });
@@ -293,6 +361,7 @@ function addCandidate(
     body: string;
     durable: boolean | undefined;
     kind: "pr-body" | "handoff-comment";
+    reportMalformed: boolean;
     sourceId: string;
     updatedAt: string;
   },
@@ -303,7 +372,13 @@ function addCandidate(
   let metadata: CleanupMetadata;
   try {
     metadata = parseCleanupMetadataBlock(options.body);
-  } catch {
+  } catch (error) {
+    if (options.reportMalformed && hasMetadataHeader(options.body)) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Malformed cleanup metadata source ${options.kind}:${options.sourceId}: ${message}`,
+      );
+    }
     return;
   }
   const contentSha256 = sha256(options.body);
@@ -416,7 +491,7 @@ function hasStrictFallbackCleanupApproval(body: string) {
 
 function buildParentLifecycle(options: {
   evidenceSources: Array<{ body: string; updatedAt: string }>;
-  requiredReviewSubmittedAt: string;
+  requiredReviewSubmittedAt: string | null;
   storyBindings: CleanupStoryBindingEvidence[];
 }) {
   const parentIntegrationReview = findParentLifecycleScalar(
@@ -456,8 +531,9 @@ function buildParentLifecycle(options: {
   });
   const cleanupPlanRecordedAt = latestInstant(lifecycleUpdatedAtValues);
   if (
+    options.requiredReviewSubmittedAt !== null &&
     Date.parse(cleanupPlanRecordedAt) >
-    Date.parse(options.requiredReviewSubmittedAt)
+      Date.parse(options.requiredReviewSubmittedAt)
   ) {
     throw new Error(
       "Parent lifecycle evidence changed after required review point.",
@@ -543,6 +619,22 @@ function storyIdFromPath(storyPath: string) {
 
 function isExactMetadataSource(source: string) {
   return source.trimStart().startsWith(METADATA_HEADER);
+}
+
+function isTrustedHandoffCommentAuthor(comment: WorkflowIssueCommentInput) {
+  return (
+    comment.authorAssociation === undefined ||
+    ["COLLABORATOR", "CONTRIBUTOR", "MEMBER", "OWNER"].includes(
+      comment.authorAssociation,
+    )
+  );
+}
+
+function hasMetadataHeader(source: string) {
+  return source
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .some((line) => line.trim() === METADATA_HEADER);
 }
 
 function normalizeInstant(value: string) {

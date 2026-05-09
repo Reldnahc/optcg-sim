@@ -1,0 +1,98 @@
+name: Cleanup metadata guard
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+  issue_comment:
+    types:
+      - created
+      - edited
+      - deleted
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  cleanup-metadata-guard:
+    name: cleanup-metadata-guard
+    if: >-
+      ${{
+        (
+          github.event_name == 'pull_request_target' &&
+          github.event.pull_request.base.ref == github.event.repository.default_branch
+        ) ||
+        (
+          github.event_name == 'issue_comment' &&
+          github.event.issue.pull_request
+        )
+      }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted default branch validation code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Set up Node for cleanup tooling
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Build cleanup metadata guard input
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("node:fs");
+            let pr = context.payload.pull_request;
+            if (!pr) {
+              const response = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                pull_number: context.payload.issue.number,
+                repo: context.repo.repo,
+              });
+              pr = response.data;
+            }
+            if (pr.base.ref !== context.payload.repository.default_branch) {
+              core.setFailed("Cleanup metadata guard only supports default-branch pull requests.");
+              return;
+            }
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              issue_number: pr.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            fs.writeFileSync("cleanup-guard-input.json", `${JSON.stringify({
+              issueComments: comments.map((comment) => ({
+                authorAssociation: comment.author_association || "",
+                body: comment.body || "",
+                createdAt: comment.created_at,
+                id: comment.id,
+                updatedAt: comment.updated_at,
+                userType: comment.user?.type || "",
+              })),
+              pullRequest: {
+                body: pr.body || "",
+                number: pr.number,
+                updatedAt: pr.updated_at,
+              },
+            }, null, 2)}\n`);
+
+      - name: Validate cleanup metadata handoff
+        run: >
+          node --experimental-strip-types tools/post-merge-cleanup.ts
+          --validate-cleanup-handoff-json-file cleanup-guard-input.json
