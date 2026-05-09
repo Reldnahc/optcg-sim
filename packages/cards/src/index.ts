@@ -11,6 +11,7 @@ export {
   buildMatchCardManifest,
   computeMatchCardManifestHash,
   createManifestVersions,
+  deckValidationContractDeferrals,
   validateDecklist,
   validateLoadout,
 } from "./manifest.js";

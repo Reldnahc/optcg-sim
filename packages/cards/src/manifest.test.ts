@@ -3,7 +3,9 @@ import type {
   DecklistEntry,
   EffectId,
   EffectDefinition,
+  Loadout,
   MatchCardManifest,
+  PlayerId,
   ResolvedCard,
   VariantKey,
 } from "@optcg/types";
@@ -13,11 +15,14 @@ import {
   buildMatchCardManifest,
   computeMatchCardManifestHash,
   createManifestVersions,
+  deckValidationContractDeferrals,
   validateDecklist,
+  validateLoadout,
 } from "./manifest.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
+const toPlayerId = (value: string): PlayerId => value as PlayerId;
 const toVariantKey = (value: string): VariantKey => value as VariantKey;
 
 const baseVersions = createManifestVersions({
@@ -111,6 +116,17 @@ const validate = (
     overlayVersion: baseVersions.overlayVersion,
   });
 
+const createLoadout = (
+  deck: readonly DecklistEntry[],
+  overrides: Partial<Loadout> = {},
+): Loadout => ({
+  loadoutId: "loadout-1" as Loadout["loadoutId"],
+  ownerPlayerId: toPlayerId("player-1"),
+  name: "Test Loadout",
+  deck: [...deck],
+  ...overrides,
+});
+
 describe("match card manifest construction", () => {
   it("computes deterministic manifest hashes that exclude createdAt", () => {
     const card = createResolvedCard(toCardId("OP01-001"));
@@ -187,6 +203,113 @@ describe("match card manifest construction", () => {
 });
 
 describe("deck validation", () => {
+  it("rejects empty decks and decks without exactly one leader entry", () => {
+    const leader = createResolvedCard(toCardId("OP01-012"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const character = createResolvedCard(toCardId("OP01-013"));
+    const secondLeader = createResolvedCard(toCardId("OP01-014"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const manifest = buildManifest([leader, character, secondLeader]);
+
+    const empty = validate([], manifest);
+    const noLeader = validate(
+      [{ cardId: character.cardId, quantity: 1 }],
+      manifest,
+    );
+    const duplicateLeaderQuantity = validate(
+      [{ cardId: leader.cardId, quantity: 2 }],
+      manifest,
+    );
+    const multipleLeaders = validate(
+      [
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: secondLeader.cardId, quantity: 1 },
+      ],
+      manifest,
+    );
+
+    expect(empty.valid).toBe(false);
+    expect(empty.errors).toContainEqual(
+      expect.objectContaining({ code: "empty-deck" }),
+    );
+    expect(noLeader.errors).toContainEqual(
+      expect.objectContaining({ code: "missing-leader" }),
+    );
+    expect(duplicateLeaderQuantity.errors).toContainEqual(
+      expect.objectContaining({
+        code: "leader-quantity-invalid",
+        cardId: leader.cardId,
+      }),
+    );
+    expect(multipleLeaders.errors).toContainEqual(
+      expect.objectContaining({ code: "multiple-leaders" }),
+    );
+  });
+
+  it("enforces requested main deck and DON!! deck sizes from manifest card categories", () => {
+    const leader = createResolvedCard(toCardId("OP01-015"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const character = createResolvedCard(toCardId("OP01-016"));
+    const don = createResolvedCard(toCardId("DON-001"), {
+      category: "don",
+      colors: [],
+      legality: { standard: { status: "legal", max_copies: 10 } },
+    });
+    const result = validateDecklist({
+      deck: [
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: character.cardId, quantity: 4 },
+        { cardId: don.cardId, quantity: 9 },
+      ],
+      expectedDonDeckSize: 10,
+      expectedMainDeckSize: 5,
+      format: "standard",
+      manifest: buildManifest([leader, character, don]),
+      mode: "ranked",
+      overlayVersion: baseVersions.overlayVersion,
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: "main-deck-size-invalid" }),
+    );
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: "don-deck-size-invalid" }),
+    );
+  });
+
+  it("rejects main deck cards outside the leader color identity", () => {
+    const leader = createResolvedCard(toCardId("OP01-017"), {
+      category: "leader",
+      colors: ["red"],
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const offColor = createResolvedCard(toCardId("OP01-018"), {
+      colors: ["blue"],
+    });
+    const result = validate(
+      [
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: offColor.cardId, quantity: 1 },
+      ],
+      buildManifest([leader, offColor]),
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        code: "leader-color-restriction",
+        cardId: offColor.cardId,
+      }),
+    );
+  });
+
   it("rejects unknown card IDs", () => {
     const manifest = buildManifest([createResolvedCard(toCardId("OP01-003"))]);
     const result = validate(
@@ -201,6 +324,10 @@ describe("deck validation", () => {
   });
 
   it("rejects unsupported non-vanilla cards outside dev or sandbox modes", () => {
+    const leader = createResolvedCard(toCardId("OP01-004L"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
     const card = createResolvedCard(toCardId("OP01-004"), {
       effectText: "[On Play] Draw 1 card.",
       support: {
@@ -214,13 +341,19 @@ describe("deck validation", () => {
       },
     });
     const ranked = validate(
-      [{ cardId: card.cardId, quantity: 1 }],
-      buildManifest([card]),
+      [
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: card.cardId, quantity: 1 },
+      ],
+      buildManifest([leader, card]),
     );
     const sandbox = validateDecklist({
-      deck: [{ cardId: card.cardId, quantity: 1 }],
+      deck: [
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: card.cardId, quantity: 1 },
+      ],
       format: "standard",
-      manifest: buildManifest([card]),
+      manifest: buildManifest([leader, card]),
       mode: "dev-sandbox",
       overlayVersion: baseVersions.overlayVersion,
     });
@@ -383,5 +516,142 @@ describe("deck validation", () => {
       effectDefinitionsVersion: baseVersions.effectDefinitionsVersion,
       overlayVersion: baseVersions.overlayVersion,
     });
+  });
+
+  it("fails closed for ranked implemented-custom cards without a reviewed contract signal", () => {
+    const leader = createResolvedCard(toCardId("OP01-019"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const custom = createResolvedCard(toCardId("OP01-020"), {
+      effectText: "[On Play] Draw 1 card.",
+      support: {
+        behaviorHash: "behavior:OP01-020",
+        cardDataVersion: baseVersions.cardDataVersion,
+        cardId: toCardId("OP01-020"),
+        customHandlerIds: ["op01-020.custom"],
+        rulesVersion: "rules-v1",
+        sourceTextHash: "source:OP01-020",
+        status: "implemented-custom",
+        tested: true,
+      },
+    });
+    const result = validate(
+      [
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: custom.cardId, quantity: 1 },
+      ],
+      buildManifest([leader, custom]),
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        code: "ranked-custom-review-unsupported",
+        cardId: custom.cardId,
+      }),
+    );
+  });
+});
+
+describe("loadout validation", () => {
+  it("rejects cardVariants for unknown cards or invalid variant keys", () => {
+    const leader = createResolvedCard(toCardId("OP01-021"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const character = createResolvedCard(toCardId("OP01-022"));
+    const result = validateLoadout({
+      format: "standard",
+      loadout: createLoadout(
+        [
+          { cardId: leader.cardId, quantity: 1 },
+          { cardId: character.cardId, quantity: 1 },
+        ],
+        {
+          cardVariants: {
+            [character.cardId]: toVariantKey("OP01-022:v99"),
+            [toCardId("OP01-999")]: toVariantKey("OP01-999:v0"),
+          },
+        },
+      ),
+      manifest: buildManifest([leader, character]),
+      mode: "ranked",
+      overlayVersion: baseVersions.overlayVersion,
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        code: "invalid-loadout-card-variant",
+        cardId: character.cardId,
+      }),
+    );
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        code: "unknown-loadout-card-variant",
+        cardId: "OP01-999",
+      }),
+    );
+  });
+
+  it("validates DON!! deck variants when DON!! metadata exists in the manifest", () => {
+    const leader = createResolvedCard(toCardId("OP01-023"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const character = createResolvedCard(toCardId("OP01-024"));
+    const don = createResolvedCard(toCardId("DON-002"), {
+      category: "don",
+      colors: [],
+      legality: { standard: { status: "legal", max_copies: 10 } },
+    });
+    const result = validateLoadout({
+      format: "standard",
+      loadout: createLoadout(
+        [
+          { cardId: leader.cardId, quantity: 1 },
+          { cardId: character.cardId, quantity: 1 },
+        ],
+        { donDeckVariantKey: toVariantKey("DON-002:v99") },
+      ),
+      manifest: buildManifest([leader, character, don]),
+      mode: "ranked",
+      overlayVersion: baseVersions.overlayVersion,
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: "invalid-don-deck-variant" }),
+    );
+  });
+
+  it("records a narrow DON!! deck variant deferral when manifest DON!! metadata is absent", () => {
+    const leader = createResolvedCard(toCardId("OP01-025"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const character = createResolvedCard(toCardId("OP01-026"));
+    const result = validateLoadout({
+      format: "standard",
+      loadout: createLoadout(
+        [
+          { cardId: leader.cardId, quantity: 1 },
+          { cardId: character.cardId, quantity: 1 },
+        ],
+        { donDeckVariantKey: toVariantKey("DON-003:v0") },
+      ),
+      manifest: buildManifest([leader, character]),
+      mode: "ranked",
+      overlayVersion: baseVersions.overlayVersion,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({
+        code: "don-deck-variant-validation-deferred",
+        message: deckValidationContractDeferrals.donDeckVariantKey,
+      }),
+    );
   });
 });

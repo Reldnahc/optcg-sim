@@ -48,6 +48,9 @@ export interface ValidateDecklistInput {
   format: string;
   mode: DeckValidationMode;
   overlayVersion: string;
+  expectedMainDeckSize?: number;
+  expectedDonDeckSize?: number;
+  enforceLeaderColorIdentity?: boolean;
   allowUnreleased?: boolean;
   allowStaleBehaviorHash?: boolean;
   allowSimulatorBannedOverride?: boolean;
@@ -77,6 +80,11 @@ type ProjectedSupport = {
   status: CardSupportStatus;
   tested: boolean;
 };
+
+export const deckValidationContractDeferrals = {
+  donDeckVariantKey:
+    "Loadout.donDeckVariantKey does not identify a DON!! card ID; validation is limited to manifest DON!! variant metadata when present.",
+} as const;
 
 export function createManifestVersions(
   versions: ManifestVersions,
@@ -117,10 +125,18 @@ export function computeMatchCardManifestHash(
 export function validateLoadout(
   input: ValidateLoadoutInput,
 ): DeckValidationResult {
-  return validateDecklist({
+  const result = validateDecklist({
     ...input,
     deck: input.loadout.deck,
   });
+
+  validateLoadoutCardVariants(input, result.errors);
+  validateLoadoutDonDeckVariant(input, result.errors, result.warnings);
+
+  return {
+    ...result,
+    valid: result.errors.length === 0,
+  };
 }
 
 export function validateDecklist(
@@ -134,6 +150,8 @@ export function validateDecklist(
   for (const entry of input.deck) {
     validateDeckEntry(entry, input.manifest, errors, accumulators, order);
   }
+
+  validateDeckStructure(input, errors, accumulators, order);
 
   for (const cardId of order) {
     const accumulator = accumulators.get(cardId);
@@ -275,6 +293,134 @@ function validateDeckEntry(
   }
 }
 
+function validateDeckStructure(
+  input: ValidateDecklistInput,
+  errors: DeckValidationError[],
+  accumulators: Map<CardId, CardAccumulator>,
+  order: readonly CardId[],
+): void {
+  if (input.deck.length === 0) {
+    errors.push({
+      code: "empty-deck",
+      message: "Deck must contain at least one entry.",
+    });
+  }
+
+  const leaderAccumulators = order
+    .map((cardId) => accumulators.get(cardId))
+    .filter(
+      (accumulator): accumulator is CardAccumulator =>
+        accumulator !== undefined && accumulator.card.category === "leader",
+    );
+
+  if (leaderAccumulators.length === 0) {
+    errors.push({
+      code: "missing-leader",
+      message: "Deck must include exactly one leader entry.",
+    });
+  }
+
+  if (leaderAccumulators.length > 1) {
+    errors.push({
+      code: "multiple-leaders",
+      message: "Deck must not include multiple leader entries.",
+    });
+  }
+
+  for (const leader of leaderAccumulators) {
+    if (leader.quantity !== 1) {
+      errors.push({
+        cardId: leader.card.cardId,
+        code: "leader-quantity-invalid",
+        message: `Leader ${String(leader.card.cardId)} must have quantity 1.`,
+      });
+    }
+  }
+
+  validateRequestedDeckSizes(input, errors, accumulators);
+  validateLeaderColorIdentity(input, errors, accumulators, leaderAccumulators);
+}
+
+function validateRequestedDeckSizes(
+  input: ValidateDecklistInput,
+  errors: DeckValidationError[],
+  accumulators: Map<CardId, CardAccumulator>,
+): void {
+  let mainDeckSize = 0;
+  let donDeckSize = 0;
+
+  for (const accumulator of accumulators.values()) {
+    if (accumulator.card.category === "don") {
+      donDeckSize += accumulator.quantity;
+    } else if (accumulator.card.category !== "leader") {
+      mainDeckSize += accumulator.quantity;
+    }
+  }
+
+  if (
+    input.expectedMainDeckSize !== undefined &&
+    mainDeckSize !== input.expectedMainDeckSize
+  ) {
+    errors.push({
+      code: "main-deck-size-invalid",
+      message: `Main deck has ${String(mainDeckSize)} cards; expected ${String(
+        input.expectedMainDeckSize,
+      )}.`,
+    });
+  }
+
+  if (
+    input.expectedDonDeckSize !== undefined &&
+    donDeckSize !== input.expectedDonDeckSize
+  ) {
+    errors.push({
+      code: "don-deck-size-invalid",
+      message: `DON!! deck has ${String(donDeckSize)} cards; expected ${String(
+        input.expectedDonDeckSize,
+      )}.`,
+    });
+  }
+}
+
+function validateLeaderColorIdentity(
+  input: ValidateDecklistInput,
+  errors: DeckValidationError[],
+  accumulators: Map<CardId, CardAccumulator>,
+  leaderAccumulators: readonly CardAccumulator[],
+): void {
+  if (input.enforceLeaderColorIdentity === false) {
+    return;
+  }
+
+  const leader = leaderAccumulators[0];
+  if (leader === undefined || leaderAccumulators.length !== 1) {
+    return;
+  }
+
+  const leaderColors = new Set(leader.card.colors);
+  for (const accumulator of accumulators.values()) {
+    if (
+      accumulator.card.category === "leader" ||
+      accumulator.card.category === "don"
+    ) {
+      continue;
+    }
+
+    const outsideIdentity = accumulator.card.colors.some(
+      (color) => !leaderColors.has(color),
+    );
+    if (outsideIdentity) {
+      errors.push({
+        cardId: accumulator.card.cardId,
+        code: "leader-color-restriction",
+        message: `Card ${String(
+          accumulator.card.cardId,
+        )} is outside the leader color identity.`,
+      });
+    }
+  }
+}
+
 function validateCardSupportAndLegality(params: {
   accumulator: CardAccumulator;
   input: ValidateDecklistInput;
@@ -382,6 +528,16 @@ function validateSupportPolicy(params: {
     return;
   }
 
+  if (support.status === "implemented-custom" && input.mode === "ranked") {
+    errors.push({
+      cardId: card.cardId,
+      code: "ranked-custom-review-unsupported",
+      message:
+        "Ranked implemented-custom support requires reviewed metadata, which CardImplementationRecord does not currently expose.",
+    });
+    return;
+  }
+
   if (!support.tested && !sandboxMode) {
     errors.push({
       cardId: card.cardId,
@@ -393,6 +549,77 @@ function validateSupportPolicy(params: {
   if (support.status === "implemented-dsl") {
     validateEffectDefinition(card, input.manifest, errors);
   }
+}
+
+function validateLoadoutCardVariants(
+  input: ValidateLoadoutInput,
+  errors: DeckValidationError[],
+): void {
+  for (const [cardId, variantKey] of Object.entries(
+    input.loadout.cardVariants ?? {},
+  )) {
+    if (variantKey === undefined) {
+      continue;
+    }
+
+    const typedCardId = toCardId(cardId);
+    const card = input.manifest.cards[typedCardId];
+
+    if (card === undefined) {
+      errors.push({
+        cardId: typedCardId,
+        code: "unknown-loadout-card-variant",
+        message: `Loadout cardVariants references unknown card ${cardId}.`,
+      });
+      continue;
+    }
+
+    if (!hasVariantKey(card, variantKey)) {
+      errors.push({
+        cardId: typedCardId,
+        code: "invalid-loadout-card-variant",
+        message: `Loadout variant ${String(
+          variantKey,
+        )} is not valid for card ${cardId}.`,
+      });
+    }
+  }
+}
+
+function validateLoadoutDonDeckVariant(
+  input: ValidateLoadoutInput,
+  errors: DeckValidationError[],
+  warnings: DeckValidationWarning[],
+): void {
+  const variantKey = input.loadout.donDeckVariantKey;
+  if (variantKey === undefined) {
+    return;
+  }
+
+  const donCards = Object.values(input.manifest.cards).filter(
+    (card) => card.category === "don",
+  );
+
+  if (donCards.length === 0) {
+    warnings.push({
+      code: "don-deck-variant-validation-deferred",
+      message: deckValidationContractDeferrals.donDeckVariantKey,
+    });
+    return;
+  }
+
+  if (!donCards.some((card) => hasVariantKey(card, variantKey))) {
+    errors.push({
+      code: "invalid-don-deck-variant",
+      message: `DON!! deck variant ${String(
+        variantKey,
+      )} is not present on manifest DON!! cards.`,
+    });
+  }
+}
+
+function hasVariantKey(card: ResolvedCard, variantKey: VariantKey): boolean {
+  return card.variants.some((variant) => variant.variantKey === variantKey);
 }
 
 function validateEffectDefinition(
@@ -609,4 +836,8 @@ function sortJson(value: unknown): unknown {
 
 function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function toCardId(value: string): CardId {
+  return value as CardId;
 }
