@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-001A.md",
+      "storyId": "CARD-001A",
+      "storyPath": "stories/approved/CARD-001A-cards-package-skeleton-poneglyph-fixtures.yaml",
+      "storySha256": "5cee4f6ee92331fc412bcf432e375127f9c73662572230d3486d16de8cfaef7e"
+    }
+  ],
   "version": 1
 }
