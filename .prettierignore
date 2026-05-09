@@ -1,4 +1,5 @@
 coverage/
+.cleanup/
 dist/
 node_modules/
 tests/fixtures/prettier/unformatted.js

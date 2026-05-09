@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Repair the post-merge cleanup executor command construction so the workflow
   invokes packet completion without passing an extra literal separator argument
