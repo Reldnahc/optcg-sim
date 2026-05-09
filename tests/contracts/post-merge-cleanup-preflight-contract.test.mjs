@@ -33,7 +33,9 @@ test("preflight writes bound cleanup plan artifact only after validation passes"
   assert.equal(artifact.schemaVersion, "post-merge-cleanup-plan.v1");
   assert.equal(artifact.status, "valid");
   assert.equal(artifact.mergedPullRequest.number, 27);
+  assert.match(artifact.metadataSource.contentSha256, /^[0-9a-f]{64}$/);
   assert.equal(artifact.packetCommand.command, "packets:complete");
+  assert.match(artifact.reviewEvidenceSource.contentSha256, /^[0-9a-f]{64}$/);
   assert.match(artifact.stories[0].packetSha256, /^[0-9a-f]{64}$/);
   assert.deepEqual(artifact.packetCommand.args, [
     "--story",
@@ -65,12 +67,16 @@ test("bound cleanup plan schema rejects unexpected top-level fields", () => {
       mergeSha: "abc123",
       number: 1,
     },
-    metadataSource: "pr-body:body:abc",
+    metadataSource: {
+      contentSha256: "3".repeat(64),
+      ref: `pr-body:body:${"3".repeat(64)}`,
+    },
     packetCommand: {
       args: ["--story", "stories/approved/INF-501-story.yaml"],
       command: "packets:complete",
     },
     reviewEvidenceSource: {
+      contentSha256: "4".repeat(64),
       requiredReviewId: "rvw-1",
       requiredReviewSubmittedAt: "2026-01-01T00:00:00.000Z",
     },
@@ -104,6 +110,29 @@ test("bound cleanup plan schema rejects unexpected top-level fields", () => {
         status: "failed",
       }),
     /status must be valid/,
+  );
+  assert.throws(
+    () =>
+      validateBoundCleanupPlanArtifact({
+        ...validArtifact,
+        metadataSource: {
+          contentSha256: "abc",
+          ref: "pr-body:body:abc",
+        },
+      }),
+    /metadataSource\.contentSha256 must be a sha256 hash/,
+  );
+  assert.throws(
+    () =>
+      validateBoundCleanupPlanArtifact({
+        ...validArtifact,
+        reviewEvidenceSource: {
+          contentSha256: "abc",
+          requiredReviewId: "rvw-1",
+          requiredReviewSubmittedAt: "2026-01-01T00:00:00.000Z",
+        },
+      }),
+    /reviewEvidenceSource\.contentSha256 must be a sha256 hash/,
   );
 });
 

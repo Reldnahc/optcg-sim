@@ -39,8 +39,12 @@ export type BoundCleanupPlan = {
     mergeSha: string;
     number: number;
   };
-  metadataSource: string;
+  metadataSource: {
+    contentSha256: string;
+    ref: string;
+  };
   reviewEvidenceSource: {
+    contentSha256: string;
     requiredReviewId: string;
     requiredReviewSubmittedAt: string;
   };

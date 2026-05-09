@@ -105,9 +105,15 @@ export function buildBoundCleanupPlan(options: {
       mergeSha: options.plan.mergeSha,
       number: options.plan.mergedPrNumber,
     },
-    metadataSource: options.plan.verificationInputs.metadataSource,
+    metadataSource: {
+      contentSha256: readSourceHash(
+        options.plan.verificationInputs.metadataSource,
+      ),
+      ref: options.plan.verificationInputs.metadataSource,
+    },
     packetCommand: command,
     reviewEvidenceSource: {
+      contentSha256: options.inputsHash,
       requiredReviewId: options.plan.verificationInputs.requiredReviewId,
       requiredReviewSubmittedAt:
         options.plan.verificationInputs.requiredReviewSubmittedAt,
@@ -148,7 +154,20 @@ export function validateBoundCleanupPlanArtifact(
     "bound cleanup plan generatedAt",
   );
   requireHash(root["inputsHash"], "bound cleanup plan inputsHash");
-  requireString(root["metadataSource"], "bound cleanup plan metadataSource");
+  const metadataSource = requireRecord(
+    root["metadataSource"],
+    "bound cleanup plan metadataSource",
+  );
+  rejectUnexpectedKeys(
+    metadataSource,
+    ["contentSha256", "ref"],
+    "bound cleanup plan metadataSource",
+  );
+  requireHash(
+    metadataSource["contentSha256"],
+    "bound cleanup plan metadataSource.contentSha256",
+  );
+  requireString(metadataSource["ref"], "bound cleanup plan metadataSource.ref");
   requireStringArray(root["branches"], "bound cleanup plan branches");
 
   const mergedPullRequest = requireRecord(
@@ -179,8 +198,12 @@ export function validateBoundCleanupPlanArtifact(
   );
   rejectUnexpectedKeys(
     reviewEvidenceSource,
-    ["requiredReviewId", "requiredReviewSubmittedAt"],
+    ["contentSha256", "requiredReviewId", "requiredReviewSubmittedAt"],
     "bound cleanup plan reviewEvidenceSource",
+  );
+  requireHash(
+    reviewEvidenceSource["contentSha256"],
+    "bound cleanup plan reviewEvidenceSource.contentSha256",
   );
   requireString(
     reviewEvidenceSource["requiredReviewId"],
@@ -456,6 +479,12 @@ function validateParentEvidence(options: {
 
 function buildSourceRef(source: CleanupEvidenceInput["metadataSource"]) {
   return `${source.kind}:${source.sourceId}:${source.contentSha256}`;
+}
+
+function readSourceHash(sourceRef: string) {
+  const sourceHash = sourceRef.split(":").at(-1) ?? "";
+  requireHash(sourceHash, "bound cleanup plan metadataSource.contentSha256");
+  return sourceHash;
 }
 
 function validateEvidenceShape(evidence: CleanupEvidenceInput) {
