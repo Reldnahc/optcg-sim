@@ -168,56 +168,61 @@ jobs:
             const sourceRefsInBody = (body) => candidates
               .filter((candidate) => body && body.includes(candidate.sourceRef))
               .map((candidate) => candidate.sourceRef);
-            const reviewEvidence = reviews.map((review) => ({
+            const reviewEvidence = [{
+              decision: "merged",
+              id: `merge-actor-${pr.number}`,
+              isMergeGate: pr.merged === true,
+              reviewerKind: context.payload.sender?.type === "Bot" ? "bot" : "human",
+              sourceRefs: [],
+              submittedAt: new Date(pr.merged_at).toISOString(),
+            }, ...reviews.map((review) => ({
               decision: review.state === "APPROVED" ? "approved" : review.state.toLowerCase(),
               id: String(review.id),
               isMergeGate: review.state === "APPROVED",
               reviewerKind: review.user?.type === "Bot" ? "bot" : "human",
               sourceRefs: sourceRefsInBody(review.body || ""),
               submittedAt: new Date(review.submitted_at).toISOString(),
-            }));
+            }))];
             for (const comment of comments) {
-              const sourceRefs = sourceRefsInBody(comment.body || "");
-              if (!comment.body || !comment.body.includes("## Equivalent Human Review Fallback") || sourceRefs.length === 0) {
+              if (!comment.body || !comment.body.includes("## Equivalent Human Review Fallback")) {
                 continue;
               }
-              const hasFallbackHumanReviewer = /^- Fallback human reviewer:\s*\S.+$/m.test(comment.body);
+              const hasStrictFallbackCleanupApproval =
+                /^- Fallback human reviewer:\s*\S.+$/m.test(comment.body) &&
+                /^- Cleanup metadata source reviewed before fallback approval:\s*\S.+$/m.test(comment.body);
+              if (!hasStrictFallbackCleanupApproval) {
+                continue;
+              }
               reviewEvidence.push({
                 decision: "fallback-approved",
                 id: `fallback-comment-${comment.id}`,
                 isMergeGate: true,
-                reviewerKind: hasFallbackHumanReviewer || comment.user?.type !== "Bot" ? "human" : "bot",
-                sourceRefs,
+                reviewerKind: "human",
+                sourceRefs: sourceRefsInBody(comment.body || ""),
                 submittedAt: new Date(comment.updated_at).toISOString(),
               });
             }
-            const reviewedCandidates = candidates.filter((candidate) =>
-              reviewEvidence.some((review) =>
-                review.reviewerKind === "human" &&
-                review.isMergeGate &&
-                ["approved", "fallback-approved"].includes(review.decision) &&
-                review.sourceRefs.includes(candidate.sourceRef) &&
-                Date.parse(review.submittedAt) <= Date.parse(pr.merged_at),
-              ),
-            );
-            if (reviewedCandidates.length !== 1) {
-              throw new Error("Expected exactly one reviewed cleanup metadata source from the PR body or a durable handoff comment.");
+            if (candidates.length !== 1) {
+              throw new Error("Expected exactly one cleanup metadata source from the PR body or a durable handoff comment.");
             }
-            const selected = reviewedCandidates[0];
+            const selected = candidates[0];
             const metadataReview = reviewEvidence
               .filter((review) =>
                 review.reviewerKind === "human" &&
                 review.isMergeGate &&
-                review.sourceRefs.includes(selected.sourceRef) &&
+                ["fallback-approved", "merged"].includes(review.decision) &&
                 Date.parse(review.submittedAt) <= Date.parse(pr.merged_at)
               )
               .sort((left, right) => left.submittedAt.localeCompare(right.submittedAt))
               .at(-1);
             if (!metadataReview) {
-              throw new Error("Missing human merge-gate review of the exact cleanup metadata source ref.");
+              throw new Error("Missing human merge-gate cleanup approval.");
             }
-            if (Date.parse(selected.sourceEvidence.updatedAt) > Date.parse(metadataReview.submittedAt)) {
-              throw new Error("Cleanup metadata source changed after required review point.");
+            if (Date.parse(selected.sourceEvidence.updatedAt) > Date.parse(pr.merged_at)) {
+              throw new Error("Cleanup metadata source changed after merge.");
+            }
+            if (metadataReview.decision !== "merged" && Date.parse(selected.sourceEvidence.updatedAt) > Date.parse(metadataReview.submittedAt)) {
+              throw new Error("Cleanup metadata source changed after fallback review.");
             }
             const storyPaths = selected.metadata.stories.map((storyPath) => ({
               storyId: storyIdFromPath(storyPath),

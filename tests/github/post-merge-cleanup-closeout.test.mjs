@@ -98,12 +98,16 @@ test("PR template records cleanup metadata and reviewer responsibility", async (
     /^## Post-Merge Cleanup$/m,
     /Cleanup metadata is a reviewed request, not standalone authority/i,
     /Reviewers confirm this metadata matches the reviewed story scope before merge/i,
-    /Confirm the exact cleanup metadata source ref before merge/i,
-    /corepack pnpm cleanup:validate-dry-run -- --print-source-ref/i,
+    /The human-controlled merge to `main` authorizes the cleanup metadata snapshot/i,
     /Automation-created cleanup pull requests are not created/i,
     /Post-merge cleanup:\s*\n\s*mode: single\s*\n\s*stories:\s*\n\s*- stories\/approved\/<STORY-ID>-<slug>\.yaml\s*\n\s*branches:\s*\n\s*- <head-branch>/i,
     /Post-merge cleanup:\s*\n\s*mode: parent\s*\n\s*stories:\s*\n\s*- stories\/approved\/<CHILD-A>\.yaml\s*\n\s*- stories\/approved\/<CHILD-B>\.yaml\s*\n\s*branches:\s*\n\s*- <parent-integration-branch>\s*\n\s*- <optional-substory-branch>/i,
   ]);
+  assert.doesNotMatch(
+    prTemplate,
+    /Confirm the exact cleanup metadata source ref before merge/i,
+  );
+  assert.doesNotMatch(prTemplate, /names the exact `pr-body:/i);
 });
 
 test("workflow docs make automation normal and manual fallback operational-only", async () => {
@@ -117,14 +121,18 @@ test("workflow docs make automation normal and manual fallback operational-only"
 
   assertMatchesAll(workflowDocs, [
     /Post-merge packet cleanup automation is the normal path after a reviewed story PR or parent PR merges/i,
-    /exact cleanup metadata source ref/i,
-    /handoff-comment:<comment-id>:<sha256>/i,
+    /human-controlled merge to `main` is the cleanup approval signal/i,
+    /computed metadata source ref is audit evidence/i,
     /Automation-created cleanup pull requests are not created/i,
     /Manual fallback is only for operational failure/i,
     /Manual edits beyond pure packet-completion output still use the normal PR and reviewer path/i,
     /After the parent PR merges to `main`, automation completes all included substories with `pnpm run packets:complete-many/i,
     /Branch deletion runs only after packet cleanup succeeds and never deletes protected, unrelated, or unmerged branches/i,
   ]);
+  assert.doesNotMatch(
+    workflowDocs,
+    /must reference the exact cleanup metadata source ref/i,
+  );
 });
 
 test("branch-protection docs preserve narrow cleanup bypass and normal PR gates", async () => {

@@ -322,8 +322,8 @@ function validateEvidenceBinding(options: {
       (review) =>
         review.reviewerKind === "human" &&
         review.isMergeGate &&
-        (review.decision === "approved" ||
-          review.decision === "fallback-approved"),
+        (review.decision === "fallback-approved" ||
+          review.decision === "merged"),
     )
     .filter(
       (review) =>
@@ -352,28 +352,17 @@ function validateEvidenceBinding(options: {
     "cleanup evidence review.submittedAt",
   );
 
-  const sourceRef = evidence.metadataSourceRef;
-  const requiredReferencesSource =
-    requiredReview.sourceRefs.includes(sourceRef);
-  if (!requiredReferencesSource) {
-    throw new Error(
-      "Required human merge-gate review must reference the exact metadata source.",
-    );
+  if (metadataUpdatedAtMs > mergedAtMs) {
+    throw new Error("Cleanup metadata source changed after merge.");
   }
 
-  if (metadataUpdatedAtMs > requiredReviewSubmittedAtMs) {
-    const laterReview = humanGateReviews.find(
-      (review) =>
-        parseCanonicalInstantMillis(
-          review.submittedAt,
-          "cleanup evidence review.submittedAt",
-        ) >= metadataUpdatedAtMs && review.sourceRefs.includes(sourceRef),
+  if (
+    requiredReview.decision !== "merged" &&
+    metadataUpdatedAtMs > requiredReviewSubmittedAtMs
+  ) {
+    throw new Error(
+      "Cleanup metadata source changed after fallback human review.",
     );
-    if (!laterReview) {
-      throw new Error(
-        "Metadata source changed after required review point without later human merge-gate review of the exact updated source.",
-      );
-    }
   }
 
   validateStoryAssociation({ evidence, metadata, stories });

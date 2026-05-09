@@ -175,6 +175,7 @@ export type WorkflowChangedFileInput = {
 export type WorkflowCleanupEvidenceInput = {
   changedFiles: WorkflowChangedFileInput[];
   defaultBranch: string;
+  eventSenderUserType?: string;
   issueComments: WorkflowIssueCommentInput[];
   pullRequest: WorkflowPullRequestInput;
   reviews: WorkflowReviewInput[];
@@ -192,49 +193,37 @@ export function buildWorkflowCleanupEvidence(
 ): CleanupEvidenceInput {
   const candidates = buildMetadataSourceCandidates(input);
   const reviewEvidence = buildReviewEvidence(input, candidates);
-  const reviewedCandidates = candidates.filter((candidate) =>
-    reviewEvidence.some(
-      (review) =>
-        review.reviewerKind === "human" &&
-        review.isMergeGate &&
-        (review.decision === "approved" ||
-          review.decision === "fallback-approved") &&
-        review.sourceRefs.includes(candidate.sourceRef),
-    ),
-  );
 
-  if (reviewedCandidates.length === 0) {
-    throw new Error(
-      "No reviewed cleanup metadata source references were found.",
-    );
+  if (candidates.length === 0) {
+    throw new Error("No cleanup metadata sources were found.");
   }
-  if (reviewedCandidates.length > 1) {
-    throw new Error("Ambiguous reviewed cleanup metadata sources were found.");
+  if (candidates.length > 1) {
+    throw new Error("Ambiguous cleanup metadata sources were found.");
   }
 
-  const selected = reviewedCandidates[0];
+  const selected = candidates[0];
   if (!selected) {
-    throw new Error(
-      "No reviewed cleanup metadata source references were found.",
-    );
+    throw new Error("No cleanup metadata sources were found.");
   }
   const requiredReview = findLatestHumanGateReview(
     reviewEvidence,
-    selected.sourceRef,
     input.pullRequest.mergedAt,
   );
   if (!requiredReview) {
-    throw new Error(
-      "No reviewed cleanup metadata source references were found.",
-    );
+    throw new Error("Missing human merge-gate cleanup approval.");
   }
   if (
     Date.parse(selected.source.updatedAt) >
-    Date.parse(requiredReview.submittedAt)
+    Date.parse(input.pullRequest.mergedAt)
   ) {
-    throw new Error(
-      "Cleanup metadata source changed after required review point.",
-    );
+    throw new Error("Cleanup metadata source changed after merge.");
+  }
+  if (
+    requiredReview.decision !== "merged" &&
+    Date.parse(selected.source.updatedAt) >
+      Date.parse(requiredReview.submittedAt)
+  ) {
+    throw new Error("Cleanup metadata source changed after fallback review.");
   }
 
   const stories = buildStoryBindings(selected.metadata.stories);
@@ -339,37 +328,41 @@ function buildReviewEvidence(
   input: WorkflowCleanupEvidenceInput,
   candidates: MetadataSourceCandidate[],
 ) {
-  const reviewEvidence: CleanupHumanReviewEvidence[] = input.reviews.map(
-    (review) => ({
-      decision:
-        review.state === "APPROVED" ? "approved" : review.state.toLowerCase(),
-      id: String(review.id),
-      isMergeGate: review.state === "APPROVED",
-      reviewerKind: review.userType === "Bot" ? "bot" : "human",
-      sourceRefs: sourceRefsInBody(review.body, candidates),
-      submittedAt: normalizeInstant(review.submittedAt),
-    }),
-  );
+  const reviewEvidence: CleanupHumanReviewEvidence[] = [
+    {
+      decision: "merged",
+      id: `merge-actor-${String(input.pullRequest.number)}`,
+      isMergeGate: input.pullRequest.merged,
+      reviewerKind: input.eventSenderUserType === "Bot" ? "bot" : "human",
+      sourceRefs: [],
+      submittedAt: normalizeInstant(input.pullRequest.mergedAt),
+    },
+    ...input.reviews.map(
+      (review): CleanupHumanReviewEvidence => ({
+        decision:
+          review.state === "APPROVED" ? "approved" : review.state.toLowerCase(),
+        id: String(review.id),
+        isMergeGate: review.state === "APPROVED",
+        reviewerKind: review.userType === "Bot" ? "bot" : "human",
+        sourceRefs: sourceRefsInBody(review.body, candidates),
+        submittedAt: normalizeInstant(review.submittedAt),
+      }),
+    ),
+  ];
 
   for (const comment of input.issueComments) {
     if (!comment.body.includes("## Equivalent Human Review Fallback")) {
       continue;
     }
-    const sourceRefs = sourceRefsInBody(comment.body, candidates);
-    if (sourceRefs.length === 0) {
+    if (!hasStrictFallbackCleanupApproval(comment.body)) {
       continue;
     }
-    const hasFallbackHumanReviewer =
-      /^- Fallback human reviewer:\s*\S.+$/m.test(comment.body);
     reviewEvidence.push({
       decision: "fallback-approved",
       id: `fallback-comment-${String(comment.id)}`,
       isMergeGate: true,
-      reviewerKind:
-        hasFallbackHumanReviewer || comment.userType !== "Bot"
-          ? "human"
-          : "bot",
-      sourceRefs,
+      reviewerKind: "human",
+      sourceRefs: sourceRefsInBody(comment.body, candidates),
       submittedAt: normalizeInstant(comment.updatedAt),
     });
   }
@@ -385,7 +378,6 @@ function sourceRefsInBody(body: string, candidates: MetadataSourceCandidate[]) {
 
 function findLatestHumanGateReview(
   reviews: CleanupHumanReviewEvidence[],
-  sourceRef: string,
   mergedAt: string,
 ) {
   const mergedAtMs = Date.parse(mergedAt);
@@ -394,9 +386,8 @@ function findLatestHumanGateReview(
       (review) =>
         review.reviewerKind === "human" &&
         review.isMergeGate &&
-        (review.decision === "approved" ||
-          review.decision === "fallback-approved") &&
-        review.sourceRefs.includes(sourceRef) &&
+        (review.decision === "fallback-approved" ||
+          review.decision === "merged") &&
         Date.parse(review.submittedAt) <= mergedAtMs,
     )
     .sort((left, right) => left.submittedAt.localeCompare(right.submittedAt))
@@ -412,6 +403,15 @@ function buildStoryBindings(storyPaths: string[]) {
       storyPath,
     };
   });
+}
+
+function hasStrictFallbackCleanupApproval(body: string) {
+  return (
+    /^- Fallback human reviewer:\s*\S.+$/m.test(body) &&
+    /^- Cleanup metadata source reviewed before fallback approval:\s*\S.+$/m.test(
+      body,
+    )
+  );
 }
 
 function buildParentLifecycle(options: {

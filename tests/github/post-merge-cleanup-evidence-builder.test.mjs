@@ -15,7 +15,7 @@ const metadataSource = `Post-merge cleanup:
 const metadataHash = sha256(metadataSource);
 const handoffRef = `handoff-comment:900:${metadataHash}`;
 
-test("workflow evidence builder selects a reviewed durable handoff comment source", () => {
+test("workflow evidence builder selects a durable handoff comment source on human merge", () => {
   const evidence = buildWorkflowCleanupEvidence(buildFixtureInputs());
 
   assert.equal(evidence.metadataSourceRef, handoffRef);
@@ -28,7 +28,18 @@ test("workflow evidence builder selects a reviewed durable handoff comment sourc
   });
   assert.deepEqual(
     evidence.reviews.find((review) => review.id === "101")?.sourceRefs,
-    [handoffRef],
+    [],
+  );
+  assert.deepEqual(
+    evidence.reviews.find((review) => review.id === "merge-actor-700"),
+    {
+      decision: "merged",
+      id: "merge-actor-700",
+      isMergeGate: true,
+      reviewerKind: "human",
+      sourceRefs: [],
+      submittedAt: "2026-01-01T13:00:00.000Z",
+    },
   );
 });
 
@@ -78,39 +89,38 @@ test("workflow evidence builder can derive parent lifecycle from the PR body", (
 test("workflow evidence builder rejects PR body metadata changed after review", () => {
   const inputs = buildFixtureInputs();
   inputs.pullRequest.body = metadataSource;
-  inputs.pullRequest.updatedAt = "2026-01-01T12:30:00.000Z";
+  inputs.pullRequest.updatedAt = "2026-01-01T13:30:00.000Z";
   inputs.issueComments.shift();
-  inputs.reviews[0].body = `Approved. Confirmed cleanup metadata source pr-body:pr-700-body:${metadataHash}.`;
 
   assert.throws(
     () => buildWorkflowCleanupEvidence(inputs),
-    /Cleanup metadata source changed after required review point/,
+    /Cleanup metadata source changed after merge/,
   );
 });
 
-test("workflow evidence builder rejects unreferenced handoff cleanup comments", () => {
+test("workflow evidence builder rejects ambiguous cleanup metadata sources", () => {
   const inputs = buildFixtureInputs();
-  inputs.reviews[0].body = "Approved without exact cleanup metadata source.";
+  inputs.pullRequest.body = metadataSource;
 
   assert.throws(
     () => buildWorkflowCleanupEvidence(inputs),
-    /No reviewed cleanup metadata source references were found/,
+    /Ambiguous cleanup metadata sources/,
   );
 });
 
-test("workflow evidence builder rejects handoff comments changed after review", () => {
+test("workflow evidence builder rejects handoff comments changed after merge", () => {
   const inputs = buildFixtureInputs();
-  inputs.issueComments[0].updatedAt = "2026-01-01T12:30:00.000Z";
+  inputs.issueComments[0].updatedAt = "2026-01-01T13:30:00.000Z";
 
   assert.throws(
     () => buildWorkflowCleanupEvidence(inputs),
-    /changed after required review point/,
+    /Cleanup metadata source changed after merge/,
   );
 });
 
-test("workflow evidence builder rejects parent lifecycle evidence changed after review", () => {
+test("workflow evidence builder rejects parent lifecycle evidence changed after merge", () => {
   const inputs = buildFixtureInputs();
-  inputs.issueComments[1].updatedAt = "2026-01-01T12:30:00.000Z";
+  inputs.issueComments[1].updatedAt = "2026-01-01T13:30:00.000Z";
 
   assert.throws(
     () => buildWorkflowCleanupEvidence(inputs),
@@ -118,10 +128,10 @@ test("workflow evidence builder rejects parent lifecycle evidence changed after 
   );
 });
 
-test("workflow evidence builder rejects later duplicate parent lifecycle evidence", () => {
+test("workflow evidence builder rejects later duplicate parent lifecycle evidence after merge", () => {
   const inputs = buildFixtureInputs();
   inputs.pullRequest.body = renderParentLifecycleEvidence();
-  inputs.issueComments[1].updatedAt = "2026-01-01T12:30:00.000Z";
+  inputs.issueComments[1].updatedAt = "2026-01-01T13:30:00.000Z";
 
   assert.throws(
     () => buildWorkflowCleanupEvidence(inputs),
@@ -131,12 +141,13 @@ test("workflow evidence builder rejects later duplicate parent lifecycle evidenc
 
 test("workflow evidence builder accepts equivalent fallback comments with a named human reviewer", () => {
   const inputs = buildFixtureInputs();
+  inputs.eventSenderUserType = "Bot";
   inputs.reviews = [];
   inputs.issueComments.push({
     body: `## Equivalent Human Review Fallback
 
 - Fallback human reviewer: reviewer-login
-- Exact cleanup metadata source ref confirmed before fallback approval (\`pr-body:<source-id>:<sha256>\` or \`handoff-comment:<comment-id>:<sha256>\`): ${handoffRef}
+- Cleanup metadata source reviewed before fallback approval: yes, exact cleanup metadata block matched story scope
 `,
     createdAt: "2026-01-01T12:00:00.000Z",
     id: 902,
@@ -151,7 +162,71 @@ test("workflow evidence builder accepts equivalent fallback comments with a name
 
   assert.equal(fallbackReview?.reviewerKind, "human");
   assert.equal(fallbackReview?.decision, "fallback-approved");
-  assert.deepEqual(fallbackReview?.sourceRefs, [handoffRef]);
+  assert.deepEqual(fallbackReview?.sourceRefs, []);
+});
+
+test("workflow evidence builder rejects bot-only merge evidence", () => {
+  const inputs = buildFixtureInputs();
+  inputs.eventSenderUserType = "Bot";
+  inputs.reviews = [];
+
+  assert.throws(
+    () => buildWorkflowCleanupEvidence(inputs),
+    /Missing human merge-gate cleanup approval/,
+  );
+});
+
+test("workflow evidence builder rejects bot merge with prior human approval but no fallback", () => {
+  const inputs = buildFixtureInputs();
+  inputs.eventSenderUserType = "Bot";
+
+  assert.throws(
+    () => buildWorkflowCleanupEvidence(inputs),
+    /Missing human merge-gate cleanup approval/,
+  );
+});
+
+test("workflow evidence builder rejects fallback comments missing cleanup metadata confirmation", () => {
+  const inputs = buildFixtureInputs();
+  inputs.eventSenderUserType = "Bot";
+  inputs.reviews = [];
+  inputs.issueComments.push({
+    body: `## Equivalent Human Review Fallback
+
+- Fallback human reviewer: reviewer-login
+`,
+    createdAt: "2026-01-01T12:00:00.000Z",
+    id: 902,
+    updatedAt: "2026-01-01T12:00:00.000Z",
+    userType: "Bot",
+  });
+
+  assert.throws(
+    () => buildWorkflowCleanupEvidence(inputs),
+    /Missing human merge-gate cleanup approval/,
+  );
+});
+
+test("workflow evidence builder rejects fallback comments with blank cleanup metadata confirmation", () => {
+  const inputs = buildFixtureInputs();
+  inputs.eventSenderUserType = "Bot";
+  inputs.reviews = [];
+  inputs.issueComments.push({
+    body: `## Equivalent Human Review Fallback
+
+- Fallback human reviewer: reviewer-login
+- Cleanup metadata source reviewed before fallback approval:
+`,
+    createdAt: "2026-01-01T12:00:00.000Z",
+    id: 902,
+    updatedAt: "2026-01-01T12:00:00.000Z",
+    userType: "Bot",
+  });
+
+  assert.throws(
+    () => buildWorkflowCleanupEvidence(inputs),
+    /Missing human merge-gate cleanup approval/,
+  );
 });
 
 test("workflow evidence builder rejects parent cleanup without substory review evidence", () => {
@@ -175,6 +250,7 @@ function buildFixtureInputs() {
       { filename: "agent-packets/INF-602.md" },
     ],
     defaultBranch: "main",
+    eventSenderUserType: "User",
     issueComments: [
       {
         body: metadataSource,
@@ -204,7 +280,7 @@ function buildFixtureInputs() {
     },
     reviews: [
       {
-        body: `Approved. Confirmed cleanup metadata source ${handoffRef}.`,
+        body: "Approved.",
         id: 101,
         state: "APPROVED",
         submittedAt: "2026-01-01T12:00:00.000Z",

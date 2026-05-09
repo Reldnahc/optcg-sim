@@ -279,14 +279,17 @@ test("pull request template declares reviewed post-merge cleanup metadata", asyn
     /^## Post-Merge Cleanup$/m,
     /Cleanup metadata is a reviewed request, not standalone authority/i,
     /Reviewers confirm this metadata matches the reviewed story scope before merge/i,
-    /Confirm the exact cleanup metadata source ref before merge/i,
-    /pr-body:<source-id>:<sha256>/i,
-    /handoff-comment:<comment-id>:<sha256>/i,
+    /The human-controlled merge to `main` authorizes the cleanup metadata snapshot/i,
     /Single-story PRs:/i,
     /Post-merge cleanup:\s*\n\s*mode: single\s*\n\s*stories:\s*\n\s*- stories\/approved\/<STORY-ID>-<slug>\.yaml\s*\n\s*branches:\s*\n\s*- <head-branch>/i,
     /Parent PRs:/i,
     /Post-merge cleanup:\s*\n\s*mode: parent\s*\n\s*stories:\s*\n\s*- stories\/approved\/<CHILD-A>\.yaml\s*\n\s*- stories\/approved\/<CHILD-B>\.yaml\s*\n\s*branches:\s*\n\s*- <parent-integration-branch>\s*\n\s*- <optional-substory-branch>/i,
   ]);
+  assert.doesNotMatch(
+    prTemplate,
+    /Confirm the exact cleanup metadata source ref before merge/i,
+  );
+  assert.doesNotMatch(prTemplate, /names the exact `pr-body:/i);
 });
 
 test("workflow docs describe automated packet cleanup policy and fallback boundaries", async () => {
@@ -305,13 +308,17 @@ test("workflow docs describe automated packet cleanup policy and fallback bounda
     /automation-created cleanup pull requests are not created/i,
     /manual edits beyond pure packet-completion output still use the normal PR and reviewer path/i,
     /cleanup metadata is a reviewed request, not standalone authority/i,
-    /exact cleanup metadata source ref/i,
+    /computed metadata source ref is audit evidence/i,
     /durable handoff comment/i,
     /bind cleanup metadata to reviewed PR evidence and trusted checked-in story and packet state/i,
     /direct cleanup commits are allowed only for exact packet-completion command output after repo verification passes/i,
     /branch deletion runs only after packet cleanup succeeds/i,
     /never deletes protected, unrelated, or unmerged branches/i,
   ]);
+  assert.doesNotMatch(
+    workflowGuidance,
+    /must reference the exact cleanup metadata source ref/i,
+  );
 });
 
 test("root agent instructions treat manual packet completion as automation fallback", async () => {
