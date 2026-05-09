@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Extend committed story validation so an approved parent story fails validation
   when all of its declared child stories are already done, preventing completed
