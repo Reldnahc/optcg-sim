@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Make post-merge parent cleanup close the reviewed non-packetized parent story
   after completing its packetized child stories so cleanup verification does not
