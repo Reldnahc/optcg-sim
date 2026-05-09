@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-027E.md",
-      "storyId": "INF-027E",
-      "storyPath": "stories/approved/INF-027E-add-privileged-direct-packet-cleanup-push.yaml",
-      "storySha256": "43ccff61f706605a6d42ef82afec0aad8a70851a17df0cb6cebe99257e252ae1"
+      "packetPath": "agent-packets/INF-027F.md",
+      "storyId": "INF-027F",
+      "storyPath": "stories/approved/INF-027F-add-safe-merged-branch-cleanup.yaml",
+      "storySha256": "73eed63660ad0054bfb5f46df4f3ed2c754ec657c4e42109c56f86afdd98715c"
     }
   ],
   "version": 1

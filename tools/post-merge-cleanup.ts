@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 import type * as PacketLifecycle from "./agent-packet-lifecycle.js";
+import type * as BranchCleanup from "./post-merge-cleanup/branch-cleanup.js";
 import type * as Executor from "./post-merge-cleanup/executor.js";
 import type * as Metadata from "./post-merge-cleanup/metadata.js";
 import type * as Validator from "./post-merge-cleanup/validator.js";
@@ -19,14 +20,21 @@ const { findRepoRoot, resolveCliPath, sha256 }: typeof PacketLifecycle =
 const { parseCleanupMetadataBlock }: typeof Metadata = createRequire(
   import.meta.url,
 )("./post-merge-cleanup/metadata.ts") as typeof Metadata;
+const { evaluateBranchCleanup, renderBranchCleanupLog }: typeof BranchCleanup =
+  createRequire(import.meta.url)(
+    "./post-merge-cleanup/branch-cleanup.ts",
+  ) as typeof BranchCleanup;
 const { executePacketCleanupPlan, finalizePacketCleanupPlan }: typeof Executor =
   createRequire(import.meta.url)(
     "./post-merge-cleanup/executor.ts",
   ) as typeof Executor;
-const { buildBoundCleanupPlan, buildCleanupDryRunPlan }: typeof Validator =
-  createRequire(import.meta.url)(
-    "./post-merge-cleanup/validator.ts",
-  ) as typeof Validator;
+const {
+  buildBoundCleanupPlan,
+  buildCleanupDryRunPlan,
+  validateBoundCleanupPlanArtifact,
+}: typeof Validator = createRequire(import.meta.url)(
+  "./post-merge-cleanup/validator.ts",
+) as typeof Validator;
 
 async function main() {
   const args = process.argv.slice(2);
@@ -35,6 +43,51 @@ async function main() {
     const repoRoot = findRepoRoot();
     const executePlanFile = parseSinglePathArg(args, "--execute-plan-file");
     const finalizePlanFile = parseSinglePathArg(args, "--finalize-plan-file");
+    const branchCleanupPlanFile = parseSinglePathArg(
+      args,
+      "--branch-cleanup-plan-file",
+    );
+    const branchCleanupStateFile = parseSinglePathArg(
+      args,
+      "--branch-cleanup-state-json-file",
+    );
+    const branchCleanupOutputFile = parseSinglePathArg(
+      args,
+      "--branch-cleanup-output-file",
+    );
+    if (branchCleanupPlanFile !== null || branchCleanupStateFile !== null) {
+      if (branchCleanupPlanFile === null || branchCleanupStateFile === null) {
+        throw new Error(
+          "Branch cleanup requires --branch-cleanup-plan-file and --branch-cleanup-state-json-file.",
+        );
+      }
+      const plan = validateBoundCleanupPlanArtifact(
+        JSON.parse(await readFile(branchCleanupPlanFile, "utf8")) as unknown,
+      );
+      const state = parseBranchCleanupState(
+        JSON.parse(await readFile(branchCleanupStateFile, "utf8")) as unknown,
+      );
+      const decisions = evaluateBranchCleanup({
+        branchStates: state.branchStates,
+        defaultBranch: plan.mergedPullRequest.baseBranch,
+        mergedPrHeadBranch: state.mergedPrHeadBranch,
+        packetCleanupSucceeded: state.packetCleanupSucceeded,
+        requestedBranches: plan.branches,
+      });
+      const output = {
+        decisions,
+        log: renderBranchCleanupLog(decisions),
+      };
+      const outputJson = `${JSON.stringify(output, null, 2)}\n`;
+      if (branchCleanupOutputFile !== null) {
+        await mkdir(path.dirname(branchCleanupOutputFile), { recursive: true });
+        await writeFile(branchCleanupOutputFile, outputJson);
+      } else {
+        process.stdout.write(outputJson);
+      }
+      return;
+    }
+
     if (executePlanFile !== null || finalizePlanFile !== null) {
       if (executePlanFile !== null && finalizePlanFile !== null) {
         throw new Error(
@@ -95,6 +148,71 @@ async function main() {
     process.stderr.write(`${message}\n`);
     process.exitCode = 1;
   }
+}
+
+function parseBranchCleanupState(value: unknown) {
+  const root = requireRecord(value, "branch cleanup state");
+  const packetCleanupSucceeded = root["packetCleanupSucceeded"];
+  const mergedPrHeadBranch = root["mergedPrHeadBranch"];
+  const branchStates = root["branchStates"];
+  if (typeof packetCleanupSucceeded !== "boolean") {
+    throw new Error(
+      "Branch cleanup state packetCleanupSucceeded must be boolean.",
+    );
+  }
+  if (typeof mergedPrHeadBranch !== "string") {
+    throw new Error("Branch cleanup state mergedPrHeadBranch must be string.");
+  }
+  if (!Array.isArray(branchStates)) {
+    throw new Error("Branch cleanup state branchStates must be an array.");
+  }
+  return {
+    branchStates: branchStates.map((entry) => parseBranchState(entry)),
+    mergedPrHeadBranch,
+    packetCleanupSucceeded,
+  };
+}
+
+function parseBranchState(value: unknown): BranchCleanup.BranchCleanupState {
+  const root = requireRecord(value, "branch cleanup branch state");
+  const name = root["name"];
+  const protectedBranch = root["protected"];
+  const aheadByDefault = root["aheadByDefault"];
+  const associatedWithCleanup = root["associatedWithCleanup"];
+  const deletionError = root["deletionError"];
+  if (typeof name !== "string") {
+    throw new Error("Branch cleanup branch state name must be string.");
+  }
+  if (typeof protectedBranch !== "boolean") {
+    throw new Error("Branch cleanup branch state protected must be boolean.");
+  }
+  if (
+    typeof aheadByDefault !== "number" ||
+    !Number.isSafeInteger(aheadByDefault)
+  ) {
+    throw new Error(
+      "Branch cleanup branch state aheadByDefault must be integer.",
+    );
+  }
+  const state: BranchCleanup.BranchCleanupState = {
+    aheadByDefault,
+    name,
+    protected: protectedBranch,
+  };
+  if (typeof associatedWithCleanup === "boolean") {
+    state.associatedWithCleanup = associatedWithCleanup;
+  }
+  if (typeof deletionError === "string") {
+    state.deletionError = deletionError;
+  }
+  return state;
+}
+
+function requireRecord(value: unknown, label: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${label} must be an object.`);
+  }
+  return value as Record<string, unknown>;
 }
 
 function parseSinglePathArg(args: string[], flag: string) {
