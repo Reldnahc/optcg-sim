@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { CardId } from "@optcg/types";
 import { describe, expect, it } from "vitest";
 
 import { createPoneglyphClient } from "./poneglyph-client.js";
@@ -26,6 +27,10 @@ type FakeResponse = {
 type BatchRequestBody = {
   card_numbers?: string[];
 };
+
+function toCardId(value: string): CardId {
+  return value as CardId;
+}
 
 async function readJsonFixture(relativePath: string): Promise<unknown> {
   const source = await readFile(path.join(repoRoot, relativePath), "utf8");
@@ -73,9 +78,23 @@ describe("Poneglyph client", () => {
       fetch: () => Promise.resolve(okJson(fixture)),
     });
 
-    await expect(client.getCard("OP01-060")).resolves.toMatchObject({
+    await expect(client.getCard(toCardId("OP01-060"))).resolves.toMatchObject({
       card_number: "OP01-060",
     });
+  });
+
+  it("fails closed when a single-card response has a different card number", async () => {
+    const fixture = validatePoneglyphCardDetail(
+      await readJsonFixture("fixtures/poneglyph/cards/OP05-091.rebecca.json"),
+    );
+    const client = createPoneglyphClient({
+      baseUrl: "https://poneglyph.test",
+      fetch: () => Promise.resolve(okJson(fixture)),
+    });
+
+    await expect(client.getCard(toCardId("OP01-060"))).rejects.toThrow(
+      /card_number mismatch.*OP01-060.*OP05-091/,
+    );
   });
 
   it("fails closed on non-2xx responses", async () => {
@@ -89,7 +108,7 @@ describe("Poneglyph client", () => {
         }),
     });
 
-    await expect(client.getCard("OP01-060")).rejects.toThrow(
+    await expect(client.getCard(toCardId("OP01-060"))).rejects.toThrow(
       /Poneglyph request failed.*503/,
     );
   });
@@ -105,7 +124,7 @@ describe("Poneglyph client", () => {
         }),
     });
 
-    await expect(client.getCard("OP01-060")).rejects.toThrow(
+    await expect(client.getCard(toCardId("OP01-060"))).rejects.toThrow(
       /Poneglyph response was not valid JSON/,
     );
   });
@@ -116,7 +135,7 @@ describe("Poneglyph client", () => {
       fetch: () => Promise.resolve(okJson({ card_number: "OP01-060" })),
     });
 
-    await expect(client.getCard("OP01-060")).rejects.toThrow(
+    await expect(client.getCard(toCardId("OP01-060"))).rejects.toThrow(
       /Invalid Poneglyph card detail/,
     );
   });
@@ -127,8 +146,23 @@ describe("Poneglyph client", () => {
       fetch: () => Promise.resolve(okJson({ data: {}, missing: ["OP01-060"] })),
     });
 
-    await expect(client.getCardsBatch(["OP01-060"])).rejects.toThrow(
+    await expect(client.getCardsBatch([toCardId("OP01-060")])).rejects.toThrow(
       /missing requested card IDs: OP01-060/,
+    );
+  });
+
+  it("fails closed when a batch detail has a different card number than its key", async () => {
+    const fixture = validatePoneglyphCardDetail(
+      await readJsonFixture("fixtures/poneglyph/cards/OP05-091.rebecca.json"),
+    );
+    const client = createPoneglyphClient({
+      baseUrl: "https://poneglyph.test",
+      fetch: () =>
+        Promise.resolve(okJson({ data: { "OP01-060": fixture }, missing: [] })),
+    });
+
+    await expect(client.getCardsBatch([toCardId("OP01-060")])).rejects.toThrow(
+      /card_number mismatch.*OP01-060.*OP05-091/,
     );
   });
 
@@ -159,10 +193,9 @@ describe("Poneglyph client", () => {
       },
     });
 
-    const response = await client.getCardsBatch([
-      ...cardNumbers,
-      cardNumbers[0] ?? "OP01-001",
-    ]);
+    const response = await client.getCardsBatch(
+      [...cardNumbers, cardNumbers[0] ?? "OP01-001"].map(toCardId),
+    );
 
     expect(requests).toHaveLength(2);
     expect(

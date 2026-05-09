@@ -1,4 +1,4 @@
-import type { PoneglyphCardDetail } from "@optcg/types";
+import type { CardId, PoneglyphCardDetail } from "@optcg/types";
 import { z } from "zod";
 
 import { validatePoneglyphCardDetail } from "./poneglyph-schema.js";
@@ -22,11 +22,11 @@ export type PoneglyphFetch = (
 
 export type PoneglyphClient = {
   getCard: (
-    cardNumber: string,
+    cardNumber: CardId,
     options?: { lang?: string },
   ) => Promise<PoneglyphCardDetail>;
   getCardsBatch: (
-    cardNumbers: string[],
+    cardNumbers: CardId[],
     options?: { lang?: string },
   ) => Promise<{
     data: Record<string, PoneglyphCardDetail>;
@@ -57,7 +57,10 @@ export function createPoneglyphClient(
           lang: requestOptions?.lang,
         }),
       );
-      return validatePoneglyphCardDetail(response);
+      return validateRequestedCardDetail(
+        cardNumber,
+        validatePoneglyphCardDetail(response),
+      );
     },
 
     async getCardsBatch(cardNumbers, requestOptions) {
@@ -99,7 +102,10 @@ export function createPoneglyphClient(
             );
           }
 
-          orderedData[cardNumber] = validatePoneglyphCardDetail(detail);
+          orderedData[cardNumber] = validateRequestedCardDetail(
+            cardNumber,
+            validatePoneglyphCardDetail(detail),
+          );
         }
       }
 
@@ -143,7 +149,20 @@ function buildUrl(
   return url.toString();
 }
 
-function uniqueInOrder(values: string[]): string[] {
+function validateRequestedCardDetail(
+  requestedCardNumber: CardId,
+  detail: PoneglyphCardDetail,
+): PoneglyphCardDetail {
+  if (detail.card_number !== requestedCardNumber) {
+    throw new Error(
+      `Poneglyph card_number mismatch for ${requestedCardNumber}: received ${detail.card_number}`,
+    );
+  }
+
+  return detail;
+}
+
+function uniqueInOrder(values: CardId[]): CardId[] {
   return [...new Set(values)];
 }
 
