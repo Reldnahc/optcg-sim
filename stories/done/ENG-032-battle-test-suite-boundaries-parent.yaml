@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Split oversized battle test suites by existing battle behavior area without
   changing battle legality, timing, damage, Blocker, Counter, Banish, K.O.,

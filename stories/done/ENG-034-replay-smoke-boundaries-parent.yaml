@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Split oversized local replay smoke tests into focused fixture suites without
   changing CLI smoke scripts, replay fixtures, hash expectations, replay scope,

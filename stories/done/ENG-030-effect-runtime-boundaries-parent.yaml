@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Split oversized effect runtime implementation and test files into focused
   modules without changing engine behavior, public contracts, event output,

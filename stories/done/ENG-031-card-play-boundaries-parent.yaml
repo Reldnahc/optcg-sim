@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Split oversized card-play implementation and test files into focused modules
   without changing play-card legality, payment, placement, event, state hash,

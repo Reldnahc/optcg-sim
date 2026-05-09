@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: medium
-status: approved
+status: done
 summary: >
   Split oversized effect runtime trigger-queueing and queue-processing modules
   into focused implementation and test files without changing trigger

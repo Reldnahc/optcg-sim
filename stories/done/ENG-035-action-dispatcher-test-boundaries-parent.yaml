@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: verification
 priority: medium
-status: approved
+status: done
 summary: >
   Split oversized action dispatcher tests into focused suites without changing
   action dispatch, legal action generation, pending-decision routing,
