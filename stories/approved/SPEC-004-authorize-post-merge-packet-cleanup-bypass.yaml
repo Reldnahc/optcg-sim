@@ -16,9 +16,11 @@ summary: >
   policy, and safe branch deletion constraints.
 story_boundary: >
   Own only the specification and policy-document authority needed to unblock
-  post-merge packet cleanup automation. Do not add GitHub Actions, parser code,
-  branch deletion code, cleanup tokens, remote repository settings, packet
-  lifecycle command behavior changes, or implementation workflow code.
+  post-merge packet cleanup automation, plus the checked-in generated follow-up
+  INF story candidates that record the reviewed implementation decomposition.
+  Do not add GitHub Actions, parser code, branch deletion code, cleanup tokens,
+  remote repository settings, packet lifecycle command behavior changes, or
+  implementation workflow code.
 allowed_touch_points:
   - specs/23-repo-tooling-and-enforcement.md
   - specs/27-spec-driven-story-generation-workflow.md
@@ -31,6 +33,7 @@ allowed_touch_points:
   - .github/branch-protection.md
   - tests/contracts/spec-authority-gates.test.mjs
   - tests/github/review-workflow.test.mjs
+  - stories/generated/INF-027*.yaml
   - stories/generated/SPEC-004-authorize-post-merge-packet-cleanup-bypass.yaml
   - stories/approved/SPEC-004-authorize-post-merge-packet-cleanup-bypass.yaml
   - agent-packets/SPEC-004.md
@@ -56,6 +59,7 @@ scope:
   - preserve manual fallback only for operational failure
   - add branch deletion safety authority only after successful packet cleanup and only for associated merged, unprotected branches
   - update branch-protection policy docs to name the required narrow bypass setting and state when remote settings must be applied outside the repo
+  - check in the reviewed generated INF-027 parent and child story candidates that split follow-up implementation into spec authority, docs, local validation, PR evidence binding, non-privileged preflight, privileged push, and safe branch cleanup stories
 non_scope:
   - adding the GitHub Actions workflow
   - implementing metadata parser or PR evidence binding code
@@ -67,6 +71,7 @@ non_scope:
   - broad branch-protection redesign
   - allowing arbitrary bot pushes to main
   - allowing arbitrary GitHub Actions workflows to bypass branch protection
+  - approving or implementing the generated INF-027 follow-up stories before SPEC-004 lands
 dependencies: []
 acceptance_criteria:
   - specs explicitly preserve human review and required checks for ordinary protected-branch changes
@@ -81,6 +86,7 @@ acceptance_criteria:
   - specs and branch-protection docs allow safe branch deletion only after packet cleanup succeeds and only for associated merged, unprotected branches
   - contract/spec authority tests pin the cleanup bypass, metadata binding, no-cleanup-PR, and branch deletion safety wording
   - generated spec metadata is updated
+  - generated INF-027 follow-up story candidates validate and remain generated, not approved
 required_tests:
   - update `tests/contracts/spec-authority-gates.test.mjs` to require the cleanup bypass and metadata binding authority wording
   - update `tests/github/review-workflow.test.mjs` to require branch-protection documentation for the exact cleanup actor/workflow and ordinary PR gate preservation
@@ -88,6 +94,7 @@ required_tests:
   - run `corepack pnpm run specs:verify-metadata`
   - run `corepack pnpm run test:contracts`
   - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
   - run `corepack pnpm run typecheck`
   - run `corepack pnpm run verify`
 repo_rules:

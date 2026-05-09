@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SPEC-004 -->
 <!-- agent-packet:story-path stories/approved/SPEC-004-authorize-post-merge-packet-cleanup-bypass.yaml -->
-<!-- agent-packet:story-sha256 b536b252f3d4da2048354addc1c27abf0df147e24364afb2fd68f486c52ff7fc -->
+<!-- agent-packet:story-sha256 08f764e6f7886b8b81cbba0de075f57675475438a07b50e176412b0bdf21b7f8 -->
 
 # Story Packet
 
@@ -245,7 +245,7 @@ Lint, formatting, and merge-gate verification are mandatory, and CI must fail wh
 
 ## Story Boundary
 
-Own only the specification and policy-document authority needed to unblock post-merge packet cleanup automation. Do not add GitHub Actions, parser code, branch deletion code, cleanup tokens, remote repository settings, packet lifecycle command behavior changes, or implementation workflow code.
+Own only the specification and policy-document authority needed to unblock post-merge packet cleanup automation, plus the checked-in generated follow-up INF story candidates that record the reviewed implementation decomposition. Do not add GitHub Actions, parser code, branch deletion code, cleanup tokens, remote repository settings, packet lifecycle command behavior changes, or implementation workflow code.
 
 ## Scope
 
@@ -261,6 +261,7 @@ Own only the specification and policy-document authority needed to unblock post-
 - preserve manual fallback only for operational failure
 - add branch deletion safety authority only after successful packet cleanup and only for associated merged, unprotected branches
 - update branch-protection policy docs to name the required narrow bypass setting and state when remote settings must be applied outside the repo
+- check in the reviewed generated INF-027 parent and child story candidates that split follow-up implementation into spec authority, docs, local validation, PR evidence binding, non-privileged preflight, privileged push, and safe branch cleanup stories
 
 ## Out of Scope
 
@@ -274,6 +275,7 @@ Own only the specification and policy-document authority needed to unblock post-
 - broad branch-protection redesign
 - allowing arbitrary bot pushes to main
 - allowing arbitrary GitHub Actions workflows to bypass branch protection
+- approving or implementing the generated INF-027 follow-up stories before SPEC-004 lands
 
 ## Allowed Touch Points
 
@@ -289,6 +291,7 @@ Own only the specification and policy-document authority needed to unblock post-
 - .github/branch-protection.md
 - tests/contracts/spec-authority-gates.test.mjs
 - tests/github/review-workflow.test.mjs
+- stories/generated/INF-027*.yaml
 - stories/generated/SPEC-004-authorize-post-merge-packet-cleanup-bypass.yaml
 - stories/approved/SPEC-004-authorize-post-merge-packet-cleanup-bypass.yaml
 - agent-packets/SPEC-004.md
@@ -316,6 +319,7 @@ Own only the specification and policy-document authority needed to unblock post-
 - run `corepack pnpm run specs:verify-metadata`
 - run `corepack pnpm run test:contracts`
 - run `corepack pnpm run packets:verify`
+- run `corepack pnpm run stories:validate`
 - run `corepack pnpm run typecheck`
 - run `corepack pnpm run verify`
 
@@ -340,6 +344,7 @@ Own only the specification and policy-document authority needed to unblock post-
 - specs and branch-protection docs allow safe branch deletion only after packet cleanup succeeds and only for associated merged, unprotected branches
 - contract/spec authority tests pin the cleanup bypass, metadata binding, no-cleanup-PR, and branch deletion safety wording
 - generated spec metadata is updated
+- generated INF-027 follow-up story candidates validate and remain generated, not approved
 
 ## Ambiguity Rule
 
