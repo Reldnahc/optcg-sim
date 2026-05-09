@@ -105,6 +105,14 @@ function validateEvidenceBinding(options: {
   ) {
     throw new Error("Handoff metadata source must be durable.");
   }
+  const mergedAtMs = parseCanonicalInstantMillis(
+    evidence.mergedAt,
+    "cleanup evidence mergedAt",
+  );
+  const metadataUpdatedAtMs = parseCanonicalInstantMillis(
+    evidence.metadataSource.updatedAt,
+    "cleanup evidence metadataSource.updatedAt",
+  );
 
   const humanGateReviews = evidence.reviews
     .filter(
@@ -114,12 +122,32 @@ function validateEvidenceBinding(options: {
         (review.decision === "approved" ||
           review.decision === "fallback-approved"),
     )
-    .filter((review) => review.submittedAt <= evidence.mergedAt)
-    .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+    .filter(
+      (review) =>
+        parseCanonicalInstantMillis(
+          review.submittedAt,
+          "cleanup evidence review.submittedAt",
+        ) <= mergedAtMs,
+    )
+    .sort(
+      (a, b) =>
+        parseCanonicalInstantMillis(
+          a.submittedAt,
+          "cleanup evidence review.submittedAt",
+        ) -
+        parseCanonicalInstantMillis(
+          b.submittedAt,
+          "cleanup evidence review.submittedAt",
+        ),
+    );
   const requiredReview = humanGateReviews.at(-1);
   if (!requiredReview) {
     throw new Error("Missing required human merge-gate review before merge.");
   }
+  const requiredReviewSubmittedAtMs = parseCanonicalInstantMillis(
+    requiredReview.submittedAt,
+    "cleanup evidence review.submittedAt",
+  );
 
   const sourceRef = evidence.metadataSourceRef;
   const requiredReferencesSource =
@@ -130,11 +158,13 @@ function validateEvidenceBinding(options: {
     );
   }
 
-  if (evidence.metadataSource.updatedAt > requiredReview.submittedAt) {
+  if (metadataUpdatedAtMs > requiredReviewSubmittedAtMs) {
     const laterReview = humanGateReviews.find(
       (review) =>
-        review.submittedAt >= evidence.metadataSource.updatedAt &&
-        review.sourceRefs.includes(sourceRef),
+        parseCanonicalInstantMillis(
+          review.submittedAt,
+          "cleanup evidence review.submittedAt",
+        ) >= metadataUpdatedAtMs && review.sourceRefs.includes(sourceRef),
     );
     if (!laterReview) {
       throw new Error(
@@ -145,7 +175,11 @@ function validateEvidenceBinding(options: {
 
   validateStoryAssociation({ evidence, metadata, stories });
   if (metadata.mode === "parent") {
-    validateParentEvidence({ evidence, requiredReview, stories });
+    validateParentEvidence({
+      evidence,
+      requiredReviewSubmittedAtMs,
+      stories,
+    });
   }
   return requiredReview;
 }
@@ -189,7 +223,7 @@ function validateStoryAssociation(options: {
 
 function validateParentEvidence(options: {
   evidence: CleanupEvidenceInput;
-  requiredReview: CleanupEvidenceInput["reviews"][number];
+  requiredReviewSubmittedAtMs: number;
   stories: CleanupStoryValidation[];
 }) {
   const parent = options.evidence.parentLifecycle;
@@ -204,7 +238,12 @@ function validateParentEvidence(options: {
       "Parent cleanup evidence is missing integration review or revision response.",
     );
   }
-  if (parent.cleanupPlanRecordedAt > options.requiredReview.submittedAt) {
+  if (
+    parseCanonicalInstantMillis(
+      parent.cleanupPlanRecordedAt,
+      "cleanup evidence parentLifecycle.cleanupPlanRecordedAt",
+    ) > options.requiredReviewSubmittedAtMs
+  ) {
     throw new Error(
       "Parent cleanup plan must be recorded before the required human merge-gate review.",
     );
@@ -244,7 +283,7 @@ function validateEvidenceShape(evidence: CleanupEvidenceInput) {
   requireNumber(root["prNumber"], "cleanup evidence prNumber");
   requireBoolean(root["merged"], "cleanup evidence merged");
   requireString(root["mergeSha"], "cleanup evidence mergeSha");
-  requireString(root["mergedAt"], "cleanup evidence mergedAt");
+  requireCanonicalInstant(root["mergedAt"], "cleanup evidence mergedAt");
   requireString(root["baseBranch"], "cleanup evidence baseBranch");
   requireString(root["defaultBranch"], "cleanup evidence defaultBranch");
   requireString(
@@ -263,7 +302,7 @@ function validateEvidenceShape(evidence: CleanupEvidenceInput) {
   );
   requireString(source["kind"], "cleanup evidence metadataSource.kind");
   requireString(source["sourceId"], "cleanup evidence metadataSource.sourceId");
-  requireString(
+  requireCanonicalInstant(
     source["updatedAt"],
     "cleanup evidence metadataSource.updatedAt",
   );
@@ -293,7 +332,10 @@ function validateEvidenceShape(evidence: CleanupEvidenceInput) {
       review["sourceRefs"],
       "cleanup evidence review.sourceRefs",
     );
-    requireString(review["submittedAt"], "cleanup evidence review.submittedAt");
+    requireCanonicalInstant(
+      review["submittedAt"],
+      "cleanup evidence review.submittedAt",
+    );
   }
 
   validateStoryBindingEvidenceArray(
@@ -306,7 +348,7 @@ function validateEvidenceShape(evidence: CleanupEvidenceInput) {
       root["parentLifecycle"],
       "cleanup evidence parentLifecycle",
     );
-    requireString(
+    requireCanonicalInstant(
       parent["cleanupPlanRecordedAt"],
       "cleanup evidence parentLifecycle.cleanupPlanRecordedAt",
     );
@@ -359,10 +401,25 @@ function requireRecordArray(value: unknown, label: string) {
   );
 }
 
-function requireString(value: unknown, label: string) {
+function requireString(value: unknown, label: string): asserts value is string {
   if (typeof value !== "string" || value.length === 0) {
     throw new Error(`Malformed cleanup evidence: ${label} must be a string.`);
   }
+}
+
+function requireCanonicalInstant(value: unknown, label: string) {
+  requireString(value, label);
+  parseCanonicalInstantMillis(value, label);
+}
+
+function parseCanonicalInstantMillis(value: string, label: string) {
+  const millis = Date.parse(value);
+  if (!Number.isFinite(millis) || new Date(millis).toISOString() !== value) {
+    throw new Error(
+      `Malformed cleanup evidence: ${label} must be a canonical UTC timestamp.`,
+    );
+  }
+  return millis;
 }
 
 function requireStringArray(value: unknown, label: string) {

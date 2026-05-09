@@ -242,6 +242,45 @@ test("rejects malformed boolean fields from untrusted evidence JSON", async () =
   );
 });
 
+test("rejects malformed timestamp fields from untrusted evidence JSON", async () => {
+  const tempRoot = await makeTempRepo([
+    { id: "INF-501", fileName: "INF-501-story.yaml" },
+  ]);
+  const malformedMetadataTimeEvidence = buildSingleEvidence();
+  malformedMetadataTimeEvidence.metadataSource.updatedAt = "not-a-date";
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: malformedMetadataTimeEvidence,
+        metadata: {
+          branches: [],
+          mode: "single",
+          stories: ["stories/approved/INF-501-story.yaml"],
+        },
+        repoRoot: tempRoot,
+      }),
+    /metadataSource\.updatedAt must be a canonical UTC timestamp/,
+  );
+
+  const malformedReviewTimeEvidence = buildSingleEvidence();
+  malformedReviewTimeEvidence.reviews[0].submittedAt = "2026-01-01T12:00:00Z";
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: malformedReviewTimeEvidence,
+        metadata: {
+          branches: [],
+          mode: "single",
+          stories: ["stories/approved/INF-501-story.yaml"],
+        },
+        repoRoot: tempRoot,
+      }),
+    /review\.submittedAt must be a canonical UTC timestamp/,
+  );
+});
+
 test("rejects merge SHA that does not match trusted default-branch checkout", async () => {
   const tempRoot = await makeTempRepo([
     { id: "INF-501", fileName: "INF-501-story.yaml" },
