@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import { spawnSync } from "node:child_process";
 import { PassThrough, Readable } from "node:stream";
+import { fileURLToPath } from "node:url";
 import {
   advanceDonPhase,
   advanceDrawPhase,
@@ -13,6 +14,13 @@ import {
 import type { GameState } from "@optcg/types";
 
 import type { DispatchCliCommandResult } from "./commands.js";
+
+const representativeManifestPath = fileURLToPath(
+  new URL(
+    "../../../fixtures/cards/representative-match-card-manifest.json",
+    import.meta.url,
+  ),
+);
 
 const must = <T>(value: T | undefined, label: string): T => {
   assert.notEqual(value, undefined, `missing ${label}`);
@@ -156,6 +164,70 @@ test("runCli boot summary entry point returns without interactive input", async 
   assert.equal(typeof parsed.stateHash, "string");
 });
 
+test("runCli boot summary can load the local representative manifest fixture", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(
+    ["--boot-summary", "--manifest-fixture", representativeManifestPath],
+    {
+      stdin: Readable.from([]),
+      stdout: stdout.writer,
+      stderr: stderr.writer,
+    },
+  );
+
+  assert.equal(status, 0);
+  assert.equal(stderr.output(), "");
+
+  const parsed = JSON.parse(stdout.output().trim()) as {
+    stateSeq?: unknown;
+    phase?: unknown;
+    status?: unknown;
+    hasPendingDecision?: unknown;
+    manifestHash?: unknown;
+    cardCount?: unknown;
+    stateHash?: unknown;
+  };
+  assert.equal(parsed.stateSeq, 1);
+  assert.equal(parsed.phase, "refresh");
+  assert.equal(parsed.status, "setup");
+  assert.equal(parsed.hasPendingDecision, true);
+  assert.equal(
+    parsed.manifestHash,
+    "4a246598c566ce027427293970f8fd0769f97a013cb1adb8401df64d11c87c4b",
+  );
+  assert.equal(parsed.cardCount, 2);
+  assert.equal(typeof parsed.stateHash, "string");
+});
+
+test("runCli manifest fixture failures are deterministic command-line diagnostics", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(
+    [
+      "--boot-summary",
+      "--manifest-fixture",
+      "fixtures/cards/missing-representative-match-card-manifest.json",
+    ],
+    {
+      stdin: Readable.from([]),
+      stdout: stdout.writer,
+      stderr: stderr.writer,
+    },
+  );
+
+  assert.equal(status, 1);
+  assert.equal(stdout.output(), "");
+  assert.match(
+    stderr.output(),
+    /^CLI local manifest fixture not found: .*missing-representative-match-card-manifest\.json/u,
+  );
+});
+
 test("command-script mode dispatches a deterministic command sequence", async () => {
   const { runCli } = await import("./cli.js");
   const stdout = createWriter();
@@ -179,6 +251,41 @@ test("command-script mode dispatches a deterministic command sequence", async ()
   assert.match(stdout.output(), /Pending decision: none/u);
   assert.match(stdout.output(), /Legal actions for p1:/u);
   assert.match(stdout.output(), /State hash: [a-f0-9]+/u);
+});
+
+test("command-script mode can boot from the local representative manifest fixture", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+  const manifests: string[] = [];
+
+  const status = await runCli(
+    [
+      "--command-script",
+      "show",
+      "--manifest-fixture",
+      representativeManifestPath,
+    ],
+    {
+      stdin: Readable.from([]),
+      stdout: stdout.writer,
+      stderr: stderr.writer,
+    },
+    {
+      onCommandScriptResult: ({ result }) => {
+        manifests.push(result.state.cardManifest.manifestHash);
+      },
+    },
+  );
+
+  assert.equal(status, 0);
+  assert.equal(stderr.output(), "");
+  assert.deepEqual(manifests, [
+    "4a246598c566ce027427293970f8fd0769f97a013cb1adb8401df64d11c87c4b",
+  ]);
+  assert.match(stdout.output(), /State seq: 1/u);
+  assert.match(stdout.output(), /Status: setup/u);
+  assert.match(stdout.output(), /Phase: refresh/u);
 });
 
 test("strict command-script mode exits zero for a successful command sequence", async () => {
@@ -479,6 +586,28 @@ test("interactive mode accepts injected input and exits cleanly on EOF", async (
   assert.match(stdout.output(), /State seq: 2/u);
   assert.match(stdout.output(), /State seq: 7/u);
   assert.match(stdout.output(), /State hash: [a-f0-9]+/u);
+});
+
+test("interactive mode rejects manifest fixture boot because it is unsupported", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(
+    ["--interactive", "--manifest-fixture", representativeManifestPath],
+    {
+      stdin: Readable.from([]),
+      stdout: stdout.writer,
+      stderr: stderr.writer,
+    },
+  );
+
+  assert.equal(status, 1);
+  assert.equal(stdout.output(), "");
+  assert.equal(
+    stderr.output(),
+    "--manifest-fixture is only supported with --boot-summary or --command-script.\n",
+  );
 });
 
 test("interactive mode keeps exit-zero behavior for command errors on EOF", async () => {
