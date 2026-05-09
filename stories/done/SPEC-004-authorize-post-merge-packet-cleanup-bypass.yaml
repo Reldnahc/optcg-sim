@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Add specification authority for a narrow post-merge packet lifecycle cleanup
   bypass that may push exact packet-completion output to main only after a

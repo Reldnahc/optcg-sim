@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/SPEC-004.md",
-      "storyId": "SPEC-004",
-      "storyPath": "stories/approved/SPEC-004-authorize-post-merge-packet-cleanup-bypass.yaml",
-      "storySha256": "08f764e6f7886b8b81cbba0de075f57675475438a07b50e176412b0bdf21b7f8"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
