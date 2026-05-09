@@ -39,11 +39,14 @@ export type {
 export { createPoneglyphClient } from "./poneglyph-client.js";
 export { validatePoneglyphCardDetail } from "./poneglyph-schema.js";
 export {
+  buildRepresentativeMatchCardManifest,
   getRepresentativeFixtureSupportMetadata,
   hasCheckedInRepresentativePoneglyphFixture,
   isRepresentativeFixtureStatusSupported,
   listRepresentativeFixtureIds,
   loadCheckedInRepresentativePoneglyphFixture,
+  loadRepresentativeMatchCardManifestFixture,
+  representativeMatchCardManifestFixturePath,
 } from "./representative-fixtures.js";
 export type {
   RepresentativeFixtureId,
