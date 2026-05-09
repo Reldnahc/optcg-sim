@@ -25,6 +25,7 @@ export type CleanupDryRunPlan = {
     requiredReviewId: string;
     requiredReviewSubmittedAt: string;
     trustedBaseBranch: string;
+    trustedMainSha: string;
   };
 };
 

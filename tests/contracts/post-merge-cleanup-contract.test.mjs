@@ -9,7 +9,7 @@ import { test } from "vitest";
 
 import { sha256 } from "../../tools/agent-packet-lifecycle.ts";
 import { parseCleanupMetadataBlock } from "../../tools/post-merge-cleanup/metadata.ts";
-import { buildCleanupDryRunPlan } from "../../tools/post-merge-cleanup/validator.ts";
+import { buildCleanupDryRunPlan as buildRawCleanupDryRunPlan } from "../../tools/post-merge-cleanup/validator.ts";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -158,6 +158,46 @@ test("rejects metadata that does not match merged PR story evidence", async () =
   );
 });
 
+test("rejects reviewed metadata source mismatch", async () => {
+  const tempRoot = await makeTempRepo([
+    { id: "INF-501", fileName: "INF-501-story.yaml" },
+  ]);
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: buildSingleEvidence(),
+        metadata: {
+          branches: [],
+          mode: "single",
+          stories: ["stories/approved/INF-501-story.yaml"],
+        },
+        metadataSourceRef: "pr-body:pr-501-body:different-source",
+        repoRoot: tempRoot,
+      }),
+    /reviewed PR metadata source/,
+  );
+});
+
+test("rejects merge SHA that does not match trusted default-branch checkout", async () => {
+  const tempRoot = await makeTempRepo([
+    { id: "INF-501", fileName: "INF-501-story.yaml" },
+  ]);
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: buildSingleEvidence(),
+        metadata: {
+          branches: [],
+          mode: "single",
+          stories: ["stories/approved/INF-501-story.yaml"],
+        },
+        repoRoot: tempRoot,
+        trustedMainSha: "different-sha",
+      }),
+    /trusted checked-out default branch/,
+  );
+});
+
 test("rejects post-review metadata mutation without later human review", async () => {
   const tempRoot = await makeTempRepo([
     { id: "INF-501", fileName: "INF-501-story.yaml" },
@@ -263,6 +303,32 @@ test("rejects parent cleanup with missing parent/substory inclusion evidence", a
   );
 });
 
+test("rejects parent included-substory evidence that mismatches trusted child story or packet", async () => {
+  const tempRoot = await makeTempRepo([
+    { id: "INF-601", fileName: "INF-601-a.yaml" },
+    { id: "INF-602", fileName: "INF-602-b.yaml" },
+  ]);
+  const evidence = buildParentEvidence();
+  evidence.parentLifecycle.includedStories[1].packetPath =
+    "agent-packets/INF-999.md";
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence,
+        metadata: {
+          branches: [],
+          mode: "parent",
+          stories: [
+            "stories/approved/INF-601-a.yaml",
+            "stories/approved/INF-602-b.yaml",
+          ],
+        },
+        repoRoot: tempRoot,
+      }),
+    /does not match trusted story\/packet evidence/,
+  );
+});
+
 test("rejects parent cleanup plan recorded after required human review", async () => {
   const tempRoot = await makeTempRepo([
     { id: "INF-601", fileName: "INF-601-a.yaml" },
@@ -285,6 +351,59 @@ test("rejects parent cleanup plan recorded after required human review", async (
         repoRoot: tempRoot,
       }),
     /recorded before the required human merge-gate review/,
+  );
+});
+
+test("validator fails closed for story-id mismatch, missing packet, and ineligible story", async () => {
+  const idMismatchRoot = await makeTempRepo([
+    { id: "INF-301", fileName: "INF-302-other.yaml" },
+  ]);
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: buildSingleEvidence(),
+        metadata: {
+          branches: [],
+          mode: "single",
+          stories: ["stories/approved/INF-302-other.yaml"],
+        },
+        repoRoot: idMismatchRoot,
+      }),
+    /id\/path mismatch/,
+  );
+
+  const missingPacketRoot = await makeTempRepo([
+    { id: "INF-304", fileName: "INF-304-story.yaml", writePacket: false },
+  ]);
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: buildSingleEvidence(),
+        metadata: {
+          branches: [],
+          mode: "single",
+          stories: ["stories/approved/INF-304-story.yaml"],
+        },
+        repoRoot: missingPacketRoot,
+      }),
+    /missing packet/,
+  );
+
+  const ineligibleStoryRoot = await makeTempRepo([
+    { id: "INF-305", fileName: "INF-305-story.yaml", status: "done" },
+  ]);
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: buildSingleEvidence(),
+        metadata: {
+          branches: [],
+          mode: "single",
+          stories: ["stories/approved/INF-305-story.yaml"],
+        },
+        repoRoot: ineligibleStoryRoot,
+      }),
+    /must be approved/,
   );
 });
 
@@ -391,13 +510,43 @@ test("package script exposes reviewed cleanup validation behavior", () => {
     "node --experimental-strip-types tools/post-merge-cleanup.ts",
   );
 
+  const metadataSource = `Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml
+  branches:
+    - story/inf-027c-cleanup-reviewed-pr-evidence-binding
+`;
+  const trustedMainSha = spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  }).stdout.trim();
+  const metadataSourceSha = sha256(metadataSource);
   const evidence = {
     ...buildSingleEvidence(),
     changedFiles: [
       "stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml",
       "agent-packets/INF-027C.md",
     ],
+    mergeSha: trustedMainSha,
+    metadataSource: {
+      contentSha256: metadataSourceSha,
+      kind: "pr-body",
+      sourceId: "pr-27-body",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+    metadataSourceRef: `pr-body:pr-27-body:${metadataSourceSha}`,
     prNumber: 27,
+    reviews: [
+      {
+        decision: "approved",
+        id: "rvw-27",
+        isMergeGate: true,
+        reviewerKind: "human",
+        sourceRefs: [`pr-body:pr-27-body:${metadataSourceSha}`],
+        submittedAt: "2026-01-01T12:00:00.000Z",
+      },
+    ],
     stories: [
       {
         packetPath: "agent-packets/INF-027C.md",
@@ -413,10 +562,8 @@ test("package script exposes reviewed cleanup validation behavior", () => {
       "--experimental-strip-types",
       "tools/post-merge-cleanup.ts",
       "--",
-      "--mode",
-      "single",
-      "--story",
-      "stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml",
+      "--pr-body",
+      metadataSource,
       "--evidence-json",
       JSON.stringify(evidence),
     ],
@@ -428,6 +575,28 @@ test("package script exposes reviewed cleanup validation behavior", () => {
   assert.equal(output.mode, "single");
   assert.equal(output.mergedPrNumber, 27);
   assert.equal(output.boundStories[0].storyId, "INF-027C");
+  assert.equal(output.verificationInputs.trustedMainSha, trustedMainSha);
+});
+
+test("package script rejects unreviewed explicit CLI metadata", () => {
+  const run = spawnSync(
+    process.execPath,
+    [
+      "--experimental-strip-types",
+      "tools/post-merge-cleanup.ts",
+      "--",
+      "--mode",
+      "single",
+      "--story",
+      "stories/approved/INF-027C-bind-cleanup-metadata-to-reviewed-pr-evidence.yaml",
+      "--evidence-json",
+      JSON.stringify(buildSingleEvidence()),
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /reviewed PR body or durable handoff comment/);
 });
 
 async function makeTempRepo(stories, options = {}) {
@@ -443,8 +612,14 @@ async function makeTempRepo(stories, options = {}) {
       "approved",
       story.fileName,
     );
-    const storySource = renderStoryYaml({ id: story.id, status: "approved" });
+    const storySource = renderStoryYaml({
+      id: story.id,
+      status: story.status ?? "approved",
+    });
     await writeFile(storyPath, storySource);
+    if (story.writePacket === false) {
+      continue;
+    }
     const packetSource = `<!-- agent-packet:story-id ${story.id} -->
 <!-- agent-packet:story-path stories/approved/${story.fileName} -->
 <!-- agent-packet:story-sha256 ${options.stalePacket ? "bad-hash" : sha256(storySource)} -->
@@ -457,6 +632,15 @@ async function makeTempRepo(stories, options = {}) {
     );
   }
   return tempRoot;
+}
+
+function buildCleanupDryRunPlan(options) {
+  return buildRawCleanupDryRunPlan({
+    ...options,
+    metadataSourceRef:
+      options.metadataSourceRef ?? options.evidence.metadataSourceRef,
+    trustedMainSha: options.trustedMainSha ?? options.evidence.mergeSha,
+  });
 }
 
 function buildSingleEvidence() {

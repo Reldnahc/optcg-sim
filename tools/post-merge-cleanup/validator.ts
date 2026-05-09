@@ -24,7 +24,9 @@ const APPROVED_PREFIX = "stories/approved/";
 export async function buildCleanupDryRunPlan(options: {
   evidence: CleanupEvidenceInput;
   metadata: CleanupMetadata;
+  metadataSourceRef: string;
   repoRoot: string;
+  trustedMainSha: string;
 }): Promise<CleanupDryRunPlan> {
   validateStoryCardinality(options.metadata);
   const stories = await validateStories(
@@ -34,7 +36,9 @@ export async function buildCleanupDryRunPlan(options: {
   const requiredReview = validateEvidenceBinding({
     evidence: options.evidence,
     metadata: options.metadata,
+    metadataSourceRef: options.metadataSourceRef,
     stories,
+    trustedMainSha: options.trustedMainSha,
   });
   const sortedBranches = [...options.metadata.branches].sort((a, b) =>
     a.localeCompare(b),
@@ -53,6 +57,7 @@ export async function buildCleanupDryRunPlan(options: {
       requiredReviewId: requiredReview.id,
       requiredReviewSubmittedAt: requiredReview.submittedAt,
       trustedBaseBranch: options.evidence.baseBranch,
+      trustedMainSha: options.trustedMainSha,
     },
   };
 }
@@ -60,17 +65,30 @@ export async function buildCleanupDryRunPlan(options: {
 function validateEvidenceBinding(options: {
   evidence: CleanupEvidenceInput;
   metadata: CleanupMetadata;
+  metadataSourceRef: string;
   stories: CleanupStoryValidation[];
+  trustedMainSha: string;
 }) {
-  const { evidence, metadata, stories } = options;
+  const { evidence, metadata, metadataSourceRef, stories, trustedMainSha } =
+    options;
   if (!evidence.merged) {
     throw new Error("Merged PR evidence is required.");
   }
   if (evidence.baseBranch !== evidence.defaultBranch) {
     throw new Error("Merged PR target branch must be the default branch.");
   }
+  if (evidence.mergeSha !== trustedMainSha) {
+    throw new Error(
+      "Merged PR SHA must match the trusted checked-out default branch.",
+    );
+  }
   if (evidence.metadataSourceRef !== buildSourceRef(evidence.metadataSource)) {
     throw new Error("Metadata source reference must match source evidence.");
+  }
+  if (metadataSourceRef !== evidence.metadataSourceRef) {
+    throw new Error(
+      "Cleanup metadata must come from the reviewed PR metadata source.",
+    );
   }
   if (
     evidence.metadataSource.kind === "handoff-comment" &&
@@ -195,6 +213,14 @@ function validateParentEvidence(options: {
     if (!child.substoryPrNumber || !child.substoryAiReviewRecordId) {
       throw new Error(
         `Parent evidence missing substory PR or AI review record for ${story.storyPath}.`,
+      );
+    }
+    if (
+      child.storyId !== story.storyId ||
+      child.packetPath !== story.packetPath
+    ) {
+      throw new Error(
+        `Parent evidence included-substory entry does not match trusted story/packet evidence for ${story.storyPath}.`,
       );
     }
   }

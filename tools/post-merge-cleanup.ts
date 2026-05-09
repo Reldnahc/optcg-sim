@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 
@@ -9,9 +10,10 @@ import type {
   CleanupMetadata,
 } from "./post-merge-cleanup/types.js";
 
-const { findRepoRoot, resolveCliPath }: typeof PacketLifecycle = createRequire(
-  import.meta.url,
-)("./agent-packet-lifecycle.ts") as typeof PacketLifecycle;
+const { findRepoRoot, resolveCliPath, sha256 }: typeof PacketLifecycle =
+  createRequire(import.meta.url)(
+    "./agent-packet-lifecycle.ts",
+  ) as typeof PacketLifecycle;
 const { parseCleanupMetadataBlock }: typeof Metadata = createRequire(
   import.meta.url,
 )("./post-merge-cleanup/metadata.ts") as typeof Metadata;
@@ -25,11 +27,14 @@ async function main() {
   try {
     const repoRoot = findRepoRoot();
     const evidence = await parseEvidenceInput(args);
-    const metadata = await parseMetadataInput(args);
+    const metadataInput = await parseMetadataInput(args, evidence);
+    const trustedMainSha = readTrustedHeadSha(repoRoot);
     const plan = await buildCleanupDryRunPlan({
       evidence,
-      metadata,
+      metadata: metadataInput.metadata,
+      metadataSourceRef: metadataInput.metadataSourceRef,
       repoRoot,
+      trustedMainSha,
     });
 
     process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
@@ -40,12 +45,14 @@ async function main() {
   }
 }
 
-async function parseMetadataInput(args: string[]): Promise<CleanupMetadata> {
-  let mode: CleanupMetadata["mode"] | null = null;
-  const stories: string[] = [];
-  const branches: string[] = [];
+async function parseMetadataInput(
+  args: string[],
+  evidence: CleanupEvidenceInput,
+): Promise<{ metadata: CleanupMetadata; metadataSourceRef: string }> {
   let prBody: string | null = null;
   let prBodyFile: string | null = null;
+  let metadataSource: string | null = null;
+  let metadataSourceFile: string | null = null;
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
@@ -63,34 +70,10 @@ async function parseMetadataInput(args: string[]): Promise<CleanupMetadata> {
       continue;
     }
 
-    if (token === "--mode") {
-      const value = args[index + 1];
-      if (value !== "single" && value !== "parent") {
-        throw new Error("Expected --mode single|parent.");
-      }
-      mode = value;
-      index += 1;
-      continue;
-    }
-
-    if (token === "--story") {
-      const value = args[index + 1];
-      if (!value || value.startsWith("--")) {
-        throw new Error("Missing value for --story.");
-      }
-      stories.push(value);
-      index += 1;
-      continue;
-    }
-
-    if (token === "--branch") {
-      const value = args[index + 1];
-      if (!value || value.startsWith("--")) {
-        throw new Error("Missing value for --branch.");
-      }
-      branches.push(value);
-      index += 1;
-      continue;
+    if (token === "--mode" || token === "--story" || token === "--branch") {
+      throw new Error(
+        "Cleanup metadata must be read from a reviewed PR body or durable handoff comment source.",
+      );
     }
 
     if (token === "--pr-body") {
@@ -113,42 +96,56 @@ async function parseMetadataInput(args: string[]): Promise<CleanupMetadata> {
       continue;
     }
 
+    if (token === "--metadata-source") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --metadata-source.");
+      }
+      metadataSource = value;
+      index += 1;
+      continue;
+    }
+
+    if (token === "--metadata-source-file") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("Missing value for --metadata-source-file.");
+      }
+      metadataSourceFile = resolveCliPath(value, process.cwd());
+      index += 1;
+      continue;
+    }
+
     throw new Error(`Unexpected argument: ${token}`);
   }
 
-  const hasCliMetadata =
-    mode !== null || stories.length > 0 || branches.length > 0;
-  const hasPrMetadata = prBody !== null || prBodyFile !== null;
+  const inlineSources = [prBody, metadataSource].filter(
+    (source) => source !== null,
+  );
+  const fileSources = [prBodyFile, metadataSourceFile].filter(
+    (source) => source !== null,
+  );
 
-  if (hasCliMetadata && hasPrMetadata) {
+  if (inlineSources.length + fileSources.length !== 1) {
     throw new Error(
-      "Ambiguous cleanup input: provide either PR metadata (--pr-body/--pr-body-file) or explicit CLI metadata (--mode/--story/--branch).",
+      "Missing or ambiguous cleanup metadata source: provide exactly one reviewed PR body or durable handoff comment source.",
     );
   }
 
-  if (prBody !== null && prBodyFile !== null) {
+  const sourceFile = prBodyFile ?? metadataSourceFile;
+  const source =
+    sourceFile !== null
+      ? await readFile(sourceFile, "utf8")
+      : (prBody ?? metadataSource ?? "");
+  const sourceSha256 = sha256(source);
+  if (sourceSha256 !== evidence.metadataSource.contentSha256) {
     throw new Error(
-      "Ambiguous cleanup input: provide only one PR body source.",
+      "Cleanup metadata source content does not match reviewed PR evidence.",
     );
   }
-
-  if (prBodyFile !== null) {
-    const source = await readFile(prBodyFile, "utf8");
-    return parseCleanupMetadataBlock(source);
-  }
-
-  if (prBody !== null) {
-    return parseCleanupMetadataBlock(prBody);
-  }
-
-  if (mode === null) {
-    throw new Error("Missing cleanup input: provide --mode or PR metadata.");
-  }
-
   return {
-    branches,
-    mode,
-    stories,
+    metadata: parseCleanupMetadataBlock(source),
+    metadataSourceRef: buildSourceRef(evidence),
   };
 }
 
@@ -206,6 +203,16 @@ async function parseEvidenceInput(
       `Malformed evidence JSON: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
+}
+
+function buildSourceRef(evidence: CleanupEvidenceInput) {
+  return `${evidence.metadataSource.kind}:${evidence.metadataSource.sourceId}:${evidence.metadataSource.contentSha256}`;
+}
+
+function readTrustedHeadSha(repoRoot: string) {
+  return execFileSync("git", ["-C", repoRoot, "rev-parse", "HEAD"], {
+    encoding: "utf8",
+  }).trim();
 }
 
 await main();
