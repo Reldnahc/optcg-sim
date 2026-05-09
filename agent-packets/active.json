@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-002B.md",
-      "storyId": "CARD-002B",
-      "storyPath": "stories/approved/CARD-002B-produce-representative-cards-manifest-fixture.yaml",
-      "storySha256": "bbbe0a97379b29f0a42c58b83d4d51e8d5d77e1fc954c70c1453091bb7027692"
+      "packetPath": "agent-packets/CARD-002C.md",
+      "storyId": "CARD-002C",
+      "storyPath": "stories/approved/CARD-002C-root-engine-manifest-integration-smoke.yaml",
+      "storySha256": "ca3a82d2c27d2526248aeee69c8d1950d9bc802d207a4b225882f811ef6707da"
     }
   ],
   "version": 1
