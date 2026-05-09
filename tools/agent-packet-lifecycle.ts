@@ -10,9 +10,10 @@ import type * as PacketRenderer from "./agent-packet-renderer.js";
 type PacketParserModule = typeof PacketParser;
 type PacketRendererModule = typeof PacketRenderer;
 
-const { parseStoryYaml }: PacketParserModule = createRequire(import.meta.url)(
-  "./agent-packet-parser.ts",
-) as PacketParserModule;
+const { parseStoryYaml, readStoryChildStoryIds }: PacketParserModule =
+  createRequire(import.meta.url)(
+    "./agent-packet-parser.ts",
+  ) as PacketParserModule;
 
 const {
   buildPacket,
@@ -525,10 +526,9 @@ async function prepareParentCompletion(options: {
     parentStoryPath: parentStoryPathLabel,
     parentStorySha256: options.parentStorySha256,
   });
-  const parentChildStoryIds = readStoryStringList(
-    parentSource,
-    "child_stories",
-  ).sort((left, right) => left.localeCompare(right));
+  const parentChildStoryIds = readStoryChildStoryIds(parentStory).sort(
+    (left, right) => left.localeCompare(right),
+  );
   const childStoryIds = [...options.childStoryIds].sort((left, right) =>
     left.localeCompare(right),
   );
@@ -707,27 +707,6 @@ function readPacketMetadata(packetSource: string, key: string) {
     ),
   );
   return match?.[1]?.trim() ?? "";
-}
-
-function readStoryStringList(source: string, key: string) {
-  const lines = source.split(/\r?\n/);
-  const keyIndex = lines.findIndex((line) => line === `${key}:`);
-  if (keyIndex < 0) {
-    return [];
-  }
-  const values: string[] = [];
-  for (let index = keyIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (line === undefined || line.trim() === "") {
-      continue;
-    }
-    const match = line.match(/^ {2}- (.+)$/);
-    if (!match) {
-      break;
-    }
-    values.push(match[1]?.trim() ?? "");
-  }
-  return values;
 }
 
 function requireSha256(value: string, label: string) {

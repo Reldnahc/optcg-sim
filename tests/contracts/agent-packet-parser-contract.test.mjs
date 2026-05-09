@@ -78,3 +78,41 @@ test("packet builder accepts inline empty-array yaml fields", async () => {
     `expected packet build with inline empty arrays to pass\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
   );
 });
+
+test("packet builder accepts schema-valid object-form child stories", async () => {
+  const tempDir = await makeTempDir();
+  const variantStoryPath = path.join(
+    tempDir,
+    "INF-014-object-child-stories.story.yaml",
+  );
+  const outputPath = path.join(tempDir, "INF-014.md");
+  const sourceStory = await readFile(storyPath, "utf8");
+
+  await writeFile(
+    variantStoryPath,
+    `${sourceStory}child_stories:
+  - id: INF-014A
+    title: Child story A
+    concern: first child concern
+    depends_on: []
+  - id: INF-014B
+    title: Child story B
+    concern: second child concern
+    depends_on: [INF-014A]
+`,
+  );
+
+  const result = runPacketTool([
+    "generate",
+    "--story",
+    variantStoryPath,
+    "--output",
+    outputPath,
+  ]);
+
+  assert.equal(
+    result.status,
+    0,
+    `expected packet build with object-form child_stories to pass\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
+  );
+});

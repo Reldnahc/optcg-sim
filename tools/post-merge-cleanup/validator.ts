@@ -13,9 +13,10 @@ import type {
   CleanupStoryValidation,
 } from "./types.js";
 
-const { parseStoryYaml }: typeof PacketParser = createRequire(import.meta.url)(
-  "../agent-packet-parser.ts",
-) as typeof PacketParser;
+const { parseStoryYaml, readStoryChildStoryIds }: typeof PacketParser =
+  createRequire(import.meta.url)(
+    "../agent-packet-parser.ts",
+  ) as typeof PacketParser;
 const { fileExists, sha256, toManifestPath }: typeof PacketLifecycle =
   createRequire(import.meta.url)(
     "../agent-packet-lifecycle.ts",
@@ -827,10 +828,9 @@ async function bindParentStory(options: {
       );
     }
 
-    const parentChildStoryIds = readStoryStringList(
-      storySource,
-      "child_stories",
-    ).sort((left, right) => left.localeCompare(right));
+    const parentChildStoryIds = readStoryChildStoryIds(story).sort(
+      (left, right) => left.localeCompare(right),
+    );
 
     if (!stringArraysEqual(parentChildStoryIds, childStoryIds)) {
       mismatches.push(candidate);
@@ -865,27 +865,6 @@ async function bindParentStory(options: {
     );
   }
   return match;
-}
-
-function readStoryStringList(source: string, key: string) {
-  const lines = source.split(/\r?\n/);
-  const keyIndex = lines.findIndex((line) => line === `${key}:`);
-  if (keyIndex < 0) {
-    return [];
-  }
-  const values: string[] = [];
-  for (let index = keyIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (line === undefined || line.trim() === "") {
-      continue;
-    }
-    const match = line.match(/^ {2}- (.+)$/);
-    if (!match) {
-      break;
-    }
-    values.push(match[1]?.trim() ?? "");
-  }
-  return values;
 }
 
 function validateCanonicalStoryPath(storyPath: string) {

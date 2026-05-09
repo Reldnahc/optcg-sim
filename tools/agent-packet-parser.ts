@@ -21,10 +21,16 @@ export type StoryData = {
   required_tests: string[];
   repo_rules: string[];
   ambiguity_policy: string;
+  child_stories?: StoryChildStory[];
 };
 
+export type StoryChildStory = string | StoryObject;
+
+type StoryObject = Record<string, string | string[]>;
+type StoryValue = string | string[] | StoryObject[];
+
 export function parseStoryYaml(source: string): StoryData {
-  const result = new Map<string, string | string[]>();
+  const result = new Map<string, StoryValue>();
   const lines = source.split(/\r?\n/);
 
   for (let index = 0; index < lines.length; ) {
@@ -49,6 +55,13 @@ export function parseStoryYaml(source: string): StoryData {
 
     if (key === undefined || key === "") {
       throw new Error(`Unable to parse story key from line: ${line}`);
+    }
+
+    if (rawValue === "" && isObjectListLine(lines[index + 1])) {
+      const { items, nextIndex } = parseObjectList(lines, index + 1);
+      result.set(key, items);
+      index = nextIndex;
+      continue;
     }
 
     if (rawValue === "" && isListLine(lines[index + 1])) {
@@ -95,7 +108,7 @@ export function parseStoryYaml(source: string): StoryData {
     index += 1;
   }
 
-  return {
+  const story: StoryData = {
     acceptance_criteria: expectStringArray(result, "acceptance_criteria"),
     allowed_touch_points: expectStringArray(result, "allowed_touch_points"),
     ambiguity_policy: expectString(result, "ambiguity_policy"),
@@ -119,6 +132,48 @@ export function parseStoryYaml(source: string): StoryData {
     title: expectString(result, "title"),
     type: expectString(result, "type"),
   };
+
+  const childStories = result.get("child_stories");
+  if (childStories !== undefined) {
+    if (!Array.isArray(childStories)) {
+      throw new Error("Malformed child_stories field in story file.");
+    }
+    story.child_stories = childStories;
+  }
+
+  return story;
+}
+
+export function readStoryChildStoryIds(story: StoryData) {
+  const childStories = story.child_stories;
+
+  if (childStories === undefined) {
+    return [];
+  }
+
+  const ids: string[] = [];
+  const seen = new Set<string>();
+
+  for (const childStory of childStories) {
+    const id = typeof childStory === "string" ? childStory : childStory["id"];
+
+    if (typeof id !== "string" || id.trim() === "") {
+      throw new Error("Malformed child_stories id in story file.");
+    }
+
+    const normalizedId = id.trim();
+
+    if (seen.has(normalizedId)) {
+      throw new Error(
+        `Duplicate child_stories id in story file: ${normalizedId}.`,
+      );
+    }
+
+    seen.add(normalizedId);
+    ids.push(normalizedId);
+  }
+
+  return ids;
 }
 
 export function parseOptionMap(args: string[]) {
@@ -162,6 +217,10 @@ function isListLine(line: string | undefined) {
   return typeof line === "string" && /^ {2}- /.test(line);
 }
 
+function isObjectListLine(line: string | undefined) {
+  return typeof line === "string" && /^ {2}- [a-z_]+:/i.test(line);
+}
+
 function isIndentedBlock(line: string | undefined) {
   return (
     typeof line === "string" && (line.startsWith("  ") || line.trim() === "")
@@ -170,6 +229,65 @@ function isIndentedBlock(line: string | undefined) {
 
 function parseListValue(line: string) {
   return parseScalarValue(line.replace(/^ {2}- /, ""));
+}
+
+function parseObjectList(lines: string[], startIndex: number) {
+  const items: StoryObject[] = [];
+  let index = startIndex;
+
+  while (index < lines.length && isObjectListLine(lines[index])) {
+    const item: StoryObject = {};
+    const firstLine = readRequiredLine(
+      lines,
+      index,
+      "reading object list item",
+    );
+    parseObjectProperty(item, firstLine.replace(/^ {2}- /, ""));
+    index += 1;
+
+    while (index < lines.length && /^ {4}[a-z_]+:/i.test(lines[index] ?? "")) {
+      const propertyLine = readRequiredLine(
+        lines,
+        index,
+        "reading object list property",
+      );
+      parseObjectProperty(item, propertyLine.slice(4));
+      index += 1;
+    }
+
+    items.push(item);
+  }
+
+  return { items, nextIndex: index };
+}
+
+function parseObjectProperty(item: StoryObject, line: string) {
+  const match = line.match(/^([a-z_]+):(?:\s(.*))?$/i);
+
+  if (!match) {
+    throw new Error(`Unable to parse story object property: ${line}`);
+  }
+
+  const [, key, rawValue = ""] = match;
+
+  if (!key) {
+    throw new Error(`Unable to parse story object property key: ${line}`);
+  }
+
+  item[key] = parseInlineValue(rawValue);
+}
+
+function parseInlineValue(value: string) {
+  const trimmed = value.trim();
+
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    const innerValue = trimmed.slice(1, -1).trim();
+    return innerValue === ""
+      ? []
+      : innerValue.split(",").map((item) => parseScalarValue(item));
+  }
+
+  return parseScalarValue(value);
 }
 
 function parseScalarValue(value: string) {
@@ -251,7 +369,7 @@ function trimTrailingBlankLines(lines: string[]) {
   return copy;
 }
 
-function expectString(map: Map<string, string | string[]>, key: string) {
+function expectString(map: Map<string, StoryValue>, key: string) {
   const value = map.get(key);
 
   if (typeof value !== "string") {
@@ -261,12 +379,18 @@ function expectString(map: Map<string, string | string[]>, key: string) {
   return value;
 }
 
-function expectStringArray(map: Map<string, string | string[]>, key: string) {
+function expectStringArray(map: Map<string, StoryValue>, key: string) {
   const value = map.get(key);
 
-  if (!Array.isArray(value)) {
+  if (!isStringArray(value)) {
     throw new Error(`Missing list field ${key} in story file.`);
   }
 
   return value;
+}
+
+function isStringArray(value: StoryValue | undefined): value is string[] {
+  return (
+    Array.isArray(value) && value.every((entry) => typeof entry === "string")
+  );
 }

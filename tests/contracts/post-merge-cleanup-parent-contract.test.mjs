@@ -96,6 +96,65 @@ test("parent cleanup planning rejects absent ambiguous mismatched or already-don
   );
 });
 
+test("parent cleanup planning accepts object-form parent child stories", async () => {
+  const repoRoot = await makeTempRepo([
+    { id: "INF-601", fileName: "INF-601-a.yaml" },
+    { id: "INF-602", fileName: "INF-602-b.yaml" },
+    parentStory("CARD-001", ["INF-601", "INF-602"], "object"),
+  ]);
+
+  const plan = await buildCleanupDryRunPlan({
+    evidence: buildParentEvidence(),
+    metadata: parentMetadata(),
+    metadataSourceRef: "pr-body:pr-501-body:meta-1",
+    repoRoot,
+    trustedMainSha: "abc123",
+  });
+
+  assert.equal(plan.boundParentStory?.storyId, "CARD-001");
+  assert.equal(
+    plan.boundParentStory?.storyPath,
+    "stories/approved/CARD-001-parent.yaml",
+  );
+  assert.match(plan.boundParentStory?.storySha256 ?? "", /^[0-9a-f]{64}$/);
+});
+
+test("parent cleanup planning fails closed for malformed object-form child story ids", async () => {
+  const duplicateRoot = await makeTempRepo([
+    { id: "INF-601", fileName: "INF-601-a.yaml" },
+    { id: "INF-602", fileName: "INF-602-b.yaml" },
+    parentStory("CARD-001", ["INF-601", "INF-601"], "object"),
+  ]);
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: buildParentEvidence(),
+        metadata: parentMetadata(),
+        metadataSourceRef: "pr-body:pr-501-body:meta-1",
+        repoRoot: duplicateRoot,
+        trustedMainSha: "abc123",
+      }),
+    /duplicate child_stories id/i,
+  );
+
+  const missingIdRoot = await makeTempRepo([
+    { id: "INF-601", fileName: "INF-601-a.yaml" },
+    { id: "INF-602", fileName: "INF-602-b.yaml" },
+    parentStory("CARD-001", ["INF-601"], "object-missing-id"),
+  ]);
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: buildParentEvidence(),
+        metadata: parentMetadata(),
+        metadataSourceRef: "pr-body:pr-501-body:meta-1",
+        repoRoot: missingIdRoot,
+        trustedMainSha: "abc123",
+      }),
+    /malformed child_stories id/i,
+  );
+});
+
 async function makeTempRepo(stories) {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-cleanup-"));
   await mkdir(path.join(tempRoot, "stories", "approved"), { recursive: true });
@@ -103,6 +162,7 @@ async function makeTempRepo(stories) {
 
   for (const story of stories) {
     const storySource = renderStoryYaml({
+      childStoryForm: story.childStoryForm,
       childStoryIds: story.childStoryIds,
       id: story.id,
       status: story.status ?? "approved",
@@ -127,8 +187,9 @@ async function makeTempRepo(stories) {
   return tempRoot;
 }
 
-function parentStory(id, childStoryIds) {
+function parentStory(id, childStoryIds, childStoryForm = "scalar") {
   return {
+    childStoryForm,
     childStoryIds,
     fileName: `${id}-parent.yaml`,
     id,
@@ -235,5 +296,31 @@ required_tests:
 repo_rules:
   - fail closed
 ambiguity_policy: fail_and_escalate
-${options.childStoryIds ? `child_stories:\n${options.childStoryIds.map((id) => `  - ${id}`).join("\n")}\n` : ""}`;
+${renderChildStories(options)}`;
+}
+
+function renderChildStories(options) {
+  if (!options.childStoryIds) {
+    return "";
+  }
+  if (options.childStoryForm === "object") {
+    return `child_stories:
+${options.childStoryIds
+  .map(
+    (id) => `  - id: ${id}
+    title: ${id} child
+    concern: ${id} concern
+    depends_on: []
+`,
+  )
+  .join("")}`;
+  }
+  if (options.childStoryForm === "object-missing-id") {
+    return `child_stories:
+  - title: Missing child id
+    concern: malformed child concern
+    depends_on: []
+`;
+  }
+  return `child_stories:\n${options.childStoryIds.map((id) => `  - ${id}`).join("\n")}\n`;
 }
