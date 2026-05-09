@@ -178,6 +178,31 @@ test("rejects reviewed metadata source mismatch", async () => {
   );
 });
 
+test("rejects unsupported reviewed metadata source kind from untrusted evidence JSON", async () => {
+  const tempRoot = await makeTempRepo([
+    { id: "INF-501", fileName: "INF-501-story.yaml" },
+  ]);
+  const evidence = buildSingleEvidence();
+  evidence.metadataSource.kind = "issue-comment";
+  evidence.metadataSourceRef = "issue-comment:pr-501-body:meta-1";
+  evidence.reviews[0].sourceRefs = ["issue-comment:pr-501-body:meta-1"];
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence,
+        metadata: {
+          branches: [],
+          mode: "single",
+          stories: ["stories/approved/INF-501-story.yaml"],
+        },
+        metadataSourceRef: "issue-comment:pr-501-body:meta-1",
+        repoRoot: tempRoot,
+      }),
+    /PR body or durable handoff comment/,
+  );
+});
+
 test("rejects merge SHA that does not match trusted default-branch checkout", async () => {
   const tempRoot = await makeTempRepo([
     { id: "INF-501", fileName: "INF-501-story.yaml" },

@@ -85,6 +85,14 @@ function validateEvidenceBinding(options: {
   if (evidence.metadataSourceRef !== buildSourceRef(evidence.metadataSource)) {
     throw new Error("Metadata source reference must match source evidence.");
   }
+  if (
+    evidence.metadataSource.kind !== "pr-body" &&
+    evidence.metadataSource.kind !== "handoff-comment"
+  ) {
+    throw new Error(
+      "Cleanup metadata source must be a PR body or durable handoff comment.",
+    );
+  }
   if (metadataSourceRef !== evidence.metadataSourceRef) {
     throw new Error(
       "Cleanup metadata must come from the reviewed PR metadata source.",

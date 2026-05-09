@@ -29,12 +29,10 @@ export type CleanupDryRunPlan = {
   };
 };
 
-export type CleanupMetadataSourceKind = "pr-body" | "handoff-comment";
-
 export type CleanupMetadataSourceEvidence = {
   contentSha256: string;
   durable?: boolean;
-  kind: CleanupMetadataSourceKind;
+  kind: string;
   sourceId: string;
   updatedAt: string;
 };
