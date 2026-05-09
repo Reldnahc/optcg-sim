@@ -1,5 +1,12 @@
 export const packageName = "@optcg/cards";
 
+export {
+  computeBehaviorHash,
+  computeSourceTextHash,
+  normalizePoneglyphCardDetail,
+  variantKey,
+} from "./normalization.js";
+export type { NormalizedPoneglyphCard } from "./normalization.js";
 export type {
   PoneglyphClient,
   PoneglyphClientOptions,

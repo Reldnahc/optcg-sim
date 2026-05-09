@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-001B.md",
-      "storyId": "CARD-001B",
-      "storyPath": "stories/approved/CARD-001B-poneglyph-client-response-validation.yaml",
-      "storySha256": "24033f623d67d1cad7331051f65350f110266260167286984a8f908c621d5729"
+      "packetPath": "agent-packets/CARD-001C.md",
+      "storyId": "CARD-001C",
+      "storyPath": "stories/approved/CARD-001C-normalization-variant-hash-helpers.yaml",
+      "storySha256": "4333734d20fdbac7a7104db4eca52563a65c3fa70c12fadbae4cc26434b9b44b"
     }
   ],
   "version": 1

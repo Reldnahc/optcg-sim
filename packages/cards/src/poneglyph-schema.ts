@@ -15,9 +15,28 @@ const PoneglyphLegalityRecordSchema = z.looseObject({
   status: z.string(),
 });
 
+const PoneglyphErrataSchema = z.looseObject({
+  after_text: z.string().nullable(),
+  before_text: z.string().nullable(),
+  date: z.string(),
+  images: z
+    .looseObject({
+      scan: z
+        .looseObject({
+          display: z.string().nullable(),
+          full: z.string().nullable(),
+          thumb: z.string().nullable(),
+        })
+        .optional(),
+      source: z.string().nullable().optional(),
+    })
+    .optional(),
+  label: z.string().nullable(),
+});
+
 const PoneglyphVariantSchema = z.looseObject({
   artist: z.string().nullable(),
-  errata: z.array(z.unknown()),
+  errata: z.array(PoneglyphErrataSchema),
   images: z.looseObject({
     scan: z.looseObject({
       display: z.string().nullable(),
