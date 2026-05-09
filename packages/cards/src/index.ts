@@ -7,6 +7,15 @@ export {
   variantKey,
 } from "./normalization.js";
 export type { NormalizedPoneglyphCard } from "./normalization.js";
+export {
+  mergeSimulatorOverlay,
+  validateSimulatorOverlay,
+  validateSimulatorOverlayRegistry,
+} from "./overlay.js";
+export type {
+  MergedSimulatorOverlayCard,
+  SimulatorOverlayRegistry,
+} from "./overlay.js";
 export type {
   PoneglyphClient,
   PoneglyphClientOptions,
