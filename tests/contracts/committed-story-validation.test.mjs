@@ -217,10 +217,99 @@ test("committed story validator accepts blocked-story lifecycle metadata", async
 
 test("committed story validator accepts parent child-story metadata", async () => {
   const tempRoot = await makeTempRepo();
-  const storyPath = path.join(
+  await writeParentStory(
     tempRoot,
     "stories/generated/TST-001-parent-story.yaml",
+    "generated",
   );
+
+  const result = await validateCommittedStories({ repoRoot: tempRoot });
+
+  assert.equal(result.ok, true, result.diagnostics.join("\n"));
+  assert.deepEqual(result.checkedFiles, [
+    "stories/generated/TST-001-parent-story.yaml",
+  ]);
+});
+
+test("committed story validator rejects approved parents whose children are all done", async () => {
+  const tempRoot = await makeTempRepo();
+  await writeParentStory(
+    tempRoot,
+    "stories/approved/TST-001-parent-story.yaml",
+    "approved",
+  );
+  await writeStory(tempRoot, "stories/done/TST-001A-child-a.yaml", {
+    id: "TST-001A",
+    status: "done",
+  });
+  await writeStory(tempRoot, "stories/done/TST-001B-child-b.yaml", {
+    id: "TST-001B",
+    status: "done",
+  });
+
+  const result = await validateCommittedStories({ repoRoot: tempRoot });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.checkedFiles, [
+    "stories/approved/TST-001-parent-story.yaml",
+    "stories/done/TST-001A-child-a.yaml",
+    "stories/done/TST-001B-child-b.yaml",
+  ]);
+  assert.match(
+    result.diagnostics.join("\n"),
+    /stories\/approved\/TST-001-parent-story\.yaml: approved parent story is stale because all declared child stories are done: TST-001A, TST-001B/,
+  );
+});
+
+test("committed story validator accepts approved parents with incomplete children", async () => {
+  const tempRoot = await makeTempRepo();
+  await writeParentStory(
+    tempRoot,
+    "stories/approved/TST-001-parent-story.yaml",
+    "approved",
+  );
+  await writeStory(tempRoot, "stories/done/TST-001A-child-a.yaml", {
+    id: "TST-001A",
+    status: "done",
+  });
+
+  const result = await validateCommittedStories({ repoRoot: tempRoot });
+
+  assert.equal(result.ok, true, result.diagnostics.join("\n"));
+  assert.deepEqual(result.checkedFiles, [
+    "stories/approved/TST-001-parent-story.yaml",
+    "stories/done/TST-001A-child-a.yaml",
+  ]);
+});
+
+test("committed story validator accepts generated parents whose children are all done", async () => {
+  const tempRoot = await makeTempRepo();
+  await writeParentStory(
+    tempRoot,
+    "stories/generated/TST-001-parent-story.yaml",
+    "generated",
+  );
+  await writeStory(tempRoot, "stories/done/TST-001A-child-a.yaml", {
+    id: "TST-001A",
+    status: "done",
+  });
+  await writeStory(tempRoot, "stories/done/TST-001B-child-b.yaml", {
+    id: "TST-001B",
+    status: "done",
+  });
+
+  const result = await validateCommittedStories({ repoRoot: tempRoot });
+
+  assert.equal(result.ok, true, result.diagnostics.join("\n"));
+  assert.deepEqual(result.checkedFiles, [
+    "stories/done/TST-001A-child-a.yaml",
+    "stories/done/TST-001B-child-b.yaml",
+    "stories/generated/TST-001-parent-story.yaml",
+  ]);
+});
+
+async function writeParentStory(tempRoot, relativePath, status) {
+  const storyPath = path.join(tempRoot, relativePath);
   await mkdir(path.dirname(storyPath), { recursive: true });
   await writeFile(
     storyPath,
@@ -235,7 +324,7 @@ test("committed story validator accepts parent child-story metadata", async () =
       area: "engine",
       primary_concern: "rules",
       priority: "low",
-      status: "generated",
+      status,
       summary: "Validate parent child-story metadata.",
       story_boundary: "Only validate this fixture.",
     })}child_stories:
@@ -259,11 +348,4 @@ ${renderStoryYaml({
   ambiguity_policy: "fail_and_escalate",
 })}`,
   );
-
-  const result = await validateCommittedStories({ repoRoot: tempRoot });
-
-  assert.equal(result.ok, true, result.diagnostics.join("\n"));
-  assert.deepEqual(result.checkedFiles, [
-    "stories/generated/TST-001-parent-story.yaml",
-  ]);
-});
+}

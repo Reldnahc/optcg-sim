@@ -17,6 +17,11 @@ const STORY_DIRECTORIES = [
 
 type StoryDocument = Record<string, unknown>;
 
+type ParsedStoryFile = {
+  document: StoryDocument;
+  relativePath: string;
+};
+
 export type StoryValidationResult = {
   checkedFiles: string[];
   diagnostics: string[];
@@ -37,6 +42,7 @@ export async function validateCommittedStories(
   const validate: ValidateFunction = ajv.compile(schema);
   const checkedFiles = await findStoryFiles(repoRoot);
   const diagnostics: string[] = [];
+  const parsedStories: ParsedStoryFile[] = [];
 
   for (const relativePath of checkedFiles) {
     const absolutePath = path.join(repoRoot, relativePath);
@@ -44,6 +50,7 @@ export async function validateCommittedStories(
     try {
       const source = await readFile(absolutePath, "utf8");
       const document = parseStoryYaml(source);
+      parsedStories.push({ document, relativePath });
 
       if (!validate(document)) {
         diagnostics.push(
@@ -55,6 +62,7 @@ export async function validateCommittedStories(
     }
   }
 
+  diagnostics.push(...validateStoryLifecycle(parsedStories));
   diagnostics.sort();
 
   return {
@@ -62,6 +70,63 @@ export async function validateCommittedStories(
     diagnostics,
     ok: diagnostics.length === 0,
   };
+}
+
+function validateStoryLifecycle(stories: ParsedStoryFile[]) {
+  const diagnostics: string[] = [];
+  const doneStoryIds = new Set(
+    stories
+      .filter(
+        ({ document, relativePath }) =>
+          relativePath.startsWith("stories/done/") &&
+          readStringField(document, "status") === "done",
+      )
+      .map(({ document }) => readStringField(document, "id"))
+      .filter((id): id is string => id !== null),
+  );
+
+  for (const { document, relativePath } of stories) {
+    if (
+      !relativePath.startsWith("stories/approved/") ||
+      readStringField(document, "status") !== "approved"
+    ) {
+      continue;
+    }
+
+    const childStoryIds = readChildStoryIds(document);
+
+    if (
+      childStoryIds.length > 0 &&
+      childStoryIds.every((id) => doneStoryIds.has(id))
+    ) {
+      diagnostics.push(
+        `${relativePath}: approved parent story is stale because all declared child stories are done: ${childStoryIds.join(", ")}`,
+      );
+    }
+  }
+
+  return diagnostics;
+}
+
+function readStringField(document: StoryDocument, key: string) {
+  const value = document[key];
+  return typeof value === "string" ? value : null;
+}
+
+function readChildStoryIds(document: StoryDocument) {
+  const childStories = document["child_stories"];
+
+  if (!Array.isArray(childStories)) {
+    return [];
+  }
+
+  return childStories
+    .map((childStory) =>
+      typeof childStory === "object" && childStory !== null
+        ? (childStory as StoryDocument)["id"]
+        : null,
+    )
+    .filter((id): id is string => typeof id === "string");
 }
 
 async function findStoryFiles(repoRoot: string) {
