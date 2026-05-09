@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-002D.md",
-      "storyId": "CARD-002D",
-      "storyPath": "stories/approved/CARD-002D-reinforce-engine-core-card-boundary-tests.yaml",
-      "storySha256": "2c8ff907b7f5ff1801e272c49599294ab07cd1f21e1471c4742b646993696442"
+      "packetPath": "agent-packets/CARD-002E.md",
+      "storyId": "CARD-002E",
+      "storyPath": "stories/approved/CARD-002E-cli-local-manifest-smoke.yaml",
+      "storySha256": "320675c7d8a591bccc541cbcc41845baccc350bebc6c4e461e2f3160e6439c0d"
     }
   ],
   "version": 1

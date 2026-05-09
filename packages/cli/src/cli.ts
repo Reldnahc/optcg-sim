@@ -1,6 +1,7 @@
 import type { GameState } from "@optcg/types";
 
-import { bootFixtureMatch } from "./boot.js";
+import { bootFixtureMatch, bootLocalManifestFixtureMatch } from "./boot.js";
+import type { BootFixtureMatchResult } from "./boot.js";
 import {
   advanceCliCommandResultToActionPoint,
   dispatchCliCommand,
@@ -21,6 +22,11 @@ export interface RunCliOptions {
   }) => void;
 }
 
+interface ParsedManifestFixtureOption {
+  manifestPath?: string;
+  error?: string;
+}
+
 const defaultIo = (): CliIo => ({
   stdin: process.stdin,
   stdout: process.stdout,
@@ -38,6 +44,28 @@ const isMatchComplete = (
   status: ReturnType<typeof bootFixtureMatch>["state"]["status"],
 ): boolean => status.type === "completed" || status.type === "gameOver";
 
+const parseManifestFixtureOption = (
+  args: readonly string[],
+): ParsedManifestFixtureOption => {
+  const optionIndex = args.indexOf("--manifest-fixture");
+  if (optionIndex === -1) {
+    return {};
+  }
+  const manifestPath = args[optionIndex + 1];
+  if (manifestPath === undefined || manifestPath.startsWith("--")) {
+    return { error: "--manifest-fixture requires a path.\n" };
+  }
+  if (args.indexOf("--manifest-fixture", optionIndex + 1) !== -1) {
+    return { error: "--manifest-fixture may only be provided once.\n" };
+  }
+  return { manifestPath };
+};
+
+const bootMatch = (manifestPath: string | undefined): BootFixtureMatchResult =>
+  manifestPath === undefined
+    ? bootFixtureMatch()
+    : bootLocalManifestFixtureMatch({ manifestPath });
+
 const writeOutput = (io: CliIo, output: string): void => {
   io.stdout.write(output.endsWith("\n") ? output : `${output}\n`);
 };
@@ -48,8 +76,10 @@ const dispatchCommands = (
   printInitialState: boolean,
   options: RunCliOptions,
   strict: boolean,
+  manifestPath: string | undefined,
 ): number => {
-  let state = options.commandScriptInitialState ?? bootFixtureMatch().state;
+  let state =
+    options.commandScriptInitialState ?? bootMatch(manifestPath).state;
 
   if (printInitialState) {
     writeOutput(io, dispatchCliCommand(state, "show").output);
@@ -157,19 +187,48 @@ export const runCli = async (
   io: CliIo = defaultIo(),
   options: RunCliOptions = {},
 ): Promise<number> => {
-  if (
-    args.length === 0 ||
-    (args.length === 1 && args[0] === "--boot-summary")
-  ) {
-    io.stdout.write(`${JSON.stringify(bootFixtureMatch().summary)}\n`);
-    return 0;
+  const manifestFixture = parseManifestFixtureOption(args);
+  if (manifestFixture.error !== undefined) {
+    io.stderr.write(manifestFixture.error);
+    return 1;
   }
 
-  if (args.length >= 1 && args[0] === "--command-script") {
-    const script = args[1];
-    const strict = args.length === 3 && args[2] === "--strict";
+  const argsWithoutManifestFixture =
+    manifestFixture.manifestPath === undefined
+      ? args
+      : args.filter(
+          (_arg, index) =>
+            index !== args.indexOf("--manifest-fixture") &&
+            index !== args.indexOf("--manifest-fixture") + 1,
+        );
+
+  if (
+    argsWithoutManifestFixture.length === 0 ||
+    (argsWithoutManifestFixture.length === 1 &&
+      argsWithoutManifestFixture[0] === "--boot-summary")
+  ) {
+    try {
+      io.stdout.write(
+        `${JSON.stringify(bootMatch(manifestFixture.manifestPath).summary)}\n`,
+      );
+      return 0;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      io.stderr.write(`${message}\n`);
+      return 1;
+    }
+  }
+
+  if (
+    argsWithoutManifestFixture.length >= 1 &&
+    argsWithoutManifestFixture[0] === "--command-script"
+  ) {
+    const script = argsWithoutManifestFixture[1];
+    const strict =
+      argsWithoutManifestFixture.length === 3 &&
+      argsWithoutManifestFixture[2] === "--strict";
     if (
-      (args.length !== 2 && !strict) ||
+      (argsWithoutManifestFixture.length !== 2 && !strict) ||
       script === undefined ||
       script === "--strict"
     ) {
@@ -181,14 +240,32 @@ export const runCli = async (
       .split(scriptCommandSeparatorPattern)
       .map((command) => command.trim())
       .filter((command) => command.length > 0);
-    return dispatchCommands(commands, io, false, options, strict);
+    try {
+      return dispatchCommands(
+        commands,
+        io,
+        false,
+        options,
+        strict,
+        manifestFixture.manifestPath,
+      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      io.stderr.write(`${message}\n`);
+      return 1;
+    }
   }
 
-  if (args.length === 1 && args[0] === "--interactive") {
+  if (
+    argsWithoutManifestFixture.length === 1 &&
+    argsWithoutManifestFixture[0] === "--interactive"
+  ) {
     return dispatchInteractiveCommands(io.stdin, io);
   }
 
-  io.stderr.write(`Unsupported CLI argument: ${args.join(" ")}\n`);
+  io.stderr.write(
+    `Unsupported CLI argument: ${argsWithoutManifestFixture.join(" ")}\n`,
+  );
   return 1;
 };
 
