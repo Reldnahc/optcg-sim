@@ -59,6 +59,18 @@ jobs:
               pull_number: pr.number,
               repo: context.repo.repo,
             });
+            const reviewEvidence = reviews.map((review) => ({
+              decision: review.state === "APPROVED" ? "approved" : review.state.toLowerCase(),
+              id: String(review.id),
+              isMergeGate: review.state === "APPROVED",
+              reviewerKind: review.user?.type === "Bot" ? "bot" : "human",
+              sourceRefs: review.body && review.body.includes(metadataSourceRef) ? [metadataSourceRef] : [],
+              submittedAt: new Date(review.submitted_at).toISOString(),
+            }));
+            const metadataReview = reviewEvidence
+              .filter((review) => review.reviewerKind === "human" && review.isMergeGate && review.sourceRefs.includes(metadataSourceRef))
+              .sort((left, right) => left.submittedAt.localeCompare(right.submittedAt))
+              .at(-1);
 
             const storyPaths = [];
             const lines = metadataSource.replace(/\r\n/g, "\n").split("\n");
@@ -89,18 +101,11 @@ jobs:
                 contentSha256: metadataSourceHash,
                 kind: "pr-body",
                 sourceId: `pr-${pr.number}-body`,
-                updatedAt: new Date(pr.updated_at).toISOString(),
+                updatedAt: metadataReview?.submittedAt || new Date(pr.created_at).toISOString(),
               },
               metadataSourceRef,
               prNumber: pr.number,
-              reviews: reviews.map((review) => ({
-                decision: review.state === "APPROVED" ? "approved" : review.state.toLowerCase(),
-                id: String(review.id),
-                isMergeGate: review.state === "APPROVED",
-                reviewerKind: review.user?.type === "Bot" ? "bot" : "human",
-                sourceRefs: review.body && review.body.includes(metadataSourceRef) ? [metadataSourceRef] : [],
-                submittedAt: new Date(review.submitted_at).toISOString(),
-              })),
+              reviews: reviewEvidence,
               stories: storyPaths.map((story) => ({
                 packetPath: `agent-packets/${story.storyId}.md`,
                 storyId: story.storyId,

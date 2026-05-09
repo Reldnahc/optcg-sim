@@ -224,10 +224,11 @@ export function validateBoundCleanupPlanArtifact(
   for (const story of storyRecords) {
     rejectUnexpectedKeys(
       story,
-      ["packetPath", "storyId", "storyPath", "storySha256"],
+      ["packetPath", "packetSha256", "storyId", "storyPath", "storySha256"],
       "bound cleanup plan stories[]",
     );
     requireString(story["packetPath"], "bound cleanup plan story packetPath");
+    requireHash(story["packetSha256"], "bound cleanup plan story packetSha256");
     requireString(story["storyId"], "bound cleanup plan story storyId");
     requireString(story["storyPath"], "bound cleanup plan story storyPath");
     requireHash(story["storySha256"], "bound cleanup plan story storySha256");
@@ -778,6 +779,7 @@ async function validatePacketEvidence(options: {
   }
 
   return {
+    packetSha256: sha256(packetSource),
     packetPath: packetPathLabel,
     storyId: options.storyId,
     storyPath: options.storyPath,

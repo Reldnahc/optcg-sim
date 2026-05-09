@@ -7,6 +7,7 @@ export type CleanupMetadata = {
 };
 
 export type CleanupStoryValidation = {
+  packetSha256: string;
   packetPath: string;
   storyId: string;
   storyPath: string;
