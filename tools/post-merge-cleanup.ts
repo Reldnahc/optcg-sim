@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 import type * as PacketLifecycle from "./agent-packet-lifecycle.js";
+import type * as Executor from "./post-merge-cleanup/executor.js";
 import type * as Metadata from "./post-merge-cleanup/metadata.js";
 import type * as Validator from "./post-merge-cleanup/validator.js";
 import type {
@@ -18,6 +19,10 @@ const { findRepoRoot, resolveCliPath, sha256 }: typeof PacketLifecycle =
 const { parseCleanupMetadataBlock }: typeof Metadata = createRequire(
   import.meta.url,
 )("./post-merge-cleanup/metadata.ts") as typeof Metadata;
+const { executePacketCleanupPlan, finalizePacketCleanupPlan }: typeof Executor =
+  createRequire(import.meta.url)(
+    "./post-merge-cleanup/executor.ts",
+  ) as typeof Executor;
 const { buildBoundCleanupPlan, buildCleanupDryRunPlan }: typeof Validator =
   createRequire(import.meta.url)(
     "./post-merge-cleanup/validator.ts",
@@ -28,6 +33,28 @@ async function main() {
 
   try {
     const repoRoot = findRepoRoot();
+    const executePlanFile = parseSinglePathArg(args, "--execute-plan-file");
+    const finalizePlanFile = parseSinglePathArg(args, "--finalize-plan-file");
+    if (executePlanFile !== null || finalizePlanFile !== null) {
+      if (executePlanFile !== null && finalizePlanFile !== null) {
+        throw new Error(
+          "Ambiguous cleanup execution input: provide only one execution plan mode.",
+        );
+      }
+      const planFile = executePlanFile ?? finalizePlanFile;
+      if (planFile === null) {
+        throw new Error("Missing cleanup execution plan file.");
+      }
+      const plan = JSON.parse(await readFile(planFile, "utf8")) as unknown;
+      const trustedMainSha = readTrustedHeadSha(repoRoot);
+      if (executePlanFile !== null) {
+        await executePacketCleanupPlan({ plan, repoRoot, trustedMainSha });
+      } else {
+        await finalizePacketCleanupPlan({ plan, repoRoot, trustedMainSha });
+      }
+      return;
+    }
+
     const evidence = await parseEvidenceInput(args);
     const metadataInput = await parseMetadataInput(args, evidence);
     const trustedMainSha = readTrustedHeadSha(repoRoot);
@@ -68,6 +95,26 @@ async function main() {
     process.stderr.write(`${message}\n`);
     process.exitCode = 1;
   }
+}
+
+function parseSinglePathArg(args: string[], flag: string) {
+  let result: string | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token !== flag) {
+      continue;
+    }
+    const value = args[index + 1];
+    if (!value || value.startsWith("--")) {
+      throw new Error(`Missing value for ${flag}.`);
+    }
+    if (result !== null) {
+      throw new Error(`Ambiguous cleanup input: provide only one ${flag}.`);
+    }
+    result = resolveCliPath(value, process.cwd());
+    index += 1;
+  }
+  return result;
 }
 
 function parsePreflightPlanFile(args: string[]) {
