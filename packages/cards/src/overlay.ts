@@ -106,6 +106,7 @@ export function validateSimulatorOverlay(value: unknown): ResolvedCardOverlay {
   );
 
   assertOverlayReferencesCard(overlay.cardId, overlay);
+  assertOverlayMetadataMatchesSupport(overlay);
 
   return overlay;
 }
@@ -241,6 +242,43 @@ function assertOverlayReferencesCard(
       );
     }
   }
+}
+
+function assertOverlayMetadataMatchesSupport(overlay: ResolvedCardOverlay) {
+  if (
+    overlay.effectDefinitionId !== undefined &&
+    overlay.effectDefinitionId !== overlay.support.effectDefinitionId
+  ) {
+    throw new Error(
+      `Simulator overlay effectDefinitionId ${overlay.effectDefinitionId} does not match support.effectDefinitionId ${String(
+        overlay.support.effectDefinitionId,
+      )} for ${String(overlay.cardId)}`,
+    );
+  }
+
+  if (
+    overlay.customHandlerIds !== undefined &&
+    !stringArraysEqual(
+      overlay.customHandlerIds,
+      overlay.support.customHandlerIds ?? [],
+    )
+  ) {
+    throw new Error(
+      `Simulator overlay customHandlerIds do not match support.customHandlerIds for ${String(
+        overlay.cardId,
+      )}`,
+    );
+  }
+}
+
+function stringArraysEqual(left: readonly string[], right: readonly string[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  const sortedLeft = [...left].sort();
+  const sortedRight = [...right].sort();
+  return sortedLeft.every((value, index) => value === sortedRight[index]);
 }
 
 function addOptionalString(

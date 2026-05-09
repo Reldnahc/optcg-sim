@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type {
+  BanlistRecord,
   CardId,
   CardSupportStatus,
   DecklistEntry,
@@ -197,6 +198,9 @@ function buildManifestCards(
   const manifestCards: Record<CardId, ResolvedCard> = {};
 
   for (const card of entries) {
+    if (manifestCards[card.cardId] !== undefined) {
+      throw new Error(`Duplicate manifest card ID ${String(card.cardId)}.`);
+    }
     manifestCards[card.cardId] = card;
   }
 
@@ -213,10 +217,13 @@ function applyManifestOverlay(
     return manifestCard;
   }
   assertOverlayReferencesCard(manifestCard.cardId, overlay);
-  return {
-    ...manifestCard,
-    support: overlay.support,
-  };
+  return applyOverlayBanlist(
+    {
+      ...manifestCard,
+      support: overlay.support,
+    },
+    overlay.banlist,
+  );
 }
 
 function toManifestCard(card: ResolvedCard): ResolvedCard {
@@ -238,6 +245,40 @@ function assertOverlayReferencesCard(
       )}/${String(overlay.support.cardId)}`,
     );
   }
+}
+
+function applyOverlayBanlist(
+  card: ResolvedCard,
+  banlist: readonly BanlistRecord[] | undefined,
+): ResolvedCard {
+  if (banlist === undefined || banlist.length === 0) {
+    return card;
+  }
+
+  let nextCard = card;
+  for (const record of banlist) {
+    const existing = nextCard.legality[record.format];
+    nextCard = {
+      ...nextCard,
+      legality: {
+        ...nextCard.legality,
+        [record.format]: {
+          ...(existing ?? { status: "legal" }),
+          status: record.status,
+          ...(record.maxCopies !== undefined
+            ? { max_copies: record.maxCopies }
+            : {}),
+          ...(record.reason !== undefined ? { reason: record.reason } : {}),
+        },
+      },
+      support:
+        record.status === "simulatorBanned"
+          ? { ...nextCard.support, status: "banned-in-simulator" }
+          : nextCard.support,
+    };
+  }
+
+  return nextCard;
 }
 
 function validateDeckEntry(

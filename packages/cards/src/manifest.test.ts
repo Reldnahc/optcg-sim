@@ -7,6 +7,7 @@ import type {
   MatchCardManifest,
   PlayerId,
   ResolvedCard,
+  ResolvedCardOverlay,
   VariantKey,
 } from "@optcg/types";
 import { describe, expect, it } from "vitest";
@@ -95,14 +96,22 @@ const createEffectDefinition = (card: ResolvedCard): EffectDefinition => ({
 const buildManifest = (
   cards: readonly ResolvedCard[],
   effectDefinitions: Record<string, EffectDefinition> = {},
-): MatchCardManifest =>
-  buildMatchCardManifest({
+  overlays?: Record<CardId, ResolvedCardOverlay>,
+): MatchCardManifest => {
+  const input = {
     cards,
     createdAt: "2026-05-09T00:00:00.000Z",
     effectDefinitions,
     source: "poneglyph-fixture",
     versions: baseVersions,
-  });
+  } satisfies Parameters<typeof buildMatchCardManifest>[0];
+
+  if (overlays === undefined) {
+    return buildMatchCardManifest(input);
+  }
+
+  return buildMatchCardManifest({ ...input, overlays });
+};
 
 const validate = (
   deck: readonly DecklistEntry[],
@@ -216,6 +225,16 @@ describe("match card manifest construction", () => {
 
     expect("raw" in card).toBe(true);
     expect("raw" in manifestCard).toBe(false);
+  });
+
+  it("fails closed on duplicate manifest card IDs", () => {
+    const cardId = toCardId("OP01-028");
+    const first = createResolvedCard(cardId, { name: "First duplicate" });
+    const second = createResolvedCard(cardId, { name: "Second duplicate" });
+
+    expect(() => buildManifest([first, second])).toThrow(
+      /Duplicate manifest card ID OP01-028/u,
+    );
   });
 });
 
@@ -566,6 +585,48 @@ describe("deck validation", () => {
       expect.objectContaining({
         code: "ranked-custom-review-unsupported",
         cardId: custom.cardId,
+      }),
+    );
+  });
+
+  it("rejects cards banned by adopted overlay banlist records", () => {
+    const leader = createResolvedCard(toCardId("OP01-029"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const card = createResolvedCard(toCardId("OP01-030"));
+    const manifest = buildManifest(
+      [leader, card],
+      {},
+      {
+        [card.cardId]: {
+          banlist: [
+            {
+              cardId: card.cardId,
+              effectiveFrom: "2026-05-09",
+              format: "standard",
+              reason: "Simulator safety hold",
+              status: "simulatorBanned",
+            },
+          ],
+          cardId: card.cardId,
+          support: card.support,
+        },
+      },
+    );
+    const result = validate(
+      [
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: card.cardId, quantity: 1 },
+      ],
+      manifest,
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        code: "simulator-banned-card",
+        cardId: card.cardId,
       }),
     );
   });
