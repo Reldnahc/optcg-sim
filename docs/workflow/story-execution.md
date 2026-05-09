@@ -71,8 +71,16 @@ effect-runtime work.
   `@optcg/cards`.
 - CLI tests may load local fixture manifests but must not require live Poneglyph
   or Redis.
-- Synthetic one-off manifests require a story or PR explanation when the
-  representative fixture is insufficient.
+- Future Main Event, Counter Event, optional effects, once-per-turn, permanent
+  modifier, replacement, multi-damage, and search/reveal story families should
+  use the representative cards-produced manifest by default.
+- Synthetic one-off manifests are allowed only for narrow edge cases where the
+  representative fixture cannot express the specific contract under test
+  without broadening the story. The story or PR must explain why the exception
+  is needed.
+- Fixture adoption is not gameplay support. Stories and PRs must keep
+  unsupported gameplay status honest and must not describe fixture cards as
+  implemented unless the story also implements and verifies the cited behavior.
 
 ## Story Lifecycle Rules
 
