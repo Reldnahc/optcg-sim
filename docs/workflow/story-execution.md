@@ -57,12 +57,20 @@ Use a pre-presentation story-review gate for generated or normalized story work:
 ## Story Lifecycle Rules
 
 - The parent agent owns story-state transitions and active-packet cleanup.
+- Post-merge packet cleanup automation is the normal path after a reviewed story PR or parent PR merges.
 - A story merged to `main` must move from `stories/approved/` to `stories/done/` with `status: done` before the next implementation story is handed off, except when an approved parent-story integration branch workflow explicitly defers substory completion until the parent PR lands on `main`.
 - Completed stories must not remain in `agent-packets/active.json`.
 - Activating a new story replaces the previous active manifest entry instead of accumulating multiple active stories.
 - Completing a story must use the packet completion command so story movement, packet removal, and manifest cleanup happen as one verified operation.
+- Cleanup metadata is a reviewed request, not standalone authority.
+- Automation must bind cleanup metadata to reviewed PR evidence and trusted checked-in story and packet state before it runs a packet completion command.
+- Direct cleanup commits are allowed only for exact packet-completion command output after repo verification passes.
 - A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` does not require a separate reviewer subagent run. Run `pnpm verify` before pushing it.
+- Automation-created cleanup pull requests are not created.
+- Manual fallback is only for operational failure.
 - If cleanup requires any manual edit beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, run full verification and a separate reviewer subagent before pushing or merging.
+- Manual edits beyond pure packet-completion output still use the normal PR and reviewer path.
+- Branch deletion runs only after packet cleanup succeeds and never deletes protected, unrelated, or unmerged branches.
 - Dormant approved backlog stories do not require checked-in packets until they are activated.
 
 ## Superpowers Plugin

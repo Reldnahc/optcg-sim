@@ -272,6 +272,43 @@ test("branch protection guide documents only the exact packet cleanup bypass", a
   assert.doesNotMatch(guide, /human users.*as a normal development path/i);
 });
 
+test("pull request template declares reviewed post-merge cleanup metadata", async () => {
+  const prTemplate = await readActiveText(".github/pull_request_template.md");
+
+  assertMatchesAll(prTemplate, [
+    /^## Post-Merge Cleanup$/m,
+    /Cleanup metadata is a reviewed request, not standalone authority/i,
+    /Reviewers confirm this metadata matches the reviewed story scope before merge/i,
+    /Single-story PRs:/i,
+    /Post-merge cleanup:\s*\n\s*mode: single\s*\n\s*stories:\s*\n\s*- stories\/approved\/<STORY-ID>-<slug>\.yaml\s*\n\s*branches:\s*\n\s*- <head-branch>/i,
+    /Parent PRs:/i,
+    /Post-merge cleanup:\s*\n\s*mode: parent\s*\n\s*stories:\s*\n\s*- stories\/approved\/<CHILD-A>\.yaml\s*\n\s*- stories\/approved\/<CHILD-B>\.yaml\s*\n\s*branches:\s*\n\s*- <parent-integration-branch>\s*\n\s*- <optional-substory-branch>/i,
+  ]);
+});
+
+test("workflow docs describe automated packet cleanup policy and fallback boundaries", async () => {
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const workflowGuidance = `${storyExecution}\n${parentBranches}\n${reviewGate}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /post-merge packet cleanup automation is the normal path after a reviewed story PR or parent PR merges/i,
+    /manual fallback is only for operational failure/i,
+    /automation-created cleanup pull requests are not created/i,
+    /manual edits beyond pure packet-completion output still use the normal PR and reviewer path/i,
+    /cleanup metadata is a reviewed request, not standalone authority/i,
+    /bind cleanup metadata to reviewed PR evidence and trusted checked-in story and packet state/i,
+    /direct cleanup commits are allowed only for exact packet-completion command output after repo verification passes/i,
+    /branch deletion runs only after packet cleanup succeeds/i,
+    /never deletes protected, unrelated, or unmerged branches/i,
+  ]);
+});
+
 test("branch protection required status checks exactly match ci workflow jobs", async () => {
   const guide = await readActiveText(".github/branch-protection.md");
   const workflow = await readActiveText(".github/workflows/ci.yml");
