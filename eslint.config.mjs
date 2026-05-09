@@ -124,6 +124,7 @@ export default [
         "error",
         {
           paths: [
+            "@optcg/cards",
             "react",
             "redis",
             "pg",
@@ -133,6 +134,9 @@ export default [
             "node-fetch",
           ],
           patterns: [
+            "**/cards/**",
+            "@optcg/cards/*",
+            "**/poneglyph-client**",
             "**/browser/**",
             "**/client/**",
             "**/server/**",

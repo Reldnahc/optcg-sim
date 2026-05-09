@@ -1,0 +1,34 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Poneglyph API Fixture",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/v1/cards/{card_number}": {
+      "get": {
+        "operationId": "getCard"
+      }
+    },
+    "/v1/cards/batch": {
+      "post": {
+        "operationId": "getCardsBatch"
+      }
+    },
+    "/v1/search": {
+      "get": {
+        "operationId": "searchCards"
+      }
+    },
+    "/v1/cards/{card_number}/text": {
+      "get": {
+        "operationId": "getCardText"
+      }
+    },
+    "/v1/formats": {
+      "get": {
+        "operationId": "getFormats"
+      }
+    }
+  }
+}

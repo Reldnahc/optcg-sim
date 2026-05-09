@@ -1,0 +1,119 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-001
+epic_id: CARD-001
+title: Card data adapter foundation parent
+type: implementation
+area: cards
+primary_concern: contract
+priority: high
+status: generated
+summary: >
+  Coordinate the concern-scoped stories that establish the @optcg/cards package
+  boundary for validated Poneglyph-shaped printed metadata, simulator overlay
+  gameplay authority, cacheable card loading, manifest construction, and
+  package-boundary enforcement.
+story_boundary: >
+  This parent is not directly implementable. It coordinates CARD-001A through
+  CARD-001G on a parent integration branch so card-data adapter behavior lands
+  as one reviewed foundation while server, client, persistence, and gameplay
+  semantics remain out of scope.
+allowed_touch_points:
+  - stories/generated/CARD-001*.yaml
+  - stories/approved/CARD-001*.yaml
+spec_refs:
+  - 09-card-data-and-support-policy.s002
+  - 09-card-data-and-support-policy.s003
+  - 09-card-data-and-support-policy.s004
+  - 09-card-data-and-support-policy.s005
+  - 09-card-data-and-support-policy.s006
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 14-glossary.s018
+  - 15-implementation-kickoff.s015
+  - 19-poneglyph-api-contract.s002
+  - 19-poneglyph-api-contract.s003
+  - 19-poneglyph-api-contract.s004
+  - 19-poneglyph-api-contract.s011
+  - 19-poneglyph-api-contract.s012
+  - 16-typescript-interface-draft.s011
+  - 17-first-card-fixtures.s007
+  - 17-first-card-fixtures.s008
+  - 18-acceptance-tests.s011
+  - 23-repo-tooling-and-enforcement.s008
+  - 24-story-schema.s025
+  - 27-spec-driven-story-generation-workflow.s015
+scope:
+  - coordinate a parent integration branch for CARD-001A through CARD-001G
+  - keep each child story scoped to one card-data adapter concern
+  - require @optcg/engine-core to keep consuming only resolved card data and MatchCardManifest inputs
+  - require Poneglyph-shaped data to remain printed/display metadata authority only
+  - require simulator overlays to remain gameplay implementation authority
+  - require missing or unsupported non-vanilla implementations to fail closed outside dev or sandbox policy
+  - defer child story completion until the parent branch lands on main
+non_scope:
+  - direct implementation from this parent story
+  - packetizing or activating this parent story as an active implementation story
+  - match-server integration
+  - platform API endpoints
+  - Postgres writes
+  - deck builder UI
+  - client search UI
+  - queue, lobby, or matchmaking behavior
+  - full released-card support coverage
+  - automated effect generation pipeline
+  - changing engine-core to fetch cards directly
+  - changing gameplay semantics
+  - implementing new effect primitives
+dependencies:
+  - INF-032
+child_stories:
+  - id: CARD-001A
+    title: Add cards package skeleton and Poneglyph fixtures
+    concern: Create package wiring, exports, tests, and checked-in Poneglyph-shaped fixtures without live network behavior.
+    depends_on: []
+  - id: CARD-001B
+    title: Add Poneglyph client and response validation
+    concern: Add a package-local Poneglyph API client that validates responses fail-closed and is tested without live Poneglyph.
+    depends_on: [CARD-001A]
+  - id: CARD-001C
+    title: Add normalization and card hash helpers
+    concern: Normalize Poneglyph detail records into resolved card metadata, variant keys, and stable text/behavior hashes.
+    depends_on: [CARD-001B]
+  - id: CARD-001D
+    title: Add simulator overlay merge
+    concern: Load and merge simulator overlays as gameplay implementation authority over normalized printed metadata.
+    depends_on: [CARD-001C]
+  - id: CARD-001E
+    title: Add manifest builder and deck validation
+    concern: Build MatchCardManifest values and reject unsupported non-vanilla deck entries outside dev or sandbox policy.
+    depends_on: [CARD-001D]
+  - id: CARD-001F
+    title: Add card data cache abstraction
+    concern: Add package-local cache interfaces with memory or file cache support and optional Redis adapter isolation.
+    depends_on: [CARD-001B]
+  - id: CARD-001G
+    title: Add representative fixtures and package-boundary tests
+    concern: Add representative card fixtures and mechanical package-boundary tests proving engine-core remains isolated from @optcg/cards and external data clients.
+    depends_on: [CARD-001E, CARD-001F]
+acceptance_criteria:
+  - CARD-001A through CARD-001G are reviewed as a coherent card-data adapter foundation group
+  - each child story has a usable per-story story-review result before approval
+  - child PRs target the CARD-001 parent integration branch
+  - parent PR integration review confirms card-data adapter behavior composes without server, client, persistence, deck builder, or gameplay scope creep
+  - post-merge cleanup completes CARD-001A through CARD-001G only after the parent branch lands on main
+required_tests:
+  - set-level story-review for CARD-001 parent and children
+  - per-story story-review for CARD-001A through CARD-001G
+  - story-specific tests from every child story
+  - full `corepack pnpm verify` on every child PR and parent PR
+repo_rules:
+  - do not implement CARD-001 directly
+  - use the parent integration branch workflow
+  - keep one active child packet at a time
+  - do not run packet completion for child stories until the parent branch lands on main
+  - if live Poneglyph response shape is ambiguous, keep live fetch behind validated fixtures and record the ambiguity instead of inventing fields
+ambiguity_policy: fail_and_escalate

@@ -1,0 +1,136 @@
+{
+  "card_number": "OP01-060",
+  "name": "Donquixote Doflamingo",
+  "language": "en",
+  "set": "OP01",
+  "set_name": "Romance Dawn",
+  "released_at": "2022-12-02",
+  "released": true,
+  "card_type": "Leader",
+  "rarity": "L",
+  "color": ["Blue"],
+  "cost": null,
+  "power": 5000,
+  "counter": null,
+  "life": 5,
+  "attribute": ["Special"],
+  "types": ["The Seven Warlords of the Sea", "Donquixote Pirates"],
+  "effect": "[DON!! x2] [When Attacking] 1: Reveal 1 card from the top of your deck. If that card is a {The Seven Warlords of the Sea} type Character card with a cost of 4 or less, you may play that card rested.",
+  "trigger": null,
+  "block": "OP01",
+  "variants": [
+    {
+      "index": 1,
+      "name": "Donquixote Doflamingo",
+      "label": "Standard",
+      "artist": "BISAI",
+      "product": {
+        "id": "op01",
+        "slug": "romance-dawn",
+        "name": "Romance Dawn",
+        "set_code": "OP01",
+        "released_at": "2022-12-02"
+      },
+      "images": {
+        "stock": {
+          "full": "https://example.test/op01-060-v1-full.png",
+          "thumb": "https://example.test/op01-060-v1-thumb.png"
+        },
+        "scan": {
+          "display": "https://example.test/op01-060-v1-display.png",
+          "full": "https://example.test/op01-060-v1-scan-full.png",
+          "thumb": "https://example.test/op01-060-v1-scan-thumb.png"
+        }
+      },
+      "errata": [],
+      "market": {
+        "tcgplayer_url": "https://example.test/op01-060",
+        "market_price": "1.00",
+        "low_price": "0.50",
+        "mid_price": "1.00",
+        "high_price": "2.00"
+      }
+    },
+    {
+      "index": 2,
+      "name": "Donquixote Doflamingo",
+      "label": "Alternate Art",
+      "artist": "BISAI",
+      "product": {
+        "id": "op01-aa",
+        "slug": "romance-dawn-alternate-art",
+        "name": "Romance Dawn Alternate Art",
+        "set_code": "OP01",
+        "released_at": "2022-12-02"
+      },
+      "images": {
+        "stock": {
+          "full": "https://example.test/op01-060-v2-full.png",
+          "thumb": "https://example.test/op01-060-v2-thumb.png"
+        },
+        "scan": {
+          "display": "https://example.test/op01-060-v2-display.png",
+          "full": "https://example.test/op01-060-v2-scan-full.png",
+          "thumb": "https://example.test/op01-060-v2-scan-thumb.png"
+        }
+      },
+      "errata": [],
+      "market": {
+        "tcgplayer_url": "https://example.test/op01-060-aa",
+        "market_price": "10.00",
+        "low_price": "8.00",
+        "mid_price": "10.00",
+        "high_price": "12.00"
+      }
+    },
+    {
+      "index": 0,
+      "name": "Donquixote Doflamingo",
+      "label": "Starter Deck",
+      "artist": "BISAI",
+      "product": {
+        "id": "st03",
+        "slug": "starter-deck-the-seven-warlords-of-the-sea",
+        "name": "Starter Deck The Seven Warlords of the Sea",
+        "set_code": "ST03",
+        "released_at": "2022-12-02"
+      },
+      "images": {
+        "stock": {
+          "full": "https://example.test/op01-060-v0-full.png",
+          "thumb": "https://example.test/op01-060-v0-thumb.png"
+        },
+        "scan": {
+          "display": "https://example.test/op01-060-v0-display.png",
+          "full": "https://example.test/op01-060-v0-scan-full.png",
+          "thumb": "https://example.test/op01-060-v0-scan-thumb.png"
+        }
+      },
+      "errata": [],
+      "market": {
+        "tcgplayer_url": "https://example.test/op01-060-st03",
+        "market_price": "1.25",
+        "low_price": "0.75",
+        "mid_price": "1.25",
+        "high_price": "2.25"
+      }
+    }
+  ],
+  "legality": {
+    "standard": {
+      "status": "not_legal"
+    },
+    "extra": {
+      "status": "legal",
+      "max_copies": 1
+    }
+  },
+  "available_languages": ["en"],
+  "official_faq": [
+    {
+      "question": "What happens to the revealed card if it is not played?",
+      "answer": "Return it to the top of the deck face-down.",
+      "updated_on": "2023-01-01"
+    }
+  ]
+}
