@@ -69,7 +69,7 @@ Use a pre-presentation story-review gate for generated or normalized story work:
 - The human-controlled merge to `main` is the cleanup approval signal. The workflow snapshots the PR-body or durable handoff-comment cleanup metadata at merge time; the computed metadata source ref is audit evidence and humans do not paste that ref into approval text.
 - If merge actor evidence is unavailable and an equivalent human-review fallback is used, the fallback record must confirm the cleanup metadata source was reviewed before fallback approval.
 - Direct cleanup commits are allowed only for exact packet-completion command output after repo verification passes.
-- A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` does not require a separate reviewer subagent run. Run `pnpm verify` before pushing it.
+- A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` does not require a separate reviewer subagent run. For validated parent-mode cleanup, exact packet-completion command output may also include command-owned bound parent story closeout from the cleanup plan. Run `pnpm verify` before pushing it.
 - Automation-created cleanup pull requests are not created.
 - Manual fallback is only for operational failure.
 - If cleanup requires any manual edit beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, run full verification and a separate reviewer subagent before pushing or merging.
@@ -128,7 +128,7 @@ Parent-owned authority edits:
 
 - Parent-owned authority edits: documentation-only changes to `AGENTS.md`, `specs/`, story files, packets, and workflow templates should be handled by the parent agent directly.
 - Parent-owned authority edits still require tests when applicable, full verification, and separate reviewer subagent review.
-- Pure packet-completion cleanup is the one lifecycle exception: when the patch contains only the exact file changes produced by direct `packets:complete` or `packets:complete-many` output, `pnpm verify` is sufficient and does not require a separate reviewer subagent run.
+- Pure packet-completion cleanup is the one lifecycle exception: when the patch contains only the exact file changes produced by direct `packets:complete` or `packets:complete-many` output, including command-owned bound parent story closeout when present in the validated cleanup plan, `pnpm verify` is sufficient and does not require a separate reviewer subagent run.
 - Manual edits beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, require full verification and separate reviewer subagent review.
 - Use worker subagents for implementation code or large bounded documentation rewrites, not small authority-layer corrections.
 

@@ -55,6 +55,9 @@ export type CompleteOptions = {
 
 export type CompleteManyOptions = {
   manifestPath: string;
+  parentCleanupPlanFile?: string;
+  parentStoryPath?: string;
+  parentStorySha256?: string;
   repoRoot: string;
   storyPaths: string[];
 };
@@ -301,6 +304,14 @@ export async function runCompleteMany(options: CompleteManyOptions) {
     storyPath: string;
     storyPathLabel: string;
   }> = [];
+  let parentCompletion:
+    | {
+        donePath: string;
+        donePathLabel: string;
+        doneStorySource: string;
+        storyPath: string;
+      }
+    | undefined;
 
   for (const storyPath of options.storyPaths) {
     const storyPathLabel = toManifestPath(options.repoRoot, storyPath);
@@ -410,11 +421,34 @@ export async function runCompleteMany(options: CompleteManyOptions) {
     });
   }
 
+  if (options.parentStoryPath || options.parentStorySha256) {
+    if (!options.parentStoryPath || !options.parentStorySha256) {
+      throw new Error(
+        "Parent story closeout requires --parent-story and --parent-story-sha256.",
+      );
+    }
+    parentCompletion = await prepareParentCompletion({
+      childStoryIds: completions.map((completion) => completion.storyId),
+      parentCleanupPlanFile: options.parentCleanupPlanFile,
+      parentStoryPath: options.parentStoryPath,
+      parentStorySha256: options.parentStorySha256,
+      repoRoot: options.repoRoot,
+    });
+  }
+
   for (const completion of completions) {
     await mkdir(path.dirname(completion.donePath), { recursive: true });
     await writeFile(completion.donePath, completion.doneStorySource);
     await rm(completion.storyPath);
     await rm(completion.packetPath, { force: true });
+  }
+  if (parentCompletion) {
+    await mkdir(path.dirname(parentCompletion.donePath), { recursive: true });
+    await writeFile(
+      parentCompletion.donePath,
+      parentCompletion.doneStorySource,
+    );
+    await rm(parentCompletion.storyPath);
   }
 
   const remainingActiveStories = manifest.activeStories.filter(
@@ -439,8 +473,190 @@ export async function runCompleteMany(options: CompleteManyOptions) {
   );
 
   process.stdout.write(
-    `${completions.map((completion) => completion.donePathLabel).join("\n")}\n`,
+    `${[
+      ...completions.map((completion) => completion.donePathLabel),
+      ...(parentCompletion ? [parentCompletion.donePathLabel] : []),
+    ].join("\n")}\n`,
   );
+}
+
+async function prepareParentCompletion(options: {
+  childStoryIds: string[];
+  parentCleanupPlanFile: string | undefined;
+  parentStoryPath: string;
+  parentStorySha256: string;
+  repoRoot: string;
+}) {
+  requireSha256(options.parentStorySha256, "--parent-story-sha256");
+  const parentStoryPathLabel = toManifestPath(
+    options.repoRoot,
+    options.parentStoryPath,
+  );
+  if (!isCanonicalApprovedStoryPath(parentStoryPathLabel)) {
+    throw new Error(
+      `Parent story must use a checked-in approved story path under ${APPROVED_STORIES_DIR}/.`,
+    );
+  }
+  const parentSource = await readUtf8(options.parentStoryPath);
+  const parentStory = parseStoryYaml(parentSource);
+  assertCanonicalStoryPathForStoryId(parentStory.id, parentStoryPathLabel);
+  if (parentStory.status !== "approved") {
+    throw new Error(
+      `Only approved parent stories may be completed. ${parentStory.id} has status ${parentStory.status}.`,
+    );
+  }
+  const parentPacketPath = path.join(
+    options.repoRoot,
+    AGENT_PACKETS_DIR,
+    `${parentStory.id}.md`,
+  );
+  if (await fileExists(parentPacketPath)) {
+    throw new Error(
+      `Parent story ${parentStory.id} must be non-packetized for parent closeout.`,
+    );
+  }
+  const currentSha = sha256(parentSource);
+  if (currentSha !== options.parentStorySha256) {
+    throw new Error(`Parent story ${parentStory.id} has stale evidence.`);
+  }
+  await validateBoundParentCleanupPlan({
+    childStoryIds: options.childStoryIds,
+    parentCleanupPlanFile: options.parentCleanupPlanFile,
+    parentStoryPath: parentStoryPathLabel,
+    parentStorySha256: options.parentStorySha256,
+  });
+  const parentChildStoryIds = readStoryStringList(
+    parentSource,
+    "child_stories",
+  ).sort((left, right) => left.localeCompare(right));
+  const childStoryIds = [...options.childStoryIds].sort((left, right) =>
+    left.localeCompare(right),
+  );
+  if (!stringArraysEqual(parentChildStoryIds, childStoryIds)) {
+    throw new Error(
+      `Parent story ${parentStory.id} child_stories must exactly match completed child story IDs.`,
+    );
+  }
+  const donePath = path.join(
+    options.repoRoot,
+    "stories",
+    "done",
+    path.basename(options.parentStoryPath),
+  );
+  const donePathLabel = toManifestPath(options.repoRoot, donePath);
+  if (await fileExists(donePath)) {
+    throw new Error(`Done parent story already exists: ${donePathLabel}.`);
+  }
+  const doneStorySource = parentSource.replace(
+    /^status:\s+approved$/m,
+    "status: done",
+  );
+  if (doneStorySource === parentSource) {
+    throw new Error(`Unable to mark parent story ${parentStory.id} as done.`);
+  }
+  return {
+    donePath,
+    donePathLabel,
+    doneStorySource,
+    storyPath: options.parentStoryPath,
+  };
+}
+
+async function validateBoundParentCleanupPlan(options: {
+  childStoryIds: string[];
+  parentCleanupPlanFile: string | undefined;
+  parentStoryPath: string;
+  parentStorySha256: string;
+}) {
+  if (!options.parentCleanupPlanFile) {
+    throw new Error(
+      "Parent story closeout requires --bound-cleanup-plan evidence.",
+    );
+  }
+  const plan = JSON.parse(await readUtf8(options.parentCleanupPlanFile)) as {
+    boundParentStory?: {
+      storyPath?: unknown;
+      storySha256?: unknown;
+    };
+    packetCommand?: {
+      args?: unknown;
+      command?: unknown;
+    };
+    schemaVersion?: unknown;
+    status?: unknown;
+    stories?: unknown;
+  };
+  if (
+    plan.schemaVersion !== "post-merge-cleanup-plan.v1" ||
+    plan.status !== "valid"
+  ) {
+    throw new Error("Bound cleanup plan evidence is invalid.");
+  }
+  if (
+    plan.boundParentStory?.storyPath !== options.parentStoryPath ||
+    plan.boundParentStory.storySha256 !== options.parentStorySha256
+  ) {
+    throw new Error(
+      "Bound cleanup plan evidence does not match parent story closeout.",
+    );
+  }
+  if (plan.packetCommand?.command !== "packets:complete-many") {
+    throw new Error("Bound cleanup plan must use packets:complete-many.");
+  }
+  if (!Array.isArray(plan.stories)) {
+    throw new Error("Bound cleanup plan stories evidence is invalid.");
+  }
+  const planStoryIds = plan.stories
+    .map((entry) => {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+        throw new Error("Bound cleanup plan story evidence is invalid.");
+      }
+      const storyId = (entry as Record<string, unknown>)["storyId"];
+      if (typeof storyId !== "string") {
+        throw new Error("Bound cleanup plan story evidence is invalid.");
+      }
+      return storyId;
+    })
+    .sort((left, right) => left.localeCompare(right));
+  const childStoryIds = [...options.childStoryIds].sort((left, right) =>
+    left.localeCompare(right),
+  );
+  if (!stringArraysEqual(planStoryIds, childStoryIds)) {
+    throw new Error(
+      "Bound cleanup plan stories must match completed child story IDs.",
+    );
+  }
+  const expectedArgs = [
+    ...plan.stories.flatMap((entry) => {
+      const storyPath = (entry as Record<string, unknown>)["storyPath"];
+      if (typeof storyPath !== "string") {
+        throw new Error("Bound cleanup plan story evidence is invalid.");
+      }
+      return ["--story", storyPath];
+    }),
+    "--parent-story",
+    options.parentStoryPath,
+    "--parent-story-sha256",
+    options.parentStorySha256,
+  ];
+  if (!Array.isArray(plan.packetCommand.args)) {
+    throw new Error(
+      "Bound cleanup plan packet command does not match parent story closeout.",
+    );
+  }
+  const packetCommandArgs = plan.packetCommand.args.map((entry) => {
+    if (typeof entry !== "string") {
+      throw new Error(
+        "Bound cleanup plan packet command does not match parent story closeout.",
+      );
+    }
+    return entry;
+  });
+  if (!stringArraysEqual(packetCommandArgs, expectedArgs)) {
+    throw new Error(
+      "Bound cleanup plan packet command does not match parent story closeout.",
+    );
+  }
 }
 
 function normalizeLineEndings(value: string) {
@@ -491,6 +707,33 @@ function readPacketMetadata(packetSource: string, key: string) {
     ),
   );
   return match?.[1]?.trim() ?? "";
+}
+
+function readStoryStringList(source: string, key: string) {
+  const lines = source.split(/\r?\n/);
+  const keyIndex = lines.findIndex((line) => line === `${key}:`);
+  if (keyIndex < 0) {
+    return [];
+  }
+  const values: string[] = [];
+  for (let index = keyIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line === undefined || line.trim() === "") {
+      continue;
+    }
+    const match = line.match(/^ {2}- (.+)$/);
+    if (!match) {
+      break;
+    }
+    values.push(match[1]?.trim() ?? "");
+  }
+  return values;
+}
+
+function requireSha256(value: string, label: string) {
+  if (!/^[0-9a-f]{64}$/.test(value)) {
+    throw new Error(`${label} must be a sha256 hash.`);
+  }
 }
 
 function escapeRegExp(value: string) {
@@ -608,4 +851,11 @@ export async function fileExists(filePath: string) {
   } catch {
     return false;
   }
+}
+
+function stringArraysEqual(left: string[], right: string[]) {
+  return (
+    left.length === right.length &&
+    left.every((entry, index) => entry === right[index])
+  );
 }

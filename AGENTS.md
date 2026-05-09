@@ -79,9 +79,9 @@ Use `pnpm run packets:generate --story <stories/approved/...yaml> --activate` to
 
 Post-merge packet cleanup automation is the normal path after a reviewed story PR or parent PR merges. Cleanup metadata is a reviewed request, not standalone authority.
 
-Use `pnpm run packets:complete --story <stories/approved/...yaml>` after a story is merged only as the operational fallback when automation fails or is unavailable. For parent cleanup fallback, use `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>`. Do not run manual packet completion after automation has already completed the listed story cleanup.
+Use `pnpm run packets:complete --story <stories/approved/...yaml>` after a story is merged only as the operational fallback when automation fails or is unavailable. For parent cleanup fallback, use `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>`. When validated parent-mode cleanup evidence binds a non-packetized parent story, the parent closeout must be produced by the multi-story packet completion command with the bound parent-story evidence from the cleanup plan. Do not run manual packet completion after automation has already completed the listed story cleanup.
 
-A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` does not require a separate reviewer subagent run.
+A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories/approved/...yaml>` or `pnpm run packets:complete-many --story <stories/approved/...yaml> --story <stories/approved/...yaml>` does not require a separate reviewer subagent run. For validated parent-mode cleanup, exact packet-completion command output may also include command-owned bound parent story closeout from the cleanup plan.
 
 Automation-created cleanup pull requests are not created.
 

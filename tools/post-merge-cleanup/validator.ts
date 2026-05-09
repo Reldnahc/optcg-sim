@@ -9,6 +9,7 @@ import type {
   CleanupDryRunPlan,
   CleanupEvidenceInput,
   CleanupMetadata,
+  CleanupParentStoryValidation,
   CleanupStoryValidation,
 } from "./types.js";
 
@@ -47,7 +48,17 @@ export async function buildCleanupDryRunPlan(options: {
     a.localeCompare(b),
   );
 
+  const boundParentStory =
+    options.metadata.mode === "parent"
+      ? await bindParentStory({
+          changedFiles: options.evidence.changedFiles,
+          repoRoot: options.repoRoot,
+          stories,
+        })
+      : undefined;
+
   return {
+    ...(boundParentStory ? { boundParentStory } : {}),
     boundStories: stories,
     branches: sortedBranches,
     mergeSha: options.evidence.mergeSha,
@@ -83,10 +94,16 @@ export function buildBoundCleanupPlan(options: {
           command: "packets:complete" as const,
         }
       : {
-          args: options.plan.boundStories.flatMap((story) => [
-            "--story",
-            story.storyPath,
-          ]),
+          args: [
+            ...options.plan.boundStories.flatMap((story) => [
+              "--story",
+              story.storyPath,
+            ]),
+            "--parent-story",
+            options.plan.boundParentStory?.storyPath ?? "",
+            "--parent-story-sha256",
+            options.plan.boundParentStory?.storySha256 ?? "",
+          ],
           command: "packets:complete-many" as const,
         };
 
@@ -120,6 +137,9 @@ export function buildBoundCleanupPlan(options: {
     },
     schemaVersion: BOUND_CLEANUP_PLAN_SCHEMA_VERSION,
     status: "valid",
+    ...(options.plan.boundParentStory
+      ? { boundParentStory: options.plan.boundParentStory }
+      : {}),
     stories: [...options.plan.boundStories],
     verificationCommand: VERIFICATION_COMMAND,
   };
@@ -131,6 +151,7 @@ export function validateBoundCleanupPlanArtifact(
   const root = requireRecord(value, "bound cleanup plan");
   const expectedKeys = [
     "branches",
+    "boundParentStory",
     "generatedAt",
     "inputsHash",
     "mergedPullRequest",
@@ -169,6 +190,9 @@ export function validateBoundCleanupPlanArtifact(
   );
   requireString(metadataSource["ref"], "bound cleanup plan metadataSource.ref");
   requireStringArray(root["branches"], "bound cleanup plan branches");
+  if (root["boundParentStory"] !== undefined) {
+    validateParentStoryRecord(root["boundParentStory"]);
+  }
 
   const mergedPullRequest = requireRecord(
     root["mergedPullRequest"],
@@ -263,6 +287,25 @@ export function validateBoundCleanupPlanArtifact(
   }
 
   return root as BoundCleanupPlan;
+}
+
+function validateParentStoryRecord(value: unknown) {
+  const parent = requireRecord(value, "bound cleanup plan boundParentStory");
+  rejectUnexpectedKeys(
+    parent,
+    ["storyId", "storyPath", "storySha256"],
+    "bound cleanup plan boundParentStory",
+  );
+  requireString(parent["storyId"], "bound cleanup plan parent story storyId");
+  requireString(
+    parent["storyPath"],
+    "bound cleanup plan parent story storyPath",
+  );
+  requireHash(
+    parent["storySha256"],
+    "bound cleanup plan parent story storySha256",
+  );
+  validateCanonicalStoryPath(parent["storyPath"]);
 }
 
 function validateEvidenceBinding(options: {
@@ -734,6 +777,117 @@ async function validateStories(repoRoot: string, storyPaths: string[]) {
   return stories.sort((a, b) => a.storyPath.localeCompare(b.storyPath));
 }
 
+async function bindParentStory(options: {
+  changedFiles: string[];
+  repoRoot: string;
+  stories: CleanupStoryValidation[];
+}): Promise<CleanupParentStoryValidation> {
+  const childStoryIds = options.stories
+    .map((story) => story.storyId)
+    .sort((left, right) => left.localeCompare(right));
+  const childStoryPaths = new Set(
+    options.stories.map((story) => story.storyPath),
+  );
+  const candidates = options.changedFiles
+    .filter((changedPath) => changedPath.startsWith(APPROVED_PREFIX))
+    .filter((changedPath) => !childStoryPaths.has(changedPath));
+
+  if (candidates.length === 0) {
+    throw new Error(
+      "Parent-mode cleanup requires exactly one changed approved parent story.",
+    );
+  }
+
+  const matches: CleanupParentStoryValidation[] = [];
+  const mismatches: string[] = [];
+
+  for (const candidate of candidates) {
+    validateCanonicalStoryPath(candidate);
+    const storyPath = path.join(options.repoRoot, ...candidate.split("/"));
+    if (!(await fileExists(storyPath))) {
+      continue;
+    }
+    const storySource = await readFile(storyPath, "utf8");
+    const story = parseStoryYaml(storySource);
+
+    if (story.status === "done") {
+      throw new Error(`Changed parent story ${story.id} is already done.`);
+    }
+    if (story.status !== "approved") {
+      continue;
+    }
+    const parentPacketPath = path.join(
+      options.repoRoot,
+      "agent-packets",
+      `${story.id}.md`,
+    );
+    if (await fileExists(parentPacketPath)) {
+      throw new Error(
+        `Changed parent story ${story.id} must be non-packetized for parent-mode cleanup.`,
+      );
+    }
+
+    const parentChildStoryIds = readStoryStringList(
+      storySource,
+      "child_stories",
+    ).sort((left, right) => left.localeCompare(right));
+
+    if (!stringArraysEqual(parentChildStoryIds, childStoryIds)) {
+      mismatches.push(candidate);
+      continue;
+    }
+
+    matches.push({
+      storyId: story.id,
+      storyPath: candidate,
+      storySha256: sha256(storySource),
+    });
+  }
+
+  if (matches.length > 1) {
+    throw new Error("Multiple changed approved parent stories match cleanup.");
+  }
+  if (matches.length === 0) {
+    if (mismatches.length > 0) {
+      throw new Error(
+        "Changed parent story child_stories must exactly match cleanup child story IDs.",
+      );
+    }
+    throw new Error(
+      "Parent-mode cleanup requires exactly one changed approved parent story.",
+    );
+  }
+
+  const match = matches[0];
+  if (!match) {
+    throw new Error(
+      "Parent-mode cleanup requires exactly one changed approved parent story.",
+    );
+  }
+  return match;
+}
+
+function readStoryStringList(source: string, key: string) {
+  const lines = source.split(/\r?\n/);
+  const keyIndex = lines.findIndex((line) => line === `${key}:`);
+  if (keyIndex < 0) {
+    return [];
+  }
+  const values: string[] = [];
+  for (let index = keyIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line === undefined || line.trim() === "") {
+      continue;
+    }
+    const match = line.match(/^ {2}- (.+)$/);
+    if (!match) {
+      break;
+    }
+    values.push(match[1]?.trim() ?? "");
+  }
+  return values;
+}
+
 function validateCanonicalStoryPath(storyPath: string) {
   if (!storyPath.startsWith(APPROVED_PREFIX)) {
     throw new Error(
@@ -811,4 +965,11 @@ function readPacketMetadata(packetSource: string, key: string) {
     new RegExp(`^<!-- agent-packet:${escapedKey} ([^\\n]+) -->$`, "m"),
   );
   return match?.[1]?.trim() ?? "";
+}
+
+function stringArraysEqual(left: string[], right: string[]) {
+  return (
+    left.length === right.length &&
+    left.every((entry, index) => entry === right[index])
+  );
 }

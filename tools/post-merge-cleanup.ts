@@ -118,7 +118,12 @@ async function main() {
       const plan = JSON.parse(await readFile(planFile, "utf8")) as unknown;
       const trustedMainSha = readTrustedHeadSha(repoRoot);
       if (executePlanFile !== null) {
-        await executePacketCleanupPlan({ plan, repoRoot, trustedMainSha });
+        await executePacketCleanupPlan({
+          plan,
+          planFile: executePlanFile,
+          repoRoot,
+          trustedMainSha,
+        });
       } else {
         await finalizePacketCleanupPlan({ plan, repoRoot, trustedMainSha });
       }

@@ -173,6 +173,9 @@ function parseCompleteManyOptions(args: string[]): CompleteManyOptions {
   const repoRoot = findRepoRoot();
   const storyPaths: string[] = [];
   let manifestPath: string | undefined;
+  let parentCleanupPlanFile: string | undefined;
+  let parentStoryPath: string | undefined;
+  let parentStorySha256: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
@@ -205,6 +208,45 @@ function parseCompleteManyOptions(args: string[]): CompleteManyOptions {
       continue;
     }
 
+    if (token === "--parent-story") {
+      const parentStoryArg = args[index + 1];
+
+      if (!parentStoryArg || parentStoryArg.startsWith("--")) {
+        throw new Error("Missing value for --parent-story");
+      }
+
+      parentStoryPath = resolveCliPath(parentStoryArg, process.cwd());
+      index += 1;
+      continue;
+    }
+
+    if (token === "--bound-cleanup-plan") {
+      const parentCleanupPlanArg = args[index + 1];
+
+      if (!parentCleanupPlanArg || parentCleanupPlanArg.startsWith("--")) {
+        throw new Error("Missing value for --bound-cleanup-plan");
+      }
+
+      parentCleanupPlanFile = resolveCliPath(
+        parentCleanupPlanArg,
+        process.cwd(),
+      );
+      index += 1;
+      continue;
+    }
+
+    if (token === "--parent-story-sha256") {
+      const parentStoryShaArg = args[index + 1];
+
+      if (!parentStoryShaArg || parentStoryShaArg.startsWith("--")) {
+        throw new Error("Missing value for --parent-story-sha256");
+      }
+
+      parentStorySha256 = parentStoryShaArg;
+      index += 1;
+      continue;
+    }
+
     if (token.startsWith("--")) {
       throw new Error(`Unexpected argument: ${token}`);
     }
@@ -219,6 +261,9 @@ function parseCompleteManyOptions(args: string[]): CompleteManyOptions {
   return {
     manifestPath:
       manifestPath ?? path.join(repoRoot, "agent-packets", "active.json"),
+    ...(parentCleanupPlanFile ? { parentCleanupPlanFile } : {}),
+    ...(parentStoryPath ? { parentStoryPath } : {}),
+    ...(parentStorySha256 ? { parentStorySha256 } : {}),
     repoRoot,
     storyPaths,
   };
