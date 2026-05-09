@@ -13,5 +13,9 @@
   "scripts": {
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run --root ../.. packages/cards/src"
+  },
+  "dependencies": {
+    "@optcg/types": "workspace:*",
+    "zod": "^4.4.3"
   }
 }

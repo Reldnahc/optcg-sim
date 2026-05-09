@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-001A.md",
-      "storyId": "CARD-001A",
-      "storyPath": "stories/approved/CARD-001A-cards-package-skeleton-poneglyph-fixtures.yaml",
-      "storySha256": "5cee4f6ee92331fc412bcf432e375127f9c73662572230d3486d16de8cfaef7e"
+      "packetPath": "agent-packets/CARD-001B.md",
+      "storyId": "CARD-001B",
+      "storyPath": "stories/approved/CARD-001B-poneglyph-client-response-validation.yaml",
+      "storySha256": "24033f623d67d1cad7331051f65350f110266260167286984a8f908c621d5729"
     }
   ],
   "version": 1
