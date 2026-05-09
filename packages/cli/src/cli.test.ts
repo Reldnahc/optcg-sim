@@ -588,6 +588,28 @@ test("interactive mode accepts injected input and exits cleanly on EOF", async (
   assert.match(stdout.output(), /State hash: [a-f0-9]+/u);
 });
 
+test("interactive mode rejects manifest fixture boot because it is unsupported", async () => {
+  const { runCli } = await import("./cli.js");
+  const stdout = createWriter();
+  const stderr = createWriter();
+
+  const status = await runCli(
+    ["--interactive", "--manifest-fixture", representativeManifestPath],
+    {
+      stdin: Readable.from([]),
+      stdout: stdout.writer,
+      stderr: stderr.writer,
+    },
+  );
+
+  assert.equal(status, 1);
+  assert.equal(stdout.output(), "");
+  assert.equal(
+    stderr.output(),
+    "--manifest-fixture is only supported with --boot-summary or --command-script.\n",
+  );
+});
+
 test("interactive mode keeps exit-zero behavior for command errors on EOF", async () => {
   const { runCli } = await import("./cli.js");
   const stdout = createWriter();

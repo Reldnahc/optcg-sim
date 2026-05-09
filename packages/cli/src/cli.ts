@@ -203,6 +203,17 @@ export const runCli = async (
         );
 
   if (
+    manifestFixture.manifestPath !== undefined &&
+    argsWithoutManifestFixture[0] !== "--boot-summary" &&
+    argsWithoutManifestFixture[0] !== "--command-script"
+  ) {
+    io.stderr.write(
+      "--manifest-fixture is only supported with --boot-summary or --command-script.\n",
+    );
+    return 1;
+  }
+
+  if (
     argsWithoutManifestFixture.length === 0 ||
     (argsWithoutManifestFixture.length === 1 &&
       argsWithoutManifestFixture[0] === "--boot-summary")
