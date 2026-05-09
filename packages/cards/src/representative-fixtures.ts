@@ -1,9 +1,21 @@
-import type { CardImplementationRecord, CardSupportStatus } from "@optcg/types";
+import type {
+  CardImplementationRecord,
+  CardSupportStatus,
+  MatchCardManifest,
+  ResolvedCardOverlay,
+} from "@optcg/types";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { PoneglyphCardDetail } from "@optcg/types";
+import {
+  buildMatchCardManifest,
+  computeMatchCardManifestHash,
+  createManifestVersions,
+} from "./manifest.js";
+import { normalizePoneglyphCardDetail } from "./normalization.js";
+import { mergeSimulatorOverlay } from "./overlay.js";
 import { validatePoneglyphCardDetail } from "./poneglyph-schema.js";
 
 export type RepresentativeFixtureId =
@@ -114,6 +126,24 @@ const representativeFixtureIds = Object.freeze(
   Object.keys(supportMetadataById) as RepresentativeFixtureId[],
 );
 
+export const representativeMatchCardManifestFixturePath =
+  "fixtures/cards/representative-match-card-manifest.json";
+
+const representativeMatchManifestCreatedAt = "2026-05-09T00:00:00.000Z";
+
+const representativeMatchManifestVersions = createManifestVersions({
+  banlistVersion: "representative-banlist-v1",
+  cardDataVersion: "representative-poneglyph-fixture-v1",
+  customHandlerVersion: "representative-custom-handlers-v1",
+  effectDefinitionsVersion: "representative-effects-v1",
+  overlayVersion: "representative-overlays-v1",
+});
+
+const representativeManifestPoneglyphFixtureIds = [
+  "OP01-060",
+  "OP05-091",
+] as const satisfies readonly RepresentativeFixtureId[];
+
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../..",
@@ -146,6 +176,46 @@ export async function loadCheckedInRepresentativePoneglyphFixture(
   return validatePoneglyphCardDetail(parsed);
 }
 
+export async function buildRepresentativeMatchCardManifest(): Promise<MatchCardManifest> {
+  const cards = await Promise.all(
+    representativeManifestPoneglyphFixtureIds.map(async (fixtureId) => {
+      const normalized = normalizePoneglyphCardDetail(
+        await loadCheckedInRepresentativePoneglyphFixture(fixtureId),
+      );
+      const merged = mergeSimulatorOverlay(
+        normalized,
+        createRepresentativeOverlay(fixtureId, normalized),
+      );
+
+      return merged.card;
+    }),
+  );
+
+  return buildMatchCardManifest({
+    cards,
+    createdAt: representativeMatchManifestCreatedAt,
+    effectDefinitions: {},
+    source: "poneglyph-fixture",
+    versions: representativeMatchManifestVersions,
+  });
+}
+
+export async function loadRepresentativeMatchCardManifestFixture(): Promise<MatchCardManifest> {
+  const source = await readFile(
+    path.join(repoRoot, representativeMatchCardManifestFixturePath),
+    "utf8",
+  );
+  const parsed = JSON.parse(source) as MatchCardManifest;
+
+  if (parsed.manifestHash !== computeMatchCardManifestHash(parsed)) {
+    throw new Error(
+      `Representative manifest fixture ${representativeMatchCardManifestFixturePath} has a stale manifestHash.`,
+    );
+  }
+
+  return parsed;
+}
+
 export function hasCheckedInRepresentativePoneglyphFixture(
   fixtureId: RepresentativeFixtureId,
 ): boolean {
@@ -156,4 +226,29 @@ export function isRepresentativeFixtureStatusSupported(
   status: CardSupportStatus,
 ): boolean {
   return status !== "unsupported" && status !== "banned-in-simulator";
+}
+
+function createRepresentativeOverlay(
+  fixtureId: (typeof representativeManifestPoneglyphFixtureIds)[number],
+  normalized: ReturnType<typeof normalizePoneglyphCardDetail>,
+): ResolvedCardOverlay {
+  const metadata = getRepresentativeFixtureSupportMetadata(fixtureId);
+  const support: CardImplementationRecord = {
+    behaviorHash: normalized.behaviorHash,
+    cardDataVersion: representativeMatchManifestVersions.cardDataVersion,
+    cardId: normalized.cardId,
+    rulesVersion: metadata.support.rulesVersion,
+    sourceTextHash: normalized.sourceTextHash,
+    status: metadata.support.status,
+    tested: metadata.support.tested,
+  };
+
+  if (metadata.support.notes !== undefined) {
+    support.notes = metadata.support.notes;
+  }
+
+  return {
+    cardId: normalized.cardId,
+    support,
+  };
 }
