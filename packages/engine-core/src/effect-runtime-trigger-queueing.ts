@@ -11,6 +11,7 @@ import type {
 
 import { createAttackTriggerQueueing } from "./effect-runtime-trigger-queueing-attack.js";
 import { createKOTriggerQueueing } from "./effect-runtime-trigger-queueing-ko.js";
+import { createMainEventTriggerQueueing } from "./effect-runtime-trigger-queueing-main-event.js";
 import { createOnPlayTriggerQueueing } from "./effect-runtime-trigger-queueing-on-play.js";
 
 export type OnPlayTriggerQueueingFailureReason =
@@ -41,6 +42,13 @@ export type OnKOTriggerCandidateDetectionFailureReason =
   | "unsupported-on-ko-definition"
   | "multiple-on-ko-effects";
 
+export type MainEventTriggerQueueingFailureReason =
+  | "invalid-card-played-event"
+  | "source-presence-failed"
+  | "missing-card-definition"
+  | "unsupported-main-event-definition"
+  | "multiple-main-event-effects";
+
 interface OnPlayTriggerQueueingErrorDetails {
   reason: OnPlayTriggerQueueingFailureReason;
 }
@@ -55,6 +63,10 @@ interface OnOpponentAttackTriggerQueueingErrorDetails {
 
 interface OnKOTriggerCandidateDetectionErrorDetails {
   reason: OnKOTriggerCandidateDetectionFailureReason;
+}
+
+interface MainEventTriggerQueueingErrorDetails {
+  reason: MainEventTriggerQueueingFailureReason;
 }
 
 export interface BattleKOTriggerCandidate {
@@ -101,6 +113,7 @@ export interface EffectRuntimeTriggerQueueingHelpers {
     events: EngineEvent[],
   ) => QueueBattleKOTriggersResult;
   queueOnPlayTriggers: (state: GameState) => EngineResult | undefined;
+  queueMainEventTriggers: (state: GameState) => EngineResult | undefined;
   queueWhenAttackingTriggers: (state: GameState) => EngineResult | undefined;
   queueOnOpponentAttackTriggers: (state: GameState) => EngineResult | undefined;
   queueEffectResolvedCustomTriggers: (
@@ -142,12 +155,24 @@ const onKOTriggerCandidateDetectionError = (
   details: { reason } satisfies OnKOTriggerCandidateDetectionErrorDetails,
 });
 
+const mainEventTriggerQueueingError = (
+  reason: MainEventTriggerQueueingFailureReason,
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId: "main-event-trigger-queueing",
+  details: { reason } satisfies MainEventTriggerQueueingErrorDetails,
+});
+
 export const createEffectRuntimeTriggerQueueing = (
   dependencies: EffectRuntimeTriggerQueueingDependencies,
 ): EffectRuntimeTriggerQueueingHelpers => {
   const { queueOnPlayTriggers } = createOnPlayTriggerQueueing(
     dependencies,
     onPlayTriggerQueueingError,
+  );
+  const { queueMainEventTriggers } = createMainEventTriggerQueueing(
+    dependencies,
+    mainEventTriggerQueueingError,
   );
   const { queueWhenAttackingTriggers, queueOnOpponentAttackTriggers } =
     createAttackTriggerQueueing(
@@ -165,6 +190,7 @@ export const createEffectRuntimeTriggerQueueing = (
     detectBattleKOTriggerCandidates,
     queueBattleKOTriggers,
     queueOnPlayTriggers,
+    queueMainEventTriggers,
     queueWhenAttackingTriggers,
     queueOnOpponentAttackTriggers,
     queueEffectResolvedCustomTriggers,

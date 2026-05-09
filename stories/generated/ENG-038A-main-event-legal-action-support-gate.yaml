@@ -1,0 +1,75 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-038A
+epic_id: KICK-001
+title: Gate and expose supported Main Event legal actions
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Add the narrow implemented-dsl support gate and legal-action exposure for
+  playable `[Main]` Event cards.
+story_boundary: >
+  Own only the support metadata gate and play-card legal action boundary for
+  supported Main Events. Stop before changing payment execution, Event effect
+  resolution, target-effect continuation, CLI, server, client, or UI behavior.
+allowed_touch_points:
+  - packages/engine-core/src/play-card-support.ts
+  - packages/engine-core/src/play-card-event.test.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - stories/approved/ENG-038A-main-event-legal-action-support-gate.yaml
+  - agent-packets/ENG-038A.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s014
+  - 02-engine-mechanics.s016
+  - 03-game-state-events-decisions.s015
+  - 04-effect-runtime.s003
+  - 04-effect-runtime.s008
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+scope:
+  - allow `implemented-dsl` Event support metadata only for a reviewed single `[Main]` Event effect definition inside the current supported runtime shape
+  - expose `playCard` legal actions for supported Main Events only to the controller during that player's Main Phase outside battle and when no pending decision or unresolved runtime work exists
+  - keep existing vanilla `[Main]` Event support behavior intact
+  - omit legal actions for unsupported Event status, missing implementation records, missing effect definitions, non-Event manifests, trigger text, Counter timing, optional effects, once-per-turn effects, effect costs, unresolved conditions, custom handlers, and unsupported effect bodies
+  - keep opponent legal actions and player-facing legal-action projection free of hidden support or hand-content leaks
+non_scope:
+  - changing Event payment execution
+  - changing Event hand-to-trash movement
+  - resolving Event effects
+  - target selection decisions or target-effect continuation
+  - Counter Events
+  - Life Trigger changes
+  - replacement effects
+  - optional activation
+  - once-per-turn tracking
+  - custom handlers
+  - server/client/UI
+dependencies:
+  - ENG-031E
+acceptance_criteria:
+  - supported implemented-dsl Main Event cards appear as legal play actions in the controller's valid Main Phase window
+  - the same cards are omitted for the opponent, outside Main Phase, during battle, or while a pending decision or runtime work blocks normal phase actions
+  - unsupported or ambiguous Event implementation metadata fails closed without adding legal actions
+  - existing vanilla Event legal-action coverage remains passing
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/play-card-event.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-038A packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-038 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if legality depends on parsing unsupported printed text, broader support policy, target primitive resolution, or client-visible explanations, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate

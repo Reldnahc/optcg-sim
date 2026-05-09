@@ -1,0 +1,78 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-038B
+epic_id: KICK-001
+title: Pay Main Event cost and trash the played Event
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Prove supported Main Events use the existing DON payment path and move from
+  hand to trash as part of play.
+story_boundary: >
+  Own only cost payment and zone movement for implemented-dsl Main Event play.
+  Stop before adding Event effect resolution, target-effect continuation, CLI,
+  server, client, or UI behavior.
+allowed_touch_points:
+  - packages/engine-core/src/play-card.ts
+  - packages/engine-core/src/play-card-payment.ts
+  - packages/engine-core/src/play-card-event.test.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - stories/approved/ENG-038B-main-event-cost-and-trash-movement.yaml
+  - agent-packets/ENG-038B.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s016
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s011
+  - 06-visibility-security.s006
+  - 09-card-data-and-support-policy.s011
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+scope:
+  - route supported nonzero-cost Main Event play through the existing payCost pending decision and response path
+  - keep the existing DON selection, DON resting, payment validation, forged-response rejection, stale card rejection, and insufficient-cost fail-closed behavior
+  - move the accepted Event from hand to the controller's trash before any Event effect work runs
+  - emit deterministic public card movement, trashed, played, and rule-processing events for the supported Event play path
+  - preserve zero-cost Main Event hand-to-trash behavior through direct accepted play
+  - preserve hand and trash reindexing and stable state hashes for repeated equivalent Event plays
+non_scope:
+  - adding or changing Event effect resolution
+  - changing generic Character, Stage, overflow, or replacement behavior
+  - changing the payCost decision schema
+  - target selection decisions or target-effect continuation
+  - Counter Events
+  - Life Trigger changes
+  - replacement effects
+  - optional activation
+  - once-per-turn tracking
+  - custom handlers
+  - server/client/UI
+dependencies:
+  - ENG-038A
+acceptance_criteria:
+  - nonzero-cost supported Main Event play creates a payCost decision using the existing DON payment path
+  - accepted payment rests exactly the selected active DON and then moves the Event from hand to trash
+  - zero-cost supported Main Event play moves hand to trash without a payment decision
+  - invalid payment, stale card references, forged payment cards, and insufficient DON fail closed without partial mutation
+  - Event play events remain strictly ordered and state hashes are stable for identical inputs
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/play-card-event.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-038B packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-038 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if payment needs a new decision shape, new cost source, or broad play-card rewrite, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate

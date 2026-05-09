@@ -6,15 +6,25 @@ import type {
   CardInstance,
   EngineResult,
   GameState,
+  ResolvedCard,
 } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "./canonical-state.js";
+import { filterStateForPlayer } from "./filter-state-for-player.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,
   getPlayCardLegalActions,
 } from "./play-card.js";
-import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
+import {
+  addExtraDeckCard,
+  must,
+  p1,
+  p2,
+  resolvedCard,
+  reviewedMainEventDrawDefinition,
+  valueContainsScalar,
+} from "./action-test-fixtures.js";
 import {
   hasPlayCardAction,
   respondToDecisionActions,
@@ -69,6 +79,152 @@ test("getLegalActions includes supported [Main] vanilla Event play only under ma
   );
 
   state.turn.phase = "don";
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p1), eventCard),
+    false,
+  );
+});
+
+test("getLegalActions includes reviewed implemented-dsl Main Event play only under main-phase controller constraints", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event");
+  const implemented = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Main] Draw 1 card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-main-event-draw",
+    },
+  });
+  state.cardManifest.cards[eventCard.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-draw": reviewedMainEventDrawDefinition(
+      implemented.cardId,
+      implemented.support,
+    ),
+  };
+
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p1), eventCard),
+    true,
+  );
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p2), eventCard),
+    false,
+  );
+
+  state.turn.phase = "don";
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p1), eventCard),
+    false,
+  );
+});
+
+test("getLegalActions omits implemented-dsl Events outside the narrow reviewed Main Event gate", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const supported = must(p1State.hand[0], "supported");
+  const optional = must(p1State.hand[1], "optional");
+  const counter = must(p1State.hand[2], "counter");
+  const untested = must(p1State.hand[3], "untested");
+
+  const install = (
+    card: CardInstance,
+    effect: ReturnType<
+      typeof reviewedMainEventDrawDefinition
+    >["effects"][number],
+    supportOverride: Partial<ResolvedCard["support"]> = {},
+  ) => {
+    const resolved = resolvedCard({
+      cardId: card.cardId,
+      category: "event",
+      cost: 1,
+      effectText: "[Main] Draw 1 card.",
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: `def-${String(card.cardId)}`,
+        ...supportOverride,
+      },
+    });
+    state.cardManifest.cards[card.cardId] = resolved;
+    state.cardManifest.effectDefinitionsVersion = "0.1.0";
+    state.cardManifest.effectDefinitions = {
+      ...state.cardManifest.effectDefinitions,
+      [`def-${String(card.cardId)}`]: {
+        ...reviewedMainEventDrawDefinition(resolved.cardId, resolved.support),
+        effects: [effect],
+      },
+    };
+  };
+  const baseDefinition = reviewedMainEventDrawDefinition(
+    supported.cardId,
+    resolvedCard({ cardId: supported.cardId, category: "event", cost: 1 })
+      .support,
+  );
+  const baseEffect = must(baseDefinition.effects[0], "base effect");
+  install(supported, baseEffect);
+  install(optional, { ...baseEffect, optional: true });
+  install(counter, { ...baseEffect, trigger: { type: "counter" } });
+  install(untested, baseEffect, { tested: false });
+
+  const legal = getPlayCardLegalActions(state, p1);
+  assert.equal(hasPlayCardAction(legal, supported), true);
+  assert.equal(hasPlayCardAction(legal, optional), false);
+  assert.equal(hasPlayCardAction(legal, counter), false);
+  assert.equal(hasPlayCardAction(legal, untested), false);
+});
+
+test("getLegalActions omits target-requiring implemented-dsl Main Events until target-effect primitives are supported", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event");
+  const implemented = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Main] Rest up to 1 of your opponent's Characters.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-main-event-target",
+    },
+  });
+  const definition = reviewedMainEventDrawDefinition(
+    implemented.cardId,
+    implemented.support,
+  );
+  state.cardManifest.cards[eventCard.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-target": {
+      ...definition,
+      effects: [
+        {
+          ...must(definition.effects[0], "main effect"),
+          effect: {
+            type: "rest",
+            target: {
+              type: "choose",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+              },
+            },
+          },
+        },
+      ],
+    },
+  };
+
   assert.equal(
     hasPlayCardAction(getPlayCardLegalActions(state, p1), eventCard),
     false,
@@ -248,6 +404,63 @@ test("nonzero [Main] Event play creates payCost and valid payment moves card han
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });
 
+test("nonzero implemented-dsl Main Event uses existing DON payment and moves hand to trash", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event");
+  const implemented = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 2,
+    effectText: "[Main] Draw 1 card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-main-event-payment",
+    },
+  });
+  state.cardManifest.cards[eventCard.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-payment": reviewedMainEventDrawDefinition(
+      implemented.cardId,
+      implemented.support,
+    ),
+  };
+
+  const opened = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: eventCard.instanceId,
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "payCost");
+
+  const openedP1 = must(opened.state.players[p1], "opened p1");
+  const don0 = must(openedP1.costArea[0], "don0");
+  const don1 = must(openedP1.costArea[1], "don1");
+  const resolved = applyPlayCardTestAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "decision").id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [don0.instanceId, don1.instanceId],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  const resolvedP1 = must(resolved.state.players[p1], "resolved p1");
+  assert.equal(
+    resolvedP1.hand.some((card) => card.instanceId === eventCard.instanceId),
+    false,
+  );
+  assert.equal(
+    must(resolvedP1.trash[0], "trash 0").instanceId,
+    eventCard.instanceId,
+  );
+  assert.equal(must(resolvedP1.costArea[0], "paid don0").state, "rested");
+  assert.equal(must(resolvedP1.costArea[1], "paid don1").state, "rested");
+});
+
 test("zero-cost [Main] Event play resolves directly to trash with expected events", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");
@@ -293,6 +506,75 @@ test("zero-cost [Main] Event play resolves directly to trash with expected event
       ["cardPlayed", "public"],
       ["ruleProcessingChecked", "replayOnly"],
     ],
+  );
+});
+
+test("implemented-dsl Main Event draw keeps event sequencing, state hash, and opponent PlayerView safe", () => {
+  const run = () => {
+    const state = setupMainPlayState();
+    addExtraDeckCard(state);
+    const p1State = must(state.players[p1], "p1");
+    const eventCard = must(p1State.hand[0], "event");
+    const drawnCard = must(p1State.deck[0], "drawn card");
+    const implemented = resolvedCard({
+      cardId: eventCard.cardId,
+      category: "event",
+      cost: 0,
+      effectText: "[Main] Draw 1 card.",
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: "def-main-event-view",
+      },
+    });
+    state.cardManifest.cards[eventCard.cardId] = implemented;
+    state.cardManifest.effectDefinitionsVersion = "0.1.0";
+    state.cardManifest.effectDefinitions = {
+      "def-main-event-view": reviewedMainEventDrawDefinition(
+        implemented.cardId,
+        implemented.support,
+      ),
+    };
+
+    const result = applyPlayCardTestAction(state, {
+      type: "playCard",
+      cardInstanceId: eventCard.instanceId,
+    });
+    return { result, eventCard, drawnCard };
+  };
+
+  const first = run();
+  const second = run();
+  assert.equal(first.result.errors, undefined);
+  assert.equal(
+    first.result.stateHash,
+    hashCanonicalStateValue(first.result.state),
+  );
+  assert.deepEqual(
+    first.result.events.map((event) => event.seq),
+    first.result.events
+      .map((event) => event.seq)
+      .slice()
+      .sort((left, right) => left - right),
+  );
+  assert.deepEqual(
+    first.result.events.map((event) => event.type),
+    second.result.events.map((event) => event.type),
+  );
+  assert.equal(first.result.stateHash, second.result.stateHash);
+
+  const opponentView = filterStateForPlayer(first.result.state, p2);
+  assert.equal(
+    valueContainsScalar(opponentView, first.eventCard.instanceId),
+    true,
+  );
+  assert.equal(
+    valueContainsScalar(opponentView, first.drawnCard.instanceId),
+    false,
+  );
+  assert.equal(opponentView.opponent.handCount, 5);
+  assert.equal(
+    opponentView.legalActions.some((action) => action.type === "playCard"),
+    false,
   );
 });
 
