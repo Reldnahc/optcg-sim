@@ -31,8 +31,10 @@ test("engine-core import boundaries include cards package and external-data clie
 
   for (const requiredPath of [
     "@optcg/cards",
+    "react",
     "redis",
     "pg",
+    "ws",
     "axios",
     "undici",
     "node-fetch",
@@ -50,6 +52,8 @@ test("engine-core import boundaries include cards package and external-data clie
     "**/client/**",
     "**/server/**",
     "**/browser/**",
+    "**/ui/**",
+    "**/view-engine/**",
   ]) {
     assert.ok(
       restrictedPatterns.includes(requiredPattern),

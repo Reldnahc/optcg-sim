@@ -140,6 +140,7 @@ export default [
             "**/browser/**",
             "**/client/**",
             "**/server/**",
+            "**/ui/**",
             "**/view-engine/**",
           ],
         },
