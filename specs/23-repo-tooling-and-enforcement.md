@@ -347,6 +347,16 @@ Recommended CI jobs:
 
 For protected branches, require at least one human review plus passing CI.
 
+Ordinary protected-branch changes still require a pull request, at least one
+human review, and passing required checks. The only allowed packet-lifecycle
+exception is a dedicated GitHub App actor `optcg-packet-cleanup[bot]` running
+workflow `.github/workflows/post-merge-packet-cleanup.yml` with token
+`POST_MERGE_PACKET_CLEANUP_TOKEN`, and that exception exists only to push exact
+packet-completion command output to `main` after a reviewed pull request has
+merged. The cleanup actor and token must not be available to arbitrary GitHub
+Actions workflows, human users, broad admin roles, implementation changes, docs
+changes, tooling changes, or ordinary development pushes.
+
 ## Coverage policy
 
 <!-- SECTION_REF: 23-repo-tooling-and-enforcement.s017 -->
