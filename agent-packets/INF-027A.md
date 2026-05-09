@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id INF-027A -->
 <!-- agent-packet:story-path stories/approved/INF-027A-document-post-merge-cleanup-policy.yaml -->
-<!-- agent-packet:story-sha256 6fe98337ce989ce096a845be3766d3948518c61e06cd2c75e4dcf39730083d80 -->
+<!-- agent-packet:story-sha256 7fcf173ef95921b8f26e8304758b89310a9166774157a7ea68584ec3be850977 -->
 
 # Story Packet
 
@@ -225,7 +225,7 @@ Lint, formatting, and merge-gate verification are mandatory, and CI must fail wh
 
 ## Story Boundary
 
-Own documentation and PR-template policy for post-merge cleanup automation only. Do not add GitHub Actions, metadata parser code, branch deletion code, remote repository setting changes, or packet lifecycle command changes in this story.
+Own documentation, PR-template, and root agent-instruction policy for post-merge cleanup automation only. Do not add GitHub Actions, metadata parser code, branch deletion code, remote repository setting changes, or packet lifecycle command changes in this story.
 
 ## Scope
 
@@ -237,6 +237,7 @@ Own documentation and PR-template policy for post-merge cleanup automation only.
 - document the exact narrow branch-protection bypass actor/workflow semantics required by SPEC-004
 - document branch deletion safety rules and cleanup-failure branch deletion skip behavior
 - update the PR template with explicit cleanup metadata fields and review-responsibility text
+- update root agent instructions so they do not require manual packet cleanup when automation succeeds
 
 ## Out of Scope
 
@@ -252,6 +253,7 @@ Own documentation and PR-template policy for post-merge cleanup automation only.
 ## Allowed Touch Points
 
 <!-- prettier-ignore -->
+- AGENTS.md
 - .github/branch-protection.md
 - .github/pull_request_template.md
 - docs/workflow/story-execution.md
@@ -277,6 +279,7 @@ Own documentation and PR-template policy for post-merge cleanup automation only.
 - review workflow test proving PR template cleanup metadata fields and reviewer responsibility exist
 - branch-protection test proving narrow bypass actor/workflow documentation exists and ordinary protections remain
 - workflow docs test proving no-cleanup-PR, operational fallback, metadata binding, and branch deletion safety language exists
+- root agent instruction test proving manual packet completion is operational fallback once cleanup automation succeeds
 
 ## Expected Output
 
@@ -295,6 +298,7 @@ Own documentation and PR-template policy for post-merge cleanup automation only.
 - docs say direct cleanup commits are allowed only for exact packet-completion command output after verification
 - docs say automation fails closed unless metadata binds to reviewed PR evidence and trusted checked-in story/packet state
 - docs say branch deletion occurs only after packet cleanup succeeds and never for protected, unrelated, or unmerged branches
+- root agent instructions align with the automated-normal, manual-operational-fallback cleanup policy
 
 ## Ambiguity Rule
 

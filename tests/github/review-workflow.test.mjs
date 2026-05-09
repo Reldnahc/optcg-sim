@@ -309,6 +309,18 @@ test("workflow docs describe automated packet cleanup policy and fallback bounda
   ]);
 });
 
+test("root agent instructions treat manual packet completion as automation fallback", async () => {
+  const agentInstructions = await readActiveText("AGENTS.md");
+
+  assertMatchesAll(agentInstructions, [
+    /Post-merge packet cleanup automation is the normal path after a reviewed story PR or parent PR merges/i,
+    /manual packet-completion cleanup only as the operational fallback when automation fails or is unavailable/i,
+    /Do not run manual packet completion after automation has already completed the listed story cleanup/i,
+    /cleanup metadata is a reviewed request, not standalone authority/i,
+    /automation-created cleanup pull requests are not created/i,
+  ]);
+});
+
 test("branch protection required status checks exactly match ci workflow jobs", async () => {
   const guide = await readActiveText(".github/branch-protection.md");
   const workflow = await readActiveText(".github/workflows/ci.yml");
@@ -392,7 +404,8 @@ test("agents guidance exposes a concise root checklist and links detailed workfl
     /Open the PR before reviewer-subagent review/i,
     /Post the AI review record or equivalent human-review fallback/i,
     /Request human review only after review records are current/i,
-    /Run `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` after merge to `main`/i,
+    /Confirm post-merge packet cleanup automation completed the listed story cleanup after merge to `main`/i,
+    /manual packet-completion cleanup only as the operational fallback when automation fails or is unavailable/i,
     /docs\/workflow\/story-execution\.md/i,
     /docs\/workflow\/review-gate\.md/i,
     /docs\/workflow\/parent-integration-branches\.md/i,
