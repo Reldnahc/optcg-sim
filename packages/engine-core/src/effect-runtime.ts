@@ -1,5 +1,6 @@
 import type {
   CardSupportStatus,
+  CardRef,
   EffectDefinition,
   EngineError,
   EngineResult,
@@ -7,6 +8,7 @@ import type {
   MatchCardManifest,
   QueueEntryId,
   ResolvedCard,
+  SelectTargetsDecision,
 } from "@optcg/types";
 
 import { toEngineResult } from "./action-results.js";
@@ -209,11 +211,17 @@ const queueEffectResolvedCustomTriggers =
 const queueProcessing = createEffectRuntimeQueueProcessing({
   resolveImplementedDslEffectDefinition,
   createUnsupportedPendingRuntimeWorkError: unsupportedPendingRuntimeWorkError,
+  queueBattleKOTriggers,
   queueEffectResolvedCustomTriggers,
 });
 
 export const failUnsupportedTargetEffectContinuation =
   queueProcessing.failUnsupportedTargetEffectContinuation;
+export const continueSelectedTargetEffect = (
+  state: GameState,
+  decision: SelectTargetsDecision,
+  targets: readonly CardRef[],
+) => queueProcessing.continueSelectedTargetEffect(state, decision, targets);
 const processNoChoiceEffectQueue = queueProcessing.processNoChoiceEffectQueue;
 
 const toErrorTuple = (
