@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { CardId, LoadoutId, PlayerId } from "@optcg/types";
+import type {
+  CardId,
+  EffectDefinition,
+  LoadoutId,
+  PlayerId,
+} from "@optcg/types";
 
 import {
   computeMatchCardManifestHash,
@@ -21,6 +26,12 @@ import {
 const toCardId = (value: string): CardId => value as CardId;
 const toLoadoutId = (value: string): LoadoutId => value as LoadoutId;
 const toPlayerId = (value: string): PlayerId => value as PlayerId;
+
+const hasTargetKoEffect = (definition: EffectDefinition): boolean =>
+  definition.effects.some(
+    (block) =>
+      block.effect.type === "ko" && block.effect.target.type === "choose",
+  );
 
 describe("real card fixtures", () => {
   it("validates every checked-in real fixture through the Poneglyph detail schema", async () => {
@@ -161,6 +172,23 @@ describe("real card fixtures", () => {
     expect(
       manifest.effectDefinitions?.[String(eb?.support.effectDefinitionId)],
     ).toEqual(effectDefinition);
+  });
+
+  it("keeps real target-KO fixture support absent until reviewed Poneglyph text supports it", async () => {
+    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const unsupportedRealCards = [
+      manifest.cards[toCardId("OP01-060")],
+      manifest.cards[toCardId("OP05-091")],
+    ];
+
+    expect(
+      Object.values(manifest.effectDefinitions ?? {}).filter(hasTargetKoEffect),
+    ).toEqual([]);
+    for (const card of unsupportedRealCards) {
+      expect(card?.support.status).toBe("unsupported");
+      expect(card?.support.effectDefinitionId).toBeUndefined();
+      expect(card?.support.tested).toBe(false);
+    }
   });
 
   it("fails loadout validation closed for unsupported real non-vanilla cards in ranked mode", async () => {
