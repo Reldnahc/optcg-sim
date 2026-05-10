@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
-import type { CardInstance } from "@optcg/types";
+import type { CardId, CardInstance, MatchCardManifest } from "@optcg/types";
 
 import { must, p1, resolvedCard } from "./action-test-fixtures.js";
+import { hasUnsupportedSupportGateText } from "./battle-support.js";
 import {
   canResolveDestinationConflict,
   getActiveDonCount,
@@ -11,6 +15,27 @@ import {
   getSupportedPlayMetadata,
 } from "./play-card-support.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
+
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+);
+
+const plainDataClone = <T>(value: T): T =>
+  JSON.parse(JSON.stringify(value)) as T;
+const toCardId = (value: string): CardId => value as CardId;
+
+const loadRealCardManifest = async (): Promise<MatchCardManifest> => {
+  const manifestFixturePath = path.join(
+    repoRoot,
+    "fixtures/cards/real-card-dsl-match-card-manifest.json",
+  );
+  return plainDataClone(
+    JSON.parse(
+      await readFile(manifestFixturePath, "utf8"),
+    ) as MatchCardManifest,
+  );
+};
 
 test("getSupportedPlayMetadata accepts supported vanilla Character, Stage, and exact Main Event", () => {
   const state = setupMainPlayState();
@@ -112,6 +137,81 @@ test("getSupportedPlayMetadata rejects unsupported play metadata", () => {
   });
   assert.equal(getSupportedPlayMetadata(state, missingManifest), null);
   assert.equal(getSupportedPlayMetadata(state, unsupported), null);
+});
+
+test("support gates ignore parenthetical explanatory notes only with matching supported keyword metadata", () => {
+  const supportedBanish = resolvedCard({
+    cardId: "supported-banish" as CardInstance["cardId"],
+    category: "character",
+    cost: 3,
+    power: 5000,
+    effectText:
+      "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
+    printedKeywords: ["banish"],
+  });
+  const missingKeyword = {
+    ...supportedBanish,
+    printedKeywords: [],
+  };
+  const extraText = {
+    ...supportedBanish,
+    effectText:
+      "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.) Draw 1 card.",
+  };
+
+  assert.equal(
+    hasUnsupportedSupportGateText(undefined, supportedBanish),
+    false,
+  );
+  assert.equal(hasUnsupportedSupportGateText("   ", supportedBanish), false);
+  assert.equal(
+    hasUnsupportedSupportGateText("(explanatory note only)", supportedBanish),
+    false,
+  );
+  assert.equal(
+    hasUnsupportedSupportGateText(supportedBanish.effectText, supportedBanish),
+    false,
+  );
+  assert.equal(
+    hasUnsupportedSupportGateText(supportedBanish.effectText, missingKeyword),
+    true,
+  );
+  assert.equal(
+    hasUnsupportedSupportGateText(extraText.effectText, supportedBanish),
+    true,
+  );
+  assert.equal(
+    hasUnsupportedSupportGateText("[Banish] (unterminated", supportedBanish),
+    true,
+  );
+});
+
+test("getSupportedPlayMetadata accepts OP04-014 parenthetical explanatory notes from the checked-in manifest", async () => {
+  const plainManifest = await loadRealCardManifest();
+  const op04014 = toCardId("OP04-014");
+  const opCard = must(plainManifest.cards[op04014], "OP04-014 manifest card");
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const supported = must(p1State.hand[0], "supported Banish");
+  const missingKeyword = must(p1State.hand[1], "missing keyword");
+
+  supported.cardId = op04014;
+  state.cardManifest.cards[op04014] = opCard;
+  state.cardManifest.cards[missingKeyword.cardId] = {
+    ...opCard,
+    cardId: missingKeyword.cardId,
+    printedKeywords: [],
+    support: {
+      ...opCard.support,
+      cardId: missingKeyword.cardId,
+    },
+  };
+
+  assert.deepEqual(getSupportedPlayMetadata(state, supported), {
+    category: "character",
+    printedCost: opCard.cost,
+  });
+  assert.equal(getSupportedPlayMetadata(state, missingKeyword), null);
 });
 
 test("getPlayableHandCards respects active DON and destination conflicts", () => {

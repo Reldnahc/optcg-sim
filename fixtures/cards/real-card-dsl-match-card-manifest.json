@@ -3733,11 +3733,11 @@
         "behaviorHash": "d5651718a7e9545674381b984060cd8b09abae4f58abdbe25ee16f30de3f89f9",
         "cardDataVersion": "real-card-poneglyph-fixture-v1",
         "cardId": "OP04-014",
-        "rulesVersion": "fixture-real-card",
+        "rulesVersion": "op04-014-banish-v1",
         "sourceTextHash": "74379c099a0a16ab7bdf274bf6b5cf38829058b1dcc68ef94707c1bd9baac74e",
-        "status": "unsupported",
-        "tested": false,
-        "notes": "Reviewed real-card fixture candidate for complete printed Banish keyword behavior; kept unsupported because the current battle metadata gate rejects real cards with printed effect text and no effect definition."
+        "status": "vanilla-confirmed",
+        "tested": true,
+        "notes": "Reviewed real-card fixture for complete printed Banish keyword behavior through parenthetical explanatory-note support gates."
       }
     },
     "OP04-039": {
@@ -4041,5 +4041,5 @@
       }
     }
   },
-  "manifestHash": "4b102c7394d1e080c6f15730617dcdde1bb7dda5a6476c2dc122a248b77a02e3"
+  "manifestHash": "da94d6001c0d73cf400d864b2a79e2adaf1cc63f0b7f0764a78b3536f08fb059"
 }

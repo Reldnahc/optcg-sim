@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-040.md",
+      "storyId": "ENG-040",
+      "storyPath": "stories/approved/ENG-040-parenthetical-reminder-text-support-gate.yaml",
+      "storySha256": "b4d798e04924c46c0c179f8f87af2708698cfb24f709946d199bfb930b11da63"
+    }
+  ],
   "version": 1
 }

@@ -4,6 +4,7 @@ import type {
   CardRef,
   EffectDefinition,
   GameState,
+  Keyword,
   MatchCardManifest,
   ResolvedCard,
 } from "@optcg/types";
@@ -33,8 +34,69 @@ export const expireBattleDurationStateForCleanup = (
   return cleanedState;
 };
 
-const hasText = (value: string | undefined): boolean =>
-  value !== undefined && value.trim().length > 0;
+const supportedExplanatoryNoteKeywordBodies = new Map<string, Keyword>([
+  ["[Banish]", "banish"],
+  ["[Blocker]", "blocker"],
+  ["[Rush]", "rush"],
+  ["[Rush: Character]", "rushCharacter"],
+]);
+
+const stripParentheticalExplanatoryNotes = (text: string): string | null => {
+  let depth = 0;
+  let stripped = "";
+
+  for (const character of text) {
+    if (character === "(") {
+      depth += 1;
+      if (depth > 1) {
+        return null;
+      }
+      stripped += " ";
+      continue;
+    }
+    if (character === ")") {
+      if (depth === 0) {
+        return null;
+      }
+      depth -= 1;
+      stripped += " ";
+      continue;
+    }
+    if (depth === 0) {
+      stripped += character;
+    }
+  }
+
+  if (depth !== 0) {
+    return null;
+  }
+  return stripped;
+};
+
+const normalizeSupportGateText = (text: string): string =>
+  text.replace(/\s+/gu, " ").trim();
+
+export const hasUnsupportedSupportGateText = (
+  text: string | undefined,
+  card: ResolvedCard,
+): boolean => {
+  if (text === undefined || text.trim().length === 0) {
+    return false;
+  }
+
+  const stripped = stripParentheticalExplanatoryNotes(text);
+  if (stripped === null) {
+    return true;
+  }
+
+  const normalized = normalizeSupportGateText(stripped);
+  if (normalized.length === 0) {
+    return false;
+  }
+
+  const keyword = supportedExplanatoryNoteKeywordBodies.get(normalized);
+  return keyword === undefined || !card.printedKeywords.includes(keyword);
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -210,8 +272,10 @@ export const hasUnsupportedBattleEffectMetadata = (
   }
 
   for (const cardId of combatCardIds) {
+    const card = state.cardManifest.cards[cardId];
     if (
-      hasText(state.cardManifest.cards[cardId]?.effectText) &&
+      card !== undefined &&
+      hasUnsupportedSupportGateText(card.effectText, card) &&
       !hasSupportedBattleRuntimeDefinitionForText(state, cardId)
     ) {
       return true;

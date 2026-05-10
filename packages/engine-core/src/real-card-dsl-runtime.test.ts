@@ -258,7 +258,7 @@ test("loads cards-produced plain manifest data while resolving synthetic target 
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });
 
-test("loads OP04-014 from plain manifest data and keeps Banish candidate fail-closed while unsupported", async () => {
+test("loads OP04-014 from plain manifest data and applies Banish without mutating printed text", async () => {
   const manifestFixturePath = path.join(
     repoRoot,
     "fixtures/cards/real-card-dsl-match-card-manifest.json",
@@ -312,23 +312,27 @@ test("loads OP04-014 from plain manifest data and keeps Banish candidate fail-cl
   });
   const nextP2 = must(result.state.players[p2], "p2 after damage");
 
-  assert.equal(opCard.support.status, "unsupported");
+  assert.equal(opCard.support.status, "vanilla-confirmed");
+  assert.equal(opCard.support.tested, true);
   assert.equal(
     opCard.effectText,
     "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
   );
   assert.deepEqual(opCard.printedKeywords, ["banish"]);
   assert.equal(opCard.support.effectDefinitionId, undefined);
-  assert.deepEqual(result.errors, [
-    {
-      type: "illegalAction",
-      reason: "declareAttack is unsupported for current combat metadata.",
-    },
-  ]);
+  assert.equal(result.errors, undefined);
   assert.equal(result.decisions, undefined);
   assert.equal(result.state.pendingDecision, undefined);
   assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
-  assert.equal(nextP2.trash.length, p2State.trash.length);
+  assert.notEqual(JSON.stringify(result.state), before);
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === topLife.card.instanceId),
+    true,
+  );
   assert.equal(nextP2.hand.length, p2State.hand.length);
+  assert.equal(
+    result.state.cardManifest.cards[op04014]?.effectText,
+    opCard.effectText,
+  );
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });
