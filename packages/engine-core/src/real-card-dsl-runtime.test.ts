@@ -7,12 +7,19 @@ import { test } from "vitest";
 import type { CardId, CardInstance, MatchCardManifest } from "@optcg/types";
 
 import { must, p1, p2 } from "./action-test-fixtures.js";
-import { applyAction } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import { applyDeclareAttack } from "./battle-actions.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+import {
+  effectDefinition,
+  setupAttackState,
+} from "./battle-actions-test-fixtures.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
-import { processEffectRuntime } from "./effect-runtime.js";
+import {
+  processEffectRuntime,
+  resolveImplementedDslEffectDefinition,
+} from "./effect-runtime.js";
 import { targetSelectionQueueState } from "./effect-runtime-queue-processing-test-support.js";
+import { enterMainPhase } from "./phases.js";
 import { applyPlayCard, applyPlayCardDecisionResponse } from "./play-card.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
 
@@ -24,6 +31,19 @@ const repoRoot = path.resolve(
 const plainDataClone = <T>(value: T): T =>
   JSON.parse(JSON.stringify(value)) as T;
 const toCardId = (value: string): CardId => value as CardId;
+
+const loadPlainRealCardManifest = async (): Promise<MatchCardManifest> => {
+  const manifestFixturePath = path.join(
+    repoRoot,
+    "fixtures/cards/real-card-dsl-match-card-manifest.json",
+  );
+
+  return plainDataClone(
+    JSON.parse(
+      await readFile(manifestFixturePath, "utf8"),
+    ) as MatchCardManifest,
+  );
+};
 
 const removeFieldCardsFromHands = (
   state: ReturnType<typeof targetSelectionQueueState>["state"],
@@ -73,15 +93,7 @@ test("package boundary keeps real-card runtime test free of @optcg/cards and ser
 });
 
 test("loads plain checked-in manifest/effect data and executes EB01-023 on-play draw through runtime", async () => {
-  const manifestFixturePath = path.join(
-    repoRoot,
-    "fixtures/cards/real-card-dsl-match-card-manifest.json",
-  );
-  const plainManifest = plainDataClone(
-    JSON.parse(
-      await readFile(manifestFixturePath, "utf8"),
-    ) as MatchCardManifest,
-  );
+  const plainManifest = await loadPlainRealCardManifest();
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");
   const handCard = must(p1State.hand[0], "hand card");
@@ -167,15 +179,7 @@ test("loads plain checked-in manifest/effect data and executes EB01-023 on-play 
 });
 
 test("loads cards-produced plain manifest data while resolving synthetic target KO runtime work", async () => {
-  const manifestFixturePath = path.join(
-    repoRoot,
-    "fixtures/cards/real-card-dsl-match-card-manifest.json",
-  );
-  const plainManifest = plainDataClone(
-    JSON.parse(
-      await readFile(manifestFixturePath, "utf8"),
-    ) as MatchCardManifest,
-  );
+  const plainManifest = await loadPlainRealCardManifest();
   const { state } = targetSelectionQueueState();
   const existingManifest = state.cardManifest;
   const targetEntry = must(state.effectQueue[0], "target queue entry");
@@ -259,21 +263,35 @@ test("loads cards-produced plain manifest data while resolving synthetic target 
 });
 
 test("loads OP04-014 from plain manifest data and applies Banish without mutating printed text", async () => {
-  const manifestFixturePath = path.join(
-    repoRoot,
-    "fixtures/cards/real-card-dsl-match-card-manifest.json",
-  );
-  const plainManifest = plainDataClone(
-    JSON.parse(
-      await readFile(manifestFixturePath, "utf8"),
-    ) as MatchCardManifest,
-  );
+  const plainManifest = await loadPlainRealCardManifest();
   const op04014 = toCardId("OP04-014");
   const opCard = must(plainManifest.cards[op04014], "OP04-014 manifest card");
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   const topLife = must(p2State.life[0], "top life");
+  const p2DeckSize = p2State.deck.length;
+  const triggerLifeCardId = toCardId("trigger-life");
+  const triggerDefinitionId = "def-real-card-banish-trigger-draw";
+  const triggerDefinitionBase = effectDefinition(triggerLifeCardId, {
+    type: "trigger",
+  });
+  const triggerEffect = must(
+    triggerDefinitionBase.effects[0],
+    "trigger draw effect",
+  );
+  const triggerEffectWithoutUnsupportedFlags = { ...triggerEffect };
+  delete triggerEffectWithoutUnsupportedFlags.optional;
+  delete triggerEffectWithoutUnsupportedFlags.oncePerTurn;
+  const triggerDefinition = {
+    ...triggerDefinitionBase,
+    effects: [
+      {
+        ...triggerEffectWithoutUnsupportedFlags,
+        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+      },
+    ],
+  };
 
   p1State.leader = {
     ...p1State.leader,
@@ -283,17 +301,33 @@ test("loads OP04-014 from plain manifest data and applies Banish without mutatin
     ...topLife,
     card: {
       ...topLife.card,
-      cardId: toCardId("trigger-life"),
+      cardId: triggerLifeCardId,
     },
   };
   state.cardManifest.cards = {
     ...state.cardManifest.cards,
     [op04014]: opCard,
-    [toCardId("trigger-life")]: {
+    [triggerLifeCardId]: {
       ...must(state.cardManifest.cards[topLife.card.cardId], "life card"),
-      cardId: toCardId("trigger-life"),
+      cardId: triggerLifeCardId,
       triggerText: "[Trigger] Draw 1 card.",
+      support: {
+        cardId: triggerLifeCardId,
+        status: "implemented-dsl",
+        effectDefinitionId: triggerDefinitionId,
+        tested: true,
+        rulesVersion: triggerDefinition.metadata.rulesVersion,
+        cardDataVersion: "fixture",
+        sourceTextHash: triggerDefinition.metadata.sourceTextHash,
+        behaviorHash: "behavior-hash",
+      },
     },
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    triggerDefinition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [triggerDefinitionId]: triggerDefinition,
   };
   const before = JSON.stringify(state);
 
@@ -323,6 +357,18 @@ test("loads OP04-014 from plain manifest data and applies Banish without mutatin
   assert.equal(result.errors, undefined);
   assert.equal(result.decisions, undefined);
   assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "decisionCreated" &&
+        JSON.stringify(event.payload).includes("confirmLifeTrigger"),
+    ),
+    false,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "cardDrawn"),
+    false,
+  );
   assert.equal(JSON.stringify(state), before);
   assert.notEqual(JSON.stringify(result.state), before);
   assert.equal(
@@ -330,9 +376,183 @@ test("loads OP04-014 from plain manifest data and applies Banish without mutatin
     true,
   );
   assert.equal(nextP2.hand.length, p2State.hand.length);
+  assert.equal(nextP2.deck.length, p2DeckSize);
   assert.equal(
     result.state.cardManifest.cards[op04014]?.effectText,
     opCard.effectText,
   );
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+const unsupportedRealCardFailClosedCases = [
+  {
+    cardId: "EB01-003",
+    effectFamily: "rush",
+  },
+  {
+    cardId: "EB01-006",
+    effectFamily: "blocker",
+  },
+  {
+    cardId: "EB01-008",
+    effectFamily: "replacement",
+  },
+  {
+    cardId: "EB01-010",
+    effectFamily: "target-ko",
+  },
+  {
+    cardId: "EB01-013",
+    effectFamily: "activate-main",
+  },
+  {
+    cardId: "EB01-019",
+    effectFamily: "search-reveal",
+  },
+  {
+    cardId: "EB01-028",
+    effectFamily: "trigger",
+  },
+  {
+    cardId: "EB01-036",
+    effectFamily: "on-ko",
+  },
+  {
+    cardId: "EB01-040",
+    effectFamily: "target-ko",
+  },
+  {
+    cardId: "EB01-051",
+    effectFamily: "event-main",
+  },
+  {
+    cardId: "EB02-018",
+    effectFamily: "double-attack",
+  },
+  {
+    cardId: "OP01-067",
+    effectFamily: "banish-with-extra-text",
+  },
+  {
+    cardId: "OP02-062",
+    effectFamily: "when-attacking",
+  },
+] as const;
+
+test("unsupported CARD-005 real fixture families fail closed through play-card and effect-definition gates", async () => {
+  const plainManifest = await loadPlainRealCardManifest();
+  const families = new Set(
+    unsupportedRealCardFailClosedCases.map((entry) => entry.effectFamily),
+  );
+
+  assert.ok(families.size >= 8);
+
+  for (const entry of unsupportedRealCardFailClosedCases) {
+    const cardId = toCardId(entry.cardId);
+    const manifestCard = must(
+      plainManifest.cards[cardId],
+      `${entry.cardId} manifest card`,
+    );
+    const state = setupMainPlayState();
+    const p1State = must(state.players[p1], "p1");
+    const handCard = must(p1State.hand[0], "hand card");
+    handCard.cardId = cardId;
+    state.cardManifest.cards = {
+      ...state.cardManifest.cards,
+      [cardId]: manifestCard,
+    };
+    state.cardManifest.effectDefinitions =
+      plainManifest.effectDefinitions ?? {};
+    const before = JSON.stringify(state);
+
+    assert.equal(manifestCard.support.status, "unsupported");
+    assert.equal(manifestCard.support.tested, false);
+    assert.equal(manifestCard.support.effectDefinitionId, undefined);
+    assert.equal(manifestCard.support.customHandlerIds, undefined);
+    assert.equal(
+      Object.values(plainManifest.effectDefinitions ?? {}).some(
+        (definition) => definition.cardId === cardId,
+      ),
+      false,
+    );
+
+    assert.equal(
+      getLegalActions(state, p1).some(
+        (action) =>
+          action.type === "playCard" &&
+          action.cardInstanceId === handCard.instanceId,
+      ),
+      false,
+      `${entry.cardId} ${entry.effectFamily} must not expose playCard`,
+    );
+
+    const played = applyPlayCard(state, {
+      type: "playCard",
+      cardInstanceId: handCard.instanceId,
+    });
+    assert.equal(played.errors?.[0]?.type, "illegalAction");
+    assert.deepEqual(played.events, []);
+    assert.equal(JSON.stringify(state), before);
+
+    const lookup = resolveImplementedDslEffectDefinition(
+      manifestCard,
+      plainManifest,
+    );
+    if (lookup.ok) {
+      assert.fail(`${entry.cardId} unexpectedly resolved an effect definition`);
+    }
+    if (lookup.error.type !== "effectRuntimeError") {
+      assert.fail(`${entry.cardId} returned a non-runtime lookup error`);
+    }
+    assert.deepEqual(lookup.error.details, {
+      reason: "unsupported-support-status",
+      supportStatus: "unsupported",
+    });
+  }
+});
+
+test("unsupported CARD-005 real board fixtures fail closed at start-of-main and combat action gates", async () => {
+  const plainManifest = await loadPlainRealCardManifest();
+  const boardCases = unsupportedRealCardFailClosedCases.filter((entry) => {
+    const card = plainManifest.cards[toCardId(entry.cardId)];
+
+    return card?.category === "character" || card?.category === "leader";
+  });
+
+  assert.ok(boardCases.length >= 8);
+
+  for (const entry of boardCases) {
+    const cardId = toCardId(entry.cardId);
+    const manifestCard = must(
+      plainManifest.cards[cardId],
+      `${entry.cardId} manifest card`,
+    );
+    const state = setupAttackState();
+    const p1State = must(state.players[p1], "p1");
+    const attacker = must(p1State.characters[0], "attacker");
+
+    attacker.cardId = cardId;
+    state.cardManifest.cards = {
+      ...state.cardManifest.cards,
+      [cardId]: manifestCard,
+    };
+    state.turn.phase = "don";
+    const beforeMain = JSON.stringify(state);
+
+    const main = enterMainPhase(state);
+    assert.equal(main.errors?.[0]?.type, "effectRuntimeError");
+    assert.deepEqual(main.events, []);
+    assert.equal(JSON.stringify(state), beforeMain);
+
+    state.turn.phase = "main";
+    assert.equal(
+      getLegalActions(state, p1).some(
+        (action) =>
+          action.type === "declareAttack" &&
+          action.attacker.instanceId === attacker.instanceId,
+      ),
+      false,
+      `${entry.cardId} ${entry.effectFamily} must not expose declareAttack`,
+    );
+  }
 });
