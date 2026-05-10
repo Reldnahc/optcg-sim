@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-039D.md",
-      "storyId": "ENG-039D",
-      "storyPath": "stories/approved/ENG-039D-target-effect-real-card-fixture-guardrails.yaml",
-      "storySha256": "0af0afdbd7f424c4773eb9c2f93bbd15091e36b74a71fb88aaab2f3da8d06a0c"
+      "packetPath": "agent-packets/ENG-039E.md",
+      "storyId": "ENG-039E",
+      "storyPath": "stories/approved/ENG-039E-target-effect-view-event-hash-regression.yaml",
+      "storySha256": "bca8485e47a424d2ad4acdbf99bb14eb2ab215da871ed9d19a8a9af9338b0c86"
     }
   ],
   "version": 1

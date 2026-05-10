@@ -8,6 +8,8 @@ import type {
   DecisionId,
   DecisionResponse,
   EffectId,
+  EngineEvent,
+  EngineResult,
   EffectQueueEntry,
   EngineError,
   GameState,
@@ -187,6 +189,35 @@ const respondWithTargets = (
   response: { type: "targets", targets: [...targets] },
 });
 
+const assertEventsAppendToJournal = (
+  result: EngineResult,
+  label: string,
+): void => {
+  const assertStrictlyIncreasing = (
+    events: readonly EngineEvent[],
+    eventLabel: string,
+  ): void => {
+    for (let index = 1; index < events.length; index += 1) {
+      const previous = must(events[index - 1], `${eventLabel} previous event`);
+      const current = must(events[index], `${eventLabel} current event`);
+      assert.ok(
+        current.seq > previous.seq,
+        `${eventLabel} seq must increase at index ${String(index)}`,
+      );
+    }
+  };
+
+  assertStrictlyIncreasing(result.events, `${label} result events`);
+  assertStrictlyIncreasing(result.state.eventJournal, `${label} journal`);
+  assert.deepEqual(
+    result.state.eventJournal
+      .slice(result.state.eventJournal.length - result.events.length)
+      .map((event) => event.id),
+    result.events.map((event) => event.id),
+    `${label} events must append to journal in order`,
+  );
+};
+
 const invalidResponseCases: Array<{
   name: string;
   response: (targets: readonly CardRef[]) => DecisionResponse;
@@ -278,58 +309,75 @@ test("getLegalActions exposes one executable selectTargets response only to the 
   );
 });
 
-test("valid selectTargets response resolves the queued KO effect and clears the pending decision", () => {
-  const { state, targets, queueEntry } = setupSelectTargetsDecision();
-  const decision = must(state.pendingDecision, "pending decision");
-  const selected = must(targets[1], "target 1");
+test("valid selectTargets response resolves queued KO with stable replay event order and state hash", () => {
+  const runScript = () => {
+    const { state, targets, queueEntry } = setupSelectTargetsDecision();
+    const decision = must(state.pendingDecision, "pending decision");
+    const selected = must(targets[1], "target 1");
 
-  const result = applyAction(
-    state,
-    respondWithTargets(decision.id, [selected]),
-  );
+    const result = applyAction(
+      state,
+      respondWithTargets(decision.id, [selected]),
+    );
 
-  assert.equal(result.errors, undefined);
-  assert.equal(result.state.pendingDecision, undefined);
-  assert.deepEqual(result.state.effectQueue, []);
-  assert.deepEqual(
-    must(result.state.players[p2], "result p2").characters.map(
-      (card) => card.instanceId,
-    ),
-    [must(targets[0], "target 0").instanceId],
-  );
-  assert.deepEqual(
-    must(result.state.players[p2], "result p2").trash.map(
-      (card) => card.instanceId,
-    ),
-    [selected.instanceId],
-  );
-  assert.deepEqual(
-    result.events.map((event) => event.type),
-    [
-      "decisionResolved",
-      "cardKOd",
-      "cardMoved",
-      "effectResolved",
-      "ruleProcessingChecked",
-    ],
-  );
-  assert.deepEqual(result.events[0]?.payload, {
-    decisionId: decision.id,
-    decisionType: "selectTargets",
-    playerId: decision.playerId,
-    responseType: "targets",
-  });
-  assert.deepEqual(result.events[3]?.payload, {
-    queueEntryId: queueEntry.id,
-    timingWindowId: queueEntry.timingWindowId,
-    generation: queueEntry.generation,
-    effectBlockId: queueEntry.effectBlockId,
-    sourcePresencePolicy: queueEntry.sourcePresencePolicy,
-    orderingGroup: queueEntry.orderingGroup,
-    status: "resolved",
-  });
-  assert.equal(result.state.actionSeq, state.actionSeq + 1);
-  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+    assert.equal(result.errors, undefined);
+    assert.equal(result.state.pendingDecision, undefined);
+    assert.deepEqual(result.state.effectQueue, []);
+    assertEventsAppendToJournal(result, "selectTargets KO");
+    assert.deepEqual(
+      must(result.state.players[p2], "result p2").characters.map(
+        (card) => card.instanceId,
+      ),
+      [must(targets[0], "target 0").instanceId],
+    );
+    assert.deepEqual(
+      must(result.state.players[p2], "result p2").trash.map(
+        (card) => card.instanceId,
+      ),
+      [selected.instanceId],
+    );
+    assert.deepEqual(
+      result.events.map((event) => event.type),
+      [
+        "decisionResolved",
+        "cardKOd",
+        "cardMoved",
+        "effectResolved",
+        "ruleProcessingChecked",
+      ],
+    );
+    assert.deepEqual(result.events[0]?.payload, {
+      decisionId: decision.id,
+      decisionType: "selectTargets",
+      playerId: decision.playerId,
+      responseType: "targets",
+    });
+    assert.deepEqual(result.events[3]?.payload, {
+      queueEntryId: queueEntry.id,
+      timingWindowId: queueEntry.timingWindowId,
+      generation: queueEntry.generation,
+      effectBlockId: queueEntry.effectBlockId,
+      sourcePresencePolicy: queueEntry.sourcePresencePolicy,
+      orderingGroup: queueEntry.orderingGroup,
+      status: "resolved",
+    });
+    assert.equal(result.state.actionSeq, state.actionSeq + 1);
+    assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+
+    return {
+      eventTypes: result.events.map((event) => event.type),
+      eventSeq: result.events.map((event) => event.seq),
+      journalSeq: result.state.eventJournal.map((event) => event.seq),
+      stateHash: result.stateHash,
+    };
+  };
+
+  const first = runScript();
+  const second = runScript();
+  assert.deepEqual(first.eventTypes, second.eventTypes);
+  assert.deepEqual(first.eventSeq, second.eventSeq);
+  assert.deepEqual(first.journalSeq, second.journalSeq);
+  assert.equal(first.stateHash, second.stateHash);
 });
 
 test.each(invalidResponseCases)(

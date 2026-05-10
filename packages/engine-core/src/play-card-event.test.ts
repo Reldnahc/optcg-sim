@@ -218,7 +218,7 @@ test("getLegalActions omits implemented-dsl Events outside the narrow reviewed M
   assert.equal(hasPlayCardAction(legal, filteredKo), false);
 });
 
-test("paid reviewed target KO Main Event moves to trash, creates selectTargets, and K.O.s the selected Character", () => {
+test("paid reviewed target KO Main Event keeps replay event order through target resolution", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -283,11 +283,6 @@ test("paid reviewed target KO Main Event moves to trash, creates selectTargets, 
       ],
     },
   };
-  assert.equal(
-    hasPlayCardAction(getPlayCardLegalActions(state, p1), eventCard),
-    true,
-  );
-
   const opened = applyPlayCardTestAction(state, {
     type: "playCard",
     cardInstanceId: eventCard.instanceId,
@@ -299,34 +294,33 @@ test("paid reviewed target KO Main Event moves to trash, creates selectTargets, 
 
   assert.equal(paid.errors, undefined);
   assert.equal(paid.state.pendingDecision?.type, "selectTargets");
-  const paidP1 = must(paid.state.players[p1], "paid p1");
-  assert.equal(
-    must(paidP1.trash[0], "event in trash").instanceId,
-    eventCard.instanceId,
+  assert.deepEqual(
+    paid.events.map((event) => event.type),
+    [
+      "costPaid",
+      "decisionResolved",
+      "cardMoved",
+      "cardTrashed",
+      "cardPlayed",
+      "ruleProcessingChecked",
+      "effectQueued",
+      "decisionCreated",
+    ],
   );
-  assert.equal(must(paidP1.costArea[0], "paid don0").state, "rested");
-  assert.equal(must(paidP1.costArea[1], "paid don1").state, "rested");
-  assert.equal(
-    paid.events.some((event) => event.type === "effectQueued"),
-    true,
-  );
-  assert.equal(paid.events.at(-1)?.type, "decisionCreated");
 
   const targetDecision = must(paid.state.pendingDecision, "target decision");
   assert.equal(targetDecision.type, "selectTargets");
   assert.deepEqual(targetDecision.request, targetRequest);
-  assert.equal(
-    targetDecision.candidates[0]?.card.instanceId,
-    target.instanceId,
+  const publicCandidate = must(
+    targetDecision.candidates[0],
+    "public target candidate",
   );
+  assert.equal(publicCandidate.card.instanceId, target.instanceId);
 
   const resolved = applyAction(paid.state, {
     type: "respondToDecision",
     decisionId: targetDecision.id,
-    response: {
-      type: "targets",
-      targets: [must(targetDecision.candidates[0], "target candidate").card],
-    },
+    response: { type: "targets", targets: [publicCandidate.card] },
   });
 
   assert.equal(resolved.errors, undefined);
@@ -340,11 +334,17 @@ test("paid reviewed target KO Main Event moves to trash, creates selectTargets, 
       .instanceId,
     target.instanceId,
   );
-  assert.equal(
-    resolved.events.some((event) => event.type === "cardKOd"),
-    true,
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardKOd",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
   );
-  assert.equal(resolved.events.at(-1)?.type, "ruleProcessingChecked");
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });
 
 test("getLegalActions omits Event play for invalid timing text, trigger text, missing manifest, and unsupported status", () => {
