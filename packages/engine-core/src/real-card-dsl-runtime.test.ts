@@ -7,8 +7,10 @@ import { test } from "vitest";
 import type { CardId, CardInstance, MatchCardManifest } from "@optcg/types";
 
 import { must, p1 } from "./action-test-fixtures.js";
+import { applyAction } from "./actions.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { processEffectRuntime } from "./effect-runtime.js";
+import { targetSelectionQueueState } from "./effect-runtime-queue-processing-test-support.js";
 import { applyPlayCard, applyPlayCardDecisionResponse } from "./play-card.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
 
@@ -20,6 +22,25 @@ const repoRoot = path.resolve(
 const plainDataClone = <T>(value: T): T =>
   JSON.parse(JSON.stringify(value)) as T;
 const toCardId = (value: string): CardId => value as CardId;
+
+const removeFieldCardsFromHands = (
+  state: ReturnType<typeof targetSelectionQueueState>["state"],
+): void => {
+  for (const player of Object.values(state.players)) {
+    const fieldIds = new Set(player.characters.map((card) => card.instanceId));
+    player.hand = player.hand
+      .filter((card) => !fieldIds.has(card.instanceId))
+      .map((card, index) => ({
+        ...card,
+        zone: {
+          zone: "hand",
+          playerId: must(card.zone.playerId, "hand player"),
+          slot: "hand",
+          index,
+        },
+      }));
+  }
+};
 
 test("package boundary keeps real-card runtime test free of @optcg/cards and server/client imports", async () => {
   const source = await readFile(fileURLToPath(import.meta.url), "utf8");
@@ -141,4 +162,96 @@ test("loads plain checked-in manifest/effect data and executes EB01-023 on-play 
 
   const runtimePass = processEffectRuntime(played.state);
   assert.equal(runtimePass.errors, undefined);
+});
+
+test("loads cards-produced plain manifest data while resolving synthetic target KO runtime work", async () => {
+  const manifestFixturePath = path.join(
+    repoRoot,
+    "fixtures/cards/real-card-dsl-match-card-manifest.json",
+  );
+  const plainManifest = plainDataClone(
+    JSON.parse(
+      await readFile(manifestFixturePath, "utf8"),
+    ) as MatchCardManifest,
+  );
+  const { state } = targetSelectionQueueState();
+  const existingManifest = state.cardManifest;
+  const targetEntry = must(state.effectQueue[0], "target queue entry");
+  const targetSourceCard = must(
+    existingManifest.cards[targetEntry.source.cardId],
+    "target source card",
+  );
+  const targetEffectDefinitionId = must(
+    targetSourceCard.support.effectDefinitionId,
+    "target effect definition id",
+  );
+  const targetEffectDefinition = must(
+    existingManifest.effectDefinitions?.[targetEffectDefinitionId],
+    "target effect definition",
+  );
+  state.cardManifest = {
+    ...existingManifest,
+    banlistVersion: plainManifest.banlistVersion,
+    cardDataVersion: plainManifest.cardDataVersion,
+    customHandlerVersion: plainManifest.customHandlerVersion,
+    effectDefinitions: {
+      ...plainManifest.effectDefinitions,
+      ...existingManifest.effectDefinitions,
+      [targetEffectDefinitionId]: {
+        ...targetEffectDefinition,
+        metadata: {
+          ...targetEffectDefinition.metadata,
+          effectDefinitionsVersion: plainManifest.effectDefinitionsVersion,
+        },
+      },
+    },
+    effectDefinitionsVersion: plainManifest.effectDefinitionsVersion,
+    cards: {
+      ...plainManifest.cards,
+      ...existingManifest.cards,
+      [targetSourceCard.cardId]: {
+        ...targetSourceCard,
+        support: {
+          ...targetSourceCard.support,
+          cardDataVersion: plainManifest.cardDataVersion,
+        },
+      },
+    },
+    source: plainManifest.source,
+  };
+  removeFieldCardsFromHands(state);
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "target decision");
+  assert.equal(decision.type, "selectTargets");
+
+  const selected = must(decision.candidates[0], "first target").card;
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "targets", targets: [selected] },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.deepEqual(resolved.state.effectQueue, []);
+  assert.equal(
+    resolved.state.cardManifest.cards[toCardId("EB01-023")]?.support.status,
+    "implemented-dsl",
+  );
+  assert.equal(
+    resolved.state.cardManifest.cards[toCardId("OP05-091")]?.support.status,
+    "unsupported",
+  );
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardKOd",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
+  );
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });

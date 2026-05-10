@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-039C.md",
-      "storyId": "ENG-039C",
-      "storyPath": "stories/approved/ENG-039C-main-event-target-ko-integration.yaml",
-      "storySha256": "c5efb5d3cbf6258c8c3aba4c96a6d06b0c1e6a765c79c5db42546374513ef1da"
+      "packetPath": "agent-packets/ENG-039D.md",
+      "storyId": "ENG-039D",
+      "storyPath": "stories/approved/ENG-039D-target-effect-real-card-fixture-guardrails.yaml",
+      "storySha256": "0af0afdbd7f424c4773eb9c2f93bbd15091e36b74a71fb88aaab2f3da8d06a0c"
     }
   ],
   "version": 1
