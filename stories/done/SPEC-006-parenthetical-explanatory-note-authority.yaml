@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Update the simulator specifications to reflect official Comprehensive Rules
   2-8-4, 2-8-4-1, and 2-8-4-2: parenthetical explanatory notes for keyword
