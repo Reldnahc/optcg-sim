@@ -183,8 +183,11 @@ export type WorkflowCleanupEvidenceInput = {
 };
 
 export type WorkflowCleanupMetadataGuardInput = {
+  allowedBranches?: string[];
+  changedFiles?: WorkflowChangedFileInput[];
   issueComments: WorkflowIssueCommentInput[];
-  pullRequest: Pick<WorkflowPullRequestInput, "body" | "number" | "updatedAt">;
+  pullRequest: Pick<WorkflowPullRequestInput, "body" | "number" | "updatedAt"> &
+    Partial<Pick<WorkflowPullRequestInput, "headRef">>;
   statusChecks?: WorkflowStatusCheckInput[];
 };
 
@@ -314,6 +317,7 @@ export function validateWorkflowCleanupMetadataGuard(
   };
 
   if (options.requireCleanupMetadataGuardStatus) {
+    requireCleanupMetadataScopeBinding(selected.metadata, input);
     const cleanupMetadataGuardStatus = requirePassingCleanupMetadataGuardStatus(
       input.statusChecks,
     );
@@ -339,6 +343,46 @@ export function validateWorkflowCleanupMetadataGuard(
   }
 
   return result;
+}
+
+function requireCleanupMetadataScopeBinding(
+  metadata: CleanupMetadata,
+  input: WorkflowCleanupMetadataGuardInput,
+) {
+  if (input.changedFiles === undefined) {
+    throw new Error(
+      "Cleanup handoff requires fetched changed files to bind metadata to reviewed PR scope.",
+    );
+  }
+  if (
+    input.pullRequest.headRef === undefined ||
+    input.pullRequest.headRef === ""
+  ) {
+    throw new Error(
+      "Cleanup handoff requires fetched PR head branch to bind metadata to reviewed PR scope.",
+    );
+  }
+
+  const changedFiles = new Set(input.changedFiles.map((file) => file.filename));
+  for (const storyPath of metadata.stories) {
+    if (!changedFiles.has(storyPath)) {
+      throw new Error(
+        `Cleanup metadata story ${storyPath} is outside reviewed PR changed files.`,
+      );
+    }
+  }
+
+  const allowedBranches = new Set([
+    input.pullRequest.headRef,
+    ...(input.allowedBranches ?? []),
+  ]);
+  for (const branch of metadata.branches) {
+    if (!allowedBranches.has(branch)) {
+      throw new Error(
+        `Cleanup metadata branch ${branch} is outside reviewed PR head branch scope.`,
+      );
+    }
+  }
 }
 
 function requirePassingCleanupMetadataGuardStatus(

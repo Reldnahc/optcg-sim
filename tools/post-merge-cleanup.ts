@@ -289,11 +289,34 @@ function parseCleanupHandoffJson(
     throw new Error("Cleanup handoff issueComments must be an array.");
   }
   return {
+    ...(Array.isArray(root["allowedBranches"])
+      ? {
+          allowedBranches: parseJsonStringArray(
+            root["allowedBranches"],
+            "allowedBranches",
+          ),
+        }
+      : {}),
+    ...(Array.isArray(root["changedFiles"])
+      ? {
+          changedFiles: root["changedFiles"].map((file) =>
+            parseWorkflowChangedFile(file),
+          ),
+        }
+      : {}),
     issueComments: issueComments.map((comment) =>
       parseWorkflowIssueComment(comment),
     ),
     pullRequest: {
       body: requireJsonString(pullRequest["body"], "pullRequest.body"),
+      ...(typeof pullRequest["headRef"] === "string"
+        ? {
+            headRef: requireJsonString(
+              pullRequest["headRef"],
+              "pullRequest.headRef",
+            ),
+          }
+        : {}),
       number: requireJsonInteger(pullRequest["number"], "pullRequest.number"),
       updatedAt: requireJsonString(
         pullRequest["updatedAt"],
@@ -307,6 +330,19 @@ function parseCleanupHandoffJson(
           ),
         }
       : {}),
+  };
+}
+
+function parseWorkflowChangedFile(
+  value: unknown,
+): Metadata.WorkflowChangedFileInput {
+  if (typeof value === "string") {
+    return { filename: value };
+  }
+
+  const root = requireRecord(value, "cleanup handoff changed file");
+  return {
+    filename: requireJsonString(root["filename"], "changedFiles[].filename"),
   };
 }
 
@@ -362,6 +398,16 @@ function requireJsonStringOrNumber(value: unknown, label: string) {
     throw new Error(`Cleanup handoff ${label} must be a string or number.`);
   }
   return value;
+}
+
+function parseJsonStringArray(value: unknown, label: string) {
+  if (!Array.isArray(value)) {
+    throw new Error(`Cleanup handoff ${label} must be an array.`);
+  }
+
+  return value.map((entry, index) =>
+    requireJsonString(entry, `${label}[${String(index)}]`),
+  );
 }
 
 function requireJsonInteger(value: unknown, label: string) {

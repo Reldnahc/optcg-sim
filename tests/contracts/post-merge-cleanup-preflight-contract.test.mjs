@@ -360,6 +360,9 @@ test("agent handoff status latch requires passing cleanup metadata guard check",
     path.join(os.tmpdir(), "optcg-handoff-status-"),
   );
   const baseInput = {
+    changedFiles: [
+      { filename: "stories/approved/INF-701-cleanup-fixture.yaml" },
+    ],
     issueComments: [],
     pullRequest: {
       body: `Post-merge cleanup:
@@ -369,6 +372,7 @@ test("agent handoff status latch requires passing cleanup metadata guard check",
   branches:
     - story/inf-701
 `,
+      headRef: "story/inf-701",
       number: 237,
       updatedAt: "2026-01-01T00:00:00.000Z",
     },
@@ -437,6 +441,84 @@ test("agent handoff status latch requires passing cleanup metadata guard check",
     "cleanup-metadata-guard",
   );
   assert.equal(output.humanReviewReady, true);
+});
+
+test("agent handoff scope latch rejects cleanup metadata outside reviewed PR scope", async () => {
+  const tempRoot = await mkdtemp(
+    path.join(os.tmpdir(), "optcg-handoff-scope-"),
+  );
+  const baseInput = {
+    changedFiles: [
+      { filename: "stories/approved/INF-701-cleanup-fixture.yaml" },
+    ],
+    issueComments: [],
+    statusChecks: [
+      {
+        name: "cleanup-metadata-guard",
+        status: "completed",
+        conclusion: "success",
+      },
+    ],
+  };
+
+  for (const [label, body, headRef] of [
+    [
+      "wrong-story",
+      `Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/INF-702-other.yaml
+  branches:
+    - story/inf-701
+`,
+      "story/inf-701",
+    ],
+    [
+      "wrong-branch",
+      `Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/INF-701-cleanup-fixture.yaml
+  branches:
+    - story/not-this-pr
+`,
+      "story/inf-701",
+    ],
+  ]) {
+    const handoffFile = path.join(tempRoot, `${label}.json`);
+    await writeFile(
+      handoffFile,
+      `${JSON.stringify(
+        {
+          ...baseInput,
+          pullRequest: {
+            body,
+            headRef,
+            number: 237,
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const run = spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        "tools/post-merge-cleanup.ts",
+        "--",
+        "--validate-cleanup-handoff-json-file",
+        handoffFile,
+        "--require-cleanup-guard-status",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+
+    assert.notEqual(run.status, 0, label);
+    assert.match(run.stderr, /reviewed PR scope|changed files|head branch/i);
+  }
 });
 
 test("bound cleanup plan schema rejects unexpected top-level fields", () => {

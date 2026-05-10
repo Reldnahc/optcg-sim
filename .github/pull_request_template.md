@@ -25,7 +25,7 @@ Cleanup metadata is a reviewed request, not standalone authority.
 
 - [ ] PR author left exactly one `Post-merge cleanup:` metadata source in the PR body or a durable handoff comment before review handoff.
 - [ ] Cleanup metadata uses the exact source shape below: no markdown fence and no `cleanup:` wrapper.
-- [ ] Cleanup metadata handoff preflight was run against the actual current PR body or selected durable handoff comment, not a copied example or reconstructed local text.
+- [ ] Cleanup metadata handoff preflight was run against the actual current PR body or selected durable handoff comment, fetched changed files, and fetched PR head branch, not a copied example or reconstructed local text.
 - [ ] `cleanup-metadata-guard` is present and passing before human review is requested.
 - [ ] Reviewers confirm this metadata matches the reviewed story scope before merge.
 - [ ] The human-controlled merge to `main` authorizes the cleanup metadata snapshot; the workflow computes the metadata source ref for audit.
