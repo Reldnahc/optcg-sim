@@ -11,7 +11,9 @@ import {
   getLegalActions,
   must,
   p1,
+  p2,
   processEffectRuntime,
+  setupOnKODefinition,
   toDecisionId,
   toStateSeq,
   publicCharacterTargetRequest,
@@ -192,6 +194,80 @@ test("selectTargets response continuation is deterministic for identical queued 
   assert.equal(second.errors, undefined);
   assert.deepEqual(first.events, second.events);
   assert.equal(first.stateHash, second.stateHash);
+});
+
+test("selectTargets response queues On K.O. triggers before continuing runtime processing", () => {
+  const { state } = targetSelectionQueueState();
+  removeFieldCardsFromHands(state);
+  const p2State = must(state.players[p2], "p2");
+  const target = must(p2State.characters[0], "target");
+  const drawCard = must(p2State.hand[0], "p2 draw card");
+  const deckBuffer = must(p2State.hand[1], "p2 deck buffer");
+  p2State.deck = [
+    {
+      ...drawCard,
+      zone: { zone: "deck", playerId: p2, slot: "deck", index: 0 },
+    },
+    {
+      ...deckBuffer,
+      zone: { zone: "deck", playerId: p2, slot: "deck", index: 1 },
+    },
+  ];
+  p2State.hand = p2State.hand.slice(2).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  setupOnKODefinition(state, target);
+  const beforeP2Hand = p2State.hand.length;
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectTargets");
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: [must(decision.candidates[0], "first candidate").card],
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardKOd",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+      "effectQueued",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
+  );
+  const targetKoResolvedIndex = result.events.findIndex(
+    (event) => event.type === "effectResolved",
+  );
+  const onKOQueuedIndex = result.events.findIndex(
+    (event) => event.type === "effectQueued",
+  );
+  const onKOResolvedIndex = result.events.findLastIndex(
+    (event) => event.type === "effectResolved",
+  );
+  assert.ok(targetKoResolvedIndex >= 0);
+  assert.ok(onKOQueuedIndex > targetKoResolvedIndex);
+  assert.ok(onKOResolvedIndex > onKOQueuedIndex);
+  assert.equal(
+    must(result.state.players[p2], "result p2").hand.length,
+    beforeP2Hand + 1,
+  );
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });
 
 test("unsupported queued target request fails closed without mutating state", () => {

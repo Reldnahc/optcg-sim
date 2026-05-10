@@ -211,6 +211,7 @@ const queueEffectResolvedCustomTriggers =
 const queueProcessing = createEffectRuntimeQueueProcessing({
   resolveImplementedDslEffectDefinition,
   createUnsupportedPendingRuntimeWorkError: unsupportedPendingRuntimeWorkError,
+  queueBattleKOTriggers,
   queueEffectResolvedCustomTriggers,
 });
 

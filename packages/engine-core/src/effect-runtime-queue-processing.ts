@@ -13,7 +13,10 @@ import type {
 } from "@optcg/types";
 
 import { createEffectRuntimeQueueResults } from "./effect-runtime-queue-results.js";
-import type { EffectQueuePendingRuntimeWork } from "./effect-runtime-queue-target-decisions.js";
+import type {
+  EffectQueuePendingRuntimeWork,
+  EffectRuntimeQueueTargetDecisionDependencies,
+} from "./effect-runtime-queue-target-decisions.js";
 import { createEffectRuntimeQueueTargetDecisions } from "./effect-runtime-queue-target-decisions.js";
 
 type ResolveImplementedDslEffectDefinition = (
@@ -35,6 +38,7 @@ export interface EffectRuntimeQueueProcessingDependencies {
     work: EffectQueuePendingRuntimeWork,
   ) => EngineError;
   queueEffectResolvedCustomTriggers: QueueEffectResolvedCustomTriggers;
+  queueBattleKOTriggers: EffectRuntimeQueueTargetDecisionDependencies["queueBattleKOTriggers"];
 }
 
 export interface EffectRuntimeQueueProcessing {

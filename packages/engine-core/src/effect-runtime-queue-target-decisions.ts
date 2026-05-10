@@ -49,6 +49,16 @@ export type ResolveImplementedDslEffectDefinition = (
 export interface EffectRuntimeQueueTargetDecisionDependencies {
   resolveImplementedDslEffectDefinition: ResolveImplementedDslEffectDefinition;
   createUnsupportedPendingRuntimeWorkError: CreateUnsupportedPendingRuntimeWorkError;
+  queueBattleKOTriggers: (
+    state: GameState,
+    eventBaseState: GameState,
+    events: EngineEvent[],
+  ) => { ok: true; state: GameState } | { ok: false; error: EngineError };
+  queueEffectResolvedCustomTriggers: (
+    state: GameState,
+    resolvedEntry: EffectQueueEntry,
+    resolutionEvents: readonly EngineEvent[],
+  ) => EngineResult | undefined;
 }
 
 export interface SelectTargetsDecisionOptions {
@@ -344,6 +354,37 @@ export const createEffectRuntimeQueueTargetDecisions = (
       const cleanup = cleanupResolvedLifeTrigger(nextState, resolved.entry);
       nextState = cleanup.state;
       allEvents.push(...cleanup.events);
+
+      const koQueueEventCount = allEvents.length;
+      const koQueued = dependencies.queueBattleKOTriggers(
+        nextState,
+        state,
+        allEvents,
+      );
+      if (!koQueued.ok) {
+        return toEngineResult(state, [], [koQueued.error]);
+      }
+      const koQueuedEvents = allEvents.slice(koQueueEventCount);
+      nextState =
+        koQueuedEvents.length > 0
+          ? {
+              ...koQueued.state,
+              eventJournal: [...nextState.eventJournal, ...koQueuedEvents],
+            }
+          : koQueued.state;
+
+      const triggered = dependencies.queueEffectResolvedCustomTriggers(
+        nextState,
+        resolved.entry,
+        [...primitive.events, ...resolvedEvents, ...cleanup.events],
+      );
+      if (triggered !== undefined) {
+        if (triggered.errors !== undefined) {
+          return triggered;
+        }
+        nextState = triggered.state;
+        allEvents.push(...triggered.events);
+      }
 
       return toEngineResult(nextState, allEvents);
     };
