@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-036.md",
-      "storyId": "INF-036",
-      "storyPath": "stories/approved/INF-036-latch-cleanup-metadata-handoff-preflight.yaml",
-      "storySha256": "6ae1311f79aeb937f33f4eb6dbeace5477fe9a43b8632d8345f50a4218c61ebd"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
