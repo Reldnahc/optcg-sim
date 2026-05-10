@@ -10,6 +10,9 @@ import { test } from "vitest";
 import { sha256 } from "../../tools/agent-packet-lifecycle.ts";
 import { validateBoundCleanupPlanArtifact } from "../../tools/post-merge-cleanup/validator.ts";
 
+const cleanupScopedVerificationCommand =
+  "node --experimental-strip-types tools/post-merge-cleanup.ts --finalize-plan-file .cleanup/bound-cleanup-plan.json";
+
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -42,7 +45,7 @@ test("preflight writes bound cleanup plan artifact only after validation passes"
   assert.match(artifact.reviewEvidenceSource.contentSha256, /^[0-9a-f]{64}$/);
   assert.match(artifact.stories[0].packetSha256, /^[0-9a-f]{64}$/);
   assert.deepEqual(artifact.packetCommand.args, ["--story", fixture.storyPath]);
-  assert.equal(artifact.verificationCommand, "corepack pnpm verify");
+  assert.equal(artifact.verificationCommand, cleanupScopedVerificationCommand);
   assert.match(artifact.inputsHash, /^[0-9a-f]{64}$/);
 });
 
@@ -227,10 +230,18 @@ test("bound cleanup plan schema rejects unexpected top-level fields", () => {
         storySha256: "1".repeat(64),
       },
     ],
-    verificationCommand: "corepack pnpm verify",
+    verificationCommand: cleanupScopedVerificationCommand,
   };
 
   assert.doesNotThrow(() => validateBoundCleanupPlanArtifact(validArtifact));
+  assert.throws(
+    () =>
+      validateBoundCleanupPlanArtifact({
+        ...validArtifact,
+        verificationCommand: "corepack pnpm verify",
+      }),
+    /verification command is invalid/,
+  );
   assert.throws(
     () =>
       validateBoundCleanupPlanArtifact({

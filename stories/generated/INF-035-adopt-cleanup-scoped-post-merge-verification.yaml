@@ -1,0 +1,78 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-035
+epic_id: INF-027
+title: Adopt cleanup-scoped post-merge verification
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: generated
+summary: >
+  Update post-merge packet cleanup automation to use the cleanup-scoped
+  lifecycle verification authorized by SPEC-005 for exact packet-completion
+  cleanup commits, removing the redundant full repo verification step from the
+  privileged cleanup push path while preserving fail-closed cleanup binding.
+story_boundary: >
+  Own only the post-merge packet cleanup verification command and the contract
+  tests that bind it. Do not change cleanup metadata authority, human-review
+  requirements, cleanup metadata parsing, branch deletion behavior, packet
+  completion semantics, story schema, or gameplay behavior.
+allowed_touch_points:
+  - .github/workflows/post-merge-packet-cleanup.yml
+  - tools/post-merge-cleanup/types.ts
+  - tools/post-merge-cleanup/validator.ts
+  - tests/contracts/post-merge-cleanup-preflight-contract.test.mjs
+  - tests/contracts/post-merge-cleanup-contract.test.mjs
+  - tests/contracts/post-merge-cleanup-executor-contract.test.mjs
+  - tests/github/post-merge-cleanup-closeout.test.mjs
+  - tests/github/review-workflow.test.mjs
+  - stories/generated/INF-035-adopt-cleanup-scoped-post-merge-verification.yaml
+  - stories/approved/INF-035-adopt-cleanup-scoped-post-merge-verification.yaml
+  - agent-packets/INF-035.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s016
+  - 26-agent-packet-template.s005
+  - 27-spec-driven-story-generation-workflow.s015
+  - 32-codex-agent-integration.s013
+scope:
+  - replace the privileged post-merge packet cleanup workflow step that runs full `corepack pnpm verify` before direct push with the existing cleanup-scoped finalization command
+  - make the bound cleanup plan verification command describe the cleanup-scoped lifecycle verification gate rather than full repo verification
+  - ensure finalization remains the direct-push gate that validates metadata binding, trusted merge state, packet-completion output, story lifecycle state, active packet state, and committed story metadata before committing
+  - keep preflight, execution, final diff validation, direct push, and safe branch deletion ordering fail-closed
+  - update workflow and contract tests so they fail if full repo verification is reintroduced into the privileged cleanup path or cleanup-scoped finalization is skipped
+  - keep normal PR and manual-cleanup paths requiring full repo verification and reviewer-subagent review
+non_scope:
+  - changing the SPEC-005 authority text
+  - changing cleanup metadata syntax or source selection
+  - changing human review or cleanup approval requirements
+  - changing packet completion output semantics
+  - changing branch deletion policy
+  - changing cleanup-metadata guard behavior for PRs
+  - changing ordinary PR verification requirements
+  - adding cleanup pull requests
+  - changing gameplay, engine, cards, server, client, replay, database, or UI behavior
+dependencies:
+  - SPEC-005
+acceptance_criteria:
+  - post-merge cleanup workflow no longer runs full `corepack pnpm verify` in the privileged direct-push cleanup job
+  - post-merge cleanup workflow still runs cleanup-scoped lifecycle finalization after packet completion and before direct push
+  - bound cleanup plan artifacts identify the cleanup-scoped lifecycle verification command and reject stale full-verify command artifacts
+  - cleanup-scoped finalization continues to fail closed for stale trusted main SHA, stale story or packet evidence, unexpected cleanup output paths, incorrect done-story output, and incorrect active packet manifest output
+  - GitHub workflow tests prove packet cleanup follows preflight, cleanup-scoped finalization follows packet completion, push follows finalization, and branch deletion follows push
+  - review/workflow documentation tests continue to prove manual cleanup edits still require full verification and reviewer-subagent review
+required_tests:
+  - contract tests for bound cleanup plan verification command changes
+  - executor/finalization regressions proving cleanup-scoped lifecycle verification still gates commit creation
+  - GitHub workflow wiring tests proving full repo verification is absent from the privileged cleanup job and cleanup-scoped finalization is ordered before push
+  - "focused `corepack pnpm exec vitest run tests/contracts/post-merge-cleanup-preflight-contract.test.mjs tests/contracts/post-merge-cleanup-contract.test.mjs tests/contracts/post-merge-cleanup-executor-contract.test.mjs tests/github/post-merge-cleanup-closeout.test.mjs tests/github/review-workflow.test.mjs`"
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run verify`"
+repo_rules:
+  - use TDD by updating failing workflow and plan-contract tests before changing the workflow/tooling
+  - keep cleanup-scoped lifecycle verification limited to exact packet-completion output
+  - preserve fail-closed metadata binding and stale-evidence checks
+  - do not weaken ordinary PR or manual cleanup verification requirements
+ambiguity_policy: fail_and_escalate

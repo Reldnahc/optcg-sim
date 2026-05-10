@@ -388,10 +388,7 @@ jobs:
           node --experimental-strip-types tools/post-merge-cleanup.ts
           --execute-plan-file .cleanup/bound-cleanup-plan.json
 
-      - name: Run repo verification before push
-        run: corepack pnpm verify
-
-      - name: Revalidate cleanup diff after verification
+      - name: Finalize cleanup-scoped lifecycle verification
         run: >
           node --experimental-strip-types tools/post-merge-cleanup.ts
           --finalize-plan-file .cleanup/bound-cleanup-plan.json

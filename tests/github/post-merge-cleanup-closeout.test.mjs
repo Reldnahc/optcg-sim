@@ -81,9 +81,8 @@ test("post-merge cleanup workflow wiring preserves all cleanup gates", async () 
     "Set up Node for cleanup tooling",
     cleanupJobIndex,
   );
-  const verifyIndex = workflow.indexOf("Run repo verification before push");
-  const revalidateIndex = workflow.indexOf(
-    "Revalidate cleanup diff after verification",
+  const finalizeIndex = workflow.indexOf(
+    "Finalize cleanup-scoped lifecycle verification",
   );
   const pushIndex = workflow.indexOf("Push direct cleanup commit");
   const branchIndex = workflow.indexOf("Delete safe merged cleanup branches");
@@ -119,22 +118,19 @@ test("post-merge cleanup workflow wiring preserves all cleanup gates", async () 
     "packet cleanup must follow preflight",
   );
   assert.ok(
-    verifyIndex > executeIndex,
-    "verification must follow packet cleanup",
+    finalizeIndex > executeIndex,
+    "cleanup-scoped finalization must follow packet cleanup",
   );
   assert.ok(
-    revalidateIndex > verifyIndex,
-    "final diff validation must follow verification",
-  );
-  assert.ok(
-    pushIndex > revalidateIndex,
-    "push must follow final diff validation",
+    pushIndex > finalizeIndex,
+    "push must follow cleanup-scoped finalization",
   );
   assert.ok(
     branchIndex > pushIndex,
     "branch deletion must follow cleanup push",
   );
   assert.doesNotMatch(workflow, /gh pr create/);
+  assert.doesNotMatch(workflow, /corepack pnpm verify/);
 });
 
 test("PR template records cleanup metadata and reviewer responsibility", async () => {

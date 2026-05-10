@@ -15,6 +15,9 @@ import {
   validatePacketCompletionDiff,
 } from "../../tools/post-merge-cleanup/executor.ts";
 
+const cleanupScopedVerificationCommand =
+  "node --experimental-strip-types tools/post-merge-cleanup.ts --finalize-plan-file .cleanup/bound-cleanup-plan.json";
+
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -594,7 +597,7 @@ function buildPlan(overrides = {}) {
     schemaVersion: "post-merge-cleanup-plan.v1",
     status: "valid",
     stories,
-    verificationCommand: "corepack pnpm verify",
+    verificationCommand: cleanupScopedVerificationCommand,
     ...overrides,
   };
 }
