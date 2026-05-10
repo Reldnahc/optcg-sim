@@ -258,13 +258,22 @@ function applyOverlayBanlist(
   let nextCard = card;
   for (const record of banlist) {
     const existing = nextCard.legality[record.format];
+    assertOverlayBanlistDoesNotLoosenCanonicalLegality(
+      nextCard.cardId,
+      record,
+      existing?.status,
+    );
+
     nextCard = {
       ...nextCard,
       legality: {
         ...nextCard.legality,
         [record.format]: {
           ...(existing ?? { status: "legal" }),
-          status: record.status,
+          status:
+            record.status === "legal"
+              ? (existing?.status ?? record.status)
+              : record.status,
           ...(record.maxCopies !== undefined
             ? { max_copies: record.maxCopies }
             : {}),
@@ -279,6 +288,24 @@ function applyOverlayBanlist(
   }
 
   return nextCard;
+}
+
+function assertOverlayBanlistDoesNotLoosenCanonicalLegality(
+  cardId: CardId,
+  record: BanlistRecord,
+  canonicalStatus: string | undefined,
+): void {
+  if (
+    record.status === "legal" &&
+    canonicalStatus !== undefined &&
+    isIllegalFormatStatus(canonicalStatus)
+  ) {
+    throw new Error(
+      `Overlay banlist for ${String(
+        cardId,
+      )} cannot loosen canonical Poneglyph legality ${canonicalStatus} in ${record.format}.`,
+    );
+  }
 }
 
 function validateDeckEntry(

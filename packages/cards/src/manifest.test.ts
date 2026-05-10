@@ -630,6 +630,60 @@ describe("deck validation", () => {
       }),
     );
   });
+
+  it("fails closed when an overlay legal banlist record would loosen a Poneglyph-banned card", () => {
+    const card = createResolvedCard(toCardId("OP01-031"), {
+      legality: { standard: { status: "banned", max_copies: 0 } },
+    });
+
+    expect(() =>
+      buildManifest(
+        [card],
+        {},
+        {
+          [card.cardId]: {
+            banlist: [
+              {
+                cardId: card.cardId,
+                effectiveFrom: "2026-05-09",
+                format: "standard",
+                status: "legal",
+              },
+            ],
+            cardId: card.cardId,
+            support: card.support,
+          },
+        },
+      ),
+    ).toThrow(/cannot loosen canonical Poneglyph legality/u);
+  });
+
+  it("fails closed when an overlay legal banlist record would loosen a Poneglyph not_legal card", () => {
+    const card = createResolvedCard(toCardId("OP01-032"), {
+      legality: { standard: { status: "not_legal" } },
+    });
+
+    expect(() =>
+      buildManifest(
+        [card],
+        {},
+        {
+          [card.cardId]: {
+            banlist: [
+              {
+                cardId: card.cardId,
+                effectiveFrom: "2026-05-09",
+                format: "standard",
+                status: "legal",
+              },
+            ],
+            cardId: card.cardId,
+            support: card.support,
+          },
+        },
+      ),
+    ).toThrow(/cannot loosen canonical Poneglyph legality/u);
+  });
 });
 
 describe("loadout validation", () => {
