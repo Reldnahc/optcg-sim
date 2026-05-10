@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Update the specification authority for exact post-merge packet cleanup so the
   direct cleanup workflow may run cleanup-scoped lifecycle verification instead
