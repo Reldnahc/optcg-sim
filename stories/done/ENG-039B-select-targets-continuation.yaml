@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Replace the current selected-target fail-closed continuation with a narrow
   reviewed continuation for queued target KO effects after selectTargets

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the first narrow selected-target effect primitive so target-based
   Main Events can resolve through the existing target-selection path without

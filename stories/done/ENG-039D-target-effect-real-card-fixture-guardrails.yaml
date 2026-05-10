@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Keep target-effect coverage tied to honest checked-in real-card fixtures while
   preserving synthetic runtime tests for the narrow primitive when no reviewed

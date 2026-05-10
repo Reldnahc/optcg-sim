@@ -8,7 +8,7 @@ type: verification
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add cross-cutting regression coverage that the targeted Main Event path keeps
   PlayerView filtering, event sequencing, state hashing, and package boundaries

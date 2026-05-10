@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the first reviewed selected-target effect primitive: K.O. one or more
   public Character targets selected through the existing target request model.

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Allow supported Main Event cards with the exact reviewed target KO effect to
   use the existing play, DON payment, hand-to-trash, target-selection, and
