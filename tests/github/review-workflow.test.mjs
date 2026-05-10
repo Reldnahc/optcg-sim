@@ -329,6 +329,29 @@ test("workflow docs latch cleanup metadata handoff to actual PR source and guard
   ]);
 });
 
+test("workflow docs separate real-card fixture coverage from engine behavior requirements", async () => {
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const cardFixtureCapture = await readActiveText(
+    "docs/workflow/card-fixture-capture.md",
+  );
+  const workflowGuidance = `${storyExecution}\n${cardFixtureCapture}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /real-card and cards-produced fixture coverage is separate integration\/card-data\s+coverage/i,
+    /does not replace primitive, unit, regression,\s+synthetic edge-case, fail-closed, hidden-info, event-order, or state-hash\s+coverage/i,
+    /engine and rules stories must keep focused synthetic\/unit\/regression tests for\s+behavior requirements/i,
+    /future engine and effect-runtime stories are not required to add real-card\s+fixtures/i,
+    /create a\s+separate CARD\/FIXTURE\/verification follow-up story/i,
+  ]);
+
+  assert.doesNotMatch(
+    workflowGuidance,
+    /Future Main Event[\s\S]*story families should\s+use the representative cards-produced manifest by default/i,
+  );
+});
+
 test("workflow docs describe automated packet cleanup policy and fallback boundaries", async () => {
   const storyExecution = await readActiveText(
     "docs/workflow/story-execution.md",
