@@ -27,6 +27,7 @@ export type {
 } from "./effect-runtime-trigger-queueing.js";
 export {
   executeNoChoiceEffectPrimitive,
+  isSupportedMainEventTargetKoEffect,
   isSupportedNoChoiceOnKODrawEffect,
   isSupportedNoChoiceMainEventDrawEffect,
   isSupportedNoChoiceOnOpponentAttackDrawEffect,

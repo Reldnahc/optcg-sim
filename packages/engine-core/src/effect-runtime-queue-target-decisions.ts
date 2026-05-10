@@ -25,6 +25,7 @@ import {
 import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
 import {
   executeSelectedTargetEffectPrimitive,
+  isSupportedMainEventTargetKoEffect,
   resolvePlayerId,
 } from "./effect-runtime-primitives.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
@@ -101,6 +102,9 @@ const isSupportedTargetChoiceEffectShape = (
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: SupportedSelectedTargetKoEffect;
 } => {
+  if (effect.trigger.type === "main") {
+    return isSupportedMainEventTargetKoEffect(effect);
+  }
   if (effect.category !== "auto") {
     return false;
   }

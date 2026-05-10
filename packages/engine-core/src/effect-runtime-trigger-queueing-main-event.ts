@@ -9,7 +9,10 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import { isSupportedNoChoiceMainEventDrawEffect } from "./effect-runtime-primitives.js";
+import {
+  isSupportedMainEventTargetKoEffect,
+  isSupportedNoChoiceMainEventDrawEffect,
+} from "./effect-runtime-primitives.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   MainEventTriggerQueueingFailureReason,
@@ -108,7 +111,9 @@ export const createMainEventTriggerQueueing = (
         continue;
       }
       const matching = mainEffects.filter(
-        isSupportedNoChoiceMainEventDrawEffect,
+        (effect) =>
+          isSupportedNoChoiceMainEventDrawEffect(effect) ||
+          isSupportedMainEventTargetKoEffect(effect),
       );
       if (matching.length === 0) {
         return toEngineResult(

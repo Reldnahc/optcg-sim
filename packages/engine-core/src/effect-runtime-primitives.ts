@@ -10,6 +10,7 @@ import type {
   GameState,
   PlayerId,
   PlayerRef,
+  Target,
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
@@ -637,6 +638,52 @@ export const isSupportedNoChoiceMainEventDrawEffect = (
   effect.sourcePresencePolicy === "resolveFromDestinationZone" &&
   effect.trigger.type === "main" &&
   isNoChoiceDrawEffectShape(effect);
+
+const isReviewedTargetKoRequestShape = (
+  request: Extract<Target, { type: "choose" }>["request"],
+): boolean =>
+  request.timing === "onResolution" &&
+  request.chooser === "self" &&
+  request.player === "opponent" &&
+  request.zone === "characterArea" &&
+  request.filter === undefined &&
+  request.min === 0 &&
+  request.max === 1 &&
+  request.allowFewerIfUnavailable &&
+  request.visibility === "public";
+
+type EffectWithTarget = Extract<Effect, { target: unknown }>;
+
+const isChooseTarget = (
+  target: EffectWithTarget["target"],
+): target is Extract<Target, { type: "choose" }> =>
+  typeof target === "object" && "type" in target && target.type === "choose";
+
+export const isSupportedMainEventTargetKoEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "ko" }> & {
+    target: Extract<Target, { type: "choose" }>;
+  };
+} => {
+  if (
+    effect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
+    effect.trigger.type !== "main" ||
+    effect.category !== "auto" ||
+    effect.optional ||
+    effect.oncePerTurn ||
+    effect.cost !== undefined ||
+    effect.condition !== undefined ||
+    effect.conditionTiming !== undefined ||
+    effect.failurePolicy !== undefined ||
+    effect.effect.type !== "ko" ||
+    !isChooseTarget(effect.effect.target)
+  ) {
+    return false;
+  }
+  return isReviewedTargetKoRequestShape(effect.effect.target.request);
+};
 
 const isSupportedNoChoiceLifeTriggerDrawEffect = (
   effect: EffectDefinition["effects"][number],
