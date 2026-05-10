@@ -1,0 +1,149 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-006
+epic_id: CARD-006
+title: Add real fixture coverage for implemented primitives
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: generated
+summary: >
+  Promote a small reviewed set of real Poneglyph-backed fixtures into
+  implemented-primitive regression coverage only where the card's complete
+  printed behavior is already supported by the current engine runtime, so
+  previously implemented primitives are tested against real card data without
+  granting partial or ambiguous gameplay support.
+story_boundary: >
+  Own only real fixture-backed verification and overlay/effect-definition
+  linkage for primitives already implemented before this story. Do not add new
+  primitives, keyword behavior, effect DSL semantics, custom handlers, full
+  catalog support, server/client/API/UI integration, live-network tests, or
+  partial support for cards whose full printed behavior is not implemented.
+allowed_touch_points:
+  - fixtures/poneglyph/cards/*.json
+  - fixtures/effect-dsl/valid/*.json
+  - fixtures/cards/real-card-dsl-match-card-manifest.json
+  - packages/cards/src/real-card-fixtures.ts
+  - packages/cards/src/real-card-fixtures.test.ts
+  - packages/engine-core/src/real-card-dsl-runtime.test.ts
+  - packages/engine-core/src/*real-card*.test.ts
+  - tests/integration/real-card-dsl-manifest-smoke.test.mjs
+  - stories/ambiguities/*.md
+  - stories/generated/CARD-006-real-implemented-primitive-fixture-coverage.yaml
+  - stories/approved/CARD-006-real-implemented-primitive-fixture-coverage.yaml
+  - agent-packets/CARD-006.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s017
+  - 02-engine-mechanics.s018
+  - 02-engine-mechanics.s019
+  - 02-engine-mechanics.s021
+  - 02-engine-mechanics.s023
+  - 02-engine-mechanics.s025
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s001
+  - 05-effect-dsl-reference.s002
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s019
+  - 05-effect-dsl-reference.s020
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s029
+  - 06-visibility-security.s003
+  - 06-visibility-security.s004
+  - 06-visibility-security.s006
+  - 06-visibility-security.s007
+  - 06-visibility-security.s017
+  - 09-card-data-and-support-policy.s003
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s019
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s023
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 17-first-card-fixtures.s003
+  - 17-first-card-fixtures.s004
+  - 17-first-card-fixtures.s007
+  - 17-first-card-fixtures.s008
+  - 19-poneglyph-api-contract.s002
+  - 19-poneglyph-api-contract.s003
+  - 19-poneglyph-api-contract.s005
+  - 19-poneglyph-api-contract.s007
+  - 19-poneglyph-api-contract.s010
+  - 19-poneglyph-api-contract.s012
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+scope:
+  - audit the CARD-005 real effect-shape corpus plus existing OP01-060, OP05-091, and EB01-023 fixtures for cards whose entire printed effect text, trigger text, keyword text, FAQ-relevant behavior, and errata-relevant behavior are already supported by landed engine primitives
+  - keep EB01-023 as the baseline real implemented-dsl On Play draw regression and preserve its existing support.effectDefinitionId linkage
+  - add a small number of story-specific real Poneglyph card-detail fixtures with the CARD-003 fixture capture helper only when the CARD-005 corpus lacks an honest complete-card match for a primitive already implemented before this story
+  - permitted already-implemented primitive families for consideration are limited to exact no-choice draw DSL, simple reviewed Main Event no-choice draw, simple reviewed selected-target public Character K.O., and exact supported combat-keyword bodies such as Rush, Banish, or Blocker when the full card text has no unsupported extra behavior
+  - mark a real card as implemented-dsl or otherwise supported only when the card's full printed behavior is covered by existing runtime behavior and reviewed effect/keyword metadata; otherwise keep it unsupported and fail closed
+  - add or update simulator overlay metadata and effect definitions only for those exact fully supported real-card matches
+  - update the real-card DSL manifest fixture so newly supported real cards, if any, carry reviewed support metadata, sourceTextHash, behaviorHash, and effectDefinitionId linkage where applicable
+  - add cards-package tests proving selected implemented real fixtures validate, normalize, merge overlays, build manifest entries, link effect definitions, and avoid raw Poneglyph payload leakage
+  - add engine-core tests proving the supported real fixtures execute or participate through existing runtime/combat paths using only plain manifest/effect-definition data
+  - preserve unsupported/fail-closed tests for CARD-005 cards whose printed behavior includes unimplemented extra text, timings, triggers, choices, replacement effects, search/reveal, once-per-turn, permanent modifiers, multi-damage, Counter Events, Life Triggers, or custom-handler needs
+  - if no real complete-card match exists for a previously implemented primitive, record that as an ambiguity or blocker instead of inventing text, stripping text, or partially supporting the card
+non_scope:
+  - full released-card catalog coverage
+  - live Poneglyph, live Redis, server, client, Postgres, browser, or UI requirements in tests or CI
+  - implementing Poneglyph search as production package API
+  - automatic effect generation from printed text
+  - new DSL primitives, new target shapes, new keyword behavior, custom handlers, optional effects, once-per-turn, replacement effects, search/reveal, Counter Events, Life Trigger changes, permanent modifiers, multi-damage, or new gameplay semantics
+  - marking a real card supported when only part of its printed behavior is implemented
+  - changing engine-core to import @optcg/cards, Poneglyph HTTP, Redis, Postgres, server, client, or UI code
+  - server, client, API, WebSocket, database, deck-builder, or UI integration
+dependencies:
+  - CARD-003
+  - CARD-004
+  - CARD-005
+  - ENG-011
+  - ENG-013
+  - ENG-014E
+  - ENG-018
+  - ENG-038C
+  - ENG-039C
+acceptance_criteria:
+  - the story identifies which candidate real fixtures are complete matches for existing implemented primitives and records why selected cards are safe to support
+  - any newly supported real fixture is backed by a checked-in validated Poneglyph detail payload, reviewed overlay metadata, sourceTextHash, behaviorHash, and effectDefinitionId linkage when an effect definition is required
+  - cards with unsupported extra printed behavior remain unsupported and continue to fail closed outside allowed dev or sandbox policy
+  - the real-card manifest fixture contains only reviewed implemented support metadata and does not add effect definitions for unsupported fixtures
+  - engine-core real-card tests consume only plain manifest/effect-definition data and never import @optcg/cards or live card-data surfaces
+  - no test requires live Poneglyph, live Redis, server, client, Postgres, browser, or UI code
+  - if no honest complete-card match exists for a targeted implemented primitive, the story records the blocker or ambiguity instead of adding partial support
+required_tests:
+  - package-local schema validation for any newly added real Poneglyph fixture
+  - package-local selected-card rationale assertion proving every newly supported real fixture is a complete match for already implemented behavior
+  - package-local overlay/manifest test proving support.status, support.effectDefinitionId/customHandlerIds, tested/version metadata, sourceTextHash, and behaviorHash are correct for newly supported real fixtures
+  - package-local assertion that unsupported CARD-005 fixtures do not gain effectDefinitionId, customHandlerIds, or implemented support accidentally
+  - package-local assertion that manifest effectDefinitions are not broadened beyond reviewed implemented real fixtures
+  - package-local assertion that manifest cards built from real fixtures do not contain raw Poneglyph payloads
+  - engine-core real-card runtime/combat tests for each newly supported primitive path using only plain checked-in manifest data
+  - package-boundary assertion or existing boundary test proving engine-core does not import @optcg/cards, Poneglyph HTTP, Redis, Postgres, server, client, or UI surfaces
+  - deck/loadout validation coverage proving newly supported cards are accepted where policy allows and unsupported non-vanilla real cards are rejected outside dev/sandbox policy
+  - "root `corepack pnpm test -- packages/cards`"
+  - "engine-core command covering the real-card runtime/combat tests"
+  - "`corepack pnpm run packets:verify`"
+  - "full `corepack pnpm run verify`"
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - use TDD by adding or extending failing real-fixture tests before changing support metadata or manifest fixtures
+  - use live Poneglyph only as an explicit local capture/discovery step; never make tests or CI call live Poneglyph
+  - keep Poneglyph data as printed/display metadata authority only
+  - keep simulator overlay as gameplay implementation authority
+  - do not add effect definitions or engine runtime behavior for unsupported or partial real fixtures
+  - fail closed on fixture schema, printed-text completeness, support-status, effect-definition linkage, runtime execution, hidden-information behavior, or deck-validation ambiguity
+  - do not weaken TypeScript strictness
+ambiguity_policy: fail_and_escalate

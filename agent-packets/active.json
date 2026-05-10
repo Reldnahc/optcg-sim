@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-006.md",
+      "storyId": "CARD-006",
+      "storyPath": "stories/approved/CARD-006-real-implemented-primitive-fixture-coverage.yaml",
+      "storySha256": "591530cb3020889845cc6d20908f32d522160ecc39057e9f44cca3639eac26f9"
+    }
+  ],
   "version": 1
 }

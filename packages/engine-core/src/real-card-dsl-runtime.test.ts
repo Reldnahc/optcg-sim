@@ -6,8 +6,10 @@ import { test } from "vitest";
 
 import type { CardId, CardInstance, MatchCardManifest } from "@optcg/types";
 
-import { must, p1 } from "./action-test-fixtures.js";
+import { must, p1, p2 } from "./action-test-fixtures.js";
 import { applyAction } from "./actions.js";
+import { applyDeclareAttack } from "./battle-actions.js";
+import { setupAttackState } from "./battle-actions-test-fixtures.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { processEffectRuntime } from "./effect-runtime.js";
 import { targetSelectionQueueState } from "./effect-runtime-queue-processing-test-support.js";
@@ -254,4 +256,79 @@ test("loads cards-produced plain manifest data while resolving synthetic target 
     ],
   );
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("loads OP04-014 from plain manifest data and keeps Banish candidate fail-closed while unsupported", async () => {
+  const manifestFixturePath = path.join(
+    repoRoot,
+    "fixtures/cards/real-card-dsl-match-card-manifest.json",
+  );
+  const plainManifest = plainDataClone(
+    JSON.parse(
+      await readFile(manifestFixturePath, "utf8"),
+    ) as MatchCardManifest,
+  );
+  const op04014 = toCardId("OP04-014");
+  const opCard = must(plainManifest.cards[op04014], "OP04-014 manifest card");
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+
+  p1State.leader = {
+    ...p1State.leader,
+    cardId: op04014,
+  };
+  p2State.life[0] = {
+    ...topLife,
+    card: {
+      ...topLife.card,
+      cardId: toCardId("trigger-life"),
+    },
+  };
+  state.cardManifest.cards = {
+    ...state.cardManifest.cards,
+    [op04014]: opCard,
+    [toCardId("trigger-life")]: {
+      ...must(state.cardManifest.cards[topLife.card.cardId], "life card"),
+      cardId: toCardId("trigger-life"),
+      triggerText: "[Trigger] Draw 1 card.",
+    },
+  };
+  const before = JSON.stringify(state);
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: op04014,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  const nextP2 = must(result.state.players[p2], "p2 after damage");
+
+  assert.equal(opCard.support.status, "unsupported");
+  assert.equal(
+    opCard.effectText,
+    "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
+  );
+  assert.deepEqual(opCard.printedKeywords, ["banish"]);
+  assert.equal(opCard.support.effectDefinitionId, undefined);
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "declareAttack is unsupported for current combat metadata.",
+    },
+  ]);
+  assert.equal(result.decisions, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(nextP2.trash.length, p2State.trash.length);
+  assert.equal(nextP2.hand.length, p2State.hand.length);
 });
