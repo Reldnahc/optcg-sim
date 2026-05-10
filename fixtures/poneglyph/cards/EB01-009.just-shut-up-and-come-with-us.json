@@ -1,0 +1,141 @@
+{
+  "attribute": null,
+  "available_languages": ["en", "fr", "ja"],
+  "block": "2",
+  "card_number": "EB01-009",
+  "card_type": "Event",
+  "color": ["Red"],
+  "cost": 1,
+  "counter": null,
+  "effect": "[Counter] Look at 5 cards from the top of your deck and play up to 1 {Animal} type Character card with a cost of 3 or less. Then, place the rest at the bottom of your deck in any order.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Just Shut Up and Come with Us!!!!",
+  "official_faq": [],
+  "power": null,
+  "rarity": "C",
+  "released": true,
+  "released_at": "2024-05-03T00:00:00.000Z",
+  "set": "EB01",
+  "set_name": "Memorial Collection",
+  "trigger": null,
+  "types": ["Drum Kingdom", "Straw Hat Crew"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-009/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-009/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "2.75",
+        "low_price": "0.07",
+        "market_price": "0.11",
+        "mid_price": "0.22",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544535/one-piece-card-game-extra-booster-memorial-collection-just-shut-up-and-come-with-us"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-009/en/stock/2/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-009/en/stock/2/thumb.webp"
+        }
+      },
+      "index": 2,
+      "label": "Reprint",
+      "market": {
+        "high_price": "1.33",
+        "low_price": "0.01",
+        "market_price": "0.08",
+        "mid_price": "0.15",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/655979/one-piece-card-game-premium-booster-the-best-vol-2-just-shut-up-and-come-with-us-reprint"
+      },
+      "name": null,
+      "product": {
+        "id": "4d262c70-3787-4fec-8516-438619cb09fa",
+        "name": "One Piece Card the Best Vol.2",
+        "released_at": "2025-10-03T00:00:00.000Z",
+        "set_code": "PRB02",
+        "slug": "one-piece-card-the-best-vol-2"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-009/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-009/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Jolly Roger Foil",
+      "market": {
+        "high_price": "4.99",
+        "low_price": "0.05",
+        "market_price": "0.18",
+        "mid_price": "0.25",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/655980/one-piece-card-game-premium-booster-the-best-vol-2-just-shut-up-and-come-with-us-pirate-foil"
+      },
+      "name": null,
+      "product": {
+        "id": "4d262c70-3787-4fec-8516-438619cb09fa",
+        "name": "One Piece Card the Best Vol.2",
+        "released_at": "2025-10-03T00:00:00.000Z",
+        "set_code": "PRB02",
+        "slug": "one-piece-card-the-best-vol-2"
+      }
+    }
+  ]
+}

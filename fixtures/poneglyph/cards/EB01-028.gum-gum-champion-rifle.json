@@ -1,0 +1,80 @@
+{
+  "attribute": null,
+  "available_languages": ["en", "ja"],
+  "block": "2",
+  "card_number": "EB01-028",
+  "card_type": "Event",
+  "color": ["Blue"],
+  "cost": 1,
+  "counter": null,
+  "effect": "[Counter] If your Leader has the {Impel Down} type, up to 1 of your Leader or Character cards gains +2000 power during this battle. Then, your opponent returns 1 of their active Characters to the owner's hand.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Gum-Gum Champion Rifle",
+  "official_faq": [
+    {
+      "answer": "The opponent of the player who activated this [Counter] effect chooses.",
+      "question": "Which player chooses which Character to return to the owner's hand according to this [Counter] effect?",
+      "updated_on": "2024-04-19"
+    },
+    {
+      "answer": "No, you cannot.",
+      "question": "If my Leader does not have the {Impel Down} type, can I still use this [Counter] effect to have my opponent return 1 of their active Characters to the owner's hand?",
+      "updated_on": "2024-04-19"
+    }
+  ],
+  "power": null,
+  "rarity": "R",
+  "released": true,
+  "released_at": "2024-05-03T00:00:00.000Z",
+  "set": "EB01",
+  "set_name": "Memorial Collection",
+  "trigger": "[Trigger] Return up to 1 Character with a cost of 3 or less to the bottom of the owner's deck.",
+  "types": ["Impel Down", "Straw Hat Crew"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-028/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-028/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "25.00",
+        "low_price": "0.99",
+        "market_price": "2.96",
+        "mid_price": "3.85",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544559/one-piece-card-game-extra-booster-memorial-collection-gum-gum-champion-rifle"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    }
+  ]
+}

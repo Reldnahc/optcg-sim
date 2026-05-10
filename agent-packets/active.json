@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-005.md",
+      "storyId": "CARD-005",
+      "storyPath": "stories/approved/CARD-005-populate-real-effect-shape-fixtures.yaml",
+      "storySha256": "07974314c22940aca332047708faa8843272e1c09d8b677ad3d26fb0d964d65d"
+    }
+  ],
   "version": 1
 }

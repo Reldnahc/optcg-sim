@@ -1,0 +1,177 @@
+{
+  "attribute": ["Wisdom"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "2",
+  "card_number": "EB01-057",
+  "card_type": "Character",
+  "color": ["Yellow"],
+  "cost": 2,
+  "counter": 1000,
+  "effect": "When this Character is K.O.'d by your opponent's effect, add up to 1 card from the top of your deck to the top of your Life cards.\n[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Shirahoshi",
+  "official_faq": [],
+  "power": 0,
+  "rarity": "SR",
+  "released": true,
+  "released_at": "2024-05-03T00:00:00.000Z",
+  "set": "EB01",
+  "set_name": "Memorial Collection",
+  "trigger": null,
+  "types": ["Merfolk"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-057/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-057/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Standard",
+      "market": {
+        "high_price": "99.90",
+        "low_price": "0.36",
+        "market_price": "0.65",
+        "mid_price": "1.10",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544596/one-piece-card-game-extra-booster-memorial-collection-shirahoshi"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-057/en/stock/2/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-057/en/stock/2/thumb.webp"
+        }
+      },
+      "index": 2,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "60.00",
+        "low_price": "8.00",
+        "market_price": "9.76",
+        "mid_price": "13.47",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544597/one-piece-card-game-extra-booster-memorial-collection-shirahoshi-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-057/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-057/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "SP",
+      "market": {
+        "high_price": "300.00",
+        "low_price": "98.00",
+        "market_price": "104.57",
+        "mid_price": "118.60",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/632502/one-piece-card-game-a-fist-of-divine-speed-shirahoshi-sp"
+      },
+      "name": null,
+      "product": {
+        "id": "a642472b-3d14-48bf-aa80-b252037be615",
+        "name": "A Fist of Divine Speed",
+        "released_at": "2025-06-06T00:00:00.000Z",
+        "set_code": "OP11",
+        "slug": "a-fist-of-divine-speed"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-057/en/stock/3/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-057/en/stock/3/thumb.webp"
+        }
+      },
+      "index": 3,
+      "label": "Reprint",
+      "market": {
+        "high_price": "16.29",
+        "low_price": "0.01",
+        "market_price": "0.44",
+        "mid_price": "0.57",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/655993/one-piece-card-game-premium-booster-the-best-vol-2-shirahoshi-reprint"
+      },
+      "name": null,
+      "product": {
+        "id": "4d262c70-3787-4fec-8516-438619cb09fa",
+        "name": "One Piece Card the Best Vol.2",
+        "released_at": "2025-10-03T00:00:00.000Z",
+        "set_code": "PRB02",
+        "slug": "one-piece-card-the-best-vol-2"
+      }
+    }
+  ]
+}

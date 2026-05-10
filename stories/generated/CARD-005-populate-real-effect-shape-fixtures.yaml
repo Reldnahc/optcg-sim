@@ -1,0 +1,116 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-005
+epic_id: CARD-005
+title: Populate distinct real effect-shape fixtures
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: generated
+summary: >
+  Add a curated corpus of roughly 50 additional real Poneglyph card-detail
+  fixtures whose printed effects are intentionally different from the currently
+  implemented EB01-023 no-choice draw fixture, so upcoming effect stories have
+  reviewed real payloads to map against without pretending unsupported
+  gameplay is implemented.
+story_boundary: >
+  Own only real fixture population and fail-closed tests for distinct printed
+  effect shapes. Do not add new effect primitives, custom handlers, gameplay
+  support, full catalog sync, live-network CI, server/client integration, or
+  engine runtime execution for unsupported cards.
+allowed_touch_points:
+  - fixtures/poneglyph/cards/*.json
+  - fixtures/cards/real-card-dsl-match-card-manifest.json
+  - packages/cards/src/real-card-fixtures.ts
+  - packages/cards/src/real-card-fixtures.test.ts
+  - docs/workflow/card-fixture-capture.md
+  - stories/ambiguities/*.md
+  - stories/generated/CARD-005-populate-real-effect-shape-fixtures.yaml
+  - stories/approved/CARD-005-populate-real-effect-shape-fixtures.yaml
+  - agent-packets/CARD-005.md
+  - agent-packets/active.json
+spec_refs:
+  - 09-card-data-and-support-policy.s003
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s019
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s023
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 17-first-card-fixtures.s003
+  - 17-first-card-fixtures.s004
+  - 17-first-card-fixtures.s007
+  - 17-first-card-fixtures.s008
+  - 18-acceptance-tests.s011
+  - 19-poneglyph-api-contract.s002
+  - 19-poneglyph-api-contract.s003
+  - 19-poneglyph-api-contract.s004
+  - 19-poneglyph-api-contract.s005
+  - 19-poneglyph-api-contract.s007
+  - 19-poneglyph-api-contract.s010
+  - 19-poneglyph-api-contract.s011
+  - 19-poneglyph-api-contract.s012
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+scope:
+  - use the Poneglyph search endpoint only as a local maintainer discovery step to find a curated set of roughly 50 explicit candidate card IDs with printed effect shapes different from EB01-023's `[On Play] Draw 1 card.`
+  - prefer fixture candidates that spread across upcoming already-discussed effect families such as target K.O., Counter Event, Trigger, search/reveal, optional choice, once-per-turn, permanent modifier, replacement, multi-damage, Blocker, Rush, Double Attack, Banish, activate-main, on-K.O., when-attacking, and stage/event behavior, but do not implement those behaviors in this story
+  - record the selected card IDs, printed effect text, and inclusion rationale in tests or implementation notes before adding fixture metadata
+  - capture selected explicit card IDs with the CARD-003 fixture capture helper or equivalent reviewed deterministic checked-in Poneglyph detail payloads
+  - validate every newly added real fixture through the existing Poneglyph detail validator in hermetic tests
+  - update the real-card fixture helper and checked-in manifest fixture so the new cards are present as real Poneglyph-backed cards with `unsupported` simulator support
+  - add tests proving the new cards remain unsupported, have no effectDefinitionId/customHandlerIds, are not added to the manifest effect definition registry, and are rejected outside dev/sandbox policy
+  - add normalization/hash tests that preserve each new card's identity, category/type, colors, attributes, printed text, sourceTextHash, and behaviorHash behavior
+  - keep engine-core consuming only plain existing manifests and never @optcg/cards or live Poneglyph
+  - if search/capture is unavailable or candidate text is ambiguous, record a blocker or ambiguity instead of inventing card text or adding unsupported fixtures without reviewed source payloads
+non_scope:
+  - full released-card catalog coverage
+  - scheduled, CI, or required live Poneglyph fetches
+  - implementing Poneglyph search as production package API
+  - automatic effect generation from printed text
+  - adding or changing effect definitions for the new fixtures
+  - new DSL primitives, custom handlers, optional effects, once-per-turn, replacement effects, search/reveal, Counter Events, Trigger effects, permanent modifiers, multi-damage, or new gameplay semantics
+  - changing engine-core to import @optcg/cards, Poneglyph HTTP, Redis, Postgres, server, client, or UI code
+  - server, client, API, WebSocket, database, deck-builder, or UI integration
+  - marking ambiguous or unsupported real cards as gameplay-supported
+dependencies:
+  - CARD-003
+  - CARD-004
+acceptance_criteria:
+  - a curated corpus of roughly 50 additional real Poneglyph card-detail fixtures with distinct printed effect shapes is checked in under `fixtures/poneglyph/cards`
+  - each added fixture has selected ID, printed effect text, and inclusion rationale recorded in tests or implementation notes
+  - every added fixture passes existing Poneglyph detail schema validation in hermetic tests
+  - real fixture normalization/hash tests cover the new cards' identity, category/type, colors, attributes, printed text, sourceTextHash, and behaviorHash behavior
+  - the real-card manifest fixture includes the new cards as `unsupported` and does not link them to effectDefinitionId or customHandlerIds
+  - manifest effect definitions remain limited to already implemented fixture support; the new unsupported fixtures do not add registry entries
+  - deck/loadout validation rejects the new unsupported non-vanilla cards outside allowed dev/sandbox policy
+  - no test requires live Poneglyph, live Redis, server, client, Postgres, or browser code
+  - if live Poneglyph search/capture is unavailable or candidate text is ambiguous, the story records the blocker instead of adding invented fixtures
+required_tests:
+  - package-local schema validation test for each newly added real Poneglyph fixture
+  - package-local selected-card rationale assertion covering each new fixture ID and printed effect family
+  - package-local corpus coverage assertion proving the selected fixtures span multiple printed effect families rather than repeating the existing draw-only support shape
+  - package-local normalization/hash regression test using the new real fixtures
+  - package-local overlay/manifest test proving each new real card remains unsupported with no effectDefinitionId or customHandlerIds
+  - package-local assertion that manifest cards built from real fixtures do not contain raw Poneglyph payloads
+  - package-local deck/loadout validation rejection test for the new unsupported non-vanilla fixture cards
+  - package-local assertion that manifest effect definitions are not broadened for the new unsupported fixtures
+  - "root `corepack pnpm test -- packages/cards`"
+  - "`corepack pnpm run packets:verify`"
+  - "full `corepack pnpm run verify`"
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - use TDD by adding or extending failing fixture/manifest tests before changing fixture support code
+  - use live Poneglyph only as an explicit local capture/discovery step; never make tests or CI call live Poneglyph
+  - keep Poneglyph data as printed/display metadata authority only
+  - keep simulator overlay as gameplay implementation authority
+  - do not add effect definitions or engine runtime execution for the new unsupported fixtures
+  - fail closed on fixture schema, printed-text, support-status, manifest, or deck-validation ambiguity
+  - do not weaken TypeScript strictness
+ambiguity_policy: fail_and_escalate

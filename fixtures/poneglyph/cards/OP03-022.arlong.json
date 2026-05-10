@@ -1,0 +1,105 @@
+{
+  "attribute": ["Slash"],
+  "available_languages": ["en", "ja"],
+  "block": "1",
+  "card_number": "OP03-022",
+  "card_type": "Leader",
+  "color": ["Green", "Yellow"],
+  "cost": null,
+  "counter": null,
+  "effect": "[DON!! x2] [When Attacking] ① (You may rest the specified number of DON!! cards in your cost area.): Play up to 1 Character card with a cost of 4 or less and a [Trigger] from your hand.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "not_legal"
+    }
+  },
+  "life": 4,
+  "name": "Arlong",
+  "official_faq": [],
+  "power": 5000,
+  "rarity": "L",
+  "released": true,
+  "released_at": "2023-06-30T00:00:00.000Z",
+  "set": "OP03",
+  "set_name": "Pillars of Strength",
+  "trigger": null,
+  "types": ["Fish-Man", "East Blue", "Arlong Pirates"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.196013,
+        "y": 0.295238
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP03-022/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP03-022/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "5.00",
+        "low_price": "0.05",
+        "market_price": "0.21",
+        "mid_price": "0.25",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/498063/one-piece-card-game-pillars-of-strength-arlong"
+      },
+      "name": null,
+      "product": {
+        "id": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+        "name": "Pillars of Strength",
+        "released_at": "2023-06-30T00:00:00.000Z",
+        "set_code": "OP03",
+        "slug": "pillars-of-strength"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.378738,
+        "y": 0.142857
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP03-022/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP03-022/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "149.99",
+        "low_price": "38.60",
+        "market_price": "45.61",
+        "mid_price": "45.81",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/498064/one-piece-card-game-pillars-of-strength-arlong-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+        "name": "Pillars of Strength",
+        "released_at": "2023-06-30T00:00:00.000Z",
+        "set_code": "OP03",
+        "slug": "pillars-of-strength"
+      }
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "attribute": ["Slash"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "2",
+  "card_number": "EB01-040",
+  "card_type": "Leader",
+  "color": ["Black", "Yellow"],
+  "cost": null,
+  "counter": null,
+  "effect": "[Activate: Main] [Once Per Turn] You may turn 1 card from the top of your Life cards face-up: K.O. up to 1 of your opponent's Characters with a cost of 0.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": 4,
+  "name": "Kyros",
+  "official_faq": [
+    {
+      "answer": "No, you cannot.",
+      "question": "If the card at the top of my Life cards is face-up, can I still use this [Activate: Main] effect to K.O. 1 of my opponent's Characters with a cost of 0?",
+      "updated_on": "2024-04-19"
+    }
+  ],
+  "power": 5000,
+  "rarity": "L",
+  "released": true,
+  "released_at": "2024-05-03T00:00:00.000Z",
+  "set": "EB01",
+  "set_name": "Memorial Collection",
+  "trigger": null,
+  "types": ["Dressrosa"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.564523,
+        "y": 0.488251
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-040/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-040/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "5.00",
+        "low_price": "0.09",
+        "market_price": "0.19",
+        "mid_price": "0.20",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544573/one-piece-card-game-extra-booster-memorial-collection-kyros"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.506189,
+        "y": 0.244126
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-040/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-040/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "120.00",
+        "low_price": "23.69",
+        "market_price": "24.78",
+        "mid_price": "26.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544574/one-piece-card-game-extra-booster-memorial-collection-kyros-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.556996,
+        "y": 0.472066
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-040/en/stock/2/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-040/en/stock/2/thumb.webp"
+        }
+      },
+      "index": 2,
+      "label": "SP",
+      "market": {
+        "high_price": "379.99",
+        "low_price": "295.00",
+        "market_price": "136.57",
+        "mid_price": "327.50",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/629088/one-piece-card-game-extra-booster-anime-25th-collection-kyros-sp"
+      },
+      "name": null,
+      "product": {
+        "id": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+        "name": "Anime 25th Collection",
+        "released_at": "2025-05-09T00:00:00.000Z",
+        "set_code": "EB02",
+        "slug": "anime-25th-collection"
+      }
+    }
+  ]
+}

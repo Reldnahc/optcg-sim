@@ -1,0 +1,69 @@
+{
+  "attribute": ["Slash"],
+  "available_languages": ["en", "ja"],
+  "block": "2",
+  "card_number": "EB01-054",
+  "card_type": "Character",
+  "color": ["Yellow"],
+  "cost": 3,
+  "counter": 1000,
+  "effect": "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[On Play] If your opponent has 1 or less Life cards, K.O. up to 1 of your opponent's Characters with a cost of 3 or less.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Gan.Fall",
+  "official_faq": [],
+  "power": 4000,
+  "rarity": "R",
+  "released": true,
+  "released_at": "2024-05-03T00:00:00.000Z",
+  "set": "EB01",
+  "set_name": "Memorial Collection",
+  "trigger": null,
+  "types": ["Sky Island"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-054/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-054/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "25.00",
+        "low_price": "0.05",
+        "market_price": "0.16",
+        "mid_price": "0.25",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544592/one-piece-card-game-extra-booster-memorial-collection-ganfall"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    }
+  ]
+}

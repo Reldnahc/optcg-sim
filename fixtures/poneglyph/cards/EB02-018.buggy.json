@@ -1,0 +1,69 @@
+{
+  "attribute": ["Slash"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "3",
+  "card_number": "EB02-018",
+  "card_type": "Character",
+  "color": ["Green"],
+  "cost": 4,
+  "counter": null,
+  "effect": "[On Play] If you have no other [Buggy] Characters, up to 1 of your Leader gains [Double Attack] during this turn.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Buggy",
+  "official_faq": [],
+  "power": 6000,
+  "rarity": "R",
+  "released": true,
+  "released_at": "2025-05-09T00:00:00.000Z",
+  "set": "EB02",
+  "set_name": "Anime 25th Collection",
+  "trigger": "[Trigger] Rest up to 1 of your opponent's Characters with a cost of 4 or less.",
+  "types": ["East Blue", "Buggy Pirates"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB02-018/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB02-018/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "59.00",
+        "low_price": "0.25",
+        "market_price": "0.55",
+        "mid_price": "0.56",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/629112/one-piece-card-game-extra-booster-anime-25th-collection-buggy"
+      },
+      "name": null,
+      "product": {
+        "id": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+        "name": "Anime 25th Collection",
+        "released_at": "2025-05-09T00:00:00.000Z",
+        "set_code": "EB02",
+        "slug": "anime-25th-collection"
+      }
+    }
+  ]
+}

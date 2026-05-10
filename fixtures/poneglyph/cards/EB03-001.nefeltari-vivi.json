@@ -1,0 +1,105 @@
+{
+  "attribute": ["Slash"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "4",
+  "card_number": "EB03-001",
+  "card_type": "Leader",
+  "color": ["Red", "Blue"],
+  "cost": null,
+  "counter": null,
+  "effect": "[Once Per Turn] If your Character with a base cost of 4 or more would be K.O.'d, you may trash 1 card from your hand instead.\n[Activate: Main] You may rest this Leader: Give up to 1 of your opponent's Characters −2000 power during this turn. Then, up to 1 of your Characters without a [When Attacking] effect gains [Rush] during this turn.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": 4,
+  "name": "Nefeltari Vivi",
+  "official_faq": [],
+  "power": 5000,
+  "rarity": "L",
+  "released": true,
+  "released_at": "2026-02-20T00:00:00.000Z",
+  "set": "EB03",
+  "set_name": "One Piece Heroines Edition",
+  "trigger": null,
+  "types": ["Alabasta"],
+  "variants": [
+    {
+      "artist": "Sunohara",
+      "crop_focus": {
+        "x": 0.494957,
+        "y": 0.19557
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": "https://cdn.poneglyph.one/images/EB03-001/en/scans/0/display.webp",
+          "full": "https://cdn.poneglyph.one/images/EB03-001/en/scans/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB03-001/en/scans/0/thumb.webp"
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB03-001/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB03-001/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "25.00",
+        "low_price": "0.01",
+        "market_price": "0.13",
+        "mid_price": "0.20",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/672739/one-piece-card-game-extra-booster-one-piece-heroines-edition-nefeltari-vivi-001"
+      },
+      "name": null,
+      "product": {
+        "id": "8eb0b2be-9cfb-416b-b615-4fb49342a8b5",
+        "name": "One Piece Heroines Edition",
+        "released_at": "2026-02-20T00:00:00.000Z",
+        "set_code": "EB03",
+        "slug": "one-piece-heroines-edition"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.509953,
+        "y": 0.342585
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB03-001/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB03-001/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "277.00",
+        "low_price": "8.00",
+        "market_price": "10.61",
+        "mid_price": "14.05",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/672740/one-piece-card-game-extra-booster-one-piece-heroines-edition-nefeltari-vivi-001-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "8eb0b2be-9cfb-416b-b615-4fb49342a8b5",
+        "name": "One Piece Heroines Edition",
+        "released_at": "2026-02-20T00:00:00.000Z",
+        "set_code": "EB03",
+        "slug": "one-piece-heroines-edition"
+      }
+    }
+  ]
+}

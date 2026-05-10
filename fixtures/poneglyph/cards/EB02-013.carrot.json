@@ -1,0 +1,75 @@
+{
+  "attribute": ["Special"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "3",
+  "card_number": "EB02-013",
+  "card_type": "Character",
+  "color": ["Green"],
+  "cost": 1,
+  "counter": 2000,
+  "effect": "[On Play] If you have 3 or more DON!! cards on your field, look at 7 cards from the top of your deck; reveal up to 1 [Zou] and add it to your hand. Then, place the rest at the bottom of your deck in any order and play up to 1 [Zou] from your hand.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Carrot",
+  "official_faq": [
+    {
+      "answer": "No, you cannot.",
+      "question": "[On Play] If I have 2 or less DON!! cards on my field, can I still play up to 1 [Zou] from my hand?",
+      "updated_on": "2025-04-25"
+    }
+  ],
+  "power": 0,
+  "rarity": "C",
+  "released": true,
+  "released_at": "2025-05-09T00:00:00.000Z",
+  "set": "EB02",
+  "set_name": "Anime 25th Collection",
+  "trigger": null,
+  "types": ["Minks"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB02-013/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB02-013/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "2.39",
+        "low_price": "0.01",
+        "market_price": "0.27",
+        "mid_price": "0.29",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/629105/one-piece-card-game-extra-booster-anime-25th-collection-carrot"
+      },
+      "name": null,
+      "product": {
+        "id": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+        "name": "Anime 25th Collection",
+        "released_at": "2025-05-09T00:00:00.000Z",
+        "set_code": "EB02",
+        "slug": "anime-25th-collection"
+      }
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+{
+  "attribute": ["Special"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "1",
+  "card_number": "OP01-073",
+  "card_type": "Character",
+  "color": ["Blue"],
+  "cost": 3,
+  "counter": 1000,
+  "effect": "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[On Play] Look at 5 cards from the top of your deck and place them at the top or bottom of the deck in any order.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "not_legal"
+    }
+  },
+  "life": null,
+  "name": "Donquixote Doflamingo",
+  "official_faq": [
+    {
+      "answer": "No, you cannot. After deciding the order in which you want to place the 5 cards, you must choose whether to return all 5 cards to the top or bottom of the deck.",
+      "question": "After looking at 5 cards from the top of my deck, can I place 1 card on the top and 4 cards on the bottom?",
+      "updated_on": "2024-04-05"
+    },
+    {
+      "answer": "You will be able to look at all of the 4 or less cards in your deck. While looking at your deck, the number of cards in your deck will not be considered 0.",
+      "question": "What happens according to this [On Play] effect if I have 4 or less cards in my deck?",
+      "updated_on": "2024-04-05"
+    }
+  ],
+  "power": 4000,
+  "rarity": "R",
+  "released": true,
+  "released_at": "2022-12-02T00:00:00.000Z",
+  "set": "OP01",
+  "set_name": "Romance Dawn",
+  "trigger": null,
+  "types": ["The Seven Warlords of the Sea", "Donquixote Pirates"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP01-073/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP01-073/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Standard",
+      "market": {
+        "high_price": "7.50",
+        "low_price": "0.02",
+        "market_price": "0.37",
+        "mid_price": "0.50",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/454602/one-piece-card-game-romance-dawn-donquixote-doflamingo-073"
+      },
+      "name": null,
+      "product": {
+        "id": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+        "name": "Romance Dawn",
+        "released_at": "2022-12-02T00:00:00.000Z",
+        "set_code": "OP01",
+        "slug": "romance-dawn"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP01-073/en/stock/2/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP01-073/en/stock/2/thumb.webp"
+        }
+      },
+      "index": 2,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "99.99",
+        "low_price": "13.90",
+        "market_price": "15.86",
+        "mid_price": "22.30",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/454603/one-piece-card-game-romance-dawn-donquixote-doflamingo-073-parallel"
+      },
+      "name": null,
+      "product": {
+        "id": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+        "name": "Romance Dawn",
+        "released_at": "2022-12-02T00:00:00.000Z",
+        "set_code": "OP01",
+        "slug": "romance-dawn"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP01-073/en/stock/3/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP01-073/en/stock/3/thumb.webp"
+        }
+      },
+      "index": 3,
+      "label": "SP",
+      "market": {
+        "high_price": "249.99",
+        "low_price": "96.79",
+        "market_price": "117.60",
+        "mid_price": "113.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/545923/one-piece-card-game-500-years-in-the-future-donquixote-doflamingo-sp"
+      },
+      "name": null,
+      "product": {
+        "id": "48d048e6-c2c6-4f03-aa7d-8ce44ec72fc5",
+        "name": "500 Years in the Future",
+        "released_at": "2024-06-28T00:00:00.000Z",
+        "set_code": "OP07",
+        "slug": "500-years-in-the-future"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP01-073/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP01-073/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Reprint",
+      "market": {
+        "high_price": "6.99",
+        "low_price": "0.04",
+        "market_price": "0.19",
+        "mid_price": "0.25",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/581007/one-piece-card-game-starter-deck-17-blue-donquixote-doflamingo-donquixote-doflamingo-op01-073"
+      },
+      "name": null,
+      "product": {
+        "id": "80cce277-2d8e-44a2-afe3-d1991034140c",
+        "name": "Starter Deck - Blue Donquixote Doflamingo",
+        "released_at": "2024-10-25T00:00:00.000Z",
+        "set_code": "ST17",
+        "slug": "starter-deck-blue-donquixote-doflamingo"
+      }
+    },
+    {
+      "artist": "Suemi jun",
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": "https://cdn.poneglyph.one/images/OP01-073/en/scans/4/display.webp",
+          "full": "https://cdn.poneglyph.one/images/OP01-073/en/scans/4/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP01-073/en/scans/4/thumb.webp"
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 4,
+      "label": "Promo",
+      "market": {
+        "high_price": "25.00",
+        "low_price": "4.21",
+        "market_price": "5.02",
+        "mid_price": "6.03",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/499434/one-piece-card-game-one-piece-promotion-cards-donquixote-doflamingo-judge"
+      },
+      "name": null,
+      "product": {
+        "id": "345dc017-b60b-4ebd-b24a-c858b5d0d7b7",
+        "name": "Judge Pack Vol. 1",
+        "released_at": null,
+        "set_code": null,
+        "slug": "judge-pack-vol-1"
+      }
+    }
+  ]
+}

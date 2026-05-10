@@ -1,0 +1,105 @@
+{
+  "attribute": ["Slash"],
+  "available_languages": ["en", "ja"],
+  "block": "1",
+  "card_number": "OP04-039",
+  "card_type": "Leader",
+  "color": ["Blue", "Black"],
+  "cost": null,
+  "counter": null,
+  "effect": "This Leader cannot attack.\n[Activate: Main] [Once Per Turn] ➀ (You may rest the specified number of DON!! cards in your cost area.): If you have 6 or less cards in your hand, look at 2 cards from the top of your deck; reveal up to 1 {Dressrosa} type card and add it to your hand. Then, trash the rest.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "not_legal"
+    }
+  },
+  "life": 5,
+  "name": "Rebecca",
+  "official_faq": [],
+  "power": 5000,
+  "rarity": "L",
+  "released": true,
+  "released_at": "2023-09-22T00:00:00.000Z",
+  "set": "OP04",
+  "set_name": "Kingdoms of Intrigue",
+  "trigger": null,
+  "types": ["Dressrosa"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.443522,
+        "y": 0.25
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP04-039/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP04-039/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "10.00",
+        "low_price": "0.01",
+        "market_price": "0.21",
+        "mid_price": "0.22",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/510993/one-piece-card-game-kingdoms-of-intrigue-rebecca-039"
+      },
+      "name": null,
+      "product": {
+        "id": "ba423e59-2155-4632-b1a4-b00a1b319692",
+        "name": "Kingdoms of Intrigue",
+        "released_at": "2023-09-22T00:00:00.000Z",
+        "set_code": "OP04",
+        "slug": "kingdoms-of-intrigue"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.501661,
+        "y": 0.260714
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP04-039/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP04-039/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "299.99",
+        "low_price": "49.95",
+        "market_price": "53.71",
+        "mid_price": "59.07",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/510994/one-piece-card-game-kingdoms-of-intrigue-rebecca-039-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "ba423e59-2155-4632-b1a4-b00a1b319692",
+        "name": "Kingdoms of Intrigue",
+        "released_at": "2023-09-22T00:00:00.000Z",
+        "set_code": "OP04",
+        "slug": "kingdoms-of-intrigue"
+      }
+    }
+  ]
+}

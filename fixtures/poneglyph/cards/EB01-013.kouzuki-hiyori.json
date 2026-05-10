@@ -1,0 +1,105 @@
+{
+  "attribute": ["Wisdom"],
+  "available_languages": ["en", "ja"],
+  "block": "2",
+  "card_number": "EB01-013",
+  "card_type": "Character",
+  "color": ["Green"],
+  "cost": 4,
+  "counter": 1000,
+  "effect": "[Activate: Main] You may trash this Character: Play up to 1 {Land of Wano} type Character card with a cost of 5 or less other than [Kouzuki Hiyori] from your hand. Then, draw 1 card.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Kouzuki Hiyori",
+  "official_faq": [],
+  "power": 0,
+  "rarity": "R",
+  "released": true,
+  "released_at": "2024-05-03T00:00:00.000Z",
+  "set": "EB01",
+  "set_name": "Memorial Collection",
+  "trigger": null,
+  "types": ["Land of Wano", "Kouzuki Clan"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-013/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-013/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "50.00",
+        "low_price": "2.99",
+        "market_price": "3.53",
+        "mid_price": "3.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544540/one-piece-card-game-extra-booster-memorial-collection-kouzuki-hiyori"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-013/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-013/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "89.99",
+        "low_price": "14.39",
+        "market_price": "17.76",
+        "mid_price": "18.64",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544541/one-piece-card-game-extra-booster-memorial-collection-kouzuki-hiyori-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    }
+  ]
+}

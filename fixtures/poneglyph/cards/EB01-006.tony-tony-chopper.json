@@ -1,0 +1,249 @@
+{
+  "attribute": ["Strike"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "2",
+  "card_number": "EB01-006",
+  "card_type": "Character",
+  "color": ["Red"],
+  "cost": 3,
+  "counter": 1000,
+  "effect": "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[DON!! x2] [When Attacking] Give up to 1 of your opponent's Characters −3000 power during this turn.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Tony Tony.Chopper",
+  "official_faq": [],
+  "power": 4000,
+  "rarity": "SR",
+  "released": true,
+  "released_at": "2024-05-03T00:00:00.000Z",
+  "set": "EB01",
+  "set_name": "Memorial Collection",
+  "trigger": null,
+  "types": ["Animal", "Straw Hat Crew"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-006/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-006/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "100.00",
+        "low_price": "19.71",
+        "market_price": "20.21",
+        "mid_price": "25.00",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544530/one-piece-card-game-extra-booster-memorial-collection-tony-tonychopper"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-006/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-006/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "220.00",
+        "low_price": "58.47",
+        "market_price": "60.41",
+        "mid_price": "61.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544531/one-piece-card-game-extra-booster-memorial-collection-tony-tonychopper-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-006/en/stock/2/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-006/en/stock/2/thumb.webp"
+        }
+      },
+      "index": 2,
+      "label": "Manga Art",
+      "market": {
+        "high_price": "120001.26",
+        "low_price": "3000.00",
+        "market_price": "2427.43",
+        "mid_price": "120000.00",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544532/one-piece-card-game-extra-booster-memorial-collection-tony-tonychopper-alternate-art-manga"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-006/en/stock/3/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-006/en/stock/3/thumb.webp"
+        }
+      },
+      "index": 3,
+      "label": "Manga Art",
+      "market": {
+        "high_price": "200000.00",
+        "low_price": "3450.00",
+        "market_price": "1704.75",
+        "mid_price": "9069.00",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/587962/one-piece-card-game-premium-booster-the-best-tony-tonychopper-eb01-006-manga"
+      },
+      "name": null,
+      "product": {
+        "id": "c02d3350-49f9-4968-a30a-436b02b140a2",
+        "name": "One Piece Card the Best",
+        "released_at": "2024-11-08T00:00:00.000Z",
+        "set_code": "PRB01",
+        "slug": "one-piece-card-the-best"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-006/en/stock/4/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-006/en/stock/4/thumb.webp"
+        }
+      },
+      "index": 4,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": null,
+        "low_price": null,
+        "market_price": null,
+        "mid_price": null,
+        "tcgplayer_url": null
+      },
+      "name": null,
+      "product": {
+        "id": "992e49d7-1301-4380-8acd-1eeb507497e5",
+        "name": "Treasure Cup November-december",
+        "released_at": null,
+        "set_code": null,
+        "slug": "treasure-cup-november-december"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 5,
+      "label": "Promo",
+      "market": {
+        "high_price": "2500.00",
+        "low_price": "2299.99",
+        "market_price": "987.91",
+        "mid_price": "2300.00",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/590986/one-piece-card-game-one-piece-promotion-cards-tony-tonychopper-treasure-cup-2024"
+      },
+      "name": null,
+      "product": {
+        "id": "219d4274-4f86-4639-9a57-39e47ffc7731",
+        "name": "Treasure Cup 2024",
+        "released_at": null,
+        "set_code": null,
+        "slug": "treasure-cup-2024"
+      }
+    }
+  ]
+}

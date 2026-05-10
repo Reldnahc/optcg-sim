@@ -1,0 +1,105 @@
+{
+  "attribute": ["Wisdom"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "3",
+  "card_number": "EB02-017",
+  "card_type": "Character",
+  "color": ["Green"],
+  "cost": 1,
+  "counter": 1000,
+  "effect": "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Straw Hat Crew} type card other than [Nami] and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Nami",
+  "official_faq": [],
+  "power": 2000,
+  "rarity": "R",
+  "released": true,
+  "released_at": "2025-05-09T00:00:00.000Z",
+  "set": "EB02",
+  "set_name": "Anime 25th Collection",
+  "trigger": null,
+  "types": ["East Blue", "Straw Hat Crew"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB02-017/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB02-017/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "22.00",
+        "low_price": "5.00",
+        "market_price": "9.73",
+        "mid_price": "11.23",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/629110/one-piece-card-game-extra-booster-anime-25th-collection-nami"
+      },
+      "name": null,
+      "product": {
+        "id": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+        "name": "Anime 25th Collection",
+        "released_at": "2025-05-09T00:00:00.000Z",
+        "set_code": "EB02",
+        "slug": "anime-25th-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB02-017/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB02-017/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "500.00",
+        "low_price": "113.99",
+        "market_price": "122.24",
+        "mid_price": "121.65",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/629111/one-piece-card-game-extra-booster-anime-25th-collection-nami-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+        "name": "Anime 25th Collection",
+        "released_at": "2025-05-09T00:00:00.000Z",
+        "set_code": "EB02",
+        "slug": "anime-25th-collection"
+      }
+    }
+  ]
+}
