@@ -2,6 +2,581 @@
   "banlistVersion": "real-card-banlist-v1",
   "cardDataVersion": "real-card-poneglyph-fixture-v1",
   "cards": {
+    "EB01-003": {
+      "attributes": ["slash", "special"],
+      "behaviorHash": "b8e48134e58a53ca7d85918bd94f2e95300c4be3e19b63826dc6ba0bd696157e",
+      "cardId": "EB01-003",
+      "category": "character",
+      "colors": ["red"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Kid & Killer",
+      "officialFaq": [
+        {
+          "answer": "Yes, it still has +2000 power.",
+          "question": "If this Character gains +2000 power according to this [When Attacking] effect, and then during that turn the number of my opponent's Life cards becomes 3, does this Character still have +2000 power?",
+          "updated_on": "2024-04-19"
+        }
+      ],
+      "printedKeywords": ["rush"],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "127edb6d7aaa0a2f13454785aee75e5fbf3aee72b7bbec7a774e27612da415f2",
+      "types": ["Supernovas", "Kid Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-003:v0",
+          "label": "SP",
+          "productId": "0c90e082-3d2b-4e94-8029-026e5e7dd2b0",
+          "productName": "The Azure Sea’s Seven",
+          "productSetCode": "OP14",
+          "productSlug": "the-azure-sea-s-seven",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-003/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB01-003:v1",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-003/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "EB01-003:v2",
+          "label": "Alternate Art",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-003/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/2/thumb.webp"
+        },
+        {
+          "variantIndex": 3,
+          "variantKey": "EB01-003:v3",
+          "label": "Alternate Art",
+          "productId": "49e43d4d-08c9-4e17-814d-70ac58183fb3",
+          "productName": "Offline Regional Participation Pack 2025 Vol.2",
+          "productSlug": "offline-regional-participation-pack-2025-vol-2",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-003/en/stock/3/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/3/thumb.webp"
+        },
+        {
+          "variantIndex": 4,
+          "variantKey": "EB01-003:v4",
+          "label": "Reprint",
+          "productId": "90fc7f9f-bc9b-4969-85ea-2ffb2e6a9e74",
+          "productName": "Learn Together Deck Set",
+          "productSlug": "learn-together-deck-set",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-003/en/stock/4/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/4/thumb.webp"
+        },
+        {
+          "variantIndex": 5,
+          "variantKey": "EB01-003:v5",
+          "label": "Alternate Art",
+          "productId": "49e43d4d-08c9-4e17-814d-70ac58183fb3",
+          "productName": "Offline Regional Participation Pack 2025 Vol.2",
+          "productSlug": "offline-regional-participation-pack-2025-vol-2",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-003/en/stock/5/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/5/thumb.webp"
+        },
+        {
+          "variantIndex": 6,
+          "variantKey": "EB01-003:v6",
+          "label": "Promo",
+          "productId": "baf44730-5c02-4a46-9608-d1d8f3528f37",
+          "productName": "CS 25-26 Regionals Textured Chase Promo",
+          "productSlug": "cs-25-26-regionals-textured-chase-promo"
+        },
+        {
+          "variantIndex": 7,
+          "variantKey": "EB01-003:v7",
+          "label": "Promo",
+          "productId": "9b22a565-f517-4fcb-8c74-7579455ef3e7",
+          "productName": "Online Regional Participation Pack 2025 Vol.2",
+          "productSlug": "online-regional-participation-pack-2025-vol-2"
+        },
+        {
+          "variantIndex": 8,
+          "variantKey": "EB01-003:v8",
+          "label": "Promo",
+          "productId": "de5bbe28-d6b7-42e3-981e-7226943ccaf0",
+          "productName": "Online Regional Finalist Card Set 2025 Vol.2",
+          "productSlug": "online-regional-finalist-card-set-2025-vol-2"
+        },
+        {
+          "variantIndex": 9,
+          "variantKey": "EB01-003:v9",
+          "label": "Promo",
+          "productId": "f9966762-4b8d-43f7-9888-010504a8121f",
+          "productName": "Offline Regional Champion Card Set 2025 Vol.2",
+          "productSlug": "offline-regional-champion-card-set-2025-vol-2"
+        },
+        {
+          "variantIndex": 10,
+          "variantKey": "EB01-003:v10",
+          "label": "Promo",
+          "productId": "9975c138-3ad7-4655-8222-b8163def50a3",
+          "productName": "Online Regional Champion Card Set 2025 Vol.2",
+          "productSlug": "online-regional-champion-card-set-2025-vol-2"
+        },
+        {
+          "variantIndex": 11,
+          "variantKey": "EB01-003:v11",
+          "label": "Promo",
+          "productId": "ef639d46-896e-4200-aca6-52b2f84aed7d",
+          "productName": "Offline Regional Finalist Card Set 2025 Vol.2",
+          "productSlug": "offline-regional-finalist-card-set-2025-vol-2"
+        }
+      ],
+      "block": "2",
+      "cost": 4,
+      "effectText": "[Rush] (This card can attack on the turn in which it is played.)\n[When Attacking] If your opponent has 2 or less Life cards, this Character gains +2000 power during this turn.",
+      "power": 5000,
+      "rarity": "R",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "b8e48134e58a53ca7d85918bd94f2e95300c4be3e19b63826dc6ba0bd696157e",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-003",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "127edb6d7aaa0a2f13454785aee75e5fbf3aee72b7bbec7a774e27612da415f2",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-006": {
+      "attributes": ["strike"],
+      "behaviorHash": "199f0468a67214209ea1a53e4a3b9dabb7c076e3ccd2c258199fdcc0d55e9172",
+      "cardId": "EB01-006",
+      "category": "character",
+      "colors": ["red"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Tony Tony.Chopper",
+      "officialFaq": [],
+      "printedKeywords": ["blocker"],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "a0f6f75b13c90ffce2155ae7751f7da18914affbe1dbcc11d2ec2af5fbc4901c",
+      "types": ["Animal", "Straw Hat Crew"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-006:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-006/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-006/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB01-006:v1",
+          "label": "Alternate Art",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-006/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-006/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "EB01-006:v2",
+          "label": "Manga Art",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-006/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-006/en/stock/2/thumb.webp"
+        },
+        {
+          "variantIndex": 3,
+          "variantKey": "EB01-006:v3",
+          "label": "Manga Art",
+          "productId": "c02d3350-49f9-4968-a30a-436b02b140a2",
+          "productName": "One Piece Card the Best",
+          "productSetCode": "PRB01",
+          "productSlug": "one-piece-card-the-best",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-006/en/stock/3/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-006/en/stock/3/thumb.webp"
+        },
+        {
+          "variantIndex": 4,
+          "variantKey": "EB01-006:v4",
+          "label": "Alternate Art",
+          "productId": "992e49d7-1301-4380-8acd-1eeb507497e5",
+          "productName": "Treasure Cup November-december",
+          "productSlug": "treasure-cup-november-december",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-006/en/stock/4/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-006/en/stock/4/thumb.webp"
+        },
+        {
+          "variantIndex": 5,
+          "variantKey": "EB01-006:v5",
+          "label": "Promo",
+          "productId": "219d4274-4f86-4639-9a57-39e47ffc7731",
+          "productName": "Treasure Cup 2024",
+          "productSlug": "treasure-cup-2024"
+        }
+      ],
+      "block": "2",
+      "cost": 3,
+      "counter": 1000,
+      "effectText": "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[DON!! x2] [When Attacking] Give up to 1 of your opponent's Characters −3000 power during this turn.",
+      "power": 4000,
+      "rarity": "SR",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "199f0468a67214209ea1a53e4a3b9dabb7c076e3ccd2c258199fdcc0d55e9172",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-006",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "a0f6f75b13c90ffce2155ae7751f7da18914affbe1dbcc11d2ec2af5fbc4901c",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-008": {
+      "attributes": ["strike"],
+      "behaviorHash": "8891f4ce301f7585984d682188ee3f28fd1f7c73d2c10cadce5869b8bbd84cc2",
+      "cardId": "EB01-008",
+      "category": "character",
+      "colors": ["red"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "LittleOars Jr.",
+      "officialFaq": [
+        {
+          "answer": "No, it cannot.",
+          "question": "Can this [Once Per Turn] effect prevent this Character from being K.O.'d by an effect even if I don't have an Event or Stage card in my hand?",
+          "updated_on": "2024-04-19"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "a4b611d04e3db1b7d7bafbc3855195c35b48d7b6147378eb65784447107bdb35",
+      "types": ["Giant", "Whitebeard Pirates Allies"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-008:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-008/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-008/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 6,
+      "counter": 1000,
+      "effectText": "[Once Per Turn] If this Character would be K.O.'d by an effect, you may trash 1 Event or Stage card from your hand instead.",
+      "power": 7000,
+      "rarity": "R",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "8891f4ce301f7585984d682188ee3f28fd1f7c73d2c10cadce5869b8bbd84cc2",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-008",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "a4b611d04e3db1b7d7bafbc3855195c35b48d7b6147378eb65784447107bdb35",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-009": {
+      "attributes": [],
+      "behaviorHash": "13949d328ff835316c650a9365a1f557887c042fddfc3f2b5f481bcf1776fd02",
+      "cardId": "EB01-009",
+      "category": "event",
+      "colors": ["red"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Just Shut Up and Come with Us!!!!",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "3581f2509ec726c8ec80f640f1e4a8169f140e8ba0705c2bade036ff86839b6e",
+      "types": ["Drum Kingdom", "Straw Hat Crew"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-009:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-009/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-009/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB01-009:v1",
+          "label": "Jolly Roger Foil",
+          "productId": "4d262c70-3787-4fec-8516-438619cb09fa",
+          "productName": "One Piece Card the Best Vol.2",
+          "productSetCode": "PRB02",
+          "productSlug": "one-piece-card-the-best-vol-2",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-009/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-009/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "EB01-009:v2",
+          "label": "Reprint",
+          "productId": "4d262c70-3787-4fec-8516-438619cb09fa",
+          "productName": "One Piece Card the Best Vol.2",
+          "productSetCode": "PRB02",
+          "productSlug": "one-piece-card-the-best-vol-2",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-009/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-009/en/stock/2/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 1,
+      "effectText": "[Counter] Look at 5 cards from the top of your deck and play up to 1 {Animal} type Character card with a cost of 3 or less. Then, place the rest at the bottom of your deck in any order.",
+      "rarity": "C",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "13949d328ff835316c650a9365a1f557887c042fddfc3f2b5f481bcf1776fd02",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-009",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "3581f2509ec726c8ec80f640f1e4a8169f140e8ba0705c2bade036ff86839b6e",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-010": {
+      "attributes": [],
+      "behaviorHash": "fe09ecdb7894d6c0f0f2d3920711a9b69c5f0d487fa5324e9e740cd8757c07d4",
+      "cardId": "EB01-010",
+      "category": "event",
+      "colors": ["red"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "There's No Way You Could Defeat Me!!",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "aaed60e5d8adec62c4211455afaae1f4ae0102ec5c4574ef345c045689b80098",
+      "types": ["Water Seven", "Straw Hat Crew"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-010:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-010/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-010/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 3,
+      "effectText": "[Counter] K.O. up to 1 of your opponent's Characters with 6000 base power or less.",
+      "rarity": "R",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "triggerText": "[Trigger] K.O. up to 1 of your opponent's Characters with 5000 base power or less.",
+      "support": {
+        "behaviorHash": "fe09ecdb7894d6c0f0f2d3920711a9b69c5f0d487fa5324e9e740cd8757c07d4",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-010",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "aaed60e5d8adec62c4211455afaae1f4ae0102ec5c4574ef345c045689b80098",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-013": {
+      "attributes": ["wisdom"],
+      "behaviorHash": "41064e5dceabe464b1acae84cda88b9b26ded652a0c4fca72c0063f365f61d48",
+      "cardId": "EB01-013",
+      "category": "character",
+      "colors": ["green"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Kouzuki Hiyori",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "85b7f770f1530372377ecd4f73aa58852a28c664464f5827d245f58636cbd81f",
+      "types": ["Land of Wano", "Kouzuki Clan"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-013:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-013/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-013/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB01-013:v1",
+          "label": "Alternate Art",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-013/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-013/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 4,
+      "counter": 1000,
+      "effectText": "[Activate: Main] You may trash this Character: Play up to 1 {Land of Wano} type Character card with a cost of 5 or less other than [Kouzuki Hiyori] from your hand. Then, draw 1 card.",
+      "power": 0,
+      "rarity": "R",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "41064e5dceabe464b1acae84cda88b9b26ded652a0c4fca72c0063f365f61d48",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-013",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "85b7f770f1530372377ecd4f73aa58852a28c664464f5827d245f58636cbd81f",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-019": {
+      "attributes": [],
+      "behaviorHash": "f1088e3adefc165b278b47cbdb22e61c74f2e3e484c647320323ab593581c82a",
+      "cardId": "EB01-019",
+      "category": "event",
+      "colors": ["green"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Off-White",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "a6536164098d654e8c3d2344796c82bd7452bc206821e41e118ba71eff44632f",
+      "types": ["The Seven Warlords of the Sea", "Donquixote Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-019:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-019/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-019/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 2,
+      "effectText": "[Counter] Up to 1 of your Leader or Character cards gains +4000 power during this battle. Then, look at 3 cards from the top of your deck; reveal up to 1 {Donquixote Pirates} type Character card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      "rarity": "R",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "f1088e3adefc165b278b47cbdb22e61c74f2e3e484c647320323ab593581c82a",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-019",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "a6536164098d654e8c3d2344796c82bd7452bc206821e41e118ba71eff44632f",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
     "EB01-023": {
       "attributes": ["slash"],
       "behaviorHash": "ef9afbb71fe73e878b604c566b64043414a3014841c741939d542658def0cf96",
@@ -84,6 +659,1317 @@
         "tested": true,
         "effectDefinitionId": "eb01-023.on-play-draw-1",
         "notes": "Reviewed real-card fixture with explicit [On Play] Draw 1 card DSL linkage."
+      }
+    },
+    "EB01-028": {
+      "attributes": [],
+      "behaviorHash": "4aa85b591243a2c1cfa390c727659112c1be38b8cc979a4298ab4b2c899eb6d1",
+      "cardId": "EB01-028",
+      "category": "event",
+      "colors": ["blue"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Gum-Gum Champion Rifle",
+      "officialFaq": [
+        {
+          "answer": "No, you cannot.",
+          "question": "If my Leader does not have the {Impel Down} type, can I still use this [Counter] effect to have my opponent return 1 of their active Characters to the owner's hand?",
+          "updated_on": "2024-04-19"
+        },
+        {
+          "answer": "The opponent of the player who activated this [Counter] effect chooses.",
+          "question": "Which player chooses which Character to return to the owner's hand according to this [Counter] effect?",
+          "updated_on": "2024-04-19"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "0b18f8f5712c8d8cb76fddf094168d0a8315e3d1fd0efc94437030de1a0628a2",
+      "types": ["Impel Down", "Straw Hat Crew"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-028:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-028/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-028/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 1,
+      "effectText": "[Counter] If your Leader has the {Impel Down} type, up to 1 of your Leader or Character cards gains +2000 power during this battle. Then, your opponent returns 1 of their active Characters to the owner's hand.",
+      "rarity": "R",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "triggerText": "[Trigger] Return up to 1 Character with a cost of 3 or less to the bottom of the owner's deck.",
+      "support": {
+        "behaviorHash": "4aa85b591243a2c1cfa390c727659112c1be38b8cc979a4298ab4b2c899eb6d1",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-028",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "0b18f8f5712c8d8cb76fddf094168d0a8315e3d1fd0efc94437030de1a0628a2",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-034": {
+      "attributes": ["slash"],
+      "behaviorHash": "e97fb3e0ba36090aa1a71a27f26682d2b6eef10aa92862932f868cccd974a29c",
+      "cardId": "EB01-034",
+      "category": "character",
+      "colors": ["purple"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Ms. Wednesday",
+      "officialFaq": [],
+      "printedKeywords": ["blocker"],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "bc060043759d0dbb55c07ff6464035f5ce11c94ec76f40d24a4b35bef08bbdb6",
+      "types": ["Baroque Works"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-034:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-034/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-034/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB01-034:v1",
+          "label": "Alternate Art",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-034/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-034/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 3,
+      "counter": 1000,
+      "effectText": "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[On Your Opponent's Attack] [Once Per Turn] DON!! −1 (You may return the specified number of DON!! cards from your field to your DON!! deck.): If your Leader's type includes \"Baroque Works\", add up to 1 DON!! card from your DON!! deck and set it as active.",
+      "power": 4000,
+      "rarity": "SR",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "e97fb3e0ba36090aa1a71a27f26682d2b6eef10aa92862932f868cccd974a29c",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-034",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "bc060043759d0dbb55c07ff6464035f5ce11c94ec76f40d24a4b35bef08bbdb6",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-036": {
+      "attributes": ["strike"],
+      "behaviorHash": "c994c7a65c8991e6a12e285c817a5fd5dcc75b246758a08226a73bcef35b28d9",
+      "cardId": "EB01-036",
+      "category": "character",
+      "colors": ["purple"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Minochihuahua",
+      "officialFaq": [],
+      "printedKeywords": ["rush"],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "17a27a4bdb4ee62461fa6f0a143d6d48aa0d1883b97661e2e6003e34fa3019e0",
+      "types": ["Impel Down", "Jailer Beast"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-036:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-036/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-036/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 4,
+      "effectText": "[Rush] (This card can attack on the turn in which it is played.)\n[On K.O.] If your Leader has the {Impel Down} type, add up to 1 DON!! card from your DON!! deck and rest it.",
+      "power": 5000,
+      "rarity": "C",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "c994c7a65c8991e6a12e285c817a5fd5dcc75b246758a08226a73bcef35b28d9",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-036",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "17a27a4bdb4ee62461fa6f0a143d6d48aa0d1883b97661e2e6003e34fa3019e0",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-040": {
+      "attributes": ["slash"],
+      "behaviorHash": "49972c064b5b00e282b6c88b853dab1790237bc2e83cb295035aae341f37d4b4",
+      "cardId": "EB01-040",
+      "category": "leader",
+      "colors": ["black", "yellow"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Kyros",
+      "officialFaq": [
+        {
+          "answer": "No, you cannot.",
+          "question": "If the card at the top of my Life cards is face-up, can I still use this [Activate: Main] effect to K.O. 1 of my opponent's Characters with a cost of 0?",
+          "updated_on": "2024-04-19"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "07c1eb17c0b759f1101e72c0e95d0620441d33562aac448f15fa998a7eb183ab",
+      "types": ["Dressrosa"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-040:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-040/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-040/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB01-040:v1",
+          "label": "Alternate Art",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-040/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-040/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "EB01-040:v2",
+          "label": "SP",
+          "productId": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+          "productName": "Anime 25th Collection",
+          "productSetCode": "EB02",
+          "productSlug": "anime-25th-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-040/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-040/en/stock/2/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "effectText": "[Activate: Main] [Once Per Turn] You may turn 1 card from the top of your Life cards face-up: K.O. up to 1 of your opponent's Characters with a cost of 0.",
+      "life": 4,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "49972c064b5b00e282b6c88b853dab1790237bc2e83cb295035aae341f37d4b4",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-040",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "07c1eb17c0b759f1101e72c0e95d0620441d33562aac448f15fa998a7eb183ab",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-051": {
+      "attributes": [],
+      "behaviorHash": "3fa6ff33bb8dc4d0104979929964f5e91cbb72424c139546934e8db9571bcf33",
+      "cardId": "EB01-051",
+      "category": "event",
+      "colors": ["black"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Finger Pistol",
+      "officialFaq": [
+        {
+          "answer": "No, you cannot.",
+          "question": "If I have 1 or less cards in my deck, can I use this [Main] effect to trash my deck and K.O. 1 of my opponent's Characters with a cost of 5 or less?",
+          "updated_on": "2024-04-19"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "ef49c9fe797f1fca8a0cb395461fab72abcf423757cd84bfdf13f3084ca6efa2",
+      "types": ["CP9"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-051:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-051/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-051/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB01-051:v1",
+          "label": "Alternate Art",
+          "productId": "4d262c70-3787-4fec-8516-438619cb09fa",
+          "productName": "One Piece Card the Best Vol.2",
+          "productSetCode": "PRB02",
+          "productSlug": "one-piece-card-the-best-vol-2",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-051/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-051/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "EB01-051:v2",
+          "label": "Reprint",
+          "productId": "4d262c70-3787-4fec-8516-438619cb09fa",
+          "productName": "One Piece Card the Best Vol.2",
+          "productSetCode": "PRB02",
+          "productSlug": "one-piece-card-the-best-vol-2",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-051/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-051/en/stock/2/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 4,
+      "effectText": "[Main] You may trash 2 cards from the top of your deck: K.O. up to 1 of your opponent's Characters with a cost of 5 or less.",
+      "rarity": "R",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "triggerText": "[Trigger] Activate this card's [Main] effect.",
+      "support": {
+        "behaviorHash": "3fa6ff33bb8dc4d0104979929964f5e91cbb72424c139546934e8db9571bcf33",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-051",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "ef49c9fe797f1fca8a0cb395461fab72abcf423757cd84bfdf13f3084ca6efa2",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-052": {
+      "attributes": ["special"],
+      "behaviorHash": "03eb62a9c336e66fbf5d0572e515ca9aa9be62e9ad368c6f8910685550f9e46a",
+      "cardId": "EB01-052",
+      "category": "character",
+      "colors": ["yellow"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Viola",
+      "officialFaq": [
+        {
+          "answer": "No. You return face-down Life cards face-down, and face- up Life cards face-up.",
+          "question": "When I use this [On Play] effect to look at all of my opponent's Life cards and place them back in their Life area in any order, do I return the face-up Life cards face- down?",
+          "updated_on": "2024-04-19"
+        },
+        {
+          "answer": "No, you cannot.",
+          "question": "When I use this [On Play] effect to turn all of my Life cards face-down, can I change the order of my Life cards?",
+          "updated_on": "2024-04-19"
+        }
+      ],
+      "printedKeywords": ["blocker"],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "09e983908bde0f3e00887ad504bff6b0a4cd50969b34a47c6b6d5546b8f42247",
+      "types": ["Dressrosa"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-052:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-052/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-052/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB01-052:v1",
+          "label": "Alternate Art",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-052/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-052/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 2,
+      "counter": 1000,
+      "effectText": "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[On Play] Choose one:\n• Look at all of your opponent's Life cards and place them back in their Life area in any order.\n• Turn all of your Life cards face-down.",
+      "power": 0,
+      "rarity": "SR",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "03eb62a9c336e66fbf5d0572e515ca9aa9be62e9ad368c6f8910685550f9e46a",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-052",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "09e983908bde0f3e00887ad504bff6b0a4cd50969b34a47c6b6d5546b8f42247",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-053": {
+      "attributes": ["special"],
+      "behaviorHash": "dcf0235ac1e5f84499d1644d76bd8b9ae61de05535e1f7a241ad30d28849134f",
+      "cardId": "EB01-053",
+      "category": "character",
+      "colors": ["yellow"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Gastino",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "e8928e7a7a98370f6d498e13dca08afd5a90a00c25fe1e865ed3e7f56a78fb83",
+      "types": ["Scientist"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-053:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-053/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-053/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 3,
+      "effectText": "[On Play] Place up to 1 of your opponent's Characters with a cost of 3 or less at the top or bottom of your opponent's Life cards face-up.",
+      "power": 5000,
+      "rarity": "C",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "triggerText": "[Trigger] Give up to a total of 2 of your opponent's Leader or Character cards −3000 power during this turn.",
+      "support": {
+        "behaviorHash": "dcf0235ac1e5f84499d1644d76bd8b9ae61de05535e1f7a241ad30d28849134f",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-053",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "e8928e7a7a98370f6d498e13dca08afd5a90a00c25fe1e865ed3e7f56a78fb83",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-054": {
+      "attributes": ["slash"],
+      "behaviorHash": "3054549081cc3195c72818817b36cea788525398e6fd06130b5f27aa2e377e6b",
+      "cardId": "EB01-054",
+      "category": "character",
+      "colors": ["yellow"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Gan.Fall",
+      "officialFaq": [],
+      "printedKeywords": ["blocker"],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "7cadc677534f2e38fb4b4bd0354c0a03635fed01857a9c51ebb48242646b84af",
+      "types": ["Sky Island"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-054:v0",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-054/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-054/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 3,
+      "counter": 1000,
+      "effectText": "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[On Play] If your opponent has 1 or less Life cards, K.O. up to 1 of your opponent's Characters with a cost of 3 or less.",
+      "power": 4000,
+      "rarity": "R",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "3054549081cc3195c72818817b36cea788525398e6fd06130b5f27aa2e377e6b",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-054",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "7cadc677534f2e38fb4b4bd0354c0a03635fed01857a9c51ebb48242646b84af",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB01-057": {
+      "attributes": ["wisdom"],
+      "behaviorHash": "ada234b2166bd1888e2085c310fc2d694b8a67d34fba16de2c5ff46a5913a353",
+      "cardId": "EB01-057",
+      "category": "character",
+      "colors": ["yellow"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Shirahoshi",
+      "officialFaq": [],
+      "printedKeywords": ["blocker"],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "0d085397264bac9003c196da40f109f8838fb5651d2ba64c8a9554e88f8a91df",
+      "types": ["Merfolk"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-057:v0",
+          "label": "SP",
+          "productId": "a642472b-3d14-48bf-aa80-b252037be615",
+          "productName": "A Fist of Divine Speed",
+          "productSetCode": "OP11",
+          "productSlug": "a-fist-of-divine-speed",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-057/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-057/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB01-057:v1",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-057/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-057/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "EB01-057:v2",
+          "label": "Alternate Art",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-057/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-057/en/stock/2/thumb.webp"
+        },
+        {
+          "variantIndex": 3,
+          "variantKey": "EB01-057:v3",
+          "label": "Reprint",
+          "productId": "4d262c70-3787-4fec-8516-438619cb09fa",
+          "productName": "One Piece Card the Best Vol.2",
+          "productSetCode": "PRB02",
+          "productSlug": "one-piece-card-the-best-vol-2",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-057/en/stock/3/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-057/en/stock/3/thumb.webp"
+        }
+      ],
+      "block": "2",
+      "cost": 2,
+      "counter": 1000,
+      "effectText": "When this Character is K.O.'d by your opponent's effect, add up to 1 card from the top of your deck to the top of your Life cards.\n[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
+      "power": 0,
+      "rarity": "SR",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "ada234b2166bd1888e2085c310fc2d694b8a67d34fba16de2c5ff46a5913a353",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-057",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "0d085397264bac9003c196da40f109f8838fb5651d2ba64c8a9554e88f8a91df",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB02-013": {
+      "attributes": ["special"],
+      "behaviorHash": "a7d3ff4949227cf1d290cf6926ee92ff9fce76528b31e95f880fa6a95f05b607",
+      "cardId": "EB02-013",
+      "category": "character",
+      "colors": ["green"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Carrot",
+      "officialFaq": [
+        {
+          "answer": "No, you cannot.",
+          "question": "[On Play] If I have 2 or less DON!! cards on my field, can I still play up to 1 [Zou] from my hand?",
+          "updated_on": "2025-04-25"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB02",
+      "setName": "Anime 25th Collection",
+      "sourceTextHash": "d5008caf5cb83be862b818db0da653508b2468f0ee824f246e56444e8467ade2",
+      "types": ["Minks"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB02-013:v0",
+          "label": "Standard",
+          "productId": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+          "productName": "Anime 25th Collection",
+          "productSetCode": "EB02",
+          "productSlug": "anime-25th-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB02-013/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB02-013/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "3",
+      "cost": 1,
+      "counter": 2000,
+      "effectText": "[On Play] If you have 3 or more DON!! cards on your field, look at 7 cards from the top of your deck; reveal up to 1 [Zou] and add it to your hand. Then, place the rest at the bottom of your deck in any order and play up to 1 [Zou] from your hand.",
+      "power": 0,
+      "rarity": "C",
+      "releasedAt": "2025-05-09T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "a7d3ff4949227cf1d290cf6926ee92ff9fce76528b31e95f880fa6a95f05b607",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB02-013",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "d5008caf5cb83be862b818db0da653508b2468f0ee824f246e56444e8467ade2",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB02-017": {
+      "attributes": ["wisdom"],
+      "behaviorHash": "fa8c531669a714cee31f986dba951a4268060167a46d88bc52103c3d9288a78d",
+      "cardId": "EB02-017",
+      "category": "character",
+      "colors": ["green"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Nami",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB02",
+      "setName": "Anime 25th Collection",
+      "sourceTextHash": "b305ec8616879bf40244806bcb4d8ca227980c76635e0f9b4ffd0568a6486db8",
+      "types": ["East Blue", "Straw Hat Crew"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB02-017:v0",
+          "label": "Standard",
+          "productId": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+          "productName": "Anime 25th Collection",
+          "productSetCode": "EB02",
+          "productSlug": "anime-25th-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB02-017/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB02-017/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB02-017:v1",
+          "label": "Alternate Art",
+          "productId": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+          "productName": "Anime 25th Collection",
+          "productSetCode": "EB02",
+          "productSlug": "anime-25th-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB02-017/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB02-017/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "3",
+      "cost": 1,
+      "counter": 1000,
+      "effectText": "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Straw Hat Crew} type card other than [Nami] and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      "power": 2000,
+      "rarity": "R",
+      "releasedAt": "2025-05-09T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "fa8c531669a714cee31f986dba951a4268060167a46d88bc52103c3d9288a78d",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB02-017",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "b305ec8616879bf40244806bcb4d8ca227980c76635e0f9b4ffd0568a6486db8",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB02-018": {
+      "attributes": ["slash"],
+      "behaviorHash": "538058ec42c239553a8be9aa919d4c70072cb430563c28ebc7ce5295a63cf9bc",
+      "cardId": "EB02-018",
+      "category": "character",
+      "colors": ["green"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Buggy",
+      "officialFaq": [],
+      "printedKeywords": ["doubleAttack"],
+      "released": true,
+      "set": "EB02",
+      "setName": "Anime 25th Collection",
+      "sourceTextHash": "86361bdc1b8a2a1b53f208c3a4ffbeff5d32ba46b7740bfe244c462bdf827c86",
+      "types": ["East Blue", "Buggy Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB02-018:v0",
+          "label": "Standard",
+          "productId": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+          "productName": "Anime 25th Collection",
+          "productSetCode": "EB02",
+          "productSlug": "anime-25th-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB02-018/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB02-018/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "3",
+      "cost": 4,
+      "effectText": "[On Play] If you have no other [Buggy] Characters, up to 1 of your Leader gains [Double Attack] during this turn.",
+      "power": 6000,
+      "rarity": "R",
+      "releasedAt": "2025-05-09T00:00:00.000Z",
+      "triggerText": "[Trigger] Rest up to 1 of your opponent's Characters with a cost of 4 or less.",
+      "support": {
+        "behaviorHash": "538058ec42c239553a8be9aa919d4c70072cb430563c28ebc7ce5295a63cf9bc",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB02-018",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "86361bdc1b8a2a1b53f208c3a4ffbeff5d32ba46b7740bfe244c462bdf827c86",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB02-025": {
+      "attributes": ["special"],
+      "behaviorHash": "bc4d2ff1f054397eaac4d2b99f16d3dc25ca73b65fe7138ad37dd6b0940e2fdb",
+      "cardId": "EB02-025",
+      "category": "character",
+      "colors": ["blue"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Donquixote Rosinante",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB02",
+      "setName": "Anime 25th Collection",
+      "sourceTextHash": "b1e6b10d6a044acd11ff2ca04889d9dec0687b08109788f0fb094863aebf1e80",
+      "types": ["Navy", "Donquixote Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB02-025:v0",
+          "label": "Standard",
+          "productId": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+          "productName": "Anime 25th Collection",
+          "productSetCode": "EB02",
+          "productSlug": "anime-25th-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB02-025/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB02-025/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "3",
+      "cost": 2,
+      "counter": 1000,
+      "effectText": "[Activate: Main] You may rest 1 of your DON!! cards and this Character: If your Leader is [Donquixote Rosinante], look at 5 cards from the top of your deck; play up to 1 Character card with a cost of 2 or less rested. Then, place the rest at the bottom of your deck in any order.",
+      "power": 3000,
+      "rarity": "R",
+      "releasedAt": "2025-05-09T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "bc4d2ff1f054397eaac4d2b99f16d3dc25ca73b65fe7138ad37dd6b0940e2fdb",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB02-025",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "b1e6b10d6a044acd11ff2ca04889d9dec0687b08109788f0fb094863aebf1e80",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB03-001": {
+      "attributes": ["slash"],
+      "behaviorHash": "48506c0d1b7a1a03015299a719797bc7582127a42c560a4a93929d4ee2d9f212",
+      "cardId": "EB03-001",
+      "category": "leader",
+      "colors": ["red", "blue"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Nefeltari Vivi",
+      "officialFaq": [],
+      "printedKeywords": ["rush"],
+      "released": true,
+      "set": "EB03",
+      "setName": "One Piece Heroines Edition",
+      "sourceTextHash": "8f50a33c7661316720b96f95c57cb7ef95c8734ffafbdb76a850f3758cfd8d45",
+      "types": ["Alabasta"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB03-001:v0",
+          "artist": "Sunohara",
+          "label": "Standard",
+          "productId": "8eb0b2be-9cfb-416b-b615-4fb49342a8b5",
+          "productName": "One Piece Heroines Edition",
+          "productSetCode": "EB03",
+          "productSlug": "one-piece-heroines-edition",
+          "scanImageDisplay": "https://cdn.poneglyph.one/images/EB03-001/en/scans/0/display.webp",
+          "scanImageFull": "https://cdn.poneglyph.one/images/EB03-001/en/scans/0/full.png",
+          "scanImageThumb": "https://cdn.poneglyph.one/images/EB03-001/en/scans/0/thumb.webp",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB03-001/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB03-001/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB03-001:v1",
+          "label": "Alternate Art",
+          "productId": "8eb0b2be-9cfb-416b-b615-4fb49342a8b5",
+          "productName": "One Piece Heroines Edition",
+          "productSetCode": "EB03",
+          "productSlug": "one-piece-heroines-edition",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB03-001/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB03-001/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "4",
+      "effectText": "[Once Per Turn] If your Character with a base cost of 4 or more would be K.O.'d, you may trash 1 card from your hand instead.\n[Activate: Main] You may rest this Leader: Give up to 1 of your opponent's Characters −2000 power during this turn. Then, up to 1 of your Characters without a [When Attacking] effect gains [Rush] during this turn.",
+      "life": 4,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2026-02-20T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "48506c0d1b7a1a03015299a719797bc7582127a42c560a4a93929d4ee2d9f212",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB03-001",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "8f50a33c7661316720b96f95c57cb7ef95c8734ffafbdb76a850f3758cfd8d45",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB03-048": {
+      "attributes": ["wisdom"],
+      "behaviorHash": "dd2074724decf4e26ca9f5e9e5ff360dab7c5303b82a64f4a23ea5734757651c",
+      "cardId": "EB03-048",
+      "category": "character",
+      "colors": ["black"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Rebecca",
+      "officialFaq": [],
+      "printedKeywords": ["blocker"],
+      "released": true,
+      "set": "EB03",
+      "setName": "One Piece Heroines Edition",
+      "sourceTextHash": "33634b245fe3a5b0efaf5d7dfb00fe5cb4154abd69a93e97e5d2c7315e4711b8",
+      "types": ["Dressrosa"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB03-048:v0",
+          "artist": "DAI-XT.",
+          "label": "Standard",
+          "productId": "8eb0b2be-9cfb-416b-b615-4fb49342a8b5",
+          "productName": "One Piece Heroines Edition",
+          "productSetCode": "EB03",
+          "productSlug": "one-piece-heroines-edition",
+          "scanImageDisplay": "https://cdn.poneglyph.one/images/EB03-048/en/scans/0/display.webp",
+          "scanImageFull": "https://cdn.poneglyph.one/images/EB03-048/en/scans/0/full.png",
+          "scanImageThumb": "https://cdn.poneglyph.one/images/EB03-048/en/scans/0/thumb.webp",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB03-048/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB03-048/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "4",
+      "cost": 2,
+      "counter": 1000,
+      "effectText": "[Blocker]\n[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Dressrosa} type Stage card and add it to your hand. Then, place the rest at the bottom of your deck in any order and play up to 1 {Dressrosa} type Stage card with a cost of 1 from your hand.",
+      "power": 0,
+      "rarity": "R",
+      "releasedAt": "2026-02-20T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "dd2074724decf4e26ca9f5e9e5ff360dab7c5303b82a64f4a23ea5734757651c",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB03-048",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "33634b245fe3a5b0efaf5d7dfb00fe5cb4154abd69a93e97e5d2c7315e4711b8",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB03-050": {
+      "attributes": ["wisdom"],
+      "behaviorHash": "cb1a59559eb674cbce2dde8399f69ef4762d4bbb34ae74d8d2956f19779dc546",
+      "cardId": "EB03-050",
+      "category": "character",
+      "colors": ["yellow"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Conis",
+      "officialFaq": [],
+      "printedKeywords": ["doubleAttack"],
+      "released": true,
+      "set": "EB03",
+      "setName": "One Piece Heroines Edition",
+      "sourceTextHash": "99454431875aa159dab6e32af981e250f0e713998cda7c7e1a63a6d047c0758b",
+      "types": ["Sky Island"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB03-050:v0",
+          "artist": "HISASHI HUJIWARA",
+          "label": "Standard",
+          "productId": "8eb0b2be-9cfb-416b-b615-4fb49342a8b5",
+          "productName": "One Piece Heroines Edition",
+          "productSetCode": "EB03",
+          "productSlug": "one-piece-heroines-edition",
+          "scanImageDisplay": "https://cdn.poneglyph.one/images/EB03-050/en/scans/0/display.webp",
+          "scanImageFull": "https://cdn.poneglyph.one/images/EB03-050/en/scans/0/full.png",
+          "scanImageThumb": "https://cdn.poneglyph.one/images/EB03-050/en/scans/0/thumb.webp",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB03-050/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB03-050/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "4",
+      "cost": 2,
+      "counter": 1000,
+      "effectText": "[On Play] Up to 1 of your {Sky Island} type Characters gains [Double Attack] during this turn.\n(This card deals 2 damage.)",
+      "power": 0,
+      "rarity": "C",
+      "releasedAt": "2026-02-20T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "cb1a59559eb674cbce2dde8399f69ef4762d4bbb34ae74d8d2956f19779dc546",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB03-050",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "99454431875aa159dab6e32af981e250f0e713998cda7c7e1a63a6d047c0758b",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB04-001": {
+      "attributes": ["special"],
+      "behaviorHash": "f0f864f5292035b346a2eac9229afaeacf94eb4b9d0b85db92b4337ddfbfd4d1",
+      "cardId": "EB04-001",
+      "category": "leader",
+      "colors": ["red", "yellow"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Jewelry Bonney",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB04",
+      "setName": "Extra Booster 4",
+      "sourceTextHash": "83a996aa3d0aa806dd0d94f317a5292fee74e7220cd54f66a6fdb802baf64da2",
+      "types": ["Egghead", "Bonney Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB04-001:v0",
+          "artist": "Sunohara",
+          "label": "Standard",
+          "productId": "05a4c8d4-f5e2-4af7-a3b9-3c58903dfa29",
+          "productName": "Adventure on Kami’s Island",
+          "productSetCode": "OP15",
+          "productSlug": "adventure-on-kami-s-island",
+          "scanImageDisplay": "https://cdn.poneglyph.one/images/EB04-001/en/scans/0/display.webp",
+          "scanImageFull": "https://cdn.poneglyph.one/images/EB04-001/en/scans/0/full.png",
+          "scanImageThumb": "https://cdn.poneglyph.one/images/EB04-001/en/scans/0/thumb.webp",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB04-001/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB04-001/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB04-001:v1",
+          "artist": "otton",
+          "label": "Alternate Art",
+          "productId": "05a4c8d4-f5e2-4af7-a3b9-3c58903dfa29",
+          "productName": "Adventure on Kami’s Island",
+          "productSetCode": "OP15",
+          "productSlug": "adventure-on-kami-s-island",
+          "scanImageDisplay": "https://cdn.poneglyph.one/images/EB04-001/en/scans/1/display.webp",
+          "scanImageFull": "https://cdn.poneglyph.one/images/EB04-001/en/scans/1/full.png",
+          "scanImageThumb": "https://cdn.poneglyph.one/images/EB04-001/en/scans/1/thumb.webp",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB04-001/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB04-001/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "4",
+      "effectText": "[Opponent's Turn] If you have 1 or less Life cards, this Leader gains +2000 power.\n[Activate: Main] [Once Per Turn] Give up to 1 of your opponent's Characters −1000 power during this turn. Then, if you have 2 or more Life cards, you may add 1 card from the top of your Life cards to your hand.",
+      "life": 4,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2026-01-16T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "f0f864f5292035b346a2eac9229afaeacf94eb4b9d0b85db92b4337ddfbfd4d1",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB04-001",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "83a996aa3d0aa806dd0d94f317a5292fee74e7220cd54f66a6fdb802baf64da2",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "EB04-023": {
+      "attributes": ["slash"],
+      "behaviorHash": "5a3202152f755fd083887f0257ad7fb15b336399e328b9cda5cf2bc185b9e2f4",
+      "cardId": "EB04-023",
+      "category": "character",
+      "colors": ["blue"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Chaka & Pell",
+      "officialFaq": [],
+      "printedKeywords": ["doubleAttack"],
+      "released": true,
+      "set": "EB04",
+      "setName": "Extra Booster 4",
+      "sourceTextHash": "560d9321483affa6ed92adc43e865e22784d1545d8aaf85f2cc81ef532be99d8",
+      "types": ["Alabasta"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB04-023:v0",
+          "label": "Standard",
+          "productId": "0c90e082-3d2b-4e94-8029-026e5e7dd2b0",
+          "productName": "The Azure Sea’s Seven",
+          "productSetCode": "OP14",
+          "productSlug": "the-azure-sea-s-seven",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB04-023/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB04-023/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "4",
+      "cost": 8,
+      "effectText": "[Double Attack] (This card deals 2 damage.)\n[On Play] You may give your active Leader −5000 power during this turn: Draw 2 cards.",
+      "power": 9000,
+      "rarity": "R",
+      "releasedAt": "2026-01-16T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "5a3202152f755fd083887f0257ad7fb15b336399e328b9cda5cf2bc185b9e2f4",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB04-023",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "560d9321483affa6ed92adc43e865e22784d1545d8aaf85f2cc81ef532be99d8",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP01-002": {
+      "attributes": ["slash"],
+      "behaviorHash": "e01c564ef5681378792cc850854ced51e5185af7cad897113fa70b47dc5fd6d9",
+      "cardId": "OP01-002",
+      "category": "leader",
+      "colors": ["red", "green"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Trafalgar Law",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP01",
+      "setName": "Romance Dawn",
+      "sourceTextHash": "f8133a1237284cb0090028da958f70a836d60e10a349337426257a93ea8d9ff6",
+      "types": ["Supernovas", "Heart Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP01-002:v0",
+          "label": "Standard",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-002/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-002/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP01-002:v1",
+          "label": "Alternate Art",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-002/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-002/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "[Activate: Main] [Once Per Turn] ➁ (You may rest the specified number of DON!! cards in your cost area.): If you have 5 Characters, return 1 of your Characters to the owner's hand. Then, play up to 1 Character with a cost of 5 or less from your hand that is a different color than the returned Character.",
+      "life": 4,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2022-12-02T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "e01c564ef5681378792cc850854ced51e5185af7cad897113fa70b47dc5fd6d9",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP01-002",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "f8133a1237284cb0090028da958f70a836d60e10a349337426257a93ea8d9ff6",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP01-003": {
+      "attributes": ["strike"],
+      "behaviorHash": "c4f40957f91e81482efb3ed43d312f3337cd035d3dfcc573bfe40c85c3ee158b",
+      "cardId": "OP01-003",
+      "category": "leader",
+      "colors": ["red", "green"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Monkey.D.Luffy",
+      "officialFaq": [
+        {
+          "answer": "Yes, it can.",
+          "question": "Can the Character attack again if this [Activate: Main] effect sets it as active?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP01",
+      "setName": "Romance Dawn",
+      "sourceTextHash": "eb259b77638d7e7aa3f6f8e7cdfadb90c5f08b262e8008f95497a93527658211",
+      "types": ["Supernovas", "Straw Hat Crew"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP01-003:v0",
+          "label": "Standard",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-003/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-003/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP01-003:v1",
+          "label": "Alternate Art",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-003/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-003/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "[Activate: Main] [Once Per Turn] ➃ (You may rest the specified number of DON!! cards in your cost area.): Set up to 1 of your {Supernovas} or {Straw Hat Crew} type Character cards with a cost of 5 or less as active. It gains +1000 power during this turn.",
+      "life": 4,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2022-12-02T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "c4f40957f91e81482efb3ed43d312f3337cd035d3dfcc573bfe40c85c3ee158b",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP01-003",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "eb259b77638d7e7aa3f6f8e7cdfadb90c5f08b262e8008f95497a93527658211",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
       }
     },
     "OP01-060": {
@@ -176,6 +2062,1746 @@
         "cardId": "OP01-060",
         "rulesVersion": "fixture-real-card",
         "sourceTextHash": "fa63d7340e1b37f10ee04503c681f4d8c42127d8e1f374ed668671901f4f2c27",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP01-061": {
+      "attributes": ["strike"],
+      "behaviorHash": "f604a05b1304d517833b9bc7899b5e974da9a7537fb9bcbdf6a448d0add2f96d",
+      "cardId": "OP01-061",
+      "category": "leader",
+      "colors": ["blue", "purple"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Kaido",
+      "officialFaq": [
+        {
+          "answer": "No. It is not activated because the [DON!! x1] condition was not met when your opponent's Character was K.O.'d.",
+          "question": "If I K.O. an opponent's Character with an effect such as \"DON!! −1:\", and simultaneously lose the DON!! card given to this Leader, is this [DON!! x1] effect activated?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP01",
+      "setName": "Romance Dawn",
+      "sourceTextHash": "164b389d59b44c5eaf253e086f7f88d1b9cf46fbe9f53730262341d30a86e69b",
+      "types": ["The Four Emperors", "Animal Kingdom Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP01-061:v0",
+          "label": "Standard",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-061/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-061/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP01-061:v1",
+          "label": "Alternate Art",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-061/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-061/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "[DON!! x1] [Your Turn] [Once Per Turn] When your opponent's Character is K.O.'d, add up to 1 DON!! card from your DON!! deck and set it as active.",
+      "life": 4,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2022-12-02T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "f604a05b1304d517833b9bc7899b5e974da9a7537fb9bcbdf6a448d0add2f96d",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP01-061",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "164b389d59b44c5eaf253e086f7f88d1b9cf46fbe9f53730262341d30a86e69b",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP01-067": {
+      "attributes": ["special"],
+      "behaviorHash": "2f53108d924072b6f047995b854abad7600b711ded7d1a54590f6f1ec0fe314f",
+      "cardId": "OP01-067",
+      "category": "character",
+      "colors": ["blue"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Crocodile",
+      "officialFaq": [
+        {
+          "answer": "No, they do not.",
+          "question": "If this [DON!! x1] effect is activated multiple times, do the costs of Event cards become less than 0?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": ["banish"],
+      "released": true,
+      "set": "OP01",
+      "setName": "Romance Dawn",
+      "sourceTextHash": "5d1294475313ccab614fead3610a06de43b1fd0fce390a056f108914cf3325e3",
+      "types": ["The Seven Warlords of the Sea", "Baroque Works"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP01-067:v0",
+          "label": "Standard",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-067/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-067/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP01-067:v1",
+          "label": "Alternate Art",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-067/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-067/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "cost": 7,
+      "counter": 1000,
+      "effectText": "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)\n[DON!! x1] Give blue Events in your hand −1 cost.",
+      "power": 7000,
+      "rarity": "SR",
+      "releasedAt": "2022-12-02T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "2f53108d924072b6f047995b854abad7600b711ded7d1a54590f6f1ec0fe314f",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP01-067",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "5d1294475313ccab614fead3610a06de43b1fd0fce390a056f108914cf3325e3",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP01-068": {
+      "attributes": ["special"],
+      "behaviorHash": "57d0fa7ce0a4f0577444afce8f6ca2eb8b567effc644e13361baf0f0dd7b98ba",
+      "cardId": "OP01-068",
+      "category": "character",
+      "colors": ["blue"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Gecko Moria",
+      "officialFaq": [],
+      "printedKeywords": ["doubleAttack"],
+      "released": true,
+      "set": "OP01",
+      "setName": "Romance Dawn",
+      "sourceTextHash": "e84be4e6effa1144e921ba4d3ec2b0cc06b62596e9ec30620048906f94258d80",
+      "types": ["The Seven Warlords of the Sea", "Thriller Bark Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP01-068:v0",
+          "label": "Standard",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-068/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-068/en/stock/0/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "cost": 4,
+      "counter": 1000,
+      "effectText": "[Your Turn] This Character gains [Double Attack] if you have 5 or more cards in your hand.\n(This card deals 2 damage.)",
+      "power": 5000,
+      "rarity": "R",
+      "releasedAt": "2022-12-02T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "57d0fa7ce0a4f0577444afce8f6ca2eb8b567effc644e13361baf0f0dd7b98ba",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP01-068",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "e84be4e6effa1144e921ba4d3ec2b0cc06b62596e9ec30620048906f94258d80",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP01-073": {
+      "attributes": ["special"],
+      "behaviorHash": "f6936e232443e8b604eb95cb6d89a121f8985bbeaf77acab4f14873a5179e752",
+      "cardId": "OP01-073",
+      "category": "character",
+      "colors": ["blue"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Donquixote Doflamingo",
+      "officialFaq": [
+        {
+          "answer": "No, you cannot. After deciding the order in which you want to place the 5 cards, you must choose whether to return all 5 cards to the top or bottom of the deck.",
+          "question": "After looking at 5 cards from the top of my deck, can I place 1 card on the top and 4 cards on the bottom?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "You will be able to look at all of the 4 or less cards in your deck. While looking at your deck, the number of cards in your deck will not be considered 0.",
+          "question": "What happens according to this [On Play] effect if I have 4 or less cards in my deck?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": ["blocker"],
+      "released": true,
+      "set": "OP01",
+      "setName": "Romance Dawn",
+      "sourceTextHash": "7bbe6e604f356da042206dd80c51b61eb517aaff27bf978d7cb76ce4366aed44",
+      "types": ["The Seven Warlords of the Sea", "Donquixote Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP01-073:v0",
+          "label": "Reprint",
+          "productId": "80cce277-2d8e-44a2-afe3-d1991034140c",
+          "productName": "Starter Deck - Blue Donquixote Doflamingo",
+          "productSetCode": "ST17",
+          "productSlug": "starter-deck-blue-donquixote-doflamingo",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-073/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-073/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP01-073:v1",
+          "label": "Standard",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-073/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-073/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "OP01-073:v2",
+          "label": "Alternate Art",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-073/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-073/en/stock/2/thumb.webp"
+        },
+        {
+          "variantIndex": 3,
+          "variantKey": "OP01-073:v3",
+          "label": "SP",
+          "productId": "48d048e6-c2c6-4f03-aa7d-8ce44ec72fc5",
+          "productName": "500 Years in the Future",
+          "productSetCode": "OP07",
+          "productSlug": "500-years-in-the-future",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-073/en/stock/3/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-073/en/stock/3/thumb.webp"
+        },
+        {
+          "variantIndex": 4,
+          "variantKey": "OP01-073:v4",
+          "artist": "Suemi jun",
+          "label": "Promo",
+          "productId": "345dc017-b60b-4ebd-b24a-c858b5d0d7b7",
+          "productName": "Judge Pack Vol. 1",
+          "productSlug": "judge-pack-vol-1",
+          "scanImageDisplay": "https://cdn.poneglyph.one/images/OP01-073/en/scans/4/display.webp",
+          "scanImageFull": "https://cdn.poneglyph.one/images/OP01-073/en/scans/4/full.png",
+          "scanImageThumb": "https://cdn.poneglyph.one/images/OP01-073/en/scans/4/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "cost": 3,
+      "counter": 1000,
+      "effectText": "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[On Play] Look at 5 cards from the top of your deck and place them at the top or bottom of the deck in any order.",
+      "power": 4000,
+      "rarity": "R",
+      "releasedAt": "2022-12-02T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "f6936e232443e8b604eb95cb6d89a121f8985bbeaf77acab4f14873a5179e752",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP01-073",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "7bbe6e604f356da042206dd80c51b61eb517aaff27bf978d7cb76ce4366aed44",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP01-121": {
+      "attributes": ["strike"],
+      "behaviorHash": "00836367b0e5d56f0ab0bf40eca1df603159b6d2e789f21d6c36db0289adf88a",
+      "cardId": "OP01-121",
+      "category": "character",
+      "colors": ["green"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Yamato",
+      "officialFaq": [],
+      "printedKeywords": ["doubleAttack", "banish"],
+      "released": true,
+      "set": "OP01",
+      "setName": "Romance Dawn",
+      "sourceTextHash": "28a27b07f7eb066bc568f9c08151ebc998df7b0c2bf60ec0b3978406e47091a6",
+      "types": ["Land of Wano"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP01-121:v0",
+          "label": "Standard",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-121/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-121/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP01-121:v1",
+          "label": "Alternate Art",
+          "productId": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-121/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-121/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "OP01-121:v2",
+          "label": "SP",
+          "productId": "f7bab738-22de-47f4-9511-4311a150f0d7",
+          "productName": "Awakening of the New Era",
+          "productSetCode": "OP05",
+          "productSlug": "awakening-of-the-new-era",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-121/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-121/en/stock/2/thumb.webp"
+        },
+        {
+          "variantIndex": 3,
+          "variantKey": "OP01-121:v3",
+          "label": "Alternate Art",
+          "productId": "c02d3350-49f9-4968-a30a-436b02b140a2",
+          "productName": "One Piece Card the Best",
+          "productSetCode": "PRB01",
+          "productSlug": "one-piece-card-the-best",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-121/en/stock/3/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-121/en/stock/3/thumb.webp"
+        },
+        {
+          "variantIndex": 4,
+          "variantKey": "OP01-121:v4",
+          "label": "Reprint",
+          "productId": "c02d3350-49f9-4968-a30a-436b02b140a2",
+          "productName": "One Piece Card the Best",
+          "productSetCode": "PRB01",
+          "productSlug": "one-piece-card-the-best",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP01-121/en/stock/4/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP01-121/en/stock/4/thumb.webp"
+        },
+        {
+          "variantIndex": 5,
+          "variantKey": "OP01-121:v5",
+          "label": "Promo",
+          "productId": "add8e69b-7ee4-4d6f-8714-e5c4b55349e4",
+          "productName": "Treasure Cup",
+          "productSlug": "treasure-cup"
+        }
+      ],
+      "block": "1",
+      "cost": 5,
+      "counter": 1000,
+      "effectText": "Also treat this card's name as [Kouzuki Oden] according to the rules.\n[Double Attack] (This card deals 2 damage.)\n[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
+      "power": 5000,
+      "rarity": "SEC",
+      "releasedAt": "2022-12-02T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "00836367b0e5d56f0ab0bf40eca1df603159b6d2e789f21d6c36db0289adf88a",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP01-121",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "28a27b07f7eb066bc568f9c08151ebc998df7b0c2bf60ec0b3978406e47091a6",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP02-001": {
+      "attributes": ["special"],
+      "behaviorHash": "eaf72c7787479d778c15971cc0535c5a35e488ec2dc25c51fb20aa237c6a064f",
+      "cardId": "OP02-001",
+      "category": "leader",
+      "colors": ["red"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Edward.Newgate",
+      "officialFaq": [
+        {
+          "answer": "Nothing will happen, and this [End of Your Turn] effect will not cause you to lose the game.",
+          "question": "What happens according to the [End of Your Turn] effect if I have no Life cards?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP02",
+      "setName": "Paramount War",
+      "sourceTextHash": "b33e2b86fb232ad4af175589567f1c93fea99ab244c930f55d33f1cf5b9637cc",
+      "types": ["The Four Emperors", "Whitebeard Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP02-001:v0",
+          "label": "Alternate Art",
+          "productId": "749b2666-be5d-4ecc-86cd-6b90dd879472",
+          "productName": "Starter Deck - Red Edward.newgate",
+          "productSetCode": "ST15",
+          "productSlug": "starter-deck-red-edward-newgate",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-001/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-001/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP02-001:v1",
+          "label": "Standard",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-001/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-001/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "OP02-001:v2",
+          "label": "Alternate Art",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-001/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-001/en/stock/2/thumb.webp"
+        },
+        {
+          "variantIndex": 3,
+          "variantKey": "OP02-001:v3",
+          "label": "Promo",
+          "productId": "e5b7931c-64a3-466e-b35e-91cf5f2a01b3",
+          "productName": "Special Goods Set -Former Four Emperors-",
+          "productSlug": "special-goods-set-former-four-emperors"
+        }
+      ],
+      "block": "1",
+      "effectText": "[End of Your Turn] Add 1 card from the top of your Life cards to your hand.",
+      "life": 6,
+      "power": 6000,
+      "rarity": "L",
+      "releasedAt": "2023-03-10T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "eaf72c7787479d778c15971cc0535c5a35e488ec2dc25c51fb20aa237c6a064f",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP02-001",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "b33e2b86fb232ad4af175589567f1c93fea99ab244c930f55d33f1cf5b9637cc",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP02-002": {
+      "attributes": ["strike"],
+      "behaviorHash": "80b5b46c1dfa592b44e810a6c7f9640cc9c2e9ae38bf86ccfd183d5918856d76",
+      "cardId": "OP02-002",
+      "category": "leader",
+      "colors": ["red", "black"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Monkey.D.Garp",
+      "officialFaq": [
+        {
+          "answer": "Yes, you can.",
+          "question": "I gave 2 of my rested DON!! cards to this Leader using the [On Play] effect of [ST01-011 Brook]. At this time, can I give my opponent's Character −2 cost?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "Yes, you can.",
+          "question": "If a Character's original cost is 8 or more, but it has been reduced to 7 or less by another effect, can I use this [Your Turn] effect to give it −1 cost?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP02",
+      "setName": "Paramount War",
+      "sourceTextHash": "07a5f973a0c59015b45d7aef6145d7c77fcbc409c2fdcfbfedfd74ada9875c2d",
+      "types": ["Navy"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP02-002:v0",
+          "label": "Standard",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-002/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-002/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP02-002:v1",
+          "label": "Alternate Art",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-002/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-002/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "[Your Turn] When this Leader or any of your Characters is given a DON!! card, give up to 1 of your opponent's Characters with a cost of 7 or less −1 cost during this turn.",
+      "life": 4,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2023-03-10T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "80b5b46c1dfa592b44e810a6c7f9640cc9c2e9ae38bf86ccfd183d5918856d76",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP02-002",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "07a5f973a0c59015b45d7aef6145d7c77fcbc409c2fdcfbfedfd74ada9875c2d",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP02-025": {
+      "attributes": ["slash"],
+      "behaviorHash": "3ec090b5019c256d2a7f55e710e7b8214afb745ca0a3946522c3bd8c45154c26",
+      "cardId": "OP02-025",
+      "category": "leader",
+      "colors": ["green"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Kin'emon",
+      "officialFaq": [
+        {
+          "answer": "Yes, it will.",
+          "question": "I activated this [Activate: Main] effect when I had 1 Character and then played a Character that is not a \"{Land of Wano} type Character card with a cost of 3 or more\" from my hand, so I now have 2 Characters on my field. If I then play a {Land of Wano} type Character card with a cost of 3 from my hand, will its cost be reduced by 1?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "Yes, it will.",
+          "question": "I activated this [Activate: Main] when I had 0 Character cards. I then played a {Land of Wano} type Character with a cost of 1 from my hand. Will the next {Land of Wano} type Character with a cost of 3 that I play from my hand have its cost reduced by 1?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "Yes, it will.",
+          "question": "I activated this [Activate: Main] when I had 0 Character cards. I then played a Character that does not have the {Land of Wano} type from my hand. Will the next {Land of Wano} type Character with a cost of 3 that I play from my hand have its cost reduced by 1?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "No, you cannot.",
+          "question": "I activated this [Activate: Main] when I had 1 Character card. Can I then use the [On Play] effect of [OP01-047 Trafalgar Law] to play a {Land of Wano} type Character with a cost of 4 from my hand?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "Yes, it will.",
+          "question": "I activated this [Activate: Main] when I had 1 Character card. I then used the effect of [OP01-047 Trafalgar Law] to play a {Land of Wano} type Character with a cost of 3 from my hand without paying its cost. Will the next {Land of Wano} type Character that I play from my hand have its cost reduced by 1?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP02",
+      "setName": "Paramount War",
+      "sourceTextHash": "d23eb6006140b8115dc622420e679a7f0d1489c72d4515ce6cf6531fed2ee9ed",
+      "types": ["Land of Wano", "The Akazaya Nine"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP02-025:v0",
+          "label": "Standard",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-025/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-025/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP02-025:v1",
+          "label": "Alternate Art",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-025/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-025/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "[Activate: Main] [Once Per Turn] If you have 1 or less Characters, the next time you play a {Land of Wano} type Character card with a cost of 3 or more from your hand during this turn, the cost will be reduced by 1.",
+      "life": 5,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2023-03-10T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "3ec090b5019c256d2a7f55e710e7b8214afb745ca0a3946522c3bd8c45154c26",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP02-025",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "d23eb6006140b8115dc622420e679a7f0d1489c72d4515ce6cf6531fed2ee9ed",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP02-062": {
+      "attributes": ["strike"],
+      "behaviorHash": "c0f1be90bf800c7046ac3d9ae30ae0c01f1340cb6c5941a877ce2ead544f18ae",
+      "cardId": "OP02-062",
+      "category": "character",
+      "colors": ["blue"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Monkey.D.Luffy",
+      "officialFaq": [
+        {
+          "answer": "Yes, you can. \"Return up to 1 Character\" means you can choose 0 Characters. In that case, this Character will still gain [Double Attack] during that turn.",
+          "question": "Can I activate this [On Play] or [When Attacking] effect, trash 2 cards from my hand, and then choose not to return 1 Character to the owner's hand?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "Yes, you can. However, you cannot activate its [On Play] effect or [When Attacking] effect.",
+          "question": "Can I play or attack with this Character if I do not have 2 cards in my hand?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "Yes, you can.",
+          "question": "Can I use this [On Play] effect and [When Attacking] effect to return my own Character to my hand?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": ["doubleAttack"],
+      "released": true,
+      "set": "OP02",
+      "setName": "Paramount War",
+      "sourceTextHash": "887f8dd1cb2bd802fd67fc002d58b5061134c876068c58b5ac7f25cb67730694",
+      "types": ["Impel Down", "Straw Hat Crew"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP02-062:v0",
+          "label": "Standard",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-062/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-062/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP02-062:v1",
+          "label": "Alternate Art",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-062/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-062/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "cost": 6,
+      "effectText": "[On Play]/[When Attacking] You may trash 2 cards from your hand: Return up to 1 Character with a cost of 4 or less to the owner's hand. Then, this Character gains [Double Attack] during this turn.\n(This card deals 2 damage.)",
+      "power": 7000,
+      "rarity": "SR",
+      "releasedAt": "2023-03-10T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "c0f1be90bf800c7046ac3d9ae30ae0c01f1340cb6c5941a877ce2ead544f18ae",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP02-062",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "887f8dd1cb2bd802fd67fc002d58b5061134c876068c58b5ac7f25cb67730694",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP02-072": {
+      "attributes": ["strike"],
+      "behaviorHash": "aec8e3a07c946ca13917108ea439a1822638177188b7054c4dcd87d7fcea76b9",
+      "cardId": "OP02-072",
+      "category": "leader",
+      "colors": ["purple", "black"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Zephyr",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP02",
+      "setName": "Paramount War",
+      "sourceTextHash": "9d7715c1d03292284a4d9177b39f4ba1a1ab8e024e3eee1fb5ff68c4dd4639a5",
+      "types": ["FILM", "Neo Navy"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP02-072:v0",
+          "label": "Standard",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-072/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-072/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP02-072:v1",
+          "label": "Alternate Art",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-072/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-072/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "[When Attacking] DON!! −4 (You may return the specified number of DON!! cards from your field to your DON!! deck.): K.O. up to 1 of your opponent's Characters with a cost of 3 or less. Then, this Leader gains +1000 power during this turn.",
+      "life": 4,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2023-03-10T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "aec8e3a07c946ca13917108ea439a1822638177188b7054c4dcd87d7fcea76b9",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP02-072",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "9d7715c1d03292284a4d9177b39f4ba1a1ab8e024e3eee1fb5ff68c4dd4639a5",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP02-087": {
+      "attributes": ["strike"],
+      "behaviorHash": "3ce57a429521e8562c0bf9870e4e525387defc94a4ec6369a0ce4b214f82a6da",
+      "cardId": "OP02-087",
+      "category": "character",
+      "colors": ["purple"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Minotaur",
+      "officialFaq": [],
+      "printedKeywords": ["doubleAttack"],
+      "released": true,
+      "set": "OP02",
+      "setName": "Paramount War",
+      "sourceTextHash": "16372d41175fbc106a730e96a98e7c4090fac6153631368e8d7df83ed015ce52",
+      "types": ["Impel Down", "Jailer Beast"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP02-087:v0",
+          "label": "Standard",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-087/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-087/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP02-087:v1",
+          "label": "Release Event",
+          "productId": "e954b056-d7e6-4d3c-88b3-fd51abbe1a91",
+          "productName": "OP02 Release Event",
+          "productSlug": "op02-release-event"
+        }
+      ],
+      "block": "1",
+      "cost": 4,
+      "counter": 1000,
+      "effectText": "[Double Attack] (This card deals 2 damage.)\n[On K.O.] If your Leader has the {Impel Down} type, add up to 1 DON!! card from your DON!! deck and rest it.",
+      "power": 5000,
+      "rarity": "UC",
+      "releasedAt": "2023-03-10T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "3ce57a429521e8562c0bf9870e4e525387defc94a4ec6369a0ce4b214f82a6da",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP02-087",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "16372d41175fbc106a730e96a98e7c4090fac6153631368e8d7df83ed015ce52",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP02-095": {
+      "attributes": ["slash"],
+      "behaviorHash": "896488370d64efbfb013e66e660d9767d9fc9f481540b97e5e6a762ef97d3abe",
+      "cardId": "OP02-095",
+      "category": "character",
+      "colors": ["black"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Onigumo",
+      "officialFaq": [],
+      "printedKeywords": ["banish"],
+      "released": true,
+      "set": "OP02",
+      "setName": "Paramount War",
+      "sourceTextHash": "84b5eb8c8779f0b0f54da557673df77aa17dc2dafeeed969745006446750b359",
+      "types": ["Navy"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP02-095:v0",
+          "label": "Standard",
+          "productId": "51a3f713-2b7b-45ad-8c36-c2b240eca661",
+          "productName": "Paramount War",
+          "productSetCode": "OP02",
+          "productSlug": "paramount-war",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP02-095/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP02-095/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP02-095:v1",
+          "label": "Release Event",
+          "productId": "e954b056-d7e6-4d3c-88b3-fd51abbe1a91",
+          "productName": "OP02 Release Event",
+          "productSlug": "op02-release-event"
+        }
+      ],
+      "block": "1",
+      "cost": 5,
+      "counter": 1000,
+      "effectText": "If there is a Character with a cost of 0, this Character gains [Banish].\n(When this card deals damage, the target card is trashed without activating its Trigger.)",
+      "power": 6000,
+      "rarity": "UC",
+      "releasedAt": "2023-03-10T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "896488370d64efbfb013e66e660d9767d9fc9f481540b97e5e6a762ef97d3abe",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP02-095",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "84b5eb8c8779f0b0f54da557673df77aa17dc2dafeeed969745006446750b359",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP03-001": {
+      "attributes": ["special"],
+      "behaviorHash": "86f1ac853ed091278004e3cef06c933e5f7a884bf0dc408d5a577f102f8799d2",
+      "cardId": "OP03-001",
+      "category": "leader",
+      "colors": ["red"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Portgas.D.Ace",
+      "officialFaq": [
+        {
+          "answer": "No, you cannot.",
+          "question": "After I activate a Counter during my Counter Step, can I activate my Leader's \"When this Leader...is attacked\" effect to increase its power?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "Yes, it activates before your opponent's [Blocker] or Counter activate.",
+          "question": "Does my Leader's \"When this Leader attacks\" effect activate before my opponent's [Blocker] or Counter activate?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "No, it activates after your [Blocker] activates. However, if you activate your Character's [Blocker], that Character will become the target of the attack, so you will be unable to activate this Leader's \"When this Leader...is attacked\" effect.",
+          "question": "Does my Leader's \"When this Leader...is attacked\" effect activate before my [Blocker] activates?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "Yes, it activates before your Counter activates.",
+          "question": "Does my Leader's \"When this Leader...is attacked\" effect activate before my Counter activates?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "No. Your opponent's [When Attacking] effects or \"When...attacks\" effects activate first.",
+          "question": "Does my Leader's \"When this Leader...is attacked\" effect activate before my opponent's [When Attacking] effects or \"When...attacks\" effects activate?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "No, you cannot.",
+          "question": "If my Character is attacked, can I activate this Leader's \"When this Leader...is attacked\" effect?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP03",
+      "setName": "Pillars of Strength",
+      "sourceTextHash": "67f1cbc8face964fea25b8befb27956da66187d9d104b706db4416efc057554a",
+      "types": ["Whitebeard Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP03-001:v0",
+          "label": "Standard",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-001/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-001/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP03-001:v1",
+          "label": "Alternate Art",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-001/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-001/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "OP03-001:v2",
+          "label": "Alternate Art",
+          "productId": "6c951614-72a3-4f74-b5c7-2a5ff8c65074",
+          "productName": "Ace/sabo/luffy",
+          "productSlug": "ace-sabo-luffy",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-001/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-001/en/stock/2/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "When this Leader attacks or is attacked, you may trash any number of Event or Stage cards from your hand. This Leader gains +1000 power during this battle for every card trashed.",
+      "life": 5,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2023-06-30T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "86f1ac853ed091278004e3cef06c933e5f7a884bf0dc408d5a577f102f8799d2",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP03-001",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "67f1cbc8face964fea25b8befb27956da66187d9d104b706db4416efc057554a",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP03-022": {
+      "attributes": ["slash"],
+      "behaviorHash": "362b3063a80631d304c59ea6032f587b753c368895c89a429394d11783c06e7e",
+      "cardId": "OP03-022",
+      "category": "leader",
+      "colors": ["green", "yellow"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Arlong",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP03",
+      "setName": "Pillars of Strength",
+      "sourceTextHash": "599800928885fa751b32ecd9a2f23060283daf543690f5444e1e6beec25821ad",
+      "types": ["Fish-Man", "East Blue", "Arlong Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP03-022:v0",
+          "label": "Standard",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-022/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-022/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP03-022:v1",
+          "label": "Alternate Art",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-022/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-022/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "[DON!! x2] [When Attacking] ① (You may rest the specified number of DON!! cards in your cost area.): Play up to 1 Character card with a cost of 4 or less and a [Trigger] from your hand.",
+      "life": 4,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2023-06-30T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "362b3063a80631d304c59ea6032f587b753c368895c89a429394d11783c06e7e",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP03-022",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "599800928885fa751b32ecd9a2f23060283daf543690f5444e1e6beec25821ad",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP03-040": {
+      "attributes": ["wisdom"],
+      "behaviorHash": "d539dcd6e3bae047a613958c991bb0dfe424c47fa6f9d300d141e18167e1df11",
+      "cardId": "OP03-040",
+      "category": "leader",
+      "colors": ["blue"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "banned_at": "2025-08-30T00:00:00.000Z",
+          "status": "banned"
+        },
+        "Standard": {
+          "banned_at": "2025-08-30T00:00:00.000Z",
+          "status": "banned"
+        }
+      },
+      "name": "Nami",
+      "officialFaq": [
+        {
+          "answer": "First, your opponent checks their Life in accordance with the damage dealt, and then this \"When this Leader's attack deals damage to your opponent's Life\" effect activates. After that, if the checked Life card has a [Trigger], your opponent can choose to activate it.",
+          "question": "Does this \"When this Leader's attack deals damage to your opponent's Life\" effect activate before a [Trigger] resulting from that damage?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP03",
+      "setName": "Pillars of Strength",
+      "sourceTextHash": "c7084c67f78c193f4a54372df5443b026702b2b746d4603a6617ead3126f8e33",
+      "types": ["East Blue"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP03-040:v0",
+          "label": "Standard",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-040/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-040/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP03-040:v1",
+          "label": "Alternate Art",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-040/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-040/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "When your deck is reduced to 0, you win the game instead of losing, according to the rules.\n[DON!! x1] When this Leader's attack deals damage to your opponent's Life, you may trash 1 card from the top of your deck.",
+      "life": 5,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2023-06-30T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "d539dcd6e3bae047a613958c991bb0dfe424c47fa6f9d300d141e18167e1df11",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP03-040",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "c7084c67f78c193f4a54372df5443b026702b2b746d4603a6617ead3126f8e33",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP03-058": {
+      "attributes": ["wisdom"],
+      "behaviorHash": "9668068753bf8bd2681de7c88e2c178818e4df5300663729707f8b3b6104d5e9",
+      "cardId": "OP03-058",
+      "category": "leader",
+      "colors": ["purple"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Iceburg",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP03",
+      "setName": "Pillars of Strength",
+      "sourceTextHash": "9d2cc7813fea4e1cb91fa825f947cad152cbb7612c16fce673cbe082e54ef998",
+      "types": ["Water Seven", "Galley-La Company"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP03-058:v0",
+          "label": "Standard",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-058/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-058/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP03-058:v1",
+          "label": "Alternate Art",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-058/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-058/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "This Leader cannot attack.\n[Activate: Main] DON!! −1 (You may return the specified number of DON!! cards from your field to your DON!! deck.) You may rest this Leader: Play up to 1 {Galley-La Company} type Character card with a cost of 5 or less from your hand.",
+      "life": 5,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2023-06-30T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "9668068753bf8bd2681de7c88e2c178818e4df5300663729707f8b3b6104d5e9",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP03-058",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "9d2cc7813fea4e1cb91fa825f947cad152cbb7612c16fce673cbe082e54ef998",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP03-059": {
+      "attributes": ["slash"],
+      "behaviorHash": "f32a509b74772e5c02e14b67d1a46c6cf181722532957e5149f99a630c793493",
+      "cardId": "OP03-059",
+      "category": "character",
+      "colors": ["purple"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Kaku",
+      "officialFaq": [],
+      "printedKeywords": ["banish"],
+      "released": true,
+      "set": "OP03",
+      "setName": "Pillars of Strength",
+      "sourceTextHash": "81a7cb9897a9da7596dd5a8ab704e055927cef0a3d307c581ac3aca8214e8ee2",
+      "types": ["Water Seven", "Galley-La Company"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP03-059:v0",
+          "label": "Standard",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-059/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-059/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP03-059:v1",
+          "label": "Release Event",
+          "productId": "bea99518-f4a4-4692-87cc-fdb979e7ba13",
+          "productName": "OP03 Release Event",
+          "productSlug": "op03-release-event"
+        }
+      ],
+      "block": "1",
+      "cost": 5,
+      "counter": 1000,
+      "effectText": "[When Attacking] DON!! −1 (You may return the specified number of DON!! cards from your field to your DON!! deck.): This Character gains [Banish] during this battle.\n(When this card deals damage, the target card is trashed without activating its Trigger.)",
+      "power": 6000,
+      "rarity": "UC",
+      "releasedAt": "2023-06-30T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "f32a509b74772e5c02e14b67d1a46c6cf181722532957e5149f99a630c793493",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP03-059",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "81a7cb9897a9da7596dd5a8ab704e055927cef0a3d307c581ac3aca8214e8ee2",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP03-068": {
+      "attributes": ["strike"],
+      "behaviorHash": "f6e5f84d7e7e2c1587be310c5c8070d025639a9e37917c7303315335a3c42556",
+      "cardId": "OP03-068",
+      "category": "character",
+      "colors": ["purple"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Minozebra",
+      "officialFaq": [],
+      "printedKeywords": ["banish"],
+      "released": true,
+      "set": "OP03",
+      "setName": "Pillars of Strength",
+      "sourceTextHash": "f6d2a9c89a06e646ee122cb4f71b0c903837b4b29e40d608f7a1272e5edd5106",
+      "types": ["Impel Down", "Jailer Beast"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP03-068:v0",
+          "label": "Standard",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-068/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-068/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP03-068:v1",
+          "label": "Release Event",
+          "productId": "bea99518-f4a4-4692-87cc-fdb979e7ba13",
+          "productName": "OP03 Release Event",
+          "productSlug": "op03-release-event"
+        }
+      ],
+      "block": "1",
+      "cost": 4,
+      "counter": 1000,
+      "effectText": "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)\n[On K.O.] If your Leader has the {Impel Down} type, add up to 1 DON!! card from your DON!! deck and rest it.",
+      "power": 5000,
+      "rarity": "C",
+      "releasedAt": "2023-06-30T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "f6e5f84d7e7e2c1587be310c5c8070d025639a9e37917c7303315335a3c42556",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP03-068",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "f6d2a9c89a06e646ee122cb4f71b0c903837b4b29e40d608f7a1272e5edd5106",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP03-076": {
+      "attributes": ["strike"],
+      "behaviorHash": "a557f6820f6b91d0f189cfd5205c09c5fadcd530a62126e9e8f5e5755b9aee91",
+      "cardId": "OP03-076",
+      "category": "leader",
+      "colors": ["black"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Rob Lucci",
+      "officialFaq": [
+        {
+          "answer": "Yes, you can.",
+          "question": "During my turn in which I have not yet activated this [Your Turn] effect, when my opponent's Character was K.O.'d, I did not trash 2 cards from my hand and chose not to activate this [Your Turn] [Once Per Turn] effect. During that turn, can I activate this effect the next time my opponent's Character is K.O.'d?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "Trash 2 cards from your hand when your opponent's Character is K.O.'d.",
+          "question": "When do I pay this \"trash 2 cards from your hand\" cost?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP03",
+      "setName": "Pillars of Strength",
+      "sourceTextHash": "171170ff0e88e4f9ca129faab9491e9a9dfbad56bcc31df46b409fe34cf29fc9",
+      "types": ["CP9"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP03-076:v0",
+          "label": "Standard",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-076/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-076/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP03-076:v1",
+          "label": "Alternate Art",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-076/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-076/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "[Your Turn] [Once Per Turn] You may trash 2 cards from your hand: When your opponent's Character is K.O.'d, set this Leader as active.",
+      "life": 5,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2023-06-30T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "a557f6820f6b91d0f189cfd5205c09c5fadcd530a62126e9e8f5e5755b9aee91",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP03-076",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "171170ff0e88e4f9ca129faab9491e9a9dfbad56bcc31df46b409fe34cf29fc9",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP03-077": {
+      "attributes": ["special"],
+      "behaviorHash": "2c4ac02f8831388903e64799fdb313ebfe9b2dad5f4fa0b850e8516a93d2b690",
+      "cardId": "OP03-077",
+      "category": "leader",
+      "colors": ["black", "yellow"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Charlotte Linlin",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP03",
+      "setName": "Pillars of Strength",
+      "sourceTextHash": "350fa5a3a0c771b00e7e7d2addefe16e139fda4e9041a9dec4b59b8d849c0a6a",
+      "types": ["The Four Emperors", "Big Mom Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP03-077:v0",
+          "label": "Standard",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "scanImageDisplay": "https://cdn.poneglyph.one/images/OP03-077/en/scans/0/display.webp",
+          "scanImageFull": "https://cdn.poneglyph.one/images/OP03-077/en/scans/0/full.png",
+          "scanImageThumb": "https://cdn.poneglyph.one/images/OP03-077/en/scans/0/thumb.webp",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-077/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-077/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP03-077:v1",
+          "label": "Alternate Art",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-077/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-077/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "[DON!! x2] [When Attacking] ② (You may rest the specified number of DON!! cards in your cost area.) You may trash 1 card from your hand: If you have 1 or less Life cards, add up to 1 card from the top of your deck to the top of your Life cards.",
+      "life": 4,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2023-06-30T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "2c4ac02f8831388903e64799fdb313ebfe9b2dad5f4fa0b850e8516a93d2b690",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP03-077",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "350fa5a3a0c771b00e7e7d2addefe16e139fda4e9041a9dec4b59b8d849c0a6a",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP03-099": {
+      "attributes": ["strike"],
+      "behaviorHash": "e4b5ed66f5968cf23858720c55a89d24fac6f349859e6f6b84e57f321d26ded7",
+      "cardId": "OP03-099",
+      "category": "leader",
+      "colors": ["yellow"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Charlotte Katakuri",
+      "officialFaq": [
+        {
+          "answer": "Yes, it can. In this case, after looking at the face-up card, you can place it face-up at the top or bottom of the Life cards.",
+          "question": "Can this [When Attacking] effect give this Leader +1000 power even if I look at a Life card that is placed face-up?",
+          "updated_on": "2024-04-05"
+        },
+        {
+          "answer": "Yes, it can.",
+          "question": "Can this [When Attacking] effect give this Leader +1000 power even if there are no Life cards to look at?",
+          "updated_on": "2024-04-05"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP03",
+      "setName": "Pillars of Strength",
+      "sourceTextHash": "3ea0baf7e8422186e4f7231671cea14105ef181b23125297094197d2037d92f0",
+      "types": ["Big Mom Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP03-099:v0",
+          "label": "Alternate Art",
+          "productId": "a2526a93-4cba-45d0-820a-428bacbd275c",
+          "productName": "Starter Deck - Yellow Charlotte Katakuri",
+          "productSetCode": "ST20",
+          "productSlug": "starter-deck-yellow-charlotte-katakuri",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-099/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-099/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP03-099:v1",
+          "label": "Standard",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-099/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-099/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "OP03-099:v2",
+          "label": "Alternate Art",
+          "productId": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+          "productName": "Pillars of Strength",
+          "productSetCode": "OP03",
+          "productSlug": "pillars-of-strength",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP03-099/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP03-099/en/stock/2/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "[DON!! x1] [When Attacking] Look at up to 1 card from the top of your or your opponent's Life cards, and place it at the top or bottom of the Life cards. Then, this Leader gains +1000 power during this battle.",
+      "life": 5,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2023-06-30T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "e4b5ed66f5968cf23858720c55a89d24fac6f349859e6f6b84e57f321d26ded7",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP03-099",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "3ea0baf7e8422186e4f7231671cea14105ef181b23125297094197d2037d92f0",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP04-039": {
+      "attributes": ["slash"],
+      "behaviorHash": "426355866f217533b042b0516ee89d2802d33741ba18ba2229e747ae7fbe4afc",
+      "cardId": "OP04-039",
+      "category": "leader",
+      "colors": ["blue", "black"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Rebecca",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP04",
+      "setName": "Kingdoms of Intrigue",
+      "sourceTextHash": "84190597da95f00397b3602639d20c233e1db64089d74b411d4e46f640db3661",
+      "types": ["Dressrosa"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP04-039:v0",
+          "label": "Standard",
+          "productId": "ba423e59-2155-4632-b1a4-b00a1b319692",
+          "productName": "Kingdoms of Intrigue",
+          "productSetCode": "OP04",
+          "productSlug": "kingdoms-of-intrigue",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP04-039/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP04-039/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP04-039:v1",
+          "label": "Alternate Art",
+          "productId": "ba423e59-2155-4632-b1a4-b00a1b319692",
+          "productName": "Kingdoms of Intrigue",
+          "productSetCode": "OP04",
+          "productSlug": "kingdoms-of-intrigue",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP04-039/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP04-039/en/stock/1/thumb.webp"
+        }
+      ],
+      "block": "1",
+      "effectText": "This Leader cannot attack.\n[Activate: Main] [Once Per Turn] ➀ (You may rest the specified number of DON!! cards in your cost area.): If you have 6 or less cards in your hand, look at 2 cards from the top of your deck; reveal up to 1 {Dressrosa} type card and add it to your hand. Then, trash the rest.",
+      "life": 5,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2023-09-22T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "426355866f217533b042b0516ee89d2802d33741ba18ba2229e747ae7fbe4afc",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP04-039",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "84190597da95f00397b3602639d20c233e1db64089d74b411d4e46f640db3661",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP04-108": {
+      "attributes": ["slash"],
+      "behaviorHash": "27077d86be2093d93c695608c388469fe23407b3b7e47b01401c643d251863a1",
+      "cardId": "OP04-108",
+      "category": "character",
+      "colors": ["yellow"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Charlotte Moscato",
+      "officialFaq": [],
+      "printedKeywords": ["banish"],
+      "released": true,
+      "set": "OP04",
+      "setName": "Kingdoms of Intrigue",
+      "sourceTextHash": "79c0025ef6260617c54a3bce3f10cf33038b181bd15cb02aa50662f2914b8d56",
+      "types": ["Big Mom Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP04-108:v0",
+          "label": "Standard",
+          "productId": "ba423e59-2155-4632-b1a4-b00a1b319692",
+          "productName": "Kingdoms of Intrigue",
+          "productSetCode": "OP04",
+          "productSlug": "kingdoms-of-intrigue",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP04-108/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP04-108/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP04-108:v1",
+          "label": "Release Event",
+          "productId": "7d487e6d-4ddd-438d-a2c0-fb06f6f16a51",
+          "productName": "OP04 Release Event",
+          "productSlug": "op04-release-event"
+        }
+      ],
+      "block": "1",
+      "cost": 3,
+      "counter": 1000,
+      "effectText": "[DON!! x1] This Character gains [Banish].\n(When this card deals damage, the target card is trashed without activating its Trigger.)",
+      "power": 4000,
+      "rarity": "UC",
+      "releasedAt": "2023-09-22T00:00:00.000Z",
+      "triggerText": "[Trigger] You may trash 1 card from your hand: Play this card.",
+      "support": {
+        "behaviorHash": "27077d86be2093d93c695608c388469fe23407b3b7e47b01401c643d251863a1",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP04-108",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "79c0025ef6260617c54a3bce3f10cf33038b181bd15cb02aa50662f2914b8d56",
         "status": "unsupported",
         "tested": false,
         "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
@@ -353,5 +3979,5 @@
       }
     }
   },
-  "manifestHash": "1809c9ca1e03f49e0e4455a8fcab730116bcf40286906d91118e2ef752acc655"
+  "manifestHash": "31a6b3b430bacc593af579909c0cb1ea401439f3aa757f7bd58ea98abe042eff"
 }

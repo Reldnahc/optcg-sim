@@ -1,0 +1,69 @@
+{
+  "attribute": ["Special"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "3",
+  "card_number": "EB02-025",
+  "card_type": "Character",
+  "color": ["Blue"],
+  "cost": 2,
+  "counter": 1000,
+  "effect": "[Activate: Main] You may rest 1 of your DON!! cards and this Character: If your Leader is [Donquixote Rosinante], look at 5 cards from the top of your deck; play up to 1 Character card with a cost of 2 or less rested. Then, place the rest at the bottom of your deck in any order.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Donquixote Rosinante",
+  "official_faq": [],
+  "power": 3000,
+  "rarity": "R",
+  "released": true,
+  "released_at": "2025-05-09T00:00:00.000Z",
+  "set": "EB02",
+  "set_name": "Anime 25th Collection",
+  "trigger": null,
+  "types": ["Navy", "Donquixote Pirates"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB02-025/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB02-025/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "10.01",
+        "low_price": "0.05",
+        "market_price": "0.21",
+        "mid_price": "0.25",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/629120/one-piece-card-game-extra-booster-anime-25th-collection-donquixote-rosinante"
+      },
+      "name": null,
+      "product": {
+        "id": "dfcc3d6f-31c6-494f-b7b5-c6d78a5187e3",
+        "name": "Anime 25th Collection",
+        "released_at": "2025-05-09T00:00:00.000Z",
+        "set_code": "EB02",
+        "slug": "anime-25th-collection"
+      }
+    }
+  ]
+}

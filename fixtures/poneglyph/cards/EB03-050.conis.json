@@ -1,0 +1,69 @@
+{
+  "attribute": ["Wisdom"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "4",
+  "card_number": "EB03-050",
+  "card_type": "Character",
+  "color": ["Yellow"],
+  "cost": 2,
+  "counter": 1000,
+  "effect": "[On Play] Up to 1 of your {Sky Island} type Characters gains [Double Attack] during this turn.\n(This card deals 2 damage.)",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Conis",
+  "official_faq": [],
+  "power": 0,
+  "rarity": "C",
+  "released": true,
+  "released_at": "2026-02-20T00:00:00.000Z",
+  "set": "EB03",
+  "set_name": "One Piece Heroines Edition",
+  "trigger": null,
+  "types": ["Sky Island"],
+  "variants": [
+    {
+      "artist": "HISASHI HUJIWARA",
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": "https://cdn.poneglyph.one/images/EB03-050/en/scans/0/display.webp",
+          "full": "https://cdn.poneglyph.one/images/EB03-050/en/scans/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB03-050/en/scans/0/thumb.webp"
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB03-050/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB03-050/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "10.01",
+        "low_price": "0.01",
+        "market_price": "0.07",
+        "mid_price": "0.10",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/672801/one-piece-card-game-extra-booster-one-piece-heroines-edition-conis"
+      },
+      "name": null,
+      "product": {
+        "id": "8eb0b2be-9cfb-416b-b615-4fb49342a8b5",
+        "name": "One Piece Heroines Edition",
+        "released_at": "2026-02-20T00:00:00.000Z",
+        "set_code": "EB03",
+        "slug": "one-piece-heroines-edition"
+      }
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "attribute": ["Slash"],
+  "available_languages": ["en", "ja"],
+  "block": "1",
+  "card_number": "OP04-108",
+  "card_type": "Character",
+  "color": ["Yellow"],
+  "cost": 3,
+  "counter": 1000,
+  "effect": "[DON!! x1] This Character gains [Banish].\n(When this card deals damage, the target card is trashed without activating its Trigger.)",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "not_legal"
+    }
+  },
+  "life": null,
+  "name": "Charlotte Moscato",
+  "official_faq": [],
+  "power": 4000,
+  "rarity": "UC",
+  "released": true,
+  "released_at": "2023-09-22T00:00:00.000Z",
+  "set": "OP04",
+  "set_name": "Kingdoms of Intrigue",
+  "trigger": "[Trigger] You may trash 1 card from your hand: Play this card.",
+  "types": ["Big Mom Pirates"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP04-108/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP04-108/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "5.00",
+        "low_price": "0.01",
+        "market_price": "0.09",
+        "mid_price": "0.15",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/516817/one-piece-card-game-kingdoms-of-intrigue-charlotte-moscato"
+      },
+      "name": null,
+      "product": {
+        "id": "ba423e59-2155-4632-b1a4-b00a1b319692",
+        "name": "Kingdoms of Intrigue",
+        "released_at": "2023-09-22T00:00:00.000Z",
+        "set_code": "OP04",
+        "slug": "kingdoms-of-intrigue"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 1,
+      "label": "Release Event",
+      "market": {
+        "high_price": "8.00",
+        "low_price": "1.18",
+        "market_price": "1.48",
+        "mid_price": "1.78",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/516901/one-piece-card-game-kingdoms-of-intrigue-pre-release-cards-charlotte-moscato"
+      },
+      "name": null,
+      "product": {
+        "id": "7d487e6d-4ddd-438d-a2c0-fb06f6f16a51",
+        "name": "OP04 Release Event",
+        "released_at": "2023-09-15T00:00:00.000Z",
+        "set_code": null,
+        "slug": "op04-release-event"
+      }
+    }
+  ]
+}

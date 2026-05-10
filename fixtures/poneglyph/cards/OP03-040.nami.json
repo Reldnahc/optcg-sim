@@ -1,0 +1,113 @@
+{
+  "attribute": ["Wisdom"],
+  "available_languages": ["en", "ja"],
+  "block": "1",
+  "card_number": "OP03-040",
+  "card_type": "Leader",
+  "color": ["Blue"],
+  "cost": null,
+  "counter": null,
+  "effect": "When your deck is reduced to 0, you win the game instead of losing, according to the rules.\n[DON!! x1] When this Leader's attack deals damage to your opponent's Life, you may trash 1 card from the top of your deck.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "banned_at": "2025-08-30T00:00:00.000Z",
+      "status": "banned"
+    },
+    "Standard": {
+      "banned_at": "2025-08-30T00:00:00.000Z",
+      "status": "banned"
+    }
+  },
+  "life": 5,
+  "name": "Nami",
+  "official_faq": [
+    {
+      "answer": "First, your opponent checks their Life in accordance with the damage dealt, and then this \"When this Leader's attack deals damage to your opponent's Life\" effect activates. After that, if the checked Life card has a [Trigger], your opponent can choose to activate it.",
+      "question": "Does this \"When this Leader's attack deals damage to your opponent's Life\" effect activate before a [Trigger] resulting from that damage?",
+      "updated_on": "2024-04-05"
+    }
+  ],
+  "power": 5000,
+  "rarity": "L",
+  "released": true,
+  "released_at": "2023-06-30T00:00:00.000Z",
+  "set": "OP03",
+  "set_name": "Pillars of Strength",
+  "trigger": null,
+  "types": ["East Blue"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.20598,
+        "y": 0.244048
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP03-040/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP03-040/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "4.99",
+        "low_price": "0.50",
+        "market_price": "0.87",
+        "mid_price": "0.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/498253/one-piece-card-game-pillars-of-strength-nami-040"
+      },
+      "name": null,
+      "product": {
+        "id": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+        "name": "Pillars of Strength",
+        "released_at": "2023-06-30T00:00:00.000Z",
+        "set_code": "OP03",
+        "slug": "pillars-of-strength"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.350498,
+        "y": 0.221429
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP03-040/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP03-040/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "600.00",
+        "low_price": "230.00",
+        "market_price": "292.59",
+        "mid_price": "287.50",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/498254/one-piece-card-game-pillars-of-strength-nami-040-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+        "name": "Pillars of Strength",
+        "released_at": "2023-06-30T00:00:00.000Z",
+        "set_code": "OP03",
+        "slug": "pillars-of-strength"
+      }
+    }
+  ]
+}

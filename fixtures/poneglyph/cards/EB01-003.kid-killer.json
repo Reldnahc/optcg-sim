@@ -1,0 +1,471 @@
+{
+  "attribute": ["Slash", "Special"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "2",
+  "card_number": "EB01-003",
+  "card_type": "Character",
+  "color": ["Red"],
+  "cost": 4,
+  "counter": null,
+  "effect": "[Rush] (This card can attack on the turn in which it is played.)\n[When Attacking] If your opponent has 2 or less Life cards, this Character gains +2000 power during this turn.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Kid & Killer",
+  "official_faq": [
+    {
+      "answer": "Yes, it still has +2000 power.",
+      "question": "If this Character gains +2000 power according to this [When Attacking] effect, and then during that turn the number of my opponent's Life cards becomes 3, does this Character still have +2000 power?",
+      "updated_on": "2024-04-19"
+    }
+  ],
+  "power": 5000,
+  "rarity": "R",
+  "released": true,
+  "released_at": "2024-05-03T00:00:00.000Z",
+  "set": "EB01",
+  "set_name": "Memorial Collection",
+  "trigger": null,
+  "types": ["Supernovas", "Kid Pirates"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-003/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Standard",
+      "market": {
+        "high_price": "50.00",
+        "low_price": "2.10",
+        "market_price": "3.18",
+        "mid_price": "4.36",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544526/one-piece-card-game-extra-booster-memorial-collection-kid-and-killer"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-003/en/stock/2/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/2/thumb.webp"
+        }
+      },
+      "index": 2,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "99.99",
+        "low_price": "14.00",
+        "market_price": "17.11",
+        "mid_price": "19.10",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544527/one-piece-card-game-extra-booster-memorial-collection-kid-and-killer-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-003/en/stock/4/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/4/thumb.webp"
+        }
+      },
+      "index": 4,
+      "label": "Reprint",
+      "market": {
+        "high_price": "8.98",
+        "low_price": "1.50",
+        "market_price": "2.54",
+        "mid_price": "2.78",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/659236/one-piece-card-game-learn-together-deck-set-kid-and-killer-eb01-003"
+      },
+      "name": null,
+      "product": {
+        "id": "90fc7f9f-bc9b-4969-85ea-2ffb2e6a9e74",
+        "name": "Learn Together Deck Set",
+        "released_at": "2025-10-03T00:00:00.000Z",
+        "set_code": null,
+        "slug": "learn-together-deck-set"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-003/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "SP",
+      "market": {
+        "high_price": "241.74",
+        "low_price": "81.61",
+        "market_price": "90.61",
+        "mid_price": "92.21",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/671449/one-piece-card-game-the-azure-seas-seven-kid-and-killer-eb01-003-sp"
+      },
+      "name": null,
+      "product": {
+        "id": "0c90e082-3d2b-4e94-8029-026e5e7dd2b0",
+        "name": "The Azure Sea’s Seven",
+        "released_at": "2026-01-16T00:00:00.000Z",
+        "set_code": "OP14",
+        "slug": "the-azure-sea-s-seven"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-003/en/stock/3/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/3/thumb.webp"
+        }
+      },
+      "index": 3,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "65.95",
+        "low_price": "11.99",
+        "market_price": "14.94",
+        "mid_price": "15.03",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/646722/one-piece-card-game-one-piece-promotion-cards-kid-and-killer-offline-regional-participation-pack-2025-vol2"
+      },
+      "name": null,
+      "product": {
+        "id": "49e43d4d-08c9-4e17-814d-70ac58183fb3",
+        "name": "Offline Regional Participation Pack 2025 Vol.2",
+        "released_at": null,
+        "set_code": null,
+        "slug": "offline-regional-participation-pack-2025-vol-2"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-003/en/stock/5/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-003/en/stock/5/thumb.webp"
+        }
+      },
+      "index": 5,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": null,
+        "low_price": null,
+        "market_price": null,
+        "mid_price": null,
+        "tcgplayer_url": null
+      },
+      "name": null,
+      "product": {
+        "id": "49e43d4d-08c9-4e17-814d-70ac58183fb3",
+        "name": "Offline Regional Participation Pack 2025 Vol.2",
+        "released_at": null,
+        "set_code": null,
+        "slug": "offline-regional-participation-pack-2025-vol-2"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 6,
+      "label": "Promo",
+      "market": {
+        "high_price": "230.97",
+        "low_price": "150.00",
+        "market_price": "181.60",
+        "mid_price": "172.42",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/658339/one-piece-card-game-one-piece-promotion-cards-kid-and-killer-cs-25-26-regionals-textured-chase-promo"
+      },
+      "name": null,
+      "product": {
+        "id": "baf44730-5c02-4a46-9608-d1d8f3528f37",
+        "name": "CS 25-26 Regionals Textured Chase Promo",
+        "released_at": null,
+        "set_code": null,
+        "slug": "cs-25-26-regionals-textured-chase-promo"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 7,
+      "label": "Promo",
+      "market": {
+        "high_price": "25.00",
+        "low_price": "19.99",
+        "market_price": "18.09",
+        "mid_price": "24.25",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/649731/one-piece-card-game-one-piece-promotion-cards-kid-and-killer-online-regional-participation-pack-2025-vol2"
+      },
+      "name": null,
+      "product": {
+        "id": "9b22a565-f517-4fcb-8c74-7579455ef3e7",
+        "name": "Online Regional Participation Pack 2025 Vol.2",
+        "released_at": null,
+        "set_code": null,
+        "slug": "online-regional-participation-pack-2025-vol-2"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 8,
+      "label": "Promo",
+      "market": {
+        "high_price": "189.99",
+        "low_price": "189.99",
+        "market_price": "78.41",
+        "mid_price": "189.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/649737/one-piece-card-game-one-piece-promotion-cards-kid-and-killer-online-regional-finalist-card-set-2025-vol2"
+      },
+      "name": null,
+      "product": {
+        "id": "de5bbe28-d6b7-42e3-981e-7226943ccaf0",
+        "name": "Online Regional Finalist Card Set 2025 Vol.2",
+        "released_at": null,
+        "set_code": null,
+        "slug": "online-regional-finalist-card-set-2025-vol-2"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 9,
+      "label": "Promo",
+      "market": {
+        "high_price": null,
+        "low_price": null,
+        "market_price": null,
+        "mid_price": null,
+        "tcgplayer_url": "https://www.tcgplayer.com/product/646720/one-piece-card-game-one-piece-promotion-cards-kid-and-killer-offline-regional-champion-card-set-2025-vol2"
+      },
+      "name": null,
+      "product": {
+        "id": "f9966762-4b8d-43f7-9888-010504a8121f",
+        "name": "Offline Regional Champion Card Set 2025 Vol.2",
+        "released_at": null,
+        "set_code": null,
+        "slug": "offline-regional-champion-card-set-2025-vol-2"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 10,
+      "label": "Promo",
+      "market": {
+        "high_price": null,
+        "low_price": null,
+        "market_price": null,
+        "mid_price": null,
+        "tcgplayer_url": "https://www.tcgplayer.com/product/649741/one-piece-card-game-one-piece-promotion-cards-kid-and-killer-online-regional-champion-card-set-2025-vol2"
+      },
+      "name": null,
+      "product": {
+        "id": "9975c138-3ad7-4655-8222-b8163def50a3",
+        "name": "Online Regional Champion Card Set 2025 Vol.2",
+        "released_at": null,
+        "set_code": null,
+        "slug": "online-regional-champion-card-set-2025-vol-2"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 11,
+      "label": "Promo",
+      "market": {
+        "high_price": "399.99",
+        "low_price": "148.68",
+        "market_price": "64.86",
+        "mid_price": "150.65",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/646721/one-piece-card-game-one-piece-promotion-cards-kid-and-killer-offline-regional-finalist-card-set-2025-vol2"
+      },
+      "name": null,
+      "product": {
+        "id": "ef639d46-896e-4200-aca6-52b2f84aed7d",
+        "name": "Offline Regional Finalist Card Set 2025 Vol.2",
+        "released_at": null,
+        "set_code": null,
+        "slug": "offline-regional-finalist-card-set-2025-vol-2"
+      }
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "attribute": ["Special"],
+  "available_languages": ["en", "ja"],
+  "block": "2",
+  "card_number": "EB01-052",
+  "card_type": "Character",
+  "color": ["Yellow"],
+  "cost": 2,
+  "counter": 1000,
+  "effect": "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[On Play] Choose one:\n• Look at all of your opponent's Life cards and place them back in their Life area in any order.\n• Turn all of your Life cards face-down.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Viola",
+  "official_faq": [
+    {
+      "answer": "No. You return face-down Life cards face-down, and face- up Life cards face-up.",
+      "question": "When I use this [On Play] effect to look at all of my opponent's Life cards and place them back in their Life area in any order, do I return the face-up Life cards face- down?",
+      "updated_on": "2024-04-19"
+    },
+    {
+      "answer": "No, you cannot.",
+      "question": "When I use this [On Play] effect to turn all of my Life cards face-down, can I change the order of my Life cards?",
+      "updated_on": "2024-04-19"
+    }
+  ],
+  "power": 0,
+  "rarity": "SR",
+  "released": true,
+  "released_at": "2024-05-03T00:00:00.000Z",
+  "set": "EB01",
+  "set_name": "Memorial Collection",
+  "trigger": null,
+  "types": ["Dressrosa"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-052/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-052/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "50.00",
+        "low_price": "5.20",
+        "market_price": "6.89",
+        "mid_price": "8.00",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544589/one-piece-card-game-extra-booster-memorial-collection-viola"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-052/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-052/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "48.00",
+        "low_price": "15.00",
+        "market_price": "19.89",
+        "mid_price": "21.00",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544590/one-piece-card-game-extra-booster-memorial-collection-viola-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    }
+  ]
+}

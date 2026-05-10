@@ -1,0 +1,69 @@
+{
+  "attribute": ["Strike"],
+  "available_languages": ["en", "ja"],
+  "block": "2",
+  "card_number": "EB01-036",
+  "card_type": "Character",
+  "color": ["Purple"],
+  "cost": 4,
+  "counter": null,
+  "effect": "[Rush] (This card can attack on the turn in which it is played.)\n[On K.O.] If your Leader has the {Impel Down} type, add up to 1 DON!! card from your DON!! deck and rest it.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Minochihuahua",
+  "official_faq": [],
+  "power": 5000,
+  "rarity": "C",
+  "released": true,
+  "released_at": "2024-05-03T00:00:00.000Z",
+  "set": "EB01",
+  "set_name": "Memorial Collection",
+  "trigger": null,
+  "types": ["Impel Down", "Jailer Beast"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/EB01-036/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/EB01-036/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "1.50",
+        "low_price": "0.01",
+        "market_price": "0.07",
+        "mid_price": "0.10",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/544569/one-piece-card-game-extra-booster-memorial-collection-minochihuahua"
+      },
+      "name": null,
+      "product": {
+        "id": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+        "name": "Memorial Collection",
+        "released_at": "2024-05-03T00:00:00.000Z",
+        "set_code": "EB01",
+        "slug": "memorial-collection"
+      }
+    }
+  ]
+}

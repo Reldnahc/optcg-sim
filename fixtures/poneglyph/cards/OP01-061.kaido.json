@@ -1,0 +1,111 @@
+{
+  "attribute": ["Strike"],
+  "available_languages": ["en", "ja"],
+  "block": "1",
+  "card_number": "OP01-061",
+  "card_type": "Leader",
+  "color": ["Blue", "Purple"],
+  "cost": null,
+  "counter": null,
+  "effect": "[DON!! x1] [Your Turn] [Once Per Turn] When your opponent's Character is K.O.'d, add up to 1 DON!! card from your DON!! deck and set it as active.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "not_legal"
+    }
+  },
+  "life": 4,
+  "name": "Kaido",
+  "official_faq": [
+    {
+      "answer": "No. It is not activated because the [DON!! x1] condition was not met when your opponent's Character was K.O.'d.",
+      "question": "If I K.O. an opponent's Character with an effect such as \"DON!! −1:\", and simultaneously lose the DON!! card given to this Leader, is this [DON!! x1] effect activated?",
+      "updated_on": "2024-04-05"
+    }
+  ],
+  "power": 5000,
+  "rarity": "L",
+  "released": true,
+  "released_at": "2022-12-02T00:00:00.000Z",
+  "set": "OP01",
+  "set_name": "Romance Dawn",
+  "trigger": null,
+  "types": ["The Four Emperors", "Animal Kingdom Pirates"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.498662,
+        "y": 0.209058
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP01-061/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP01-061/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "2.00",
+        "low_price": "0.20",
+        "market_price": "0.34",
+        "mid_price": "0.35",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/453517/one-piece-card-game-romance-dawn-kaido-061"
+      },
+      "name": null,
+      "product": {
+        "id": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+        "name": "Romance Dawn",
+        "released_at": "2022-12-02T00:00:00.000Z",
+        "set_code": "OP01",
+        "slug": "romance-dawn"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.669901,
+        "y": 0.383048
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP01-061/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP01-061/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "699.99",
+        "low_price": "111.00",
+        "market_price": "140.63",
+        "mid_price": "140.63",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/454587/one-piece-card-game-romance-dawn-kaido-061-parallel"
+      },
+      "name": null,
+      "product": {
+        "id": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+        "name": "Romance Dawn",
+        "released_at": "2022-12-02T00:00:00.000Z",
+        "set_code": "OP01",
+        "slug": "romance-dawn"
+      }
+    }
+  ]
+}
