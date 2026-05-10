@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type {
   CardId,
+  CardSupportStatus,
   EffectDefinition,
   LoadoutId,
   PlayerId,
@@ -33,6 +34,49 @@ const hasTargetKoEffect = (definition: EffectDefinition): boolean =>
     (block) =>
       block.effect.type === "ko" && block.effect.target.type === "choose",
   );
+
+type RealMechanicsRuntimeStance =
+  | "implemented-dsl-runtime"
+  | "supported-keyword-runtime"
+  | "fail-closed-unsupported";
+
+type RealMechanicsMatrixEntry = {
+  readonly cardId: string;
+  readonly effectFamily: string;
+  readonly expectedSupportStatus: CardSupportStatus;
+  readonly expectedRuntimeStance: RealMechanicsRuntimeStance;
+  readonly rationale: string;
+};
+
+const supportedRealMechanicsMatrix = [
+  {
+    cardId: "EB01-023",
+    effectFamily: "on-play-draw",
+    expectedSupportStatus: "implemented-dsl",
+    expectedRuntimeStance: "implemented-dsl-runtime",
+    rationale:
+      "Reviewed complete real [On Play] Draw 1 card fixture with checked-in DSL runtime coverage.",
+  },
+  {
+    cardId: "OP04-014",
+    effectFamily: "banish",
+    expectedSupportStatus: "vanilla-confirmed",
+    expectedRuntimeStance: "supported-keyword-runtime",
+    rationale:
+      "Reviewed complete real Banish keyword fixture with no extra printed behavior beyond parenthetical explanatory text.",
+  },
+] as const satisfies readonly RealMechanicsMatrixEntry[];
+
+const realMechanicsMatrix = [
+  ...supportedRealMechanicsMatrix,
+  ...realEffectShapeFixtureCorpus.map((entry) => ({
+    cardId: entry.cardId,
+    effectFamily: entry.effectFamily,
+    expectedSupportStatus: "unsupported" as const,
+    expectedRuntimeStance: "fail-closed-unsupported" as const,
+    rationale: entry.rationale,
+  })),
+] as const satisfies readonly RealMechanicsMatrixEntry[];
 
 describe("real card fixtures", () => {
   it("records a broad selected corpus of unsupported real effect-shape fixtures", () => {
@@ -67,6 +111,45 @@ describe("real card fixtures", () => {
     for (const entry of realEffectShapeFixtureCorpus) {
       expect(entry.rationale).toContain(entry.effectFamily);
       expect(entry.printedTextIncludes.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("records a broad real mechanics support/runtime matrix for every CARD-005 fixture and reviewed supported real card", () => {
+    const corpusCardIds = realEffectShapeFixtureCorpus.map(
+      (entry) => entry.cardId,
+    );
+    const matrixCardIds = realMechanicsMatrix.map((entry) => entry.cardId);
+    const matrixByCardId = new Map(
+      realMechanicsMatrix.map((entry) => [entry.cardId, entry]),
+    );
+
+    expect(realMechanicsMatrix).toHaveLength(corpusCardIds.length + 2);
+    expect(new Set(matrixCardIds).size).toBe(matrixCardIds.length);
+    expect(matrixCardIds).toEqual(
+      expect.arrayContaining(["EB01-023", "OP04-014", ...corpusCardIds]),
+    );
+    expect(
+      realMechanicsMatrix.filter(
+        (entry) => entry.expectedSupportStatus !== "unsupported",
+      ),
+    ).toEqual([...supportedRealMechanicsMatrix]);
+
+    for (const corpusEntry of realEffectShapeFixtureCorpus) {
+      const matrixEntry = matrixByCardId.get(corpusEntry.cardId);
+
+      expect(matrixEntry).toEqual({
+        cardId: corpusEntry.cardId,
+        effectFamily: corpusEntry.effectFamily,
+        expectedSupportStatus: "unsupported",
+        expectedRuntimeStance: "fail-closed-unsupported",
+        rationale: corpusEntry.rationale,
+      });
+    }
+
+    for (const entry of realMechanicsMatrix) {
+      expect(entry.cardId.length).toBeGreaterThan(0);
+      expect(entry.effectFamily.length).toBeGreaterThan(0);
+      expect(entry.rationale).toMatch(/\S/u);
     }
   });
 
@@ -428,5 +511,109 @@ describe("real card fixtures", () => {
     expect(deckResult.errors).toEqual([]);
     expect(loadoutResult.valid).toBe(true);
     expect(loadoutResult.errors).toEqual([]);
+  });
+
+  it("matches every real mechanics matrix entry to checked-in manifest support metadata without broadening support", async () => {
+    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const supportedCardIds = supportedRealMechanicsMatrix.map(
+      (entry) => entry.cardId,
+    );
+    const supportedEffectDefinitionIds = ["eb01-023.on-play-draw-1"];
+
+    expect(Object.keys(manifest.effectDefinitions ?? {})).toEqual(
+      supportedEffectDefinitionIds,
+    );
+
+    for (const entry of realMechanicsMatrix) {
+      const card = manifest.cards[toCardId(entry.cardId)];
+
+      expect(card, entry.cardId).toBeDefined();
+      expect(card?.support.cardId).toBe(toCardId(entry.cardId));
+      expect(card?.support.status).toBe(entry.expectedSupportStatus);
+      expect(card?.support.sourceTextHash).toBe(card?.sourceTextHash);
+      expect(card?.support.behaviorHash).toBe(card?.behaviorHash);
+      expect(card?.support.sourceTextHash).toMatch(/^[a-f0-9]{64}$/u);
+      expect(card?.support.behaviorHash).toMatch(/^[a-f0-9]{64}$/u);
+
+      if (entry.expectedRuntimeStance === "implemented-dsl-runtime") {
+        expect(card?.support.tested).toBe(true);
+        expect(card?.support.effectDefinitionId).toBe(
+          "eb01-023.on-play-draw-1",
+        );
+        expect(card?.support.customHandlerIds).toBeUndefined();
+        expect(
+          manifest.effectDefinitions?.[
+            String(card?.support.effectDefinitionId)
+          ],
+        ).toBeDefined();
+      } else if (entry.expectedRuntimeStance === "supported-keyword-runtime") {
+        expect(card?.support.tested).toBe(true);
+        expect(card?.support.effectDefinitionId).toBeUndefined();
+        expect(card?.support.customHandlerIds).toBeUndefined();
+      } else {
+        expect(card?.support.tested).toBe(false);
+        expect(card?.support.effectDefinitionId).toBeUndefined();
+        expect(card?.support.customHandlerIds).toBeUndefined();
+        expect(manifest.effectDefinitions?.[entry.cardId]).toBeUndefined();
+        expect(
+          Object.values(manifest.effectDefinitions ?? {}).some(
+            (definition) => definition.cardId === toCardId(entry.cardId),
+          ),
+        ).toBe(false);
+      }
+    }
+
+    expect(
+      realMechanicsMatrix
+        .filter((entry) => entry.expectedSupportStatus !== "unsupported")
+        .map((entry) => entry.cardId)
+        .sort(),
+    ).toEqual(supportedCardIds.sort());
+    expect(
+      Object.values(manifest.cards)
+        .filter((card) => card.support.status !== "unsupported")
+        .map((card) => card.cardId)
+        .sort(),
+    ).toEqual(supportedCardIds.sort().map(toCardId));
+  });
+
+  it("rejects every unsupported CARD-005 real effect-shape fixture in ranked decks while allowing sandbox warnings", async () => {
+    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const deck = realEffectShapeFixtureCorpus.map((entry) => ({
+      cardId: toCardId(entry.cardId),
+      quantity: 1,
+    }));
+
+    const ranked = validateDecklist({
+      deck,
+      enforceLeaderColorIdentity: false,
+      format: "extra",
+      manifest,
+      mode: "ranked",
+      overlayVersion: "real-card-overlays-v1",
+    });
+    const sandbox = validateDecklist({
+      deck,
+      enforceLeaderColorIdentity: false,
+      format: "extra",
+      manifest,
+      mode: "dev-sandbox",
+      overlayVersion: "real-card-overlays-v1",
+    });
+
+    for (const entry of realEffectShapeFixtureCorpus) {
+      expect(ranked.errors).toContainEqual(
+        expect.objectContaining({
+          code: "unsupported-card",
+          cardId: toCardId(entry.cardId),
+        }),
+      );
+      expect(sandbox.warnings).toContainEqual(
+        expect.objectContaining({
+          code: "unsupported-card",
+          cardId: toCardId(entry.cardId),
+        }),
+      );
+    }
   });
 });
