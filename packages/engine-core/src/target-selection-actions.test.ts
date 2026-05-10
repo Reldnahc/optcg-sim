@@ -4,6 +4,7 @@ import { test } from "vitest";
 import type {
   Action,
   CardId,
+  CardInstance,
   CardRef,
   DecisionId,
   DecisionResponse,
@@ -27,10 +28,13 @@ import {
   p1,
   p2,
   resolvedCard,
+  reviewedMainEventDrawDefinition,
   reviewedOnPlayDrawDefinition,
   toCardId,
 } from "./action-test-fixtures.js";
 import { applyAction, getLegalActions } from "./actions.js";
+import { applyPlayCard, applyPlayCardDecisionResponse } from "./play-card.js";
+import { setupMainPlayState } from "./play-card-test-fixtures.js";
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -189,6 +193,36 @@ const respondWithTargets = (
   response: { type: "targets", targets: [...targets] },
 });
 
+const applyPlayCardTestAction = (
+  state: GameState,
+  action:
+    | Extract<Action, { type: "playCard" }>
+    | Extract<Action, { type: "respondToDecision" }>,
+): EngineResult => {
+  if (action.type === "playCard") {
+    return applyPlayCard(state, action);
+  }
+  const result = applyPlayCardDecisionResponse(state, action);
+  assert.ok(result !== null, "expected play-card decision response");
+  return result;
+};
+
+const payFirstTwoDon = (state: GameState): EngineResult => {
+  const player = must(state.players[p1], "p1");
+  return applyPlayCardTestAction(state, {
+    type: "respondToDecision",
+    decisionId: must(state.pendingDecision, "pay decision").id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [
+        must(player.costArea[0], "don0").instanceId,
+        must(player.costArea[1], "don1").instanceId,
+      ],
+    },
+  });
+};
+
 const assertEventsAppendToJournal = (
   result: EngineResult,
   label: string,
@@ -216,6 +250,23 @@ const assertEventsAppendToJournal = (
     result.events.map((event) => event.id),
     `${label} events must append to journal in order`,
   );
+};
+
+const eventReplaySnapshot = (
+  result: EngineResult,
+  expectedTypes: readonly string[],
+  label: string,
+) => {
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    expectedTypes,
+  );
+  assertEventsAppendToJournal(result, label);
+  return {
+    eventSeq: result.events.map((event) => event.seq),
+    eventTypes: result.events.map((event) => event.type),
+    journalSeq: result.state.eventJournal.map((event) => event.seq),
+  };
 };
 
 const invalidResponseCases: Array<{
@@ -377,6 +428,139 @@ test("valid selectTargets response resolves queued KO with stable replay event o
   assert.deepEqual(first.eventTypes, second.eventTypes);
   assert.deepEqual(first.eventSeq, second.eventSeq);
   assert.deepEqual(first.journalSeq, second.journalSeq);
+  assert.equal(first.stateHash, second.stateHash);
+});
+
+test("paid reviewed target KO Main Event keeps repeated replay order and hash stable through target resolution", () => {
+  const paidTypes = [
+    "costPaid",
+    "decisionResolved",
+    "cardMoved",
+    "cardTrashed",
+    "cardPlayed",
+    "ruleProcessingChecked",
+    "effectQueued",
+    "decisionCreated",
+  ];
+  const resolvedTypes = [
+    "decisionResolved",
+    "cardKOd",
+    "cardMoved",
+    "effectResolved",
+    "ruleProcessingChecked",
+  ];
+  const runScript = () => {
+    const state = setupMainPlayState();
+    const p1State = must(state.players[p1], "p1");
+    const p2State = must(state.players[p2], "p2");
+    const eventCard = must(p1State.hand[0], "event");
+    const targetSource = must(p2State.hand.shift(), "target source");
+    const target: CardInstance = {
+      ...targetSource,
+      zone: {
+        zone: "characterArea",
+        playerId: p2,
+        slot: "character",
+        index: 0,
+      },
+      attachedDon: [],
+    };
+    p2State.characters = [target];
+    p2State.hand = p2State.hand.map((card, index) => ({
+      ...card,
+      zone: { zone: "hand", playerId: p2, slot: "hand", index },
+    }));
+    state.cardManifest.cards[target.cardId] = resolvedCard({
+      cardId: target.cardId,
+      category: "character",
+    });
+    const implemented = resolvedCard({
+      cardId: eventCard.cardId,
+      category: "event",
+      cost: 2,
+      effectText: "[Main] K.O. up to 1 of your opponent's Characters.",
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: "def-main-event-ko",
+      },
+    });
+    const definition = reviewedMainEventDrawDefinition(
+      implemented.cardId,
+      implemented.support,
+    );
+    state.cardManifest.cards[eventCard.cardId] = implemented;
+    state.cardManifest.effectDefinitionsVersion = "0.1.0";
+    state.cardManifest.effectDefinitions = {
+      "def-main-event-ko": {
+        ...definition,
+        effects: [
+          {
+            ...must(definition.effects[0], "main effect"),
+            id: "OP01-040:event-main-ko-1" as (typeof definition.effects)[number]["id"],
+            effect: {
+              type: "ko",
+              target: {
+                type: "choose",
+                request: publicCharacterTargetRequest({
+                  allowFewerIfUnavailable: true,
+                  min: 0,
+                }),
+              },
+            },
+          },
+        ],
+      },
+    };
+    const opened = applyPlayCardTestAction(state, {
+      type: "playCard",
+      cardInstanceId: eventCard.instanceId,
+    });
+    assert.equal(opened.errors, undefined);
+    assert.equal(opened.state.pendingDecision?.type, "payCost");
+
+    const paid = payFirstTwoDon(opened.state);
+    assert.equal(paid.errors, undefined);
+    assert.equal(paid.state.pendingDecision?.type, "selectTargets");
+    const targetDecision = must(paid.state.pendingDecision, "target decision");
+    assert.equal(targetDecision.type, "selectTargets");
+    const publicCandidate = must(
+      targetDecision.candidates[0],
+      "public target candidate",
+    );
+    assert.equal(publicCandidate.card.instanceId, target.instanceId);
+
+    const resolved = applyAction(paid.state, {
+      type: "respondToDecision",
+      decisionId: targetDecision.id,
+      response: { type: "targets", targets: [publicCandidate.card] },
+    });
+    assert.equal(resolved.errors, undefined);
+    assert.equal(resolved.state.pendingDecision, undefined);
+    assert.deepEqual(
+      must(resolved.state.players[p2], "resolved p2").characters,
+      [],
+    );
+    assert.equal(
+      must(must(resolved.state.players[p2], "resolved p2").trash[0], "ko trash")
+        .instanceId,
+      target.instanceId,
+    );
+    assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+    return {
+      paid: eventReplaySnapshot(paid, paidTypes, "paid Main Event target KO"),
+      resolved: eventReplaySnapshot(
+        resolved,
+        resolvedTypes,
+        "resolved Main Event target KO",
+      ),
+      stateHash: resolved.stateHash,
+    };
+  };
+
+  const first = runScript();
+  const second = runScript();
+  assert.deepEqual(first.paid, second.paid);
+  assert.deepEqual(first.resolved, second.resolved);
   assert.equal(first.stateHash, second.stateHash);
 });
 
