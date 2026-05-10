@@ -47,6 +47,22 @@ const applyPlayCardTestAction = (
   return result;
 };
 
+const payFirstTwoDon = (state: GameState): EngineResult => {
+  const player = must(state.players[p1], "p1");
+  return applyPlayCardTestAction(state, {
+    type: "respondToDecision",
+    decisionId: must(state.pendingDecision, "pay decision").id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [
+        must(player.costArea[0], "don0").instanceId,
+        must(player.costArea[1], "don1").instanceId,
+      ],
+    },
+  });
+};
+
 test("getLegalActions includes supported [Main] vanilla Event play only under main-phase turn-player constraints", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");
@@ -132,6 +148,7 @@ test("getLegalActions omits implemented-dsl Events outside the narrow reviewed M
   const optional = must(p1State.hand[1], "optional");
   const counter = must(p1State.hand[2], "counter");
   const untested = must(p1State.hand[3], "untested");
+  const filteredKo = must(p1State.hand[4], "filtered ko");
 
   const install = (
     card: CardInstance,
@@ -171,12 +188,34 @@ test("getLegalActions omits implemented-dsl Events outside the narrow reviewed M
   install(optional, { ...baseEffect, optional: true });
   install(counter, { ...baseEffect, trigger: { type: "counter" } });
   install(untested, baseEffect, { tested: false });
+  install(filteredKo, {
+    ...baseEffect,
+    id: "OP01-040:event-filtered-main-ko-1" as typeof baseEffect.id,
+    effect: {
+      type: "ko",
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "opponent",
+          zone: "characterArea",
+          filter: { cost: { op: "lte", value: 3 } },
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+        },
+      },
+    },
+  });
 
   const legal = getPlayCardLegalActions(state, p1);
   assert.equal(hasPlayCardAction(legal, supported), true);
   assert.equal(hasPlayCardAction(legal, optional), false);
   assert.equal(hasPlayCardAction(legal, counter), false);
   assert.equal(hasPlayCardAction(legal, untested), false);
+  assert.equal(hasPlayCardAction(legal, filteredKo), false);
 });
 
 test("paid reviewed target KO Main Event moves to trash, creates selectTargets, and K.O.s the selected Character", () => {
@@ -256,19 +295,7 @@ test("paid reviewed target KO Main Event moves to trash, creates selectTargets, 
   assert.equal(opened.errors, undefined);
   assert.equal(opened.state.pendingDecision?.type, "payCost");
 
-  const openedP1 = must(opened.state.players[p1], "opened p1");
-  const paid = applyPlayCardTestAction(opened.state, {
-    type: "respondToDecision",
-    decisionId: must(opened.state.pendingDecision, "pay decision").id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: [
-        must(openedP1.costArea[0], "don0").instanceId,
-        must(openedP1.costArea[1], "don1").instanceId,
-      ],
-    },
-  });
+  const paid = payFirstTwoDon(opened.state);
 
   assert.equal(paid.errors, undefined);
   assert.equal(paid.state.pendingDecision?.type, "selectTargets");
@@ -421,35 +448,20 @@ test("nonzero [Main] Event play creates payCost and valid payment moves card han
     opened.events.map((event) => event.type),
     ["cardRevealed", "decisionCreated"],
   );
+  const [don0Id, don1Id, don2Id] = p1State.costArea.map(
+    (card) => card.instanceId,
+  );
   assert.deepEqual(
     respondToDecisionActions(getPlayCardLegalActions(opened.state, p1)).map(
-      (action) => action.response,
+      (action) =>
+        action.response.type === "payment"
+          ? action.response.selectedDonInstanceIds
+          : [],
     ),
     [
-      {
-        type: "payment",
-        optionId: "restDon",
-        selectedDonInstanceIds: [
-          must(p1State.costArea[0], "legal don0").instanceId,
-          must(p1State.costArea[1], "legal don1").instanceId,
-        ],
-      },
-      {
-        type: "payment",
-        optionId: "restDon",
-        selectedDonInstanceIds: [
-          must(p1State.costArea[0], "legal don0").instanceId,
-          must(p1State.costArea[2], "legal don2").instanceId,
-        ],
-      },
-      {
-        type: "payment",
-        optionId: "restDon",
-        selectedDonInstanceIds: [
-          must(p1State.costArea[1], "legal don1").instanceId,
-          must(p1State.costArea[2], "legal don2").instanceId,
-        ],
-      },
+      [don0Id, don1Id],
+      [don0Id, don2Id],
+      [don1Id, don2Id],
     ],
   );
   assert.equal(
@@ -491,6 +503,52 @@ test("nonzero [Main] Event play creates payCost and valid payment moves card han
     ],
   );
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("nonzero implemented-dsl Main Event draw uses existing DON payment and moves hand to trash", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event");
+  const implemented = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 2,
+    effectText: "[Main] Draw 1 card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-main-event-payment",
+    },
+  });
+  state.cardManifest.cards[eventCard.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-payment": reviewedMainEventDrawDefinition(
+      implemented.cardId,
+      implemented.support,
+    ),
+  };
+
+  const opened = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: eventCard.instanceId,
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "payCost");
+
+  const resolved = payFirstTwoDon(opened.state);
+
+  assert.equal(resolved.errors, undefined);
+  const resolvedP1 = must(resolved.state.players[p1], "resolved p1");
+  assert.equal(
+    resolvedP1.hand.some((card) => card.instanceId === eventCard.instanceId),
+    false,
+  );
+  assert.equal(
+    must(resolvedP1.trash[0], "trash 0").instanceId,
+    eventCard.instanceId,
+  );
+  assert.equal(must(resolvedP1.costArea[0], "paid don0").state, "rested");
+  assert.equal(must(resolvedP1.costArea[1], "paid don1").state, "rested");
 });
 
 test("zero-cost [Main] Event play resolves directly to trash with expected events", () => {
@@ -702,18 +760,7 @@ test("Event nonzero open and resolve emitted events are public except existing r
     ],
   );
 
-  const openedP1 = must(opened.state.players[p1], "opened p1");
-  const don0 = must(openedP1.costArea[0], "don0");
-  const don1 = must(openedP1.costArea[1], "don1");
-  const resolved = applyPlayCardTestAction(opened.state, {
-    type: "respondToDecision",
-    decisionId: must(opened.state.pendingDecision, "decision").id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: [don0.instanceId, don1.instanceId],
-    },
-  });
+  const resolved = payFirstTwoDon(opened.state);
   assert.deepEqual(
     resolved.events.map((event) => [event.type, event.visibility.type]),
     [
@@ -750,19 +797,7 @@ test("Event paid and zero-cost plays reindex hand and trash zone refs", () => {
     type: "playCard",
     cardInstanceId: paidEvent.instanceId,
   });
-  const paidOpenedP1 = must(paidOpened.state.players[p1], "paid opened p1");
-  const paidResolved = applyPlayCardTestAction(paidOpened.state, {
-    type: "respondToDecision",
-    decisionId: must(paidOpened.state.pendingDecision, "decision").id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: [
-        must(paidOpenedP1.costArea[0], "don0").instanceId,
-        must(paidOpenedP1.costArea[1], "don1").instanceId,
-      ],
-    },
-  });
+  const paidResolved = payFirstTwoDon(paidOpened.state);
   const paidResolvedP1 = must(
     paidResolved.state.players[p1],
     "paid resolved p1",
@@ -1005,19 +1040,7 @@ test("Event play repeated execution is stable for event sequence and state hash"
       type: "playCard",
       cardInstanceId: eventCard.instanceId,
     });
-    const openedP1 = must(opened.state.players[p1], "opened p1");
-    const resolved = applyPlayCardTestAction(opened.state, {
-      type: "respondToDecision",
-      decisionId: must(opened.state.pendingDecision, "decision").id,
-      response: {
-        type: "payment",
-        optionId: "restDon",
-        selectedDonInstanceIds: [
-          must(openedP1.costArea[0], "don0").instanceId,
-          must(openedP1.costArea[1], "don1").instanceId,
-        ],
-      },
-    });
+    const resolved = payFirstTwoDon(opened.state);
     return {
       openTypes: opened.events.map((event) => event.type),
       resolveTypes: resolved.events.map((event) => event.type),

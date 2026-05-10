@@ -646,6 +646,7 @@ const isReviewedTargetKoRequestShape = (
   request.chooser === "self" &&
   request.player === "opponent" &&
   request.zone === "characterArea" &&
+  request.filter === undefined &&
   request.min === 0 &&
   request.max === 1 &&
   request.allowFewerIfUnavailable &&
