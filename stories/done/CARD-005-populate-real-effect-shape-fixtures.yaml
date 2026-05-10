@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add a curated corpus of roughly 50 additional real Poneglyph card-detail
   fixtures whose printed effects are intentionally different from the currently
