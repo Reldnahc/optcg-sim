@@ -20,6 +20,19 @@ The helper validates every fetched detail through the checked-in Poneglyph schem
 
 Tests for the helper must stay hermetic. Do not require live Poneglyph in CI; inject a fake fetch implementation and use checked-in Poneglyph-shaped fixtures for expected card details.
 
+## Fixture Coverage Lane
+
+Real-card fixture capture and cards-produced manifest tests are separate
+integration/card-data coverage. They are useful for proving adapter output,
+overlay metadata, manifest construction, support status, and local integration
+surfaces, but they do not replace engine primitive/unit/regression coverage.
+
+When an engine or rules story needs exact behavior coverage, keep that coverage
+synthetic and focused in the engine package. If the story reveals that a real
+card fixture, overlay, or manifest should be added or corrected, create a
+separate CARD/FIXTURE/verification follow-up story instead of broadening the
+engine story.
+
 ## Target-Effect Fixture Guardrail
 
 Do not promote a real card to target-effect `implemented-dsl` support unless a

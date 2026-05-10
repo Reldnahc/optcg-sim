@@ -56,9 +56,9 @@ Use a pre-presentation story-review gate for generated or normalized story work:
 
 ## Card Manifest Fixture Policy
 
-For card-data integration work, cards-produced `MatchCardManifest` fixtures are
-the default local integration surface for engine, CLI, hidden-info, and future
-effect-runtime work.
+Real-card and cards-produced fixture coverage is separate integration/card-data coverage. It proves that card-data adapter output, representative manifests, CLI boot paths, hidden-info filtering, and root integration surfaces can consume reviewed local fixtures. It does not replace primitive, unit, regression, synthetic edge-case, fail-closed, hidden-info, event-order, or state-hash coverage for engine behavior.
+
+Engine and rules stories must keep focused synthetic/unit/regression tests for behavior requirements. Use synthetic or purpose-built plain manifest data for exact primitive behavior, edge cases, unsupported shapes, PlayerView visibility, event sequencing, and deterministic state hashes.
 
 - `@optcg/cards` may produce match manifests by resolving Poneglyph data,
   simulator overlays, and implementation metadata.
@@ -68,19 +68,19 @@ effect-runtime work.
   together when the test is explicitly exercising the produced-manifest
   integration boundary.
 - Engine package tests may load plain JSON or data fixtures but must not import
-  `@optcg/cards`.
+  `@optcg/cards`. Loading a cards-produced manifest in an engine test is
+  integration coverage, not a substitute for the synthetic behavior tests above.
 - CLI tests may load local fixture manifests but must not require live Poneglyph
   or Redis.
-- Future Main Event, Counter Event, optional effects, once-per-turn, permanent
-  modifier, replacement, multi-damage, and search/reveal story families should
-  use the representative cards-produced manifest by default.
-- Synthetic one-off manifests are allowed only for narrow edge cases where the
-  representative fixture cannot express the specific contract under test
-  without broadening the story. The story or PR must explain why the exception
-  is needed.
+- Future engine and effect-runtime stories are not required to add real-card fixtures merely because they implement a primitive, rule, or behavior path.
+- Synthetic one-off manifests are allowed for narrow engine behavior tests when
+  they make the behavior contract clearer or avoid broadening the story. The
+  story or PR should explain any unusual synthetic fixture shape that is not
+  obvious from the test.
 - Fixture adoption is not gameplay support. Stories and PRs must keep
   unsupported gameplay status honest and must not describe fixture cards as
   implemented unless the story also implements and verifies the cited behavior.
+- If an engine or rules story exposes a real-card fixture or cards-produced manifest gap, create a separate CARD/FIXTURE/verification follow-up story instead of widening the engine story.
 
 ## Story Lifecycle Rules
 
