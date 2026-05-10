@@ -160,6 +160,46 @@ test("agent handoff guard rejects a PR body with missing cleanup metadata", asyn
   assert.match(run.stderr, /Missing Post-merge cleanup metadata source/);
 });
 
+test("agent handoff guard rejects visually plausible fenced cleanup metadata", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-handoff-bad-"));
+  const prBodyFile = path.join(tempRoot, "pr-body.md");
+  await writeFile(
+    prBodyFile,
+    `## Summary
+
+Implementation summary.
+
+## Post-Merge Cleanup
+\`\`\`yaml
+cleanup:
+  mode: single
+  stories:
+    - stories/approved/INF-701-cleanup-fixture.yaml
+  branches:
+    - story/inf-701
+\`\`\`
+`,
+  );
+
+  const run = spawnSync(
+    process.execPath,
+    [
+      "--experimental-strip-types",
+      "tools/post-merge-cleanup.ts",
+      "--",
+      "--validate-cleanup-handoff",
+      "--pr-number",
+      "237",
+      "--pr-body-file",
+      prBodyFile,
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /Missing Post-merge cleanup metadata source/);
+});
+
 test("agent handoff guard accepts valid single-story cleanup metadata", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-handoff-ok-"));
   const prBodyFile = path.join(tempRoot, "pr-body.md");
@@ -194,6 +234,209 @@ test("agent handoff guard accepts valid single-story cleanup metadata", async ()
   assert.equal(output.status, "valid");
   assert.equal(output.metadata.mode, "single");
   assert.match(output.metadataSourceRef, /^pr-body:pr-237-body:[0-9a-f]{64}$/);
+});
+
+test("agent handoff guard validates fetched PR input instead of copied local metadata", async () => {
+  const validCopiedExample = `Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/INF-701-cleanup-fixture.yaml
+  branches:
+    - story/inf-701
+`;
+  const copied = spawnSync(
+    process.execPath,
+    [
+      "--experimental-strip-types",
+      "tools/post-merge-cleanup.ts",
+      "--",
+      "--validate-cleanup-handoff",
+      "--pr-number",
+      "237",
+      "--pr-body",
+      validCopiedExample,
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+  assert.equal(copied.status, 0, copied.stderr);
+
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-handoff-json-"));
+  const handoffFile = path.join(tempRoot, "handoff.json");
+  await writeFile(
+    handoffFile,
+    `${JSON.stringify(
+      {
+        issueComments: [],
+        pullRequest: {
+          body: `## Post-Merge Cleanup
+\`\`\`yaml
+cleanup:
+  mode: single
+  stories:
+    - stories/approved/INF-701-cleanup-fixture.yaml
+\`\`\`
+`,
+          number: 237,
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  const fetched = spawnSync(
+    process.execPath,
+    [
+      "--experimental-strip-types",
+      "tools/post-merge-cleanup.ts",
+      "--",
+      "--validate-cleanup-handoff-json-file",
+      handoffFile,
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.notEqual(fetched.status, 0);
+  assert.match(fetched.stderr, /Missing Post-merge cleanup metadata source/);
+});
+
+test("agent handoff guard accepts trusted durable handoff comment metadata", async () => {
+  const tempRoot = await mkdtemp(
+    path.join(os.tmpdir(), "optcg-handoff-comment-"),
+  );
+  const handoffFile = path.join(tempRoot, "handoff.json");
+  await writeFile(
+    handoffFile,
+    `${JSON.stringify(
+      {
+        issueComments: [
+          {
+            authorAssociation: "OWNER",
+            body: `Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/INF-701-cleanup-fixture.yaml
+  branches:
+    - story/inf-701
+`,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            id: 881,
+            updatedAt: "2026-01-01T00:00:00.000Z",
+            userType: "User",
+          },
+        ],
+        pullRequest: {
+          body: "## Summary\n\nCleanup metadata lives in a durable handoff comment.\n",
+          number: 237,
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  const run = spawnSync(
+    process.execPath,
+    [
+      "--experimental-strip-types",
+      "tools/post-merge-cleanup.ts",
+      "--",
+      "--validate-cleanup-handoff-json-file",
+      handoffFile,
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const output = JSON.parse(run.stdout);
+  assert.equal(output.metadataSource.kind, "handoff-comment");
+  assert.equal(output.metadataSource.sourceId, "881");
+});
+
+test("agent handoff status latch requires passing cleanup metadata guard check", async () => {
+  const tempRoot = await mkdtemp(
+    path.join(os.tmpdir(), "optcg-handoff-status-"),
+  );
+  const baseInput = {
+    issueComments: [],
+    pullRequest: {
+      body: `Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/INF-701-cleanup-fixture.yaml
+  branches:
+    - story/inf-701
+`,
+      number: 237,
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+  };
+
+  for (const [label, statusChecks] of [
+    ["missing", []],
+    ["pending", [{ bucket: "pending", name: "cleanup-metadata-guard" }]],
+    ["failed", [{ bucket: "fail", name: "cleanup-metadata-guard" }]],
+  ]) {
+    const handoffFile = path.join(tempRoot, `${label}.json`);
+    await writeFile(
+      handoffFile,
+      `${JSON.stringify({ ...baseInput, statusChecks }, null, 2)}\n`,
+    );
+
+    const run = spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        "tools/post-merge-cleanup.ts",
+        "--",
+        "--validate-cleanup-handoff-json-file",
+        handoffFile,
+        "--require-cleanup-guard-status",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+
+    assert.notEqual(run.status, 0, label);
+    assert.match(run.stderr, /cleanup-metadata-guard/);
+  }
+
+  const passingFile = path.join(tempRoot, "passing.json");
+  await writeFile(
+    passingFile,
+    `${JSON.stringify(
+      {
+        ...baseInput,
+        statusChecks: [
+          { bucket: "pass", name: "cleanup-metadata-guard", state: "SUCCESS" },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  const passing = spawnSync(
+    process.execPath,
+    [
+      "--experimental-strip-types",
+      "tools/post-merge-cleanup.ts",
+      "--",
+      "--validate-cleanup-handoff-json-file",
+      passingFile,
+      "--require-cleanup-guard-status",
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.equal(passing.status, 0, passing.stderr);
+  const output = JSON.parse(passing.stdout);
+  assert.equal(
+    output.cleanupMetadataGuardStatus.name,
+    "cleanup-metadata-guard",
+  );
+  assert.equal(output.humanReviewReady, true);
 });
 
 test("bound cleanup plan schema rejects unexpected top-level fields", () => {

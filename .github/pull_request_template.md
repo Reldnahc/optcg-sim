@@ -24,6 +24,9 @@
 Cleanup metadata is a reviewed request, not standalone authority.
 
 - [ ] PR author left exactly one `Post-merge cleanup:` metadata source in the PR body or a durable handoff comment before review handoff.
+- [ ] Cleanup metadata uses the exact source shape below: no markdown fence and no `cleanup:` wrapper.
+- [ ] Cleanup metadata handoff preflight was run against the actual current PR body or selected durable handoff comment, not a copied example or reconstructed local text.
+- [ ] `cleanup-metadata-guard` is present and passing before human review is requested.
 - [ ] Reviewers confirm this metadata matches the reviewed story scope before merge.
 - [ ] The human-controlled merge to `main` authorizes the cleanup metadata snapshot; the workflow computes the metadata source ref for audit.
 - [ ] Equivalent fallback review, if used because merge actor evidence is unavailable, confirms the cleanup metadata source was reviewed before fallback approval.
@@ -32,18 +35,16 @@ Cleanup metadata is a reviewed request, not standalone authority.
 
 Single-story PRs:
 
-```yaml
+<!-- prettier-ignore-start -->
 Post-merge cleanup:
   mode: single
   stories:
     - stories/approved/<STORY-ID>-<slug>.yaml
   branches:
     - <head-branch>
-```
 
 Parent PRs:
 
-```yaml
 Post-merge cleanup:
   mode: parent
   stories:
@@ -52,7 +53,7 @@ Post-merge cleanup:
   branches:
     - <parent-integration-branch>
     - <optional-substory-branch>
-```
+<!-- prettier-ignore-end -->
 
 ## Review
 

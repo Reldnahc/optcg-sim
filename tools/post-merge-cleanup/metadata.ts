@@ -185,9 +185,20 @@ export type WorkflowCleanupEvidenceInput = {
 export type WorkflowCleanupMetadataGuardInput = {
   issueComments: WorkflowIssueCommentInput[];
   pullRequest: Pick<WorkflowPullRequestInput, "body" | "number" | "updatedAt">;
+  statusChecks?: WorkflowStatusCheckInput[];
+};
+
+export type WorkflowStatusCheckInput = {
+  bucket?: string;
+  conclusion?: string;
+  name: string;
+  state?: string;
+  status?: string;
 };
 
 export type WorkflowCleanupMetadataGuardResult = {
+  cleanupMetadataGuardStatus?: WorkflowStatusCheckInput;
+  humanReviewReady?: boolean;
   metadata: CleanupMetadata;
   metadataSource: CleanupMetadataSourceEvidence;
   metadataSourceRef: string;
@@ -276,6 +287,7 @@ export function buildWorkflowCleanupEvidence(
 
 export function validateWorkflowCleanupMetadataGuard(
   input: WorkflowCleanupMetadataGuardInput,
+  options: { requireCleanupMetadataGuardStatus?: boolean } = {},
 ): WorkflowCleanupMetadataGuardResult {
   const candidates = buildMetadataSourceCandidates(input, {
     reportMalformed: true,
@@ -301,6 +313,14 @@ export function validateWorkflowCleanupMetadataGuard(
     metadataSourceRef: selected.sourceRef,
   };
 
+  if (options.requireCleanupMetadataGuardStatus) {
+    const cleanupMetadataGuardStatus = requirePassingCleanupMetadataGuardStatus(
+      input.statusChecks,
+    );
+    result.cleanupMetadataGuardStatus = cleanupMetadataGuardStatus;
+    result.humanReviewReady = true;
+  }
+
   if (selected.metadata.mode === "parent") {
     result.parentLifecycle = buildParentLifecycle({
       evidenceSources: [
@@ -319,6 +339,44 @@ export function validateWorkflowCleanupMetadataGuard(
   }
 
   return result;
+}
+
+function requirePassingCleanupMetadataGuardStatus(
+  statusChecks: WorkflowStatusCheckInput[] | undefined,
+): WorkflowStatusCheckInput {
+  if (statusChecks === undefined) {
+    throw new Error(
+      "Cleanup handoff requires fetched cleanup-metadata-guard status checks.",
+    );
+  }
+
+  const matching = statusChecks.filter(
+    (check) => check.name === "cleanup-metadata-guard",
+  );
+  if (matching.length === 0) {
+    throw new Error(
+      "Missing cleanup-metadata-guard status check for human-review-ready handoff.",
+    );
+  }
+
+  const passing = matching.find(isPassingStatusCheck);
+  if (passing === undefined) {
+    throw new Error(
+      "cleanup-metadata-guard status check must be passing before human-review-ready handoff.",
+    );
+  }
+
+  return passing;
+}
+
+function isPassingStatusCheck(check: WorkflowStatusCheckInput): boolean {
+  return (
+    check.bucket?.toLowerCase() === "pass" ||
+    check.state?.toUpperCase() === "SUCCESS" ||
+    check.conclusion?.toLowerCase() === "success" ||
+    (check.status?.toLowerCase() === "completed" &&
+      check.conclusion?.toLowerCase() === "success")
+  );
 }
 
 function buildMetadataSourceCandidates(

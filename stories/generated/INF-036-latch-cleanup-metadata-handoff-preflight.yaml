@@ -1,0 +1,108 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-036
+epic_id: KICK-001
+title: Latch cleanup metadata handoff preflight
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: generated
+summary: >
+  Close the agent workflow gap where PR authors can provide visually plausible
+  but parser-invalid cleanup metadata and still proceed through review handoff
+  until the cleanup metadata guard fails or a human notices. Add a mechanical
+  pre-handoff latch that validates the actual PR cleanup metadata source and
+  confirms the required remote guard has passed before a PR is described as
+  ready for human review.
+story_boundary: >
+  Own only agent-facing cleanup metadata handoff enforcement, documentation,
+  PR-template guidance, and tests around the exact pre-handoff validation path.
+  Do not redesign cleanup metadata authority, post-merge cleanup execution,
+  story lifecycle semantics, branch deletion policy, or human review
+  requirements.
+allowed_touch_points:
+  - AGENTS.md
+  - .github/pull_request_template.md
+  - .github/branch-protection.md
+  - docs/workflow/parent-integration-branches.md
+  - docs/workflow/review-gate.md
+  - docs/workflow/story-execution.md
+  - docs/workflow/reporting-and-github-sync.md
+  - package.json
+  - tools/post-merge-cleanup.ts
+  - tools/post-merge-cleanup/metadata.ts
+  - tools/post-merge-cleanup/types.ts
+  - tools/post-merge-cleanup/validator.ts
+  - tests/ci/github-workflows.test.mjs
+  - tests/contracts/post-merge-cleanup-*.test.mjs
+  - tests/github/post-merge-cleanup-evidence-builder.test.mjs
+  - tests/github/review-workflow.test.mjs
+  - tests/fixtures/post-merge-cleanup/**
+  - stories/generated/INF-036-latch-cleanup-metadata-handoff-preflight.yaml
+  - stories/approved/INF-036-latch-cleanup-metadata-handoff-preflight.yaml
+  - agent-packets/INF-036.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s010
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 27-spec-driven-story-generation-workflow.s008
+  - 27-spec-driven-story-generation-workflow.s015
+  - 27-spec-driven-story-generation-workflow.s017
+  - 32-codex-agent-integration.s013
+scope:
+  - make the PR author/review handoff checklist require cleanup metadata validation against the actual current PR body or selected durable handoff comment, not a copied example or reconstructed local text
+  - make the required cleanup metadata source shape explicit in agent-facing docs: exact `Post-merge cleanup:` header, indented `mode`, `stories`, and optional `branches`, no markdown fence, and no `cleanup:` wrapper
+  - add or refine a mechanical command path that can be run before AI reviewer handoff and before human-review handoff to validate fetched/current cleanup metadata source input using the same parser as the cleanup metadata guard
+  - add or refine a mechanical handoff-status validation path that consumes remote check/status input and fails unless the `cleanup-metadata-guard` check is present and passing before the PR is described as ready for human review
+  - require handoff docs to use the mechanical status validation path, not a prose claim that the remote guard is green
+  - make the pre-handoff latch fail closed for missing metadata, multiple metadata sources, fenced YAML metadata, metadata wrapped in a `cleanup:` key, malformed indentation, and metadata that names a story or branch outside the reviewed PR scope
+  - keep parent-mode behavior compatible with existing parent lifecycle evidence requirements while making parent PR handoff also wait for the same mechanical cleanup metadata guard status check
+  - update the PR template and workflow docs so authors do not use a markdown heading plus fenced YAML block for cleanup metadata
+  - add regression tests using the CARD-007 failure mode: a visually plausible `## Post-Merge Cleanup` fenced YAML block with `cleanup:` wrapper must fail the handoff validator, while the exact `Post-merge cleanup:` source must pass
+non_scope:
+  - changing post-merge packet completion command semantics
+  - changing cleanup metadata source authority or making arbitrary comments authoritative
+  - relaxing post-merge cleanup validation or pre-merge cleanup metadata guard behavior
+  - changing the human merge-gate approval model
+  - changing branch deletion policy
+  - adding cleanup pull requests
+  - broad GitHub branch-protection redesign or remote ruleset mutation
+  - changing story schema shape
+  - gameplay, engine, replay, server, client, database, or UI behavior
+dependencies:
+  - INF-027I
+  - INF-032
+acceptance_criteria:
+  - agent-facing workflow docs require a cleanup metadata handoff preflight before reviewer handoff, before human review request, and before declaring a PR human-review-ready
+  - the documented preflight validates fetched/current PR body and durable handoff comment input through the repo cleanup metadata parser, and tests prove it does not accept a copied valid local example when the fetched/current PR body is malformed
+  - the documented preflight requires a mechanical remote-status validation input proving the `cleanup-metadata-guard` check is present and green before final handoff language is used
+  - the exact accepted cleanup metadata shape is documented with no markdown fence and no `cleanup:` wrapper
+  - malformed but visually plausible fenced YAML cleanup metadata is rejected by tests and documented as invalid
+  - single-story cleanup metadata remains accepted when it uses the exact source shape and matches the reviewed story scope
+  - parent-mode cleanup metadata remains accepted only when existing parent lifecycle evidence requirements are satisfied
+  - the change does not weaken post-merge cleanup fail-closed validation, metadata binding, packet evidence checks, branch cleanup safety, or human merge-gate requirements
+required_tests:
+  - contract or GitHub workflow test proving a PR body with `## Post-Merge Cleanup`, a fenced YAML block, and a `cleanup:` wrapper fails cleanup handoff validation
+  - contract or GitHub workflow test proving a PR body with exact `Post-merge cleanup:` metadata passes cleanup handoff validation
+  - contract or GitHub workflow test proving the handoff latch validates the fetched/current PR body or durable handoff comment source, and rejects the handoff when that source is malformed even if a separate copied local example would parse
+  - contract or GitHub workflow test proving durable handoff comment metadata is included in the fetched/current source set and remains subject to the exact-source and trusted-author rules
+  - contract or GitHub workflow test proving missing, absent, failed, or pending `cleanup-metadata-guard` status blocks human-review-ready output
+  - contract or GitHub workflow test proving exact cleanup metadata plus a present passing `cleanup-metadata-guard` status permits human-review-ready output
+  - workflow docs test proving reviewer/human-review handoff instructions require running the cleanup metadata preflight against the actual PR metadata source
+  - workflow docs or branch-protection test proving final handoff requires mechanical confirmation that the remote `cleanup-metadata-guard` status check passed
+  - PR template test proving the template shows the exact accepted cleanup metadata shape and does not encourage fenced YAML metadata
+  - parent cleanup regression test proving the latch does not bypass existing parent lifecycle evidence requirements
+  - "`corepack pnpm run test -- tests/github tests/contracts/post-merge-cleanup-contract.test.mjs tests/contracts/post-merge-cleanup-preflight-contract.test.mjs tests/ci/github-workflows.test.mjs`"
+  - "`corepack pnpm run packets:verify`"
+  - full "`corepack pnpm run verify`"
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - do not present this generated story as approval-ready until the exact candidate has a usable per-story story-review result
+  - preserve cleanup metadata as a reviewed request that must bind to trusted checked-in story and packet evidence
+  - keep the cleanup metadata guard running from trusted default-branch or base-branch validation code, not PR-head-modifiable code
+  - fail closed if the actual PR metadata source cannot be fetched or validated during handoff
+  - do not rely on reviewer memory or author prose when a mechanical validation path exists
+ambiguity_policy: fail_and_escalate

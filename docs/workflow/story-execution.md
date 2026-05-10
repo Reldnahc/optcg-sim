@@ -92,6 +92,9 @@ effect-runtime work.
 - Completing a story must use the packet completion command so story movement, packet removal, and manifest cleanup happen as one verified operation.
 - Cleanup metadata is a reviewed request, not standalone authority.
 - PR authors must leave exactly one `Post-merge cleanup:` metadata source in the PR body or a durable handoff comment before PR handoff, reviewer handoff, or human review request.
+- The cleanup metadata source must use the exact parser shape: `Post-merge cleanup:` followed by indented `mode`, `stories`, and optional `branches`; use no markdown fence and no `cleanup:` wrapper.
+- Before reviewer handoff, human review request, or final ready-for-human-review language, validate cleanup metadata against the actual current PR body or selected durable handoff comment, not a copied example or reconstructed local text.
+- When fetched PR metadata and checks are available, use `node --experimental-strip-types tools/post-merge-cleanup.ts -- --validate-cleanup-handoff-json-file <handoff.json> --require-cleanup-guard-status`; the handoff JSON must include the fetched PR body, fetched issue comments, and fetched status checks so `cleanup-metadata-guard` must be present and passing before human review is requested.
 - The cleanup metadata guard is a required pre-merge check for pull requests targeting the default branch and must run from trusted default-branch or base-branch validation code, not PR-head-modifiable workflow or tooling code.
 - Automation must bind cleanup metadata to reviewed PR evidence and trusted checked-in story and packet state before it runs a packet completion command.
 - The human-controlled merge to `main` is the cleanup approval signal. The workflow snapshots the PR-body or durable handoff-comment cleanup metadata at merge time; the computed metadata source ref is audit evidence and humans do not paste that ref into approval text.
