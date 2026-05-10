@@ -1,0 +1,128 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-007
+epic_id: CARD-007
+title: Add real implemented mechanics regression set
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Add a broader real-card regression set for mechanics already implemented and
+  already represented by reviewed real fixtures, proving the cards-produced
+  manifest exercises those mechanics through engine-core without adding new
+  gameplay behavior or broadening unsupported card support.
+story_boundary: >
+  Own only real fixture-backed regression tests and package-local assertions
+  for the closed set of currently reviewed supported real fixture mechanics:
+  EB01-023 On Play draw and OP04-014 Banish. Do not audit or promote additional
+  real cards, add new engine primitives, add new effect definitions for
+  unsupported cards, add custom handlers, add live Poneglyph/Redis/server/client
+  dependencies, or partially support cards whose full printed behavior is not
+  implemented.
+allowed_touch_points:
+  - packages/cards/src/real-card-fixtures.test.ts
+  - packages/engine-core/src/real-card-dsl-runtime.test.ts
+  - packages/engine-core/src/*real-card*.test.ts
+  - packages/engine-core/src/package-boundary.test.ts
+  - tests/integration/real-card-dsl-manifest-smoke.test.mjs
+  - stories/ambiguities/*.md
+  - stories/generated/CARD-007-real-implemented-mechanics-regression-set.yaml
+  - stories/approved/CARD-007-real-implemented-mechanics-regression-set.yaml
+  - agent-packets/CARD-007.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s017
+  - 02-engine-mechanics.s018
+  - 02-engine-mechanics.s019
+  - 02-engine-mechanics.s021
+  - 02-engine-mechanics.s023
+  - 02-engine-mechanics.s025
+  - 02-engine-mechanics.s045
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s001
+  - 05-effect-dsl-reference.s002
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s019
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s003
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s025
+  - 17-first-card-fixtures.s003
+  - 17-first-card-fixtures.s004
+  - 17-first-card-fixtures.s006
+  - 17-first-card-fixtures.s007
+  - 17-first-card-fixtures.s008
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s011
+  - 23-repo-tooling-and-enforcement.s023
+scope:
+  - add a named real implemented mechanics regression matrix for the checked-in cards-produced manifest that records the closed set of supported real fixture cards, initially only EB01-023 and OP04-014, and the exact implemented mechanics they cover
+  - include EB01-023 as the real implemented-dsl On Play draw regression and prove its effect definition remains linked, reviewed, hash-bound, and executable
+  - include OP04-014 as the real Banish keyword regression and prove it uses unchanged printed text, printedKeywords metadata, no effectDefinitionId/customHandlerIds, and existing Banish damage behavior
+  - prove OP04-014 Banish damage moves the damaged Life card to trash, suppresses the Life Trigger decision, and prevents the Trigger's draw effect from happening
+  - add package-local assertions that the implemented real-card regression matrix has no unsupported or partially implemented fixture entries
+  - add package-local assertions that unsupported CARD-005 real effect-shape fixtures remain unsupported, untested for gameplay support, and absent from the manifest effect definition registry
+  - reuse or extend existing engine-core real-card runtime tests as matrix-backed regressions that consume only plain checked-in MatchCardManifest/effect definition data and do not import @optcg/cards
+  - keep any target-K.O., Main Event, Rush, Blocker, Double Attack, Life Trigger, search/reveal, optional, once-per-turn, replacement, permanent modifier, multi-damage, Counter Event, and custom-handler real cards unsupported unless a complete already-reviewed implementation already exists
+  - if the implementation discovers another checked-in real card may be a complete match for an already-implemented mechanic, record that as a follow-up ambiguity or story candidate instead of adding it to this closed regression matrix
+non_scope:
+  - adding new real Poneglyph card fixtures
+  - live Poneglyph, live Redis, server, client, Postgres, browser, or UI requirements in tests or CI
+  - implementing Poneglyph search as production package API
+  - automatic effect generation from printed text
+  - new DSL primitives, target shapes, keyword behavior, custom handlers, optional effects, once-per-turn, replacement effects, search/reveal, Counter Events, Life Trigger changes, permanent modifiers, multi-damage, or new gameplay semantics
+  - marking a real card supported when only part of its printed behavior is implemented
+  - adding effect definitions for unsupported CARD-005 fixture cards
+  - changing engine-core to import @optcg/cards, Poneglyph HTTP, Redis, Postgres, server, client, or UI code
+  - server, client, API, WebSocket, database, deck-builder, or UI integration
+dependencies:
+  - CARD-004
+  - CARD-005
+  - CARD-006
+  - ENG-038
+  - ENG-039
+  - ENG-040
+acceptance_criteria:
+  - a reviewed real implemented mechanics regression matrix exists in package-local tests and contains exactly the closed supported real fixture set for this story, initially EB01-023 and OP04-014
+  - EB01-023 remains the baseline real implemented-dsl On Play draw regression, with support.effectDefinitionId linked to the checked-in effect definition registry entry and executable through engine-core from plain manifest data
+  - OP04-014 remains the baseline real Banish regression, with unchanged printed effect text, matching printedKeywords metadata, no effectDefinitionId/customHandlerIds, and executable Banish damage through engine-core from plain manifest data
+  - OP04-014 Banish runtime coverage explicitly proves the damaged Life card goes to trash, no Trigger decision opens, and the Trigger draw effect does not resolve
+  - unsupported CARD-005 real effect-shape fixtures remain unsupported, untested for gameplay support, without effectDefinitionId/customHandlerIds, and rejected outside allowed dev/sandbox policy
+  - the manifest effect definition registry is not broadened beyond reviewed implemented real fixture definitions
+  - engine-core tests consume only plain checked-in manifest/effect-definition data and never import @optcg/cards or live card-data surfaces
+  - no test requires live Poneglyph, live Redis, server, client, Postgres, browser, or UI code
+  - any possible additional real complete-card match is deferred to a separate story or ambiguity note instead of being added to this closed regression set
+required_tests:
+  - package-local real implemented mechanics matrix test covering supported card IDs, implemented mechanic labels, support status, tested metadata, effectDefinitionId/customHandlerIds, and printed text/hash binding expectations
+  - package-local assertion that every implemented matrix entry exists in the checked-in real-card manifest and no unsupported CARD-005 fixture appears in the implemented matrix
+  - package-local assertion that unsupported CARD-005 fixtures remain unsupported, have tested false, and have no effectDefinitionId/customHandlerIds
+  - package-local assertion that manifest effectDefinitions are limited to reviewed implemented real fixture definitions
+  - engine-core real-card runtime coverage for EB01-023 On Play draw is reused or extended as a matrix-backed regression using only plain checked-in manifest/effect definition data
+  - engine-core real-card runtime coverage for OP04-014 Banish is reused or extended as a matrix-backed regression using only plain checked-in manifest data and explicitly checking trash movement plus Trigger/draw suppression
+  - package-boundary assertion or existing boundary test proving engine-core does not import @optcg/cards, Poneglyph HTTP, Redis, Postgres, server, client, or UI surfaces
+  - "root `corepack pnpm exec vitest run packages/cards/src/real-card-fixtures.test.ts packages/engine-core/src/real-card-dsl-runtime.test.ts`"
+  - "`corepack pnpm run packets:verify`"
+  - "full `corepack pnpm run verify`"
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - use TDD by adding or extending failing real-fixture regression tests before changing test helpers or support assertions
+  - do not add new fixtures, new effect definitions, support metadata, implemented matrix entries, or engine runtime behavior
+  - use live Poneglyph only as an optional local maintainer discovery step; never make tests or CI call live Poneglyph
+  - keep Poneglyph data as printed/display metadata authority only
+  - keep simulator overlay as gameplay implementation authority
+  - fail closed on fixture schema, printed-text completeness, support-status, effect-definition linkage, runtime execution, hidden-information behavior, or deck-validation ambiguity
+  - do not weaken TypeScript strictness
+ambiguity_policy: fail_and_escalate

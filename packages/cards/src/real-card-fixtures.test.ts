@@ -34,6 +34,38 @@ const hasTargetKoEffect = (definition: EffectDefinition): boolean =>
       block.effect.type === "ko" && block.effect.target.type === "choose",
   );
 
+const realImplementedMechanicsRegressionMatrix = [
+  {
+    cardId: "EB01-023",
+    mechanicLabels: ["on-play", "draw-1", "implemented-dsl"],
+    supportStatus: "implemented-dsl",
+    tested: true,
+    effectDefinitionId: "eb01-023.on-play-draw-1",
+    customHandlerIds: undefined,
+    printedText: "[On Play] Draw 1 card.",
+    printedKeywords: [],
+    sourceTextHash:
+      "9706370291413ce10c29335f8d7b2233ca11ea835f0391c8bcf56502018e3dfc",
+    behaviorHash:
+      "ef9afbb71fe73e878b604c566b64043414a3014841c741939d542658def0cf96",
+  },
+  {
+    cardId: "OP04-014",
+    mechanicLabels: ["banish", "keyword", "trigger-suppression"],
+    supportStatus: "vanilla-confirmed",
+    tested: true,
+    effectDefinitionId: undefined,
+    customHandlerIds: undefined,
+    printedText:
+      "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
+    printedKeywords: ["banish"],
+    sourceTextHash:
+      "74379c099a0a16ab7bdf274bf6b5cf38829058b1dcc68ef94707c1bd9baac74e",
+    behaviorHash:
+      "d5651718a7e9545674381b984060cd8b09abae4f58abdbe25ee16f30de3f89f9",
+  },
+] as const;
+
 describe("real card fixtures", () => {
   it("records a broad selected corpus of unsupported real effect-shape fixtures", () => {
     const cardIds = realEffectShapeFixtureCorpus.map((entry) => entry.cardId);
@@ -253,6 +285,44 @@ describe("real card fixtures", () => {
     );
   });
 
+  it("records a closed real implemented mechanics regression matrix for reviewed real fixtures", async () => {
+    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const matrixCardIds = realImplementedMechanicsRegressionMatrix.map(
+      (entry) => entry.cardId,
+    );
+    const unsupportedCard005FixtureIds = new Set<string>(
+      realEffectShapeFixtureCorpus.map((entry) => entry.cardId),
+    );
+
+    expect(matrixCardIds).toEqual(["EB01-023", "OP04-014"]);
+    expect(
+      realImplementedMechanicsRegressionMatrix.map((entry) => [
+        ...entry.mechanicLabels,
+      ]),
+    ).toEqual([
+      ["on-play", "draw-1", "implemented-dsl"],
+      ["banish", "keyword", "trigger-suppression"],
+    ]);
+    expect(new Set(matrixCardIds).size).toBe(matrixCardIds.length);
+
+    for (const entry of realImplementedMechanicsRegressionMatrix) {
+      const card = manifest.cards[toCardId(entry.cardId)];
+
+      expect(card, entry.cardId).toBeDefined();
+      expect(unsupportedCard005FixtureIds.has(entry.cardId)).toBe(false);
+      expect(card?.support.status).toBe(entry.supportStatus);
+      expect(card?.support.tested).toBe(entry.tested);
+      expect(card?.support.effectDefinitionId).toBe(entry.effectDefinitionId);
+      expect(card?.support.customHandlerIds).toBe(entry.customHandlerIds);
+      expect(card?.effectText).toBe(entry.printedText);
+      expect(card?.printedKeywords).toEqual(entry.printedKeywords);
+      expect(card?.support.sourceTextHash).toBe(entry.sourceTextHash);
+      expect(card?.sourceTextHash).toBe(entry.sourceTextHash);
+      expect(card?.support.behaviorHash).toBe(entry.behaviorHash);
+      expect(card?.behaviorHash).toBe(entry.behaviorHash);
+    }
+  });
+
   it("builds the checked-in real-card manifest and keeps raw payload fields out", async () => {
     const built = await buildRealCardDslMatchCardManifest();
     const checkedIn = await loadRealCardDslMatchCardManifestFixture();
@@ -313,6 +383,40 @@ describe("real card fixtures", () => {
       "real-card-poneglyph-fixture-v1",
     );
     expect(op04014?.support.notes).toContain("Banish");
+  });
+
+  it("keeps unsupported CARD-005 fixtures out of the implemented matrix and effect definition registry", async () => {
+    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const matrixCardIds = new Set<string>(
+      realImplementedMechanicsRegressionMatrix.map((entry) => entry.cardId),
+    );
+
+    for (const entry of realEffectShapeFixtureCorpus) {
+      const card = manifest.cards[toCardId(entry.cardId)];
+
+      expect(matrixCardIds.has(entry.cardId)).toBe(false);
+      expect(card, entry.cardId).toBeDefined();
+      expect(card?.support.status).toBe("unsupported");
+      expect(card?.support.tested).toBe(false);
+      expect(card?.support.effectDefinitionId).toBeUndefined();
+      expect(card?.support.customHandlerIds).toBeUndefined();
+    }
+
+    const expectedEffectDefinitionIds =
+      realImplementedMechanicsRegressionMatrix.flatMap((entry) =>
+        entry.effectDefinitionId === undefined
+          ? []
+          : [entry.effectDefinitionId],
+      );
+
+    expect(Object.keys(manifest.effectDefinitions ?? {})).toEqual(
+      expectedEffectDefinitionIds,
+    );
+    expect(
+      Object.values(manifest.effectDefinitions ?? {}).map(
+        (definition) => definition.cardId,
+      ),
+    ).toEqual(["EB01-023"]);
   });
 
   it("keeps real target-KO fixture support absent until reviewed Poneglyph text supports it", async () => {

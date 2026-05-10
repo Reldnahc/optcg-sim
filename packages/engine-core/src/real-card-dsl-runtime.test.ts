@@ -9,7 +9,10 @@ import type { CardId, CardInstance, MatchCardManifest } from "@optcg/types";
 import { must, p1, p2 } from "./action-test-fixtures.js";
 import { applyAction } from "./actions.js";
 import { applyDeclareAttack } from "./battle-actions.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+import {
+  effectDefinition,
+  setupAttackState,
+} from "./battle-actions-test-fixtures.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { processEffectRuntime } from "./effect-runtime.js";
 import { targetSelectionQueueState } from "./effect-runtime-queue-processing-test-support.js";
@@ -24,6 +27,34 @@ const repoRoot = path.resolve(
 const plainDataClone = <T>(value: T): T =>
   JSON.parse(JSON.stringify(value)) as T;
 const toCardId = (value: string): CardId => value as CardId;
+
+const realImplementedMechanicsRuntimeMatrix = [
+  {
+    cardId: toCardId("EB01-023"),
+    mechanicLabels: ["on-play", "draw-1", "implemented-dsl"],
+    supportStatus: "implemented-dsl",
+    effectDefinitionId: "eb01-023.on-play-draw-1",
+  },
+  {
+    cardId: toCardId("OP04-014"),
+    mechanicLabels: ["banish", "keyword", "trigger-suppression"],
+    supportStatus: "vanilla-confirmed",
+    effectDefinitionId: undefined,
+  },
+] as const;
+
+const loadPlainRealCardManifest = async (): Promise<MatchCardManifest> => {
+  const manifestFixturePath = path.join(
+    repoRoot,
+    "fixtures/cards/real-card-dsl-match-card-manifest.json",
+  );
+
+  return plainDataClone(
+    JSON.parse(
+      await readFile(manifestFixturePath, "utf8"),
+    ) as MatchCardManifest,
+  );
+};
 
 const removeFieldCardsFromHands = (
   state: ReturnType<typeof targetSelectionQueueState>["state"],
@@ -72,16 +103,40 @@ test("package boundary keeps real-card runtime test free of @optcg/cards and ser
   );
 });
 
+test("plain manifest runtime matrix is closed to EB01-023 and OP04-014", async () => {
+  const plainManifest = await loadPlainRealCardManifest();
+
+  assert.deepEqual(
+    realImplementedMechanicsRuntimeMatrix.map((entry) => entry.cardId),
+    [toCardId("EB01-023"), toCardId("OP04-014")],
+  );
+  assert.deepEqual(
+    realImplementedMechanicsRuntimeMatrix.map((entry) => [
+      ...entry.mechanicLabels,
+    ]),
+    [
+      ["on-play", "draw-1", "implemented-dsl"],
+      ["banish", "keyword", "trigger-suppression"],
+    ],
+  );
+  for (const entry of realImplementedMechanicsRuntimeMatrix) {
+    const card = must(
+      plainManifest.cards[entry.cardId],
+      `${String(entry.cardId)} manifest card`,
+    );
+
+    assert.equal(card.support.status, entry.supportStatus);
+    assert.equal(card.support.tested, true);
+    assert.equal(card.support.effectDefinitionId, entry.effectDefinitionId);
+    assert.equal(card.support.customHandlerIds, undefined);
+  }
+  assert.deepEqual(Object.keys(plainManifest.effectDefinitions ?? {}), [
+    "eb01-023.on-play-draw-1",
+  ]);
+});
+
 test("loads plain checked-in manifest/effect data and executes EB01-023 on-play draw through runtime", async () => {
-  const manifestFixturePath = path.join(
-    repoRoot,
-    "fixtures/cards/real-card-dsl-match-card-manifest.json",
-  );
-  const plainManifest = plainDataClone(
-    JSON.parse(
-      await readFile(manifestFixturePath, "utf8"),
-    ) as MatchCardManifest,
-  );
+  const plainManifest = await loadPlainRealCardManifest();
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");
   const handCard = must(p1State.hand[0], "hand card");
@@ -89,6 +144,12 @@ test("loads plain checked-in manifest/effect data and executes EB01-023 on-play 
   const extraDonSource = must(p1State.costArea[0], "extra DON source");
   const eb01023 = toCardId("EB01-023");
   const ebCard = must(plainManifest.cards[eb01023], "EB01-023 manifest card");
+  const matrixEntry = must(
+    realImplementedMechanicsRuntimeMatrix.find(
+      (entry) => entry.cardId === eb01023,
+    ),
+    "EB01-023 runtime matrix entry",
+  );
   const effectDefinitionId = must(
     ebCard.support.effectDefinitionId,
     "EB01-023 effectDefinitionId",
@@ -98,6 +159,8 @@ test("loads plain checked-in manifest/effect data and executes EB01-023 on-play 
     "EB01-023 effect definition",
   );
 
+  assert.equal(ebCard.support.status, matrixEntry.supportStatus);
+  assert.equal(effectDefinitionId, matrixEntry.effectDefinitionId);
   handCard.cardId = eb01023;
   p1State.costArea.push({
     ...extraDonSource,
@@ -167,15 +230,7 @@ test("loads plain checked-in manifest/effect data and executes EB01-023 on-play 
 });
 
 test("loads cards-produced plain manifest data while resolving synthetic target KO runtime work", async () => {
-  const manifestFixturePath = path.join(
-    repoRoot,
-    "fixtures/cards/real-card-dsl-match-card-manifest.json",
-  );
-  const plainManifest = plainDataClone(
-    JSON.parse(
-      await readFile(manifestFixturePath, "utf8"),
-    ) as MatchCardManifest,
-  );
+  const plainManifest = await loadPlainRealCardManifest();
   const { state } = targetSelectionQueueState();
   const existingManifest = state.cardManifest;
   const targetEntry = must(state.effectQueue[0], "target queue entry");
@@ -259,21 +314,28 @@ test("loads cards-produced plain manifest data while resolving synthetic target 
 });
 
 test("loads OP04-014 from plain manifest data and applies Banish without mutating printed text", async () => {
-  const manifestFixturePath = path.join(
-    repoRoot,
-    "fixtures/cards/real-card-dsl-match-card-manifest.json",
-  );
-  const plainManifest = plainDataClone(
-    JSON.parse(
-      await readFile(manifestFixturePath, "utf8"),
-    ) as MatchCardManifest,
-  );
+  const plainManifest = await loadPlainRealCardManifest();
   const op04014 = toCardId("OP04-014");
   const opCard = must(plainManifest.cards[op04014], "OP04-014 manifest card");
+  const matrixEntry = must(
+    realImplementedMechanicsRuntimeMatrix.find(
+      (entry) => entry.cardId === op04014,
+    ),
+    "OP04-014 runtime matrix entry",
+  );
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   const topLife = must(p2State.life[0], "top life");
+  const triggerLifeId = toCardId("trigger-life");
+  const triggerDefinition = effectDefinition(triggerLifeId, {
+    type: "trigger",
+  });
+  const triggerDefinitionId = "def-trigger-life-draw-1";
+  const triggerDrawDeckTop = must(p2State.deck[0], "trigger draw deck top");
+  const beforeP2DeckLength = p2State.deck.length;
+  const beforeP2HandLength = p2State.hand.length;
+  const beforeP2LifeLength = p2State.life.length;
 
   p1State.leader = {
     ...p1State.leader,
@@ -283,18 +345,34 @@ test("loads OP04-014 from plain manifest data and applies Banish without mutatin
     ...topLife,
     card: {
       ...topLife.card,
-      cardId: toCardId("trigger-life"),
+      cardId: triggerLifeId,
     },
   };
   state.cardManifest.cards = {
     ...state.cardManifest.cards,
     [op04014]: opCard,
-    [toCardId("trigger-life")]: {
+    [triggerLifeId]: {
       ...must(state.cardManifest.cards[topLife.card.cardId], "life card"),
-      cardId: toCardId("trigger-life"),
+      cardId: triggerLifeId,
       triggerText: "[Trigger] Draw 1 card.",
+      support: {
+        behaviorHash: "trigger-life-draw-1-behavior",
+        cardDataVersion: plainManifest.cardDataVersion,
+        cardId: triggerLifeId,
+        effectDefinitionId: triggerDefinitionId,
+        rulesVersion: triggerDefinition.metadata.rulesVersion,
+        sourceTextHash: triggerDefinition.metadata.sourceTextHash,
+        status: "implemented-dsl",
+        tested: true,
+      },
     },
   };
+  state.cardManifest.effectDefinitions = {
+    ...plainManifest.effectDefinitions,
+    [triggerDefinitionId]: triggerDefinition,
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    plainManifest.effectDefinitionsVersion;
   const before = JSON.stringify(state);
 
   const result = applyDeclareAttack(state, {
@@ -313,7 +391,12 @@ test("loads OP04-014 from plain manifest data and applies Banish without mutatin
   const nextP2 = must(result.state.players[p2], "p2 after damage");
 
   assert.equal(opCard.support.status, "vanilla-confirmed");
+  assert.equal(opCard.support.status, matrixEntry.supportStatus);
   assert.equal(opCard.support.tested, true);
+  assert.equal(
+    opCard.support.effectDefinitionId,
+    matrixEntry.effectDefinitionId,
+  );
   assert.equal(
     opCard.effectText,
     "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
@@ -325,11 +408,31 @@ test("loads OP04-014 from plain manifest data and applies Banish without mutatin
   assert.equal(result.state.pendingDecision, undefined);
   assert.equal(JSON.stringify(state), before);
   assert.notEqual(JSON.stringify(result.state), before);
+  assert.equal(nextP2.life.length, beforeP2LifeLength - 1);
   assert.equal(
     nextP2.trash.some((card) => card.instanceId === topLife.card.instanceId),
     true,
   );
-  assert.equal(nextP2.hand.length, p2State.hand.length);
+  assert.equal(nextP2.hand.length, beforeP2HandLength);
+  assert.equal(nextP2.deck.length, beforeP2DeckLength);
+  assert.equal(
+    must(nextP2.deck[0], "top deck after suppressed trigger").instanceId,
+    triggerDrawDeckTop.instanceId,
+  );
+  assert.equal(
+    nextP2.hand.some(
+      (card) => card.instanceId === triggerDrawDeckTop.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "triggerActivated"),
+    false,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "cardDrawn"),
+    false,
+  );
   assert.equal(
     result.state.cardManifest.cards[op04014]?.effectText,
     opCard.effectText,

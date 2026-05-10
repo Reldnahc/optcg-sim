@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-007.md",
+      "storyId": "CARD-007",
+      "storyPath": "stories/approved/CARD-007-real-implemented-mechanics-regression-set.yaml",
+      "storySha256": "488c2c38ad7fd3765c936e5c397699b69bf078a55ca99e819d57924fbd4305ed"
+    }
+  ],
   "version": 1
 }
