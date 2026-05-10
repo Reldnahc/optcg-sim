@@ -444,12 +444,14 @@ export type RealCardFixtureId =
   | "OP01-060"
   | "OP05-091"
   | "EB01-023"
+  | "OP04-014"
   | SelectedEffectShapeFixtureId;
 
 const checkedInCardFixturePathById = {
   "OP01-060": "fixtures/poneglyph/cards/OP01-060.donquixote-doflamingo.json",
   "OP05-091": "fixtures/poneglyph/cards/OP05-091.rebecca.json",
   "EB01-023": "fixtures/poneglyph/cards/EB01-023.edward-weevil.json",
+  "OP04-014": "fixtures/poneglyph/cards/OP04-014.monkey-d-luffy.json",
   ...selectedEffectShapeFixturePathById,
 } as const satisfies Record<RealCardFixtureId, string>;
 
@@ -569,6 +571,9 @@ function createRealCardOverlay(
     support.effectDefinitionId = supportedEffectDefinitionId;
     support.notes =
       "Reviewed real-card fixture with explicit [On Play] Draw 1 card DSL linkage.";
+  } else if (fixtureId === "OP04-014") {
+    support.notes =
+      "Reviewed real-card fixture candidate for complete printed Banish keyword behavior; kept unsupported because the current battle metadata gate rejects real cards with printed effect text and no effect definition.";
   } else {
     support.notes =
       "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported.";

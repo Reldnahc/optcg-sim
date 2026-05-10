@@ -3678,6 +3678,68 @@
         "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
       }
     },
+    "OP04-014": {
+      "attributes": ["strike"],
+      "behaviorHash": "d5651718a7e9545674381b984060cd8b09abae4f58abdbe25ee16f30de3f89f9",
+      "cardId": "OP04-014",
+      "category": "character",
+      "colors": ["red"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Monkey.D.Luffy",
+      "officialFaq": [],
+      "printedKeywords": ["banish"],
+      "released": true,
+      "set": "OP04",
+      "setName": "Kingdoms of Intrigue",
+      "sourceTextHash": "74379c099a0a16ab7bdf274bf6b5cf38829058b1dcc68ef94707c1bd9baac74e",
+      "types": ["Alabasta", "Straw Hat Crew"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP04-014:v0",
+          "label": "Standard",
+          "productId": "ba423e59-2155-4632-b1a4-b00a1b319692",
+          "productName": "Kingdoms of Intrigue",
+          "productSetCode": "OP04",
+          "productSlug": "kingdoms-of-intrigue",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP04-014/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP04-014/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP04-014:v1",
+          "label": "Release Event",
+          "productId": "7d487e6d-4ddd-438d-a2c0-fb06f6f16a51",
+          "productName": "OP04 Release Event",
+          "productSlug": "op04-release-event"
+        }
+      ],
+      "block": "1",
+      "cost": 8,
+      "effectText": "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
+      "power": 9000,
+      "rarity": "UC",
+      "releasedAt": "2023-09-22T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "d5651718a7e9545674381b984060cd8b09abae4f58abdbe25ee16f30de3f89f9",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP04-014",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "74379c099a0a16ab7bdf274bf6b5cf38829058b1dcc68ef94707c1bd9baac74e",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Reviewed real-card fixture candidate for complete printed Banish keyword behavior; kept unsupported because the current battle metadata gate rejects real cards with printed effect text and no effect definition."
+      }
+    },
     "OP04-039": {
       "attributes": ["slash"],
       "behaviorHash": "426355866f217533b042b0516ee89d2802d33741ba18ba2229e747ae7fbe4afc",
@@ -3979,5 +4041,5 @@
       }
     }
   },
-  "manifestHash": "31a6b3b430bacc593af579909c0cb1ea401439f3aa757f7bd58ea98abe042eff"
+  "manifestHash": "4b102c7394d1e080c6f15730617dcdde1bb7dda5a6476c2dc122a248b77a02e3"
 }

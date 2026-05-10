@@ -81,6 +81,7 @@ describe("real card fixtures", () => {
       "OP01-060",
       "OP05-091",
       "EB01-023",
+      "OP04-014",
       ...realEffectShapeFixtureCorpus.map((entry) => entry.cardId),
     ]);
   });
@@ -137,10 +138,30 @@ describe("real card fixtures", () => {
     }
   });
 
+  it("records OP04-014 as a complete Banish keyword candidate that remains blocked by the current battle metadata gate", async () => {
+    const fixture = await loadCheckedInRealPoneglyphFixture("OP04-014");
+    const normalized = normalizePoneglyphCardDetail(fixture);
+
+    expect(fixture.card_number).toBe("OP04-014");
+    expect(fixture.effect).toBe(
+      "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
+    );
+    expect(fixture.trigger).toBeNull();
+    expect(fixture.official_faq).toEqual([]);
+    expect(fixture.variants.map((variant) => variant.errata)).toEqual([[], []]);
+    expect(normalized.printedKeywords).toEqual(["banish"]);
+    expect(normalized.effectText).toBe(fixture.effect);
+    expect(normalized.triggerText).toBeUndefined();
+    expect(normalized.officialFaq).toEqual([]);
+    expect(normalized.errata).toEqual([]);
+    expect(normalized.legality["Extra Regulation"]?.status).toBe("legal");
+  });
+
   it("keeps overlay as gameplay authority and fails closed for unsupported non-vanilla cards in ranked mode", async () => {
     const manifest = await buildRealCardDslMatchCardManifest();
     const unsupported = manifest.cards[toCardId("OP05-091")];
     const implementedDsl = manifest.cards[toCardId("EB01-023")];
+    const blockedBanishCandidate = manifest.cards[toCardId("OP04-014")];
     const selectedUnsupported = realEffectShapeFixtureCorpus.map((entry) => {
       const card = manifest.cards[toCardId(entry.cardId)];
 
@@ -153,6 +174,10 @@ describe("real card fixtures", () => {
     expect(implementedDsl?.support.effectDefinitionId).toBe(
       "eb01-023.on-play-draw-1",
     );
+    expect(blockedBanishCandidate?.support.status).toBe("unsupported");
+    expect(blockedBanishCandidate?.support.tested).toBe(false);
+    expect(blockedBanishCandidate?.support.effectDefinitionId).toBeUndefined();
+    expect(blockedBanishCandidate?.support.customHandlerIds).toBeUndefined();
     for (const card of selectedUnsupported) {
       expect(card?.support.status).toBe("unsupported");
       expect(card?.support.tested).toBe(false);
@@ -163,6 +188,7 @@ describe("real card fixtures", () => {
     const ranked = validateDecklist({
       deck: [
         { cardId: toCardId("OP01-060"), quantity: 1 },
+        { cardId: toCardId("OP04-014"), quantity: 1 },
         { cardId: toCardId("OP05-091"), quantity: 1 },
         { cardId: toCardId("EB01-003"), quantity: 1 },
         { cardId: toCardId("EB01-010"), quantity: 1 },
@@ -177,6 +203,7 @@ describe("real card fixtures", () => {
     const sandbox = validateDecklist({
       deck: [
         { cardId: toCardId("OP01-060"), quantity: 1 },
+        { cardId: toCardId("OP04-014"), quantity: 1 },
         { cardId: toCardId("OP05-091"), quantity: 1 },
         { cardId: toCardId("EB01-003"), quantity: 1 },
         { cardId: toCardId("EB01-010"), quantity: 1 },
@@ -204,6 +231,12 @@ describe("real card fixtures", () => {
         }),
       );
     }
+    expect(ranked.errors).toContainEqual(
+      expect.objectContaining({
+        code: "unsupported-card",
+        cardId: toCardId("OP04-014"),
+      }),
+    );
     expect(sandbox.warnings).toContainEqual(
       expect.objectContaining({
         code: "unsupported-card",
@@ -218,6 +251,12 @@ describe("real card fixtures", () => {
         }),
       );
     }
+    expect(sandbox.warnings).toContainEqual(
+      expect.objectContaining({
+        code: "unsupported-card",
+        cardId: toCardId("OP04-014"),
+      }),
+    );
   });
 
   it("builds the checked-in real-card manifest and keeps raw payload fields out", async () => {
@@ -232,6 +271,7 @@ describe("real card fixtures", () => {
     expect(Object.keys(checkedIn.cards)).toEqual(
       [
         "EB01-023",
+        "OP04-014",
         "OP01-060",
         "OP05-091",
         ...realEffectShapeFixtureCorpus.map((entry) => entry.cardId).sort(),
@@ -255,6 +295,7 @@ describe("real card fixtures", () => {
     const effectDefinition =
       await loadCheckedInEb01023OnPlayDraw1EffectDefinition();
     const eb = manifest.cards[toCardId("EB01-023")];
+    const op04014 = manifest.cards[toCardId("OP04-014")];
 
     expect(realCardDslEffectDefinitionFixturePath).toBe(
       "fixtures/effect-dsl/valid/eb01-023-on-play-draw-1.json",
@@ -267,6 +308,17 @@ describe("real card fixtures", () => {
     expect(
       manifest.effectDefinitions?.[String(eb?.support.effectDefinitionId)],
     ).toEqual(effectDefinition);
+    expect(op04014?.support.status).toBe("unsupported");
+    expect(op04014?.support.effectDefinitionId).toBeUndefined();
+    expect(op04014?.support.customHandlerIds).toBeUndefined();
+    expect(op04014?.support.sourceTextHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(op04014?.support.behaviorHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(op04014?.support.tested).toBe(false);
+    expect(op04014?.support.rulesVersion).toBe("fixture-real-card");
+    expect(op04014?.support.cardDataVersion).toBe(
+      "real-card-poneglyph-fixture-v1",
+    );
+    expect(op04014?.support.notes).toContain("Banish");
   });
 
   it("keeps real target-KO fixture support absent until reviewed Poneglyph text supports it", async () => {
@@ -274,6 +326,7 @@ describe("real card fixtures", () => {
     const unsupportedRealCards = [
       manifest.cards[toCardId("OP01-060")],
       manifest.cards[toCardId("OP05-091")],
+      manifest.cards[toCardId("OP04-014")],
       ...realEffectShapeFixtureCorpus.map(
         (entry) => manifest.cards[toCardId(entry.cardId)],
       ),
@@ -299,6 +352,7 @@ describe("real card fixtures", () => {
         name: "Unsupported Real Card Loadout",
         deck: [
           { cardId: toCardId("OP01-060"), quantity: 1 },
+          { cardId: toCardId("OP04-014"), quantity: 1 },
           { cardId: toCardId("OP05-091"), quantity: 1 },
           { cardId: toCardId("EB01-003"), quantity: 1 },
           { cardId: toCardId("EB01-010"), quantity: 1 },
@@ -325,5 +379,78 @@ describe("real card fixtures", () => {
         }),
       );
     }
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        code: "unsupported-card",
+        cardId: toCardId("OP04-014"),
+      }),
+    );
+  });
+
+  it("rejects OP04-014 in ranked deck and loadout validation until the Banish metadata gate is implemented", async () => {
+    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const leader = manifest.cards[toCardId("OP03-077")];
+    if (leader === undefined) {
+      throw new Error("missing OP03-077 manifest leader");
+    }
+    const manifestWithSupportedLeader = {
+      ...manifest,
+      cards: {
+        ...manifest.cards,
+        [toCardId("OP03-077")]: {
+          ...leader,
+          support: {
+            behaviorHash: leader.behaviorHash,
+            cardDataVersion: "real-card-poneglyph-fixture-v1",
+            cardId: toCardId("OP03-077"),
+            rulesVersion: "fixture-real-card",
+            sourceTextHash: leader.sourceTextHash,
+            status: "vanilla-confirmed",
+            tested: true,
+          },
+        },
+      },
+    };
+    const deck = [
+      { cardId: toCardId("OP03-077"), quantity: 1 },
+      { cardId: toCardId("OP04-014"), quantity: 1 },
+    ];
+
+    const deckResult = validateDecklist({
+      deck,
+      enforceLeaderColorIdentity: false,
+      format: "Extra Regulation",
+      manifest: manifestWithSupportedLeader,
+      mode: "ranked",
+      overlayVersion: "real-card-overlays-v1",
+    });
+    const loadoutResult = validateLoadout({
+      enforceLeaderColorIdentity: false,
+      format: "Extra Regulation",
+      loadout: {
+        loadoutId: toLoadoutId("loadout-real-card-banish"),
+        ownerPlayerId: toPlayerId("player-1"),
+        name: "Blocked Banish Real Card Loadout",
+        deck,
+      },
+      manifest: manifestWithSupportedLeader,
+      mode: "ranked",
+      overlayVersion: "real-card-overlays-v1",
+    });
+
+    expect(deckResult.valid).toBe(false);
+    expect(deckResult.errors).toContainEqual(
+      expect.objectContaining({
+        code: "unsupported-card",
+        cardId: toCardId("OP04-014"),
+      }),
+    );
+    expect(loadoutResult.valid).toBe(false);
+    expect(loadoutResult.errors).toContainEqual(
+      expect.objectContaining({
+        code: "unsupported-card",
+        cardId: toCardId("OP04-014"),
+      }),
+    );
   });
 });

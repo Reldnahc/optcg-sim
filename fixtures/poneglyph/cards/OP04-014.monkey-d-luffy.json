@@ -1,0 +1,105 @@
+{
+  "attribute": ["Strike"],
+  "available_languages": ["en", "ja"],
+  "block": "1",
+  "card_number": "OP04-014",
+  "card_type": "Character",
+  "color": ["Red"],
+  "cost": 8,
+  "counter": null,
+  "effect": "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "not_legal"
+    }
+  },
+  "life": null,
+  "name": "Monkey.D.Luffy",
+  "official_faq": [],
+  "power": 9000,
+  "rarity": "UC",
+  "released": true,
+  "released_at": "2023-09-22T00:00:00.000Z",
+  "set": "OP04",
+  "set_name": "Kingdoms of Intrigue",
+  "trigger": null,
+  "types": ["Alabasta", "Straw Hat Crew"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP04-014/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP04-014/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "10.00",
+        "low_price": "0.06",
+        "market_price": "0.17",
+        "mid_price": "0.24",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/516740/one-piece-card-game-kingdoms-of-intrigue-monkeydluffy-014"
+      },
+      "name": null,
+      "product": {
+        "id": "ba423e59-2155-4632-b1a4-b00a1b319692",
+        "name": "Kingdoms of Intrigue",
+        "released_at": "2023-09-22T00:00:00.000Z",
+        "set_code": "OP04",
+        "slug": "kingdoms-of-intrigue"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 1,
+      "label": "Release Event",
+      "market": {
+        "high_price": "114.99",
+        "low_price": "40.00",
+        "market_price": "24.55",
+        "mid_price": "89.00",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/516843/one-piece-card-game-kingdoms-of-intrigue-pre-release-cards-monkeydluffy"
+      },
+      "name": null,
+      "product": {
+        "id": "7d487e6d-4ddd-438d-a2c0-fb06f6f16a51",
+        "name": "OP04 Release Event",
+        "released_at": "2023-09-15T00:00:00.000Z",
+        "set_code": null,
+        "slug": "op04-release-event"
+      }
+    }
+  ]
+}
