@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-039A.md",
+      "storyId": "ENG-039A",
+      "storyPath": "stories/approved/ENG-039A-targeted-ko-primitive-execution-boundary.yaml",
+      "storySha256": "ce71471d5a0628202e52493f9dfc9e4032bb2040ca765487d3a9171ebf7afe22"
+    }
+  ],
   "version": 1
 }
