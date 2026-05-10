@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SPEC-005.md",
+      "storyId": "SPEC-005",
+      "storyPath": "stories/approved/SPEC-005-authorize-cleanup-scoped-post-merge-verification.yaml",
+      "storySha256": "a11542cdeea6f7f9f63b5429a9a9059350fe75a665463fc664feb3f7689bccb4"
+    }
+  ],
   "version": 1
 }

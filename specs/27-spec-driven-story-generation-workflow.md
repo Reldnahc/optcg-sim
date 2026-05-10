@@ -308,7 +308,7 @@ During that parent-branch window, `agent-packets/active.json` remains a single-s
 
 Before human review is requested on a parent PR, the PR body or a handoff comment should be updated from future-tense review plans to completed-gate evidence: included substory PRs, full-story AI review record, revision response, CI result, repo verification result, remaining human-review requirement, and the post-merge `packets:complete-many` cleanup plan.
 
-A commit that contains only the exact file changes produced by the packet completion command is a generated lifecycle cleanup and does not need a separate reviewer-subagent pass. Run the repo verification command before pushing that cleanup. If cleanup requires any manual edit beyond the command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, it is no longer pure generated cleanup and should receive the normal reviewer-subagent pass before push or merge.
+A commit that contains only the exact file changes produced by the packet completion command is a generated lifecycle cleanup and does not need a separate reviewer-subagent pass; exact packet-completion cleanup may use cleanup-scoped lifecycle verification instead of full repo verification before the direct cleanup push. Cleanup-scoped lifecycle verification must prove metadata binding, packet-completion output, story lifecycle state, active packet state, and committed story metadata remain valid; cleanup that includes any manual edit beyond packet-completion output still requires full repo verification and the normal reviewer-subagent path before push or merge. This includes edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files.
 
 Post-merge cleanup metadata is a reviewed cleanup request, not standalone
 authority to mutate story state. Cleanup automation must bind the requested
@@ -321,7 +321,9 @@ names a story that is not eligible for completion.
 The cleanup workflow must check out trusted `main` or default-branch code, not
 unreviewed pull-request branch code. A direct cleanup commit may be pushed only
 by the dedicated cleanup actor after packet-completion output is proven exact
-and repo-approved verification passes. The automation must not open a cleanup
+and cleanup-scoped lifecycle verification passes. Normal main-branch CI remains
+the broad post-cleanup safety net after the cleanup commit is pushed. The
+automation must not open a cleanup
 pull request. Manual fallback is only for operational failure, not the normal
 path. Branch deletion may run only after packet lifecycle cleanup succeeds and
 only for associated merged, unprotected story or substory branches.

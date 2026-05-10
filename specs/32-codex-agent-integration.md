@@ -240,10 +240,16 @@ review, and post-merge multi-story cleanup.
 
 Pure packet-completion cleanup does not require reviewer-subagent review when the
 commit contains only the exact file changes produced by the packet completion
-command and repo verification passes. If cleanup requires any manual edit beyond
-that command output, including edits to packet files, `agent-packets/active.json`,
-tooling, tests, fixtures, specs, workflow docs, or story files, use the normal
-separate reviewer-subagent review path before pushing or merging.
+command and cleanup-scoped lifecycle verification passes; exact
+packet-completion cleanup may use cleanup-scoped lifecycle verification instead
+of full repo verification before the direct cleanup push. Cleanup-scoped
+lifecycle verification must prove metadata binding, packet-completion output,
+story lifecycle state, active packet state, and committed story metadata remain
+valid; cleanup that includes any manual edit beyond packet-completion output
+still requires full repo verification and the normal reviewer-subagent path
+before push or merge; this includes edits to packet files,
+`agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or
+story files.
 
 Post-merge cleanup metadata is a reviewed cleanup request, not standalone
 authority to mutate story state. Cleanup automation must bind the requested
@@ -256,7 +262,9 @@ names a story that is not eligible for completion.
 The cleanup workflow must check out trusted `main` or default-branch code, not
 unreviewed pull-request branch code. A direct cleanup commit may be pushed only
 by the dedicated cleanup actor after packet-completion output is proven exact
-and repo-approved verification passes. The automation must not open a cleanup
+and cleanup-scoped lifecycle verification passes. Normal main-branch CI remains
+the broad post-cleanup safety net after the cleanup commit is pushed. The
+automation must not open a cleanup
 pull request. Manual fallback is only for operational failure, not the normal
 path. Branch deletion may run only after packet lifecycle cleanup succeeds and
 only for associated merged, unprotected story or substory branches.

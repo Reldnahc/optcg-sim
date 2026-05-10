@@ -1,0 +1,99 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SPEC-005
+epic_id: KICK-001
+title: Authorize cleanup-scoped post-merge verification
+type: specification
+area: docs
+primary_concern: tooling
+priority: high
+status: approved
+summary: >
+  Update the specification authority for exact post-merge packet cleanup so the
+  direct cleanup workflow may run cleanup-scoped lifecycle verification instead
+  of full repo verification after a reviewed PR has already merged.
+story_boundary: >
+  Own only the specification, policy documentation, and authority tests for
+  narrowing verification on exact generated post-merge packet cleanup commits.
+  Do not change GitHub Actions, cleanup tooling, packet lifecycle code, branch
+  deletion behavior, cleanup metadata parsing, or implementation workflow code.
+allowed_touch_points:
+  - specs/23-repo-tooling-and-enforcement.md
+  - specs/26-agent-packet-template.md
+  - specs/27-spec-driven-story-generation-workflow.md
+  - specs/32-codex-agent-integration.md
+  - specs/section-index.json
+  - specs/spec-manifest.json
+  - specs/source-map.md
+  - specs/source-coverage-matrix.md
+  - specs/SPEC_VERSION.md
+  - .github/branch-protection.md
+  - docs/workflow/story-execution.md
+  - docs/workflow/parent-integration-branches.md
+  - tests/contracts/spec-authority-gates.test.mjs
+  - tests/contracts/agent-packet-contract.test.mjs
+  - tests/github/review-workflow.test.mjs
+  - stories/generated/SPEC-005-authorize-cleanup-scoped-post-merge-verification.yaml
+  - stories/approved/SPEC-005-authorize-cleanup-scoped-post-merge-verification.yaml
+  - agent-packets/SPEC-005.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 26-agent-packet-template.s005
+  - 27-spec-driven-story-generation-workflow.s015
+  - 27-spec-driven-story-generation-workflow.s017
+  - 32-codex-agent-integration.s010
+  - 32-codex-agent-integration.s013
+scope:
+  - replace existing authority that requires full repo verification before exact generated post-merge packet cleanup pushes
+  - authorize cleanup-scoped lifecycle verification only for exact packet-completion output after a reviewed PR has merged
+  - define cleanup-scoped lifecycle verification as checks that prove metadata binding, packet completion output, story lifecycle state, active packet state, and committed story metadata remain valid
+  - preserve full repo verification before ordinary PR handoff, human review, non-cleanup protected-branch changes, and any cleanup containing manual edits beyond packet-completion output
+  - preserve trusted default-branch checkout, dedicated cleanup actor, cleanup metadata binding, fail-closed validation, no-cleanup-PR policy, and safe branch deletion constraints
+  - update branch-protection and workflow docs to distinguish exact generated cleanup from manual cleanup edits
+  - add or update authority tests so future workflow stories cannot remove the cleanup-scoped/full-verification distinction silently
+non_scope:
+  - changing `.github/workflows/post-merge-packet-cleanup.yml`
+  - changing cleanup validator, executor, bound plan, or packet lifecycle tooling
+  - changing cleanup metadata syntax or evidence requirements
+  - changing branch deletion logic
+  - changing cleanup actor/token permissions
+  - changing PR CI, story-review, reviewer-subagent review, human review, or pre-merge verification gates
+  - implementing a cleanup-scoped command
+  - changing engine, cards, CLI, server, client, replay, database, gameplay, or UI behavior
+dependencies:
+  - SPEC-004
+  - INF-034
+acceptance_criteria:
+  - specs explicitly allow exact generated post-merge packet cleanup to use cleanup-scoped lifecycle verification instead of full repo verification
+  - specs define cleanup-scoped lifecycle verification tightly enough for a later implementation story to wire it without weakening cleanup safety
+  - specs and docs still require full repo verification for ordinary PR handoff and any cleanup with manual edits beyond packet-completion output
+  - specs and docs preserve the dedicated cleanup actor, trusted checkout, metadata binding, fail-closed cleanup validation, no-cleanup-PR policy, and safe branch deletion constraints from SPEC-004
+  - branch-protection docs distinguish broad CI on the cleanup push from pre-push cleanup-scoped lifecycle checks
+  - authority tests fail if exact cleanup is again required to run full repo verification before push
+  - authority tests fail if manual cleanup edits are allowed without full verification and normal review
+  - generated spec metadata is updated
+required_tests:
+  - update `tests/contracts/spec-authority-gates.test.mjs` to pin cleanup-scoped verification authority and manual-cleanup full-verification requirements
+  - update `tests/contracts/agent-packet-contract.test.mjs` to pin packet-template cleanup verification language
+  - update `tests/github/review-workflow.test.mjs` to pin workflow documentation language for exact generated cleanup versus manual cleanup edits
+  - run `corepack pnpm run specs:generate-metadata`
+  - run `corepack pnpm run specs:verify-metadata`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run typecheck`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate the SPEC-005 packet before implementation
+  - run `corepack pnpm run packets:verify` before implementation and review handoff
+  - stay within allowed_touch_points
+  - parent agent may implement this parent-owned authority edit directly
+  - open the PR before implementation-review
+  - run the implementation-review gate after the PR is opened
+  - do not change workflow code, cleanup tooling code, packet lifecycle code, cleanup credentials, or remote branch-protection settings in this SPEC story
+  - create a separate follow-up INF story after SPEC-005 lands to implement the workflow/tooling change
+ambiguity_policy: fail_and_escalate

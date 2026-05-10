@@ -306,6 +306,16 @@ test("specs authorize only a narrow post-merge packet cleanup bypass", async () 
     assertContainsWords(mergeGateRecommendation, requiredText);
   }
 
+  for (const requiredText of [
+    "packet-completion cleanup may use cleanup-scoped lifecycle verification instead of full repo verification before the direct cleanup push",
+    "Cleanup-scoped lifecycle verification must prove metadata binding, packet-completion output, story lifecycle state, active packet state, and committed story metadata remain valid",
+    "that includes any manual edit beyond packet-completion output still requires full repo verification and the normal reviewer-subagent path before push or merge",
+  ]) {
+    assertContainsWords(mergeGates, requiredText);
+    assertContainsWords(completionChecks, requiredText);
+    assertContainsWords(mergeGateRecommendation, requiredText);
+  }
+
   for (const prohibitedPattern of [
     /arbitrary GitHub Actions workflows to bypass branch protection/i,
     /human users .* use this cleanup bypass/i,
