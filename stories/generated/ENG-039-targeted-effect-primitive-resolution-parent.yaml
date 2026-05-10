@@ -1,0 +1,125 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-039
+epic_id: KICK-001
+title: Targeted effect primitive resolution parent
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Coordinate the first narrow selected-target effect primitive so target-based
+  Main Events can resolve through the existing target-selection path without
+  broadening into unrelated effect families or card-data authority changes.
+story_boundary: >
+  This parent is not directly implementable. It coordinates ENG-039A through
+  ENG-039E on a parent integration branch so the KO target primitive,
+  selectTargets continuation, Main Event integration, real-fixture guardrails,
+  and PlayerView/event/hash regressions land as one reviewed gameplay group.
+allowed_touch_points:
+  - stories/generated/ENG-039*.yaml
+  - stories/approved/ENG-039*.yaml
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s013
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s002
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s020
+  - 05-effect-dsl-reference.s029
+  - 06-visibility-security.s004
+  - 06-visibility-security.s006
+  - 06-visibility-security.s007
+  - 06-visibility-security.s017
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s004
+  - 11-testing-quality.s005
+  - 11-testing-quality.s008
+  - 11-testing-quality.s011
+  - 17-first-card-fixtures.s003
+  - 17-first-card-fixtures.s004
+  - 24-story-schema.s004
+  - 24-story-schema.s016
+  - 27-spec-driven-story-generation-workflow.s015
+  - 27-spec-driven-story-generation-workflow.s017
+scope:
+  - coordinate a parent integration branch for ENG-039A through ENG-039E
+  - resolve exactly one reviewed selected-target primitive shape through existing effect queue and selectTargets decision plumbing
+  - prefer public Character K.O. from a selected target if story-review confirms the current DSL schema and runtime contracts authorize that shape
+  - keep unsupported target shapes fail-closed with no partial mutation
+  - keep cards-produced manifest fixtures as the default integration surface
+  - keep @optcg/engine-core consuming only plain MatchCardManifest data
+  - include at least one real checked-in Poneglyph fixture in the story group, with EB01-023 retained as a baseline real-card DSL regression if useful
+  - add a story-specific real target-effect fixture only if its checked-in Poneglyph payload and reviewed effect text support the exact narrow behavior honestly
+  - record a blocker or ambiguity instead of inventing real card text when no suitable real target-effect fixture can be reviewed
+non_scope:
+  - direct implementation from this parent story
+  - packetizing or activating this parent story as an active implementation story
+  - Counter Events
+  - optional effects
+  - once-per-turn behavior
+  - permanent modifiers
+  - replacement effects
+  - search or reveal effects
+  - server, client, API, WebSocket, database, or UI work
+  - live Poneglyph, live Redis, or live network requirements in tests
+  - engine-core importing @optcg/cards, Poneglyph HTTP, Redis, Postgres, server, client, or UI code
+dependencies:
+  - ENG-038D
+  - CARD-002B
+  - CARD-002D
+  - CARD-004
+child_stories:
+  - id: ENG-039A
+    title: Add targeted KO primitive execution boundary
+    concern: Add the exact public selected-Character KO primitive and fail-closed guards for unsupported target/effect shapes.
+    depends_on: []
+  - id: ENG-039B
+    title: Resume queued effect after selected targets
+    concern: Wire validated selectTargets responses into the reviewed target primitive continuation.
+    depends_on: [ENG-039A]
+  - id: ENG-039C
+    title: Integrate targeted KO with Main Event play
+    concern: Allow supported Main Events with the exact target KO shape through play legality, payment, trash movement, target decision, and resolution.
+    depends_on: [ENG-039A, ENG-039B]
+  - id: ENG-039D
+    title: Add target-effect real-card fixture guardrails
+    concern: Use cards-produced real-fixture coverage honestly while keeping ambiguous real target cards unsupported or blocked.
+    depends_on: [ENG-039C]
+  - id: ENG-039E
+    title: Verify target-effect view event and hash safety
+    concern: Prove target-effect resolution preserves PlayerView safety, event sequencing, deterministic hashes, and engine-core package boundaries.
+    depends_on: [ENG-039C, ENG-039D]
+acceptance_criteria:
+  - ENG-039A through ENG-039E are reviewed as a coherent selected-target primitive group
+  - each child story has a usable per-story story-review result before approval
+  - child PRs target the ENG-039 parent integration branch if the group is approved
+  - the final parent PR proves the target-based Main Event gap from ENG-038D is closed only for the reviewed narrow primitive
+  - unsupported or ambiguous target shapes continue to fail closed without hidden-information leakage or partial mutation
+  - parent PR cleanup metadata lists ENG-039A through ENG-039E, and cleanup is deferred until the parent PR lands on main
+required_tests:
+  - set-level story-review for ENG-039 parent and children
+  - per-story story-review for ENG-039 parent before approval
+  - per-story story-review for ENG-039A through ENG-039E before approval
+  - story-specific tests from every child story
+  - full `corepack pnpm verify` on every child PR and parent PR
+repo_rules:
+  - do not implement ENG-039 directly
+  - use the parent integration branch workflow if this group is approved
+  - keep one active child packet at a time
+  - do not run packet completion for child stories until the parent branch lands on main
+  - require parent PR cleanup metadata for every included child story
+  - use `packets:complete-many` only after the parent PR lands on main or as documented operational fallback
+  - if story-review finds the exact real card behavior ambiguous, record a blocker or ambiguity instead of inventing card text
+ambiguity_policy: fail_and_escalate

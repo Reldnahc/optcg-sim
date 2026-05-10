@@ -1,0 +1,99 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-039D
+epic_id: KICK-001
+title: Add target-effect real-card fixture guardrails
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Keep target-effect coverage tied to honest checked-in real-card fixtures while
+  preserving synthetic runtime tests for the narrow primitive when no reviewed
+  real target card can be safely supported yet.
+story_boundary: >
+  Own only real-fixture guardrails and cards-produced manifest coverage needed
+  for the new target-effect path. Do not invent card text, broaden the card
+  catalog, or change engine-core card-data boundaries.
+allowed_touch_points:
+  - packages/cards/src/real-card-fixtures.ts
+  - packages/cards/src/real-card-fixtures.test.ts
+  - packages/cards/src/representative-fixtures.ts
+  - fixtures/poneglyph/cards/*.json
+  - fixtures/cards/real-card-dsl-match-card-manifest.json
+  - fixtures/effect-dsl/valid/*.json
+  - packages/engine-core/src/real-card-dsl-runtime.test.ts
+  - tests/integration/real-card-dsl-manifest-smoke.test.mjs
+  - docs/workflow/card-fixture-capture.md
+  - stories/ambiguities/*.md
+  - stories/generated/ENG-039D-target-effect-real-card-fixture-guardrails.yaml
+  - stories/approved/ENG-039D-target-effect-real-card-fixture-guardrails.yaml
+  - agent-packets/ENG-039D.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s001
+  - 05-effect-dsl-reference.s002
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s020
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s003
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 17-first-card-fixtures.s003
+  - 17-first-card-fixtures.s004
+  - 17-first-card-fixtures.s007
+  - 17-first-card-fixtures.s008
+scope:
+  - retain EB01-023 as a baseline real-card implemented-dsl manifest regression when useful for cards-produced fixture continuity
+  - use existing checked-in real Poneglyph fixtures and CARD-004 real-card DSL manifest coverage as the baseline for this story group
+  - add one story-specific real target-effect card fixture only if a checked-in validated Poneglyph detail payload and reviewed text can honestly support the exact target KO behavior
+  - if no suitable reviewed real target-effect card is available, record the blocker or ambiguity and keep the real card unsupported or absent while synthetic engine-core data covers the primitive
+  - ensure any added real target-effect fixture has support metadata, sourceTextHash, behaviorHash, and effectDefinitionId linkage reviewed together
+  - ensure engine-core tests consume only the resulting plain manifest data and never import @optcg/cards
+non_scope:
+  - full released-card catalog coverage
+  - live Poneglyph, live Redis, or network requirements in tests or CI
+  - automatic effect generation from printed text
+  - making an ambiguous real card supported
+  - changing engine-core to import @optcg/cards or live card-data surfaces
+  - server, client, API, WebSocket, database, or UI work
+  - new effect primitives beyond the target KO shape implemented by ENG-039A through ENG-039C
+dependencies:
+  - ENG-039C
+  - CARD-003
+  - CARD-004
+acceptance_criteria:
+  - at least one real checked-in Poneglyph fixture participates in the story group's regression coverage
+  - any newly supported real target-effect card is backed by a checked-in validated Poneglyph detail fixture, reviewed effect definition, support.effectDefinitionId linkage, and hermetic tests
+  - if no honest real target-effect fixture is supported, the story records that blocker or ambiguity and keeps runtime target KO coverage synthetic
+  - unsupported real non-vanilla cards remain unsupported and fail closed outside allowed dev or sandbox policy
+  - engine-core real-card tests use only plain manifest/effect definition data
+required_tests:
+  - package-local schema validation for any newly added real Poneglyph fixture
+  - package-local manifest or overlay test proving any target-effect fixture support metadata links to the effect definition registry
+  - engine-core or root integration test proving the cards-produced plain manifest can coexist with the target-effect runtime path without @optcg/cards imports in engine-core
+  - package-local deck/loadout validation rejection test for unsupported real non-vanilla fixture cards when this story adds or updates such a fixture
+  - run corepack pnpm test -- packages/cards
+  - run the engine-core real-card DSL runtime test command
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-039D packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-039 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if the exact real card behavior is ambiguous, stop and record the blocker instead of inventing card text
+ambiguity_policy: fail_and_escalate
