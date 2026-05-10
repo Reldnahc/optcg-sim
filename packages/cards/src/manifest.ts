@@ -82,6 +82,8 @@ type ProjectedSupport = {
   tested: boolean;
 };
 
+type ManifestLegalityRecord = ResolvedCard["legality"][string];
+
 export const deckValidationContractDeferrals = {
   donDeckVariantKey:
     "Loadout.donDeckVariantKey does not identify a DON!! card ID; validation is limited to manifest DON!! variant metadata when present.",
@@ -258,27 +260,16 @@ function applyOverlayBanlist(
   let nextCard = card;
   for (const record of banlist) {
     const existing = nextCard.legality[record.format];
-    assertOverlayBanlistDoesNotLoosenCanonicalLegality(
-      nextCard.cardId,
-      record,
-      existing?.status,
-    );
 
     nextCard = {
       ...nextCard,
       legality: {
         ...nextCard.legality,
-        [record.format]: {
-          ...(existing ?? { status: "legal" }),
-          status:
-            record.status === "legal"
-              ? (existing?.status ?? record.status)
-              : record.status,
-          ...(record.maxCopies !== undefined
-            ? { max_copies: record.maxCopies }
-            : {}),
-          ...(record.reason !== undefined ? { reason: record.reason } : {}),
-        },
+        [record.format]: mergeOverlayBanlistLegality(
+          nextCard.cardId,
+          existing,
+          record,
+        ),
       },
       support:
         record.status === "simulatorBanned"
@@ -290,22 +281,72 @@ function applyOverlayBanlist(
   return nextCard;
 }
 
-function assertOverlayBanlistDoesNotLoosenCanonicalLegality(
+function mergeOverlayBanlistLegality(
   cardId: CardId,
+  existing: ManifestLegalityRecord | undefined,
   record: BanlistRecord,
+): ManifestLegalityRecord {
+  const maxCopies = getStricterMaxCopies(
+    existing?.max_copies,
+    record.maxCopies,
+  );
+  const merged: ManifestLegalityRecord = {
+    ...(existing ?? { status: "legal" }),
+    status: getOverlayBanlistStatus(cardId, existing?.status, record),
+  };
+
+  if (maxCopies !== undefined) {
+    merged.max_copies = maxCopies;
+  }
+
+  if (record.reason !== undefined) {
+    merged.reason = record.reason;
+  }
+
+  return merged;
+}
+
+function getOverlayBanlistStatus(
+  cardId: CardId,
   canonicalStatus: string | undefined,
-): void {
-  if (
-    record.status === "legal" &&
-    canonicalStatus !== undefined &&
-    isIllegalFormatStatus(canonicalStatus)
-  ) {
+  record: BanlistRecord,
+): string {
+  if (record.status === "leaderLocked") {
     throw new Error(
-      `Overlay banlist for ${String(
-        cardId,
-      )} cannot loosen canonical Poneglyph legality ${canonicalStatus} in ${record.format}.`,
+      `Overlay banlist leaderLocked status for ${String(cardId)} has no current validation semantics.`,
     );
   }
+
+  if (canonicalStatus !== undefined && isIllegalFormatStatus(canonicalStatus)) {
+    return canonicalStatus;
+  }
+
+  if (record.status === "restricted" && record.maxCopies === undefined) {
+    throw new Error(
+      `Overlay banlist restricted status for ${String(cardId)} requires maxCopies in ${record.format}.`,
+    );
+  }
+
+  switch (record.status) {
+    case "banned":
+      return "banned";
+    case "legal":
+    case "simulatorBanned":
+      return canonicalStatus ?? "legal";
+    case "restricted":
+      return canonicalStatus ?? "restricted";
+  }
+}
+
+function getStricterMaxCopies(
+  canonicalMaxCopies: number | undefined,
+  overlayMaxCopies: number | undefined,
+): number | undefined {
+  if (canonicalMaxCopies !== undefined && overlayMaxCopies !== undefined) {
+    return Math.min(canonicalMaxCopies, overlayMaxCopies);
+  }
+
+  return canonicalMaxCopies ?? overlayMaxCopies;
 }
 
 function validateDeckEntry(

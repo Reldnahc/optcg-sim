@@ -125,6 +125,13 @@ const validate = (
     overlayVersion: baseVersions.overlayVersion,
   });
 
+const hasError = (
+  result: ReturnType<typeof validateDecklist>,
+  code: string,
+  cardId: CardId,
+): boolean =>
+  result.errors.some((error) => error.code === code && error.cardId === cardId);
+
 const createLoadout = (
   deck: readonly DecklistEntry[],
   overrides: Partial<Loadout> = {},
@@ -631,37 +638,177 @@ describe("deck validation", () => {
     );
   });
 
-  it("fails closed when an overlay legal banlist record would loosen a Poneglyph-banned card", () => {
+  it("does not let overlay legal loosen a Poneglyph-banned card", () => {
+    const leader = createResolvedCard(toCardId("OP01-038"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
     const card = createResolvedCard(toCardId("OP01-031"), {
       legality: { standard: { status: "banned", max_copies: 0 } },
     });
-
-    expect(() =>
-      buildManifest(
-        [card],
-        {},
-        {
-          [card.cardId]: {
-            banlist: [
-              {
-                cardId: card.cardId,
-                effectiveFrom: "2026-05-09",
-                format: "standard",
-                status: "legal",
-              },
-            ],
-            cardId: card.cardId,
-            support: card.support,
-          },
+    const manifest = buildManifest(
+      [leader, card],
+      {},
+      {
+        [card.cardId]: {
+          banlist: [
+            {
+              cardId: card.cardId,
+              effectiveFrom: "2026-05-09",
+              format: "standard",
+              status: "legal",
+            },
+          ],
+          cardId: card.cardId,
+          support: card.support,
         },
-      ),
-    ).toThrow(/cannot loosen canonical Poneglyph legality/u);
+      },
+    );
+
+    expect(manifest.cards[card.cardId]?.legality["standard"]?.status).toBe(
+      "banned",
+    );
+    const result = validate(
+      [
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: card.cardId, quantity: 1 },
+      ],
+      manifest,
+    );
+
+    expect(result.valid).toBe(false);
+    expect(hasError(result, "format-illegal-card", card.cardId)).toBe(true);
   });
 
-  it("fails closed when an overlay legal banlist record would loosen a Poneglyph not_legal card", () => {
+  it("does not let overlay legal loosen a Poneglyph not_legal card", () => {
+    const leader = createResolvedCard(toCardId("OP01-039"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
     const card = createResolvedCard(toCardId("OP01-032"), {
       legality: { standard: { status: "not_legal" } },
     });
+    const manifest = buildManifest(
+      [leader, card],
+      {},
+      {
+        [card.cardId]: {
+          banlist: [
+            {
+              cardId: card.cardId,
+              effectiveFrom: "2026-05-09",
+              format: "standard",
+              status: "legal",
+            },
+          ],
+          cardId: card.cardId,
+          support: card.support,
+        },
+      },
+    );
+
+    expect(manifest.cards[card.cardId]?.legality["standard"]?.status).toBe(
+      "not_legal",
+    );
+    const result = validate(
+      [
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: card.cardId, quantity: 1 },
+      ],
+      manifest,
+    );
+
+    expect(result.valid).toBe(false);
+    expect(hasError(result, "format-illegal-card", card.cardId)).toBe(true);
+  });
+
+  it("does not let overlay restricted loosen a Poneglyph-banned card", () => {
+    const leader = createResolvedCard(toCardId("OP01-033"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const card = createResolvedCard(toCardId("OP01-034"), {
+      legality: { standard: { status: "banned", max_copies: 0 } },
+    });
+    const manifest = buildManifest(
+      [leader, card],
+      {},
+      {
+        [card.cardId]: {
+          banlist: [
+            {
+              cardId: card.cardId,
+              effectiveFrom: "2026-05-09",
+              format: "standard",
+              maxCopies: 1,
+              status: "restricted",
+            },
+          ],
+          cardId: card.cardId,
+          support: card.support,
+        },
+      },
+    );
+    const manifestCard = manifest.cards[card.cardId];
+
+    expect(manifestCard?.legality["standard"]?.status).toBe("banned");
+    const result = validate(
+      [
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: card.cardId, quantity: 1 },
+      ],
+      manifest,
+    );
+
+    expect(result.valid).toBe(false);
+    expect(hasError(result, "format-illegal-card", card.cardId)).toBe(true);
+  });
+
+  it("does not let overlay maxCopies raise a canonical lower copy limit", () => {
+    const leader = createResolvedCard(toCardId("OP01-035"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const card = createResolvedCard(toCardId("OP01-036"), {
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const manifest = buildManifest(
+      [leader, card],
+      {},
+      {
+        [card.cardId]: {
+          banlist: [
+            {
+              cardId: card.cardId,
+              effectiveFrom: "2026-05-09",
+              format: "standard",
+              maxCopies: 4,
+              status: "restricted",
+            },
+          ],
+          cardId: card.cardId,
+          support: card.support,
+        },
+      },
+    );
+
+    expect(manifest.cards[card.cardId]?.legality["standard"]?.max_copies).toBe(
+      1,
+    );
+    const result = validate(
+      [
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: card.cardId, quantity: 2 },
+      ],
+      manifest,
+    );
+
+    expect(result.valid).toBe(false);
+    expect(hasError(result, "copy-limit-exceeded", card.cardId)).toBe(true);
+  });
+
+  it("fails closed on overlay leaderLocked banlist records without validation semantics", () => {
+    const card = createResolvedCard(toCardId("OP01-037"));
 
     expect(() =>
       buildManifest(
@@ -674,7 +821,7 @@ describe("deck validation", () => {
                 cardId: card.cardId,
                 effectiveFrom: "2026-05-09",
                 format: "standard",
-                status: "legal",
+                status: "leaderLocked",
               },
             ],
             cardId: card.cardId,
@@ -682,7 +829,7 @@ describe("deck validation", () => {
           },
         },
       ),
-    ).toThrow(/cannot loosen canonical Poneglyph legality/u);
+    ).toThrow(/leaderLocked.*validation semantics/u);
   });
 });
 
