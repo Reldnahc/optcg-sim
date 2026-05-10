@@ -1,0 +1,133 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-002
+epic_id: CARD-002
+title: Cards-produced manifest adoption parent
+type: implementation
+area: cards
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Coordinate the adoption of @optcg/cards-produced MatchCardManifest fixtures as
+  the default local integration surface for engine, CLI, hidden-info, and future
+  effect-runtime stories while keeping engine-core isolated from card-data
+  adapter, live network, cache, server, client, and UI code.
+story_boundary: >
+  This parent is not directly implementable. It coordinates CARD-002A through
+  CARD-002H on a parent integration branch so manifest fixture policy,
+  representative cards-produced fixtures, package-boundary checks, CLI smoke,
+  hidden-info regressions, future-story guidance, and narrow adoption hardening
+  land as one reviewed adoption group.
+allowed_touch_points:
+  - stories/generated/CARD-002*.yaml
+  - stories/approved/CARD-002*.yaml
+spec_refs:
+  - 04-effect-runtime.s002
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s017
+  - 06-visibility-security.s002
+  - 06-visibility-security.s004
+  - 06-visibility-security.s017
+  - 09-card-data-and-support-policy.s004
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 18-acceptance-tests.s004
+  - 18-acceptance-tests.s009
+  - 18-acceptance-tests.s011
+  - 19-poneglyph-api-contract.s002
+  - 19-poneglyph-api-contract.s007
+  - 19-poneglyph-api-contract.s011
+  - 19-poneglyph-api-contract.s012
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 24-story-schema.s004
+  - 24-story-schema.s016
+  - 27-spec-driven-story-generation-workflow.s015
+scope:
+  - coordinate a parent integration branch for CARD-002A through CARD-002H
+  - adopt cards-produced MatchCardManifest fixtures as the default local integration surface
+  - keep @optcg/engine-core consuming only plain MatchCardManifest and resolved card data
+  - keep @optcg/engine-core free of @optcg/cards, live Poneglyph, Redis, Postgres, server, client, and UI imports
+  - require root integration tests to be the only tests that may combine @optcg/cards and @optcg/engine-core in one process
+  - require engine package tests to load only plain fixture data when they need card-backed manifests
+  - keep live Poneglyph and live Redis out of tests and CI
+  - require unsupported gameplay status to remain honest in representative fixtures
+  - require synthetic one-off manifests to be justified in the story or PR when a narrow edge case cannot use the representative fixture
+non_scope:
+  - direct implementation from this parent story
+  - packetizing or activating this parent story as an active implementation story
+  - creating @optcg/cards from scratch
+  - broad changes to the Poneglyph adapter foundation
+  - live match-server integration
+  - platform API endpoints
+  - deck builder UI
+  - client card search
+  - WebSocket protocol changes
+  - Postgres writes
+  - live Redis requirements
+  - live Poneglyph requirements in tests or CI
+  - full released-card catalog support
+  - broad replay fixture rewrite
+  - new gameplay semantics
+  - new effect primitives
+  - engine-core importing @optcg/cards
+dependencies:
+  - CARD-001
+child_stories:
+  - id: CARD-002A
+    title: Document cards-produced manifest adoption policy
+    concern: Define fixture policy and package-boundary rules for cards-produced manifests.
+    depends_on: []
+  - id: CARD-002B
+    title: Produce representative cards manifest fixture
+    concern: Build a stable MatchCardManifest fixture from @optcg/cards representative inputs and simulator overlays.
+    depends_on: [CARD-002A]
+  - id: CARD-002C
+    title: Add root engine manifest integration smoke
+    concern: Prove @optcg/cards can produce a manifest that engine-core consumes through createInitialState without engine-core importing @optcg/cards.
+    depends_on: [CARD-002B]
+  - id: CARD-002D
+    title: Reinforce engine-core card boundary tests
+    concern: Keep engine-core isolated from @optcg/cards and live card-data surfaces while allowing plain fixture data.
+    depends_on: [CARD-002B]
+  - id: CARD-002E
+    title: Add CLI local manifest smoke
+    concern: Let CLI smoke tests boot from a checked-in local representative manifest fixture without live Poneglyph or Redis.
+    depends_on: [CARD-002B]
+  - id: CARD-002F
+    title: Add cards-backed PlayerView hidden-info regression
+    concern: Prove cards-backed PlayerView output does not expose full manifest data or hidden card identities.
+    depends_on: [CARD-002B]
+  - id: CARD-002G
+    title: Add future effect story manifest guidance
+    concern: Guide upcoming effect-runtime stories to use the representative manifest by default and justify synthetic one-off manifests.
+    depends_on: [CARD-002A, CARD-002B]
+  - id: CARD-002H
+    title: Harden card manifest adoption validation
+    concern: Add narrow fail-closed adoption checks for duplicate manifest cards, overlay disagreement, and banlist validation behavior.
+    depends_on: [CARD-002B]
+acceptance_criteria:
+  - CARD-002A through CARD-002H are reviewed as a coherent card-manifest adoption group
+  - each child story has a usable per-story story-review result before approval
+  - child PRs target the CARD-002 parent integration branch if the group is approved
+  - parent PR integration review confirms the adoption group composes without server, client, database, protocol, UI, or gameplay scope creep
+  - parent PR cleanup metadata lists CARD-002A through CARD-002H, and durable parent lifecycle evidence binds the changed non-packetized CARD-002 parent story for closeout
+  - post-merge cleanup completes CARD-002A through CARD-002H and bound CARD-002 parent closeout only after the parent branch lands on main
+required_tests:
+  - set-level story-review for CARD-002 parent and children
+  - per-story story-review for CARD-002 parent before approval
+  - per-story story-review for CARD-002A through CARD-002H before approval
+  - story-specific tests from every child story
+  - full `corepack pnpm verify` on every child PR and parent PR
+repo_rules:
+  - do not implement CARD-002 directly
+  - use the parent integration branch workflow if this group is approved
+  - keep one active child packet at a time
+  - do not run packet completion for child stories until the parent branch lands on main
+  - require parent PR cleanup metadata for every included child story and reviewed closeout evidence binding the changed non-packetized CARD-002 parent story
+  - use `packets:complete-many` as the operational cleanup mechanism for child cleanup and bound parent closeout after merge to main
+  - if CARD-001 outputs are missing, unstable, or not cleaned up, record the dependency blocker instead of inventing missing APIs
+ambiguity_policy: fail_and_escalate

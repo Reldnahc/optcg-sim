@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import {
   createInitialState,
   hashCanonicalStateValue,
@@ -19,6 +20,8 @@ export interface BootSummary {
   status: GameState["status"]["type"];
   hasPendingDecision: boolean;
   stateHash: string;
+  manifestHash: string;
+  cardCount: number;
 }
 
 export interface BootFixtureMatchResult {
@@ -27,9 +30,15 @@ export interface BootFixtureMatchResult {
   summary: BootSummary;
 }
 
+export interface BootLocalManifestFixtureMatchOptions {
+  manifestPath: string;
+}
+
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
 const createdAt = "2026-05-04T00:00:00.000Z";
+const representativeLeaderCardId = "OP01-060" as CardId;
+const representativeCharacterCardId = "OP05-091" as CardId;
 
 const toCardId = (value: string): CardId => value as CardId;
 
@@ -163,7 +172,162 @@ const summarizeBootState = (
   status: state.status.type,
   hasPendingDecision: state.pendingDecision !== undefined,
   stateHash,
+  manifestHash: state.cardManifest.manifestHash,
+  cardCount: Object.keys(state.cardManifest.cards).length,
 });
+
+type JsonRecord = Record<string, unknown>;
+
+const isRecord = (value: unknown): value is JsonRecord =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const readManifestString = (record: JsonRecord, key: string): string => {
+  const value = record[key];
+  if (typeof value !== "string") {
+    throw new Error(`CLI local manifest fixture ${key} must be a string.`);
+  }
+  return value;
+};
+
+const readManifestRecord = (record: JsonRecord, key: string): JsonRecord => {
+  const value = record[key];
+  if (!isRecord(value)) {
+    throw new Error(`CLI local manifest fixture ${key} must be an object.`);
+  }
+  return value;
+};
+
+const readManifestCard = (
+  cards: JsonRecord,
+  cardId: CardId,
+  expectedCategory: ResolvedCard["category"],
+): ResolvedCard => {
+  const value = cards[cardId];
+  if (!isRecord(value)) {
+    throw new Error(
+      `CLI local manifest fixture card ${String(cardId)} must be an object.`,
+    );
+  }
+  const actualCardId = readManifestString(value, "cardId");
+  if (actualCardId !== cardId) {
+    throw new Error(
+      `CLI local manifest fixture card ${String(cardId)} has mismatched cardId.`,
+    );
+  }
+  const category = readManifestString(value, "category");
+  if (category !== expectedCategory) {
+    throw new Error(
+      `CLI local manifest fixture card ${String(cardId)} category must be ${expectedCategory}.`,
+    );
+  }
+  readManifestRecord(value, "support");
+  readManifestString(value, "name");
+
+  return value as unknown as ResolvedCard;
+};
+
+export const loadLocalMatchCardManifestFixture = (
+  manifestPath: string,
+): MatchCardManifest => {
+  if (!existsSync(manifestPath)) {
+    throw new Error(`CLI local manifest fixture not found: ${manifestPath}`);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as unknown;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `CLI local manifest fixture could not be parsed: ${manifestPath}: ${message}`,
+    );
+  }
+
+  if (!isRecord(parsed)) {
+    throw new Error("CLI local manifest fixture root must be an object.");
+  }
+
+  const cards = readManifestRecord(parsed, "cards");
+  const leader = readManifestCard(cards, representativeLeaderCardId, "leader");
+  const character = readManifestCard(
+    cards,
+    representativeCharacterCardId,
+    "character",
+  );
+  const source = readManifestString(parsed, "source");
+  if (
+    source !== "poneglyph" &&
+    source !== "poneglyph-fixture" &&
+    source !== "manual-test"
+  ) {
+    throw new Error("CLI local manifest fixture source is unsupported.");
+  }
+
+  return {
+    manifestHash: readManifestString(parsed, "manifestHash"),
+    source,
+    cardDataVersion: readManifestString(parsed, "cardDataVersion"),
+    effectDefinitionsVersion: readManifestString(
+      parsed,
+      "effectDefinitionsVersion",
+    ),
+    customHandlerVersion: readManifestString(parsed, "customHandlerVersion"),
+    banlistVersion: readManifestString(parsed, "banlistVersion"),
+    cards: {
+      [representativeLeaderCardId]: leader,
+      [representativeCharacterCardId]: character,
+    },
+    createdAt: readManifestString(parsed, "createdAt"),
+  };
+};
+
+export const bootLocalManifestFixtureMatch = ({
+  manifestPath,
+}: BootLocalManifestFixtureMatchOptions): BootFixtureMatchResult => {
+  const manifest = loadLocalMatchCardManifestFixture(manifestPath);
+  const p1Deck = Array.from(
+    { length: 14 },
+    () => representativeCharacterCardId,
+  );
+  const p2Deck = Array.from(
+    { length: 14 },
+    () => representativeCharacterCardId,
+  );
+
+  const setupState = createInitialState({
+    matchId: "cli-local-manifest-fixture-match" as MatchId,
+    firstPlayerId: p1,
+    rngSeed: "cli-local-manifest-fixture-seed",
+    playerOrder: [p1, p2],
+    leaderCardIds: {
+      [p1]: representativeLeaderCardId,
+      [p2]: representativeLeaderCardId,
+    },
+    leaderLifeCounts: {
+      [p1]: 5,
+      [p2]: 5,
+    },
+    deckCardIds: {
+      [p1]: p1Deck,
+      [p2]: p2Deck,
+    },
+    donDeckCardIds: {
+      [p1]: [],
+      [p2]: [],
+    },
+    cardManifest: manifest,
+    shuffleDecks: false,
+  });
+  const started = startMulliganFlow(setupState);
+  assertSuccessfulEngineResult(started);
+
+  const stateHash = hashCanonicalStateValue(started.state);
+  return {
+    state: started.state,
+    stateHash,
+    summary: summarizeBootState(started.state, stateHash),
+  };
+};
 
 export const bootFixtureMatch = (): BootFixtureMatchResult => {
   const p1Deck = fixtureDeck("p1");

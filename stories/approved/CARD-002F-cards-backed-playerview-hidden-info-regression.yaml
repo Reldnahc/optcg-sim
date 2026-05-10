@@ -1,0 +1,69 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-002F
+epic_id: CARD-002
+title: Add cards-backed PlayerView hidden-info regression
+type: implementation
+area: security
+primary_concern: visibility
+priority: high
+status: approved
+summary: >
+  Add hidden-info regression coverage proving PlayerView output from a
+  cards-backed manifest state does not expose full MatchCardManifest data,
+  opponent hidden card identities, deck order, face-down Life identity, private
+  effect registry internals, or private decision candidates.
+story_boundary: >
+  Own hidden-info regression tests for cards-backed manifests only. Do not
+  change gameplay semantics, server protocol, client rendering, UI, replay
+  fixtures, or card adapter behavior except for narrow test fixture use.
+allowed_touch_points:
+  - tests/hidden-info/**
+  - tests/integration/**
+  - fixtures/hidden-info/**
+  - stories/generated/CARD-002F-cards-backed-playerview-hidden-info-regression.yaml
+  - stories/approved/CARD-002F-cards-backed-playerview-hidden-info-regression.yaml
+  - agent-packets/CARD-002F.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s021
+  - 04-effect-runtime.s017
+  - 06-visibility-security.s002
+  - 06-visibility-security.s004
+  - 06-visibility-security.s017
+  - 06-visibility-security.s021
+  - 18-acceptance-tests.s004
+  - 18-acceptance-tests.s009
+  - 09-card-data-and-support-policy.s013
+scope:
+  - create a cards-backed state using the representative manifest fixture or plain data derived from it
+  - assert PlayerView does not expose the full MatchCardManifest
+  - assert opponent hand and deck identity/order remain hidden
+  - assert face-down Life identity remains hidden from the opponent
+  - assert private effect registry internals and private decision candidates are not exposed
+  - keep any root integration import of @optcg/cards outside engine-core package tests
+  - do not edit production filter or shared type contracts in this story unless exact per-story review records a blocker and the story is revised before approval
+non_scope:
+  - client rendering
+  - server protocol or WebSocket payload changes
+  - replay fixture rewrite
+  - new hidden-info filtering semantics beyond regression coverage
+  - gameplay effect implementation
+  - engine-core imports from @optcg/cards
+dependencies:
+  - CARD-001
+  - CARD-002B
+acceptance_criteria:
+  - hidden-info regression uses cards-backed manifest data
+  - PlayerView output excludes full manifest and hidden card identities
+  - regression covers private effect registry internals and private decision candidates when present in current contracts
+required_tests:
+  - cards-backed PlayerView hidden-info regression
+  - "`corepack pnpm run test:hidden-info`"
+  - full `corepack pnpm verify`
+repo_rules:
+  - fail closed on hidden-information ambiguity
+  - do not expose raw GameState or manifest internals in PlayerView
+  - do not import @optcg/cards from engine-core package tests
+ambiguity_policy: fail_and_escalate

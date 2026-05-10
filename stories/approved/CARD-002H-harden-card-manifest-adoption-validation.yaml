@@ -1,0 +1,76 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-002H
+epic_id: CARD-002
+title: Harden card manifest adoption validation
+type: implementation
+area: cards
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Add narrow fail-closed validation around cards-produced manifest adoption so
+  duplicate manifest card IDs, contradictory overlay effect metadata, and
+  banlist behavior cannot be silently misrepresented in downstream fixtures.
+story_boundary: >
+  Own only the narrow validation hardening needed by manifest adoption. Do not
+  redesign the CARD-001 adapter foundation, add live Poneglyph behavior, add
+  live Redis behavior, broaden catalog support, or change gameplay semantics.
+allowed_touch_points:
+  - packages/cards/**
+  - fixtures/**
+  - tests/contracts/**
+  - stories/generated/CARD-002H-harden-card-manifest-adoption-validation.yaml
+  - stories/approved/CARD-002H-harden-card-manifest-adoption-validation.yaml
+  - agent-packets/CARD-002H.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 09-card-data-and-support-policy.s009
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s021
+  - 09-card-data-and-support-policy.s023
+  - 18-acceptance-tests.s011
+  - 19-poneglyph-api-contract.s010
+  - 19-poneglyph-api-contract.s012
+  - 23-repo-tooling-and-enforcement.s006
+scope:
+  - ensure duplicate card IDs in manifest input fail closed instead of silently overwriting entries
+  - ensure overlay top-level effectDefinitionId and customHandlerIds cannot disagree with support.effectDefinitionId and support.customHandlerIds
+  - ensure overlay banlist behavior is enforced by deck or loadout validation where current contracts define the semantics
+  - if current contracts do not define overlay-banlist semantics narrowly enough, stop and record an ambiguity or blocker before implementation instead of deferring in an implementation note
+  - add deterministic tests for each adoption hardening behavior
+  - keep the hardening scoped to existing @optcg/cards APIs unless story-review identifies a narrow adoption blocker
+non_scope:
+  - broad adapter redesign
+  - new Poneglyph schema fields beyond existing validated fixtures
+  - live Poneglyph or Redis requirements
+  - engine-core imports from @optcg/cards
+  - server, client, UI, or database behavior
+  - new gameplay semantics or effect primitives
+dependencies:
+  - CARD-001D
+  - CARD-001E
+  - CARD-002B
+acceptance_criteria:
+  - duplicate manifest card IDs fail closed with a clear validation error
+  - contradictory overlay effect metadata fails closed with a clear validation error
+  - banlist behavior is enforced by validation where current contracts define the semantics
+  - if banlist semantics are not currently defined narrowly enough, implementation stops with a recorded ambiguity or blocker instead of merging a deferral
+  - tests prove the above behaviors without live Poneglyph or Redis
+required_tests:
+  - package-local duplicate manifest card ID validation test
+  - package-local overlay effect metadata disagreement validation test
+  - package-local banlist enforcement validation test where current contracts define overlay-banlist semantics
+  - no banlist deferral test may merge; undefined overlay-banlist semantics must stop implementation with a recorded ambiguity or blocker
+  - root `corepack pnpm test -- packages/cards`
+  - full `corepack pnpm verify`
+repo_rules:
+  - fail closed on validation ambiguity
+  - do not silently broaden this story into new adapter features
+  - do not weaken TypeScript strictness
+ambiguity_policy: fail_and_escalate

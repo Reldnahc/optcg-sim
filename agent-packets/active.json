@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-002H.md",
+      "storyId": "CARD-002H",
+      "storyPath": "stories/approved/CARD-002H-harden-card-manifest-adoption-validation.yaml",
+      "storySha256": "dedbbff7636e9b890c57b551425132e74d8eeed0bb645d15c3467d85d8a08bb5"
+    }
+  ],
   "version": 1
 }

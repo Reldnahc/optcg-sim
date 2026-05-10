@@ -1,0 +1,64 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-002E
+epic_id: CARD-002
+title: Add CLI local manifest smoke
+type: implementation
+area: engine
+primary_concern: cli
+priority: medium
+status: approved
+summary: >
+  Add CLI smoke or boot support for loading a checked-in local representative
+  MatchCardManifest fixture so CLI paths can exercise cards-backed manifests
+  without live Poneglyph, Redis, server, client, or UI integration.
+story_boundary: >
+  Own CLI local fixture manifest smoke only. Do not add live fetch behavior,
+  Redis requirements, server integration, client integration, WebSocket changes,
+  gameplay semantics, or broad CLI feature work.
+allowed_touch_points:
+  - packages/cli/**
+  - tests/cli/**
+  - tests/integration/**
+  - fixtures/**
+  - stories/generated/CARD-002E-cli-local-manifest-smoke.yaml
+  - stories/approved/CARD-002E-cli-local-manifest-smoke.yaml
+  - agent-packets/CARD-002E.md
+  - agent-packets/active.json
+spec_refs:
+  - 09-card-data-and-support-policy.s013
+  - 18-acceptance-tests.s011
+  - 19-poneglyph-api-contract.s012
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+scope:
+  - identify the existing CLI package or smoke-test surface
+  - add the narrowest local fixture manifest load path needed for CLI smoke
+  - prove the CLI path can boot or smoke with the representative manifest fixture from CARD-002B
+  - ensure the CLI smoke does not require live Poneglyph, Redis, server, client, or UI services
+non_scope:
+  - match-server integration
+  - platform API endpoints
+  - WebSocket protocol changes
+  - live card-data fetches
+  - live Redis behavior
+  - deck builder UI or client search
+  - new gameplay actions or semantics
+dependencies:
+  - CARD-001
+  - CARD-002B
+acceptance_criteria:
+  - CLI smoke can use a local representative manifest fixture
+  - smoke fails clearly if the local fixture is absent or malformed
+  - tests run without live Poneglyph or Redis
+required_tests:
+  - package-local CLI smoke proving the CLI boot or command-script path uses the CARD-002B local representative MatchCardManifest fixture
+  - package-local negative CLI smoke proving absent or malformed local manifest fixture fails clearly
+  - root `corepack pnpm test -- packages/cli`
+  - full `corepack pnpm verify`
+repo_rules:
+  - keep CLI behavior local and deterministic
+  - do not introduce live external-service requirements
+  - do not broaden into server, client, or protocol work
+ambiguity_policy: fail_and_escalate
