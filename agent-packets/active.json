@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CARD-003.md",
-      "storyId": "CARD-003",
-      "storyPath": "stories/approved/CARD-003-poneglyph-fixture-capture-helper.yaml",
-      "storySha256": "4301fcf606de497a9dcd60437ded4a8632f25deeab76c6ddb825bb371b6d2b96"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

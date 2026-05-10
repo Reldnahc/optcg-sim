@@ -8,7 +8,7 @@ type: tooling
 area: cards
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Add a package-local helper for maintainers to capture selected live Poneglyph
   card-detail responses into deterministic checked-in fixtures without making
