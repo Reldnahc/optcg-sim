@@ -622,3 +622,15 @@ Section Ref: `02-engine-mechanics.s044`
 - Effects triggered during damage processing wait until all damage processing finishes.
 - Effects triggered by card/effect activation resolve after the triggering effect finishes.
 - Start-of-game effects can modify the deck before opening draw.
+
+### Parenthetical explanatory notes
+
+<!-- SECTION_REF: 02-engine-mechanics.s045 -->
+
+Section Ref: `02-engine-mechanics.s045`
+
+Comprehensive Rules 2-8-4, 2-8-4-1, and 2-8-4-2 define parenthetical explanatory notes for keyword effects and other card effects. These explanatory notes provide further explanation or make an effect easier to understand, but they do not influence gameplay.
+
+For engine support gates, support and classification logic may ignore parenthetical explanatory notes when deciding whether remaining printed text requires simulator implementation. This is a classification rule only. It must not be used to parse, execute, generate, or replace gameplay behavior.
+
+Parenthetical explanatory-note handling must not mutate raw Poneglyph text, normalized `ResolvedCard.effectText`, manifest display text, PlayerView card text, `sourceTextHash`, `behaviorHash`, or reviewed printed-text evidence. The simulator overlay, keyword behavior table, effect DSL definitions, custom handlers, rulings, support status, and card-specific tests remain the gameplay implementation authority.

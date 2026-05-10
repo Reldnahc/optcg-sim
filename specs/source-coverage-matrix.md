@@ -75,6 +75,7 @@ Section Ref: `source-coverage-matrix.s003`
 | Effect Resolution Order                      | `04-effect-runtime.md`                                                                            |
 | Replacement Effects                          | `04-effect-runtime.md`, `05-effect-dsl-reference.md`                                              |
 | Permanent Effects Processing Order           | `04-effect-runtime.md`, `03-game-state-events-decisions.md`                                       |
+| 2-8-4 Parenthetical explanatory notes        | `02-engine-mechanics.md`                                                                          |
 | One-Shot vs Continuous Effects               | `04-effect-runtime.md`, `05-effect-dsl-reference.md`                                              |
 | 8. Keyword Effects Reference                 | `02-engine-mechanics.md`, `05-effect-dsl-reference.md`                                            |
 | 9. If vs Then Clauses                        | `02-engine-mechanics.md`, `05-effect-dsl-reference.md`                                            |
