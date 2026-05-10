@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Allow narrow engine support gates to treat parenthetical printed text as
   `02-engine-mechanics.s045` explanatory notes when deciding whether OP04-014
