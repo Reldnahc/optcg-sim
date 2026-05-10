@@ -876,6 +876,15 @@
       "visible_line": "Section Ref: `02-engine-mechanics.s044`"
     },
     {
+      "section_ref": "02-engine-mechanics.s045",
+      "doc_id": "02-engine-mechanics",
+      "doc_path": "02-engine-mechanics.md",
+      "heading": "Parenthetical explanatory notes",
+      "heading_level": 3,
+      "marker_line": 619,
+      "visible_line": "Section Ref: `02-engine-mechanics.s045`"
+    },
+    {
       "section_ref": "03-game-state-events-decisions.s001",
       "doc_id": "03-game-state-events-decisions",
       "doc_path": "03-game-state-events-decisions.md",
@@ -5894,7 +5903,7 @@
       "doc_path": "source-coverage-matrix.md",
       "heading": "`optcg-effect-system.pdf`",
       "heading_level": 2,
-      "marker_line": 80,
+      "marker_line": 81,
       "visible_line": "Section Ref: `source-coverage-matrix.s004`"
     },
     {
@@ -5903,7 +5912,7 @@
       "doc_path": "source-coverage-matrix.md",
       "heading": "Audit note",
       "heading_level": 2,
-      "marker_line": 111,
+      "marker_line": 112,
       "visible_line": "Section Ref: `source-coverage-matrix.s005`"
     },
     {
@@ -5912,7 +5921,7 @@
       "doc_path": "source-coverage-matrix.md",
       "heading": "Supplemental source coverage added in v3",
       "heading_level": 2,
-      "marker_line": 119,
+      "marker_line": 120,
       "visible_line": "Section Ref: `source-coverage-matrix.s006`"
     },
     {

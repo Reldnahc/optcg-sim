@@ -141,6 +141,32 @@ test("Effect DSL policy classifies schema-supported and planned primitives", asy
   }
 });
 
+test("engine mechanics spec preserves parenthetical explanatory note authority", async () => {
+  const engineSpec = await readText("specs/02-engine-mechanics.md");
+  const explanatoryNotes = extractSectionToEnd(
+    engineSpec,
+    "02-engine-mechanics.s045",
+  );
+
+  for (const requiredText of [
+    "Comprehensive Rules 2-8-4",
+    "parenthetical explanatory notes",
+    "keyword effects and other card effects",
+    "do not influence gameplay",
+    "support and classification logic may ignore parenthetical explanatory notes when deciding whether remaining printed text requires simulator implementation",
+    "must not mutate raw Poneglyph text",
+    "normalized `ResolvedCard.effectText`",
+    "manifest display text",
+    "PlayerView card text",
+    "`sourceTextHash`",
+    "`behaviorHash`",
+    "reviewed printed-text evidence",
+    "simulator overlay, keyword behavior table, effect DSL definitions, custom handlers, rulings, support status, and card-specific tests remain the gameplay implementation authority",
+  ]) {
+    assertContainsWords(explanatoryNotes, requiredText);
+  }
+});
+
 test("Milestone 1 exit gates require full vanilla CLI, local smoke hash reconstruction, sequencing, and real filterStateForPlayer tests", async () => {
   const roadmap = await readText("specs/12-roadmap.md");
   const kickoff = await readText("specs/15-implementation-kickoff.md");

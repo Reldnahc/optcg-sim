@@ -1,0 +1,91 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SPEC-006
+epic_id: KICK-001
+title: Reflect parenthetical explanatory note authority
+type: specification
+area: docs
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Update the simulator specifications to reflect official Comprehensive Rules
+  2-8-4, 2-8-4-1, and 2-8-4-2: parenthetical explanatory notes for keyword
+  effects and other card effects do not influence gameplay, while printed card
+  text remains preserved for display, review, and hashing.
+story_boundary: >
+  Own only the specification authority and authority-test coverage for
+  parenthetical explanatory-note handling. Do not change engine behavior,
+  Poneglyph normalization, cards fixtures, source text hashes, behavior hashes,
+  support metadata, effect DSL definitions, server/client/API/UI behavior, or
+  workflow tooling.
+allowed_touch_points:
+  - specs/02-engine-mechanics.md
+  - specs/source-coverage-matrix.md
+  - specs/section-index.json
+  - specs/spec-manifest.json
+  - specs/SPEC_VERSION.md
+  - tests/contracts/spec-authority-gates.test.mjs
+  - stories/generated/SPEC-006-parenthetical-explanatory-note-authority.yaml
+  - stories/approved/SPEC-006-parenthetical-explanatory-note-authority.yaml
+  - agent-packets/SPEC-006.md
+  - agent-packets/active.json
+spec_refs:
+  - 00-project-overview.s020
+  - 02-engine-mechanics.s004
+  - 02-engine-mechanics.s025
+  - 05-effect-dsl-reference.s001
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s003
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 19-poneglyph-api-contract.s007
+  - source-map.s006
+dependencies:
+  - CARD-006
+scope:
+  - add a stable engine-mechanics spec section that reflects official Comprehensive Rules 2-8-4 parenthetical explanatory notes
+  - state that parenthetical explanatory notes for keyword effects and other card effects do not influence gameplay
+  - state that parenthetical explanatory-note text may be ignored by engine support/classification logic when determining whether remaining printed text requires implementation
+  - state that explanatory-note handling must not mutate raw Poneglyph text, normalized ResolvedCard.effectText, manifest display text, PlayerView card text, sourceTextHash, behaviorHash, or reviewed printed-text evidence
+  - keep gameplay implementation authority in simulator DSL/custom handlers/keyword behavior/support metadata, not in explanatory-note text
+  - add an authority test that fails if the parenthetical explanatory-note gameplay and non-mutation wording is removed or weakened
+  - update source coverage and generated spec metadata
+non_scope:
+  - implementing reminder/explanatory-note stripping in engine-core
+  - changing card support status for OP04-014 or any other real fixture
+  - changing Poneglyph fixtures, Poneglyph schema, cards normalization, sourceTextHash, behaviorHash, or manifest construction
+  - adding effect DSL primitives, custom handlers, target shapes, Counter Events, Life Trigger changes, replacement effects, optional activation, once-per-turn, permanent modifiers, search/reveal, or multi-damage
+  - server, client, API, WebSocket, database, deck-builder, or UI integration
+  - live Poneglyph, live Redis, Postgres, browser, or UI requirements in tests or CI
+  - changing story workflow, packet tooling, cleanup workflow, GitHub Actions, or branch protection
+acceptance_criteria:
+  - "`02-engine-mechanics.md` has a stable SECTION_REF defining parenthetical explanatory-note authority for keyword effects and other card effects"
+  - the new spec wording explicitly reflects official Comprehensive Rules 2-8-4, 2-8-4-1, and 2-8-4-2
+  - the spec says parenthetical explanatory notes do not influence gameplay and may be ignored for support/classification checks of remaining printed text
+  - the spec says explanatory-note handling must not mutate Poneglyph printed/display text, normalized effect text, manifest display text, PlayerView card text, sourceTextHash, behaviorHash, or reviewed printed-text evidence
+  - the spec preserves simulator overlay, keyword behavior, DSL, custom handlers, and reviewed support metadata as gameplay implementation authority
+  - authority tests pin the parenthetical explanatory-note gameplay and non-mutation requirements
+  - generated spec metadata is updated and verifies
+required_tests:
+  - update `tests/contracts/spec-authority-gates.test.mjs` to require the parenthetical explanatory-note authority wording
+  - run `corepack pnpm run specs:generate-metadata`
+  - run `corepack pnpm run specs:verify-metadata`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run typecheck`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate the SPEC-006 packet before implementation
+  - run `corepack pnpm run packets:verify` before implementation and review handoff
+  - stay within allowed_touch_points
+  - parent agent may implement this narrow authority edit directly
+  - open the PR before implementation-review
+  - run the implementation-review gate after the PR is opened
+  - do not change engine, cards, fixture, workflow, cleanup, server, client, database, or UI behavior in this SPEC story
+ambiguity_policy: fail_and_escalate

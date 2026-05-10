@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SPEC-006.md",
+      "storyId": "SPEC-006",
+      "storyPath": "stories/approved/SPEC-006-parenthetical-explanatory-note-authority.yaml",
+      "storySha256": "b73d25ca1b1dae5a7e2af6bd36a2f76249ad56fb95bcb729fbc990337feef321"
+    }
+  ],
   "version": 1
 }
