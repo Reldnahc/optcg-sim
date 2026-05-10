@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-037.md",
-      "storyId": "INF-037",
-      "storyPath": "stories/approved/INF-037-separate-real-card-fixture-tests-policy.yaml",
-      "storySha256": "99484f507c154114ee5cdb4136c649555319330b10cf804215096654761d1ac0"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

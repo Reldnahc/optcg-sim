@@ -8,7 +8,7 @@ type: verification
 area: infra
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Correct workflow and future-story guidance so engine and rules stories keep
   focused synthetic/unit/regression coverage for behavior requirements, while
