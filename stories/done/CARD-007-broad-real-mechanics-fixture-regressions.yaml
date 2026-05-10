@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add a broad real-card fixture regression suite that runs the existing
   cards-produced manifest and CARD-005 real effect-shape corpus against

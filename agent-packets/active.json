@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CARD-007.md",
-      "storyId": "CARD-007",
-      "storyPath": "stories/approved/CARD-007-broad-real-mechanics-fixture-regressions.yaml",
-      "storySha256": "c1d70393d2de6506861324ad1b1056fce9aba9fa187b881623183379c25823b0"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
