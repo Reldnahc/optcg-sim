@@ -11,6 +11,7 @@
     }
   },
   "scripts": {
+    "capture:fixture": "corepack pnpm exec tsx src/fixture-capture.ts",
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run --root ../.. packages/cards/src"
   },
