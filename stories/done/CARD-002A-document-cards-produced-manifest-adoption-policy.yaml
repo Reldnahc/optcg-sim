@@ -8,7 +8,7 @@ type: implementation
 area: docs
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Document the repo policy that cards-produced MatchCardManifest fixtures are
   the default local integration surface for engine, CLI, hidden-info, and future

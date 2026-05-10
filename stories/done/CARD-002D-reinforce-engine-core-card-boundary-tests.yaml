@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Reinforce package-boundary tests and lint rules so @optcg/engine-core remains
   isolated from @optcg/cards, Poneglyph HTTP, Redis, Postgres, server, client,

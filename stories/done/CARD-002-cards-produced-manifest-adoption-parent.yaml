@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the adoption of @optcg/cards-produced MatchCardManifest fixtures as
   the default local integration surface for engine, CLI, hidden-info, and future

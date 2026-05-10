@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Add narrow fail-closed validation around cards-produced manifest adoption so
   duplicate manifest card IDs, contradictory overlay effect metadata, and

@@ -8,7 +8,7 @@ type: implementation
 area: docs
 primary_concern: docs
 priority: medium
-status: approved
+status: done
 summary: >
   Add workflow guidance so future Main Event, Counter Event, optional effects,
   once-per-turn, permanent modifier, replacement, multi-damage, and

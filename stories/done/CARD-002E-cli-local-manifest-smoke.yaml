@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: cli
 priority: medium
-status: approved
+status: done
 summary: >
   Add CLI smoke or boot support for loading a checked-in local representative
   MatchCardManifest fixture so CLI paths can exercise cards-backed manifests

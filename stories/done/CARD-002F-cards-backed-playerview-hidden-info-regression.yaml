@@ -8,7 +8,7 @@ type: implementation
 area: security
 primary_concern: visibility
 priority: high
-status: approved
+status: done
 summary: >
   Add hidden-info regression coverage proving PlayerView output from a
   cards-backed manifest state does not expose full MatchCardManifest data,
