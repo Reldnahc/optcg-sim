@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Promote a small reviewed set of real Poneglyph-backed fixtures into
   implemented-primitive regression coverage only where the card's complete
