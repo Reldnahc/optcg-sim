@@ -9,6 +9,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
+import { applyAction } from "./actions.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import {
@@ -178,57 +179,145 @@ test("getLegalActions omits implemented-dsl Events outside the narrow reviewed M
   assert.equal(hasPlayCardAction(legal, untested), false);
 });
 
-test("getLegalActions omits target-requiring implemented-dsl Main Events until target-effect primitives are supported", () => {
+test("paid reviewed target KO Main Event moves to trash, creates selectTargets, and K.O.s the selected Character", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
   const eventCard = must(p1State.hand[0], "event");
+  const targetSource = must(p2State.hand[0], "target source");
+  const target: CardInstance = {
+    ...targetSource,
+    zone: { zone: "characterArea", playerId: p2, slot: "character", index: 0 },
+    state: "active",
+    attachedDon: [],
+    turnPlayed: state.turn.globalTurn,
+  };
+  p2State.characters = [target];
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    cost: 3,
+    power: 4000,
+  });
   const implemented = resolvedCard({
     cardId: eventCard.cardId,
     category: "event",
-    cost: 1,
-    effectText: "[Main] Rest up to 1 of your opponent's Characters.",
+    cost: 2,
+    effectText: "[Main] K.O. up to 1 of your opponent's Characters.",
     support: {
       status: "implemented-dsl",
-      effectDefinitionId: "def-main-event-target",
+      effectDefinitionId: "def-main-event-ko",
     },
   });
   const definition = reviewedMainEventDrawDefinition(
     implemented.cardId,
     implemented.support,
   );
+  const targetRequest = {
+    timing: "onResolution" as const,
+    chooser: "self" as const,
+    player: "opponent" as const,
+    zone: "characterArea" as const,
+    min: 0,
+    max: 1,
+    allowFewerIfUnavailable: true,
+    visibility: "public" as const,
+  };
   state.cardManifest.cards[eventCard.cardId] = implemented;
   state.cardManifest.effectDefinitionsVersion = "0.1.0";
   state.cardManifest.effectDefinitions = {
-    "def-main-event-target": {
+    "def-main-event-ko": {
       ...definition,
       effects: [
         {
           ...must(definition.effects[0], "main effect"),
+          id: "OP01-040:event-main-ko-1" as (typeof definition.effects)[number]["id"],
           effect: {
-            type: "rest",
-            target: {
-              type: "choose",
-              request: {
-                timing: "onResolution",
-                chooser: "self",
-                player: "opponent",
-                zone: "characterArea",
-                min: 0,
-                max: 1,
-                allowFewerIfUnavailable: true,
-                visibility: "public",
-              },
-            },
+            type: "ko",
+            target: { type: "choose", request: targetRequest },
           },
         },
       ],
     },
   };
-
   assert.equal(
     hasPlayCardAction(getPlayCardLegalActions(state, p1), eventCard),
-    false,
+    true,
   );
+
+  const opened = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: eventCard.instanceId,
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.pendingDecision?.type, "payCost");
+
+  const openedP1 = must(opened.state.players[p1], "opened p1");
+  const paid = applyPlayCardTestAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "pay decision").id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [
+        must(openedP1.costArea[0], "don0").instanceId,
+        must(openedP1.costArea[1], "don1").instanceId,
+      ],
+    },
+  });
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(paid.state.pendingDecision?.type, "selectTargets");
+  const paidP1 = must(paid.state.players[p1], "paid p1");
+  assert.equal(
+    must(paidP1.trash[0], "event in trash").instanceId,
+    eventCard.instanceId,
+  );
+  assert.equal(must(paidP1.costArea[0], "paid don0").state, "rested");
+  assert.equal(must(paidP1.costArea[1], "paid don1").state, "rested");
+  assert.equal(
+    paid.events.some((event) => event.type === "effectQueued"),
+    true,
+  );
+  assert.equal(paid.events.at(-1)?.type, "decisionCreated");
+
+  const targetDecision = must(paid.state.pendingDecision, "target decision");
+  assert.equal(targetDecision.type, "selectTargets");
+  assert.deepEqual(targetDecision.request, targetRequest);
+  assert.equal(
+    targetDecision.candidates[0]?.card.instanceId,
+    target.instanceId,
+  );
+
+  const resolved = applyAction(paid.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: {
+      type: "targets",
+      targets: [must(targetDecision.candidates[0], "target candidate").card],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.deepEqual(
+    must(resolved.state.players[p2], "resolved p2").characters,
+    [],
+  );
+  assert.equal(
+    must(must(resolved.state.players[p2], "resolved p2").trash[0], "ko trash")
+      .instanceId,
+    target.instanceId,
+  );
+  assert.equal(
+    resolved.events.some((event) => event.type === "cardKOd"),
+    true,
+  );
+  assert.equal(resolved.events.at(-1)?.type, "ruleProcessingChecked");
 });
 
 test("getLegalActions omits Event play for invalid timing text, trigger text, missing manifest, and unsupported status", () => {
@@ -402,63 +491,6 @@ test("nonzero [Main] Event play creates payCost and valid payment moves card han
     ],
   );
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
-});
-
-test("nonzero implemented-dsl Main Event uses existing DON payment and moves hand to trash", () => {
-  const state = setupMainPlayState();
-  const p1State = must(state.players[p1], "p1");
-  const eventCard = must(p1State.hand[0], "event");
-  const implemented = resolvedCard({
-    cardId: eventCard.cardId,
-    category: "event",
-    cost: 2,
-    effectText: "[Main] Draw 1 card.",
-    support: {
-      status: "implemented-dsl",
-      effectDefinitionId: "def-main-event-payment",
-    },
-  });
-  state.cardManifest.cards[eventCard.cardId] = implemented;
-  state.cardManifest.effectDefinitionsVersion = "0.1.0";
-  state.cardManifest.effectDefinitions = {
-    "def-main-event-payment": reviewedMainEventDrawDefinition(
-      implemented.cardId,
-      implemented.support,
-    ),
-  };
-
-  const opened = applyPlayCardTestAction(state, {
-    type: "playCard",
-    cardInstanceId: eventCard.instanceId,
-  });
-  assert.equal(opened.errors, undefined);
-  assert.equal(opened.state.pendingDecision?.type, "payCost");
-
-  const openedP1 = must(opened.state.players[p1], "opened p1");
-  const don0 = must(openedP1.costArea[0], "don0");
-  const don1 = must(openedP1.costArea[1], "don1");
-  const resolved = applyPlayCardTestAction(opened.state, {
-    type: "respondToDecision",
-    decisionId: must(opened.state.pendingDecision, "decision").id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: [don0.instanceId, don1.instanceId],
-    },
-  });
-
-  assert.equal(resolved.errors, undefined);
-  const resolvedP1 = must(resolved.state.players[p1], "resolved p1");
-  assert.equal(
-    resolvedP1.hand.some((card) => card.instanceId === eventCard.instanceId),
-    false,
-  );
-  assert.equal(
-    must(resolvedP1.trash[0], "trash 0").instanceId,
-    eventCard.instanceId,
-  );
-  assert.equal(must(resolvedP1.costArea[0], "paid don0").state, "rested");
-  assert.equal(must(resolvedP1.costArea[1], "paid don1").state, "rested");
 });
 
 test("zero-cost [Main] Event play resolves directly to trash with expected events", () => {

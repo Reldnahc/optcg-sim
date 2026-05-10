@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-039B.md",
-      "storyId": "ENG-039B",
-      "storyPath": "stories/approved/ENG-039B-select-targets-continuation.yaml",
-      "storySha256": "ae1e64fb2499eeaffdd38bd52d35a409f53430525f913e9f6c4db7b3795b5ed9"
+      "packetPath": "agent-packets/ENG-039C.md",
+      "storyId": "ENG-039C",
+      "storyPath": "stories/approved/ENG-039C-main-event-target-ko-integration.yaml",
+      "storySha256": "c5efb5d3cbf6258c8c3aba4c96a6d06b0c1e6a765c79c5db42546374513ef1da"
     }
   ],
   "version": 1

@@ -1,6 +1,7 @@
 import type { CardInstance, GameState, PlayerId } from "@optcg/types";
 
 import {
+  isSupportedMainEventTargetKoEffect,
   isSupportedNoChoiceMainEventDrawEffect,
   isSupportedNoChoiceOnPlayDrawEffect,
   resolveImplementedDslEffectDefinition,
@@ -63,7 +64,10 @@ export const getSupportedPlayMetadata = (
       };
     }
     if (resolved.category === "event") {
-      if (!isSupportedNoChoiceMainEventDrawEffect(effect)) {
+      if (
+        !isSupportedNoChoiceMainEventDrawEffect(effect) &&
+        !isSupportedMainEventTargetKoEffect(effect)
+      ) {
         return null;
       }
       return {

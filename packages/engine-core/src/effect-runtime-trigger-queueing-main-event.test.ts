@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { CardInstance } from "@optcg/types";
+import type {
+  CardInstance,
+  EffectDefinition,
+  TargetRequest,
+} from "@optcg/types";
 
 import {
   createActiveState,
@@ -12,6 +16,45 @@ import {
   toEngineEventId,
 } from "./action-test-fixtures.js";
 import { processEffectRuntime } from "./effect-runtime.js";
+
+const reviewedMainEventTargetKoRequest = (
+  overrides: Partial<TargetRequest> = {},
+): TargetRequest => ({
+  timing: "onResolution",
+  chooser: "self",
+  player: "opponent",
+  zone: "characterArea",
+  min: 0,
+  max: 1,
+  allowFewerIfUnavailable: true,
+  visibility: "public",
+  ...overrides,
+});
+
+const reviewedMainEventTargetKoDefinition = (
+  cardId: EffectDefinition["cardId"],
+  support: ReturnType<typeof resolvedCard>["support"],
+  request: TargetRequest = reviewedMainEventTargetKoRequest(),
+): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: "OP01-040:event-main-ko-1" as EffectDefinition["effects"][number]["id"],
+      category: "auto",
+      trigger: { type: "main" },
+      sourcePresencePolicy: "resolveFromDestinationZone",
+      effect: { type: "ko", target: { type: "choose", request } },
+    },
+  ],
+  metadata: {
+    sourceTextHash: support.sourceTextHash,
+    rulesVersion: support.rulesVersion,
+    effectDefinitionsVersion: "0.1.0",
+    tested: true,
+    reviewer: "qa-reviewer",
+  },
+});
 
 const setupMainEventQueueingState = () => {
   const state = createActiveState();
@@ -79,6 +122,75 @@ test("queues one supported no-choice Main Event draw effect from an Event cardPl
     result.events.map((event) => event.type),
     ["effectQueued"],
   );
+});
+
+test("queues one supported reviewed target KO Main Event from an Event cardPlayed event in trash", () => {
+  const { state, eventInTrash } = setupMainEventQueueingState();
+  const implemented = resolvedCard({
+    cardId: eventInTrash.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Main] K.O. up to 1 of your opponent's Characters.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-main-event-ko",
+    },
+  });
+  state.cardManifest.cards[eventInTrash.cardId] = implemented;
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-ko": reviewedMainEventTargetKoDefinition(
+      implemented.cardId,
+      implemented.support,
+    ),
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  const entry = must(result.state.effectQueue[0], "queue entry");
+  assert.equal(entry.controllerId, p1);
+  assert.equal(entry.source.instanceId, eventInTrash.instanceId);
+  assert.deepEqual(entry.source.zone, eventInTrash.zone);
+  assert.equal(entry.sourcePresencePolicy, "resolveFromDestinationZone");
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectQueued"],
+  );
+});
+
+test("Main Event queueing fails closed for unsupported target KO request shapes", () => {
+  const { state, eventInTrash } = setupMainEventQueueingState();
+  const implemented = resolvedCard({
+    cardId: eventInTrash.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Main] K.O. up to 1 of your opponent's Characters.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-main-event-private-ko",
+    },
+  });
+  state.cardManifest.cards[eventInTrash.cardId] = implemented;
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-private-ko": reviewedMainEventTargetKoDefinition(
+      implemented.cardId,
+      implemented.support,
+      reviewedMainEventTargetKoRequest({ visibility: "privateToChooser" }),
+    ),
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "main-event-trigger-queueing",
+      details: { reason: "unsupported-main-event-definition" },
+    },
+  ]);
+  assert.equal(result.state.effectQueue.length, 0);
 });
 
 test("Main Event queueing fails closed when the played Event source is no longer in trash", () => {
