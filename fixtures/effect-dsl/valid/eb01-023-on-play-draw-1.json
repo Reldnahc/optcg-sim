@@ -1,0 +1,22 @@
+{
+  "cardId": "EB01-023",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "EB01-023:auto-on-play-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "optional": false,
+      "oncePerTurn": false,
+      "sourcePresencePolicy": "mustRemainInSameZone",
+      "effect": { "type": "draw", "count": 1, "player": "self" }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "9706370291413ce10c29335f8d7b2233ca11ea835f0391c8bcf56502018e3dfc",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "real-card-effects-v1",
+    "tested": true,
+    "reviewer": "reviewed-real-card-fixture"
+  }
+}

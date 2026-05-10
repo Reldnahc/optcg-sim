@@ -1,0 +1,357 @@
+{
+  "banlistVersion": "real-card-banlist-v1",
+  "cardDataVersion": "real-card-poneglyph-fixture-v1",
+  "cards": {
+    "EB01-023": {
+      "attributes": ["slash"],
+      "behaviorHash": "ef9afbb71fe73e878b604c566b64043414a3014841c741939d542658def0cf96",
+      "cardId": "EB01-023",
+      "category": "character",
+      "colors": ["blue"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "Extra Regulation": {
+          "status": "legal"
+        },
+        "Standard": {
+          "status": "legal"
+        }
+      },
+      "name": "Edward Weevil",
+      "officialFaq": [],
+      "printedKeywords": [],
+      "released": true,
+      "set": "EB01",
+      "setName": "Memorial Collection",
+      "sourceTextHash": "9706370291413ce10c29335f8d7b2233ca11ea835f0391c8bcf56502018e3dfc",
+      "types": ["The Seven Warlords of the Sea"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "EB01-023:v0",
+          "label": "SP",
+          "productId": "0c90e082-3d2b-4e94-8029-026e5e7dd2b0",
+          "productName": "The Azure Sea’s Seven",
+          "productSetCode": "OP14",
+          "productSlug": "the-azure-sea-s-seven",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-023/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-023/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "EB01-023:v1",
+          "label": "Standard",
+          "productId": "d0846e92-2ded-43b7-b4fb-fd050765d2b3",
+          "productName": "Memorial Collection",
+          "productSetCode": "EB01",
+          "productSlug": "memorial-collection",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-023/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-023/en/stock/1/thumb.webp"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "EB01-023:v2",
+          "label": "Alternate Art",
+          "productId": "d4f6ef69-d6d1-47df-9210-a4997f12ac98",
+          "productName": "Seven Warlords of the Sea Binder Set",
+          "productSlug": "seven-warlords-of-the-sea-binder-set",
+          "stockImageFull": "https://cdn.poneglyph.one/images/EB01-023/en/stock/2/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/EB01-023/en/stock/2/thumb.webp"
+        },
+        {
+          "variantIndex": 3,
+          "variantKey": "EB01-023:v3",
+          "label": "Promo",
+          "productId": "a5440eb5-3581-429d-8c06-43f157a1f50e",
+          "productName": "Judge Pack Vol. 4",
+          "productSlug": "judge-pack-vol-4"
+        }
+      ],
+      "block": "2",
+      "cost": 4,
+      "effectText": "[On Play] Draw 1 card.",
+      "power": 6000,
+      "rarity": "R",
+      "releasedAt": "2024-05-03T00:00:00.000Z",
+      "support": {
+        "behaviorHash": "ef9afbb71fe73e878b604c566b64043414a3014841c741939d542658def0cf96",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "EB01-023",
+        "rulesVersion": "2026-01-16",
+        "sourceTextHash": "9706370291413ce10c29335f8d7b2233ca11ea835f0391c8bcf56502018e3dfc",
+        "status": "implemented-dsl",
+        "tested": true,
+        "effectDefinitionId": "eb01-023.on-play-draw-1",
+        "notes": "Reviewed real-card fixture with explicit [On Play] Draw 1 card DSL linkage."
+      }
+    },
+    "OP01-060": {
+      "attributes": ["special"],
+      "behaviorHash": "6e56996059c03bb93c37f8b4fb636248e938306210e5bd353cf943feb98cd12a",
+      "cardId": "OP01-060",
+      "category": "leader",
+      "colors": ["blue"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "extra": {
+          "max_copies": 1,
+          "status": "legal"
+        },
+        "standard": {
+          "status": "not_legal"
+        }
+      },
+      "name": "Donquixote Doflamingo",
+      "officialFaq": [
+        {
+          "answer": "Return it to the top of the deck face-down.",
+          "question": "What happens to the revealed card if it is not played?",
+          "updated_on": "2023-01-01"
+        }
+      ],
+      "printedKeywords": [],
+      "released": true,
+      "set": "OP01",
+      "setName": "Romance Dawn",
+      "sourceTextHash": "fa63d7340e1b37f10ee04503c681f4d8c42127d8e1f374ed668671901f4f2c27",
+      "types": ["The Seven Warlords of the Sea", "Donquixote Pirates"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP01-060:v0",
+          "artist": "BISAI",
+          "label": "Starter Deck",
+          "productId": "st03",
+          "productName": "Starter Deck The Seven Warlords of the Sea",
+          "productSetCode": "ST03",
+          "productSlug": "starter-deck-the-seven-warlords-of-the-sea",
+          "scanImageDisplay": "https://example.test/op01-060-v0-display.png",
+          "scanImageFull": "https://example.test/op01-060-v0-scan-full.png",
+          "scanImageThumb": "https://example.test/op01-060-v0-scan-thumb.png",
+          "stockImageFull": "https://example.test/op01-060-v0-full.png",
+          "stockImageThumb": "https://example.test/op01-060-v0-thumb.png"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP01-060:v1",
+          "artist": "BISAI",
+          "label": "Standard",
+          "productId": "op01",
+          "productName": "Romance Dawn",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn",
+          "scanImageDisplay": "https://example.test/op01-060-v1-display.png",
+          "scanImageFull": "https://example.test/op01-060-v1-scan-full.png",
+          "scanImageThumb": "https://example.test/op01-060-v1-scan-thumb.png",
+          "stockImageFull": "https://example.test/op01-060-v1-full.png",
+          "stockImageThumb": "https://example.test/op01-060-v1-thumb.png"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "OP01-060:v2",
+          "artist": "BISAI",
+          "label": "Alternate Art",
+          "productId": "op01-aa",
+          "productName": "Romance Dawn Alternate Art",
+          "productSetCode": "OP01",
+          "productSlug": "romance-dawn-alternate-art",
+          "scanImageDisplay": "https://example.test/op01-060-v2-display.png",
+          "scanImageFull": "https://example.test/op01-060-v2-scan-full.png",
+          "scanImageThumb": "https://example.test/op01-060-v2-scan-thumb.png",
+          "stockImageFull": "https://example.test/op01-060-v2-full.png",
+          "stockImageThumb": "https://example.test/op01-060-v2-thumb.png"
+        }
+      ],
+      "block": "OP01",
+      "effectText": "[DON!! x2] [When Attacking] 1: Reveal 1 card from the top of your deck. If that card is a {The Seven Warlords of the Sea} type Character card with a cost of 4 or less, you may play that card rested.",
+      "life": 5,
+      "power": 5000,
+      "rarity": "L",
+      "releasedAt": "2022-12-02",
+      "support": {
+        "behaviorHash": "6e56996059c03bb93c37f8b4fb636248e938306210e5bd353cf943feb98cd12a",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP01-060",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "fa63d7340e1b37f10ee04503c681f4d8c42127d8e1f374ed668671901f4f2c27",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    },
+    "OP05-091": {
+      "attributes": ["wisdom"],
+      "behaviorHash": "7d13e36533bcbc870ed4d342364c9475bf82caa0f147ce481b31e5344d1e28be",
+      "cardId": "OP05-091",
+      "category": "character",
+      "colors": ["black"],
+      "errata": [],
+      "language": "en",
+      "legality": {
+        "extra": {
+          "max_copies": 4,
+          "status": "legal"
+        },
+        "standard": {
+          "max_copies": 4,
+          "status": "legal"
+        }
+      },
+      "name": "Rebecca",
+      "officialFaq": [
+        {
+          "answer": "Yes. The second part of the effect checks your hand after the first part resolves.",
+          "question": "Can the card added from trash be played by this effect?",
+          "updated_on": "2023-12-08"
+        }
+      ],
+      "printedKeywords": ["blocker"],
+      "released": true,
+      "set": "OP05",
+      "setName": "Awakening of the New Era",
+      "sourceTextHash": "38a164409261c6738fada82f2f3541d64bfd401da06ce4942ef755b4287c4b7a",
+      "types": ["Dressrosa"],
+      "variants": [
+        {
+          "variantIndex": 0,
+          "variantKey": "OP05-091:v0",
+          "artist": "Hokuyuu",
+          "label": "Standard",
+          "productId": "op05",
+          "productName": "Awakening of the New Era",
+          "productSetCode": "OP05",
+          "productSlug": "awakening-of-the-new-era",
+          "scanImageDisplay": "https://example.test/op05-091-v0-display.png",
+          "scanImageFull": "https://example.test/op05-091-v0-scan-full.png",
+          "scanImageThumb": "https://example.test/op05-091-v0-scan-thumb.png",
+          "stockImageFull": "https://example.test/op05-091-v0-full.png",
+          "stockImageThumb": "https://example.test/op05-091-v0-thumb.png"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP05-091:v1",
+          "artist": "Hokuyuu",
+          "label": "Alternate Art",
+          "productName": "Regionals",
+          "scanImageDisplay": "https://example.test/op05-091-v1-display.png",
+          "scanImageFull": "https://example.test/op05-091-v1-scan-full.png",
+          "scanImageThumb": "https://example.test/op05-091-v1-scan-thumb.png"
+        },
+        {
+          "variantIndex": 2,
+          "variantKey": "OP05-091:v2",
+          "artist": "Hokuyuu",
+          "label": "SP",
+          "productId": "op05-sp",
+          "productName": "Awakening of the New Era SP",
+          "productSetCode": "OP05",
+          "productSlug": "awakening-of-the-new-era-sp",
+          "scanImageDisplay": "https://example.test/op05-091-v2-display.png",
+          "scanImageFull": "https://example.test/op05-091-v2-scan-full.png",
+          "scanImageThumb": "https://example.test/op05-091-v2-scan-thumb.png",
+          "stockImageFull": "https://example.test/op05-091-v2-full.png",
+          "stockImageThumb": "https://example.test/op05-091-v2-thumb.png"
+        },
+        {
+          "variantIndex": 3,
+          "variantKey": "OP05-091:v3",
+          "artist": "Hokuyuu",
+          "label": "Alternate Art",
+          "productId": "op05-aa-2",
+          "productName": "Awakening of the New Era Alternate Art",
+          "productSetCode": "OP05",
+          "productSlug": "awakening-of-the-new-era-aa-2",
+          "scanImageDisplay": "https://example.test/op05-091-v3-display.png",
+          "scanImageFull": "https://example.test/op05-091-v3-scan-full.png",
+          "scanImageThumb": "https://example.test/op05-091-v3-scan-thumb.png",
+          "stockImageFull": "https://example.test/op05-091-v3-full.png",
+          "stockImageThumb": "https://example.test/op05-091-v3-thumb.png"
+        },
+        {
+          "variantIndex": 4,
+          "variantKey": "OP05-091:v4",
+          "artist": "Hokuyuu",
+          "label": "Winner",
+          "productId": "op05-winner",
+          "productName": "Tournament Pack",
+          "productSetCode": "OP05",
+          "productSlug": "op05-winner",
+          "scanImageDisplay": "https://example.test/op05-091-v4-display.png",
+          "scanImageFull": "https://example.test/op05-091-v4-scan-full.png",
+          "scanImageThumb": "https://example.test/op05-091-v4-scan-thumb.png",
+          "stockImageFull": "https://example.test/op05-091-v4-full.png",
+          "stockImageThumb": "https://example.test/op05-091-v4-thumb.png"
+        },
+        {
+          "variantIndex": 5,
+          "variantKey": "OP05-091:v5",
+          "artist": "Hokuyuu",
+          "label": "Judge",
+          "productId": "op05-judge",
+          "productName": "Judge Pack",
+          "productSetCode": "OP05",
+          "productSlug": "op05-judge",
+          "scanImageDisplay": "https://example.test/op05-091-v5-display.png",
+          "scanImageFull": "https://example.test/op05-091-v5-scan-full.png",
+          "scanImageThumb": "https://example.test/op05-091-v5-scan-thumb.png",
+          "stockImageFull": "https://example.test/op05-091-v5-full.png",
+          "stockImageThumb": "https://example.test/op05-091-v5-thumb.png"
+        }
+      ],
+      "block": "OP05",
+      "cost": 4,
+      "counter": 1000,
+      "effectText": "[Blocker]\n[On Play] Add up to 1 black Character card with a cost of 3 to 7 other than [Rebecca] from your trash to your hand. Then, play up to 1 black Character card with a cost of 3 or less from your hand rested.",
+      "power": 0,
+      "rarity": "SR",
+      "releasedAt": "2023-12-08",
+      "support": {
+        "behaviorHash": "7d13e36533bcbc870ed4d342364c9475bf82caa0f147ce481b31e5344d1e28be",
+        "cardDataVersion": "real-card-poneglyph-fixture-v1",
+        "cardId": "OP05-091",
+        "rulesVersion": "fixture-real-card",
+        "sourceTextHash": "38a164409261c6738fada82f2f3541d64bfd401da06ce4942ef755b4287c4b7a",
+        "status": "unsupported",
+        "tested": false,
+        "notes": "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported."
+      }
+    }
+  },
+  "createdAt": "2026-05-09T00:00:00.000Z",
+  "customHandlerVersion": "real-card-custom-handlers-v1",
+  "effectDefinitionsVersion": "real-card-effects-v1",
+  "source": "poneglyph-fixture",
+  "effectDefinitions": {
+    "eb01-023.on-play-draw-1": {
+      "cardId": "EB01-023",
+      "implementationStatus": "implemented-dsl",
+      "effects": [
+        {
+          "id": "EB01-023:auto-on-play-1",
+          "category": "auto",
+          "trigger": {
+            "type": "onPlay"
+          },
+          "optional": false,
+          "oncePerTurn": false,
+          "sourcePresencePolicy": "mustRemainInSameZone",
+          "effect": {
+            "type": "draw",
+            "count": 1,
+            "player": "self"
+          }
+        }
+      ],
+      "metadata": {
+        "sourceTextHash": "9706370291413ce10c29335f8d7b2233ca11ea835f0391c8bcf56502018e3dfc",
+        "rulesVersion": "2026-01-16",
+        "effectDefinitionsVersion": "real-card-effects-v1",
+        "tested": true,
+        "reviewer": "reviewed-real-card-fixture"
+      }
+    }
+  },
+  "manifestHash": "1809c9ca1e03f49e0e4455a8fcab730116bcf40286906d91118e2ef752acc655"
+}
