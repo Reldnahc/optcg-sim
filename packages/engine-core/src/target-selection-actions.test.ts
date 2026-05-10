@@ -25,6 +25,7 @@ import {
   p1,
   p2,
   resolvedCard,
+  reviewedOnPlayDrawDefinition,
   toCardId,
 } from "./action-test-fixtures.js";
 import { applyAction, getLegalActions } from "./actions.js";
@@ -91,7 +92,35 @@ const setupSelectTargetsDecision = (
     resolvedCard({
       cardId: toCardId("select-targets-source-card"),
       category: "leader",
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: "def-select-targets",
+        rulesVersion: "select-targets-rules",
+        sourceTextHash: "select-targets-source",
+      },
     });
+  const support = must(
+    state.cardManifest.cards[toCardId("select-targets-source-card")]?.support,
+    "source support",
+  );
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    toCardId("select-targets-source-card"),
+    support,
+  );
+  state.cardManifest.effectDefinitionsVersion =
+    baseDefinition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-select-targets": {
+      ...baseDefinition,
+      effects: [
+        {
+          ...must(baseDefinition.effects[0], "base effect"),
+          id: toEffectId("effect-select-targets"),
+          effect: { type: "ko", target: { type: "choose", request } },
+        },
+      ],
+    },
+  };
   const targets = cardIds.map((cardId, index) => {
     state.cardManifest.cards[cardId] = resolvedCard({
       cardId,
@@ -249,42 +278,58 @@ test("getLegalActions exposes one executable selectTargets response only to the 
   );
 });
 
-test("valid selectTargets response clears the pending decision and preserves queued effect work", () => {
+test("valid selectTargets response resolves the queued KO effect and clears the pending decision", () => {
   const { state, targets, queueEntry } = setupSelectTargetsDecision();
   const decision = must(state.pendingDecision, "pending decision");
-  const beforeQueue = structuredClone(state.effectQueue);
-  const beforeP2Characters = structuredClone(
-    must(state.players[p2], "p2").characters,
-  );
+  const selected = must(targets[1], "target 1");
 
   const result = applyAction(
     state,
-    respondWithTargets(decision.id, [must(targets[1], "target 1")]),
+    respondWithTargets(decision.id, [selected]),
   );
 
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-effect-queue",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "effectQueue",
-        count: 1,
-      },
-    },
-  ]);
+  assert.equal(result.errors, undefined);
   assert.equal(result.state.pendingDecision, undefined);
-  assert.deepEqual(result.state.effectQueue, beforeQueue);
-  assert.deepEqual(result.state.effectQueue, [queueEntry]);
+  assert.deepEqual(result.state.effectQueue, []);
   assert.deepEqual(
-    must(result.state.players[p2], "result p2").characters,
-    beforeP2Characters,
+    must(result.state.players[p2], "result p2").characters.map(
+      (card) => card.instanceId,
+    ),
+    [must(targets[0], "target 0").instanceId],
+  );
+  assert.deepEqual(
+    must(result.state.players[p2], "result p2").trash.map(
+      (card) => card.instanceId,
+    ),
+    [selected.instanceId],
   );
   assert.deepEqual(
     result.events.map((event) => event.type),
-    ["decisionResolved"],
+    [
+      "decisionResolved",
+      "cardKOd",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
   );
+  assert.deepEqual(result.events[0]?.payload, {
+    decisionId: decision.id,
+    decisionType: "selectTargets",
+    playerId: decision.playerId,
+    responseType: "targets",
+  });
+  assert.deepEqual(result.events[3]?.payload, {
+    queueEntryId: queueEntry.id,
+    timingWindowId: queueEntry.timingWindowId,
+    generation: queueEntry.generation,
+    effectBlockId: queueEntry.effectBlockId,
+    sourcePresencePolicy: queueEntry.sourcePresencePolicy,
+    orderingGroup: queueEntry.orderingGroup,
+    status: "resolved",
+  });
   assert.equal(result.state.actionSeq, state.actionSeq + 1);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });
 
 test.each(invalidResponseCases)(
@@ -375,6 +420,48 @@ test("rejects selectTargets response when the queued effect entry is no longer p
     ),
     [],
   );
+});
+
+test("rejects selectTargets response for unsupported queued target effect without mutating state", () => {
+  const { state, targets } = setupSelectTargetsDecision();
+  const decision = must(state.pendingDecision, "pending decision");
+  const definition = must(
+    state.cardManifest.effectDefinitions?.["def-select-targets"],
+    "definition",
+  );
+  state.cardManifest.effectDefinitions = {
+    "def-select-targets": {
+      ...definition,
+      effects: [
+        {
+          ...must(definition.effects[0], "effect"),
+          effect: { type: "draw", count: 1, player: "self" },
+        },
+      ],
+    },
+  };
+  const before = structuredClone(state);
+  const beforeHash = hashCanonicalStateValue(state);
+
+  const result = applyAction(
+    state,
+    respondWithTargets(decision.id, [must(targets[0], "target 0")]),
+  );
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "unsupported-effect-queue",
+      details: {
+        reason: "unsupported-pending-runtime-work",
+        kind: "effectQueue",
+        count: 1,
+      },
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.state, before);
+  assert.equal(result.stateHash, beforeHash);
 });
 
 test.each([
@@ -482,18 +569,9 @@ test("allowFewerIfUnavailable permits fewer than min only when current candidate
     ]),
   );
 
-  assert.deepEqual(accepted.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-effect-queue",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "effectQueue",
-        count: 1,
-      },
-    },
-  ]);
+  assert.equal(accepted.errors, undefined);
   assert.equal(accepted.state.pendingDecision, undefined);
+  assert.deepEqual(accepted.state.effectQueue, []);
 
   const available = setupSelectTargetsDecision(request, [
     toCardId("target-a"),

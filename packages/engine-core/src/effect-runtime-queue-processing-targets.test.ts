@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { QueueEntryId } from "./effect-runtime-queue-processing-test-support.js";
+import type {
+  CardInstance,
+  QueueEntryId,
+} from "./effect-runtime-queue-processing-test-support.js";
 import {
   hashCanonicalStateValue,
   applyAction,
@@ -15,6 +18,25 @@ import {
   targetSelectionQueueState,
   mixedOrderedDrawThenTargetState,
 } from "./effect-runtime-queue-processing-test-support.js";
+
+const removeFieldCardsFromHands = (state: {
+  players: Record<string, { hand: CardInstance[]; characters: CardInstance[] }>;
+}): void => {
+  for (const player of Object.values(state.players)) {
+    const fieldIds = new Set(player.characters.map((card) => card.instanceId));
+    player.hand = player.hand
+      .filter((card) => !fieldIds.has(card.instanceId))
+      .map((card, index) => ({
+        ...card,
+        zone: {
+          zone: "hand" as const,
+          playerId: must(card.zone.playerId, "hand player"),
+          slot: "hand" as const,
+          index,
+        },
+      }));
+  }
+};
 
 test("supported queued target request creates selectTargets decision without resolving the effect", () => {
   const { state, entry, request, targets } = targetSelectionQueueState();
@@ -93,6 +115,82 @@ test("selectTargets decision creation is deterministic for identical queued targ
   assert.equal(second.errors, undefined);
   assert.deepEqual(first.events, second.events);
   assert.deepEqual(first.state.pendingDecision, second.state.pendingDecision);
+  assert.equal(first.stateHash, second.stateHash);
+});
+
+test("selectTargets response resumes queued KO target effect in stable event order", () => {
+  const { state, entry } = targetSelectionQueueState();
+  removeFieldCardsFromHands(state);
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectTargets");
+  const selected = must(decision.candidates[1], "second candidate").card;
+  const beforeJournalLength = paused.state.eventJournal.length;
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "targets", targets: [selected] },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardKOd",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
+  );
+  assert.deepEqual(result.events[0]?.payload, {
+    decisionId: decision.id,
+    decisionType: "selectTargets",
+    playerId: p1,
+    responseType: "targets",
+  });
+  assert.deepEqual(result.events[3]?.payload, {
+    queueEntryId: entry.id,
+    timingWindowId: entry.timingWindowId,
+    generation: entry.generation,
+    effectBlockId: entry.effectBlockId,
+    sourcePresencePolicy: entry.sourcePresencePolicy,
+    orderingGroup: entry.orderingGroup,
+    status: "resolved",
+  });
+  assert.deepEqual(
+    result.state.eventJournal.slice(beforeJournalLength),
+    result.events,
+  );
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+test("selectTargets response continuation is deterministic for identical queued target input", () => {
+  const run = () => {
+    const { state } = targetSelectionQueueState();
+    removeFieldCardsFromHands(state);
+    const paused = processEffectRuntime(state);
+    const decision = must(paused.state.pendingDecision, "pending decision");
+    assert.equal(decision.type, "selectTargets");
+    return applyAction(paused.state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "targets",
+        targets: [must(decision.candidates[0], "first candidate").card],
+      },
+    });
+  };
+
+  const first = run();
+  const second = run();
+
+  assert.equal(first.errors, undefined);
+  assert.equal(second.errors, undefined);
+  assert.deepEqual(first.events, second.events);
   assert.equal(first.stateHash, second.stateHash);
 });
 
