@@ -64,3 +64,14 @@ export type {
   FileCardDataCacheOptions,
   InMemoryCardDataCacheOptions,
 } from "./cache.js";
+export {
+  capturePoneglyphCardFixtures,
+  runCapturePoneglyphFixtureCli,
+  stringifyDeterministicJson,
+  toPoneglyphCardFixtureFileName,
+} from "./fixture-capture.js";
+export type {
+  CapturedPoneglyphCardFixture,
+  CapturePoneglyphCardFixturesOptions,
+  CapturePoneglyphCardFixturesResult,
+} from "./fixture-capture.js";
