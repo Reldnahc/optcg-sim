@@ -561,10 +561,17 @@ function createRealCardOverlay(
     rulesVersion:
       fixtureId === "EB01-023"
         ? supportedEffectRulesVersion
-        : "fixture-real-card",
+        : fixtureId === "OP04-014"
+          ? "op04-014-banish-v1"
+          : "fixture-real-card",
     sourceTextHash: normalized.sourceTextHash,
-    status: fixtureId === "EB01-023" ? "implemented-dsl" : "unsupported",
-    tested: fixtureId === "EB01-023",
+    status:
+      fixtureId === "EB01-023"
+        ? "implemented-dsl"
+        : fixtureId === "OP04-014"
+          ? "vanilla-confirmed"
+          : "unsupported",
+    tested: fixtureId === "EB01-023" || fixtureId === "OP04-014",
   };
 
   if (fixtureId === "EB01-023") {
@@ -573,7 +580,7 @@ function createRealCardOverlay(
       "Reviewed real-card fixture with explicit [On Play] Draw 1 card DSL linkage.";
   } else if (fixtureId === "OP04-014") {
     support.notes =
-      "Reviewed real-card fixture candidate for complete printed Banish keyword behavior; kept unsupported because the current battle metadata gate rejects real cards with printed effect text and no effect definition.";
+      "Reviewed real-card fixture for complete printed Banish keyword behavior through parenthetical explanatory-note support gates.";
   } else {
     support.notes =
       "Checked-in real Poneglyph adapter fixture for normalization/hash coverage; gameplay support remains unsupported.";

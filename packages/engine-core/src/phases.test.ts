@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
 import type {
   CardId,
+  CardInstance,
   EngineEvent,
   EngineResult,
+  MatchCardManifest,
   MatchId,
   PlayerId,
   ResolvedCard,
@@ -29,9 +34,29 @@ const toCardId = (value: string): CardId => value as CardId;
 const p1 = toPlayerId("p1");
 const p2 = toPlayerId("p2");
 
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+);
+
 const must = <T>(value: T | undefined, label: string): T => {
   assert.ok(value !== undefined, `missing ${label}`);
   return value;
+};
+
+const plainDataClone = <T>(value: T): T =>
+  JSON.parse(JSON.stringify(value)) as T;
+
+const loadRealCardManifest = async (): Promise<MatchCardManifest> => {
+  const manifestFixturePath = path.join(
+    repoRoot,
+    "fixtures/cards/real-card-dsl-match-card-manifest.json",
+  );
+  return plainDataClone(
+    JSON.parse(
+      await readFile(manifestFixturePath, "utf8"),
+    ) as MatchCardManifest,
+  );
 };
 
 const eventPayload = (event: {
@@ -491,6 +516,77 @@ test("enterMainPhase rejects when on-board manifest card has effectText", () => 
   state.cardManifest.cards[leader.cardId] = {
     ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
     effectText: "[Start of Main Phase] draw 1",
+  };
+  const before = JSON.stringify(state);
+
+  const result = enterMainPhase(state);
+  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
+  assert.equal(result.events.length, 0);
+  assert.equal(JSON.stringify(state), before);
+});
+
+test("enterMainPhase accepts parenthetical explanatory notes for supported Banish-only board cards", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  const leader = must(state.players[p1], "p1").leader;
+  state.cardManifest.cards[leader.cardId] = {
+    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
+    effectText:
+      "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
+    printedKeywords: ["banish"],
+  };
+
+  const result = enterMainPhase(state);
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.turn.phase, "main");
+});
+
+test("enterMainPhase accepts OP04-014 parenthetical explanatory notes from the checked-in manifest", async () => {
+  const plainManifest = await loadRealCardManifest();
+  const op04014 = toCardId("OP04-014");
+  const opCard = must(plainManifest.cards[op04014], "OP04-014 manifest card");
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  const p1State = must(state.players[p1], "p1");
+  const characterSource = must(p1State.hand[0], "OP04-014 character source");
+  p1State.hand = p1State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index },
+  }));
+  p1State.characters = [
+    {
+      ...characterSource,
+      cardId: op04014,
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 0,
+      },
+      state: "active",
+      attachedDon: [],
+      turnPlayed: 0,
+    } satisfies CardInstance,
+  ];
+  state.cardManifest.cards[op04014] = opCard;
+
+  const result = enterMainPhase(state);
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.turn.phase, "main");
+});
+
+test("enterMainPhase rejects supported keyword text without matching printed keyword metadata", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  const leader = must(state.players[p1], "p1").leader;
+  state.cardManifest.cards[leader.cardId] = {
+    ...must(state.cardManifest.cards[leader.cardId], "leader manifest"),
+    effectText:
+      "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
+    printedKeywords: [],
   };
   const before = JSON.stringify(state);
 

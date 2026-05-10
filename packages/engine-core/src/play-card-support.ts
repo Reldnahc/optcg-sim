@@ -6,6 +6,7 @@ import {
   isSupportedNoChoiceOnPlayDrawEffect,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
+import { hasUnsupportedSupportGateText } from "./battle-support.js";
 
 export type SupportedPlayMetadata = {
   category: "character" | "stage" | "event";
@@ -36,7 +37,7 @@ export const getSupportedPlayMetadata = (
   if (resolved.support.status === "implemented-dsl") {
     if (
       resolved.cost === undefined ||
-      hasUnsupportedPlayText(resolved.triggerText)
+      hasUnsupportedSupportGateText(resolved.triggerText, resolved)
     ) {
       return null;
     }
@@ -82,8 +83,8 @@ export const getSupportedPlayMetadata = (
   }
   if (resolved.category === "character" || resolved.category === "stage") {
     if (
-      hasUnsupportedPlayText(resolved.effectText) ||
-      hasUnsupportedPlayText(resolved.triggerText) ||
+      hasUnsupportedSupportGateText(resolved.effectText, resolved) ||
+      hasUnsupportedSupportGateText(resolved.triggerText, resolved) ||
       resolved.cost === undefined
     ) {
       return null;
@@ -102,7 +103,7 @@ export const getSupportedPlayMetadata = (
   if ((resolved.effectText ?? "").trim() !== "[Main]") {
     return null;
   }
-  if (hasUnsupportedPlayText(resolved.triggerText)) {
+  if (hasUnsupportedSupportGateText(resolved.triggerText, resolved)) {
     return null;
   }
   return {
@@ -134,6 +135,3 @@ export const getPlayableHandCards = (
 
 export const getActiveDonCount = (costArea: readonly CardInstance[]): number =>
   costArea.filter((card) => card.state === "active").length;
-
-const hasUnsupportedPlayText = (text: string | undefined): boolean =>
-  text !== undefined && text.trim().length > 0;

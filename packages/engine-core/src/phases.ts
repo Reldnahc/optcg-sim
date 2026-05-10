@@ -19,6 +19,7 @@ import {
 } from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
+import { hasUnsupportedSupportGateText } from "./battle-support.js";
 
 const toStateSeq = (value: number): StateSeq => value as StateSeq;
 const toEngineEventId = (value: string): EngineEventId =>
@@ -136,9 +137,6 @@ const withIndexedZone = (
 const hasUnsupportedBoardCardSupport = (status: CardSupportStatus): boolean =>
   status !== "vanilla-confirmed";
 
-const hasNonEmptyText = (value: string | undefined): boolean =>
-  value !== undefined && value.trim().length > 0;
-
 const unsupportedStartOfMain = (
   state: GameState,
   details: unknown,
@@ -174,10 +172,10 @@ const findUnsupportedBoardCard = (
     if (resolved.support.customHandlerIds !== undefined) {
       return { cardId: card.cardId, reason: "custom-handlers-present" };
     }
-    if (hasNonEmptyText(resolved.effectText)) {
+    if (hasUnsupportedSupportGateText(resolved.effectText, resolved)) {
       return { cardId: card.cardId, reason: "effect-text-present" };
     }
-    if (hasNonEmptyText(resolved.triggerText)) {
+    if (hasUnsupportedSupportGateText(resolved.triggerText, resolved)) {
       return { cardId: card.cardId, reason: "trigger-text-present" };
     }
   }
