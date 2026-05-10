@@ -62,7 +62,7 @@ test("repo guidance documents active-story packet requirements", async () => {
   );
   assert.match(
     packetTemplate,
-    /Cleanup-scoped lifecycle verification must prove packet completion output, story lifecycle state, active packet state, and committed story metadata remain valid/,
+    /Cleanup-scoped lifecycle verification must prove metadata binding, packet completion output, story lifecycle state, active packet state, and committed story metadata remain valid/,
   );
   assert.match(
     workflow,

@@ -298,13 +298,20 @@ test("specs authorize only a narrow post-merge packet cleanup bypass", async () 
     "must bind the requested cleanup to reviewed pull-request evidence, the merge state, trusted checked-in approved story files, current packet evidence, and, for parent cleanup, included substory evidence",
     "fail closed when cleanup metadata is absent, malformed, stale, unbound to reviewed evidence, or names a story that is not eligible for completion",
     "The cleanup workflow must check out trusted `main` or default-branch code, not unreviewed pull-request branch code",
-    "exact packet-completion cleanup may use cleanup-scoped lifecycle verification instead of full repo verification before the direct cleanup push",
-    "Cleanup-scoped lifecycle verification must prove metadata binding, packet-completion output, story lifecycle state, active packet state, and committed story metadata remain valid",
-    "cleanup that includes any manual edit beyond packet-completion output still requires full repo verification and the normal reviewer-subagent path before push or merge",
     "must not open a cleanup pull request",
     "Manual fallback is only for operational failure",
     "Branch deletion may run only after packet lifecycle cleanup succeeds and only for associated merged, unprotected story or substory branches",
   ]) {
+    assertContainsWords(completionChecks, requiredText);
+    assertContainsWords(mergeGateRecommendation, requiredText);
+  }
+
+  for (const requiredText of [
+    "packet-completion cleanup may use cleanup-scoped lifecycle verification instead of full repo verification before the direct cleanup push",
+    "Cleanup-scoped lifecycle verification must prove metadata binding, packet-completion output, story lifecycle state, active packet state, and committed story metadata remain valid",
+    "that includes any manual edit beyond packet-completion output still requires full repo verification and the normal reviewer-subagent path before push or merge",
+  ]) {
+    assertContainsWords(mergeGates, requiredText);
     assertContainsWords(completionChecks, requiredText);
     assertContainsWords(mergeGateRecommendation, requiredText);
   }
