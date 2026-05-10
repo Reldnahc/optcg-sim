@@ -24,7 +24,8 @@ const { fileExists, sha256, toManifestPath }: typeof PacketLifecycle =
 
 const APPROVED_PREFIX = "stories/approved/";
 const BOUND_CLEANUP_PLAN_SCHEMA_VERSION = "post-merge-cleanup-plan.v1";
-const VERIFICATION_COMMAND = "corepack pnpm verify";
+const VERIFICATION_COMMAND =
+  "node --experimental-strip-types tools/post-merge-cleanup.ts --finalize-plan-file .cleanup/bound-cleanup-plan.json";
 
 export async function buildCleanupDryRunPlan(options: {
   evidence: CleanupEvidenceInput;

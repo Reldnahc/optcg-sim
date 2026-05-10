@@ -62,7 +62,7 @@ export type BoundCleanupPlan = {
     args: string[];
     command: "packets:complete" | "packets:complete-many";
   };
-  verificationCommand: "corepack pnpm verify";
+  verificationCommand: "node --experimental-strip-types tools/post-merge-cleanup.ts --finalize-plan-file .cleanup/bound-cleanup-plan.json";
   inputsHash: string;
 };
 

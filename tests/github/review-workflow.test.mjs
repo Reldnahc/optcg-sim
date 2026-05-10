@@ -380,9 +380,9 @@ test("post-merge cleanup workflow gates the privileged direct push on a validate
   const workflow = await readActiveText(
     ".github/workflows/post-merge-packet-cleanup.yml",
   );
-  const verifyIndex = workflow.indexOf("Run repo verification before push");
-  const revalidateIndex = workflow.indexOf(
-    "Revalidate cleanup diff after verification",
+  const executeIndex = workflow.indexOf("Execute validated packet cleanup");
+  const finalizeIndex = workflow.indexOf(
+    "Finalize cleanup-scoped lifecycle verification",
   );
   const pushIndex = workflow.indexOf("Push direct cleanup commit");
 
@@ -396,17 +396,19 @@ test("post-merge cleanup workflow gates the privileged direct push on a validate
     /name: bound-cleanup-plan\.json/i,
     /path: \.cleanup/i,
     /--execute-plan-file \.cleanup\/bound-cleanup-plan\.json/i,
+    /--finalize-plan-file \.cleanup\/bound-cleanup-plan\.json/i,
     /git push origin HEAD:\$\{\{ github\.event\.repository\.default_branch \}\}/i,
   ]);
-  assert.ok(verifyIndex > -1, "missing verification step");
+  assert.ok(executeIndex > -1, "missing packet cleanup step");
   assert.ok(
-    revalidateIndex > verifyIndex,
-    "diff must be revalidated after verification",
+    finalizeIndex > executeIndex,
+    "cleanup-scoped finalization must follow packet cleanup",
   );
   assert.ok(
-    pushIndex > revalidateIndex,
-    "push must run after final diff validation",
+    pushIndex > finalizeIndex,
+    "push must run after cleanup-scoped finalization",
   );
+  assert.doesNotMatch(workflow, /corepack pnpm verify/);
   assert.doesNotMatch(workflow, /gh pr create/);
 });
 
