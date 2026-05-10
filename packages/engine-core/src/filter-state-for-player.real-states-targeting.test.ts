@@ -13,13 +13,14 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { getLegalActions } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import {
   createActiveState,
   must,
   p1,
   p2,
   resolvedCard,
+  reviewedOnPlayDrawDefinition,
 } from "./action-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
@@ -302,6 +303,13 @@ const assertNoHiddenLeak = (
     view,
     [
       "rng",
+      "cardManifest",
+      "manifestHash",
+      "cardDataVersion",
+      "effectDefinitions",
+      "effectDefinitionsVersion",
+      "customHandlerVersion",
+      "banlistVersion",
       "effectQueue",
       "deferredTriggers",
       "replacementState",
@@ -393,6 +401,50 @@ const createSelectTargetsDecisionState = (): {
 
   const queueEntryId = toQueueEntryId("real-select-targets-private-queue");
   const effectId = toEffectId("real-select-targets-private-effect");
+  const sourceCard = resolvedCard({
+    cardId: p1State.leader.cardId,
+    category: "leader",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "real-select-targets-private-definition",
+      rulesVersion: "real-select-targets-rules",
+      sourceTextHash: "real-select-targets-source",
+    },
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    p1State.leader.cardId,
+    sourceCard.support,
+  );
+  state.cardManifest.cards[p1State.leader.cardId] = sourceCard;
+  state.cardManifest.effectDefinitionsVersion =
+    baseDefinition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "real-select-targets-private-definition": {
+      ...baseDefinition,
+      effects: [
+        {
+          ...must(baseDefinition.effects[0], "base target effect"),
+          id: effectId,
+          effect: {
+            type: "ko",
+            target: {
+              type: "choose",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                min: 1,
+                max: 1,
+                allowFewerIfUnavailable: false,
+                visibility: "public",
+              },
+            },
+          },
+        },
+      ],
+    },
+  };
   state.effectQueue = [
     {
       id: queueEntryId,
@@ -503,6 +555,11 @@ test("real selectTargets views omit candidates, legal responses, and private que
     recipientView.opponent.characters[0]?.instanceId,
     target.instanceId,
   );
+  const pendingDecision = must(state.pendingDecision, "target decision");
+  assert.equal(pendingDecision.type, "selectTargets");
+  assert.deepEqual(pendingDecision.candidates, [
+    { card: target, visibility: { type: "public" } },
+  ]);
   assert.equal(
     JSON.stringify(recipientView).includes(hiddenOpponentHandId),
     false,
@@ -527,5 +584,44 @@ test("real selectTargets views omit candidates, legal responses, and private que
     );
     assert.equal(serialized.includes(hiddenOpponentDeckId), false);
     assert.equal(serialized.includes(hiddenOpponentLifeId), false);
+    assert.equal(serialized.includes("manifestHash"), false);
+    assert.equal(serialized.includes("effectDefinitions"), false);
+    assert.equal(serialized.includes("cardManifest"), false);
+    assert.equal(serialized.includes("real-select-targets-rules"), false);
+    assert.equal(serialized.includes("real-select-targets-source"), false);
+  }
+
+  const resolved = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: toDecisionId("real-select-targets-decision"),
+    response: { type: "targets", targets: [target] },
+  });
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.deepEqual(resolved.state.effectQueue, []);
+  assertNoHiddenLeak(resolved.state, p1, "real-selectTargets-resolved:p1");
+  assertNoHiddenLeak(resolved.state, p2, "real-selectTargets-resolved:p2");
+
+  const resolvedRecipientView = filterStateForPlayer(resolved.state, p1);
+  const resolvedOpponentView = filterStateForPlayer(resolved.state, p2);
+  assert.equal(
+    JSON.stringify(resolvedRecipientView).includes(hiddenOpponentHandId),
+    false,
+  );
+  for (const view of [resolvedRecipientView, resolvedOpponentView]) {
+    const serialized = JSON.stringify(view);
+    assert.equal(serialized.includes(hiddenOpponentDeckId), false);
+    assert.equal(serialized.includes(hiddenOpponentLifeId), false);
+    assert.equal(
+      serialized.includes("real-select-targets-private-queue"),
+      false,
+    );
+    assert.equal(
+      serialized.includes("real-select-targets-private-effect"),
+      false,
+    );
+    assert.equal(serialized.includes("effectQueue"), false);
+    assert.equal(serialized.includes("cardManifest"), false);
+    assert.equal(serialized.includes("manifestHash"), false);
   }
 });

@@ -19,3 +19,15 @@ The default output directory is `fixtures/poneglyph/cards` from the repository r
 The helper validates every fetched detail through the checked-in Poneglyph schema before writing any file. If a request fails, a requested card is missing, or any returned detail is invalid, no fixture files are written for that batch. Output is deterministic JSON with sorted object keys and a stable filename of `<card_number>.<slugified-name>.json`.
 
 Tests for the helper must stay hermetic. Do not require live Poneglyph in CI; inject a fake fetch implementation and use checked-in Poneglyph-shaped fixtures for expected card details.
+
+## Target-Effect Fixture Guardrail
+
+Do not promote a real card to target-effect `implemented-dsl` support unless a
+checked-in validated Poneglyph detail payload, reviewed printed text, support
+metadata, `sourceTextHash`, `behaviorHash`, and effect-definition registry entry
+all support the exact target behavior under review.
+
+If the checked-in real fixtures do not honestly support the behavior, record the
+blocker in `stories/ambiguities/`, keep the real card unsupported or absent from
+the supported overlay, and use synthetic engine-core data for the narrow runtime
+primitive coverage.

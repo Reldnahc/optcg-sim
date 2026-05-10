@@ -1,4 +1,5 @@
 import type {
+  CardRef,
   CardInstance,
   Effect,
   EffectDefinition,
@@ -9,6 +10,7 @@ import type {
   GameState,
   PlayerId,
   PlayerRef,
+  Target,
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
@@ -19,8 +21,22 @@ export type DrawExecutionFailureReason =
   | "unsupported-player-ref"
   | "invalid-draw-count";
 
+export type SelectedTargetKoExecutionFailureReason =
+  | "unsupported-effect-shape"
+  | "unsupported-target-shape"
+  | "selected-target-count-below-minimum"
+  | "duplicate-targets"
+  | "missing-card"
+  | "stale-target"
+  | "private-target"
+  | "non-character-target";
+
 interface EffectExecutionErrorDetails {
   reason: DrawExecutionFailureReason;
+}
+
+interface SelectedTargetKoExecutionErrorDetails {
+  reason: SelectedTargetKoExecutionFailureReason;
 }
 
 const drawExecutionError = (
@@ -30,6 +46,15 @@ const drawExecutionError = (
   type: "effectRuntimeError",
   effectId,
   details: { reason } satisfies EffectExecutionErrorDetails,
+});
+
+const selectedTargetKoExecutionError = (
+  effectId: string,
+  reason: SelectedTargetKoExecutionFailureReason,
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId,
+  details: { reason } satisfies SelectedTargetKoExecutionErrorDetails,
 });
 
 export const resolvePlayerId = (
@@ -150,6 +175,329 @@ const executeDrawEffect = (
   };
 
   return toEngineResult(nextState, events);
+};
+
+const cardRefsEqual = (left: CardRef, right: CardRef): boolean =>
+  left.instanceId === right.instanceId &&
+  left.cardId === right.cardId &&
+  left.playerId === right.playerId &&
+  left.zone?.zone === right.zone?.zone &&
+  left.zone?.playerId === right.zone?.playerId &&
+  left.zone?.slot === right.zone?.slot &&
+  left.zone?.index === right.zone?.index;
+
+const hasDuplicateTargets = (targets: readonly CardRef[]): boolean =>
+  targets.some((target, index) =>
+    targets
+      .slice(index + 1)
+      .some((candidate) => cardRefsEqual(target, candidate)),
+  );
+
+type LocatedCard = {
+  playerId: PlayerId;
+  zone:
+    | "leaderArea"
+    | "characterArea"
+    | "stageArea"
+    | "hand"
+    | "deck"
+    | "trash"
+    | "costArea"
+    | "donDeck"
+    | "life";
+  card: CardInstance;
+  index?: number;
+};
+
+const findCardByInstanceId = (
+  state: GameState,
+  instanceId: CardInstance["instanceId"],
+): LocatedCard | null => {
+  for (const [playerId, player] of Object.entries(state.players) as [
+    PlayerId,
+    GameState["players"][PlayerId],
+  ][]) {
+    if (player.leader.instanceId === instanceId) {
+      return { playerId, zone: "leaderArea", card: player.leader };
+    }
+
+    const collections = [
+      ["characterArea", player.characters],
+      ["stageArea", player.stage === undefined ? [] : [player.stage]],
+      ["hand", player.hand],
+      ["deck", player.deck],
+      ["trash", player.trash],
+      ["costArea", player.costArea],
+      ["donDeck", player.donDeck],
+      ["life", player.life.map((lifeCard) => lifeCard.card)],
+    ] as const;
+
+    for (const [zone, cards] of collections) {
+      const index = cards.findIndex((card) => card.instanceId === instanceId);
+      const card = cards[index];
+      if (index >= 0 && card !== undefined) {
+        return { playerId, zone, card, index };
+      }
+    }
+  }
+  return null;
+};
+
+const executeSelectedTargetKoEffect = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: Extract<Effect, { type: "ko" }>,
+  selectedTargets: readonly CardRef[],
+): EngineResult => {
+  if (
+    effect.target.type !== "choose" ||
+    effect.target.request.visibility !== "public"
+  ) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        selectedTargetKoExecutionError(
+          entry.effectBlockId,
+          "unsupported-target-shape",
+        ),
+      ],
+    );
+  }
+
+  if (selectedTargets.length < effect.target.request.min) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        selectedTargetKoExecutionError(
+          entry.effectBlockId,
+          "selected-target-count-below-minimum",
+        ),
+      ],
+    );
+  }
+
+  if (hasDuplicateTargets(selectedTargets)) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        selectedTargetKoExecutionError(
+          entry.effectBlockId,
+          "duplicate-targets",
+        ),
+      ],
+    );
+  }
+
+  for (const target of selectedTargets) {
+    const located = findCardByInstanceId(state, target.instanceId);
+    if (located === null) {
+      return toEngineResult(
+        state,
+        [],
+        [selectedTargetKoExecutionError(entry.effectBlockId, "missing-card")],
+      );
+    }
+
+    if (
+      located.zone === "hand" ||
+      located.zone === "deck" ||
+      located.zone === "donDeck" ||
+      located.zone === "life"
+    ) {
+      return toEngineResult(
+        state,
+        [],
+        [selectedTargetKoExecutionError(entry.effectBlockId, "private-target")],
+      );
+    }
+
+    if (located.zone === "leaderArea") {
+      return toEngineResult(
+        state,
+        [],
+        [
+          selectedTargetKoExecutionError(
+            entry.effectBlockId,
+            "non-character-target",
+          ),
+        ],
+      );
+    }
+
+    if (located.zone !== "characterArea") {
+      return toEngineResult(
+        state,
+        [],
+        [selectedTargetKoExecutionError(entry.effectBlockId, "stale-target")],
+      );
+    }
+
+    if (
+      !cardRefsEqual(target, {
+        instanceId: located.card.instanceId,
+        cardId: located.card.cardId,
+        playerId: located.playerId,
+        zone: located.card.zone,
+      })
+    ) {
+      return toEngineResult(
+        state,
+        [],
+        [selectedTargetKoExecutionError(entry.effectBlockId, "stale-target")],
+      );
+    }
+
+    const resolved = state.cardManifest.cards[located.card.cardId];
+    if (resolved === undefined) {
+      return toEngineResult(
+        state,
+        [],
+        [selectedTargetKoExecutionError(entry.effectBlockId, "missing-card")],
+      );
+    }
+    if (resolved.category !== "character") {
+      return toEngineResult(
+        state,
+        [],
+        [
+          selectedTargetKoExecutionError(
+            entry.effectBlockId,
+            "non-character-target",
+          ),
+        ],
+      );
+    }
+  }
+
+  const events: EngineEvent[] = [];
+  let nextState = state;
+
+  for (const target of selectedTargets) {
+    const located = findCardByInstanceId(nextState, target.instanceId);
+    if (located === null || located.zone !== "characterArea") {
+      return toEngineResult(
+        state,
+        [],
+        [selectedTargetKoExecutionError(entry.effectBlockId, "stale-target")],
+      );
+    }
+
+    const player = nextState.players[located.playerId];
+    if (player === undefined) {
+      return toEngineResult(
+        state,
+        [],
+        [selectedTargetKoExecutionError(entry.effectBlockId, "missing-card")],
+      );
+    }
+
+    const targetIndex = player.characters.findIndex(
+      (candidate) => candidate.instanceId === located.card.instanceId,
+    );
+    const koCard = player.characters[targetIndex];
+    if (targetIndex < 0 || koCard === undefined) {
+      return toEngineResult(
+        state,
+        [],
+        [selectedTargetKoExecutionError(entry.effectBlockId, "stale-target")],
+      );
+    }
+
+    const trashedCard: CardInstance = {
+      ...koCard,
+      attachedDon: [],
+      zone: {
+        zone: "trash",
+        playerId: located.playerId,
+        slot: "trash",
+        index: 0,
+      },
+    };
+    const nextCharacters = reindexZoneCards(
+      player.characters.filter((_, index) => index !== targetIndex),
+      "characterArea",
+      located.playerId,
+      "character",
+    );
+    const nextTrash = reindexZoneCards(
+      [trashedCard, ...player.trash],
+      "trash",
+      located.playerId,
+      "trash",
+    );
+    const attachedDonIds = new Set(koCard.attachedDon);
+    const nextCostArea = player.costArea.map((card) =>
+      attachedDonIds.has(card.instanceId)
+        ? { ...card, state: "rested" as const }
+        : card,
+    );
+
+    nextState = {
+      ...nextState,
+      players: {
+        ...nextState.players,
+        [located.playerId]: {
+          ...player,
+          characters: nextCharacters,
+          trash: nextTrash,
+          costArea: nextCostArea,
+        },
+      },
+    };
+
+    appendEvent(nextState, events, "cardKOd", {
+      playerId: located.playerId,
+      instanceId: koCard.instanceId,
+    });
+    appendEvent(nextState, events, "cardMoved", {
+      instanceId: koCard.instanceId,
+      cardId: koCard.cardId,
+      from: koCard.zone,
+      to: trashedCard.zone,
+      reason: "ko",
+    });
+    for (const donId of koCard.attachedDon) {
+      appendEvent(
+        nextState,
+        events,
+        "donReturned",
+        { playerId: located.playerId, donInstanceId: donId, state: "rested" },
+        { type: "replayOnly" },
+      );
+    }
+  }
+
+  const finalState: GameState = {
+    ...nextState,
+    seq: toStateSeq(state.seq + 1),
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  return toEngineResult(finalState, events);
+};
+
+export const executeSelectedTargetEffectPrimitive = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: Effect,
+  selectedTargets: readonly CardRef[],
+): EngineResult => {
+  if (effect.type !== "ko") {
+    return toEngineResult(
+      state,
+      [],
+      [
+        selectedTargetKoExecutionError(
+          entry.effectBlockId,
+          "unsupported-effect-shape",
+        ),
+      ],
+    );
+  }
+
+  return executeSelectedTargetKoEffect(state, entry, effect, selectedTargets);
 };
 
 export const executeNoChoiceEffectPrimitive = (
@@ -290,6 +638,52 @@ export const isSupportedNoChoiceMainEventDrawEffect = (
   effect.sourcePresencePolicy === "resolveFromDestinationZone" &&
   effect.trigger.type === "main" &&
   isNoChoiceDrawEffectShape(effect);
+
+const isReviewedTargetKoRequestShape = (
+  request: Extract<Target, { type: "choose" }>["request"],
+): boolean =>
+  request.timing === "onResolution" &&
+  request.chooser === "self" &&
+  request.player === "opponent" &&
+  request.zone === "characterArea" &&
+  request.filter === undefined &&
+  request.min === 0 &&
+  request.max === 1 &&
+  request.allowFewerIfUnavailable &&
+  request.visibility === "public";
+
+type EffectWithTarget = Extract<Effect, { target: unknown }>;
+
+const isChooseTarget = (
+  target: EffectWithTarget["target"],
+): target is Extract<Target, { type: "choose" }> =>
+  typeof target === "object" && "type" in target && target.type === "choose";
+
+export const isSupportedMainEventTargetKoEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Extract<Effect, { type: "ko" }> & {
+    target: Extract<Target, { type: "choose" }>;
+  };
+} => {
+  if (
+    effect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
+    effect.trigger.type !== "main" ||
+    effect.category !== "auto" ||
+    effect.optional ||
+    effect.oncePerTurn ||
+    effect.cost !== undefined ||
+    effect.condition !== undefined ||
+    effect.conditionTiming !== undefined ||
+    effect.failurePolicy !== undefined ||
+    effect.effect.type !== "ko" ||
+    !isChooseTarget(effect.effect.target)
+  ) {
+    return false;
+  }
+  return isReviewedTargetKoRequestShape(effect.effect.target.request);
+};
 
 const isSupportedNoChoiceLifeTriggerDrawEffect = (
   effect: EffectDefinition["effects"][number],

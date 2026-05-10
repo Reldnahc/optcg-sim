@@ -8,10 +8,15 @@ import type {
   MatchCardManifest,
   QueueEntryId,
   ResolvedCard,
+  SelectTargetsDecision,
+  CardRef,
 } from "@optcg/types";
 
 import { createEffectRuntimeQueueResults } from "./effect-runtime-queue-results.js";
-import type { EffectQueuePendingRuntimeWork } from "./effect-runtime-queue-target-decisions.js";
+import type {
+  EffectQueuePendingRuntimeWork,
+  EffectRuntimeQueueTargetDecisionDependencies,
+} from "./effect-runtime-queue-target-decisions.js";
 import { createEffectRuntimeQueueTargetDecisions } from "./effect-runtime-queue-target-decisions.js";
 
 type ResolveImplementedDslEffectDefinition = (
@@ -33,10 +38,16 @@ export interface EffectRuntimeQueueProcessingDependencies {
     work: EffectQueuePendingRuntimeWork,
   ) => EngineError;
   queueEffectResolvedCustomTriggers: QueueEffectResolvedCustomTriggers;
+  queueBattleKOTriggers: EffectRuntimeQueueTargetDecisionDependencies["queueBattleKOTriggers"];
 }
 
 export interface EffectRuntimeQueueProcessing {
   failUnsupportedTargetEffectContinuation: (state: GameState) => EngineResult;
+  continueSelectedTargetEffect: (
+    state: GameState,
+    decision: SelectTargetsDecision,
+    selectedTargets: readonly CardRef[],
+  ) => EngineResult;
   processNoChoiceEffectQueue: (
     state: GameState,
     orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
@@ -57,6 +68,24 @@ export const createEffectRuntimeQueueProcessing = (
   });
 
   return {
+    continueSelectedTargetEffect: (state, decision, selectedTargets) => {
+      const resolved = targetDecisions.continueSelectedTargetEffect(
+        state,
+        decision,
+        selectedTargets,
+      );
+      if (
+        resolved.errors !== undefined ||
+        resolved.state.status.type !== "active"
+      ) {
+        return resolved;
+      }
+      const continued = queueResults.processNoChoiceEffectQueue(resolved.state);
+      return {
+        ...continued,
+        events: [...resolved.events, ...continued.events],
+      };
+    },
     failUnsupportedTargetEffectContinuation:
       targetDecisions.failUnsupportedTargetEffectContinuation,
     processNoChoiceEffectQueue: queueResults.processNoChoiceEffectQueue,

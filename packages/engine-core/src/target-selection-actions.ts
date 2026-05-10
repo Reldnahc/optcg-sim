@@ -12,13 +12,29 @@ import type {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { zonesEqual } from "./action-state.js";
-import { failUnsupportedTargetEffectContinuation } from "./effect-runtime.js";
+import { continueSelectedTargetEffect } from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { resolvePublicTargetCandidates } from "./target-selection.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
 ];
+
+const toErrorTuple = (
+  errors: readonly EngineError[],
+): readonly [EngineError, ...EngineError[]] => {
+  const first = errors[0];
+  if (first === undefined) {
+    return [
+      {
+        type: "effectRuntimeError",
+        effectId: "select-targets-continuation",
+        details: { reason: "empty-runtime-error-list" },
+      },
+    ];
+  }
+  return [first, ...errors.slice(1)];
+};
 
 const cardRefMatches = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
@@ -239,10 +255,16 @@ export const applySelectTargetsDecisionResponse = (
   };
   delete nextState.pendingDecision;
   assertGameStateInvariants(nextState);
-  const unsupportedContinuation =
-    failUnsupportedTargetEffectContinuation(nextState);
+  const continuation = continueSelectedTargetEffect(
+    nextState,
+    decision,
+    targets,
+  );
+  if (continuation.errors !== undefined) {
+    return toEngineResult(state, [], toErrorTuple(continuation.errors));
+  }
   return {
-    ...unsupportedContinuation,
-    events: [...events, ...unsupportedContinuation.events],
+    ...continuation,
+    events: [...events, ...continuation.events],
   };
 };

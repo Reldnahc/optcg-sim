@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-039E.md",
+      "storyId": "ENG-039E",
+      "storyPath": "stories/approved/ENG-039E-target-effect-view-event-hash-regression.yaml",
+      "storySha256": "bca8485e47a424d2ad4acdbf99bb14eb2ab215da871ed9d19a8a9af9338b0c86"
+    }
+  ],
   "version": 1
 }

@@ -1,0 +1,95 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-039C
+epic_id: KICK-001
+title: Integrate targeted KO with Main Event play
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Allow supported Main Event cards with the exact reviewed target KO effect to
+  use the existing play, DON payment, hand-to-trash, target-selection, and
+  primitive-resolution path.
+story_boundary: >
+  Own only Main Event integration for one implemented-dsl effect block whose
+  trigger is `main`, source policy is Event destination-zone resolution, and
+  effect is the reviewed choose-target KO shape. Stop before supporting other
+  Event targets or other effect primitives.
+allowed_touch_points:
+  - packages/engine-core/src/play-card-support.ts
+  - packages/engine-core/src/play-card-event.test.ts
+  - packages/engine-core/src/play-card.ts
+  - packages/engine-core/src/effect-runtime-primitives.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-main-event.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-main-event.test.ts
+  - packages/engine-core/src/effect-runtime-queue-target-decisions.ts
+  - packages/engine-core/src/effect-runtime-queue-processing.ts
+  - packages/engine-core/src/effect-runtime.ts
+  - stories/generated/ENG-039C-main-event-target-ko-integration.yaml
+  - stories/approved/ENG-039C-main-event-target-ko-integration.yaml
+  - agent-packets/ENG-039C.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s013
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s020
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s013
+  - 11-testing-quality.s004
+  - 11-testing-quality.s005
+scope:
+  - update Main Event support gating to accept only the reviewed target KO effect shape in addition to existing no-choice draw support
+  - preserve existing Main Event timing, controller Main Phase, payment, and hand-to-trash behavior
+  - after play/payment, create selectTargets for the reviewed public opponent Character request
+  - resolve the selected target through the ENG-039A and ENG-039B continuation
+  - keep unsupported Main Event target shapes omitted from legal actions and fail-closed if forced
+  - use plain MatchCardManifest data and cards-produced fixtures by default for integration tests
+non_scope:
+  - Counter Events
+  - optional effects
+  - once-per-turn behavior
+  - Event effect costs beyond existing card play DON cost
+  - permanent modifiers
+  - replacement effects
+  - search or reveal effects
+  - custom handlers
+  - server, client, API, WebSocket, database, or UI work
+  - engine-core importing @optcg/cards
+dependencies:
+  - ENG-039A
+  - ENG-039B
+  - ENG-038A
+  - ENG-038B
+  - ENG-038C
+acceptance_criteria:
+  - legal actions include a supported implemented-dsl Main Event only for the reviewed target KO shape and only under existing Main Phase controller constraints
+  - paying an Event cost still uses the existing DON payment path and moves the Event from hand to trash before target effect resolution
+  - target-based Main Event resolution creates selectTargets, validates the selected target, K.O.s the selected Character, and leaves unsupported shapes fail-closed
+  - existing no-choice Main Event draw tests continue to pass unchanged
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/play-card-event.test.ts packages/engine-core/src/effect-runtime-trigger-queueing-main-event.test.ts packages/engine-core/src/target-selection-actions.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-039C packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-039 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+  - if Main Event integration requires new gameplay timing, optional activation, or replacement behavior, stop and split or record the blocker
+ambiguity_policy: fail_and_escalate
