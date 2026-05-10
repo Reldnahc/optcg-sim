@@ -5,7 +5,7 @@ id: INF-037
 epic_id: KICK-001
 title: Separate real-card fixture tests from engine runtime requirements
 type: verification
-area: workflow
+area: infra
 primary_concern: verification
 priority: high
 status: generated
