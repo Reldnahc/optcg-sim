@@ -293,6 +293,40 @@ test("pull request template declares reviewed post-merge cleanup metadata", asyn
     /Confirm the exact cleanup metadata source ref before merge/i,
   );
   assert.doesNotMatch(prTemplate, /names the exact `pr-body:/i);
+  assert.doesNotMatch(
+    prTemplate,
+    /```yaml[\s\S]*Post-merge cleanup:/i,
+    "cleanup metadata examples must not be fenced YAML because the parser expects the exact source block",
+  );
+  assert.doesNotMatch(
+    prTemplate,
+    /^cleanup:\s*\n\s*mode:/im,
+    "cleanup metadata examples must not add a cleanup wrapper key",
+  );
+});
+
+test("workflow docs latch cleanup metadata handoff to actual PR source and guard status", async () => {
+  const agents = await readActiveText("AGENTS.md");
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const prTemplate = await readActiveText(".github/pull_request_template.md");
+  const workflowGuidance = `${agents}\n${storyExecution}\n${parentBranches}\n${reviewGate}\n${prTemplate}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /actual current PR body or selected durable handoff comment/i,
+    /not a copied example or reconstructed local text/i,
+    /--validate-cleanup-handoff-json-file/i,
+    /--require-cleanup-guard-status/i,
+    /cleanup-metadata-guard/i,
+    /must be present and passing before human review is requested/i,
+    /no markdown fence/i,
+    /no `cleanup:` wrapper/i,
+  ]);
 });
 
 test("workflow docs describe automated packet cleanup policy and fallback boundaries", async () => {
@@ -501,7 +535,7 @@ test("agents guidance exposes a concise root checklist and links detailed workfl
     /Stay inside the story boundary and `allowed_touch_points`/i,
     /Open the PR before reviewer-subagent review/i,
     /Post the AI review record or equivalent human-review fallback/i,
-    /Request human review only after review records are current/i,
+    /Request human review only after review records and cleanup metadata handoff checks are current/i,
     /Confirm post-merge packet cleanup automation completed the listed story cleanup after merge to `main`/i,
     /manual packet-completion cleanup only as the operational fallback when automation fails or is unavailable/i,
     /docs\/workflow\/story-execution\.md/i,

@@ -46,11 +46,13 @@ For any implementation or review handoff:
 7. Implement the story with its required tests.
 8. Run the story-specific tests and `pnpm verify`.
 9. Open the PR before reviewer-subagent review.
-10. Post the AI review record or equivalent human-review fallback.
-11. Post or update the revision response when reviewer-subagent review was used.
-12. Request human review only after review records are current.
-13. Merge only after the required human review gate is satisfied.
-14. Confirm post-merge packet cleanup automation completed the listed story cleanup after merge to `main`, or run manual packet-completion cleanup only as the operational fallback when automation fails or is unavailable.
+10. Run cleanup metadata handoff preflight against the actual current PR body or selected durable handoff comment, fetched changed files, and fetched PR head branch, not a copied example or reconstructed local text; the metadata source must use exact `Post-merge cleanup:` syntax with no markdown fence and no `cleanup:` wrapper.
+11. Confirm the remote `cleanup-metadata-guard` check is present and passing before reviewer handoff or human review request.
+12. Post the AI review record or equivalent human-review fallback.
+13. Post or update the revision response when reviewer-subagent review was used.
+14. Request human review only after review records and cleanup metadata handoff checks are current.
+15. Merge only after the required human review gate is satisfied.
+16. Confirm post-merge packet cleanup automation completed the listed story cleanup after merge to `main`, or run manual packet-completion cleanup only as the operational fallback when automation fails or is unavailable.
 
 ## Mandatory Procedures
 

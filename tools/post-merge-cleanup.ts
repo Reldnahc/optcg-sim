@@ -54,7 +54,10 @@ async function main() {
     }
     const handoffGuard = await parseCleanupHandoffGuard(args);
     if (handoffGuard !== null) {
-      const result = validateWorkflowCleanupMetadataGuard(handoffGuard);
+      const result = validateWorkflowCleanupMetadataGuard(handoffGuard.input, {
+        requireCleanupMetadataGuardStatus:
+          handoffGuard.requireCleanupMetadataGuardStatus,
+      });
       process.stdout.write(
         `${JSON.stringify({ status: "valid", ...result }, null, 2)}\n`,
       );
@@ -172,17 +175,24 @@ async function main() {
   }
 }
 
-async function parseCleanupHandoffGuard(
-  args: string[],
-): Promise<Metadata.WorkflowCleanupMetadataGuardInput | null> {
+async function parseCleanupHandoffGuard(args: string[]): Promise<{
+  input: Metadata.WorkflowCleanupMetadataGuardInput;
+  requireCleanupMetadataGuardStatus: boolean;
+} | null> {
+  const requireCleanupMetadataGuardStatus = args.includes(
+    "--require-cleanup-guard-status",
+  );
   const handoffJsonFile = parseSinglePathArg(
     args,
     "--validate-cleanup-handoff-json-file",
   );
   if (handoffJsonFile !== null) {
-    return parseCleanupHandoffJson(
-      JSON.parse(await readFile(handoffJsonFile, "utf8")) as unknown,
-    );
+    return {
+      input: parseCleanupHandoffJson(
+        JSON.parse(await readFile(handoffJsonFile, "utf8")) as unknown,
+      ),
+      requireCleanupMetadataGuardStatus,
+    };
   }
 
   if (!args.includes("--validate-cleanup-handoff")) {
@@ -196,7 +206,11 @@ async function parseCleanupHandoffGuard(
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
 
-    if (token === "--validate-cleanup-handoff" || token === "--") {
+    if (
+      token === "--validate-cleanup-handoff" ||
+      token === "--require-cleanup-guard-status" ||
+      token === "--"
+    ) {
       continue;
     }
 
@@ -247,15 +261,18 @@ async function parseCleanupHandoffGuard(
   }
 
   return {
-    issueComments: [],
-    pullRequest: {
-      body:
-        prBodyFile === null
-          ? (prBody ?? "")
-          : await readFile(prBodyFile, "utf8"),
-      number: prNumber,
-      updatedAt: "1970-01-01T00:00:00.000Z",
+    input: {
+      issueComments: [],
+      pullRequest: {
+        body:
+          prBodyFile === null
+            ? (prBody ?? "")
+            : await readFile(prBodyFile, "utf8"),
+        number: prNumber,
+        updatedAt: "1970-01-01T00:00:00.000Z",
+      },
     },
+    requireCleanupMetadataGuardStatus,
   };
 }
 
@@ -272,18 +289,78 @@ function parseCleanupHandoffJson(
     throw new Error("Cleanup handoff issueComments must be an array.");
   }
   return {
+    ...(Array.isArray(root["allowedBranches"])
+      ? {
+          allowedBranches: parseJsonStringArray(
+            root["allowedBranches"],
+            "allowedBranches",
+          ),
+        }
+      : {}),
+    ...(Array.isArray(root["changedFiles"])
+      ? {
+          changedFiles: root["changedFiles"].map((file) =>
+            parseWorkflowChangedFile(file),
+          ),
+        }
+      : {}),
     issueComments: issueComments.map((comment) =>
       parseWorkflowIssueComment(comment),
     ),
     pullRequest: {
       body: requireJsonString(pullRequest["body"], "pullRequest.body"),
+      ...(typeof pullRequest["headRef"] === "string"
+        ? {
+            headRef: requireJsonString(
+              pullRequest["headRef"],
+              "pullRequest.headRef",
+            ),
+          }
+        : {}),
       number: requireJsonInteger(pullRequest["number"], "pullRequest.number"),
       updatedAt: requireJsonString(
         pullRequest["updatedAt"],
         "pullRequest.updatedAt",
       ),
     },
+    ...(Array.isArray(root["statusChecks"])
+      ? {
+          statusChecks: root["statusChecks"].map((check) =>
+            parseWorkflowStatusCheck(check),
+          ),
+        }
+      : {}),
   };
+}
+
+function parseWorkflowChangedFile(
+  value: unknown,
+): Metadata.WorkflowChangedFileInput {
+  if (typeof value === "string") {
+    return { filename: value };
+  }
+
+  const root = requireRecord(value, "cleanup handoff changed file");
+  return {
+    filename: requireJsonString(root["filename"], "changedFiles[].filename"),
+  };
+}
+
+function parseWorkflowStatusCheck(
+  value: unknown,
+): Metadata.WorkflowStatusCheckInput {
+  const root = requireRecord(value, "cleanup handoff status check");
+  const check: Metadata.WorkflowStatusCheckInput = {
+    name: requireJsonString(root["name"], "statusChecks[].name"),
+  };
+
+  for (const key of ["bucket", "conclusion", "state", "status"] as const) {
+    if (root[key] !== undefined) {
+      check[key] = requireJsonString(root[key], `statusChecks[].${key}`);
+    }
+  }
+
+  return check;
 }
 
 function parseWorkflowIssueComment(
@@ -321,6 +398,16 @@ function requireJsonStringOrNumber(value: unknown, label: string) {
     throw new Error(`Cleanup handoff ${label} must be a string or number.`);
   }
   return value;
+}
+
+function parseJsonStringArray(value: unknown, label: string) {
+  if (!Array.isArray(value)) {
+    throw new Error(`Cleanup handoff ${label} must be an array.`);
+  }
+
+  return value.map((entry, index) =>
+    requireJsonString(entry, `${label}[${String(index)}]`),
+  );
 }
 
 function requireJsonInteger(value: unknown, label: string) {

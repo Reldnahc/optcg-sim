@@ -183,11 +183,25 @@ export type WorkflowCleanupEvidenceInput = {
 };
 
 export type WorkflowCleanupMetadataGuardInput = {
+  allowedBranches?: string[];
+  changedFiles?: WorkflowChangedFileInput[];
   issueComments: WorkflowIssueCommentInput[];
-  pullRequest: Pick<WorkflowPullRequestInput, "body" | "number" | "updatedAt">;
+  pullRequest: Pick<WorkflowPullRequestInput, "body" | "number" | "updatedAt"> &
+    Partial<Pick<WorkflowPullRequestInput, "headRef">>;
+  statusChecks?: WorkflowStatusCheckInput[];
+};
+
+export type WorkflowStatusCheckInput = {
+  bucket?: string;
+  conclusion?: string;
+  name: string;
+  state?: string;
+  status?: string;
 };
 
 export type WorkflowCleanupMetadataGuardResult = {
+  cleanupMetadataGuardStatus?: WorkflowStatusCheckInput;
+  humanReviewReady?: boolean;
   metadata: CleanupMetadata;
   metadataSource: CleanupMetadataSourceEvidence;
   metadataSourceRef: string;
@@ -276,6 +290,7 @@ export function buildWorkflowCleanupEvidence(
 
 export function validateWorkflowCleanupMetadataGuard(
   input: WorkflowCleanupMetadataGuardInput,
+  options: { requireCleanupMetadataGuardStatus?: boolean } = {},
 ): WorkflowCleanupMetadataGuardResult {
   const candidates = buildMetadataSourceCandidates(input, {
     reportMalformed: true,
@@ -301,6 +316,15 @@ export function validateWorkflowCleanupMetadataGuard(
     metadataSourceRef: selected.sourceRef,
   };
 
+  if (options.requireCleanupMetadataGuardStatus) {
+    requireCleanupMetadataScopeBinding(selected.metadata, input);
+    const cleanupMetadataGuardStatus = requirePassingCleanupMetadataGuardStatus(
+      input.statusChecks,
+    );
+    result.cleanupMetadataGuardStatus = cleanupMetadataGuardStatus;
+    result.humanReviewReady = true;
+  }
+
   if (selected.metadata.mode === "parent") {
     result.parentLifecycle = buildParentLifecycle({
       evidenceSources: [
@@ -319,6 +343,84 @@ export function validateWorkflowCleanupMetadataGuard(
   }
 
   return result;
+}
+
+function requireCleanupMetadataScopeBinding(
+  metadata: CleanupMetadata,
+  input: WorkflowCleanupMetadataGuardInput,
+) {
+  if (input.changedFiles === undefined) {
+    throw new Error(
+      "Cleanup handoff requires fetched changed files to bind metadata to reviewed PR scope.",
+    );
+  }
+  if (
+    input.pullRequest.headRef === undefined ||
+    input.pullRequest.headRef === ""
+  ) {
+    throw new Error(
+      "Cleanup handoff requires fetched PR head branch to bind metadata to reviewed PR scope.",
+    );
+  }
+
+  const changedFiles = new Set(input.changedFiles.map((file) => file.filename));
+  for (const storyPath of metadata.stories) {
+    if (!changedFiles.has(storyPath)) {
+      throw new Error(
+        `Cleanup metadata story ${storyPath} is outside reviewed PR changed files.`,
+      );
+    }
+  }
+
+  const allowedBranches = new Set([
+    input.pullRequest.headRef,
+    ...(input.allowedBranches ?? []),
+  ]);
+  for (const branch of metadata.branches) {
+    if (!allowedBranches.has(branch)) {
+      throw new Error(
+        `Cleanup metadata branch ${branch} is outside reviewed PR head branch scope.`,
+      );
+    }
+  }
+}
+
+function requirePassingCleanupMetadataGuardStatus(
+  statusChecks: WorkflowStatusCheckInput[] | undefined,
+): WorkflowStatusCheckInput {
+  if (statusChecks === undefined) {
+    throw new Error(
+      "Cleanup handoff requires fetched cleanup-metadata-guard status checks.",
+    );
+  }
+
+  const matching = statusChecks.filter(
+    (check) => check.name === "cleanup-metadata-guard",
+  );
+  if (matching.length === 0) {
+    throw new Error(
+      "Missing cleanup-metadata-guard status check for human-review-ready handoff.",
+    );
+  }
+
+  const passing = matching.find(isPassingStatusCheck);
+  if (passing === undefined) {
+    throw new Error(
+      "cleanup-metadata-guard status check must be passing before human-review-ready handoff.",
+    );
+  }
+
+  return passing;
+}
+
+function isPassingStatusCheck(check: WorkflowStatusCheckInput): boolean {
+  return (
+    check.bucket?.toLowerCase() === "pass" ||
+    check.state?.toUpperCase() === "SUCCESS" ||
+    check.conclusion?.toLowerCase() === "success" ||
+    (check.status?.toLowerCase() === "completed" &&
+      check.conclusion?.toLowerCase() === "success")
+  );
 }
 
 function buildMetadataSourceCandidates(
