@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add a small reviewed set of real Poneglyph card-detail fixtures and hermetic
   tests proving the existing @optcg/cards validation, normalization, overlay,

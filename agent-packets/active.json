@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CARD-004.md",
-      "storyId": "CARD-004",
-      "storyPath": "stories/approved/CARD-004-real-card-fixture-integration-tests.yaml",
-      "storySha256": "2eeba944ef349d476050917e044e89b33a8bfd1feaae5eb4ffc98d9803416ef1"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
