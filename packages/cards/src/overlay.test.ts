@@ -180,6 +180,76 @@ describe("simulator overlay merge", () => {
     ).toThrow(/does not match normalized card OP05-091/);
   });
 
+  it("fails closed when top-level overlay effect metadata disagrees with support metadata", async () => {
+    const normalized = await normalizedRebecca();
+
+    expect(() =>
+      mergeSimulatorOverlay(normalized, {
+        cardId: "OP05-091",
+        effectDefinitionId: "op05-091.overlay-effect",
+        support: {
+          behaviorHash: normalized.behaviorHash,
+          cardDataVersion: "cards-v1",
+          cardId: "OP05-091",
+          rulesVersion: "rules-v1",
+          sourceTextHash: normalized.sourceTextHash,
+          status: "implemented-dsl",
+          tested: true,
+        },
+      }),
+    ).toThrow(/effectDefinitionId/i);
+
+    expect(() =>
+      mergeSimulatorOverlay(normalized, {
+        cardId: "OP05-091",
+        effectDefinitionId: "op05-091.overlay-effect",
+        support: {
+          behaviorHash: normalized.behaviorHash,
+          cardDataVersion: "cards-v1",
+          cardId: "OP05-091",
+          effectDefinitionId: "op05-091.support-effect",
+          rulesVersion: "rules-v1",
+          sourceTextHash: normalized.sourceTextHash,
+          status: "implemented-dsl",
+          tested: true,
+        },
+      }),
+    ).toThrow(/effectDefinitionId/i);
+
+    expect(() =>
+      mergeSimulatorOverlay(normalized, {
+        cardId: "OP05-091",
+        customHandlerIds: ["op05-091.overlay-handler"],
+        support: {
+          behaviorHash: normalized.behaviorHash,
+          cardDataVersion: "cards-v1",
+          cardId: "OP05-091",
+          rulesVersion: "rules-v1",
+          sourceTextHash: normalized.sourceTextHash,
+          status: "implemented-custom",
+          tested: true,
+        },
+      }),
+    ).toThrow(/customHandlerIds/i);
+
+    expect(() =>
+      mergeSimulatorOverlay(normalized, {
+        cardId: "OP05-091",
+        customHandlerIds: ["op05-091.overlay-handler"],
+        support: {
+          behaviorHash: normalized.behaviorHash,
+          cardDataVersion: "cards-v1",
+          cardId: "OP05-091",
+          customHandlerIds: ["op05-091.support-handler"],
+          rulesVersion: "rules-v1",
+          sourceTextHash: normalized.sourceTextHash,
+          status: "implemented-custom",
+          tested: true,
+        },
+      }),
+    ).toThrow(/customHandlerIds/i);
+  });
+
   it("validates overlay registries keyed by card ID", async () => {
     const normalized = await normalizedRebecca();
     const registry = validateSimulatorOverlayRegistry({
