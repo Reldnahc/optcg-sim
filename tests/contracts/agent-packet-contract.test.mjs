@@ -58,7 +58,11 @@ test("repo guidance documents active-story packet requirements", async () => {
   );
   assert.match(
     packetTemplate,
-    /treat the exact file changes produced by that completion operation as generated lifecycle cleanup that needs repo verification but does not need separate reviewer-subagent review unless any manual edits are added/,
+    /treat the exact file changes produced by that completion operation as generated lifecycle cleanup that needs cleanup-scoped lifecycle verification but does not need separate reviewer-subagent review unless any manual edits are added/,
+  );
+  assert.match(
+    packetTemplate,
+    /Cleanup-scoped lifecycle verification must prove packet completion output, story lifecycle state, active packet state, and committed story metadata remain valid/,
   );
   assert.match(
     workflow,

@@ -4427,7 +4427,7 @@
       "doc_path": "23-repo-tooling-and-enforcement.md",
       "heading": "Coverage policy",
       "heading_level": 2,
-      "marker_line": 353,
+      "marker_line": 362,
       "visible_line": "Section Ref: `23-repo-tooling-and-enforcement.s017`"
     },
     {
@@ -4436,7 +4436,7 @@
       "doc_path": "23-repo-tooling-and-enforcement.md",
       "heading": "Snapshot policy",
       "heading_level": 2,
-      "marker_line": 371,
+      "marker_line": 380,
       "visible_line": "Section Ref: `23-repo-tooling-and-enforcement.s018`"
     },
     {
@@ -4445,7 +4445,7 @@
       "doc_path": "23-repo-tooling-and-enforcement.md",
       "heading": "Logging and diagnostics tooling",
       "heading_level": 2,
-      "marker_line": 394,
+      "marker_line": 403,
       "visible_line": "Section Ref: `23-repo-tooling-and-enforcement.s019`"
     },
     {
@@ -4454,7 +4454,7 @@
       "doc_path": "23-repo-tooling-and-enforcement.md",
       "heading": "Dependency policy",
       "heading_level": 2,
-      "marker_line": 411,
+      "marker_line": 420,
       "visible_line": "Section Ref: `23-repo-tooling-and-enforcement.s020`"
     },
     {
@@ -4463,7 +4463,7 @@
       "doc_path": "23-repo-tooling-and-enforcement.md",
       "heading": "Generated code and codegen policy",
       "heading_level": 2,
-      "marker_line": 428,
+      "marker_line": 437,
       "visible_line": "Section Ref: `23-repo-tooling-and-enforcement.s021`"
     },
     {
@@ -4472,7 +4472,7 @@
       "doc_path": "23-repo-tooling-and-enforcement.md",
       "heading": "Required implementation sequence for tooling",
       "heading_level": 2,
-      "marker_line": 443,
+      "marker_line": 452,
       "visible_line": "Section Ref: `23-repo-tooling-and-enforcement.s022`"
     },
     {
@@ -4481,7 +4481,7 @@
       "doc_path": "23-repo-tooling-and-enforcement.md",
       "heading": "Definition of done for repo tooling",
       "heading_level": 2,
-      "marker_line": 464,
+      "marker_line": 473,
       "visible_line": "Section Ref: `23-repo-tooling-and-enforcement.s023`"
     },
     {
@@ -4940,7 +4940,7 @@
       "doc_path": "26-agent-packet-template.md",
       "heading": "Recommended agent instruction footer",
       "heading_level": 2,
-      "marker_line": 148,
+      "marker_line": 149,
       "visible_line": "Section Ref: `26-agent-packet-template.s006`"
     },
     {
@@ -4949,7 +4949,7 @@
       "doc_path": "26-agent-packet-template.md",
       "heading": "Recommended review-agent footer",
       "heading_level": 2,
-      "marker_line": 167,
+      "marker_line": 168,
       "visible_line": "Section Ref: `26-agent-packet-template.s007`"
     },
     {
@@ -5102,7 +5102,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "First practical adoption step",
       "heading_level": 2,
-      "marker_line": 322,
+      "marker_line": 324,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s016`"
     },
     {
@@ -5642,7 +5642,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Subagent model routing",
       "heading_level": 2,
-      "marker_line": 257,
+      "marker_line": 265,
       "visible_line": "Section Ref: `32-codex-agent-integration.s014`"
     },
     {
