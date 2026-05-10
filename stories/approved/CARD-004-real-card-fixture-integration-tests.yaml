@@ -1,0 +1,132 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-004
+epic_id: CARD-004
+title: Add real card fixture integration tests
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Add a small reviewed set of real Poneglyph card-detail fixtures and hermetic
+  tests proving the existing @optcg/cards validation, normalization, overlay,
+  manifest, deck/loadout validation, and effect DSL execution surfaces work
+  against real checked-in card payloads rather than synthetic-only data.
+story_boundary: >
+  Own real checked-in Poneglyph-shaped fixture coverage and tests for the
+  existing cards package adapter path and current engine effect DSL runtime path.
+  Do not broaden into full catalog sync, live-network CI, new DSL primitives,
+  custom handlers, server/client integration, or production gameplay support
+  changes.
+allowed_touch_points:
+  - packages/cards/src/real-card-fixtures.ts
+  - packages/cards/src/real-card-fixtures.test.ts
+  - packages/cards/src/representative-fixtures.ts
+  - packages/cards/src/index.ts
+  - packages/engine-core/src/real-card-dsl-runtime.test.ts
+  - fixtures/poneglyph/cards/EB01-023.edward-weevil.json
+  - fixtures/cards/real-card-dsl-match-card-manifest.json
+  - fixtures/effect-dsl/valid/eb01-023-on-play-draw-1.json
+  - tests/integration/real-card-dsl-manifest-smoke.test.mjs
+  - docs/workflow/card-fixture-capture.md
+  - stories/generated/CARD-004-real-card-fixture-integration-tests.yaml
+  - stories/approved/CARD-004-real-card-fixture-integration-tests.yaml
+  - agent-packets/CARD-004.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s001
+  - 05-effect-dsl-reference.s002
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s019
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s004
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s019
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s023
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 17-first-card-fixtures.s007
+  - 17-first-card-fixtures.s008
+  - 18-acceptance-tests.s011
+  - 19-poneglyph-api-contract.s002
+  - 19-poneglyph-api-contract.s003
+  - 19-poneglyph-api-contract.s007
+  - 19-poneglyph-api-contract.s010
+  - 19-poneglyph-api-contract.s011
+  - 19-poneglyph-api-contract.s012
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+scope:
+  - use OP01-060 and OP05-091 as existing real Poneglyph adapter/hash fixtures at their current checked-in paths
+  - add EB01-023 as the explicit simple real DSL fixture only if the captured validated Poneglyph payload has the exact `[On Play] Draw 1 card.` behavior; otherwise stop and record an ambiguity or blocker instead of inventing the payload or effect text
+  - use the CARD-003 fixture capture helper or equivalent reviewed checked-in payloads to add deterministic Poneglyph card-detail fixtures
+  - keep fixture capture as a maintainer/local step only; committed tests must use checked-in fixtures and must not call live Poneglyph
+  - add package-local tests that validate every newly added real fixture through the existing Poneglyph detail validator
+  - add package-local tests that normalize the real fixtures and assert key behavior-sensitive fields are preserved in the repo's resolved card metadata shape
+  - add package-local tests that merge simulator overlays with the real fixtures without granting unsupported gameplay support accidentally
+  - add package-local tests that build a MatchCardManifest from the real fixtures and assert manifest cards do not contain raw Poneglyph payloads
+  - include EB01-023 in a real checked-in card fixture with a reviewed effectDefinitionId and EffectDefinition using the existing On Play draw-1 DSL shape
+  - add tests proving the EB01-023 real-card manifest support metadata links support.effectDefinitionId to the included effect definition registry entry
+  - add root or engine integration coverage that passes the cards-produced plain manifest data into engine-core without importing @optcg/cards from engine-core
+  - add engine effect-runtime coverage that queues and executes EB01-023's no-choice On Play draw DSL effect through the existing runtime path using only plain manifest/effect definition data
+  - add deck/loadout validation coverage using real fixtures, including fail-closed rejection for unsupported non-vanilla cards outside the allowed dev or sandbox policy
+  - update representative fixture metadata or fixture helper surfaces only as needed for these real-card tests
+  - document any selected real card IDs and why each is included when that rationale is not obvious from the test name
+non_scope:
+  - full released-card catalog coverage
+  - scheduled, CI, or required live Poneglyph fetches
+  - live Redis, Postgres, server, client, UI, or deck-builder integration
+  - changing engine-core to import @optcg/cards or live card-data surfaces
+  - implementing new DSL primitives, custom handlers, or gameplay semantics
+  - changing production card support status except for checked-in fixture/test overlay data that explicitly points EB01-023 to the reviewed existing On Play draw-1 DSL definition
+  - automatic effect generation from printed text
+  - broad replay fixture rewrite
+dependencies:
+  - CARD-001B
+  - CARD-001C
+  - CARD-001D
+  - CARD-001E
+  - CARD-002B
+  - CARD-002H
+  - CARD-003
+acceptance_criteria:
+  - a small reviewed set of additional real Poneglyph card-detail fixtures is checked in under fixtures/poneglyph/cards
+  - every added real fixture passes existing Poneglyph detail schema validation in hermetic tests
+  - real fixture normalization tests assert card identity, category/type, colors, attributes, printed text, variants, legality, sourceTextHash, and behaviorHash behavior where present in the payload
+  - real fixture overlay/manifest tests prove simulator overlay remains gameplay implementation authority and unsupported cards remain unsupported
+  - EB01-023 is either captured as a validated real fixture with exact `[On Play] Draw 1 card.` behavior and wired to the reviewed On Play draw-1 DSL definition, or the story stops with a recorded blocker explaining why the live/captured payload cannot support that test honestly
+  - the real fixture-backed manifest includes the EB01-023 reviewed DSL effect definition wired through support.effectDefinitionId and the manifest effect definition registry
+  - engine effect-runtime tests execute EB01-023's no-choice On Play draw DSL effect from plain manifest/effect definition data without @optcg/cards imports in engine-core
+  - real fixture deck/loadout tests fail closed for unsupported non-vanilla cards outside the allowed dev or sandbox policy
+  - no test requires live Poneglyph, live Redis, server, client, Postgres, or browser code
+  - engine-core package boundaries remain unchanged; engine-core consumes only plain manifest/resolved-card data
+required_tests:
+  - package-local schema validation test for each newly added real Poneglyph fixture
+  - package-local normalization/hash regression test using the real fixtures
+  - package-local overlay merge test using the real fixtures
+  - package-local MatchCardManifest build test using the real fixtures
+  - package-local or root integration test proving EB01-023 support.effectDefinitionId resolves to the manifest effect definition registry entry
+  - engine-core test that loads plain checked-in manifest/effect definition data and executes EB01-023's no-choice On Play draw DSL effect through the existing effect runtime
+  - package-local deck/loadout validation rejection test for unsupported non-vanilla real fixture cards
+  - package-local assertion that manifest cards built from real fixtures do not contain raw Poneglyph payloads
+  - package-boundary assertion that engine-core real-card DSL tests do not import @optcg/cards, Poneglyph HTTP, Redis, Postgres, server, client, or UI code
+  - root `corepack pnpm test -- packages/cards`
+  - root or package command covering the engine-core real-card DSL runtime test
+  - full `corepack pnpm verify`
+repo_rules:
+  - do not require live Poneglyph or live Redis in tests or CI
+  - keep Poneglyph data as printed/display metadata authority only
+  - keep simulator overlay as gameplay implementation authority
+  - real-card DSL tests must use reviewed checked-in EffectDefinition data and existing runtime primitives only
+  - keep engine-core free of @optcg/cards, live Poneglyph, Redis, Postgres, server, client, and UI imports
+  - fail closed on fixture schema, support-status, effect-definition linkage, DSL execution, or deck-validation ambiguity
+  - do not weaken TypeScript strictness
+ambiguity_policy: fail_and_escalate

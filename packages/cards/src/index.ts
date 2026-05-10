@@ -39,6 +39,16 @@ export type {
 export { createPoneglyphClient } from "./poneglyph-client.js";
 export { validatePoneglyphCardDetail } from "./poneglyph-schema.js";
 export {
+  buildRealCardDslMatchCardManifest,
+  listRealCardFixtureIds,
+  loadCheckedInEb01023OnPlayDraw1EffectDefinition,
+  loadCheckedInRealPoneglyphFixture,
+  loadRealCardDslMatchCardManifestFixture,
+  realCardDslEffectDefinitionFixturePath,
+  realCardDslMatchCardManifestFixturePath,
+} from "./real-card-fixtures.js";
+export type { RealCardFixtureId } from "./real-card-fixtures.js";
+export {
   buildRepresentativeMatchCardManifest,
   getRepresentativeFixtureSupportMetadata,
   hasCheckedInRepresentativePoneglyphFixture,
