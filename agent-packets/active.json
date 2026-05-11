@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-043B.md",
-      "storyId": "ENG-043B",
-      "storyPath": "stories/approved/ENG-043B-once-per-turn-activation-commitment.yaml",
-      "storySha256": "92239b4935d0f5ec56adfecf2d09ceeb5b924021ee3a9eede4935cb87fcb2faf"
+      "packetPath": "agent-packets/ENG-043C.md",
+      "storyId": "ENG-043C",
+      "storyPath": "stories/approved/ENG-043C-once-per-turn-failed-cost-target-regressions.yaml",
+      "storySha256": "b4707f7758d989bc0e92678143b5db0605aed1db316f7aa512ca2f63e1847157"
     }
   ],
   "version": 1
