@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-043C.md",
-      "storyId": "ENG-043C",
-      "storyPath": "stories/approved/ENG-043C-once-per-turn-failed-cost-target-regressions.yaml",
-      "storySha256": "720f5876449833ca8ee5b8ee33df9fa279e6826304c9e464211ed4ff07dc87db"
+      "packetPath": "agent-packets/ENG-043D.md",
+      "storyId": "ENG-043D",
+      "storyPath": "stories/approved/ENG-043D-once-per-turn-optional-integration.yaml",
+      "storySha256": "aff924d60e65728e1fa81a8157dc4e500637aa5b61fa644c0acad1bc7be43aa0"
     }
   ],
   "version": 1

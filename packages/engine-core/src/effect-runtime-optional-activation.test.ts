@@ -349,6 +349,7 @@ test("optional activation decline of a lone effect clears the decision without r
     declined.events.some((event) => event.type === "effectResolved"),
     false,
   );
+  assert.deepEqual(declined.state.oncePerTurn, []);
   assert.equal(declined.stateHash, hashCanonicalStateValue(declined.state));
 });
 

@@ -204,9 +204,17 @@ export const createEffectRuntimeQueueResults = (
         ) {
           return unsupportedEffectQueueResult(originalState);
         }
+        if (queuedEffect.oncePerTurn === true) {
+          const oncePerTurnKey = toOncePerTurnKey({
+            cardInstanceId: selected.source.instanceId,
+            effectId: selected.effectBlockId,
+            turnNumber: nextState.turn.globalTurn,
+          });
+          if (isOncePerTurnUsed(nextState, oncePerTurnKey)) {
+            return unsupportedEffectQueueResult(originalState);
+          }
+        }
         if (acceptedOptionalQueueEntryIds.has(selected.id)) {
-          // Once-per-turn consumption for accepted automatic optional effects is
-          // a future integration point; this story only resumes no-choice draw.
           drawEffect = queuedEffect.effect;
         } else {
           const paused = createChooseOptionalActivationDecision(

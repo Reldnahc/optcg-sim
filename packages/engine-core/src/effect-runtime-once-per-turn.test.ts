@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type { EffectQueueEntry } from "./effect-runtime-queue-processing-test-support.js";
-import type { createActiveState } from "./effect-runtime-queue-processing-test-support.js";
+import { addExtraDeckCard } from "./action-test-fixtures.js";
 import {
+  applyAction,
+  createActiveState,
   must,
   p1,
   processEffectRuntime,
@@ -15,6 +17,7 @@ import {
   toEffectId,
   toQueueEntryId,
   toStateSeq,
+  toSourceSnapshot,
   toTimingWindowId,
   withCardInZone,
 } from "./effect-runtime-queue-processing-test-support.js";
@@ -84,6 +87,73 @@ const createOncePerTurnOnPlayEntry = (
   };
   state.effectQueue = [nextEntry];
   return { state, entry: nextEntry };
+};
+
+const createOncePerTurnOptionalEntry = (
+  id: string,
+  effectId: string,
+): {
+  state: ReturnType<typeof createActiveState>;
+  entry: EffectQueueEntry;
+} => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = p1State.leader;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    source.cardId,
+    supportCard.support,
+  );
+  const baseEffect = must(baseDefinition.effects[0], "base optional effect");
+  const effect = {
+    ...baseEffect,
+    id: toEffectId(effectId),
+    optional: true,
+    oncePerTurn: true,
+  };
+  const definition = {
+    ...baseDefinition,
+    effects: [effect],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-optional-once-per-turn": definition,
+  };
+  state.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-optional-once-per-turn",
+      rulesVersion: definition.metadata.rulesVersion,
+      sourceTextHash: definition.metadata.sourceTextHash,
+    },
+  });
+  const entry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId(id),
+    timingWindowId: toTimingWindowId(`${id}:window`),
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    sourceSnapshot: toSourceSnapshot(source, p1, p1),
+    effectBlockId: effect.id,
+    sourcePresencePolicy: must(
+      effect.sourcePresencePolicy,
+      "optional source presence policy",
+    ),
+    queuedAtStateSeq: toStateSeq(state.seq),
+  };
+  state.effectQueue = [entry];
+  return { state, entry };
 };
 
 test("supported queued no-choice draw consumes once-per-turn when resolution begins", () => {
@@ -331,4 +401,167 @@ test("once-per-turn keys remain independent across card or effect identity", () 
     must(resultB.state.players[p1], "p1 after B").deck.length,
     beforeDeckB - 1,
   );
+});
+
+test("declining optional once-per-turn does not consume use", () => {
+  const { state } = createOncePerTurnOptionalEntry(
+    "queue-entry-optional-once-decline",
+    "OP01-015:auto-optional-1",
+  );
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "optional decision");
+
+  const declined = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice: "decline" },
+  });
+
+  assert.equal(declined.errors, undefined);
+  assert.deepEqual(declined.state.oncePerTurn, []);
+  assert.equal(declined.state.pendingDecision, undefined);
+  assert.deepEqual(declined.state.effectQueue, []);
+});
+
+test("accepting optional once-per-turn consumes when the accepted entry begins resolution", () => {
+  const { state, entry } = createOncePerTurnOptionalEntry(
+    "queue-entry-optional-once-accept",
+    "OP01-015:auto-optional-1",
+  );
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "optional decision");
+
+  const accepted = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(accepted.state.oncePerTurn.length, 1);
+  assert.deepEqual(accepted.state.oncePerTurn[0], {
+    cardInstanceId: entry.source.instanceId,
+    effectId: entry.effectBlockId,
+    turnNumber: state.turn.globalTurn,
+    usedAtStateSeq: toStateSeq(paused.state.seq + 1),
+  });
+});
+
+test("accepted optional once-per-turn blocks repeated same-turn optional use", () => {
+  const { state, entry } = createOncePerTurnOptionalEntry(
+    "queue-entry-optional-once-repeat",
+    "OP01-015:auto-optional-1",
+  );
+  const firstDecisionResult = processEffectRuntime(state);
+  const firstDecision = must(
+    firstDecisionResult.state.pendingDecision,
+    "first optional decision",
+  );
+  const accepted = applyAction(firstDecisionResult.state, {
+    type: "respondToDecision",
+    decisionId: firstDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+  assert.equal(accepted.errors, undefined);
+
+  const repeatedState = structuredClone(accepted.state);
+  repeatedState.effectQueue = [
+    {
+      ...entry,
+      id: toQueueEntryId("queue-entry-optional-repeat-same-turn"),
+      queuedAtStateSeq: toStateSeq(accepted.state.seq),
+    },
+  ];
+  const blocked = processEffectRuntime(repeatedState);
+
+  assert.ok(blocked.errors !== undefined);
+  assert.equal(blocked.events.length, 0);
+  assert.deepEqual(blocked.state, repeatedState);
+});
+
+test("accepted optional once-per-turn fails closed before resolving a same-key ordered-group repeat", () => {
+  const { state, entry } = createOncePerTurnOptionalEntry(
+    "queue-entry-optional-once-ordered",
+    "OP01-015:auto-optional-1",
+  );
+  addExtraDeckCard(state, p1);
+  addExtraDeckCard(state, p1);
+  const repeatedEntry: EffectQueueEntry = {
+    ...entry,
+    id: toQueueEntryId("queue-entry-optional-once-ordered-repeat"),
+    createdAtEventSeq: entry.createdAtEventSeq + 1,
+  };
+  state.effectQueue = [entry, repeatedEntry];
+  const ordered = processEffectRuntime(state);
+  const triggerOrderDecision = must(
+    ordered.state.pendingDecision,
+    "trigger order decision",
+  );
+  assert.equal(triggerOrderDecision.type, "chooseTriggerOrder");
+
+  const orderedOptionalFirst = applyAction(ordered.state, {
+    type: "respondToDecision",
+    decisionId: triggerOrderDecision.id,
+    response: {
+      type: "orderedIds",
+      ids: [entry.id, repeatedEntry.id],
+    },
+  });
+  const optionalDecision = must(
+    orderedOptionalFirst.state.pendingDecision,
+    "optional decision",
+  );
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+
+  const blocked = applyAction(orderedOptionalFirst.state, {
+    type: "respondToDecision",
+    decisionId: optionalDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.ok(blocked.errors !== undefined);
+  assert.deepEqual(blocked.state.oncePerTurn, []);
+  assert.deepEqual(
+    blocked.state.effectQueue.map((queued) => queued.id),
+    [entry.id, repeatedEntry.id],
+  );
+  assert.equal(
+    blocked.events.some((event) => event.type === "effectResolved"),
+    false,
+  );
+});
+
+test("accepted optional once-per-turn does not block same optional effect next turn", () => {
+  const { state, entry } = createOncePerTurnOptionalEntry(
+    "queue-entry-optional-once-next-turn",
+    "OP01-015:auto-optional-1",
+  );
+  const firstDecisionResult = processEffectRuntime(state);
+  const firstDecision = must(
+    firstDecisionResult.state.pendingDecision,
+    "first optional decision",
+  );
+  const accepted = applyAction(firstDecisionResult.state, {
+    type: "respondToDecision",
+    decisionId: firstDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+  assert.equal(accepted.errors, undefined);
+
+  const nextTurnState = structuredClone(accepted.state);
+  nextTurnState.turn.globalTurn += 1;
+  nextTurnState.effectQueue = [
+    {
+      ...entry,
+      id: toQueueEntryId("queue-entry-optional-next-turn"),
+      queuedAtStateSeq: toStateSeq(nextTurnState.seq),
+    },
+  ];
+
+  const nextTurn = processEffectRuntime(nextTurnState);
+  const nextTurnDecision = must(
+    nextTurn.state.pendingDecision,
+    "next-turn optional decision",
+  );
+  assert.equal(nextTurnDecision.type, "chooseOptionalActivation");
 });
