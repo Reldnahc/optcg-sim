@@ -62,6 +62,7 @@ The procedure docs below are part of this repo's agent contract. Read the one th
 - PR review, AI review records, fallback review, and human review procedure: `docs/workflow/review-gate.md`
 - Parent integration branch procedure: `docs/workflow/parent-integration-branches.md`
 - Reporting and GitHub/board sync procedure: `docs/workflow/reporting-and-github-sync.md`
+- Code standard and implementation-quality guidance: `docs/code-standard.md`
 
 ## Non-Negotiable Rules
 
@@ -103,7 +104,7 @@ Until stricter tooling is in place, preserve these boundaries:
 
 ## Code Standards
 
-The repo is intentionally strict. Prefer enforcement over convention.
+The repo is intentionally strict. Prefer enforcement over convention. `docs/code-standard.md` is mandatory implementation guidance for coding quality, architecture boundaries, testing, story scope, and PR review expectations.
 
 - TypeScript must remain strict.
 - Do not weaken `tsconfig` strictness to make a patch pass.

@@ -76,6 +76,17 @@ test("TypeScript interface draft is historical and non-normative", async () => {
   assert.doesNotMatch(draft, /^status:\s+"canonical"$/m);
 });
 
+test("code standard guide is mandatory implementation guidance", async () => {
+  const agents = await readText("AGENTS.md");
+  const storyExecution = await readText("docs/workflow/story-execution.md");
+  const codeStandard = await readText("docs/code-standard.md");
+  const mandatoryGuidance = `${agents}\n${storyExecution}`;
+
+  assert.match(codeStandard, /^# Code Standard Guide$/m);
+  assert.match(mandatoryGuidance, /docs\/code-standard\.md/);
+  assertContainsWords(mandatoryGuidance, "mandatory implementation guidance");
+});
+
 test("event specs require append-order strictly increasing event sequences", async () => {
   const eventsSpec = await readText("specs/03-game-state-events-decisions.md");
 
