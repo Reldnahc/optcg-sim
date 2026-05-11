@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-041.md",
-      "storyId": "ENG-041",
-      "storyPath": "stories/approved/ENG-041-counter-event-foundation.yaml",
-      "storySha256": "3eeea3e3d6f0ab21a75e86e45a21bc1369b57d63f5f7cc7714f5793517dc7481"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Support the first narrow playable `[Counter]` Event path during the Counter
   Step by reusing existing Counter Step, Event support-gate, DON payment,
