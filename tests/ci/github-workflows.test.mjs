@@ -171,3 +171,16 @@ test("ci workflow runs the canonical root commands and publishes coverage", asyn
   assert.match(workflow, /actions\/upload-artifact@v4/);
   assert.match(workflow, /coverage-artifact/);
 });
+
+test("post-merge cleanup workflow uses merged_at for PR body metadata source freshness", async () => {
+  const workflow = await readText(
+    ".github/workflows/post-merge-packet-cleanup.yml",
+  );
+  const prBodyCandidate = workflow.match(
+    /addCandidate\(\{\s*kind: "pr-body",[\s\S]*?\}\);/,
+  );
+
+  assert.ok(prBodyCandidate, "missing PR-body cleanup metadata candidate");
+  assert.match(prBodyCandidate[0], /updatedAt:\s*pr\.merged_at/);
+  assert.doesNotMatch(prBodyCandidate[0], /updatedAt:\s*pr\.updated_at/);
+});

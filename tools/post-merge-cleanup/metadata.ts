@@ -218,7 +218,9 @@ type MetadataSourceCandidate = {
 export function buildWorkflowCleanupEvidence(
   input: WorkflowCleanupEvidenceInput,
 ): CleanupEvidenceInput {
-  const candidates = buildMetadataSourceCandidates(input);
+  const candidates = buildMetadataSourceCandidates(input, {
+    prBodyUpdatedAt: input.pullRequest.mergedAt,
+  });
   const reviewEvidence = buildReviewEvidence(input, candidates);
 
   if (candidates.length === 0) {
@@ -425,7 +427,7 @@ function isPassingStatusCheck(check: WorkflowStatusCheckInput): boolean {
 
 function buildMetadataSourceCandidates(
   input: WorkflowCleanupMetadataGuardInput,
-  options: { reportMalformed?: boolean } = {},
+  options: { prBodyUpdatedAt?: string; reportMalformed?: boolean } = {},
 ) {
   const candidates: MetadataSourceCandidate[] = [];
   addCandidate(candidates, {
@@ -434,7 +436,7 @@ function buildMetadataSourceCandidates(
     kind: "pr-body",
     reportMalformed: options.reportMalformed ?? false,
     sourceId: `pr-${String(input.pullRequest.number)}-body`,
-    updatedAt: input.pullRequest.updatedAt,
+    updatedAt: options.prBodyUpdatedAt ?? input.pullRequest.updatedAt,
   });
 
   for (const comment of input.issueComments) {

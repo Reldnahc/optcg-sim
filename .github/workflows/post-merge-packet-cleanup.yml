@@ -155,7 +155,7 @@ jobs:
               kind: "pr-body",
               source: pr.body || "",
               sourceId: `pr-${pr.number}-body`,
-              updatedAt: pr.updated_at,
+              updatedAt: pr.merged_at,
             });
             for (const comment of comments) {
               const source = comment.body || "";

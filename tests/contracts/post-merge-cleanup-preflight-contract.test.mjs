@@ -49,6 +49,32 @@ test("preflight writes bound cleanup plan artifact only after validation passes"
   assert.match(artifact.inputsHash, /^[0-9a-f]{64}$/);
 });
 
+test("preflight accepts merge-event PR body metadata freshness at mergedAt", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-plan-merge-"));
+  const planFile = path.join(tempRoot, "bound-cleanup-plan.json");
+  const fixture = await makeCleanupFixture();
+  const metadataSource = renderMetadataSource(fixture.storySlug);
+  const evidence = buildEvidence({ ...fixture, metadataSource });
+  evidence.metadataSource.updatedAt = evidence.mergedAt;
+
+  const run = runPreflight({
+    evidence,
+    metadataSource,
+    planFile,
+    repoRoot: fixture.repoRoot,
+  });
+
+  assert.equal(run.status, 0, run.stderr);
+  const artifact = validateBoundCleanupPlanArtifact(
+    JSON.parse(readFileSync(planFile, "utf8")),
+  );
+  assert.equal(
+    artifact.reviewEvidenceSource.requiredReviewId,
+    "merge-actor-27",
+  );
+  assert.equal(artifact.metadataSource.ref, evidence.metadataSourceRef);
+});
+
 test("source-ref preview computes the same PR body ref used by preflight validation", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-ref-"));
   const planFile = path.join(tempRoot, "bound-cleanup-plan.json");
