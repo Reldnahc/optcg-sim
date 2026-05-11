@@ -95,7 +95,10 @@ const toPublicDecisionCausedBy = (
   pending: NonNullable<GameState["pendingDecision"]>,
 ): PublicDecision["causedBy"] => {
   const causedBy = pending.causedBy;
-  if (pending.type !== "selectTargets") {
+  if (
+    pending.type !== "selectTargets" &&
+    pending.type !== "chooseOptionalActivation"
+  ) {
     return causedBy;
   }
   if (causedBy.type === "effect" || "queueEntryId" in causedBy) {
