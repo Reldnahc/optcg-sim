@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-043D.md",
-      "storyId": "ENG-043D",
-      "storyPath": "stories/approved/ENG-043D-once-per-turn-optional-integration.yaml",
-      "storySha256": "aff924d60e65728e1fa81a8157dc4e500637aa5b61fa644c0acad1bc7be43aa0"
+      "packetPath": "agent-packets/ENG-043E.md",
+      "storyId": "ENG-043E",
+      "storyPath": "stories/approved/ENG-043E-once-per-turn-fizzle-turn-boundary-regression.yaml",
+      "storySha256": "a40a593d195aa02d75db5a25561435d85203bda0d823bc2bced1d5325d56796b"
     }
   ],
   "version": 1
