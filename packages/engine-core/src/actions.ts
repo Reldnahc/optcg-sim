@@ -28,6 +28,7 @@ import {
 } from "./target-selection-actions.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
 import { applyLifeTriggerDecisionResponse } from "./life-trigger-actions.js";
+import { applyOptionalActivationDecisionResponse } from "./optional-activation-actions.js";
 import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
 import {
   applyConcede,
@@ -118,6 +119,13 @@ const applyRespondToDecision = (
   const lifeTriggerResult = applyLifeTriggerDecisionResponse(state, action);
   if (lifeTriggerResult !== null) {
     return lifeTriggerResult;
+  }
+  const optionalActivationResult = applyOptionalActivationDecisionResponse(
+    state,
+    action,
+  );
+  if (optionalActivationResult !== null) {
+    return optionalActivationResult;
   }
   const triggerOrderResult = applyChooseTriggerOrderDecisionResponse(
     state,

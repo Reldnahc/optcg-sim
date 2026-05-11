@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-042A.md",
-      "storyId": "ENG-042A",
-      "storyPath": "stories/approved/ENG-042A-optional-activation-decision-creation.yaml",
-      "storySha256": "64b03acd0b77ccd34b3d8dedb9ffaf9f2d13b574aebb6b34187769b4e37500c4"
+      "packetPath": "agent-packets/ENG-042B.md",
+      "storyId": "ENG-042B",
+      "storyPath": "stories/approved/ENG-042B-optional-decline-behavior.yaml",
+      "storySha256": "250092b77addb973f6ff02fc24b6980d36b1bd23a75be3feb7a583097bee7a08"
     }
   ],
   "version": 1

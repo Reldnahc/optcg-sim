@@ -298,3 +298,7 @@ export const processEffectRuntimeAfterTriggerOrderChoice = (
   state: GameState,
   orderedIds: readonly QueueEntryId[],
 ): EngineResult => processNoChoiceEffectQueue(state, orderedIds);
+
+export const processEffectRuntimeAfterOptionalActivationDecline = (
+  state: GameState,
+): EngineResult => processNoChoiceEffectQueue(state);
