@@ -11,6 +11,7 @@ import type {
 
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import {
+  addExtraDeckCard,
   createActiveState,
   must,
   p1,
@@ -107,6 +108,80 @@ const optionalMainDefinition = (
   };
 };
 
+const optionalThenRequiredDrawState = (): {
+  state: ReturnType<typeof createActiveState>;
+  optionalEntry: EffectQueueEntry;
+  requiredEntry: EffectQueueEntry;
+} => {
+  const state = createActiveState();
+  addExtraDeckCard(state, p1);
+  const p1State = must(state.players[p1], "p1");
+  const source = p1State.leader;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const baseEffect = must(base.effects[0], "base draw effect");
+  const optionalEffect = {
+    ...baseEffect,
+    id: toEffectId("optional-decline-effect"),
+    optional: true,
+  };
+  const requiredEffect = {
+    ...baseEffect,
+    id: toEffectId("required-followup-effect"),
+  };
+  installDefinition(
+    state,
+    source,
+    {
+      ...base,
+      effects: [optionalEffect, requiredEffect],
+    },
+    "leader",
+    "def-optional-decline",
+  );
+
+  const common = {
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    sourceSnapshot: toSourceSnapshot(source, p1, p1),
+    sourcePresencePolicy: must(
+      baseEffect.sourcePresencePolicy,
+      "source presence policy",
+    ),
+    queuedAtStateSeq: toStateSeq(state.seq),
+  } satisfies Pick<
+    EffectQueueEntry,
+    "source" | "sourceSnapshot" | "sourcePresencePolicy" | "queuedAtStateSeq"
+  >;
+  const optionalEntry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    ...common,
+    id: toQueueEntryId("queue-entry-optional-decline"),
+    timingWindowId: toTimingWindowId("timing-window-optional-decline"),
+    generation: 0,
+    effectBlockId: optionalEffect.id,
+    createdAtEventSeq: 1,
+  };
+  const requiredEntry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    ...common,
+    id: toQueueEntryId("queue-entry-required-after-decline"),
+    timingWindowId: optionalEntry.timingWindowId,
+    generation: 1,
+    effectBlockId: requiredEffect.id,
+    createdAtEventSeq: 2,
+  };
+  state.effectQueue = [optionalEntry, requiredEntry];
+  return { state, optionalEntry, requiredEntry };
+};
+
 const assertOptionalDecision = (
   result: ReturnType<typeof processEffectRuntime>,
   entry: EffectQueueEntry,
@@ -164,6 +239,159 @@ const processQueuedOptional = (
   );
   return processEffectRuntime(queued.state);
 };
+
+const eventPayloadHasQueueEntryId = (
+  event: EngineEvent,
+  queueEntryId: EffectQueueEntry["id"],
+): boolean =>
+  typeof event.payload === "object" &&
+  event.payload !== null &&
+  "queueEntryId" in event.payload &&
+  event.payload.queueEntryId === queueEntryId;
+
+test("declining optional activation skips that queue entry and resumes later runtime work", () => {
+  const { state, optionalEntry, requiredEntry } =
+    optionalThenRequiredDrawState();
+  const p1State = must(state.players[p1], "p1");
+  const beforeHandCount = p1State.hand.length;
+  const beforeDeckCount = p1State.deck.length;
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "optional decision");
+
+  const declined = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice: "decline" },
+  });
+  const replay = applyAction(structuredClone(paused.state), {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice: "decline" },
+  });
+  const resultP1 = must(declined.state.players[p1], "declined p1");
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(declined.state.pendingDecision, undefined);
+  assert.deepEqual(declined.state.effectQueue, []);
+  assert.equal(resultP1.hand.length, beforeHandCount + 1);
+  assert.equal(resultP1.deck.length, beforeDeckCount - 1);
+  assert.deepEqual(
+    declined.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
+  );
+  assert.deepEqual(declined.events[0]?.payload, {
+    decisionId: decision.id,
+    decisionType: "chooseOptionalActivation",
+    playerId: p1,
+    responseType: "optionalActivation",
+  });
+  assert.equal(
+    declined.events.some(
+      (event) =>
+        event.type === "effectResolved" &&
+        eventPayloadHasQueueEntryId(event, optionalEntry.id),
+    ),
+    false,
+  );
+  assert.equal(
+    declined.events.some(
+      (event) =>
+        event.type === "effectResolved" &&
+        eventPayloadHasQueueEntryId(event, requiredEntry.id),
+    ),
+    true,
+  );
+  assert.equal(declined.stateHash, hashCanonicalStateValue(declined.state));
+  assert.deepEqual(declined.events, replay.events);
+  assert.equal(declined.stateHash, replay.stateHash);
+});
+
+test("optional activation decline of a lone effect clears the decision without resolving the effect", () => {
+  const { state, optionalEntry } = optionalThenRequiredDrawState();
+  state.effectQueue = [optionalEntry];
+  const p1State = must(state.players[p1], "p1");
+  const beforeHandCount = p1State.hand.length;
+  const beforeDeckCount = p1State.deck.length;
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "optional decision");
+
+  const declined = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice: "decline" },
+  });
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(declined.state.pendingDecision, undefined);
+  assert.deepEqual(declined.state.effectQueue, []);
+  assert.equal(
+    must(declined.state.players[p1], "declined p1").hand.length,
+    beforeHandCount,
+  );
+  assert.equal(
+    must(declined.state.players[p1], "declined p1").deck.length,
+    beforeDeckCount,
+  );
+  assert.deepEqual(
+    declined.events.map((event) => event.type),
+    ["decisionResolved"],
+  );
+  assert.equal(
+    declined.events.some((event) => event.type === "effectResolved"),
+    false,
+  );
+  assert.equal(declined.stateHash, hashCanonicalStateValue(declined.state));
+});
+
+test("optional activation rejects activate until accept handling is implemented", () => {
+  const { state } = optionalThenRequiredDrawState();
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "optional decision");
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.deepEqual(result.state, paused.state);
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "optionalActivation activate is not implemented yet.",
+    },
+  ]);
+});
+
+test("optional activation rejects non optionalActivation responses", () => {
+  const { state } = optionalThenRequiredDrawState();
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "optional decision");
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "orderedIds", ids: [] },
+  });
+
+  assert.deepEqual(result.state, paused.state);
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason:
+        "Response type must be optionalActivation for chooseOptionalActivation.",
+    },
+  ]);
+});
 
 test("direct queued optional no-choice draw creates private chooseOptionalActivation without resolving", () => {
   const state = createActiveState();
