@@ -253,7 +253,7 @@ test("Character On Play draw events are deterministic after card play events", (
   );
 });
 
-test("choice optional custom Event and unsupported On Play effects fail closed without mutation", () => {
+test("choice custom Event and unsupported On Play effects fail closed without mutation", () => {
   const cases: Array<{
     name: string;
     mutate: (definition: EffectDefinition) => EffectDefinition;
@@ -276,15 +276,6 @@ test("choice optional custom Event and unsupported On Play effects fail closed w
             },
           },
         ],
-      }),
-    },
-    {
-      name: "optional",
-      mutate: (
-        definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,
-      ) => ({
-        ...definition,
-        effects: [{ ...must(definition.effects[0], "effect"), optional: true }],
       }),
     },
     {

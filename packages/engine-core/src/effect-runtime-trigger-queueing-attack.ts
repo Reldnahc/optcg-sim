@@ -12,6 +12,8 @@ import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import {
   isSupportedNoChoiceOnOpponentAttackDrawEffect,
   isSupportedNoChoiceWhenAttackingDrawEffect,
+  isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect,
+  isSupportedOptionalNoChoiceWhenAttackingDrawEffect,
 } from "./effect-runtime-primitives.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
@@ -134,7 +136,9 @@ export const createAttackTriggerQueueing = (
         continue;
       }
       const matching = whenAttackingEffects.filter(
-        isSupportedNoChoiceWhenAttackingDrawEffect,
+        (effect) =>
+          isSupportedNoChoiceWhenAttackingDrawEffect(effect) ||
+          isSupportedOptionalNoChoiceWhenAttackingDrawEffect(effect),
       );
       if (matching.length === 0) {
         return toEngineResult(
@@ -389,7 +393,9 @@ export const createAttackTriggerQueueing = (
           continue;
         }
         const matching = onOpponentAttackEffects.filter(
-          isSupportedNoChoiceOnOpponentAttackDrawEffect,
+          (effect) =>
+            isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
+            isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect(effect),
         );
         if (matching.length === 0) {
           return toEngineResult(
