@@ -244,6 +244,12 @@ test("Character On Play draw events are deterministic after card play events", (
   assert.equal(first.stateHash, second.stateHash);
   assert.equal(first.stateHash, hashCanonicalStateValue(first.state));
   assert.equal(second.stateHash, hashCanonicalStateValue(second.state));
+  assert.equal(first.state.pendingDecision, undefined);
+  assert.equal(second.state.pendingDecision, undefined);
+  assert.equal(
+    first.events.some((event) => event.type === "decisionCreated"),
+    false,
+  );
   assert.equal(
     first.events.every(
       (event, index, events) =>

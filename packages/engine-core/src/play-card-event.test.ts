@@ -521,6 +521,12 @@ test("implemented-dsl Main Event draw keeps event sequencing, state hash, and op
     second.result.events.map((event) => event.type),
   );
   assert.equal(first.result.stateHash, second.result.stateHash);
+  assert.equal(first.result.state.pendingDecision, undefined);
+  assert.equal(second.result.state.pendingDecision, undefined);
+  assert.equal(
+    first.result.events.some((event) => event.type === "decisionCreated"),
+    false,
+  );
 
   const opponentView = filterStateForPlayer(first.result.state, p2);
   assert.equal(

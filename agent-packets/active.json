@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-042D.md",
-      "storyId": "ENG-042D",
-      "storyPath": "stories/approved/ENG-042D-optional-view-hidden-info-invalid-response.yaml",
-      "storySha256": "ac4f484e91d3e664b5ffb4803613d518af24ebb1347c9978efd94bda68fd5725"
+      "packetPath": "agent-packets/ENG-042E.md",
+      "storyId": "ENG-042E",
+      "storyPath": "stories/approved/ENG-042E-no-choice-baseline-regression.yaml",
+      "storySha256": "27fa1cc4ff9a6e88ad6d3cf41ffa28f2e78efd5e0f26985d920621e702f71709"
     }
   ],
   "version": 1
