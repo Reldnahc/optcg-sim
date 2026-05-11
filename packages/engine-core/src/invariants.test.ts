@@ -391,3 +391,54 @@ test("invariant checks do not mutate input state", () => {
 
   assert.deepEqual(state, before);
 });
+
+test("duplicate once-per-turn usage key fails with stable invariant name", () => {
+  const state = createBaseState();
+  state.oncePerTurn.push(
+    {
+      cardInstanceId: toInstanceId("card-1"),
+      effectId: "effect-a",
+      turnNumber: 2,
+      usedAtStateSeq: toStateSeq(5),
+    },
+    {
+      cardInstanceId: toInstanceId("card-1"),
+      effectId: "effect-a",
+      turnNumber: 2,
+      usedAtStateSeq: toStateSeq(6),
+    },
+  );
+
+  const violations = collectGameStateInvariantViolations(state);
+  assert.ok(
+    violations.some(
+      (violation) => violation.invariant === "oncePerTurn.uniqueUsageKey",
+    ),
+  );
+});
+
+test("once-per-turn delimiter-collision-shaped records are not treated as duplicates", () => {
+  const state = createBaseState();
+  state.oncePerTurn.push(
+    {
+      cardInstanceId: toInstanceId("card|alpha"),
+      effectId: "effect",
+      turnNumber: 2,
+      usedAtStateSeq: toStateSeq(5),
+    },
+    {
+      cardInstanceId: toInstanceId("card"),
+      effectId: "alpha|effect",
+      turnNumber: 2,
+      usedAtStateSeq: toStateSeq(6),
+    },
+  );
+
+  const violations = collectGameStateInvariantViolations(state);
+  assert.equal(
+    violations.some(
+      (violation) => violation.invariant === "oncePerTurn.uniqueUsageKey",
+    ),
+    false,
+  );
+});

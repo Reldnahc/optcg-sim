@@ -427,6 +427,33 @@ export const collectGameStateInvariantViolations = (
     }
   }
 
+  type OncePerTurnTurnNumber = GameState["oncePerTurn"][number]["turnNumber"];
+  type OncePerTurnEffectUsage = Map<string, Set<OncePerTurnTurnNumber>>;
+  const oncePerTurnByCard = new Map<string, OncePerTurnEffectUsage>();
+  for (const record of state.oncePerTurn) {
+    const byEffect =
+      oncePerTurnByCard.get(record.cardInstanceId) ??
+      new Map<string, Set<OncePerTurnTurnNumber>>();
+    const byTurn =
+      byEffect.get(record.effectId) ?? new Set<OncePerTurnTurnNumber>();
+    if (byTurn.has(record.turnNumber)) {
+      violations.push({
+        invariant: "oncePerTurn.uniqueUsageKey",
+        message:
+          "oncePerTurn must not contain duplicate cardInstanceId/effectId/turnNumber records",
+        details: {
+          cardInstanceId: record.cardInstanceId,
+          effectId: record.effectId,
+          turnNumber: record.turnNumber,
+        },
+      });
+      continue;
+    }
+    byTurn.add(record.turnNumber);
+    byEffect.set(record.effectId, byTurn);
+    oncePerTurnByCard.set(record.cardInstanceId, byEffect);
+  }
+
   try {
     canonicalSerializeStateValue(state);
     hashCanonicalStateValue(state);
