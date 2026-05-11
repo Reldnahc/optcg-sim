@@ -51,6 +51,7 @@ export interface EffectRuntimeQueueProcessing {
   processNoChoiceEffectQueue: (
     state: GameState,
     orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
+    acceptedOptionalQueueEntryIds?: readonly QueueEntryId[],
   ) => EngineResult;
   processEffectRuntimeAfterTriggerOrderChoice: (
     state: GameState,

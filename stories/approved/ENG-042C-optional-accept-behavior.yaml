@@ -1,0 +1,78 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-042C
+epic_id: KICK-001
+title: Accept optional queued effects through existing runtime resolution
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add the accept response path for optional queued no-choice draw effects so an
+  accepted optional effect resolves through the existing queue runtime.
+story_boundary: >
+  Own only valid accept handling for existing chooseOptionalActivation
+  decisions and the minimal queue-resume marker needed to avoid re-prompting the
+  accepted entry. Stop before costs, targets, once-per-turn, or new primitives.
+allowed_touch_points:
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/optional-activation-actions.ts
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime-queue-processing.ts
+  - packages/engine-core/src/effect-runtime-queue-results.ts
+  - packages/engine-core/src/effect-runtime-optional-activation.test.ts
+  - stories/generated/ENG-042C-optional-accept-behavior.yaml
+  - stories/approved/ENG-042C-optional-accept-behavior.yaml
+  - agent-packets/ENG-042C.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s004
+  - 02-engine-mechanics.s042
+  - 03-game-state-events-decisions.s009
+  - 03-game-state-events-decisions.s011
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+scope:
+  - validate `optionalActivation` activate responses for the current optional activation decision
+  - clear the pending decision and append deterministic `decisionResolved` evidence
+  - resume the accepted queued no-choice draw effect through the existing effect resolution path
+  - continue later runtime queue processing after the accepted effect resolves
+  - document in code or tests that once-per-turn consumption remains a future integration point outside this story
+  - prove accept draws through the same primitive path and emits deterministic event order/hash coverage
+non_scope:
+  - optional target effects
+  - optional costs or once-per-turn consumption implementation
+  - replacement effects
+  - new primitives
+  - real-card fixtures or card-data integration
+  - server, client, API, Redis, live Poneglyph, or UI work
+dependencies:
+  - ENG-042A
+  - ENG-042B
+acceptance_criteria:
+  - a valid activate response clears the optional decision and resolves the selected queue entry
+  - accepted optional effects use existing no-choice draw resolution behavior
+  - accepted optional effects produce deterministic `decisionResolved`, draw, `effectResolved`, and checkpoint ordering
+  - later queue entries continue after the accepted effect resolves
+required_tests:
+  - run corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-optional-activation.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-042C packet while implementing this story
+  - run corepack pnpm run packets:verify before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-042 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+ambiguity_policy: fail_and_escalate

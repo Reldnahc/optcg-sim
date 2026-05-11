@@ -6,6 +6,10 @@ import {
   isSupportedNoChoiceOnPlayDrawEffect,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
+import {
+  isSupportedOptionalNoChoiceMainEventDrawEffect,
+  isSupportedOptionalNoChoiceOnPlayDrawEffect,
+} from "./effect-runtime-primitives.js";
 import { hasUnsupportedSupportGateText } from "./battle-support.js";
 
 export type SupportedPlayMetadata = {
@@ -56,7 +60,10 @@ export const getSupportedPlayMetadata = (
       return null;
     }
     if (resolved.category === "character") {
-      if (!isSupportedNoChoiceOnPlayDrawEffect(effect)) {
+      if (
+        !isSupportedNoChoiceOnPlayDrawEffect(effect) &&
+        !isSupportedOptionalNoChoiceOnPlayDrawEffect(effect)
+      ) {
         return null;
       }
       return {
@@ -67,6 +74,7 @@ export const getSupportedPlayMetadata = (
     if (resolved.category === "event") {
       if (
         !isSupportedNoChoiceMainEventDrawEffect(effect) &&
+        !isSupportedOptionalNoChoiceMainEventDrawEffect(effect) &&
         !isSupportedMainEventTargetKoEffect(effect)
       ) {
         return null;

@@ -1,0 +1,115 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-042
+epic_id: KICK-001
+title: Optional effects foundation parent
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Coordinate the first narrow optional-effect runtime foundation so already
+  supported no-choice draw effect paths can pause for an accept/decline
+  decision without broadening into costs, replacement effects, real-card fixture
+  integration, or UI/API work.
+story_boundary: >
+  This parent is not directly implementable. It coordinates ENG-042A through
+  ENG-042E on a parent integration branch so optional activation creation,
+  decline, accept, PlayerView/fail-closed regressions, and no-choice baseline
+  regressions land as one reviewed gameplay group.
+allowed_touch_points:
+  - stories/generated/ENG-042*.yaml
+  - stories/approved/ENG-042*.yaml
+spec_refs:
+  - 02-engine-mechanics.s004
+  - 02-engine-mechanics.s042
+  - 03-game-state-events-decisions.s009
+  - 03-game-state-events-decisions.s011
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s008
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 06-visibility-security.s004
+  - 06-visibility-security.s006
+  - 06-visibility-security.s007
+  - 06-visibility-security.s017
+  - 11-testing-quality.s004
+  - 11-testing-quality.s005
+  - 11-testing-quality.s008
+  - 24-story-schema.s004
+  - 24-story-schema.s016
+  - 27-spec-driven-story-generation-workflow.s015
+  - 27-spec-driven-story-generation-workflow.s017
+scope:
+  - coordinate a parent integration branch for ENG-042A through ENG-042E
+  - support optional activation decisions only for reviewed no-choice draw effects in on-play, main-event, when-attacking, on-opponent-attack, and on-K.O. queue paths
+  - keep optional decisions private to the choosing player in PlayerView and legal-action projection
+  - make decline skip the optional effect without resolving it
+  - make accept resume the existing queued-effect resolution path
+  - preserve existing non-optional no-choice behavior
+  - require synthetic unit/regression/fail-closed/hidden-info/event-order/hash tests
+non_scope:
+  - direct implementation from this parent story
+  - packetizing or activating this parent story as an active implementation story
+  - real-card fixture capture or card-data integration
+  - optional life-trigger or custom effect-resolved queue paths
+  - once-per-turn consumption beyond documenting the future integration point
+  - new cost semantics
+  - replacement effects
+  - unrelated new primitives
+  - server, client, API, WebSocket, database, Redis, live Poneglyph, or UI work
+  - engine-core importing @optcg/cards
+dependencies:
+  - ENG-039
+child_stories:
+  - id: ENG-042A
+    title: Create optional activation decisions for supported no-choice effects
+    concern: Detect optional supported no-choice draw queue entries and create a private chooseOptionalActivation decision for the effect controller.
+    depends_on: []
+  - id: ENG-042B
+    title: Decline optional queued effects without resolving them
+    concern: Validate decline responses, clear the decision, remove the optional queue entry, and continue runtime work without resolving the declined effect.
+    depends_on: [ENG-042A]
+  - id: ENG-042C
+    title: Accept optional queued effects through existing runtime resolution
+    concern: Validate accept responses and resume the already-supported queued no-choice draw resolution path for the accepted entry.
+    depends_on: [ENG-042A, ENG-042B]
+  - id: ENG-042D
+    title: Verify optional decisions are private and fail closed
+    concern: Prove PlayerView/legal-action privacy, invalid-response rejection, malformed-response rejection, and unsupported optional shapes fail closed.
+    depends_on: [ENG-042A, ENG-042B, ENG-042C]
+  - id: ENG-042E
+    title: Preserve no-choice effect baseline behavior
+    concern: Prove non-optional supported no-choice effect paths keep their existing ordering, events, hashes, and runtime behavior.
+    depends_on: [ENG-042A, ENG-042B, ENG-042C, ENG-042D]
+acceptance_criteria:
+  - ENG-042A through ENG-042E are reviewed as a coherent optional-effect foundation group
+  - each child story has a usable exact per-story story-review result before approval
+  - child PRs target the ENG-042 parent integration branch if the group is approved
+  - the final parent PR supports optional accept/decline only for reviewed supported no-choice draw effect paths
+  - unsupported optional shapes and malformed responses fail closed without hidden-information leakage or partial mutation
+  - parent PR cleanup metadata and lifecycle evidence bind ENG-042 plus ENG-042A through ENG-042E, and cleanup is deferred until the parent PR lands on main
+required_tests:
+  - set-level story-review for ENG-042 parent and children
+  - per-story story-review for ENG-042 parent before approval
+  - per-story story-review for ENG-042A through ENG-042E before approval
+  - story-specific tests from every child story
+  - full `corepack pnpm run coverage` before parent PR completion
+  - full `corepack pnpm verify` on every child PR and parent PR
+repo_rules:
+  - do not implement ENG-042 directly
+  - use the parent integration branch workflow if this group is approved
+  - keep one active child packet at a time
+  - do not run packet completion for child stories until the parent branch lands on main
+  - require parent PR cleanup metadata and lifecycle evidence for ENG-042 and every included child story
+  - use `packets:complete-many` only after the parent PR lands on main or as documented operational fallback
+  - if optional support needs costs, targets, replacement effects, card-data authority, or UI/API changes, stop and split or record a blocker
+ambiguity_policy: fail_and_escalate

@@ -30,140 +30,145 @@ import {
 } from "./effect-runtime-queue-processing-test-support.js";
 
 test("resolves multiple no-choice queued entries in deterministic ENG-010F order", () => {
-  const state = createActiveState();
-  const p1Source = must(must(state.players[p1], "p1").hand[0], "p1 source");
-  const p2Source = must(must(state.players[p2], "p2").hand[0], "p2 source");
-  const p1Played = withCardInZone({
-    state,
-    playerId: p1,
-    card: p1Source,
-    zone: "characterArea",
-  });
-  const p2Played = withCardInZone({
-    state,
-    playerId: p2,
-    card: p2Source,
-    zone: "characterArea",
-  });
-  const p1Resolved = resolvedCard({
-    cardId: p1Played.cardId,
-    category: "character",
-    support: {
-      status: "implemented-dsl",
-      effectDefinitionId: "def-p1",
-      rulesVersion: "queue-order-rules-p1",
-      sourceTextHash: "queue-order-source-p1",
-    },
-  });
-  const p2Resolved = resolvedCard({
-    cardId: p2Played.cardId,
-    category: "character",
-    support: {
-      status: "implemented-dsl",
-      effectDefinitionId: "def-p2",
-      rulesVersion: "queue-order-rules-p2",
-      sourceTextHash: "queue-order-source-p2",
-    },
-  });
-  const p1Definition = reviewedOnPlayDrawDefinition(
-    p1Played.cardId,
-    p1Resolved.support,
-  );
-  const p2Definition = reviewedOnPlayDrawDefinition(
-    p2Played.cardId,
-    p2Resolved.support,
-  );
-  state.cardManifest.effectDefinitionsVersion = "0.1.0";
-  state.cardManifest.effectDefinitions = {
-    "def-p1": p1Definition,
-    "def-p2": p2Definition,
+  const run = () => {
+    const state = createActiveState();
+    const p1Source = must(must(state.players[p1], "p1").hand[0], "p1 source");
+    const p2Source = must(must(state.players[p2], "p2").hand[0], "p2 source");
+    const p1Played = withCardInZone({
+      state,
+      playerId: p1,
+      card: p1Source,
+      zone: "characterArea",
+    });
+    const p2Played = withCardInZone({
+      state,
+      playerId: p2,
+      card: p2Source,
+      zone: "characterArea",
+    });
+    const p1Resolved = resolvedCard({
+      cardId: p1Played.cardId,
+      category: "character",
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: "def-p1",
+        rulesVersion: "queue-order-rules-p1",
+        sourceTextHash: "queue-order-source-p1",
+      },
+    });
+    const p2Resolved = resolvedCard({
+      cardId: p2Played.cardId,
+      category: "character",
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: "def-p2",
+        rulesVersion: "queue-order-rules-p2",
+        sourceTextHash: "queue-order-source-p2",
+      },
+    });
+    const p1Definition = reviewedOnPlayDrawDefinition(
+      p1Played.cardId,
+      p1Resolved.support,
+    );
+    const p2Definition = reviewedOnPlayDrawDefinition(
+      p2Played.cardId,
+      p2Resolved.support,
+    );
+    state.cardManifest.effectDefinitionsVersion = "0.1.0";
+    state.cardManifest.effectDefinitions = {
+      "def-p1": p1Definition,
+      "def-p2": p2Definition,
+    };
+    state.cardManifest.cards[p1Played.cardId] = p1Resolved;
+    state.cardManifest.cards[p2Played.cardId] = p2Resolved;
+    const p2State = must(state.players[p2], "p2");
+    const p1State = must(state.players[p1], "p1");
+    if (p1State.deck.length < 2 && p1State.hand.length >= 2) {
+      const refillA = must(p1State.hand[0], "p1 refill a");
+      const refillB = must(p1State.hand[1], "p1 refill b");
+      state.players[p1] = {
+        ...p1State,
+        hand: p1State.hand.slice(2),
+        deck: [
+          {
+            ...refillA,
+            zone: { zone: "deck", playerId: p1, slot: "deck", index: 0 },
+          },
+          {
+            ...refillB,
+            zone: { zone: "deck", playerId: p1, slot: "deck", index: 1 },
+          },
+        ],
+      };
+    }
+    if (p2State.deck.length < 2 && p2State.hand.length >= 2) {
+      const refillA = must(p2State.hand[0], "p2 refill a");
+      const refillB = must(p2State.hand[1], "p2 refill b");
+      state.players[p2] = {
+        ...p2State,
+        hand: p2State.hand.slice(2),
+        deck: [
+          {
+            ...refillA,
+            zone: { zone: "deck", playerId: p2, slot: "deck", index: 0 },
+          },
+          {
+            ...refillB,
+            zone: { zone: "deck", playerId: p2, slot: "deck", index: 1 },
+          },
+        ],
+      };
+    }
+    state.effectQueue = [
+      {
+        ...queueDrawForP1(),
+        id: toQueueEntryId("queue-entry-turn"),
+        timingWindowId: toTimingWindowId("window-a"),
+        generation: 0,
+        orderingGroup: "turnPlayer",
+        controllerId: p1,
+        createdAtEventSeq: 9,
+        source: {
+          instanceId: p1Played.instanceId,
+          cardId: p1Played.cardId,
+          playerId: p1,
+          zone: p1Played.zone,
+        },
+        sourceSnapshot: toSourceSnapshot(p1Played, p1, p1),
+        effectBlockId: must(p1Definition.effects[0], "p1 effect").id,
+        sourcePresencePolicy: "mustRemainInSameZone",
+      },
+      {
+        ...queueDrawForP1(),
+        id: toQueueEntryId("queue-entry-non-turn"),
+        timingWindowId: toTimingWindowId("window-a"),
+        generation: 0,
+        orderingGroup: "nonTurnPlayer",
+        controllerId: p2,
+        createdAtEventSeq: 10,
+        source: {
+          instanceId: p2Played.instanceId,
+          cardId: p2Played.cardId,
+          playerId: p2,
+          zone: p2Played.zone,
+        },
+        sourceSnapshot: toSourceSnapshot(p2Played, p2, p2),
+        effectBlockId: must(p2Definition.effects[0], "p2 effect").id,
+        sourcePresencePolicy: "mustRemainInSameZone",
+      },
+    ];
+    return processEffectRuntime(state);
   };
-  state.cardManifest.cards[p1Played.cardId] = p1Resolved;
-  state.cardManifest.cards[p2Played.cardId] = p2Resolved;
-  const p2State = must(state.players[p2], "p2");
-  const p1State = must(state.players[p1], "p1");
-  if (p1State.deck.length < 2 && p1State.hand.length >= 2) {
-    const refillA = must(p1State.hand[0], "p1 refill a");
-    const refillB = must(p1State.hand[1], "p1 refill b");
-    state.players[p1] = {
-      ...p1State,
-      hand: p1State.hand.slice(2),
-      deck: [
-        {
-          ...refillA,
-          zone: { zone: "deck", playerId: p1, slot: "deck", index: 0 },
-        },
-        {
-          ...refillB,
-          zone: { zone: "deck", playerId: p1, slot: "deck", index: 1 },
-        },
-      ],
-    };
-  }
-  if (p2State.deck.length < 2 && p2State.hand.length >= 2) {
-    const refillA = must(p2State.hand[0], "p2 refill a");
-    const refillB = must(p2State.hand[1], "p2 refill b");
-    state.players[p2] = {
-      ...p2State,
-      hand: p2State.hand.slice(2),
-      deck: [
-        {
-          ...refillA,
-          zone: { zone: "deck", playerId: p2, slot: "deck", index: 0 },
-        },
-        {
-          ...refillB,
-          zone: { zone: "deck", playerId: p2, slot: "deck", index: 1 },
-        },
-      ],
-    };
-  }
-  state.effectQueue = [
-    {
-      ...queueDrawForP1(),
-      id: toQueueEntryId("queue-entry-turn"),
-      timingWindowId: toTimingWindowId("window-a"),
-      generation: 0,
-      orderingGroup: "turnPlayer",
-      controllerId: p1,
-      createdAtEventSeq: 9,
-      source: {
-        instanceId: p1Played.instanceId,
-        cardId: p1Played.cardId,
-        playerId: p1,
-        zone: p1Played.zone,
-      },
-      sourceSnapshot: toSourceSnapshot(p1Played, p1, p1),
-      effectBlockId: must(p1Definition.effects[0], "p1 effect").id,
-      sourcePresencePolicy: "mustRemainInSameZone",
-    },
-    {
-      ...queueDrawForP1(),
-      id: toQueueEntryId("queue-entry-non-turn"),
-      timingWindowId: toTimingWindowId("window-a"),
-      generation: 0,
-      orderingGroup: "nonTurnPlayer",
-      controllerId: p2,
-      createdAtEventSeq: 10,
-      source: {
-        instanceId: p2Played.instanceId,
-        cardId: p2Played.cardId,
-        playerId: p2,
-        zone: p2Played.zone,
-      },
-      sourceSnapshot: toSourceSnapshot(p2Played, p2, p2),
-      effectBlockId: must(p2Definition.effects[0], "p2 effect").id,
-      sourcePresencePolicy: "mustRemainInSameZone",
-    },
-  ];
-
-  const result = processEffectRuntime(state);
+  const result = run();
+  const replay = run();
   const drawEvents = result.events.filter(
     (event) => event.type === "cardDrawn",
   );
 
   assert.equal(result.errors, undefined);
+  assert.equal(replay.errors, undefined);
   assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(result.state.pendingDecision, undefined);
   assert.equal(drawEvents.length, 2);
   assert.deepEqual(
     drawEvents.map(
@@ -171,6 +176,11 @@ test("resolves multiple no-choice queued entries in deterministic ENG-010F order
     ),
     [p1, p2],
   );
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    replay.events.map((event) => event.type),
+  );
+  assert.equal(result.stateHash, replay.stateHash);
 });
 
 test("resolves A then already-pending B before turn-player C created by resolving A", () => {

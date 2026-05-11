@@ -302,7 +302,7 @@ test("rejects battle K.O. event batches whose move event lacks the K.O.'d card i
   assert.deepEqual(state, before);
 });
 
-test("unsupported On K.O. definitions fail candidate detection without mutation", () => {
+test("optional On K.O. draw support gate detects an optional trigger candidate", () => {
   const state = createActiveState();
   const p2State = must(state.players[p2], "p2");
   const source = withCardInZone({
@@ -335,15 +335,22 @@ test("unsupported On K.O. definitions fail candidate detection without mutation"
 
   const result = detectBattleKOTriggerCandidates(state, events);
 
-  assert.deepEqual(result, {
-    ok: false,
-    error: {
-      type: "effectRuntimeError",
-      effectId: "on-ko-trigger-candidate-detection",
-      details: {
-        reason: "unsupported-on-ko-definition",
+  assert.equal(result.ok, true);
+  assert.deepEqual(
+    result.candidates.map((candidate) => ({
+      controllerId: candidate.controllerId,
+      effectBlockId: candidate.effectBlockId,
+      sourcePresencePolicy: candidate.sourcePresencePolicy,
+      triggerEventId: candidate.triggerEventId,
+    })),
+    [
+      {
+        controllerId: p2,
+        effectBlockId: must(definition.effects[0], "onKO effect").id,
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        triggerEventId: must(events[0], "K.O. event").id,
       },
-    },
-  });
+    ],
+  );
   assert.deepEqual(state, before);
 });

@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-042E.md",
+      "storyId": "ENG-042E",
+      "storyPath": "stories/approved/ENG-042E-no-choice-baseline-regression.yaml",
+      "storySha256": "27fa1cc4ff9a6e88ad6d3cf41ffa28f2e78efd5e0f26985d920621e702f71709"
+    }
+  ],
   "version": 1
 }

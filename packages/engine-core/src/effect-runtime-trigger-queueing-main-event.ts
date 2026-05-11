@@ -12,6 +12,7 @@ import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import {
   isSupportedMainEventTargetKoEffect,
   isSupportedNoChoiceMainEventDrawEffect,
+  isSupportedOptionalNoChoiceMainEventDrawEffect,
 } from "./effect-runtime-primitives.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
@@ -113,6 +114,7 @@ export const createMainEventTriggerQueueing = (
       const matching = mainEffects.filter(
         (effect) =>
           isSupportedNoChoiceMainEventDrawEffect(effect) ||
+          isSupportedOptionalNoChoiceMainEventDrawEffect(effect) ||
           isSupportedMainEventTargetKoEffect(effect),
       );
       if (matching.length === 0) {
