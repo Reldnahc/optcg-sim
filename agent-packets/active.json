@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-043A.md",
+      "storyId": "ENG-043A",
+      "storyPath": "stories/approved/ENG-043A-once-per-turn-state-helpers.yaml",
+      "storySha256": "08a729846bdf5149b6df5c512783ebd9aaf50e124a4c9f49324d413afd64f554"
+    }
+  ],
   "version": 1
 }
