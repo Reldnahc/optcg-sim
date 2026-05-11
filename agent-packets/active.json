@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-043A.md",
-      "storyId": "ENG-043A",
-      "storyPath": "stories/approved/ENG-043A-once-per-turn-state-helpers.yaml",
-      "storySha256": "08a729846bdf5149b6df5c512783ebd9aaf50e124a4c9f49324d413afd64f554"
+      "packetPath": "agent-packets/ENG-043B.md",
+      "storyId": "ENG-043B",
+      "storyPath": "stories/approved/ENG-043B-once-per-turn-activation-commitment.yaml",
+      "storySha256": "92239b4935d0f5ec56adfecf2d09ceeb5b924021ee3a9eede4935cb87fcb2faf"
     }
   ],
   "version": 1
