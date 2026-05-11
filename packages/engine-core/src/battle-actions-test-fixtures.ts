@@ -418,6 +418,94 @@ export const setupOpenedCounterStepPassDecision = () => {
   };
 };
 
+export const installSupportedCounterEvent = (
+  state: ReturnType<typeof setupAttackState>,
+  card: CardInstance,
+  value: number,
+) => {
+  state.cardManifest.cards[card.cardId] = resolvedCard({
+    cardId: card.cardId,
+    category: "event",
+    effectText: `[Counter] Your Leader or 1 of your Characters gets +${String(value)} power during this battle.`,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: `${String(card.cardId)}:counter`,
+    },
+  });
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [`${String(card.cardId)}:counter`]: {
+      cardId: card.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: `${String(card.cardId)}:counter:1` as EffectId,
+          category: "auto",
+          trigger: { type: "counter" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          effect: {
+            type: "modifyPower",
+            target: { type: "attackTarget" },
+            value,
+            duration: { type: "thisBattle" },
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: "source-hash",
+        rulesVersion: "r1",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+        reviewer: "qa-reviewer",
+      },
+    },
+  };
+};
+
+export const ensureActiveDonInCostArea = (
+  state: ReturnType<typeof setupAttackState>,
+  playerId: PlayerId,
+  count = 1,
+) => {
+  const player = must(state.players[playerId], "player");
+  while (
+    player.costArea.filter((card) => card.state === "active").length < count
+  ) {
+    const don = player.donDeck.shift();
+    if (don === undefined) {
+      break;
+    }
+    player.costArea.push({
+      ...don,
+      zone: {
+        zone: "costArea",
+        playerId,
+        slot: "cost",
+        index: player.costArea.length,
+      },
+      state: "active",
+    });
+  }
+  player.costArea = player.costArea.map((card, index) => ({
+    ...card,
+    zone: {
+      zone: "costArea",
+      playerId,
+      slot: "cost",
+      index,
+    },
+  }));
+  player.donDeck = player.donDeck.map((card, index) => ({
+    ...card,
+    zone: {
+      zone: "donDeck",
+      playerId,
+      slot: "donDeck",
+      index,
+    },
+  }));
+};
+
 export const assertRejectsWithoutMutation = (
   state: ReturnType<typeof setupAttackState>,
   response: Parameters<typeof applyAction>[1],

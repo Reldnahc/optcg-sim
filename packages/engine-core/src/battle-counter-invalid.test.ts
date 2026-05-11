@@ -3,7 +3,7 @@ import { test } from "vitest";
 
 import type { CardInstance, CardRef } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import { applyDeclareAttack } from "./battle-actions.js";
 import {
   must,
@@ -16,7 +16,9 @@ import {
   assertRejectsWithoutMutation,
   cardRef,
   continuousEffectRecord,
+  ensureActiveDonInCostArea,
   effectDefinition,
+  installSupportedCounterEvent,
   setupAttackState,
   setupOpenedCounterStepPassDecision,
 } from "./battle-actions-test-fixtures.js";
@@ -413,6 +415,7 @@ test("raw [Counter] Event text prevents auto-pass with unsupported Counter Event
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
+  ensureActiveDonInCostArea(state, p2, 1);
   const counterEvent = must(p2State.hand[0], "counter event");
   state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
     cardId: counterEvent.cardId,
@@ -450,6 +453,7 @@ test("counter effect definition on defender Event prevents auto-pass with unsupp
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
+  ensureActiveDonInCostArea(state, p2, 1);
   const counterEvent = must(p2State.hand[0], "counter event");
   state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
     cardId: counterEvent.cardId,
@@ -475,4 +479,229 @@ test("counter effect definition on defender Event prevents auto-pass with unsupp
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
   assert.deepEqual(result.events, []);
+});
+
+test("counter trigger definition on defender Character still prevents unsupported counter window", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterCharacter = must(p2State.hand[0], "counter character");
+  state.cardManifest.cards[counterCharacter.cardId] = resolvedCard({
+    cardId: counterCharacter.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+  state.cardManifest.effectDefinitions = {
+    counterCharacter: effectDefinition(counterCharacter.cardId, {
+      type: "counter",
+    }),
+  };
+  const before = JSON.stringify(state);
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Battle requires unsupported counter window handling.",
+    },
+  ]);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.deepEqual(result.events, []);
+});
+
+test("unsupported implemented-dsl Counter Event shapes still fail closed", () => {
+  const run = (
+    mutate: (
+      state: ReturnType<typeof setupAttackState>,
+      counterEvent: CardInstance,
+    ) => void,
+  ) => {
+    const state = setupAttackState();
+    const p1State = must(state.players[p1], "p1");
+    const p2State = must(state.players[p2], "p2");
+    const counterEvent = must(p2State.hand[0], "counter event");
+    installSupportedCounterEvent(state, counterEvent, 1000);
+    mutate(state, counterEvent);
+    const before = JSON.stringify(state);
+
+    const result = applyDeclareAttack(state, {
+      type: "declareAttack",
+      attacker: cardRef(p1State.leader, p1),
+      target: cardRef(p2State.leader, p2),
+    });
+
+    assert.deepEqual(result.errors, [
+      {
+        type: "illegalAction",
+        reason: "Counter Events are unsupported in the Counter Step.",
+      },
+    ]);
+    assert.equal(JSON.stringify(state), before);
+    assert.equal(JSON.stringify(result.state), before);
+    assert.deepEqual(result.events, []);
+  };
+
+  run((state, counterEvent) => {
+    const definition = must(
+      state.cardManifest.effectDefinitions?.[
+        `${String(counterEvent.cardId)}:counter`
+      ],
+      "counter definition",
+    );
+    const effect = must(definition.effects[0], "counter effect");
+    definition.effects = [
+      {
+        ...effect,
+        conditionTiming: "resolution",
+      },
+    ];
+  });
+
+  run((state, counterEvent) => {
+    state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
+      cardId: counterEvent.cardId,
+      category: "event",
+      effectText: "[Counter] +1000.",
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: `${String(counterEvent.cardId)}:counter`,
+        customHandlerIds: ["custom-counter"],
+      },
+    });
+  });
+
+  run((state, counterEvent) => {
+    const definition = must(
+      state.cardManifest.effectDefinitions?.[
+        `${String(counterEvent.cardId)}:counter`
+      ],
+      "counter definition",
+    );
+    const effect = must(definition.effects[0], "counter effect");
+    definition.effects = [
+      {
+        ...effect,
+        effect: {
+          type: "modifyPower",
+          target: { type: "attackTarget" },
+          value: 0,
+          duration: { type: "thisBattle" },
+        },
+      },
+    ];
+  });
+});
+
+test("supported nonzero-cost Counter Event rejects forged payCost response without mutation", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  ensureActiveDonInCostArea(state, p2, 1);
+  const counterEvent = must(p2State.hand[0], "counter event");
+  installSupportedCounterEvent(state, counterEvent, 1000);
+  state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
+    cardId: counterEvent.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Counter] +1000.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: `${String(counterEvent.cardId)}:counter`,
+    },
+  });
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  const use = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterEvent.instanceId,
+    target: must(opened.state.battle, "battle").currentTarget,
+  });
+  assert.equal(use.errors, undefined);
+  const before = JSON.stringify(use.state);
+
+  const forged = applyAction(use.state, {
+    type: "respondToDecision",
+    decisionId: must(use.state.pendingDecision, "decision").id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: ["missing-don" as never],
+    },
+  });
+
+  assert.equal(forged.errors?.[0]?.type, "illegalAction");
+  assert.deepEqual(forged.events, []);
+  assert.equal(JSON.stringify(use.state), before);
+  assert.equal(JSON.stringify(forged.state), before);
+});
+
+test("costed Counter Event without active DON is not legal and fails closed without mutation", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  const characterCounter = must(p2State.hand[1], "character counter");
+  installSupportedCounterEvent(state, counterEvent, 1000);
+  state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
+    cardId: counterEvent.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Counter] +1000.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: `${String(counterEvent.cardId)}:counter`,
+    },
+  });
+  state.cardManifest.cards[characterCounter.cardId] = resolvedCard({
+    cardId: characterCounter.cardId,
+    category: "character",
+    power: 3000,
+    counter: 1000,
+  });
+  p2State.costArea = p2State.costArea.map((don) => ({
+    ...don,
+    state: "rested",
+  }));
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterEvent.instanceId,
+    ),
+    false,
+  );
+  const before = JSON.stringify(opened.state);
+
+  const result = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterEvent.instanceId,
+    target: must(opened.state.battle, "battle").currentTarget,
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Counter Event requires enough active DON!!.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(opened.state), before);
+  assert.equal(JSON.stringify(result.state), before);
 });
