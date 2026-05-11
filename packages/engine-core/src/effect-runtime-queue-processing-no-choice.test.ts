@@ -47,6 +47,7 @@ test("resolves one queued supported On Play draw entry and removes it from effec
 
   assert.equal(result.errors, undefined);
   assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(result.state.pendingDecision, undefined);
   assert.equal(afterP1.deck.length, beforeDeck - 1);
   assert.equal(afterP1.hand.length, beforeHand + 1);
   const eventTypes = result.events.map((event) => event.type);
@@ -88,6 +89,7 @@ test("resolves one queued supported On Play draw entry and removes it from effec
     queueEntryId: queuedEntry.id,
     effectId: queuedEntry.effectBlockId,
   });
+  assert.equal(eventTypes.includes("decisionCreated"), false);
   assert.deepEqual(
     result.state.eventJournal.slice(-result.events.length),
     result.events,
