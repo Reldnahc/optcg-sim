@@ -78,6 +78,7 @@ If broad mechanical validation of PR comments or story-review artifacts would be
 - Use `pnpm run packets:verify` immediately after generating or refreshing the packet, and before worker assignment, reviewer assignment, implementation handoff, or PR handoff, to fail fast on missing or stale active-story packets.
 - Run `pnpm run packets:generate --story <stories/approved/...yaml> --activate` and `pnpm run packets:verify` before assigning an implementation worker.
 - Use `pnpm run packets:complete --story <stories/approved/...yaml>` after a story is merged to move it to done history, remove its active packet, and clear it from `agent-packets/active.json`.
+- Treat `docs/code-standard.md` as mandatory implementation guidance for code quality, separation of concerns, architecture boundaries, testing, story scope, and PR review expectations.
 - Stay inside the story's `scope`, `story_boundary`, and `allowed_touch_points`.
 - Do not silently absorb adjacent contract, engine, server, client, replay, or UI work just because it is nearby.
 - If the needed work crosses concerns, stop and split the story or raise the ambiguity instead of broadening the patch.

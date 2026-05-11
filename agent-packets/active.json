@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-040.md",
+      "storyId": "INF-040",
+      "storyPath": "stories/approved/INF-040-code-standard-guide.yaml",
+      "storySha256": "f002a77e97d7a446f68627ec0405e57436aefbf9cb75f08211a29c2b5a185f1d"
+    }
+  ],
   "version": 1
 }

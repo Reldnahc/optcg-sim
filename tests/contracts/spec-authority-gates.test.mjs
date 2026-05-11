@@ -21,6 +21,13 @@ function assertContainsWords(text, phrase) {
   assert.match(text, new RegExp(pattern));
 }
 
+function assertMandatoryCodeStandardLink(text) {
+  assert.match(
+    text,
+    /`docs\/code-standard\.md` (?:is|as) mandatory implementation guidance/,
+  );
+}
+
 function extractSection(text, sectionRef, nextSectionRef) {
   const startMarker = `Section Ref: \`${sectionRef}\``;
   const start = text.indexOf(startMarker);
@@ -74,6 +81,16 @@ test("TypeScript interface draft is historical and non-normative", async () => {
     /must not use this draft over `contracts\/canonical-types\.ts` or package source types/i,
   );
   assert.doesNotMatch(draft, /^status:\s+"canonical"$/m);
+});
+
+test("code standard guide is mandatory implementation guidance", async () => {
+  const agents = await readText("AGENTS.md");
+  const storyExecution = await readText("docs/workflow/story-execution.md");
+  const codeStandard = await readText("docs/code-standard.md");
+
+  assert.match(codeStandard, /^# Code Standard Guide$/m);
+  assertMandatoryCodeStandardLink(agents);
+  assertMandatoryCodeStandardLink(storyExecution);
 });
 
 test("event specs require append-order strictly increasing event sequences", async () => {
