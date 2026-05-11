@@ -1,0 +1,89 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-039
+epic_id: INF-027
+title: Accept merge-event PR body cleanup metadata timestamp
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: approved
+summary: >
+  Fix the post-merge cleanup false positive where GitHub advances a merged pull
+  request's aggregate `updated_at` timestamp during the merge event, causing
+  valid PR-body cleanup metadata from the merge event payload to be rejected as
+  "changed after merge" even though the cleanup source content is the reviewed
+  merge-time PR body snapshot.
+story_boundary: >
+  Own only post-merge cleanup evidence construction and validation for PR-body
+  cleanup metadata timestamps, plus the narrow workflow/tests that bind that
+  behavior. Do not change cleanup metadata syntax, packet completion semantics,
+  branch deletion policy, human-review requirements, story schema, or gameplay
+  behavior.
+allowed_touch_points:
+  - .github/workflows/post-merge-packet-cleanup.yml
+  - tools/post-merge-cleanup/metadata.ts
+  - tools/post-merge-cleanup/types.ts
+  - tools/post-merge-cleanup/validator.ts
+  - tests/github/post-merge-cleanup-evidence-builder.test.mjs
+  - tests/contracts/post-merge-cleanup-contract.test.mjs
+  - tests/contracts/post-merge-cleanup-preflight-contract.test.mjs
+  - tests/contracts/post-merge-cleanup-executor-contract.test.mjs
+  - tests/github/post-merge-cleanup-closeout.test.mjs
+  - tests/ci/github-workflows.test.mjs
+  - stories/generated/INF-039-accept-merge-event-pr-body-cleanup-metadata.yaml
+  - stories/approved/INF-039-accept-merge-event-pr-body-cleanup-metadata.yaml
+  - agent-packets/INF-039.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 27-spec-driven-story-generation-workflow.s015
+  - 32-codex-agent-integration.s013
+scope:
+  - treat PR-body cleanup metadata read from the `pull_request.closed` merge event payload as the merge-time source snapshot for post-merge cleanup evidence
+  - stop using the merged pull request's aggregate `updated_at` as proof that PR-body cleanup metadata changed after merge when the source is the merge event PR body
+  - keep durable handoff comment metadata fail-closed when the comment `updated_at` is after merge
+  - keep equivalent human-review fallback behavior fail-closed when PR-body cleanup metadata changed after the fallback review point
+  - keep parent lifecycle evidence freshness checks strict for PR body and durable comments unless the evidence is exactly the merge-event PR-body cleanup metadata source covered by this story
+  - align the workflow inline evidence builder with the shared metadata evidence builder so automation and local tests enforce the same PR-body timestamp behavior
+  - add regression coverage for the merge-event PR-body timestamp failure mode: PR-body cleanup metadata content from the merge event is accepted when PR `updated_at` is one second after `merged_at`
+non_scope:
+  - accepting durable handoff comments edited after merge
+  - accepting cleanup metadata whose content hash does not match reviewed evidence
+  - changing cleanup metadata parser syntax or allowed source locations
+  - changing cleanup-metadata-guard pre-merge behavior
+  - changing packet completion command output or cleanup-scoped finalization
+  - changing branch deletion policy
+  - changing human review or equivalent fallback requirements
+  - broad workflow refactors or reusable action extraction
+  - gameplay, engine, cards, server, client, replay, database, or UI behavior
+dependencies:
+  - INF-027I
+  - INF-035
+  - INF-036
+acceptance_criteria:
+  - post-merge cleanup evidence accepts a PR-body cleanup metadata source from the merge event payload when PR `updated_at` is after `merged_at` because of the merge event
+  - the accepted PR-body metadata source evidence records `updatedAt` from `pullRequest.mergedAt`
+  - durable handoff comment cleanup metadata still fails closed when the comment was updated after merge
+  - equivalent human-review fallback cleanup still fails closed if the selected cleanup metadata source changed after the fallback approval point
+  - workflow inline evidence construction no longer rejects valid PR-body cleanup metadata solely because `pr.updated_at` is later than `pr.merged_at`
+  - contract validation continues to reject stale metadata evidence for handoff comments and for any metadata evidence timestamp later than the required review point when the required review is not the merge actor
+required_tests:
+  - regression test proving `buildWorkflowCleanupEvidence` accepts PR-body cleanup metadata when `pullRequest.updatedAt` is one second after `pullRequest.mergedAt`
+  - regression test proving the accepted PR-body metadata source records `updatedAt` equal to `pullRequest.mergedAt`
+  - contract validation test proving cleanup validation accepts merge-event PR-body evidence with `metadataSource.updatedAt` equal to `mergedAt` even when the original PR aggregate `updated_at` was after `merged_at`
+  - regression test proving a durable handoff comment updated after merge still throws `Cleanup metadata source changed after merge`
+  - regression test proving fallback approval still rejects PR-body cleanup metadata whose source timestamp is after the fallback comment
+  - workflow test proving `.github/workflows/post-merge-packet-cleanup.yml` does not feed `pr.updated_at` as the PR-body cleanup metadata source freshness timestamp in the post-merge evidence builder
+  - focused `corepack pnpm exec vitest run tests/github/post-merge-cleanup-evidence-builder.test.mjs tests/contracts/post-merge-cleanup-contract.test.mjs tests/contracts/post-merge-cleanup-preflight-contract.test.mjs tests/ci/github-workflows.test.mjs`
+  - "`corepack pnpm run packets:verify`"
+  - full "`corepack pnpm run verify`"
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - use TDD by adding the merge-event PR-body timestamp regression before changing the evidence builder
+  - preserve fail-closed cleanup metadata binding to reviewed PR evidence and trusted checked-in story/packet state
+  - do not weaken durable handoff comment freshness checks
+  - keep the cleanup workflow using trusted default-branch/base-branch code, not PR-head-modifiable code
+ambiguity_policy: fail_and_escalate

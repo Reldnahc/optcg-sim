@@ -89,15 +89,42 @@ test("workflow evidence builder can derive parent lifecycle from the PR body", (
   );
 });
 
-test("workflow evidence builder rejects PR body metadata changed after review", () => {
+test("workflow evidence builder accepts merge-event PR body metadata when aggregate PR update follows merge", () => {
   const inputs = buildFixtureInputs();
   inputs.pullRequest.body = metadataSource;
-  inputs.pullRequest.updatedAt = "2026-01-01T13:30:00.000Z";
+  inputs.pullRequest.mergedAt = "2026-01-01T13:00:00.000Z";
+  inputs.pullRequest.updatedAt = "2026-01-01T13:00:01.000Z";
   inputs.issueComments.shift();
+
+  const evidence = buildWorkflowCleanupEvidence(inputs);
+
+  assert.equal(evidence.metadataSource.kind, "pr-body");
+  assert.equal(evidence.metadataSource.updatedAt, inputs.pullRequest.mergedAt);
+});
+
+test("workflow evidence builder rejects PR body metadata changed after fallback approval", () => {
+  const inputs = buildFixtureInputs();
+  inputs.eventSenderUserType = "Bot";
+  inputs.reviews = [];
+  inputs.pullRequest.body = metadataSource;
+  inputs.pullRequest.mergedAt = "2026-01-01T13:00:00.000Z";
+  inputs.pullRequest.updatedAt = "2026-01-01T13:00:00.000Z";
+  inputs.issueComments.shift();
+  inputs.issueComments.push({
+    body: `## Equivalent Human Review Fallback
+
+- Fallback human reviewer: reviewer-login
+- Cleanup metadata source reviewed before fallback approval: yes, exact cleanup metadata block matched story scope
+`,
+    createdAt: "2026-01-01T12:00:00.000Z",
+    id: 902,
+    updatedAt: "2026-01-01T12:00:00.000Z",
+    userType: "Bot",
+  });
 
   assert.throws(
     () => buildWorkflowCleanupEvidence(inputs),
-    /Cleanup metadata source changed after merge/,
+    /Cleanup metadata source changed after fallback review/,
   );
 });
 
