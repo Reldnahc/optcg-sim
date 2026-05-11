@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Update agent packet generation so every newly generated packet carries a
   compact Code Standard attachment that points implementation agents to

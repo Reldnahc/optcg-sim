@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-041.md",
-      "storyId": "INF-041",
-      "storyPath": "stories/approved/INF-041-code-standard-packet-attachment.yaml",
-      "storySha256": "5acf8cdf3574742d237049073a081d28df9eb600727e6ebf11f0ebb62c53ef67"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
