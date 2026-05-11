@@ -625,7 +625,10 @@ export const isSupportedOptionalNoChoiceOnPlayDrawEffect = (
 } =>
   effect.optional === true &&
   effect.sourcePresencePolicy === "mustRemainInSameZone" &&
-  isNoChoiceDrawTriggerEffect(effect, "onPlay", { allowOptional: true });
+  isNoChoiceDrawTriggerEffect(effect, "onPlay", {
+    allowOptional: true,
+    allowOncePerTurn: true,
+  });
 
 export const isSupportedNoChoiceWhenAttackingDrawEffect = (
   effect: EffectDefinition["effects"][number],
@@ -644,6 +647,7 @@ export const isSupportedOptionalNoChoiceWhenAttackingDrawEffect = (
   effect.sourcePresencePolicy === "mustRemainInSameZone" &&
   isNoChoiceDrawTriggerEffect(effect, "whenAttacking", {
     allowOptional: true,
+    allowOncePerTurn: true,
   });
 
 export const isSupportedNoChoiceOnOpponentAttackDrawEffect = (
@@ -663,6 +667,7 @@ export const isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect = (
   effect.sourcePresencePolicy === "mustRemainInSameZone" &&
   isNoChoiceDrawTriggerEffect(effect, "onOpponentAttack", {
     allowOptional: true,
+    allowOncePerTurn: true,
   });
 
 export const isSupportedNoChoiceOnKODrawEffect = (
@@ -690,7 +695,10 @@ export const isSupportedOptionalNoChoiceOnKODrawEffect = (
   (effect.sourcePresencePolicy === "resolveFromDestinationZone" ||
     effect.sourcePresencePolicy === "resolveFromLastKnownInformation") &&
   effect.trigger.type === "onKO" &&
-  isNoChoiceDrawEffectShape(effect, { allowOptional: true });
+  isNoChoiceDrawEffectShape(effect, {
+    allowOptional: true,
+    allowOncePerTurn: true,
+  });
 
 export const isSupportedNoChoiceMainEventDrawEffect = (
   effect: EffectDefinition["effects"][number],
@@ -715,7 +723,10 @@ export const isSupportedOptionalNoChoiceMainEventDrawEffect = (
   effect.optional === true &&
   effect.sourcePresencePolicy === "resolveFromDestinationZone" &&
   effect.trigger.type === "main" &&
-  isNoChoiceDrawEffectShape(effect, { allowOptional: true });
+  isNoChoiceDrawEffectShape(effect, {
+    allowOptional: true,
+    allowOncePerTurn: true,
+  });
 
 const isReviewedTargetKoRequestShape = (
   request: Extract<Target, { type: "choose" }>["request"],
