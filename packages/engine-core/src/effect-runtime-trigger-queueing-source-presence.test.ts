@@ -85,14 +85,6 @@ test("unsupported effect metadata and shapes fail closed without partial mutatio
     definition: (d: EffectDefinition) => EffectDefinition;
   }> = [
     {
-      name: "optional",
-      expectedReason: "unsupported-on-play-definition",
-      definition: (d) => ({
-        ...d,
-        effects: [{ ...must(d.effects[0], "onPlay effect"), optional: true }],
-      }),
-    },
-    {
       name: "cost",
       expectedReason: "unsupported-on-play-definition",
       definition: (d) => ({
@@ -185,6 +177,41 @@ test("unsupported effect metadata and shapes fail closed without partial mutatio
       testCase.name,
     );
   }
+});
+
+test("optional On Play draw support gate queues for optional activation", () => {
+  const { state, played } = queueingState();
+  const baseCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    baseCard.support,
+  );
+  const optionalEffect = {
+    ...must(baseDefinition.effects[0], "onPlay effect"),
+    optional: true,
+  };
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...baseDefinition,
+      effects: [optionalEffect],
+    },
+    "def-optional-on-play-supported",
+  );
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(isSupportedNoChoiceOnPlayDrawEffect(optionalEffect), false);
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectQueued"],
+  );
+  assert.equal(result.state.effectQueue.length, 1);
 });
 
 test("unreviewed On Play definition metadata fails closed without queue mutation or events", () => {

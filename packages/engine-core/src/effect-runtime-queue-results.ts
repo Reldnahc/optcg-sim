@@ -1,6 +1,7 @@
 import type {
   DecisionId,
   Effect,
+  EffectDefinition,
   EffectQueueEntry,
   EngineEvent,
   EngineResult,
@@ -29,6 +30,7 @@ import type {
 import {
   executeNoChoiceEffectPrimitive,
   isSupportedQueuedNoChoiceDrawEffect,
+  isSupportedQueuedOptionalNoChoiceDrawEffect,
 } from "./effect-runtime-primitives.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
@@ -85,10 +87,10 @@ export const createEffectRuntimeQueueResults = (
       ],
     );
 
-  const resolveQueuedNoChoiceDrawEffect = (
+  const resolveQueuedEffectDefinition = (
     state: GameState,
     entry: EffectQueueEntry,
-  ): Extract<Effect, { type: "draw" }> | undefined => {
+  ): EffectDefinition["effects"][number] | undefined => {
     const resolved = state.cardManifest.cards[entry.source.cardId];
     if (resolved === undefined) {
       return undefined;
@@ -103,6 +105,17 @@ export const createEffectRuntimeQueueResults = (
     const match = lookup.definition.effects.find(
       (effect) => effect.id === entry.effectBlockId,
     );
+    if (match === undefined) {
+      return undefined;
+    }
+    return match;
+  };
+
+  const resolveQueuedNoChoiceDrawEffect = (
+    state: GameState,
+    entry: EffectQueueEntry,
+  ): Extract<Effect, { type: "draw" }> | undefined => {
+    const match = resolveQueuedEffectDefinition(state, entry);
     if (
       match === undefined ||
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
@@ -111,6 +124,53 @@ export const createEffectRuntimeQueueResults = (
       return undefined;
     }
     return match.effect;
+  };
+
+  const createChooseOptionalActivationDecision = (
+    state: GameState,
+    entry: EffectQueueEntry,
+  ): EngineResult => {
+    const decisionId =
+      `decision:chooseOptionalActivation:${String(entry.id)}` as DecisionId;
+    const causedBy = {
+      type: "effect",
+      queueEntryId: entry.id,
+      effectId: entry.effectBlockId,
+    } as const;
+    const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
+      id: decisionId,
+      type: "chooseOptionalActivation",
+      playerId: entry.controllerId,
+      prompt: "Choose whether to activate this effect.",
+      causedBy,
+      visibility: { type: "private", playerId: entry.controllerId },
+      effectId: entry.effectBlockId,
+      source: entry.source,
+      options: ["activate", "decline"],
+    };
+    const events: EngineEvent[] = [];
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: pendingDecision.id,
+        decisionType: pendingDecision.type,
+        playerId: pendingDecision.playerId,
+      },
+      { type: "private", playerId: entry.controllerId },
+    );
+    const created = events[0];
+    if (created !== undefined) {
+      created.causedBy = causedBy;
+    }
+    const nextState: GameState = {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      pendingDecision,
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    return toEngineResult(nextState, events);
   };
 
   const resolveQueueEntriesInOrder = (
@@ -127,6 +187,20 @@ export const createEffectRuntimeQueueResults = (
       );
       if (!sourcePresence.ok) {
         return unsupportedEffectQueueResult(originalState);
+      }
+      const queuedEffect = resolveQueuedEffectDefinition(nextState, selected);
+      if (queuedEffect?.optional === true) {
+        if (
+          queuedEffect.sourcePresencePolicy !== selected.sourcePresencePolicy ||
+          !isSupportedQueuedOptionalNoChoiceDrawEffect(queuedEffect)
+        ) {
+          return unsupportedEffectQueueResult(originalState);
+        }
+        const paused = createChooseOptionalActivationDecision(
+          nextState,
+          selected,
+        );
+        return { ...paused, events: [...allEvents, ...paused.events] };
       }
       const targetRequest =
         dependencies.targetDecisions.resolveQueuedTargetRequest(

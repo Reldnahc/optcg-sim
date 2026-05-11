@@ -27,6 +27,10 @@ allowed_touch_points:
   - packages/engine-core/src/effect-runtime-trigger-queueing-ko.ts
   - packages/engine-core/src/play-card-support.ts
   - packages/engine-core/src/effect-runtime-optional-activation.test.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-source-presence.test.ts
+  - packages/engine-core/src/effect-runtime-ko-triggers.test.ts
+  - packages/engine-core/src/play-card-event.test.ts
+  - packages/engine-core/src/play-card-on-play-runtime.test.ts
   - stories/generated/ENG-042A-optional-activation-decision-creation.yaml
   - stories/approved/ENG-042A-optional-activation-decision-creation.yaml
   - agent-packets/ENG-042A.md

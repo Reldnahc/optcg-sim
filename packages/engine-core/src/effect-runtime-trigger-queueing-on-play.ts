@@ -8,7 +8,10 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import { isSupportedNoChoiceOnPlayDrawEffect } from "./effect-runtime-primitives.js";
+import {
+  isSupportedNoChoiceOnPlayDrawEffect,
+  isSupportedOptionalNoChoiceOnPlayDrawEffect,
+} from "./effect-runtime-primitives.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OnPlayTriggerQueueingFailureReason,
@@ -114,7 +117,9 @@ export const createOnPlayTriggerQueueing = (
         continue;
       }
       const matching = onPlayEffects.filter(
-        isSupportedNoChoiceOnPlayDrawEffect,
+        (effect) =>
+          isSupportedNoChoiceOnPlayDrawEffect(effect) ||
+          isSupportedOptionalNoChoiceOnPlayDrawEffect(effect),
       );
       if (matching.length === 0) {
         return toEngineResult(

@@ -12,6 +12,7 @@ import { zonesEqual } from "./action-state.js";
 import {
   isSupportedEffectResolvedCustomDrawEffect,
   isSupportedNoChoiceOnKODrawEffect,
+  isSupportedOptionalNoChoiceOnKODrawEffect,
 } from "./effect-runtime-primitives.js";
 import type {
   BattleKOTriggerCandidate,
@@ -123,7 +124,11 @@ export const createKOTriggerQueueing = (
       if (onKOEffects.length === 0) {
         continue;
       }
-      const matching = onKOEffects.filter(isSupportedNoChoiceOnKODrawEffect);
+      const matching = onKOEffects.filter(
+        (effect) =>
+          isSupportedNoChoiceOnKODrawEffect(effect) ||
+          isSupportedOptionalNoChoiceOnKODrawEffect(effect),
+      );
       if (matching.length === 0 || lookup.definition.effects.length !== 1) {
         return {
           ok: false,

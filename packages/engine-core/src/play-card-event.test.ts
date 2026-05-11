@@ -140,7 +140,7 @@ test("getLegalActions includes reviewed implemented-dsl Main Event play only und
   );
 });
 
-test("getLegalActions omits implemented-dsl Events outside the narrow reviewed Main Event gate", () => {
+test("getLegalActions keeps implemented-dsl Events inside the narrow reviewed Main Event gate", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");
   const supported = must(p1State.hand[0], "supported");
@@ -211,7 +211,7 @@ test("getLegalActions omits implemented-dsl Events outside the narrow reviewed M
 
   const legal = getPlayCardLegalActions(state, p1);
   assert.equal(hasPlayCardAction(legal, supported), true);
-  assert.equal(hasPlayCardAction(legal, optional), false);
+  assert.equal(hasPlayCardAction(legal, optional), true);
   assert.equal(hasPlayCardAction(legal, counter), false);
   assert.equal(hasPlayCardAction(legal, untested), false);
   assert.equal(hasPlayCardAction(legal, filteredKo), false);

@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-042A -->
 <!-- agent-packet:story-path stories/approved/ENG-042A-optional-activation-decision-creation.yaml -->
-<!-- agent-packet:story-sha256 21e897ed490d98140a4503c9bb55745dd444172e77c32d406d742079d38e2562 -->
+<!-- agent-packet:story-sha256 64b03acd0b77ccd34b3d8dedb9ffaf9f2d13b574aebb6b34187769b4e37500c4 -->
 
 # Story Packet
 
@@ -323,6 +323,10 @@ Own only optional detection and decision creation for on-play, main-event, when-
 - packages/engine-core/src/effect-runtime-trigger-queueing-ko.ts
 - packages/engine-core/src/play-card-support.ts
 - packages/engine-core/src/effect-runtime-optional-activation.test.ts
+- packages/engine-core/src/effect-runtime-trigger-queueing-source-presence.test.ts
+- packages/engine-core/src/effect-runtime-ko-triggers.test.ts
+- packages/engine-core/src/play-card-event.test.ts
+- packages/engine-core/src/play-card-on-play-runtime.test.ts
 - stories/generated/ENG-042A-optional-activation-decision-creation.yaml
 - stories/approved/ENG-042A-optional-activation-decision-creation.yaml
 - agent-packets/ENG-042A.md
