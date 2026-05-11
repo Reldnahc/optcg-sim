@@ -28,6 +28,25 @@ const DEFAULT_EXPECTED_OUTPUT = [
   "explicit assumptions list",
 ];
 
+const CODE_STANDARD_SUBSECTION_LINES = [
+  "### Code Standard",
+  "",
+  "Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:",
+  "",
+  "- stay inside the approved story boundary",
+  "- preserve package boundaries",
+  "- use strict TypeScript without `any`, routine non-null assertions, or ignored TS errors",
+  "- prefer named exports and precise types",
+  "- keep files cohesive; 500 effective lines is suspect, 800 is high-risk, 1000 is the hard mechanical guard",
+  "- split by reason-to-change, not by line count",
+  "- do not over-split into tiny files or generic dumping grounds",
+  "- keep engine-core pure and hidden-info safe",
+  "- prove engine behavior with synthetic/unit/regression tests",
+  "- keep real-card fixture tests separate from engine behavior requirements",
+  "- preserve deterministic event ordering and state hashes",
+  "- record ambiguity instead of inventing behavior",
+];
+
 const AGENT_FOOTER = [
   "You are implementing a constrained story in an existing codebase.",
   "The cited specification is authoritative.",
@@ -209,6 +228,8 @@ export async function buildPacket(input: {
     "## Constraints",
     "",
     ...renderBulletList(constraints),
+    "",
+    ...CODE_STANDARD_SUBSECTION_LINES,
     "",
     "## Required Tests",
     "",

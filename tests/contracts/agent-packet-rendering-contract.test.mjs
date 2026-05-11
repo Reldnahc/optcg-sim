@@ -68,16 +68,62 @@ test("packet builder generates the canonical packet sections for an approved sto
     readPacketRawBullets(packet, "Allowed Touch Points"),
     story.allowedTouchPoints,
   );
+  const constraintBullets = readPacketBullets(packet, "Constraints");
   assert.deepEqual(
-    readPacketBullets(packet, "Constraints"),
+    constraintBullets.slice(0, expectedRelevantConstraintBullets.length),
     expectedRelevantConstraintBullets,
+  );
+  const constraintsSection = readPacketSection(packet, "Constraints");
+  assert.match(constraintsSection, /^### Code Standard$/m);
+  assert.match(
+    constraintsSection,
+    /Follow \[`docs\/code-standard\.md`\]\(docs\/code-standard\.md\)\. Non-negotiables:/,
+  );
+  assert.match(constraintsSection, /- stay inside the approved story boundary/);
+  assert.match(constraintsSection, /- preserve package boundaries/);
+  assert.match(
+    constraintsSection,
+    /- use strict TypeScript without `any`, routine non-null assertions, or ignored TS errors/,
+  );
+  assert.match(constraintsSection, /- prefer named exports and precise types/);
+  assert.match(
+    constraintsSection,
+    /- keep files cohesive; 500 effective lines is suspect, 800 is high-risk, 1000 is the hard mechanical guard/,
+  );
+  assert.match(
+    constraintsSection,
+    /- split by reason-to-change, not by line count/,
+  );
+  assert.match(
+    constraintsSection,
+    /- do not over-split into tiny files or generic dumping grounds/,
+  );
+  assert.match(
+    constraintsSection,
+    /- keep engine-core pure and hidden-info safe/,
+  );
+  assert.match(
+    constraintsSection,
+    /- prove engine behavior with synthetic\/unit\/regression tests/,
+  );
+  assert.match(
+    constraintsSection,
+    /- keep real-card fixture tests separate from engine behavior requirements/,
+  );
+  assert.match(
+    constraintsSection,
+    /- preserve deterministic event ordering and state hashes/,
+  );
+  assert.match(
+    constraintsSection,
+    /- record ambiguity instead of inventing behavior/,
   );
   assert.deepEqual(
     readPacketRawBullets(packet, "Acceptance Criteria"),
     story.acceptanceCriteria,
   );
   assert.deepEqual(
-    readPacketBullets(packet, "Constraints").slice(0, story.repoRules.length),
+    constraintBullets.slice(0, story.repoRules.length),
     story.repoRules,
   );
   assert.doesNotMatch(

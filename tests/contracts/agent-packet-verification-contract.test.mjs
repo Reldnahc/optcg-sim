@@ -138,6 +138,35 @@ test("active packet verification enforces packet presence, freshness, and requir
   assert.notEqual(missingSection.status, 0);
   assert.match(missingSection.stderr, /missing required section/i);
 
+  await runPacketToolFromRepo(tempRepoRoot, [
+    "generate",
+    "--story",
+    approvedStoryPath,
+    "--manifest",
+    manifestPath,
+    "--activate",
+  ]);
+  const regeneratedPacket = await readFile(packetPath, "utf8");
+  await writeFile(
+    packetPath,
+    regeneratedPacket.replace(
+      /^### Code Standard[\s\S]*?(?=\r?\n## Required Tests)/m,
+      "",
+    ),
+  );
+
+  const missingCodeStandard = runPacketToolFromRepo(tempRepoRoot, [
+    "verify-active",
+    "--manifest",
+    manifestPath,
+  ]);
+
+  assert.notEqual(missingCodeStandard.status, 0);
+  assert.match(
+    missingCodeStandard.stderr,
+    /missing required code standard subsection/i,
+  );
+
   runPacketToolFromRepo(tempRepoRoot, [
     "generate",
     "--story",

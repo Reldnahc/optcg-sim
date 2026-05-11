@@ -189,6 +189,11 @@ export async function runVerifyActive(options: VerifyOptions) {
         );
       }
     }
+    if (!hasRequiredCodeStandardSubsection(normalizedPacketSource)) {
+      throw new Error(
+        `Active story ${entry.storyId} packet is missing required Code Standard subsection under ## Constraints.`,
+      );
+    }
 
     const expectedPacketSource = await buildPacket({
       repoRoot: options.repoRoot,
@@ -372,6 +377,11 @@ export async function runCompleteMany(options: CompleteManyOptions) {
           `Story ${story.id} packet is missing required section ${heading}.`,
         );
       }
+    }
+    if (!hasRequiredCodeStandardSubsection(normalizedPacketSource)) {
+      throw new Error(
+        `Story ${story.id} packet is missing required Code Standard subsection under ## Constraints.`,
+      );
     }
 
     const expectedPacketSource = await buildPacket({
@@ -713,6 +723,49 @@ function requireSha256(value: string, label: string) {
   if (!/^[0-9a-f]{64}$/.test(value)) {
     throw new Error(`${label} must be a sha256 hash.`);
   }
+}
+
+function hasRequiredCodeStandardSubsection(packetSource: string) {
+  const constraintsSection = readTopLevelSection(packetSource, "Constraints");
+  return /^### Code Standard$/m.test(constraintsSection);
+}
+
+function readTopLevelSection(packetSource: string, heading: string) {
+  const lines = packetSource.split("\n");
+  const targetHeading = `## ${heading}`;
+  let inCodeFence = false;
+  let startIndex = -1;
+  let endIndex = lines.length;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+
+    if (/^(```|~~~)/.test(line)) {
+      inCodeFence = !inCodeFence;
+      continue;
+    }
+    if (inCodeFence) {
+      continue;
+    }
+
+    if (startIndex < 0) {
+      if (line === targetHeading) {
+        startIndex = index + 1;
+      }
+      continue;
+    }
+
+    if (/^##\s+/.test(line) && line !== targetHeading) {
+      endIndex = index;
+      break;
+    }
+  }
+
+  if (startIndex < 0) {
+    return "";
+  }
+
+  return lines.slice(startIndex, endIndex).join("\n");
 }
 
 function escapeRegExp(value: string) {
