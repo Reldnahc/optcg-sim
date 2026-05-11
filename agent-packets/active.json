@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-038.md",
+      "storyId": "INF-038",
+      "storyPath": "stories/approved/INF-038-per-story-review-status-hardening.yaml",
+      "storySha256": "eebb29fd9f3f5fefc3de97caa071abf5bffe1dea382982535a70160ed20d7f29"
+    }
+  ],
   "version": 1
 }

@@ -673,6 +673,34 @@ test("story workflow requires pre-presentation story-review agents", async () =>
   ]);
 });
 
+test("workflow docs require decomposed-group per-story review-status matrices before handoffs", async () => {
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const workflowGuidance = `${storyExecution}\n${reviewGate}\n${parentBranches}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /decomposed story groups?[\s\S]*compact per-story review-status matrix/i,
+    /before approval handoff, child activation, packet generation, and parent\/substory PR opening or handoff/i,
+    /reconstruct[\s\S]*durable story-review outputs, story files, PR comments, or recorded blockers/i,
+    /do not use chat memory/i,
+    /columns?:?[\s\S]*story id[\s\S]*story path[\s\S]*review type[\s\S]*review status[\s\S]*review artifact or blocker reference[\s\S]*disposition summary/i,
+    /allowed review types?:?[\s\S]*set-level[\s\S]*exact per-story[\s\S]*not-applicable/i,
+    /allowed review statuses?:?[\s\S]*pending[\s\S]*approval-ready[\s\S]*needs-revision[\s\S]*blocked[\s\S]*not-applicable/i,
+    /fail closed when any child has unknown or pending exact per-story review/i,
+    /fail closed when status cannot be reconstructed from durable artifacts/i,
+    /lost chat context is not a reason to rerun review blindly/i,
+    /reconstruct first and report uncertainty if reconstruction fails/i,
+    /orchestration aid and PR\/review handoff artifact, not a new mutable current-status file and not a second authority over story files/i,
+    /ordinary single-story workflows are not required to maintain this parent\/substory matrix/i,
+    /if broad mechanical validation of PR comments or story-review artifacts would be needed, record a follow-up recommendation instead of widening the patch/i,
+  ]);
+});
+
 test("codex integration spec reflects subagent orchestration instead of cli-first execution", async () => {
   const codexSpec = await readActiveText("specs/32-codex-agent-integration.md");
 

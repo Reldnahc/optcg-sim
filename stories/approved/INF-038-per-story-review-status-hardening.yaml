@@ -1,0 +1,98 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-038
+epic_id: KICK-001
+title: Per-Story Review Status Hardening
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: approved
+summary: >
+  Prevent orchestrators from losing track of story-review status in decomposed
+  story groups and wasting tokens by re-reviewing, second-guessing, or
+  proceeding with unclear review state.
+story_boundary: >
+  Own only workflow hardening for decomposed story-group review-status tracking
+  and narrow docs/contract tests that prevent the required matrix guidance from
+  disappearing silently. Do not add a new mutable current-status source of
+  truth, change story schema unless story-review says it is necessary, replace
+  the existing review-gate workflow, or change packet lifecycle behavior.
+allowed_touch_points:
+  - docs/workflow/story-execution.md
+  - docs/workflow/review-gate.md
+  - docs/workflow/parent-integration-branches.md
+  - tests/github/review-workflow.test.mjs
+  - stories/generated/INF-038-per-story-review-status-hardening.yaml
+  - stories/approved/INF-038-per-story-review-status-hardening.yaml
+  - agent-packets/INF-038.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s010
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 27-spec-driven-story-generation-workflow.s009
+  - 27-spec-driven-story-generation-workflow.s008
+  - 27-spec-driven-story-generation-workflow.s015
+  - 27-spec-driven-story-generation-workflow.s017
+  - 32-codex-agent-integration.s008
+  - 32-codex-agent-integration.s013
+scope:
+  - require decomposed story groups to maintain a compact per-story review-status matrix before approval handoff, activation, packet generation, or parent/substory PR handoff
+  - require the matrix to be reconstructed from durable story-review outputs, story files, PR comments, or recorded blockers instead of chat memory
+  - require the matrix to list each parent and child candidate story ID, story path, review type, review status, review artifact or blocker reference, and disposition summary
+  - define allowed review types as set-level, exact per-story, or not-applicable
+  - define allowed review statuses as pending, approval-ready, needs-revision, blocked, or not-applicable
+  - require the orchestrator to refresh or check the matrix before presenting stories as approval-ready
+  - require the orchestrator to refresh or check the matrix before activating a child story
+  - require the orchestrator to refresh or check the matrix before generating a packet
+  - require the orchestrator to refresh or check the matrix before opening or handing off a parent/substory PR
+  - require fail-closed behavior when any child has unknown or pending exact per-story review
+  - require fail-closed behavior when review status cannot be reconstructed from durable artifacts
+  - state that lost chat context is not a valid reason to rerun review blindly; the orchestrator must first reconstruct status from durable artifacts and report uncertainty if reconstruction fails
+  - add a small workflow docs contract test if the repo has an appropriate existing test surface, so the matrix requirement cannot disappear silently
+  - record a follow-up instead of widening this story if mechanical validation would require broad parsing of PR comments or story-review artifacts
+non_scope:
+  - changing story schema unless story-review says it is necessary
+  - adding a new mutable current-status file
+  - replacing the existing review-gate workflow
+  - changing parent/substory lifecycle semantics
+  - changing packet generation or packet completion behavior
+  - changing post-merge cleanup automation
+  - implementing a broad mechanical validator for PR comments or story-review artifacts
+  - gameplay, engine, cards, server, client, database, replay, or UI behavior
+dependencies:
+  - INF-016
+  - INF-019
+  - INF-021
+acceptance_criteria:
+  - decomposed story groups have explicit workflow guidance requiring a per-story review-status matrix
+  - approval handoff is blocked when any child's exact review status is unknown or pending
+  - packet generation and activation guidance requires checking decomposed-group review status first
+  - workflow docs distinguish set-level review from exact per-story review
+  - workflow docs state that lost chat context is not enough reason to rerun review blindly and that orchestrators must reconstruct status from durable artifacts first
+  - the matrix is described as an orchestration aid and PR/review handoff artifact, not a second authority over story files
+  - parent/substory PR opening or handoff is blocked when any child's exact per-story review status is unknown or pending
+  - ordinary single-story workflows are not given parent/substory matrix requirements
+  - any added tests pass
+required_tests:
+  - workflow docs test proving decomposed story groups require a per-story review-status matrix before approval-ready presentation
+  - workflow docs test proving child activation or packet generation guidance requires checking exact per-story review status
+  - workflow docs test proving set-level review is distinguished from exact per-story review
+  - workflow docs test proving lost chat context requires durable reconstruction before rerunning review or proceeding
+  - workflow docs test proving the matrix is reconstructed from durable artifacts and is not a new mutable current-status file or second authority over story files
+  - workflow docs test proving decomposed parent/substory PR opening or handoff requires checking the per-story review-status matrix and fails closed on unknown or pending exact per-story status
+  - workflow docs test proving ordinary single-story workflows are not required to maintain a parent/substory review-status matrix
+  - run `corepack pnpm run test -- tests/github/review-workflow.test.mjs`
+  - run `corepack pnpm run packets:verify`
+  - run full `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - do not skip exact story-review for this generated INF-038 candidate
+  - use the normal packet, implementation, verification, PR, AI review, revision response, and human-review workflow after story-review passes
+  - keep the patch small and prefer docs plus narrow workflow tests
+  - do not introduce a manual current-status source of truth
+  - do not make the review-status matrix a second authority over story files
+  - if a mechanical validator would require broad parsing of PR comments or story-review artifacts, record that as a follow-up instead of widening this story
+ambiguity_policy: fail_and_escalate

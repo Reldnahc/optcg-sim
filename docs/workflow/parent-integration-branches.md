@@ -7,6 +7,7 @@ This document is mandatory workflow guidance linked from `AGENTS.md`. Use it whe
 - Create a parent integration branch from `main` for the full story or decomposed story group, for example `story/typ-001`.
 - Create each substory implementation branch from the parent integration branch, not from `main`.
 - Open each substory PR against the parent integration branch.
+- Before opening or handing off a substory PR or parent PR in this decomposed flow, reconstruct and refresh the compact per-story review-status matrix from durable artifacts (story-review outputs, story files, PR comments, recorded blockers) and fail closed if any child exact per-story status is unknown or pending.
 - Keep one active substory packet at a time. A substory PR may include only its active substory packet, implementation, tests, and parent-owned story activation files.
 - In a parent integration branch, `agent-packets/active.json` is a handoff pointer for the currently active or most recently active substory packet. It is not the full list of unfinished substories.
 - Substories that already merged into the parent integration branch remain approved and keep their packet files until the parent PR lands on `main`; their absence from `active.json` does not mean they are done.

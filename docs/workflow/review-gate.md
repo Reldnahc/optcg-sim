@@ -24,6 +24,7 @@ Code review is required. Use this flow unless a higher-authority story or packet
 16. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, after the revision response comment is up to date when a separate reviewer subagent run was used, after reviewers confirm any post-merge cleanup metadata matches the reviewed story scope, and after `cleanup-metadata-guard` is present and passing before human review is requested
 17. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes unless the PR is a substory PR targeting an approved parent integration branch; in that case, human review is deferred to the parent PR
 18. if review finds multi-concern drift, split the story or narrow the patch before merge
+19. for decomposed parent/substory workflows, confirm the per-story review-status matrix is reconstructed from durable artifacts before PR opening or PR handoff; fail closed on unknown or pending child exact per-story review
 
 The separate reviewer subagent run is a repo-level first-pass gate before human review. It does not replace the merge-gate requirement for a durable review record or equivalent human review step.
 
