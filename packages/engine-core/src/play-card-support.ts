@@ -1,4 +1,9 @@
-import type { CardInstance, GameState, PlayerId } from "@optcg/types";
+import type {
+  CardInstance,
+  EffectDefinition,
+  GameState,
+  PlayerId,
+} from "@optcg/types";
 
 import {
   isSupportedMainEventTargetKoEffect,
@@ -15,6 +20,22 @@ import { hasUnsupportedSupportGateText } from "./battle-support.js";
 export type SupportedPlayMetadata = {
   category: "character" | "stage" | "event";
   printedCost: number;
+};
+
+const isSupportedMainEventTargetKoEffectAllowingOncePerTurn = (
+  effect: EffectDefinition["effects"][number],
+): boolean => {
+  if (isSupportedMainEventTargetKoEffect(effect)) {
+    return true;
+  }
+  if (effect.oncePerTurn !== true) {
+    return false;
+  }
+  const effectWithoutOncePerTurn: EffectDefinition["effects"][number] = {
+    ...effect,
+  };
+  delete effectWithoutOncePerTurn.oncePerTurn;
+  return isSupportedMainEventTargetKoEffect(effectWithoutOncePerTurn);
 };
 
 export const canResolveDestinationConflict = (
@@ -75,7 +96,7 @@ export const getSupportedPlayMetadata = (
       if (
         !isSupportedNoChoiceMainEventDrawEffect(effect) &&
         !isSupportedOptionalNoChoiceMainEventDrawEffect(effect) &&
-        !isSupportedMainEventTargetKoEffect(effect)
+        !isSupportedMainEventTargetKoEffectAllowingOncePerTurn(effect)
       ) {
         return null;
       }

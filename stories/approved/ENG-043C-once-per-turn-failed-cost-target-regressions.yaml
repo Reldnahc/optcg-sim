@@ -23,8 +23,10 @@ allowed_touch_points:
   - packages/engine-core/src/once-per-turn.ts
   - packages/engine-core/src/play-card.ts
   - packages/engine-core/src/play-card-payment.ts
+  - packages/engine-core/src/play-card-support.ts
   - packages/engine-core/src/effect-runtime-queue-results.ts
   - packages/engine-core/src/effect-runtime-queue-target-decisions.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-main-event.ts
   - packages/engine-core/src/target-selection-actions.ts
   - packages/engine-core/src/effect-runtime-once-per-turn.test.ts
   - packages/engine-core/src/play-card-event.test.ts

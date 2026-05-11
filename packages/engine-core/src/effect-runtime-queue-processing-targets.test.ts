@@ -295,6 +295,34 @@ test("unsupported queued target request fails closed without mutating state", ()
   assert.equal(hashCanonicalStateValue(result.state), beforeHash);
 });
 
+test("failed queued target decision creation does not consume once-per-turn", () => {
+  const { state, entry } = targetSelectionQueueState(
+    publicCharacterTargetRequest({ visibility: "privateToChooser" }),
+  );
+  const definition = must(
+    state.cardManifest.effectDefinitions?.["def-target-selection"],
+    "target definition",
+  );
+  state.cardManifest.effectDefinitions = {
+    "def-target-selection": {
+      ...definition,
+      effects: [
+        {
+          ...must(definition.effects[0], "target effect"),
+          oncePerTurn: true,
+        },
+      ],
+    },
+  };
+  const before = structuredClone(state.oncePerTurn);
+
+  const result = processEffectRuntime(state);
+
+  assert.ok(result.errors !== undefined);
+  assert.equal(result.state.effectQueue[0]?.id, entry.id);
+  assert.deepEqual(result.state.oncePerTurn, before);
+});
+
 test("ordered draw before target pause preserves prior runtime events in returned result", () => {
   const { state, drawEntry, targetEntry } = mixedOrderedDrawThenTargetState();
   const paused = processEffectRuntime(state);
