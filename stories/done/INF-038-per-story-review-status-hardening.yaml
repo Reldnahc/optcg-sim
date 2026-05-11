@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Prevent orchestrators from losing track of story-review status in decomposed
   story groups and wasting tokens by re-reviewing, second-guessing, or
