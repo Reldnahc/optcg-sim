@@ -5,6 +5,8 @@ import type {
   EngineEvent,
   EngineResult,
   GameState,
+  LegalAction,
+  PlayerId,
   QueueEntryId,
 } from "@optcg/types";
 
@@ -141,4 +143,23 @@ export const applyOptionalActivationDecisionResponse = (
     ...resumed,
     events: [...events, ...resumed.events],
   };
+};
+
+export const getOptionalActivationLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): LegalAction[] => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "chooseOptionalActivation" ||
+    decision.playerId !== playerId
+  ) {
+    return [];
+  }
+  return decision.options.map((choice) => ({
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice },
+  }));
 };

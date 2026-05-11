@@ -18,8 +18,10 @@ import {
 } from "./play-card-test-fixtures.js";
 import {
   toDecisionId,
+  toEffectId,
   toQueueEntryId,
 } from "./action-dispatcher-test-support.js";
+import { hashCanonicalStateValue } from "./canonical-state.js";
 
 test("getLegalActions suppresses phase actions while a decision is pending", () => {
   const setup = createInitialState(createInput());
@@ -179,4 +181,47 @@ test("getLegalActions exposes confirmLifeTrigger respondToDecision only to decis
   assert.deepEqual(getLegalActions(state, p1), [
     { type: "concede", playerId: p1 },
   ]);
+});
+
+test("respondToDecision rejects stale decision id for pending chooseOptionalActivation without mutation", () => {
+  const state = createActiveState();
+  const source = must(state.players[p1], "p1").leader;
+  state.pendingDecision = {
+    id: toDecisionId("decision:choose-optional-activation"),
+    type: "chooseOptionalActivation",
+    playerId: p1,
+    prompt: "Activate optional effect?",
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-optional-activation"),
+      effectId: toEffectId("effect-optional-activation"),
+    },
+    visibility: { type: "private", playerId: p1 },
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    effectId: toEffectId("effect-optional-activation"),
+    options: ["activate", "decline"],
+  };
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: toDecisionId("decision:stale-optional"),
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Decision id does not match current pending decision.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });

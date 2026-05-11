@@ -28,7 +28,10 @@ import {
 } from "./target-selection-actions.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
 import { applyLifeTriggerDecisionResponse } from "./life-trigger-actions.js";
-import { applyOptionalActivationDecisionResponse } from "./optional-activation-actions.js";
+import {
+  applyOptionalActivationDecisionResponse,
+  getOptionalActivationLegalActions,
+} from "./optional-activation-actions.js";
 import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
 import {
   applyConcede,
@@ -81,6 +84,7 @@ export const getLegalActions = (
       });
     }
     actions.push(...getSelectTargetsLegalActions(state, playerId));
+    actions.push(...getOptionalActivationLegalActions(state, playerId));
     actions.push(...getPlayCardLegalActions(state, playerId));
     actions.push(...getBattleDecisionLegalActions(state, playerId));
     return actions;

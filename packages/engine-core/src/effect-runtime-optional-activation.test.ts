@@ -502,6 +502,7 @@ test("optional activation rejects non optionalActivation responses", () => {
   const { state } = optionalThenRequiredDrawState();
   const paused = processEffectRuntime(state);
   const decision = must(paused.state.pendingDecision, "optional decision");
+  const beforeHash = hashCanonicalStateValue(paused.state);
 
   const result = applyAction(paused.state, {
     type: "respondToDecision",
@@ -518,6 +519,7 @@ test("optional activation rejects non optionalActivation responses", () => {
         "Response type must be optionalActivation for chooseOptionalActivation.",
     },
   ]);
+  assert.equal(result.stateHash, beforeHash);
 });
 
 test("optional activation rejects malformed optionalActivation choices without mutation", () => {
@@ -924,6 +926,7 @@ test("optional life-trigger no-choice draw fails closed instead of creating opti
 
   assert.deepEqual(result.events, []);
   assert.deepEqual(result.state, before);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
   assert.deepEqual(result.errors, [
     {
       type: "effectRuntimeError",
@@ -984,6 +987,7 @@ test("optional custom effect-resolved no-choice draw fails closed instead of cre
 
   assert.deepEqual(result.events, []);
   assert.deepEqual(result.state, before);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
   assert.deepEqual(result.errors, [
     {
       type: "effectRuntimeError",
