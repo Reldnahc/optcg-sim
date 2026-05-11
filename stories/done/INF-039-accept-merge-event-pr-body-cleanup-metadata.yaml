@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Fix the post-merge cleanup false positive where GitHub advances a merged pull
   request's aggregate `updated_at` timestamp during the merge event, causing

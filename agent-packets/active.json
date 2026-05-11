@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-039.md",
-      "storyId": "INF-039",
-      "storyPath": "stories/approved/INF-039-accept-merge-event-pr-body-cleanup-metadata.yaml",
-      "storySha256": "a664ef62bcb58f0c8de2ff175545973aba5be088680e0d4f4c8f845d59cab3fb"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
