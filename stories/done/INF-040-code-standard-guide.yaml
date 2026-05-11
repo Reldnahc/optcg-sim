@@ -8,7 +8,7 @@ type: tooling
 area: docs
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Add a concrete repository code standard guide so implementation workers and
   reviewers have one mandatory source for TypeScript style, separation of
