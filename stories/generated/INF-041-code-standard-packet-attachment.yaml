@@ -1,0 +1,109 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-041
+epic_id: KICK-001
+title: Attach code standard guidance to generated packets
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: generated
+summary: >
+  Update agent packet generation so every newly generated packet carries a
+  compact Code Standard attachment that points implementation agents to
+  docs/code-standard.md and summarizes the non-negotiable implementation rules.
+story_boundary: >
+  Own only packet rendering and active-packet verification for the compact code
+  standard attachment. Keep the packet concise, preserve all existing story
+  metadata and story-derived sections, and do not rewrite historical packets
+  except the active packet required for this story.
+allowed_touch_points:
+  - tools/build-agent-packet.ts
+  - tools/agent-packet-renderer.ts
+  - tools/agent-packet-lifecycle.ts
+  - tests/contracts/agent-packet-rendering-contract.test.mjs
+  - tests/contracts/agent-packet-verification-contract.test.mjs
+  - tests/contracts/agent-packet-test-support.mjs
+  - stories/generated/INF-041-code-standard-packet-attachment.yaml
+  - stories/approved/INF-041-code-standard-packet-attachment.yaml
+  - agent-packets/INF-041.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s003
+  - 01-system-architecture.s005
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 06-visibility-security.s002
+  - 06-visibility-security.s017
+  - 11-testing-quality.s004
+  - 11-testing-quality.s005
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s008
+  - 23-repo-tooling-and-enforcement.s010
+  - 23-repo-tooling-and-enforcement.s012
+  - 23-repo-tooling-and-enforcement.s016
+  - 24-story-schema.s016
+  - 24-story-schema.s017
+  - 24-story-schema.s018
+  - 24-story-schema.s020
+  - 24-story-schema.s021
+  - 24-story-schema.s022
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+  - 26-agent-packet-template.s003
+  - 26-agent-packet-template.s004
+  - 26-agent-packet-template.s005
+  - 26-agent-packet-template.s006
+  - 27-spec-driven-story-generation-workflow.s009
+  - 27-spec-driven-story-generation-workflow.s017
+  - 32-codex-agent-integration.s008
+  - 32-codex-agent-integration.s010
+  - 32-codex-agent-integration.s013
+scope:
+  - add a compact Code Standard attachment to newly generated packet output
+  - include the path `docs/code-standard.md` in the packet attachment
+  - include the compact non-negotiable checklist from the story request without pasting the full guide
+  - prefer a new top-level `## Code Standard` packet section unless story-review directs using a subsection under `## Constraints`
+  - update required packet-heading verification when a top-level section is used
+  - update packet rendering contract tests so generated packets must include the Code Standard attachment
+  - update packet verification contract tests so active-packet verification fails when the required attachment is missing
+  - refresh only the active/current INF-041 packet artifact required by this story
+  - preserve existing packet metadata, spec refs and excerpts, story boundary, scope, non-scope, allowed touch points, constraints, required tests, acceptance criteria, ambiguity rule, and agent instruction footer
+non_scope:
+  - changing `docs/code-standard.md` except tiny wording if story-review explicitly requires it
+  - broad packet template rewrite
+  - story schema changes
+  - gameplay behavior
+  - server, client, API, WebSocket, database, Redis, replay, or UI behavior
+  - changing review-gate semantics
+  - changing post-merge cleanup semantics
+  - changing the mechanical max-lines rule
+  - manually rewriting historical packet artifacts
+dependencies:
+  - INF-040
+acceptance_criteria:
+  - generated packets include the Code Standard attachment
+  - packet contract or verification tests catch a missing Code Standard attachment
+  - packet content links to `docs/code-standard.md`
+  - packet content includes the compact non-negotiable checklist
+  - packet generation still preserves story metadata, spec refs and excerpts, story boundary, scope, non-scope, allowed touch points, constraints, required tests, acceptance criteria, repo rules, ambiguity policy, and agent instruction footer
+  - only active/current packet artifacts required by this story are refreshed
+  - full `corepack pnpm run verify` passes
+required_tests:
+  - exact candidate story-review before approval or implementation
+  - packet rendering contract test for generated Code Standard attachment
+  - packet verification contract test that fails when an active packet is missing the Code Standard attachment
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run packets:verify`"
+  - full `corepack pnpm run verify`
+repo_rules:
+  - do not skip story-review
+  - if story-review rejects a new top-level packet heading, attach the same compact checklist as a required subsection under `## Constraints`
+  - do not paste the full `docs/code-standard.md` guide into every packet
+  - keep packet output concise and readable
+  - update packet verification only through existing packet verification surfaces
+  - do not modify packet completion, post-merge cleanup, review-gate, story schema, gameplay, server, client, API, UI, replay, database, or card-data behavior
+ambiguity_policy: fail_and_escalate
