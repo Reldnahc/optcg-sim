@@ -123,7 +123,7 @@ const isSupportedTargetChoiceEffectShape = (
   if (effect.category !== "auto") {
     return false;
   }
-  if (effect.optional) {
+  if (effect.optional || effect.oncePerTurn) {
     return false;
   }
   return (

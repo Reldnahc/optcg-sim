@@ -497,6 +497,7 @@ test("paid reviewed target KO Main Event keeps repeated replay order and hash st
           {
             ...must(definition.effects[0], "main effect"),
             id: "OP01-040:event-main-ko-1" as (typeof definition.effects)[number]["id"],
+            oncePerTurn: true,
             effect: {
               type: "ko",
               target: {
@@ -545,6 +546,34 @@ test("paid reviewed target KO Main Event keeps repeated replay order and hash st
         .instanceId,
       target.instanceId,
     );
+    assert.deepEqual(resolved.state.oncePerTurn, [
+      {
+        cardInstanceId: eventCard.instanceId,
+        effectId: "OP01-040:event-main-ko-1",
+        turnNumber: state.turn.globalTurn,
+        usedAtStateSeq: toStateSeq(paid.state.seq + 1),
+      },
+    ]);
+
+    const repeatState = {
+      ...paid.state,
+      oncePerTurn: [
+        {
+          cardInstanceId: eventCard.instanceId,
+          effectId: "OP01-040:event-main-ko-1",
+          turnNumber: state.turn.globalTurn,
+          usedAtStateSeq: toStateSeq(paid.state.seq),
+        },
+      ],
+    };
+    const repeat = applyAction(repeatState, {
+      type: "respondToDecision",
+      decisionId: targetDecision.id,
+      response: { type: "targets", targets: [publicCandidate.card] },
+    });
+    assert.deepEqual(repeat.events, []);
+    assert.ok(repeat.errors !== undefined);
+    assert.deepEqual(repeat.state, repeatState);
     assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
     return {
       paid: eventReplaySnapshot(paid, paidTypes, "paid Main Event target KO"),
@@ -562,55 +591,6 @@ test("paid reviewed target KO Main Event keeps repeated replay order and hash st
   assert.deepEqual(first.paid, second.paid);
   assert.deepEqual(first.resolved, second.resolved);
   assert.equal(first.stateHash, second.stateHash);
-});
-
-test("once-per-turn target KO consumes on target commitment and blocks repeat", () => {
-  const { state, targets, queueEntry } = setupSelectTargetsDecision();
-  const definition = must(
-    state.cardManifest.effectDefinitions?.["def-select-targets"],
-    "definition",
-  );
-  state.cardManifest.effectDefinitions = {
-    "def-select-targets": {
-      ...definition,
-      effects: [
-        {
-          ...must(definition.effects[0], "effect"),
-          oncePerTurn: true,
-        },
-      ],
-    },
-  };
-  const decision = must(state.pendingDecision, "pending decision");
-  const selected = must(targets[0], "target 0");
-
-  const result = applyAction(
-    state,
-    respondWithTargets(decision.id, [selected]),
-  );
-
-  assert.equal(result.errors, undefined);
-  assert.deepEqual(result.state.oncePerTurn, [
-    {
-      cardInstanceId: queueEntry.source.instanceId,
-      effectId: queueEntry.effectBlockId,
-      turnNumber: state.turn.globalTurn,
-      usedAtStateSeq: toStateSeq(state.seq + 1),
-    },
-  ]);
-
-  const repeatState = {
-    ...state,
-    oncePerTurn: result.state.oncePerTurn,
-  };
-  const repeat = applyAction(
-    repeatState,
-    respondWithTargets(decision.id, [selected]),
-  );
-
-  assert.deepEqual(repeat.events, []);
-  assert.ok(repeat.errors !== undefined);
-  assert.deepEqual(repeat.state, repeatState);
 });
 
 test.each(invalidResponseCases)(

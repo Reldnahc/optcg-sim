@@ -4,7 +4,7 @@
       "packetPath": "agent-packets/ENG-043C.md",
       "storyId": "ENG-043C",
       "storyPath": "stories/approved/ENG-043C-once-per-turn-failed-cost-target-regressions.yaml",
-      "storySha256": "b4707f7758d989bc0e92678143b5db0605aed1db316f7aa512ca2f63e1847157"
+      "storySha256": "720f5876449833ca8ee5b8ee33df9fa279e6826304c9e464211ed4ff07dc87db"
     }
   ],
   "version": 1

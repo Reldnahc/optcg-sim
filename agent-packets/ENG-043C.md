@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-043C -->
 <!-- agent-packet:story-path stories/approved/ENG-043C-once-per-turn-failed-cost-target-regressions.yaml -->
-<!-- agent-packet:story-sha256 b4707f7758d989bc0e92678143b5db0605aed1db316f7aa512ca2f63e1847157 -->
+<!-- agent-packet:story-sha256 720f5876449833ca8ee5b8ee33df9fa279e6826304c9e464211ed4ff07dc87db -->
 
 # Story Packet
 
@@ -219,8 +219,10 @@ Own only once-per-turn commitment for existing supported selected-target effect 
 - packages/engine-core/src/once-per-turn.ts
 - packages/engine-core/src/play-card.ts
 - packages/engine-core/src/play-card-payment.ts
+- packages/engine-core/src/play-card-support.ts
 - packages/engine-core/src/effect-runtime-queue-results.ts
 - packages/engine-core/src/effect-runtime-queue-target-decisions.ts
+- packages/engine-core/src/effect-runtime-trigger-queueing-main-event.ts
 - packages/engine-core/src/target-selection-actions.ts
 - packages/engine-core/src/effect-runtime-once-per-turn.test.ts
 - packages/engine-core/src/play-card-event.test.ts
