@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  Action,
   CardInstance,
   EffectDefinition,
   EffectQueueEntry,
@@ -114,6 +115,7 @@ const optionalThenRequiredDrawState = (): {
   requiredEntry: EffectQueueEntry;
 } => {
   const state = createActiveState();
+  addExtraDeckCard(state, p1);
   addExtraDeckCard(state, p1);
   const p1State = must(state.players[p1], "p1");
   const source = p1State.leader;
@@ -350,25 +352,150 @@ test("optional activation decline of a lone effect clears the decision without r
   assert.equal(declined.stateHash, hashCanonicalStateValue(declined.state));
 });
 
-test("optional activation rejects activate until accept handling is implemented", () => {
-  const { state } = optionalThenRequiredDrawState();
-  const paused = processEffectRuntime(state);
-  const decision = must(paused.state.pendingDecision, "optional decision");
+test("optional activation accept resumes prior trigger order group without re-prompting", () => {
+  const { state, optionalEntry, requiredEntry } =
+    optionalThenRequiredDrawState();
+  const sameGroupRequiredEntry: EffectQueueEntry = {
+    ...requiredEntry,
+    generation: optionalEntry.generation,
+  };
+  state.effectQueue = [optionalEntry, sameGroupRequiredEntry];
+  const ordered = processEffectRuntime(state);
+  const triggerOrderDecision = must(
+    ordered.state.pendingDecision,
+    "trigger order decision",
+  );
+  assert.equal(triggerOrderDecision.type, "chooseTriggerOrder");
 
-  const result = applyAction(paused.state, {
+  const orderedOptionalFirst = applyAction(ordered.state, {
     type: "respondToDecision",
-    decisionId: decision.id,
+    decisionId: triggerOrderDecision.id,
+    response: {
+      type: "orderedIds",
+      ids: [optionalEntry.id, sameGroupRequiredEntry.id],
+    },
+  });
+  const optionalDecision = must(
+    orderedOptionalFirst.state.pendingDecision,
+    "optional decision",
+  );
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+
+  const accepted = applyAction(orderedOptionalFirst.state, {
+    type: "respondToDecision",
+    decisionId: optionalDecision.id,
     response: { type: "optionalActivation", choice: "activate" },
   });
 
-  assert.deepEqual(result.state, paused.state);
-  assert.deepEqual(result.events, []);
-  assert.deepEqual(result.errors, [
-    {
-      type: "invalidDecisionResponse",
-      reason: "optionalActivation activate is not implemented yet.",
+  assert.equal(accepted.errors, undefined);
+  assert.equal(accepted.state.pendingDecision, undefined);
+  assert.deepEqual(accepted.state.effectQueue, []);
+  assert.equal(
+    accepted.events.some((event) => event.type === "decisionCreated"),
+    false,
+  );
+  assert.equal(
+    accepted.events.some(
+      (event) =>
+        event.type === "effectResolved" &&
+        eventPayloadHasQueueEntryId(event, optionalEntry.id),
+    ),
+    true,
+  );
+  assert.equal(
+    accepted.events.some(
+      (event) =>
+        event.type === "effectResolved" &&
+        eventPayloadHasQueueEntryId(event, sameGroupRequiredEntry.id),
+    ),
+    true,
+  );
+  assert.equal(accepted.stateHash, hashCanonicalStateValue(accepted.state));
+});
+
+test("optional activation accept resolves single ordered entry before later trigger-order groups", () => {
+  const { state, optionalEntry, requiredEntry } =
+    optionalThenRequiredDrawState();
+  const firstRequiredEntry: EffectQueueEntry = {
+    ...requiredEntry,
+    id: toQueueEntryId("queue-entry-required-before-optional"),
+    generation: optionalEntry.generation,
+    createdAtEventSeq: 0,
+  };
+  const laterEntryA: EffectQueueEntry = {
+    ...requiredEntry,
+    id: toQueueEntryId("queue-entry-later-choice-a"),
+    timingWindowId: toTimingWindowId("timing-window-later-choice"),
+    generation: 0,
+    createdAtEventSeq: 20,
+  };
+  const laterEntryB: EffectQueueEntry = {
+    ...requiredEntry,
+    id: toQueueEntryId("queue-entry-later-choice-b"),
+    timingWindowId: laterEntryA.timingWindowId,
+    generation: laterEntryA.generation,
+    createdAtEventSeq: 21,
+  };
+  state.effectQueue = [
+    firstRequiredEntry,
+    optionalEntry,
+    laterEntryA,
+    laterEntryB,
+  ];
+
+  const ordered = processEffectRuntime(state);
+  const triggerOrderDecision = must(
+    ordered.state.pendingDecision,
+    "first trigger order decision",
+  );
+  assert.equal(triggerOrderDecision.type, "chooseTriggerOrder");
+  const orderedOptionalSecond = applyAction(ordered.state, {
+    type: "respondToDecision",
+    decisionId: triggerOrderDecision.id,
+    response: {
+      type: "orderedIds",
+      ids: [firstRequiredEntry.id, optionalEntry.id],
     },
+  });
+  const optionalDecision = must(
+    orderedOptionalSecond.state.pendingDecision,
+    "optional decision",
+  );
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+  assert.deepEqual(
+    orderedOptionalSecond.state.effectQueue.map((entry) => entry.id),
+    [optionalEntry.id, laterEntryA.id, laterEntryB.id],
+  );
+
+  const accepted = applyAction(orderedOptionalSecond.state, {
+    type: "respondToDecision",
+    decisionId: optionalDecision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.equal(accepted.errors, undefined);
+  const laterTriggerOrderDecision = must(
+    accepted.state.pendingDecision,
+    "later trigger order decision",
+  );
+  assert.equal(laterTriggerOrderDecision.type, "chooseTriggerOrder");
+  assert.deepEqual(laterTriggerOrderDecision.triggerIds, [
+    laterEntryA.id,
+    laterEntryB.id,
   ]);
+  assert.deepEqual(
+    accepted.state.effectQueue.map((entry) => entry.id),
+    [laterEntryA.id, laterEntryB.id],
+  );
+  assert.equal(
+    accepted.events.some(
+      (event) =>
+        event.type === "effectResolved" &&
+        eventPayloadHasQueueEntryId(event, optionalEntry.id),
+    ),
+    true,
+  );
+  assert.equal(accepted.stateHash, hashCanonicalStateValue(accepted.state));
 });
 
 test("optional activation rejects non optionalActivation responses", () => {
@@ -391,6 +518,29 @@ test("optional activation rejects non optionalActivation responses", () => {
         "Response type must be optionalActivation for chooseOptionalActivation.",
     },
   ]);
+});
+
+test("optional activation rejects malformed optionalActivation choices without mutation", () => {
+  const { state } = optionalThenRequiredDrawState();
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "optional decision");
+  const malformed = {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice: "bogus" },
+  } as unknown as Action;
+
+  const result = applyAction(paused.state, malformed);
+
+  assert.deepEqual(result.state, paused.state);
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "optionalActivation choice must be activate or decline.",
+    },
+  ]);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });
 
 test("direct queued optional no-choice draw creates private chooseOptionalActivation without resolving", () => {

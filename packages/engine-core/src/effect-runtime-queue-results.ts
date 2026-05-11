@@ -51,6 +51,7 @@ export interface EffectRuntimeQueueResults {
   processNoChoiceEffectQueue: (
     state: GameState,
     orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
+    acceptedOptionalQueueEntryIds?: readonly QueueEntryId[],
   ) => EngineResult;
   processEffectRuntimeAfterTriggerOrderChoice: (
     state: GameState,
@@ -176,6 +177,7 @@ export const createEffectRuntimeQueueResults = (
   const resolveQueueEntriesInOrder = (
     state: GameState,
     entries: readonly EffectQueueEntry[],
+    acceptedOptionalQueueEntryIds: ReadonlySet<QueueEntryId> = new Set(),
   ): EngineResult => {
     const originalState = state;
     let nextState = state;
@@ -189,6 +191,7 @@ export const createEffectRuntimeQueueResults = (
         return unsupportedEffectQueueResult(originalState);
       }
       const queuedEffect = resolveQueuedEffectDefinition(nextState, selected);
+      let drawEffect: Extract<Effect, { type: "draw" }> | undefined;
       if (queuedEffect?.optional === true) {
         if (
           queuedEffect.sourcePresencePolicy !== selected.sourcePresencePolicy ||
@@ -196,11 +199,17 @@ export const createEffectRuntimeQueueResults = (
         ) {
           return unsupportedEffectQueueResult(originalState);
         }
-        const paused = createChooseOptionalActivationDecision(
-          nextState,
-          selected,
-        );
-        return { ...paused, events: [...allEvents, ...paused.events] };
+        if (acceptedOptionalQueueEntryIds.has(selected.id)) {
+          // Once-per-turn consumption for accepted automatic optional effects is
+          // a future integration point; this story only resumes no-choice draw.
+          drawEffect = queuedEffect.effect;
+        } else {
+          const paused = createChooseOptionalActivationDecision(
+            nextState,
+            selected,
+          );
+          return { ...paused, events: [...allEvents, ...paused.events] };
+        }
       }
       const targetRequest =
         dependencies.targetDecisions.resolveQueuedTargetRequest(
@@ -219,7 +228,7 @@ export const createEffectRuntimeQueueResults = (
           },
         );
       }
-      const drawEffect = resolveQueuedNoChoiceDrawEffect(nextState, selected);
+      drawEffect ??= resolveQueuedNoChoiceDrawEffect(nextState, selected);
       if (drawEffect === undefined) {
         return unsupportedEffectQueueResult(originalState);
       }
@@ -393,6 +402,7 @@ export const createEffectRuntimeQueueResults = (
   const processNoChoiceEffectQueue = (
     state: GameState,
     orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
+    acceptedOptionalQueueEntryIds: readonly QueueEntryId[] = [],
   ): EngineResult => {
     if (state.pendingDecision !== undefined) {
       return toEngineResult(state, []);
@@ -403,6 +413,34 @@ export const createEffectRuntimeQueueResults = (
     }
 
     const earliestChoiceGroup = ordering.earliestChoiceGroup;
+    if (
+      acceptedOptionalQueueEntryIds.length > 0 &&
+      orderedCurrentChoiceGroupIds === undefined
+    ) {
+      const acceptedOptionalIds = new Set(acceptedOptionalQueueEntryIds);
+      const acceptedEntry = state.effectQueue.find((entry) =>
+        acceptedOptionalIds.has(entry.id),
+      );
+      if (acceptedEntry === undefined) {
+        return unsupportedEffectQueueResult(state);
+      }
+      const resolved = resolveQueueEntriesInOrder(
+        state,
+        [acceptedEntry],
+        acceptedOptionalIds,
+      );
+      if (
+        resolved.errors !== undefined ||
+        resolved.state.status.type !== "active"
+      ) {
+        return resolved;
+      }
+      const continued = processNoChoiceEffectQueue(resolved.state);
+      return {
+        ...continued,
+        events: [...resolved.events, ...continued.events],
+      };
+    }
     if (earliestChoiceGroup !== undefined) {
       if (orderedCurrentChoiceGroupIds !== undefined) {
         const expectedIds = earliestChoiceGroup.entries.map(
@@ -421,7 +459,12 @@ export const createEffectRuntimeQueueResults = (
           }
           return entry;
         });
-        const resolved = resolveQueueEntriesInOrder(state, selectedEntries);
+        const acceptedOptionalIds = new Set(acceptedOptionalQueueEntryIds);
+        const resolved = resolveQueueEntriesInOrder(
+          state,
+          selectedEntries,
+          acceptedOptionalIds,
+        );
         if (
           resolved.errors !== undefined ||
           resolved.state.status.type !== "active"
@@ -446,7 +489,11 @@ export const createEffectRuntimeQueueResults = (
     if (firstEntry === undefined) {
       return toEngineResult(state, []);
     }
-    const resolved = resolveQueueEntriesInOrder(state, [firstEntry]);
+    const resolved = resolveQueueEntriesInOrder(
+      state,
+      [firstEntry],
+      new Set(acceptedOptionalQueueEntryIds),
+    );
     if (
       resolved.errors !== undefined ||
       resolved.state.status.type !== "active"

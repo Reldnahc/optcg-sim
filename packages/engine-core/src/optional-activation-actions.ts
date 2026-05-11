@@ -5,11 +5,15 @@ import type {
   EngineEvent,
   EngineResult,
   GameState,
+  QueueEntryId,
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { zonesEqual } from "./action-state.js";
-import { processEffectRuntimeAfterOptionalActivationDecline } from "./effect-runtime.js";
+import {
+  processEffectRuntimeAfterOptionalActivationAccept,
+  processEffectRuntimeAfterOptionalActivationDecline,
+} from "./effect-runtime.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -23,6 +27,23 @@ const sameSource = (left: CardRef, right: CardRef): boolean =>
     (left.zone !== undefined &&
       right.zone !== undefined &&
       zonesEqual(left.zone, right.zone)));
+
+const orderedCurrentChoiceGroupIds = (
+  state: GameState,
+  selected: GameState["effectQueue"][number],
+): readonly QueueEntryId[] | undefined => {
+  const groupIds = state.effectQueue
+    .filter(
+      (entry) =>
+        entry.state === "pending" &&
+        entry.timingWindowId === selected.timingWindowId &&
+        entry.generation === selected.generation &&
+        entry.controllerId === selected.controllerId &&
+        entry.orderingGroup === selected.orderingGroup,
+    )
+    .map((entry) => entry.id);
+  return groupIds.length > 1 ? groupIds : undefined;
+};
 
 export const applyOptionalActivationDecisionResponse = (
   state: GameState,
@@ -41,13 +62,15 @@ export const applyOptionalActivationDecisionResponse = (
       ),
     );
   }
-  if (action.response.choice !== "decline") {
+  const choice: unknown = action.response.choice;
+  if (choice !== "activate" && choice !== "decline") {
     return toEngineResult(
       state,
       [],
-      invalidDecision("optionalActivation activate is not implemented yet."),
+      invalidDecision("optionalActivation choice must be activate or decline."),
     );
   }
+  const shouldActivate = choice === "activate";
   if (decision.causedBy.type !== "effect") {
     return toEngineResult(
       state,
@@ -100,12 +123,20 @@ export const applyOptionalActivationDecisionResponse = (
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
-    effectQueue: state.effectQueue.filter((entry) => entry.id !== selected.id),
+    effectQueue: shouldActivate
+      ? state.effectQueue
+      : state.effectQueue.filter((entry) => entry.id !== selected.id),
     eventJournal: [...state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;
 
-  const resumed = processEffectRuntimeAfterOptionalActivationDecline(nextState);
+  const resumed = shouldActivate
+    ? processEffectRuntimeAfterOptionalActivationAccept(
+        nextState,
+        selected.id,
+        orderedCurrentChoiceGroupIds(state, selected),
+      )
+    : processEffectRuntimeAfterOptionalActivationDecline(nextState);
   return {
     ...resumed,
     events: [...events, ...resumed.events],
