@@ -1,0 +1,124 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-041
+epic_id: KICK-001
+title: Implement narrow Counter Event foundation
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Support the first narrow playable `[Counter]` Event path during the Counter
+  Step by reusing existing Counter Step, Event support-gate, DON payment,
+  hand-to-trash movement, and battle-duration counter-power behavior.
+story_boundary: >
+  Own only engine-core Counter Event legality and resolution for one reviewed
+  implemented-dsl shape: a mandatory `[Counter]` Event that grants battle-duration
+  power to the current battle target. Stop before real-card fixture capture,
+  optional effects, once-per-turn, replacement effects, search/reveal, a general
+  continuous-effect system, server/client/API/UI work, or card-data integration.
+allowed_touch_points:
+  - packages/engine-core/src/battle-counter-actions.ts
+  - packages/engine-core/src/battle-counter-flow.test.ts
+  - packages/engine-core/src/battle-counter-invalid.test.ts
+  - packages/engine-core/src/battle-pipeline-counter-regression.test.ts
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/filter-state-for-player.real-states-battle.test.ts
+  - packages/engine-core/src/action-test-fixtures.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - stories/generated/ENG-041-counter-event-foundation.yaml
+  - stories/approved/ENG-041-counter-event-foundation.yaml
+  - agent-packets/ENG-041.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s020
+  - 02-engine-mechanics.s021
+  - 02-engine-mechanics.s022
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s018
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s003
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s010
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s012
+  - 06-visibility-security.s005
+  - 06-visibility-security.s006
+  - 06-visibility-security.s007
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 11-testing-quality.s007
+  - 11-testing-quality.s008
+  - 11-testing-quality.s011
+  - 18-acceptance-tests.s004
+scope:
+  - implement only the mandatory `[Counter]` Event `modifyPower` shape that story-review confirmed as authorized when it targets `attackTarget` for `thisBattle` and maps directly to existing battle-local counter power
+  - expose `useCounter` legal actions to the defender during the opponent's Counter Step for only supported implemented-dsl Counter Events in hand
+  - support Counter Event use only when no pending runtime work, replacement work, unsupported combat metadata, unsupported battle envelope, unsupported trigger metadata, optional behavior, once-per-turn behavior, effect cost, condition, custom handler, target choice, or unsupported effect body is present
+  - pay nonzero Counter Event printed cost through the existing DON payment decision and response path; zero-cost supported Counter Events resolve directly
+  - move the accepted Counter Event from defender hand to defender trash as part of use before applying its effect
+  - apply exactly one narrow effect path: map the reviewed `modifyPower` amount targeting `attackTarget` for `thisBattle` to the current battle target by reusing the existing battle-duration `battle.counterPower` storage and Damage Step computation
+  - after Counter Event resolution, re-check attacker and current target presence and supported battle legality before allowing further Counter actions or Counter Step pass
+  - preserve existing Character Counter behavior, including stacking and keeping the Counter Step open
+  - preserve fail-closed behavior for unsupported Counter Event text, metadata, timing, target, cost, condition, optional, once-per-turn, replacement, search/reveal, custom handler, and target-choice shapes
+  - prove deterministic event ordering, state hash stability, and PlayerView hidden-information safety for the supported Counter Event path
+non_scope:
+  - real-card fixture capture, cards-produced fixture adoption, or card-data integration
+  - optional effects
+  - once-per-turn tracking
+  - replacement effects
+  - search, reveal, or target-choice effects
+  - full continuous-effect system or `continuousEffects` expansion
+  - target K.O. Counter Events
+  - Life Trigger changes
+  - opponent attack, On Block, On K.O., or effect ordering changes outside the supported Counter Event path
+  - replay schema, rollback, server, client, API, WebSocket, database, UI, or CLI work
+  - live Poneglyph, live Redis, live HTTP, or `@optcg/cards` imports from engine-core
+dependencies:
+  - ENG-019B
+  - ENG-019C
+  - ENG-020
+  - ENG-038B
+  - ENG-038C
+  - ENG-039A
+acceptance_criteria:
+  - defender legal actions include supported Counter Events only during the opponent's Counter Step and do not reveal opponent hand contents to the attacking player
+  - using a supported zero-cost Counter Event moves it from hand to trash, emits deterministic public use/move/trash/effect events, applies battle-duration power, keeps the Counter Step open, and preserves Character Counter behavior
+  - using a supported nonzero-cost Counter Event creates the existing payCost decision; accepted payment rests only selected active DON, moves the Event to trash, applies battle-duration power, and rejects forged, stale, insufficient, or wrong-player payment without partial mutation
+  - invalid `useCounter` actions, invalid payment responses, unsupported Counter Event shapes, and unsupported battle continuations fail closed without state mutation or hidden-information leakage
+  - after Counter Event resolution, stale or illegal attacker/current-target state prevents further supported Counter Step progression and skips unsupported Damage Step resolution
+  - event sequencing, appended eventJournal order, replay-visible payloads, and repeated-script state hashes are deterministic
+required_tests:
+  - add or update unit tests for legal Counter Event timing, defender-only legal actions, and attacker PlayerView hidden-info filtering
+  - add or update unit tests for zero-cost Counter Event hand-to-trash movement, battle-duration power application, event order, state hash stability, and continued Counter Step availability
+  - add or update unit tests for nonzero-cost Counter Event DON payment success and payment failure with no partial mutation
+  - add or update unit tests for invalid `useCounter` responses, unsupported Counter Event shapes, wrong timing, wrong player, stale card references, unsupported target/effect bodies, optional/once-per-turn/cost/condition shapes, and unsupported battle continuation after resolution
+  - add or update regression coverage proving existing Character Counter behavior still works and unsupported Counter Event fail-closed behavior remains for unsupported shapes
+  - run corepack pnpm exec vitest run packages/engine-core/src/battle-counter-flow.test.ts packages/engine-core/src/battle-counter-invalid.test.ts packages/engine-core/src/battle-pipeline-counter-regression.test.ts packages/engine-core/src/battle-pipeline-regression.test.ts packages/engine-core/src/filter-state-for-player.real-states-battle.test.ts
+  - run corepack pnpm --filter @optcg/engine-core typecheck
+  - run corepack pnpm run stories:validate
+  - run corepack pnpm run packets:verify
+  - run corepack pnpm run coverage
+  - run corepack pnpm run verify
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - story-review verdict was approval-ready-with-edits and confirmed no substory split is required if this story only maps the reviewed battle-local Counter Event `modifyPower` shape to existing `battle.counterPower`
+  - generate and activate only the ENG-041 packet while implementing this story
+  - run corepack pnpm run packets:verify immediately after packet generation and before implementation or review handoff
+  - stay within allowed_touch_points
+  - use implementation worker subagents after packet activation
+  - keep engine-core deterministic and pure
+  - keep engine-core free of `@optcg/cards`, Poneglyph HTTP, Redis, Postgres, server, client, API, and UI imports
+  - do not add real-card fixture tests or live Poneglyph dependencies in this story
+  - fail closed on gameplay-rule, hidden-information, replay, and security-sensitive ambiguity
+ambiguity_policy: fail_and_escalate

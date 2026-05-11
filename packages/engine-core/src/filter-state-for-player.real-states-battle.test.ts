@@ -5,7 +5,10 @@ import type { GameState, PlayerId } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "./actions.js";
 import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+import {
+  installSupportedCounterEvent,
+  setupAttackState,
+} from "./battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const findScalarPaths = (
@@ -559,13 +562,38 @@ const createAfterBlockerState = (): GameState => {
   return blocked.state;
 };
 
+const createCounterEventWindowState = (): GameState => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  installSupportedCounterEvent(state, counterEvent, 2000);
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assert.equal(opened.errors, undefined);
+  return opened.state;
+};
+
 test("real battle engine states stay hidden-info safe across battle progression", () => {
   const afterAttackDamage = createAfterAttackDamageState();
   const afterBlocker = createAfterBlockerState();
+  const counterEventWindow = createCounterEventWindowState();
 
   const samples: ReadonlyArray<[string, GameState]> = [
     ["after-attack-damage", afterAttackDamage],
     ["after-blocker", afterBlocker],
+    ["counter-event-window", counterEventWindow],
   ];
 
   for (const [label, state] of samples) {
@@ -574,4 +602,37 @@ test("real battle engine states stay hidden-info safe across battle progression"
     assertPublicZonesVisible(state, p1, `${label}:p1`);
     assertPublicZonesVisible(state, p2, `${label}:p2`);
   }
+});
+
+test("supported Counter Event legal action is private to defender view", () => {
+  const state = createCounterEventWindowState();
+  const counterEvent = must(
+    must(state.players[p2], "p2").hand[0],
+    "counter event",
+  );
+  const attackerView = filterStateForPlayer(state, p1);
+  const defenderView = filterStateForPlayer(state, p2);
+
+  assertNoScalarValue(
+    attackerView,
+    String(counterEvent.instanceId),
+    "attacker view must not reveal defender Counter Event instance",
+  );
+  assertNoScalarValue(
+    attackerView,
+    String(counterEvent.cardId),
+    "attacker view must not reveal defender Counter Event card",
+  );
+  assert.equal(
+    attackerView.legalActions.some((action) => action.type === "useCounter"),
+    false,
+  );
+  assert.equal(
+    defenderView.legalActions.some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.card.instanceId === counterEvent.instanceId,
+    ),
+    true,
+  );
 });
