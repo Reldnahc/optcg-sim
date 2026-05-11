@@ -47,6 +47,18 @@ const orderedCurrentChoiceGroupIds = (
   return groupIds.length > 1 ? groupIds : undefined;
 };
 
+const orderedRemainingChoiceGroupIdsAfterDecline = (
+  state: GameState,
+  selected: GameState["effectQueue"][number],
+): readonly QueueEntryId[] | undefined => {
+  const ordered = orderedCurrentChoiceGroupIds(state, selected);
+  if (ordered === undefined) {
+    return undefined;
+  }
+  const remaining = ordered.filter((id) => id !== selected.id);
+  return remaining.length > 1 ? remaining : undefined;
+};
+
 export const applyOptionalActivationDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -138,7 +150,10 @@ export const applyOptionalActivationDecisionResponse = (
         selected.id,
         orderedCurrentChoiceGroupIds(state, selected),
       )
-    : processEffectRuntimeAfterOptionalActivationDecline(nextState);
+    : processEffectRuntimeAfterOptionalActivationDecline(
+        nextState,
+        orderedRemainingChoiceGroupIdsAfterDecline(state, selected),
+      );
   return {
     ...resumed,
     events: [...events, ...resumed.events],
