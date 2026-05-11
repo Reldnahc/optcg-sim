@@ -36,6 +36,35 @@ Use a pre-presentation story-review gate for generated or normalized story work:
 - If no usable story-review agent run exists, do not present the story as approval-ready; present it as unreviewed and blocked on story review instead.
 - Implementation patch review remains a separate gate.
 
+### Decomposed Story-Group Review Matrix
+
+For decomposed story groups, require a compact per-story review-status matrix before approval handoff, child activation, packet generation, and parent/substory PR opening or handoff.
+
+Reconstruct this matrix from durable story-review outputs, story files, PR comments, or recorded blockers; do not use chat memory as the source of truth.
+
+Required columns:
+
+- story ID (parent and each child candidate)
+- story path
+- review type
+- review status
+- review artifact or blocker reference
+- disposition summary
+
+Allowed review types: `set-level`, `exact per-story`, `not-applicable`.
+
+Allowed review statuses: `pending`, `approval-ready`, `needs-revision`, `blocked`, `not-applicable`.
+
+Fail closed when any child has unknown or pending exact per-story review. Fail closed when status cannot be reconstructed from durable artifacts.
+
+Lost chat context is not a reason to rerun review blindly; reconstruct first and report uncertainty if reconstruction fails.
+
+This matrix is an orchestration aid and PR/review handoff artifact, not a new mutable current-status file and not a second authority over story files.
+
+Ordinary single-story workflows are not required to maintain this parent/substory matrix.
+
+If broad mechanical validation of PR comments or story-review artifacts would be needed, record a follow-up recommendation instead of widening the patch.
+
 ## Story Execution Rules
 
 - Read `AGENTS.md` first, then the approved story, then the corresponding packet.
