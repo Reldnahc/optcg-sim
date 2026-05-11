@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the first narrow optional-effect runtime foundation so already
   supported no-choice draw effect paths can pause for an accept/decline

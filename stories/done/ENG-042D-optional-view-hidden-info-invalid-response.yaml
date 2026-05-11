@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add PlayerView, legal-action, invalid-response, malformed-response, and
   unsupported-shape regressions for optional activation decisions.

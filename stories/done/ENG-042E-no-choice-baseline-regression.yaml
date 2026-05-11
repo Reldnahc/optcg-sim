@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add baseline regressions proving non-optional supported no-choice effect
   behavior remains unchanged after optional activation support lands.

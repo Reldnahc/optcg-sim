@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the decline response path for optional queued no-choice draw effects so
   declined effects are skipped and runtime processing continues deterministically.
