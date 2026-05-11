@@ -699,6 +699,20 @@ test("workflow docs require decomposed-group per-story review-status matrices be
     /ordinary single-story workflows are not required to maintain this parent\/substory matrix/i,
     /if broad mechanical validation of PR comments or story-review artifacts would be needed, record a follow-up recommendation instead of widening the patch/i,
   ]);
+
+  assertMatchesAll(reviewGate, [
+    /decomposed parent\/substory workflows/i,
+    /per-story review-status matrix/i,
+    /PR opening or PR handoff/i,
+    /fail closed on unknown or pending child exact per-story review/i,
+  ]);
+
+  assertMatchesAll(parentBranches, [
+    /before opening or handing off a substory PR or parent PR/i,
+    /compact per-story review-status matrix/i,
+    /durable artifacts \(story-review outputs, story files, PR comments, recorded blockers\)/i,
+    /fail closed if any child exact per-story status is unknown or pending/i,
+  ]);
 });
 
 test("codex integration spec reflects subagent orchestration instead of cli-first execution", async () => {
