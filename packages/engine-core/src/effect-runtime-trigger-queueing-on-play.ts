@@ -1,4 +1,5 @@
 import type {
+  EffectDefinition,
   EffectQueueEntry,
   EngineError,
   EngineEvent,
@@ -7,7 +8,12 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import {
+  appendEvent,
+  toDecisionId,
+  toEngineResult,
+  toStateSeq,
+} from "./action-results.js";
 import { isSupportedNoChoiceOnPlayDrawEffect } from "./effect-runtime-primitives.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
@@ -17,6 +23,31 @@ import {
   findCardInstance,
   toSnapshot,
 } from "./effect-runtime-trigger-source-lookup.js";
+
+const isSupportedOptionalOnPlayDrawEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+} => {
+  if (
+    effect.sourcePresencePolicy !== "mustRemainInSameZone" ||
+    effect.trigger.type !== "onPlay" ||
+    effect.category !== "auto" ||
+    effect.optional !== true ||
+    effect.oncePerTurn ||
+    effect.cost !== undefined ||
+    effect.condition !== undefined ||
+    effect.conditionTiming !== undefined ||
+    effect.failurePolicy !== undefined
+  ) {
+    return false;
+  }
+  return (
+    effect.effect.type === "draw" &&
+    effect.effect.count === 1 &&
+    effect.effect.player === "self"
+  );
+};
 
 export const createOnPlayTriggerQueueing = (
   dependencies: Pick<
@@ -113,17 +144,21 @@ export const createOnPlayTriggerQueueing = (
       if (onPlayEffects.length === 0) {
         continue;
       }
-      const matching = onPlayEffects.filter(
+      const requiredMatching = onPlayEffects.filter(
         isSupportedNoChoiceOnPlayDrawEffect,
       );
-      if (matching.length === 0) {
+      const optionalMatching = onPlayEffects.filter(
+        isSupportedOptionalOnPlayDrawEffect,
+      );
+      const matchingCount = requiredMatching.length + optionalMatching.length;
+      if (matchingCount === 0) {
         return toEngineResult(
           state,
           [],
           [onPlayTriggerQueueingError("unsupported-on-play-definition")],
         );
       }
-      if (matching.length !== 1) {
+      if (matchingCount !== 1) {
         return toEngineResult(
           state,
           [],
@@ -138,7 +173,58 @@ export const createOnPlayTriggerQueueing = (
         );
       }
 
-      for (const effectBlock of matching) {
+      const optionalEffect = optionalMatching[0];
+      if (optionalEffect !== undefined) {
+        const causedBy = {
+          type: "ruleProcess",
+          name: "effectRuntime:onPlayOptional",
+        } as const;
+        const sourceRef = {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: source.zone.playerId,
+          zone: source.zone,
+        };
+        const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
+          id: toDecisionId(
+            `decision:chooseOptionalActivation:${String(event.id)}:${String(
+              optionalEffect.id,
+            )}`,
+          ),
+          type: "chooseOptionalActivation",
+          playerId: source.zone.playerId,
+          prompt: "Choose whether to activate this optional effect.",
+          causedBy,
+          visibility: { type: "private", playerId: source.zone.playerId },
+          effectId: optionalEffect.id,
+          source: sourceRef,
+          options: ["activate", "decline"],
+        };
+        appendEvent(
+          state,
+          events,
+          "decisionCreated",
+          {
+            decisionId: pendingDecision.id,
+            decisionType: pendingDecision.type,
+            playerId: pendingDecision.playerId,
+          },
+          { type: "private", playerId: pendingDecision.playerId },
+        );
+        const created = events[events.length - 1];
+        if (created !== undefined) {
+          created.causedBy = causedBy;
+        }
+        const nextState: GameState = {
+          ...state,
+          seq: toStateSeq(state.seq + 1),
+          pendingDecision,
+          eventJournal: [...state.eventJournal, ...events],
+        };
+        return toEngineResult(nextState, events);
+      }
+
+      for (const effectBlock of requiredMatching) {
         const orderingGroup =
           source.zone.playerId === state.turn.turnPlayerId
             ? "turnPlayer"

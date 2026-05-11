@@ -85,14 +85,6 @@ test("unsupported effect metadata and shapes fail closed without partial mutatio
     definition: (d: EffectDefinition) => EffectDefinition;
   }> = [
     {
-      name: "optional",
-      expectedReason: "unsupported-on-play-definition",
-      definition: (d) => ({
-        ...d,
-        effects: [{ ...must(d.effects[0], "onPlay effect"), optional: true }],
-      }),
-    },
-    {
       name: "cost",
       expectedReason: "unsupported-on-play-definition",
       definition: (d) => ({

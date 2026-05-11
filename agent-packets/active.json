@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-042A.md",
+      "storyId": "ENG-042A",
+      "storyPath": "stories/approved/ENG-042A-optional-activation-decision-creation.yaml",
+      "storySha256": "dbac1b714cd4753d9caea1b9d1bb0078280afd2ee2dcc368f1cc51a7b1cac994"
+    }
+  ],
   "version": 1
 }
