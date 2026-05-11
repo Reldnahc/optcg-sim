@@ -21,6 +21,13 @@ function assertContainsWords(text, phrase) {
   assert.match(text, new RegExp(pattern));
 }
 
+function assertMandatoryCodeStandardLink(text) {
+  assert.match(
+    text,
+    /`docs\/code-standard\.md` (?:is|as) mandatory implementation guidance/,
+  );
+}
+
 function extractSection(text, sectionRef, nextSectionRef) {
   const startMarker = `Section Ref: \`${sectionRef}\``;
   const start = text.indexOf(startMarker);
@@ -80,11 +87,10 @@ test("code standard guide is mandatory implementation guidance", async () => {
   const agents = await readText("AGENTS.md");
   const storyExecution = await readText("docs/workflow/story-execution.md");
   const codeStandard = await readText("docs/code-standard.md");
-  const mandatoryGuidance = `${agents}\n${storyExecution}`;
 
   assert.match(codeStandard, /^# Code Standard Guide$/m);
-  assert.match(mandatoryGuidance, /docs\/code-standard\.md/);
-  assertContainsWords(mandatoryGuidance, "mandatory implementation guidance");
+  assertMandatoryCodeStandardLink(agents);
+  assertMandatoryCodeStandardLink(storyExecution);
 });
 
 test("event specs require append-order strictly increasing event sequences", async () => {

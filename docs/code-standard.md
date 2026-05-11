@@ -18,8 +18,8 @@ guide to decide whether a patch is shaped well enough to review and maintain.
 - Prefer `unknown` plus validation for external input. Do not cast browser,
   API, Redis, Postgres, or card-data payloads directly into trusted engine
   types.
-- Prefer named exports. Do not introduce default exports unless the surrounding
-  package already uses them for the same kind of module.
+- Prefer named exports. Do not introduce default exports unless the repo later
+  adopts them explicitly.
 - Keep imports directional and package-safe. Type-only imports should be marked
   as type imports when the compiler setting requires it.
 - Do not use `console` in production packages. Use an approved logger or keep
