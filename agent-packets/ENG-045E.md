@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-045E -->
 <!-- agent-packet:story-path stories/approved/ENG-045E-same-replacement-once-per-process.yaml -->
-<!-- agent-packet:story-sha256 182c9b10c01b38a2af4e41bdf67fcc72f5f5376894d6bc41d3c9e87a0b9ead8f -->
+<!-- agent-packet:story-sha256 6847ac292e94641fbf0f5bd1e2248cf23c5118f3750979745d9240d570ea43f8 -->
 
 # Story Packet
 
@@ -194,7 +194,9 @@ Own only `usedReplacementIds` propagation and duplicate-use regression for the s
 ## Allowed Touch Points
 
 <!-- prettier-ignore -->
+- packages/engine-core/src/effect-runtime.ts
 - packages/engine-core/src/effect-runtime-primitives.ts
+- packages/engine-core/src/effect-runtime-replacement-application.test.ts
 - packages/engine-core/src/effect-runtime-target-primitives.test.ts
 - packages/types/src/runtime.ts
 - packages/types/src/runtime.test.ts
@@ -235,7 +237,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 ## Required Tests
 
-- run `corepack pnpm exec vitest run packages/types/src/runtime.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts`
+- run `corepack pnpm exec vitest run packages/types/src/runtime.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/effect-runtime-replacement-application.test.ts`
 - run `corepack pnpm --filter @optcg/engine-core typecheck`
 - run `corepack pnpm run packets:verify`
 - run `corepack pnpm run verify`

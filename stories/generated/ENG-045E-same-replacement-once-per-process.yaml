@@ -16,7 +16,9 @@ story_boundary: >
   Own only `usedReplacementIds` propagation and duplicate-use regression for
   the supported KO replacement process.
 allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.ts
   - packages/engine-core/src/effect-runtime-primitives.ts
+  - packages/engine-core/src/effect-runtime-replacement-application.test.ts
   - packages/engine-core/src/effect-runtime-target-primitives.test.ts
   - packages/types/src/runtime.ts
   - packages/types/src/runtime.test.ts
@@ -49,7 +51,7 @@ acceptance_criteria:
   - no duplicate `replacementApplied` event is emitted for one replacement id on one process
   - a separate process may still consider the same replacement id if otherwise legal
 required_tests:
-  - run `corepack pnpm exec vitest run packages/types/src/runtime.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts`
+  - run `corepack pnpm exec vitest run packages/types/src/runtime.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/effect-runtime-replacement-application.test.ts`
   - run `corepack pnpm --filter @optcg/engine-core typecheck`
   - run `corepack pnpm run packets:verify`
   - run `corepack pnpm run verify`

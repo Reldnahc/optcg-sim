@@ -317,7 +317,14 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
   effectId: string,
   process: ReplacementProcess,
   replacementId: string,
-): { state: GameState } | { error: EngineError } => {
+):
+  | { state: GameState; process: ReplacementProcess }
+  | { error: EngineError } => {
+  if (process.usedReplacementIds.includes(replacementId)) {
+    return {
+      error: acceptedReplacementError(effectId, "unsupported-effect-shape"),
+    };
+  }
   const detected = detectSupportedSelectedTargetKoReplacementCandidate(
     state,
     process,
@@ -330,13 +337,17 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     };
   }
 
+  const usedProcess: ReplacementProcess = {
+    ...process,
+    usedReplacementIds: [...process.usedReplacementIds, candidate.id],
+  };
   const transformedPayload = replacementDrawTransformedPayload(candidate);
   appendEvent(
     state,
     events,
     "replacementApplied",
     {
-      processId: process.id,
+      processId: usedProcess.id,
       replacementId: candidate.id,
       previousPayloadHash: hashCanonicalStateValue(process.payload),
       transformedPayloadHash: hashCanonicalStateValue(transformedPayload),
@@ -393,6 +404,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
       ...drawn.state,
       eventJournal: [...state.eventJournal, ...events],
     },
+    process: usedProcess,
   };
 };
 
