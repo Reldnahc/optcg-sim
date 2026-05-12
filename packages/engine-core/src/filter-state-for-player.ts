@@ -64,6 +64,8 @@ const boardCardsForState = (state: GameState): CardInstance[] =>
     ...player.characters,
   ]);
 
+const viewPowerUnsupportedKeywords = new Set(["doubleAttack", "unblockable"]);
+
 const hasComputableBoardPowerMetadata = (state: GameState): boolean => {
   if (state.continuousEffects.length > 0) {
     return true;
@@ -82,6 +84,13 @@ const hasComputableBoardPowerMetadata = (state: GameState): boolean => {
     if (
       resolved.support.status !== "vanilla-confirmed" &&
       resolved.support.status !== "implemented-dsl"
+    ) {
+      return false;
+    }
+    if (
+      resolved.printedKeywords.some((keyword) =>
+        viewPowerUnsupportedKeywords.has(keyword),
+      )
     ) {
       return false;
     }
@@ -199,6 +208,9 @@ const playerEventPayloadForbiddenKeys = new Set([
   "sourcePresencePolicy",
   "orderingGroup",
   "generation",
+  "damageProcess",
+  "remainingDamagePoints",
+  "sourceKeyword",
 ]);
 
 const toPlayerEventPayload = (payload: unknown): unknown => {

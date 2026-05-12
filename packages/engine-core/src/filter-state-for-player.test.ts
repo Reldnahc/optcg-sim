@@ -988,3 +988,43 @@ test("sanitizes player-visible effect lifecycle events without mutating the jour
   assert.equal(JSON.stringify(view.events).includes("orderedIds"), false);
   assert.equal(JSON.stringify(state.eventJournal), originalJournal);
 });
+
+test("sanitizes player-visible damage continuation payload internals", () => {
+  const state = createActiveState();
+  const damageEvent: EngineEvent = {
+    id: toEngineEventId("event:damage-continuation"),
+    seq: 1,
+    type: "damageDealt",
+    actor: p1,
+    payload: {
+      publicAmount: 1,
+      damageProcess: {
+        type: "multipleDamage",
+        sourceKeyword: "doubleAttack",
+        remainingDamagePoints: 1,
+      },
+      remainingDamagePoints: 1,
+      sourceKeyword: "doubleAttack",
+    },
+    visibility: { type: "public" },
+    createdAtStateSeq: toStateSeq(state.seq),
+  };
+  state.eventJournal = [damageEvent];
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.deepEqual(view.events, [
+    {
+      id: damageEvent.id,
+      seq: damageEvent.seq,
+      type: damageEvent.type,
+      actor: damageEvent.actor,
+      payload: { publicAmount: 1 },
+      visibility: damageEvent.visibility,
+      createdAtStateSeq: damageEvent.createdAtStateSeq,
+    },
+  ]);
+  assert.equal(JSON.stringify(view).includes("damageProcess"), false);
+  assert.equal(JSON.stringify(view).includes("remainingDamagePoints"), false);
+  assert.equal(JSON.stringify(view).includes("sourceKeyword"), false);
+});
