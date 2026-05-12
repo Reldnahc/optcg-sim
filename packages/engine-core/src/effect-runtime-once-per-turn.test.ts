@@ -6,6 +6,7 @@ import { addExtraDeckCard } from "./action-test-fixtures.js";
 import {
   applyAction,
   createActiveState,
+  hashCanonicalStateValue,
   must,
   p1,
   processEffectRuntime,
@@ -198,6 +199,66 @@ test("first once-per-turn resolution is deterministic for events, journal, and s
     first.events.map((event) => event.seq),
     "deterministic first once-per-turn events",
   );
+});
+
+test("once-per-turn consumption changes stateHash deterministically when consumed", () => {
+  const run = () => {
+    const { state } = createOncePerTurnOnPlayEntry(
+      "queue-entry-once-per-turn-hash-shift",
+      "OP01-015:auto-on-play-1",
+    );
+    const beforeHash = hashCanonicalStateValue(state);
+    const result = processEffectRuntime(state);
+    return { beforeHash, result };
+  };
+
+  const first = run();
+  const second = run();
+
+  assert.equal(first.result.errors, undefined);
+  assert.equal(second.result.errors, undefined);
+  assert.equal(first.result.state.oncePerTurn.length, 1);
+  assert.equal(second.result.state.oncePerTurn.length, 1);
+  assert.notEqual(first.beforeHash, first.result.stateHash);
+  assert.notEqual(second.beforeHash, second.result.stateHash);
+  assert.equal(
+    first.result.stateHash,
+    hashCanonicalStateValue(first.result.state),
+  );
+  assert.equal(
+    second.result.stateHash,
+    hashCanonicalStateValue(second.result.state),
+  );
+  assert.equal(first.beforeHash, second.beforeHash);
+  assert.equal(first.result.stateHash, second.result.stateHash);
+});
+
+test("once-per-turn use is still consumed when resolution follows a do-as-much-as-possible path", () => {
+  const { state, entry } = createOncePerTurnOnPlayEntry(
+    "queue-entry-once-per-turn-partial-consume",
+    "OP01-015:auto-on-play-1",
+  );
+  const p1State = must(state.players[p1], "p1 state");
+  p1State.deck = [];
+  const beforeHand = p1State.hand.length;
+
+  const result = processEffectRuntime(state);
+  const afterP1 = must(result.state.players[p1], "p1 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.oncePerTurn.length, 1);
+  assert.deepEqual(result.state.oncePerTurn[0], {
+    cardInstanceId: entry.source.instanceId,
+    effectId: entry.effectBlockId,
+    turnNumber: state.turn.globalTurn,
+    usedAtStateSeq: toStateSeq(state.seq),
+  });
+  assert.equal(afterP1.hand.length, beforeHand);
+  assert.equal(
+    result.events.some((event) => event.type === "cardDrawn"),
+    false,
+  );
+  assert.equal(result.state.effectQueue.length, 0);
 });
 
 test("repeated same-card same-effect queued no-choice draw is blocked before resolution", () => {
