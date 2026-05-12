@@ -23,7 +23,10 @@ import {
   p2,
   resolvedCard,
 } from "./action-test-fixtures.js";
-import { executeSelectedTargetEffectPrimitive } from "./effect-runtime-primitives.js";
+import {
+  buildSelectedTargetKoReplacementProcess,
+  executeSelectedTargetEffectPrimitive,
+} from "./effect-runtime-primitives.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -250,6 +253,63 @@ test("targeted KO primitive moves selected public Characters to trash with deter
     instanceId: targetB.instanceId,
   });
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+test("targeted KO primitive builds deterministic replacement process for each selected public Character", () => {
+  const { entry, refs } = setupKoPrimitiveState();
+  const targetA = must(refs[0], "target A ref");
+  const targetB = must(refs[1], "target B ref");
+
+  const processes = [targetA, targetB].map((target, index) =>
+    buildSelectedTargetKoReplacementProcess(entry, target, index),
+  );
+
+  assert.deepEqual(processes, [
+    {
+      id: `${entry.id}:ko:${targetA.instanceId}:${String(0)}`,
+      type: "ko",
+      source: entry.source,
+      target: targetA,
+      payload: {
+        effectId: entry.effectBlockId,
+        queueEntryId: entry.id,
+        source: entry.source,
+        target: targetA,
+      },
+      causedBy: entry.causedBy,
+      usedReplacementIds: [],
+    },
+    {
+      id: `${entry.id}:ko:${targetB.instanceId}:${String(1)}`,
+      type: "ko",
+      source: entry.source,
+      target: targetB,
+      payload: {
+        effectId: entry.effectBlockId,
+        queueEntryId: entry.id,
+        source: entry.source,
+        target: targetB,
+      },
+      causedBy: entry.causedBy,
+      usedReplacementIds: [],
+    },
+  ]);
+});
+
+test("targeted KO primitive preserves no-replacement state hash through the replacement wrapper", () => {
+  const { state, entry, refs } = setupKoPrimitiveState();
+
+  const result = executeSelectedTargetEffectPrimitive(
+    state,
+    entry,
+    koChooseEffect(),
+    [must(refs[0], "target A ref"), must(refs[1], "target B ref")],
+  );
+
+  assert.equal(
+    result.stateHash,
+    "eeb5d818c539eb7a4520d92ad6a6cc480f8b40b62185ea9284da0529536f146b",
+  );
 });
 
 test.each<KoPrimitiveFailureCase>([

@@ -10,6 +10,7 @@ import type {
   GameState,
   PlayerId,
   PlayerRef,
+  ReplacementProcess,
   Target,
 } from "@optcg/types";
 
@@ -209,6 +210,35 @@ type LocatedCard = {
   index?: number;
 };
 
+interface SelectedTargetKoReplacementPayload {
+  effectId: EffectQueueEntry["effectBlockId"];
+  queueEntryId: EffectQueueEntry["id"];
+  source: CardRef;
+  target: CardRef;
+}
+
+export const buildSelectedTargetKoReplacementProcess = (
+  entry: EffectQueueEntry,
+  target: CardRef,
+  targetIndex: number,
+): ReplacementProcess => {
+  const payload: SelectedTargetKoReplacementPayload = {
+    effectId: entry.effectBlockId,
+    queueEntryId: entry.id,
+    source: entry.source,
+    target,
+  };
+  return {
+    id: `${entry.id}:ko:${target.instanceId}:${String(targetIndex)}`,
+    type: "ko",
+    source: entry.source,
+    target,
+    payload,
+    causedBy: entry.causedBy,
+    usedReplacementIds: [],
+  };
+};
+
 const findCardByInstanceId = (
   state: GameState,
   instanceId: CardInstance["instanceId"],
@@ -242,6 +272,120 @@ const findCardByInstanceId = (
   }
   return null;
 };
+
+const executeUnreplacedSelectedTargetKoProcess = (
+  state: GameState,
+  events: EngineEvent[],
+  effectId: string,
+  process: ReplacementProcess,
+): { state: GameState } | { error: EngineError } => {
+  const target = process.target;
+  if (process.type !== "ko" || target === undefined) {
+    return {
+      error: selectedTargetKoExecutionError(
+        effectId,
+        "unsupported-effect-shape",
+      ),
+    };
+  }
+
+  const located = findCardByInstanceId(state, target.instanceId);
+  if (located === null || located.zone !== "characterArea") {
+    return {
+      error: selectedTargetKoExecutionError(effectId, "stale-target"),
+    };
+  }
+
+  const player = state.players[located.playerId];
+  if (player === undefined) {
+    return {
+      error: selectedTargetKoExecutionError(effectId, "missing-card"),
+    };
+  }
+
+  const targetIndex = player.characters.findIndex(
+    (candidate) => candidate.instanceId === located.card.instanceId,
+  );
+  const koCard = player.characters[targetIndex];
+  if (targetIndex < 0 || koCard === undefined) {
+    return {
+      error: selectedTargetKoExecutionError(effectId, "stale-target"),
+    };
+  }
+
+  const trashedCard: CardInstance = {
+    ...koCard,
+    attachedDon: [],
+    zone: {
+      zone: "trash",
+      playerId: located.playerId,
+      slot: "trash",
+      index: 0,
+    },
+  };
+  const nextCharacters = reindexZoneCards(
+    player.characters.filter((_, index) => index !== targetIndex),
+    "characterArea",
+    located.playerId,
+    "character",
+  );
+  const nextTrash = reindexZoneCards(
+    [trashedCard, ...player.trash],
+    "trash",
+    located.playerId,
+    "trash",
+  );
+  const attachedDonIds = new Set(koCard.attachedDon);
+  const nextCostArea = player.costArea.map((card) =>
+    attachedDonIds.has(card.instanceId)
+      ? { ...card, state: "rested" as const }
+      : card,
+  );
+
+  const nextState = {
+    ...state,
+    players: {
+      ...state.players,
+      [located.playerId]: {
+        ...player,
+        characters: nextCharacters,
+        trash: nextTrash,
+        costArea: nextCostArea,
+      },
+    },
+  };
+
+  appendEvent(nextState, events, "cardKOd", {
+    playerId: located.playerId,
+    instanceId: koCard.instanceId,
+  });
+  appendEvent(nextState, events, "cardMoved", {
+    instanceId: koCard.instanceId,
+    cardId: koCard.cardId,
+    from: koCard.zone,
+    to: trashedCard.zone,
+    reason: "ko",
+  });
+  for (const donId of koCard.attachedDon) {
+    appendEvent(
+      nextState,
+      events,
+      "donReturned",
+      { playerId: located.playerId, donInstanceId: donId, state: "rested" },
+      { type: "replayOnly" },
+    );
+  }
+
+  return { state: nextState };
+};
+
+const executeSelectedTargetKoReplacementProcess = (
+  state: GameState,
+  events: EngineEvent[],
+  effectId: string,
+  process: ReplacementProcess,
+): { state: GameState } | { error: EngineError } =>
+  executeUnreplacedSelectedTargetKoProcess(state, events, effectId, process);
 
 const executeSelectedTargetKoEffect = (
   state: GameState,
@@ -375,99 +519,22 @@ const executeSelectedTargetKoEffect = (
   const events: EngineEvent[] = [];
   let nextState = state;
 
-  for (const target of selectedTargets) {
-    const located = findCardByInstanceId(nextState, target.instanceId);
-    if (located === null || located.zone !== "characterArea") {
-      return toEngineResult(
-        state,
-        [],
-        [selectedTargetKoExecutionError(entry.effectBlockId, "stale-target")],
-      );
-    }
-
-    const player = nextState.players[located.playerId];
-    if (player === undefined) {
-      return toEngineResult(
-        state,
-        [],
-        [selectedTargetKoExecutionError(entry.effectBlockId, "missing-card")],
-      );
-    }
-
-    const targetIndex = player.characters.findIndex(
-      (candidate) => candidate.instanceId === located.card.instanceId,
+  for (const [targetIndex, target] of selectedTargets.entries()) {
+    const process = buildSelectedTargetKoReplacementProcess(
+      entry,
+      target,
+      targetIndex,
     );
-    const koCard = player.characters[targetIndex];
-    if (targetIndex < 0 || koCard === undefined) {
-      return toEngineResult(
-        state,
-        [],
-        [selectedTargetKoExecutionError(entry.effectBlockId, "stale-target")],
-      );
+    const resolvedProcess = executeSelectedTargetKoReplacementProcess(
+      nextState,
+      events,
+      entry.effectBlockId,
+      process,
+    );
+    if ("error" in resolvedProcess) {
+      return toEngineResult(state, [], [resolvedProcess.error]);
     }
-
-    const trashedCard: CardInstance = {
-      ...koCard,
-      attachedDon: [],
-      zone: {
-        zone: "trash",
-        playerId: located.playerId,
-        slot: "trash",
-        index: 0,
-      },
-    };
-    const nextCharacters = reindexZoneCards(
-      player.characters.filter((_, index) => index !== targetIndex),
-      "characterArea",
-      located.playerId,
-      "character",
-    );
-    const nextTrash = reindexZoneCards(
-      [trashedCard, ...player.trash],
-      "trash",
-      located.playerId,
-      "trash",
-    );
-    const attachedDonIds = new Set(koCard.attachedDon);
-    const nextCostArea = player.costArea.map((card) =>
-      attachedDonIds.has(card.instanceId)
-        ? { ...card, state: "rested" as const }
-        : card,
-    );
-
-    nextState = {
-      ...nextState,
-      players: {
-        ...nextState.players,
-        [located.playerId]: {
-          ...player,
-          characters: nextCharacters,
-          trash: nextTrash,
-          costArea: nextCostArea,
-        },
-      },
-    };
-
-    appendEvent(nextState, events, "cardKOd", {
-      playerId: located.playerId,
-      instanceId: koCard.instanceId,
-    });
-    appendEvent(nextState, events, "cardMoved", {
-      instanceId: koCard.instanceId,
-      cardId: koCard.cardId,
-      from: koCard.zone,
-      to: trashedCard.zone,
-      reason: "ko",
-    });
-    for (const donId of koCard.attachedDon) {
-      appendEvent(
-        nextState,
-        events,
-        "donReturned",
-        { playerId: located.playerId, donInstanceId: donId, state: "rested" },
-        { type: "replayOnly" },
-      );
-    }
+    nextState = resolvedProcess.state;
   }
 
   const finalState: GameState = {
