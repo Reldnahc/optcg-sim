@@ -35,6 +35,7 @@ import type {
   QueueEntryId,
   ReplaceableProcessType,
   ReplacementProcess,
+  SelectedTargetKoReplacementPayload,
   ReplacementProcessState,
   RestrictionIndex,
   RevealRecord,
@@ -173,11 +174,18 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
   };
 
   const replacementType: ReplaceableProcessType = "ko";
+  const koPayload: SelectedTargetKoReplacementPayload = {
+    effectId: "effect-1" as EffectId,
+    queueEntryId: "q-1" as QueueEntryId,
+    source,
+    target: source,
+  };
   const replacement: ReplacementProcess = {
     id: "proc-1",
     type: replacementType,
     source,
-    payload: {},
+    target: source,
+    payload: koPayload,
     causedBy,
     usedReplacementIds: [],
   };
@@ -298,6 +306,7 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
   };
 
   expect(replacementState.type).toBe("ko");
+  expect(koPayload.target.instanceId).toBe(source.instanceId);
   expect(trigger.controllerId).toBe(player);
   expect(deferred.generation).toBe(0);
   expect(context.execution.effectId).toBe("effect-1" as EffectId);
