@@ -16,6 +16,12 @@ import type {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { getOpponentId, reindexZoneCards } from "./action-state.js";
+export type {
+  DetectSelectedTargetKoReplacementCandidateResult,
+  SelectedTargetKoReplacementCandidate,
+  SelectedTargetKoReplacementDetectionFailureReason,
+} from "./effect-runtime-replacement-primitives.js";
+export { detectSupportedSelectedTargetKoReplacementCandidate } from "./effect-runtime-replacement-primitives.js";
 
 export type DrawExecutionFailureReason =
   | "unsupported-effect-shape"

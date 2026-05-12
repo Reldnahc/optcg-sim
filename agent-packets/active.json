@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-045A.md",
-      "storyId": "ENG-045A",
-      "storyPath": "stories/approved/ENG-045A-replaceable-ko-process-wrapper.yaml",
-      "storySha256": "e1040e68f62ba9d17708c3038c4d2de11d20437501f2aba7f9c7576d6f163535"
+      "packetPath": "agent-packets/ENG-045B.md",
+      "storyId": "ENG-045B",
+      "storyPath": "stories/approved/ENG-045B-ko-replacement-applicability.yaml",
+      "storySha256": "3fc05af03e85914cd4731571e52afc0f455d350a510a353287781cbd1cab2a32"
     }
   ],
   "version": 1

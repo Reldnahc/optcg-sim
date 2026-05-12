@@ -18,6 +18,7 @@ story_boundary: >
   Do not create player decisions or execute replacements in this story.
 allowed_touch_points:
   - packages/engine-core/src/effect-runtime-primitives.ts
+  - packages/engine-core/src/effect-runtime-replacement-primitives.ts
   - packages/engine-core/src/effect-runtime-target-primitives.test.ts
   - packages/types/src/effects.ts
   - packages/types/src/effects.test.ts
