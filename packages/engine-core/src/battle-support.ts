@@ -318,7 +318,7 @@ export const hasUnsupportedBattleEffectMetadata = (
 export const isSupportedBattleResolutionEnvelope = (
   battle: NonNullable<GameState["battle"]>,
 ): boolean => {
-  if (battle.damageCount !== 1) {
+  if (battle.damageCount !== 1 && battle.damageCount !== 2) {
     return false;
   }
   if (battle.blocker === undefined) {

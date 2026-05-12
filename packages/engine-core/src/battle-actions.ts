@@ -140,14 +140,57 @@ export const applyDeclareAttack = (
 
   const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
   let legalTargets: readonly CardInstance["instanceId"][];
+  let attackerHasDoubleAttack = false;
   try {
     const computed = computeView(combatMetadataState);
+    attackerHasDoubleAttack =
+      computed.cards[attacker.card.instanceId]?.keywords.includes(
+        "doubleAttack",
+      ) ?? false;
     legalTargets = computed.legalAttackTargets[attacker.card.instanceId] ?? [];
   } catch {
-    return illegalAction(
-      state,
-      "declareAttack is unsupported for current combat metadata.",
-    );
+    const attackerMetadata = state.cardManifest.cards[attacker.card.cardId];
+    const attackerKeywords = attackerMetadata?.printedKeywords ?? [];
+    const supportedDoubleAttackFallback =
+      attackerMetadata?.support.status === "implemented-dsl" &&
+      attackerMetadata.support.effectDefinitionId === undefined &&
+      (attackerMetadata.effectText ?? "").trim().length === 0 &&
+      (attackerMetadata.triggerText ?? "").trim().length === 0 &&
+      attackerKeywords.includes("doubleAttack") &&
+      !attackerKeywords.includes("banish");
+    if (!supportedDoubleAttackFallback) {
+      return illegalAction(
+        state,
+        "declareAttack is unsupported for current combat metadata.",
+      );
+    }
+
+    const fallbackManifest = {
+      ...combatMetadataState.cardManifest,
+      cards: {
+        ...combatMetadataState.cardManifest.cards,
+        [attacker.card.cardId]: {
+          ...attackerMetadata,
+          printedKeywords: attackerKeywords.filter(
+            (keyword) => keyword !== "doubleAttack",
+          ),
+        },
+      },
+    };
+    try {
+      const computed = computeView({
+        ...combatMetadataState,
+        cardManifest: fallbackManifest,
+      });
+      legalTargets =
+        computed.legalAttackTargets[attacker.card.instanceId] ?? [];
+      attackerHasDoubleAttack = true;
+    } catch {
+      return illegalAction(
+        state,
+        "declareAttack is unsupported for current combat metadata.",
+      );
+    }
   }
   if (!legalTargets.includes(target.card.instanceId)) {
     return illegalAction(
@@ -192,7 +235,7 @@ export const applyDeclareAttack = (
       originalTarget: toCardRef(target.card, target.playerId),
       currentTarget: toCardRef(target.card, target.playerId),
       step: "attack",
-      damageCount: 1,
+      damageCount: target.isLeader && attackerHasDoubleAttack ? 2 : 1,
     },
   };
 

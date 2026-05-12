@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-046A -->
 <!-- agent-packet:story-path stories/approved/ENG-046A-multiple-damage-loop-structure.yaml -->
-<!-- agent-packet:story-sha256 2e335232cd4074e2f56350ddbffe6034f017d321f35ce6687276bdc754759022 -->
+<!-- agent-packet:story-sha256 cb61e1c56d26d0e0736d62c43cb685d3a887e763e0fd12a99722a034b8a63278 -->
 
 # Story Packet
 
@@ -319,6 +319,7 @@ Own only the loop structure and support gate for Double Attack leader damage wit
 ## Allowed Touch Points
 
 <!-- prettier-ignore -->
+- packages/engine-core/src/battle-actions.ts
 - packages/engine-core/src/battle-resolution.ts
 - packages/engine-core/src/battle-support.ts
 - packages/engine-core/src/battle-actions.test.ts
