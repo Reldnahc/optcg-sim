@@ -102,6 +102,49 @@ export const detectPendingRuntimeWork = (
   return undefined;
 };
 
+export const isSupportedDamageDeferredEffectQueueState = (
+  state: GameState,
+): boolean => {
+  if (
+    state.deferredTriggers.length === 0 ||
+    state.battle?.damageProcess?.type !== "multipleDamage" ||
+    state.battle.damageProcess.remainingDamagePoints <= 0
+  ) {
+    return false;
+  }
+  return releaseDamageDeferredEffectQueue(state) !== null;
+};
+
+export const releaseDamageDeferredEffectQueue = (
+  state: GameState,
+): GameState | null => {
+  if (state.deferredTriggers.length === 0) {
+    return state;
+  }
+  if (state.deferredTriggers.length !== 1 || state.effectQueue.length !== 1) {
+    return null;
+  }
+  const bucket = state.deferredTriggers[0];
+  const entry = state.effectQueue[0];
+  if (bucket === undefined || entry === undefined) {
+    return null;
+  }
+  if (
+    bucket.releasePolicy !== "afterCurrentProcess" ||
+    bucket.triggerIds.length !== 1 ||
+    bucket.triggerIds[0] !== String(entry.id) ||
+    bucket.timingWindowId !== entry.timingWindowId ||
+    bucket.generation !== entry.generation ||
+    entry.state !== "pending"
+  ) {
+    return null;
+  }
+  return {
+    ...state,
+    deferredTriggers: [],
+  };
+};
+
 const asLookupError = (
   reason: EffectDefinitionLookupFailureReason,
   supportStatus: CardSupportStatus,
@@ -458,6 +501,9 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
     return queuedFromWhenAttacking;
   }
   if (state.deferredTriggers.length > 0) {
+    if (isSupportedDamageDeferredEffectQueueState(state)) {
+      return toEngineResult(state, []);
+    }
     return toEngineResult(
       state,
       [],

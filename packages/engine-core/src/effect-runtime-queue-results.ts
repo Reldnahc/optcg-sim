@@ -78,6 +78,29 @@ const hasExactIds = (
   return receivedIds.every((id) => expected.has(id));
 };
 
+const isActiveDoubleAttackDamageProcess = (state: GameState): boolean =>
+  state.battle?.damageProcess?.type === "multipleDamage" &&
+  state.battle.damageProcess.remainingDamagePoints > 0;
+
+const hasExactDamageDeferredQueue = (state: GameState): boolean => {
+  if (state.deferredTriggers.length !== 1 || state.effectQueue.length !== 1) {
+    return false;
+  }
+  const bucket = state.deferredTriggers[0];
+  const entry = state.effectQueue[0];
+  if (bucket === undefined || entry === undefined) {
+    return false;
+  }
+  return (
+    bucket.releasePolicy === "afterCurrentProcess" &&
+    bucket.triggerIds.length === 1 &&
+    bucket.triggerIds[0] === String(entry.id) &&
+    bucket.timingWindowId === entry.timingWindowId &&
+    bucket.generation === entry.generation &&
+    entry.state === "pending"
+  );
+};
+
 export const createEffectRuntimeQueueResults = (
   dependencies: EffectRuntimeQueueResultsDependencies,
 ): EffectRuntimeQueueResults => {
@@ -430,6 +453,14 @@ export const createEffectRuntimeQueueResults = (
   ): EngineResult => {
     if (state.pendingDecision !== undefined) {
       return toEngineResult(state, []);
+    }
+    if (
+      state.deferredTriggers.length > 0 &&
+      isActiveDoubleAttackDamageProcess(state)
+    ) {
+      return hasExactDamageDeferredQueue(state)
+        ? toEngineResult(state, [])
+        : unsupportedEffectQueueResult(state);
     }
     const ordering = evaluateQueueOrdering(state.effectQueue);
     if (!ordering.ok) {
