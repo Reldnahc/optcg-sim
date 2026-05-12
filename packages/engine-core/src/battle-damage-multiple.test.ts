@@ -350,3 +350,32 @@ test("supported doubleAttack declareAttack with available blocker fails closed w
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
 });
+
+test("getLegalActions omits supported doubleAttack leader attack when blocker handling is unsupported", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const blocker = must(p2State.characters[0], "p2 blocker");
+  blocker.state = "active";
+  state.cardManifest.cards[blocker.cardId] = {
+    ...resolvedCard({
+      cardId: blocker.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    printedKeywords: ["blocker"],
+  };
+  installSupportedDoubleAttackLeader(state);
+
+  const legal = getLegalActions(state, p1);
+
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.attacker.instanceId === p1State.leader.instanceId &&
+        action.target.instanceId === p2State.leader.instanceId,
+    ),
+    false,
+  );
+});

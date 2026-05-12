@@ -112,6 +112,7 @@ const collectDeclareAttackLegalActions = (
   state: GameState,
   playerId: PlayerId,
   view: ReturnType<typeof computeView>,
+  options: { filterUnsupportedDoubleAttackBlockers: boolean },
 ): LegalAction[] => {
   const actions: LegalAction[] = [];
   for (const [attackerId, targetIds] of Object.entries(
@@ -129,6 +130,16 @@ const collectDeclareAttackLegalActions = (
       if (target === null) {
         continue;
       }
+      if (
+        options.filterUnsupportedDoubleAttackBlockers &&
+        target.isLeader &&
+        isSupportedDoubleAttackCombatMetadata(
+          state.cardManifest.cards[attacker.card.cardId],
+        ) &&
+        hasActivePrintedBlocker(state, target.playerId)
+      ) {
+        continue;
+      }
       actions.push({
         type: "declareAttack",
         attacker: toCardRef(attacker.card, attacker.playerId),
@@ -137,6 +148,25 @@ const collectDeclareAttackLegalActions = (
     }
   }
   return actions;
+};
+
+const hasActivePrintedBlocker = (
+  state: GameState,
+  defenderId: PlayerId,
+): boolean => {
+  const defender = state.players[defenderId];
+  if (defender === undefined) {
+    return false;
+  }
+  return defender.characters.some((character) => {
+    const metadata = state.cardManifest.cards[character.cardId];
+    return (
+      character.controller === defenderId &&
+      character.state === "active" &&
+      metadata?.category === "character" &&
+      metadata.printedKeywords.includes("blocker")
+    );
+  });
 };
 
 const hasPotentialBlockerForUnsupportedDoubleAttackWindow = (
@@ -150,19 +180,7 @@ const hasPotentialBlockerForUnsupportedDoubleAttackWindow = (
   if (target === null) {
     return false;
   }
-  const defender = state.players[target.playerId];
-  if (defender === undefined) {
-    return false;
-  }
-  return defender.characters.some((character) => {
-    const metadata = state.cardManifest.cards[character.cardId];
-    return (
-      character.controller === target.playerId &&
-      character.state === "active" &&
-      metadata?.category === "character" &&
-      metadata.printedKeywords.includes("blocker")
-    );
-  });
+  return hasActivePrintedBlocker(state, target.playerId);
 };
 
 export const getDeclareAttackLegalActions = (
@@ -182,7 +200,9 @@ export const getDeclareAttackLegalActions = (
   const legalActionState = withAllAttackTimingCombatMetadataHidden(state);
   try {
     const view = computeView(legalActionState);
-    return collectDeclareAttackLegalActions(state, playerId, view);
+    return collectDeclareAttackLegalActions(state, playerId, view, {
+      filterUnsupportedDoubleAttackBlockers: false,
+    });
   } catch {
     // Fail closed when computed combat metadata is unsupported or invalid.
   }
@@ -195,7 +215,9 @@ export const getDeclareAttackLegalActions = (
   }
   try {
     const view = computeView(fallback.state);
-    return collectDeclareAttackLegalActions(state, playerId, view);
+    return collectDeclareAttackLegalActions(state, playerId, view, {
+      filterUnsupportedDoubleAttackBlockers: true,
+    });
   } catch {
     return [];
   }
