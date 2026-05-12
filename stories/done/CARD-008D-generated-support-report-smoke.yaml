@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Produce a deterministic generated-support report over inline synthetic smoke
   inputs showing supported cards, unsupported blockers, missing primitives,

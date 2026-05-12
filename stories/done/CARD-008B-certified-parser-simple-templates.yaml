@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Implement the first certified exact card-text parser rules for simple
   generated-support templates, starting with `[On Play] Draw 1 card.`

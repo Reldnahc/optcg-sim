@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the first narrow generated-support pipeline from Poneglyph-shaped
   card text through certified parser rules, generated DSL, runtime capability

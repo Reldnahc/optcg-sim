@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Define generated-support parser result contracts and a machine-readable
   runtime capability matrix for currently implemented DSL features.
