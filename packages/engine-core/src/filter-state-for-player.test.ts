@@ -269,6 +269,37 @@ test("fails closed instead of projecting unsupported continuous modifier shapes"
   });
 });
 
+test("projects PlayerView without computed power when Double Attack and continuous effects coexist", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1 state");
+  state.cardManifest.cards[p1State.leader.cardId] = {
+    ...resolvedCard({
+      cardId: p1State.leader.cardId,
+      category: "leader",
+      power: 5000,
+    }),
+    support: {
+      ...must(
+        state.cardManifest.cards[p1State.leader.cardId],
+        "p1 leader metadata",
+      ).support,
+      status: "implemented-dsl",
+    },
+    printedKeywords: ["doubleAttack"],
+  };
+  state.continuousEffects = [
+    continuousEffectRecord(state, "player-view-double-attack-power", {
+      type: "permanent",
+    }),
+  ];
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.equal(view.self.leader.instanceId, p1State.leader.instanceId);
+  assert.equal("currentPower" in view.self.leader, false);
+  assert.equal(JSON.stringify(view).includes("continuousEffects"), false);
+});
+
 test("shows pending decision only to the recipient with public shape", () => {
   const setup = createInitialState(createInput());
   const withDecision = startMulliganFlow(setup).state;

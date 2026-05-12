@@ -67,10 +67,6 @@ const boardCardsForState = (state: GameState): CardInstance[] =>
 const viewPowerUnsupportedKeywords = new Set(["doubleAttack", "unblockable"]);
 
 const hasComputableBoardPowerMetadata = (state: GameState): boolean => {
-  if (state.continuousEffects.length > 0) {
-    return true;
-  }
-
   const effectDefinitions = Object.values(
     state.cardManifest.effectDefinitions ?? {},
   );
