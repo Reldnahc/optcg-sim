@@ -184,7 +184,8 @@ Section Ref: `12-roadmap.s009`
 Deliverables:
 
 - Card-data adapter.
-- Local overlay and support registry.
+- Local overlay and generated support registry.
+- Complete-parse generated support index and runtime capability matrix.
 - Deck CRUD.
 - Deck validation.
 - Variant storage.
@@ -194,6 +195,8 @@ Exit criteria:
 
 - Player can create legal sample deck.
 - Ranked validation rejects unsupported non-vanilla cards.
+- Complete-parse common-template cards can be supported by certified parser rules without manual per-card mapping.
+- Partial, stale, ambiguous, unparsed, or capability-missing generated support remains rejected in normal play.
 - Variant split counts correctly.
 
 ## Milestone 6: replay/rollback/recovery

@@ -724,13 +724,17 @@ The runtime should convert this into a `ContinuousEffectRecord`/modifier and app
 
 Section Ref: `05-effect-dsl-reference.s022`
 
-The original effect-system plan defined three authoring phases:
+The effect-system plan supports three authoring paths:
 
 1. Manual DSL definitions written by developers.
 2. Custom TypeScript handlers for cards that cannot be expressed in DSL.
-3. Generated DSL candidates from Poneglyph printed card text, always requiring human review before merge.
+3. Generated DSL from Poneglyph printed card text when certified parser rules produce a complete parse and runtime capability checks pass.
 
-Generated definitions must never be deployed blindly. The pipeline may read Poneglyph card text and produce a candidate `EffectDefinition`, but a reviewer must verify the card against official text/rulings, update tests, and approve the source-text hash.
+Generated definitions must never be deployed blindly. A new parser rule, ambiguous parse class, custom handler binding, or wording/ruling ambiguity requires review before it can certify support. Once a parser rule is certified, matching complete-parse cards may be generated without a manual per-card allowlist or manual card-to-mechanic map for that common template.
+
+A complete parse covers all gameplay-relevant printed text, trigger text, keyword text, costs, conditions, timing windows, target or selection requirements, visibility requirements, replacement or optionality semantics, and ruling/errata inputs that affect behavior. Multiple parsed effects compose into one generated `EffectDefinition`. Partial parse output may be reported for coverage progress, but it must not make the card playable in normal modes.
+
+Bandai or Poneglyph wording drift must invalidate the affected parse/hash evidence or downgrade support until parser and support evidence are updated. If any parsed component is unparsed, ambiguous, stale, unsupported, or missing runtime capability evidence, the generated definition fails closed instead of partially enabling the card.
 
 ```ts
 interface EffectDefinitionMetadata {

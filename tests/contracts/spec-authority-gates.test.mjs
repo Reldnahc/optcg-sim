@@ -184,6 +184,141 @@ test("engine mechanics spec preserves parenthetical explanatory note authority",
   }
 });
 
+test("specs define generated card support from complete parse and runtime capabilities", async () => {
+  const overview = await readText("specs/00-project-overview.md");
+  const architecture = await readText("specs/01-system-architecture.md");
+  const effectRuntime = await readText("specs/04-effect-runtime.md");
+  const dslSpec = await readText("specs/05-effect-dsl-reference.md");
+  const cardPolicy = await readText("specs/09-card-data-and-support-policy.md");
+  const testingSpec = await readText("specs/11-testing-quality.md");
+  const roadmap = await readText("specs/12-roadmap.md");
+  const examples = await readText("specs/20-card-implementation-examples.md");
+
+  const cardSupport = extractSection(
+    overview,
+    "00-project-overview.s014",
+    "00-project-overview.s015",
+  );
+  const sourceData = extractSectionToEnd(overview, "00-project-overview.s020");
+  const topology = extractSection(
+    architecture,
+    "01-system-architecture.s023",
+    "01-system-architecture.s024",
+  );
+  const runtimeSupport = extractSection(
+    effectRuntime,
+    "04-effect-runtime.s005",
+    "04-effect-runtime.s006",
+  );
+  const textToDsl = extractSection(
+    dslSpec,
+    "05-effect-dsl-reference.s022",
+    "05-effect-dsl-reference.s023",
+  );
+  const generatedSupport = extractSection(
+    cardPolicy,
+    "09-card-data-and-support-policy.s016",
+    "09-card-data-and-support-policy.s017",
+  );
+  const cardDataTests = extractSection(
+    testingSpec,
+    "11-testing-quality.s020",
+    "11-testing-quality.s021",
+  );
+  const milestoneFive = extractSection(
+    roadmap,
+    "12-roadmap.s009",
+    "12-roadmap.s010",
+  );
+  const implementationExamplesPurpose = extractSection(
+    examples,
+    "20-card-implementation-examples.s002",
+    "20-card-implementation-examples.s003",
+  );
+
+  for (const requiredText of [
+    "certified parser rule",
+    "completely parses the card's gameplay-relevant text",
+    "runtime capability matrix confirms every parsed component is currently supported",
+    "Partial, ambiguous, stale, or capability-missing parses remain unsupported for normal play",
+  ]) {
+    assertContainsWords(cardSupport, requiredText);
+  }
+
+  for (const requiredText of [
+    "generated support index",
+    "complete parsed behavior is playable in normal modes",
+  ]) {
+    assertContainsWords(sourceData, requiredText);
+  }
+
+  for (const requiredText of [
+    "certified parser rules may generate complete parsed effect definitions",
+    "runtime capability matrix gates generated support status",
+    "not from a manual per-card allowlist or manual card-to-mechanic map",
+    "any unparsed, ambiguous, stale, unsupported, or capability-missing component keeps the card unsupported in normal play",
+  ]) {
+    assertContainsWords(topology, requiredText);
+  }
+
+  for (const requiredText of [
+    "runtime must expose or consume a capability matrix",
+    "keyword bodies, DSL primitives, trigger timings, decision types, replacement processes, visibility modes, target shapes, costs, and custom handlers",
+    "Multiple parsed effects from one card compose into one generated `EffectDefinition`",
+    "the entire generated support record fails closed for normal play",
+  ]) {
+    assertContainsWords(runtimeSupport, requiredText);
+  }
+
+  for (const requiredText of [
+    "Generated DSL from Poneglyph printed card text when certified parser rules produce a complete parse and runtime capability checks pass",
+    "Once a parser rule is certified, matching complete-parse cards may be generated without a manual per-card allowlist or manual card-to-mechanic map",
+    "Partial parse output may be reported for coverage progress, but it must not make the card playable in normal modes",
+    "Bandai or Poneglyph wording drift must invalidate the affected parse/hash evidence or downgrade support",
+  ]) {
+    assertContainsWords(textToDsl, requiredText);
+  }
+
+  for (const requiredText of [
+    "Common-template card support is generated from complete parsing plus runtime capability checks",
+    "must not depend on a manual per-card allowlist or a manual card-to-mechanic map",
+    "Complete parse means every gameplay-relevant part of a card is parsed",
+    "runtime capability matrix records which generated components the current engine can execute",
+    "generated support index maps Poneglyph card IDs and source hashes to generated `EffectDefinition` IDs",
+    "Multiple parsed effects for one card compose into one generated `EffectDefinition`",
+    "Partial support reporting is allowed and encouraged for progress tracking",
+    "Partial support does not make a card playable in normal modes",
+    "Generated support fails closed",
+    "New parser rules, ambiguous parse classes, custom handlers, and wording or ruling ambiguity require review",
+  ]) {
+    assertContainsWords(generatedSupport, requiredText);
+  }
+
+  for (const requiredText of [
+    "CD-009 generated support index accepts only complete-parse cards whose every parsed component is covered by the runtime capability matrix",
+    "CD-010 partial, ambiguous, stale, unparsed, unsupported, or capability-missing generated support reports do not make cards playable in normal modes",
+    "CD-011 certified parser-rule fixtures auto-support matching complete-parse common-template cards without a manual per-card allowlist",
+  ]) {
+    assertContainsWords(cardDataTests, requiredText);
+  }
+
+  for (const requiredText of [
+    "Complete-parse generated support index and runtime capability matrix",
+    "Complete-parse common-template cards can be supported by certified parser rules without manual per-card mapping",
+    "Partial, stale, ambiguous, unparsed, or capability-missing generated support remains rejected in normal play",
+  ]) {
+    assertContainsWords(milestoneFive, requiredText);
+  }
+
+  for (const requiredText of [
+    "parser-rule certification fixtures",
+    "A complete parser rule may auto-support matching common-template cards only when it parses the entire gameplay-relevant text",
+    "not evidence for a manual per-card allowlist or partial support",
+  ]) {
+    assertContainsWords(implementationExamplesPurpose, requiredText);
+  }
+});
+
 test("Milestone 1 exit gates require full vanilla CLI, local smoke hash reconstruction, sequencing, and real filterStateForPlayer tests", async () => {
   const roadmap = await readText("specs/12-roadmap.md");
   const kickoff = await readText("specs/15-implementation-kickoff.md");

@@ -401,7 +401,9 @@ Poneglyph is external display/metadata truth. The simulator is gameplay truth.
 Poneglyph API
   -> @optcg/cards fetches and validates with Zod
   -> Redis read-through cache stores validated Poneglyph metadata
-  -> simulator overlay adds effect definitions, support status, rulings, banlist status
+  -> certified parser rules may generate complete parsed effect definitions
+  -> runtime capability matrix gates generated support status
+  -> simulator overlay adds reviewed custom behavior, rulings, banlist status, and explicit overrides
   -> match server snapshots resolved cards at match creation
   -> engine consumes the match card manifest and effect registry
 ```
@@ -412,6 +414,8 @@ Important boundaries:
 - The client may fetch Poneglyph data for images/search/display only.
 - The server validates every Poneglyph response before use.
 - Simulator overlays are keyed by Poneglyph card ID.
+- Common-template support is generated from complete parse plus runtime capability checks, not from a manual per-card allowlist or manual card-to-mechanic map.
+- Generated support records are fail-closed: any unparsed, ambiguous, stale, unsupported, or capability-missing component keeps the card unsupported in normal play.
 - Poneglyph variant indexes/generated variant keys are cosmetic and stored in deck data, not rule state.
 
 ## Original team and workflow rules preserved

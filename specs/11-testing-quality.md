@@ -361,6 +361,9 @@ CD-005 Poneglyph source text hash drift marks implementation stale
 CD-006 unsupported non-vanilla Poneglyph card cannot enter ranked deck
 CD-007 variant indexes/generated variant keys are accepted only when valid for the base card
 CD-008 client display data cannot alter server-resolved match manifest
+CD-009 generated support index accepts only complete-parse cards whose every parsed component is covered by the runtime capability matrix
+CD-010 partial, ambiguous, stale, unparsed, unsupported, or capability-missing generated support reports do not make cards playable in normal modes
+CD-011 certified parser-rule fixtures auto-support matching complete-parse common-template cards without a manual per-card allowlist
 ```
 
 These tests prevent the card-data layer from becoming an implicit rules authority.
