@@ -4,6 +4,7 @@ import { test } from "vitest";
 import type {
   CardId,
   CardInstance,
+  ContinuousEffectRecord,
   MatchCardManifest,
   MatchId,
   PlayerId,
@@ -176,6 +177,63 @@ const withCharacter = (
   return card;
 };
 
+const continuousPowerEffectRecord = (
+  state: ReturnType<typeof createState>,
+  options?: {
+    id?: string;
+    modifier?: ContinuousEffectRecord["modifier"];
+    duration?: ContinuousEffectRecord["duration"];
+    condition?: ContinuousEffectRecord["condition"];
+  },
+): ContinuousEffectRecord => {
+  const source = must(state.players[p1], "p1 state").leader;
+  const record: ContinuousEffectRecord = {
+    id: options?.id ?? "continuous-power-1000",
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: source.zone,
+      category: "leader",
+      colors: ["red"],
+      power: 5000,
+      keywords: [],
+    },
+    controller: p1,
+    modifier: options?.modifier ?? {
+      layer: "powerAdd",
+      target: { type: "self" },
+      operation: { type: "addPower", value: 1000 },
+    },
+    duration: options?.duration ?? { type: "permanent" },
+    createdBy: { type: "ruleProcess", name: "compute-view-test" },
+    createdAtStateSeq: state.seq,
+  };
+  if (options?.condition !== undefined) {
+    record.condition = options.condition;
+  }
+  return record;
+};
+
+const assertRejectsUnsupportedContinuousEffect = (
+  effect: ContinuousEffectRecord,
+) => {
+  const state = createState();
+  state.continuousEffects = [effect];
+
+  assert.throws(() => computeView(state), {
+    name: "TypeError",
+    message: `Unsupported continuous effect ${effect.id}: only unconditional self +1000 powerAdd modifiers with permanent or whileSourceOnField duration are supported by computeView.`,
+  });
+};
+
 test("computes base/current power from manifest with attached DON!! during controller turn", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
@@ -203,6 +261,180 @@ test("computes base/current power from manifest with attached DON!! during contr
   assert.equal(characterView.basePower, 3000);
   assert.equal(characterView.currentPower, 5000);
 });
+
+test("accepts permanent self +1000 powerAdd continuous modifier without changing computed power", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  const before = computeView(state);
+
+  state.continuousEffects = [
+    continuousPowerEffectRecord(state, {
+      id: "supported-permanent-power",
+      duration: { type: "permanent" },
+    }),
+  ];
+
+  const after = computeView(state);
+  assert.equal(
+    after.cards[p1State.leader.instanceId]?.currentPower,
+    before.cards[p1State.leader.instanceId]?.currentPower,
+  );
+});
+
+test("accepts whileSourceOnField self +1000 powerAdd continuous modifier without changing computed power", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
+  const character = must(p1State.characters[0], "p1 character");
+  const before = computeView(state);
+
+  state.continuousEffects = [
+    continuousPowerEffectRecord(state, {
+      id: "supported-while-source-on-field-power",
+      duration: { type: "whileSourceOnField" },
+    }),
+  ];
+
+  const after = computeView(state);
+  assert.equal(
+    after.cards[character.instanceId]?.currentPower,
+    before.cards[character.instanceId]?.currentPower,
+  );
+});
+
+const unsupportedContinuousEffectCases: Array<{
+  label: string;
+  createEffect: (
+    state: ReturnType<typeof createState>,
+  ) => ContinuousEffectRecord;
+}> = [
+  {
+    label: "base power set modifier",
+    createEffect: (state) =>
+      continuousPowerEffectRecord(state, {
+        id: "unsupported-base-power-set",
+        modifier: {
+          layer: "basePowerSet",
+          target: { type: "self" },
+          operation: { type: "setBasePower", value: 9000 },
+        },
+      }),
+  },
+  {
+    label: "base cost set modifier",
+    createEffect: (state) =>
+      continuousPowerEffectRecord(state, {
+        id: "unsupported-base-cost-set",
+        modifier: {
+          layer: "baseCostSet",
+          target: { type: "self" },
+          operation: { type: "setBaseCost", value: 1 },
+        },
+      }),
+  },
+  {
+    label: "cost add modifier",
+    createEffect: (state) =>
+      continuousPowerEffectRecord(state, {
+        id: "unsupported-cost-add",
+        modifier: {
+          layer: "costAdd",
+          target: { type: "self" },
+          operation: { type: "addCost", value: 1 },
+        },
+      }),
+  },
+  {
+    label: "keyword modifier",
+    createEffect: (state) =>
+      continuousPowerEffectRecord(state, {
+        id: "unsupported-keyword-add",
+        modifier: {
+          layer: "keywordAdd",
+          target: { type: "self" },
+          operation: { type: "addKeyword", keyword: "banish" },
+        },
+      }),
+  },
+  {
+    label: "restriction modifier",
+    createEffect: (state) =>
+      continuousPowerEffectRecord(state, {
+        id: "unsupported-restriction",
+        modifier: {
+          layer: "restriction",
+          target: { type: "self" },
+          operation: { type: "restriction", restriction: "cannotAttack" },
+        },
+      }),
+  },
+  {
+    label: "protection modifier",
+    createEffect: (state) => {
+      const base = continuousPowerEffectRecord(state, {
+        id: "unsupported-protection",
+      });
+      return {
+        ...base,
+        modifier: {
+          layer: "protection",
+          target: { type: "self" },
+          operation: {
+            type: "protection",
+            protection: { process: "ko", source: base.source },
+          },
+        },
+      };
+    },
+  },
+  {
+    label: "non-self target",
+    createEffect: (state) =>
+      continuousPowerEffectRecord(state, {
+        id: "unsupported-non-self-target",
+        modifier: {
+          layer: "powerAdd",
+          target: { type: "myLeader" },
+          operation: { type: "addPower", value: 1000 },
+        },
+      }),
+  },
+  {
+    label: "non-1000 power value",
+    createEffect: (state) =>
+      continuousPowerEffectRecord(state, {
+        id: "unsupported-power-value",
+        modifier: {
+          layer: "powerAdd",
+          target: { type: "self" },
+          operation: { type: "addPower", value: 2000 },
+        },
+      }),
+  },
+  {
+    label: "conditional modifier",
+    createEffect: (state) =>
+      continuousPowerEffectRecord(state, {
+        id: "unsupported-condition",
+        condition: { type: "yourTurn" },
+      }),
+  },
+  {
+    label: "unsupported duration",
+    createEffect: (state) =>
+      continuousPowerEffectRecord(state, {
+        id: "unsupported-duration",
+        duration: { type: "thisTurn" },
+      }),
+  },
+];
+
+for (const { label, createEffect } of unsupportedContinuousEffectCases) {
+  test(`fails closed for unsupported continuous effect ${label}`, () => {
+    const state = createState();
+    assertRejectsUnsupportedContinuousEffect(createEffect(state));
+  });
+}
 
 test("attached DON!! does not modify current power outside controller turn", () => {
   const state = createState();
