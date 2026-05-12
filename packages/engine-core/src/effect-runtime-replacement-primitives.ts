@@ -303,7 +303,12 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
   const targetLookup = validateKoReplacementTarget(state, effectId, target);
   if (!targetLookup.ok) return targetLookup;
   const { located, ref, resolved } = targetLookup;
-  if (resolved.support.effectDefinitionId === undefined) return { ok: true };
+  if (
+    resolved.support.status === "vanilla-confirmed" &&
+    resolved.support.effectDefinitionId === undefined
+  ) {
+    return { ok: true };
+  }
 
   const lookup = resolveReviewedImplementedDslEffectDefinition(
     resolved,

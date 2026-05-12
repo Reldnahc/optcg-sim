@@ -499,6 +499,60 @@ test("fails closed without mutation for private selected KO replacement target",
   assert.deepEqual(state, before);
 });
 
+test.each([
+  {
+    name: "custom handler",
+    support: {
+      status: "implemented-custom" as const,
+      customHandlerIds: ["custom-ko-replacement"],
+    },
+    reason: "implemented-custom-status",
+  },
+  {
+    name: "unsupported status",
+    support: {
+      status: "unsupported" as const,
+    },
+    reason: "unsupported-support-status",
+  },
+] satisfies {
+  name: string;
+  support: Partial<ReturnType<typeof resolvedCard>["support"]>;
+  reason: string;
+}[])(
+  "fails closed without mutation for KO replacement support metadata with no definition id and $name",
+  ({ support, reason }) => {
+    const { state, entry, refs, targetA } = setupKoPrimitiveState();
+    state.cardManifest.cards[targetA.cardId] = resolvedCard({
+      cardId: targetA.cardId,
+      category: "character",
+      power: 3000,
+      support,
+    });
+    const process = buildSelectedTargetKoReplacementProcess(
+      entry,
+      must(refs[0], "target A ref"),
+      0,
+    );
+    const before = structuredClone(state);
+
+    const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+      state,
+      process,
+    );
+
+    assert.deepEqual(detected, {
+      ok: false,
+      error: {
+        type: "effectRuntimeError",
+        effectId: entry.effectBlockId,
+        details: { reason },
+      },
+    });
+    assert.deepEqual(state, before);
+  },
+);
+
 test("fails closed without mutation for KO replacement support metadata with custom handlers", () => {
   const { state, entry, refs, targetA } = setupKoPrimitiveState();
   setupReviewedKoReplacementDefinition(
