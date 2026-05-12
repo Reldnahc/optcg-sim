@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-044A.md",
+      "storyId": "ENG-044A",
+      "storyPath": "stories/approved/ENG-044A-continuous-power-modifier-support-gate.yaml",
+      "storySha256": "cafc116f6c0d21eacec710f573fb45cdc02aa76de5ebd91fd23f46e0e970c7c8"
+    }
+  ],
   "version": 1
 }
