@@ -8,6 +8,7 @@ import type {
   CardRef,
   DecisionId,
   DecisionResponse,
+  EffectDefinition,
   EffectId,
   EngineEvent,
   EngineResult,
@@ -182,6 +183,60 @@ const setupSelectTargetsDecision = (
     })),
   };
   return { state, targets: candidateRefs, queueEntry };
+};
+
+const attachReviewedKoReplacementDefinition = (
+  state: GameState,
+  target: CardRef,
+): EffectDefinition["effects"][number] => {
+  const support = {
+    cardId: target.cardId,
+    status: "implemented-dsl" as const,
+    tested: true,
+    rulesVersion: "replacement-rules",
+    cardDataVersion: state.cardManifest.cardDataVersion,
+    sourceTextHash: "replacement-source-hash",
+    behaviorHash: "replacement-behavior-hash",
+    effectDefinitionId: `definition:${String(target.cardId)}:replacement`,
+  };
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 3000,
+    support,
+  });
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: toEffectId("replacement:would-be-ko-draw-1"),
+    category: "replacement",
+    trigger: {
+      type: "replacement",
+      replacement: { type: "wouldBeKOd", target: { type: "self" } },
+    },
+    optional: true,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    effect: {
+      type: "replacement",
+      when: { type: "wouldBeKOd", target: { type: "self" } },
+      instead: { type: "draw", count: 1, player: "self" },
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [support.effectDefinitionId]: {
+      cardId: target.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [effectBlock],
+      metadata: {
+        sourceTextHash: support.sourceTextHash,
+        rulesVersion: support.rulesVersion,
+        effectDefinitionsVersion: state.cardManifest.effectDefinitionsVersion,
+        tested: true,
+        reviewedBy: "engine-reviewer",
+        reviewedAt: "2026-05-11T00:00:00.000Z",
+      },
+    },
+  };
+  return effectBlock;
 };
 
 const respondWithTargets = (
@@ -881,4 +936,32 @@ test("allowFewerIfUnavailable permits fewer than min only when current candidate
       reason: "Selected target count is below the required minimum.",
     },
   ]);
+});
+
+test("selected-target continuation pauses for chooseReplacement without resolving the source effect", () => {
+  const { state, targets } = setupSelectTargetsDecision();
+  const decision = must(state.pendingDecision, "target decision");
+  const target = must(targets[0], "target");
+  const effectBlock = attachReviewedKoReplacementDefinition(state, target);
+
+  const result = applyAction(state, respondWithTargets(decision.id, [target]));
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["decisionResolved", "decisionCreated"],
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "effectResolved"),
+    false,
+  );
+  assert.equal(result.state.pendingDecision?.type, "chooseReplacement");
+  assert.equal(result.state.pendingDecision.playerId, p2);
+  assert.deepEqual(result.state.pendingDecision.replacementIds, [
+    String(effectBlock.id),
+  ]);
+  assert.equal(
+    result.state.eventJournal.some((event) => event.type === "effectResolved"),
+    false,
+  );
 });
