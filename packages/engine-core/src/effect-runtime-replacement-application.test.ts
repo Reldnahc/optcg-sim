@@ -224,6 +224,17 @@ const acceptReplacement = () => {
   return { ...paused, accepted };
 };
 
+const declineReplacement = () => {
+  const paused = pauseForReplacementDecision();
+  const declined = applyAction(paused.result.state, {
+    type: "respondToDecision",
+    decisionId: paused.decision.id,
+    playerId: p2,
+    response: { type: "replacement" },
+  });
+  return { ...paused, declined };
+};
+
 const acceptedProcessFromResult = (
   result: ReturnType<typeof executeAcceptedSelectedTargetKoReplacementProcess>,
 ): ReplacementProcess => {
@@ -421,3 +432,113 @@ test("accepted KO replacement allows the same replacement id on a separate proce
     [replacementId],
   );
 });
+
+test("declining optional chooseReplacement resolves with deterministic hash and KO passthrough ordering", () => {
+  const first = declineReplacement();
+  const second = declineReplacement();
+
+  assert.equal(first.declined.errors, undefined);
+  assert.equal(first.declined.state.pendingDecision, undefined);
+  assert.deepEqual(first.declined.state.replacementState, []);
+  assert.deepEqual(
+    first.declined.events.map((event) => event.type),
+    ["decisionResolved", "cardKOd", "cardMoved"],
+  );
+  assert.equal(
+    first.declined.stateHash,
+    hashCanonicalStateValue(first.declined.state),
+  );
+  assert.equal(first.declined.stateHash, second.declined.stateHash);
+  assert.deepEqual(
+    first.declined.events.map(({ type, payload, visibility, causedBy }) => ({
+      type,
+      payload,
+      visibility,
+      causedBy,
+    })),
+    second.declined.events.map(({ type, payload, visibility, causedBy }) => ({
+      type,
+      payload,
+      visibility,
+      causedBy,
+    })),
+  );
+});
+
+test.each([
+  {
+    name: "non-object payload",
+    replacementState: {
+      processId: "queue-entry-ko-replacement:ko:process",
+      type: "ko" as const,
+      usedReplacementIds: [],
+      payload: "malformed",
+    },
+  },
+  {
+    name: "invalid source card ref shape",
+    replacementState: {
+      processId: "queue-entry-ko-replacement:ko:process",
+      type: "ko" as const,
+      usedReplacementIds: [],
+      payload: {
+        effectId: "ko-replacement-effect",
+        source: { instanceId: "missing-fields" },
+      },
+    },
+  },
+  {
+    name: "invalid target card ref shape",
+    replacementState: {
+      processId: "queue-entry-ko-replacement:ko:process",
+      type: "ko" as const,
+      usedReplacementIds: [],
+      payload: {
+        effectId: "ko-replacement-effect",
+        target: { cardId: "missing-instance-id" },
+      },
+    },
+  },
+] satisfies {
+  name: string;
+  replacementState: {
+    processId: string;
+    type: "ko";
+    usedReplacementIds: string[];
+    payload: unknown;
+  };
+}[])(
+  "chooseReplacement fails closed without mutation for malformed stored process: $name",
+  ({ replacementState }) => {
+    const paused = pauseForReplacementDecision();
+    const malformedState = {
+      ...paused.result.state,
+      replacementState: [
+        {
+          ...replacementState,
+          processId: paused.decision.processId,
+        },
+      ],
+    };
+    const before = structuredClone(malformedState);
+    const beforeHash = hashCanonicalStateValue(malformedState);
+
+    const rejected = applyAction(malformedState, {
+      type: "respondToDecision",
+      decisionId: paused.decision.id,
+      playerId: p2,
+      response: { type: "replacement" },
+    });
+
+    assert.deepEqual(rejected.errors, [
+      {
+        type: "invalidDecisionResponse",
+        reason:
+          "chooseReplacement decision is stale for current replacement process.",
+      },
+    ]);
+    assert.deepEqual(rejected.events, []);
+    assert.deepEqual(rejected.state, before);
+    assert.equal(rejected.stateHash, beforeHash);
+  },
+);
