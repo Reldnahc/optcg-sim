@@ -155,6 +155,8 @@ Section Ref: `00-project-overview.s014`
 
 A card is `vanilla-confirmed`, `implemented-dsl`, `implemented-custom`, `unsupported`, or `banned-in-simulator`. Missing implementations are not silently allowed in normal play.
 
+Common card support does not require a manual per-card allowlist when a certified parser rule completely parses the card's gameplay-relevant text into supported keyword, DSL, or custom behavior and the runtime capability matrix confirms every parsed component is currently supported. Partial, ambiguous, stale, or capability-missing parses remain unsupported for normal play.
+
 ### Ship a narrow game first
 
 <!-- SECTION_REF: 00-project-overview.s015 -->
@@ -247,6 +249,6 @@ The exact package names can change, but the boundary between full-state server l
 
 Section Ref: `00-project-overview.s020`
 
-The simulator uses Poneglyph API (`api.poneglyph.one`) as the external source for printed card metadata: card IDs, names, text, stats, images, and variants. The simulator does not treat Poneglyph or local code as rules authority; it uses official rules/card wording/rulings as authority and uses local effect definitions, custom handlers, rulings overlays, support status, and banlist overlays to implement that authority.
+The simulator uses Poneglyph API (`api.poneglyph.one`) as the external source for printed card metadata: card IDs, names, text, stats, images, and variants. The simulator does not treat Poneglyph or local code as rules authority; it uses official rules/card wording/rulings as authority and uses generated or reviewed effect definitions, certified parser rules, custom handlers, runtime capability evidence, rulings overlays, support status, and banlist overlays to implement that authority.
 
-This distinction matters: Poneglyph data tells the simulator what a card says and looks like; the simulator overlay tells the engine what the card does.
+This distinction matters: Poneglyph data tells the simulator what a card says and looks like; the simulator's generated support index and overlays tell the engine what the card does and whether that complete parsed behavior is playable in normal modes.

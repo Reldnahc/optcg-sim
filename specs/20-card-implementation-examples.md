@@ -28,6 +28,8 @@ This file turns the supplied Poneglyph card examples into implementation guidanc
 - An effect can add a card to hand and then immediately allow that same card to be played.
 - Card filters need name exclusion, type matching, color matching, category matching, and cost ranges.
 
+These examples may be used as parser-rule certification fixtures. A complete parser rule may auto-support matching common-template cards only when it parses the entire gameplay-relevant text and the runtime capability matrix supports every parsed component. They are not evidence for a manual per-card allowlist or partial support.
+
 ## Example 1: OP01-060 Donquixote Doflamingo
 
 <!-- SECTION_REF: 20-card-implementation-examples.s003 -->

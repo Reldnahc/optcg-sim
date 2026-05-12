@@ -206,7 +206,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "Ship a narrow game first",
       "heading_level": 3,
-      "marker_line": 151,
+      "marker_line": 153,
       "visible_line": "Section Ref: `00-project-overview.s015`"
     },
     {
@@ -215,7 +215,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "Launch blockers",
       "heading_level": 2,
-      "marker_line": 159,
+      "marker_line": 161,
       "visible_line": "Section Ref: `00-project-overview.s016`"
     },
     {
@@ -224,7 +224,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "System actors",
       "heading_level": 2,
-      "marker_line": 175,
+      "marker_line": 177,
       "visible_line": "Section Ref: `00-project-overview.s017`"
     },
     {
@@ -233,7 +233,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "Match modes",
       "heading_level": 2,
-      "marker_line": 191,
+      "marker_line": 193,
       "visible_line": "Section Ref: `00-project-overview.s018`"
     },
     {
@@ -242,7 +242,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "Repository shape",
       "heading_level": 2,
-      "marker_line": 207,
+      "marker_line": 209,
       "visible_line": "Section Ref: `00-project-overview.s019`"
     },
     {
@@ -251,7 +251,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "Source-data assumption",
       "heading_level": 2,
-      "marker_line": 237,
+      "marker_line": 239,
       "visible_line": "Section Ref: `00-project-overview.s020`"
     },
     {
@@ -467,7 +467,7 @@
       "doc_path": "01-system-architecture.md",
       "heading": "Original team and workflow rules preserved",
       "heading_level": 2,
-      "marker_line": 410,
+      "marker_line": 414,
       "visible_line": "Section Ref: `01-system-architecture.s024`"
     },
     {
@@ -476,7 +476,7 @@
       "doc_path": "01-system-architecture.md",
       "heading": "Deployment and scaling notes from the original plan",
       "heading_level": 2,
-      "marker_line": 438,
+      "marker_line": 442,
       "visible_line": "Section Ref: `01-system-architecture.s025`"
     },
     {
@@ -1151,7 +1151,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Effect queue entry",
       "heading_level": 2,
-      "marker_line": 84,
+      "marker_line": 88,
       "visible_line": "Section Ref: `04-effect-runtime.s006`"
     },
     {
@@ -1160,7 +1160,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Source presence policy",
       "heading_level": 2,
-      "marker_line": 109,
+      "marker_line": 113,
       "visible_line": "Section Ref: `04-effect-runtime.s007`"
     },
     {
@@ -1169,7 +1169,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Trigger detection from events",
       "heading_level": 2,
-      "marker_line": 137,
+      "marker_line": 141,
       "visible_line": "Section Ref: `04-effect-runtime.s008`"
     },
     {
@@ -1178,7 +1178,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Queue ordering",
       "heading_level": 2,
-      "marker_line": 163,
+      "marker_line": 167,
       "visible_line": "Section Ref: `04-effect-runtime.s009`"
     },
     {
@@ -1187,7 +1187,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Queue processing",
       "heading_level": 2,
-      "marker_line": 191,
+      "marker_line": 195,
       "visible_line": "Section Ref: `04-effect-runtime.s010`"
     },
     {
@@ -1196,7 +1196,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Conditions and costs",
       "heading_level": 2,
-      "marker_line": 244,
+      "marker_line": 248,
       "visible_line": "Section Ref: `04-effect-runtime.s011`"
     },
     {
@@ -1205,7 +1205,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Player choices during effect resolution",
       "heading_level": 2,
-      "marker_line": 268,
+      "marker_line": 272,
       "visible_line": "Section Ref: `04-effect-runtime.s012`"
     },
     {
@@ -1214,7 +1214,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Replacement effects",
       "heading_level": 2,
-      "marker_line": 302,
+      "marker_line": 306,
       "visible_line": "Section Ref: `04-effect-runtime.s013`"
     },
     {
@@ -1223,7 +1223,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Continuous effects as computed view",
       "heading_level": 2,
-      "marker_line": 379,
+      "marker_line": 383,
       "visible_line": "Section Ref: `04-effect-runtime.s014`"
     },
     {
@@ -1232,7 +1232,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Duration expiration",
       "heading_level": 2,
-      "marker_line": 429,
+      "marker_line": 433,
       "visible_line": "Section Ref: `04-effect-runtime.s015`"
     },
     {
@@ -1241,7 +1241,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Failure policy",
       "heading_level": 2,
-      "marker_line": 445,
+      "marker_line": 449,
       "visible_line": "Section Ref: `04-effect-runtime.s016`"
     },
     {
@@ -1250,7 +1250,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Transient reveal and selection sets",
       "heading_level": 2,
-      "marker_line": 461,
+      "marker_line": 465,
       "visible_line": "Section Ref: `04-effect-runtime.s017`"
     },
     {
@@ -1259,7 +1259,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Custom handlers",
       "heading_level": 2,
-      "marker_line": 477,
+      "marker_line": 481,
       "visible_line": "Section Ref: `04-effect-runtime.s018`"
     },
     {
@@ -1268,7 +1268,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Effect logging",
       "heading_level": 2,
-      "marker_line": 505,
+      "marker_line": 509,
       "visible_line": "Section Ref: `04-effect-runtime.s019`"
     },
     {
@@ -1475,7 +1475,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "v3 additions from real Poneglyph examples",
       "heading_level": 2,
-      "marker_line": 739,
+      "marker_line": 743,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s023`"
     },
     {
@@ -1484,7 +1484,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Source-attached DON!! condition",
       "heading_level": 3,
-      "marker_line": 747,
+      "marker_line": 751,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s024`"
     },
     {
@@ -1493,7 +1493,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Richer filters",
       "heading_level": 3,
-      "marker_line": 764,
+      "marker_line": 768,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s025`"
     },
     {
@@ -1502,7 +1502,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Transient reveal and selection primitives",
       "heading_level": 3,
-      "marker_line": 785,
+      "marker_line": 789,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s026`"
     },
     {
@@ -1511,7 +1511,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Effect-play options",
       "heading_level": 3,
-      "marker_line": 847,
+      "marker_line": 851,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s027`"
     },
     {
@@ -1520,7 +1520,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example implementation docs",
       "heading_level": 2,
-      "marker_line": 861,
+      "marker_line": 865,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s028`"
     },
     {
@@ -1529,7 +1529,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Schema coverage policy",
       "heading_level": 2,
-      "marker_line": 869,
+      "marker_line": 873,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s029`"
     },
     {
@@ -2321,7 +2321,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Support policy by mode",
       "heading_level": 2,
-      "marker_line": 215,
+      "marker_line": 216,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s011`"
     },
     {
@@ -2330,7 +2330,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Deck validation",
       "heading_level": 2,
-      "marker_line": 231,
+      "marker_line": 232,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s012`"
     },
     {
@@ -2339,7 +2339,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Match-time card manifest",
       "heading_level": 2,
-      "marker_line": 266,
+      "marker_line": 269,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s013`"
     },
     {
@@ -2348,7 +2348,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Canonical Poneglyph normalization",
       "heading_level": 3,
-      "marker_line": 287,
+      "marker_line": 290,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s014`"
     },
     {
@@ -2357,16 +2357,16 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Poneglyph text hash and stale-card review",
       "heading_level": 2,
-      "marker_line": 304,
+      "marker_line": 307,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s015`"
     },
     {
       "section_ref": "09-card-data-and-support-policy.s016",
       "doc_id": "09-card-data-and-support-policy",
       "doc_path": "09-card-data-and-support-policy.md",
-      "heading": "Card addition flow - manual Phase 1",
+      "heading": "Generated support from complete parse",
       "heading_level": 2,
-      "marker_line": 321,
+      "marker_line": 325,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s016`"
     },
     {
@@ -2375,7 +2375,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Card addition flow - assisted Phase 3",
       "heading_level": 2,
-      "marker_line": 337,
+      "marker_line": 343,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s017`"
     },
     {
@@ -2384,7 +2384,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Effect coverage report",
       "heading_level": 2,
-      "marker_line": 353,
+      "marker_line": 359,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s018`"
     },
     {
@@ -2393,7 +2393,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Failure behavior",
       "heading_level": 2,
-      "marker_line": 385,
+      "marker_line": 391,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s019`"
     },
     {
@@ -2402,7 +2402,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Custom handler governance",
       "heading_level": 2,
-      "marker_line": 403,
+      "marker_line": 409,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s020`"
     },
     {
@@ -2411,7 +2411,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Banlist and simulator ban policy",
       "heading_level": 2,
-      "marker_line": 418,
+      "marker_line": 424,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s021`"
     },
     {
@@ -2420,7 +2420,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Security checklist",
       "heading_level": 2,
-      "marker_line": 444,
+      "marker_line": 450,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s022`"
     },
     {
@@ -2429,7 +2429,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Concrete Poneglyph API contract",
       "heading_level": 2,
-      "marker_line": 459,
+      "marker_line": 465,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s023`"
     },
     {
@@ -2438,7 +2438,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Source hash and behavior hash",
       "heading_level": 2,
-      "marker_line": 475,
+      "marker_line": 481,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s024`"
     },
     {
@@ -2447,7 +2447,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Poneglyph fixture-backed implementation tests",
       "heading_level": 2,
-      "marker_line": 500,
+      "marker_line": 506,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s025`"
     },
     {
@@ -2816,7 +2816,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "v6 contract validation",
       "heading_level": 2,
-      "marker_line": 361,
+      "marker_line": 364,
       "visible_line": "Section Ref: `11-testing-quality.s021`"
     },
     {
@@ -2825,7 +2825,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Required repo enforcement linkage",
       "heading_level": 2,
-      "marker_line": 380,
+      "marker_line": 383,
       "visible_line": "Section Ref: `11-testing-quality.s022`"
     },
     {
@@ -2915,7 +2915,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Milestone 6: replay/rollback/recovery",
       "heading_level": 2,
-      "marker_line": 192,
+      "marker_line": 195,
       "visible_line": "Section Ref: `12-roadmap.s010`"
     },
     {
@@ -2924,7 +2924,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Milestone 7: public unranked alpha and custom lobbies",
       "heading_level": 2,
-      "marker_line": 214,
+      "marker_line": 217,
       "visible_line": "Section Ref: `12-roadmap.s011`"
     },
     {
@@ -2933,7 +2933,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Milestone 8: ranked ladder beta",
       "heading_level": 2,
-      "marker_line": 237,
+      "marker_line": 240,
       "visible_line": "Section Ref: `12-roadmap.s012`"
     },
     {
@@ -2942,7 +2942,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Open decisions",
       "heading_level": 2,
-      "marker_line": 260,
+      "marker_line": 263,
       "visible_line": "Section Ref: `12-roadmap.s013`"
     },
     {
@@ -2951,7 +2951,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Risk register",
       "heading_level": 2,
-      "marker_line": 276,
+      "marker_line": 279,
       "visible_line": "Section Ref: `12-roadmap.s014`"
     },
     {
@@ -2960,7 +2960,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Immediate next tasks",
       "heading_level": 2,
-      "marker_line": 295,
+      "marker_line": 298,
       "visible_line": "Section Ref: `12-roadmap.s015`"
     },
     {
@@ -2969,7 +2969,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Original phase plan preserved",
       "heading_level": 2,
-      "marker_line": 309,
+      "marker_line": 312,
       "visible_line": "Section Ref: `12-roadmap.s016`"
     },
     {
@@ -2978,7 +2978,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Original Phase 1 - Foundation, weeks 1-4",
       "heading_level": 3,
-      "marker_line": 317,
+      "marker_line": 320,
       "visible_line": "Section Ref: `12-roadmap.s017`"
     },
     {
@@ -2987,7 +2987,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Original Phase 2 - Playable prototype, weeks 5-10",
       "heading_level": 3,
-      "marker_line": 330,
+      "marker_line": 333,
       "visible_line": "Section Ref: `12-roadmap.s018`"
     },
     {
@@ -2996,7 +2996,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Original Phase 3 - Feature completion, weeks 11-18",
       "heading_level": 3,
-      "marker_line": 342,
+      "marker_line": 345,
       "visible_line": "Section Ref: `12-roadmap.s019`"
     },
     {
@@ -3005,7 +3005,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Original Phase 4 - Launch and iterate",
       "heading_level": 3,
-      "marker_line": 354,
+      "marker_line": 357,
       "visible_line": "Section Ref: `12-roadmap.s020`"
     },
     {
@@ -3014,7 +3014,7 @@
       "doc_path": "12-roadmap.md",
       "heading": "Why the revised solo order differs",
       "heading_level": 2,
-      "marker_line": 367,
+      "marker_line": 370,
       "visible_line": "Section Ref: `12-roadmap.s021`"
     },
     {
@@ -3932,7 +3932,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Example 1: OP01-060 Donquixote Doflamingo",
       "heading_level": 2,
-      "marker_line": 24,
+      "marker_line": 26,
       "visible_line": "Section Ref: `20-card-implementation-examples.s003`"
     },
     {
@@ -3941,7 +3941,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Poneglyph facts from fixture",
       "heading_level": 3,
-      "marker_line": 30,
+      "marker_line": 32,
       "visible_line": "Section Ref: `20-card-implementation-examples.s004`"
     },
     {
@@ -3950,7 +3950,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Implementation consequences",
       "heading_level": 3,
-      "marker_line": 50,
+      "marker_line": 52,
       "visible_line": "Section Ref: `20-card-implementation-examples.s005`"
     },
     {
@@ -3959,7 +3959,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Required DSL support",
       "heading_level": 3,
-      "marker_line": 62,
+      "marker_line": 64,
       "visible_line": "Section Ref: `20-card-implementation-examples.s006`"
     },
     {
@@ -3968,7 +3968,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Draft effect definition",
       "heading_level": 3,
-      "marker_line": 106,
+      "marker_line": 108,
       "visible_line": "Section Ref: `20-card-implementation-examples.s007`"
     },
     {
@@ -3977,7 +3977,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Acceptance tests",
       "heading_level": 3,
-      "marker_line": 197,
+      "marker_line": 199,
       "visible_line": "Section Ref: `20-card-implementation-examples.s008`"
     },
     {
@@ -3986,7 +3986,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Example 2: OP05-091 Rebecca",
       "heading_level": 2,
-      "marker_line": 216,
+      "marker_line": 218,
       "visible_line": "Section Ref: `20-card-implementation-examples.s009`"
     },
     {
@@ -3995,7 +3995,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Poneglyph facts from fixture",
       "heading_level": 3,
-      "marker_line": 222,
+      "marker_line": 224,
       "visible_line": "Section Ref: `20-card-implementation-examples.s010`"
     },
     {
@@ -4004,7 +4004,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Implementation consequences",
       "heading_level": 3,
-      "marker_line": 244,
+      "marker_line": 246,
       "visible_line": "Section Ref: `20-card-implementation-examples.s011`"
     },
     {
@@ -4013,7 +4013,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Required DSL support",
       "heading_level": 3,
-      "marker_line": 256,
+      "marker_line": 258,
       "visible_line": "Section Ref: `20-card-implementation-examples.s012`"
     },
     {
@@ -4022,7 +4022,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Draft effect definition",
       "heading_level": 3,
-      "marker_line": 274,
+      "marker_line": 276,
       "visible_line": "Section Ref: `20-card-implementation-examples.s013`"
     },
     {
@@ -4031,7 +4031,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "Acceptance tests",
       "heading_level": 3,
-      "marker_line": 383,
+      "marker_line": 385,
       "visible_line": "Section Ref: `20-card-implementation-examples.s014`"
     },
     {
@@ -4040,7 +4040,7 @@
       "doc_path": "20-card-implementation-examples.md",
       "heading": "DSL additions required by these examples",
       "heading_level": 2,
-      "marker_line": 402,
+      "marker_line": 404,
       "visible_line": "Section Ref: `20-card-implementation-examples.s015`"
     },
     {

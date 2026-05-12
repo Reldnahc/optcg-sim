@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SPEC-007.md",
+      "storyId": "SPEC-007",
+      "storyPath": "stories/approved/SPEC-007-generated-card-support-complete-parse.yaml",
+      "storySha256": "4eddb228e365693bf27408af98f24eceabd61a482717bb8735c7d7c5098fbc11"
+    }
+  ],
   "version": 1
 }
