@@ -285,7 +285,6 @@ test("accepts whileSourceOnField self +1000 powerAdd continuous modifier without
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
   p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
-  const character = must(p1State.characters[0], "p1 character");
   const before = computeView(state);
 
   state.continuousEffects = [
@@ -297,8 +296,8 @@ test("accepts whileSourceOnField self +1000 powerAdd continuous modifier without
 
   const after = computeView(state);
   assert.equal(
-    after.cards[character.instanceId]?.currentPower,
-    before.cards[character.instanceId]?.currentPower,
+    after.cards[p1State.leader.instanceId]?.currentPower,
+    before.cards[p1State.leader.instanceId]?.currentPower,
   );
 });
 
