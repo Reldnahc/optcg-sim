@@ -49,6 +49,29 @@ const assertSupportedContinuousEffects = (
   }
 };
 
+const continuousPowerBonusForCard = (
+  state: GameState,
+  card: CardInstance,
+): number => {
+  let powerBonus = 0;
+
+  for (const effect of state.continuousEffects) {
+    if (effect.duration.type !== "permanent") continue;
+    if (effect.condition !== undefined) continue;
+    if (effect.modifier.layer !== "powerAdd") continue;
+    if (effect.modifier.target.type !== "self") continue;
+    if (effect.modifier.operation.type !== "addPower") continue;
+    if (effect.modifier.operation.value !== 1000) continue;
+    if (effect.source.instanceId !== card.instanceId) continue;
+    if (effect.source.cardId !== card.cardId) continue;
+    if (effect.source.playerId !== card.controller) continue;
+
+    powerBonus += effect.modifier.operation.value;
+  }
+
+  return powerBonus;
+};
+
 const resolveCombatMetadata = (
   state: GameState,
   card: CardInstance,
@@ -226,12 +249,13 @@ const computeCardView = (
     state.battle.currentTarget.cardId === card.cardId
       ? (state.battle.counterPower ?? 0)
       : 0;
+  const continuousPowerBonus = continuousPowerBonusForCard(state, card);
 
   return {
     instanceId: card.instanceId,
     cardId: card.cardId,
     basePower,
-    currentPower: basePower + donBonus + counterBonus,
+    currentPower: basePower + donBonus + counterBonus + continuousPowerBonus,
     keywords: [...metadata.printedKeywords] as Keyword[],
     canAttack: canAttackNow(state, card),
     canBlock: canBlockNow(state, card, metadata),
