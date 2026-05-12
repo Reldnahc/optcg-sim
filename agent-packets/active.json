@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-047A.md",
+      "storyId": "ENG-047A",
+      "storyPath": "stories/approved/ENG-047A-transient-reveal-set-model.yaml",
+      "storySha256": "ca4442537ec68a51c55a47f9e96c7ce19cb17b26447e7dd49548dc1f34515bfd"
+    }
+  ],
   "version": 1
 }
