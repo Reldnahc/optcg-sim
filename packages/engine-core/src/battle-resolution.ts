@@ -32,9 +32,11 @@ import {
 import { computeView } from "./compute-view.js";
 import {
   detectPendingRuntimeWork,
+  isSupportedDamageDeferredEffectQueueState,
   processDefenderOpponentAttackTiming,
   processEffectRuntime,
   queueBattleKOTriggers,
+  releaseDamageDeferredEffectQueue,
 } from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import {
@@ -95,6 +97,46 @@ const hasOnKODefinitionMetadata = (
   );
 };
 
+const withDamageDeferredEffectQueueMetadataHidden = (
+  state: GameState,
+): GameState => {
+  if (!isSupportedDamageDeferredEffectQueueState(state)) {
+    return state;
+  }
+  const entry = state.effectQueue[0];
+  if (entry === undefined) {
+    return state;
+  }
+  const metadata = state.cardManifest.cards[entry.source.cardId];
+  if (metadata === undefined) {
+    return state;
+  }
+  const sanitizedSupport: ResolvedCard["support"] = { ...metadata.support };
+  delete sanitizedSupport.effectDefinitionId;
+  const { effectText, triggerText, ...metadataWithoutText } = metadata;
+  void effectText;
+  void triggerText;
+  const definitions = Object.fromEntries(
+    Object.entries(state.cardManifest.effectDefinitions ?? {}).filter(
+      ([, definition]) => definition.cardId !== entry.source.cardId,
+    ),
+  );
+  return {
+    ...state,
+    cardManifest: {
+      ...state.cardManifest,
+      cards: {
+        ...state.cardManifest.cards,
+        [entry.source.cardId]: {
+          ...metadataWithoutText,
+          support: sanitizedSupport,
+        },
+      },
+      effectDefinitions: definitions,
+    },
+  };
+};
+
 export const resolveSupportedVanillaBattle = (
   state: GameState,
 ): EngineResult => {
@@ -108,8 +150,10 @@ export const resolveSupportedVanillaBattle = (
       "Battle requires unsupported blocker, step, or multi-damage behavior.",
     );
   }
+  const pendingRuntimeWork = detectPendingRuntimeWork(state);
   if (
-    detectPendingRuntimeWork(state) !== undefined ||
+    (pendingRuntimeWork !== undefined &&
+      !isSupportedDamageDeferredEffectQueueState(state)) ||
     state.replacementState.length > 0 ||
     state.continuousEffects.length > 0
   ) {
@@ -120,8 +164,10 @@ export const resolveSupportedVanillaBattle = (
   }
   if (
     hasUnsupportedBattleEffectMetadata(
-      withSupportedBattleRuntimeMetadataHidden(
-        withAllAttackTimingCombatMetadataHidden(state),
+      withDamageDeferredEffectQueueMetadataHidden(
+        withSupportedBattleRuntimeMetadataHidden(
+          withAllAttackTimingCombatMetadataHidden(state),
+        ),
       ),
     )
   ) {
@@ -218,7 +264,9 @@ export const resolveSupportedVanillaBattle = (
       }
     : baseCombatMetadataState;
   const combatState = withSupportedBattleRuntimeMetadataHidden(
-    withAllAttackTimingCombatMetadataHidden(combatMetadataState),
+    withDamageDeferredEffectQueueMetadataHidden(
+      withAllAttackTimingCombatMetadataHidden(combatMetadataState),
+    ),
   );
   let view: ReturnType<typeof computeView>;
   try {
@@ -802,6 +850,37 @@ const finalizeSupportedEndOfBattleCleanup = ({
     );
   }
   finalizedState.eventJournal = [...state.eventJournal, ...events];
+
+  const releasedState = releaseDamageDeferredEffectQueue(finalizedState);
+  if (releasedState === null) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        {
+          type: "effectRuntimeError",
+          effectId: "unsupported-effect-queue",
+          details: {
+            reason: "unsupported-pending-runtime-work",
+            kind: "effectQueue",
+            count: finalizedState.effectQueue.length,
+          },
+        },
+      ],
+    );
+  }
+  if (
+    releasedState.effectQueue.length > 0 &&
+    finalizedState.deferredTriggers.length > 0
+  ) {
+    const resolved = processEffectRuntime(releasedState);
+    if (resolved.errors !== undefined) {
+      return toEngineResult(state, [], toErrorTuple(resolved.errors));
+    }
+    assertGameStateInvariants(resolved.state);
+    return toEngineResult(resolved.state, [...events, ...resolved.events]);
+  }
+
   assertGameStateInvariants(finalizedState);
   return toEngineResult(finalizedState, events);
 };

@@ -353,11 +353,62 @@ export const createKOTriggerQueueing = (
     if (appended.length === 0) {
       return undefined;
     }
+    const shouldDeferForDamageProcess =
+      state.battle?.damageProcess?.type === "multipleDamage" &&
+      state.battle.damageProcess.remainingDamagePoints > 0 &&
+      String(resolvedEntry.id).startsWith("queue-entry:life-trigger:") &&
+      String(resolvedEntry.timingWindowId).startsWith(
+        "timing-window:life-trigger:",
+      ) &&
+      resolvedEntry.causedBy.type === "decision" &&
+      (resolvedEntry.source.zone?.zone === "noZone" ||
+        resolvedEntry.sourceSnapshot.zone.zone === "noZone");
+    if (
+      shouldDeferForDamageProcess &&
+      (appended.length !== 1 || state.deferredTriggers.length > 0)
+    ) {
+      return toEngineResult(
+        state,
+        [],
+        [
+          dependencies.createUnsupportedPendingRuntimeWorkError({
+            kind: "effectQueue",
+            count: state.effectQueue.length + appended.length,
+          }),
+        ],
+      );
+    }
+    let deferredTriggers = state.deferredTriggers;
+    if (shouldDeferForDamageProcess) {
+      const deferredEntry = appended[0];
+      if (deferredEntry === undefined) {
+        return toEngineResult(
+          state,
+          [],
+          [
+            dependencies.createUnsupportedPendingRuntimeWorkError({
+              kind: "effectQueue",
+              count: state.effectQueue.length,
+            }),
+          ],
+        );
+      }
+      deferredTriggers = [
+        ...state.deferredTriggers,
+        {
+          timingWindowId: deferredEntry.timingWindowId,
+          generation: deferredEntry.generation,
+          triggerIds: [String(deferredEntry.id)],
+          releasePolicy: "afterCurrentProcess",
+        },
+      ];
+    }
 
     const nextState: GameState = {
       ...state,
       seq: toStateSeq(state.seq + 1),
       effectQueue: [...state.effectQueue, ...appended],
+      deferredTriggers,
     };
     for (const entry of appended) {
       const beforeEventCount = events.length;
