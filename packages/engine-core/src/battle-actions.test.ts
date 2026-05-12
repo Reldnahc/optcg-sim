@@ -21,7 +21,7 @@ test("resolveSupportedVanillaBattle rejects when no active battle", () => {
   assert.equal(JSON.stringify(state), before);
 });
 
-test("unsupported trigger/blocker/counter/doubleAttack windows fail closed without mutation", () => {
+test("unsupported trigger/blocker/counter windows fail closed without mutation", () => {
   const run = (
     mutate: (state: ReturnType<typeof setupAttackState>) => void,
   ) => {
@@ -91,16 +91,6 @@ test("unsupported trigger/blocker/counter/doubleAttack windows fail closed witho
       },
       step: "block",
       damageCount: 1,
-    };
-  });
-  run((state) => {
-    state.cardManifest.cards[toCardId("leader-red")] = {
-      ...resolvedCard({
-        cardId: toCardId("leader-red"),
-        category: "leader",
-        power: 5000,
-      }),
-      printedKeywords: ["doubleAttack"],
     };
   });
 });

@@ -18,6 +18,7 @@ story_boundary: >
   damage-created trigger deferral, Banish plus multiple damage, replacement
   effects, or new damage modifiers in this story.
 allowed_touch_points:
+  - packages/engine-core/src/battle-actions.ts
   - packages/engine-core/src/battle-resolution.ts
   - packages/engine-core/src/battle-support.ts
   - packages/engine-core/src/battle-actions.test.ts
