@@ -283,6 +283,7 @@ export const resolveSupportedVanillaBattle = (
           targetInstanceId: target.card.instanceId,
           targetPlayerId: target.playerId,
           attackerHasBanish,
+          allowLifeTriggerDecision: battleDamageCount === 1,
         });
         if (point.result !== undefined) {
           return point.result;
@@ -428,6 +429,7 @@ const processLeaderDamagePoint = ({
   targetInstanceId,
   targetPlayerId,
   attackerHasBanish,
+  allowLifeTriggerDecision,
 }: {
   state: GameState;
   nextState: GameState;
@@ -436,6 +438,7 @@ const processLeaderDamagePoint = ({
   targetInstanceId: CardInstance["instanceId"];
   targetPlayerId: PlayerId;
   attackerHasBanish: boolean;
+  allowLifeTriggerDecision: boolean;
 }):
   | { state: GameState; result?: undefined }
   | { result: EngineResult; state?: undefined } => {
@@ -469,7 +472,7 @@ const processLeaderDamagePoint = ({
   if (
     !attackerHasBanish &&
     hasLifeTriggerText(lifeMeta?.triggerText) &&
-    supportedLifeTriggerDecision === undefined
+    (supportedLifeTriggerDecision === undefined || !allowLifeTriggerDecision)
   ) {
     return {
       result: unsupportedBattleResolution(
