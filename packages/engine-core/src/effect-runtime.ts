@@ -24,6 +24,7 @@ import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue-proce
 import {
   detectSupportedSelectedTargetKoReplacementCandidate,
   executeNoChoiceEffectPrimitive,
+  isSupportedEffectResolvedCustomDrawEffect,
   type SelectedTargetKoReplacementCandidate,
 } from "./effect-runtime-primitives.js";
 import { createEffectRuntimeTriggerQueueing } from "./effect-runtime-trigger-queueing.js";
@@ -115,6 +116,52 @@ export const isSupportedDamageDeferredEffectQueueState = (
   return releaseDamageDeferredEffectQueue(state) !== null;
 };
 
+const isPublicFieldZone = (zone: CardRef["zone"]): boolean =>
+  zone?.zone === "leaderArea" ||
+  zone?.zone === "characterArea" ||
+  zone?.zone === "stageArea";
+
+const isSupportedDamageDeferredEffectQueueEntry = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): boolean => {
+  if (
+    entry.causedBy.type !== "effect" ||
+    !String(entry.causedBy.queueEntryId).startsWith(
+      "queue-entry:life-trigger:",
+    ) ||
+    !String(entry.timingWindowId).startsWith("timing-window:life-trigger:") ||
+    entry.triggerEventId === undefined ||
+    entry.generation <= 0 ||
+    !isPublicFieldZone(entry.source.zone) ||
+    !isPublicFieldZone(entry.sourceSnapshot.zone)
+  ) {
+    return false;
+  }
+  const resolved = state.cardManifest.cards[entry.source.cardId];
+  if (resolved === undefined) {
+    return false;
+  }
+  const lookup = resolveImplementedDslEffectDefinition(
+    resolved,
+    state.cardManifest,
+  );
+  if (!lookup.ok) {
+    return false;
+  }
+  const effect = lookup.definition.effects.find(
+    (candidate) => candidate.id === entry.effectBlockId,
+  );
+  return (
+    effect !== undefined &&
+    effect.sourcePresencePolicy === entry.sourcePresencePolicy &&
+    isSupportedEffectResolvedCustomDrawEffect(
+      effect,
+      `effectResolved:${String(entry.causedBy.effectId)}`,
+    )
+  );
+};
+
 export const releaseDamageDeferredEffectQueue = (
   state: GameState,
 ): GameState | null => {
@@ -135,7 +182,8 @@ export const releaseDamageDeferredEffectQueue = (
     bucket.triggerIds[0] !== String(entry.id) ||
     bucket.timingWindowId !== entry.timingWindowId ||
     bucket.generation !== entry.generation ||
-    entry.state !== "pending"
+    entry.state !== "pending" ||
+    !isSupportedDamageDeferredEffectQueueEntry(state, entry)
   ) {
     return null;
   }

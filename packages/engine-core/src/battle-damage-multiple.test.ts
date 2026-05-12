@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { EffectQueueEntry } from "@optcg/types";
+
 import {
   applyDeclareAttack,
   resolveSupportedVanillaBattle,
@@ -12,6 +14,8 @@ import {
   p2,
   resolvedCard,
   toCardId,
+  toEngineEventId,
+  toStateSeq,
 } from "./action-test-fixtures.js";
 import {
   effectDefinition,
@@ -452,6 +456,78 @@ test("Double Attack defers Life Trigger effectResolved follow-up until all damag
   assert.notEqual(followUpResolvedIndex, -1);
   assert.equal(followUpQueuedIndex < secondDamageIndex, true);
   assert.equal(finalDamageEventIndex < followUpResolvedIndex, true);
+});
+
+test("Double Attack rejects structurally deferred non-Life Trigger follow-up without mutation", () => {
+  const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
+  installSupportedLifeTriggerOnLife(state, 0, "first");
+  const opened = resolveSupportedVanillaBattle(state);
+  assert.equal(opened.errors, undefined);
+  const followUp = installEffectResolvedDrawFollowUp(
+    opened.state,
+    "effectResolved:not-a-life-trigger",
+  );
+  const source = must(
+    must(opened.state.players[p2], "opened p2").characters[0],
+    "follow-up source",
+  );
+  const entry: EffectQueueEntry = {
+    id: "queue-entry:unsupported-deferred-follow-up" as EffectQueueEntry["id"],
+    state: "pending",
+    timingWindowId:
+      "timing-window:unsupported-deferred-follow-up" as EffectQueueEntry["timingWindowId"],
+    generation: 1,
+    controllerId: p2,
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p2,
+      zone: source.zone,
+    },
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: source.owner,
+      controllerId: source.controller,
+      zone: source.zone,
+      category: "character",
+      colors: ["red"],
+      power: 1000,
+      keywords: [],
+    },
+    triggerEventId: toEngineEventId("event:unsupported-deferred-follow-up"),
+    effectBlockId: followUp.id,
+    orderingGroup: "nonTurnPlayer",
+    createdAtEventSeq: 1,
+    queuedAtStateSeq: toStateSeq(opened.state.seq + 1),
+    sourcePresencePolicy: must(
+      followUp.sourcePresencePolicy,
+      "follow-up source presence policy",
+    ),
+    causedBy: { type: "playerAction", actionId: "unsupported-deferred" },
+  };
+  opened.state.effectQueue = [entry];
+  opened.state.deferredTriggers = [
+    {
+      timingWindowId: entry.timingWindowId,
+      generation: entry.generation,
+      triggerIds: [String(entry.id)],
+      releasePolicy: "afterCurrentProcess",
+    },
+  ];
+  const before = JSON.stringify(opened.state);
+
+  const result = resolveSupportedVanillaBattle(opened.state);
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Battle requires unsupported trigger or replacement processing.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(opened.state), before);
+  assert.equal(JSON.stringify(result.state), before);
 });
 
 test("declining first Double Attack Life Trigger moves it to hand then resumes to second trigger decision", () => {
