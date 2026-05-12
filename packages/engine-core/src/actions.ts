@@ -47,6 +47,7 @@ import {
   applyOptionalActivationDecisionResponse,
   getOptionalActivationLegalActions,
 } from "./optional-activation-actions.js";
+import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
 import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
 import {
   applyConcede,
@@ -156,6 +157,39 @@ const getChooseReplacementLegalActions = (
         decisionId: decision.id,
         playerId: decision.playerId,
         response: { type: "replacement", replacementId },
+      }),
+    ),
+  ];
+};
+
+const getSearchRevealDecisionLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): LegalAction[] => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "selectCards" ||
+    decision.playerId !== playerId ||
+    decision.request.set === undefined ||
+    !String(decision.request.set).startsWith("set:search-reveal:")
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      playerId: decision.playerId,
+      response: { type: "cards", cards: [] },
+    },
+    ...decision.candidates.map(
+      (candidate): LegalAction => ({
+        type: "respondToDecision",
+        decisionId: decision.id,
+        playerId: decision.playerId,
+        response: { type: "cards", cards: [candidate.card] },
       }),
     ),
   ];
@@ -379,6 +413,7 @@ export const getLegalActions = (
     actions.push(...getPlayCardLegalActions(state, playerId));
     actions.push(...getBattleDecisionLegalActions(state, playerId));
     actions.push(...getChooseReplacementLegalActions(state, playerId));
+    actions.push(...getSearchRevealDecisionLegalActions(state, playerId));
     return actions;
   }
 
@@ -448,6 +483,13 @@ const applyRespondToDecision = (
   );
   if (targetSelectionResult !== null) {
     return targetSelectionResult;
+  }
+  if (
+    decision.type === "selectCards" &&
+    decision.request.set !== undefined &&
+    String(decision.request.set).startsWith("set:search-reveal:")
+  ) {
+    return applySupportedSearchRevealChoiceResponse(state, action);
   }
   const replacementResult = applyChooseReplacementDecisionResponse(
     state,

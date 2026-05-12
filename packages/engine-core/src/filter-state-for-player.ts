@@ -184,6 +184,7 @@ const toPublicDecisionCausedBy = (
   const causedBy = pending.causedBy;
   if (
     pending.type !== "selectTargets" &&
+    pending.type !== "selectCards" &&
     pending.type !== "chooseOptionalActivation" &&
     pending.type !== "chooseReplacement"
   ) {
@@ -249,6 +250,28 @@ const toPlayerEvent = (event: EngineEvent): EngineEvent => {
     return { ...base, payload: { status: "resolved" } };
   }
   return { ...base, payload: toPlayerEventPayload(event.payload) };
+};
+
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const shouldIncludePlayerEvent = (
+  state: GameState,
+  event: EngineEvent,
+): boolean => {
+  if (event.type !== "cardRevealed" || !isObjectRecord(event.payload)) {
+    return true;
+  }
+  const revealId = event.payload["revealId"];
+  const selectionSetId = event.payload["selectionSetId"];
+  if (
+    typeof revealId !== "string" ||
+    typeof selectionSetId !== "string" ||
+    !selectionSetId.startsWith("set:search-reveal:")
+  ) {
+    return true;
+  }
+  return state.revealedCards.some((record) => record.id === revealId);
 };
 
 const toPublicDecision = (
@@ -573,14 +596,15 @@ export const filterStateForPlayer = (
     opponent: toOpponentVisibleState(opponentState, computedPowers),
     ...(battle === undefined ? {} : { battle }),
     ...(pendingDecision === undefined ? {} : { pendingDecision }),
-    legalActions: dedupePublicLegalActions(
-      getLegalActions(state, playerId)
+    legalActions: dedupePublicLegalActions([
+      ...getLegalActions(state, playerId)
         .map((action) => toPublicLegalAction(state, playerId, action))
         .filter((action): action is PublicLegalAction => action !== undefined),
-    ),
+    ]),
     revealedCards: toPublicRevealRecord(state, playerId),
     events: state.eventJournal
       .filter((event) => isEventVisibleToPlayer(event, playerId))
+      .filter((event) => shouldIncludePlayerEvent(state, event))
       .map(toPlayerEvent),
     timers,
   };

@@ -33,6 +33,7 @@ import {
   isSupportedQueuedNoChoiceDrawEffect,
   isSupportedQueuedOptionalNoChoiceDrawEffect,
 } from "./effect-runtime-primitives.js";
+import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
 import {
   consumeOncePerTurn,
   isOncePerTurnUsed,
@@ -131,6 +132,29 @@ export const createEffectRuntimeQueueResults = (
       match === undefined ||
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
       !isSupportedQueuedNoChoiceDrawEffect(match)
+    ) {
+      return undefined;
+    }
+    return match.effect;
+  };
+
+  const resolveQueuedSearchRevealEffect = (
+    state: GameState,
+    entry: EffectQueueEntry,
+  ): Extract<Effect, { type: "search" }> | undefined => {
+    const match = resolveQueuedEffectDefinition(state, entry);
+    if (
+      match === undefined ||
+      match.effect.type !== "search" ||
+      match.category !== "auto" ||
+      match.optional === true ||
+      match.oncePerTurn === true ||
+      match.condition !== undefined ||
+      match.conditionTiming !== undefined ||
+      match.cost !== undefined ||
+      match.failurePolicy !== undefined ||
+      match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
+      match.sourcePresencePolicy !== "mustRemainInSameZone"
     ) {
       return undefined;
     }
@@ -300,6 +324,61 @@ export const createEffectRuntimeQueueResults = (
             errorCount: originalState.effectQueue.length,
           },
         );
+      }
+      const searchEffect = resolveQueuedSearchRevealEffect(nextState, selected);
+      if (searchEffect !== undefined) {
+        const searchDecision = createSupportedSearchRevealChoiceDecision(
+          nextState,
+          selected,
+          searchEffect,
+        );
+        if (!searchDecision.ok) {
+          return unsupportedEffectQueueResult(originalState);
+        }
+        if (searchDecision.kind === "decisionCreated") {
+          return toEngineResult(searchDecision.state, [
+            ...allEvents,
+            ...searchDecision.events,
+          ]);
+        }
+
+        const resolvedEvents: EngineEvent[] = [];
+        appendEvent(
+          searchDecision.state,
+          resolvedEvents,
+          "effectResolved",
+          {
+            queueEntryId: selected.id,
+            timingWindowId: selected.timingWindowId,
+            generation: selected.generation,
+            effectBlockId: selected.effectBlockId,
+            ...(selected.triggerEventId !== undefined
+              ? { triggerEventId: selected.triggerEventId }
+              : {}),
+            sourcePresencePolicy: selected.sourcePresencePolicy,
+            orderingGroup: selected.orderingGroup,
+            status: "resolved" as const,
+          },
+          { type: "public" },
+        );
+        const resolvedEvent = resolvedEvents[0];
+        if (resolvedEvent !== undefined) {
+          resolvedEvent.causedBy = {
+            type: "effect",
+            queueEntryId: selected.id,
+            effectId: selected.effectBlockId,
+          };
+          nextState = {
+            ...searchDecision.state,
+            seq: toStateSeq(searchDecision.state.seq + 1),
+            effectQueue: searchDecision.state.effectQueue.filter(
+              (entry) => entry.id !== selected.id,
+            ),
+            eventJournal: [...searchDecision.state.eventJournal, resolvedEvent],
+          };
+          allEvents.push(...searchDecision.events, resolvedEvent);
+        }
+        continue;
       }
       drawEffect ??= resolveQueuedNoChoiceDrawEffect(nextState, selected);
       if (drawEffect === undefined) {

@@ -209,6 +209,8 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
     id: "set-1" as SelectionSetId,
     cards: [source],
     origin: "topOfDeck",
+    ownerId: player,
+    controllerId: player,
     visibility: { type: "private", playerId: player },
     cleanupPolicy: "none",
   };
