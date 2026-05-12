@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Update simulator specifications so common card support may be generated from
   complete card-text parsing plus runtime capability checks, without implying a
