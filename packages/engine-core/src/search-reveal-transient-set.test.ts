@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import type { Action, Effect, TransientCardSet } from "@optcg/types";
+import type {
+  Action,
+  Effect,
+  EngineEvent,
+  TransientCardSet,
+} from "@optcg/types";
 import { test } from "vitest";
 
 import {
@@ -15,8 +20,10 @@ import {
   createSupportedSearchRevealChoiceDecisionFromTransientSet,
   createSupportedSearchRevealTransientSet,
 } from "./effect-runtime-search-reveal.js";
+import { processEffectRuntime } from "./effect-runtime.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { queueDrawForP1 } from "./effect-runtime-queue-processing-test-support.js";
+import { hashCanonicalStateValue } from "./canonical-state.js";
 
 const supportedSearch = (
   overrides: Partial<Extract<Effect, { type: "search" }>["request"]> = {},
@@ -94,6 +101,44 @@ const assertDoesNotContain = (
   label: string,
 ) => {
   assert.equal(JSON.stringify(value).includes(hidden), false, label);
+};
+
+const assertStrictlyIncreasingEventOrder = (
+  events: readonly EngineEvent[],
+  label: string,
+) => {
+  for (let index = 1; index < events.length; index += 1) {
+    const previous = must(events[index - 1], `${label} previous event`);
+    const current = must(events[index], `${label} current event`);
+    assert.equal(
+      current.seq > previous.seq,
+      true,
+      `${label} event seq should increase`,
+    );
+    assert.notEqual(current.id, previous.id, `${label} event ids differ`);
+  }
+  assert.equal(
+    new Set(events.map((event) => event.id)).size,
+    events.length,
+    `${label} event ids should be unique`,
+  );
+};
+
+const assertEventsAppendToJournal = (
+  previousJournalLength: number,
+  result: Pick<ReturnType<typeof applyAction>, "events" | "state">,
+  label: string,
+) => {
+  assert.deepEqual(
+    result.state.eventJournal.slice(previousJournalLength),
+    result.events,
+    `${label} eventJournal suffix should match returned events`,
+  );
+  assertStrictlyIncreasingEventOrder(result.events, `${label} result events`);
+  assertStrictlyIncreasingEventOrder(
+    result.state.eventJournal,
+    `${label} eventJournal`,
+  );
 };
 
 test("supported top-1 Character deck search creates deterministic transient reveal set", () => {
@@ -193,6 +238,7 @@ test("unsupported search reveal shapes fail closed without mutation or events", 
   for (const [index, effect] of unsupportedEffects.entries()) {
     const state = createActiveState();
     const topDeck = markTopDeckCard(state, "character");
+    const beforeHash = hashCanonicalStateValue(state);
     const result = createSupportedSearchRevealTransientSet(
       state,
       queueDrawForP1(),
@@ -202,6 +248,7 @@ test("unsupported search reveal shapes fail closed without mutation or events", 
     assert.equal(result.ok, false, `case ${String(index)}`);
     assert.equal(result.state, state);
     assert.deepEqual(result.events, []);
+    assert.equal(hashCanonicalStateValue(result.state), beforeHash);
     assert.equal(
       must(state.players[p1], "p1").deck[0]?.instanceId,
       topDeck.instanceId,
@@ -285,6 +332,67 @@ test("eligible search reveal path creates private reveal record and chooser-owne
     },
   ]);
   assert.deepEqual(result.state.eventJournal.slice(-2), result.events);
+});
+
+test("eligible search reveal lifecycle preserves creation and response event order", () => {
+  const state = createActiveState();
+  const topDeck = markTopDeckCard(state, "character");
+  const created = createSupportedSearchRevealChoiceDecision(
+    state,
+    queueDrawForP1(),
+    supportedSearch(),
+  );
+
+  assert.equal(created.ok, true);
+  assert.equal(created.kind, "decisionCreated");
+  const decision = must(created.state.pendingDecision, "pending decision");
+  if (decision.type !== "selectCards") {
+    throw new TypeError("Expected search reveal selectCards decision.");
+  }
+  const candidate = must(decision.candidates[0], "candidate").card;
+  assert.deepEqual(
+    created.events.map((event) => event.type),
+    ["cardRevealed", "decisionCreated"],
+  );
+  assertEventsAppendToJournal(
+    state.eventJournal.length,
+    created,
+    "search reveal creation",
+  );
+
+  const resolved = applyAction(
+    created.state,
+    respondWithCards(decision.id, [candidate]),
+  );
+
+  assert.equal(resolved.errors, undefined);
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    ["decisionResolved", "cardMoved"],
+  );
+  assertEventsAppendToJournal(
+    created.state.eventJournal.length,
+    resolved,
+    "search reveal response",
+  );
+  assert.deepEqual(
+    [...created.events, ...resolved.events].map((event) => event.type),
+    ["cardRevealed", "decisionCreated", "decisionResolved", "cardMoved"],
+  );
+  assertStrictlyIncreasingEventOrder(
+    [...created.events, ...resolved.events],
+    "search reveal lifecycle",
+  );
+  assert.deepEqual(resolved.state.revealedCards, []);
+  const continued = processEffectRuntime(resolved.state);
+  assert.equal(continued.errors, undefined);
+  assert.deepEqual(continued.events, []);
+  assert.equal(continued.state, resolved.state);
+  assert.equal(continued.stateHash, resolved.stateHash);
+  assert.equal(
+    must(resolved.state.players[p1], "p1").hand.at(-1)?.instanceId,
+    topDeck.instanceId,
+  );
 });
 
 test("search reveal decision candidates are visible only to the chooser", () => {
@@ -397,6 +505,11 @@ test("search reveal PlayerViews keep legal actions and metadata content-agnostic
 test("no eligible top-card search reveal creates no decision and leaks no identity", () => {
   const state = createActiveState();
   const topDeck = markTopDeckCard(state, "event");
+  const beforeHash = hashCanonicalStateValue(state);
+  const previousEventJournalLength = state.eventJournal.length;
+  const originalDeckIds = must(state.players[p1], "p1").deck.map(
+    (card) => card.instanceId,
+  );
 
   const result = createSupportedSearchRevealChoiceDecision(
     state,
@@ -409,7 +522,21 @@ test("no eligible top-card search reveal creates no decision and leaks no identi
   assert.equal(result.state, state);
   assert.equal(result.state.pendingDecision, undefined);
   assert.deepEqual(result.events, []);
+  assert.deepEqual(
+    result.state.eventJournal
+      .slice(previousEventJournalLength)
+      .filter(
+        (event) =>
+          event.type === "cardRevealed" || event.type === "decisionCreated",
+      ),
+    [],
+  );
   assert.deepEqual(result.state.revealedCards, []);
+  assert.deepEqual(
+    must(result.state.players[p1], "p1").deck.map((card) => card.instanceId),
+    originalDeckIds,
+  );
+  assert.equal(hashCanonicalStateValue(result.state), beforeHash);
   assert.equal(
     JSON.stringify(filterStateForPlayer(result.state, p1)).includes(
       String(topDeck.cardId),
@@ -515,6 +642,29 @@ test("valid search reveal choice moves selected Character to hand and clears tra
   );
 });
 
+test("equivalent search reveal accepted choices produce stable creation and cleanup hashes", () => {
+  const run = () => {
+    const { candidate, decision, state } = createSearchRevealDecisionState();
+    const creationHash = hashCanonicalStateValue(state);
+    const resolved = applyAction(
+      state,
+      respondWithCards(decision.id, [candidate]),
+    );
+    assert.equal(resolved.errors, undefined);
+    assert.deepEqual(resolved.state.revealedCards, []);
+    assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+    return {
+      cleanupHash: resolved.stateHash,
+      creationHash,
+    };
+  };
+
+  const first = run();
+  const second = run();
+
+  assert.deepEqual(second, first);
+});
+
 test("search reveal cleanup removes stale declined candidates from player-facing outputs", () => {
   const { decision, state, topDeck } = createSearchRevealDecisionState();
 
@@ -584,6 +734,68 @@ test("valid zero-card search reveal choice declines and clears transient state w
   );
 });
 
+test("equivalent search reveal declined choices produce stable cleanup hashes", () => {
+  const run = () => {
+    const { decision, state } = createSearchRevealDecisionState();
+    const creationHash = hashCanonicalStateValue(state);
+    const resolved = applyAction(state, respondWithCards(decision.id, []));
+    assert.equal(resolved.errors, undefined);
+    assert.deepEqual(resolved.state.revealedCards, []);
+    assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+    return {
+      cleanupHash: resolved.stateHash,
+      creationHash,
+    };
+  };
+
+  const first = run();
+  const second = run();
+
+  assert.deepEqual(second, first);
+});
+
+test("search reveal cleanup removes only the active transient reveal record", () => {
+  const { candidate, decision, state } = createSearchRevealDecisionState();
+  const activeReveal = must(state.revealedCards[0], "active reveal");
+  const unrelatedReveal = {
+    ...activeReveal,
+    id: "reveal:search-reveal:unrelated-queue-entry",
+  };
+  const staleState = {
+    ...state,
+    revealedCards: [...state.revealedCards, unrelatedReveal],
+  };
+
+  const cleanAccepted = applyAction(
+    state,
+    respondWithCards(decision.id, [candidate]),
+  );
+  const staleAccepted = applyAction(
+    staleState,
+    respondWithCards(decision.id, [candidate]),
+  );
+  assert.equal(cleanAccepted.errors, undefined);
+  assert.equal(staleAccepted.errors, undefined);
+  assert.deepEqual(staleAccepted.state.revealedCards, [unrelatedReveal]);
+  assert.equal(
+    hashCanonicalStateValue(cleanAccepted.state),
+    cleanAccepted.stateHash,
+  );
+
+  const cleanDeclined = applyAction(state, respondWithCards(decision.id, []));
+  const staleDeclined = applyAction(
+    staleState,
+    respondWithCards(decision.id, []),
+  );
+  assert.equal(cleanDeclined.errors, undefined);
+  assert.equal(staleDeclined.errors, undefined);
+  assert.deepEqual(staleDeclined.state.revealedCards, [unrelatedReveal]);
+  assert.equal(
+    hashCanonicalStateValue(cleanDeclined.state),
+    cleanDeclined.stateHash,
+  );
+});
+
 test("invalid search reveal choice responses fail closed without mutation or events", () => {
   const { candidate, decision, state } = createSearchRevealDecisionState();
   const invalidResponses: Extract<Action, { type: "respondToDecision" }>[] = [
@@ -604,10 +816,12 @@ test("invalid search reveal choice responses fail closed without mutation or eve
   ];
 
   for (const action of invalidResponses) {
+    const beforeHash = hashCanonicalStateValue(state);
     const result = applyAction(state, action);
     assert.equal(result.state, state);
     assert.deepEqual(result.events, []);
     assert.equal(result.errors?.[0]?.type, "invalidDecisionResponse");
+    assert.equal(hashCanonicalStateValue(result.state), beforeHash);
   }
 });
 
@@ -645,6 +859,7 @@ test("stale search reveal choice envelope fails closed without mutation or event
   ];
 
   for (const { state: staleState, errorType } of staleStates) {
+    const beforeHash = hashCanonicalStateValue(staleState);
     const result = applyAction(
       staleState,
       respondWithCards(decision.id, [candidate]),
@@ -652,5 +867,6 @@ test("stale search reveal choice envelope fails closed without mutation or event
     assert.equal(result.state, staleState);
     assert.deepEqual(result.events, []);
     assert.equal(result.errors?.[0]?.type, errorType);
+    assert.equal(hashCanonicalStateValue(result.state), beforeHash);
   }
 });
