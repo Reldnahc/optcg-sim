@@ -96,6 +96,11 @@ export interface BattleState {
   step: BattleStep;
   damageCount: number;
   counterPower?: number;
+  damageProcess?: {
+    type: "multipleDamage";
+    sourceKeyword: "doubleAttack";
+    remainingDamagePoints: number;
+  };
 }
 
 export interface TurnState {

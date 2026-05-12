@@ -5,7 +5,7 @@ import {
   applyDeclareAttack,
   resolveSupportedVanillaBattle,
 } from "./battle-actions.js";
-import { getLegalActions } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import {
   must,
   p1,
@@ -69,15 +69,17 @@ const setupLeaderBattleWithDamageCount = (
   return state;
 };
 
-const installSupportedLifeTriggerOnTopLife = (
+const installSupportedLifeTriggerOnLife = (
   state: ReturnType<typeof setupAttackState>,
+  lifeIndex = 0,
+  idSuffix = "top",
 ) => {
   const p2State = must(state.players[p2], "p2");
-  const topLife = must(p2State.life[0], "top life");
-  const lifeCardId = toCardId("double-attack-trigger-life");
-  p2State.life[0] = {
-    ...topLife,
-    card: { ...topLife.card, cardId: lifeCardId },
+  const life = must(p2State.life[lifeIndex], "life card");
+  const lifeCardId = toCardId(`double-attack-trigger-life-${idSuffix}`);
+  p2State.life[lifeIndex] = {
+    ...life,
+    card: { ...life.card, cardId: lifeCardId },
   };
   const definition = effectDefinition(lifeCardId, { type: "trigger" });
   const effect = must(definition.effects[0], "trigger effect");
@@ -103,7 +105,7 @@ const installSupportedLifeTriggerOnTopLife = (
     support: {
       cardId: lifeCardId,
       status: "implemented-dsl",
-      effectDefinitionId: "def-double-attack-life-trigger",
+      effectDefinitionId: `def-double-attack-life-trigger-${idSuffix}`,
       tested: true,
       rulesVersion: supported.metadata.rulesVersion,
       cardDataVersion: "fixture",
@@ -114,7 +116,12 @@ const installSupportedLifeTriggerOnTopLife = (
   state.cardManifest.effectDefinitionsVersion =
     supported.metadata.effectDefinitionsVersion;
   state.cardManifest.effectDefinitions = {
-    "def-double-attack-life-trigger": supported,
+    ...(state.cardManifest.effectDefinitions ?? {}),
+    [`def-double-attack-life-trigger-${idSuffix}`]: supported,
+  };
+  return {
+    cardId: lifeCardId,
+    instanceId: life.card.instanceId,
   };
 };
 
@@ -238,23 +245,252 @@ test("unsupported Double Attack metadata cannot bypass source gate through direc
   assert.equal(JSON.stringify(result.state), before);
 });
 
-test("two damage over supported Life Trigger fails closed before mutation", () => {
+test("first Double Attack damage point with supported Life Trigger pauses before second point", () => {
   const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
-  installSupportedLifeTriggerOnTopLife(state);
-  const before = JSON.stringify(state);
+  const firstLife = installSupportedLifeTriggerOnLife(state, 0, "first");
+  const secondLife = must(must(state.players[p2], "p2").life[1], "second life")
+    .card.instanceId;
+  const beforeP2 = must(state.players[p2], "p2 before");
 
   const result = resolveSupportedVanillaBattle(state);
 
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision?.type, "confirmLifeTrigger");
+  assert.equal(result.state.pendingDecision.card.cardId, firstLife.cardId);
+  const continuationBattle = must(result.state.battle, "continuation battle");
+  assert.equal(continuationBattle.damageCount, 1);
+  assert.deepEqual(continuationBattle.damageProcess, {
+    type: "multipleDamage",
+    sourceKeyword: "doubleAttack",
+    remainingDamagePoints: 1,
+  });
+  const nextP2 = must(result.state.players[p2], "next p2");
+  assert.equal(nextP2.life.length, beforeP2.life.length - 1);
+  assert.equal(nextP2.hand.length, beforeP2.hand.length);
+  assert.equal(
+    nextP2.life.some((lifeCard) => lifeCard.card.instanceId === secondLife),
+    true,
+  );
+  assert.deepEqual(
+    result.events
+      .filter(
+        (event) =>
+          event.type === "damageDealt" ||
+          event.type === "lifeTaken" ||
+          event.type === "decisionCreated",
+      )
+      .map((event) => event.type),
+    ["damageDealt", "lifeTaken", "decisionCreated"],
+  );
+});
+
+test("accepting first Double Attack Life Trigger resumes and can create second trigger decision", () => {
+  const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
+  const firstLife = installSupportedLifeTriggerOnLife(state, 0, "first");
+  const secondLife = installSupportedLifeTriggerOnLife(state, 1, "second");
+  const opened = resolveSupportedVanillaBattle(state);
+  const firstDecision = must(
+    opened.state.pendingDecision,
+    "first life trigger decision",
+  );
+
+  const result = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: firstDecision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision?.type, "confirmLifeTrigger");
+  assert.equal(result.state.pendingDecision.card.cardId, secondLife.cardId);
+  assert.notEqual(result.state.pendingDecision.id, firstDecision.id);
+  assert.equal(result.state.battle, undefined);
+  const nextP2 = must(result.state.players[p2], "next p2");
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === firstLife.instanceId),
+    true,
+  );
+  assert.equal(
+    nextP2.life.some(
+      (lifeCard) => lifeCard.card.instanceId === secondLife.instanceId,
+    ),
+    false,
+  );
+  assert.deepEqual(
+    result.events
+      .filter(
+        (event) =>
+          event.type === "decisionResolved" ||
+          event.type === "triggerActivated" ||
+          event.type === "damageDealt" ||
+          event.type === "lifeTaken" ||
+          event.type === "decisionCreated",
+      )
+      .map((event) => event.type),
+    [
+      "decisionResolved",
+      "triggerActivated",
+      "damageDealt",
+      "lifeTaken",
+      "decisionCreated",
+    ],
+  );
+});
+
+test("declining first Double Attack Life Trigger moves it to hand then resumes to second trigger decision", () => {
+  const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
+  const firstLife = installSupportedLifeTriggerOnLife(state, 0, "first");
+  const secondLife = installSupportedLifeTriggerOnLife(state, 1, "second");
+  const opened = resolveSupportedVanillaBattle(state);
+  const firstDecision = must(
+    opened.state.pendingDecision,
+    "first life trigger decision",
+  );
+  const beforeHand = must(opened.state.players[p2], "p2 before").hand.length;
+
+  const result = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: firstDecision.id,
+    response: { type: "lifeTrigger", choice: "addToHand" },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision?.type, "confirmLifeTrigger");
+  assert.equal(result.state.pendingDecision.card.cardId, secondLife.cardId);
+  assert.equal(result.state.battle, undefined);
+  const nextP2 = must(result.state.players[p2], "next p2");
+  assert.equal(nextP2.hand.length, beforeHand + 1);
+  assert.equal(nextP2.hand[0]?.instanceId, firstLife.instanceId);
+  assert.equal(
+    nextP2.life.some(
+      (lifeCard) => lifeCard.card.instanceId === secondLife.instanceId,
+    ),
+    false,
+  );
+  assert.deepEqual(
+    result.events
+      .filter(
+        (event) =>
+          event.type === "decisionResolved" ||
+          event.type === "cardMoved" ||
+          event.type === "damageDealt" ||
+          event.type === "lifeTaken" ||
+          event.type === "decisionCreated",
+      )
+      .map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardMoved",
+      "cardMoved",
+      "damageDealt",
+      "lifeTaken",
+      "decisionCreated",
+    ],
+  );
+});
+
+test("malformed Double Attack Life Trigger continuation fails closed without mutation", () => {
+  const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
+  installSupportedLifeTriggerOnLife(state, 0, "first");
+  const opened = resolveSupportedVanillaBattle(state);
+  const decision = must(opened.state.pendingDecision, "life trigger decision");
+  const malformed = structuredClone(opened.state);
+  malformed.battle = {
+    ...must(malformed.battle, "continuation battle"),
+    damageCount: 3,
+  };
+  const before = structuredClone(malformed);
+
+  const result = applyAction(malformed, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "addToHand" },
+  });
+
   assert.deepEqual(result.errors, [
     {
-      type: "illegalAction",
-      reason:
-        "Life trigger reveal decisions are unsupported in this battle path.",
+      type: "invalidDecisionResponse",
+      reason: "Life Trigger damage continuation is malformed.",
     },
   ]);
   assert.deepEqual(result.events, []);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
+  assert.deepEqual(result.state, before);
+});
+
+test("missing Double Attack Life Trigger continuation marker fails closed without mutation", () => {
+  const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
+  installSupportedLifeTriggerOnLife(state, 0, "first");
+  const opened = resolveSupportedVanillaBattle(state);
+  const decision = must(opened.state.pendingDecision, "life trigger decision");
+  const malformed = structuredClone(opened.state);
+  const battle = must(malformed.battle, "continuation battle");
+  malformed.battle = {
+    ...battle,
+  };
+  delete malformed.battle.damageProcess;
+  const before = structuredClone(malformed);
+
+  const result = applyAction(malformed, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "addToHand" },
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "Life Trigger damage continuation is malformed.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.state, before);
+});
+
+test("stale Double Attack Life Trigger continuation response fails closed without mutation", () => {
+  const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
+  const firstLife = installSupportedLifeTriggerOnLife(state, 0, "first");
+  const opened = resolveSupportedVanillaBattle(state);
+  const decision = must(opened.state.pendingDecision, "life trigger decision");
+  const stale = structuredClone(opened.state);
+  const player = must(stale.players[p2], "stale p2");
+  stale.players[p2] = {
+    ...player,
+    hand: [
+      {
+        instanceId: firstLife.instanceId,
+        cardId: firstLife.cardId,
+        owner: p2,
+        controller: p2,
+        attachedDon: [],
+        zone: { zone: "hand", playerId: p2, slot: "hand", index: 0 },
+      },
+      ...player.hand.map((card, index) => ({
+        ...card,
+        zone: {
+          zone: "hand" as const,
+          playerId: p2,
+          slot: "hand" as const,
+          index: index + 1,
+        },
+      })),
+    ],
+  };
+  const before = structuredClone(stale);
+
+  const result = applyAction(stale, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "addToHand" },
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "Life Trigger card is stale for current state.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.state, before);
 });
 
 test("supported doubleAttack declareAttack against leader applies two damage points", () => {

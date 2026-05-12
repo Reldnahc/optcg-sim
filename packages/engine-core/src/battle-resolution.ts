@@ -40,6 +40,7 @@ import { assertGameStateInvariants } from "./invariants.js";
 import {
   getSupportedLifeTriggerDecision,
   hasLifeTriggerText,
+  registerLifeTriggerDamageContinuationResolver,
 } from "./life-trigger-actions.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
@@ -195,26 +196,27 @@ export const resolveSupportedVanillaBattle = (
             damageCount: 1,
           },
         };
-  const combatMetadataState =
-    battle.damageCount === 2 &&
-    attackerManifestCard !== undefined &&
-    attackerPrintedKeywords.includes("doubleAttack")
-      ? {
-          ...baseCombatMetadataState,
-          cardManifest: {
-            ...baseCombatMetadataState.cardManifest,
-            cards: {
-              ...baseCombatMetadataState.cardManifest.cards,
-              [battle.attacker.cardId]: {
-                ...attackerManifestCard,
-                printedKeywords: attackerPrintedKeywords.filter(
-                  (keyword) => keyword !== "doubleAttack",
-                ),
-              },
+  const shouldHideDoubleAttackForCombatView =
+    (battle.damageCount === 2 ||
+      battle.damageProcess?.sourceKeyword === "doubleAttack") &&
+    isSupportedDoubleAttackDamageSource(attackerManifestCard);
+  const combatMetadataState = shouldHideDoubleAttackForCombatView
+    ? {
+        ...baseCombatMetadataState,
+        cardManifest: {
+          ...baseCombatMetadataState.cardManifest,
+          cards: {
+            ...baseCombatMetadataState.cardManifest.cards,
+            [battle.attacker.cardId]: {
+              ...attackerManifestCard,
+              printedKeywords: attackerPrintedKeywords.filter(
+                (keyword) => keyword !== "doubleAttack",
+              ),
             },
           },
-        }
-      : baseCombatMetadataState;
+        },
+      }
+    : baseCombatMetadataState;
   const combatState = withSupportedBattleRuntimeMetadataHidden(
     withAllAttackTimingCombatMetadataHidden(combatMetadataState),
   );
@@ -275,6 +277,7 @@ export const resolveSupportedVanillaBattle = (
         );
       }
       for (let index = 0; index < battleDamageCount; index += 1) {
+        const remainingDamagePoints = battleDamageCount - index - 1;
         const point = processLeaderDamagePoint({
           state,
           nextState,
@@ -283,12 +286,17 @@ export const resolveSupportedVanillaBattle = (
           targetInstanceId: target.card.instanceId,
           targetPlayerId: target.playerId,
           attackerHasBanish,
-          allowLifeTriggerDecision: battleDamageCount === 1,
+          remainingDamagePoints,
         });
         if (point.result !== undefined) {
           return point.result;
         }
         nextState = point.state;
+        if (point.pausedForLifeTrigger) {
+          nextState.eventJournal = [...state.eventJournal, ...events];
+          assertGameStateInvariants(nextState);
+          return toEngineResult(nextState, events);
+        }
       }
     } else {
       const defender = nextState.players[target.playerId];
@@ -429,7 +437,7 @@ const processLeaderDamagePoint = ({
   targetInstanceId,
   targetPlayerId,
   attackerHasBanish,
-  allowLifeTriggerDecision,
+  remainingDamagePoints,
 }: {
   state: GameState;
   nextState: GameState;
@@ -438,9 +446,9 @@ const processLeaderDamagePoint = ({
   targetInstanceId: CardInstance["instanceId"];
   targetPlayerId: PlayerId;
   attackerHasBanish: boolean;
-  allowLifeTriggerDecision: boolean;
+  remainingDamagePoints: number;
 }):
-  | { state: GameState; result?: undefined }
+  | { state: GameState; pausedForLifeTrigger: boolean; result?: undefined }
   | { result: EngineResult; state?: undefined } => {
   const damaged = nextState.players[targetPlayerId];
   const topLife = damaged?.life[0];
@@ -472,7 +480,7 @@ const processLeaderDamagePoint = ({
   if (
     !attackerHasBanish &&
     hasLifeTriggerText(lifeMeta?.triggerText) &&
-    (supportedLifeTriggerDecision === undefined || !allowLifeTriggerDecision)
+    supportedLifeTriggerDecision === undefined
   ) {
     return {
       result: unsupportedBattleResolution(
@@ -579,7 +587,7 @@ const processLeaderDamagePoint = ({
       },
       { type: "private", playerId: targetPlayerId },
     );
-    return { state: updatedState };
+    return { state: updatedState, pausedForLifeTrigger: false };
   }
 
   const nextLife = damaged.life.slice(1).map((lifeCard, index) => ({
@@ -609,18 +617,33 @@ const processLeaderDamagePoint = ({
     },
     { type: "private", playerId: targetPlayerId },
   );
-  return {
-    state: {
-      ...nextState,
-      players: {
-        ...nextState.players,
-        [targetPlayerId]: {
-          ...damaged,
-          life: nextLife,
-        },
+  const stateWithDecision: GameState = {
+    ...nextState,
+    ...(remainingDamagePoints > 0 && nextState.battle !== undefined
+      ? {
+          battle: {
+            ...nextState.battle,
+            damageCount: remainingDamagePoints,
+            damageProcess: {
+              type: "multipleDamage",
+              sourceKeyword: "doubleAttack",
+              remainingDamagePoints,
+            },
+          },
+        }
+      : {}),
+    players: {
+      ...nextState.players,
+      [targetPlayerId]: {
+        ...damaged,
+        life: nextLife,
       },
-      pendingDecision: supportedLifeTriggerDecision,
     },
+    pendingDecision: supportedLifeTriggerDecision,
+  };
+  return {
+    state: stateWithDecision,
+    pausedForLifeTrigger: remainingDamagePoints > 0,
   };
 };
 
@@ -782,3 +805,5 @@ const finalizeSupportedEndOfBattleCleanup = ({
   assertGameStateInvariants(finalizedState);
   return toEngineResult(finalizedState, events);
 };
+
+registerLifeTriggerDamageContinuationResolver(resolveSupportedVanillaBattle);
