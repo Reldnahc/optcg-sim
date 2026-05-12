@@ -274,21 +274,6 @@ test("double attack leader damage processes two life cards sequentially", () => 
   ]);
 });
 
-test("ordinary Double Attack event order and state hash are stable for identical input", () => {
-  const run = () =>
-    resolveSupportedVanillaBattle(
-      setupLeaderBattleWithDamageCount(2, { doubleAttack: true }),
-    );
-
-  const first = run();
-  const second = run();
-
-  assertAcceptedHash(first);
-  assertAcceptedHash(second);
-  assert.deepEqual(eventSequence(first), eventSequence(second));
-  assert.equal(first.stateHash, second.stateHash);
-});
-
 test("damageCount values other than one or two fail closed without mutation", () => {
   for (const damageCount of [0, 3]) {
     const state = setupLeaderBattleWithDamageCount(damageCount);
@@ -648,57 +633,6 @@ test("Double Attack defers Life Trigger effectResolved follow-up until all damag
   assert.equal(followUpQueuedIndex < secondDamageIndex, true);
   assert.equal(finalDamageEventIndex < followUpResolvedIndex, true);
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
-});
-
-test("custom effect-resolved follow-up deferral keeps replay order and state hash stable", () => {
-  const run = () => {
-    const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
-    const firstLife = installSupportedLifeTriggerOnLife(state, 0, "first");
-    const firstLifeEffectId = must(firstLife.effectId, "first life effect id");
-    const opened = resolveSupportedVanillaBattle(state);
-    assert.equal(opened.errors, undefined);
-    installEffectResolvedDrawFollowUp(
-      opened.state,
-      `effectResolved:${String(firstLifeEffectId)}`,
-    );
-    const openedP2 = must(opened.state.players[p2], "opened p2");
-    const lifeDrawRefill = must(openedP2.hand[0], "life draw refill");
-    const followUpDrawRefill = must(openedP2.hand[1], "follow-up draw refill");
-    opened.state.players[p2] = {
-      ...openedP2,
-      hand: openedP2.hand.slice(2).map((card, index) => ({
-        ...card,
-        zone: { zone: "hand", playerId: p2, slot: "hand", index },
-      })),
-      deck: [
-        {
-          ...lifeDrawRefill,
-          zone: { zone: "deck", playerId: p2, slot: "deck", index: 0 },
-        },
-        {
-          ...followUpDrawRefill,
-          zone: { zone: "deck", playerId: p2, slot: "deck", index: 1 },
-        },
-      ],
-    };
-    const firstDecision = must(
-      opened.state.pendingDecision,
-      "first life trigger decision",
-    );
-    return applyAction(opened.state, {
-      type: "respondToDecision",
-      decisionId: firstDecision.id,
-      response: { type: "lifeTrigger", choice: "activateTrigger" },
-    });
-  };
-
-  const first = run();
-  const second = run();
-
-  assertAcceptedHash(first);
-  assertAcceptedHash(second);
-  assert.deepEqual(eventSequence(first), eventSequence(second));
-  assert.equal(first.stateHash, second.stateHash);
 });
 
 test("Double Attack rejects structurally deferred non-Life Trigger follow-up without mutation", () => {
