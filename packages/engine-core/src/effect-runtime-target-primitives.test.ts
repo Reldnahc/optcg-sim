@@ -16,6 +16,7 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
+import { applyAction, getLegalActions } from "./actions.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import {
   createActiveState,
@@ -372,6 +373,30 @@ const setupReviewedKoReplacementDefinition = (
   return effectBlock;
 };
 
+const pauseForReplacementDecision = () => {
+  const setup = setupKoPrimitiveState();
+  const { state, entry, refs, targetA } = setup;
+  const effectBlock = setupReviewedKoReplacementDefinition(state, targetA);
+  const result = executeSelectedTargetEffectPrimitive(
+    state,
+    entry,
+    koChooseEffect(),
+    [must(refs[0], "target A ref")],
+  );
+  return { ...setup, effectBlock, result };
+};
+
+const mustChooseReplacementDecision = (
+  decision: ReturnType<
+    typeof pauseForReplacementDecision
+  >["result"]["state"]["pendingDecision"],
+) => {
+  if (decision?.type !== "chooseReplacement") {
+    throw new Error("missing chooseReplacement decision");
+  }
+  return decision;
+};
+
 test("detects one reviewed optional would-be-KOd self replacement candidate for selected public Character", () => {
   const { state, entry, refs, targetA } = setupKoPrimitiveState();
   const effectBlock = setupReviewedKoReplacementDefinition(state, targetA);
@@ -400,6 +425,202 @@ test("detects one reviewed optional would-be-KOd self replacement candidate for 
   });
   assert.deepEqual(state, before);
   assert.equal(hashCanonicalStateValue(state), beforeHash);
+});
+
+test("targeted KO primitive pauses on a private chooseReplacement decision for supported optional KO replacement", () => {
+  const { result, entry, effectBlock, targetA } = pauseForReplacementDecision();
+  const p2State = must(result.state.players[p2], "next p2");
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.events.map((event) => [event.type, event.visibility]),
+    [["decisionCreated", { type: "private", playerId: p2 }]],
+  );
+  assert.deepEqual(result.state.pendingDecision, {
+    id: `decision:chooseReplacement:${String(entry.id)}:ko:${String(
+      targetA.instanceId,
+    )}:0`,
+    type: "chooseReplacement",
+    playerId: p2,
+    prompt: "Choose replacement effect.",
+    causedBy: entry.causedBy,
+    visibility: { type: "private", playerId: p2 },
+    processId: `${String(entry.id)}:ko:${String(targetA.instanceId)}:0`,
+    replacementIds: [String(effectBlock.id)],
+    mandatory: false,
+  });
+  assert.deepEqual(result.decisions, [result.state.pendingDecision]);
+  assert.equal(
+    p2State.characters.some((card) => card.instanceId === targetA.instanceId),
+    true,
+  );
+  assert.deepEqual(result.state.replacementState, [
+    {
+      processId: `${String(entry.id)}:ko:${String(targetA.instanceId)}:0`,
+      type: "ko",
+      usedReplacementIds: [],
+      payload: {
+        effectId: entry.effectBlockId,
+        queueEntryId: entry.id,
+        source: entry.source,
+        target: {
+          instanceId: targetA.instanceId,
+          cardId: targetA.cardId,
+          playerId: p2,
+          zone: targetA.zone,
+        },
+      },
+    },
+  ]);
+});
+
+test("chooseReplacement legal actions expose accept and decline only to the decision player", () => {
+  const { result, effectBlock } = pauseForReplacementDecision();
+  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
+
+  assert.deepEqual(getLegalActions(result.state, p2), [
+    { type: "concede", playerId: p2 },
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "replacement" },
+    },
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "replacement", replacementId: String(effectBlock.id) },
+    },
+  ]);
+  assert.deepEqual(getLegalActions(result.state, p1), [
+    { type: "concede", playerId: p1 },
+  ]);
+});
+
+test("declining optional chooseReplacement resolves to the unreplaced KO process", () => {
+  const { result, targetA } = pauseForReplacementDecision();
+  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
+
+  const declined = applyAction(result.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    playerId: p2,
+    response: { type: "replacement" },
+  });
+  const nextP2 = must(declined.state.players[p2], "next p2");
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(declined.state.pendingDecision, undefined);
+  assert.deepEqual(declined.state.replacementState, []);
+  assert.deepEqual(
+    declined.events.map((event) => event.type),
+    ["decisionResolved", "cardKOd", "cardMoved", "donReturned"],
+  );
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === targetA.instanceId),
+    false,
+  );
+  assert.equal(nextP2.trash[0]?.instanceId, targetA.instanceId);
+});
+
+test.each([
+  {
+    name: "wrong player",
+    action: (decision: ReturnType<typeof mustChooseReplacementDecision>) => ({
+      type: "respondToDecision" as const,
+      decisionId: decision.id,
+      playerId: p1,
+      response: { type: "replacement" as const },
+    }),
+    reason: "Player does not match current pending decision.",
+  },
+  {
+    name: "malformed response type",
+    action: (decision: ReturnType<typeof mustChooseReplacementDecision>) => ({
+      type: "respondToDecision" as const,
+      decisionId: decision.id,
+      playerId: p2,
+      response: { type: "orderedIds" as const, ids: [] },
+    }),
+    reason: "Response type must be replacement for chooseReplacement.",
+  },
+  {
+    name: "unknown replacement id",
+    action: (decision: ReturnType<typeof mustChooseReplacementDecision>) => ({
+      type: "respondToDecision" as const,
+      decisionId: decision.id,
+      playerId: p2,
+      response: {
+        type: "replacement" as const,
+        replacementId: "replacement:unknown",
+      },
+    }),
+    reason: "replacementId must match an available replacement.",
+  },
+  {
+    name: "accepted unsupported replacement",
+    action: (decision: ReturnType<typeof mustChooseReplacementDecision>) => ({
+      type: "respondToDecision" as const,
+      decisionId: decision.id,
+      playerId: p2,
+      response: {
+        type: "replacement" as const,
+        replacementId: must(decision.replacementIds[0], "replacement id"),
+      },
+    }),
+    reason: "Accepted replacement execution is unsupported.",
+  },
+] satisfies {
+  name: string;
+  action: (
+    decision: ReturnType<typeof mustChooseReplacementDecision>,
+  ) => Parameters<typeof applyAction>[1];
+  reason: string;
+}[])(
+  "chooseReplacement response validation rejects $name without mutation",
+  ({ action, reason }) => {
+    const { result } = pauseForReplacementDecision();
+    const decision = mustChooseReplacementDecision(
+      result.state.pendingDecision,
+    );
+    const before = structuredClone(result.state);
+    const beforeHash = hashCanonicalStateValue(result.state);
+
+    const rejected = applyAction(result.state, action(decision));
+
+    assert.deepEqual(rejected.errors, [
+      { type: "invalidDecisionResponse", reason },
+    ]);
+    assert.deepEqual(rejected.events, []);
+    assert.deepEqual(rejected.state, before);
+    assert.equal(rejected.stateHash, beforeHash);
+    assert.equal(rejected.state.pendingDecision?.id, decision.id);
+  },
+);
+
+test("chooseReplacement response validation rejects mandatory decline without mutation", () => {
+  const { result } = pauseForReplacementDecision();
+  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
+  const mandatoryState = {
+    ...result.state,
+    pendingDecision: { ...decision, mandatory: true },
+  };
+  const before = structuredClone(mandatoryState);
+
+  const rejected = applyAction(mandatoryState, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    playerId: p2,
+    response: { type: "replacement" },
+  });
+
+  assert.deepEqual(rejected.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "Mandatory replacement decisions cannot be declined.",
+    },
+  ]);
+  assert.deepEqual(rejected.events, []);
+  assert.deepEqual(rejected.state, before);
 });
 
 test("does not return KO replacement candidate already used by the process", () => {

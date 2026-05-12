@@ -21,6 +21,15 @@ import { getLegalActions } from "./actions.js";
 import { toCardRef, zonesEqual } from "./action-state.js";
 import { computeView } from "./compute-view.js";
 
+type PublicChooseReplacementDecision = PublicDecision &
+  Pick<
+    Extract<
+      NonNullable<GameState["pendingDecision"]>,
+      { type: "chooseReplacement" }
+    >,
+    "processId" | "replacementIds" | "mandatory"
+  >;
+
 const toPublicCardView = (
   card: CardInstance,
   currentPower?: number,
@@ -236,12 +245,12 @@ const toPlayerEvent = (event: EngineEvent): EngineEvent => {
 const toPublicDecision = (
   state: GameState,
   playerId: PlayerId,
-): PublicDecision | undefined => {
+): PublicDecision | PublicChooseReplacementDecision | undefined => {
   const pending = state.pendingDecision;
   if (pending === undefined || pending.playerId !== playerId) {
     return undefined;
   }
-  return {
+  const base = {
     id: pending.id,
     type: pending.type,
     playerId: pending.playerId,
@@ -251,6 +260,15 @@ const toPublicDecision = (
       ? {}
       : { timeoutMs: pending.timeoutMs }),
   };
+  if (pending.type === "chooseReplacement") {
+    return {
+      ...base,
+      processId: pending.processId,
+      replacementIds: [...pending.replacementIds],
+      mandatory: pending.mandatory,
+    };
+  }
+  return base;
 };
 
 type LocatedVisibleCard = {

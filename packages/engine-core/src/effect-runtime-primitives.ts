@@ -14,14 +14,20 @@ import type {
   Target,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import {
+  appendEvent,
+  toDecisionId,
+  toEngineResult,
+  toStateSeq,
+} from "./action-results.js";
 import { getOpponentId, reindexZoneCards } from "./action-state.js";
+import { detectSupportedSelectedTargetKoReplacementCandidate } from "./effect-runtime-replacement-primitives.js";
 export type {
   DetectSelectedTargetKoReplacementCandidateResult,
   SelectedTargetKoReplacementCandidate,
   SelectedTargetKoReplacementDetectionFailureReason,
 } from "./effect-runtime-replacement-primitives.js";
-export { detectSupportedSelectedTargetKoReplacementCandidate } from "./effect-runtime-replacement-primitives.js";
+export { detectSupportedSelectedTargetKoReplacementCandidate };
 
 export type DrawExecutionFailureReason =
   | "unsupported-effect-shape"
@@ -279,7 +285,38 @@ const findCardByInstanceId = (
   return null;
 };
 
-const executeUnreplacedSelectedTargetKoProcess = (
+const normalizeSelectedTargetKoProcess = (
+  state: GameState,
+  process: ReplacementProcess,
+): ReplacementProcess => {
+  const target = process.target;
+  if (process.type !== "ko" || target === undefined) {
+    return process;
+  }
+  const located = findCardByInstanceId(state, target.instanceId);
+  if (located === null || located.zone !== "characterArea") {
+    return process;
+  }
+  const currentTarget: CardRef = {
+    instanceId: located.card.instanceId,
+    cardId: located.card.cardId,
+    playerId: located.playerId,
+    zone: located.card.zone,
+  };
+  const payload =
+    typeof process.payload === "object" &&
+    process.payload !== null &&
+    "target" in process.payload
+      ? { ...process.payload, target: currentTarget }
+      : process.payload;
+  return {
+    ...process,
+    target: currentTarget,
+    payload,
+  };
+};
+
+export const executeUnreplacedSelectedTargetKoProcess = (
   state: GameState,
   events: EngineEvent[],
   effectId: string,
@@ -390,8 +427,72 @@ const executeSelectedTargetKoReplacementProcess = (
   events: EngineEvent[],
   effectId: string,
   process: ReplacementProcess,
-): { state: GameState } | { error: EngineError } =>
-  executeUnreplacedSelectedTargetKoProcess(state, events, effectId, process);
+): { state: GameState; paused?: true } | { error: EngineError } => {
+  const currentProcess = normalizeSelectedTargetKoProcess(state, process);
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    currentProcess,
+  );
+  if (!detected.ok) {
+    return { error: detected.error };
+  }
+  if (detected.candidate === undefined) {
+    return executeUnreplacedSelectedTargetKoProcess(
+      state,
+      events,
+      effectId,
+      currentProcess,
+    );
+  }
+
+  const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
+    id: toDecisionId(`decision:chooseReplacement:${currentProcess.id}`),
+    type: "chooseReplacement",
+    playerId: detected.candidate.controllerId,
+    prompt: "Choose replacement effect.",
+    causedBy: currentProcess.causedBy,
+    visibility: { type: "private", playerId: detected.candidate.controllerId },
+    processId: currentProcess.id,
+    replacementIds: [detected.candidate.id],
+    mandatory: false,
+  };
+  appendEvent(
+    state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: pendingDecision.id,
+      decisionType: pendingDecision.type,
+      playerId: pendingDecision.playerId,
+    },
+    pendingDecision.visibility,
+  );
+  const created = events[events.length - 1];
+  if (created !== undefined) {
+    created.causedBy = currentProcess.causedBy;
+  }
+
+  return {
+    state: {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      pendingDecision,
+      replacementState: [
+        ...state.replacementState.filter(
+          (candidate) => candidate.processId !== process.id,
+        ),
+        {
+          processId: currentProcess.id,
+          type: currentProcess.type,
+          usedReplacementIds: [...currentProcess.usedReplacementIds],
+          payload: currentProcess.payload,
+        },
+      ],
+      eventJournal: [...state.eventJournal, ...events],
+    },
+    paused: true,
+  };
+};
 
 const executeSelectedTargetKoEffect = (
   state: GameState,
@@ -539,6 +640,9 @@ const executeSelectedTargetKoEffect = (
     );
     if ("error" in resolvedProcess) {
       return toEngineResult(state, [], [resolvedProcess.error]);
+    }
+    if (resolvedProcess.paused === true) {
+      return toEngineResult(resolvedProcess.state, events);
     }
     nextState = resolvedProcess.state;
   }
