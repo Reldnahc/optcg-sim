@@ -43,6 +43,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supportedParserRuleIds: [
         "exact:on-play:draw-1:self",
         "exact:when-attacking:draw-1:self",
+        "line-separated-effect-blocks:v1",
       ],
     },
     {
