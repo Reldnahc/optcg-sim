@@ -834,6 +834,44 @@ describe("deck validation", () => {
 });
 
 describe("loadout validation", () => {
+  it("rejects unsupported non-vanilla cards in ranked loadouts", () => {
+    const leader = createResolvedCard(toCardId("OP01-020L"), {
+      category: "leader",
+      legality: { standard: { status: "legal", max_copies: 1 } },
+    });
+    const card = createResolvedCard(toCardId("OP01-020"), {
+      effectText: "[On Play] Draw 1 card.",
+      support: {
+        behaviorHash: "behavior:OP01-020",
+        cardDataVersion: baseVersions.cardDataVersion,
+        cardId: toCardId("OP01-020"),
+        rulesVersion: "rules-v1",
+        sourceTextHash: "source:OP01-020",
+        status: "unsupported",
+        tested: false,
+      },
+    });
+
+    const result = validateLoadout({
+      format: "standard",
+      loadout: createLoadout([
+        { cardId: leader.cardId, quantity: 1 },
+        { cardId: card.cardId, quantity: 1 },
+      ]),
+      manifest: buildManifest([leader, card]),
+      mode: "ranked",
+      overlayVersion: baseVersions.overlayVersion,
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        code: "unsupported-card",
+        cardId: card.cardId,
+      }),
+    );
+  });
+
   it("rejects cardVariants for unknown cards or invalid variant keys", () => {
     const leader = createResolvedCard(toCardId("OP01-021"), {
       category: "leader",

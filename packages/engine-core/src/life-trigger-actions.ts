@@ -9,6 +9,7 @@ import type {
   EngineEvent,
   EngineResult,
   GameState,
+  LegalAction,
   PlayerId,
   ResolvedCard,
 } from "@optcg/types";
@@ -222,6 +223,40 @@ const validateDecisionCard = (
     );
   }
   return undefined;
+};
+
+export const getLifeTriggerLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): LegalAction[] => {
+  const decision = state.pendingDecision;
+  const resolved =
+    decision?.type === "confirmLifeTrigger"
+      ? state.cardManifest.cards[decision.card.cardId]
+      : undefined;
+  if (
+    decision === undefined ||
+    decision.type !== "confirmLifeTrigger" ||
+    decision.playerId !== playerId ||
+    resolved?.support.status === "unsupported" ||
+    (resolved?.support.status === "implemented-dsl" &&
+      resolveSupportedLifeTriggerEffect(state, decision.card.cardId) ===
+        undefined)
+  ) {
+    return [];
+  }
+  return [
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "lifeTrigger", choice: "activateTrigger" },
+    },
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "lifeTrigger", choice: "addToHand" },
+    },
+  ];
 };
 
 const malformedContinuation = (state: GameState): EngineResult =>

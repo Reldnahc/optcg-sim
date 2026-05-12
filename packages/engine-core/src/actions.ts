@@ -42,7 +42,10 @@ import {
   finalizeSelectedTargetEffectResolution,
 } from "./effect-runtime.js";
 import { executeUnreplacedSelectedTargetKoProcess } from "./effect-runtime-primitives.js";
-import { applyLifeTriggerDecisionResponse } from "./life-trigger-actions.js";
+import {
+  applyLifeTriggerDecisionResponse,
+  getLifeTriggerLegalActions,
+} from "./life-trigger-actions.js";
 import {
   applyOptionalActivationDecisionResponse,
   getOptionalActivationLegalActions,
@@ -393,21 +396,7 @@ export const getLegalActions = (
         },
       });
     }
-    if (
-      state.pendingDecision.type === "confirmLifeTrigger" &&
-      state.pendingDecision.playerId === playerId
-    ) {
-      actions.push({
-        type: "respondToDecision",
-        decisionId: state.pendingDecision.id,
-        response: { type: "lifeTrigger", choice: "activateTrigger" },
-      });
-      actions.push({
-        type: "respondToDecision",
-        decisionId: state.pendingDecision.id,
-        response: { type: "lifeTrigger", choice: "addToHand" },
-      });
-    }
+    actions.push(...getLifeTriggerLegalActions(state, playerId));
     actions.push(...getSelectTargetsLegalActions(state, playerId));
     actions.push(...getOptionalActivationLegalActions(state, playerId));
     actions.push(...getPlayCardLegalActions(state, playerId));

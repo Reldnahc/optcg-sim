@@ -785,6 +785,13 @@ test("rejects selectTargets response for unsupported queued target effect withou
   const before = structuredClone(state);
   const beforeHash = hashCanonicalStateValue(state);
 
+  assert.deepEqual(
+    getLegalActions(state, p1).filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+
   const result = applyAction(
     state,
     respondWithTargets(decision.id, [must(targets[0], "target 0")]),

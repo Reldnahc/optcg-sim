@@ -12,7 +12,11 @@ import type {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { zonesEqual } from "./action-state.js";
-import { continueSelectedTargetEffect } from "./effect-runtime.js";
+import {
+  continueSelectedTargetEffect,
+  resolveImplementedDslEffectDefinition,
+} from "./effect-runtime.js";
+import { isUnsupportedSelectTargetsDecision } from "./effect-runtime-queue-target-decisions.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { resolvePublicTargetCandidates } from "./target-selection.js";
 
@@ -165,7 +169,12 @@ export const getSelectTargetsLegalActions = (
   if (
     decision === undefined ||
     decision.type !== "selectTargets" ||
-    decision.playerId !== playerId
+    decision.playerId !== playerId ||
+    isUnsupportedSelectTargetsDecision(
+      state,
+      decision,
+      resolveImplementedDslEffectDefinition,
+    )
   ) {
     return [];
   }
