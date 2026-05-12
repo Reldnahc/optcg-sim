@@ -186,6 +186,12 @@ export const resolveSupportedVanillaBattle = (
   if (initialAttacker === null || initialTarget === null) {
     return illegalAction(state, "Battle participants are stale or invalid.");
   }
+  if (!initialTarget.isLeader && initialBattle.damageCount !== 1) {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported blocker, step, or multi-damage behavior.",
+    );
+  }
   if (initialBattle.blocker !== undefined) {
     const blocker = reifyCardRef(resolutionState, initialBattle.blocker);
     if (

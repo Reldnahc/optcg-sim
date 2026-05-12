@@ -289,6 +289,48 @@ test("unsupported Double Attack metadata cannot bypass source gate through direc
   assert.equal(JSON.stringify(result.state), before);
 });
 
+test("two damage against Character target fails closed without mutation", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const target = must(p2State.characters[0], "p2 character");
+  target.state = "rested";
+  installSupportedDoubleAttackLeader(state);
+  state.battle = {
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    step: "attack",
+    damageCount: 2,
+  };
+  const before = JSON.stringify(state);
+
+  const result = resolveSupportedVanillaBattle(state);
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason:
+        "Battle requires unsupported blocker, step, or multi-damage behavior.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+});
+
 test("first Double Attack damage point with supported Life Trigger pauses before second point", () => {
   const state = setupLeaderBattleWithDamageCount(2, { doubleAttack: true });
   const firstLife = installSupportedLifeTriggerOnLife(state, 0, "first");
