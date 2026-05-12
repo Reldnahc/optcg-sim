@@ -1,0 +1,64 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-046D
+epic_id: KICK-001
+title: Guard Banish and unsupported multiple-damage interactions
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Preserve existing Banish single-damage behavior and fail closed for Banish
+  combined with multiple damage or unsupported damage-count interactions.
+story_boundary: >
+  Own only guard coverage and small support-gate hardening for unsupported
+  multiple-damage interactions. Do not implement Banish plus Double Attack or
+  any new keyword behavior.
+allowed_touch_points:
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/battle-support.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-damage-banish-only.test.ts
+  - packages/engine-core/src/battle-damage-multiple.test.ts
+  - stories/generated/ENG-046D-banish-unsupported-interaction-guard.yaml
+  - stories/approved/ENG-046D-banish-unsupported-interaction-guard.yaml
+  - agent-packets/ENG-046D.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s023
+  - 02-engine-mechanics.s025
+  - 02-engine-mechanics.s039
+  - 11-testing-quality.s004
+  - 22-v6-implementation-tightening.s008
+scope:
+  - keep existing Banish single-damage leader behavior unchanged
+  - keep Banish damage on Life Trigger cards from creating Life Trigger decisions
+  - fail closed without mutation for Banish combined with Double Attack
+  - fail closed without mutation for unsupported multi-damage counts, unsupported targets, or unsupported keyword combinations
+  - preserve existing battle support gate behavior for unsupported battle envelopes
+non_scope:
+  - Banish plus Double Attack support
+  - new Banish effect text support
+  - replacement effects or damage replacement integration
+  - real-card fixtures or card-data integration
+dependencies:
+  - ENG-046A
+acceptance_criteria:
+  - Banish single-damage tests still pass unchanged
+  - Banish plus Double Attack fails closed without mutation and without events
+  - unsupported damage count values fail closed without mutation
+  - unsupported multiple-damage Character target cases fail closed unless already supported by earlier child scope
+required_tests:
+  - run `corepack pnpm exec vitest run packages/engine-core/src/battle-damage-banish-only.test.ts packages/engine-core/src/battle-damage-multiple.test.ts packages/engine-core/src/battle-actions.test.ts`
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-046D packet while implementing this story
+  - stay within allowed_touch_points
+  - target the ENG-046 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+ambiguity_policy: fail_and_escalate
