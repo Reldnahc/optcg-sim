@@ -1,0 +1,66 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-044C
+epic_id: KICK-001
+title: Remove while-source-on-field modifier from computed view
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Make supported `whileSourceOnField` +1000 self power modifiers apply only
+  while the source card remains live on the board.
+story_boundary: >
+  Own only computed-view applicability for ENG-044A-supported
+  `whileSourceOnField` modifiers. Do not add cleanup mutation, broad duration
+  semantics, effect-runtime record creation, or PlayerView projection here.
+allowed_touch_points:
+  - packages/engine-core/src/compute-view.ts
+  - packages/engine-core/src/compute-view.test.ts
+  - stories/generated/ENG-044C-source-removal-modifier-disappearance.yaml
+  - stories/approved/ENG-044C-source-removal-modifier-disappearance.yaml
+  - agent-packets/ENG-044C.md
+  - agent-packets/active.json
+spec_refs:
+  - 0003-continuous-effects-computed-view.s004
+  - 0003-continuous-effects-computed-view.s005
+  - 0003-continuous-effects-computed-view.s006
+  - 03-game-state-events-decisions.s020
+  - 11-testing-quality.s004
+scope:
+  - apply supported whileSourceOnField self +1000 powerAdd records while the source card is in leader or character area with matching instance and card id
+  - omit the modifier from computed power when the source card has left the board, changed identity, or is otherwise not live
+  - keep stale continuous records in canonical state; disappearance is derived in computed view only
+  - prove stale-source derivation leaves canonical state hash and `state.eventJournal` unchanged
+  - preserve permanent modifier behavior from ENG-044B
+non_scope:
+  - mutating or cleaning up stale continuous effect records
+  - supporting whileConditionTrue or additional duration types
+  - non-self targets
+  - PlayerView/public projection
+  - real-card fixtures or card-data integration
+dependencies:
+  - ENG-044A
+  - ENG-044B
+acceptance_criteria:
+  - a live whileSourceOnField source applies the supported +1000 modifier in computed view
+  - moving or removing that source makes the modifier disappear from computed view without mutating canonical state
+  - stale source refs do not throw if the modifier shape is otherwise supported; they simply contribute no power
+  - stale source records remain in canonical `continuousEffects` after `computeView`
+  - "`hashCanonicalStateValue(state)` and `state.eventJournal` are identical before and after stale-source `computeView`"
+  - permanent modifiers remain source-independent according to ENG-044B
+required_tests:
+  - run `corepack pnpm exec vitest run packages/engine-core/src/compute-view.test.ts`
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-044C packet while implementing this story
+  - run `corepack pnpm run packets:verify` before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-044 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+ambiguity_policy: fail_and_escalate

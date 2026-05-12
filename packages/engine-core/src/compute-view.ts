@@ -2,6 +2,7 @@ import type {
   CardInstance,
   ComputedCardView,
   ComputedGameView,
+  ContinuousEffectRecord,
   GameState,
   InstanceId,
   Keyword,
@@ -24,6 +25,63 @@ const isLeaderOrCharacter = (
   card: CardInstance,
 ): card is CardInstance & { zone: { zone: "leaderArea" | "characterArea" } } =>
   card.zone.zone === "leaderArea" || card.zone.zone === "characterArea";
+
+const isSupportedContinuousPowerModifier = (
+  effect: ContinuousEffectRecord,
+): boolean =>
+  effect.condition === undefined &&
+  (effect.duration.type === "permanent" ||
+    effect.duration.type === "whileSourceOnField") &&
+  effect.modifier.layer === "powerAdd" &&
+  effect.modifier.target.type === "self" &&
+  effect.modifier.operation.type === "addPower" &&
+  effect.modifier.operation.value === 1000;
+
+const assertSupportedContinuousEffects = (
+  continuousEffects: readonly ContinuousEffectRecord[],
+): void => {
+  for (const effect of continuousEffects) {
+    if (!isSupportedContinuousPowerModifier(effect)) {
+      throw new TypeError(
+        `Unsupported continuous effect ${effect.id}: only unconditional self +1000 powerAdd modifiers with permanent or whileSourceOnField duration are supported by computeView.`,
+      );
+    }
+  }
+};
+
+const continuousPowerBonusForCard = (
+  state: GameState,
+  card: CardInstance,
+): number => {
+  let powerBonus = 0;
+
+  for (const effect of state.continuousEffects) {
+    if (
+      effect.duration.type !== "permanent" &&
+      effect.duration.type !== "whileSourceOnField"
+    ) {
+      continue;
+    }
+    if (effect.condition !== undefined) continue;
+    if (effect.modifier.layer !== "powerAdd") continue;
+    if (effect.modifier.target.type !== "self") continue;
+    if (effect.modifier.operation.type !== "addPower") continue;
+    if (effect.modifier.operation.value !== 1000) continue;
+    if (effect.source.instanceId !== card.instanceId) continue;
+    if (effect.source.cardId !== card.cardId) continue;
+    if (effect.source.playerId !== card.controller) continue;
+    if (
+      effect.duration.type === "whileSourceOnField" &&
+      !isCardRefLive(state, effect.source)
+    ) {
+      continue;
+    }
+
+    powerBonus += effect.modifier.operation.value;
+  }
+
+  return powerBonus;
+};
 
 const resolveCombatMetadata = (
   state: GameState,
@@ -202,12 +260,13 @@ const computeCardView = (
     state.battle.currentTarget.cardId === card.cardId
       ? (state.battle.counterPower ?? 0)
       : 0;
+  const continuousPowerBonus = continuousPowerBonusForCard(state, card);
 
   return {
     instanceId: card.instanceId,
     cardId: card.cardId,
     basePower,
-    currentPower: basePower + donBonus + counterBonus,
+    currentPower: basePower + donBonus + counterBonus + continuousPowerBonus,
     keywords: [...metadata.printedKeywords] as Keyword[],
     canAttack: canAttackNow(state, card),
     canBlock: canBlockNow(state, card, metadata),
@@ -217,6 +276,8 @@ const computeCardView = (
 };
 
 export const computeView = (state: GameState): ComputedGameView => {
+  assertSupportedContinuousEffects(state.continuousEffects);
+
   const cards: ComputedGameView["cards"] = {};
   const legalAttackTargets: ComputedGameView["legalAttackTargets"] = {};
   const allCombatCards: CardInstance[] = [];
