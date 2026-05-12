@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-047D.md",
-      "storyId": "ENG-047D",
-      "storyPath": "stories/approved/ENG-047D-hidden-info-view-regression.yaml",
-      "storySha256": "9253e1a5893513dfda7eaecef4335315860afaa85ca348e93741433be837a144"
+      "packetPath": "agent-packets/ENG-047E.md",
+      "storyId": "ENG-047E",
+      "storyPath": "stories/approved/ENG-047E-event-order-state-hash-regression.yaml",
+      "storySha256": "0e0bd0763cf45d2b01538240d06619552f1961f67d8abefe836bda1fda0cb680"
     }
   ],
   "version": 1
