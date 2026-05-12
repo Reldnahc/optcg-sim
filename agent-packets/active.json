@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-049.md",
+      "storyId": "ENG-049",
+      "storyPath": "stories/approved/ENG-049-acceptance-closeout-matrix.yaml",
+      "storySha256": "1f1eedfb34d9e795930d201e472ebf9bef1f1bf979c6ace5718d56f258523f5e"
+    }
+  ],
   "version": 1
 }

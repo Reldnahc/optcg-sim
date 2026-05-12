@@ -125,9 +125,10 @@ engine state, legal actions, vanilla terminal match smoke, events,
 hidden-info-safe `PlayerView` filtering, battle timing, state hashes, and local
 verification coverage.
 
-The stable focus after that closeout is the first effect-runtime foundation:
-explicit supported sample effects, deterministic effect queue behavior,
-trigger-ordering coverage, and hidden-info-safe views for effect-driven states.
+The first effect-runtime foundation closes with explicit supported sample
+effects, deterministic effect queue behavior, trigger-ordering coverage, and
+hidden-info-safe views for effect-driven states. Its acceptance closeout matrix
+is [docs/effect-runtime-acceptance-closeout.md](docs/effect-runtime-acceptance-closeout.md).
 
 ## Not Yet
 
