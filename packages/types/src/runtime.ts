@@ -5,7 +5,6 @@ import type {
   EngineEventId,
   InstanceId,
   PlayerId,
-  QueueEntryId,
   SelectionSetId,
   StateSeq,
   TimingWindowId,
@@ -145,13 +144,6 @@ export interface ReplacementProcess {
   payload: unknown;
   causedBy: CausalityRef;
   usedReplacementIds: string[];
-}
-
-export interface SelectedTargetKoReplacementPayload {
-  effectId: EffectId;
-  queueEntryId: QueueEntryId;
-  source: CardRef;
-  target: CardRef;
 }
 
 export interface ReplacementProcessState {

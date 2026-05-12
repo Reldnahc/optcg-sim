@@ -11,7 +11,6 @@ import type {
   PlayerId,
   PlayerRef,
   ReplacementProcess,
-  SelectedTargetKoReplacementPayload,
   Target,
 } from "@optcg/types";
 
@@ -210,6 +209,13 @@ type LocatedCard = {
   card: CardInstance;
   index?: number;
 };
+
+interface SelectedTargetKoReplacementPayload {
+  effectId: EffectQueueEntry["effectBlockId"];
+  queueEntryId: EffectQueueEntry["id"];
+  source: CardRef;
+  target: CardRef;
+}
 
 export const buildSelectedTargetKoReplacementProcess = (
   entry: EffectQueueEntry,
