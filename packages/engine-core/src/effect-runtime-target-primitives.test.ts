@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- ENG-045D adds required story coverage to this pre-existing 997-line primitive test file. */
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -520,6 +521,137 @@ test("declining optional chooseReplacement resolves to the unreplaced KO process
   assert.equal(nextP2.trash[0]?.instanceId, targetA.instanceId);
 });
 
+test("accepting optional chooseReplacement applies the supported KO replacement draw without KO mutation", () => {
+  const { result, effectBlock, targetA } = pauseForReplacementDecision();
+  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
+  const storedProcess = must(
+    result.state.replacementState[0],
+    "stored replacement process",
+  );
+  const previousPayloadHash = hashCanonicalStateValue(storedProcess.payload);
+  const transformedPayloadHash = hashCanonicalStateValue({
+    controllerId: p2,
+    effect: { type: "draw", count: 1, player: "self" },
+    replacementId: String(effectBlock.id),
+    source: {
+      instanceId: targetA.instanceId,
+      cardId: targetA.cardId,
+      playerId: p2,
+      zone: targetA.zone,
+    },
+  });
+  const pausedP2 = must(result.state.players[p2], "paused p2");
+
+  const accepted = applyAction(result.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    playerId: p2,
+    response: {
+      type: "replacement",
+      replacementId: String(effectBlock.id),
+    },
+  });
+  const nextP2 = must(accepted.state.players[p2], "next p2");
+  const replacementApplied = must(
+    accepted.events[1],
+    "replacementApplied event",
+  );
+  const cardDrawn = must(accepted.events[2], "cardDrawn event");
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(accepted.state.pendingDecision, undefined);
+  assert.deepEqual(accepted.state.replacementState, []);
+  assert.deepEqual(
+    accepted.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "replacementApplied",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+    ],
+  );
+  assert.deepEqual(replacementApplied.payload, {
+    processId: decision.processId,
+    replacementId: String(effectBlock.id),
+    previousPayloadHash,
+    transformedPayloadHash,
+  });
+  assert.deepEqual(replacementApplied.visibility, { type: "public" });
+  assert.deepEqual(replacementApplied.causedBy, {
+    type: "replacement",
+    replacementId: String(effectBlock.id),
+  });
+  assert.deepEqual(cardDrawn.payload, { playerId: p2 });
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === targetA.instanceId),
+    true,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === targetA.instanceId),
+    false,
+  );
+  assert.equal(nextP2.deck.length, pausedP2.deck.length - 1);
+  assert.equal(nextP2.hand.length, pausedP2.hand.length + 1);
+  assert.equal(
+    accepted.events.some(
+      (event) =>
+        event.type === "cardKOd" ||
+        event.type === "decisionCreated" ||
+        event.type === "donReturned",
+    ),
+    false,
+  );
+  assert.deepEqual(
+    accepted.state.eventJournal.slice(-accepted.events.length),
+    accepted.events,
+  );
+  assert.equal(accepted.stateHash, hashCanonicalStateValue(accepted.state));
+});
+
+test("accepted KO replacement application is deterministic across equivalent states", () => {
+  const runAcceptedReplacement = () => {
+    const { result, effectBlock } = pauseForReplacementDecision();
+    const decision = mustChooseReplacementDecision(
+      result.state.pendingDecision,
+    );
+    return applyAction(result.state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      playerId: p2,
+      response: {
+        type: "replacement",
+        replacementId: String(effectBlock.id),
+      },
+    });
+  };
+
+  const first = runAcceptedReplacement();
+  const second = runAcceptedReplacement();
+
+  assert.equal(first.errors, undefined);
+  assert.equal(second.errors, undefined);
+  assert.equal(first.stateHash, second.stateHash);
+  assert.deepEqual(
+    first.events.map((event) => ({
+      type: event.type,
+      payload: event.payload,
+      visibility: event.visibility,
+      causedBy: event.causedBy,
+      seq: event.seq,
+      createdAtStateSeq: event.createdAtStateSeq,
+    })),
+    second.events.map((event) => ({
+      type: event.type,
+      payload: event.payload,
+      visibility: event.visibility,
+      causedBy: event.causedBy,
+      seq: event.seq,
+      createdAtStateSeq: event.createdAtStateSeq,
+    })),
+  );
+});
+
 test.each([
   {
     name: "wrong player",
@@ -556,16 +688,10 @@ test.each([
     response: { type: "replacement", replacementId: "replacement:unknown" },
     reason: "replacementId must match an available replacement.",
   },
-  {
-    name: "accepted unsupported replacement",
-    playerId: p2,
-    response: "known",
-    reason: "Accepted replacement execution is unsupported.",
-  },
 ] satisfies {
   name: string;
   playerId?: typeof p1;
-  response?: Record<string, unknown> | null | "known";
+  response?: Record<string, unknown> | null;
   omitResponse?: true;
   reason: string;
 }[])(
@@ -577,18 +703,11 @@ test.each([
     );
     const before = structuredClone(result.state);
     const beforeHash = hashCanonicalStateValue(result.state);
-    const responseValue =
-      response === "known"
-        ? {
-            type: "replacement",
-            replacementId: must(decision.replacementIds[0], "replacement id"),
-          }
-        : response;
     const action = {
       type: "respondToDecision" as const,
       decisionId: decision.id,
       ...(playerId === undefined ? {} : { playerId }),
-      ...(omitResponse === true ? {} : { response: responseValue }),
+      ...(omitResponse === true ? {} : { response }),
     } as unknown as Parameters<typeof applyAction>[1];
 
     const rejected = applyAction(result.state, action);
