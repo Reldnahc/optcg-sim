@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import type { Effect, TransientCardSet } from "@optcg/types";
+import type { Action, Effect, TransientCardSet } from "@optcg/types";
 import { test } from "vitest";
 
 import {
@@ -9,6 +9,7 @@ import {
   p2,
   resolvedCard,
 } from "./action-test-fixtures.js";
+import { applyAction } from "./actions.js";
 import {
   createSupportedSearchRevealChoiceDecision,
   createSupportedSearchRevealChoiceDecisionFromTransientSet,
@@ -47,6 +48,45 @@ const markTopDeckCard = (
   });
   return topDeck;
 };
+
+const createSearchRevealDecisionState = () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  const originalDeck = [...player.deck];
+  const originalHand = [...player.hand];
+  const topDeck = markTopDeckCard(state, "character");
+  const result = createSupportedSearchRevealChoiceDecision(
+    state,
+    queueDrawForP1(),
+    supportedSearch(),
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.kind, "decisionCreated");
+  const decision = must(result.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectCards");
+  const candidate = must(decision.candidates[0], "candidate").card;
+  return {
+    candidate,
+    decision,
+    originalDeck,
+    originalHand,
+    state: result.state,
+    topDeck,
+  };
+};
+
+const respondWithCards = (
+  decisionId: ReturnType<
+    typeof createSearchRevealDecisionState
+  >["decision"]["id"],
+  cards: ReturnType<typeof createSearchRevealDecisionState>["candidate"][],
+  playerId = p1,
+): Extract<Action, { type: "respondToDecision" }> => ({
+  type: "respondToDecision",
+  decisionId,
+  playerId,
+  response: { type: "cards", cards },
+});
 
 test("supported top-1 Character deck search creates deterministic transient reveal set", () => {
   const state = createActiveState();
@@ -345,4 +385,159 @@ test("malformed search reveal transient set rejects without mutation", () => {
   });
   assert.equal(state.pendingDecision, undefined);
   assert.deepEqual(state.revealedCards, []);
+});
+
+test("valid search reveal choice moves selected Character to hand and clears transient state privately", () => {
+  const { candidate, decision, originalDeck, originalHand, state, topDeck } =
+    createSearchRevealDecisionState();
+
+  const result = applyAction(state, respondWithCards(decision.id, [candidate]));
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.revealedCards, []);
+  assert.deepEqual(
+    result.events.map((event) => [event.type, event.visibility.type]),
+    [
+      ["decisionResolved", "private"],
+      ["cardMoved", "private"],
+    ],
+  );
+  assert.deepEqual(result.events[0]?.payload, {
+    decisionId: decision.id,
+    decisionType: "selectCards",
+    playerId: p1,
+    responseType: "cards",
+    selectedCount: 1,
+  });
+  assert.equal(
+    (result.events[1]?.payload as { instanceId?: unknown }).instanceId,
+    topDeck.instanceId,
+  );
+
+  const nextPlayer = must(result.state.players[p1], "next p1");
+  assert.deepEqual(
+    nextPlayer.hand.map((card) => card.instanceId),
+    [...originalHand.map((card) => card.instanceId), topDeck.instanceId],
+  );
+  assert.deepEqual(
+    nextPlayer.deck.map((card) => card.instanceId),
+    originalDeck.slice(1).map((card) => card.instanceId),
+  );
+  assert.equal(
+    JSON.stringify(filterStateForPlayer(result.state, p2)).includes(
+      String(topDeck.instanceId),
+    ),
+    false,
+  );
+});
+
+test("valid zero-card search reveal choice declines and clears transient state without moving cards", () => {
+  const { decision, originalDeck, originalHand, state, topDeck } =
+    createSearchRevealDecisionState();
+
+  const result = applyAction(state, respondWithCards(decision.id, []));
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.revealedCards, []);
+  assert.deepEqual(
+    result.events.map((event) => [event.type, event.visibility.type]),
+    [["decisionResolved", "private"]],
+  );
+  assert.deepEqual(result.events[0]?.payload, {
+    decisionId: decision.id,
+    decisionType: "selectCards",
+    playerId: p1,
+    responseType: "cards",
+    selectedCount: 0,
+  });
+
+  const nextPlayer = must(result.state.players[p1], "next p1");
+  assert.deepEqual(
+    nextPlayer.hand.map((card) => card.instanceId),
+    originalHand.map((card) => card.instanceId),
+  );
+  assert.deepEqual(
+    nextPlayer.deck.map((card) => card.instanceId),
+    originalDeck.map((card) => card.instanceId),
+  );
+  assert.equal(nextPlayer.deck[0]?.instanceId, topDeck.instanceId);
+  assert.equal(
+    JSON.stringify(filterStateForPlayer(result.state, p2)).includes(
+      String(topDeck.instanceId),
+    ),
+    false,
+  );
+});
+
+test("invalid search reveal choice responses fail closed without mutation or events", () => {
+  const { candidate, decision, state } = createSearchRevealDecisionState();
+  const invalidResponses: Extract<Action, { type: "respondToDecision" }>[] = [
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      playerId: p1,
+      response: { type: "targets", targets: [candidate] },
+    },
+    respondWithCards(decision.id, [candidate, candidate]),
+    respondWithCards(decision.id, [
+      {
+        ...candidate,
+        instanceId: "not-a-candidate",
+      } as typeof candidate,
+    ]),
+    respondWithCards(decision.id, [candidate], p2),
+  ];
+
+  for (const action of invalidResponses) {
+    const result = applyAction(state, action);
+    assert.equal(result.state, state);
+    assert.deepEqual(result.events, []);
+    assert.equal(result.errors?.[0]?.type, "invalidDecisionResponse");
+  }
+});
+
+test("stale search reveal choice envelope fails closed without mutation or events", () => {
+  const { candidate, decision, state } = createSearchRevealDecisionState();
+  const noDecisionState = { ...state };
+  delete noDecisionState.pendingDecision;
+  const staleStates: {
+    state: typeof state;
+    errorType: NonNullable<
+      ReturnType<typeof applyAction>["errors"]
+    >[number]["type"];
+  }[] = [
+    { state: noDecisionState, errorType: "illegalAction" },
+    {
+      state: { ...state, revealedCards: [] },
+      errorType: "invalidDecisionResponse",
+    },
+    {
+      state: {
+        ...state,
+        cardManifest: {
+          ...state.cardManifest,
+          cards: {
+            ...state.cardManifest.cards,
+            [candidate.cardId]: resolvedCard({
+              cardId: candidate.cardId,
+              category: "event",
+            }),
+          },
+        },
+      },
+      errorType: "invalidDecisionResponse",
+    },
+  ];
+
+  for (const { state: staleState, errorType } of staleStates) {
+    const result = applyAction(
+      staleState,
+      respondWithCards(decision.id, [candidate]),
+    );
+    assert.equal(result.state, staleState);
+    assert.deepEqual(result.events, []);
+    assert.equal(result.errors?.[0]?.type, errorType);
+  }
 });

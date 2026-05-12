@@ -47,6 +47,7 @@ import {
   applyOptionalActivationDecisionResponse,
   getOptionalActivationLegalActions,
 } from "./optional-activation-actions.js";
+import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
 import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
 import {
   applyConcede,
@@ -448,6 +449,13 @@ const applyRespondToDecision = (
   );
   if (targetSelectionResult !== null) {
     return targetSelectionResult;
+  }
+  if (
+    decision.type === "selectCards" &&
+    decision.request.set !== undefined &&
+    String(decision.request.set).startsWith("set:search-reveal:")
+  ) {
+    return applySupportedSearchRevealChoiceResponse(state, action);
   }
   const replacementResult = applyChooseReplacementDecisionResponse(
     state,
