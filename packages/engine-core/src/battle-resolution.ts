@@ -5,6 +5,7 @@ import type {
   EngineResult,
   GameState,
   PlayerId,
+  ResolvedCard,
 } from "@optcg/types";
 
 import {
@@ -61,6 +62,20 @@ const toErrorTuple = (
     ];
   }
   return [first, ...errors.slice(1)];
+};
+
+const isSupportedDoubleAttackDamageSource = (
+  card: ResolvedCard | undefined,
+): card is ResolvedCard => {
+  const printedKeywords = card?.printedKeywords ?? [];
+  return (
+    card?.support.status === "implemented-dsl" &&
+    card.support.effectDefinitionId === undefined &&
+    (card.effectText ?? "").trim().length === 0 &&
+    (card.triggerText ?? "").trim().length === 0 &&
+    printedKeywords.includes("doubleAttack") &&
+    !printedKeywords.includes("banish")
+  );
 };
 
 const hasOnKODefinitionMetadata = (
@@ -153,8 +168,7 @@ export const resolveSupportedVanillaBattle = (
   const attackerPrintedKeywords = attackerManifestCard?.printedKeywords ?? [];
   if (
     battle.damageCount === 2 &&
-    attackerPrintedKeywords.includes("doubleAttack") &&
-    attackerPrintedKeywords.includes("banish")
+    !isSupportedDoubleAttackDamageSource(attackerManifestCard)
   ) {
     return unsupportedBattleResolution(
       state,
