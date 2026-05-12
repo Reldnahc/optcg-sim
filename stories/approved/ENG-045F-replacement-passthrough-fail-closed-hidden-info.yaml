@@ -18,6 +18,7 @@ story_boundary: >
   ENG-045 foundation. Do not add new replacement capabilities.
 allowed_touch_points:
   - packages/engine-core/src/effect-runtime-primitives.ts
+  - packages/engine-core/src/effect-runtime-replacement-application.test.ts
   - packages/engine-core/src/effect-runtime-target-primitives.test.ts
   - packages/engine-core/src/filter-state-for-player.ts
   - packages/engine-core/src/filter-state-for-player.test.ts
@@ -28,8 +29,10 @@ allowed_touch_points:
   - agent-packets/ENG-045F.md
   - agent-packets/active.json
 spec_refs:
+  - 03-game-state-events-decisions.s005
   - 03-game-state-events-decisions.s006
   - 03-game-state-events-decisions.s018
+  - 03-game-state-events-decisions.s020
   - 04-effect-runtime.s013
   - 11-testing-quality.s004
   - 22-v6-implementation-tightening.s011
@@ -54,7 +57,7 @@ acceptance_criteria:
   - event sequencing and state hashes are covered for all supported paths
   - PlayerView does not leak replacement internals or hidden information
 required_tests:
-  - run `corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/filter-state-for-player.test.ts packages/engine-core/src/filter-state-for-player.real-states-baseline.test.ts packages/engine-core/src/filter-state-for-player.real-states-battle.test.ts`
+  - run `corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/effect-runtime-replacement-application.test.ts packages/engine-core/src/filter-state-for-player.test.ts packages/engine-core/src/filter-state-for-player.real-states-baseline.test.ts packages/engine-core/src/filter-state-for-player.real-states-battle.test.ts`
   - run `corepack pnpm --filter @optcg/engine-core typecheck`
   - run `corepack pnpm run packets:verify`
   - run `corepack pnpm run verify`
