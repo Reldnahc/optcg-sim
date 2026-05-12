@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-048.md",
-      "storyId": "ENG-048",
-      "storyPath": "stories/approved/ENG-048-unsupported-nonvanilla-rejection-closeout.yaml",
-      "storySha256": "7c939c18b2b243358866034a69e561cf206785be58fe93a1ddee09185b5a1d51"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
