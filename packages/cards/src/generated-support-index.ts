@@ -12,7 +12,6 @@ import {
 } from "./generated-support-types.js";
 import {
   generatedSupportRuntimeCapabilityMatrix,
-  hasRuntimeCapability,
   type RuntimeCapabilityMatrix,
 } from "./runtime-capability-matrix.js";
 
@@ -46,6 +45,7 @@ export interface GeneratedSupportIndex {
 
 export interface GeneratedSupportIndexEntry {
   blockers: readonly GeneratedSupportBlocker[];
+  capabilityEvidence: readonly RuntimeCapabilityEvidence[];
   cardId: CardId;
   effectDefinition?: EffectDefinition;
   effectDefinitionId?: string;
@@ -59,7 +59,13 @@ export interface GeneratedSupportIndexEntry {
 
 export interface GeneratedSupportManifestEvidence {
   effectDefinitions: Record<string, EffectDefinition>;
+  generatedSupport: Record<CardId, GeneratedSupportIndexEntry>;
   support: Record<CardId, CardImplementationRecord>;
+}
+
+export interface RuntimeCapabilityEvidence {
+  capabilityId: string;
+  parserRuleId: string;
 }
 
 export function buildGeneratedSupportIndex(
@@ -110,6 +116,11 @@ export function toGeneratedSupportManifestEvidence(
 
   return {
     effectDefinitions: { ...index.effectDefinitions },
+    generatedSupport: Object.fromEntries(
+      index.entries
+        .map((entry) => [entry.cardId, entry] as const)
+        .sort(([left], [right]) => String(left).localeCompare(String(right))),
+    ),
     support: Object.fromEntries(supportEntries),
   };
 }
@@ -155,20 +166,25 @@ function buildGeneratedSupportIndexEntry(
     });
   }
 
-  const missingCapabilityIds = listMissingCapabilityIds({
+  const capabilityCoverage = resolveCapabilityCoverage({
     matrix:
       input.runtimeCapabilityMatrix ?? generatedSupportRuntimeCapabilityMatrix,
     parserRuleIds: parseResult.parserRuleIds,
   });
-  if (missingCapabilityIds.length > 0) {
+  if (capabilityCoverage.missing.length > 0) {
     return unsupportedEntry({
-      blockers: missingCapabilityIds.map((capabilityId) => ({
-        capabilityId,
+      blockers: capabilityCoverage.missing.map((missing) => ({
+        capabilityId: missing.capabilityId,
         code: "missing-runtime-capability",
-        message: `Missing runtime capability ${capabilityId}.`,
+        component: missing.parserRuleId,
+        message: `Missing runtime capability ${missing.capabilityId} for parser rule ${missing.parserRuleId}.`,
       })),
       card,
-      missingCapabilityIds,
+      missingCapabilityIds: [
+        ...new Set(
+          capabilityCoverage.missing.map((missing) => missing.capabilityId),
+        ),
+      ].sort(),
       parseStatus: parseResult.status,
       parserRuleIds: parseResult.parserRuleIds,
     });
@@ -195,6 +211,7 @@ function buildGeneratedSupportIndexEntry(
   const effectDefinitionId = toGeneratedEffectDefinitionId(card.cardId);
   return {
     blockers: [],
+    capabilityEvidence: capabilityCoverage.evidence,
     cardId: card.cardId,
     effectDefinition: parseResult.effectDefinition,
     effectDefinitionId,
@@ -231,6 +248,7 @@ function unsupportedEntry({
 }): GeneratedSupportIndexEntry {
   return {
     blockers,
+    capabilityEvidence: [],
     cardId: card.cardId,
     missingCapabilityIds,
     parseStatus,
@@ -240,24 +258,71 @@ function unsupportedEntry({
   };
 }
 
-function listMissingCapabilityIds({
+function resolveCapabilityCoverage({
   matrix,
   parserRuleIds,
 }: {
   matrix: RuntimeCapabilityMatrix;
   parserRuleIds: readonly string[];
-}): readonly string[] {
-  const required = new Set<string>();
+}): {
+  evidence: readonly RuntimeCapabilityEvidence[];
+  missing: readonly RuntimeCapabilityEvidence[];
+} {
+  const evidence: RuntimeCapabilityEvidence[] = [];
+  const missing: RuntimeCapabilityEvidence[] = [];
 
   for (const parserRuleId of parserRuleIds) {
     for (const capabilityId of capabilityIdsForParserRuleId(parserRuleId)) {
-      required.add(capabilityId);
+      if (
+        hasRuntimeCapabilityForParserRule({
+          capabilityId,
+          matrix,
+          parserRuleId,
+        })
+      ) {
+        evidence.push({ capabilityId, parserRuleId });
+      } else {
+        missing.push({ capabilityId, parserRuleId });
+      }
     }
   }
 
-  return [...required]
-    .filter((capabilityId) => !hasRuntimeCapability(capabilityId, matrix))
-    .sort();
+  return {
+    evidence: evidence.sort(compareCapabilityEvidence),
+    missing: missing.sort(compareCapabilityEvidence),
+  };
+}
+
+function hasRuntimeCapabilityForParserRule({
+  capabilityId,
+  matrix,
+  parserRuleId,
+}: {
+  capabilityId: string;
+  matrix: RuntimeCapabilityMatrix;
+  parserRuleId: string;
+}): boolean {
+  const capability = matrix.capabilities.find(
+    (candidate) => candidate.id === capabilityId,
+  );
+
+  return (
+    capability !== undefined &&
+    capability.supported &&
+    capability.supportedParserRuleIds.includes(parserRuleId)
+  );
+}
+
+function compareCapabilityEvidence(
+  left: RuntimeCapabilityEvidence,
+  right: RuntimeCapabilityEvidence,
+): number {
+  const capabilityOrder = left.capabilityId.localeCompare(right.capabilityId);
+  if (capabilityOrder !== 0) {
+    return capabilityOrder;
+  }
+
+  return left.parserRuleId.localeCompare(right.parserRuleId);
 }
 
 function capabilityIdsForParserRuleId(parserRuleId: string): readonly string[] {

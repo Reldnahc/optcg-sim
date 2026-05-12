@@ -68,6 +68,24 @@ describe("generated support index", () => {
     expect(index.entries).toHaveLength(1);
     expect(index.entries[0]).toMatchObject({
       blockers: [],
+      capabilityEvidence: [
+        {
+          capabilityId: "category:auto",
+          parserRuleId: "exact:on-play:draw-1:self",
+        },
+        {
+          capabilityId: "effect:draw:self:count:1",
+          parserRuleId: "exact:on-play:draw-1:self",
+        },
+        {
+          capabilityId: "sourcePresencePolicy:mustRemainInSameZone",
+          parserRuleId: "exact:on-play:draw-1:self",
+        },
+        {
+          capabilityId: "trigger:onPlay",
+          parserRuleId: "exact:on-play:draw-1:self",
+        },
+      ],
       cardId: baseCard.cardId,
       effectDefinitionId: "card-008c-001.generated-support",
       parserRuleIds: ["exact:on-play:draw-1:self"],
@@ -135,6 +153,36 @@ describe("generated support index", () => {
     });
   });
 
+  it("keeps parser rules unsupported when capability evidence no longer covers the rule", () => {
+    const matrixWithoutRuleEvidence = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.map(
+        (capability) =>
+          capability.id === "effect:draw:self:count:1"
+            ? { ...capability, supportedParserRuleIds: [] }
+            : capability,
+      ),
+    };
+
+    const index = buildGeneratedSupportIndex({
+      cards: [baseCard],
+      runtimeCapabilityMatrix: matrixWithoutRuleEvidence,
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "effect:draw:self:count:1",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:draw-1:self",
+        },
+      ],
+      missingCapabilityIds: ["effect:draw:self:count:1"],
+      status: "unsupported",
+    });
+  });
+
   it("keeps invalid generated DSL unsupported when schema validation fails", () => {
     const index = buildGeneratedSupportIndex({
       cards: [baseCard],
@@ -183,6 +231,29 @@ describe("generated support index", () => {
       validateEffectDefinition,
     });
     const evidence = toGeneratedSupportManifestEvidence(index);
+    expect(evidence.generatedSupport[baseCard.cardId]).toMatchObject({
+      capabilityEvidence: [
+        {
+          capabilityId: "category:auto",
+          parserRuleId: "exact:on-play:draw-1:self",
+        },
+        {
+          capabilityId: "effect:draw:self:count:1",
+          parserRuleId: "exact:on-play:draw-1:self",
+        },
+        {
+          capabilityId: "sourcePresencePolicy:mustRemainInSameZone",
+          parserRuleId: "exact:on-play:draw-1:self",
+        },
+        {
+          capabilityId: "trigger:onPlay",
+          parserRuleId: "exact:on-play:draw-1:self",
+        },
+      ],
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-play:draw-1:self"],
+      status: "supported",
+    });
     const resolvedCard = createResolvedCard(baseCard.cardId, evidence);
     const leader = createVanillaLeader("CARD-008C-L" as CardId);
     const manifest = buildMatchCardManifest({
