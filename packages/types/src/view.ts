@@ -42,6 +42,7 @@ export interface PublicCardView {
   zone: ZoneRef;
   state?: "active" | "rested";
   attachedDonCount: number;
+  currentPower?: number;
   turnPlayed?: number;
 }
 

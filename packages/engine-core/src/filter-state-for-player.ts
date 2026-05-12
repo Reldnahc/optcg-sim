@@ -1,8 +1,10 @@
 import type {
   CardInstance,
   CardRef,
+  ComputedGameView,
   EngineEvent,
   GameState,
+  InstanceId,
   LegalAction,
   OpponentVisibleState,
   PlayerId,
@@ -17,8 +19,12 @@ import type {
 
 import { getLegalActions } from "./actions.js";
 import { toCardRef, zonesEqual } from "./action-state.js";
+import { computeView } from "./compute-view.js";
 
-const toPublicCardView = (card: CardInstance): PublicCardView => ({
+const toPublicCardView = (
+  card: CardInstance,
+  currentPower?: number,
+): PublicCardView => ({
   instanceId: card.instanceId,
   cardId: card.cardId,
   owner: card.owner,
@@ -26,8 +32,15 @@ const toPublicCardView = (card: CardInstance): PublicCardView => ({
   zone: card.zone,
   attachedDonCount: card.attachedDon.length,
   ...(card.state === undefined ? {} : { state: card.state }),
+  ...(currentPower === undefined ? {} : { currentPower }),
   ...(card.turnPlayed === undefined ? {} : { turnPlayed: card.turnPlayed }),
 });
+
+const toBoardPublicCardView = (
+  card: CardInstance,
+  computedPowerByInstance: ReadonlyMap<InstanceId, number> | undefined,
+): PublicCardView =>
+  toPublicCardView(card, computedPowerByInstance?.get(card.instanceId));
 
 const toPublicLifeView = (player: PlayerState) => ({
   count: player.life.length,
@@ -36,35 +49,95 @@ const toPublicLifeView = (player: PlayerState) => ({
     .map((lifeCard) => toPublicCardView(lifeCard.card)),
 });
 
-const toVisiblePlayerState = (player: PlayerState): VisiblePlayerState => ({
+const boardCardsForState = (state: GameState): CardInstance[] =>
+  Object.values(state.players).flatMap((player) => [
+    player.leader,
+    ...player.characters,
+  ]);
+
+const hasComputableBoardPowerMetadata = (state: GameState): boolean => {
+  if (state.continuousEffects.length > 0) {
+    return true;
+  }
+
+  const effectDefinitions = Object.values(
+    state.cardManifest.effectDefinitions ?? {},
+  );
+  return boardCardsForState(state).every((card) => {
+    const resolved = state.cardManifest.cards[card.cardId];
+    if (resolved === undefined) return false;
+    if (resolved.category !== "leader" && resolved.category !== "character") {
+      return false;
+    }
+    if (resolved.power === undefined) return false;
+    if (
+      resolved.support.status !== "vanilla-confirmed" &&
+      resolved.support.status !== "implemented-dsl"
+    ) {
+      return false;
+    }
+    if (resolved.support.effectDefinitionId !== undefined) return false;
+    return !effectDefinitions.some(
+      (definition) => definition.cardId === card.cardId,
+    );
+  });
+};
+
+const computedPowerByInstance = (
+  state: GameState,
+): ReadonlyMap<InstanceId, number> | undefined => {
+  if (!hasComputableBoardPowerMetadata(state)) {
+    return undefined;
+  }
+  const view: ComputedGameView = computeView(state);
+  return new Map<InstanceId, number>(
+    Object.values(view.cards).flatMap((card) =>
+      card.currentPower === undefined
+        ? []
+        : [[card.instanceId, card.currentPower] as const],
+    ),
+  );
+};
+
+const toVisiblePlayerState = (
+  player: PlayerState,
+  computedPowers: ReadonlyMap<InstanceId, number> | undefined,
+): VisiblePlayerState => ({
   playerId: player.playerId,
   deckCount: player.deck.length,
   donDeckCount: player.donDeck.length,
-  hand: player.hand.map(toPublicCardView),
-  trash: player.trash.map(toPublicCardView),
-  leader: toPublicCardView(player.leader),
-  characters: player.characters.map(toPublicCardView),
+  hand: player.hand.map((card) => toPublicCardView(card)),
+  trash: player.trash.map((card) => toPublicCardView(card)),
+  leader: toBoardPublicCardView(player.leader, computedPowers),
+  characters: player.characters.map((card) =>
+    toBoardPublicCardView(card, computedPowers),
+  ),
   ...(player.stage === undefined
     ? {}
     : { stage: toPublicCardView(player.stage) }),
-  costArea: player.costArea.map(toPublicCardView),
+  costArea: player.costArea.map((card) => toPublicCardView(card)),
   life: toPublicLifeView(player),
   hasMulliganed: player.hasMulliganed,
   turnCount: player.turnCount,
 });
 
-const toOpponentVisibleState = (player: PlayerState): OpponentVisibleState => ({
+const toOpponentVisibleState = (
+  player: PlayerState,
+  computedPowers: ReadonlyMap<InstanceId, number> | undefined,
+): OpponentVisibleState => ({
   playerId: player.playerId,
   deckCount: player.deck.length,
   donDeckCount: player.donDeck.length,
   handCount: player.hand.length,
-  trash: player.trash.map(toPublicCardView),
-  leader: toPublicCardView(player.leader),
-  characters: player.characters.map(toPublicCardView),
+  trash: player.trash.map((card) => toPublicCardView(card)),
+  leader: toBoardPublicCardView(player.leader, computedPowers),
+  characters: player.characters.map((card) =>
+    toBoardPublicCardView(card, computedPowers),
+  ),
   ...(player.stage === undefined
     ? {}
     : { stage: toPublicCardView(player.stage) }),
-  costArea: player.costArea.map(toPublicCardView),
+  costArea: player.costArea.map((card) => toPublicCardView(card)),
   life: toPublicLifeView(player),
   hasMulliganed: player.hasMulliganed,
   turnCount: player.turnCount,
@@ -461,6 +534,7 @@ export const filterStateForPlayer = (
   };
 
   const pendingDecision = toPublicDecision(state, playerId);
+  const computedPowers = computedPowerByInstance(state);
 
   return {
     matchId: state.matchId,
@@ -468,8 +542,8 @@ export const filterStateForPlayer = (
     stateSeq: state.seq,
     actionSeq: state.actionSeq,
     turn,
-    self: toVisiblePlayerState(selfState),
-    opponent: toOpponentVisibleState(opponentState),
+    self: toVisiblePlayerState(selfState, computedPowers),
+    opponent: toOpponentVisibleState(opponentState, computedPowers),
     ...(battle === undefined ? {} : { battle }),
     ...(pendingDecision === undefined ? {} : { pendingDecision }),
     legalActions: dedupePublicLegalActions(
