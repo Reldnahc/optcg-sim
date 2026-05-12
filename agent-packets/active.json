@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-046A.md",
+      "storyId": "ENG-046A",
+      "storyPath": "stories/approved/ENG-046A-multiple-damage-loop-structure.yaml",
+      "storySha256": "2e335232cd4074e2f56350ddbffe6034f017d321f35ce6687276bdc754759022"
+    }
+  ],
   "version": 1
 }
