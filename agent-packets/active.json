@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-046A.md",
-      "storyId": "ENG-046A",
-      "storyPath": "stories/approved/ENG-046A-multiple-damage-loop-structure.yaml",
-      "storySha256": "cb61e1c56d26d0e0736d62c43cb685d3a887e763e0fd12a99722a034b8a63278"
+      "packetPath": "agent-packets/ENG-046B.md",
+      "storyId": "ENG-046B",
+      "storyPath": "stories/approved/ENG-046B-life-trigger-per-point-regression.yaml",
+      "storySha256": "4ef3254e59d36f4cd68a8ee87e5b32b4df56d58637f1e25c6e08826e74c3cce7"
     }
   ],
   "version": 1
