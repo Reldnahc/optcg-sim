@@ -195,6 +195,7 @@ test("projects computed current power only for public board leaders and characte
   const p2State = must(state.players[p2], "p2 state");
   const p1Character = must(p1State.characters[0], "p1 character");
   const p2Character = must(p2State.characters[0], "p2 character");
+  must(p1State.life[0], "p1 face-up life").faceUp = true;
   const p1TrashCard = must(p1State.hand.shift(), "p1 hand -> trash");
   p1TrashCard.zone = { zone: "trash", playerId: p1, slot: "trash", index: 0 };
   p1State.trash.push(p1TrashCard);
@@ -241,6 +242,10 @@ test("projects computed current power only for public board leaders and characte
   assert.equal("currentPower" in must(view.self.trash[0], "self trash"), false);
   assert.equal(
     "currentPower" in must(view.self.costArea[0], "self cost"),
+    false,
+  );
+  assert.equal(
+    "currentPower" in must(view.self.life.faceUpCards[0], "self face-up life"),
     false,
   );
   assert.equal("currentPower" in must(view.self.stage, "self stage"), false);
