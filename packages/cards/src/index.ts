@@ -86,6 +86,7 @@ export type {
   CapturePoneglyphCardFixturesResult,
 } from "./fixture-capture.js";
 export {
+  certifiedParserRuleReviewer,
   lineSeparatedEffectBlocksCompositionId,
   onPlayDrawOneParserRuleId,
   parseCertifiedCardText,

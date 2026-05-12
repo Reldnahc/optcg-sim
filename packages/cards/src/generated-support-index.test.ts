@@ -101,6 +101,13 @@ describe("generated support index", () => {
     expect(index.effectDefinitions["card-008c-001.generated-support"]).toEqual(
       index.entries[0]?.effectDefinition,
     );
+    expect(
+      index.effectDefinitions["card-008c-001.generated-support"]?.metadata,
+    ).toMatchObject({
+      generatedBy: "rule-parser",
+      reviewer: "certified-parser-rule:CARD-008B",
+      tested: true,
+    });
   });
 
   it("keeps unparsed residue unsupported with blocker evidence", () => {

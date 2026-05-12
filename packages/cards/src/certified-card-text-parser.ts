@@ -10,6 +10,7 @@ export const whenAttackingDrawOneParserRuleId =
   "exact:when-attacking:draw-1:self";
 export const lineSeparatedEffectBlocksCompositionId =
   "line-separated-effect-blocks:v1";
+export const certifiedParserRuleReviewer = "certified-parser-rule:CARD-008B";
 
 export interface CertifiedCardTextParserInput {
   cardId: CardId;
@@ -122,6 +123,7 @@ function completeParse(
       metadata: {
         effectDefinitionsVersion: input.effectDefinitionsVersion,
         generatedBy: "rule-parser",
+        reviewer: certifiedParserRuleReviewer,
         rulesVersion: input.rulesVersion,
         sourceTextHash: input.sourceTextHash,
         tested: true,

@@ -26,6 +26,7 @@ const effectDefinition: EffectDefinition = {
   metadata: {
     effectDefinitionsVersion: "generated-support-test",
     generatedBy: "rule-parser",
+    reviewer: "certified-parser-rule:CARD-008B",
     rulesVersion: "rules-test",
     sourceTextHash: "sha256:source",
     tested: true,

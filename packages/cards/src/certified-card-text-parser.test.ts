@@ -41,6 +41,7 @@ describe("certified card text parser", () => {
       metadata: {
         effectDefinitionsVersion: "generated-support-parser-test",
         generatedBy: "rule-parser",
+        reviewer: "certified-parser-rule:CARD-008B",
         rulesVersion: "rules-test",
         sourceTextHash: "sha256:source",
         tested: true,
