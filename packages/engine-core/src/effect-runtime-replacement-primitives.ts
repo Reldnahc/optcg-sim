@@ -305,6 +305,12 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
   const { located, ref, resolved } = targetLookup;
   if (
     resolved.support.status === "vanilla-confirmed" &&
+    (resolved.support.customHandlerIds?.length ?? 0) > 0
+  ) {
+    return failure(effectId, "unsupported-ko-replacement-shape");
+  }
+  if (
+    resolved.support.status === "vanilla-confirmed" &&
     resolved.support.effectDefinitionId === undefined
   ) {
     return { ok: true };

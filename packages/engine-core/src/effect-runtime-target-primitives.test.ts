@@ -515,6 +515,14 @@ test.each([
     },
     reason: "unsupported-support-status",
   },
+  {
+    name: "vanilla custom handler",
+    support: {
+      status: "vanilla-confirmed" as const,
+      customHandlerIds: ["custom-ko-replacement"],
+    },
+    reason: "unsupported-ko-replacement-shape",
+  },
 ] satisfies {
   name: string;
   support: Partial<ReturnType<typeof resolvedCard>["support"]>;
