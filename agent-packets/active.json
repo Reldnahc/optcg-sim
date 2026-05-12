@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-045C.md",
-      "storyId": "ENG-045C",
-      "storyPath": "stories/approved/ENG-045C-choose-replacement-decision.yaml",
-      "storySha256": "0f0b4dae5dce4f1b8af168afcaa7bfef84fa87716ad79d77ad927586d1dda3d7"
+      "packetPath": "agent-packets/ENG-045D.md",
+      "storyId": "ENG-045D",
+      "storyPath": "stories/approved/ENG-045D-ko-replacement-application-event.yaml",
+      "storySha256": "98b82520adb62de6083e1c37a02bd33439ad2228e2a2eec53eb34457b4cfa566"
     }
   ],
   "version": 1
