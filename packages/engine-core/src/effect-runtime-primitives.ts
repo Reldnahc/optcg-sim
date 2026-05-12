@@ -593,7 +593,7 @@ export const isSupportedEffectResolvedCustomDrawEffect = (
   effect.sourcePresencePolicy === "mustRemainInSameZone" &&
   effect.trigger.type === "custom" &&
   effect.trigger.event === eventName &&
-  isNoChoiceDrawEffectShape(effect);
+  isNoChoiceDrawEffectShape(effect, { allowOncePerTurn: true });
 
 const isSupportedNoChoiceDrawTriggerEffect = (
   effect: EffectDefinition["effects"][number],
@@ -615,7 +615,10 @@ export const isSupportedNoChoiceOnPlayDrawEffect = (
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: Extract<Effect, { type: "draw" }>;
-} => isSupportedNoChoiceDrawTriggerEffect(effect, "onPlay");
+} =>
+  isSupportedNoChoiceDrawTriggerEffect(effect, "onPlay", {
+    allowOncePerTurn: true,
+  });
 
 export const isSupportedOptionalNoChoiceOnPlayDrawEffect = (
   effect: EffectDefinition["effects"][number],
@@ -635,7 +638,10 @@ export const isSupportedNoChoiceWhenAttackingDrawEffect = (
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: Extract<Effect, { type: "draw" }>;
-} => isSupportedNoChoiceDrawTriggerEffect(effect, "whenAttacking");
+} =>
+  isSupportedNoChoiceDrawTriggerEffect(effect, "whenAttacking", {
+    allowOncePerTurn: true,
+  });
 
 export const isSupportedOptionalNoChoiceWhenAttackingDrawEffect = (
   effect: EffectDefinition["effects"][number],
@@ -655,7 +661,10 @@ export const isSupportedNoChoiceOnOpponentAttackDrawEffect = (
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: Extract<Effect, { type: "draw" }>;
-} => isSupportedNoChoiceDrawTriggerEffect(effect, "onOpponentAttack");
+} =>
+  isSupportedNoChoiceDrawTriggerEffect(effect, "onOpponentAttack", {
+    allowOncePerTurn: true,
+  });
 
 export const isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect = (
   effect: EffectDefinition["effects"][number],
@@ -682,7 +691,9 @@ export const isSupportedNoChoiceOnKODrawEffect = (
   effect.trigger.type === "onKO" &&
   isNoChoiceDrawEffectShape(
     effect,
-    options.allowOncePerTurn === true ? { allowOncePerTurn: true } : {},
+    options.allowOncePerTurn === true || options.allowOncePerTurn === undefined
+      ? { allowOncePerTurn: true }
+      : {},
   );
 
 export const isSupportedOptionalNoChoiceOnKODrawEffect = (

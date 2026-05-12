@@ -1,20 +1,39 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { CardInstance, EffectDefinition } from "@optcg/types";
+
 import type { EffectQueueEntry } from "./effect-runtime-queue-processing-test-support.js";
 import { addExtraDeckCard } from "./action-test-fixtures.js";
+import {
+  cardRef,
+  setupAttackState,
+  withOnKODrawEffect,
+  withOnOpponentAttackDrawEffect,
+  withWhenAttackingDrawEffect,
+} from "./battle-actions-test-fixtures.js";
+import {
+  isSupportedEffectResolvedCustomDrawEffect,
+  isSupportedNoChoiceOnKODrawEffect,
+  isSupportedNoChoiceOnOpponentAttackDrawEffect,
+  isSupportedNoChoiceOnPlayDrawEffect,
+  isSupportedNoChoiceWhenAttackingDrawEffect,
+} from "./effect-runtime-primitives.js";
 import {
   applyAction,
   createActiveState,
   hashCanonicalStateValue,
   must,
   p1,
+  p2,
   processEffectRuntime,
   queueDrawForP1,
   queueingState,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
+  setupCustomEffectResolvedDefinition,
   setupOnPlayDefinition,
+  toCardId,
   toEffectId,
   toQueueEntryId,
   toStateSeq,
@@ -22,6 +41,8 @@ import {
   toTimingWindowId,
   withCardInZone,
 } from "./effect-runtime-queue-processing-test-support.js";
+import { resolveSupportedVanillaBattle } from "./index.js";
+import { setupMainPlayState } from "./play-card-test-fixtures.js";
 
 const assertStrictlyIncreasingSeq = (
   seqValues: readonly number[],
@@ -157,6 +178,81 @@ const createOncePerTurnOptionalEntry = (
   return { state, entry };
 };
 
+const installOncePerTurnDrawDefinition = (params: {
+  state: ReturnType<typeof createActiveState>;
+  source: CardInstance;
+  category: "character" | "leader";
+  trigger: EffectDefinition["effects"][number]["trigger"];
+  effectDefinitionId: string;
+  sourcePresencePolicy?: EffectQueueEntry["sourcePresencePolicy"];
+}): EffectDefinition["effects"][number] => {
+  const {
+    state,
+    source,
+    category,
+    trigger,
+    effectDefinitionId,
+    sourcePresencePolicy = "mustRemainInSameZone",
+  } = params;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category,
+    power: category === "leader" ? 5000 : 3000,
+    ...(category === "character" ? { cost: 0 } : {}),
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: `${effectDefinitionId}:rules`,
+      sourceTextHash: `${effectDefinitionId}:source`,
+    },
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    source.cardId,
+    supportCard.support,
+  );
+  const effect = {
+    ...must(baseDefinition.effects[0], "base production effect"),
+    id: toEffectId(`${effectDefinitionId}:effect`),
+    trigger,
+    oncePerTurn: true,
+    sourcePresencePolicy,
+  };
+  const definition: EffectDefinition = {
+    ...baseDefinition,
+    effects: [effect],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: definition,
+  };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  return effect;
+};
+
+const replaceOnlyEffect = (
+  state: ReturnType<typeof createActiveState>,
+  effectDefinitionId: string,
+  update: (
+    effect: EffectDefinition["effects"][number],
+  ) => EffectDefinition["effects"][number],
+): EffectDefinition["effects"][number] => {
+  const definition = must(
+    state.cardManifest.effectDefinitions?.[effectDefinitionId],
+    `${effectDefinitionId} definition`,
+  );
+  const effect = update(must(definition.effects[0], "definition effect"));
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: {
+      ...definition,
+      effects: [effect],
+    },
+  };
+  return effect;
+};
+
 test("supported queued no-choice draw consumes once-per-turn when resolution begins", () => {
   const { state, entry } = createOncePerTurnOnPlayEntry(
     "queue-entry-once-per-turn-first",
@@ -177,6 +273,279 @@ test("supported queued no-choice draw consumes once-per-turn when resolution beg
   assertStrictlyIncreasingSeq(
     result.events.map((event) => event.seq),
     "first once-per-turn resolution events",
+  );
+});
+
+const oncePerTurnNoChoiceDrawEffect = (
+  trigger:
+    | { type: "onPlay" }
+    | { type: "whenAttacking" }
+    | { type: "onOpponentAttack" }
+    | { type: "onKO" }
+    | { type: "custom"; event: string },
+  sourcePresencePolicy:
+    | "mustRemainInSameZone"
+    | "resolveFromDestinationZone"
+    | "resolveFromLastKnownInformation",
+): EffectDefinition["effects"][number] => ({
+  id: toEffectId(`predicate:${trigger.type}`),
+  trigger,
+  category: "auto",
+  sourcePresencePolicy,
+  oncePerTurn: true,
+  effect: { type: "draw", player: "self", count: 1 },
+});
+
+test("non-optional once-per-turn no-choice onPlay draw shape is queue-supported", () => {
+  assert.equal(
+    isSupportedNoChoiceOnPlayDrawEffect(
+      oncePerTurnNoChoiceDrawEffect({ type: "onPlay" }, "mustRemainInSameZone"),
+    ),
+    true,
+  );
+});
+
+test("non-optional once-per-turn no-choice whenAttacking draw shape is queue-supported", () => {
+  assert.equal(
+    isSupportedNoChoiceWhenAttackingDrawEffect(
+      oncePerTurnNoChoiceDrawEffect(
+        { type: "whenAttacking" },
+        "mustRemainInSameZone",
+      ),
+    ),
+    true,
+  );
+});
+
+test("non-optional once-per-turn no-choice onOpponentAttack draw shape is queue-supported", () => {
+  assert.equal(
+    isSupportedNoChoiceOnOpponentAttackDrawEffect(
+      oncePerTurnNoChoiceDrawEffect(
+        { type: "onOpponentAttack" },
+        "mustRemainInSameZone",
+      ),
+    ),
+    true,
+  );
+});
+
+test("non-optional once-per-turn no-choice onKO draw shape is queue-supported", () => {
+  assert.equal(
+    isSupportedNoChoiceOnKODrawEffect(
+      oncePerTurnNoChoiceDrawEffect(
+        { type: "onKO" },
+        "resolveFromDestinationZone",
+      ),
+    ),
+    true,
+  );
+});
+
+test("non-optional once-per-turn no-choice custom effect-resolved draw shape is queue-supported", () => {
+  assert.equal(
+    isSupportedEffectResolvedCustomDrawEffect(
+      oncePerTurnNoChoiceDrawEffect(
+        { type: "custom", event: "effectResolved" },
+        "mustRemainInSameZone",
+      ),
+      "effectResolved",
+    ),
+    true,
+  );
+});
+
+test("production playCard path queues and consumes non-optional once-per-turn On Play", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "on-play source");
+  const effect = installOncePerTurnDrawDefinition({
+    state,
+    source,
+    category: "character",
+    trigger: { type: "onPlay" },
+    effectDefinitionId: "def-production-on-play-once",
+  });
+
+  const result = applyAction(state, {
+    type: "playCard",
+    cardInstanceId: source.instanceId,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.oncePerTurn.length, 1);
+  assert.equal(result.state.oncePerTurn[0]?.effectId, effect.id);
+  assert.equal(
+    result.events.some((event) => event.type === "effectQueued"),
+    true,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "effectResolved"),
+    true,
+  );
+});
+
+test("production attack timing queues and consumes non-optional once-per-turn attack triggers", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = p1State.leader;
+  const defender = p2State.leader;
+  const whenAttackingId = "def-production-when-attacking-once";
+  const opponentAttackId = "def-production-on-opponent-attack-once";
+  withWhenAttackingDrawEffect(state, attacker, whenAttackingId);
+  withOnOpponentAttackDrawEffect(state, defender, opponentAttackId);
+  const whenAttackingEffect = replaceOnlyEffect(
+    state,
+    whenAttackingId,
+    (effect) => ({ ...effect, oncePerTurn: true }),
+  );
+  const opponentAttackEffect = replaceOnlyEffect(
+    state,
+    opponentAttackId,
+    (effect) => ({ ...effect, oncePerTurn: true }),
+  );
+  addExtraDeckCard(state, p1);
+  addExtraDeckCard(state, p2);
+
+  const result = applyAction(state, {
+    type: "declareAttack",
+    attacker: cardRef(attacker, p1),
+    target: cardRef(defender, p2),
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.state.oncePerTurn.map((record) => record.effectId),
+    [whenAttackingEffect.id, opponentAttackEffect.id],
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        (event.payload as { effectBlockId?: string }).effectBlockId ===
+          whenAttackingEffect.id,
+    ),
+    true,
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        (event.payload as { effectBlockId?: string }).effectBlockId ===
+          opponentAttackEffect.id,
+    ),
+    true,
+  );
+});
+
+test("production battle K.O. queues and consumes non-optional once-per-turn On K.O.", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+  });
+  const definitionId = "def-production-on-ko-once";
+  withOnKODrawEffect(state, target, definitionId);
+  const onKOEffect = replaceOnlyEffect(state, definitionId, (effect) => ({
+    ...effect,
+    oncePerTurn: true,
+  }));
+  addExtraDeckCard(state, p2);
+  state.battle = {
+    attacker: cardRef(attacker, p1),
+    originalTarget: cardRef(target, p2),
+    currentTarget: cardRef(target, p2),
+    step: "counter",
+    damageCount: 1,
+  };
+
+  const result = resolveSupportedVanillaBattle(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.oncePerTurn.length, 1);
+  assert.equal(result.state.oncePerTurn[0]?.effectId, onKOEffect.id);
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        (event.payload as { effectBlockId?: string }).effectBlockId ===
+          onKOEffect.id,
+    ),
+    true,
+  );
+});
+
+test("production effect-resolved trigger queues and consumes non-optional once-per-turn custom draw", () => {
+  const { state, played } = queueingState();
+  const p1State = must(state.players[p1], "p1");
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const onPlayDefinition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const onPlayEffect = must(onPlayDefinition.effects[0], "on-play effect");
+  setupOnPlayDefinition(
+    state,
+    played,
+    onPlayDefinition,
+    "def-production-custom-source",
+  );
+  const customSource = withCardInZone({
+    state,
+    playerId: p1,
+    card: {
+      ...must(p1State.hand[1], "custom trigger source"),
+      cardId: toCardId("once-custom-trigger-source"),
+    },
+    zone: "characterArea",
+    index: 1,
+  });
+  const customDefinitionId = "def-production-custom-once";
+  setupCustomEffectResolvedDefinition(
+    state,
+    customSource,
+    `effectResolved:${String(onPlayEffect.id)}`,
+    customDefinitionId,
+  );
+  const customEffect = replaceOnlyEffect(
+    state,
+    customDefinitionId,
+    (effect) => ({
+      ...effect,
+      id: toEffectId("def-production-custom-once:effect"),
+      oncePerTurn: true,
+    }),
+  );
+  addExtraDeckCard(state, p1);
+  addExtraDeckCard(state, p1);
+
+  const queued = processEffectRuntime(state);
+  assert.equal(queued.errors, undefined);
+  const result = processEffectRuntime(queued.state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.state.oncePerTurn.some(
+      (record) => record.effectId === customEffect.id,
+    ),
+    true,
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        (event.payload as { effectBlockId?: string }).effectBlockId ===
+          customEffect.id,
+    ),
+    true,
   );
 });
 
