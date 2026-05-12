@@ -1,0 +1,85 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-008B
+epic_id: CARD-008
+title: Certified parser rules for exact simple templates
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Implement the first certified exact card-text parser rules for simple
+  generated-support templates, starting with `[On Play] Draw 1 card.`
+story_boundary: >
+  Own only certified exact-template parser behavior, parser-rule evidence,
+  generated DSL construction for the narrow reviewed templates, exports, and
+  parser tests. Do not build support indexes, reports, deck validation, or new
+  runtime behavior in this story.
+allowed_touch_points:
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/index.ts
+  - stories/generated/CARD-008B-certified-parser-simple-templates.yaml
+  - stories/approved/CARD-008B-certified-parser-simple-templates.yaml
+  - agent-packets/CARD-008B.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 11-testing-quality.s005
+  - 11-testing-quality.s020
+  - 20-card-implementation-examples.s002
+scope:
+  - implement an exact certified parser rule for `[On Play] Draw 1 card.`
+  - implement an exact certified parser rule for `[When Attacking] Draw 1 card.` only as part of the reviewed composition path
+  - implement the exact line-separated composition text `[On Play] Draw 1 card.` followed by `[When Attacking] Draw 1 card.` as two EffectBlocks in one generated EffectDefinition
+  - use deterministic parser rule IDs `exact:on-play:draw-1:self`, `exact:when-attacking:draw-1:self`, and composition family `line-separated-effect-blocks:v1`
+  - attach parser rule identifiers to complete parser results
+  - fail closed on near-miss wording
+  - fail closed and record unparsed residue when text contains unsupported leftovers
+  - produce generated DSL that later stories can validate against the existing DSL schema
+  - keep parser behavior deterministic and free of live Poneglyph calls
+non_scope:
+  - full released-card parser
+  - LLM-assisted parser
+  - broad catalog parsing
+  - runtime capability checking
+  - support index generation
+  - support report generation
+  - deck validation changes
+  - engine runtime behavior changes
+  - custom handlers
+  - server, client, API, UI, Redis, database, replay, or live Poneglyph work
+dependencies:
+  - CARD-008A
+acceptance_criteria:
+  - exact `[On Play] Draw 1 card.` parses to expected generated DSL
+  - near-miss wording fails closed
+  - unparsed residue makes the parser result unsupported or partial with blocker evidence
+  - multiple supported parsed components can compose into one generated EffectDefinition
+  - the exact line-separated composition produces two EffectBlocks, not a broad sequence grammar
+  - parser-rule identifiers are deterministic and included in complete parse results
+required_tests:
+  - exact candidate story-review before implementation
+  - focused parser tests for exact template success, near-miss failure, residue failure, and multi-effect composition
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-008B packet before implementation
+  - stay within allowed_touch_points
+  - do not implement support indexing, report generation, deck validation, or runtime capability checking in this story
+  - do not broaden parser grammar beyond exact certified templates
+ambiguity_policy: fail_and_escalate
