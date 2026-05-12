@@ -9,8 +9,10 @@ import type {
   EffectDefinition,
   EffectId,
   EffectQueueEntry,
+  EngineEvent,
   GameState,
   QueueEntryId,
+  ReplacementProcess,
   TargetRequest,
   TimingWindowId,
 } from "@optcg/types";
@@ -24,7 +26,11 @@ import {
   p2,
   resolvedCard,
 } from "./action-test-fixtures.js";
-import { executeSelectedTargetEffectPrimitive } from "./effect-runtime-primitives.js";
+import { executeAcceptedSelectedTargetKoReplacementProcess } from "./effect-runtime.js";
+import {
+  buildSelectedTargetKoReplacementProcess,
+  executeSelectedTargetEffectPrimitive,
+} from "./effect-runtime-primitives.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -218,6 +224,38 @@ const acceptReplacement = () => {
   return { ...paused, accepted };
 };
 
+const acceptedProcessFromResult = (
+  result: ReturnType<typeof executeAcceptedSelectedTargetKoReplacementProcess>,
+): ReplacementProcess => {
+  return acceptedResult(result).process;
+};
+
+const acceptedResult = (
+  result: ReturnType<typeof executeAcceptedSelectedTargetKoReplacementProcess>,
+) => {
+  if ("error" in result) {
+    throw new Error(`unexpected replacement error: ${result.error.type}`);
+  }
+  return result;
+};
+
+const executeAcceptedReplacementDirectly = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  process: ReplacementProcess,
+  replacementId: string,
+) => {
+  const events: EngineEvent[] = [];
+  const result = executeAcceptedSelectedTargetKoReplacementProcess(
+    state,
+    events,
+    entry.effectBlockId,
+    process,
+    replacementId,
+  );
+  return { events, result };
+};
+
 test("accepting optional chooseReplacement applies deterministic draw replacement without KO mutation", () => {
   const first = acceptReplacement();
   const second = acceptReplacement();
@@ -295,5 +333,91 @@ test("accepting optional chooseReplacement applies deterministic draw replacemen
       visibility,
       causedBy,
     })),
+  );
+});
+
+test("accepted KO replacement marks the process used and rejects duplicate use without mutation", () => {
+  const paused = pauseForReplacementDecision();
+  const replacementId = String(paused.effectBlock.id);
+  const process = buildSelectedTargetKoReplacementProcess(
+    paused.entry,
+    paused.targetRef,
+    0,
+  );
+
+  const first = executeAcceptedReplacementDirectly(
+    paused.result.state,
+    paused.entry,
+    process,
+    replacementId,
+  );
+  const usedProcess = acceptedProcessFromResult(first.result);
+  const firstAccepted = acceptedResult(first.result);
+
+  assert.deepEqual(usedProcess.usedReplacementIds, [replacementId]);
+
+  const beforeDuplicate = structuredClone(firstAccepted.state);
+  const beforeDuplicateHash = hashCanonicalStateValue(firstAccepted.state);
+  const duplicate = executeAcceptedReplacementDirectly(
+    firstAccepted.state,
+    paused.entry,
+    usedProcess,
+    replacementId,
+  );
+
+  assert.deepEqual(duplicate.events, []);
+  assert.equal("error" in duplicate.result, true);
+  assert.deepEqual(duplicate.result, {
+    error: {
+      type: "effectRuntimeError",
+      effectId: paused.entry.effectBlockId,
+      details: { reason: "unsupported-effect-shape" },
+    },
+  });
+  assert.deepEqual(firstAccepted.state, beforeDuplicate);
+  assert.equal(
+    hashCanonicalStateValue(firstAccepted.state),
+    beforeDuplicateHash,
+  );
+});
+
+test("accepted KO replacement allows the same replacement id on a separate process", () => {
+  const paused = pauseForReplacementDecision();
+  const replacementId = String(paused.effectBlock.id);
+  const firstProcess = buildSelectedTargetKoReplacementProcess(
+    paused.entry,
+    paused.targetRef,
+    0,
+  );
+  const first = executeAcceptedReplacementDirectly(
+    paused.result.state,
+    paused.entry,
+    firstProcess,
+    replacementId,
+  );
+  if ("error" in first.result) {
+    throw new Error("first replacement should apply");
+  }
+  const separateProcess = buildSelectedTargetKoReplacementProcess(
+    paused.entry,
+    paused.targetRef,
+    1,
+  );
+
+  const second = executeAcceptedReplacementDirectly(
+    first.result.state,
+    paused.entry,
+    separateProcess,
+    replacementId,
+  );
+
+  assert.equal("error" in second.result, false);
+  assert.equal(
+    second.events.filter((event) => event.type === "replacementApplied").length,
+    1,
+  );
+  assert.deepEqual(
+    acceptedProcessFromResult(second.result).usedReplacementIds,
+    [replacementId],
   );
 });

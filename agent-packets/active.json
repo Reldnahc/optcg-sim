@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-045D.md",
-      "storyId": "ENG-045D",
-      "storyPath": "stories/approved/ENG-045D-ko-replacement-application-event.yaml",
-      "storySha256": "0baacb5b98bdd35e27d5f7806cd0790ab93ec846437f2b02868339c815a6b5b6"
+      "packetPath": "agent-packets/ENG-045E.md",
+      "storyId": "ENG-045E",
+      "storyPath": "stories/approved/ENG-045E-same-replacement-once-per-process.yaml",
+      "storySha256": "6847ac292e94641fbf0f5bd1e2248cf23c5118f3750979745d9240d570ea43f8"
     }
   ],
   "version": 1
