@@ -225,43 +225,66 @@ test("projects computed current power only for public board leaders and characte
   ).power;
   const view = filterStateForPlayer(state, p1);
 
-  assert.equal(view.self.leader.currentPower, 7000);
-  assert.equal(view.self.characters[0]?.currentPower, 3000);
-  assert.equal(view.opponent.leader.currentPower, 5000);
-  assert.equal(view.opponent.characters[0]?.currentPower, 3000);
-  assert.equal(view.self.leader.instanceId, p1State.leader.instanceId);
-  assert.equal(
-    must(view.self.characters[0], "self character").instanceId,
-    p1Character.instanceId,
+  assert.deepEqual(
+    [
+      view.self.leader.currentPower,
+      view.self.characters[0]?.currentPower,
+      view.opponent.leader.currentPower,
+      view.opponent.characters[0]?.currentPower,
+    ],
+    [7000, 3000, 5000, 3000],
   );
-  assert.equal(
-    must(view.opponent.characters[0], "opponent character").instanceId,
-    p2Character.instanceId,
+  assert.deepEqual(
+    [
+      view.self.leader.instanceId,
+      must(view.self.characters[0], "self character").instanceId,
+      must(view.opponent.characters[0], "opponent character").instanceId,
+    ],
+    [p1State.leader.instanceId, p1Character.instanceId, p2Character.instanceId],
   );
-  assert.equal("currentPower" in must(view.self.hand[0], "self hand"), false);
-  assert.equal("currentPower" in must(view.self.trash[0], "self trash"), false);
-  assert.equal(
-    "currentPower" in must(view.self.costArea[0], "self cost"),
-    false,
+  assert.deepEqual(
+    [
+      must(view.self.hand[0], "self hand"),
+      must(view.self.trash[0], "self trash"),
+      must(view.self.costArea[0], "self cost"),
+      must(view.self.life.faceUpCards[0], "self face-up life"),
+      must(view.self.stage, "self stage"),
+    ].map((card) => "currentPower" in card),
+    [false, false, false, false, false],
   );
-  assert.equal(
-    "currentPower" in must(view.self.life.faceUpCards[0], "self face-up life"),
-    false,
-  );
-  assert.equal("currentPower" in must(view.self.stage, "self stage"), false);
   assert.equal(
     state.cardManifest.cards[p1State.leader.cardId]?.power,
     beforeLeaderPower,
   );
   assert.equal(JSON.stringify(view).includes("continuousEffects"), false);
   assert.equal(JSON.stringify(view).includes("sourceSnapshot"), false);
+
+  state.cardManifest.cards[p1State.leader.cardId] = {
+    ...must(
+      state.cardManifest.cards[p1State.leader.cardId],
+      "p1 leader metadata",
+    ),
+    support: {
+      ...must(
+        state.cardManifest.cards[p1State.leader.cardId],
+        "p1 leader metadata",
+      ).support,
+      status: "implemented-dsl",
+    },
+    printedKeywords: ["doubleAttack"],
+  };
+  const doubleAttackView = filterStateForPlayer(state, p1);
+  assert.equal(
+    doubleAttackView.self.leader.instanceId,
+    p1State.leader.instanceId,
+  );
+  assert.equal("currentPower" in doubleAttackView.self.leader, false);
 });
 
 test("fails closed instead of projecting unsupported continuous modifier shapes", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1 state");
   state.continuousEffects = [unsupportedContinuousEffectRecord(p1State.leader)];
-
   assert.throws(() => filterStateForPlayer(state, p1), {
     name: "TypeError",
     message:
@@ -934,15 +957,34 @@ test("sanitizes player-visible effect lifecycle events without mutating the jour
     visibility: { type: "public" },
     createdAtStateSeq: toStateSeq(state.seq),
   };
+  const damageEvent: EngineEvent = {
+    id: toEngineEventId("event:damage-continuation"),
+    seq: 5,
+    type: "damageDealt",
+    actor: p1,
+    payload: {
+      publicAmount: 1,
+      damageProcess: {
+        type: "multipleDamage",
+        sourceKeyword: "doubleAttack",
+        remainingDamagePoints: 1,
+      },
+      remainingDamagePoints: 1,
+      sourceKeyword: "doubleAttack",
+    },
+    visibility: { type: "public" },
+    createdAtStateSeq: toStateSeq(state.seq),
+  };
   state.eventJournal = [
     effectQueued,
     effectResolved,
     safeNonEffect,
     unsafeNonEffectCausedBy,
-    withEvent(state, 5, { type: "private", playerId: p2 }),
-    withEvent(state, 6, { type: "hidden" }),
-    withEvent(state, 7, { type: "replayOnly" }),
-    withEvent(state, 8, { type: "serverOnly" }),
+    damageEvent,
+    withEvent(state, 6, { type: "private", playerId: p2 }),
+    withEvent(state, 7, { type: "hidden" }),
+    withEvent(state, 8, { type: "replayOnly" }),
+    withEvent(state, 9, { type: "serverOnly" }),
   ];
   const originalJournal = JSON.stringify(state.eventJournal);
 
@@ -981,10 +1023,25 @@ test("sanitizes player-visible effect lifecycle events without mutating the jour
       visibility: unsafeNonEffectCausedBy.visibility,
       createdAtStateSeq: unsafeNonEffectCausedBy.createdAtStateSeq,
     },
+    {
+      id: damageEvent.id,
+      seq: damageEvent.seq,
+      type: damageEvent.type,
+      actor: damageEvent.actor,
+      payload: { publicAmount: 1 },
+      visibility: damageEvent.visibility,
+      createdAtStateSeq: damageEvent.createdAtStateSeq,
+    },
   ]);
   assert.equal(JSON.stringify(view.events).includes("queueEntryId"), false);
   assert.equal(JSON.stringify(view.events).includes("triggerIds"), false);
   assert.equal(JSON.stringify(view.events).includes("sourceSnapshot"), false);
   assert.equal(JSON.stringify(view.events).includes("orderedIds"), false);
+  assert.equal(JSON.stringify(view.events).includes("damageProcess"), false);
+  assert.equal(
+    JSON.stringify(view.events).includes("remainingDamagePoints"),
+    false,
+  );
+  assert.equal(JSON.stringify(view.events).includes("sourceKeyword"), false);
   assert.equal(JSON.stringify(state.eventJournal), originalJournal);
 });

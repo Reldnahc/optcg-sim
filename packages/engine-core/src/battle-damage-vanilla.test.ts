@@ -10,6 +10,7 @@ import {
   continuousEffectRecord,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
+import { hashCanonicalStateValue } from "./canonical-state.js";
 
 test("supported declareAttack resolves vanilla battle internally without continuation action", () => {
   const state = setupAttackState();
@@ -40,8 +41,11 @@ test("supported declareAttack resolves vanilla battle internally without continu
   });
 
   assert.equal(result.errors, undefined);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
   assert.equal(must(result.state.players[p1], "p1").leader.state, "rested");
   assert.equal(result.state.battle, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.decisions, undefined);
   assert.equal(
     result.events.some((event) => event.type === "attackDeclared"),
     true,
