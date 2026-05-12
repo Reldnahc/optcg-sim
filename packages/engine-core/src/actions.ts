@@ -39,6 +39,7 @@ import {
 import {
   detectPendingRuntimeWork,
   executeAcceptedSelectedTargetKoReplacementProcess,
+  finalizeSelectedTargetEffectResolution,
 } from "./effect-runtime.js";
 import { executeUnreplacedSelectedTargetKoProcess } from "./effect-runtime-primitives.js";
 import { applyLifeTriggerDecisionResponse } from "./life-trigger-actions.js";
@@ -84,6 +85,20 @@ const effectIdFromStoredReplacementPayload = (
     return payload.effectId;
   }
   return fallback;
+};
+
+const queueEntryIdFromStoredReplacementPayload = (
+  payload: unknown,
+): string | undefined => {
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    "queueEntryId" in payload &&
+    typeof payload.queueEntryId === "string"
+  ) {
+    return payload.queueEntryId;
+  }
+  return undefined;
 };
 
 const replacementProcessFromState = (
@@ -254,6 +269,13 @@ const applyChooseReplacementDecisionResponse = (
     ),
   };
   delete processState.pendingDecision;
+  const queuedEntryId = queueEntryIdFromStoredReplacementPayload(
+    storedProcess.payload,
+  );
+  const queuedEntry =
+    queuedEntryId === undefined
+      ? undefined
+      : state.effectQueue.find((entry) => entry.id === queuedEntryId);
 
   if (replacementId !== undefined) {
     const applied = executeAcceptedSelectedTargetKoReplacementProcess(
@@ -266,13 +288,19 @@ const applyChooseReplacementDecisionResponse = (
     if ("error" in applied) {
       return toEngineResult(state, [], [applied.error]);
     }
-    return toEngineResult(
-      {
-        ...applied.state,
-        actionSeq: state.actionSeq + 1,
-      },
-      events,
-    );
+    const nextState = {
+      ...applied.state,
+      actionSeq: state.actionSeq + 1,
+    };
+    return queuedEntry === undefined
+      ? toEngineResult(nextState, events)
+      : finalizeSelectedTargetEffectResolution(
+          nextState,
+          state,
+          queuedEntry,
+          events,
+          events.slice(1),
+        );
   }
 
   const unreplaced = executeUnreplacedSelectedTargetKoProcess(
@@ -291,7 +319,15 @@ const applyChooseReplacementDecisionResponse = (
     actionSeq: state.actionSeq + 1,
     eventJournal: [...state.eventJournal, ...events],
   };
-  return toEngineResult(nextState, events);
+  return queuedEntry === undefined
+    ? toEngineResult(nextState, events)
+    : finalizeSelectedTargetEffectResolution(
+        nextState,
+        state,
+        queuedEntry,
+        events,
+        events.slice(1),
+      );
 };
 
 export const getLegalActions = (

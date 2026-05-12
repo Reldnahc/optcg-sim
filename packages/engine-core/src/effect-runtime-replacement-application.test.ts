@@ -5,6 +5,7 @@ import type {
   CardId,
   CardInstance,
   CardRef,
+  DecisionId,
   Effect,
   EffectDefinition,
   EffectId,
@@ -33,6 +34,7 @@ import {
 } from "./effect-runtime-primitives.js";
 
 const toCardId = (value: string): CardId => value as CardId;
+const toDecisionId = (value: string): DecisionId => value as DecisionId;
 const toEffectId = (value: string): EffectId => value as EffectId;
 const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
 
@@ -207,6 +209,94 @@ const pauseForReplacementDecision = () => {
     effectBlock,
     result,
     decision: result.state.pendingDecision,
+  };
+};
+
+const attachQueuedKoEffect = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): EffectDefinition["effects"][number] => {
+  const support = {
+    cardId: entry.source.cardId,
+    status: "implemented-dsl" as const,
+    tested: true,
+    rulesVersion: "queued-ko-rules",
+    cardDataVersion: state.cardManifest.cardDataVersion,
+    sourceTextHash: "queued-ko-source-hash",
+    behaviorHash: "queued-ko-behavior-hash",
+    effectDefinitionId: `definition:${String(entry.source.cardId)}:queued-ko`,
+  };
+  state.cardManifest.cards[entry.source.cardId] = resolvedCard({
+    cardId: entry.source.cardId,
+    category: "character",
+    power: 5000,
+    support,
+  });
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: entry.effectBlockId,
+    category: "auto",
+    trigger: { type: "onPlay" },
+    sourcePresencePolicy: entry.sourcePresencePolicy,
+    effect: koChooseEffect(),
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [support.effectDefinitionId]: {
+      cardId: entry.source.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [effectBlock],
+      metadata: {
+        sourceTextHash: support.sourceTextHash,
+        rulesVersion: support.rulesVersion,
+        effectDefinitionsVersion: state.cardManifest.effectDefinitionsVersion,
+        tested: true,
+        reviewedBy: "engine-reviewer",
+        reviewedAt: "2026-05-11T00:00:00.000Z",
+      },
+    },
+  };
+  return effectBlock;
+};
+
+const pauseQueuedTargetKoForReplacementDecision = () => {
+  const setup = setupKoReplacementState();
+  const replacementBlock = attachReviewedReplacement(setup.state, setup.target);
+  attachQueuedKoEffect(setup.state, setup.entry);
+  setup.state.effectQueue = [setup.entry];
+  setup.state.pendingDecision = {
+    id: toDecisionId("decision:selectTargets:queue-entry-ko-replacement"),
+    type: "selectTargets",
+    playerId: p1,
+    prompt: "Select targets.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: setup.entry.id,
+      effectId: setup.entry.effectBlockId,
+    },
+    visibility: { type: "public" },
+    request: publicCharacterRequest(),
+    candidates: [
+      {
+        card: setup.targetRef,
+        visibility: { type: "public" },
+      },
+    ],
+  };
+
+  const paused = applyAction(setup.state, {
+    type: "respondToDecision",
+    decisionId: setup.state.pendingDecision.id,
+    response: { type: "targets", targets: [setup.targetRef] },
+  });
+  if (paused.state.pendingDecision?.type !== "chooseReplacement") {
+    throw new Error("missing queued chooseReplacement decision");
+  }
+
+  return {
+    ...setup,
+    replacementBlock,
+    paused,
+    decision: paused.state.pendingDecision,
   };
 };
 
@@ -432,6 +522,83 @@ test("accepted KO replacement allows the same replacement id on a separate proce
     [replacementId],
   );
 });
+
+test.each([
+  {
+    name: "accept",
+    response: (replacementId: string) => ({
+      type: "replacement" as const,
+      replacementId,
+    }),
+    expectedEvents: [
+      "decisionResolved",
+      "replacementApplied",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+      "gameEnded",
+    ],
+  },
+  {
+    name: "decline",
+    response: () => ({ type: "replacement" as const }),
+    expectedEvents: [
+      "decisionResolved",
+      "cardKOd",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
+  },
+] satisfies {
+  name: string;
+  response: (replacementId: string) => {
+    type: "replacement";
+    replacementId?: string;
+  };
+  expectedEvents: string[];
+}[])(
+  "queued chooseReplacement $name response resumes and resolves the source effect",
+  ({ response, expectedEvents }) => {
+    const paused = pauseQueuedTargetKoForReplacementDecision();
+
+    const result = applyAction(paused.paused.state, {
+      type: "respondToDecision",
+      decisionId: paused.decision.id,
+      playerId: p2,
+      response: response(String(paused.replacementBlock.id)),
+    });
+
+    assert.equal(result.errors, undefined);
+    assert.deepEqual(
+      result.events.map((event) => event.type),
+      expectedEvents,
+    );
+    assert.deepEqual(result.state.effectQueue, []);
+    assert.equal(result.state.pendingDecision, undefined);
+    assert.equal(
+      result.state.eventJournal.some(
+        (event) => event.type === "effectResolved",
+      ),
+      true,
+    );
+    assert.deepEqual(
+      result.events.find((event) => event.type === "effectResolved")?.payload,
+      {
+        queueEntryId: paused.entry.id,
+        timingWindowId: paused.entry.timingWindowId,
+        generation: paused.entry.generation,
+        effectBlockId: paused.entry.effectBlockId,
+        sourcePresencePolicy: paused.entry.sourcePresencePolicy,
+        orderingGroup: paused.entry.orderingGroup,
+        status: "resolved",
+      },
+    );
+    assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+  },
+);
 
 test("declining optional chooseReplacement resolves with deterministic hash and KO passthrough ordering", () => {
   const first = declineReplacement();

@@ -43,6 +43,13 @@ export interface EffectRuntimeQueueProcessingDependencies {
 
 export interface EffectRuntimeQueueProcessing {
   failUnsupportedTargetEffectContinuation: (state: GameState) => EngineResult;
+  finalizeSelectedTargetEffectResolution: (
+    state: GameState,
+    eventBaseState: GameState,
+    resolvedEntry: EffectQueueEntry,
+    allEvents: EngineEvent[],
+    resolutionEvents: readonly EngineEvent[],
+  ) => EngineResult;
   continueSelectedTargetEffect: (
     state: GameState,
     decision: SelectTargetsDecision,
@@ -89,6 +96,32 @@ export const createEffectRuntimeQueueProcessing = (
     },
     failUnsupportedTargetEffectContinuation:
       targetDecisions.failUnsupportedTargetEffectContinuation,
+    finalizeSelectedTargetEffectResolution: (
+      state,
+      eventBaseState,
+      resolvedEntry,
+      allEvents,
+      resolutionEvents,
+    ) => {
+      const resolved = targetDecisions.finalizeSelectedTargetEffectResolution(
+        state,
+        eventBaseState,
+        resolvedEntry,
+        allEvents,
+        resolutionEvents,
+      );
+      if (
+        resolved.errors !== undefined ||
+        resolved.state.status.type !== "active"
+      ) {
+        return resolved;
+      }
+      const continued = queueResults.processNoChoiceEffectQueue(resolved.state);
+      return {
+        ...continued,
+        events: [...resolved.events, ...continued.events],
+      };
+    },
     processNoChoiceEffectQueue: queueResults.processNoChoiceEffectQueue,
     processEffectRuntimeAfterTriggerOrderChoice:
       queueResults.processEffectRuntimeAfterTriggerOrderChoice,

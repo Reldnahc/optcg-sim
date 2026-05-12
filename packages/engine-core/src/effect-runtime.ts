@@ -236,6 +236,8 @@ export const continueSelectedTargetEffect = (
   decision: SelectTargetsDecision,
   targets: readonly CardRef[],
 ) => queueProcessing.continueSelectedTargetEffect(state, decision, targets);
+export const finalizeSelectedTargetEffectResolution =
+  queueProcessing.finalizeSelectedTargetEffectResolution;
 const processNoChoiceEffectQueue = queueProcessing.processNoChoiceEffectQueue;
 
 type LocatedReplacementSource = {
