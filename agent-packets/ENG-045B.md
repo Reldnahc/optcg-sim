@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-045B -->
 <!-- agent-packet:story-path stories/approved/ENG-045B-ko-replacement-applicability.yaml -->
-<!-- agent-packet:story-sha256 582d0263b648bd8010c32be349b9aa180c240add6bc4e2b04de10f7fdaa8257e -->
+<!-- agent-packet:story-sha256 3fc05af03e85914cd4731571e52afc0f455d350a510a353287781cbd1cab2a32 -->
 
 # Story Packet
 
@@ -396,6 +396,7 @@ Own only applicability detection for one selected public Character KO target. Do
 
 <!-- prettier-ignore -->
 - packages/engine-core/src/effect-runtime-primitives.ts
+- packages/engine-core/src/effect-runtime-replacement-primitives.ts
 - packages/engine-core/src/effect-runtime-target-primitives.test.ts
 - packages/types/src/effects.ts
 - packages/types/src/effects.test.ts
