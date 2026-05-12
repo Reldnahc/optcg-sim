@@ -85,3 +85,31 @@ export type {
   CapturePoneglyphCardFixturesOptions,
   CapturePoneglyphCardFixturesResult,
 } from "./fixture-capture.js";
+export {
+  generatedSupportParserResultStatuses,
+  isCompleteGeneratedSupportParseResult,
+} from "./generated-support-types.js";
+export type {
+  AmbiguousWordingGeneratedSupportParseResult,
+  CompleteGeneratedSupportParseResult,
+  CustomHandlerRequiredGeneratedSupportParseResult,
+  GeneratedSupportBlocker,
+  GeneratedSupportBlockerCode,
+  GeneratedSupportParserResult,
+  GeneratedSupportParserResultStatus,
+  GeneratedSupportUnparsedSpan,
+  PartialGeneratedSupportParseResult,
+  StaleHashGeneratedSupportParseResult,
+  UnsupportedPrimitiveGeneratedSupportParseResult,
+} from "./generated-support-types.js";
+export {
+  generatedSupportRuntimeCapabilityMatrix,
+  hasRuntimeCapability,
+  listSupportedRuntimeCapabilityIds,
+  requiredGeneratedSupportCapabilityIds,
+} from "./runtime-capability-matrix.js";
+export type {
+  RuntimeCapabilityKind,
+  RuntimeCapabilityMatrix,
+  RuntimeCapabilityRecord,
+} from "./runtime-capability-matrix.js";
