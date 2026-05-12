@@ -593,6 +593,90 @@ test("selectTargets projection stays metadata-only and does not expose candidate
   assert.equal(JSON.stringify(forOpponent).includes("request"), false);
 });
 
+test("chooseReplacement projection is private and exposes only DTO-safe replacement metadata", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2 state");
+  const hiddenDecisionPlayerDeckCard = must(
+    p2State.deck[0],
+    "hidden decision player deck",
+  );
+  state.replacementState = [
+    {
+      processId: "process:ko:replacement",
+      type: "ko",
+      usedReplacementIds: [],
+      payload: {
+        target: {
+          instanceId: hiddenDecisionPlayerDeckCard.instanceId,
+          cardId: hiddenDecisionPlayerDeckCard.cardId,
+          playerId: p2,
+          zone: hiddenDecisionPlayerDeckCard.zone,
+        },
+        internal: "raw replacement process payload",
+      },
+    },
+  ];
+  state.pendingDecision = {
+    id: toDecisionId("decision:choose-replacement"),
+    type: "chooseReplacement",
+    playerId: p2,
+    prompt: "Choose replacement effect.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-entry-choose-replacement"),
+      effectId: "effect-choose-replacement" as EffectId,
+    },
+    visibility: { type: "private", playerId: p2 },
+    processId: "process:ko:replacement",
+    replacementIds: ["replacement:would-be-ko-draw-1"],
+    mandatory: false,
+  };
+
+  const forDecisionPlayer = filterStateForPlayer(state, p2);
+  const forOpponent = filterStateForPlayer(state, p1);
+
+  assert.deepEqual(forDecisionPlayer.pendingDecision, {
+    id: toDecisionId("decision:choose-replacement"),
+    type: "chooseReplacement",
+    playerId: p2,
+    prompt: "Choose replacement effect.",
+    causedBy: { type: "ruleProcess", name: "privateCausality" },
+    processId: "process:ko:replacement",
+    replacementIds: ["replacement:would-be-ko-draw-1"],
+    mandatory: false,
+  });
+  assert.deepEqual(
+    forDecisionPlayer.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [{ type: "respondToDecision", decisionId: state.pendingDecision.id }],
+  );
+  assert.equal(forOpponent.pendingDecision, undefined);
+  assert.deepEqual(
+    forOpponent.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("payload"), false);
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("target"), false);
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("queueEntryId"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("effect-choose-replacement"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes(
+      String(hiddenDecisionPlayerDeckCard.cardId),
+    ),
+    false,
+  );
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("internal"), false);
+});
+
 test("projects legal actions without leaking hidden card identities", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1 state");

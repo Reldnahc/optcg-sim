@@ -90,6 +90,9 @@ export interface PublicDecision {
   prompt: string;
   causedBy: CausalityRef;
   timeoutMs?: number;
+  processId?: string;
+  replacementIds?: string[];
+  mandatory?: boolean;
 }
 
 export type PublicLegalAction =

@@ -316,6 +316,9 @@ export const createEffectRuntimeQueueTargetDecisions = (
       if (primitive.errors !== undefined) {
         return unsupportedContinuationResult(state);
       }
+      if (primitive.state.pendingDecision?.type === "chooseReplacement") {
+        return toEngineResult(primitive.state, primitive.events);
+      }
 
       nextState = primitive.state;
       const allEvents: EngineEvent[] = [...primitive.events];
