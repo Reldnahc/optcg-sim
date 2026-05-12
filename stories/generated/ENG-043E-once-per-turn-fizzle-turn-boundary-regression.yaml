@@ -1,0 +1,79 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-043E
+epic_id: KICK-001
+title: Verify committed fizzle and turn-boundary behavior
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Add final once-per-turn foundation regressions for committed later-fizzle,
+  do-as-much-as-possible, deterministic turn-boundary behavior, event ordering,
+  state hashes, and unsupported-shape fail-closed behavior.
+story_boundary: >
+  Own only final regression and integration coverage for the narrow
+  once-per-turn foundation. Do not add real-card fixture coverage, replacement
+  effects, custom handlers, broad activation redesign, or UI/API work.
+allowed_touch_points:
+  - packages/engine-core/src/once-per-turn.ts
+  - packages/engine-core/src/effect-runtime-queue-results.ts
+  - packages/engine-core/src/effect-runtime-queue-target-decisions.ts
+  - packages/engine-core/src/effect-runtime-primitives.ts
+  - packages/engine-core/src/effect-runtime-once-per-turn.test.ts
+  - packages/engine-core/src/effect-runtime-optional-activation.test.ts
+  - packages/engine-core/src/event-sequencing-regression.test.ts
+  - packages/engine-core/src/canonical-state.test.ts
+  - stories/generated/ENG-043E-once-per-turn-fizzle-turn-boundary-regression.yaml
+  - stories/approved/ENG-043E-once-per-turn-fizzle-turn-boundary-regression.yaml
+  - agent-packets/ENG-043E.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s042
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+scope:
+  - prove a legally committed effect that later fizzles or does as much as possible remains consumed
+  - prove once-per-turn usage is scoped by turn number and does not block later turns
+  - prove unsupported once-per-turn shapes fail closed without adding usage records
+  - add event-order and state-hash regression coverage for consumed and blocked paths
+  - preserve synthetic/unit/regression test style and avoid real-card fixtures
+non_scope:
+  - implementing new fizzle primitives beyond existing supported behavior
+  - real-card fixture capture or card-data integration
+  - replacement effects
+  - custom handlers
+  - broad activation redesign
+  - server, client, API, Redis, live Poneglyph, or UI work
+dependencies:
+  - ENG-043A
+  - ENG-043B
+  - ENG-043C
+  - ENG-043D
+acceptance_criteria:
+  - committed later-fizzle or do-as-much-as-possible behavior remains consumed
+  - same key in a later turn is legal and records a distinct turn-numbered use
+  - unsupported once-per-turn effect shapes fail closed without partial mutation or use consumption
+  - event sequencing remains strictly increasing for accepted, blocked, and optional paths
+  - state hash coverage changes when usage is consumed and remains deterministic across repeat construction
+required_tests:
+  - run `corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-once-per-turn.test.ts packages/engine-core/src/event-sequencing-regression.test.ts packages/engine-core/src/canonical-state.test.ts`
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run coverage`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-043E packet while implementing this story
+  - run `corepack pnpm run packets:verify` before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-043 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+ambiguity_policy: fail_and_escalate

@@ -32,6 +32,11 @@ import {
   isSupportedQueuedNoChoiceDrawEffect,
   isSupportedQueuedOptionalNoChoiceDrawEffect,
 } from "./effect-runtime-primitives.js";
+import {
+  consumeOncePerTurn,
+  isOncePerTurnUsed,
+  toOncePerTurnKey,
+} from "./once-per-turn.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 
 export type QueueEffectResolvedCustomTriggers = (
@@ -199,9 +204,17 @@ export const createEffectRuntimeQueueResults = (
         ) {
           return unsupportedEffectQueueResult(originalState);
         }
+        if (queuedEffect.oncePerTurn === true) {
+          const oncePerTurnKey = toOncePerTurnKey({
+            cardInstanceId: selected.source.instanceId,
+            effectId: selected.effectBlockId,
+            turnNumber: nextState.turn.globalTurn,
+          });
+          if (isOncePerTurnUsed(nextState, oncePerTurnKey)) {
+            return unsupportedEffectQueueResult(originalState);
+          }
+        }
         if (acceptedOptionalQueueEntryIds.has(selected.id)) {
-          // Once-per-turn consumption for accepted automatic optional effects is
-          // a future integration point; this story only resumes no-choice draw.
           drawEffect = queuedEffect.effect;
         } else {
           const paused = createChooseOptionalActivationDecision(
@@ -231,6 +244,17 @@ export const createEffectRuntimeQueueResults = (
       drawEffect ??= resolveQueuedNoChoiceDrawEffect(nextState, selected);
       if (drawEffect === undefined) {
         return unsupportedEffectQueueResult(originalState);
+      }
+      if (queuedEffect?.oncePerTurn === true) {
+        const oncePerTurnKey = toOncePerTurnKey({
+          cardInstanceId: selected.source.instanceId,
+          effectId: selected.effectBlockId,
+          turnNumber: nextState.turn.globalTurn,
+        });
+        if (isOncePerTurnUsed(nextState, oncePerTurnKey)) {
+          return unsupportedEffectQueueResult(originalState);
+        }
+        nextState = consumeOncePerTurn(nextState, oncePerTurnKey);
       }
 
       const resolvingEntry: EffectQueueEntry = {

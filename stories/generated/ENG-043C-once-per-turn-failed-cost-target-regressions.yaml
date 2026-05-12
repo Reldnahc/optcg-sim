@@ -1,0 +1,82 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-043C
+epic_id: KICK-001
+title: Commit target activations and preserve failed attempts
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Integrate once-per-turn commitment with the existing supported
+  activation-time target-selection continuation path, and add synthetic
+  regressions proving failed cost payment, failed target-selection setup, and
+  invalid target responses do not consume once-per-turn use.
+story_boundary: >
+  Own only once-per-turn commitment for existing supported selected-target
+  effect continuation and failure regressions for existing payment and
+  target-selection paths. Do not introduce new cost semantics, target shapes,
+  client-trusted target candidates, or real-card fixture coverage.
+allowed_touch_points:
+  - packages/engine-core/src/once-per-turn.ts
+  - packages/engine-core/src/play-card.ts
+  - packages/engine-core/src/play-card-payment.ts
+  - packages/engine-core/src/play-card-support.ts
+  - packages/engine-core/src/effect-runtime-queue-results.ts
+  - packages/engine-core/src/effect-runtime-queue-target-decisions.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-main-event.ts
+  - packages/engine-core/src/target-selection-actions.ts
+  - packages/engine-core/src/effect-runtime-once-per-turn.test.ts
+  - packages/engine-core/src/play-card-event.test.ts
+  - packages/engine-core/src/play-card-payment.test.ts
+  - packages/engine-core/src/target-selection-actions.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-targets.test.ts
+  - stories/generated/ENG-043C-once-per-turn-failed-cost-target-regressions.yaml
+  - stories/approved/ENG-043C-once-per-turn-failed-cost-target-regressions.yaml
+  - agent-packets/ENG-043C.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s042
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+scope:
+  - allow `oncePerTurn: true` only on the existing supported selected-target effect continuation path
+  - consume use only after successful required activation-time target selection reaches legal commitment
+  - prove failed play-card cost/payment response paths do not add once-per-turn records
+  - prove failed activation-time target-selection creation does not add once-per-turn records
+  - keep invalid target decision responses mutation-free and unconsumed
+non_scope:
+  - new cost primitives or cost payment semantics
+  - new target shapes or client-trusted target candidates
+  - optional activation behavior
+  - replacement effects
+  - custom handlers
+  - real-card fixtures or card-data integration
+  - server, client, API, Redis, live Poneglyph, or UI work
+dependencies:
+  - ENG-043A
+  - ENG-043B
+acceptance_criteria:
+  - invalid or failed cost payment does not consume once-per-turn use
+  - failed activation-time target-selection setup does not consume once-per-turn use
+  - invalid target decision responses do not consume use
+  - a successful committed activation-time target path consumes once and cannot repeat in the same turn
+  - tests use synthetic engine fixtures rather than real-card fixture ingestion
+required_tests:
+  - run `corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-once-per-turn.test.ts packages/engine-core/src/play-card-payment.test.ts packages/engine-core/src/target-selection-actions.test.ts packages/engine-core/src/effect-runtime-queue-processing-targets.test.ts`
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-043C packet while implementing this story
+  - run `corepack pnpm run packets:verify` before implementation and review handoff
+  - stay within allowed_touch_points
+  - target the ENG-043 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+ambiguity_policy: fail_and_escalate

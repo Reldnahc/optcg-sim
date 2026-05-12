@@ -497,6 +497,7 @@ test("paid reviewed target KO Main Event keeps repeated replay order and hash st
           {
             ...must(definition.effects[0], "main effect"),
             id: "OP01-040:event-main-ko-1" as (typeof definition.effects)[number]["id"],
+            oncePerTurn: true,
             effect: {
               type: "ko",
               target: {
@@ -545,6 +546,34 @@ test("paid reviewed target KO Main Event keeps repeated replay order and hash st
         .instanceId,
       target.instanceId,
     );
+    assert.deepEqual(resolved.state.oncePerTurn, [
+      {
+        cardInstanceId: eventCard.instanceId,
+        effectId: "OP01-040:event-main-ko-1",
+        turnNumber: state.turn.globalTurn,
+        usedAtStateSeq: toStateSeq(paid.state.seq + 1),
+      },
+    ]);
+
+    const repeatState = {
+      ...paid.state,
+      oncePerTurn: [
+        {
+          cardInstanceId: eventCard.instanceId,
+          effectId: "OP01-040:event-main-ko-1",
+          turnNumber: state.turn.globalTurn,
+          usedAtStateSeq: toStateSeq(paid.state.seq),
+        },
+      ],
+    };
+    const repeat = applyAction(repeatState, {
+      type: "respondToDecision",
+      decisionId: targetDecision.id,
+      response: { type: "targets", targets: [publicCandidate.card] },
+    });
+    assert.deepEqual(repeat.events, []);
+    assert.ok(repeat.errors !== undefined);
+    assert.deepEqual(repeat.state, repeatState);
     assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
     return {
       paid: eventReplaySnapshot(paid, paidTypes, "paid Main Event target KO"),
@@ -563,6 +592,32 @@ test("paid reviewed target KO Main Event keeps repeated replay order and hash st
   assert.deepEqual(first.resolved, second.resolved);
   assert.equal(first.stateHash, second.stateHash);
 });
+
+test.each(invalidResponseCases)(
+  "invalid selectTargets $name leaves once-per-turn unchanged",
+  ({ response }) => {
+    const { state, targets } = setupSelectTargetsDecision();
+    state.oncePerTurn = [
+      {
+        cardInstanceId: toInstanceId("existing-card"),
+        effectId: toEffectId("existing-effect"),
+        turnNumber: state.turn.globalTurn,
+        usedAtStateSeq: state.seq,
+      },
+    ];
+    const decision = must(state.pendingDecision, "pending decision");
+    const before = structuredClone(state.oncePerTurn);
+
+    const result = applyAction(state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: response(targets),
+    });
+
+    assert.ok(result.errors !== undefined);
+    assert.deepEqual(result.state.oncePerTurn, before);
+  },
+);
 
 test.each(invalidResponseCases)(
   "rejects selectTargets $name without mutating state",

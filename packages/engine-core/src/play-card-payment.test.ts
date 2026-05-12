@@ -326,6 +326,7 @@ test("respondToDecision rejects invalid payment variants without mutation", () =
   });
   assert.equal(wrongDecision.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(opened.state), before);
+  assert.deepEqual(wrongDecision.state.oncePerTurn, opened.state.oncePerTurn);
 
   const insufficient = applyPlayCardTestAction(opened.state, {
     type: "respondToDecision",
@@ -338,6 +339,7 @@ test("respondToDecision rejects invalid payment variants without mutation", () =
   });
   assert.equal(insufficient.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(opened.state), before);
+  assert.deepEqual(insufficient.state.oncePerTurn, opened.state.oncePerTurn);
 
   const wrongPlayerSelection = applyPlayCardTestAction(opened.state, {
     type: "respondToDecision",
@@ -350,6 +352,10 @@ test("respondToDecision rejects invalid payment variants without mutation", () =
   });
   assert.equal(wrongPlayerSelection.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(opened.state), before);
+  assert.deepEqual(
+    wrongPlayerSelection.state.oncePerTurn,
+    opened.state.oncePerTurn,
+  );
 
   const restedState = {
     ...opened.state,
@@ -377,6 +383,7 @@ test("respondToDecision rejects invalid payment variants without mutation", () =
   });
   assert.equal(rested.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(restedState), restedBefore);
+  assert.deepEqual(rested.state.oncePerTurn, restedState.oncePerTurn);
 
   const attachedState = {
     ...opened.state,
@@ -409,6 +416,7 @@ test("respondToDecision rejects invalid payment variants without mutation", () =
   });
   assert.equal(attached.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(attachedState), attachedBefore);
+  assert.deepEqual(attached.state.oncePerTurn, attachedState.oncePerTurn);
 
   const staleState = {
     ...opened.state,
@@ -437,4 +445,5 @@ test("respondToDecision rejects invalid payment variants without mutation", () =
   });
   assert.equal(stale.errors?.[0]?.type, "illegalAction");
   assert.equal(JSON.stringify(staleState), staleBefore);
+  assert.deepEqual(stale.state.oncePerTurn, staleState.oncePerTurn);
 });

@@ -28,6 +28,11 @@ import {
   isSupportedMainEventTargetKoEffect,
   resolvePlayerId,
 } from "./effect-runtime-primitives.js";
+import {
+  consumeOncePerTurn,
+  isOncePerTurnUsed,
+  toOncePerTurnKey,
+} from "./once-per-turn.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 import { resolvePublicTargetCandidates } from "./target-selection.js";
 
@@ -103,7 +108,17 @@ const isSupportedTargetChoiceEffectShape = (
   effect: SupportedSelectedTargetKoEffect;
 } => {
   if (effect.trigger.type === "main") {
-    return isSupportedMainEventTargetKoEffect(effect);
+    if (isSupportedMainEventTargetKoEffect(effect)) {
+      return true;
+    }
+    if (effect.oncePerTurn !== true) {
+      return false;
+    }
+    const effectWithoutOncePerTurn: EffectDefinition["effects"][number] = {
+      ...effect,
+    };
+    delete effectWithoutOncePerTurn.oncePerTurn;
+    return isSupportedMainEventTargetKoEffect(effectWithoutOncePerTurn);
   }
   if (effect.category !== "auto") {
     return false;
@@ -194,6 +209,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         ok: true;
         entry: EffectQueueEntry;
         effect: SupportedSelectedTargetKoEffect;
+        oncePerTurn: boolean;
       }
     | { ok: false } => {
     if (!isEffectQueueCausality(decision.causedBy)) {
@@ -228,7 +244,12 @@ export const createEffectRuntimeQueueTargetDecisions = (
     ) {
       return { ok: false };
     }
-    return { ok: true, entry, effect: match.effect };
+    return {
+      ok: true,
+      entry,
+      effect: match.effect,
+      oncePerTurn: match.oncePerTurn === true,
+    };
   };
 
   const unsupportedContinuationResult = (state: GameState): EngineResult =>
@@ -249,14 +270,26 @@ export const createEffectRuntimeQueueTargetDecisions = (
       if (!resolved.ok) {
         return unsupportedContinuationResult(state);
       }
+      let nextState = state;
+      if (resolved.oncePerTurn) {
+        const oncePerTurnKey = toOncePerTurnKey({
+          cardInstanceId: resolved.entry.source.instanceId,
+          effectId: resolved.entry.effectBlockId,
+          turnNumber: state.turn.globalTurn,
+        });
+        if (isOncePerTurnUsed(nextState, oncePerTurnKey)) {
+          return unsupportedContinuationResult(state);
+        }
+        nextState = consumeOncePerTurn(nextState, oncePerTurnKey);
+      }
 
       const resolvingEntry: EffectQueueEntry = {
         ...resolved.entry,
         state: "resolving",
       };
       const queueRemovedState: GameState = {
-        ...state,
-        effectQueue: state.effectQueue.filter(
+        ...nextState,
+        effectQueue: nextState.effectQueue.filter(
           (entry) => entry.id !== resolved.entry.id,
         ),
       };
@@ -284,7 +317,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         return unsupportedContinuationResult(state);
       }
 
-      let nextState = primitive.state;
+      nextState = primitive.state;
       const allEvents: EngineEvent[] = [...primitive.events];
       const resolvedEvents: EngineEvent[] = [];
       const resolvedEventBaseState: GameState = {

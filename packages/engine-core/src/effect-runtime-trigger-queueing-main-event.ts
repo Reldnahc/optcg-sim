@@ -1,5 +1,6 @@
 import type {
   CardId,
+  EffectDefinition,
   EffectQueueEntry,
   EngineError,
   EngineEvent,
@@ -22,6 +23,24 @@ import {
   findCardInstanceInTrash,
   toSnapshot,
 } from "./effect-runtime-trigger-source-lookup.js";
+
+const isSupportedMainEventTargetKoEffectAllowingOncePerTurn = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+} => {
+  if (isSupportedMainEventTargetKoEffect(effect)) {
+    return true;
+  }
+  if (effect.oncePerTurn !== true) {
+    return false;
+  }
+  const effectWithoutOncePerTurn: EffectDefinition["effects"][number] = {
+    ...effect,
+  };
+  delete effectWithoutOncePerTurn.oncePerTurn;
+  return isSupportedMainEventTargetKoEffect(effectWithoutOncePerTurn);
+};
 
 export const createMainEventTriggerQueueing = (
   dependencies: Pick<
@@ -115,7 +134,7 @@ export const createMainEventTriggerQueueing = (
         (effect) =>
           isSupportedNoChoiceMainEventDrawEffect(effect) ||
           isSupportedOptionalNoChoiceMainEventDrawEffect(effect) ||
-          isSupportedMainEventTargetKoEffect(effect),
+          isSupportedMainEventTargetKoEffectAllowingOncePerTurn(effect),
       );
       if (matching.length === 0) {
         return toEngineResult(
