@@ -19,7 +19,8 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { reindexZoneCards } from "./action-state.js";
+import { reifyCardRef, reindexZoneCards } from "./action-state.js";
+import { isSupportedBattleResolutionEnvelope } from "./battle-support.js";
 import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
@@ -28,6 +29,16 @@ import { assertGameStateInvariants } from "./invariants.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
   triggerText !== undefined && triggerText.trim().length > 0;
+
+type DamageContinuationResolver = (state: GameState) => EngineResult;
+
+let damageContinuationResolver: DamageContinuationResolver | undefined;
+
+export const registerLifeTriggerDamageContinuationResolver = (
+  resolver: DamageContinuationResolver,
+): void => {
+  damageContinuationResolver = resolver;
+};
 
 const isSupportedTriggerEffect = (effect: EffectBlock): boolean => {
   if (effect.category !== "auto") return false;
@@ -213,6 +224,57 @@ const validateDecisionCard = (
   return undefined;
 };
 
+const malformedContinuation = (state: GameState): EngineResult =>
+  toEngineResult(
+    state,
+    [],
+    invalidDecision("Life Trigger damage continuation is malformed."),
+  );
+
+const validateDamageContinuation = (
+  state: GameState,
+): EngineResult | undefined => {
+  const battle = state.battle;
+  if (battle === undefined) {
+    return undefined;
+  }
+  if (
+    battle.damageCount !== 1 ||
+    battle.damageProcess?.type !== "multipleDamage" ||
+    battle.damageProcess.remainingDamagePoints !== 1 ||
+    !isSupportedBattleResolutionEnvelope(battle) ||
+    state.effectQueue.length > 0 ||
+    state.deferredTriggers.length > 0 ||
+    state.replacementState.length > 0 ||
+    state.continuousEffects.length > 0 ||
+    reifyCardRef(state, battle.attacker) === null ||
+    reifyCardRef(state, battle.currentTarget) === null
+  ) {
+    return malformedContinuation(state);
+  }
+  return undefined;
+};
+
+const continueDamageAfterLifeTriggerResponse = (
+  state: GameState,
+  responseResult: EngineResult,
+): EngineResult => {
+  if (state.battle === undefined || responseResult.errors !== undefined) {
+    return responseResult;
+  }
+  if (damageContinuationResolver === undefined) {
+    return malformedContinuation(state);
+  }
+  const continued = damageContinuationResolver(responseResult.state);
+  if (continued.errors !== undefined) {
+    return malformedContinuation(state);
+  }
+  return toEngineResult(continued.state, [
+    ...responseResult.events,
+    ...continued.events,
+  ]);
+};
+
 const applyActivatedTriggerResponse = (
   state: GameState,
   decision: ConfirmLifeTriggerDecision,
@@ -389,7 +451,14 @@ export const applyLifeTriggerDecisionResponse = (
   }
   const choice: string = action.response.choice;
   if (choice === "activateTrigger") {
-    return applyActivatedTriggerResponse(state, decision, action);
+    const continuationValidation = validateDamageContinuation(state);
+    if (continuationValidation !== undefined) {
+      return continuationValidation;
+    }
+    return continueDamageAfterLifeTriggerResponse(
+      state,
+      applyActivatedTriggerResponse(state, decision, action),
+    );
   }
   if (choice !== "addToHand") {
     return toEngineResult(
@@ -397,6 +466,10 @@ export const applyLifeTriggerDecisionResponse = (
       [],
       invalidDecision("Life Trigger choice is unsupported."),
     );
+  }
+  const continuationValidation = validateDamageContinuation(state);
+  if (continuationValidation !== undefined) {
+    return continuationValidation;
   }
   const validation = validateDecisionCard(state, decision);
   if (validation !== undefined) {
@@ -483,5 +556,8 @@ export const applyLifeTriggerDecisionResponse = (
   };
   delete nextState.pendingDecision;
   assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  return continueDamageAfterLifeTriggerResponse(
+    state,
+    toEngineResult(nextState, events),
+  );
 };
