@@ -182,27 +182,30 @@ const continuousPowerEffectRecord = (
   state: ReturnType<typeof createState>,
   options?: {
     id?: string;
+    source?: CardInstance;
     modifier?: ContinuousEffectRecord["modifier"];
     duration?: ContinuousEffectRecord["duration"];
     condition?: ContinuousEffectRecord["condition"];
   },
 ): ContinuousEffectRecord => {
-  const source = must(state.players[p1], "p1 state").leader;
+  const source = options?.source ?? must(state.players[p1], "p1 state").leader;
+  const sourceCategory =
+    source.zone.zone === "leaderArea" ? "leader" : "character";
   const record: ContinuousEffectRecord = {
     id: options?.id ?? "continuous-power-1000",
     source: {
       instanceId: source.instanceId,
       cardId: source.cardId,
-      playerId: p1,
+      playerId: source.controller,
       zone: source.zone,
     },
     sourceSnapshot: {
       instanceId: source.instanceId,
       cardId: source.cardId,
-      ownerId: p1,
-      controllerId: p1,
+      ownerId: source.owner,
+      controllerId: source.controller,
       zone: source.zone,
-      category: "leader",
+      category: sourceCategory,
       colors: ["red"],
       power: 5000,
       keywords: [],
@@ -306,23 +309,58 @@ test("applies permanent self +1000 powerAdd continuous modifier only to source c
   assert.deepEqual(state.eventJournal, eventJournalBefore);
 });
 
-test("accepts whileSourceOnField self +1000 powerAdd continuous modifier without changing computed power", () => {
+test("applies whileSourceOnField self +1000 powerAdd modifier while leader or character source remains live", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
   p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
-  const before = computeView(state);
-
+  const source = must(p1State.characters[0], "p1 source character");
   state.continuousEffects = [
     continuousPowerEffectRecord(state, {
-      id: "supported-while-source-on-field-power",
+      duration: { type: "whileSourceOnField" },
+    }),
+    continuousPowerEffectRecord(state, {
+      source,
       duration: { type: "whileSourceOnField" },
     }),
   ];
-
   const after = computeView(state);
+  assert.equal(after.cards[p1State.leader.instanceId]?.currentPower, 6000);
+  assert.equal(after.cards[source.instanceId]?.currentPower, 4000);
+});
+
+test("omits stale or identity-changed whileSourceOnField modifier without mutating canonical state", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
+  const source = must(p1State.characters[0], "p1 original source character");
+  state.continuousEffects = [
+    continuousPowerEffectRecord(state, {
+      source,
+      duration: { type: "whileSourceOnField" },
+    }),
+  ];
+  p1State.characters = [];
+  const beforeHash = hashCanonicalStateValue(state);
+  const eventJournalBefore = structuredClone(state.eventJournal);
+  const continuousEffectsBefore = structuredClone(state.continuousEffects);
+  assert.equal(computeView(state).cards[source.instanceId], undefined);
+  assert.deepEqual(state.continuousEffects, continuousEffectsBefore);
+  assert.equal(hashCanonicalStateValue(state), beforeHash);
+  assert.deepEqual(state.eventJournal, eventJournalBefore);
+  const identityState = createState();
+  const identityP1 = must(identityState.players[p1], "identity p1 state");
+  identityP1.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
+  const identitySource = must(identityP1.characters[0], "identity source");
+  identityState.continuousEffects = [
+    continuousPowerEffectRecord(identityState, {
+      source: identitySource,
+      duration: { type: "whileSourceOnField" },
+    }),
+  ];
+  identitySource.cardId = toCardId("char-rush");
   assert.equal(
-    after.cards[p1State.leader.instanceId]?.currentPower,
-    before.cards[p1State.leader.instanceId]?.currentPower,
+    computeView(identityState).cards[identitySource.instanceId]?.currentPower,
+    3000,
   );
 });
 
