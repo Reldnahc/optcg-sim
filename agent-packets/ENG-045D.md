@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-045D -->
 <!-- agent-packet:story-path stories/approved/ENG-045D-ko-replacement-application-event.yaml -->
-<!-- agent-packet:story-sha256 98b82520adb62de6083e1c37a02bd33439ad2228e2a2eec53eb34457b4cfa566 -->
+<!-- agent-packet:story-sha256 23b51eb01393d70677b225276e071b36914871a04e5072d6cdac3657a2309125 -->
 
 # Story Packet
 
@@ -402,6 +402,7 @@ Own only the accepted single-candidate KO replacement execution path. Do not add
 <!-- prettier-ignore -->
 - packages/engine-core/src/action-results.ts
 - packages/engine-core/src/effect-runtime.ts
+- packages/engine-core/src/effect-runtime-replacement-application.test.ts
 - packages/engine-core/src/effect-runtime-primitives.ts
 - packages/engine-core/src/effect-runtime-target-primitives.test.ts
 - packages/types/src/events.ts
@@ -443,7 +444,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 ## Required Tests
 
-- run `corepack pnpm exec vitest run packages/types/src/events.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts`
+- run `corepack pnpm exec vitest run packages/types/src/events.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/effect-runtime-replacement-application.test.ts`
 - run `corepack pnpm --filter @optcg/engine-core typecheck`
 - run `corepack pnpm run packets:verify`
 - run `corepack pnpm run verify`
