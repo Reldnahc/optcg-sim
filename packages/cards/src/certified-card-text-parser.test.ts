@@ -74,6 +74,26 @@ describe("certified card text parser", () => {
     });
   });
 
+  it("fails closed on standalone When Attacking because only the reviewed composition path is certified", () => {
+    const text = "[When Attacking] Draw 1 card.";
+    const result = parse(text);
+
+    expect(result).toMatchObject({
+      blockers: [
+        {
+          code: "unparsed-span",
+          message: "Card text is not covered by certified parser rules.",
+          span: {
+            end: text.length,
+            start: 0,
+            text,
+          },
+        },
+      ],
+      status: "partial",
+    });
+  });
+
   it("records unparsed residue when an exact supported clause has unsupported leftover text", () => {
     const result = parse("[On Play] Draw 1 card. Then rest 1 DON!!.");
 
@@ -132,5 +152,46 @@ describe("certified card text parser", () => {
         trigger: { type: "whenAttacking" },
       },
     ]);
+  });
+
+  it.each([
+    {
+      name: "reversed",
+      text: "[When Attacking] Draw 1 card.\n[On Play] Draw 1 card.",
+    },
+    {
+      name: "duplicate",
+      text: "[On Play] Draw 1 card.\n[On Play] Draw 1 card.",
+    },
+    {
+      name: "extra line",
+      text: "[On Play] Draw 1 card.\n[When Attacking] Draw 1 card.\n[On Play] Draw 1 card.",
+    },
+  ])("fails closed on non-certified $name composition", ({ text }) => {
+    const result = parse(text);
+
+    expect(result.status).toBe("partial");
+    expect(isCompleteGeneratedSupportParseResult(result)).toBe(false);
+    expect(result).toMatchObject({
+      blockers: [
+        {
+          code: "unparsed-span",
+          message: "Card text is not covered by certified parser rules.",
+          span: {
+            end: text.length,
+            start: 0,
+            text,
+          },
+        },
+      ],
+      parsedRuleIds: [],
+      unparsedSpans: [
+        {
+          end: text.length,
+          start: 0,
+          text,
+        },
+      ],
+    });
   });
 });

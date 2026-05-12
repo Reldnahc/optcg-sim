@@ -32,6 +32,19 @@ interface CertifiedClause {
 export function parseCertifiedCardText(
   input: CertifiedCardTextParserInput,
 ): GeneratedSupportParserResult {
+  if (input.sourceText === "[On Play] Draw 1 card.") {
+    return completeParse(input, [createOnPlayDrawClause(input.cardId)]);
+  }
+
+  if (
+    input.sourceText === "[On Play] Draw 1 card.\n[When Attacking] Draw 1 card."
+  ) {
+    return completeParse(input, [
+      createOnPlayDrawClause(input.cardId),
+      createWhenAttackingDrawClause(input.cardId),
+    ]);
+  }
+
   const lines = input.sourceText.split("\n");
   const parsedClauses: CertifiedClause[] = [];
   const unparsedSpans: GeneratedSupportUnparsedSpan[] = [];
@@ -93,6 +106,13 @@ export function parseCertifiedCardText(
     };
   }
 
+  return unsupportedWholeText(input);
+}
+
+function completeParse(
+  input: CertifiedCardTextParserInput,
+  parsedClauses: readonly CertifiedClause[],
+): GeneratedSupportParserResult {
   return {
     cardId: input.cardId,
     effectDefinition: {
@@ -111,6 +131,32 @@ export function parseCertifiedCardText(
     sourceText: input.sourceText,
     sourceTextHash: input.sourceTextHash,
     status: "complete",
+  };
+}
+
+function unsupportedWholeText(
+  input: CertifiedCardTextParserInput,
+): GeneratedSupportParserResult {
+  const span = {
+    end: input.sourceText.length,
+    start: 0,
+    text: input.sourceText,
+  };
+
+  return {
+    blockers: [
+      {
+        code: "unparsed-span",
+        message: "Card text is not covered by certified parser rules.",
+        span,
+      },
+    ],
+    cardId: input.cardId,
+    parsedRuleIds: [],
+    sourceText: input.sourceText,
+    sourceTextHash: input.sourceTextHash,
+    status: "partial",
+    unparsedSpans: [span],
   };
 }
 
