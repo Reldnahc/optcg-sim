@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-046B.md",
-      "storyId": "ENG-046B",
-      "storyPath": "stories/approved/ENG-046B-life-trigger-per-point-regression.yaml",
-      "storySha256": "4ef3254e59d36f4cd68a8ee87e5b32b4df56d58637f1e25c6e08826e74c3cce7"
+      "packetPath": "agent-packets/ENG-046C.md",
+      "storyId": "ENG-046C",
+      "storyPath": "stories/approved/ENG-046C-damage-trigger-deferral.yaml",
+      "storySha256": "a3d34e3049ab8ca8b00cf7a0b7d14bace483bdb7c68bc6473c0439952f1f646a"
     }
   ],
   "version": 1
