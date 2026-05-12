@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-044B.md",
-      "storyId": "ENG-044B",
-      "storyPath": "stories/approved/ENG-044B-computed-view-power-application.yaml",
-      "storySha256": "0cef4f76f3e6eb93ea58aa262f67f590428dec71db8c0608fc171f82009bd14d"
+      "packetPath": "agent-packets/ENG-044C.md",
+      "storyId": "ENG-044C",
+      "storyPath": "stories/approved/ENG-044C-source-removal-modifier-disappearance.yaml",
+      "storySha256": "456671e413bb36301528a047c368d4274d8afcba658b939456e6b8d6a891ce20"
     }
   ],
   "version": 1
