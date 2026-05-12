@@ -1,0 +1,70 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-045C
+epic_id: KICK-001
+title: Create and validate chooseReplacement decisions
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Pause the supported KO replacement process on a private
+  `chooseReplacement` decision and validate replacement responses.
+story_boundary: >
+  Own only decision creation, PlayerView visibility, and response validation for
+  the selected-target KO replacement process. Do not execute accepted
+  replacements yet.
+allowed_touch_points:
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/action-results.ts
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime-primitives.ts
+  - packages/engine-core/src/effect-runtime-target-primitives.test.ts
+  - packages/engine-core/src/filter-state-for-player.ts
+  - packages/engine-core/src/filter-state-for-player.test.ts
+  - packages/types/src/decisions.ts
+  - packages/types/src/decisions.test.ts
+  - stories/generated/ENG-045C-choose-replacement-decision.yaml
+  - stories/approved/ENG-045C-choose-replacement-decision.yaml
+  - agent-packets/ENG-045C.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s006
+  - 03-game-state-events-decisions.s009
+  - 03-game-state-events-decisions.s018
+  - 04-effect-runtime.s013
+  - 11-testing-quality.s004
+  - 22-v6-implementation-tightening.s011
+scope:
+  - create `chooseReplacement` for the KO target controller when the supported optional KO replacement requires a player decision
+  - keep the decision private to the choosing player in PlayerView
+  - expose only public decision metadata, process id, replacement ids, and mandatory/optional flag allowed by the DTO
+  - validate stale decision ids, wrong player responses, malformed responses, unknown replacement ids, declined mandatory replacements, and accepted unsupported replacement ids
+  - keep malformed response failures nonmutating and deterministic
+non_scope:
+  - executing accepted replacements
+  - multiple-candidate ordering beyond deterministic fail-closed behavior
+  - client/API/UI changes
+  - real-card fixtures or card-data integration
+dependencies:
+  - ENG-045A
+  - ENG-045B
+acceptance_criteria:
+  - "`chooseReplacement` is created for the correct player and hidden from the opponent"
+  - valid decline/accept response shapes are recognized for the optional replacement path while declined mandatory replacements remain rejected as unsupported
+  - malformed or unauthorized responses fail closed without clearing the decision or mutating state
+  - PlayerView does not expose raw process payloads, replacement internals, or hidden card identities
+required_tests:
+  - run `corepack pnpm exec vitest run packages/types/src/decisions.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/filter-state-for-player.test.ts`
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-045C packet while implementing this story
+  - stay within allowed_touch_points
+  - target the ENG-045 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+ambiguity_policy: fail_and_escalate

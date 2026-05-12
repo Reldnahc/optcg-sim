@@ -1,0 +1,124 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-045
+epic_id: KICK-001
+title: Replacement process foundation parent
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Coordinate the first deterministic replacement-process foundation around the
+  existing selected-target KO primitive so replacement decisions, application,
+  one-use-per-process, hidden-info safety, and fail-closed behavior land as one
+  reviewed gameplay group.
+story_boundary: >
+  This parent is not directly implementable. It coordinates ENG-045A through
+  ENG-045F on a parent integration branch. The first replaceable process is the
+  synthetic selected public Character KO path already owned by engine-core
+  effect-runtime primitive tests. Do not broaden to damage replacement, trash
+  replacement, Life Trigger replacement, replay storage, or real-card fixtures.
+allowed_touch_points:
+  - stories/generated/ENG-045*.yaml
+  - stories/approved/ENG-045*.yaml
+spec_refs:
+  - 02-engine-mechanics.s043
+  - 03-game-state-events-decisions.s006
+  - 03-game-state-events-decisions.s007
+  - 03-game-state-events-decisions.s008
+  - 03-game-state-events-decisions.s009
+  - 03-game-state-events-decisions.s018
+  - 04-effect-runtime.s013
+  - 05-effect-dsl-reference.s002
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s016
+  - 11-testing-quality.s004
+  - 22-v6-implementation-tightening.s011
+  - 24-story-schema.s004
+  - 24-story-schema.s016
+  - 27-spec-driven-story-generation-workflow.s015
+  - 27-spec-driven-story-generation-workflow.s017
+scope:
+  - coordinate a parent integration branch for ENG-045A through ENG-045F
+  - define the first narrow replaceable process boundary around selected-target public Character KO
+  - detect only reviewed replacement metadata for optional `wouldBeKOd` on the KO target with target `self`
+  - create and validate `chooseReplacement` only for the supported replacement path
+  - apply one selected replacement through the existing no-choice draw primitive as `draw 1` for the replacement controller
+  - execute the replacement draw body as the terminal replacement body for this KO process without creating a nested or secondary draw replaceable process
+  - emit deterministic `replacementApplied` events with payload hashes or equivalent deterministic payload evidence
+  - prevent the same replacement from applying twice to the same process
+  - preserve no-replacement KO passthrough behavior
+  - fail closed for unsupported replacement triggers, effects, conditions, costs, target shapes, multiple candidates, and hidden/private candidate shapes
+  - prove deterministic event ordering, state hashes, canonical nonmutation on failures, and PlayerView hidden-info safety
+non_scope:
+  - direct implementation from this parent story
+  - packetizing or activating this parent story as an active implementation story
+  - real-card fixture capture or card-data integration
+  - full replacement priority across all card classes
+  - complex multi-replacement ordering beyond the first narrow path
+  - Life Trigger replacement
+  - damage replacement plus trash replacement plus trigger replacement all at once
+  - rollback or replay storage
+  - custom handlers
+  - server, client, API, WebSocket, database, Redis, live Poneglyph, or UI work
+  - engine-core importing @optcg/cards
+dependencies:
+  - ENG-044
+child_stories:
+  - id: ENG-045A
+    title: Wrap selected-target KO as a replaceable process
+    concern: Add the process construction and no-replacement passthrough seam for selected public Character KO without changing behavior.
+    depends_on: []
+  - id: ENG-045B
+    title: Detect supported KO replacement candidates
+    concern: Detect exactly one reviewed `wouldBeKOd` replacement candidate for a selected public Character KO target and fail closed for unsupported metadata.
+    depends_on: [ENG-045A]
+  - id: ENG-045C
+    title: Create and validate chooseReplacement decisions
+    concern: Pause the supported KO process on `chooseReplacement` and validate accept/decline or malformed responses without leaking private details.
+    depends_on: [ENG-045A, ENG-045B]
+  - id: ENG-045D
+    title: Apply selected KO replacement and emit event
+    concern: Execute the accepted replacement through existing runtime primitives and emit deterministic `replacementApplied`.
+    depends_on: [ENG-045A, ENG-045B, ENG-045C]
+  - id: ENG-045E
+    title: Prevent duplicate replacement use per process
+    concern: Preserve and enforce `usedReplacementIds` so the same replacement cannot apply twice to one process.
+    depends_on: [ENG-045A, ENG-045B, ENG-045C, ENG-045D]
+  - id: ENG-045F
+    title: Preserve passthrough and fail-closed replacement safety
+    concern: Add no-replacement, unsupported-shape, state-hash, event ordering, and PlayerView hidden-info regressions for the integrated foundation.
+    depends_on: [ENG-045A, ENG-045B, ENG-045C, ENG-045D, ENG-045E]
+acceptance_criteria:
+  - ENG-045A through ENG-045F are reviewed as a coherent replacement process foundation group
+  - each child story has a usable exact per-story story-review result before approval
+  - child PRs target the ENG-045 parent integration branch if the group is approved
+  - selected public Character KO has a replaceable process wrapper with unchanged no-replacement behavior
+  - supported replacement metadata is detected only for the narrow optional `wouldBeKOd` self KO target path
+  - "`chooseReplacement` decision creation, visibility, and malformed response validation are covered"
+  - accepted replacement skips the KO and applies the reviewed `draw 1 self` replacement body through existing deterministic engine result and event journal patterns
+  - accepted replacement execution does not create or re-enter a draw replacement process
+  - "`replacementApplied` event is emitted with deterministic payload evidence"
+  - the same replacement cannot apply twice to one process
+  - unsupported replacement shapes fail closed without state mutation
+  - PlayerView never exposes replacement internals, hidden candidates, private card identities, or raw `replacementState`
+  - parent PR cleanup metadata and lifecycle evidence bind ENG-045 plus ENG-045A through ENG-045F, and cleanup is deferred until the parent PR lands on main
+required_tests:
+  - set-level story-review for ENG-045 parent and children
+  - per-story story-review for ENG-045 parent before approval
+  - per-story story-review for ENG-045A through ENG-045F before approval
+  - story-specific tests from every child story
+  - full `corepack pnpm run verify` on every child PR and parent PR
+repo_rules:
+  - do not implement ENG-045 directly
+  - use the parent integration branch workflow if this group is approved
+  - keep one active child packet at a time
+  - do not run packet completion for child stories until the parent branch lands on main
+  - require parent PR cleanup metadata and lifecycle evidence for ENG-045 and every included child story
+  - use `packets:complete-many` only after the parent PR lands on main or as documented operational fallback
+  - if story-review finds the first replaceable process ambiguous, record the ambiguity and stop instead of implementing
+ambiguity_policy: fail_and_escalate
