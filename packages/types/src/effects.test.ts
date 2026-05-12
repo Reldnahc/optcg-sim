@@ -157,6 +157,42 @@ test("effect support contracts compile with canonical representative values", ()
   expect(segment.connector).toBe("then");
 });
 
+test("replacement effect contract supports reviewed would-be-KOd self draw shape", () => {
+  const replacement: ReplacementTrigger = {
+    type: "wouldBeKOd",
+    target: { type: "self" },
+  };
+  const effect: Effect = {
+    type: "replacement",
+    when: replacement,
+    instead: { type: "draw", count: 1, player: "self" },
+  };
+  const block: EffectBlock = {
+    id: "replacement-1" as EffectId,
+    category: "replacement",
+    trigger: { type: "replacement", replacement },
+    optional: true,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    effect,
+  };
+  const definition: EffectDefinition = {
+    cardId: "OP01-002" as CardId,
+    implementationStatus: "implemented-dsl",
+    effects: [block],
+    metadata: {
+      sourceTextHash: "hash",
+      rulesVersion: "v6",
+      effectDefinitionsVersion: "v1",
+      tested: true,
+      reviewedBy: "reviewer",
+      reviewedAt: "2026-05-11T00:00:00.000Z",
+    },
+  };
+
+  expect(definition.effects[0]?.category).toBe("replacement");
+  expect(effect.when.type).toBe("wouldBeKOd");
+});
+
 test("deprecated CardFilter aliases are rejected by canonical contract", () => {
   // @ts-expect-error deprecated alias
   const cardIdAlias: CardFilter = { cardId: "OP01-001" };
