@@ -556,16 +556,10 @@ test.each([
     response: { type: "replacement", replacementId: "replacement:unknown" },
     reason: "replacementId must match an available replacement.",
   },
-  {
-    name: "accepted unsupported replacement",
-    playerId: p2,
-    response: "known",
-    reason: "Accepted replacement execution is unsupported.",
-  },
 ] satisfies {
   name: string;
   playerId?: typeof p1;
-  response?: Record<string, unknown> | null | "known";
+  response?: Record<string, unknown> | null;
   omitResponse?: true;
   reason: string;
 }[])(
@@ -577,18 +571,11 @@ test.each([
     );
     const before = structuredClone(result.state);
     const beforeHash = hashCanonicalStateValue(result.state);
-    const responseValue =
-      response === "known"
-        ? {
-            type: "replacement",
-            replacementId: must(decision.replacementIds[0], "replacement id"),
-          }
-        : response;
     const action = {
       type: "respondToDecision" as const,
       decisionId: decision.id,
       ...(playerId === undefined ? {} : { playerId }),
-      ...(omitResponse === true ? {} : { response: responseValue }),
+      ...(omitResponse === true ? {} : { response }),
     } as unknown as Parameters<typeof applyAction>[1];
 
     const rejected = applyAction(result.state, action);

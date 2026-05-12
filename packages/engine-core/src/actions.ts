@@ -36,7 +36,10 @@ import {
   applySelectTargetsDecisionResponse,
   getSelectTargetsLegalActions,
 } from "./target-selection-actions.js";
-import { detectPendingRuntimeWork } from "./effect-runtime.js";
+import {
+  detectPendingRuntimeWork,
+  executeAcceptedSelectedTargetKoReplacementProcess,
+} from "./effect-runtime.js";
 import { executeUnreplacedSelectedTargetKoProcess } from "./effect-runtime-primitives.js";
 import { applyLifeTriggerDecisionResponse } from "./life-trigger-actions.js";
 import {
@@ -194,11 +197,6 @@ const applyChooseReplacementDecisionResponse = (
         invalidDecision("replacementId must match an available replacement."),
       );
     }
-    return toEngineResult(
-      state,
-      [],
-      invalidDecision("Accepted replacement execution is unsupported."),
-    );
   }
   if (decision.mandatory) {
     return toEngineResult(
@@ -256,6 +254,26 @@ const applyChooseReplacementDecisionResponse = (
     ),
   };
   delete processState.pendingDecision;
+
+  if (replacementId !== undefined) {
+    const applied = executeAcceptedSelectedTargetKoReplacementProcess(
+      processState,
+      events,
+      effectIdFromStoredReplacementPayload(storedProcess.payload, decision.id),
+      process,
+      replacementId,
+    );
+    if ("error" in applied) {
+      return toEngineResult(state, [], [applied.error]);
+    }
+    return toEngineResult(
+      {
+        ...applied.state,
+        actionSeq: state.actionSeq + 1,
+      },
+      events,
+    );
+  }
 
   const unreplaced = executeUnreplacedSelectedTargetKoProcess(
     processState,

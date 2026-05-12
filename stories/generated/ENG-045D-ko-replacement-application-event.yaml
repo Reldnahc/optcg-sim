@@ -16,8 +16,10 @@ story_boundary: >
   Own only the accepted single-candidate KO replacement execution path. Do not
   add broad replacement priority, replay storage, or other process kinds.
 allowed_touch_points:
+  - packages/engine-core/src/actions.ts
   - packages/engine-core/src/action-results.ts
   - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime-replacement-application.test.ts
   - packages/engine-core/src/effect-runtime-primitives.ts
   - packages/engine-core/src/effect-runtime-target-primitives.test.ts
   - packages/types/src/events.ts
@@ -59,7 +61,7 @@ acceptance_criteria:
   - event journal and returned events match
   - state hash coverage proves deterministic canonical output
 required_tests:
-  - run `corepack pnpm exec vitest run packages/types/src/events.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts`
+  - run `corepack pnpm exec vitest run packages/types/src/events.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/effect-runtime-replacement-application.test.ts`
   - run `corepack pnpm --filter @optcg/engine-core typecheck`
   - run `corepack pnpm run packets:verify`
   - run `corepack pnpm run verify`
