@@ -184,6 +184,7 @@ const toPublicDecisionCausedBy = (
   const causedBy = pending.causedBy;
   if (
     pending.type !== "selectTargets" &&
+    pending.type !== "selectCards" &&
     pending.type !== "chooseOptionalActivation" &&
     pending.type !== "chooseReplacement"
   ) {
