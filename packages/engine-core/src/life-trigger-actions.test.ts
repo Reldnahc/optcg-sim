@@ -3,7 +3,7 @@ import { test } from "vitest";
 
 import type { EffectDefinition, GameState, InstanceId } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import {
   must,
   p1,
@@ -501,6 +501,13 @@ test("activated life trigger fails closed without mutation when trigger metadata
     },
   };
   const before = structuredClone(state);
+
+  assert.deepEqual(
+    getLegalActions(state, p2).filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
 
   const result = applyAction(state, {
     type: "respondToDecision",

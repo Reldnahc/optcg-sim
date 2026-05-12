@@ -108,7 +108,7 @@ const isEffectQueueCausality = (
 ): causedBy is Extract<CausalityRef, { type: "effect" }> =>
   causedBy.type === "effect";
 
-const isSupportedTargetChoiceEffectShape = (
+export const isSupportedTargetChoiceEffectShape = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
@@ -162,6 +162,43 @@ const targetRequestsEqual = (
   left: TargetRequest,
   right: TargetRequest,
 ): boolean => JSON.stringify(left) === JSON.stringify(right);
+
+export const isUnsupportedSelectTargetsDecision = (
+  state: GameState,
+  decision: SelectTargetsDecision,
+  resolveImplementedDslEffectDefinition: ResolveImplementedDslEffectDefinition,
+): boolean => {
+  const causedBy = decision.causedBy;
+  if (!isEffectQueueCausality(causedBy)) {
+    return false;
+  }
+  const entry = state.effectQueue.find(
+    (candidate) => candidate.id === causedBy.queueEntryId,
+  );
+  if (entry === undefined) {
+    return false;
+  }
+  const resolved = state.cardManifest.cards[entry.source.cardId];
+  if (resolved === undefined) {
+    return false;
+  }
+  const lookup = resolveImplementedDslEffectDefinition(
+    resolved,
+    state.cardManifest,
+  );
+  if (!lookup.ok) {
+    return resolved.support.status === "unsupported";
+  }
+  const match = lookup.definition.effects.find(
+    (effect) => effect.id === entry.effectBlockId,
+  );
+  return (
+    match !== undefined &&
+    (match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
+      !isSupportedTargetChoiceEffectShape(match) ||
+      !targetRequestsEqual(match.effect.target.request, decision.request))
+  );
+};
 
 export const createEffectRuntimeQueueTargetDecisions = (
   dependencies: EffectRuntimeQueueTargetDecisionDependencies,
