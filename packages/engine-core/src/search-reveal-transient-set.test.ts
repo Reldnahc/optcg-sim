@@ -88,6 +88,14 @@ const respondWithCards = (
   response: { type: "cards", cards },
 });
 
+const assertDoesNotContain = (
+  value: unknown,
+  hidden: string,
+  label: string,
+) => {
+  assert.equal(JSON.stringify(value).includes(hidden), false, label);
+};
+
 test("supported top-1 Character deck search creates deterministic transient reveal set", () => {
   const state = createActiveState();
   const topDeck = markTopDeckCard(state, "character");
@@ -311,6 +319,81 @@ test("search reveal decision candidates are visible only to the chooser", () => 
   assert.equal(opponentSerialized.includes(String(topDeck.instanceId)), false);
 });
 
+test("search reveal PlayerViews keep legal actions and metadata content-agnostic", () => {
+  const state = createActiveState();
+  const topDeck = markTopDeckCard(state, "character");
+  const result = createSupportedSearchRevealChoiceDecision(
+    state,
+    queueDrawForP1(),
+    supportedSearch(),
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.kind, "decisionCreated");
+  const decision = must(result.state.pendingDecision, "pending decision");
+  if (decision.type !== "selectCards") {
+    throw new TypeError("Expected search reveal selectCards decision.");
+  }
+  const candidate = must(decision.candidates[0], "candidate").card;
+  const chooserView = filterStateForPlayer(result.state, p1);
+  const opponentView = filterStateForPlayer(result.state, p2);
+
+  assert.deepEqual(chooserView.pendingDecision, {
+    id: decision.id,
+    type: "selectCards",
+    playerId: p1,
+    prompt: "Choose a revealed card or decline.",
+    causedBy: { type: "ruleProcess", name: "privateCausality" },
+  });
+  assert.deepEqual(chooserView.revealedCards, [
+    {
+      id: "reveal:search-reveal:queue-entry-1",
+      cards: [candidate],
+      visibility: "privateToRecipient",
+      origin: "topOfDeck",
+      createdAtStateSeq: result.state.seq,
+      cleanupPolicy: "returnToOrigin",
+    },
+  ]);
+  assert.deepEqual(
+    chooserView.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [{ type: "respondToDecision", decisionId: decision.id }],
+  );
+  assertDoesNotContain(chooserView.pendingDecision, "set:search-reveal", "set");
+  assertDoesNotContain(chooserView.pendingDecision, "candidates", "candidates");
+  assertDoesNotContain(
+    chooserView.legalActions,
+    String(topDeck.cardId),
+    "card",
+  );
+  assertDoesNotContain(
+    chooserView.legalActions,
+    String(topDeck.instanceId),
+    "instance",
+  );
+
+  assert.equal(opponentView.pendingDecision, undefined);
+  assert.deepEqual(opponentView.revealedCards, []);
+  assert.deepEqual(
+    opponentView.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+  assert.equal(
+    opponentView.opponent.deckCount,
+    must(state.players[p1], "p1").deck.length,
+  );
+  assertDoesNotContain(opponentView, String(topDeck.cardId), "opponent card");
+  assertDoesNotContain(
+    opponentView,
+    String(topDeck.instanceId),
+    "opponent instance",
+  );
+});
+
 test("no eligible top-card search reveal creates no decision and leaks no identity", () => {
   const state = createActiveState();
   const topDeck = markTopDeckCard(state, "event");
@@ -429,6 +512,36 @@ test("valid search reveal choice moves selected Character to hand and clears tra
       String(topDeck.instanceId),
     ),
     false,
+  );
+});
+
+test("search reveal cleanup removes stale declined candidates from player-facing outputs", () => {
+  const { decision, state, topDeck } = createSearchRevealDecisionState();
+
+  const result = applyAction(state, respondWithCards(decision.id, []));
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.revealedCards, []);
+  assertDoesNotContain(
+    filterStateForPlayer(result.state, p1),
+    String(topDeck.cardId),
+    "chooser stale card",
+  );
+  assertDoesNotContain(
+    filterStateForPlayer(result.state, p1),
+    String(topDeck.instanceId),
+    "chooser stale instance",
+  );
+  assertDoesNotContain(
+    filterStateForPlayer(result.state, p2),
+    String(topDeck.cardId),
+    "opponent stale card",
+  );
+  assertDoesNotContain(
+    filterStateForPlayer(result.state, p2),
+    String(topDeck.instanceId),
+    "opponent stale instance",
   );
 });
 

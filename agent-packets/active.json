@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-047C.md",
-      "storyId": "ENG-047C",
-      "storyPath": "stories/approved/ENG-047C-choice-resolution-cleanup.yaml",
-      "storySha256": "728158a90294a41ca9c5ca193acf61d09cf76ac5c13ffe6c5f608a8238092084"
+      "packetPath": "agent-packets/ENG-047D.md",
+      "storyId": "ENG-047D",
+      "storyPath": "stories/approved/ENG-047D-hidden-info-view-regression.yaml",
+      "storySha256": "9253e1a5893513dfda7eaecef4335315860afaa85ca348e93741433be837a144"
     }
   ],
   "version": 1
