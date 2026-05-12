@@ -178,6 +178,23 @@ const withCharacter = (
   return card;
 };
 
+const battleRef = (card: CardInstance) => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  playerId: card.controller,
+});
+
+const setMainTurnAfterFirstTurn = (
+  state: ReturnType<typeof createState>,
+  turnPlayerId: PlayerId = p1,
+) => {
+  state.turn.phase = "main";
+  state.turn.turnPlayerId = turnPlayerId;
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+};
+
 const continuousPowerEffectRecord = (
   state: ReturnType<typeof createState>,
   options?: {
@@ -565,11 +582,7 @@ test("rush allows played-this-turn character to attack leader and rested charact
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
-  state.turn.phase = "main";
-  state.turn.turnPlayerId = p1;
-  state.turn.globalTurn = 3;
-  state.turn.playerTurnCounts[p1] = 2;
-  state.turn.playerTurnCounts[p2] = 1;
+  setMainTurnAfterFirstTurn(state);
   p1State.characters = [
     withCharacter(p1, toCardId("char-rush"), 0, { turnPlayed: 3 }),
   ];
@@ -591,11 +604,7 @@ test("rushCharacter allows played-this-turn character to attack rested character
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
-  state.turn.phase = "main";
-  state.turn.turnPlayerId = p1;
-  state.turn.globalTurn = 3;
-  state.turn.playerTurnCounts[p1] = 2;
-  state.turn.playerTurnCounts[p2] = 1;
+  setMainTurnAfterFirstTurn(state);
   p1State.characters = [
     withCharacter(p1, toCardId("char-rush-character"), 0, {
       turnPlayed: 3,
@@ -618,11 +627,7 @@ test("legal target lists include opponent leader and rested opponent characters 
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
-  state.turn.phase = "main";
-  state.turn.turnPlayerId = p1;
-  state.turn.globalTurn = 3;
-  state.turn.playerTurnCounts[p1] = 2;
-  state.turn.playerTurnCounts[p2] = 1;
+  setMainTurnAfterFirstTurn(state);
   p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
   p2State.characters = [
     withCharacter(p2, toCardId("char-vanilla"), 0, { state: "rested" }),
@@ -687,11 +692,7 @@ test("supports implemented-dsl combat body with supported keywords and no effect
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
-  state.turn.phase = "main";
-  state.turn.turnPlayerId = p1;
-  state.turn.globalTurn = 3;
-  state.turn.playerTurnCounts[p1] = 2;
-  state.turn.playerTurnCounts[p2] = 1;
+  setMainTurnAfterFirstTurn(state);
   p1State.characters = [
     withCharacter(p1, toCardId("char-rush"), 0, { turnPlayed: 3 }),
   ];
@@ -796,28 +797,12 @@ test("fails closed when combat card has unsupported printed combat keywords", ()
 test("active defender blocker character has canBlock true only during block step", () => {
   const state = createState();
   const p2State = must(state.players[p2], "p2 state");
-  state.turn.phase = "main";
-  state.turn.turnPlayerId = p1;
-  state.turn.globalTurn = 3;
-  state.turn.playerTurnCounts[p1] = 2;
-  state.turn.playerTurnCounts[p2] = 1;
+  setMainTurnAfterFirstTurn(state);
   p2State.characters = [withCharacter(p2, toCardId("char-blocker"), 0)];
   state.battle = {
-    attacker: {
-      instanceId: must(state.players[p1], "p1 state").leader.instanceId,
-      cardId: must(state.players[p1], "p1 state").leader.cardId,
-      playerId: p1,
-    },
-    originalTarget: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
-    currentTarget: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
+    attacker: battleRef(must(state.players[p1], "p1 state").leader),
+    originalTarget: battleRef(p2State.leader),
+    currentTarget: battleRef(p2State.leader),
     step: "block",
     damageCount: 1,
   };
@@ -833,32 +818,16 @@ test("canBlock remains false for ineligible blocker and non-blocker contexts", (
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
-  state.turn.phase = "main";
-  state.turn.turnPlayerId = p1;
-  state.turn.globalTurn = 3;
-  state.turn.playerTurnCounts[p1] = 2;
-  state.turn.playerTurnCounts[p2] = 1;
+  setMainTurnAfterFirstTurn(state);
   p1State.characters = [withCharacter(p1, toCardId("char-blocker"), 0)];
   p2State.characters = [
     withCharacter(p2, toCardId("char-blocker"), 0, { state: "rested" }),
     withCharacter(p2, toCardId("char-vanilla"), 1),
   ];
   state.battle = {
-    attacker: {
-      instanceId: p1State.leader.instanceId,
-      cardId: p1State.leader.cardId,
-      playerId: p1,
-    },
-    originalTarget: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
-    currentTarget: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
+    attacker: battleRef(p1State.leader),
+    originalTarget: battleRef(p2State.leader),
+    currentTarget: battleRef(p2State.leader),
     step: "block",
     damageCount: 1,
   };
@@ -894,28 +863,12 @@ test("active defender printed blocker has canBlock false outside block step", ()
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
-  state.turn.phase = "main";
-  state.turn.turnPlayerId = p1;
-  state.turn.globalTurn = 3;
-  state.turn.playerTurnCounts[p1] = 2;
-  state.turn.playerTurnCounts[p2] = 1;
+  setMainTurnAfterFirstTurn(state);
   p2State.characters = [withCharacter(p2, toCardId("char-blocker"), 0)];
   state.battle = {
-    attacker: {
-      instanceId: p1State.leader.instanceId,
-      cardId: p1State.leader.cardId,
-      playerId: p1,
-    },
-    originalTarget: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
-    currentTarget: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
+    attacker: battleRef(p1State.leader),
+    originalTarget: battleRef(p2State.leader),
+    currentTarget: battleRef(p2State.leader),
     step: "attack",
     damageCount: 1,
   };
@@ -942,32 +895,16 @@ test("battle counter power contributes only during active battle", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
-  state.turn.phase = "main";
-  state.turn.turnPlayerId = p1;
-  state.turn.globalTurn = 3;
-  state.turn.playerTurnCounts[p1] = 2;
-  state.turn.playerTurnCounts[p2] = 1;
+  setMainTurnAfterFirstTurn(state);
   p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
   p2State.characters = [
     withCharacter(p2, toCardId("char-vanilla"), 0, { state: "rested" }),
   ];
   const target = must(p2State.characters[0], "target");
   state.battle = {
-    attacker: {
-      instanceId: must(p1State.characters[0], "attacker").instanceId,
-      cardId: must(p1State.characters[0], "attacker").cardId,
-      playerId: p1,
-    },
-    originalTarget: {
-      instanceId: target.instanceId,
-      cardId: target.cardId,
-      playerId: p2,
-    },
-    currentTarget: {
-      instanceId: target.instanceId,
-      cardId: target.cardId,
-      playerId: p2,
-    },
+    attacker: battleRef(must(p1State.characters[0], "attacker")),
+    originalTarget: battleRef(target),
+    currentTarget: battleRef(target),
     step: "counter",
     damageCount: 1,
     counterPower: 2000,
@@ -981,15 +918,90 @@ test("battle counter power contributes only during active battle", () => {
   assert.equal(afterBattle.cards[target.instanceId]?.currentPower, 3000);
 });
 
-test("active defender printed blocker has canBlock false for stale battle refs", () => {
+test("composes attached DON!! and self continuous power during controller turn without mutating state", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
   state.turn.phase = "main";
   state.turn.turnPlayerId = p1;
-  state.turn.globalTurn = 3;
-  state.turn.playerTurnCounts[p1] = 2;
-  state.turn.playerTurnCounts[p2] = 1;
+  p1State.leader.attachedDon = ["p1:don:1" as CardInstance["instanceId"]];
+  p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
+  const p1Character = must(p1State.characters[0], "p1 character");
+  p1Character.attachedDon = [
+    "p1:don:2" as CardInstance["instanceId"],
+    "p1:don:3" as CardInstance["instanceId"],
+  ];
+  state.continuousEffects = [
+    continuousPowerEffectRecord(state, {
+      id: "leader-continuous-power",
+      source: p1State.leader,
+    }),
+  ];
+  const beforeHash = hashCanonicalStateValue(state);
+
+  const firstView = computeView(state);
+  const secondView = computeView(state);
+
+  assert.equal(firstView.cards[p1State.leader.instanceId]?.currentPower, 7000);
+  assert.equal(secondView.cards[p1State.leader.instanceId]?.currentPower, 7000);
+  assert.equal(firstView.cards[p1Character.instanceId]?.currentPower, 5000);
+  assert.equal(firstView.cards[p2State.leader.instanceId]?.currentPower, 5000);
+  assert.equal(hashCanonicalStateValue(state), beforeHash);
+
+  state.turn.turnPlayerId = p2;
+  const opponentTurnView = computeView(state);
+  assert.equal(
+    opponentTurnView.cards[p1State.leader.instanceId]?.currentPower,
+    6000,
+  );
+});
+
+test("composes battle counter and self continuous power only for current target", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  setMainTurnAfterFirstTurn(state);
+  p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
+  p2State.characters = [
+    withCharacter(p2, toCardId("char-vanilla"), 0, { state: "rested" }),
+    withCharacter(p2, toCardId("char-vanilla"), 1),
+  ];
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  const unrelatedDefender = must(p2State.characters[1], "unrelated defender");
+  state.continuousEffects = [
+    continuousPowerEffectRecord(state, {
+      id: "target-continuous-power",
+      source: target,
+      duration: { type: "whileSourceOnField" },
+    }),
+  ];
+  state.battle = {
+    attacker: battleRef(attacker),
+    originalTarget: battleRef(target),
+    currentTarget: battleRef(target),
+    step: "counter",
+    damageCount: 1,
+    counterPower: 2000,
+  };
+
+  const firstView = computeView(state);
+  const secondView = computeView(state);
+
+  assert.equal(firstView.cards[target.instanceId]?.currentPower, 6000);
+  assert.equal(secondView.cards[target.instanceId]?.currentPower, 6000);
+  assert.equal(
+    firstView.cards[unrelatedDefender.instanceId]?.currentPower,
+    3000,
+  );
+  assert.equal(firstView.cards[attacker.instanceId]?.currentPower, 3000);
+});
+
+test("active defender printed blocker has canBlock false for stale battle refs", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  setMainTurnAfterFirstTurn(state);
   p2State.characters = [withCharacter(p2, toCardId("char-blocker"), 0)];
 
   state.battle = {
@@ -998,16 +1010,8 @@ test("active defender printed blocker has canBlock false for stale battle refs",
       cardId: toCardId("leader-red"),
       playerId: p1,
     },
-    originalTarget: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
-    currentTarget: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
+    originalTarget: battleRef(p2State.leader),
+    currentTarget: battleRef(p2State.leader),
     step: "block",
     damageCount: 1,
   };
@@ -1020,16 +1024,8 @@ test("active defender printed blocker has canBlock false for stale battle refs",
   );
 
   state.battle = {
-    attacker: {
-      instanceId: p1State.leader.instanceId,
-      cardId: p1State.leader.cardId,
-      playerId: p1,
-    },
-    originalTarget: {
-      instanceId: p2State.leader.instanceId,
-      cardId: p2State.leader.cardId,
-      playerId: p2,
-    },
+    attacker: battleRef(p1State.leader),
+    originalTarget: battleRef(p2State.leader),
     currentTarget: {
       instanceId: "stale-target" as CardInstance["instanceId"],
       cardId: p2State.leader.cardId,
