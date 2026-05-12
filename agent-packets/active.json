@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-044E.md",
-      "storyId": "ENG-044E",
-      "storyPath": "stories/approved/ENG-044E-power-view-hidden-info-fail-closed.yaml",
-      "storySha256": "eb0e7d78d2f673cdf958f21b71c58f5472d3c07280087f82bebe6b8272ab88f0"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

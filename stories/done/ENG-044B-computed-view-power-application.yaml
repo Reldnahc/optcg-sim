@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Apply supported permanent +1000 self power modifiers in `computeView` without
   mutating canonical card instances or manifest/base power.

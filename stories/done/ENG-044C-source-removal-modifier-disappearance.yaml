@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Make supported `whileSourceOnField` +1000 self power modifiers apply only
   while the source card remains live on the board.

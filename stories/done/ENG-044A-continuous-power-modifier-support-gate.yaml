@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add a narrow engine-core support gate for continuous +1000 power modifier
   records so computed view can later fail closed on unsupported shapes.

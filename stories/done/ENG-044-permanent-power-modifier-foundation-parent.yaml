@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the first narrow continuous +1000 power modifier foundation so
   active modifier records are derived into computed view without mutating
