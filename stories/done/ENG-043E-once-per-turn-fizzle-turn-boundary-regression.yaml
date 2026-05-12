@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add final once-per-turn foundation regressions for committed later-fizzle,
   do-as-much-as-possible, deterministic turn-boundary behavior, event ordering,

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Integrate once-per-turn commitment with the existing supported
   activation-time target-selection continuation path, and add synthetic

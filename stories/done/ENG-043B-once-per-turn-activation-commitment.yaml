@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Use the once-per-turn helpers in supported non-optional queued-effect runtime
   so use is checked and consumed when a queue entry legally begins resolution.

@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-043E.md",
-      "storyId": "ENG-043E",
-      "storyPath": "stories/approved/ENG-043E-once-per-turn-fizzle-turn-boundary-regression.yaml",
-      "storySha256": "a40a593d195aa02d75db5a25561435d85203bda0d823bc2bced1d5325d56796b"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

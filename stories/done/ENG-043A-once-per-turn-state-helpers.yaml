@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add pure engine-core helpers for once-per-turn usage keys, lookup, and
   immutable consumption using card instance id, effect id, and turn number.

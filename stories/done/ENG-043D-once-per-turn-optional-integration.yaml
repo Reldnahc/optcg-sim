@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Integrate once-per-turn consumption with the landed optional activation path:
   optional decline remains unconsumed, while accepted optional automatic effects

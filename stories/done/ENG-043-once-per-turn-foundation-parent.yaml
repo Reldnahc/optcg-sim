@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the first narrow once-per-turn runtime foundation so supported
   effect paths track use by stable card instance, effect id, and turn number,
