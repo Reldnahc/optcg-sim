@@ -16,6 +16,7 @@ story_boundary: >
   Own only the accepted single-candidate KO replacement execution path. Do not
   add broad replacement priority, replay storage, or other process kinds.
 allowed_touch_points:
+  - packages/engine-core/src/actions.ts
   - packages/engine-core/src/action-results.ts
   - packages/engine-core/src/effect-runtime.ts
   - packages/engine-core/src/effect-runtime-replacement-application.test.ts

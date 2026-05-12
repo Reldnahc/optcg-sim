@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-045D -->
 <!-- agent-packet:story-path stories/approved/ENG-045D-ko-replacement-application-event.yaml -->
-<!-- agent-packet:story-sha256 23b51eb01393d70677b225276e071b36914871a04e5072d6cdac3657a2309125 -->
+<!-- agent-packet:story-sha256 0baacb5b98bdd35e27d5f7806cd0790ab93ec846437f2b02868339c815a6b5b6 -->
 
 # Story Packet
 
@@ -400,6 +400,7 @@ Own only the accepted single-candidate KO replacement execution path. Do not add
 ## Allowed Touch Points
 
 <!-- prettier-ignore -->
+- packages/engine-core/src/actions.ts
 - packages/engine-core/src/action-results.ts
 - packages/engine-core/src/effect-runtime.ts
 - packages/engine-core/src/effect-runtime-replacement-application.test.ts
