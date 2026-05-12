@@ -11,6 +11,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
+import { hashCanonicalStateValue } from "./canonical-state.js";
 import { computeView } from "./compute-view.js";
 import { createInitialState } from "./initial-state.js";
 
@@ -262,10 +263,17 @@ test("computes base/current power from manifest with attached DON!! during contr
   assert.equal(characterView.currentPower, 5000);
 });
 
-test("accepts permanent self +1000 powerAdd continuous modifier without changing computed power", () => {
+test("applies permanent self +1000 powerAdd continuous modifier only to source current power", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
-  const before = computeView(state);
+  const p2State = must(state.players[p2], "p2 state");
+  p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
+  const sourceCardBefore = structuredClone(p1State.leader);
+  const manifestCardBefore = structuredClone(
+    must(state.cardManifest.cards[p1State.leader.cardId], "source manifest"),
+  );
+  const beforeHash = hashCanonicalStateValue(state);
+  const eventJournalBefore = structuredClone(state.eventJournal);
 
   state.continuousEffects = [
     continuousPowerEffectRecord(state, {
@@ -274,11 +282,28 @@ test("accepts permanent self +1000 powerAdd continuous modifier without changing
     }),
   ];
 
-  const after = computeView(state);
-  assert.equal(
-    after.cards[p1State.leader.instanceId]?.currentPower,
-    before.cards[p1State.leader.instanceId]?.currentPower,
+  const stateWithRecordHash = hashCanonicalStateValue(state);
+  const firstView = computeView(state);
+  const secondView = computeView(state);
+  const sourceView = must(
+    firstView.cards[p1State.leader.instanceId],
+    "source leader view",
   );
+  const p1Character = must(p1State.characters[0], "p1 character");
+
+  assert.equal(sourceView.basePower, 5000);
+  assert.equal(sourceView.currentPower, 6000);
+  assert.equal(firstView.cards[p1Character.instanceId]?.currentPower, 3000);
+  assert.equal(firstView.cards[p2State.leader.instanceId]?.currentPower, 5000);
+  assert.equal(secondView.cards[p1State.leader.instanceId]?.currentPower, 6000);
+  assert.deepEqual(p1State.leader, sourceCardBefore);
+  assert.deepEqual(
+    state.cardManifest.cards[p1State.leader.cardId],
+    manifestCardBefore,
+  );
+  assert.equal(hashCanonicalStateValue(state), stateWithRecordHash);
+  assert.notEqual(beforeHash, stateWithRecordHash);
+  assert.deepEqual(state.eventJournal, eventJournalBefore);
 });
 
 test("accepts whileSourceOnField self +1000 powerAdd continuous modifier without changing computed power", () => {
