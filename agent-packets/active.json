@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-046D.md",
-      "storyId": "ENG-046D",
-      "storyPath": "stories/approved/ENG-046D-banish-unsupported-interaction-guard.yaml",
-      "storySha256": "3e080707cc685c646a9ded1b079215ee5306699fba59d09b7cd2a5f2236d9989"
+      "packetPath": "agent-packets/ENG-046E.md",
+      "storyId": "ENG-046E",
+      "storyPath": "stories/approved/ENG-046E-multiple-damage-event-hash-hidden-info.yaml",
+      "storySha256": "6a6b65bd50608826f5d880715bce47aa4006ec2786746d3b8d6020cac7ef783c"
     }
   ],
   "version": 1
