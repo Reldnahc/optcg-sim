@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Close the current engine/effect foundation milestone with an explicit
   acceptance matrix that maps required acceptance items to committed stories,
