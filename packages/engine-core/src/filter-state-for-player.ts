@@ -252,6 +252,28 @@ const toPlayerEvent = (event: EngineEvent): EngineEvent => {
   return { ...base, payload: toPlayerEventPayload(event.payload) };
 };
 
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const shouldIncludePlayerEvent = (
+  state: GameState,
+  event: EngineEvent,
+): boolean => {
+  if (event.type !== "cardRevealed" || !isObjectRecord(event.payload)) {
+    return true;
+  }
+  const revealId = event.payload["revealId"];
+  const selectionSetId = event.payload["selectionSetId"];
+  if (
+    typeof revealId !== "string" ||
+    typeof selectionSetId !== "string" ||
+    !selectionSetId.startsWith("set:search-reveal:")
+  ) {
+    return true;
+  }
+  return state.revealedCards.some((record) => record.id === revealId);
+};
+
 const toPublicDecision = (
   state: GameState,
   playerId: PlayerId,
@@ -481,6 +503,23 @@ const dedupePublicLegalActions = (
   return deduped;
 };
 
+const toSearchRevealDecisionLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): PublicLegalAction[] => {
+  const pending = state.pendingDecision;
+  if (
+    pending === undefined ||
+    pending.type !== "selectCards" ||
+    pending.playerId !== playerId ||
+    pending.request.set === undefined ||
+    !String(pending.request.set).startsWith("set:search-reveal:")
+  ) {
+    return [];
+  }
+  return [{ type: "respondToDecision", decisionId: pending.id }];
+};
+
 const toPublicRevealRecord = (
   state: GameState,
   playerId: PlayerId,
@@ -574,14 +613,16 @@ export const filterStateForPlayer = (
     opponent: toOpponentVisibleState(opponentState, computedPowers),
     ...(battle === undefined ? {} : { battle }),
     ...(pendingDecision === undefined ? {} : { pendingDecision }),
-    legalActions: dedupePublicLegalActions(
-      getLegalActions(state, playerId)
+    legalActions: dedupePublicLegalActions([
+      ...getLegalActions(state, playerId)
         .map((action) => toPublicLegalAction(state, playerId, action))
         .filter((action): action is PublicLegalAction => action !== undefined),
-    ),
+      ...toSearchRevealDecisionLegalActions(state, playerId),
+    ]),
     revealedCards: toPublicRevealRecord(state, playerId),
     events: state.eventJournal
       .filter((event) => isEventVisibleToPlayer(event, playerId))
+      .filter((event) => shouldIncludePlayerEvent(state, event))
       .map(toPlayerEvent),
     timers,
   };
