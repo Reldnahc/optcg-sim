@@ -56,7 +56,12 @@ const continuousPowerBonusForCard = (
   let powerBonus = 0;
 
   for (const effect of state.continuousEffects) {
-    if (effect.duration.type !== "permanent") continue;
+    if (
+      effect.duration.type !== "permanent" &&
+      effect.duration.type !== "whileSourceOnField"
+    ) {
+      continue;
+    }
     if (effect.condition !== undefined) continue;
     if (effect.modifier.layer !== "powerAdd") continue;
     if (effect.modifier.target.type !== "self") continue;
@@ -65,6 +70,12 @@ const continuousPowerBonusForCard = (
     if (effect.source.instanceId !== card.instanceId) continue;
     if (effect.source.cardId !== card.cardId) continue;
     if (effect.source.playerId !== card.controller) continue;
+    if (
+      effect.duration.type === "whileSourceOnField" &&
+      !isCardRefLive(state, effect.source)
+    ) {
+      continue;
+    }
 
     powerBonus += effect.modifier.operation.value;
   }
