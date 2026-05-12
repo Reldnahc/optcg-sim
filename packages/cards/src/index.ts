@@ -86,6 +86,13 @@ export type {
   CapturePoneglyphCardFixturesResult,
 } from "./fixture-capture.js";
 export {
+  lineSeparatedEffectBlocksCompositionId,
+  onPlayDrawOneParserRuleId,
+  parseCertifiedCardText,
+  whenAttackingDrawOneParserRuleId,
+} from "./certified-card-text-parser.js";
+export type { CertifiedCardTextParserInput } from "./certified-card-text-parser.js";
+export {
   generatedSupportParserResultStatuses,
   isCompleteGeneratedSupportParseResult,
 } from "./generated-support-types.js";
