@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the first supported multiple-damage loop for Double Attack leader damage
   while preserving the existing supported single-damage battle path.

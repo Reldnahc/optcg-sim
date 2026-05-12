@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Preserve supported Life Trigger decision, activation, decline, reveal, and
   cleanup behavior for each point in the narrow multiple-damage process.

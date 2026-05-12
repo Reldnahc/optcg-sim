@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add integrated regression coverage for multiple-damage event ordering, state
   hashes, PlayerView hidden-info safety, and no-choice single-damage baselines.

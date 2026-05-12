@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the first narrow multiple-damage foundation so Double Attack
   leader damage is processed one damage point at a time, Life Trigger behavior

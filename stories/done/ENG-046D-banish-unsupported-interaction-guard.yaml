@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Preserve existing Banish single-damage behavior and fail closed for Banish
   combined with multiple damage or unsupported damage-count interactions.
