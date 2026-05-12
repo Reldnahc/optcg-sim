@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-008D.md",
+      "storyId": "CARD-008D",
+      "storyPath": "stories/approved/CARD-008D-generated-support-report-smoke.yaml",
+      "storySha256": "1fea6ed564ca210f9a6b44669d74178f26b03e91f39099049a7d909ca7043acd"
+    }
+  ],
   "version": 1
 }

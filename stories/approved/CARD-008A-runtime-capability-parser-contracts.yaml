@@ -1,0 +1,81 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-008A
+epic_id: CARD-008
+title: Runtime capability matrix and parser result contracts
+type: implementation
+area: cards
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Define generated-support parser result contracts and a machine-readable
+  runtime capability matrix for currently implemented DSL features.
+story_boundary: >
+  Own only generated-support contract types, the narrow runtime capability
+  matrix surface, exports, and tests proving the matrix is deterministic and
+  contains the supported DSL features needed by the first generated-support
+  pipeline slice.
+allowed_touch_points:
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/index.ts
+  - stories/generated/CARD-008A-runtime-capability-parser-contracts.yaml
+  - stories/approved/CARD-008A-runtime-capability-parser-contracts.yaml
+  - agent-packets/CARD-008A.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+scope:
+  - define parser result types for complete parse, partial parse, unsupported primitive, ambiguous wording, stale hash, and custom handler required
+  - define blocker and unparsed-span contracts that later index/report stories can consume
+  - expose a deterministic machine-readable runtime capability matrix for implemented generated-support DSL primitives and trigger shapes
+  - include capabilities needed for exact `[On Play] Draw 1 card.` support and exact line-separated `[On Play] Draw 1 card.` plus `[When Attacking] Draw 1 card.` multi-effect composition
+  - keep the matrix data-only and free of live Poneglyph, server, client, UI, Redis, or database dependencies
+  - export the new cards package surfaces
+non_scope:
+  - implementing parser rules
+  - generating support index entries
+  - producing support reports
+  - changing engine runtime behavior
+  - changing deck validation behavior
+  - server, client, API, UI, Redis, database, replay, or live Poneglyph work
+  - importing @optcg/cards from engine-core
+dependencies:
+  - SPEC-007
+  - ENG-049
+acceptance_criteria:
+  - parser result contracts cover complete, partial, unsupported primitive, ambiguous wording, stale hash, and custom handler required outcomes
+  - blocker contracts can record missing primitives, unparsed spans, ambiguous wording, stale hashes, and custom-handler requirements
+  - runtime capability matrix is machine-readable and deterministic
+  - capability matrix includes currently implemented support for the narrow simple draw pipeline
+  - capability matrix includes `onPlay`, `whenAttacking`, and self draw capability evidence used by parser rule IDs `exact:on-play:draw-1:self` and `exact:when-attacking:draw-1:self`
+  - capability matrix tests fail if required generated-support primitives are missing
+required_tests:
+  - exact candidate story-review before implementation
+  - focused cards package tests for parser result contracts and runtime capability matrix determinism
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-008A packet before implementation
+  - stay within allowed_touch_points
+  - do not implement parser, index, report, deck validation, or gameplay behavior in this story
+  - preserve engine-core package purity
+ambiguity_policy: fail_and_escalate

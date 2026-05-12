@@ -85,3 +85,58 @@ export type {
   CapturePoneglyphCardFixturesOptions,
   CapturePoneglyphCardFixturesResult,
 } from "./fixture-capture.js";
+export {
+  certifiedParserRuleReviewer,
+  lineSeparatedEffectBlocksCompositionId,
+  onPlayDrawOneParserRuleId,
+  parseCertifiedCardText,
+  whenAttackingDrawOneParserRuleId,
+} from "./certified-card-text-parser.js";
+export type { CertifiedCardTextParserInput } from "./certified-card-text-parser.js";
+export {
+  buildGeneratedSupportIndex,
+  toGeneratedSupportManifestEvidence,
+} from "./generated-support-index.js";
+export type {
+  EffectDefinitionValidationResult,
+  GeneratedSupportCardTextInput,
+  GeneratedSupportIndex,
+  GeneratedSupportIndexEntry,
+  GeneratedSupportIndexInput,
+  GeneratedSupportManifestEvidence,
+} from "./generated-support-index.js";
+export { buildGeneratedSupportReport } from "./generated-support-report.js";
+export type {
+  GeneratedSupportReport,
+  GeneratedSupportReportBlocker,
+  GeneratedSupportReportCardStatus,
+  GeneratedSupportReportUnparsedSpan,
+} from "./generated-support-report.js";
+export {
+  generatedSupportParserResultStatuses,
+  isCompleteGeneratedSupportParseResult,
+} from "./generated-support-types.js";
+export type {
+  AmbiguousWordingGeneratedSupportParseResult,
+  CompleteGeneratedSupportParseResult,
+  CustomHandlerRequiredGeneratedSupportParseResult,
+  GeneratedSupportBlocker,
+  GeneratedSupportBlockerCode,
+  GeneratedSupportParserResult,
+  GeneratedSupportParserResultStatus,
+  GeneratedSupportUnparsedSpan,
+  PartialGeneratedSupportParseResult,
+  StaleHashGeneratedSupportParseResult,
+  UnsupportedPrimitiveGeneratedSupportParseResult,
+} from "./generated-support-types.js";
+export {
+  generatedSupportRuntimeCapabilityMatrix,
+  hasRuntimeCapability,
+  listSupportedRuntimeCapabilityIds,
+  requiredGeneratedSupportCapabilityIds,
+} from "./runtime-capability-matrix.js";
+export type {
+  RuntimeCapabilityKind,
+  RuntimeCapabilityMatrix,
+  RuntimeCapabilityRecord,
+} from "./runtime-capability-matrix.js";

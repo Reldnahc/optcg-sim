@@ -1,0 +1,103 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-008
+epic_id: CARD-008
+title: Generated card support pipeline foundation parent
+type: implementation
+area: cards
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Coordinate the first narrow generated-support pipeline from Poneglyph-shaped
+  card text through certified parser rules, generated DSL, runtime capability
+  checks, generated support index entries, and a support report.
+story_boundary: >
+  This parent is not directly implementable. It coordinates CARD-008A through
+  CARD-008D on a parent integration branch so parser contracts, certified
+  simple-template parsing, complete-parse support indexing, and support-report
+  smoke coverage land as one reviewed generated-support pipeline slice.
+allowed_touch_points:
+  - stories/generated/CARD-008*.yaml
+  - stories/approved/CARD-008*.yaml
+spec_refs:
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+  - 12-roadmap.s009
+  - 20-card-implementation-examples.s002
+  - 24-story-schema.s016
+  - 27-spec-driven-story-generation-workflow.s015
+scope:
+  - coordinate a parent integration branch for CARD-008A through CARD-008D
+  - build the first narrow generated-support pipeline from card text to generated support evidence
+  - keep parser coverage limited to exact certified templates and explicitly reviewed composition rules
+  - certify multi-effect composition only for the exact line-separated text `[On Play] Draw 1 card.` followed by `[When Attacking] Draw 1 card.`, producing two EffectBlocks in one generated EffectDefinition
+  - keep generated support fail-closed when any parsed component is partial, unparsed, ambiguous, stale, unsupported, custom-handler-only, or missing runtime capability
+  - require generated DSL to validate against the existing DSL schema before a card can be marked supported
+  - produce a support report that distinguishes supported cards, unsupported blockers, missing primitives, unparsed spans, and parser rules used
+  - preserve the package boundary that engine-core does not import @optcg/cards
+non_scope:
+  - direct implementation from this parent story
+  - packetizing or activating this parent story as an active implementation story
+  - full released-card parsing
+  - LLM-assisted parsing
+  - broad catalog auto-unlock
+  - custom handlers
+  - server, client, API, WebSocket, database, Redis, replay, or UI work
+  - live Poneglyph calls in CI
+  - replacing engine primitive tests
+  - broad engine runtime behavior changes
+dependencies:
+  - SPEC-007
+  - ENG-049
+child_stories:
+  - id: CARD-008A
+    title: Runtime capability matrix and parser result contracts
+    concern: Define generated-support parser result contracts and machine-readable runtime capability evidence for implemented DSL features.
+    depends_on: []
+  - id: CARD-008B
+    title: Certified parser rules for exact simple templates
+    concern: Parse exact reviewed simple card-text templates into generated DSL and fail closed on near misses or residue.
+    depends_on: [CARD-008A]
+  - id: CARD-008C
+    title: Complete-parse generated support index
+    concern: Build reproducible generated support index entries only when complete parse, DSL validation, and runtime capability checks all pass.
+    depends_on: [CARD-008A, CARD-008B]
+  - id: CARD-008D
+    title: Generated support report smoke
+    concern: Produce a deterministic support report over inline synthetic smoke inputs with clear blocker and parser-rule evidence.
+    depends_on: [CARD-008C]
+acceptance_criteria:
+  - CARD-008A through CARD-008D are reviewed as a coherent generated-support pipeline group
+  - each child story has a usable per-story story-review result before approval
+  - child PRs target the CARD-008 parent integration branch if the group is approved
+  - parent PR integration review confirms the pipeline composes without full-catalog, server, client, live Poneglyph, UI, or engine-runtime scope creep
+  - parent PR cleanup metadata lists CARD-008A through CARD-008D, and durable parent lifecycle evidence binds the changed non-packetized CARD-008 parent story for closeout
+  - post-merge cleanup completes CARD-008A through CARD-008D and bound CARD-008 parent closeout only after the parent branch lands on main
+required_tests:
+  - set-level story-review for CARD-008 parent and children
+  - per-story story-review for CARD-008 parent before approval
+  - per-story story-review for CARD-008A through CARD-008D before approval
+  - story-specific tests from every child story
+  - full `corepack pnpm verify` on every child PR and parent PR
+repo_rules:
+  - do not implement CARD-008 directly
+  - use the parent integration branch workflow if this group is approved
+  - keep one active child packet at a time
+  - do not run packet completion for child stories until the parent branch lands on main
+  - require parent PR cleanup metadata for every included child story and reviewed closeout evidence binding the changed non-packetized CARD-008 parent story
+  - use `packets:complete-many` as the operational cleanup mechanism for child cleanup and bound parent closeout after merge to main
+  - if generated card-support spec authority is missing or ambiguous, record the blocker instead of inventing parser or support policy
+ambiguity_policy: fail_and_escalate
