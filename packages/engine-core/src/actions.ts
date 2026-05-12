@@ -149,7 +149,24 @@ const applyChooseReplacementDecisionResponse = (
   if (decision === undefined || decision.type !== "chooseReplacement") {
     return null;
   }
-  if (action.response.type !== "replacement") {
+  if (action.playerId !== decision.playerId) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Player does not match current pending decision."),
+    );
+  }
+
+  const response: unknown = action.response;
+  if (typeof response !== "object" || response === null) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Response must be an object for chooseReplacement."),
+    );
+  }
+  const responseType = (response as { type?: unknown }).type;
+  if (responseType !== "replacement") {
     return toEngineResult(
       state,
       [],
@@ -159,8 +176,7 @@ const applyChooseReplacementDecisionResponse = (
     );
   }
 
-  const replacementId = (action.response as { replacementId?: unknown })
-    .replacementId;
+  const replacementId = (response as { replacementId?: unknown }).replacementId;
   if (replacementId !== undefined && typeof replacementId !== "string") {
     return toEngineResult(
       state,

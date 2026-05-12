@@ -525,67 +525,75 @@ test("declining optional chooseReplacement resolves to the unreplaced KO process
 test.each([
   {
     name: "wrong player",
-    action: (decision: ReturnType<typeof mustChooseReplacementDecision>) => ({
-      type: "respondToDecision" as const,
-      decisionId: decision.id,
-      playerId: p1,
-      response: { type: "replacement" as const },
-    }),
+    playerId: p1,
+    response: { type: "replacement" },
     reason: "Player does not match current pending decision.",
   },
   {
+    name: "missing player",
+    response: { type: "replacement" },
+    reason: "Player does not match current pending decision.",
+  },
+  {
+    name: "missing response",
+    playerId: p2,
+    omitResponse: true,
+    reason: "Response must be an object for chooseReplacement.",
+  },
+  {
+    name: "null response",
+    playerId: p2,
+    response: null,
+    reason: "Response must be an object for chooseReplacement.",
+  },
+  {
     name: "malformed response type",
-    action: (decision: ReturnType<typeof mustChooseReplacementDecision>) => ({
-      type: "respondToDecision" as const,
-      decisionId: decision.id,
-      playerId: p2,
-      response: { type: "orderedIds" as const, ids: [] },
-    }),
+    playerId: p2,
+    response: { type: "orderedIds", ids: [] },
     reason: "Response type must be replacement for chooseReplacement.",
   },
   {
     name: "unknown replacement id",
-    action: (decision: ReturnType<typeof mustChooseReplacementDecision>) => ({
-      type: "respondToDecision" as const,
-      decisionId: decision.id,
-      playerId: p2,
-      response: {
-        type: "replacement" as const,
-        replacementId: "replacement:unknown",
-      },
-    }),
+    playerId: p2,
+    response: { type: "replacement", replacementId: "replacement:unknown" },
     reason: "replacementId must match an available replacement.",
   },
   {
     name: "accepted unsupported replacement",
-    action: (decision: ReturnType<typeof mustChooseReplacementDecision>) => ({
-      type: "respondToDecision" as const,
-      decisionId: decision.id,
-      playerId: p2,
-      response: {
-        type: "replacement" as const,
-        replacementId: must(decision.replacementIds[0], "replacement id"),
-      },
-    }),
+    playerId: p2,
+    response: "known",
     reason: "Accepted replacement execution is unsupported.",
   },
 ] satisfies {
   name: string;
-  action: (
-    decision: ReturnType<typeof mustChooseReplacementDecision>,
-  ) => Parameters<typeof applyAction>[1];
+  playerId?: typeof p1;
+  response?: Record<string, unknown> | null | "known";
+  omitResponse?: true;
   reason: string;
 }[])(
   "chooseReplacement response validation rejects $name without mutation",
-  ({ action, reason }) => {
+  ({ playerId, response, omitResponse, reason }) => {
     const { result } = pauseForReplacementDecision();
     const decision = mustChooseReplacementDecision(
       result.state.pendingDecision,
     );
     const before = structuredClone(result.state);
     const beforeHash = hashCanonicalStateValue(result.state);
+    const responseValue =
+      response === "known"
+        ? {
+            type: "replacement",
+            replacementId: must(decision.replacementIds[0], "replacement id"),
+          }
+        : response;
+    const action = {
+      type: "respondToDecision" as const,
+      decisionId: decision.id,
+      ...(playerId === undefined ? {} : { playerId }),
+      ...(omitResponse === true ? {} : { response: responseValue }),
+    } as unknown as Parameters<typeof applyAction>[1];
 
-    const rejected = applyAction(result.state, action(decision));
+    const rejected = applyAction(result.state, action);
 
     assert.deepEqual(rejected.errors, [
       { type: "invalidDecisionResponse", reason },

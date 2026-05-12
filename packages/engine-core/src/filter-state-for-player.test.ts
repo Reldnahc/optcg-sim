@@ -621,7 +621,11 @@ test("chooseReplacement projection is private and exposes only DTO-safe replacem
     type: "chooseReplacement",
     playerId: p2,
     prompt: "Choose replacement effect.",
-    causedBy: { type: "ruleProcess", name: "replacement:test" },
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-entry-choose-replacement"),
+      effectId: "effect-choose-replacement" as EffectId,
+    },
     visibility: { type: "private", playerId: p2 },
     processId: "process:ko:replacement",
     replacementIds: ["replacement:would-be-ko-draw-1"],
@@ -636,7 +640,7 @@ test("chooseReplacement projection is private and exposes only DTO-safe replacem
     type: "chooseReplacement",
     playerId: p2,
     prompt: "Choose replacement effect.",
-    causedBy: { type: "ruleProcess", name: "replacement:test" },
+    causedBy: { type: "ruleProcess", name: "privateCausality" },
     processId: "process:ko:replacement",
     replacementIds: ["replacement:would-be-ko-draw-1"],
     mandatory: false,
@@ -656,6 +660,14 @@ test("chooseReplacement projection is private and exposes only DTO-safe replacem
   );
   assert.equal(JSON.stringify(forDecisionPlayer).includes("payload"), false);
   assert.equal(JSON.stringify(forDecisionPlayer).includes("target"), false);
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("queueEntryId"),
+    false,
+  );
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("effect-choose-replacement"),
+    false,
+  );
   assert.equal(
     JSON.stringify(forDecisionPlayer).includes(
       String(hiddenDecisionPlayerDeckCard.cardId),
