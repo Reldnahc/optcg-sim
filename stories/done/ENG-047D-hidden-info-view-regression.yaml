@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: visibility
 priority: high
-status: approved
+status: done
 summary: >
   Prove the supported transient reveal set path does not leak deck order,
   hidden card identities, private candidates, or stale reveal metadata through

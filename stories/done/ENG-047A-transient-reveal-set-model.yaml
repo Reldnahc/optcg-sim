@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the first narrow transient reveal set representation for a supported
   synthetic top-of-deck search/look path and fail closed for unsupported

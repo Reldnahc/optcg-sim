@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add integrated deterministic event-order and state-hash regressions for the
   complete supported transient reveal set lifecycle.

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Resolve the supported reveal choice decision, validate selected candidates,
   move chosen cards through the narrow path, and clean up transient reveal

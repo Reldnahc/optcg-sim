@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Create the required choose-from-revealed-set decision for the first supported
   transient reveal path while preserving recipient-only/private candidate
