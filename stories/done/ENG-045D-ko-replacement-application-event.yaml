@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Apply the accepted supported KO replacement through existing deterministic
   engine result paths and emit `replacementApplied`.

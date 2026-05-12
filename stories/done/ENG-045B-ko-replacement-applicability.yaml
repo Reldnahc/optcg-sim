@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Detect exactly the first supported `wouldBeKOd` replacement metadata shape for
   the selected-target KO process and fail closed for unsupported replacement

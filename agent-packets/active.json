@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-045F.md",
-      "storyId": "ENG-045F",
-      "storyPath": "stories/approved/ENG-045F-replacement-passthrough-fail-closed-hidden-info.yaml",
-      "storySha256": "089014a9563596107831302c19e4090c9b5816eae12c5a1c1da5ccccd179c3ab"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

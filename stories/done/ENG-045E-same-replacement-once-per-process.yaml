@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Enforce that the same replacement cannot apply twice to one selected-target
   KO replacement process.

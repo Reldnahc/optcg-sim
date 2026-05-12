@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Introduce the first narrow replaceable process boundary around selected public
   Character KO while preserving current no-replacement behavior.

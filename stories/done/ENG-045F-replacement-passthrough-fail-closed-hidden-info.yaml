@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add integrated no-replacement passthrough, unsupported-shape, state-hash,
   event-ordering, and PlayerView hidden-info regressions for the replacement
