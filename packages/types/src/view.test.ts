@@ -104,6 +104,13 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
     prompt: "Choose whether to mulligan.",
     causedBy: { type: "playerAction", actionId: "action-1" },
   };
+  const replacementDecision: PublicDecision = {
+    ...decision,
+    type: "chooseReplacement",
+    processId: "process-1",
+    replacementIds: ["replacement-1"],
+    mandatory: false,
+  };
   const legalAction: PublicLegalAction = {
     type: "respondToDecision",
     decisionId: decision.id,
@@ -172,6 +179,7 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
   };
 
   expect(playerView.legalActions).toHaveLength(1);
+  expect(replacementDecision.replacementIds).toEqual(["replacement-1"]);
   expect(spectatorView.spectatorPolicy.mode).toBe("live-filtered");
 });
 

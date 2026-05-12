@@ -11,7 +11,6 @@ import type {
   EffectId,
   InstanceId,
   QueueEntryId,
-  StateSeq,
   TargetRequest,
   TimingWindowId,
 } from "@optcg/types";
@@ -35,9 +34,6 @@ const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
 const toInstanceId = (value: string): InstanceId => value as InstanceId;
 const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
-const toStateSeq = (value: number): StateSeq => value as StateSeq;
-const toTimingWindowId = (value: string): TimingWindowId =>
-  value as TimingWindowId;
 
 const publicCharacterRequest = (
   overrides: Partial<TargetRequest> = {},
@@ -150,7 +146,7 @@ const setupKoPrimitiveState = () => {
   const entry: EffectQueueEntry = {
     id: toQueueEntryId("queue-entry-ko-targets"),
     state: "pending",
-    timingWindowId: toTimingWindowId("window-ko-targets"),
+    timingWindowId: "window-ko-targets" as TimingWindowId,
     generation: 0,
     controllerId: p1,
     source: {
@@ -173,7 +169,7 @@ const setupKoPrimitiveState = () => {
     effectBlockId: toEffectId("ko-targets-effect"),
     orderingGroup: "turnPlayer",
     createdAtEventSeq: 1,
-    queuedAtStateSeq: toStateSeq(state.seq),
+    queuedAtStateSeq: state.seq,
     sourcePresencePolicy: "mustRemainInSameZone",
     causedBy: { type: "ruleProcess", name: "ko-target-test" },
   };
@@ -483,11 +479,13 @@ test("chooseReplacement legal actions expose accept and decline only to the deci
     {
       type: "respondToDecision",
       decisionId: decision.id,
+      playerId: p2,
       response: { type: "replacement" },
     },
     {
       type: "respondToDecision",
       decisionId: decision.id,
+      playerId: p2,
       response: { type: "replacement", replacementId: String(effectBlock.id) },
     },
   ]);

@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-045C -->
 <!-- agent-packet:story-path stories/approved/ENG-045C-choose-replacement-decision.yaml -->
-<!-- agent-packet:story-sha256 46b1277297e40e4e4909beb56365c7046321ff7067c934ad245e201abf9cb8c3 -->
+<!-- agent-packet:story-sha256 0f0b4dae5dce4f1b8af168afcaa7bfef84fa87716ad79d77ad927586d1dda3d7 -->
 
 # Story Packet
 
@@ -246,12 +246,16 @@ Own only decision creation, PlayerView visibility, and response validation for t
 - packages/engine-core/src/actions.ts
 - packages/engine-core/src/action-results.ts
 - packages/engine-core/src/effect-runtime.ts
+- packages/engine-core/src/effect-runtime-queue-target-decisions.ts
 - packages/engine-core/src/effect-runtime-primitives.ts
 - packages/engine-core/src/effect-runtime-target-primitives.test.ts
 - packages/engine-core/src/filter-state-for-player.ts
 - packages/engine-core/src/filter-state-for-player.test.ts
+- packages/engine-core/src/target-selection-actions.test.ts
 - packages/types/src/decisions.ts
 - packages/types/src/decisions.test.ts
+- packages/types/src/view.ts
+- packages/types/src/view.test.ts
 - stories/generated/ENG-045C-choose-replacement-decision.yaml
 - stories/approved/ENG-045C-choose-replacement-decision.yaml
 - agent-packets/ENG-045C.md
@@ -289,7 +293,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 ## Required Tests
 
-- run `corepack pnpm exec vitest run packages/types/src/decisions.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/filter-state-for-player.test.ts`
+- run `corepack pnpm exec vitest run packages/types/src/decisions.test.ts packages/types/src/view.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/filter-state-for-player.test.ts packages/engine-core/src/target-selection-actions.test.ts`
 - run `corepack pnpm --filter @optcg/engine-core typecheck`
 - run `corepack pnpm run packets:verify`
 - run `corepack pnpm run verify`

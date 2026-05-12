@@ -129,12 +129,14 @@ const getChooseReplacementLegalActions = (
     {
       type: "respondToDecision",
       decisionId: decision.id,
+      playerId: decision.playerId,
       response: { type: "replacement" },
     },
     ...decision.replacementIds.map(
       (replacementId): LegalAction => ({
         type: "respondToDecision",
         decisionId: decision.id,
+        playerId: decision.playerId,
         response: { type: "replacement", replacementId },
       }),
     ),
