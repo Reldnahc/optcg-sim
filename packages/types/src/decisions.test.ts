@@ -96,6 +96,9 @@ test("TYP-001E decision and response contracts compile against canonical variant
     type: "replacement",
     replacementId: "replacement-1",
   };
+  const responseReplacementDecline: DecisionResponse = {
+    type: "replacement",
+  };
   const responseMulligan: DecisionResponse = { type: "mulligan", keep: true };
   const responseLoopCount: DecisionResponse = { type: "loopCount", count: 2 };
   const responseRollbackConsent: DecisionResponse = {
@@ -220,6 +223,7 @@ test("TYP-001E decision and response contracts compile against canonical variant
   expect(responseEffectOption.type).toBe("effectOption");
   expect(responseLifeTrigger.type).toBe("lifeTrigger");
   expect(responseReplacement.type).toBe("replacement");
+  expect(responseReplacementDecline.type).toBe("replacement");
   expect(responseMulligan.type).toBe("mulligan");
   expect(responseLoopCount.type).toBe("loopCount");
   expect(responseRollbackConsent.type).toBe("rollbackConsent");

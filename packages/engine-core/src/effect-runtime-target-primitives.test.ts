@@ -6,15 +6,16 @@ import type {
   CardInstance,
   CardRef,
   Effect,
+  EffectDefinition,
   EffectQueueEntry,
   EffectId,
   InstanceId,
   QueueEntryId,
-  StateSeq,
   TargetRequest,
   TimingWindowId,
 } from "@optcg/types";
 
+import { applyAction, getLegalActions } from "./actions.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import {
   createActiveState,
@@ -23,15 +24,16 @@ import {
   p2,
   resolvedCard,
 } from "./action-test-fixtures.js";
-import { executeSelectedTargetEffectPrimitive } from "./effect-runtime-primitives.js";
+import {
+  buildSelectedTargetKoReplacementProcess,
+  detectSupportedSelectedTargetKoReplacementCandidate,
+  executeSelectedTargetEffectPrimitive,
+} from "./effect-runtime-primitives.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
 const toInstanceId = (value: string): InstanceId => value as InstanceId;
 const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
-const toStateSeq = (value: number): StateSeq => value as StateSeq;
-const toTimingWindowId = (value: string): TimingWindowId =>
-  value as TimingWindowId;
 
 const publicCharacterRequest = (
   overrides: Partial<TargetRequest> = {},
@@ -144,7 +146,7 @@ const setupKoPrimitiveState = () => {
   const entry: EffectQueueEntry = {
     id: toQueueEntryId("queue-entry-ko-targets"),
     state: "pending",
-    timingWindowId: toTimingWindowId("window-ko-targets"),
+    timingWindowId: "window-ko-targets" as TimingWindowId,
     generation: 0,
     controllerId: p1,
     source: {
@@ -167,7 +169,7 @@ const setupKoPrimitiveState = () => {
     effectBlockId: toEffectId("ko-targets-effect"),
     orderingGroup: "turnPlayer",
     createdAtEventSeq: 1,
-    queuedAtStateSeq: toStateSeq(state.seq),
+    queuedAtStateSeq: state.seq,
     sourcePresencePolicy: "mustRemainInSameZone",
     causedBy: { type: "ruleProcess", name: "ko-target-test" },
   };
@@ -251,6 +253,637 @@ test("targeted KO primitive moves selected public Characters to trash with deter
   });
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });
+
+test("targeted KO primitive builds deterministic replacement process for each selected public Character", () => {
+  const { entry, refs } = setupKoPrimitiveState();
+  const targetA = must(refs[0], "target A ref");
+  const targetB = must(refs[1], "target B ref");
+
+  const processes = [targetA, targetB].map((target, index) =>
+    buildSelectedTargetKoReplacementProcess(entry, target, index),
+  );
+
+  assert.deepEqual(processes, [
+    {
+      id: `${entry.id}:ko:${targetA.instanceId}:${String(0)}`,
+      type: "ko",
+      source: entry.source,
+      target: targetA,
+      payload: {
+        effectId: entry.effectBlockId,
+        queueEntryId: entry.id,
+        source: entry.source,
+        target: targetA,
+      },
+      causedBy: entry.causedBy,
+      usedReplacementIds: [],
+    },
+    {
+      id: `${entry.id}:ko:${targetB.instanceId}:${String(1)}`,
+      type: "ko",
+      source: entry.source,
+      target: targetB,
+      payload: {
+        effectId: entry.effectBlockId,
+        queueEntryId: entry.id,
+        source: entry.source,
+        target: targetB,
+      },
+      causedBy: entry.causedBy,
+      usedReplacementIds: [],
+    },
+  ]);
+});
+
+test("targeted KO primitive preserves no-replacement state hash through the replacement wrapper", () => {
+  const { state, entry, refs } = setupKoPrimitiveState();
+
+  const result = executeSelectedTargetEffectPrimitive(
+    state,
+    entry,
+    koChooseEffect(),
+    [must(refs[0], "target A ref"), must(refs[1], "target B ref")],
+  );
+
+  assert.equal(
+    result.stateHash,
+    "eeb5d818c539eb7a4520d92ad6a6cc480f8b40b62185ea9284da0529536f146b",
+  );
+});
+
+const setupReviewedKoReplacementDefinition = (
+  state: ReturnType<typeof createActiveState>,
+  target: CardInstance,
+  overrides: Partial<EffectDefinition["effects"][number]> = {},
+  supportOverrides: Partial<ReturnType<typeof resolvedCard>["support"]> = {},
+): EffectDefinition["effects"][number] => {
+  const support = {
+    cardId: target.cardId,
+    status: "implemented-dsl" as const,
+    tested: true,
+    rulesVersion: "r1",
+    cardDataVersion: state.cardManifest.cardDataVersion,
+    sourceTextHash: "replacement-source-hash",
+    behaviorHash: "replacement-behavior-hash",
+    effectDefinitionId: `definition:${String(target.cardId)}`,
+    ...supportOverrides,
+  };
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 3000,
+    support,
+  });
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: toEffectId("replacement:would-be-ko-draw-1"),
+    category: "replacement",
+    trigger: {
+      type: "replacement",
+      replacement: { type: "wouldBeKOd", target: { type: "self" } },
+    },
+    optional: true,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    effect: {
+      type: "replacement",
+      when: { type: "wouldBeKOd", target: { type: "self" } },
+      instead: { type: "draw", count: 1, player: "self" },
+    },
+    ...overrides,
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [support.effectDefinitionId]: {
+      cardId: target.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [effectBlock],
+      metadata: {
+        sourceTextHash: support.sourceTextHash,
+        rulesVersion: support.rulesVersion,
+        effectDefinitionsVersion: state.cardManifest.effectDefinitionsVersion,
+        tested: true,
+        reviewedBy: "engine-reviewer",
+        reviewedAt: "2026-05-11T00:00:00.000Z",
+      },
+    },
+  };
+  return effectBlock;
+};
+
+const pauseForReplacementDecision = () => {
+  const setup = setupKoPrimitiveState();
+  const { state, entry, refs, targetA } = setup;
+  const effectBlock = setupReviewedKoReplacementDefinition(state, targetA);
+  const result = executeSelectedTargetEffectPrimitive(
+    state,
+    entry,
+    koChooseEffect(),
+    [must(refs[0], "target A ref")],
+  );
+  return { ...setup, effectBlock, result };
+};
+
+const mustChooseReplacementDecision = (
+  decision: ReturnType<
+    typeof pauseForReplacementDecision
+  >["result"]["state"]["pendingDecision"],
+) => {
+  if (decision?.type !== "chooseReplacement") {
+    throw new Error("missing chooseReplacement decision");
+  }
+  return decision;
+};
+
+test("detects one reviewed optional would-be-KOd self replacement candidate for selected public Character", () => {
+  const { state, entry, refs, targetA } = setupKoPrimitiveState();
+  const effectBlock = setupReviewedKoReplacementDefinition(state, targetA);
+  const process = buildSelectedTargetKoReplacementProcess(
+    entry,
+    must(refs[0], "target A ref"),
+    0,
+  );
+  const before = structuredClone(state);
+  const beforeHash = hashCanonicalStateValue(state);
+
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    process,
+  );
+
+  assert.deepEqual(detected, {
+    ok: true,
+    candidate: {
+      id: effectBlock.id,
+      effectBlockId: effectBlock.id,
+      controllerId: p2,
+      source: process.target,
+      replacementEffect: effectBlock.effect,
+    },
+  });
+  assert.deepEqual(state, before);
+  assert.equal(hashCanonicalStateValue(state), beforeHash);
+});
+
+test("targeted KO primitive pauses on a private chooseReplacement decision for supported optional KO replacement", () => {
+  const { result, entry, effectBlock, targetA } = pauseForReplacementDecision();
+  const p2State = must(result.state.players[p2], "next p2");
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.events.map((event) => [event.type, event.visibility]),
+    [["decisionCreated", { type: "private", playerId: p2 }]],
+  );
+  assert.deepEqual(result.state.pendingDecision, {
+    id: `decision:chooseReplacement:${String(entry.id)}:ko:${String(
+      targetA.instanceId,
+    )}:0`,
+    type: "chooseReplacement",
+    playerId: p2,
+    prompt: "Choose replacement effect.",
+    causedBy: entry.causedBy,
+    visibility: { type: "private", playerId: p2 },
+    processId: `${String(entry.id)}:ko:${String(targetA.instanceId)}:0`,
+    replacementIds: [String(effectBlock.id)],
+    mandatory: false,
+  });
+  assert.deepEqual(result.decisions, [result.state.pendingDecision]);
+  assert.equal(
+    p2State.characters.some((card) => card.instanceId === targetA.instanceId),
+    true,
+  );
+  assert.deepEqual(result.state.replacementState, [
+    {
+      processId: `${String(entry.id)}:ko:${String(targetA.instanceId)}:0`,
+      type: "ko",
+      usedReplacementIds: [],
+      payload: {
+        effectId: entry.effectBlockId,
+        queueEntryId: entry.id,
+        source: entry.source,
+        target: {
+          instanceId: targetA.instanceId,
+          cardId: targetA.cardId,
+          playerId: p2,
+          zone: targetA.zone,
+        },
+      },
+    },
+  ]);
+});
+
+test("chooseReplacement legal actions expose accept and decline only to the decision player", () => {
+  const { result, effectBlock } = pauseForReplacementDecision();
+  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
+
+  assert.deepEqual(getLegalActions(result.state, p2), [
+    { type: "concede", playerId: p2 },
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      playerId: p2,
+      response: { type: "replacement" },
+    },
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      playerId: p2,
+      response: { type: "replacement", replacementId: String(effectBlock.id) },
+    },
+  ]);
+  assert.deepEqual(getLegalActions(result.state, p1), [
+    { type: "concede", playerId: p1 },
+  ]);
+});
+
+test("declining optional chooseReplacement resolves to the unreplaced KO process", () => {
+  const { result, targetA } = pauseForReplacementDecision();
+  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
+
+  const declined = applyAction(result.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    playerId: p2,
+    response: { type: "replacement" },
+  });
+  const nextP2 = must(declined.state.players[p2], "next p2");
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(declined.state.pendingDecision, undefined);
+  assert.deepEqual(declined.state.replacementState, []);
+  assert.deepEqual(
+    declined.events.map((event) => event.type),
+    ["decisionResolved", "cardKOd", "cardMoved", "donReturned"],
+  );
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === targetA.instanceId),
+    false,
+  );
+  assert.equal(nextP2.trash[0]?.instanceId, targetA.instanceId);
+});
+
+test.each([
+  {
+    name: "wrong player",
+    playerId: p1,
+    response: { type: "replacement" },
+    reason: "Player does not match current pending decision.",
+  },
+  {
+    name: "missing player",
+    response: { type: "replacement" },
+    reason: "Player does not match current pending decision.",
+  },
+  {
+    name: "missing response",
+    playerId: p2,
+    omitResponse: true,
+    reason: "Response must be an object for chooseReplacement.",
+  },
+  {
+    name: "null response",
+    playerId: p2,
+    response: null,
+    reason: "Response must be an object for chooseReplacement.",
+  },
+  {
+    name: "malformed response type",
+    playerId: p2,
+    response: { type: "orderedIds", ids: [] },
+    reason: "Response type must be replacement for chooseReplacement.",
+  },
+  {
+    name: "unknown replacement id",
+    playerId: p2,
+    response: { type: "replacement", replacementId: "replacement:unknown" },
+    reason: "replacementId must match an available replacement.",
+  },
+] satisfies {
+  name: string;
+  playerId?: typeof p1;
+  response?: Record<string, unknown> | null;
+  omitResponse?: true;
+  reason: string;
+}[])(
+  "chooseReplacement response validation rejects $name without mutation",
+  ({ playerId, response, omitResponse, reason }) => {
+    const { result } = pauseForReplacementDecision();
+    const decision = mustChooseReplacementDecision(
+      result.state.pendingDecision,
+    );
+    const before = structuredClone(result.state);
+    const beforeHash = hashCanonicalStateValue(result.state);
+    const action = {
+      type: "respondToDecision" as const,
+      decisionId: decision.id,
+      ...(playerId === undefined ? {} : { playerId }),
+      ...(omitResponse === true ? {} : { response }),
+    } as unknown as Parameters<typeof applyAction>[1];
+
+    const rejected = applyAction(result.state, action);
+
+    assert.deepEqual(rejected.errors, [
+      { type: "invalidDecisionResponse", reason },
+    ]);
+    assert.deepEqual(rejected.events, []);
+    assert.deepEqual(rejected.state, before);
+    assert.equal(rejected.stateHash, beforeHash);
+    assert.equal(rejected.state.pendingDecision?.id, decision.id);
+  },
+);
+
+test("chooseReplacement response validation rejects mandatory decline without mutation", () => {
+  const { result } = pauseForReplacementDecision();
+  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
+  const mandatoryState = {
+    ...result.state,
+    pendingDecision: { ...decision, mandatory: true },
+  };
+  const before = structuredClone(mandatoryState);
+
+  const rejected = applyAction(mandatoryState, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    playerId: p2,
+    response: { type: "replacement" },
+  });
+
+  assert.deepEqual(rejected.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "Mandatory replacement decisions cannot be declined.",
+    },
+  ]);
+  assert.deepEqual(rejected.events, []);
+  assert.deepEqual(rejected.state, before);
+});
+
+test("does not return KO replacement candidate already used by the process", () => {
+  const { state, entry, refs, targetA } = setupKoPrimitiveState();
+  const effectBlock = setupReviewedKoReplacementDefinition(state, targetA);
+  const process = {
+    ...buildSelectedTargetKoReplacementProcess(
+      entry,
+      must(refs[0], "target A ref"),
+      0,
+    ),
+    usedReplacementIds: [String(effectBlock.id)],
+  };
+
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    process,
+  );
+
+  assert.deepEqual(detected, { ok: true });
+});
+
+test("fails closed without mutation for multiple applicable KO replacement candidates", () => {
+  const { state, entry, refs, targetA } = setupKoPrimitiveState();
+  const effectBlock = setupReviewedKoReplacementDefinition(state, targetA);
+  const definitionId = must(
+    state.cardManifest.cards[targetA.cardId]?.support.effectDefinitionId,
+    "definition id",
+  );
+  const definition = must(
+    state.cardManifest.effectDefinitions?.[definitionId],
+    "definition",
+  );
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: {
+      ...definition,
+      effects: [
+        effectBlock,
+        { ...effectBlock, id: toEffectId("replacement:would-be-ko-draw-2") },
+      ],
+    },
+  };
+  const process = buildSelectedTargetKoReplacementProcess(
+    entry,
+    must(refs[0], "target A ref"),
+    0,
+  );
+  const before = structuredClone(state);
+
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    process,
+  );
+
+  assert.deepEqual(detected, {
+    ok: false,
+    error: {
+      type: "effectRuntimeError",
+      effectId: entry.effectBlockId,
+      details: { reason: "multiple-applicable-ko-replacements" },
+    },
+  });
+  assert.deepEqual(state, before);
+});
+
+test("fails closed without mutation for private selected KO replacement target", () => {
+  const { state, entry } = setupKoPrimitiveState();
+  const p2State = must(state.players[p2], "p2");
+  const privateCard = must(p2State.hand[0], "private card");
+  setupReviewedKoReplacementDefinition(state, privateCard);
+  const process = buildSelectedTargetKoReplacementProcess(
+    entry,
+    {
+      instanceId: privateCard.instanceId,
+      cardId: privateCard.cardId,
+      playerId: p2,
+      zone: privateCard.zone,
+    },
+    0,
+  );
+  const before = structuredClone(state);
+
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    process,
+  );
+
+  assert.deepEqual(detected, {
+    ok: false,
+    error: {
+      type: "effectRuntimeError",
+      effectId: entry.effectBlockId,
+      details: { reason: "private-target" },
+    },
+  });
+  assert.deepEqual(state, before);
+});
+
+test.each([
+  {
+    name: "custom handler",
+    support: {
+      status: "implemented-custom" as const,
+      customHandlerIds: ["custom-ko-replacement"],
+    },
+    reason: "implemented-custom-status",
+  },
+  {
+    name: "unsupported status",
+    support: {
+      status: "unsupported" as const,
+    },
+    reason: "unsupported-support-status",
+  },
+  {
+    name: "vanilla custom handler",
+    support: {
+      status: "vanilla-confirmed" as const,
+      customHandlerIds: ["custom-ko-replacement"],
+    },
+    reason: "unsupported-ko-replacement-shape",
+  },
+] satisfies {
+  name: string;
+  support: Partial<ReturnType<typeof resolvedCard>["support"]>;
+  reason: string;
+}[])(
+  "fails closed without mutation for KO replacement support metadata with no definition id and $name",
+  ({ support, reason }) => {
+    const { state, entry, refs, targetA } = setupKoPrimitiveState();
+    state.cardManifest.cards[targetA.cardId] = resolvedCard({
+      cardId: targetA.cardId,
+      category: "character",
+      power: 3000,
+      support,
+    });
+    const process = buildSelectedTargetKoReplacementProcess(
+      entry,
+      must(refs[0], "target A ref"),
+      0,
+    );
+    const before = structuredClone(state);
+
+    const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+      state,
+      process,
+    );
+
+    assert.deepEqual(detected, {
+      ok: false,
+      error: {
+        type: "effectRuntimeError",
+        effectId: entry.effectBlockId,
+        details: { reason },
+      },
+    });
+    assert.deepEqual(state, before);
+  },
+);
+
+test("fails closed without mutation for KO replacement support metadata with custom handlers", () => {
+  const { state, entry, refs, targetA } = setupKoPrimitiveState();
+  setupReviewedKoReplacementDefinition(
+    state,
+    targetA,
+    {},
+    {
+      customHandlerIds: ["custom-ko-replacement"],
+    },
+  );
+  const process = buildSelectedTargetKoReplacementProcess(
+    entry,
+    must(refs[0], "target A ref"),
+    0,
+  );
+  const before = structuredClone(state);
+
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    process,
+  );
+
+  assert.deepEqual(detected, {
+    ok: false,
+    error: {
+      type: "effectRuntimeError",
+      effectId: entry.effectBlockId,
+      details: { reason: "unsupported-ko-replacement-shape" },
+    },
+  });
+  assert.deepEqual(state, before);
+});
+
+test.each([
+  {
+    name: "mandatory metadata",
+    overrides: { optional: false },
+  },
+  {
+    name: "wrong replacement trigger",
+    overrides: {
+      trigger: {
+        type: "replacement",
+        replacement: { type: "wouldTakeDamage", target: { type: "self" } },
+      },
+    },
+  },
+  {
+    name: "non-self target",
+    overrides: {
+      trigger: {
+        type: "replacement",
+        replacement: { type: "wouldBeKOd", target: { type: "myLeader" } },
+      },
+    },
+  },
+  {
+    name: "condition",
+    overrides: { condition: { type: "yourTurn" } },
+  },
+  {
+    name: "cost",
+    overrides: { cost: { type: "restSelf" } },
+  },
+  {
+    name: "once per turn",
+    overrides: { oncePerTurn: true },
+  },
+  {
+    name: "wrong effect body",
+    overrides: {
+      effect: {
+        type: "replacement",
+        when: { type: "wouldBeKOd", target: { type: "self" } },
+        instead: { type: "draw", count: 2, player: "self" },
+      },
+    },
+  },
+] satisfies {
+  name: string;
+  overrides: Partial<EffectDefinition["effects"][number]>;
+}[])(
+  "fails closed without mutation for unsupported KO replacement $name shape",
+  ({ overrides }) => {
+    const { state, entry, refs, targetA } = setupKoPrimitiveState();
+    setupReviewedKoReplacementDefinition(state, targetA, overrides);
+    const process = buildSelectedTargetKoReplacementProcess(
+      entry,
+      must(refs[0], "target A ref"),
+      0,
+    );
+    const before = structuredClone(state);
+
+    const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+      state,
+      process,
+    );
+
+    assert.deepEqual(detected, {
+      ok: false,
+      error: {
+        type: "effectRuntimeError",
+        effectId: entry.effectBlockId,
+        details: { reason: "unsupported-ko-replacement-shape" },
+      },
+    });
+    assert.deepEqual(state, before);
+  },
+);
 
 test.each<KoPrimitiveFailureCase>([
   {

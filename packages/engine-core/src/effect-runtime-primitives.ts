@@ -10,11 +10,24 @@ import type {
   GameState,
   PlayerId,
   PlayerRef,
+  ReplacementProcess,
   Target,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import {
+  appendEvent,
+  toDecisionId,
+  toEngineResult,
+  toStateSeq,
+} from "./action-results.js";
 import { getOpponentId, reindexZoneCards } from "./action-state.js";
+import { detectSupportedSelectedTargetKoReplacementCandidate } from "./effect-runtime-replacement-primitives.js";
+export type {
+  DetectSelectedTargetKoReplacementCandidateResult,
+  SelectedTargetKoReplacementCandidate,
+  SelectedTargetKoReplacementDetectionFailureReason,
+} from "./effect-runtime-replacement-primitives.js";
+export { detectSupportedSelectedTargetKoReplacementCandidate };
 
 export type DrawExecutionFailureReason =
   | "unsupported-effect-shape"
@@ -209,6 +222,35 @@ type LocatedCard = {
   index?: number;
 };
 
+interface SelectedTargetKoReplacementPayload {
+  effectId: EffectQueueEntry["effectBlockId"];
+  queueEntryId: EffectQueueEntry["id"];
+  source: CardRef;
+  target: CardRef;
+}
+
+export const buildSelectedTargetKoReplacementProcess = (
+  entry: EffectQueueEntry,
+  target: CardRef,
+  targetIndex: number,
+): ReplacementProcess => {
+  const payload: SelectedTargetKoReplacementPayload = {
+    effectId: entry.effectBlockId,
+    queueEntryId: entry.id,
+    source: entry.source,
+    target,
+  };
+  return {
+    id: `${entry.id}:ko:${target.instanceId}:${String(targetIndex)}`,
+    type: "ko",
+    source: entry.source,
+    target,
+    payload,
+    causedBy: entry.causedBy,
+    usedReplacementIds: [],
+  };
+};
+
 const findCardByInstanceId = (
   state: GameState,
   instanceId: CardInstance["instanceId"],
@@ -241,6 +283,215 @@ const findCardByInstanceId = (
     }
   }
   return null;
+};
+
+const normalizeSelectedTargetKoProcess = (
+  state: GameState,
+  process: ReplacementProcess,
+): ReplacementProcess => {
+  const target = process.target;
+  if (process.type !== "ko" || target === undefined) {
+    return process;
+  }
+  const located = findCardByInstanceId(state, target.instanceId);
+  if (located === null || located.zone !== "characterArea") {
+    return process;
+  }
+  const currentTarget: CardRef = {
+    instanceId: located.card.instanceId,
+    cardId: located.card.cardId,
+    playerId: located.playerId,
+    zone: located.card.zone,
+  };
+  const payload =
+    typeof process.payload === "object" &&
+    process.payload !== null &&
+    "target" in process.payload
+      ? { ...process.payload, target: currentTarget }
+      : process.payload;
+  return {
+    ...process,
+    target: currentTarget,
+    payload,
+  };
+};
+
+export const executeUnreplacedSelectedTargetKoProcess = (
+  state: GameState,
+  events: EngineEvent[],
+  effectId: string,
+  process: ReplacementProcess,
+): { state: GameState } | { error: EngineError } => {
+  const target = process.target;
+  if (process.type !== "ko" || target === undefined) {
+    return {
+      error: selectedTargetKoExecutionError(
+        effectId,
+        "unsupported-effect-shape",
+      ),
+    };
+  }
+
+  const located = findCardByInstanceId(state, target.instanceId);
+  if (located === null || located.zone !== "characterArea") {
+    return {
+      error: selectedTargetKoExecutionError(effectId, "stale-target"),
+    };
+  }
+
+  const player = state.players[located.playerId];
+  if (player === undefined) {
+    return {
+      error: selectedTargetKoExecutionError(effectId, "missing-card"),
+    };
+  }
+
+  const targetIndex = player.characters.findIndex(
+    (candidate) => candidate.instanceId === located.card.instanceId,
+  );
+  const koCard = player.characters[targetIndex];
+  if (targetIndex < 0 || koCard === undefined) {
+    return {
+      error: selectedTargetKoExecutionError(effectId, "stale-target"),
+    };
+  }
+
+  const trashedCard: CardInstance = {
+    ...koCard,
+    attachedDon: [],
+    zone: {
+      zone: "trash",
+      playerId: located.playerId,
+      slot: "trash",
+      index: 0,
+    },
+  };
+  const nextCharacters = reindexZoneCards(
+    player.characters.filter((_, index) => index !== targetIndex),
+    "characterArea",
+    located.playerId,
+    "character",
+  );
+  const nextTrash = reindexZoneCards(
+    [trashedCard, ...player.trash],
+    "trash",
+    located.playerId,
+    "trash",
+  );
+  const attachedDonIds = new Set(koCard.attachedDon);
+  const nextCostArea = player.costArea.map((card) =>
+    attachedDonIds.has(card.instanceId)
+      ? { ...card, state: "rested" as const }
+      : card,
+  );
+
+  const nextState = {
+    ...state,
+    players: {
+      ...state.players,
+      [located.playerId]: {
+        ...player,
+        characters: nextCharacters,
+        trash: nextTrash,
+        costArea: nextCostArea,
+      },
+    },
+  };
+
+  appendEvent(nextState, events, "cardKOd", {
+    playerId: located.playerId,
+    instanceId: koCard.instanceId,
+  });
+  appendEvent(nextState, events, "cardMoved", {
+    instanceId: koCard.instanceId,
+    cardId: koCard.cardId,
+    from: koCard.zone,
+    to: trashedCard.zone,
+    reason: "ko",
+  });
+  for (const donId of koCard.attachedDon) {
+    appendEvent(
+      nextState,
+      events,
+      "donReturned",
+      { playerId: located.playerId, donInstanceId: donId, state: "rested" },
+      { type: "replayOnly" },
+    );
+  }
+
+  return { state: nextState };
+};
+
+const executeSelectedTargetKoReplacementProcess = (
+  state: GameState,
+  events: EngineEvent[],
+  effectId: string,
+  process: ReplacementProcess,
+): { state: GameState; paused?: true } | { error: EngineError } => {
+  const currentProcess = normalizeSelectedTargetKoProcess(state, process);
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    currentProcess,
+  );
+  if (!detected.ok) {
+    return { error: detected.error };
+  }
+  if (detected.candidate === undefined) {
+    return executeUnreplacedSelectedTargetKoProcess(
+      state,
+      events,
+      effectId,
+      currentProcess,
+    );
+  }
+
+  const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
+    id: toDecisionId(`decision:chooseReplacement:${currentProcess.id}`),
+    type: "chooseReplacement",
+    playerId: detected.candidate.controllerId,
+    prompt: "Choose replacement effect.",
+    causedBy: currentProcess.causedBy,
+    visibility: { type: "private", playerId: detected.candidate.controllerId },
+    processId: currentProcess.id,
+    replacementIds: [detected.candidate.id],
+    mandatory: false,
+  };
+  appendEvent(
+    state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: pendingDecision.id,
+      decisionType: pendingDecision.type,
+      playerId: pendingDecision.playerId,
+    },
+    pendingDecision.visibility,
+  );
+  const created = events[events.length - 1];
+  if (created !== undefined) {
+    created.causedBy = currentProcess.causedBy;
+  }
+
+  return {
+    state: {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      pendingDecision,
+      replacementState: [
+        ...state.replacementState.filter(
+          (candidate) => candidate.processId !== process.id,
+        ),
+        {
+          processId: currentProcess.id,
+          type: currentProcess.type,
+          usedReplacementIds: [...currentProcess.usedReplacementIds],
+          payload: currentProcess.payload,
+        },
+      ],
+      eventJournal: [...state.eventJournal, ...events],
+    },
+    paused: true,
+  };
 };
 
 const executeSelectedTargetKoEffect = (
@@ -375,99 +626,25 @@ const executeSelectedTargetKoEffect = (
   const events: EngineEvent[] = [];
   let nextState = state;
 
-  for (const target of selectedTargets) {
-    const located = findCardByInstanceId(nextState, target.instanceId);
-    if (located === null || located.zone !== "characterArea") {
-      return toEngineResult(
-        state,
-        [],
-        [selectedTargetKoExecutionError(entry.effectBlockId, "stale-target")],
-      );
-    }
-
-    const player = nextState.players[located.playerId];
-    if (player === undefined) {
-      return toEngineResult(
-        state,
-        [],
-        [selectedTargetKoExecutionError(entry.effectBlockId, "missing-card")],
-      );
-    }
-
-    const targetIndex = player.characters.findIndex(
-      (candidate) => candidate.instanceId === located.card.instanceId,
+  for (const [targetIndex, target] of selectedTargets.entries()) {
+    const process = buildSelectedTargetKoReplacementProcess(
+      entry,
+      target,
+      targetIndex,
     );
-    const koCard = player.characters[targetIndex];
-    if (targetIndex < 0 || koCard === undefined) {
-      return toEngineResult(
-        state,
-        [],
-        [selectedTargetKoExecutionError(entry.effectBlockId, "stale-target")],
-      );
+    const resolvedProcess = executeSelectedTargetKoReplacementProcess(
+      nextState,
+      events,
+      entry.effectBlockId,
+      process,
+    );
+    if ("error" in resolvedProcess) {
+      return toEngineResult(state, [], [resolvedProcess.error]);
     }
-
-    const trashedCard: CardInstance = {
-      ...koCard,
-      attachedDon: [],
-      zone: {
-        zone: "trash",
-        playerId: located.playerId,
-        slot: "trash",
-        index: 0,
-      },
-    };
-    const nextCharacters = reindexZoneCards(
-      player.characters.filter((_, index) => index !== targetIndex),
-      "characterArea",
-      located.playerId,
-      "character",
-    );
-    const nextTrash = reindexZoneCards(
-      [trashedCard, ...player.trash],
-      "trash",
-      located.playerId,
-      "trash",
-    );
-    const attachedDonIds = new Set(koCard.attachedDon);
-    const nextCostArea = player.costArea.map((card) =>
-      attachedDonIds.has(card.instanceId)
-        ? { ...card, state: "rested" as const }
-        : card,
-    );
-
-    nextState = {
-      ...nextState,
-      players: {
-        ...nextState.players,
-        [located.playerId]: {
-          ...player,
-          characters: nextCharacters,
-          trash: nextTrash,
-          costArea: nextCostArea,
-        },
-      },
-    };
-
-    appendEvent(nextState, events, "cardKOd", {
-      playerId: located.playerId,
-      instanceId: koCard.instanceId,
-    });
-    appendEvent(nextState, events, "cardMoved", {
-      instanceId: koCard.instanceId,
-      cardId: koCard.cardId,
-      from: koCard.zone,
-      to: trashedCard.zone,
-      reason: "ko",
-    });
-    for (const donId of koCard.attachedDon) {
-      appendEvent(
-        nextState,
-        events,
-        "donReturned",
-        { playerId: located.playerId, donInstanceId: donId, state: "rested" },
-        { type: "replayOnly" },
-      );
+    if (resolvedProcess.paused === true) {
+      return toEngineResult(resolvedProcess.state, events);
     }
+    nextState = resolvedProcess.state;
   }
 
   const finalState: GameState = {

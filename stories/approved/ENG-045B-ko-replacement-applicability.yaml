@@ -1,0 +1,70 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-045B
+epic_id: KICK-001
+title: Detect supported KO replacement candidates
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Detect exactly the first supported `wouldBeKOd` replacement metadata shape for
+  the selected-target KO process and fail closed for unsupported replacement
+  shapes.
+story_boundary: >
+  Own only applicability detection for one selected public Character KO target.
+  Do not create player decisions or execute replacements in this story.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime-primitives.ts
+  - packages/engine-core/src/effect-runtime-replacement-primitives.ts
+  - packages/engine-core/src/effect-runtime-target-primitives.test.ts
+  - packages/types/src/effects.ts
+  - packages/types/src/effects.test.ts
+  - stories/generated/ENG-045B-ko-replacement-applicability.yaml
+  - stories/approved/ENG-045B-ko-replacement-applicability.yaml
+  - agent-packets/ENG-045B.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s043
+  - 04-effect-runtime.s013
+  - 05-effect-dsl-reference.s002
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s016
+  - 11-testing-quality.s004
+  - 22-v6-implementation-tightening.s011
+scope:
+  - detect a reviewed implemented-DSL replacement block with category `replacement`, trigger `replacement.wouldBeKOd`, target `self`, optional `true`, and source presence policy `resolveFromLastKnownInformation`
+  - "require the source card support metadata and referenced effect definition to match the existing implemented-DSL lookup contract: support status `implemented-dsl`, tested support metadata, matching card data and rules versions, definition `implementationStatus: implemented-dsl`, definition metadata `tested: true`, and human review metadata through `reviewer` or `reviewedBy` plus `reviewedAt`"
+  - 'limit the supported replacement effect body to exactly `{ type: "draw", count: 1, player: "self" }`'
+  - exclude candidates already listed in the process `usedReplacementIds`
+  - fail closed for unsupported replacement triggers, target shapes, conditions, costs, non-optional replacement metadata, custom handlers, multiple applicable candidates, hidden/private target shapes, and any effect body other than `draw 1 self`
+  - prove detection does not mutate canonical state or event journal
+non_scope:
+  - creating decisions
+  - applying replacement effects
+  - priority ordering beyond the single supported candidate
+  - Life Trigger, damage, trash-process, draw-process, or move-zone replacement
+  - real-card fixtures or card-data integration
+dependencies:
+  - ENG-045A
+acceptance_criteria:
+  - one supported optional `wouldBeKOd` replacement candidate with `draw 1 self` is detected for the KO target that owns the replacement
+  - candidates already used by the process are not returned
+  - unsupported shapes return deterministic fail-closed errors without mutation
+  - no replacement candidate details are exposed through PlayerView
+required_tests:
+  - run `corepack pnpm exec vitest run packages/types/src/effects.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts`
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-045B packet while implementing this story
+  - stay within allowed_touch_points
+  - target the ENG-045 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+ambiguity_policy: fail_and_escalate

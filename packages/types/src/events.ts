@@ -28,6 +28,13 @@ export interface EngineEvent {
   createdAtStateSeq: StateSeq;
 }
 
+export interface ReplacementAppliedEventPayload {
+  processId: string;
+  replacementId: string;
+  previousPayloadHash: string;
+  transformedPayloadHash: string;
+}
+
 export type EngineEventType =
   | "phaseStarted"
   | "phaseEnded"

@@ -1,18 +1,31 @@
 import type {
+  CardInstance,
   CardSupportStatus,
   CardRef,
+  CardSnapshot,
   EffectDefinition,
   EngineError,
+  EngineEvent,
   EngineResult,
+  EffectQueueEntry,
   GameState,
   MatchCardManifest,
   QueueEntryId,
+  ReplacementAppliedEventPayload,
+  ReplacementProcess,
   ResolvedCard,
   SelectTargetsDecision,
+  TimingWindowId,
 } from "@optcg/types";
 
-import { toEngineResult } from "./action-results.js";
+import { appendEvent, rebaseEvents, toEngineResult } from "./action-results.js";
+import { hashCanonicalStateValue } from "./canonical-state.js";
 import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue-processing.js";
+import {
+  detectSupportedSelectedTargetKoReplacementCandidate,
+  executeNoChoiceEffectPrimitive,
+  type SelectedTargetKoReplacementCandidate,
+} from "./effect-runtime-primitives.js";
 import { createEffectRuntimeTriggerQueueing } from "./effect-runtime-trigger-queueing.js";
 
 export type { DrawExecutionFailureReason } from "./effect-runtime-primitives.js";
@@ -223,7 +236,179 @@ export const continueSelectedTargetEffect = (
   decision: SelectTargetsDecision,
   targets: readonly CardRef[],
 ) => queueProcessing.continueSelectedTargetEffect(state, decision, targets);
+export const finalizeSelectedTargetEffectResolution =
+  queueProcessing.finalizeSelectedTargetEffectResolution;
 const processNoChoiceEffectQueue = queueProcessing.processNoChoiceEffectQueue;
+
+type LocatedReplacementSource = {
+  card: CardInstance;
+};
+
+const acceptedReplacementError = (
+  effectId: string,
+  reason: "missing-card" | "unsupported-effect-shape",
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId,
+  details: { reason },
+});
+
+const findReplacementSource = (
+  state: GameState,
+  source: CardRef,
+): LocatedReplacementSource | null => {
+  for (const [, player] of Object.entries(state.players) as [
+    CardInstance["controller"],
+    GameState["players"][CardInstance["controller"]],
+  ][]) {
+    const card = [
+      player.leader,
+      ...player.characters,
+      ...(player.stage === undefined ? [] : [player.stage]),
+      ...player.hand,
+      ...player.deck,
+      ...player.trash,
+      ...player.costArea,
+      ...player.donDeck,
+      ...player.life.map((lifeCard) => lifeCard.card),
+    ].find((candidate) => candidate.instanceId === source.instanceId);
+    if (card !== undefined) {
+      return { card };
+    }
+  }
+  return null;
+};
+
+const toReplacementDrawSourceSnapshot = (
+  state: GameState,
+  source: CardRef,
+): CardSnapshot | null => {
+  const located = findReplacementSource(state, source);
+  const resolved = state.cardManifest.cards[source.cardId];
+  if (located === null || resolved === undefined) {
+    return null;
+  }
+  return {
+    instanceId: located.card.instanceId,
+    cardId: located.card.cardId,
+    ownerId: located.card.owner,
+    controllerId: located.card.controller,
+    zone: located.card.zone,
+    category: resolved.category,
+    colors: [...resolved.colors],
+    ...(resolved.cost === undefined ? {} : { cost: resolved.cost }),
+    ...(resolved.power === undefined ? {} : { power: resolved.power }),
+    ...(resolved.counter === undefined ? {} : { counter: resolved.counter }),
+    ...(resolved.life === undefined ? {} : { life: resolved.life }),
+    keywords: [...resolved.printedKeywords],
+  };
+};
+
+const replacementDrawTransformedPayload = (
+  candidate: SelectedTargetKoReplacementCandidate,
+) => ({
+  controllerId: candidate.controllerId,
+  effect: candidate.replacementEffect.instead,
+  replacementId: candidate.id,
+  source: candidate.source,
+});
+
+export const executeAcceptedSelectedTargetKoReplacementProcess = (
+  state: GameState,
+  events: EngineEvent[],
+  effectId: string,
+  process: ReplacementProcess,
+  replacementId: string,
+):
+  | { state: GameState; process: ReplacementProcess }
+  | { error: EngineError } => {
+  if (process.usedReplacementIds.includes(replacementId)) {
+    return {
+      error: acceptedReplacementError(effectId, "unsupported-effect-shape"),
+    };
+  }
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    process,
+  );
+  if (!detected.ok) return { error: detected.error };
+  const candidate = detected.candidate;
+  if (candidate === undefined || candidate.id !== replacementId) {
+    return {
+      error: acceptedReplacementError(effectId, "unsupported-effect-shape"),
+    };
+  }
+
+  const usedProcess: ReplacementProcess = {
+    ...process,
+    usedReplacementIds: [...process.usedReplacementIds, candidate.id],
+  };
+  const transformedPayload = replacementDrawTransformedPayload(candidate);
+  appendEvent(
+    state,
+    events,
+    "replacementApplied",
+    {
+      processId: usedProcess.id,
+      replacementId: candidate.id,
+      previousPayloadHash: hashCanonicalStateValue(process.payload),
+      transformedPayloadHash: hashCanonicalStateValue(transformedPayload),
+    } satisfies ReplacementAppliedEventPayload,
+    { type: "public" },
+  );
+  const applied = events[events.length - 1];
+  if (applied !== undefined) {
+    applied.causedBy = { type: "replacement", replacementId: candidate.id };
+  }
+
+  const sourceSnapshot = toReplacementDrawSourceSnapshot(
+    state,
+    candidate.source,
+  );
+  if (sourceSnapshot === null) {
+    return { error: acceptedReplacementError(effectId, "missing-card") };
+  }
+
+  const replacementEntry: EffectQueueEntry = {
+    id: `${process.id}:replacement:${candidate.id}` as EffectQueueEntry["id"],
+    state: "resolving",
+    timingWindowId: `replacement:${process.id}` as TimingWindowId,
+    generation: 0,
+    controllerId: candidate.controllerId,
+    source: candidate.source,
+    sourceSnapshot,
+    effectBlockId: candidate.effectBlockId,
+    orderingGroup:
+      candidate.controllerId === state.turn.turnPlayerId
+        ? "turnPlayer"
+        : "nonTurnPlayer",
+    createdAtEventSeq: state.eventJournal.length + events.length,
+    queuedAtStateSeq: state.seq,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    causedBy: { type: "replacement", replacementId: candidate.id },
+  };
+  const drawn = executeNoChoiceEffectPrimitive(
+    { ...state, eventJournal: [...state.eventJournal, ...events] },
+    replacementEntry,
+    candidate.replacementEffect.instead,
+  );
+  if (drawn.errors !== undefined) {
+    return {
+      error:
+        drawn.errors[0] ??
+        acceptedReplacementError(effectId, "unsupported-effect-shape"),
+    };
+  }
+
+  events.push(...rebaseEvents(state, drawn.events, events.length + 1));
+  return {
+    state: {
+      ...drawn.state,
+      eventJournal: [...state.eventJournal, ...events],
+    },
+    process: usedProcess,
+  };
+};
 
 const toErrorTuple = (
   errors: readonly EngineError[],

@@ -1,0 +1,64 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-045E
+epic_id: KICK-001
+title: Prevent duplicate replacement use per process
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Enforce that the same replacement cannot apply twice to one selected-target
+  KO replacement process.
+story_boundary: >
+  Own only `usedReplacementIds` propagation and duplicate-use regression for
+  the supported KO replacement process.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime-primitives.ts
+  - packages/engine-core/src/effect-runtime-replacement-application.test.ts
+  - packages/engine-core/src/effect-runtime-target-primitives.test.ts
+  - packages/types/src/runtime.ts
+  - packages/types/src/runtime.test.ts
+  - stories/generated/ENG-045E-same-replacement-once-per-process.yaml
+  - stories/approved/ENG-045E-same-replacement-once-per-process.yaml
+  - agent-packets/ENG-045E.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s043
+  - 04-effect-runtime.s013
+  - 22-v6-implementation-tightening.s011
+  - 11-testing-quality.s004
+scope:
+  - persist the selected replacement id in process `usedReplacementIds`
+  - prove same-KO-process duplicate-use protection without adding broader transformed-process or draw-process applicability
+  - prove a synthetic repeated candidate cannot apply twice to one process
+  - keep behavior deterministic and nonmutating on duplicate-use failures
+non_scope:
+  - multiple distinct replacement ordering
+  - cross-process once-per-game or once-per-turn semantics
+  - real-card fixtures or card-data integration
+dependencies:
+  - ENG-045A
+  - ENG-045B
+  - ENG-045C
+  - ENG-045D
+acceptance_criteria:
+  - accepted replacement id is added to `usedReplacementIds`
+  - the same replacement id is ignored or rejected on the same process after it has been used
+  - no duplicate `replacementApplied` event is emitted for one replacement id on one process
+  - a separate process may still consider the same replacement id if otherwise legal
+required_tests:
+  - run `corepack pnpm exec vitest run packages/types/src/runtime.test.ts packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/effect-runtime-replacement-application.test.ts`
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass before moving this story to approved or implementing
+  - generate and activate only the ENG-045E packet while implementing this story
+  - stay within allowed_touch_points
+  - target the ENG-045 parent integration branch
+  - do not run packets:complete after merging only into the parent integration branch
+ambiguity_policy: fail_and_escalate

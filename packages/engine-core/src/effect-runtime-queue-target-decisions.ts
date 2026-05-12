@@ -75,6 +75,13 @@ export interface SelectTargetsDecisionOptions {
 
 export interface EffectRuntimeQueueTargetDecisions {
   failUnsupportedTargetEffectContinuation: (state: GameState) => EngineResult;
+  finalizeSelectedTargetEffectResolution: (
+    state: GameState,
+    eventBaseState: GameState,
+    resolvedEntry: EffectQueueEntry,
+    allEvents: EngineEvent[],
+    resolutionEvents: readonly EngineEvent[],
+  ) => EngineResult;
   continueSelectedTargetEffect: (
     state: GameState,
     decision: SelectTargetsDecision,
@@ -264,6 +271,121 @@ export const createEffectRuntimeQueueTargetDecisions = (
       ],
     );
 
+  const finalizeSelectedTargetEffectResolution: EffectRuntimeQueueTargetDecisions["finalizeSelectedTargetEffectResolution"] =
+    (state, eventBaseState, resolvedEntry, allEvents, resolutionEvents) => {
+      let nextState: GameState = {
+        ...state,
+        effectQueue: state.effectQueue.filter(
+          (entry) => entry.id !== resolvedEntry.id,
+        ),
+      };
+      const resolvedEvents: EngineEvent[] = [];
+      const resolvedEventBaseState: GameState = {
+        ...nextState,
+        seq: toStateSeq(nextState.seq - 1),
+      };
+      appendEvent(
+        resolvedEventBaseState,
+        resolvedEvents,
+        "effectResolved",
+        {
+          queueEntryId: resolvedEntry.id,
+          timingWindowId: resolvedEntry.timingWindowId,
+          generation: resolvedEntry.generation,
+          effectBlockId: resolvedEntry.effectBlockId,
+          ...(resolvedEntry.triggerEventId !== undefined
+            ? { triggerEventId: resolvedEntry.triggerEventId }
+            : {}),
+          sourcePresencePolicy: resolvedEntry.sourcePresencePolicy,
+          orderingGroup: resolvedEntry.orderingGroup,
+          status: "resolved" as const,
+        },
+        { type: "public" },
+      );
+      const resolvedEvent = resolvedEvents[0];
+      if (resolvedEvent !== undefined) {
+        resolvedEvent.causedBy = {
+          type: "effect",
+          queueEntryId: resolvedEntry.id,
+          effectId: resolvedEntry.effectBlockId,
+        };
+        nextState = {
+          ...nextState,
+          eventJournal: [...nextState.eventJournal, resolvedEvent],
+        };
+        allEvents.push(resolvedEvent);
+      }
+
+      const checkpointEvents: EngineEvent[] = [];
+      const checkpointEventBaseState: GameState = {
+        ...nextState,
+        seq: toStateSeq(nextState.seq - 1),
+      };
+      nextState = applyRuleProcessingCheckpoint({
+        state: nextState,
+        events: checkpointEvents,
+        phase: nextState.turn.phase,
+        createEvent: (seqOffset, type, payload, visibility) => ({
+          ...createEvent(
+            checkpointEventBaseState,
+            seqOffset,
+            type,
+            payload,
+            visibility,
+          ),
+          causedBy: {
+            type: "effect",
+            queueEntryId: resolvedEntry.id,
+            effectId: resolvedEntry.effectBlockId,
+          },
+        }),
+      });
+      if (checkpointEvents.length > 0) {
+        nextState = {
+          ...nextState,
+          eventJournal: [...nextState.eventJournal, ...checkpointEvents],
+        };
+        allEvents.push(...checkpointEvents);
+      }
+
+      const cleanup = cleanupResolvedLifeTrigger(nextState, resolvedEntry);
+      nextState = cleanup.state;
+      allEvents.push(...cleanup.events);
+
+      const koQueueEventCount = allEvents.length;
+      const koQueued = dependencies.queueBattleKOTriggers(
+        nextState,
+        eventBaseState,
+        allEvents,
+      );
+      if (!koQueued.ok) {
+        return toEngineResult(state, [], [koQueued.error]);
+      }
+      const koQueuedEvents = allEvents.slice(koQueueEventCount);
+      nextState =
+        koQueuedEvents.length > 0
+          ? {
+              ...koQueued.state,
+              eventJournal: [...nextState.eventJournal, ...koQueuedEvents],
+            }
+          : koQueued.state;
+
+      const triggered = dependencies.queueEffectResolvedCustomTriggers(
+        nextState,
+        resolvedEntry,
+        [...resolutionEvents, ...resolvedEvents, ...cleanup.events],
+      );
+      if (triggered !== undefined) {
+        if (triggered.errors !== undefined) {
+          return triggered;
+        }
+        nextState = triggered.state;
+        allEvents.push(...triggered.events);
+      }
+
+      return toEngineResult(nextState, allEvents);
+    };
+
   const continueSelectedTargetEffect: EffectRuntimeQueueTargetDecisions["continueSelectedTargetEffect"] =
     (state, decision, selectedTargets) => {
       const resolved = resolveSelectedTargetEffect(state, decision);
@@ -316,114 +438,27 @@ export const createEffectRuntimeQueueTargetDecisions = (
       if (primitive.errors !== undefined) {
         return unsupportedContinuationResult(state);
       }
+      if (primitive.state.pendingDecision?.type === "chooseReplacement") {
+        return toEngineResult(
+          {
+            ...primitive.state,
+            effectQueue: nextState.effectQueue.map((entry) =>
+              entry.id === resolved.entry.id ? resolvingEntry : entry,
+            ),
+          },
+          primitive.events,
+        );
+      }
 
       nextState = primitive.state;
       const allEvents: EngineEvent[] = [...primitive.events];
-      const resolvedEvents: EngineEvent[] = [];
-      const resolvedEventBaseState: GameState = {
-        ...nextState,
-        seq: toStateSeq(nextState.seq - 1),
-      };
-      appendEvent(
-        resolvedEventBaseState,
-        resolvedEvents,
-        "effectResolved",
-        {
-          queueEntryId: resolved.entry.id,
-          timingWindowId: resolved.entry.timingWindowId,
-          generation: resolved.entry.generation,
-          effectBlockId: resolved.entry.effectBlockId,
-          ...(resolved.entry.triggerEventId !== undefined
-            ? { triggerEventId: resolved.entry.triggerEventId }
-            : {}),
-          sourcePresencePolicy: resolved.entry.sourcePresencePolicy,
-          orderingGroup: resolved.entry.orderingGroup,
-          status: "resolved" as const,
-        },
-        { type: "public" },
-      );
-      const resolvedEvent = resolvedEvents[0];
-      if (resolvedEvent !== undefined) {
-        resolvedEvent.causedBy = {
-          type: "effect",
-          queueEntryId: resolved.entry.id,
-          effectId: resolved.entry.effectBlockId,
-        };
-        nextState = {
-          ...nextState,
-          eventJournal: [...nextState.eventJournal, resolvedEvent],
-        };
-        allEvents.push(resolvedEvent);
-      }
-
-      const checkpointEvents: EngineEvent[] = [];
-      const checkpointEventBaseState: GameState = {
-        ...nextState,
-        seq: toStateSeq(nextState.seq - 1),
-      };
-      nextState = applyRuleProcessingCheckpoint({
-        state: nextState,
-        events: checkpointEvents,
-        phase: nextState.turn.phase,
-        createEvent: (seqOffset, type, payload, visibility) => ({
-          ...createEvent(
-            checkpointEventBaseState,
-            seqOffset,
-            type,
-            payload,
-            visibility,
-          ),
-          causedBy: {
-            type: "effect",
-            queueEntryId: resolved.entry.id,
-            effectId: resolved.entry.effectBlockId,
-          },
-        }),
-      });
-      if (checkpointEvents.length > 0) {
-        nextState = {
-          ...nextState,
-          eventJournal: [...nextState.eventJournal, ...checkpointEvents],
-        };
-        allEvents.push(...checkpointEvents);
-      }
-
-      const cleanup = cleanupResolvedLifeTrigger(nextState, resolved.entry);
-      nextState = cleanup.state;
-      allEvents.push(...cleanup.events);
-
-      const koQueueEventCount = allEvents.length;
-      const koQueued = dependencies.queueBattleKOTriggers(
+      return finalizeSelectedTargetEffectResolution(
         nextState,
         state,
-        allEvents,
-      );
-      if (!koQueued.ok) {
-        return toEngineResult(state, [], [koQueued.error]);
-      }
-      const koQueuedEvents = allEvents.slice(koQueueEventCount);
-      nextState =
-        koQueuedEvents.length > 0
-          ? {
-              ...koQueued.state,
-              eventJournal: [...nextState.eventJournal, ...koQueuedEvents],
-            }
-          : koQueued.state;
-
-      const triggered = dependencies.queueEffectResolvedCustomTriggers(
-        nextState,
         resolved.entry,
-        [...primitive.events, ...resolvedEvents, ...cleanup.events],
+        allEvents,
+        primitive.events,
       );
-      if (triggered !== undefined) {
-        if (triggered.errors !== undefined) {
-          return triggered;
-        }
-        nextState = triggered.state;
-        allEvents.push(...triggered.events);
-      }
-
-      return toEngineResult(nextState, allEvents);
     };
 
   const createSelectTargetsDecisionForQueuedEffect = (
@@ -492,6 +527,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
 
   return {
     continueSelectedTargetEffect,
+    finalizeSelectedTargetEffectResolution,
     failUnsupportedTargetEffectContinuation,
     resolveQueuedTargetRequest,
     createSelectTargetsDecisionForQueuedEffect,
