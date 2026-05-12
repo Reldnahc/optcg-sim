@@ -104,6 +104,13 @@ export type {
   GeneratedSupportIndexInput,
   GeneratedSupportManifestEvidence,
 } from "./generated-support-index.js";
+export { buildGeneratedSupportReport } from "./generated-support-report.js";
+export type {
+  GeneratedSupportReport,
+  GeneratedSupportReportBlocker,
+  GeneratedSupportReportCardStatus,
+  GeneratedSupportReportUnparsedSpan,
+} from "./generated-support-report.js";
 export {
   generatedSupportParserResultStatuses,
   isCompleteGeneratedSupportParseResult,

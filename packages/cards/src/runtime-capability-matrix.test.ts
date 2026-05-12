@@ -35,6 +35,18 @@ describe("generated support runtime capability matrix", () => {
     }
   });
 
+  it("certifies the reviewed line-separated composition parser rule", () => {
+    const compositionCapability =
+      generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+        (capability) =>
+          capability.id === "composition:line-separated-effect-blocks:v1",
+      );
+
+    expect(compositionCapability?.supportedParserRuleIds).toContain(
+      "line-separated-effect-blocks:v1",
+    );
+  });
+
   it("lists only supported capability ids and keeps unsupported probes absent", () => {
     expect(listSupportedRuntimeCapabilityIds()).toEqual(
       requiredGeneratedSupportCapabilityIds,
