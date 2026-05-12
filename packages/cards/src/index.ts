@@ -93,6 +93,18 @@ export {
 } from "./certified-card-text-parser.js";
 export type { CertifiedCardTextParserInput } from "./certified-card-text-parser.js";
 export {
+  buildGeneratedSupportIndex,
+  toGeneratedSupportManifestEvidence,
+} from "./generated-support-index.js";
+export type {
+  EffectDefinitionValidationResult,
+  GeneratedSupportCardTextInput,
+  GeneratedSupportIndex,
+  GeneratedSupportIndexEntry,
+  GeneratedSupportIndexInput,
+  GeneratedSupportManifestEvidence,
+} from "./generated-support-index.js";
+export {
   generatedSupportParserResultStatuses,
   isCompleteGeneratedSupportParseResult,
 } from "./generated-support-types.js";

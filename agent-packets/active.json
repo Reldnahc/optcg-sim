@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-008B.md",
-      "storyId": "CARD-008B",
-      "storyPath": "stories/approved/CARD-008B-certified-parser-simple-templates.yaml",
-      "storySha256": "80c41df4bb0cbe6f7202fba92f7dcd79f51ace55b7d14e15d8182bd4d9e81431"
+      "packetPath": "agent-packets/CARD-008C.md",
+      "storyId": "CARD-008C",
+      "storyPath": "stories/approved/CARD-008C-complete-parse-generated-support-index.yaml",
+      "storySha256": "0687599fd5c03ff7caffb6e3b8f0c45b08e4191b8aa2962e8558123296e917dc"
     }
   ],
   "version": 1
