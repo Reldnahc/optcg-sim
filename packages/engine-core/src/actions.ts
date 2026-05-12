@@ -162,6 +162,39 @@ const getChooseReplacementLegalActions = (
   ];
 };
 
+const getSearchRevealDecisionLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): LegalAction[] => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "selectCards" ||
+    decision.playerId !== playerId ||
+    decision.request.set === undefined ||
+    !String(decision.request.set).startsWith("set:search-reveal:")
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      playerId: decision.playerId,
+      response: { type: "cards", cards: [] },
+    },
+    ...decision.candidates.map(
+      (candidate): LegalAction => ({
+        type: "respondToDecision",
+        decisionId: decision.id,
+        playerId: decision.playerId,
+        response: { type: "cards", cards: [candidate.card] },
+      }),
+    ),
+  ];
+};
+
 const applyChooseReplacementDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -380,6 +413,7 @@ export const getLegalActions = (
     actions.push(...getPlayCardLegalActions(state, playerId));
     actions.push(...getBattleDecisionLegalActions(state, playerId));
     actions.push(...getChooseReplacementLegalActions(state, playerId));
+    actions.push(...getSearchRevealDecisionLegalActions(state, playerId));
     return actions;
   }
 

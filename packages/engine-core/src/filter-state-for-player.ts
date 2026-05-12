@@ -503,23 +503,6 @@ const dedupePublicLegalActions = (
   return deduped;
 };
 
-const toSearchRevealDecisionLegalActions = (
-  state: GameState,
-  playerId: PlayerId,
-): PublicLegalAction[] => {
-  const pending = state.pendingDecision;
-  if (
-    pending === undefined ||
-    pending.type !== "selectCards" ||
-    pending.playerId !== playerId ||
-    pending.request.set === undefined ||
-    !String(pending.request.set).startsWith("set:search-reveal:")
-  ) {
-    return [];
-  }
-  return [{ type: "respondToDecision", decisionId: pending.id }];
-};
-
 const toPublicRevealRecord = (
   state: GameState,
   playerId: PlayerId,
@@ -617,7 +600,6 @@ export const filterStateForPlayer = (
       ...getLegalActions(state, playerId)
         .map((action) => toPublicLegalAction(state, playerId, action))
         .filter((action): action is PublicLegalAction => action !== undefined),
-      ...toSearchRevealDecisionLegalActions(state, playerId),
     ]),
     revealedCards: toPublicRevealRecord(state, playerId),
     events: state.eventJournal

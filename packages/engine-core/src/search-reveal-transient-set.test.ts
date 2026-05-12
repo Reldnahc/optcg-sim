@@ -13,8 +13,9 @@ import {
   p1,
   p2,
   resolvedCard,
+  reviewedOnPlayDrawDefinition,
 } from "./action-test-fixtures.js";
-import { applyAction } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import {
   createSupportedSearchRevealChoiceDecision,
   createSupportedSearchRevealChoiceDecisionFromTransientSet,
@@ -22,7 +23,10 @@ import {
 } from "./effect-runtime-search-reveal.js";
 import { processEffectRuntime } from "./effect-runtime.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
-import { queueDrawForP1 } from "./effect-runtime-queue-processing-test-support.js";
+import {
+  queueDrawForP1,
+  toEffectId,
+} from "./effect-runtime-queue-processing-test-support.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 
 const supportedSearch = (
@@ -80,6 +84,79 @@ const createSearchRevealDecisionState = () => {
     state: result.state,
     topDeck,
   };
+};
+
+const createQueuedSearchRevealState = (
+  category: "character" | "event" = "character",
+) => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  const originalTopDeck = must(player.deck[0], "top deck");
+  player.deck = [
+    {
+      ...originalTopDeck,
+      cardId: `search-reveal-${category}-top` as typeof originalTopDeck.cardId,
+    },
+    ...player.deck.slice(1),
+  ];
+  const topDeck = markTopDeckCard(state, category);
+  const baseEntry = queueDrawForP1();
+  const source = player.leader;
+  const effectBlockId = toEffectId("OP01-015:auto-search-reveal-1");
+  const entry = {
+    ...baseEntry,
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    sourceSnapshot: {
+      ...baseEntry.sourceSnapshot,
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: source.zone,
+      category: "leader" as const,
+    },
+    effectBlockId,
+    sourcePresencePolicy: "mustRemainInSameZone" as const,
+  };
+  const sourceCard = resolvedCard({
+    cardId: entry.source.cardId,
+    category: "leader",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "search-reveal-definition",
+      rulesVersion: "search-reveal-rules",
+      sourceTextHash: "search-reveal-source",
+    },
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    entry.source.cardId,
+    sourceCard.support,
+  );
+  const baseEffect = must(baseDefinition.effects[0], "base effect");
+  const definition = {
+    ...baseDefinition,
+    effects: [
+      {
+        ...baseEffect,
+        id: effectBlockId,
+        effect: supportedSearch(),
+        sourcePresencePolicy: "mustRemainInSameZone" as const,
+      },
+    ],
+  };
+  state.cardManifest.cards[entry.source.cardId] = sourceCard;
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "search-reveal-definition": definition,
+  };
+  state.effectQueue = [entry];
+  return { entry, state, topDeck };
 };
 
 const respondWithCards = (
@@ -392,6 +469,119 @@ test("eligible search reveal lifecycle preserves creation and response event ord
   assert.equal(
     must(resolved.state.players[p1], "p1").hand.at(-1)?.instanceId,
     topDeck.instanceId,
+  );
+});
+
+test("queued search reveal effect pauses for private choice and resolves through the queue", () => {
+  const { entry, state, topDeck } = createQueuedSearchRevealState();
+
+  const created = processEffectRuntime(state);
+
+  assert.equal(created.errors, undefined);
+  assert.deepEqual(
+    created.events.map((event) => event.type),
+    ["cardRevealed", "decisionCreated"],
+  );
+  assert.deepEqual(created.state.effectQueue, [entry]);
+  const decision = must(created.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectCards");
+  const candidate = must(decision.candidates[0], "candidate").card;
+  const chooserActions = getLegalActions(created.state, p1).filter(
+    (action) => action.type === "respondToDecision",
+  );
+  assert.deepEqual(
+    chooserActions.map((action) => action.response),
+    [
+      { type: "cards", cards: [] },
+      { type: "cards", cards: [candidate] },
+    ],
+  );
+  assert.deepEqual(
+    getLegalActions(created.state, p2).filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+
+  const resolved = applyAction(
+    created.state,
+    respondWithCards(decision.id, [candidate]),
+  );
+
+  assert.equal(resolved.errors, undefined);
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    ["decisionResolved", "cardMoved", "effectResolved"],
+  );
+  assert.deepEqual(
+    [...created.events, ...resolved.events].map((event) => event.type),
+    [
+      "cardRevealed",
+      "decisionCreated",
+      "decisionResolved",
+      "cardMoved",
+      "effectResolved",
+    ],
+  );
+  assertStrictlyIncreasingEventOrder(
+    [...created.events, ...resolved.events],
+    "queued search reveal lifecycle",
+  );
+  assert.deepEqual(resolved.state.effectQueue, []);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.deepEqual(resolved.state.revealedCards, []);
+  assert.equal(
+    must(resolved.state.players[p1], "p1").hand.at(-1)?.instanceId,
+    topDeck.instanceId,
+  );
+
+  const continued = processEffectRuntime(resolved.state);
+  assert.equal(continued.errors, undefined);
+  assert.deepEqual(continued.events, []);
+  assert.equal(continued.state, resolved.state);
+  assert.equal(continued.stateHash, resolved.stateHash);
+});
+
+test("queued search reveal with no eligible card resolves without reveal or identity leak", () => {
+  const { entry, state, topDeck } = createQueuedSearchRevealState("event");
+  const originalDeckIds = must(state.players[p1], "p1").deck.map(
+    (card) => card.instanceId,
+  );
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.deepEqual(result.state.revealedCards, []);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectResolved"],
+  );
+  assert.deepEqual(result.events[0]?.payload, {
+    queueEntryId: entry.id,
+    timingWindowId: entry.timingWindowId,
+    generation: entry.generation,
+    effectBlockId: entry.effectBlockId,
+    sourcePresencePolicy: entry.sourcePresencePolicy,
+    orderingGroup: entry.orderingGroup,
+    status: "resolved",
+  });
+  assert.deepEqual(
+    must(result.state.players[p1], "p1").deck.map((card) => card.instanceId),
+    originalDeckIds,
+  );
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+  assertDoesNotContain(result.events, String(topDeck.cardId), "event card");
+  assertDoesNotContain(
+    filterStateForPlayer(result.state, p1),
+    String(topDeck.cardId),
+    "chooser view",
+  );
+  assertDoesNotContain(
+    filterStateForPlayer(result.state, p2),
+    String(topDeck.cardId),
+    "opponent view",
   );
 });
 

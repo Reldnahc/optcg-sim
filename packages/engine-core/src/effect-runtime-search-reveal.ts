@@ -611,6 +611,44 @@ export const applySupportedSearchRevealChoiceResponse = (
     }
   }
 
+  const causedBy = decision.causedBy;
+  const queuedEntry =
+    causedBy.type === "effect"
+      ? state.effectQueue.find(
+          (entry) =>
+            entry.id === causedBy.queueEntryId &&
+            entry.effectBlockId === causedBy.effectId,
+        )
+      : undefined;
+  if (queuedEntry !== undefined) {
+    appendEvent(
+      state,
+      events,
+      "effectResolved",
+      {
+        queueEntryId: queuedEntry.id,
+        timingWindowId: queuedEntry.timingWindowId,
+        generation: queuedEntry.generation,
+        effectBlockId: queuedEntry.effectBlockId,
+        ...(queuedEntry.triggerEventId !== undefined
+          ? { triggerEventId: queuedEntry.triggerEventId }
+          : {}),
+        sourcePresencePolicy: queuedEntry.sourcePresencePolicy,
+        orderingGroup: queuedEntry.orderingGroup,
+        status: "resolved" as const,
+      },
+      { type: "public" },
+    );
+    const effectResolved = events[events.length - 1];
+    if (effectResolved !== undefined) {
+      effectResolved.causedBy = {
+        type: "effect",
+        queueEntryId: queuedEntry.id,
+        effectId: queuedEntry.effectBlockId,
+      };
+    }
+  }
+
   const nextPlayers =
     movedCard === undefined
       ? state.players
@@ -633,6 +671,10 @@ export const applySupportedSearchRevealChoiceResponse = (
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
     players: nextPlayers,
+    effectQueue:
+      queuedEntry === undefined
+        ? state.effectQueue
+        : state.effectQueue.filter((entry) => entry.id !== queuedEntry.id),
     revealedCards: state.revealedCards.filter(
       (record) => record.id !== reveal.id,
     ),
