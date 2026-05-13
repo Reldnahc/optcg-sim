@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id CARD-012 -->
 <!-- agent-packet:story-path stories/approved/CARD-012-blocker-and-empty-effect-generated-support.yaml -->
-<!-- agent-packet:story-sha256 22c84c3dccd25e2e5771724712d67f7ab01be0994b8c0f374c37862d40b6b7a7 -->
+<!-- agent-packet:story-sha256 f594e8bb33ec1c4da766a75fefc0365487ca55becae33eb6758cef99832f6230 -->
 
 # Story Packet
 
@@ -13,7 +13,7 @@ Epic ID: CARD-012
 Title: Blocker and empty-effect generated support enablement
 Type: implementation
 Area: cards
-Primary Concern: parser
+Primary Concern: rules
 
 ## Why
 

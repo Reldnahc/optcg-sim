@@ -6,7 +6,7 @@ epic_id: CARD-012
 title: Blocker and empty-effect generated support enablement
 type: implementation
 area: cards
-primary_concern: parser
+primary_concern: rules
 priority: high
 status: approved
 summary: >
