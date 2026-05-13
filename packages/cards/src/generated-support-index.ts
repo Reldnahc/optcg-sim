@@ -1,7 +1,9 @@
 import type {
+  CardCategory,
   CardId,
   CardImplementationRecord,
   EffectDefinition,
+  Keyword,
 } from "@optcg/types";
 
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
@@ -21,6 +23,8 @@ export interface GeneratedSupportCardTextInput {
   cardId: CardId;
   effectDefinitionsVersion: string;
   expectedSourceTextHash?: string;
+  category?: CardCategory;
+  printedKeywords?: readonly Keyword[];
   rulesVersion: string;
   sourceText: string;
   sourceTextHash: string;
@@ -149,6 +153,15 @@ function buildGeneratedSupportIndexEntry(
   }
 
   if (card.sourceText.length === 0) {
+    if (!hasEmptyEffectSupportMetadata(card)) {
+      return unsupportedMetadataEntry({
+        card,
+        message:
+          "Normalized card metadata does not satisfy certified empty-effect support preconditions.",
+        parserRuleIds: [],
+      });
+    }
+
     return supportedVanillaEntry({
       capabilityEvidence: [],
       card,
@@ -172,6 +185,18 @@ function buildGeneratedSupportIndexEntry(
       parseStatus: parseResult.status,
       parserRuleIds:
         "parsedRuleIds" in parseResult ? parseResult.parsedRuleIds : [],
+    });
+  }
+
+  if (
+    parseResult.parserRuleIds.includes("exact:keyword:blocker:standalone") &&
+    !hasBlockerKeywordSupportMetadata(card)
+  ) {
+    return unsupportedMetadataEntry({
+      card,
+      message:
+        "Normalized card metadata does not satisfy certified Blocker keyword support preconditions.",
+      parserRuleIds: parseResult.parserRuleIds,
     });
   }
 
@@ -253,6 +278,25 @@ function buildGeneratedSupportIndexEntry(
   };
 }
 
+function hasBlockerKeywordSupportMetadata(
+  card: GeneratedSupportCardTextInput,
+): boolean {
+  return card.category === "character" && hasPrintedKeyword(card, "blocker");
+}
+
+function hasEmptyEffectSupportMetadata(
+  card: GeneratedSupportCardTextInput,
+): boolean {
+  return card.category === "character" && card.printedKeywords?.length === 0;
+}
+
+function hasPrintedKeyword(
+  card: GeneratedSupportCardTextInput,
+  keyword: Keyword,
+): boolean {
+  return card.printedKeywords?.includes(keyword) === true;
+}
+
 function supportedVanillaEntry({
   capabilityEvidence,
   card,
@@ -283,6 +327,28 @@ function supportedVanillaEntry({
       tested: true,
     },
   };
+}
+
+function unsupportedMetadataEntry({
+  card,
+  message,
+  parserRuleIds,
+}: {
+  card: GeneratedSupportCardTextInput;
+  message: string;
+  parserRuleIds: readonly string[];
+}): GeneratedSupportIndexEntry {
+  return unsupportedEntry({
+    blockers: [
+      {
+        code: "unsupported-primitive",
+        message,
+      },
+    ],
+    card,
+    parseStatus: "unsupportedPrimitive",
+    parserRuleIds,
+  });
 }
 
 function unsupportedEntry({

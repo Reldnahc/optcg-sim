@@ -259,6 +259,43 @@ describe("support evaluator", () => {
     expect(evaluation.effectDefinitionId).toBeUndefined();
   });
 
+  it("rejects Blocker reminder text when normalized card category is not a character", () => {
+    const blockerEvent = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "EB01-017",
+      card_type: "Event",
+      cost: 2,
+      effect:
+        "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
+      keyword: ["Blocker"],
+      name: "Malformed Blocker Reminder Candidate",
+      power: null,
+    });
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: blockerEvent,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: blockerEvent.behaviorHash,
+      expectedSourceTextHash: blockerEvent.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [
+        {
+          code: "unsupported-primitive",
+          message:
+            "Normalized card metadata does not satisfy certified Blocker keyword support preconditions.",
+        },
+      ],
+      parseStatus: "unsupportedPrimitive",
+      playable: false,
+      status: "unsupported",
+    });
+  });
+
   it("evaluates EB01-005-shaped null effect text as playable vanilla-confirmed with no effect definition", () => {
     const vanillaCard = normalizePoneglyphCardDetail({
       ...loadOp03044Fixture(),
@@ -293,6 +330,42 @@ describe("support evaluator", () => {
     });
     expect(evaluation.effectDefinition).toBeUndefined();
     expect(evaluation.effectDefinitionId).toBeUndefined();
+  });
+
+  it("rejects empty effect text when normalized card category is not a character", () => {
+    const emptyEvent = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "EB01-005",
+      card_type: "Event",
+      cost: 1,
+      effect: null,
+      keyword: [],
+      name: "Malformed Empty Effect Candidate",
+      power: null,
+    });
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: emptyEvent,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: emptyEvent.behaviorHash,
+      expectedSourceTextHash: emptyEvent.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [
+        {
+          code: "unsupported-primitive",
+          message:
+            "Normalized card metadata does not satisfy certified empty-effect support preconditions.",
+        },
+      ],
+      parseStatus: "unsupportedPrimitive",
+      playable: false,
+      status: "unsupported",
+    });
   });
 });
 

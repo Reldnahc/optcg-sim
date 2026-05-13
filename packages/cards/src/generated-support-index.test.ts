@@ -113,7 +113,9 @@ describe("generated support index", () => {
       cards: [
         {
           ...baseCard,
+          category: "character",
           cardId: "CARD-012-001" as CardId,
+          printedKeywords: ["blocker"],
           sourceText: "[Blocker]",
         },
       ],
@@ -147,6 +149,32 @@ describe("generated support index", () => {
     expect(index.effectDefinitions).toEqual({});
   });
 
+  it("keeps standalone Blocker unsupported without normalized blocker keyword metadata", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          cardId: "CARD-012-001" as CardId,
+          sourceText: "[Blocker]",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      blockers: [
+        {
+          code: "unsupported-primitive",
+          message:
+            "Normalized card metadata does not satisfy certified Blocker keyword support preconditions.",
+        },
+      ],
+      cardId: "CARD-012-001",
+      parseStatus: "unsupportedPrimitive",
+      status: "unsupported",
+    });
+  });
+
   it("supports EB01-017-shaped Blocker reminder text", () => {
     const sourceText =
       "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)";
@@ -154,7 +182,9 @@ describe("generated support index", () => {
       cards: [
         {
           ...baseCard,
+          category: "character",
           cardId: "EB01-017" as CardId,
+          printedKeywords: ["blocker"],
           sourceText,
         },
       ],
@@ -175,7 +205,9 @@ describe("generated support index", () => {
       cards: [
         {
           ...baseCard,
+          category: "character",
           cardId: "EB01-005" as CardId,
+          printedKeywords: [],
           sourceText: "",
         },
       ],
@@ -197,6 +229,32 @@ describe("generated support index", () => {
     expect(index.entries[0]?.effectDefinition).toBeUndefined();
     expect(index.entries[0]?.effectDefinitionId).toBeUndefined();
     expect(index.effectDefinitions).toEqual({});
+  });
+
+  it("keeps empty effect text unsupported without normalized vanilla metadata", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          cardId: "EB01-005" as CardId,
+          sourceText: "",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      blockers: [
+        {
+          code: "unsupported-primitive",
+          message:
+            "Normalized card metadata does not satisfy certified empty-effect support preconditions.",
+        },
+      ],
+      cardId: "EB01-005",
+      parseStatus: "unsupportedPrimitive",
+      status: "unsupported",
+    });
   });
 
   it("creates supported evidence for exact complete-parse card text", () => {
