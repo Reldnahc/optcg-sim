@@ -70,6 +70,7 @@ function extractDispositionJson(doc) {
 test("downstream disposition record exists and enforces per-field TYP-005C authority evidence", async () => {
   const doc = await readFile(typeAuthorityDocPath, "utf8");
   const record = extractDispositionJson(doc);
+  const ambiguityFileCache = new Map();
 
   assert.equal(record.storyId, "TYP-005C");
   assert.ok(
@@ -115,6 +116,18 @@ test("downstream disposition record exists and enforces per-field TYP-005C autho
         "TYP-005F",
         `${field} behavior_ambiguity cannot route directly to TYP-005F`,
       );
+      if (disposition.followUpStory.startsWith("stories/ambiguities/")) {
+        const ambiguityPath = path.join(repoRoot, disposition.followUpStory);
+        let ambiguityDoc = ambiguityFileCache.get(ambiguityPath);
+        if (typeof ambiguityDoc !== "string") {
+          ambiguityDoc = await readFile(ambiguityPath, "utf8");
+          ambiguityFileCache.set(ambiguityPath, ambiguityDoc);
+        }
+        assert.ok(
+          ambiguityDoc.includes(field),
+          `${field} behavior_ambiguity must be explicitly listed in ${disposition.followUpStory}`,
+        );
+      }
     }
     assert.ok(
       Array.isArray(disposition.specRefs) && disposition.specRefs.length > 0,

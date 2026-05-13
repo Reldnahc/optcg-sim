@@ -15,6 +15,17 @@ not present in canonical contracts after sync, including:
 - `TransientCardSet.ownerId`
 - `TransientCardSet.controllerId`
 - `ReplacementAppliedEventPayload`
+- `PublicDecision.processId`
+- `PublicDecision.replacementIds`
+- `PublicDecision.mandatory`
+
+For `PublicDecision.processId`, `PublicDecision.replacementIds`, and
+`PublicDecision.mandatory`, the blocker is behavior/visibility authority, not a
+direct canonical omission classification. Cited TYP-005C authority does not
+resolve whether replacement-process routing metadata or mandatory/optional
+decision semantics are player-visible in canonical `PublicDecision` payloads.
+These fields stay fail-closed behind ambiguity resolution until an approved
+follow-up story or ambiguity decision provides explicit canonical authority.
 
 TYP-005C explicitly forbids changing canonical contracts and forbids engine,
 server, client, replay, UI, database, or gameplay behavior changes. Therefore
