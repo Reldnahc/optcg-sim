@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: generated
+status: approved
 summary: >
   Certify generated parser/capability/index/report behavior for the narrow
   `Draw N cards and trash M cards from your hand` template using ENG-050 runtime

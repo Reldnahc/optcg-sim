@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-009A.md",
+      "storyId": "CARD-009A",
+      "storyPath": "stories/approved/CARD-009A-parameterized-draw-n-parser-capabilities.yaml",
+      "storySha256": "afa65e6a5b5271fec67941a0b98fd3765aabf3f50d923e6b0daf538f1494d51b"
+    }
+  ],
   "version": 1
 }
