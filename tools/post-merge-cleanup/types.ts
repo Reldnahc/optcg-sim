@@ -88,7 +88,9 @@ export type CleanupStoryBindingEvidence = {
   storyId: string;
   storyPath: string;
   substoryAiReviewRecordId?: string;
-  substoryPrNumber?: number;
+  substoryCommitSha?: string;
+  substoryRevisionResponseId?: string;
+  substoryVerificationEvidence?: string;
 };
 
 export type CleanupParentLifecycleEvidence = {

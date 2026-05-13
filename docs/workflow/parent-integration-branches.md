@@ -6,22 +6,21 @@ This document is mandatory workflow guidance linked from `AGENTS.md`. Use it whe
 
 - Use exactly one story-orchestrator for the parent series and one pr-gate per PR in that series.
 - Create a parent integration branch from `main` for the full story or decomposed story group, for example `story/typ-001`.
-- Create each substory implementation branch from the parent integration branch, not from `main`.
-- Open each substory PR against the parent integration branch.
-- Before opening or handing off a substory PR or parent PR in this decomposed flow, reconstruct and refresh the compact per-story review-status matrix from durable artifacts (story-review outputs, story files, PR comments, recorded blockers) and fail closed if any child exact per-story status is unknown or pending.
-- Keep one active substory packet at a time. A substory PR may include only its active substory packet, implementation, tests, and parent-owned story activation files.
+- Keep implementation on the one parent integration branch for this workflow; do not create substory branches as the normal path.
+- Do not open substory PRs in this flow; land each completed substory as a reviewed commit on the parent integration branch.
+- Before handing off the parent PR in this decomposed flow, reconstruct and refresh the compact per-story review-status matrix from durable artifacts (story-review outputs, story files, PR comments, recorded blockers) and fail closed if any child exact per-story status is unknown or pending.
+- Keep one active substory packet at a time. A substory implementation pass may include only its active substory packet, implementation, tests, and parent-owned story activation files.
 - In a parent integration branch, `agent-packets/active.json` is a handoff pointer for the currently active or most recently active substory packet. It is not the full list of unfinished substories.
 - Substories that already merged into the parent integration branch remain approved and keep their packet files until the parent PR lands on `main`; their absence from `active.json` does not mean they are done.
-- Substory PRs still require CI, `pnpm verify`, reviewer-subagent review, AI review records, and revision response comments.
-- After a substory PR passes CI and AI review, the parent agent may merge it into the parent integration branch without human review if the user explicitly approved this parent-story workflow for the group.
+- Each substory commit still requires CI, `pnpm verify`, reviewer-subagent review evidence, AI review record, revision response, and verification evidence bound to that exact commit.
 - Do not run `pnpm run packets:complete` for a substory when it merges only into the parent integration branch. The substory is not done until the parent integration branch lands on `main`.
 - After all substories for the parent story land on the parent integration branch, open one parent PR from the integration branch to `main`.
-- The parent PR must receive a full-story integration review that checks the parent story, all included substory PRs, packet history, cross-story consistency, CI, tests, scope boundaries, and unresolved PR comments.
-- Before requesting human review on the parent PR, update the PR body or post a handoff comment that records completed gates rather than future-tense review plans: included substory PRs, full-story AI review record, revision response, CI result, `pnpm verify`, human-review requirement, and post-merge cleanup metadata for the parent and each included substory.
+- The parent PR must receive a full-story integration review that checks the parent story, all included substory commit records, packet history, cross-story consistency, CI, tests, scope boundaries, and unresolved PR comments.
+- Before requesting human review on the parent PR, update the PR body or post a handoff comment that records completed gates rather than future-tense review plans: included substory story path + commit SHA + AI review + revision response + verification evidence, full-story AI review record, parent revision response, CI result, `pnpm verify`, human-review requirement, and post-merge cleanup metadata for the parent and each included substory.
 - Parent PR authors must leave exactly one `Post-merge cleanup:` metadata source before parent PR handoff, full-story reviewer handoff, or human review request; the required cleanup metadata guard must fail parent PRs when parent lifecycle evidence is missing for any listed substory.
 - Before full-story reviewer handoff, human review request, or final ready language, parent PR authors must run cleanup metadata handoff preflight against the actual current PR body or selected durable handoff comment, fetched changed files, fetched PR head branch, and allowed cleanup branches for any listed non-head substory branches, not a copied example or reconstructed local text. When fetched PR metadata and check status are available, use `node --experimental-strip-types tools/post-merge-cleanup.ts -- --validate-cleanup-handoff-json-file <handoff.json> --require-cleanup-guard-status`; the remote `cleanup-metadata-guard` check must be present and passing before human review is requested.
 - Parent PR cleanup metadata may live in the PR body or in a durable handoff comment whose content is the reviewed cleanup metadata source. The human-controlled merge to `main` is the cleanup approval signal; the computed metadata source ref is audit evidence. If merge actor evidence is unavailable and an equivalent human-review fallback is used, the fallback record must confirm the cleanup metadata source was reviewed before fallback approval.
-- Parent cleanup evidence must include durable parent lifecycle evidence before merge: parent integration AI review record, parent revision response, and one substory AI review record entry for each included story.
+- Parent cleanup evidence must include durable parent lifecycle evidence before merge: parent integration AI review record, parent revision response, and one substory commit-evidence entry for each included story.
 - Post-merge packet cleanup automation is the normal path after a reviewed story PR or parent PR merges.
 - Cleanup metadata is a reviewed request, not standalone authority; the automation must bind cleanup metadata to reviewed PR evidence and trusted checked-in story and packet state before completing parent/substory packets.
 - Human review is required on the parent PR before it merges to `main`.
@@ -29,5 +28,5 @@ This document is mandatory workflow guidance linked from `AGENTS.md`. Use it whe
 - Direct cleanup commits are allowed only for exact packet-completion command output after cleanup-scoped lifecycle verification passes; automation-created cleanup pull requests are not created.
 - Manual fallback is only for operational failure. Manual edits beyond pure packet-completion output still use the normal PR and reviewer path.
 - Branch deletion runs only after packet cleanup succeeds and never deletes protected, unrelated, or unmerged branches.
-- Substory PR comments remain the durable historical record for AI review and revisions even when human review happens only on the parent PR.
+- Parent PR body or durable handoff comment remains the durable historical record for included substory commit evidence when human review happens only on the parent PR.
 - The final parent PR still follows the normal Review Workflow, including reviewer-subagent review, durable AI review records, revision response records, CI, `pnpm verify`, and human review before merge.

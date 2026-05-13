@@ -6,7 +6,7 @@ epic_id: INF-046
 title: Replace substory PR workflow with parent-branch commit evidence
 type: tooling
 area: infra
-primary_concern: workflow
+primary_concern: tooling
 priority: high
 status: approved
 summary: >

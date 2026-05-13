@@ -623,14 +623,16 @@ function buildParentLifecycle(options: {
     const review = substoryReviewByPath.get(story.storyPath);
     if (!review) {
       throw new Error(
-        `Missing durable substory PR review evidence for ${story.storyPath}.`,
+        `Missing durable substory commit review evidence for ${story.storyPath}.`,
       );
     }
     lifecycleUpdatedAtValues.push(review.updatedAt);
     return {
       ...story,
       substoryAiReviewRecordId: review.recordId,
-      substoryPrNumber: review.prNumber,
+      substoryCommitSha: review.commitSha,
+      substoryRevisionResponseId: review.revisionResponseId,
+      substoryVerificationEvidence: review.verificationEvidence,
     };
   });
   const cleanupPlanRecordedAt = latestInstant(lifecycleUpdatedAtValues);
@@ -657,27 +659,45 @@ function parseSubstoryReviewRecords(
 ) {
   const records = new Map<
     string,
-    { prNumber: number; recordId: string; updatedAt: string }
+    {
+      commitSha: string;
+      recordId: string;
+      revisionResponseId: string;
+      updatedAt: string;
+      verificationEvidence: string;
+    }
   >();
   const pattern =
-    /^Substory AI review record:\s*\n {2}story:\s*(stories\/approved\/[^\s]+\.yaml)\s*\n {2}pr:\s*(\d+)\s*\n {2}record:\s*(\S+)\s*$/gm;
+    /^Substory commit evidence:\s*\n {2}story:\s*(stories\/approved\/[^\s]+\.yaml)\s*\n {2}commit:\s*([0-9a-f]{40})\s*\n {2}ai_review_record:\s*(\S+)\s*\n {2}revision_response:\s*(\S+)\s*\n {2}verification:\s*(\S+)\s*$/gim;
   for (const source of evidenceSources) {
     for (const match of source.body.matchAll(pattern)) {
       const storyPath = match[1];
-      const prNumber = Number(match[2]);
+      const commitSha = match[2]?.toLowerCase();
       const recordId = match[3];
-      if (!storyPath || !Number.isSafeInteger(prNumber) || !recordId) {
+      const revisionResponseId = match[4];
+      const verificationEvidence = match[5];
+      if (
+        !storyPath ||
+        !commitSha ||
+        !recordId ||
+        !revisionResponseId ||
+        !verificationEvidence
+      ) {
         continue;
       }
       const updatedAt = normalizeInstant(source.updatedAt);
       const previous = records.get(storyPath);
-      if (previous && Date.parse(previous.updatedAt) >= Date.parse(updatedAt)) {
-        continue;
+      if (previous) {
+        throw new Error(
+          `Duplicate durable substory commit evidence for ${storyPath}.`,
+        );
       }
       records.set(storyPath, {
-        prNumber,
+        commitSha,
         recordId,
+        revisionResponseId,
         updatedAt,
+        verificationEvidence,
       });
     }
   }

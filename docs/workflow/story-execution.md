@@ -15,7 +15,7 @@ When starting after a context reset or uncertain session state:
 5. Inspect the current branch name, recent branch commits, and recent `main` commits to identify whether the worktree is on `main`, a single-story branch, a substory branch, or a parent integration branch.
 6. Use the native GitHub connector to check open pull requests, recent merged pull requests, unresolved review threads, and failing checks, including PR base/head branches.
 7. If an active packet exists, recover by reading the active approved story and packet before doing any implementation or review handoff.
-8. If no active packet exists on a parent integration branch, do not infer that the repo is between stories; reconstruct the parent/substory state from branch history, merged substory PRs, remaining approved stories, packets, and the parent PR trail.
+8. If no active packet exists on a parent integration branch, do not infer that the repo is between stories; reconstruct the parent/substory state from branch history, reviewed substory commits, remaining approved stories, packets, and the parent PR trail.
 9. If no active packet exists on `main`, no open PR needs action, and story/packet state is consistent, infer that the repo is between stories and propose the next candidate from `stories/approved/` or ask the user to choose when ordering is ambiguous.
 
 Manual chat memory is not authority after reset. If reconstructed state conflicts with chat memory, use the repo and GitHub evidence, then surface the conflict explicitly.
@@ -38,7 +38,7 @@ Use a pre-presentation story-review gate for generated or normalized story work:
 
 ### Decomposed Story-Group Review Matrix
 
-For decomposed story groups, require a compact per-story review-status matrix before approval handoff, child activation, packet generation, and parent/substory PR opening or handoff.
+For decomposed story groups, require a compact per-story review-status matrix before approval handoff, child activation, packet generation, and parent PR handoff.
 
 Reconstruct this matrix from durable story-review outputs, story files, PR comments, or recorded blockers; do not use chat memory as the source of truth.
 

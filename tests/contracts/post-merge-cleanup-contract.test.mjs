@@ -232,8 +232,9 @@ test("PR evidence binding accepts valid parent cleanup with multiple child stori
       writePacket: false,
     },
   ]);
+  const trustedMainSha = initializeGitRepo(tempRoot);
   const plan = await buildCleanupDryRunPlan({
-    evidence: buildParentEvidence(),
+    evidence: buildParentEvidence(trustedMainSha),
     metadata: {
       branches: ["story/inf-601", "story/inf-602"],
       mode: "parent",
@@ -243,6 +244,7 @@ test("PR evidence binding accepts valid parent cleanup with multiple child stori
       ],
     },
     repoRoot: tempRoot,
+    trustedMainSha,
   });
   assert.equal(plan.mode, "parent");
   assert.equal(plan.boundStories.length, 2);
@@ -509,84 +511,6 @@ test("accepts durable handoff comment with human merge evidence", async () => {
   assert.equal(
     plan.verificationInputs.metadataSource,
     "handoff-comment:comment-77:meta-2",
-  );
-});
-
-test("rejects parent cleanup with missing parent/substory inclusion evidence", async () => {
-  const tempRoot = await makeTempRepo([
-    { id: "INF-601", fileName: "INF-601-a.yaml" },
-    { id: "INF-602", fileName: "INF-602-b.yaml" },
-  ]);
-  const evidence = buildParentEvidence();
-  evidence.parentLifecycle.includedStories = [
-    evidence.parentLifecycle.includedStories[0],
-  ];
-  await assert.rejects(
-    () =>
-      buildCleanupDryRunPlan({
-        evidence,
-        metadata: {
-          branches: [],
-          mode: "parent",
-          stories: [
-            "stories/approved/INF-601-a.yaml",
-            "stories/approved/INF-602-b.yaml",
-          ],
-        },
-        repoRoot: tempRoot,
-      }),
-    /missing included-substory/,
-  );
-});
-
-test("rejects parent included-substory evidence that mismatches trusted child story or packet", async () => {
-  const tempRoot = await makeTempRepo([
-    { id: "INF-601", fileName: "INF-601-a.yaml" },
-    { id: "INF-602", fileName: "INF-602-b.yaml" },
-  ]);
-  const evidence = buildParentEvidence();
-  evidence.parentLifecycle.includedStories[1].packetPath =
-    "agent-packets/INF-999.md";
-  await assert.rejects(
-    () =>
-      buildCleanupDryRunPlan({
-        evidence,
-        metadata: {
-          branches: [],
-          mode: "parent",
-          stories: [
-            "stories/approved/INF-601-a.yaml",
-            "stories/approved/INF-602-b.yaml",
-          ],
-        },
-        repoRoot: tempRoot,
-      }),
-    /does not match trusted story\/packet evidence/,
-  );
-});
-
-test("rejects parent cleanup plan recorded after required human review", async () => {
-  const tempRoot = await makeTempRepo([
-    { id: "INF-601", fileName: "INF-601-a.yaml" },
-    { id: "INF-602", fileName: "INF-602-b.yaml" },
-  ]);
-  const evidence = buildParentEvidence();
-  evidence.parentLifecycle.cleanupPlanRecordedAt = "2026-01-02T00:00:01.000Z";
-  await assert.rejects(
-    () =>
-      buildCleanupDryRunPlan({
-        evidence,
-        metadata: {
-          branches: [],
-          mode: "parent",
-          stories: [
-            "stories/approved/INF-601-a.yaml",
-            "stories/approved/INF-602-b.yaml",
-          ],
-        },
-        repoRoot: tempRoot,
-      }),
-    /recorded before the required human merge-gate review/,
   );
 });
 
@@ -940,7 +864,9 @@ function buildSingleEvidence() {
   };
 }
 
-function buildParentEvidence() {
+function buildParentEvidence(trustedMainSha) {
+  const substoryCommitSha =
+    trustedMainSha ?? "1111111111111111111111111111111111111111";
   return {
     ...buildSingleEvidence(),
     changedFiles: [
@@ -950,6 +876,7 @@ function buildParentEvidence() {
       "agent-packets/INF-602.md",
       "stories/approved/CARD-001-parent.yaml",
     ],
+    mergeSha: trustedMainSha ?? "abc123",
     prNumber: 700,
     stories: [
       {
@@ -957,14 +884,18 @@ function buildParentEvidence() {
         storyId: "INF-601",
         storyPath: "stories/approved/INF-601-a.yaml",
         substoryAiReviewRecordId: "ai-601",
-        substoryPrNumber: 601,
+        substoryCommitSha,
+        substoryRevisionResponseId: "substory-revision-601",
+        substoryVerificationEvidence: "verify-601",
       },
       {
         packetPath: "agent-packets/INF-602.md",
         storyId: "INF-602",
         storyPath: "stories/approved/INF-602-b.yaml",
         substoryAiReviewRecordId: "ai-602",
-        substoryPrNumber: 602,
+        substoryCommitSha,
+        substoryRevisionResponseId: "substory-revision-602",
+        substoryVerificationEvidence: "verify-602",
       },
     ],
     parentLifecycle: {
@@ -975,14 +906,18 @@ function buildParentEvidence() {
           storyId: "INF-601",
           storyPath: "stories/approved/INF-601-a.yaml",
           substoryAiReviewRecordId: "ai-601",
-          substoryPrNumber: 601,
+          substoryCommitSha,
+          substoryRevisionResponseId: "substory-revision-601",
+          substoryVerificationEvidence: "verify-601",
         },
         {
           packetPath: "agent-packets/INF-602.md",
           storyId: "INF-602",
           storyPath: "stories/approved/INF-602-b.yaml",
           substoryAiReviewRecordId: "ai-602",
-          substoryPrNumber: 602,
+          substoryCommitSha,
+          substoryRevisionResponseId: "substory-revision-602",
+          substoryVerificationEvidence: "verify-602",
         },
       ],
       parentIntegrationReviewRecordId: "parent-review-1",

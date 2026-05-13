@@ -57,14 +57,18 @@ test("workflow evidence builder derives parent lifecycle from durable review com
         storyId: "INF-601",
         storyPath: "stories/approved/INF-601-a.yaml",
         substoryAiReviewRecordId: "substory-ai-601",
-        substoryPrNumber: 601,
+        substoryCommitSha: "1111111111111111111111111111111111111111",
+        substoryRevisionResponseId: "substory-revision-601",
+        substoryVerificationEvidence: "verify-601",
       },
       {
         packetPath: "agent-packets/INF-602.md",
         storyId: "INF-602",
         storyPath: "stories/approved/INF-602-b.yaml",
         substoryAiReviewRecordId: "substory-ai-602",
-        substoryPrNumber: 602,
+        substoryCommitSha: "2222222222222222222222222222222222222222",
+        substoryRevisionResponseId: "substory-revision-602",
+        substoryVerificationEvidence: "verify-602",
       },
     ],
     parentIntegrationReviewRecordId: "parent-ai-review-700",
@@ -165,7 +169,7 @@ test("workflow evidence builder rejects later duplicate parent lifecycle evidenc
 
   assert.throws(
     () => buildWorkflowCleanupEvidence(inputs),
-    /Parent lifecycle evidence changed after required review point/,
+    /Duplicate durable substory commit evidence/,
   );
 });
 
@@ -267,7 +271,69 @@ Parent revision response: parent-revision-700
 
   assert.throws(
     () => buildWorkflowCleanupEvidence(inputs),
-    /Missing durable substory PR review evidence/,
+    /Missing durable substory commit review evidence/,
+  );
+});
+
+test("workflow evidence builder rejects duplicate substory commit evidence for the same story path", () => {
+  const inputs = buildFixtureInputs();
+  inputs.issueComments[1].body = `${renderParentLifecycleEvidence()}Substory commit evidence:
+  story: stories/approved/INF-601-a.yaml
+  commit: 3333333333333333333333333333333333333333
+  ai_review_record: substory-ai-601-dup
+  revision_response: substory-revision-601-dup
+  verification: verify-601-dup
+`;
+
+  assert.throws(
+    () => buildWorkflowCleanupEvidence(inputs),
+    /Duplicate durable substory commit evidence/,
+  );
+});
+
+test("workflow evidence builder rejects parent cleanup when substory revision_response is missing", () => {
+  const inputs = buildFixtureInputs();
+  inputs.issueComments[1].body = `Parent integration AI review record: parent-ai-review-700
+Parent revision response: parent-revision-700
+Substory commit evidence:
+  story: stories/approved/INF-601-a.yaml
+  commit: 1111111111111111111111111111111111111111
+  ai_review_record: substory-ai-601
+  verification: verify-601
+Substory commit evidence:
+  story: stories/approved/INF-602-b.yaml
+  commit: 2222222222222222222222222222222222222222
+  ai_review_record: substory-ai-602
+  revision_response: substory-revision-602
+  verification: verify-602
+`;
+
+  assert.throws(
+    () => buildWorkflowCleanupEvidence(inputs),
+    /Missing durable substory commit review evidence/,
+  );
+});
+
+test("workflow evidence builder rejects parent cleanup when substory verification is missing", () => {
+  const inputs = buildFixtureInputs();
+  inputs.issueComments[1].body = `Parent integration AI review record: parent-ai-review-700
+Parent revision response: parent-revision-700
+Substory commit evidence:
+  story: stories/approved/INF-601-a.yaml
+  commit: 1111111111111111111111111111111111111111
+  ai_review_record: substory-ai-601
+  revision_response: substory-revision-601
+Substory commit evidence:
+  story: stories/approved/INF-602-b.yaml
+  commit: 2222222222222222222222222222222222222222
+  ai_review_record: substory-ai-602
+  revision_response: substory-revision-602
+  verification: verify-602
+`;
+
+  assert.throws(
+    () => buildWorkflowCleanupEvidence(inputs),
+    /Missing durable substory commit review evidence/,
   );
 });
 
@@ -351,7 +417,7 @@ Parent revision response: parent-revision-700
 
   assert.throws(
     () => validateWorkflowCleanupMetadataGuard(inputs),
-    /Missing durable substory PR review evidence/,
+    /Missing durable substory commit review evidence/,
   );
 });
 
@@ -428,13 +494,17 @@ function buildFixtureInputs() {
 function renderParentLifecycleEvidence() {
   return `Parent integration AI review record: parent-ai-review-700
 Parent revision response: parent-revision-700
-Substory AI review record:
+Substory commit evidence:
   story: stories/approved/INF-601-a.yaml
-  pr: 601
-  record: substory-ai-601
-Substory AI review record:
+  commit: 1111111111111111111111111111111111111111
+  ai_review_record: substory-ai-601
+  revision_response: substory-revision-601
+  verification: verify-601
+Substory commit evidence:
   story: stories/approved/INF-602-b.yaml
-  pr: 602
-  record: substory-ai-602
+  commit: 2222222222222222222222222222222222222222
+  ai_review_record: substory-ai-602
+  revision_response: substory-revision-602
+  verification: verify-602
 `;
 }

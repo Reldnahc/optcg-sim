@@ -87,8 +87,8 @@ Post-merge cleanup:
 
 Use this section only when the PR merges a parent integration branch into `main`.
 
-- Included substory PRs:
-- [ ] Each included substory PR has CI, `pnpm verify`, AI review record, and revision response recorded on its PR
+- Included substory commit evidence:
+- [ ] Each included substory commit has story path, commit SHA, AI review record, revision response, and verification evidence recorded in this parent PR body or durable handoff comment
 - [ ] Full-story integration reviewer-subagent review is posted on this parent PR
 - [ ] Parent PR revision response is posted after full-story integration review
 - [ ] Parent PR body or handoff comment is updated to completed-gate language before human review is requested
