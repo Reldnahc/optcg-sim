@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-050A.md",
+      "storyId": "ENG-050A",
+      "storyPath": "stories/approved/ENG-050A-trash-from-hand-decision-primitive.yaml",
+      "storySha256": "893c51ce3b4f50729a7143cf4014af94f046f272399f2a9f7c126f5eb6abcf00"
+    }
+  ],
   "version": 1
 }
