@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-009B.md",
-      "storyId": "CARD-009B",
-      "storyPath": "stories/approved/CARD-009B-generated-draw-then-trash-template-evidence.yaml",
-      "storySha256": "53b279571d007f2042a7603eafb236c0765d4604fdfe3e2aee7dce72992d72e8"
+      "packetPath": "agent-packets/CARD-009D.md",
+      "storyId": "CARD-009D",
+      "storyPath": "stories/approved/CARD-009D-when-attacking-sequence-trigger-queueing.yaml",
+      "storySha256": "70897ae3327b86b4655dc6e9f1f23c4cd753c7f4c1b72873f1268a5e4d1c5d68"
     }
   ],
   "version": 1
