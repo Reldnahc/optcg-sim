@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Split generated-support playability into a small substory series: a card-data
   evaluator, a read-only support probe CLI, and fixture-only manifest boundary

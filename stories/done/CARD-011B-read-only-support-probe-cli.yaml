@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: cli
 priority: high
-status: approved
+status: done
 summary: >
   Add a read-only @optcg/cards command that fetches one explicit card from live
   Poneglyph, runs the generated-support playability evaluator, prints playable

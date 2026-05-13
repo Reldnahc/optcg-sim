@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Preserve checked-in real-card DSL manifests for deterministic implementation
   and integration tests, while making explicit that they are fixture evidence
