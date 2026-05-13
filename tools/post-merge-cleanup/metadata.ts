@@ -272,16 +272,7 @@ export function buildWorkflowCleanupEvidence(
 
   if (selected.metadata.mode === "parent") {
     evidence.parentLifecycle = buildParentLifecycle({
-      evidenceSources: [
-        {
-          body: input.pullRequest.body,
-          updatedAt: input.pullRequest.updatedAt,
-        },
-        ...input.issueComments.map((comment) => ({
-          body: comment.body,
-          updatedAt: comment.updatedAt,
-        })),
-      ],
+      evidenceSources: buildSelectedLifecycleEvidenceSources(selected),
       requiredReviewSubmittedAt: requiredReview.submittedAt,
       storyBindings: stories,
     });
@@ -329,16 +320,7 @@ export function validateWorkflowCleanupMetadataGuard(
 
   if (selected.metadata.mode === "parent") {
     result.parentLifecycle = buildParentLifecycle({
-      evidenceSources: [
-        {
-          body: input.pullRequest.body,
-          updatedAt: input.pullRequest.updatedAt,
-        },
-        ...input.issueComments.map((comment) => ({
-          body: comment.body,
-          updatedAt: comment.updatedAt,
-        })),
-      ],
+      evidenceSources: buildSelectedLifecycleEvidenceSources(selected),
       requiredReviewSubmittedAt: null,
       storyBindings: buildStoryBindings(selected.metadata.stories),
     });
@@ -582,6 +564,17 @@ function buildStoryBindings(storyPaths: string[]) {
       storyPath,
     };
   });
+}
+
+function buildSelectedLifecycleEvidenceSources(
+  selected: MetadataSourceCandidate,
+) {
+  return [
+    {
+      body: selected.body,
+      updatedAt: selected.source.updatedAt,
+    },
+  ];
 }
 
 function hasStrictFallbackCleanupApproval(body: string) {

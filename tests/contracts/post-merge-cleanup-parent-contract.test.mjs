@@ -221,6 +221,32 @@ test("parent cleanup planning rejects missing substory commit evidence", async (
   );
 });
 
+test("parent cleanup planning rejects substory commit evidence that exists but is not reachable from merged parent head", async () => {
+  const repoRoot = await makeTempRepo([
+    { id: "INF-601", fileName: "INF-601-a.yaml" },
+    { id: "INF-602", fileName: "INF-602-b.yaml" },
+    parentStory("CARD-001", ["INF-601", "INF-602"]),
+  ]);
+  const trustedMainSha = initializeGitRepo(repoRoot);
+  const unreachableCommitSha = createUnreachableCommit(repoRoot);
+  const evidence = buildParentEvidence(trustedMainSha);
+  evidence.stories[0].substoryCommitSha = unreachableCommitSha;
+  evidence.parentLifecycle.includedStories[0].substoryCommitSha =
+    unreachableCommitSha;
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence,
+        metadata: parentMetadata(),
+        metadataSourceRef: "pr-body:pr-501-body:meta-1",
+        repoRoot,
+        trustedMainSha,
+      }),
+    /is not reachable from merged parent PR head/i,
+  );
+});
+
 test("parent cleanup planning fails closed for malformed object-form child story ids", async () => {
   const duplicateRoot = await makeTempRepo([
     { id: "INF-601", fileName: "INF-601-a.yaml" },
@@ -375,6 +401,24 @@ function initializeGitRepo(tempRoot) {
     assert.equal(run.status, 0, run.stderr);
   }
   return spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: tempRoot,
+    encoding: "utf8",
+  }).stdout.trim();
+}
+
+function createUnreachableCommit(tempRoot) {
+  for (const args of [
+    ["checkout", "-b", "side/unreachable"],
+    ["commit", "--allow-empty", "-m", "unreachable"],
+    ["checkout", "main"],
+  ]) {
+    const run = spawnSync("git", args, {
+      cwd: tempRoot,
+      encoding: "utf8",
+    });
+    assert.equal(run.status, 0, run.stderr);
+  }
+  return spawnSync("git", ["rev-parse", "side/unreachable"], {
     cwd: tempRoot,
     encoding: "utf8",
   }).stdout.trim();

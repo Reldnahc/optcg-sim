@@ -241,11 +241,10 @@ jobs:
             }));
             const buildParentLifecycle = () => {
               const evidenceSources = [
-                { body: pr.body || "", updatedAt: pr.updated_at },
-                ...comments.map((comment) => ({
-                  body: comment.body || "",
-                  updatedAt: comment.updated_at,
-                })),
+                {
+                  body: selected.source || "",
+                  updatedAt: selected.sourceEvidence.updatedAt,
+                },
               ];
               const findScalar = (pattern) => {
                 let latest = null;
