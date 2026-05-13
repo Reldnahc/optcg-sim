@@ -10,19 +10,27 @@ primary_concern: tooling
 priority: critical
 status: approved
 summary: >
-  Replace the current duplicated package type maintenance model with a
-  contract-authoritative flow where `contracts/canonical-types.ts` and
-  `contracts/types/*` are the source of truth for `@optcg/types`.
+  Replace the failed package-type migration tail with a classification-first
+  path so canonical contracts become authoritative without blindly absorbing
+  package or engine implementation drift.
 story_boundary: >
-  This parent coordinates TYP-005A through TYP-005D only. It is not directly
-  implementable and must not change contract shapes, package source files, or
-  tooling outside child stories.
+  This parent replaces the existing approved parent authority in one lifecycle
+  transaction, preserves reviewed TYP-005A and TYP-005B evidence once available,
+  and coordinates replacement child stories TYP-005C through TYP-005G only. It
+  is not directly implementable and must not change contract shapes, package
+  source files, or tooling outside child stories.
 allowed_touch_points:
   - stories/approved/TYP-005-canonical-contract-source-of-truth-parent.yaml
   - stories/approved/TYP-005A-package-type-authority-strategy.yaml
   - stories/approved/TYP-005B-deterministic-package-type-sync.yaml
-  - stories/approved/TYP-005C-migrate-package-types-to-canonical-output.yaml
-  - stories/approved/TYP-005D-whole-surface-type-parity-guard.yaml
+  - stories/approved/TYP-005C-classify-canonical-package-downstream-type-gaps.yaml
+  - stories/approved/TYP-005D-align-classified-canonical-shared-contract-omissions.yaml
+  - stories/approved/TYP-005E-migrate-engine-core-consumers-off-package-only-type-drift.yaml
+  - stories/approved/TYP-005F-migrate-package-projections-to-settled-canonical-output.yaml
+  - stories/approved/TYP-005G-whole-surface-type-parity-guard.yaml
+  - stories/replaced/TYP-005C-migrate-package-types-to-canonical-output.yaml
+  - stories/replaced/TYP-005D-whole-surface-type-parity-guard.yaml
+  - stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md
 spec_refs:
   - 03-game-state-events-decisions.s002
   - 03-game-state-events-decisions.s003
@@ -41,26 +49,28 @@ spec_refs:
   - 24-story-schema.s031
   - 24-story-schema.s032
 scope:
-  - coordinate a parent/substory hardening effort for canonical contract authority over `@optcg/types`
-  - require the package authority strategy to be documented before sync tooling or migration work starts
-  - require deterministic generated or synced package type output before current package drift is corrected
-  - require a whole-surface guard before the parent set is considered complete
-  - keep only one child story active in `agent-packets/active.json` at a time after approval
+  - replace the existing approved TYP-005 parent authority without leaving duplicate approved TYP-005 parent stories
+  - preserve reviewed TYP-005A and TYP-005B commits as parent-series evidence after TYP-005B has review or completion evidence
+  - supersede the old approved TYP-005C and TYP-005D child path that failed closed on downstream consumer drift
+  - require field classification before canonical contract edits, engine consumer migration, package projection sync, or parity guard enforcement
+  - require deterministic sync tooling and settled downstream consumers before package projection migration
+  - require whole-surface parity guard after package projection migration
 non_scope:
   - direct implementation from this parent story
   - packetizing or activating this parent story as an active implementation story
+  - deciding field dispositions directly in the parent
   - gameplay rules, engine behavior, server protocol behavior, client behavior, replay behavior, persistence, or UI work
-  - changing canonical contract shapes outside an approved child story
-  - deciding uncited behavior for `respondToDecision.playerId`
 dependencies: []
 acceptance_criteria:
-  - approved child stories exist for strategy, sync tooling, migration, and guard enforcement
+  - approved replacement child stories exist for classification, optional canonical alignment, engine consumer migration, package projection migration, and guard enforcement
+  - old approved TYP-005C and TYP-005D path has been lifecycle-transitioned to replaced before replacement TYP-005C approval or activation
+  - replacement TYP-005C activation waits for TYP-005B review or completion evidence
   - each child story is narrow, concern-scoped, and has explicit allowed touch points and non-scope
   - this parent remains non-implementable and is not directly packetized
-  - future approval can use the parent integration branch workflow with child packetization only
 required_tests:
   - set-level story-review before presenting these generated stories as approval-ready
-  - run `corepack pnpm run stories:validate` after generated story files are checked in
+  - exact per-story story-review for the parent and every replacement child before approval
+  - run `corepack pnpm run stories:validate` after replacement story lifecycle changes are checked in
 repo_rules:
   - do not packetize this parent as an active implementation story
   - use child packets only and keep one active child packet at a time
@@ -77,10 +87,22 @@ child_stories:
     concern: tooling
     depends_on: [TYP-005A]
   - id: TYP-005C
-    title: Migrate package types to canonical output
+    title: Classify canonical/package downstream type authority gaps
     concern: contract
     depends_on: [TYP-005B]
   - id: TYP-005D
+    title: Align classified canonical shared contract omissions
+    concern: contract
+    depends_on: [TYP-005C]
+  - id: TYP-005E
+    title: Migrate engine-core consumers off package-only type drift
+    concern: contract
+    depends_on: [TYP-005C]
+  - id: TYP-005F
+    title: Migrate package projections to settled canonical output
+    concern: contract
+    depends_on: [TYP-005D, TYP-005E]
+  - id: TYP-005G
     title: Add whole-surface type parity guard
     concern: verification
-    depends_on: [TYP-005C]
+    depends_on: [TYP-005F]

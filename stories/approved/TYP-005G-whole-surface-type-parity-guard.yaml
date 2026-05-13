@@ -1,0 +1,66 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-005G
+epic_id: TYP-005
+title: Add whole-surface type parity guard
+type: verification
+area: contracts
+primary_concern: verification
+priority: critical
+status: approved
+summary: >
+  Add merge-blocking verification so future one-sided drift between canonical
+  contract modules and `@optcg/types` package projection output fails
+  mechanically across the whole surface.
+story_boundary: >
+  Own only whole-surface parity, export, and stale-output enforcement after the
+  package projection migration is complete.
+allowed_touch_points:
+  - package.json
+  - packages/types/src/export-cohesion.test.ts
+  - tests/contracts/package-type-sync-tool.test.mjs
+  - tests/contracts/package-type-parity.test.mjs
+  - tests/contracts/root-contracts-lane.test.mjs
+  - docs/contracts/type-authority.md
+  - stories/approved/TYP-005G-whole-surface-type-parity-guard.yaml
+spec_refs:
+  - 22-v6-implementation-tightening.s006
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s011
+  - 23-repo-tooling-and-enforcement.s016
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+scope:
+  - add or finish whole-surface parity enforcement between canonical modules and package projection output
+  - ensure missing canonical exports fail verification
+  - ensure stale package projection output fails verification
+  - wire the guard into the root contracts lane and root `verify`
+non_scope:
+  - changing canonical contracts
+  - changing package projection declarations except tests or guard wiring
+  - engine, server, client, replay, gameplay, database, or UI behavior
+dependencies:
+  - TYP-005F
+acceptance_criteria:
+  - root contract verification fails on stale package output
+  - root contract verification fails on missing canonical exports from `@optcg/types`
+  - guard covers the full canonical module mapping, not only known blocker fields
+  - dependency resolves to the replacement TYP-005F package projection story, not the superseded old parity-guard story
+  - "`pnpm verify` includes the guard through the contracts lane or an equally explicit root path"
+required_tests:
+  - exact candidate story-review before implementation
+  - focused parity test proving stale package output fails
+  - focused parity test proving missing package export fails
+  - root contracts-lane test proving the guard is included
+  - run `corepack pnpm exec vitest run tests/contracts/package-type-parity.test.mjs tests/contracts/package-type-sync-tool.test.mjs tests/contracts/root-contracts-lane.test.mjs`
+  - run `corepack pnpm run contracts`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - do not use the guard story to resolve newly discovered type-shape disputes
+  - depend on the replacement TYP-005F output after the old TYP-005C/TYP-005D path has been lifecycle-transitioned out of stories/approved
+  - raise a separate ambiguity or contract story if canonical authority is incomplete
+ambiguity_policy: fail_and_escalate

@@ -8,7 +8,7 @@ type: refactor
 area: contracts
 primary_concern: contract
 priority: critical
-status: approved
+status: replaced
 summary: >
   Run the canonical type sync mechanism against committed `@optcg/types`
   package files so package exports reflect canonical contracts, including the

@@ -1,0 +1,69 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-005C
+epic_id: TYP-005
+title: Classify canonical/package downstream type authority gaps
+type: design
+area: contracts
+primary_concern: contract
+priority: critical
+status: approved
+summary: >
+  Classify the downstream fields that blocked the package projection migration
+  so later stories know whether each field is a canonical contract omission,
+  package drift or engine-internal state, or unresolved behavior ambiguity.
+story_boundary: >
+  Own only classification of the failed package-projection downstream blockers
+  and durable authority-disposition evidence. Do not change canonical
+  contracts, package projection output, engine behavior, or root verification
+  gates.
+allowed_touch_points:
+  - docs/contracts/type-authority.md
+  - tests/contracts/type-authority-downstream-dispositions.test.mjs
+  - stories/approved/TYP-005C-classify-canonical-package-downstream-type-gaps.yaml
+  - stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md
+spec_refs:
+  - 03-game-state-events-decisions.s002
+  - 03-game-state-events-decisions.s003
+  - 03-game-state-events-decisions.s016
+  - 06-visibility-security.s004
+  - 06-visibility-security.s007
+  - 06-visibility-security.s021
+  - 22-v6-implementation-tightening.s006
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s011
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+scope:
+  - inspect every failed-sync blocker field including `Action.respondToDecision.playerId`, `PublicCardView.currentPower`, `BattleState.counterPower`, `BattleState.damageProcess`, `TransientCardSet.ownerId`, `TransientCardSet.controllerId`, and `ReplacementAppliedEventPayload`
+  - account for previously known package-only public decision fields including `PublicDecision.processId`, `PublicDecision.replacementIds`, and `PublicDecision.mandatory`
+  - record a per-field disposition of `canonical_contract_omission`, `package_drift_or_engine_internal`, or `behavior_ambiguity`
+  - record evidence for each disposition using cited spec refs, current canonical/package shape, and downstream consumer summary
+  - identify the required next story for each classified field
+non_scope:
+  - adding, removing, or renaming type fields
+  - running package projection sync against committed package files
+  - changing engine-core consumers
+  - deciding gameplay, replay, protocol, or hidden-information behavior without cited authority
+dependencies:
+  - TYP-005B
+acceptance_criteria:
+  - disposition evidence exists for every listed field
+  - each disposition has a specific follow-up path or explicit ambiguity blocker
+  - no canonical, package projection, engine, server, client, replay, or UI behavior changes are included
+  - classification does not make canonical contracts blindly follow package drift
+  - old approved TYP-005C and TYP-005D lifecycle transitions are complete before this replacement story is activated
+required_tests:
+  - exact candidate story-review before implementation
+  - focused test proving the authority-disposition record exists and covers every required field
+  - run `corepack pnpm exec vitest run tests/contracts/type-authority-downstream-dispositions.test.mjs`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - this replacement story may be activated only after the old approved TYP-005C and TYP-005D files have moved out of stories/approved
+  - this replacement story depends on the reviewed TYP-005B sync-tooling evidence, not the old package-projection migration story
+  - use canonical contract modules as authority unless the classification records a cited canonical omission
+  - fail closed for hidden-information, replay, gameplay, decision-routing, or event-payload ambiguity
+ambiguity_policy: fail_and_escalate

@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-005B.md",
-      "storyId": "TYP-005B",
-      "storyPath": "stories/approved/TYP-005B-deterministic-package-type-sync.yaml",
-      "storySha256": "7e7a318d9361d7345288d810941e0c6a38fb43f958a7f5d961da454045017666"
+      "packetPath": "agent-packets/TYP-005C.md",
+      "storyId": "TYP-005C",
+      "storyPath": "stories/approved/TYP-005C-classify-canonical-package-downstream-type-gaps.yaml",
+      "storySha256": "6a7f0caffc0ebe2774a4e9a59a661d74726e7624c44541e3ba95cfbb2f72a540"
     }
   ],
   "version": 1

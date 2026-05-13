@@ -65,3 +65,133 @@ Canonical module to package module mapping is one-to-one by filename:
 ## Change Authority Rule
 
 Contract shape changes require edits in canonical contract modules under separate approved authority, not one-sided package patches.
+
+## Downstream Disposition Record (TYP-005C)
+
+```json
+{
+  "storyId": "TYP-005C",
+  "dispositions": [
+    {
+      "field": "Action.respondToDecision.playerId",
+      "disposition": "package_drift_or_engine_internal",
+      "followUpStory": "TYP-005E",
+      "specRefs": [
+        "03-game-state-events-decisions.s016",
+        "22-v6-implementation-tightening.s006"
+      ],
+      "canonicalShape": "Canonical Action.respondToDecision includes decisionId and response only.",
+      "packageOrDownstreamShape": "Downstream package/consumer assumptions previously expected Action.respondToDecision.playerId.",
+      "downstreamConsumerSummary": "Field mismatch blocks projection-aligned downstream action typing and requires consumer migration away from package-only action metadata."
+    },
+    {
+      "field": "PublicCardView.currentPower",
+      "disposition": "package_drift_or_engine_internal",
+      "followUpStory": "TYP-005E",
+      "specRefs": [
+        "03-game-state-events-decisions.s003",
+        "06-visibility-security.s004"
+      ],
+      "canonicalShape": "Canonical PublicCardView includes stable public board fields and excludes computed currentPower.",
+      "packageOrDownstreamShape": "packages/types/src/view.ts currently includes PublicCardView.currentPower as an optional field.",
+      "downstreamConsumerSummary": "Compile blockers arise where downstream view consumers rely on package-only currentPower instead of canonical public DTO shape."
+    },
+    {
+      "field": "BattleState.counterPower",
+      "disposition": "package_drift_or_engine_internal",
+      "followUpStory": "TYP-005E",
+      "specRefs": [
+        "03-game-state-events-decisions.s002",
+        "06-visibility-security.s004"
+      ],
+      "canonicalShape": "Canonical runtime BattleState tracks attacker/target/blocker/step/damageCount without counterPower.",
+      "packageOrDownstreamShape": "packages/types/src/runtime.ts adds optional BattleState.counterPower.",
+      "downstreamConsumerSummary": "Engine-adjacent consumers depending on package-only counterPower fail against canonical runtime types."
+    },
+    {
+      "field": "BattleState.damageProcess",
+      "disposition": "package_drift_or_engine_internal",
+      "followUpStory": "TYP-005E",
+      "specRefs": [
+        "03-game-state-events-decisions.s002",
+        "03-game-state-events-decisions.s003"
+      ],
+      "canonicalShape": "Canonical BattleState omits damageProcess and keeps process internals outside the public/runtime battle contract.",
+      "packageOrDownstreamShape": "packages/types/src/runtime.ts includes optional BattleState.damageProcess metadata.",
+      "downstreamConsumerSummary": "Downstream compile failures occur when package-only damageProcess is treated as canonical battle-state authority."
+    },
+    {
+      "field": "TransientCardSet.ownerId",
+      "disposition": "package_drift_or_engine_internal",
+      "followUpStory": "TYP-005E",
+      "specRefs": [
+        "03-game-state-events-decisions.s002",
+        "06-visibility-security.s021"
+      ],
+      "canonicalShape": "Canonical TransientCardSet includes id/cards/origin/visibility/cleanupPolicy and no ownerId.",
+      "packageOrDownstreamShape": "packages/types/src/runtime.ts adds TransientCardSet.ownerId.",
+      "downstreamConsumerSummary": "Package-only owner metadata causes downstream transient-set typings to diverge from canonical runtime contracts."
+    },
+    {
+      "field": "TransientCardSet.controllerId",
+      "disposition": "package_drift_or_engine_internal",
+      "followUpStory": "TYP-005E",
+      "specRefs": [
+        "03-game-state-events-decisions.s002",
+        "06-visibility-security.s021"
+      ],
+      "canonicalShape": "Canonical TransientCardSet does not include controllerId.",
+      "packageOrDownstreamShape": "packages/types/src/runtime.ts adds TransientCardSet.controllerId.",
+      "downstreamConsumerSummary": "Downstream consumers typed to package-only controller metadata block canonical-package parity for transient sets."
+    },
+    {
+      "field": "ReplacementAppliedEventPayload",
+      "disposition": "canonical_contract_omission",
+      "followUpStory": "TYP-005D",
+      "specRefs": [
+        "03-game-state-events-decisions.s002",
+        "22-v6-implementation-tightening.s006"
+      ],
+      "canonicalShape": "Canonical EngineEvent uses payload: unknown and does not define ReplacementAppliedEventPayload.",
+      "packageOrDownstreamShape": "packages/types/src/events.ts defines ReplacementAppliedEventPayload with process and payload hash fields.",
+      "downstreamConsumerSummary": "Replacement event payload consumers compile against package-only payload typing, signaling a canonical contract omission for shared event payload structure."
+    },
+    {
+      "field": "PublicDecision.processId",
+      "disposition": "canonical_contract_omission",
+      "followUpStory": "TYP-005D",
+      "specRefs": [
+        "06-visibility-security.s004",
+        "06-visibility-security.s007"
+      ],
+      "canonicalShape": "Canonical PublicDecision omits processId while canonical replacement decision state includes processId in PendingDecision.",
+      "packageOrDownstreamShape": "packages/types/src/view.ts adds optional PublicDecision.processId for projected replacement decisions.",
+      "downstreamConsumerSummary": "Projection and consumer typing rely on this field to render replacement choice context, creating a canonical view-contract omission."
+    },
+    {
+      "field": "PublicDecision.replacementIds",
+      "disposition": "canonical_contract_omission",
+      "followUpStory": "TYP-005D",
+      "specRefs": [
+        "06-visibility-security.s004",
+        "06-visibility-security.s007"
+      ],
+      "canonicalShape": "Canonical PublicDecision omits replacementIds even though replacement-choice decisions track candidate IDs internally.",
+      "packageOrDownstreamShape": "packages/types/src/view.ts adds optional PublicDecision.replacementIds.",
+      "downstreamConsumerSummary": "Downstream replacement UI/decision handlers compile against package-only replacementIds, indicating a canonical projection omission."
+    },
+    {
+      "field": "PublicDecision.mandatory",
+      "disposition": "canonical_contract_omission",
+      "followUpStory": "TYP-005D",
+      "specRefs": [
+        "06-visibility-security.s004",
+        "06-visibility-security.s007"
+      ],
+      "canonicalShape": "Canonical PublicDecision omits mandatory despite replacement decision state tracking whether choice is mandatory.",
+      "packageOrDownstreamShape": "packages/types/src/view.ts adds optional PublicDecision.mandatory.",
+      "downstreamConsumerSummary": "Consumer compile paths that differentiate forced vs optional replacement responses depend on package-only mandatory field."
+    }
+  ]
+}
+```
