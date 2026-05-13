@@ -43,6 +43,9 @@ const BatchResponseSchema = z.looseObject({
   data: z.record(z.string(), z.unknown()),
   missing: z.array(z.string()),
 });
+const SingleCardEnvelopeSchema = z.looseObject({
+  data: z.unknown(),
+});
 
 export function createPoneglyphClient(
   options: PoneglyphClientOptions,
@@ -57,9 +60,14 @@ export function createPoneglyphClient(
           lang: requestOptions?.lang,
         }),
       );
+      const envelope = SingleCardEnvelopeSchema.safeParse(response);
+      const cardDetail =
+        envelope.success && envelope.data.data !== undefined
+          ? envelope.data.data
+          : response;
       return validateRequestedCardDetail(
         cardNumber,
-        validatePoneglyphCardDetail(response),
+        validatePoneglyphCardDetail(cardDetail),
       );
     },
 
