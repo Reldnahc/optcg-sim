@@ -22,7 +22,7 @@ describe("generated support runtime capability matrix", () => {
 
   it("exposes the narrow capabilities needed by exact draw parser rules", () => {
     expect(generatedSupportRuntimeCapabilityMatrix.generatedAtStory).toBe(
-      "CARD-009B",
+      "CARD-012",
     );
     expect(requiredGeneratedSupportCapabilityIds).toEqual([
       "category:auto",
@@ -30,7 +30,9 @@ describe("generated support runtime capability matrix", () => {
       "effect:draw:self:count:positive-safe-integer",
       "effect:sequence:ordered",
       "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+      "keyword:blocker:printed",
       "sourcePresencePolicy:mustRemainInSameZone",
+      "sourcePresencePolicy:none-for-keyword",
       "trigger:onPlay",
       "trigger:whenAttacking",
       "trigger:whenAttacking:oncePerTurn",

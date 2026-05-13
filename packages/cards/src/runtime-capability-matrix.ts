@@ -2,6 +2,7 @@ export type RuntimeCapabilityKind =
   | "category"
   | "composition"
   | "effect"
+  | "keyword"
   | "sourcePresencePolicy"
   | "trigger";
 
@@ -92,6 +93,15 @@ export const generatedSupportRuntimeCapabilityMatrix = {
     },
     {
       description:
+        "Printed Blocker keyword behavior is executable by current runtime.",
+      id: "keyword:blocker:printed",
+      kind: "keyword",
+      sinceStory: "ENG-014",
+      supported: true,
+      supportedParserRuleIds: ["exact:keyword:blocker:standalone"],
+    },
+    {
+      description:
         "Source must remain in the same zone for generated simple character effects.",
       id: "sourcePresencePolicy:mustRemainInSameZone",
       kind: "sourcePresencePolicy",
@@ -104,6 +114,15 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "exact:when-attacking:draw-n:trash-m:hand:self",
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
       ],
+    },
+    {
+      description:
+        "Printed keyword-only generated support does not need source-presence effect resolution.",
+      id: "sourcePresencePolicy:none-for-keyword",
+      kind: "sourcePresencePolicy",
+      sinceStory: "CARD-012",
+      supported: true,
+      supportedParserRuleIds: ["exact:keyword:blocker:standalone"],
     },
     {
       description: "On Play trigger timing is executable by current runtime.",
@@ -140,7 +159,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       ],
     },
   ],
-  generatedAtStory: "CARD-009B",
+  generatedAtStory: "CARD-012",
   id: "generated-support-runtime-capabilities:v1",
 } as const satisfies RuntimeCapabilityMatrix;
 
@@ -150,7 +169,9 @@ export const requiredGeneratedSupportCapabilityIds = [
   "effect:draw:self:count:positive-safe-integer",
   "effect:sequence:ordered",
   "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+  "keyword:blocker:printed",
   "sourcePresencePolicy:mustRemainInSameZone",
+  "sourcePresencePolicy:none-for-keyword",
   "trigger:onPlay",
   "trigger:whenAttacking",
   "trigger:whenAttacking:oncePerTurn",

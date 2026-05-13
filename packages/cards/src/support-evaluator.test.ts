@@ -221,6 +221,79 @@ describe("support evaluator", () => {
       ]),
     );
   });
+
+  it("evaluates EB01-017-shaped Blocker reminder text as generated-support playable", () => {
+    const blockerCard = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "EB01-017",
+      effect:
+        "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
+      keyword: ["Blocker"],
+      name: "Blocker Reminder Candidate",
+    });
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: blockerCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: blockerCard.behaviorHash,
+      expectedSourceTextHash: blockerCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [],
+      cardId: "EB01-017",
+      parseStatus: "complete",
+      parserRuleIds: ["exact:keyword:blocker:standalone"],
+      playable: true,
+      status: "supported",
+      support: {
+        cardId: "EB01-017",
+        status: "vanilla-confirmed",
+        tested: true,
+      },
+    });
+    expect(evaluation.effectDefinition).toBeUndefined();
+    expect(evaluation.effectDefinitionId).toBeUndefined();
+  });
+
+  it("evaluates EB01-005-shaped null effect text as playable vanilla-confirmed with no effect definition", () => {
+    const vanillaCard = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "EB01-005",
+      effect: null,
+      keyword: [],
+      name: "Empty Effect Candidate",
+    });
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: vanillaCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: vanillaCard.behaviorHash,
+      expectedSourceTextHash: vanillaCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [],
+      cardId: "EB01-005",
+      parseStatus: "complete",
+      parserRuleIds: [],
+      playable: true,
+      status: "supported",
+      support: {
+        cardId: "EB01-005",
+        status: "vanilla-confirmed",
+        tested: true,
+      },
+    });
+    expect(evaluation.effectDefinition).toBeUndefined();
+    expect(evaluation.effectDefinitionId).toBeUndefined();
+  });
 });
 
 function loadOp03044Fixture(): PoneglyphCardDetail {

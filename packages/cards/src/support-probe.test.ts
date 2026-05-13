@@ -236,6 +236,38 @@ describe("support probe", () => {
     expect(text).toContain('span: "Then rest 1 DON!!."');
   });
 
+  it("prints only the unsupported span for mixed [Blocker] plus unsupported opponent-turn text", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("OP03-045"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "OP03-045",
+          effect:
+            "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[Opponent's Turn] This Character gains +1000 power.",
+          keyword: ["Blocker"],
+          name: "Mixed Blocker Unsupported Candidate",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain(
+      'span: "[Opponent\'s Turn] This Character gains +1000 power."',
+    );
+    expect(text).not.toContain('span: "[Blocker]"');
+  });
+
   it("does not create, delete, or rewrite fixture, manifest, report, or cache files when probing via CLI", async () => {
     const detail = await loadOp03044Fixture();
     const sensitivePaths = [

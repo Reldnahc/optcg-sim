@@ -432,4 +432,64 @@ describe("certified card text parser", () => {
       ],
     });
   });
+
+  it("parses standalone [Blocker] as a certified complete parse", () => {
+    const result = parse("[Blocker]");
+
+    expect(result.status).toBe("complete");
+    if (!isCompleteGeneratedSupportParseResult(result)) {
+      throw new Error("Expected complete parse.");
+    }
+
+    expect(result.parserRuleIds).toEqual(["exact:keyword:blocker:standalone"]);
+    expect(result.effectDefinition.implementationStatus).toBe(
+      "vanilla-confirmed",
+    );
+    expect(result.effectDefinition.effects).toEqual([]);
+  });
+
+  it("parses [Blocker] with reminder text as a certified complete parse", () => {
+    const result = parse(
+      "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
+    );
+
+    expect(result.status).toBe("complete");
+    if (!isCompleteGeneratedSupportParseResult(result)) {
+      throw new Error("Expected complete parse.");
+    }
+
+    expect(result.parserRuleIds).toEqual(["exact:keyword:blocker:standalone"]);
+    expect(result.effectDefinition.implementationStatus).toBe(
+      "vanilla-confirmed",
+    );
+    expect(result.effectDefinition.effects).toEqual([]);
+  });
+
+  it("parses [Blocker] plus unsupported text as partial with only unsupported residue", () => {
+    const text =
+      "[Blocker] [Opponent's Turn] This Character gains +1000 power.";
+    const result = parse(text);
+
+    expect(result.status).toBe("partial");
+    expect(result).toMatchObject({
+      blockers: [
+        {
+          code: "unparsed-span",
+          span: {
+            end: text.length,
+            start: 10,
+            text: "[Opponent's Turn] This Character gains +1000 power.",
+          },
+        },
+      ],
+      parsedRuleIds: ["exact:keyword:blocker:standalone"],
+      unparsedSpans: [
+        {
+          end: text.length,
+          start: 10,
+          text: "[Opponent's Turn] This Character gains +1000 power.",
+        },
+      ],
+    });
+  });
 });

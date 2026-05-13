@@ -148,6 +148,15 @@ function buildGeneratedSupportIndexEntry(
     });
   }
 
+  if (card.sourceText.length === 0) {
+    return supportedVanillaEntry({
+      capabilityEvidence: [],
+      card,
+      parseStatus: "complete",
+      parserRuleIds: [],
+    });
+  }
+
   const parseResult = parseCertifiedCardText({
     cardId: card.cardId,
     effectDefinitionsVersion: card.effectDefinitionsVersion,
@@ -185,6 +194,17 @@ function buildGeneratedSupportIndexEntry(
           capabilityCoverage.missing.map((missing) => missing.capabilityId),
         ),
       ].sort(),
+      parseStatus: parseResult.status,
+      parserRuleIds: parseResult.parserRuleIds,
+    });
+  }
+
+  if (
+    parseResult.effectDefinition.implementationStatus === "vanilla-confirmed"
+  ) {
+    return supportedVanillaEntry({
+      capabilityEvidence: capabilityCoverage.evidence,
+      card,
       parseStatus: parseResult.status,
       parserRuleIds: parseResult.parserRuleIds,
     });
@@ -228,6 +248,38 @@ function buildGeneratedSupportIndexEntry(
       rulesVersion: card.rulesVersion,
       sourceTextHash: card.sourceTextHash,
       status: "implemented-dsl",
+      tested: true,
+    },
+  };
+}
+
+function supportedVanillaEntry({
+  capabilityEvidence,
+  card,
+  parseStatus,
+  parserRuleIds,
+}: {
+  capabilityEvidence: readonly RuntimeCapabilityEvidence[];
+  card: GeneratedSupportCardTextInput;
+  parseStatus: GeneratedSupportParserResultStatus;
+  parserRuleIds: readonly string[];
+}): GeneratedSupportIndexEntry {
+  return {
+    blockers: [],
+    capabilityEvidence,
+    cardId: card.cardId,
+    missingCapabilityIds: [],
+    parseStatus,
+    parserRuleIds,
+    sourceTextHash: card.sourceTextHash,
+    status: "supported",
+    support: {
+      behaviorHash: card.behaviorHash,
+      cardDataVersion: card.cardDataVersion,
+      cardId: card.cardId,
+      rulesVersion: card.rulesVersion,
+      sourceTextHash: card.sourceTextHash,
+      status: "vanilla-confirmed",
       tested: true,
     },
   };
@@ -346,6 +398,10 @@ function capabilityIdsForParserRuleId(parserRuleId: string): readonly string[] {
 
   if (parserRuleId === "line-separated-effect-blocks:v1") {
     return ["composition:line-separated-effect-blocks:v1"];
+  }
+
+  if (parserRuleId === "exact:keyword:blocker:standalone") {
+    return ["keyword:blocker:printed", "sourcePresencePolicy:none-for-keyword"];
   }
 
   if (parserRuleId === "exact:on-play:draw-n:trash-m:hand:self") {

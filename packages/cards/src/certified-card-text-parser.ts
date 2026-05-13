@@ -14,6 +14,8 @@ export const whenAttackingDrawNTrashMFromHandParserRuleId =
   "exact:when-attacking:draw-n:trash-m:hand:self";
 export const whenAttackingOncePerTurnDrawNTrashMFromHandParserRuleId =
   "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self";
+export const standaloneBlockerKeywordParserRuleId =
+  "exact:keyword:blocker:standalone";
 export const lineSeparatedEffectBlocksCompositionId =
   "line-separated-effect-blocks:v1";
 export const certifiedParserRuleReviewer = "certified-parser-rule:CARD-009B";
@@ -32,7 +34,8 @@ interface CertifiedLineParse {
 }
 
 interface CertifiedClause {
-  readonly effectBlock: EffectBlock;
+  readonly effectBlock?: EffectBlock;
+  readonly implementationStatus?: "implemented-dsl" | "vanilla-confirmed";
   readonly parserRuleId: string;
 }
 
@@ -132,8 +135,10 @@ function completeParse(
     cardId: input.cardId,
     effectDefinition: {
       cardId: input.cardId,
-      effects: parsedClauses.map((clause) => clause.effectBlock),
-      implementationStatus: "implemented-dsl",
+      effects: parsedClauses.flatMap((clause) =>
+        clause.effectBlock === undefined ? [] : [clause.effectBlock],
+      ),
+      implementationStatus: resolveImplementationStatus(parsedClauses),
       metadata: {
         effectDefinitionsVersion: input.effectDefinitionsVersion,
         generatedBy: "rule-parser",
@@ -221,6 +226,13 @@ function parseCertifiedLine(
     };
   }
 
+  const standaloneBlockerClause = parseStandaloneBlockerClause(line);
+  if (standaloneBlockerClause !== undefined) {
+    return {
+      clause: standaloneBlockerClause,
+    };
+  }
+
   const onPlayResidue = parseOnPlayDrawResidueClause(cardId, line);
   if (onPlayResidue !== undefined) {
     return {
@@ -289,6 +301,18 @@ function parseCertifiedLine(
     };
   }
 
+  const standaloneBlockerResidue = parseStandaloneBlockerResidueClause(line);
+  if (standaloneBlockerResidue !== undefined) {
+    return {
+      clause: standaloneBlockerResidue.clause,
+      unparsedSpan: residueSpan({
+        offset,
+        prefix: standaloneBlockerResidue.prefix,
+        source: line,
+      }),
+    };
+  }
+
   return {};
 }
 
@@ -322,6 +346,13 @@ function createWhenAttackingDrawClauseWithCount(
   };
 }
 
+function createStandaloneBlockerClause(): CertifiedClause {
+  return {
+    implementationStatus: "vanilla-confirmed",
+    parserRuleId: standaloneBlockerKeywordParserRuleId,
+  };
+}
+
 function createDrawEffectBlock({
   cardId,
   count,
@@ -351,7 +382,8 @@ function parseSupportedSourceText(
     parseWhenAttackingDrawClause(cardId, sourceText) ??
     parseOnPlayDrawThenTrashClause(cardId, sourceText) ??
     parseWhenAttackingDrawThenTrashClause(cardId, sourceText) ??
-    parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, sourceText)
+    parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, sourceText) ??
+    parseStandaloneBlockerClause(sourceText)
   );
 }
 
@@ -460,6 +492,24 @@ function parseWhenAttackingOncePerTurnDrawThenTrashClause(
   });
 }
 
+const blockerReminderText =
+  "(After your opponent declares an attack, you may rest this card to make it the new target of the attack.)";
+const standaloneBlockerSourceText = "[Blocker]";
+const standaloneBlockerWithReminderSourceText = `${standaloneBlockerSourceText} ${blockerReminderText}`;
+
+function parseStandaloneBlockerClause(
+  sourceText: string,
+): CertifiedClause | undefined {
+  if (
+    sourceText === standaloneBlockerSourceText ||
+    sourceText === standaloneBlockerWithReminderSourceText
+  ) {
+    return createStandaloneBlockerClause();
+  }
+
+  return undefined;
+}
+
 function parseOnPlayDrawResidueClause(
   cardId: CardId,
   sourceText: string,
@@ -559,6 +609,27 @@ function parseWhenAttackingOncePerTurnDrawThenTrashResidueClause(
       trigger: { oncePerTurn: true, type: "whenAttacking" },
     }),
     prefix: parsed.prefix,
+  };
+}
+
+function parseStandaloneBlockerResidueClause(
+  sourceText: string,
+): ParsedResidueClause | undefined {
+  const reminderPrefix = `${standaloneBlockerWithReminderSourceText} `;
+  if (sourceText.startsWith(reminderPrefix)) {
+    return {
+      clause: createStandaloneBlockerClause(),
+      prefix: reminderPrefix,
+    };
+  }
+
+  if (!sourceText.startsWith(`${standaloneBlockerSourceText} `)) {
+    return undefined;
+  }
+
+  return {
+    clause: createStandaloneBlockerClause(),
+    prefix: `${standaloneBlockerSourceText} `,
   };
 }
 
@@ -769,6 +840,21 @@ function getCompleteParserRuleIds(
   }
 
   return ruleIds;
+}
+
+function resolveImplementationStatus(
+  clauses: readonly CertifiedClause[],
+): "implemented-dsl" | "vanilla-confirmed" {
+  if (
+    clauses.length > 0 &&
+    clauses.every(
+      (clause) => clause.implementationStatus === "vanilla-confirmed",
+    )
+  ) {
+    return "vanilla-confirmed";
+  }
+
+  return "implemented-dsl";
 }
 
 function toEffectId(value: string): EffectId {
