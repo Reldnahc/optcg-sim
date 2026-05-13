@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-004.md",
-      "storyId": "TYP-004",
-      "storyPath": "stories/approved/TYP-004-trash-from-hand-effect-dsl-schema.yaml",
-      "storySha256": "697a1a3c497e8085cf19c251dec436379696e758bf2622d487a3ed7fa8cb5add"
+      "packetPath": "agent-packets/CARD-009B.md",
+      "storyId": "CARD-009B",
+      "storyPath": "stories/approved/CARD-009B-generated-draw-then-trash-template-evidence.yaml",
+      "storySha256": "53b279571d007f2042a7603eafb236c0765d4604fdfe3e2aee7dce72992d72e8"
     }
   ],
   "version": 1

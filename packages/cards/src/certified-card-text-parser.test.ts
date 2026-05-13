@@ -41,7 +41,7 @@ describe("certified card text parser", () => {
       metadata: {
         effectDefinitionsVersion: "generated-support-parser-test",
         generatedBy: "rule-parser",
-        reviewer: "certified-parser-rule:CARD-009A",
+        reviewer: "certified-parser-rule:CARD-009B",
         rulesVersion: "rules-test",
         sourceTextHash: "sha256:source",
         tested: true,
@@ -88,6 +88,84 @@ describe("certified card text parser", () => {
       },
     ]);
   });
+
+  it.each([
+    {
+      expectedEffectId: "CARD-008B-001:auto-on-play-draw-2-then-trash-1",
+      expectedParserRuleIds: ["exact:on-play:draw-n:trash-m:hand:self"],
+      hasOncePerTurn: false,
+      sourceText: "[On Play] Draw 2 cards and trash 1 card from your hand.",
+      trigger: { type: "onPlay" },
+    },
+    {
+      expectedEffectId: "CARD-008B-001:auto-when-attacking-draw-2-then-trash-1",
+      expectedParserRuleIds: ["exact:when-attacking:draw-n:trash-m:hand:self"],
+      hasOncePerTurn: false,
+      sourceText:
+        "[When Attacking] Draw 2 cards and trash 1 card from your hand.",
+      trigger: { type: "whenAttacking" },
+    },
+    {
+      expectedEffectId:
+        "CARD-008B-001:auto-when-attacking-once-per-turn-draw-2-then-trash-1",
+      expectedParserRuleIds: [
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+      ],
+      hasOncePerTurn: true,
+      sourceText:
+        "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
+      trigger: { type: "whenAttacking" },
+    },
+  ])(
+    "parses exact draw-then-trash templates to generated DSL ($sourceText)",
+    ({
+      expectedEffectId,
+      expectedParserRuleIds,
+      hasOncePerTurn,
+      sourceText,
+      trigger,
+    }) => {
+      const result = parse(sourceText);
+
+      expect(result.status).toBe("complete");
+      if (!isCompleteGeneratedSupportParseResult(result)) {
+        throw new Error("Expected complete parse.");
+      }
+
+      expect(result.parserRuleIds).toEqual(expectedParserRuleIds);
+      expect(result.effectDefinition.effects).toHaveLength(1);
+      expect(result.effectDefinition.effects[0]).toMatchObject({
+        category: "auto",
+        effect: {
+          effects: [
+            {
+              connector: "always",
+              effect: { count: 2, player: "self", type: "draw" },
+            },
+            {
+              connector: "then",
+              effect: {
+                chooser: "self",
+                count: 1,
+                player: "self",
+                type: "trashFromHand",
+              },
+            },
+          ],
+          type: "sequence",
+        },
+        id: toEffectId(expectedEffectId),
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger,
+      });
+      const effectBlock = result.effectDefinition.effects[0];
+      if (hasOncePerTurn) {
+        expect(effectBlock).toMatchObject({ oncePerTurn: true });
+      } else {
+        expect(effectBlock).not.toHaveProperty("oncePerTurn");
+      }
+    },
+  );
 
   it("fails closed on near-miss wording", () => {
     const result = parse("[On Play] Draw one card.");
@@ -221,6 +299,13 @@ describe("certified card text parser", () => {
     "[When Attacking] Draw 9007199254740992 cards.",
     "[On Play] Draw cards.",
     "[When Attacking] Draw 2cards.",
+    "[On Play] Draw 1 card and trash 0 cards from your hand.",
+    "[On Play] Draw 01 card and trash 1 card from your hand.",
+    "[On Play] Draw 1 card and trash one card from your hand.",
+    "[When Attacking] Draw 2 cards and trash 00 cards from your hand.",
+    "[When Attacking] Draw two cards and trash 1 card from your hand.",
+    "[When Attacking] Draw 9007199254740992 cards and trash 1 card from your hand.",
+    "[On Play] Draw 1 card and trash 9007199254740992 cards from your hand.",
   ])("fails closed on invalid draw count wording (%s)", (text) => {
     const result = parse(text);
 
@@ -241,6 +326,67 @@ describe("certified card text parser", () => {
           end: text.length,
           start: 0,
           text,
+        },
+      ],
+    });
+  });
+
+  it.each([
+    "[On Play] Trash 1 card from your hand and draw 2 cards.",
+    "[When Attacking] [Once Per Turn] Trash 1 card from your hand and draw 2 cards.",
+    "[On K.O.] Draw 2 cards and trash 1 card from your hand.",
+    "[When Attacking] You may draw 2 cards and trash 1 card from your hand.",
+  ])(
+    "fails closed on unsupported draw-then-trash wrappers/order/residue (%s)",
+    (text) => {
+      const result = parse(text);
+
+      expect(result.status).toBe("partial");
+      expect(result).toMatchObject({
+        blockers: [
+          {
+            code: "unparsed-span",
+            span: {
+              end: text.length,
+              start: 0,
+              text,
+            },
+          },
+        ],
+        unparsedSpans: [
+          {
+            end: text.length,
+            start: 0,
+            text,
+          },
+        ],
+      });
+    },
+  );
+
+  it("captures residue for supported draw-then-trash clause followed by unsupported text", () => {
+    const text =
+      "[When Attacking] Draw 2 cards and trash 1 card from your hand. Then draw 1 card.";
+    const result = parse(text);
+
+    expect(result.status).toBe("partial");
+    expect(result).toMatchObject({
+      blockers: [
+        {
+          code: "unparsed-span",
+          span: {
+            end: text.length,
+            start: 63,
+            text: "Then draw 1 card.",
+          },
+        },
+      ],
+      parsedRuleIds: ["exact:when-attacking:draw-n:trash-m:hand:self"],
+      unparsedSpans: [
+        {
+          end: text.length,
+          start: 63,
+          text: "Then draw 1 card.",
         },
       ],
     });
