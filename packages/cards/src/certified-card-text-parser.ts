@@ -5,9 +5,6 @@ import type {
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-types.js";
 
-export const onPlayDrawOneParserRuleId = "exact:on-play:draw-1:self";
-export const whenAttackingDrawOneParserRuleId =
-  "exact:when-attacking:draw-1:self";
 export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self";
 export const whenAttackingDrawNParserRuleId =
   "exact:when-attacking:draw-n:self";
@@ -383,8 +380,13 @@ function parseDrawCount(
     return undefined;
   }
 
-  const count = Number.parseInt(match[2] ?? "", 10);
+  const countText = match[2] ?? "";
+  const count = Number.parseInt(countText, 10);
   if (!Number.isSafeInteger(count) || count <= 0) {
+    return undefined;
+  }
+
+  if (countText !== String(count)) {
     return undefined;
   }
 
