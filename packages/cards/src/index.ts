@@ -140,3 +140,8 @@ export type {
   RuntimeCapabilityMatrix,
   RuntimeCapabilityRecord,
 } from "./runtime-capability-matrix.js";
+export { evaluateGeneratedSupportPlayability } from "./support-evaluator.js";
+export type {
+  EvaluateGeneratedSupportPlayabilityInput,
+  GeneratedSupportPlayabilityEvaluation,
+} from "./support-evaluator.js";

@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-011A.md",
+      "storyId": "CARD-011A",
+      "storyPath": "stories/approved/CARD-011A-generated-support-playability-evaluator.yaml",
+      "storySha256": "c779afcf12994abefe4697008948d2e21ce4168167b7397aa1f5c415c02019c9"
+    }
+  ],
   "version": 1
 }
