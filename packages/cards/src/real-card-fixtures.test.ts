@@ -220,6 +220,11 @@ describe("real card fixtures", () => {
     expect(weevil.behaviorHash).toMatch(/^[a-f0-9]{64}$/u);
 
     expect(cavendish.cardId).toBe("OP10-045");
+    expect(cavendish.colors).toEqual(["blue"]);
+    expect(cavendish.cost).toBe(4);
+    expect(cavendish.power).toBe(6000);
+    expect(cavendish.counter).toBeUndefined();
+    expect(cavendish.types).toEqual(["Dressrosa", "Beautiful Pirates"]);
     expect(cavendish.effectText).toBe(
       "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
     );

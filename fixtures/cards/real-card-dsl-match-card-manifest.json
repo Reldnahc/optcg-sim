@@ -4008,10 +4008,10 @@
     },
     "OP10-045": {
       "attributes": ["slash"],
-      "behaviorHash": "c60f35e613ee3b39a1d5259cb799b06bbf896e699cce902cb24a8fe1234f98f5",
+      "behaviorHash": "91be13cae1812281f832a9d4801ab16b17f162937783b27a572ce153dc88f234",
       "cardId": "OP10-045",
       "category": "character",
-      "colors": ["green"],
+      "colors": ["blue"],
       "errata": [],
       "language": "en",
       "legality": {
@@ -4029,33 +4029,47 @@
       "set": "OP10",
       "setName": "Royal Blood",
       "sourceTextHash": "021421b539ccd217aba7f1b12a71c8237e0c0fda28985041d9e91d5df1cd2a28",
-      "types": ["Supernovas", "Beautiful Pirates"],
+      "types": ["Dressrosa", "Beautiful Pirates"],
       "variants": [
         {
           "variantIndex": 0,
           "variantKey": "OP10-045:v0",
-          "artist": "otton",
+          "artist": "Hatori Kyoka",
           "label": "Standard",
-          "productId": "op10",
+          "productId": "953d1419-04bb-45fc-bd01-8a04c9665c15",
           "productName": "Royal Blood",
           "productSetCode": "OP10",
           "productSlug": "royal-blood",
-          "scanImageDisplay": "https://example.test/op10-045-v0-display.png",
-          "scanImageFull": "https://example.test/op10-045-v0-scan-full.png",
-          "scanImageThumb": "https://example.test/op10-045-v0-scan-thumb.png",
-          "stockImageFull": "https://example.test/op10-045-v0-full.png",
-          "stockImageThumb": "https://example.test/op10-045-v0-thumb.png"
+          "scanImageDisplay": "https://cdn.poneglyph.one/images/OP10-045/en/scans/0/display.webp",
+          "scanImageFull": "https://cdn.poneglyph.one/images/OP10-045/en/scans/0/full.png",
+          "scanImageThumb": "https://cdn.poneglyph.one/images/OP10-045/en/scans/0/thumb.webp",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP10-045/en/stock/0/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP10-045/en/stock/0/thumb.webp"
+        },
+        {
+          "variantIndex": 1,
+          "variantKey": "OP10-045:v1",
+          "artist": "Sunohara",
+          "label": "Alternate Art",
+          "productId": "953d1419-04bb-45fc-bd01-8a04c9665c15",
+          "productName": "Royal Blood",
+          "productSetCode": "OP10",
+          "productSlug": "royal-blood",
+          "scanImageDisplay": "https://cdn.poneglyph.one/images/OP10-045/en/scans/1/display.webp",
+          "scanImageFull": "https://cdn.poneglyph.one/images/OP10-045/en/scans/1/full.png",
+          "scanImageThumb": "https://cdn.poneglyph.one/images/OP10-045/en/scans/1/thumb.webp",
+          "stockImageFull": "https://cdn.poneglyph.one/images/OP10-045/en/stock/1/full.png",
+          "stockImageThumb": "https://cdn.poneglyph.one/images/OP10-045/en/stock/1/thumb.webp"
         }
       ],
       "block": "3",
-      "cost": 3,
-      "counter": 1000,
+      "cost": 4,
       "effectText": "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
-      "power": 4000,
+      "power": 6000,
       "rarity": "R",
-      "releasedAt": "2026-03-13T00:00:00.000Z",
+      "releasedAt": "2025-03-21T00:00:00.000Z",
       "support": {
-        "behaviorHash": "c60f35e613ee3b39a1d5259cb799b06bbf896e699cce902cb24a8fe1234f98f5",
+        "behaviorHash": "91be13cae1812281f832a9d4801ab16b17f162937783b27a572ce153dc88f234",
         "cardDataVersion": "real-card-poneglyph-fixture-v1",
         "cardId": "OP10-045",
         "rulesVersion": "2026-01-16",
@@ -4102,49 +4116,49 @@
     },
     "op10-045.generated-support": {
       "cardId": "OP10-045",
-      "implementationStatus": "implemented-dsl",
       "effects": [
         {
-          "id": "OP10-045:auto-when-attacking-once-per-turn-draw-2-then-trash-1",
           "category": "auto",
-          "trigger": {
-            "type": "whenAttacking"
-          },
-          "oncePerTurn": true,
-          "sourcePresencePolicy": "mustRemainInSameZone",
           "effect": {
-            "type": "sequence",
             "effects": [
               {
                 "connector": "always",
                 "effect": {
-                  "type": "draw",
+                  "count": 2,
                   "player": "self",
-                  "count": 2
+                  "type": "draw"
                 }
               },
               {
                 "connector": "then",
                 "effect": {
-                  "type": "trashFromHand",
-                  "player": "self",
                   "chooser": "self",
-                  "count": 1
+                  "count": 1,
+                  "player": "self",
+                  "type": "trashFromHand"
                 }
               }
-            ]
+            ],
+            "type": "sequence"
+          },
+          "id": "OP10-045:auto-when-attacking-once-per-turn-draw-2-then-trash-1",
+          "oncePerTurn": true,
+          "sourcePresencePolicy": "mustRemainInSameZone",
+          "trigger": {
+            "type": "whenAttacking"
           }
         }
       ],
+      "implementationStatus": "implemented-dsl",
       "metadata": {
-        "sourceTextHash": "021421b539ccd217aba7f1b12a71c8237e0c0fda28985041d9e91d5df1cd2a28",
-        "rulesVersion": "2026-01-16",
         "effectDefinitionsVersion": "real-card-effects-v1",
-        "tested": true,
+        "generatedBy": "rule-parser",
         "reviewer": "certified-parser-rule:CARD-009B",
-        "generatedBy": "rule-parser"
+        "rulesVersion": "2026-01-16",
+        "sourceTextHash": "021421b539ccd217aba7f1b12a71c8237e0c0fda28985041d9e91d5df1cd2a28",
+        "tested": true
       }
     }
   },
-  "manifestHash": "de214734889bdb61ce186ce46c155396521a787f6186bf2f5e11fd85b6af7929"
+  "manifestHash": "15df90d79ac10e3bf19080bf956da2d53368b4213f639863e5a001c273e5d928"
 }

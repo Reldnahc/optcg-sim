@@ -1,57 +1,14 @@
 {
-  "card_number": "OP10-045",
-  "name": "Cavendish",
-  "language": "en",
-  "set": "OP10",
-  "set_name": "Royal Blood",
-  "released_at": "2026-03-13T00:00:00.000Z",
-  "released": true,
-  "card_type": "Character",
-  "rarity": "R",
-  "color": ["Green"],
-  "cost": 3,
-  "power": 4000,
-  "counter": 1000,
-  "life": null,
   "attribute": ["Slash"],
-  "types": ["Supernovas", "Beautiful Pirates"],
-  "effect": "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
-  "trigger": null,
+  "available_languages": ["en", "fr", "ja"],
   "block": "3",
-  "variants": [
-    {
-      "index": 0,
-      "name": null,
-      "label": "Standard",
-      "artist": "otton",
-      "product": {
-        "id": "op10",
-        "slug": "royal-blood",
-        "name": "Royal Blood",
-        "set_code": "OP10",
-        "released_at": "2026-03-13T00:00:00.000Z"
-      },
-      "images": {
-        "stock": {
-          "full": "https://example.test/op10-045-v0-full.png",
-          "thumb": "https://example.test/op10-045-v0-thumb.png"
-        },
-        "scan": {
-          "display": "https://example.test/op10-045-v0-display.png",
-          "full": "https://example.test/op10-045-v0-scan-full.png",
-          "thumb": "https://example.test/op10-045-v0-scan-thumb.png"
-        }
-      },
-      "errata": [],
-      "market": {
-        "tcgplayer_url": null,
-        "market_price": null,
-        "low_price": null,
-        "mid_price": null,
-        "high_price": null
-      }
-    }
-  ],
+  "card_number": "OP10-045",
+  "card_type": "Character",
+  "color": ["Blue"],
+  "cost": 4,
+  "counter": null,
+  "effect": "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
+  "language": "en",
   "legality": {
     "Extra Regulation": {
       "status": "legal"
@@ -60,6 +17,89 @@
       "status": "legal"
     }
   },
-  "available_languages": ["en"],
-  "official_faq": []
+  "life": null,
+  "name": "Cavendish",
+  "official_faq": [],
+  "power": 6000,
+  "rarity": "R",
+  "released": true,
+  "released_at": "2025-03-21T00:00:00.000Z",
+  "set": "OP10",
+  "set_name": "Royal Blood",
+  "trigger": null,
+  "types": ["Dressrosa", "Beautiful Pirates"],
+  "variants": [
+    {
+      "artist": "Hatori Kyoka",
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": "https://cdn.poneglyph.one/images/OP10-045/en/scans/0/display.webp",
+          "full": "https://cdn.poneglyph.one/images/OP10-045/en/scans/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP10-045/en/scans/0/thumb.webp"
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP10-045/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP10-045/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "13.00",
+        "low_price": "4.00",
+        "market_price": "5.17",
+        "mid_price": "7.00",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/617085/one-piece-card-game-royal-blood-cavendish-045"
+      },
+      "name": null,
+      "product": {
+        "id": "953d1419-04bb-45fc-bd01-8a04c9665c15",
+        "name": "Royal Blood",
+        "released_at": "2025-03-21T00:00:00.000Z",
+        "set_code": "OP10",
+        "slug": "royal-blood"
+      }
+    },
+    {
+      "artist": "Sunohara",
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": "https://cdn.poneglyph.one/images/OP10-045/en/scans/1/display.webp",
+          "full": "https://cdn.poneglyph.one/images/OP10-045/en/scans/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP10-045/en/scans/1/thumb.webp"
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP10-045/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP10-045/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "80.00",
+        "low_price": "29.51",
+        "market_price": "35.24",
+        "mid_price": "41.01",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/617086/one-piece-card-game-royal-blood-cavendish-045-parallel"
+      },
+      "name": null,
+      "product": {
+        "id": "953d1419-04bb-45fc-bd01-8a04c9665c15",
+        "name": "Royal Blood",
+        "released_at": "2025-03-21T00:00:00.000Z",
+        "set_code": "OP10",
+        "slug": "royal-blood"
+      }
+    }
+  ]
 }
