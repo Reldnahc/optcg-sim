@@ -1,0 +1,86 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-005
+epic_id: TYP-005
+title: Make canonical contracts the source of truth for @optcg/types
+type: tooling
+area: contracts
+primary_concern: tooling
+priority: critical
+status: approved
+summary: >
+  Replace the current duplicated package type maintenance model with a
+  contract-authoritative flow where `contracts/canonical-types.ts` and
+  `contracts/types/*` are the source of truth for `@optcg/types`.
+story_boundary: >
+  This parent coordinates TYP-005A through TYP-005D only. It is not directly
+  implementable and must not change contract shapes, package source files, or
+  tooling outside child stories.
+allowed_touch_points:
+  - stories/approved/TYP-005-canonical-contract-source-of-truth-parent.yaml
+  - stories/approved/TYP-005A-package-type-authority-strategy.yaml
+  - stories/approved/TYP-005B-deterministic-package-type-sync.yaml
+  - stories/approved/TYP-005C-migrate-package-types-to-canonical-output.yaml
+  - stories/approved/TYP-005D-whole-surface-type-parity-guard.yaml
+spec_refs:
+  - 03-game-state-events-decisions.s002
+  - 03-game-state-events-decisions.s003
+  - 03-game-state-events-decisions.s016
+  - 06-visibility-security.s004
+  - 06-visibility-security.s007
+  - 06-visibility-security.s021
+  - 22-v6-implementation-tightening.s006
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s011
+  - 23-repo-tooling-and-enforcement.s016
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s028
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+scope:
+  - coordinate a parent/substory hardening effort for canonical contract authority over `@optcg/types`
+  - require the package authority strategy to be documented before sync tooling or migration work starts
+  - require deterministic generated or synced package type output before current package drift is corrected
+  - require a whole-surface guard before the parent set is considered complete
+  - keep only one child story active in `agent-packets/active.json` at a time after approval
+non_scope:
+  - direct implementation from this parent story
+  - packetizing or activating this parent story as an active implementation story
+  - gameplay rules, engine behavior, server protocol behavior, client behavior, replay behavior, persistence, or UI work
+  - changing canonical contract shapes outside an approved child story
+  - deciding uncited behavior for `respondToDecision.playerId`
+dependencies: []
+acceptance_criteria:
+  - approved child stories exist for strategy, sync tooling, migration, and guard enforcement
+  - each child story is narrow, concern-scoped, and has explicit allowed touch points and non-scope
+  - this parent remains non-implementable and is not directly packetized
+  - future approval can use the parent integration branch workflow with child packetization only
+required_tests:
+  - set-level story-review before presenting these generated stories as approval-ready
+  - run `corepack pnpm run stories:validate` after generated story files are checked in
+repo_rules:
+  - do not packetize this parent as an active implementation story
+  - use child packets only and keep one active child packet at a time
+  - if the approved parent integration workflow is used, close the non-packetized parent only through validated parent-mode cleanup after the parent PR merges
+  - child stories must fail closed on any contract authority gap that would require gameplay, validation, protocol, replay, or hidden-information behavior decisions
+ambiguity_policy: fail_and_escalate
+child_stories:
+  - id: TYP-005A
+    title: Define the package type authority strategy
+    concern: contract
+    depends_on: []
+  - id: TYP-005B
+    title: Add deterministic package type sync tooling
+    concern: tooling
+    depends_on: [TYP-005A]
+  - id: TYP-005C
+    title: Migrate package types to canonical output
+    concern: contract
+    depends_on: [TYP-005B]
+  - id: TYP-005D
+    title: Add whole-surface type parity guard
+    concern: verification
+    depends_on: [TYP-005C]

@@ -1,0 +1,70 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-005B
+epic_id: TYP-005
+title: Add deterministic package type sync tooling
+type: tooling
+area: contracts
+primary_concern: tooling
+priority: critical
+status: approved
+summary: >
+  Add deterministic tooling that derives `@optcg/types` package type source
+  files from canonical contract modules and can verify stale output without
+  making type-shape decisions itself.
+story_boundary: >
+  Own only the sync or generation mechanism selected by TYP-005A and focused
+  tests for deterministic output. Do not migrate committed package type files or
+  wire a merge-blocking whole-surface guard in this story.
+allowed_touch_points:
+  - tools/sync-package-types.ts
+  - tests/contracts/package-type-sync-tool.test.mjs
+  - package.json
+  - docs/contracts/type-authority.md
+  - stories/approved/TYP-005B-deterministic-package-type-sync.yaml
+spec_refs:
+  - 22-v6-implementation-tightening.s006
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s011
+  - 23-repo-tooling-and-enforcement.s016
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+scope:
+  - implement the TYP-005A-selected sync strategy as a deterministic tool with write and check modes
+  - derive package module output from the canonical module mapping documented in TYP-005A
+  - preserve type-only import and export semantics and `.js` module specifiers expected by the package source model
+  - add package scripts for invoking sync write and stale-output check modes without yet making them part of root `verify`
+  - test deterministic output, stable ordering, stale-output detection, and clear diagnostics using temporary fixture directories
+non_scope:
+  - updating committed `packages/types/src/*` to match canonical contracts
+  - deciding whether package-only drift fields should exist
+  - changing `contracts/types/*` or `contracts/canonical-types.ts`
+  - adding the final root verify or CI enforcement gate
+  - gameplay, server, client, replay, database, UI, or protocol behavior
+dependencies:
+  - TYP-005A
+acceptance_criteria:
+  - the sync tool can write package-style type modules from canonical-style input modules deterministically
+  - the sync tool check mode fails when generated output differs from checked output and passes when it matches
+  - diagnostics identify the stale or mismatched package type file path
+  - package scripts expose the sync write and check entrypoints
+  - committed package type files are not migrated in this story
+required_tests:
+  - exact candidate story-review before implementation
+  - focused sync-tool test for deterministic write output
+  - focused sync-tool test for stale-output check failure
+  - focused sync-tool test for clean check success
+  - focused sync-tool test for preserving type-only module boundaries
+  - run `corepack pnpm exec vitest run tests/contracts/package-type-sync-tool.test.mjs`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run typecheck`
+repo_rules:
+  - keep the tool independent of gameplay, server, client, and replay packages
+  - do not add broad parser or AST rewrites unless required by the documented strategy
+  - do not use the tool to make one-sided contract authority decisions
+  - if implementation reveals the selected strategy cannot work, stop and raise an ambiguity instead of broadening the story
+ambiguity_policy: fail_and_escalate
