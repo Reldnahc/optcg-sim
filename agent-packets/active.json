@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-005D.md",
-      "storyId": "TYP-005D",
-      "storyPath": "stories/approved/TYP-005D-align-classified-canonical-shared-contract-omissions.yaml",
-      "storySha256": "a0b1eb046da36a42d3141c83cb267ce5fd0e139b122f9c240458388d978ade2f"
+      "packetPath": "agent-packets/TYP-005E.md",
+      "storyId": "TYP-005E",
+      "storyPath": "stories/approved/TYP-005E-migrate-engine-core-consumers-off-package-only-type-drift.yaml",
+      "storySha256": "8ed5a719f3a56c06a35befcbc087e312e28c23e7538e01366dd6f18001406a0e"
     }
   ],
   "version": 1
