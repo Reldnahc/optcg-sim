@@ -7,7 +7,6 @@
       "category": "auto",
       "trigger": { "type": "whenAttacking" },
       "oncePerTurn": true,
-      "optional": false,
       "sourcePresencePolicy": "mustRemainInSameZone",
       "effect": {
         "type": "sequence",

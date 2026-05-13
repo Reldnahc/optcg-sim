@@ -10,6 +10,11 @@ import { fileURLToPath } from "node:url";
 
 import type { PoneglyphCardDetail } from "@optcg/types";
 import {
+  buildGeneratedSupportIndex,
+  toGeneratedSupportManifestEvidence,
+  type GeneratedSupportManifestEvidence,
+} from "./generated-support-index.js";
+import {
   buildMatchCardManifest,
   computeMatchCardManifestHash,
   createManifestVersions,
@@ -462,7 +467,6 @@ const realCardFixtureIds = Object.freeze(
 );
 
 const supportedEffectDefinitionId = "eb01-023.on-play-draw-1";
-const supportedGeneratedEffectDefinitionId = "op10-045.generated-support";
 const supportedEffectRulesVersion = "2026-01-16";
 
 export const realCardDslEffectDefinitionFixturePath =
@@ -482,6 +486,11 @@ const realCardMatchManifestVersions = createManifestVersions({
   effectDefinitionsVersion: "real-card-effects-v1",
   overlayVersion: "real-card-overlays-v1",
 });
+
+type NormalizedRealCardFixture = {
+  readonly fixtureId: RealCardFixtureId;
+  readonly normalized: ReturnType<typeof normalizePoneglyphCardDetail>;
+};
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -513,7 +522,7 @@ export async function loadCheckedInEb01023OnPlayDraw1EffectDefinition(): Promise
   return JSON.parse(source) as EffectDefinition;
 }
 
-async function loadCheckedInOp10045GeneratedSupportEffectDefinition(): Promise<EffectDefinition> {
+export async function loadCheckedInOp10045GeneratedSupportEffectDefinition(): Promise<EffectDefinition> {
   const source = await readFile(
     path.join(repoRoot, realCardDslGeneratedSupportFixturePath),
     "utf8",
@@ -525,32 +534,84 @@ async function loadCheckedInOp10045GeneratedSupportEffectDefinition(): Promise<E
 export async function buildRealCardDslMatchCardManifest(): Promise<MatchCardManifest> {
   const effectDefinition =
     await loadCheckedInEb01023OnPlayDraw1EffectDefinition();
-  const generatedSupportEffectDefinition =
-    await loadCheckedInOp10045GeneratedSupportEffectDefinition();
-  const cards = await Promise.all(
-    realCardFixtureIds.map(async (fixtureId) => {
-      const normalized = normalizePoneglyphCardDetail(
-        await loadCheckedInRealPoneglyphFixture(fixtureId),
-      );
-      const merged = mergeSimulatorOverlay(
-        normalized,
-        createRealCardOverlay(fixtureId, normalized),
-      );
-
-      return merged.card;
-    }),
+  const normalizedFixtures = await Promise.all(
+    realCardFixtureIds.map(
+      async (fixtureId): Promise<NormalizedRealCardFixture> => {
+        return {
+          fixtureId,
+          normalized: normalizePoneglyphCardDetail(
+            await loadCheckedInRealPoneglyphFixture(fixtureId),
+          ),
+        };
+      },
+    ),
   );
+  const generatedSupportEvidence =
+    buildRealCardGeneratedSupportEvidence(normalizedFixtures);
+  const cards = normalizedFixtures.map(({ fixtureId, normalized }) => {
+    const merged = mergeSimulatorOverlay(
+      normalized,
+      createRealCardOverlay(
+        fixtureId,
+        normalized,
+        generatedSupportEvidence.support[normalized.cardId],
+      ),
+    );
+
+    return merged.card;
+  });
 
   return buildMatchCardManifest({
     cards,
     createdAt: realCardMatchManifestCreatedAt,
     effectDefinitions: {
       [supportedEffectDefinitionId]: effectDefinition,
-      [supportedGeneratedEffectDefinitionId]: generatedSupportEffectDefinition,
+      ...generatedSupportEvidence.effectDefinitions,
     },
     source: "poneglyph-fixture",
     versions: realCardMatchManifestVersions,
   });
+}
+
+function buildRealCardGeneratedSupportEvidence(
+  fixtures: readonly NormalizedRealCardFixture[],
+): GeneratedSupportManifestEvidence {
+  const generatedSupportCandidates = fixtures
+    .filter((fixture) => fixture.fixtureId === "OP10-045")
+    .map(({ normalized }) => {
+      if (normalized.effectText === undefined) {
+        throw new Error(
+          `Generated-support fixture ${String(normalized.cardId)} is missing effect text.`,
+        );
+      }
+
+      return {
+        behaviorHash: normalized.behaviorHash,
+        cardDataVersion: realCardMatchManifestVersions.cardDataVersion,
+        cardId: normalized.cardId,
+        effectDefinitionsVersion:
+          realCardMatchManifestVersions.effectDefinitionsVersion,
+        rulesVersion: supportedEffectRulesVersion,
+        sourceText: normalized.effectText,
+        sourceTextHash: normalized.sourceTextHash,
+      };
+    });
+  const index = buildGeneratedSupportIndex({
+    cards: generatedSupportCandidates,
+    validateEffectDefinition: () => ({ valid: true }),
+  });
+  const unsupported = index.entries.filter(
+    (entry) => entry.status !== "supported",
+  );
+  if (unsupported.length > 0) {
+    throw new Error(
+      `Generated support failed for ${unsupported
+        .map((entry) => String(entry.cardId))
+        .join(", ")}.`,
+    );
+  }
+
+  return toGeneratedSupportManifestEvidence(index);
 }
 
 export async function loadRealCardDslMatchCardManifestFixture(): Promise<MatchCardManifest> {
@@ -572,7 +633,19 @@ export async function loadRealCardDslMatchCardManifestFixture(): Promise<MatchCa
 function createRealCardOverlay(
   fixtureId: RealCardFixtureId,
   normalized: ReturnType<typeof normalizePoneglyphCardDetail>,
+  generatedSupport?: CardImplementationRecord,
 ): ResolvedCardOverlay {
+  if (generatedSupport !== undefined) {
+    return {
+      cardId: normalized.cardId,
+      support: {
+        ...generatedSupport,
+        notes:
+          "Reviewed real-card fixture with complete [When Attacking] [Once Per Turn] draw-then-trash generated-support linkage.",
+      },
+    };
+  }
+
   const support: CardImplementationRecord = {
     behaviorHash: normalized.behaviorHash,
     cardDataVersion: realCardMatchManifestVersions.cardDataVersion,
@@ -582,32 +655,21 @@ function createRealCardOverlay(
         ? supportedEffectRulesVersion
         : fixtureId === "OP04-014"
           ? "op04-014-banish-v1"
-          : fixtureId === "OP10-045"
-            ? supportedEffectRulesVersion
-            : "fixture-real-card",
+          : "fixture-real-card",
     sourceTextHash: normalized.sourceTextHash,
     status:
       fixtureId === "EB01-023"
         ? "implemented-dsl"
         : fixtureId === "OP04-014"
           ? "vanilla-confirmed"
-          : fixtureId === "OP10-045"
-            ? "implemented-dsl"
-            : "unsupported",
-    tested:
-      fixtureId === "EB01-023" ||
-      fixtureId === "OP04-014" ||
-      fixtureId === "OP10-045",
+          : "unsupported",
+    tested: fixtureId === "EB01-023" || fixtureId === "OP04-014",
   };
 
   if (fixtureId === "EB01-023") {
     support.effectDefinitionId = supportedEffectDefinitionId;
     support.notes =
       "Reviewed real-card fixture with explicit [On Play] Draw 1 card DSL linkage.";
-  } else if (fixtureId === "OP10-045") {
-    support.effectDefinitionId = supportedGeneratedEffectDefinitionId;
-    support.notes =
-      "Reviewed real-card fixture with complete [When Attacking] [Once Per Turn] draw-then-trash generated-support linkage.";
   } else if (fixtureId === "OP04-014") {
     support.notes =
       "Reviewed real-card fixture for complete printed Banish keyword behavior through parenthetical explanatory-note support gates.";

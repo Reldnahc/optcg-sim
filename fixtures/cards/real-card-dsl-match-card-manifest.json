@@ -4111,7 +4111,6 @@
             "type": "whenAttacking"
           },
           "oncePerTurn": true,
-          "optional": false,
           "sourcePresencePolicy": "mustRemainInSameZone",
           "effect": {
             "type": "sequence",
@@ -4147,5 +4146,5 @@
       }
     }
   },
-  "manifestHash": "6caf7847807bc49aa971a0541b8cae829eab9bcec09ecd7a0c2b58b90ab7ee8e"
+  "manifestHash": "de214734889bdb61ce186ce46c155396521a787f6186bf2f5e11fd85b6af7929"
 }
