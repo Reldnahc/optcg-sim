@@ -1,0 +1,123 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-012
+epic_id: CARD-012
+title: Blocker and empty-effect generated support enablement
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Enable two already-supported generated-support card-data cases: standalone
+  printed `[Blocker]` keyword text, including the standard parenthetical
+  reminder text, and Poneglyph cards whose printed effect is null or empty and
+  normalizes to empty source text. Both cases should become playable support
+  evidence without adding new engine behavior or manually admitting individual
+  cards.
+story_boundary: >
+  Own only @optcg/cards parser, generated-support evaluator, runtime capability
+  metadata, report/probe rendering, and package-local tests needed to recognize
+  standalone Blocker, EB01-017-shaped Blocker reminder text, and empty effect
+  text using EB01-005 as the named vanilla proof target. Do not implement
+  opponent-turn power modifiers, conditional effects, new combat rules, server
+  Redis loading, broad fixture-corpus refreshes, unrelated fixture-only manifest
+  regeneration, or per-card manual support records.
+allowed_touch_points:
+  - fixtures/poneglyph/cards/EB01-005.*.json
+  - fixtures/poneglyph/cards/EB01-017.*.json
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - stories/generated/CARD-012-blocker-and-empty-effect-generated-support.yaml
+  - stories/approved/CARD-012-blocker-and-empty-effect-generated-support.yaml
+  - agent-packets/CARD-012.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s019
+  - 02-engine-mechanics.s025
+  - 02-engine-mechanics.s045
+  - 05-effect-dsl-reference.s017
+  - 05-effect-dsl-reference.s018
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+scope:
+  - certify standalone `[Blocker]` as generated-supportable keyword text when the normalized card metadata also exposes the printed blocker keyword
+  - certify the real Poneglyph-style Blocker line `[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)` by ignoring the parenthetical reminder text in the cards layer
+  - use EB01-017 as the named live/manual Blocker proof target for the reminder-text parser behavior
+  - record runtime capability evidence for the certified standalone Blocker parser rule using already-implemented blocker battle behavior
+  - treat null or empty printed effect text that normalizes to source text `""` as no printed effect text, yielding playable vanilla support evidence rather than an unparsed-span blocker
+  - use EB01-005 as the named live/manual vanilla proof target for empty-effect generated support
+  - keep support evidence hash-bound to current normalized Poneglyph source and behavior hashes
+  - ensure read-only support probe output for cards with mixed supported and unsupported text no longer reports standalone Blocker as unparsed while preserving unsupported blockers for remaining text
+non_scope:
+  - OP03-045 full gameplay support
+  - opponent-turn power modifier support
+  - conditional effect support
+  - any new engine-core battle, blocker, or computed-power behavior
+  - live Poneglyph fixture capture outside EB01-017 and EB01-005
+  - fixture-only real-card manifest regeneration unless target fixture or generated-support evidence changes require it
+  - Redis cache or server match-time lazy loading
+  - broad parser grammar expansion beyond exact standalone Blocker and empty text
+dependencies:
+  - CARD-011A
+  - CARD-011B
+  - ENG-014
+card_source_integrity:
+  - EB01-017 is the named Blocker target card for this story; authoritative provenance is live Poneglyph captured or inspected with `corepack pnpm --filter @optcg/cards capture:fixture -- --card EB01-017` and may be supplemented by `corepack pnpm --filter @optcg/cards support:probe -- --card EB01-017`
+  - EB01-005 is the named vanilla target card for this story; authoritative provenance is live Poneglyph captured or inspected with `corepack pnpm --filter @optcg/cards capture:fixture -- --card EB01-005` and may be supplemented by `corepack pnpm --filter @optcg/cards support:probe -- --card EB01-005`
+  - required tests must remain hermetic by injecting reviewed EB01-017-shaped and EB01-005-shaped normalized/Poneglyph data or by reading checked-in target fixtures when this story adds them; CI must not call live Poneglyph
+  - behavior-sensitive source fields for EB01-005 empty-effect tests are cardId EB01-005, card_type/category Character, color, cost, power, counter, types/type line, printed effect null or empty with normalized source text exactly `""`, trigger text null or empty, printed keywords empty, sourceTextHash, and behaviorHash
+  - behavior-sensitive source fields for EB01-017 Blocker tests are cardId EB01-017, card_type/category Character, color, cost, power, counter, types/type line, printed effect text exactly `[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)`, trigger text null or empty, printedKeywords containing `blocker`, sourceTextHash, and behaviorHash
+  - behavior-sensitive source fields for generic Blocker tests include card_type/category Character, printed effect text exactly `[Blocker]`, trigger text null or empty, printedKeywords containing `blocker`, sourceTextHash, and behaviorHash
+  - cards with `[Blocker]` plus additional unsupported printed rules text must stay unsupported with blocker evidence for only the unsupported remaining text
+  - if target-card fixture data, normalization evidence, generated-support evidence, support reports, or cards-produced manifest inputs change, regenerate or update the affected checked-in artifacts in the same story patch and rerun the card fixture/support tests
+engine_capability_preflight:
+  - standalone Blocker required runtime capability is keyword:blocker:printed, backed by existing engine support for block step activation, resting the blocker, redirecting the attack target, blockerActivated events, hidden-information-safe legal action projection, and deterministic battle resolution
+  - supported required runtime capabilities are keyword:blocker:printed and sourcePresencePolicy:none-for-keyword
+  - empty effect text requires no runtime effect capability; it maps to vanilla-confirmed support evidence with no generated EffectDefinition
+  - missing required runtime capabilities are none for this story if existing engine blocker tests remain passing
+  - if implementation discovers that the cards package cannot prove blocker capability without engine changes, stop and split an ENG prerequisite instead of broadening this story
+acceptance_criteria:
+  - exact standalone `[Blocker]` source text evaluates playable through generated support with blocker capability evidence and no unparsed-span blockers
+  - EB01-017-shaped exact full Poneglyph reminder-text Blocker source text evaluates playable through generated support with blocker capability evidence and no unparsed-span blockers
+  - EB01-005-shaped null or empty printed effect text normalizes to source text `""` and evaluates playable as `vanilla-confirmed`, with no generated EffectDefinition and no unparsed-span blockers
+  - a card with `[Blocker]` plus unsupported opponent-turn power text remains playable no and reports only the unsupported opponent-turn text as unparsed
+  - support probe exits 0 for completed playable-no evaluations and includes span text for remaining blockers
+  - existing OP03-044 generated-support playability remains unchanged
+required_tests:
+  - exact candidate story-review before implementation
+  - parser unit test for exact standalone `[Blocker]`
+  - parser unit test for exact EB01-017 full Poneglyph reminder-text Blocker line
+  - parser or evaluator unit test for `[Blocker]` plus unsupported remaining text preserving only the unsupported span
+  - generated-support index/evaluator test proving standalone Blocker support evidence is produced
+  - generated-support index/evaluator test proving EB01-017-shaped Blocker reminder text support evidence is produced
+  - generated-support index/evaluator test proving EB01-005-shaped null or empty printed effect text normalizes to source text `""` and produces vanilla-confirmed support evidence without an effect definition
+  - support-probe test proving mixed supported Blocker plus unsupported text prints only the remaining unsupported span
+  - regression test proving OP03-044 remains generated-support playable
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-012 packet before implementation
+  - stay within allowed_touch_points
+  - preserve generated-support fail-closed behavior when any parsed component lacks certified parser or runtime capability evidence
+  - do not add per-card manual support records for cards that should be validated at runtime from Poneglyph data
+ambiguity_policy: fail_and_escalate

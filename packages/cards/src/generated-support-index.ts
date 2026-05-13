@@ -1,7 +1,9 @@
 import type {
+  CardCategory,
   CardId,
   CardImplementationRecord,
   EffectDefinition,
+  Keyword,
 } from "@optcg/types";
 
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
@@ -21,6 +23,8 @@ export interface GeneratedSupportCardTextInput {
   cardId: CardId;
   effectDefinitionsVersion: string;
   expectedSourceTextHash?: string;
+  category?: CardCategory;
+  printedKeywords?: readonly Keyword[];
   rulesVersion: string;
   sourceText: string;
   sourceTextHash: string;
@@ -148,6 +152,24 @@ function buildGeneratedSupportIndexEntry(
     });
   }
 
+  if (card.sourceText.length === 0) {
+    if (!hasEmptyEffectSupportMetadata(card)) {
+      return unsupportedMetadataEntry({
+        card,
+        message:
+          "Normalized card metadata does not satisfy certified empty-effect support preconditions.",
+        parserRuleIds: [],
+      });
+    }
+
+    return supportedVanillaEntry({
+      capabilityEvidence: [],
+      card,
+      parseStatus: "complete",
+      parserRuleIds: [],
+    });
+  }
+
   const parseResult = parseCertifiedCardText({
     cardId: card.cardId,
     effectDefinitionsVersion: card.effectDefinitionsVersion,
@@ -163,6 +185,18 @@ function buildGeneratedSupportIndexEntry(
       parseStatus: parseResult.status,
       parserRuleIds:
         "parsedRuleIds" in parseResult ? parseResult.parsedRuleIds : [],
+    });
+  }
+
+  if (
+    parseResult.parserRuleIds.includes("exact:keyword:blocker:standalone") &&
+    !hasBlockerKeywordSupportMetadata(card)
+  ) {
+    return unsupportedMetadataEntry({
+      card,
+      message:
+        "Normalized card metadata does not satisfy certified Blocker keyword support preconditions.",
+      parserRuleIds: parseResult.parserRuleIds,
     });
   }
 
@@ -185,6 +219,17 @@ function buildGeneratedSupportIndexEntry(
           capabilityCoverage.missing.map((missing) => missing.capabilityId),
         ),
       ].sort(),
+      parseStatus: parseResult.status,
+      parserRuleIds: parseResult.parserRuleIds,
+    });
+  }
+
+  if (
+    parseResult.effectDefinition.implementationStatus === "vanilla-confirmed"
+  ) {
+    return supportedVanillaEntry({
+      capabilityEvidence: capabilityCoverage.evidence,
+      card,
       parseStatus: parseResult.status,
       parserRuleIds: parseResult.parserRuleIds,
     });
@@ -231,6 +276,79 @@ function buildGeneratedSupportIndexEntry(
       tested: true,
     },
   };
+}
+
+function hasBlockerKeywordSupportMetadata(
+  card: GeneratedSupportCardTextInput,
+): boolean {
+  return card.category === "character" && hasPrintedKeyword(card, "blocker");
+}
+
+function hasEmptyEffectSupportMetadata(
+  card: GeneratedSupportCardTextInput,
+): boolean {
+  return card.category === "character" && card.printedKeywords?.length === 0;
+}
+
+function hasPrintedKeyword(
+  card: GeneratedSupportCardTextInput,
+  keyword: Keyword,
+): boolean {
+  return card.printedKeywords?.includes(keyword) === true;
+}
+
+function supportedVanillaEntry({
+  capabilityEvidence,
+  card,
+  parseStatus,
+  parserRuleIds,
+}: {
+  capabilityEvidence: readonly RuntimeCapabilityEvidence[];
+  card: GeneratedSupportCardTextInput;
+  parseStatus: GeneratedSupportParserResultStatus;
+  parserRuleIds: readonly string[];
+}): GeneratedSupportIndexEntry {
+  return {
+    blockers: [],
+    capabilityEvidence,
+    cardId: card.cardId,
+    missingCapabilityIds: [],
+    parseStatus,
+    parserRuleIds,
+    sourceTextHash: card.sourceTextHash,
+    status: "supported",
+    support: {
+      behaviorHash: card.behaviorHash,
+      cardDataVersion: card.cardDataVersion,
+      cardId: card.cardId,
+      rulesVersion: card.rulesVersion,
+      sourceTextHash: card.sourceTextHash,
+      status: "vanilla-confirmed",
+      tested: true,
+    },
+  };
+}
+
+function unsupportedMetadataEntry({
+  card,
+  message,
+  parserRuleIds,
+}: {
+  card: GeneratedSupportCardTextInput;
+  message: string;
+  parserRuleIds: readonly string[];
+}): GeneratedSupportIndexEntry {
+  return unsupportedEntry({
+    blockers: [
+      {
+        code: "unsupported-primitive",
+        message,
+      },
+    ],
+    card,
+    parseStatus: "unsupportedPrimitive",
+    parserRuleIds,
+  });
 }
 
 function unsupportedEntry({
@@ -346,6 +464,10 @@ function capabilityIdsForParserRuleId(parserRuleId: string): readonly string[] {
 
   if (parserRuleId === "line-separated-effect-blocks:v1") {
     return ["composition:line-separated-effect-blocks:v1"];
+  }
+
+  if (parserRuleId === "exact:keyword:blocker:standalone") {
+    return ["keyword:blocker:printed", "sourcePresencePolicy:none-for-keyword"];
   }
 
   if (parserRuleId === "exact:on-play:draw-n:trash-m:hand:self") {
