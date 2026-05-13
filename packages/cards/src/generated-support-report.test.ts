@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { CardId } from "@optcg/types";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { buildGeneratedSupportIndex } from "./generated-support-index.js";
 import { buildGeneratedSupportReport } from "./generated-support-report.js";
+import { normalizePoneglyphCardDetail } from "./normalization.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 
 const baseInput = {
@@ -13,8 +17,50 @@ const baseInput = {
 };
 
 const validateEffectDefinition = () => ({ valid: true }) as const;
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+);
 
 describe("generated support report", () => {
+  it("includes OP03-044 Kaya as supported with certified parser and capability evidence", () => {
+    const fixture = JSON.parse(
+      readFileSync(
+        path.join(repoRoot, "fixtures/poneglyph/cards/OP03-044.kaya.json"),
+        "utf8",
+      ),
+    ) as unknown;
+    const normalized = normalizePoneglyphCardDetail(fixture);
+
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          behaviorHash: normalized.behaviorHash,
+          cardDataVersion: "cards-v1",
+          cardId: normalized.cardId,
+          effectDefinitionsVersion: "effects-v1",
+          rulesVersion: "rules-v1",
+          sourceText: normalized.effectText ?? "",
+          sourceTextHash: normalized.sourceTextHash,
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.supportedCardIds).toEqual(["OP03-044"]);
+    expect(report.unsupportedCardIds).toEqual([]);
+    expect(report.statusByCardId["OP03-044"]).toEqual({
+      blockerCodes: [],
+      missingCapabilityIds: [],
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-play:draw-n:trash-m:hand:self"],
+      status: "supported",
+    });
+  });
+
   it("summarizes supported and unsupported generated-support evidence deterministically", () => {
     const matrixWithoutDraw = {
       ...generatedSupportRuntimeCapabilityMatrix,
