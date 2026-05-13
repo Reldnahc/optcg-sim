@@ -1,4 +1,5 @@
 import type {
+  CardId,
   CardImplementationRecord,
   EffectDefinition,
   MatchCardManifest,
@@ -577,7 +578,11 @@ function buildRealCardGeneratedSupportEvidence(
   fixtures: readonly NormalizedRealCardFixture[],
 ): GeneratedSupportManifestEvidence {
   const generatedSupportCandidates = fixtures
-    .filter((fixture) => fixture.fixtureId === "OP10-045")
+    .filter(
+      (fixture) =>
+        !hasReviewedNonGeneratedFixtureSupport(fixture.fixtureId) &&
+        fixture.normalized.effectText !== undefined,
+    )
     .map(({ normalized }) => {
       if (normalized.effectText === undefined) {
         throw new Error(
@@ -600,18 +605,19 @@ function buildRealCardGeneratedSupportEvidence(
     cards: generatedSupportCandidates,
     validateEffectDefinition: () => ({ valid: true }),
   });
-  const unsupported = index.entries.filter(
-    (entry) => entry.status !== "supported",
-  );
-  if (unsupported.length > 0) {
-    throw new Error(
-      `Generated support failed for ${unsupported
-        .map((entry) => String(entry.cardId))
-        .join(", ")}.`,
-    );
+  const evidence = toGeneratedSupportManifestEvidence(index);
+  const op10045 = "OP10-045" as CardId;
+  if (evidence.support[op10045] === undefined) {
+    throw new Error("Generated support failed for OP10-045.");
   }
 
-  return toGeneratedSupportManifestEvidence(index);
+  return evidence;
+}
+
+function hasReviewedNonGeneratedFixtureSupport(
+  fixtureId: RealCardFixtureId,
+): boolean {
+  return fixtureId === "EB01-023" || fixtureId === "OP04-014";
 }
 
 export async function loadRealCardDslMatchCardManifestFixture(): Promise<MatchCardManifest> {
