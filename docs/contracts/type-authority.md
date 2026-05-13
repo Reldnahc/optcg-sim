@@ -146,51 +146,51 @@ Contract shape changes require edits in canonical contract modules under separat
     },
     {
       "field": "ReplacementAppliedEventPayload",
-      "disposition": "canonical_contract_omission",
-      "followUpStory": "TYP-005D",
+      "disposition": "behavior_ambiguity",
+      "followUpStory": "stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md",
       "specRefs": [
         "03-game-state-events-decisions.s002",
         "22-v6-implementation-tightening.s006"
       ],
-      "canonicalShape": "Canonical EngineEvent uses payload: unknown and does not define ReplacementAppliedEventPayload.",
-      "packageOrDownstreamShape": "packages/types/src/events.ts defines ReplacementAppliedEventPayload with process and payload hash fields.",
-      "downstreamConsumerSummary": "Replacement event payload consumers compile against package-only payload typing, signaling a canonical contract omission for shared event payload structure."
+      "canonicalShape": "Canonical EngineEvent keeps payload typed as unknown and cited authority does not define a stable ReplacementAppliedEventPayload contract.",
+      "packageOrDownstreamShape": "packages/types/src/events.ts currently exposes a ReplacementAppliedEventPayload shape used by downstream consumers, but that shape is package-local and not canonically specified by cited sections.",
+      "downstreamConsumerSummary": "Promoting this payload shape directly into canonical contracts would invent uncited event-payload semantics; this is recorded as behavior ambiguity and routed to durable ambiguity resolution."
     },
     {
       "field": "PublicDecision.processId",
-      "disposition": "canonical_contract_omission",
-      "followUpStory": "TYP-005D",
+      "disposition": "behavior_ambiguity",
+      "followUpStory": "stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md",
       "specRefs": [
         "06-visibility-security.s004",
         "06-visibility-security.s007"
       ],
-      "canonicalShape": "Canonical PublicDecision omits processId while canonical replacement decision state includes processId in PendingDecision.",
-      "packageOrDownstreamShape": "packages/types/src/view.ts adds optional PublicDecision.processId for projected replacement decisions.",
-      "downstreamConsumerSummary": "Projection and consumer typing rely on this field to render replacement choice context, creating a canonical view-contract omission."
+      "canonicalShape": "Canonical PublicDecision includes id/type/playerId/prompt/causedBy/timeoutMs and does not authorize processId for player-facing decision views.",
+      "packageOrDownstreamShape": "packages/types/src/view.ts currently adds optional PublicDecision.processId for downstream replacement-decision consumers.",
+      "downstreamConsumerSummary": "Because process visibility and decision-routing exposure are not explicitly authorized by cited canonical sections, direct canonical promotion would guess hidden-info behavior and must remain an ambiguity."
     },
     {
       "field": "PublicDecision.replacementIds",
-      "disposition": "canonical_contract_omission",
-      "followUpStory": "TYP-005D",
+      "disposition": "behavior_ambiguity",
+      "followUpStory": "stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md",
       "specRefs": [
         "06-visibility-security.s004",
         "06-visibility-security.s007"
       ],
-      "canonicalShape": "Canonical PublicDecision omits replacementIds even though replacement-choice decisions track candidate IDs internally.",
-      "packageOrDownstreamShape": "packages/types/src/view.ts adds optional PublicDecision.replacementIds.",
-      "downstreamConsumerSummary": "Downstream replacement UI/decision handlers compile against package-only replacementIds, indicating a canonical projection omission."
+      "canonicalShape": "Canonical PublicDecision does not include replacementIds, and cited canonical text does not specify whether candidate replacement identifiers are public in decision payloads.",
+      "packageOrDownstreamShape": "packages/types/src/view.ts currently carries optional PublicDecision.replacementIds relied on by some downstream UI/decision typing paths.",
+      "downstreamConsumerSummary": "Adding replacementIds to canonical player-view contracts without explicit authority risks hidden-information leakage and decision-visibility drift; this remains a fail-closed behavior ambiguity."
     },
     {
       "field": "PublicDecision.mandatory",
-      "disposition": "canonical_contract_omission",
-      "followUpStory": "TYP-005D",
+      "disposition": "behavior_ambiguity",
+      "followUpStory": "stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md",
       "specRefs": [
         "06-visibility-security.s004",
         "06-visibility-security.s007"
       ],
-      "canonicalShape": "Canonical PublicDecision omits mandatory despite replacement decision state tracking whether choice is mandatory.",
-      "packageOrDownstreamShape": "packages/types/src/view.ts adds optional PublicDecision.mandatory.",
-      "downstreamConsumerSummary": "Consumer compile paths that differentiate forced vs optional replacement responses depend on package-only mandatory field."
+      "canonicalShape": "Canonical PublicDecision omits mandatory and cited sections do not define whether mandatory/optional replacement semantics belong in player-visible decision DTOs.",
+      "packageOrDownstreamShape": "packages/types/src/view.ts currently adds optional PublicDecision.mandatory consumed by downstream replacement response handling.",
+      "downstreamConsumerSummary": "Without explicit canonical authority for mandatory visibility semantics, routing this as a direct canonical omission would overreach; classification stays as behavior ambiguity pending durable follow-up."
     }
   ]
 }

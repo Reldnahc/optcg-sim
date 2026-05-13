@@ -94,6 +94,28 @@ test("downstream disposition record exists and enforces per-field TYP-005C autho
       isValidFollowUpStory(disposition.followUpStory),
       `${field} followUpStory must be TYP-005D/TYP-005E/TYP-005F or a story path`,
     );
+    if (disposition.disposition === "behavior_ambiguity") {
+      assert.ok(
+        disposition.followUpStory.startsWith("stories/ambiguities/") ||
+          disposition.followUpStory.startsWith("stories/approved/"),
+        `${field} behavior_ambiguity must route to an ambiguity/story path`,
+      );
+      assert.notEqual(
+        disposition.followUpStory,
+        "TYP-005D",
+        `${field} behavior_ambiguity cannot route directly to TYP-005D`,
+      );
+      assert.notEqual(
+        disposition.followUpStory,
+        "TYP-005E",
+        `${field} behavior_ambiguity cannot route directly to TYP-005E`,
+      );
+      assert.notEqual(
+        disposition.followUpStory,
+        "TYP-005F",
+        `${field} behavior_ambiguity cannot route directly to TYP-005F`,
+      );
+    }
     assert.ok(
       Array.isArray(disposition.specRefs) && disposition.specRefs.length > 0,
       `${field} must include non-empty specRefs`,
