@@ -15,14 +15,20 @@ summary: >
   fixture proof after required engine runtime support lands.
 story_boundary: >
   This parent is not directly implementable. It coordinates CARD-009A through
-  CARD-009C on a parent integration branch so parameterized Draw N parsing,
-  generated draw-then-trash parsing/capability evidence, and OP10-045
-  generated-support fixture evidence land as one reviewed card-support slice.
+  CARD-009D on a parent integration branch so parameterized Draw N parsing,
+  generated draw-then-trash parsing/capability evidence, the required
+  when-attacking runtime trigger queueing, and OP10-045 generated-support
+  fixture evidence land as one reviewed card-support slice.
 allowed_touch_points:
   - stories/generated/CARD-009*.yaml
   - stories/approved/CARD-009*.yaml
 spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
   - 04-effect-runtime.s005
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
   - 05-effect-dsl-reference.s008
   - 05-effect-dsl-reference.s022
   - 06-visibility-security.s003
@@ -43,10 +49,11 @@ spec_refs:
   - 24-story-schema.s016
   - 27-spec-driven-story-generation-workflow.s015
 scope:
-  - coordinate a parent integration branch for CARD-009A through CARD-009C
+  - coordinate a parent integration branch for CARD-009A through CARD-009D
   - certify bounded positive-integer Draw N parser rules without per-number rule certification
   - support exact generated templates such as `[On Play] Draw 3 cards.` and `[When Attacking] Draw 2 cards.`
   - certify the narrow draw-then-trash wording `Draw N cards and trash M cards from your hand` under supported trigger wrappers after ENG-050 runtime support exists
+  - add the bounded engine-core when-attacking trigger queueing needed for generated draw-then-trash sequence effects to execute through `applyDeclareAttack`
   - support optional `[Once Per Turn]` immediately after `[When Attacking]` for the OP10-045 shape
   - compose draw and trash into one generated EffectDefinition without manual per-card mapping
   - add OP10-045 Cavendish checked-in fixture/support evidence only after the complete printed gameplay-relevant text is supported
@@ -55,7 +62,7 @@ scope:
 non_scope:
   - direct implementation from this parent story
   - packetizing or activating this parent story as an active implementation story
-  - engine runtime behavior
+  - engine runtime behavior beyond the CARD-009D when-attacking draw-then-trash trigger queueing slice
   - trash-from-hand decision implementation
   - sequence continuation implementation
   - leader-type conditions
@@ -87,9 +94,13 @@ child_stories:
   - id: CARD-009C
     title: OP10-045 generated support fixture proof
     concern: Add OP10-045 Cavendish checked-in fixture/generated support/report evidence after the parser, capability matrix, and runtime can support its complete text.
-    depends_on: [CARD-009B]
+    depends_on: [CARD-009B, CARD-009D]
+  - id: CARD-009D
+    title: When Attacking draw-then-trash trigger queueing
+    concern: Add the bounded engine-core attack-trigger queueing support needed for certified draw-then-trash when-attacking sequence effects to execute through applyDeclareAttack.
+    depends_on: [CARD-009B, ENG-050B]
 acceptance_criteria:
-  - CARD-009A through CARD-009C are reviewed as a coherent generated-support group
+  - CARD-009A through CARD-009D are reviewed as a coherent generated-support group
   - each child story has a usable per-story story-review result before approval
   - child PRs target the CARD-009 parent integration branch if the group is approved
   - "`[On Play] Draw 3 cards.` is generated-supported by parameterized Draw N parsing and capability checks"
@@ -98,12 +109,12 @@ acceptance_criteria:
   - numeric parsing is bounded to positive safe integers and fails closed for zero, negative, decimal, word-number, malformed, and unsafe-integer counts
   - generated support does not require a manual per-card allowlist or manual per-number mapping for certified draw/trash templates
   - parent PR integration review confirms the pipeline composes without OP14, leader-condition, end-turn, server, client, live Poneglyph, UI, or broad parser scope creep
-  - parent PR cleanup metadata lists CARD-009A through CARD-009C, and durable parent lifecycle evidence binds the changed non-packetized CARD-009 parent story for closeout
-  - post-merge cleanup completes CARD-009A through CARD-009C and bound CARD-009 parent closeout only after the parent branch lands on main
+  - parent PR cleanup metadata lists CARD-009A through CARD-009D, and durable parent lifecycle evidence binds the changed non-packetized CARD-009 parent story for closeout
+  - post-merge cleanup completes CARD-009A through CARD-009D and bound CARD-009 parent closeout only after the parent branch lands on main
 required_tests:
   - set-level story-review for CARD-009 parent and children
   - per-story story-review for CARD-009 parent before approval
-  - per-story story-review for CARD-009A through CARD-009C before approval
+  - per-story story-review for CARD-009A through CARD-009D before approval
   - story-specific tests from every child story
   - full `corepack pnpm verify` on every child PR and parent PR
 repo_rules:

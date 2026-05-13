@@ -1,0 +1,105 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-009D
+epic_id: CARD-009
+title: When Attacking draw-then-trash trigger queueing
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Add engine trigger-queueing support for the already-certified
+  `[When Attacking]` draw-then-trash generated DSL template so cards whose
+  support evidence passes CARD-009B can execute through `applyDeclareAttack`
+  instead of only resolving from a manually seeded queue entry.
+story_boundary: >
+  Own only engine-core attack-trigger queueing for supported generated
+  `whenAttacking` sequence effects that draw cards and then trash cards from
+  hand. Do not broaden parser grammar, card-data fixture support, manifest
+  generation, or unrelated trigger timings in this story.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing*.ts
+  - packages/engine-core/src/effect-runtime-primitives.ts
+  - packages/engine-core/src/effect-runtime-queue-processing*.ts
+  - packages/engine-core/src/*attack*.test.ts
+  - packages/engine-core/src/*trigger*.test.ts
+  - packages/engine-core/src/real-card-dsl-runtime.test.ts
+  - stories/generated/CARD-009D-when-attacking-sequence-trigger-queueing.yaml
+  - stories/approved/CARD-009D-when-attacking-sequence-trigger-queueing.yaml
+  - agent-packets/CARD-009D.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s022
+  - 06-visibility-security.s003
+  - 06-visibility-security.s004
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s019
+  - 09-card-data-and-support-policy.s022
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 17-first-card-fixtures.s004
+  - 20-card-implementation-examples.s002
+scope:
+  - allow `queueWhenAttackingTriggers` to queue a supported `whenAttacking` sequence effect whose first segment draws for self and whose next segment trashes from the controller's hand
+  - preserve existing supported no-choice draw trigger behavior
+  - preserve fail-closed behavior for unsupported `whenAttacking` shapes, multiple matching attack-trigger effects, missing effect definitions, and source-presence failures
+  - preserve once-per-turn/source-presence metadata on the queued effect entry
+  - add an end-to-end `applyDeclareAttack` regression proving the queued sequence opens the private trash-from-hand decision after drawing
+  - prove event ordering keeps attack declaration before effect queueing and draw before private trash decision creation
+  - prove the resulting state hash remains deterministic after resolving the trash decision
+non_scope:
+  - parser grammar expansion
+  - generated-support index/report changes
+  - OP10-045 fixture capture or card-data manifest support changes
+  - On Play trigger behavior
+  - On Opponent's Attack trigger behavior
+  - optional activation decisions
+  - broad sequence grammar beyond draw-then-trash
+  - dynamic trash-until-hand-size effects
+  - leader-type conditions
+  - replacement effects
+  - server, client, API, UI, Redis, database, replay, or live Poneglyph work
+dependencies:
+  - CARD-009B
+  - ENG-050B
+acceptance_criteria:
+  - "`applyDeclareAttack` queues a supported `[When Attacking] Draw N cards and trash M cards from your hand.` generated DSL sequence and advances until the private trash-from-hand decision opens after draw"
+  - "`applyDeclareAttack` queues the same supported sequence when `oncePerTurn` is present on the effect block and advances until the private trash-from-hand decision opens after draw"
+  - responding to the private trash-from-hand decision resolves the trash step
+  - repeated runs keep attack declaration, effect queueing, draw, private decision creation, and final state hash deterministic
+  - the queued effect entry preserves source snapshot, source-presence policy, trigger event ID, effect block ID, controller, and ordering group
+  - "unsupported `whenAttacking` sequence shapes still fail closed with the existing unsupported-definition error path"
+  - existing no-choice draw `whenAttacking` trigger tests continue to pass unchanged
+  - hidden-information behavior remains private for the trash-from-hand decision and does not leak hand cards to non-choosers
+required_tests:
+  - exact candidate story-review before implementation
+  - focused engine-core trigger-queueing regression for `applyDeclareAttack` with draw-then-trash sequence
+  - focused engine-core trigger-queueing regression for the once-per-turn wrapper shape used by OP10-045
+  - focused continuation regression proving the private trash-from-hand decision response resolves the trash step
+  - focused determinism assertion proving repeated runs keep event ordering and final state hash stable
+  - focused unsupported-shape/fail-closed regression for an unsupported `whenAttacking` sequence
+  - existing hidden-info tests or a focused visibility assertion proving private hand selection remains private
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/engine-core test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - approve, generate, and activate the CARD-009D packet before implementation
+  - stay within allowed_touch_points
+  - keep engine-core free of @optcg/cards, Poneglyph HTTP, Redis, Postgres, WebSocket, React, and browser code
+  - preserve fail-closed behavior for unsupported gameplay shapes
+  - do not mark any real card supported from this story; CARD-009C owns OP10-045 fixture/support evidence after this prerequisite lands
+ambiguity_policy: fail_and_escalate
