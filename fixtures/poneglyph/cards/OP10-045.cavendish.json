@@ -1,0 +1,65 @@
+{
+  "card_number": "OP10-045",
+  "name": "Cavendish",
+  "language": "en",
+  "set": "OP10",
+  "set_name": "Royal Blood",
+  "released_at": "2026-03-13T00:00:00.000Z",
+  "released": true,
+  "card_type": "Character",
+  "rarity": "R",
+  "color": ["Green"],
+  "cost": 3,
+  "power": 4000,
+  "counter": 1000,
+  "life": null,
+  "attribute": ["Slash"],
+  "types": ["Supernovas", "Beautiful Pirates"],
+  "effect": "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
+  "trigger": null,
+  "block": "3",
+  "variants": [
+    {
+      "index": 0,
+      "name": null,
+      "label": "Standard",
+      "artist": "otton",
+      "product": {
+        "id": "op10",
+        "slug": "royal-blood",
+        "name": "Royal Blood",
+        "set_code": "OP10",
+        "released_at": "2026-03-13T00:00:00.000Z"
+      },
+      "images": {
+        "stock": {
+          "full": "https://example.test/op10-045-v0-full.png",
+          "thumb": "https://example.test/op10-045-v0-thumb.png"
+        },
+        "scan": {
+          "display": "https://example.test/op10-045-v0-display.png",
+          "full": "https://example.test/op10-045-v0-scan-full.png",
+          "thumb": "https://example.test/op10-045-v0-scan-thumb.png"
+        }
+      },
+      "errata": [],
+      "market": {
+        "tcgplayer_url": null,
+        "market_price": null,
+        "low_price": null,
+        "mid_price": null,
+        "high_price": null
+      }
+    }
+  ],
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "available_languages": ["en"],
+  "official_faq": []
+}

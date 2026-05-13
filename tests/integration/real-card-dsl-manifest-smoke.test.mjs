@@ -27,9 +27,15 @@ test("root integration loads real-card DSL manifest fixture into engine initial 
   const plainManifest = plainDataClone(cardsProducedManifest);
   const leaderCard = must(plainManifest.cards["OP01-060"], "OP01-060");
   const deckCard = must(plainManifest.cards["EB01-023"], "EB01-023");
+  const op10045 = must(plainManifest.cards["OP10-045"], "OP10-045");
 
   assert.equal(deckCard.support.status, "implemented-dsl");
   assert.equal(deckCard.support.effectDefinitionId, "eb01-023.on-play-draw-1");
+  assert.equal(op10045.support.status, "implemented-dsl");
+  assert.equal(
+    op10045.support.effectDefinitionId,
+    "op10-045.generated-support",
+  );
   assert.notEqual(plainManifest, cardsProducedManifest);
   assert.deepEqual(plainManifest, cardsProducedManifest);
 

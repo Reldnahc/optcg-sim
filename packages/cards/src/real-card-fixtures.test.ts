@@ -65,6 +65,14 @@ const supportedRealMechanicsMatrix = [
     rationale:
       "Reviewed complete real Banish keyword fixture with no extra printed behavior beyond parenthetical explanatory text.",
   },
+  {
+    cardId: "OP10-045",
+    effectFamily: "when-attacking",
+    expectedSupportStatus: "implemented-dsl",
+    expectedRuntimeStance: "implemented-dsl-runtime",
+    rationale:
+      "Reviewed complete real [When Attacking] [Once Per Turn] draw-then-trash fixture with generated-support runtime linkage.",
+  },
 ] as const satisfies readonly RealMechanicsMatrixEntry[];
 
 const realMechanicsMatrix = [
@@ -123,10 +131,15 @@ describe("real card fixtures", () => {
       realMechanicsMatrix.map((entry) => [entry.cardId, entry]),
     );
 
-    expect(realMechanicsMatrix).toHaveLength(corpusCardIds.length + 2);
+    expect(realMechanicsMatrix).toHaveLength(corpusCardIds.length + 3);
     expect(new Set(matrixCardIds).size).toBe(matrixCardIds.length);
     expect(matrixCardIds).toEqual(
-      expect.arrayContaining(["EB01-023", "OP04-014", ...corpusCardIds]),
+      expect.arrayContaining([
+        "EB01-023",
+        "OP04-014",
+        "OP10-045",
+        ...corpusCardIds,
+      ]),
     );
     expect(
       realMechanicsMatrix.filter(
@@ -165,6 +178,7 @@ describe("real card fixtures", () => {
       "OP05-091",
       "EB01-023",
       "OP04-014",
+      "OP10-045",
       ...realEffectShapeFixtureCorpus.map((entry) => entry.cardId),
     ]);
   });
@@ -178,6 +192,9 @@ describe("real card fixtures", () => {
     );
     const weevil = normalizePoneglyphCardDetail(
       await loadCheckedInRealPoneglyphFixture("EB01-023"),
+    );
+    const cavendish = normalizePoneglyphCardDetail(
+      await loadCheckedInRealPoneglyphFixture("OP10-045"),
     );
 
     expect(doflamingo.cardId).toBe("OP01-060");
@@ -200,6 +217,13 @@ describe("real card fixtures", () => {
     expect(weevil.types).toEqual(["The Seven Warlords of the Sea"]);
     expect(weevil.sourceTextHash).toMatch(/^[a-f0-9]{64}$/u);
     expect(weevil.behaviorHash).toMatch(/^[a-f0-9]{64}$/u);
+
+    expect(cavendish.cardId).toBe("OP10-045");
+    expect(cavendish.effectText).toBe(
+      "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
+    );
+    expect(cavendish.sourceTextHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(cavendish.behaviorHash).toMatch(/^[a-f0-9]{64}$/u);
 
     for (const entry of realEffectShapeFixtureCorpus) {
       const fixture = await loadCheckedInRealPoneglyphFixture(entry.cardId);
@@ -349,14 +373,15 @@ describe("real card fixtures", () => {
       [
         "EB01-023",
         "OP04-014",
+        "OP10-045",
         "OP01-060",
         "OP05-091",
         ...realEffectShapeFixtureCorpus.map((entry) => entry.cardId).sort(),
       ].sort(),
     );
-    expect(Object.keys(checkedIn.effectDefinitions ?? {})).toEqual([
-      "eb01-023.on-play-draw-1",
-    ]);
+    expect(Object.keys(checkedIn.effectDefinitions ?? {})).toEqual(
+      ["eb01-023.on-play-draw-1", "op10-045.generated-support"].sort(),
+    );
     expect(computeMatchCardManifestHash(checkedIn)).toBe(
       checkedIn.manifestHash,
     );
@@ -372,6 +397,7 @@ describe("real card fixtures", () => {
     const effectDefinition =
       await loadCheckedInEb01023OnPlayDraw1EffectDefinition();
     const eb = manifest.cards[toCardId("EB01-023")];
+    const op10045 = manifest.cards[toCardId("OP10-045")];
     const op04014 = manifest.cards[toCardId("OP04-014")];
 
     expect(realCardDslEffectDefinitionFixturePath).toBe(
@@ -385,6 +411,18 @@ describe("real card fixtures", () => {
     expect(
       manifest.effectDefinitions?.[String(eb?.support.effectDefinitionId)],
     ).toEqual(effectDefinition);
+    expect(op10045?.support.status).toBe("implemented-dsl");
+    expect(op10045?.support.effectDefinitionId).toBe(
+      "op10-045.generated-support",
+    );
+    expect(op10045?.support.customHandlerIds).toBeUndefined();
+    expect(op10045?.support.sourceTextHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(op10045?.support.behaviorHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(op10045?.support.tested).toBe(true);
+    expect(op10045?.support.rulesVersion).toBe("2026-01-16");
+    expect(op10045?.support.cardDataVersion).toBe(
+      "real-card-poneglyph-fixture-v1",
+    );
     expect(op04014?.support.status).toBe("vanilla-confirmed");
     expect(op04014?.support.effectDefinitionId).toBeUndefined();
     expect(op04014?.support.customHandlerIds).toBeUndefined();
@@ -518,7 +556,10 @@ describe("real card fixtures", () => {
     const supportedCardIds = supportedRealMechanicsMatrix.map(
       (entry) => entry.cardId,
     );
-    const supportedEffectDefinitionIds = ["eb01-023.on-play-draw-1"];
+    const supportedEffectDefinitionIds = [
+      "eb01-023.on-play-draw-1",
+      "op10-045.generated-support",
+    ];
 
     expect(Object.keys(manifest.effectDefinitions ?? {})).toEqual(
       supportedEffectDefinitionIds,
@@ -537,9 +578,7 @@ describe("real card fixtures", () => {
 
       if (entry.expectedRuntimeStance === "implemented-dsl-runtime") {
         expect(card?.support.tested).toBe(true);
-        expect(card?.support.effectDefinitionId).toBe(
-          "eb01-023.on-play-draw-1",
-        );
+        expect(card?.support.effectDefinitionId).toBeDefined();
         expect(card?.support.customHandlerIds).toBeUndefined();
         expect(
           manifest.effectDefinitions?.[

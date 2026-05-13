@@ -445,6 +445,7 @@ export type RealCardFixtureId =
   | "OP05-091"
   | "EB01-023"
   | "OP04-014"
+  | "OP10-045"
   | SelectedEffectShapeFixtureId;
 
 const checkedInCardFixturePathById = {
@@ -452,6 +453,7 @@ const checkedInCardFixturePathById = {
   "OP05-091": "fixtures/poneglyph/cards/OP05-091.rebecca.json",
   "EB01-023": "fixtures/poneglyph/cards/EB01-023.edward-weevil.json",
   "OP04-014": "fixtures/poneglyph/cards/OP04-014.monkey-d-luffy.json",
+  "OP10-045": "fixtures/poneglyph/cards/OP10-045.cavendish.json",
   ...selectedEffectShapeFixturePathById,
 } as const satisfies Record<RealCardFixtureId, string>;
 
@@ -460,10 +462,13 @@ const realCardFixtureIds = Object.freeze(
 );
 
 const supportedEffectDefinitionId = "eb01-023.on-play-draw-1";
+const supportedGeneratedEffectDefinitionId = "op10-045.generated-support";
 const supportedEffectRulesVersion = "2026-01-16";
 
 export const realCardDslEffectDefinitionFixturePath =
   "fixtures/effect-dsl/valid/eb01-023-on-play-draw-1.json";
+export const realCardDslGeneratedSupportFixturePath =
+  "fixtures/effect-dsl/valid/op10-045-generated-support.json";
 
 export const realCardDslMatchCardManifestFixturePath =
   "fixtures/cards/real-card-dsl-match-card-manifest.json";
@@ -508,9 +513,20 @@ export async function loadCheckedInEb01023OnPlayDraw1EffectDefinition(): Promise
   return JSON.parse(source) as EffectDefinition;
 }
 
+async function loadCheckedInOp10045GeneratedSupportEffectDefinition(): Promise<EffectDefinition> {
+  const source = await readFile(
+    path.join(repoRoot, realCardDslGeneratedSupportFixturePath),
+    "utf8",
+  );
+
+  return JSON.parse(source) as EffectDefinition;
+}
+
 export async function buildRealCardDslMatchCardManifest(): Promise<MatchCardManifest> {
   const effectDefinition =
     await loadCheckedInEb01023OnPlayDraw1EffectDefinition();
+  const generatedSupportEffectDefinition =
+    await loadCheckedInOp10045GeneratedSupportEffectDefinition();
   const cards = await Promise.all(
     realCardFixtureIds.map(async (fixtureId) => {
       const normalized = normalizePoneglyphCardDetail(
@@ -528,7 +544,10 @@ export async function buildRealCardDslMatchCardManifest(): Promise<MatchCardMani
   return buildMatchCardManifest({
     cards,
     createdAt: realCardMatchManifestCreatedAt,
-    effectDefinitions: { [supportedEffectDefinitionId]: effectDefinition },
+    effectDefinitions: {
+      [supportedEffectDefinitionId]: effectDefinition,
+      [supportedGeneratedEffectDefinitionId]: generatedSupportEffectDefinition,
+    },
     source: "poneglyph-fixture",
     versions: realCardMatchManifestVersions,
   });
@@ -563,21 +582,32 @@ function createRealCardOverlay(
         ? supportedEffectRulesVersion
         : fixtureId === "OP04-014"
           ? "op04-014-banish-v1"
-          : "fixture-real-card",
+          : fixtureId === "OP10-045"
+            ? supportedEffectRulesVersion
+            : "fixture-real-card",
     sourceTextHash: normalized.sourceTextHash,
     status:
       fixtureId === "EB01-023"
         ? "implemented-dsl"
         : fixtureId === "OP04-014"
           ? "vanilla-confirmed"
-          : "unsupported",
-    tested: fixtureId === "EB01-023" || fixtureId === "OP04-014",
+          : fixtureId === "OP10-045"
+            ? "implemented-dsl"
+            : "unsupported",
+    tested:
+      fixtureId === "EB01-023" ||
+      fixtureId === "OP04-014" ||
+      fixtureId === "OP10-045",
   };
 
   if (fixtureId === "EB01-023") {
     support.effectDefinitionId = supportedEffectDefinitionId;
     support.notes =
       "Reviewed real-card fixture with explicit [On Play] Draw 1 card DSL linkage.";
+  } else if (fixtureId === "OP10-045") {
+    support.effectDefinitionId = supportedGeneratedEffectDefinitionId;
+    support.notes =
+      "Reviewed real-card fixture with complete [When Attacking] [Once Per Turn] draw-then-trash generated-support linkage.";
   } else if (fixtureId === "OP04-014") {
     support.notes =
       "Reviewed real-card fixture for complete printed Banish keyword behavior through parenthetical explanatory-note support gates.";

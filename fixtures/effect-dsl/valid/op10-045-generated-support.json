@@ -1,0 +1,40 @@
+{
+  "cardId": "OP10-045",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "OP10-045:auto-when-attacking-once-per-turn-draw-2-then-trash-1",
+      "category": "auto",
+      "trigger": { "type": "whenAttacking" },
+      "oncePerTurn": true,
+      "optional": false,
+      "sourcePresencePolicy": "mustRemainInSameZone",
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "connector": "always",
+            "effect": { "type": "draw", "player": "self", "count": 2 }
+          },
+          {
+            "connector": "then",
+            "effect": {
+              "type": "trashFromHand",
+              "player": "self",
+              "chooser": "self",
+              "count": 1
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "021421b539ccd217aba7f1b12a71c8237e0c0fda28985041d9e91d5df1cd2a28",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "real-card-effects-v1",
+    "tested": true,
+    "reviewer": "certified-parser-rule:CARD-009B",
+    "generatedBy": "rule-parser"
+  }
+}
