@@ -1,0 +1,72 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-044C
+epic_id: INF-044
+title: Add role-scoped post-approval packet sections
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: approved
+summary: >
+  Extend canonical story packets with role-scoped post-approval sections so
+  downstream agents can receive only the packet content required for their role.
+story_boundary: >
+  Own only packet rendering and packet contract tests for role-scoped sections.
+  Do not add extraction commands, change story lifecycle semantics, alter
+  cleanup automation, or modify gameplay/application code.
+allowed_touch_points:
+  - tools/agent-packet-renderer.ts
+  - tools/agent-packet-parser.ts
+  - tools/build-agent-packet.ts
+  - tests/contracts/agent-packet-contract.test.mjs
+  - tests/contracts/agent-packet-rendering-contract.test.mjs
+  - tests/contracts/agent-packet-parser-contract.test.mjs
+  - tests/contracts/agent-packet-verification-contract.test.mjs
+  - stories/generated/INF-044C-role-scoped-packet-sections.yaml
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s010
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 27-spec-driven-story-generation-workflow.s006
+  - 27-spec-driven-story-generation-workflow.s008
+  - 27-spec-driven-story-generation-workflow.s015
+  - 32-codex-agent-integration.s008
+  - 32-codex-agent-integration.s013
+scope:
+  - add role-scoped packet sections for story-orchestrator, implementation, code-review, and pr-gate
+  - keep one canonical packet file per active story or active parent/substory context
+  - include shared authority content once and make role sections deterministic
+  - ensure role sections include responsibilities, forbidden actions, required inputs, required outputs, and verification or handoff checklist for that role
+  - preserve existing packet verification behavior for active packets
+non_scope:
+  - packet extraction CLI
+  - JSON packet extraction output
+  - changing story-author or story-review handoff mechanics
+  - changing packet completion lifecycle
+  - changing cleanup metadata validation
+dependencies:
+  - INF-044A
+  - INF-044B
+acceptance_criteria:
+  - generated packets include deterministic role sections for story-orchestrator, implementation, code-review, and pr-gate
+  - generated packets still include shared authority and story scope content
+  - packet verification passes with role sections present
+  - tests prove each role section appears in generated packet output
+  - tests prove no pre-approval story-author or story-review role packet section is required
+  - tests prove no packet-agent, cleanup-sync-agent, or revision-agent role packet section is introduced
+required_tests:
+  - packet renderer test for story-orchestrator role section
+  - packet renderer test for implementation role section
+  - packet renderer test for code-review role section
+  - packet renderer test for pr-gate role section
+  - packet renderer or contract test proving packet-agent, cleanup-sync-agent, and revision-agent packet sections are not generated
+  - packet verification contract test proving active packet remains valid
+  - run targeted packet tests
+  - run `corepack pnpm run packets:verify`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - do not add extraction command behavior in this story
+  - do not change active packet lifecycle shape beyond generated packet content
+ambiguity_policy: fail_and_escalate

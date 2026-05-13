@@ -1,0 +1,85 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-044E
+epic_id: INF-044
+title: Enforce role-based handoff workflow
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: approved
+summary: >
+  Update workflow docs and tests so post-approval agent handoffs use
+  deterministic role packet extraction and so AGENTS.md remains a concise
+  top-level checklist rather than a bloated role manual.
+story_boundary: >
+  Own only workflow documentation, PR template guidance, and workflow tests for
+  role-based handoffs after packet extraction exists. Do not change packet
+  extraction tooling, gameplay/application behavior, or cleanup automation
+  semantics.
+allowed_touch_points:
+  - AGENTS.md
+  - docs/workflow/story-execution.md
+  - docs/workflow/review-gate.md
+  - docs/workflow/parent-integration-branches.md
+  - docs/workflow/reporting-and-github-sync.md
+  - docs/code-standard.md
+  - .github/pull_request_template.md
+  - tests/github/review-workflow.test.mjs
+  - tests/contracts/agent-packet-contract.test.mjs
+  - stories/generated/INF-044E-enforce-role-based-handoffs.yaml
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s010
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 27-spec-driven-story-generation-workflow.s006
+  - 27-spec-driven-story-generation-workflow.s007
+  - 27-spec-driven-story-generation-workflow.s008
+  - 27-spec-driven-story-generation-workflow.s009
+  - 27-spec-driven-story-generation-workflow.s015
+  - 27-spec-driven-story-generation-workflow.s017
+  - 32-codex-agent-integration.s008
+  - 32-codex-agent-integration.s013
+scope:
+  - require story-orchestrator, implementation, code-review, and pr-gate handoffs to include packet extraction output for the assigned role
+  - prohibit manual packet trimming as the normal handoff path
+  - require workflow docs to state packet-agent, cleanup-sync-agent, and revision-agent are not valid role handoff targets
+  - define temporary fallback language only for extraction command failure, requiring the failure and manual fallback to be recorded in the PR or implementation trail
+  - update review-gate guidance so code-review agents receive code-review role packet output plus PR context
+  - update review-gate guidance so pr-gate agents receive pr-gate role packet output plus current PR body or durable handoff comment, changed files, head branch, review records, revision response state, check status, cleanup-metadata-guard status, and human-review readiness context
+  - update parent integration guidance so one story-orchestrator owns the parent series while pr-gate agents remain per PR
+  - keep AGENTS.md short by pointing to workflow docs for role details
+  - update PR template or review workflow tests to require role-based handoff evidence when applicable
+non_scope:
+  - adding or changing packet extraction command behavior
+  - changing packet generation or completion behavior
+  - changing cleanup metadata parser or cleanup automation semantics
+  - changing gameplay/application code
+dependencies:
+  - INF-044D
+acceptance_criteria:
+  - workflow docs require extraction output for post-approval role handoffs
+  - workflow docs prohibit manual packet trimming as the normal path
+  - workflow docs reject packet-agent, cleanup-sync-agent, and revision-agent as role handoff targets
+  - workflow docs define recorded fallback behavior when extraction is unavailable or fails
+  - review-gate docs require code-review handoff to include code-review role packet output and PR context
+  - review-gate docs require pr-gate handoff to include pr-gate role packet output plus current PR, review-record, check-status, cleanup-guard, and human-review readiness context
+  - parent integration docs define one story-orchestrator per parent series and one pr-gate per PR
+  - AGENTS.md remains concise and delegates role detail to docs/workflow
+required_tests:
+  - workflow docs test proving extraction output is required for story-orchestrator handoff
+  - workflow docs test proving extraction output is required for implementation handoff
+  - workflow docs test proving extraction output is required for code-review handoff
+  - workflow docs test proving extraction output is required for pr-gate handoff
+  - workflow docs test proving pr-gate handoff includes current PR body or durable handoff comment, changed files, head branch, review records, revision response state, check status, cleanup-metadata-guard status, and human-review readiness context
+  - workflow docs test proving manual packet trimming is not the normal path
+  - workflow docs test proving packet-agent, cleanup-sync-agent, and revision-agent are not valid role handoff targets
+  - workflow docs test proving extraction failure fallback must be recorded
+  - workflow docs test proving AGENTS.md links role guidance without duplicating full role manual
+  - run `corepack pnpm run test -- tests/github/review-workflow.test.mjs tests/contracts/agent-packet-contract.test.mjs`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - do not change packet extraction implementation in this story
+  - do not add a new mutable handoff status file
+ambiguity_policy: fail_and_escalate

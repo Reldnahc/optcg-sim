@@ -1,0 +1,68 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-044A
+epic_id: INF-044
+title: Define role hierarchy and human-selected story path
+type: tooling
+area: infra
+primary_concern: docs
+priority: high
+status: approved
+summary: >
+  Document the new agent hierarchy and require the Session Orchestrator to
+  present single-story versus parent/substory tradeoffs while the human chooses
+  the story path.
+story_boundary: >
+  Own only workflow documentation and tests for the role hierarchy and story
+  path selection policy. Do not change packet rendering, packet extraction,
+  implementation code, PR gate tooling, or cleanup automation.
+allowed_touch_points:
+  - AGENTS.md
+  - docs/workflow/story-execution.md
+  - docs/workflow/parent-integration-branches.md
+  - docs/workflow/review-gate.md
+  - tests/github/review-workflow.test.mjs
+  - stories/generated/INF-044A-role-hierarchy-and-human-selected-story-path.yaml
+spec_refs:
+  - 27-spec-driven-story-generation-workflow.s006
+  - 27-spec-driven-story-generation-workflow.s007
+  - 27-spec-driven-story-generation-workflow.s008
+  - 27-spec-driven-story-generation-workflow.s009
+  - 27-spec-driven-story-generation-workflow.s015
+  - 32-codex-agent-integration.s008
+  - 32-codex-agent-integration.s013
+scope:
+  - document that the human interacts only with the Session Orchestrator
+  - document that the Session Orchestrator owns story-author, story-review, and story-orchestrator assignment
+  - document that the story-orchestrator owns implementation, code-review, and pr-gate agents for its assigned story or story set
+  - document that there is no implicit single-story default
+  - require the Session Orchestrator to present tradeoffs and record the human-selected single-story or parent/substory path in the story draft, story review artifact, approval note, or PR/review trail rather than in a new mutable current-status file
+  - document that story-author and story-review work happens before active packet generation
+  - document that packet-agent, cleanup-sync-agent, and revision-agent are not roles in this workflow
+non_scope:
+  - packet format changes
+  - packet extraction commands
+  - model routing policy
+  - implementation/code-review/pr-gate lifecycle reuse policy
+  - post-merge cleanup automation changes
+dependencies: []
+acceptance_criteria:
+  - workflow docs include the hierarchy Human to Session Orchestrator to story-author/story-review/story-orchestrator to implementation/code-review/pr-gate
+  - workflow docs state that only the Session Orchestrator talks to the human
+  - workflow docs state that single-story execution is not the default and parent/substory is not the exception
+  - workflow docs state the human chooses the story path after Session Orchestrator presents tradeoffs
+  - workflow docs state the selected path is recorded only in existing durable story/review/PR artifacts and not in a new current-status file
+  - workflow docs state story-author and story-review agents do not receive active packets
+  - workflow docs state packet-agent, cleanup-sync-agent, and revision-agent are not introduced roles
+required_tests:
+  - workflow docs test proving the hierarchy and human interaction boundary
+  - workflow docs test proving no implicit single-story default
+  - workflow docs test proving human-selected story path after tradeoff presentation
+  - workflow docs test proving selected path recording uses existing durable artifacts and not a new current-status file
+  - workflow docs test proving packet-agent, cleanup-sync-agent, and revision-agent are not introduced roles
+  - run `corepack pnpm run test -- tests/github/review-workflow.test.mjs`
+repo_rules:
+  - keep AGENTS.md concise and link detailed role guidance from docs/workflow
+  - do not add packet extraction behavior in this story
+ambiguity_policy: fail_and_escalate
