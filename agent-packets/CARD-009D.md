@@ -1,6 +1,6 @@
-<!-- agent-packet:story-id CARD-009C -->
-<!-- agent-packet:story-path stories/approved/CARD-009C-op10-045-generated-support-fixture-proof.yaml -->
-<!-- agent-packet:story-sha256 00018442b55310dca59b5dc86fc0827d7a2cf26e7367a8aa2d3878730dbf3a00 -->
+<!-- agent-packet:story-id CARD-009D -->
+<!-- agent-packet:story-path stories/approved/CARD-009D-when-attacking-sequence-trigger-queueing.yaml -->
+<!-- agent-packet:story-sha256 70897ae3327b86b4655dc6e9f1f23c4cd753c7f4c1b72873f1268a5e4d1c5d68 -->
 
 # Story Packet
 
@@ -8,47 +8,39 @@
 
 Spec Version: v6
 Story Schema Version: 1.0.0
-ID: CARD-009C
+ID: CARD-009D
 Epic ID: CARD-009
-Title: OP10-045 generated support fixture proof
+Title: When Attacking draw-then-trash trigger queueing
 Type: implementation
-Area: cards
-Primary Concern: verification
+Area: engine
+Primary Concern: rules
 
 ## Why
 
-Add OP10-045 Cavendish checked-in fixture/generated support/report evidence after its complete printed gameplay-relevant text is supported by certified parsing and runtime capability checks.
+Add engine trigger-queueing support for the already-certified `[When Attacking]` draw-then-trash generated DSL template so cards whose support evidence passes CARD-009B can execute through `applyDeclareAttack` instead of only resolving from a manually seeded queue entry.
 
 ## Authoritative Spec References
 
+- 03-game-state-events-decisions.s005 (Event journal)
+- 03-game-state-events-decisions.s017 (Canonical decision routing)
+- 03-game-state-events-decisions.s020 (State hashing)
 - 04-effect-runtime.s005 (Card implementation support)
+- 04-effect-runtime.s006 (Effect queue entry)
+- 04-effect-runtime.s007 (Source presence policy)
 - 05-effect-dsl-reference.s008 (Targets)
 - 05-effect-dsl-reference.s022 (Poneglyph text-to-DSL pipeline)
 - 06-visibility-security.s003 (Player zone visibility)
 - 06-visibility-security.s004 (PlayerView shape)
-- 09-card-data-and-support-policy.s003 (Data ownership model)
 - 09-card-data-and-support-policy.s010 (Card implementation record)
 - 09-card-data-and-support-policy.s011 (Support policy by mode)
 - 09-card-data-and-support-policy.s012 (Deck validation)
-- 09-card-data-and-support-policy.s013 (Match-time card manifest)
-- 09-card-data-and-support-policy.s014 (Canonical Poneglyph normalization)
-- 09-card-data-and-support-policy.s015 (Poneglyph text hash and stale-card review)
 - 09-card-data-and-support-policy.s016 (Generated support from complete parse)
 - 09-card-data-and-support-policy.s019 (Failure behavior)
 - 09-card-data-and-support-policy.s022 (Security checklist)
-- 09-card-data-and-support-policy.s023 (Concrete Poneglyph API contract)
-- 09-card-data-and-support-policy.s024 (Source hash and behavior hash)
-- 09-card-data-and-support-policy.s025 (Poneglyph fixture-backed implementation tests)
 - 11-testing-quality.s005 (Unit tests per card)
 - 11-testing-quality.s016 (Coverage gates)
-- 11-testing-quality.s020 (Poneglyph/card-data tests)
 - 17-first-card-fixtures.s004 (Recommended 20-card coverage set)
-- 19-poneglyph-api-contract.s002 (Purpose)
-- 19-poneglyph-api-contract.s003 (Source fixtures in this package)
-- 19-poneglyph-api-contract.s005 (Do not use search results for match manifests)
-- 19-poneglyph-api-contract.s007 (Normalized card shape)
-- 19-poneglyph-api-contract.s010 (Zod schema policy)
-- 19-poneglyph-api-contract.s012 (Match creation behavior)
+- 20-card-implementation-examples.s002 (Purpose)
 - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
 - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
 - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
@@ -56,6 +48,113 @@ Add OP10-045 Cavendish checked-in fixture/generated support/report evidence afte
 - 15-implementation-kickoff.s012 (Guardrails)
 
 ## Relevant Spec Excerpts
+
+### 03-game-state-events-decisions.s005 (Event journal)
+
+Every atomic mutation emits events. Trigger detection consumes events, not actions.
+
+Event sequencing is part of the replay and state-hash contract:
+
+- EngineResult.events from one accepted transition must be strictly increasing by
+  `seq`.
+- The final `state.eventJournal` must be strictly increasing by `seq`.
+- Event `seq` values must be allocated by append order.
+- Helpers must not create multiple events in one `push` call when event IDs or seq values depend on `events.length`; append events one at a time or use an
+  equivalent allocator that observes the already-appended event count.
+
+```ts
+interface EngineEvent {
+  id: EngineEventId;
+  seq: number;
+  type: EngineEventType;
+  actor?: PlayerId;
+  source?: CardRef;
+  affected?: CardRef[];
+  payload: unknown;
+  causedBy?: CausalityRef;
+  visibility: EventVisibility;
+  createdAtStateSeq: StateSeq;
+}
+
+type EngineEventType =
+  | "phaseStarted"
+  | "phaseEnded"
+  | "cardRevealed"
+  | "cardMoved"
+  | "cardPlayed"
+  | "cardDrawn"
+  | "cardDiscarded"
+  | "cardTrashed"
+  | "cardKOd"
+  | "cardReturned"
+  | "donAttached"
+  | "donReturned"
+  | "costPaid"
+  | "attackDeclared"
+  | "blockerActivated"
+  | "counterUsed"
+  | "damageWouldBeDealt"
+  | "damageDealt"
+  | "lifeTaken"
+  | "triggerActivated"
+  | "effectQueued"
+  | "effectResolved"
+  | "replacementApplied"
+  | "decisionCreated"
+  | "decisionResolved"
+  | "ruleProcessingChecked"
+  | "gameEnded";
+```
+
+### 03-game-state-events-decisions.s017 (Canonical decision routing)
+
+All player choices are represented as `PendingDecision` and answered by exactly one action shape:
+
+```ts
+{
+  type: ("respondToDecision", decisionId, response);
+}
+```
+
+The engine validates the response against the current pending decision. The client never gets to submit raw target IDs or payment choices outside the active decision context.
+
+The following decision families are implementation-required for Milestones 1-2:
+
+```text
+mulligan
+chooseTriggerOrder
+chooseOptionalActivation
+payCost
+selectTargets
+selectCards
+chooseEffectOption
+confirmTriggerFromLife
+chooseReplacement
+orderCards
+chooseCharacterToTrashForOverflow
+```
+
+Decision IDs are single-use. A response for an old decision ID is stale unless it is an exact idempotent retry already accepted by the match server.
+
+### 03-game-state-events-decisions.s020 (State hashing)
+
+Replays and recovery need state hashes.
+
+```ts
+interface StateHashInput {
+  state: GameState;
+  includeHidden: boolean;
+  normalizeTransientIds: boolean;
+}
+```
+
+Use canonical JSON serialization:
+
+- Stable object-key ordering.
+- Stable array ordering.
+- Exclude timestamps unless explicitly part of replay logic.
+- Include hidden data for authoritative replay hashes.
+- Use separate public-view hash for client sync if useful.
 
 ### 04-effect-runtime.s005 (Card implementation support)
 
@@ -75,6 +174,51 @@ A missing effect definition for a non-vanilla card is an error in normal play. O
 For generated support, the runtime must expose or consume a capability matrix that describes which keyword bodies, DSL primitives, trigger timings, decision types, replacement processes, visibility modes, target shapes, costs, and custom handlers are currently executable. A generated card support record may be considered playable only when the card has a complete parse and every parsed component is covered by that current runtime capability matrix.
 
 Multiple parsed effects from one card compose into one generated `EffectDefinition` for that card. If any component is unparsed, ambiguous, stale, unsupported, or missing capability evidence, the entire generated support record fails closed for normal play instead of partially enabling the card.
+
+### 04-effect-runtime.s006 (Effect queue entry)
+
+```ts
+interface EffectQueueEntry {
+  id: QueueEntryId;
+  state: "pending" | "resolving" | "resolved" | "cancelled";
+  timingWindowId: TimingWindowId;
+  generation: number;
+  controllerId: PlayerId;
+  source: CardRef;
+  sourceSnapshot: CardSnapshot;
+  triggerEventId?: EngineEventId;
+  effectBlockId: EffectId;
+  orderingGroup: "turnPlayer" | "nonTurnPlayer";
+  createdAtEventSeq: number;
+  queuedAtStateSeq: StateSeq;
+  sourcePresencePolicy: SourcePresencePolicy;
+  causedBy: CausalityRef;
+}
+```
+
+### 04-effect-runtime.s007 (Source presence policy)
+
+A simple "cancel if source moved" rule is not enough. Zone-transition triggers such as `[On K.O.]` must activate on field and resolve after the card moves to trash.
+
+```ts
+type SourcePresencePolicy =
+  | "mustRemainInSameZone"
+  | "resolveFromDestinationZone"
+  | "resolveFromLastKnownInformation"
+  | "noSourceRequired";
+```
+
+Recommended defaults:
+
+| Trigger/effect kind           | Policy                                                                                                |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `[When Attacking]`            | `mustRemainInSameZone`                                                                                |
+| `[On Your Opponent's Attack]` | `mustRemainInSameZone`                                                                                |
+| `[On Block]`                  | `mustRemainInSameZone`                                                                                |
+| `[On K.O.]`                   | `resolveFromDestinationZone` or `resolveFromLastKnownInformation`, depending on ruling/implementation |
+| `[Trigger]` from life         | `resolveFromLastKnownInformation` or `noSourceRequired` while in no zone                              |
+| Event `[Main]` / `[Counter]`  | `resolveFromDestinationZone` after event is trashed                                                   |
+| Global rule-created effect    | `noSourceRequired`                                                                                    |
 
 ### 05-effect-dsl-reference.s008 (Targets)
 
@@ -309,24 +453,6 @@ card IDs, private reveal records, non-public events, RNG state, effect queue
 internals, or audit entries. Full-information live spectating is deferred to a
 future explicit policy story.
 
-### 09-card-data-and-support-policy.s003 (Data ownership model)
-
-| Data                    | Source / authority                                            | Notes                                                                                                                                                                          |
-| ----------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Base card ID            | Poneglyph                                                     | This is the canonical `cardId` used by decks, effects, state, and DB rows.                                                                                                     |
-| Printed name            | Poneglyph                                                     | Display and search.                                                                                                                                                            |
-| Category                | Poneglyph                                                     | Leader, Character, Event, Stage, DON!!.                                                                                                                                        |
-| Color                   | Poneglyph                                                     | Used by deck validation and display.                                                                                                                                           |
-| Cost/life/power/counter | Poneglyph                                                     | Engine reads this only after server-side validation.                                                                                                                           |
-| Type/attribute          | Poneglyph                                                     | Used by filters and effects.                                                                                                                                                   |
-| Printed card text       | Poneglyph                                                     | Used for display, text hashes, effect-authoring pipeline, and human review.                                                                                                    |
-| Images and variants     | Poneglyph                                                     | Cosmetic display only. No gameplay authority.                                                                                                                                  |
-| Effect DSL definitions  | Simulator overlay                                             | Local JSON/JSONC/YAML keyed by Poneglyph card ID.                                                                                                                              |
-| Custom handler IDs      | Simulator overlay                                             | Used only for cards that cannot be represented by DSL.                                                                                                                         |
-| Ruling overrides        | Simulator overlay                                             | Local rules/ruling notes keyed by Poneglyph card ID.                                                                                                                           |
-| Card support status     | Simulator overlay                                             | Determines if a card can be used in each play mode.                                                                                                                            |
-| Banlist / restrictions  | Poneglyph legality data plus simulator overlay/format service | Poneglyph is the source of truth for per-format card legality status and copy-limit inputs; simulator overlays add unsupported-card policy and any platform-local enforcement. |
-
 ### 09-card-data-and-support-policy.s010 (Card implementation record)
 
 ```ts
@@ -398,50 +524,6 @@ Validation checks:
 - Unsupported-card status.
 - Variant IDs resolve to valid Poneglyph variants for the base card.
 
-### 09-card-data-and-support-policy.s013 (Match-time card manifest)
-
-At match creation, snapshot resolved card data versions and implementation data. Replays use this manifest instead of live Poneglyph data. The implementation contract is `MatchCardManifest` in `contracts/canonical-types.ts`.
-
-```ts
-interface MatchCardManifest {
-  manifestHash: string;
-  source: "poneglyph" | "poneglyph-fixture" | "manual-test";
-  cardDataVersion: string;
-  effectDefinitionsVersion: string;
-  customHandlerVersion: string;
-  banlistVersion: string;
-  cards: Record<CardId, ResolvedCard>;
-  createdAt: string;
-}
-```
-
-### 09-card-data-and-support-policy.s014 (Canonical Poneglyph normalization)
-
-The Poneglyph adapter emits `ResolvedCard` from `contracts/canonical-types.ts`. Important normalization rules:
-
-- `attribute` values become `attributes: Attribute[]`; never collapse to a singular attribute.
-- `color` values become `colors: CardColor[]`; multi-color cards preserve all colors.
-- `variants[].index` becomes `variantIndex`.
-- `variantKey = `${cardId}:v${variantIndex}``.
-- Missing market prices, product set codes, or image URLs are allowed display gaps and must not fail gameplay resolution.
-- Search endpoint DTOs are never accepted as manifest card details. Only detail/batch card payloads can become `ResolvedCard`.
-- `sourceTextHash` covers printed effect/trigger text used for implementation drift.
-- `behaviorHash` covers stats, type line, effect, trigger, official FAQ, errata, and any source field that can alter behavior.
-
-### 09-card-data-and-support-policy.s015 (Poneglyph text hash and stale-card review)
-
-Every supported card stores a hash of its Poneglyph printed text and, when generated support is used, a behavior hash or parser-evidence hash for the complete parsed behavior.
-
-When the Poneglyph text changes:
-
-1. Mark the card implementation as stale.
-2. Fail CI if a stale card remains marked `tested` without review.
-3. Prevent ranked use if the changed text affects card behavior.
-4. Require parser/support evidence to be updated before generated support may remain playable.
-5. Require a reviewer to update the source hash after verifying any DSL/custom handler or certified parser-rule evidence that remains authoritative.
-
-This catches errata, typo fixes that affect parsing, and Poneglyph schema/text changes.
-
 ### 09-card-data-and-support-policy.s016 (Generated support from complete parse)
 
 Common-template card support is generated from complete parsing plus runtime capability checks. It must not depend on a manual per-card allowlist or a manual card-to-mechanic map for templates that parser certification already covers.
@@ -481,61 +563,6 @@ Poneglyph downtime should not affect matches already created because card data w
 - Poneglyph text hash changes trigger implementation review.
 - Replays store versions and manifest hashes.
 
-### 09-card-data-and-support-policy.s023 (Concrete Poneglyph API contract)
-
-The provided OpenAPI document is captured in [`fixtures/poneglyph/openapi.optcg-api-0.1.0.json`](fixtures/poneglyph/openapi.optcg-api-0.1.0.json). The exact adapter contract is now split into [`19-poneglyph-api-contract.md`](19-poneglyph-api-contract.md).
-
-Key implementation rules from the API contract:
-
-- Use `GET /v1/cards/{card_number}` or `POST /v1/cards/batch` for match/deck resolution.
-- Batch requests accept at most 60 `card_numbers`, so deck resolution must chunk unique IDs.
-- Do not use `/v1/search` results as authoritative card details. Search variants can be filtered by query predicates and the result shape lacks some fields needed for implementation review.
-- Treat `legality` as an input to format validation, not as the only authority. Merge it with simulator support status and banlist overlays.
-- Keep `official_faq` and variant `errata` in implementation review data because they can change effect behavior.
-
-### 09-card-data-and-support-policy.s024 (Source hash and behavior hash)
-
-Use both hashes:
-
-```ts
-interface CardImplementationRecord {
-  cardId: CardId;
-  status: CardSupportStatus;
-  effectDefinitionId?: string;
-  customHandlerIds?: string[];
-  tested: boolean;
-  rulesVersion: string;
-  cardDataVersion: string;
-  sourceTextHash: string; // effect + trigger text only
-  behaviorHash: string; // stats + type line + effect + trigger + FAQ + errata
-  notes?: string;
-}
-```
-
-`OP01-060` demonstrates why `behaviorHash` matters: the FAQ clarifies that an unplayed revealed card returns to the top of the deck face-down. A change to that FAQ would affect hidden-information behavior even if the printed effect text did not change.
-
-### 09-card-data-and-support-policy.s025 (Poneglyph fixture-backed implementation tests)
-
-Use these local fixtures before live HTTP exists:
-
-```text
-fixtures/poneglyph/openapi.optcg-api-0.1.0.json
-fixtures/poneglyph/cards/OP01-060.donquixote-doflamingo.json
-fixtures/poneglyph/cards/OP05-091.rebecca.json
-```
-
-Required tests:
-
-```text
-PON-001 validate OpenAPI fixture parses and expected endpoints exist.
-PON-002 validate OP01-060 and OP05-091 detail payloads with Zod.
-PON-003 normalize variant indexes into generated variant keys.
-PON-004 preserve nullable product and market fields without crashing.
-PON-005 compute stable sourceTextHash and behaviorHash.
-PON-006 reject missing card IDs from batch resolution.
-PON-007 chunk batch resolution into groups of <=60 IDs.
-```
-
 ### 11-testing-quality.s005 (Unit tests per card)
 
 Every implemented non-vanilla card gets a test file.
@@ -568,26 +595,6 @@ Suggested early gates:
 - 0 unsupported cards allowed in ranked validation fixtures.
 - 0 queue-eligible ranked formats missing ladder configuration.
 
-### 11-testing-quality.s020 (Poneglyph/card-data tests)
-
-Add card-data tests once `@optcg/cards` exists:
-
-```text
-CD-001 Poneglyph response validates against Zod schema
-CD-002 invalid Poneglyph shape fails before Redis cache write
-CD-003 Redis cache key includes cardDataVersion and overlay/effect version
-CD-004 overlay merge adds support status and effect definition IDs
-CD-005 Poneglyph source text hash drift marks implementation stale
-CD-006 unsupported non-vanilla Poneglyph card cannot enter ranked deck
-CD-007 variant indexes/generated variant keys are accepted only when valid for the base card
-CD-008 client display data cannot alter server-resolved match manifest
-CD-009 generated support index accepts only complete-parse cards whose every parsed component is covered by the runtime capability matrix
-CD-010 partial, ambiguous, stale, unparsed, unsupported, or capability-missing generated support reports do not make cards playable in normal modes
-CD-011 certified parser-rule fixtures auto-support matching complete-parse common-template cards without a manual per-card allowlist
-```
-
-These tests prevent the card-data layer from becoming an implicit rules authority.
-
 ### 17-first-card-fixtures.s004 (Recommended 20-card coverage set)
 
 | Slot | Fixture purpose                  | Mechanics covered                                          |
@@ -613,168 +620,17 @@ These tests prevent the card-data layer from becoming an implicit rules authorit
 |   19 | Protection/replacement effect    | Replacement priority and one-use-per-process rule.         |
 |   20 | Custom-handler card              | Escape hatch, handler registry, handler tests.             |
 
-### 19-poneglyph-api-contract.s002 (Purpose)
+### 20-card-implementation-examples.s002 (Purpose)
 
-This document tightens the `@optcg/cards` implementation against the provided Poneglyph OpenAPI contract and real card payload examples. The original simulator plan says Poneglyph is the source of truth for printed card text, stats, images, variants, and metadata. This document makes that actionable without giving Poneglyph gameplay authority.
+This file turns the supplied Poneglyph card examples into implementation guidance, DSL requirements, and acceptance tests. These two cards are useful because they expose several non-trivial engine needs:
 
-The engine never calls Poneglyph during effect resolution. `@optcg/cards` resolves Poneglyph data, validates it, normalizes it, merges simulator overlays, and produces a match-time manifest.
+- Poneglyph variant indexes are not simple positive IDs.
+- FAQ entries can affect hidden-information behavior.
+- Effects can temporarily reveal cards, then return them face-down.
+- An effect can add a card to hand and then immediately allow that same card to be played.
+- Card filters need name exclusion, type matching, color matching, category matching, and cost ranges.
 
-### 19-poneglyph-api-contract.s003 (Source fixtures in this package)
-
-```text
-fixtures/poneglyph/openapi.optcg-api-0.1.0.json
-fixtures/poneglyph/cards/OP01-060.donquixote-doflamingo.json
-fixtures/poneglyph/cards/OP05-091.rebecca.json
-```
-
-These fixtures should be used for contract tests and early implementation tests before live HTTP is wired in.
-
-### 19-poneglyph-api-contract.s005 (Do not use search results for match manifests)
-
-`/v1/search` returns card items with matching variants and pagination metadata. The OpenAPI description says `collapse=card` returns one item per matching card with `variants[]` filtered to matching prints, while `collapse=variant` returns one item per matching print. Search data is therefore a UI/search result shape, not a canonical card-detail shape.
-
-Match creation must use `/v1/cards/{card_number}` or `/v1/cards/batch`, not `/v1/search`.
-
-### 19-poneglyph-api-contract.s007 (Normalized card shape)
-
-`@optcg/cards` should normalize Poneglyph records into an engine-safe `ResolvedCard`. Keep the original payload available for audit/debug, but the engine should read the normalized shape.
-
-A critical rule for deck validation: `ResolvedCard.legality` is populated from Poneglyph and is the canonical external legality record the platform validates against. Queue eligibility, unsupported-card rejection, or platform-specific safety blocks may add stricter checks, but they must not invent a separate base legality source.
-
-```ts
-interface ResolvedCard {
-  cardId: CardId; // from card_number, e.g. "OP05-091"
-  language: string;
-  name: string;
-  category: CardCategory;
-  set: string;
-  block?: string;
-  released: boolean;
-  releasedAt?: string;
-  rarity?: string;
-  colors: Color[];
-  cost?: number;
-  power?: number;
-  counter?: number;
-  life?: number;
-  attributes: Attribute[];
-  types: string[];
-  effectText?: string;
-  triggerText?: string;
-  printedKeywords: Keyword[];
-  variants: ResolvedCardVariant[];
-  legality: Record<string, PoneglyphLegalityRecord>;
-  officialFaq: PoneglyphOfficialFaq[];
-  errata: NormalizedErrata[];
-  sourceTextHash: string;
-  behaviorHash: string;
-  support: CardImplementationRecord;
-}
-```
-
-### 19-poneglyph-api-contract.s010 (Zod schema policy)
-
-Runtime validation should be strict about required gameplay fields and tolerant of additive non-breaking fields.
-
-```ts
-const PoneglyphOfficialFaqSchema = z.object({
-  question: z.string(),
-  answer: z.string(),
-  updated_on: z.string(),
-});
-
-const PoneglyphVariantSchema = z
-  .object({
-    index: z.number().int(),
-    name: z.string().nullable(),
-    label: z.string().nullable(),
-    artist: z.string().nullable(),
-    product: z
-      .object({
-        id: z.string().nullable(),
-        slug: z.string().nullable(),
-        name: z.string().nullable(),
-        set_code: z.string().nullable(),
-        released_at: z.string().nullable(),
-      })
-      .passthrough(),
-    images: z
-      .object({
-        stock: z
-          .object({ full: z.string().nullable(), thumb: z.string().nullable() })
-          .passthrough(),
-        scan: z
-          .object({
-            display: z.string().nullable(),
-            full: z.string().nullable(),
-            thumb: z.string().nullable(),
-          })
-          .passthrough(),
-      })
-      .passthrough(),
-    errata: z.array(z.unknown()),
-    market: z
-      .object({
-        tcgplayer_url: z.string().nullable(),
-        market_price: z.string().nullable(),
-        low_price: z.string().nullable(),
-        mid_price: z.string().nullable(),
-        high_price: z.string().nullable(),
-      })
-      .passthrough(),
-  })
-  .passthrough();
-
-const PoneglyphCardDetailSchema = z
-  .object({
-    card_number: z.string(),
-    name: z.string(),
-    language: z.string(),
-    set: z.string(),
-    set_name: z.string(),
-    released_at: z.string().nullable(),
-    released: z.boolean(),
-    card_type: z.string(),
-    rarity: z.string().nullable(),
-    color: z.array(z.string()),
-    cost: z.number().int().nullable(),
-    power: z.number().int().nullable(),
-    counter: z.number().int().nullable(),
-    life: z.number().int().nullable(),
-    attribute: z.array(z.string()).nullable(),
-    types: z.array(z.string()),
-    effect: z.string().nullable(),
-    trigger: z.string().nullable(),
-    block: z.string().nullable(),
-    variants: z.array(PoneglyphVariantSchema),
-    legality: z.record(
-      z
-        .object({
-          status: z.string(),
-          banned_at: z.string().optional(),
-          reason: z.string().optional(),
-          max_copies: z.number().int().optional(),
-          paired_with: z.array(z.string()).optional(),
-        })
-        .passthrough(),
-    ),
-    available_languages: z.array(z.string()),
-    official_faq: z.array(PoneglyphOfficialFaqSchema),
-  })
-  .passthrough();
-```
-
-Contract tests should also hash the OpenAPI document and alert maintainers if it changes.
-
-### 19-poneglyph-api-contract.s012 (Match creation behavior)
-
-1. Collect unique base card IDs from both leaders, main decks, and DON!! decks.
-2. Resolve through batch endpoint in chunks of 60.
-3. Validate and normalize each returned card.
-4. Fail if any requested card appears in `missing`.
-5. Merge simulator overlays.
-6. Reject unsupported, stale, unreleased, or format-illegal cards according to mode.
-7. Snapshot the full match manifest, including hash/version fields.
+These examples may be used as parser-rule certification fixtures. A complete parser rule may auto-support matching common-template cards only when it parses the entire gameplay-relevant text and the runtime capability matrix supports every parsed component. They are not evidence for a manual per-card allowlist or partial support.
 
 ### 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
 
@@ -798,58 +654,56 @@ Kickoff guardrails require the engine to stay free of Redis, Postgres, WebSocket
 
 ## Story Boundary
 
-Own only OP10-045 real-card fixture capture/check-in, generated support evidence, manifest/report/deck-validation smoke coverage, and engine plain-data runtime verification for the already-supported generated effect. Do not broaden parser or runtime behavior in this story.
+Own only engine-core attack-trigger queueing for supported generated `whenAttacking` sequence effects that draw cards and then trash cards from hand. Do not broaden parser grammar, card-data fixture support, manifest generation, or unrelated trigger timings in this story.
 
 ## Scope
 
-- add a checked-in OP10-045 Cavendish Poneglyph-shaped fixture if no existing fixture is present
-- assert the relevant OP10-045 effect text is exactly `[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.`
-- generate support evidence from complete parse plus runtime capability checks, not a manual card-to-mechanic map
-- preserve source text hash, behavior/parser evidence hash, parser rule IDs, and generated EffectDefinition linkage
-- add support-index/report coverage showing OP10-045 as supported and explaining parser rules used
-- update manifest/deck-validation smoke coverage only as needed to consume generated support evidence for OP10-045
-- add engine-core real-card runtime coverage using only plain manifest/effect-definition data and no @optcg/cards import
-- keep fixture/card-data tests separate from synthetic engine behavior tests already covered by ENG-050 and CARD-009B
+- allow `queueWhenAttackingTriggers` to queue a supported `whenAttacking` sequence effect whose first segment draws for self and whose next segment trashes from the controller's hand
+- preserve existing supported no-choice draw trigger behavior
+- preserve fail-closed behavior for unsupported `whenAttacking` shapes, multiple matching attack-trigger effects, missing effect definitions, and source-presence failures
+- preserve once-per-turn/source-presence metadata on the queued effect entry
+- add an end-to-end `applyDeclareAttack` regression proving the queued sequence opens the private trash-from-hand decision after drawing
+- prove event ordering keeps attack declaration before effect queueing and draw before private trash decision creation
+- prove the resulting state hash remains deterministic after resolving the trash decision
 
 ## Out of Scope
 
 - parser grammar expansion
-- runtime behavior expansion
-- OP14-054 Fisher Tiger support
-- leader-type conditions
-- end-of-turn triggers
+- generated-support index/report changes
+- OP10-045 fixture capture or card-data manifest support changes
+- On Play trigger behavior
+- On Opponent's Attack trigger behavior
+- optional activation decisions
+- broad sequence grammar beyond draw-then-trash
 - dynamic trash-until-hand-size effects
-- new real-card fixture capture beyond OP10-045
-- full released-card catalog support
-- server, client, API, UI, Redis, database, replay, or live Poneglyph in CI
-- engine-core importing @optcg/cards
+- leader-type conditions
+- replacement effects
+- server, client, API, UI, Redis, database, replay, or live Poneglyph work
 
 ## Allowed Touch Points
 
 <!-- prettier-ignore -->
-- fixtures/poneglyph/cards/*.json
-- fixtures/effect-dsl/valid/*.json
-- fixtures/cards/real-card-dsl-match-card-manifest.json
-- packages/cards/src/real-card-fixtures.ts
-- packages/cards/src/real-card-fixtures.test.ts
-- packages/cards/src/generated-support-index.test.ts
-- packages/cards/src/generated-support-report.test.ts
-- packages/cards/src/manifest.test.ts
+- packages/engine-core/src/actions.ts
+- packages/engine-core/src/battle-actions.ts
+- packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts
+- packages/engine-core/src/effect-runtime-trigger-queueing*.ts
+- packages/engine-core/src/effect-runtime-primitives.ts
+- packages/engine-core/src/effect-runtime-queue-processing*.ts
+- packages/engine-core/src/*attack*.test.ts
+- packages/engine-core/src/*trigger*.test.ts
 - packages/engine-core/src/real-card-dsl-runtime.test.ts
-- packages/engine-core/src/*real-card*.test.ts
-- tests/integration/real-card-dsl-manifest-smoke.test.mjs
-- stories/generated/CARD-009C-op10-045-generated-support-fixture-proof.yaml
-- stories/approved/CARD-009C-op10-045-generated-support-fixture-proof.yaml
-- agent-packets/CARD-009C.md
+- stories/generated/CARD-009D-when-attacking-sequence-trigger-queueing.yaml
+- stories/approved/CARD-009D-when-attacking-sequence-trigger-queueing.yaml
+- agent-packets/CARD-009D.md
 - agent-packets/active.json
 
 ## Constraints
 
-- generate and activate the CARD-009C packet before implementation
+- approve, generate, and activate the CARD-009D packet before implementation
 - stay within allowed_touch_points
-- use live Poneglyph only as an explicit local capture/discovery step; never make tests or CI call live Poneglyph
-- do not mark OP10-045 supported unless complete printed gameplay-relevant text is covered
-- preserve engine-core package purity and hidden-information boundaries
+- keep engine-core free of @optcg/cards, Poneglyph HTTP, Redis, Postgres, WebSocket, React, and browser code
+- preserve fail-closed behavior for unsupported gameplay shapes
+- do not mark any real card supported from this story; CARD-009C owns OP10-045 fixture/support evidence after this prerequisite lands
 - use `pnpm`; the canonical local verification commands are `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`
 - TypeScript stays strict; avoid `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions without explicit justification
 - ESLint with type-aware rules and Prettier formatting are required; CI and local verification must fail when checked-in generated artifacts are stale
@@ -876,14 +730,14 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 ## Required Tests
 
 - exact candidate story-review before implementation
-- package-local fixture/schema/support-evidence tests for OP10-045
-- generated support index/report tests for OP10-045
-- manifest/deck-validation smoke test for generated support evidence if integration is in scope
-- engine-core real-card runtime test using plain manifest/effect-definition data
-- package-boundary assertion or existing boundary test proving engine-core does not import @optcg/cards
+- focused engine-core trigger-queueing regression for `applyDeclareAttack` with draw-then-trash sequence
+- focused engine-core trigger-queueing regression for the once-per-turn wrapper shape used by OP10-045
+- focused continuation regression proving the private trash-from-hand decision response resolves the trash step
+- focused determinism assertion proving repeated runs keep event ordering and final state hash stable
+- focused unsupported-shape/fail-closed regression for an unsupported `whenAttacking` sequence
+- existing hidden-info tests or a focused visibility assertion proving private hand selection remains private
 - run `corepack pnpm run packets:verify`
 - run `corepack pnpm run stories:validate`
-- run `corepack pnpm --filter @optcg/cards test`
 - run `corepack pnpm --filter @optcg/engine-core test`
 - full `corepack pnpm verify`
 
@@ -896,13 +750,14 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 ## Acceptance Criteria
 
-- OP10-045 fixture is checked in or existing fixture evidence is reused with exact printed text assertions
-- OP10-045 generated support comes from complete parse plus runtime capability checks
-- OP10-045 is not supported by a manual per-card allowlist or manual card-to-mechanic map
-- generated support index/report tests show OP10-045 supported with parser rules and no blockers
-- deck validation can consume OP10-045 generated support evidence or a narrow follow-up is recorded if integration is too large
-- engine-core real-card runtime test uses plain data and proves draw-before-trash behavior for OP10-045
-- fixture/card-data tests remain separate from engine primitive behavior tests
+- `applyDeclareAttack` queues a supported `[When Attacking] Draw N cards and trash M cards from your hand.` generated DSL sequence and advances until the private trash-from-hand decision opens after draw
+- `applyDeclareAttack` queues the same supported sequence when `oncePerTurn` is present on the effect block and advances until the private trash-from-hand decision opens after draw
+- responding to the private trash-from-hand decision resolves the trash step
+- repeated runs keep attack declaration, effect queueing, draw, private decision creation, and final state hash deterministic
+- the queued effect entry preserves source snapshot, source-presence policy, trigger event ID, effect block ID, controller, and ordering group
+- unsupported `whenAttacking` sequence shapes still fail closed with the existing unsupported-definition error path
+- existing no-choice draw `whenAttacking` trigger tests continue to pass unchanged
+- hidden-information behavior remains private for the trash-from-hand decision and does not leak hand cards to non-choosers
 
 ## Ambiguity Rule
 

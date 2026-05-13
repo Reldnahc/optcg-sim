@@ -85,6 +85,7 @@ non_scope:
   - engine-core importing @optcg/cards
 dependencies:
   - CARD-009B
+  - CARD-009D
 acceptance_criteria:
   - OP10-045 fixture is checked in or existing fixture evidence is reused with exact printed text assertions
   - OP10-045 generated support comes from complete parse plus runtime capability checks

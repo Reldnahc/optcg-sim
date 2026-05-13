@@ -18,13 +18,7 @@ import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
-import {
-  queueDrawForP1,
-  targetSelectionQueueState,
-  toQueueEntryId,
-  toSourceSnapshot,
-  toTimingWindowId,
-} from "./effect-runtime-queue-processing-test-support.js";
+import { targetSelectionQueueState } from "./effect-runtime-queue-processing-test-support.js";
 import { enterMainPhase } from "./phases.js";
 import { applyPlayCard, applyPlayCardDecisionResponse } from "./play-card.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
@@ -390,7 +384,7 @@ test("loads OP04-014 from plain manifest data and applies Banish without mutatin
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });
 
-test("loads OP10-045 from plain manifest data and resolves draw-before-trash on when-attacking", async () => {
+test("loads OP10-045 from plain manifest data and queues draw-before-trash on declare attack", async () => {
   const plainManifest = await loadPlainRealCardManifest();
   const op10045 = toCardId("OP10-045");
   const opCard = must(plainManifest.cards[op10045], "OP10-045 manifest card");
@@ -464,34 +458,19 @@ test("loads OP10-045 from plain manifest data and resolves draw-before-trash on 
     "trashFromHand",
   );
 
-  state.effectQueue = [
-    {
-      ...queueDrawForP1(),
-      id: toQueueEntryId("queue-entry-op10-045-generated-support"),
-      timingWindowId: toTimingWindowId(
-        "timing-window-op10-045-generated-support",
-      ),
-      controllerId: p1,
-      source: {
-        instanceId: source.instanceId,
-        cardId: op10045,
-        playerId: p1,
-        zone: source.zone,
-      },
-      sourceSnapshot: toSourceSnapshot(source, p1, p1),
-      effectBlockId: effectBlock.id,
-      sourcePresencePolicy: must(
-        effectBlock.sourcePresencePolicy,
-        "source presence policy",
-      ),
-      causedBy: {
-        type: "ruleProcess",
-        name: "real-card:OP10-045-generated-support-test",
-      },
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: source.instanceId,
+      cardId: op10045,
+      playerId: p1,
     },
-  ];
-
-  const opened = processEffectRuntime(state);
+    target: {
+      instanceId: must(state.players[p2], "p2").leader.instanceId,
+      cardId: must(state.players[p2], "p2").leader.cardId,
+      playerId: p2,
+    },
+  });
 
   assert.equal(opened.errors, undefined);
   const decision = must(opened.state.pendingDecision, "trash decision");
@@ -519,6 +498,14 @@ test("loads OP10-045 from plain manifest data and resolves draw-before-trash on 
     openedP1.hand.map((card) => card.instanceId),
   );
   const eventTypes = opened.events.map((event) => event.type);
+  assert.equal(
+    eventTypes.indexOf("attackDeclared") < eventTypes.indexOf("effectQueued"),
+    true,
+  );
+  assert.equal(
+    eventTypes.indexOf("effectQueued") < eventTypes.indexOf("cardDrawn"),
+    true,
+  );
   assert.equal(
     eventTypes.indexOf("cardDrawn") < eventTypes.indexOf("decisionCreated"),
     true,
@@ -548,7 +535,17 @@ test("loads OP10-045 from plain manifest data and resolves draw-before-trash on 
   const resolvedP1 = must(resolved.state.players[p1], "p1 after trash");
 
   assert.equal(resolved.errors, undefined);
-  assert.equal(resolved.state.pendingDecision, undefined);
+  if (resolved.state.status.type === "active") {
+    assert.notEqual(resolved.state.battle?.step, "attack");
+    assert.equal(
+      getLegalActions(resolved.state, p2).some(
+        (legalAction) => legalAction.type === "respondToDecision",
+      ),
+      true,
+    );
+  } else {
+    assert.deepEqual(getLegalActions(resolved.state, p2), []);
+  }
   assert.equal(
     resolvedP1.hand.some((card) => card.instanceId === secondDrawn.instanceId),
     false,
