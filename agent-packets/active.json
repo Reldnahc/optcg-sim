@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CARD-012.md",
-      "storyId": "CARD-012",
-      "storyPath": "stories/approved/CARD-012-blocker-and-empty-effect-generated-support.yaml",
-      "storySha256": "f594e8bb33ec1c4da766a75fefc0365487ca55becae33eb6758cef99832f6230"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
