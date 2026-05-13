@@ -17,6 +17,8 @@
     "stories:review-plan": "node --experimental-strip-types tools/story-review-plan.ts",
     "specs:generate-metadata": "node --experimental-strip-types tools/spec-metadata.ts generate",
     "specs:verify-metadata": "node --experimental-strip-types tools/spec-metadata.ts verify",
+    "types:sync:write": "node --experimental-strip-types tools/sync-package-types.ts write",
+    "types:sync:check": "node --experimental-strip-types tools/sync-package-types.ts check",
     "cli:boot": "corepack pnpm --filter @optcg/cli boot:summary",
     "packets:complete": "node --experimental-strip-types tools/build-agent-packet.ts complete",
     "packets:complete-many": "node --experimental-strip-types tools/build-agent-packet.ts complete-many",

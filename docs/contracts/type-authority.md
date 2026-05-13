@@ -58,7 +58,9 @@ Canonical module to package module mapping is one-to-one by filename:
 - Tests, manifests, and support files under `packages/types/src` are not generated canonical projections unless a later approved story explicitly includes them (for example `*.test.ts` and `export-ownership.manifest.ts`).
 - Manual edits to generated canonical projection files are non-authoritative.
 - Later sync verification must overwrite or reject manual-only drift in package outputs.
-- A stale-output check entrypoint is expected in later stories as part of repository verification lanes.
+- Sync write entrypoint: `corepack pnpm run types:sync:write`
+- Stale-output check entrypoint: `corepack pnpm run types:sync:check`
+- The stale-output check entrypoint is not yet wired into root `verify` in this story.
 
 ## Change Authority Rule
 

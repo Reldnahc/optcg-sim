@@ -19,6 +19,7 @@ story_boundary: >
   wire a merge-blocking whole-surface guard in this story.
 allowed_touch_points:
   - tools/sync-package-types.ts
+  - tools/tsconfig.json
   - tests/contracts/package-type-sync-tool.test.mjs
   - package.json
   - docs/contracts/type-authority.md
