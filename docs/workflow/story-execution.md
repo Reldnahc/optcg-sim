@@ -84,6 +84,24 @@ If broad mechanical validation of PR comments or story-review artifacts would be
 - If the needed work crosses concerns, stop and split the story or raise the ambiguity instead of broadening the patch.
 - Supporting tests, fixtures, snapshots, and docs for the same concern are allowed in the same story.
 
+## Role Hierarchy And Story Path Selection
+
+Use this workflow hierarchy:
+
+- Human -> Session Orchestrator -> (story-author, story-review, story-orchestrator) -> (implementation, code-review, pr-gate)
+
+Human interaction boundary and path-selection policy:
+
+- Only the Session Orchestrator interacts directly with the human for story-path decisions.
+- Session Orchestrator owns assignment of story-author, story-review, and story-orchestrator.
+- story-orchestrator owns implementation, code-review, and pr-gate assignment for its assigned story or story set.
+- Single-story execution is not the default and parent/substory execution is not the exception.
+- Session Orchestrator presents the single-story versus parent/substory tradeoffs before the human selects the path.
+- Record the selected path only in durable existing artifacts: story draft, story-review artifact, approval note, or PR/review trail.
+- Do not create a new mutable current-status file for selected-path tracking.
+- Story-author and story-review work happens before active packet generation; those roles do not receive active packets.
+- packet-agent, cleanup-sync-agent, and revision-agent are not introduced roles in this workflow.
+
 ## Card Manifest Fixture Policy
 
 Real-card and cards-produced fixture coverage is separate integration/card-data coverage. It proves that card-data adapter output, representative manifests, CLI boot paths, hidden-info filtering, and root integration surfaces can consume reviewed local fixtures. It does not replace primitive, unit, regression, synthetic edge-case, fail-closed, hidden-info, event-order, or state-hash coverage for engine behavior.

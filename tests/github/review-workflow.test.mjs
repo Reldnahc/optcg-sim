@@ -715,6 +715,31 @@ test("workflow docs require decomposed-group per-story review-status matrices be
   ]);
 });
 
+test("workflow docs define INF-044A hierarchy, human path selection, and role boundaries", async () => {
+  const agents = await readActiveText("AGENTS.md");
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const workflowGuidance = `${agents}\n${storyExecution}\n${parentBranches}\n${reviewGate}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /Human -> Session Orchestrator -> \(story-author, story-review, story-orchestrator\) -> \(implementation, code-review, pr-gate\)/i,
+    /Only the Session Orchestrator interacts directly with the human for story-path decisions/i,
+    /Session Orchestrator owns assignment of story-author, story-review, and story-orchestrator/i,
+    /story-orchestrator owns implementation, code-review, and pr-gate assignment for its assigned story or story set/i,
+    /Single-story execution is not the default and parent\/substory execution is not the exception/i,
+    /Session Orchestrator presents the single-story versus parent\/substory tradeoffs before the human selects the path/i,
+    /Record the selected path only in durable existing artifacts: story draft, story-review artifact, approval note, or PR\/review trail/i,
+    /Do not create a new mutable current-status file for selected-path tracking/i,
+    /Story-author and story-review work happens before active packet generation; those roles do not receive active packets/i,
+    /packet-agent, cleanup-sync-agent, and revision-agent are not introduced roles in this workflow/i,
+  ]);
+});
+
 test("codex integration spec reflects subagent orchestration instead of cli-first execution", async () => {
   const codexSpec = await readActiveText("specs/32-codex-agent-integration.md");
 
