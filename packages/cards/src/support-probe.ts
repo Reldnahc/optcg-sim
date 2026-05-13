@@ -12,7 +12,10 @@ import {
   type PoneglyphClient,
 } from "./poneglyph-client.js";
 import type { EffectDefinitionValidationResult } from "./generated-support-index.js";
-import { evaluateGeneratedSupportPlayability } from "./support-evaluator.js";
+import {
+  evaluateGeneratedSupportPlayability,
+  type EvaluateGeneratedSupportPlayabilityInput,
+} from "./support-evaluator.js";
 
 const defaultBaseUrl = "https://api.poneglyph.one";
 const cardIdPattern = /^[A-Z]{2,6}\d{2}-\d{3}$/;
@@ -20,6 +23,8 @@ let validateSchema: ReturnType<Ajv2020["compile"]> | undefined;
 
 export type SupportProbeOptions = {
   cardId: CardId;
+  expectedBehaviorHash?: string;
+  expectedSourceTextHash?: string;
   getCard: PoneglyphClient["getCard"];
   stdout: Pick<NodeJS.WriteStream, "write">;
 };
@@ -29,15 +34,20 @@ export async function runSupportProbe(
 ): Promise<number> {
   const detail = await options.getCard(options.cardId);
   const normalized = normalizePoneglyphCardDetail(detail);
-  const evaluation = evaluateGeneratedSupportPlayability({
+  const evaluationInput: EvaluateGeneratedSupportPlayabilityInput = {
     card: normalized,
     cardDataVersion: new Date().toISOString().slice(0, 10),
     effectDefinitionsVersion: "generated-support-v1",
-    expectedBehaviorHash: normalized.behaviorHash,
-    expectedSourceTextHash: normalized.sourceTextHash,
     rulesVersion: "generated-support-v1",
     validateEffectDefinition,
-  });
+  };
+  if (options.expectedBehaviorHash !== undefined) {
+    evaluationInput.expectedBehaviorHash = options.expectedBehaviorHash;
+  }
+  if (options.expectedSourceTextHash !== undefined) {
+    evaluationInput.expectedSourceTextHash = options.expectedSourceTextHash;
+  }
+  const evaluation = evaluateGeneratedSupportPlayability(evaluationInput);
 
   options.stdout.write(`Card ID: ${normalized.cardId}\n`);
   options.stdout.write(`Playable: ${evaluation.playable ? "yes" : "no"}\n`);
@@ -95,11 +105,19 @@ export async function runSupportProbeCli(
       fetch: environment.fetch,
     });
 
-    return await runSupportProbe({
+    const probeOptions: SupportProbeOptions = {
       cardId: parsed.cardId,
       getCard: client.getCard,
       stdout: environment.stdout,
-    });
+    };
+    if (parsed.expectedBehaviorHash !== undefined) {
+      probeOptions.expectedBehaviorHash = parsed.expectedBehaviorHash;
+    }
+    if (parsed.expectedSourceTextHash !== undefined) {
+      probeOptions.expectedSourceTextHash = parsed.expectedSourceTextHash;
+    }
+
+    return await runSupportProbe(probeOptions);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     environment.stderr.write(`${message}\n`);
@@ -110,12 +128,16 @@ export async function runSupportProbeCli(
 type ParsedProbeArgs = {
   baseUrl: string;
   cardId: CardId;
+  expectedBehaviorHash?: string;
+  expectedSourceTextHash?: string;
   help: boolean;
 };
 
 function parseProbeArgs(argv: string[]): ParsedProbeArgs {
   let cardId: CardId | undefined;
   let baseUrl = defaultBaseUrl;
+  let expectedBehaviorHash: string | undefined;
+  let expectedSourceTextHash: string | undefined;
   let help = false;
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -144,6 +166,16 @@ function parseProbeArgs(argv: string[]): ParsedProbeArgs {
       index += 1;
       continue;
     }
+    if (token === "--expected-behavior-hash") {
+      expectedBehaviorHash = readOptionValue(argv, index, token);
+      index += 1;
+      continue;
+    }
+    if (token === "--expected-source-text-hash") {
+      expectedSourceTextHash = readOptionValue(argv, index, token);
+      index += 1;
+      continue;
+    }
     if (token.startsWith("-")) {
       throw new Error(`Unknown option: ${token}`);
     }
@@ -157,11 +189,18 @@ function parseProbeArgs(argv: string[]): ParsedProbeArgs {
     throw new Error("Missing --card <id>.");
   }
 
-  return {
+  const parsed: ParsedProbeArgs = {
     baseUrl,
     cardId: cardId ?? ("OP03-044" as CardId),
     help,
   };
+  if (expectedBehaviorHash !== undefined) {
+    parsed.expectedBehaviorHash = expectedBehaviorHash;
+  }
+  if (expectedSourceTextHash !== undefined) {
+    parsed.expectedSourceTextHash = expectedSourceTextHash;
+  }
+  return parsed;
 }
 
 function readOptionValue(
@@ -228,6 +267,8 @@ function usageText(): string {
     "Options:",
     "  --card <id>        Probe exactly one Poneglyph card ID.",
     "  --base-url <url>   Poneglyph base URL. Defaults to https://api.poneglyph.one.",
+    "  --expected-source-text-hash <hash>  Optional reviewed source-text hash baseline.",
+    "  --expected-behavior-hash <hash>     Optional reviewed behavior hash baseline.",
     "",
   ].join("\n");
 }

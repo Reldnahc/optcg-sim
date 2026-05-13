@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { CardId, PoneglyphCardDetail } from "@optcg/types";
 
+import { normalizePoneglyphCardDetail } from "./normalization.js";
 import { runSupportProbe, runSupportProbeCli } from "./support-probe.js";
 
 const repoRoot = path.resolve(
@@ -30,31 +31,42 @@ async function loadOp03044Fixture(): Promise<PoneglyphCardDetail> {
 describe("support probe", () => {
   it("runs CLI path with injected fetch and prints playable output without live network", async () => {
     const detail = await loadOp03044Fixture();
+    const normalized = normalizePoneglyphCardDetail(detail);
     const output: string[] = [];
     const fetchCalls: string[] = [];
 
-    const exitCode = await runSupportProbeCli(["--card", "OP03-044"], {
-      cwd: repoRoot,
-      fetch: (url) => {
-        fetchCalls.push(url);
-        return Promise.resolve({
-          json: () => Promise.resolve(detail),
-          ok: true,
-          status: 200,
-        });
-      },
-      stderr: {
-        write(): boolean {
-          return true;
+    const exitCode = await runSupportProbeCli(
+      [
+        "--card",
+        "OP03-044",
+        "--expected-source-text-hash",
+        normalized.sourceTextHash,
+        "--expected-behavior-hash",
+        normalized.behaviorHash,
+      ],
+      {
+        cwd: repoRoot,
+        fetch: (url) => {
+          fetchCalls.push(url);
+          return Promise.resolve({
+            json: () => Promise.resolve(detail),
+            ok: true,
+            status: 200,
+          });
+        },
+        stderr: {
+          write(): boolean {
+            return true;
+          },
+        },
+        stdout: {
+          write(chunk: string | Uint8Array): boolean {
+            output.push(String(chunk));
+            return true;
+          },
         },
       },
-      stdout: {
-        write(chunk: string | Uint8Array): boolean {
-          output.push(String(chunk));
-          return true;
-        },
-      },
-    });
+    );
 
     const text = output.join("");
     expect(exitCode).toBe(0);
@@ -62,6 +74,53 @@ describe("support probe", () => {
     expect(fetchCalls[0]).toContain("/v1/cards/OP03-044");
     expect(text).toContain("Playable: yes");
     expect(text).toContain("op03-044.generated-support");
+  });
+
+  it("reports stale blockers when live detail drifts from reviewed hash evidence", async () => {
+    const detail = await loadOp03044Fixture();
+    const normalized = normalizePoneglyphCardDetail(detail);
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbeCli(
+      [
+        "--card",
+        "OP03-044",
+        "--expected-source-text-hash",
+        normalized.sourceTextHash,
+        "--expected-behavior-hash",
+        normalized.behaviorHash,
+      ],
+      {
+        cwd: repoRoot,
+        fetch: () =>
+          Promise.resolve({
+            json: () =>
+              Promise.resolve({
+                ...detail,
+                name: "Kaya Drifted",
+              }),
+            ok: true,
+            status: 200,
+          }),
+        stderr: {
+          write(): boolean {
+            return true;
+          },
+        },
+        stdout: {
+          write(chunk: string | Uint8Array): boolean {
+            output.push(String(chunk));
+            return true;
+          },
+        },
+      },
+    );
+
+    const text = output.join("");
+    expect(exitCode).toBe(1);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("stale-hash");
+    expect(text).toContain("Poneglyph behavior hash changed.");
   });
 
   it("returns CLI parse error to stderr when --card is missing", async () => {
