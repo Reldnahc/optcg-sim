@@ -195,3 +195,15 @@ Contract shape changes require edits in canonical contract modules under separat
   ]
 }
 ```
+
+## TYP-005D No-Op Closure
+
+TYP-005D inspected the TYP-005C downstream disposition record above and found no
+`canonical_contract_omission` dispositions. The classified fields are either
+`package_drift_or_engine_internal` items routed to TYP-005E or
+`behavior_ambiguity` items routed to the recorded ambiguity follow-up.
+
+No canonical contract fields are added by TYP-005D. This preserves
+`contracts/canonical-types.ts` and `contracts/types/*` as canonical authority
+for the cited spec sections without promoting package drift or unresolved
+behavior semantics into shared contracts.
