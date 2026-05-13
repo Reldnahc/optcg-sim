@@ -55,6 +55,9 @@ importers:
       "@optcg/types":
         specifier: workspace:*
         version: link:../types
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
       zod:
         specifier: ^4.4.3
         version: 4.4.3
