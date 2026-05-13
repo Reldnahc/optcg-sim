@@ -630,3 +630,61 @@ export const applyBattleDecisionResponse = (
     ? null
     : withOriginalManifestResult(blockResponse, state);
 };
+
+export const continueAttackTimingBattleIfReady = (
+  state: GameState,
+): EngineResult | null => {
+  if (
+    state.status.type !== "active" ||
+    state.pendingDecision !== undefined ||
+    detectPendingRuntimeWork(state) !== undefined
+  ) {
+    return null;
+  }
+  const battle = state.battle;
+  if (battle === undefined || battle.step !== "attack") {
+    return null;
+  }
+  if (!battleParticipantsRemainLegal(state)) {
+    return cleanupBattleAfterAttackTiming(state, toEngineResult(state, []));
+  }
+  if (hasPotentialBlockerForUnsupportedDoubleAttackWindow(state)) {
+    return illegalAction(
+      state,
+      "declareAttack requires unsupported blocker handling for Double Attack.",
+    );
+  }
+
+  const blockDecision = createBlockStepDeclineDecision(
+    withAllAttackTimingCombatMetadataHidden(state),
+  );
+  if (blockDecision !== null) {
+    const events: EngineEvent[] = [];
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: blockDecision.id,
+        decisionType: blockDecision.type,
+        playerId: blockDecision.playerId,
+      },
+      { type: "public" },
+    );
+    const blockState: GameState = {
+      ...state,
+      battle: {
+        ...battle,
+        step: "block",
+      },
+      pendingDecision: blockDecision,
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    return toEngineResult(blockState, events);
+  }
+
+  return withOriginalManifestResult(
+    resolveSupportedVanillaBattle(state),
+    state,
+  );
+};

@@ -20,6 +20,7 @@ import {
 import { isMatchActive } from "./action-state.js";
 import {
   applyBattleDecisionResponse,
+  continueAttackTimingBattleIfReady,
   applyDeclareAttack,
   applyUseCounter,
   getBattleDecisionLegalActions,
@@ -494,13 +495,27 @@ const applyRespondToDecision = (
     if (!trashResult.ok) {
       return trashResult.result;
     }
-    return finalizeSelectedTargetEffectResolution(
+    const finalized = finalizeSelectedTargetEffectResolution(
       trashResult.state,
       trashResult.eventBaseState,
       trashResult.entry,
       trashResult.allEvents,
       trashResult.resolutionEvents,
     );
+    if (
+      finalized.errors !== undefined ||
+      finalized.state.status.type !== "active"
+    ) {
+      return finalized;
+    }
+    const continued = continueAttackTimingBattleIfReady(finalized.state);
+    if (continued === null) {
+      return finalized;
+    }
+    return {
+      ...continued,
+      events: [...finalized.events, ...continued.events],
+    };
   }
   const replacementResult = applyChooseReplacementDecisionResponse(
     state,

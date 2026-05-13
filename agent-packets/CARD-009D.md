@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id CARD-009D -->
 <!-- agent-packet:story-path stories/approved/CARD-009D-when-attacking-sequence-trigger-queueing.yaml -->
-<!-- agent-packet:story-sha256 1e11fc23eaf3fc1f74abcdb85d5f28398b553151a48e6ed37fdce67b36fe5406 -->
+<!-- agent-packet:story-sha256 70897ae3327b86b4655dc6e9f1f23c4cd753c7f4c1b72873f1268a5e4d1c5d68 -->
 
 # Story Packet
 
@@ -683,6 +683,8 @@ Own only engine-core attack-trigger queueing for supported generated `whenAttack
 ## Allowed Touch Points
 
 <!-- prettier-ignore -->
+- packages/engine-core/src/actions.ts
+- packages/engine-core/src/battle-actions.ts
 - packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts
 - packages/engine-core/src/effect-runtime-trigger-queueing*.ts
 - packages/engine-core/src/effect-runtime-primitives.ts

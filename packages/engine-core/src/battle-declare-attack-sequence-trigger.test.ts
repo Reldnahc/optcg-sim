@@ -3,7 +3,7 @@ import { test } from "vitest";
 
 import type { PlayerId } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import { applyDeclareAttack } from "./battle-actions.js";
 import {
   setupAttackState,
@@ -182,8 +182,26 @@ test("CARD-009D: draw-then-trash trash decision response trashes selected card a
       response: { type: "cards", cards: [card] },
     });
     assert.equal(resolved.errors, undefined);
-    assert.equal(resolved.state.pendingDecision, undefined);
     assert.equal(resolved.state.effectQueue.length, 0);
+    assert.notEqual(resolved.state.battle?.step, "attack");
+    if (resolved.state.battle !== undefined) {
+      assert.equal(resolved.state.battle.step, "block");
+      assert.equal(resolved.state.pendingDecision?.type, "selectCards");
+      assert.equal(
+        getLegalActions(resolved.state, p2).some(
+          (legalAction) => legalAction.type === "respondToDecision",
+        ),
+        true,
+      );
+    } else {
+      assert.equal(resolved.state.pendingDecision, undefined);
+      assert.equal(
+        getLegalActions(resolved.state, p1).some(
+          (legalAction) => legalAction.type !== "concede",
+        ),
+        true,
+      );
+    }
     assert.equal(
       resolved.events.some((event) => event.type === "cardTrashed"),
       true,

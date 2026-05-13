@@ -20,6 +20,8 @@ story_boundary: >
   hand. Do not broaden parser grammar, card-data fixture support, manifest
   generation, or unrelated trigger timings in this story.
 allowed_touch_points:
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/battle-actions.ts
   - packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts
   - packages/engine-core/src/effect-runtime-trigger-queueing*.ts
   - packages/engine-core/src/effect-runtime-primitives.ts
