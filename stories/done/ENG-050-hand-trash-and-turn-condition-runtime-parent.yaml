@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the shared engine runtime foundations needed before generated card
   support can safely support OP10-045: private hand-trash decisions and

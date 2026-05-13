@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-050B.md",
-      "storyId": "ENG-050B",
-      "storyPath": "stories/approved/ENG-050B-draw-then-trash-sequence-continuation.yaml",
-      "storySha256": "4e07691e604722d7bf9fe54f3c205985cb1ac743b6b5d0e51e1a5a014216df9d"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

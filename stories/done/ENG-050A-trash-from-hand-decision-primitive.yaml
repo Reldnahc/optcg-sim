@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the first narrow self trash-from-hand effect runtime decision path with
   private choice validation, deterministic events, and fail-closed invalid
