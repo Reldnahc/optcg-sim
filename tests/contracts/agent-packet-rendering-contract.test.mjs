@@ -10,7 +10,6 @@ import {
   readPacketBullets,
   readPacketRawBullets,
   readPacketSection,
-  repoRoot,
   readStoryValues,
   runPacketTool,
   runPacketToolFromRepo,
@@ -291,18 +290,12 @@ ambiguity_policy: fail_and_escalate
 
 test("packet builder renders deterministic post-approval role sections for INF-044C", async () => {
   const tempDir = await makeTempDir();
-  const outputPath = path.join(tempDir, "INF-044C.md");
-  const inf044cStoryPath = path.join(
-    repoRoot,
-    "stories",
-    "approved",
-    "INF-044C-role-scoped-packet-sections.yaml",
-  );
+  const outputPath = path.join(tempDir, "INF-014.md");
 
   const result = runPacketTool([
     "generate",
     "--story",
-    inf044cStoryPath,
+    storyPath,
     "--output",
     outputPath,
   ]);
@@ -310,7 +303,7 @@ test("packet builder renders deterministic post-approval role sections for INF-0
   assert.equal(
     result.status,
     0,
-    `expected INF-044C packet build to pass\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
+    `expected fixture packet build to pass\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
   );
 
   const packet = await readFile(outputPath, "utf8");
