@@ -384,6 +384,176 @@ test("loads OP04-014 from plain manifest data and applies Banish without mutatin
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });
 
+test("loads OP10-045 from plain manifest data and queues draw-before-trash on declare attack", async () => {
+  const plainManifest = await loadPlainRealCardManifest();
+  const op10045 = toCardId("OP10-045");
+  const opCard = must(plainManifest.cards[op10045], "OP10-045 manifest card");
+  const effectDefinitionId = must(
+    opCard.support.effectDefinitionId,
+    "OP10-045 effectDefinitionId",
+  );
+  const effectDefinition = must(
+    plainManifest.effectDefinitions?.[effectDefinitionId],
+    "OP10-045 effect definition",
+  );
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.characters[0], "source");
+  const extraDrawSource = must(p1State.hand[0], "extra draw source");
+  p1State.hand = p1State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index },
+  }));
+  p1State.deck.push({
+    ...extraDrawSource,
+    zone: {
+      zone: "deck",
+      playerId: p1,
+      slot: "deck",
+      index: p1State.deck.length,
+    },
+  });
+  const firstDrawn = must(p1State.deck[0], "first drawn card");
+  const secondDrawn = must(p1State.deck[1], "second drawn card");
+  const beforeDeckSize = p1State.deck.length;
+  const beforeHandSize = p1State.hand.length;
+
+  source.cardId = op10045;
+  state.cardManifest.cards = {
+    ...state.cardManifest.cards,
+    [op10045]: opCard,
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: effectDefinition,
+  };
+  state.cardManifest.cardDataVersion = plainManifest.cardDataVersion;
+  state.cardManifest.effectDefinitionsVersion =
+    plainManifest.effectDefinitionsVersion;
+
+  assert.equal(opCard.support.status, "implemented-dsl");
+  assert.equal(
+    opCard.effectText,
+    "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
+  );
+  assert.equal(effectDefinition.effects.length, 1);
+  const effectBlock = must(effectDefinition.effects[0], "effect block");
+  assert.equal(effectBlock.oncePerTurn, true);
+  assert.deepEqual(effectBlock.trigger, { type: "whenAttacking" });
+  assert.equal(effectBlock.effect.type, "sequence");
+  assert.equal(
+    must(effectBlock.effect.effects[0], "draw segment").connector,
+    "always",
+  );
+  assert.equal(
+    must(effectBlock.effect.effects[0], "draw segment").effect.type,
+    "draw",
+  );
+  assert.equal(
+    must(effectBlock.effect.effects[1], "trash segment").connector,
+    "then",
+  );
+  assert.equal(
+    must(effectBlock.effect.effects[1], "trash segment").effect.type,
+    "trashFromHand",
+  );
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: source.instanceId,
+      cardId: op10045,
+      playerId: p1,
+    },
+    target: {
+      instanceId: must(state.players[p2], "p2").leader.instanceId,
+      cardId: must(state.players[p2], "p2").leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(opened.errors, undefined);
+  const decision = must(opened.state.pendingDecision, "trash decision");
+  const openedP1 = must(opened.state.players[p1], "p1 after queue");
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.playerId, p1);
+  assert.deepEqual(decision.request, {
+    timing: "onResolution",
+    chooser: "self",
+    player: "self",
+    zone: "hand",
+    min: 1,
+    max: 1,
+    allowFewerIfUnavailable: false,
+    visibility: "privateToChooser",
+  });
+  assert.equal(openedP1.deck.length, beforeDeckSize - 2);
+  assert.equal(openedP1.hand.length, beforeHandSize + 2);
+  assert.deepEqual(
+    openedP1.hand.slice(-2).map((card) => card.instanceId),
+    [firstDrawn.instanceId, secondDrawn.instanceId],
+  );
+  assert.deepEqual(
+    decision.candidates.map((candidate) => candidate.card.instanceId),
+    openedP1.hand.map((card) => card.instanceId),
+  );
+  const eventTypes = opened.events.map((event) => event.type);
+  assert.equal(
+    eventTypes.indexOf("attackDeclared") < eventTypes.indexOf("effectQueued"),
+    true,
+  );
+  assert.equal(
+    eventTypes.indexOf("effectQueued") < eventTypes.indexOf("cardDrawn"),
+    true,
+  );
+  assert.equal(
+    eventTypes.indexOf("cardDrawn") < eventTypes.indexOf("decisionCreated"),
+    true,
+  );
+
+  const resolved = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    playerId: p1,
+    response: {
+      type: "cards",
+      cards: [
+        {
+          instanceId: secondDrawn.instanceId,
+          cardId: secondDrawn.cardId,
+          playerId: p1,
+          zone: must(
+            openedP1.hand.find(
+              (card) => card.instanceId === secondDrawn.instanceId,
+            ),
+            "drawn card in hand",
+          ).zone,
+        },
+      ],
+    },
+  });
+  const resolvedP1 = must(resolved.state.players[p1], "p1 after trash");
+
+  assert.equal(resolved.errors, undefined);
+  if (resolved.state.status.type === "active") {
+    assert.notEqual(resolved.state.battle?.step, "attack");
+    assert.equal(
+      getLegalActions(resolved.state, p2).some(
+        (legalAction) => legalAction.type === "respondToDecision",
+      ),
+      true,
+    );
+  } else {
+    assert.deepEqual(getLegalActions(resolved.state, p2), []);
+  }
+  assert.equal(
+    resolvedP1.hand.some((card) => card.instanceId === secondDrawn.instanceId),
+    false,
+  );
+  assert.equal(resolvedP1.trash[0]?.instanceId, secondDrawn.instanceId);
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
 const unsupportedRealCardFailClosedCases = [
   {
     cardId: "EB01-003",

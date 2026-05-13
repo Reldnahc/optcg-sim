@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-009D.md",
-      "storyId": "CARD-009D",
-      "storyPath": "stories/approved/CARD-009D-when-attacking-sequence-trigger-queueing.yaml",
-      "storySha256": "70897ae3327b86b4655dc6e9f1f23c4cd753c7f4c1b72873f1268a5e4d1c5d68"
+      "packetPath": "agent-packets/CARD-009C.md",
+      "storyId": "CARD-009C",
+      "storyPath": "stories/approved/CARD-009C-op10-045-generated-support-fixture-proof.yaml",
+      "storySha256": "00018442b55310dca59b5dc86fc0827d7a2cf26e7367a8aa2d3878730dbf3a00"
     }
   ],
   "version": 1

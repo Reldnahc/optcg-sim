@@ -299,4 +299,36 @@ describe("generated support report", () => {
       unsupportedCardIds: ["CARD-009B-203"],
     });
   });
+
+  it("includes OP10-045 as supported with once-per-turn draw-then-trash parser rule evidence", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "OP10-045" as CardId,
+          sourceText:
+            "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
+          sourceTextHash: "sha256:op10-045-source",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.supportedCardIds).toEqual(["OP10-045"]);
+    expect(report.unsupportedCardIds).toEqual([]);
+    expect(report.parserRuleIdsUsed).toEqual([
+      "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+    ]);
+    expect(report.statusByCardId["OP10-045"]).toEqual({
+      blockerCodes: [],
+      missingCapabilityIds: [],
+      parseStatus: "complete",
+      parserRuleIds: [
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+      ],
+      status: "supported",
+    });
+  });
 });

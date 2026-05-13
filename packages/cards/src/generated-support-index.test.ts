@@ -364,6 +364,56 @@ describe("generated support index", () => {
     },
   );
 
+  it("supports OP10-045 once-per-turn draw-then-trash template via parser+runtime capability evidence", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          cardId: "OP10-045" as CardId,
+          sourceText:
+            "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      blockers: [],
+      cardId: "OP10-045",
+      parseStatus: "complete",
+      parserRuleIds: [
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+      ],
+      status: "supported",
+      support: {
+        cardId: "OP10-045",
+        effectDefinitionId: "op10-045.generated-support",
+        status: "implemented-dsl",
+        tested: true,
+      },
+    });
+    expect(index.entries[0]?.capabilityEvidence).toEqual(
+      expect.arrayContaining([
+        {
+          capabilityId: "effect:sequence:ordered",
+          parserRuleId:
+            "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+        },
+        {
+          capabilityId:
+            "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+          parserRuleId:
+            "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+        },
+        {
+          capabilityId: "trigger:whenAttacking:oncePerTurn",
+          parserRuleId:
+            "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+        },
+      ]),
+    );
+  });
+
   it.each([
     "[On Play] Trash 1 card from your hand and draw 2 cards.",
     "[When Attacking] Draw 2 cards and trash 1 card from your hand. Then draw 1 card.",
