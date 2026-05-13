@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add engine trigger-queueing support for the already-certified
   `[When Attacking]` draw-then-trash generated DSL template so cards whose

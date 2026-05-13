@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Align the checked-in effect DSL JSON schema with the existing canonical
   `trashFromHand` effect contract so generated draw-then-trash DSL can validate
