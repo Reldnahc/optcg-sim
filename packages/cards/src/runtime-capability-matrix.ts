@@ -29,8 +29,8 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       sinceStory: "CARD-008A",
       supported: true,
       supportedParserRuleIds: [
-        "exact:on-play:draw-1:self",
-        "exact:when-attacking:draw-1:self",
+        "exact:on-play:draw-n:self",
+        "exact:when-attacking:draw-n:self",
       ],
     },
     {
@@ -41,20 +41,21 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       sinceStory: "CARD-008A",
       supported: true,
       supportedParserRuleIds: [
-        "exact:on-play:draw-1:self",
-        "exact:when-attacking:draw-1:self",
+        "exact:on-play:draw-n:self",
+        "exact:when-attacking:draw-n:self",
         "line-separated-effect-blocks:v1",
       ],
     },
     {
-      description: "Draw exactly one card for the source controller.",
-      id: "effect:draw:self:count:1",
+      description:
+        "Draw a positive safe-integer number of cards for the source controller.",
+      id: "effect:draw:self:count:positive-safe-integer",
       kind: "effect",
-      sinceStory: "CARD-008A",
+      sinceStory: "CARD-009A",
       supported: true,
       supportedParserRuleIds: [
-        "exact:on-play:draw-1:self",
-        "exact:when-attacking:draw-1:self",
+        "exact:on-play:draw-n:self",
+        "exact:when-attacking:draw-n:self",
       ],
     },
     {
@@ -65,8 +66,8 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       sinceStory: "CARD-008A",
       supported: true,
       supportedParserRuleIds: [
-        "exact:on-play:draw-1:self",
-        "exact:when-attacking:draw-1:self",
+        "exact:on-play:draw-n:self",
+        "exact:when-attacking:draw-n:self",
       ],
     },
     {
@@ -75,7 +76,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "trigger",
       sinceStory: "CARD-008A",
       supported: true,
-      supportedParserRuleIds: ["exact:on-play:draw-1:self"],
+      supportedParserRuleIds: ["exact:on-play:draw-n:self"],
     },
     {
       description:
@@ -84,17 +85,17 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "trigger",
       sinceStory: "CARD-008A",
       supported: true,
-      supportedParserRuleIds: ["exact:when-attacking:draw-1:self"],
+      supportedParserRuleIds: ["exact:when-attacking:draw-n:self"],
     },
   ],
-  generatedAtStory: "CARD-008A",
+  generatedAtStory: "CARD-009A",
   id: "generated-support-runtime-capabilities:v1",
 } as const satisfies RuntimeCapabilityMatrix;
 
 export const requiredGeneratedSupportCapabilityIds = [
   "category:auto",
   "composition:line-separated-effect-blocks:v1",
-  "effect:draw:self:count:1",
+  "effect:draw:self:count:positive-safe-integer",
   "sourcePresencePolicy:mustRemainInSameZone",
   "trigger:onPlay",
   "trigger:whenAttacking",

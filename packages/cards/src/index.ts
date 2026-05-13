@@ -88,9 +88,9 @@ export type {
 export {
   certifiedParserRuleReviewer,
   lineSeparatedEffectBlocksCompositionId,
-  onPlayDrawOneParserRuleId,
+  onPlayDrawNParserRuleId,
   parseCertifiedCardText,
-  whenAttackingDrawOneParserRuleId,
+  whenAttackingDrawNParserRuleId,
 } from "./certified-card-text-parser.js";
 export type { CertifiedCardTextParserInput } from "./certified-card-text-parser.js";
 export {

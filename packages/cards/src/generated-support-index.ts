@@ -326,19 +326,19 @@ function compareCapabilityEvidence(
 }
 
 function capabilityIdsForParserRuleId(parserRuleId: string): readonly string[] {
-  if (parserRuleId === "exact:on-play:draw-1:self") {
+  if (parserRuleId === "exact:on-play:draw-n:self") {
     return [
       "category:auto",
-      "effect:draw:self:count:1",
+      "effect:draw:self:count:positive-safe-integer",
       "sourcePresencePolicy:mustRemainInSameZone",
       "trigger:onPlay",
     ];
   }
 
-  if (parserRuleId === "exact:when-attacking:draw-1:self") {
+  if (parserRuleId === "exact:when-attacking:draw-n:self") {
     return [
       "category:auto",
-      "effect:draw:self:count:1",
+      "effect:draw:self:count:positive-safe-integer",
       "sourcePresencePolicy:mustRemainInSameZone",
       "trigger:whenAttacking",
     ];
