@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-011A.md",
-      "storyId": "CARD-011A",
-      "storyPath": "stories/approved/CARD-011A-generated-support-playability-evaluator.yaml",
-      "storySha256": "c779afcf12994abefe4697008948d2e21ce4168167b7397aa1f5c415c02019c9"
+      "packetPath": "agent-packets/CARD-011B.md",
+      "storyId": "CARD-011B",
+      "storyPath": "stories/approved/CARD-011B-read-only-support-probe-cli.yaml",
+      "storySha256": "f33174c49764c51729498ade3e9406a82a9df9f83fb1301e30638761ebf3c376"
     }
   ],
   "version": 1
