@@ -394,6 +394,9 @@ export const applyDeclareAttack = (
   if (attackTimingResult.state.status.type !== "active") {
     return attackTimingResult;
   }
+  if (attackTimingResult.state.pendingDecision !== undefined) {
+    return attackTimingResult;
+  }
   if (!battleParticipantsRemainLegal(attackTimingResult.state)) {
     return cleanupBattleAfterAttackTiming(state, attackTimingResult);
   }
