@@ -329,3 +329,55 @@ test("CARD-009D: unsupported whenAttacking sequence shape still fails closed", (
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
 });
+
+test("CARD-009D: zero-draw whenAttacking sequence still fails closed", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const definition = withWhenAttackingDrawEffect(state, p1State.leader);
+  const effect = must(definition.effects[0], "When Attacking effect");
+  effect.effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: { type: "draw", count: 0, player: "self" },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "trashFromHand",
+          count: 1,
+          player: "self",
+          chooser: "self",
+        },
+      },
+    ],
+  };
+  const before = JSON.stringify(state);
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "when-attacking-trigger-queueing",
+      details: { reason: "unsupported-when-attacking-definition" },
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+});

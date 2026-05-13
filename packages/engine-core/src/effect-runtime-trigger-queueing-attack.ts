@@ -66,7 +66,7 @@ const isSupportedWhenAttackingDrawThenTrashSequenceEffect = (
 
   return (
     Number.isInteger(drawSegment.effect.count) &&
-    drawSegment.effect.count >= 0 &&
+    drawSegment.effect.count > 0 &&
     drawSegment.effect.player === "self" &&
     Number.isInteger(trashSegment.effect.count) &&
     trashSegment.effect.count > 0 &&
