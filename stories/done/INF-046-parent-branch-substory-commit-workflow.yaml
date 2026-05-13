@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Make the INF-044-style parent/substory workflow the normal path: substories
   land as reviewed commits on one parent integration branch, and the final
