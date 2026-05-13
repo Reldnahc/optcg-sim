@@ -77,11 +77,17 @@ export async function runSupportProbe(
   } else {
     options.stdout.write("Blockers:\n");
     for (const blocker of evaluation.blockers) {
-      options.stdout.write(`- ${blocker.code}: ${blocker.message}\n`);
+      const spanText =
+        blocker.span === undefined
+          ? ""
+          : ` span: ${JSON.stringify(blocker.span.text)}`;
+      options.stdout.write(
+        `- ${blocker.code}: ${blocker.message}${spanText}\n`,
+      );
     }
   }
 
-  return evaluation.playable ? 0 : 1;
+  return 0;
 }
 
 export async function runSupportProbeCli(

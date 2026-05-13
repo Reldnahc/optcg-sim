@@ -117,7 +117,7 @@ describe("support probe", () => {
     );
 
     const text = output.join("");
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(0);
     expect(text).toContain("Playable: no");
     expect(text).toContain("stale-hash");
     expect(text).toContain("Poneglyph behavior hash changed.");
@@ -229,10 +229,11 @@ describe("support probe", () => {
     });
 
     const text = output.join("");
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(0);
     expect(text).toContain("Playable: no");
     expect(text).toMatch(/Blockers:/);
     expect(text).toMatch(/unparsed-span|missing-runtime-capability/);
+    expect(text).toContain('span: "Then rest 1 DON!!."');
   });
 
   it("does not create, delete, or rewrite fixture, manifest, report, or cache files when probing via CLI", async () => {
