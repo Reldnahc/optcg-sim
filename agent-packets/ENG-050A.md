@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-050A -->
 <!-- agent-packet:story-path stories/approved/ENG-050A-trash-from-hand-decision-primitive.yaml -->
-<!-- agent-packet:story-sha256 893c51ce3b4f50729a7143cf4014af94f046f272399f2a9f7c126f5eb6abcf00 -->
+<!-- agent-packet:story-sha256 cf0c1d9e6cba837b29136acc7c7586d6c9ccd856152ae2c1893962b2346dd667 -->
 
 # Story Packet
 
@@ -733,6 +733,7 @@ Own only the narrow `trashFromHand` effect primitive for the source controller c
 ## Allowed Touch Points
 
 <!-- prettier-ignore -->
+- packages/engine-core/src/actions.ts
 - packages/engine-core/src/effect-runtime-*.ts
 - packages/engine-core/src/*decision*.ts
 - packages/engine-core/src/*player-view*.ts

@@ -19,6 +19,7 @@ story_boundary: >
   generated support fixture changes, broad discard semantics, costs, or
   sequence execution in this story.
 allowed_touch_points:
+  - packages/engine-core/src/actions.ts
   - packages/engine-core/src/effect-runtime-*.ts
   - packages/engine-core/src/*decision*.ts
   - packages/engine-core/src/*player-view*.ts
