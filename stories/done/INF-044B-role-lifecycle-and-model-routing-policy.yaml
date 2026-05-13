@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Document role-specific agent reuse, closure, revision, verification authority,
   and model routing policy for the role-based workflow.

@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Document the new agent hierarchy and require the Session Orchestrator to
   present single-story versus parent/substory tradeoffs while the human chooses

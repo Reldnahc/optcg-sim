@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-044E.md",
-      "storyId": "INF-044E",
-      "storyPath": "stories/approved/INF-044E-enforce-role-based-handoffs.yaml",
-      "storySha256": "40a04d276084cfc8fe9f0e64a69ff9bcf481b1b802ba7e1064375ca86486cd59"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

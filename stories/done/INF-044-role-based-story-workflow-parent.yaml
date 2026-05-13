@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Replace the current implicit single-story, parent-owned workflow with an
   explicit human-selected story path and role-based agent hierarchy backed by

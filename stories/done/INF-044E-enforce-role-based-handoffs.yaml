@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Update workflow docs and tests so post-approval agent handoffs use
   deterministic role packet extraction and so AGENTS.md remains a concise

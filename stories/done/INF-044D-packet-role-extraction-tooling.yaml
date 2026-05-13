@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Add a packet extraction command that emits role-scoped Markdown and JSON for
   post-approval agent handoffs without manual packet trimming.
