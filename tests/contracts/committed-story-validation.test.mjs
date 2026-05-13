@@ -308,6 +308,77 @@ test("committed story validator accepts generated parents whose children are all
   ]);
 });
 
+test("committed story validator rejects approved CARD implementation stories missing authoring guards", async () => {
+  const tempRoot = await makeTempRepo();
+  await writeStory(tempRoot, "stories/approved/CARD-001-missing-guards.yaml", {
+    id: "CARD-001",
+    epic_id: "CARD-001",
+    type: "implementation",
+    area: "cards",
+    primary_concern: "verification",
+  });
+
+  const result = await validateCommittedStories({ repoRoot: tempRoot });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.checkedFiles, [
+    "stories/approved/CARD-001-missing-guards.yaml",
+  ]);
+  assert.match(
+    result.diagnostics.join("\n"),
+    /approved stories with area: cards and type: implementation must define card_source_integrity evidence/,
+  );
+  assert.match(
+    result.diagnostics.join("\n"),
+    /approved stories with area: cards and type: implementation must define engine_capability_preflight evidence/,
+  );
+});
+
+test("committed story validator accepts approved CARD implementation stories with authoring guards", async () => {
+  const tempRoot = await makeTempRepo();
+  await writeStory(tempRoot, "stories/approved/CARD-001-with-guards.yaml", {
+    id: "CARD-001",
+    epic_id: "CARD-001",
+    type: "implementation",
+    area: "cards",
+    primary_concern: "verification",
+    card_source_integrity: [
+      "target card fixture is captured with the package helper",
+      "behavior-sensitive printed fields are pinned in fixture tests",
+    ],
+    engine_capability_preflight: [
+      "parsed effect shape is listed",
+      "missing reusable runtime capabilities are split into ENG prerequisites",
+    ],
+  });
+
+  const result = await validateCommittedStories({ repoRoot: tempRoot });
+
+  assert.equal(result.ok, true, result.diagnostics.join("\n"));
+  assert.deepEqual(result.checkedFiles, [
+    "stories/approved/CARD-001-with-guards.yaml",
+  ]);
+});
+
+test("committed story validator allows generated CARD implementation drafts before guard approval", async () => {
+  const tempRoot = await makeTempRepo();
+  await writeStory(tempRoot, "stories/generated/CARD-001-draft.yaml", {
+    id: "CARD-001",
+    epic_id: "CARD-001",
+    type: "implementation",
+    area: "cards",
+    primary_concern: "verification",
+    status: "generated",
+  });
+
+  const result = await validateCommittedStories({ repoRoot: tempRoot });
+
+  assert.equal(result.ok, true, result.diagnostics.join("\n"));
+  assert.deepEqual(result.checkedFiles, [
+    "stories/generated/CARD-001-draft.yaml",
+  ]);
+});
+
 async function writeParentStory(tempRoot, relativePath, status) {
   const storyPath = path.join(tempRoot, relativePath);
   await mkdir(path.dirname(storyPath), { recursive: true });

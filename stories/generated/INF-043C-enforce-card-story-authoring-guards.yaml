@@ -1,0 +1,69 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-043C
+epic_id: INF-043
+title: Enforce CARD story authoring guard sections
+type: tooling
+area: infra
+primary_concern: tooling
+priority: high
+status: generated
+summary: >
+  Add story schema and committed-story validation support for card source
+  integrity and engine capability preflight blocks so approved CARD
+  implementation stories cannot omit them.
+story_boundary: >
+  Own only story schema, committed-story validation, and contract tests for the
+  new CARD implementation story guard sections. Do not change gameplay behavior,
+  fixtures, manifests, generated support, parser behavior, or engine runtime
+  behavior.
+allowed_touch_points:
+  - contracts/story.schema.json
+  - tools/validate-stories.ts
+  - tests/contracts/story-schema-contract.test.mjs
+  - tests/contracts/committed-story-validation.test.mjs
+  - specs/24-story-schema.md
+  - specs/25-story-template.md
+  - specs/spec-manifest.json
+  - specs/section-index.json
+  - docs/workflow/review-gate.md
+  - stories/generated/INF-043C-enforce-card-story-authoring-guards.yaml
+spec_refs:
+  - 24-story-schema.s004
+  - 24-story-schema.s020
+  - 24-story-schema.s021
+  - 24-story-schema.s027
+  - 25-story-template.s003
+  - 27-spec-driven-story-generation-workflow.s007
+  - 27-spec-driven-story-generation-workflow.s017
+  - 27-spec-driven-story-generation-workflow.s008
+scope:
+  - add optional `card_source_integrity` and `engine_capability_preflight` fields to the story schema
+  - make committed-story validation reject approved cards-area implementation stories when either field is missing
+  - keep generated and historical story files valid so backlog drafting remains possible before approval
+  - add contract tests for the schema and validator behavior
+  - add review-gate guidance for substantive story-review of the two fields before approval
+non_scope:
+  - requiring the new fields on non-CARD stories
+  - requiring the new fields on generated backlog drafts
+  - changing existing done-story metadata
+  - card fixture, manifest, parser, generated support, or engine runtime changes
+dependencies:
+  - INF-043A
+  - INF-043B
+acceptance_criteria:
+  - story schema exposes `card_source_integrity` and `engine_capability_preflight`
+  - approved cards-area implementation stories without `card_source_integrity` fail committed-story validation
+  - approved cards-area implementation stories without `engine_capability_preflight` fail committed-story validation
+  - generated CARD implementation drafts without the fields remain valid for pre-approval backlog work
+required_tests:
+  - story schema contract test for both new fields
+  - committed-story validation reject test for approved CARD implementation missing the fields
+  - committed-story validation accept test for generated CARD implementation missing the fields
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm exec vitest run tests/contracts/story-schema-contract.test.mjs tests/contracts/committed-story-validation.test.mjs`
+repo_rules:
+  - enforcement must not break historical done stories or generated backlog drafts
+  - do not change gameplay, fixtures, manifests, parser behavior, or generated support
+ambiguity_policy: fail_and_escalate

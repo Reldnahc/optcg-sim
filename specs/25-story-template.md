@@ -79,6 +79,10 @@ repo_rules:
   - must pass pnpm verify
   - must follow package boundary rules
   - must not introduce hidden-information leakage
+card_source_integrity:
+  - <required for approved CARD implementation stories; otherwise say not applicable and why>
+engine_capability_preflight:
+  - <required for approved CARD implementation stories; otherwise say not applicable and why>
 ambiguity_policy: <fail_and_escalate|implement_if_clearly_implied>
 ```
 
@@ -127,6 +131,46 @@ Acceptance criteria should describe behavior, not internal aspirations. Write th
 Section Ref: `25-story-template.s009`
 
 The default assumption is that implementation work includes tests. If a story does not require tests, that must be justified explicitly.
+
+### CARD implementation preflights
+
+<!-- SECTION_REF: 25-story-template.s014 -->
+
+Section Ref: `25-story-template.s014`
+
+Approved stories with `area: cards` and `type: implementation` must include
+`card_source_integrity` and `engine_capability_preflight` before approval.
+
+Use `card_source_integrity` to record target card IDs, the fixture capture
+command or reviewed checked-in fixture provenance, behavior-sensitive printed
+fields, required fixture assertions, and manifest regeneration requirements.
+Behavior-sensitive printed fields include card type, color, cost, power,
+counter, types, effect, trigger, and release or set metadata when freshness
+matters.
+If the story does not enable or change real-card gameplay support, this field
+must say why source integrity is not applicable.
+
+Use `engine_capability_preflight` to record parsed effect shape, required
+runtime capabilities, which capabilities are already supported, which reusable
+capabilities are missing, and prerequisite ENG stories for missing behavior.
+Reusable engine gaps block CARD implementation until they are done or split into
+explicit prerequisite ENG stories.
+If the story is pure card-data infrastructure and does not implement or enable
+gameplay behavior, this field must say why runtime capability preflight is not
+applicable.
+
+Copy-ready CARD implementation example:
+
+```yaml
+card_source_integrity:
+  - target card OP10-045 must be captured with `corepack pnpm --filter @optcg/cards capture:fixture -- --card OP10-045 --dry-run`
+  - fixture assertions must pin card_type Character, color Blue, cost 4, power 6000, counter null, types Dressrosa and Beautiful Pirates, and exact effect text
+  - cards-produced manifest must be regenerated when fixture or generated support evidence changes
+engine_capability_preflight:
+  - parsed effect shape is `[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.`
+  - required runtime capabilities are when-attacking trigger queueing, once-per-turn tracking, draw, trash-from-hand decision, sequence continuation, and source-presence policy
+  - missing reusable runtime capabilities must be split into prerequisite ENG stories before CARD implementation starts
+```
 
 ## Example approved story
 

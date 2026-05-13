@@ -125,6 +125,24 @@ test("story schema enums match the canonical spec vocabulary", async () => {
   ]);
   assert.equal(schema.properties.blocked_reason.type, "string");
   assert.equal(schema.properties.child_stories.type, "array");
+  assert.equal(schema.properties.card_source_integrity.type, "array");
+  assert.equal(schema.properties.engine_capability_preflight.type, "array");
+});
+
+test("story schema supports CARD implementation preflight guard fields", async () => {
+  const schema = await readJson("contracts/story.schema.json");
+
+  for (const fieldName of [
+    "card_source_integrity",
+    "engine_capability_preflight",
+  ]) {
+    const field = schema.properties[fieldName];
+
+    assert.equal(field.type, "array");
+    assert.equal(field.minItems, 1);
+    assert.equal(field.items.type, "string");
+    assert.equal(field.items.minLength, 1);
+  }
 });
 
 test("story schema accepts split-story letter suffixes without broad arbitrary suffixes", async () => {
@@ -138,4 +156,25 @@ test("story schema accepts split-story letter suffixes without broad arbitrary s
   assert.doesNotMatch("INF-006-alpha", storyIdPattern);
   assert.match("KICK-001", epicIdPattern);
   assert.doesNotMatch("KICK-001A", epicIdPattern);
+});
+
+test("workflow docs require substantive CARD implementation preflight review", async () => {
+  const storyExecution = await readFile(
+    path.join(repoRoot, "docs/workflow/story-execution.md"),
+    "utf8",
+  );
+  const reviewGate = await readFile(
+    path.join(repoRoot, "docs/workflow/review-gate.md"),
+    "utf8",
+  );
+  const fixtureCapture = await readFile(
+    path.join(repoRoot, "docs/workflow/card-fixture-capture.md"),
+    "utf8",
+  );
+
+  assert.match(storyExecution, /card_source_integrity/);
+  assert.match(storyExecution, /engine_capability_preflight/);
+  assert.match(storyExecution, /reusable engine gaps are already implemented/i);
+  assert.match(reviewGate, /story reviewers must inspect the\s+substance/s);
+  assert.match(fixtureCapture, /behavior-sensitive printed data/);
 });

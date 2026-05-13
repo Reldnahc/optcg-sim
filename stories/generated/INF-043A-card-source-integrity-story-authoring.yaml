@@ -1,0 +1,60 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-043A
+epic_id: INF-043
+title: Require real-card source integrity in CARD stories
+type: tooling
+area: infra
+primary_concern: docs
+priority: high
+status: generated
+summary: >
+  Document that real-card implementation stories must capture or cite validated
+  Poneglyph fixture provenance and pin behavior-sensitive printed metadata
+  before support evidence is accepted.
+story_boundary: >
+  Own only workflow and template guidance for card source integrity. Do not
+  change story validation tooling, real fixtures, manifests, parser behavior, or
+  engine runtime behavior.
+allowed_touch_points:
+  - docs/workflow/card-fixture-capture.md
+  - docs/workflow/story-execution.md
+  - docs/workflow/review-gate.md
+  - specs/25-story-template.md
+  - specs/spec-manifest.json
+  - specs/section-index.json
+  - tests/contracts/story-schema-contract.test.mjs
+  - tests/contracts/committed-story-validation.test.mjs
+  - stories/generated/INF-043A-card-source-integrity-story-authoring.yaml
+spec_refs:
+  - 24-story-schema.s020
+  - 24-story-schema.s021
+  - 25-story-template.s008
+  - 25-story-template.s009
+  - 27-spec-driven-story-generation-workflow.s006
+  - 27-spec-driven-story-generation-workflow.s007
+  - 27-spec-driven-story-generation-workflow.s017
+scope:
+  - define card source integrity as a required section for approved cards-area implementation stories
+  - require fixture capture or explicit checked-in fixture provenance for target real cards
+  - require behavior-sensitive field assertions for card type, color, cost, power, counter, types, effect, trigger, and release metadata where present
+  - require manifest regeneration when fixture or support evidence changes
+non_scope:
+  - schema or validator enforcement beyond documentation-focused contract coverage
+  - real-card fixture updates
+  - generated support updates
+  - engine behavior
+dependencies: []
+acceptance_criteria:
+  - workflow docs say CARD implementation stories must include card source integrity evidence
+  - story template shows a copy-ready `card_source_integrity` block
+  - docs distinguish real Poneglyph fixture provenance from helper-test fake payloads
+  - story-review guidance tells reviewers to reject vague source integrity before approval
+required_tests:
+  - documentation contract or targeted text assertion covering card source integrity guidance
+  - run `corepack pnpm run specs:verify-metadata` if specs are changed
+repo_rules:
+  - do not change fixtures or manifests
+  - do not introduce live Poneglyph requirements in CI
+ambiguity_policy: fail_and_escalate

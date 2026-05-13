@@ -33,6 +33,39 @@ card fixture, overlay, or manifest should be added or corrected, create a
 separate CARD/FIXTURE/verification follow-up story instead of broadening the
 engine story.
 
+## CARD Implementation Source Integrity
+
+Every approved CARD implementation story that enables or changes real-card
+gameplay support must include a `card_source_integrity` story section before it
+is approved. That section must name the target card IDs and record how the
+checked-in Poneglyph detail payload is known to be real: either by running the
+fixture capture helper for the explicit card ID or by citing an existing
+checked-in fixture with reviewed provenance.
+
+For each target real card, the story must list behavior-sensitive printed data
+that reviewers can compare against the checked-in fixture:
+
+- `card_type`
+- `color`
+- `cost`
+- `power`
+- `counter`
+- `types`
+- `effect`
+- `trigger`
+- release or set metadata when it affects fixture freshness
+
+The story must require existing fixture/normalization tests to pin those fields
+for the target card. Exact effect text alone is not enough; cost, color, power,
+counter, and type mistakes can change legality, payment, targeting, or deck
+validation without changing effect text.
+
+If the fixture or support evidence changes, the story must also require
+regenerating the affected cards-produced manifest and running the manifest
+snapshot/integration tests. Fake helper payloads, `example.test` image URLs, or
+hand-written Poneglyph-shaped details are allowed only in helper unit tests, not
+as evidence for supported real-card fixtures.
+
 ## Target-Effect Fixture Guardrail
 
 Do not promote a real card to target-effect `implemented-dsl` support unless a

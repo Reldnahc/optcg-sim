@@ -98,6 +98,8 @@ Every approved story must define all of the following fields:
 - `ambiguity_policy`
 
 Optional fields may exist, but approved stories must not omit required fields.
+Approved stories with `area: cards` and `type: implementation` must also define
+`card_source_integrity` and `engine_capability_preflight` before approval.
 
 ## Field meanings
 
@@ -256,6 +258,36 @@ Section Ref: `24-story-schema.s022`
 
 Mechanical repo requirements that apply to the story, such as `pnpm verify`, deterministic engine rules, hidden-information safety, or package-boundary restrictions.
 
+### `card_source_integrity`
+
+<!-- SECTION_REF: 24-story-schema.s033 -->
+
+Section Ref: `24-story-schema.s033`
+
+Approved stories with `area: cards` and `type: implementation` use this field to
+record real-card data provenance before enabling or changing card support. The
+field should identify target card IDs, fixture capture or checked-in fixture
+provenance, behavior-sensitive printed fields, required fixture assertions, and
+whether a cards-produced manifest must be regenerated. If the story does not
+enable or change real-card gameplay support, the field should explicitly say why
+source integrity is not applicable. Generated drafts may omit it until approval
+review, but approved CARD implementation stories must not.
+
+### `engine_capability_preflight`
+
+<!-- SECTION_REF: 24-story-schema.s034 -->
+
+Section Ref: `24-story-schema.s034`
+
+Approved stories with `area: cards` and `type: implementation` use this field to
+record the parsed effect shape and reusable runtime capability status before
+card support starts. The field should list required engine capabilities, which
+are already supported, which are missing, and any prerequisite ENG stories. If
+the story is pure card-data infrastructure and does not implement or enable
+gameplay behavior, the field should explicitly say why the capability preflight
+is not applicable. Generated drafts may omit it until approval review, but
+approved CARD implementation stories must not.
+
 ### `ambiguity_policy`
 
 <!-- SECTION_REF: 24-story-schema.s023 -->
@@ -324,6 +356,10 @@ repo_rules:
   - must pass pnpm verify
   - engine behavior must remain deterministic
   - no hidden-information leakage is allowed
+card_source_integrity:
+  - not applicable; this engine story does not enable or change real-card support
+engine_capability_preflight:
+  - not applicable; this engine story is itself the reusable runtime capability
 ambiguity_policy: fail_and_escalate
 ```
 

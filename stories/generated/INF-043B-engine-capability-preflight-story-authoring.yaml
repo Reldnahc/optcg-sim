@@ -1,0 +1,60 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-043B
+epic_id: INF-043
+title: Require engine capability preflight in CARD stories
+type: tooling
+area: infra
+primary_concern: docs
+priority: high
+status: generated
+summary: >
+  Document that CARD implementation stories must classify parsed effect shapes
+  against current reusable engine capabilities and split missing reusable
+  runtime work into ENG prerequisites before card support starts.
+story_boundary: >
+  Own only workflow and template guidance for engine capability preflight. Do
+  not change story validation tooling, engine runtime behavior, parser behavior,
+  generated support, fixtures, or manifests.
+allowed_touch_points:
+  - docs/workflow/story-execution.md
+  - docs/workflow/review-gate.md
+  - specs/25-story-template.md
+  - specs/spec-manifest.json
+  - specs/section-index.json
+  - tests/contracts/story-schema-contract.test.mjs
+  - tests/contracts/committed-story-validation.test.mjs
+  - stories/generated/INF-043B-engine-capability-preflight-story-authoring.yaml
+spec_refs:
+  - 24-story-schema.s017
+  - 24-story-schema.s018
+  - 24-story-schema.s019
+  - 24-story-schema.s025
+  - 25-story-template.s006
+  - 25-story-template.s007
+  - 27-spec-driven-story-generation-workflow.s006
+  - 27-spec-driven-story-generation-workflow.s007
+  - 27-spec-driven-story-generation-workflow.s017
+scope:
+  - define engine capability preflight as a required section for approved cards-area implementation stories
+  - require parsed effect shape, runtime capabilities, supported/missing split, and prerequisite ENG stories
+  - state that reusable engine gaps block CARD implementation instead of becoming hidden card-story scope
+non_scope:
+  - schema or validator enforcement beyond documentation-focused contract coverage
+  - engine runtime changes
+  - parser or generated support changes
+  - real-card fixture changes
+dependencies: []
+acceptance_criteria:
+  - workflow docs say CARD implementation stories must include engine capability preflight evidence
+  - story template shows a copy-ready `engine_capability_preflight` block
+  - docs require missing reusable capabilities to become prerequisite ENG stories before CARD implementation
+  - story-review guidance tells reviewers to reject vague capability preflight before approval
+required_tests:
+  - documentation contract or targeted text assertion covering engine capability preflight guidance
+  - run `corepack pnpm run specs:verify-metadata` if specs are changed
+repo_rules:
+  - do not change engine behavior
+  - keep CARD and ENG story boundaries explicit
+ambiguity_policy: fail_and_escalate

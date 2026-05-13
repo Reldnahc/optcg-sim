@@ -30,6 +30,20 @@ The separate reviewer subagent run is a repo-level first-pass gate before human 
 
 Passing AI review does not replace human review.
 
+For CARD implementation story review, story reviewers must inspect the
+substance of `card_source_integrity` and `engine_capability_preflight`, not only
+their presence. Flag a CARD implementation story before approval when:
+
+- source integrity does not identify target card IDs and fixture provenance,
+- source integrity omits behavior-sensitive printed fields that affect gameplay
+  or deck validation,
+- source integrity relies on fake helper payloads as real-card support evidence,
+- engine capability preflight does not list the parsed effect shape,
+- engine capability preflight does not split required runtime capabilities into
+  supported and missing groups,
+- missing reusable engine behavior is not represented as prerequisite ENG
+  stories or an explicit blocker.
+
 Cleanup metadata is a reviewed request, not standalone authority. PR authors must leave exactly one `Post-merge cleanup:` metadata source in the PR body or a durable handoff comment before PR handoff, reviewer handoff, or human review request. The exact source shape uses `Post-merge cleanup:` followed by indented `mode`, `stories`, and optional `branches`; do not wrap it in a markdown fence and do not add a `cleanup:` wrapper. Handoff validation must use the actual current PR body or selected durable handoff comment, fetched changed files, and fetched PR head branch, not a copied example or reconstructed local text. The remote `cleanup-metadata-guard` check must be present and passing before human review is requested. Reviewers confirm the metadata matches the reviewed story scope before merge; automation must bind cleanup metadata to reviewed PR evidence and trusted checked-in story and packet state before any direct cleanup commit. The human-controlled merge to `main` authorizes the cleanup metadata snapshot at merge time, and the computed metadata source ref is audit evidence rather than a manual approval field. If merge actor evidence is unavailable and an equivalent human-review fallback is used, the fallback record must confirm the cleanup metadata source was reviewed before fallback approval.
 
 For parent-story integration branch work, passing AI review permits the parent agent to merge a substory PR into the parent integration branch only after CI, packet verification, AI review records, and revision response records are complete. It does not permit merging the parent integration branch to `main` without human review.

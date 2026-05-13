@@ -183,6 +183,22 @@
       },
       "minItems": 1
     },
+    "card_source_integrity": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "engine_capability_preflight": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
     "ambiguity_policy": {
       "type": "string",
       "enum": ["fail_and_escalate", "implement_if_clearly_implied"]

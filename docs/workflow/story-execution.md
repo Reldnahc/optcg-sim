@@ -112,6 +112,37 @@ Engine and rules stories must keep focused synthetic/unit/regression tests for b
   implemented unless the story also implements and verifies the cited behavior.
 - If an engine or rules story exposes a real-card fixture or cards-produced manifest gap, create a separate CARD/FIXTURE/verification follow-up story instead of widening the engine story.
 
+## CARD Implementation Story Authoring
+
+Approved stories with `area: cards` and `type: implementation` must include two
+preflight sections before they are worker-ready:
+
+- `card_source_integrity`
+- `engine_capability_preflight`
+
+`card_source_integrity` records the real-card data provenance for each target
+card. It must identify the capture command or reviewed checked-in fixture,
+list behavior-sensitive printed fields, require fixture/normalization
+assertions for those fields, and require manifest regeneration when fixture or
+support evidence changes. If the story does not enable or change real-card
+gameplay support, the section must say so explicitly and explain why source
+integrity is not applicable.
+
+`engine_capability_preflight` records the parsed effect shape and compares it to
+current reusable runtime capabilities. It must list required runtime
+capabilities, split them into supported and missing groups, and name prerequisite
+ENG stories for missing reusable behavior. A CARD implementation story is blocked
+until reusable engine gaps are already implemented or explicitly split into
+prerequisite ENG stories. If the story is pure card-data infrastructure and does
+not implement or enable gameplay behavior, the section must say so explicitly.
+
+CARD stories own real-card fixture provenance, generated support linkage,
+support reports, cards-produced manifest updates, and card-specific integration
+proof. ENG stories own reusable engine behavior such as costs, targeting,
+decision continuations, trigger timing, once-per-turn state, hidden-information
+projection, event order, and state hashing. Do not hide reusable engine work
+inside a card support story.
+
 ## Story Lifecycle Rules
 
 - The parent agent owns story-state transitions and active-packet cleanup.

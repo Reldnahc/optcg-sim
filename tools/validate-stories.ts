@@ -63,6 +63,9 @@ export async function validateCommittedStories(
   }
 
   diagnostics.push(...validateStoryLifecycle(parsedStories));
+  diagnostics.push(
+    ...validateApprovedCardImplementationStoryGuards(parsedStories),
+  );
   diagnostics.sort();
 
   return {
@@ -108,9 +111,50 @@ function validateStoryLifecycle(stories: ParsedStoryFile[]) {
   return diagnostics;
 }
 
+function validateApprovedCardImplementationStoryGuards(
+  stories: ParsedStoryFile[],
+) {
+  const diagnostics: string[] = [];
+
+  for (const { document, relativePath } of stories) {
+    if (
+      !relativePath.startsWith("stories/approved/") ||
+      readStringField(document, "status") !== "approved" ||
+      readStringField(document, "area") !== "cards" ||
+      readStringField(document, "type") !== "implementation"
+    ) {
+      continue;
+    }
+
+    if (!hasNonEmptyStringArray(document, "card_source_integrity")) {
+      diagnostics.push(
+        `${relativePath}: approved stories with area: cards and type: implementation must define card_source_integrity evidence before approval.`,
+      );
+    }
+
+    if (!hasNonEmptyStringArray(document, "engine_capability_preflight")) {
+      diagnostics.push(
+        `${relativePath}: approved stories with area: cards and type: implementation must define engine_capability_preflight evidence before approval.`,
+      );
+    }
+  }
+
+  return diagnostics;
+}
+
 function readStringField(document: StoryDocument, key: string) {
   const value = document[key];
   return typeof value === "string" ? value : null;
+}
+
+function hasNonEmptyStringArray(document: StoryDocument, key: string) {
+  const value = document[key];
+
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((item) => typeof item === "string" && item.trim() !== "")
+  );
 }
 
 function readChildStoryIds(document: StoryDocument) {
