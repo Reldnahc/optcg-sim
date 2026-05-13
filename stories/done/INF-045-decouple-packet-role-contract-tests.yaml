@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Fix packet rendering and extraction contract coverage so role-section tests
   use lifecycle-independent story inputs instead of hard-coding completed

@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-045.md",
-      "storyId": "INF-045",
-      "storyPath": "stories/approved/INF-045-decouple-packet-role-contract-tests.yaml",
-      "storySha256": "ebfe32162f1ea7d4a749b2637a609fcf88b642ef9c3fd7878b50a5715e645483"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
