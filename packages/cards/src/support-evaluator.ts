@@ -2,6 +2,7 @@ import type { CardImplementationRecord, EffectDefinition } from "@optcg/types";
 
 import {
   buildGeneratedSupportIndex,
+  type GeneratedSupportCardTextInput,
   type EffectDefinitionValidationResult,
   type GeneratedSupportIndexEntry,
   type GeneratedSupportIndexInput,
@@ -15,6 +16,8 @@ export interface EvaluateGeneratedSupportPlayabilityInput {
   card: NormalizedPoneglyphCard;
   cardDataVersion: string;
   effectDefinitionsVersion: string;
+  expectedBehaviorHash?: string;
+  expectedSourceTextHash?: string;
   rulesVersion: string;
   runtimeCapabilityMatrix?: RuntimeCapabilityMatrix;
   validateEffectDefinition: (
@@ -41,18 +44,45 @@ export function evaluateGeneratedSupportPlayability(
   input: EvaluateGeneratedSupportPlayabilityInput,
 ): GeneratedSupportPlayabilityEvaluation {
   const sourceText = toSourceText(input.card);
+  if (
+    input.expectedBehaviorHash !== undefined &&
+    input.expectedBehaviorHash !== input.card.behaviorHash
+  ) {
+    return {
+      blockers: [
+        {
+          code: "stale-hash",
+          expectedHash: input.expectedBehaviorHash,
+          message: "Poneglyph behavior hash changed.",
+          receivedHash: input.card.behaviorHash,
+        },
+      ],
+      capabilityEvidence: [],
+      cardId: input.card.cardId,
+      missingCapabilityIds: [],
+      parseStatus: "staleHash",
+      parserRuleIds: [],
+      playable: false,
+      sourceTextHash: input.card.sourceTextHash,
+      status: "unsupported",
+    };
+  }
+
+  const cardInput: GeneratedSupportCardTextInput = {
+    behaviorHash: input.card.behaviorHash,
+    cardDataVersion: input.cardDataVersion,
+    cardId: input.card.cardId,
+    effectDefinitionsVersion: input.effectDefinitionsVersion,
+    rulesVersion: input.rulesVersion,
+    sourceText,
+    sourceTextHash: input.card.sourceTextHash,
+  };
+  if (input.expectedSourceTextHash !== undefined) {
+    cardInput.expectedSourceTextHash = input.expectedSourceTextHash;
+  }
+
   const indexInput: GeneratedSupportIndexInput = {
-    cards: [
-      {
-        behaviorHash: input.card.behaviorHash,
-        cardDataVersion: input.cardDataVersion,
-        cardId: input.card.cardId,
-        effectDefinitionsVersion: input.effectDefinitionsVersion,
-        rulesVersion: input.rulesVersion,
-        sourceText,
-        sourceTextHash: input.card.sourceTextHash,
-      },
-    ],
+    cards: [cardInput],
     validateEffectDefinition: input.validateEffectDefinition,
   };
   if (input.runtimeCapabilityMatrix !== undefined) {
@@ -93,9 +123,9 @@ export function evaluateGeneratedSupportPlayability(
 }
 
 function toSourceText(card: NormalizedPoneglyphCard): string {
-  const chunks = [card.effectText, card.triggerText]
-    .map((value) => value?.trim() ?? "")
-    .filter((value) => value.length > 0);
+  return normalizeText(`${card.raw.effect ?? ""}\n${card.raw.trigger ?? ""}`);
+}
 
-  return chunks.join("\n");
+function normalizeText(value: string): string {
+  return value.replace(/\r\n/g, "\n").trim();
 }

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import type { AnySchema } from "ajv";
 import { describe, expect, it } from "vitest";
-import type { CardId, EffectDefinition, VariantKey } from "@optcg/types";
+import type { EffectDefinition, PoneglyphCardDetail } from "@optcg/types";
 
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import type { EffectDefinitionValidationResult } from "./generated-support-index.js";
@@ -41,13 +41,7 @@ const validateEffectDefinition = (
 
 describe("support evaluator", () => {
   it("evaluates checked-in OP03-044 Kaya fixture as generated-support playable", () => {
-    const fixture = JSON.parse(
-      readFileSync(
-        path.join(repoRoot, "fixtures/poneglyph/cards/OP03-044.kaya.json"),
-        "utf8",
-      ),
-    ) as unknown;
-    const normalized = normalizePoneglyphCardDetail(fixture);
+    const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
 
     expect(normalized.cardId).toBe("OP03-044");
     expect(normalized.category).toBe("character");
@@ -65,6 +59,8 @@ describe("support evaluator", () => {
       card: normalized,
       cardDataVersion: "2026-05-13",
       effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: normalized.behaviorHash,
+      expectedSourceTextHash: normalized.sourceTextHash,
       rulesVersion: "generated-support-v1",
       validateEffectDefinition,
     });
@@ -88,28 +84,19 @@ describe("support evaluator", () => {
   });
 
   it("returns unsupported with blocker evidence for text that is not fully covered", () => {
-    const fixture = JSON.parse(
-      readFileSync(
-        path.join(repoRoot, "fixtures/poneglyph/cards/OP03-044.kaya.json"),
-        "utf8",
-      ),
-    ) as unknown;
-    const baseline = normalizePoneglyphCardDetail(fixture);
+    const unsupportedCard = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "OP03-999",
+      effect: "[On Play] Draw 1 card. Then rest 1 DON!!.",
+      name: "Unsupported Template Candidate",
+    });
 
     const unsupported = evaluateGeneratedSupportPlayability({
-      card: {
-        ...baseline,
-        behaviorHash: "sha256:behavior-unsupported",
-        cardId: "CARD-011A-001" as CardId,
-        name: "Unsupported Template Candidate",
-        sourceTextHash: "sha256:source",
-        variants: [
-          { variantIndex: 0, variantKey: "CARD-011A-001:v0" as VariantKey },
-        ],
-        effectText: "[On Play] Draw 1 card. Then rest 1 DON!!.",
-      },
+      card: unsupportedCard,
       cardDataVersion: "2026-05-13",
       effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: unsupportedCard.behaviorHash,
+      expectedSourceTextHash: unsupportedCard.sourceTextHash,
       rulesVersion: "generated-support-v1",
       validateEffectDefinition,
     });
@@ -126,50 +113,121 @@ describe("support evaluator", () => {
     expect(unsupported.support).toBeUndefined();
   });
 
-  it("keeps EB01-023/OP04-014 semantics by requiring generated-support contract evidence", () => {
-    const fixture = JSON.parse(
-      readFileSync(
-        path.join(repoRoot, "fixtures/poneglyph/cards/OP03-044.kaya.json"),
-        "utf8",
-      ),
-    ) as unknown;
-    const baseline = normalizePoneglyphCardDetail(fixture);
+  it("fails closed when reviewed source hash evidence is stale", () => {
+    const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
 
-    const eb01023 = evaluateGeneratedSupportPlayability({
-      card: {
-        ...baseline,
-        behaviorHash: "sha256:eb01-023-behavior",
-        cardId: "EB01-023" as CardId,
-        effectText: "[On Play] Draw 1 card.",
-        sourceTextHash: "sha256:eb01-023-source",
-      },
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: normalized,
       cardDataVersion: "2026-05-13",
       effectDefinitionsVersion: "generated-support-v1",
-      rulesVersion: "generated-support-v1",
-      validateEffectDefinition,
-    });
-    const op04014 = evaluateGeneratedSupportPlayability({
-      card: {
-        ...baseline,
-        behaviorHash: "sha256:op04-014-behavior",
-        cardId: "OP04-014" as CardId,
-        effectText: "[Banish]",
-        sourceTextHash: "sha256:op04-014-source",
-      },
-      cardDataVersion: "2026-05-13",
-      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: normalized.behaviorHash,
+      expectedSourceTextHash: "sha256:reviewed-source-before-drift",
       rulesVersion: "generated-support-v1",
       validateEffectDefinition,
     });
 
-    expect(eb01023.playable).toBe(true);
-    expect(eb01023.effectDefinitionId).toBe("eb01-023.generated-support");
-    expect(op04014.playable).toBe(false);
-    expect(op04014.status).toBe("unsupported");
-    expect(op04014.blockers).toEqual(
+    expect(evaluation).toMatchObject({
+      blockers: [
+        {
+          code: "stale-hash",
+          expectedHash: "sha256:reviewed-source-before-drift",
+          message: "Poneglyph text hash changed.",
+          receivedHash: normalized.sourceTextHash,
+        },
+      ],
+      parseStatus: "staleHash",
+      playable: false,
+      status: "unsupported",
+    });
+    expect(evaluation.effectDefinition).toBeUndefined();
+    expect(evaluation.support).toBeUndefined();
+  });
+
+  it("fails closed when reviewed behavior hash evidence is stale", () => {
+    const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: normalized,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: "sha256:reviewed-behavior-before-drift",
+      expectedSourceTextHash: normalized.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [
+        {
+          code: "stale-hash",
+          expectedHash: "sha256:reviewed-behavior-before-drift",
+          message: "Poneglyph behavior hash changed.",
+          receivedHash: normalized.behaviorHash,
+        },
+      ],
+      parseStatus: "staleHash",
+      playable: false,
+      status: "unsupported",
+    });
+    expect(evaluation.effectDefinition).toBeUndefined();
+    expect(evaluation.support).toBeUndefined();
+  });
+
+  it("uses normalized raw Poneglyph text as the hash-covered parser source", () => {
+    const fixtureWithWhitespace = {
+      ...loadOp03044Fixture(),
+      effect: "  [On Play] Draw 2 cards and trash 2 cards from your hand.",
+      trigger: "  ",
+    };
+    const normalized = normalizePoneglyphCardDetail(fixtureWithWhitespace);
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: normalized,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: normalized.behaviorHash,
+      expectedSourceTextHash: normalized.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation.playable).toBe(true);
+    expect(evaluation.effectDefinitionId).toBe("op03-044.generated-support");
+  });
+
+  it("keeps OP04-014 unsupported unless it satisfies the generated-support contract", () => {
+    const op04014 = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "OP04-014",
+      effect: "[Banish]",
+      name: "Banish Contract Candidate",
+    });
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: op04014,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: op04014.behaviorHash,
+      expectedSourceTextHash: op04014.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation.playable).toBe(false);
+    expect(evaluation.status).toBe("unsupported");
+    expect(evaluation.blockers).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "unparsed-span" }),
       ]),
     );
   });
 });
+
+function loadOp03044Fixture(): PoneglyphCardDetail {
+  const source = readFileSync(
+    path.join(repoRoot, "fixtures/poneglyph/cards/OP03-044.kaya.json"),
+    "utf8",
+  );
+
+  return JSON.parse(source) as PoneglyphCardDetail;
+}
