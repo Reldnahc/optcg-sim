@@ -19,7 +19,8 @@ describe("generated support report", () => {
     const matrixWithoutDraw = {
       ...generatedSupportRuntimeCapabilityMatrix,
       capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
-        (capability) => capability.id !== "effect:draw:self:count:1",
+        (capability) =>
+          capability.id !== "effect:draw:self:count:positive-safe-integer",
       ),
     };
     const missingCapabilityIndex = buildGeneratedSupportIndex({
@@ -77,18 +78,20 @@ describe("generated support report", () => {
           },
         },
         {
-          capabilityId: "effect:draw:self:count:1",
+          capabilityId: "effect:draw:self:count:positive-safe-integer",
           cardId: "CARD-008D-003",
           code: "missing-runtime-capability",
-          component: "exact:on-play:draw-1:self",
+          component: "exact:on-play:draw-n:self",
           message:
-            "Missing runtime capability effect:draw:self:count:1 for parser rule exact:on-play:draw-1:self.",
+            "Missing runtime capability effect:draw:self:count:positive-safe-integer for parser rule exact:on-play:draw-n:self.",
         },
       ],
-      missingRuntimeCapabilityIds: ["effect:draw:self:count:1"],
+      missingRuntimeCapabilityIds: [
+        "effect:draw:self:count:positive-safe-integer",
+      ],
       parserRuleIdsUsed: [
-        "exact:on-play:draw-1:self",
-        "exact:when-attacking:draw-1:self",
+        "exact:on-play:draw-n:self",
+        "exact:when-attacking:draw-n:self",
         "line-separated-effect-blocks:v1",
       ],
       statusByCardId: {
@@ -96,21 +99,23 @@ describe("generated support report", () => {
           blockerCodes: [],
           missingCapabilityIds: [],
           parseStatus: "complete",
-          parserRuleIds: ["exact:on-play:draw-1:self"],
+          parserRuleIds: ["exact:on-play:draw-n:self"],
           status: "supported",
         },
         "CARD-008D-002": {
           blockerCodes: ["unparsed-span"],
           missingCapabilityIds: [],
           parseStatus: "partial",
-          parserRuleIds: ["exact:on-play:draw-1:self"],
+          parserRuleIds: ["exact:on-play:draw-n:self"],
           status: "unsupported",
         },
         "CARD-008D-003": {
           blockerCodes: ["missing-runtime-capability"],
-          missingCapabilityIds: ["effect:draw:self:count:1"],
+          missingCapabilityIds: [
+            "effect:draw:self:count:positive-safe-integer",
+          ],
           parseStatus: "complete",
-          parserRuleIds: ["exact:on-play:draw-1:self"],
+          parserRuleIds: ["exact:on-play:draw-n:self"],
           status: "unsupported",
         },
         "CARD-008D-004": {
@@ -118,8 +123,8 @@ describe("generated support report", () => {
           missingCapabilityIds: [],
           parseStatus: "complete",
           parserRuleIds: [
-            "exact:on-play:draw-1:self",
-            "exact:when-attacking:draw-1:self",
+            "exact:on-play:draw-n:self",
+            "exact:when-attacking:draw-n:self",
             "line-separated-effect-blocks:v1",
           ],
           status: "supported",
@@ -172,5 +177,158 @@ describe("generated support report", () => {
         message: "Resting DON is not covered by the runtime matrix.",
       },
     ]);
+  });
+
+  it("reports invalid draw-count blockers deterministically", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-009A-001" as CardId,
+          sourceText: "[On Play] Draw 0 cards.",
+          sourceTextHash: "sha256:invalid-count",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report).toMatchObject({
+      blockerCount: 1,
+      blockers: [
+        {
+          cardId: "CARD-009A-001",
+          code: "unparsed-span",
+          message: "Card text is not covered by certified parser rules.",
+          span: {
+            end: 23,
+            start: 0,
+            text: "[On Play] Draw 0 cards.",
+          },
+        },
+      ],
+      statusByCardId: {
+        "CARD-009A-001": {
+          blockerCodes: ["unparsed-span"],
+          missingCapabilityIds: [],
+          parseStatus: "partial",
+          parserRuleIds: [],
+          status: "unsupported",
+        },
+      },
+      supportedCardIds: [],
+      unsupportedCardIds: ["CARD-009A-001"],
+    });
+  });
+
+  it("includes draw-then-trash parser rules in report evidence when supported", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-009B-201" as CardId,
+          sourceText: "[On Play] Draw 2 cards and trash 1 card from your hand.",
+          sourceTextHash: "sha256:draw-trash-on-play",
+        },
+        {
+          ...baseInput,
+          cardId: "CARD-009B-202" as CardId,
+          sourceText:
+            "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
+          sourceTextHash: "sha256:draw-trash-when-attacking-1t",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.parserRuleIdsUsed).toEqual(
+      expect.arrayContaining([
+        "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+      ]),
+    );
+    expect(report.unsupportedCardIds).toEqual([]);
+  });
+
+  it("reports missing draw-then-trash runtime capability blockers", () => {
+    const matrixWithoutSequence = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) => capability.id !== "effect:sequence:ordered",
+      ),
+    };
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-009B-203" as CardId,
+          sourceText:
+            "[When Attacking] Draw 2 cards and trash 1 card from your hand.",
+          sourceTextHash: "sha256:missing-sequence",
+        },
+      ],
+      runtimeCapabilityMatrix: matrixWithoutSequence,
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report).toMatchObject({
+      blockerCount: 1,
+      blockers: [
+        {
+          capabilityId: "effect:sequence:ordered",
+          cardId: "CARD-009B-203",
+          code: "missing-runtime-capability",
+          component: "exact:when-attacking:draw-n:trash-m:hand:self",
+        },
+      ],
+      missingRuntimeCapabilityIds: ["effect:sequence:ordered"],
+      statusByCardId: {
+        "CARD-009B-203": {
+          blockerCodes: ["missing-runtime-capability"],
+          missingCapabilityIds: ["effect:sequence:ordered"],
+          parseStatus: "complete",
+          parserRuleIds: ["exact:when-attacking:draw-n:trash-m:hand:self"],
+          status: "unsupported",
+        },
+      },
+      unsupportedCardIds: ["CARD-009B-203"],
+    });
+  });
+
+  it("includes OP10-045 as supported with once-per-turn draw-then-trash parser rule evidence", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "OP10-045" as CardId,
+          sourceText:
+            "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
+          sourceTextHash: "sha256:op10-045-source",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.supportedCardIds).toEqual(["OP10-045"]);
+    expect(report.unsupportedCardIds).toEqual([]);
+    expect(report.parserRuleIdsUsed).toEqual([
+      "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+    ]);
+    expect(report.statusByCardId["OP10-045"]).toEqual({
+      blockerCodes: [],
+      missingCapabilityIds: [],
+      parseStatus: "complete",
+      parserRuleIds: [
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+      ],
+      status: "supported",
+    });
   });
 });

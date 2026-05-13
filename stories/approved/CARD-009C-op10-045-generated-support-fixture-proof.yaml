@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: generated
+status: approved
 summary: >
   Add OP10-045 Cavendish checked-in fixture/generated support/report evidence
   after its complete printed gameplay-relevant text is supported by certified

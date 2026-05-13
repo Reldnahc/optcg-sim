@@ -5,12 +5,18 @@ import type {
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-types.js";
 
-export const onPlayDrawOneParserRuleId = "exact:on-play:draw-1:self";
-export const whenAttackingDrawOneParserRuleId =
-  "exact:when-attacking:draw-1:self";
+export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self";
+export const whenAttackingDrawNParserRuleId =
+  "exact:when-attacking:draw-n:self";
+export const onPlayDrawNTrashMFromHandParserRuleId =
+  "exact:on-play:draw-n:trash-m:hand:self";
+export const whenAttackingDrawNTrashMFromHandParserRuleId =
+  "exact:when-attacking:draw-n:trash-m:hand:self";
+export const whenAttackingOncePerTurnDrawNTrashMFromHandParserRuleId =
+  "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self";
 export const lineSeparatedEffectBlocksCompositionId =
   "line-separated-effect-blocks:v1";
-export const certifiedParserRuleReviewer = "certified-parser-rule:CARD-008B";
+export const certifiedParserRuleReviewer = "certified-parser-rule:CARD-009B";
 
 export interface CertifiedCardTextParserInput {
   cardId: CardId;
@@ -30,20 +36,28 @@ interface CertifiedClause {
   readonly parserRuleId: string;
 }
 
+interface ParsedResidueClause {
+  readonly clause: CertifiedClause;
+  readonly prefix: string;
+}
+
 export function parseCertifiedCardText(
   input: CertifiedCardTextParserInput,
 ): GeneratedSupportParserResult {
-  if (input.sourceText === "[On Play] Draw 1 card.") {
-    return completeParse(input, [createOnPlayDrawClause(input.cardId)]);
+  const singleLineParse = parseSupportedSourceText(
+    input.cardId,
+    input.sourceText,
+  );
+  if (singleLineParse !== undefined) {
+    return completeParse(input, [singleLineParse]);
   }
 
-  if (
-    input.sourceText === "[On Play] Draw 1 card.\n[When Attacking] Draw 1 card."
-  ) {
-    return completeParse(input, [
-      createOnPlayDrawClause(input.cardId),
-      createWhenAttackingDrawClause(input.cardId),
-    ]);
+  const compositionParse = parseSupportedComposition(
+    input.cardId,
+    input.sourceText,
+  );
+  if (compositionParse !== undefined) {
+    return completeParse(input, compositionParse);
   }
 
   const lines = input.sourceText.split("\n");
@@ -167,35 +181,109 @@ function parseCertifiedLine(
   line: string,
   offset: number,
 ): CertifiedLineParse {
-  if (line === "[On Play] Draw 1 card.") {
+  const onPlayClause = parseOnPlayDrawClause(cardId, line);
+  if (onPlayClause !== undefined) {
     return {
-      clause: createOnPlayDrawClause(cardId),
+      clause: onPlayClause,
     };
   }
 
-  if (line === "[When Attacking] Draw 1 card.") {
+  const onPlayDrawThenTrashClause = parseOnPlayDrawThenTrashClause(
+    cardId,
+    line,
+  );
+  if (onPlayDrawThenTrashClause !== undefined) {
     return {
-      clause: createWhenAttackingDrawClause(cardId),
+      clause: onPlayDrawThenTrashClause,
     };
   }
 
-  if (line.startsWith("[On Play] Draw 1 card. ")) {
+  const whenAttackingClause = parseWhenAttackingDrawClause(cardId, line);
+  if (whenAttackingClause !== undefined) {
     return {
-      clause: createOnPlayDrawClause(cardId),
+      clause: whenAttackingClause,
+    };
+  }
+
+  const whenAttackingDrawThenTrashClause =
+    parseWhenAttackingDrawThenTrashClause(cardId, line);
+  if (whenAttackingDrawThenTrashClause !== undefined) {
+    return {
+      clause: whenAttackingDrawThenTrashClause,
+    };
+  }
+
+  const whenAttackingOncePerTurnDrawThenTrashClause =
+    parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, line);
+  if (whenAttackingOncePerTurnDrawThenTrashClause !== undefined) {
+    return {
+      clause: whenAttackingOncePerTurnDrawThenTrashClause,
+    };
+  }
+
+  const onPlayResidue = parseOnPlayDrawResidueClause(cardId, line);
+  if (onPlayResidue !== undefined) {
+    return {
+      clause: onPlayResidue.clause,
       unparsedSpan: residueSpan({
         offset,
-        prefix: "[On Play] Draw 1 card. ",
+        prefix: onPlayResidue.prefix,
         source: line,
       }),
     };
   }
 
-  if (line.startsWith("[When Attacking] Draw 1 card. ")) {
+  const onPlayDrawThenTrashResidue = parseOnPlayDrawThenTrashResidueClause(
+    cardId,
+    line,
+  );
+  if (onPlayDrawThenTrashResidue !== undefined) {
     return {
-      clause: createWhenAttackingDrawClause(cardId),
+      clause: onPlayDrawThenTrashResidue.clause,
       unparsedSpan: residueSpan({
         offset,
-        prefix: "[When Attacking] Draw 1 card. ",
+        prefix: onPlayDrawThenTrashResidue.prefix,
+        source: line,
+      }),
+    };
+  }
+
+  const whenAttackingResidue = parseWhenAttackingDrawResidueClause(
+    cardId,
+    line,
+  );
+  if (whenAttackingResidue !== undefined) {
+    return {
+      clause: whenAttackingResidue.clause,
+      unparsedSpan: residueSpan({
+        offset,
+        prefix: whenAttackingResidue.prefix,
+        source: line,
+      }),
+    };
+  }
+
+  const whenAttackingDrawThenTrashResidue =
+    parseWhenAttackingDrawThenTrashResidueClause(cardId, line);
+  if (whenAttackingDrawThenTrashResidue !== undefined) {
+    return {
+      clause: whenAttackingDrawThenTrashResidue.clause,
+      unparsedSpan: residueSpan({
+        offset,
+        prefix: whenAttackingDrawThenTrashResidue.prefix,
+        source: line,
+      }),
+    };
+  }
+
+  const whenAttackingOncePerTurnDrawThenTrashResidue =
+    parseWhenAttackingOncePerTurnDrawThenTrashResidueClause(cardId, line);
+  if (whenAttackingOncePerTurnDrawThenTrashResidue !== undefined) {
+    return {
+      clause: whenAttackingOncePerTurnDrawThenTrashResidue.clause,
+      unparsedSpan: residueSpan({
+        offset,
+        prefix: whenAttackingOncePerTurnDrawThenTrashResidue.prefix,
         source: line,
       }),
     };
@@ -204,43 +292,470 @@ function parseCertifiedLine(
   return {};
 }
 
-function createOnPlayDrawClause(cardId: CardId): CertifiedClause {
+function createOnPlayDrawClauseWithCount(
+  cardId: CardId,
+  count: number,
+): CertifiedClause {
   return {
     effectBlock: createDrawEffectBlock({
       cardId,
-      effectIdSuffix: "auto-on-play-draw-1",
+      count,
+      effectIdSuffix: `auto-on-play-draw-${String(count)}`,
       triggerType: "onPlay",
     }),
-    parserRuleId: onPlayDrawOneParserRuleId,
+    parserRuleId: onPlayDrawNParserRuleId,
   };
 }
 
-function createWhenAttackingDrawClause(cardId: CardId): CertifiedClause {
+function createWhenAttackingDrawClauseWithCount(
+  cardId: CardId,
+  count: number,
+): CertifiedClause {
   return {
     effectBlock: createDrawEffectBlock({
       cardId,
-      effectIdSuffix: "auto-when-attacking-draw-1",
+      count,
+      effectIdSuffix: `auto-when-attacking-draw-${String(count)}`,
       triggerType: "whenAttacking",
     }),
-    parserRuleId: whenAttackingDrawOneParserRuleId,
+    parserRuleId: whenAttackingDrawNParserRuleId,
   };
 }
 
 function createDrawEffectBlock({
   cardId,
+  count,
   effectIdSuffix,
   triggerType,
 }: {
   cardId: CardId;
+  count: number;
   effectIdSuffix: string;
   triggerType: "onPlay" | "whenAttacking";
 }): EffectBlock {
   return {
     category: "auto",
-    effect: { count: 1, player: "self", type: "draw" },
+    effect: { count, player: "self", type: "draw" },
     id: toEffectId(`${String(cardId)}:${effectIdSuffix}`),
     sourcePresencePolicy: "mustRemainInSameZone",
     trigger: { type: triggerType },
+  };
+}
+
+function parseSupportedSourceText(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  return (
+    parseOnPlayDrawClause(cardId, sourceText) ??
+    parseWhenAttackingDrawClause(cardId, sourceText) ??
+    parseOnPlayDrawThenTrashClause(cardId, sourceText) ??
+    parseWhenAttackingDrawThenTrashClause(cardId, sourceText) ??
+    parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, sourceText)
+  );
+}
+
+function parseSupportedComposition(
+  cardId: CardId,
+  sourceText: string,
+): readonly CertifiedClause[] | undefined {
+  const lines = sourceText.split("\n");
+  if (lines.length !== 2) {
+    return undefined;
+  }
+
+  const onPlayClause = parseOnPlayDrawClause(cardId, lines[0] ?? "");
+  const whenAttackingClause = parseWhenAttackingDrawClause(
+    cardId,
+    lines[1] ?? "",
+  );
+  if (onPlayClause === undefined || whenAttackingClause === undefined) {
+    return undefined;
+  }
+
+  return [onPlayClause, whenAttackingClause];
+}
+
+function parseOnPlayDrawClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const count = parseDrawCount(sourceText, "[On Play] ");
+  if (count === undefined) {
+    return undefined;
+  }
+
+  return createOnPlayDrawClauseWithCount(cardId, count);
+}
+
+function parseWhenAttackingDrawClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const count = parseDrawCount(sourceText, "[When Attacking] ");
+  if (count === undefined) {
+    return undefined;
+  }
+
+  return createWhenAttackingDrawClauseWithCount(cardId, count);
+}
+
+function parseOnPlayDrawThenTrashClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const parsed = parseDrawThenTrashCounts(sourceText, "[On Play] ");
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return createDrawThenTrashClauseWithCounts({
+    cardId,
+    drawCount: parsed.drawCount,
+    effectIdSuffix: `auto-on-play-draw-${String(parsed.drawCount)}-then-trash-${String(parsed.trashCount)}`,
+    parserRuleId: onPlayDrawNTrashMFromHandParserRuleId,
+    trashCount: parsed.trashCount,
+    trigger: { type: "onPlay" },
+  });
+}
+
+function parseWhenAttackingDrawThenTrashClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const parsed = parseDrawThenTrashCounts(sourceText, "[When Attacking] ");
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return createDrawThenTrashClauseWithCounts({
+    cardId,
+    drawCount: parsed.drawCount,
+    effectIdSuffix: `auto-when-attacking-draw-${String(parsed.drawCount)}-then-trash-${String(parsed.trashCount)}`,
+    parserRuleId: whenAttackingDrawNTrashMFromHandParserRuleId,
+    trashCount: parsed.trashCount,
+    trigger: { type: "whenAttacking" },
+  });
+}
+
+function parseWhenAttackingOncePerTurnDrawThenTrashClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const parsed = parseDrawThenTrashCounts(
+    sourceText,
+    "[When Attacking] [Once Per Turn] ",
+  );
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return createDrawThenTrashClauseWithCounts({
+    cardId,
+    drawCount: parsed.drawCount,
+    effectIdSuffix: `auto-when-attacking-once-per-turn-draw-${String(parsed.drawCount)}-then-trash-${String(parsed.trashCount)}`,
+    parserRuleId: whenAttackingOncePerTurnDrawNTrashMFromHandParserRuleId,
+    trashCount: parsed.trashCount,
+    trigger: { oncePerTurn: true, type: "whenAttacking" },
+  });
+}
+
+function parseOnPlayDrawResidueClause(
+  cardId: CardId,
+  sourceText: string,
+): ParsedResidueClause | undefined {
+  const parsed = parseDrawCountWithResidue(sourceText, "[On Play] ");
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return {
+    clause: createOnPlayDrawClauseWithCount(cardId, parsed.count),
+    prefix: parsed.prefix,
+  };
+}
+
+function parseWhenAttackingDrawResidueClause(
+  cardId: CardId,
+  sourceText: string,
+): ParsedResidueClause | undefined {
+  const parsed = parseDrawCountWithResidue(sourceText, "[When Attacking] ");
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return {
+    clause: createWhenAttackingDrawClauseWithCount(cardId, parsed.count),
+    prefix: parsed.prefix,
+  };
+}
+
+function parseOnPlayDrawThenTrashResidueClause(
+  cardId: CardId,
+  sourceText: string,
+): ParsedResidueClause | undefined {
+  const parsed = parseDrawThenTrashCountsWithResidue(sourceText, "[On Play] ");
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return {
+    clause: createDrawThenTrashClauseWithCounts({
+      cardId,
+      drawCount: parsed.drawCount,
+      effectIdSuffix: `auto-on-play-draw-${String(parsed.drawCount)}-then-trash-${String(parsed.trashCount)}`,
+      parserRuleId: onPlayDrawNTrashMFromHandParserRuleId,
+      trashCount: parsed.trashCount,
+      trigger: { type: "onPlay" },
+    }),
+    prefix: parsed.prefix,
+  };
+}
+
+function parseWhenAttackingDrawThenTrashResidueClause(
+  cardId: CardId,
+  sourceText: string,
+): ParsedResidueClause | undefined {
+  const parsed = parseDrawThenTrashCountsWithResidue(
+    sourceText,
+    "[When Attacking] ",
+  );
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return {
+    clause: createDrawThenTrashClauseWithCounts({
+      cardId,
+      drawCount: parsed.drawCount,
+      effectIdSuffix: `auto-when-attacking-draw-${String(parsed.drawCount)}-then-trash-${String(parsed.trashCount)}`,
+      parserRuleId: whenAttackingDrawNTrashMFromHandParserRuleId,
+      trashCount: parsed.trashCount,
+      trigger: { type: "whenAttacking" },
+    }),
+    prefix: parsed.prefix,
+  };
+}
+
+function parseWhenAttackingOncePerTurnDrawThenTrashResidueClause(
+  cardId: CardId,
+  sourceText: string,
+): ParsedResidueClause | undefined {
+  const parsed = parseDrawThenTrashCountsWithResidue(
+    sourceText,
+    "[When Attacking] [Once Per Turn] ",
+  );
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return {
+    clause: createDrawThenTrashClauseWithCounts({
+      cardId,
+      drawCount: parsed.drawCount,
+      effectIdSuffix: `auto-when-attacking-once-per-turn-draw-${String(parsed.drawCount)}-then-trash-${String(parsed.trashCount)}`,
+      parserRuleId: whenAttackingOncePerTurnDrawNTrashMFromHandParserRuleId,
+      trashCount: parsed.trashCount,
+      trigger: { oncePerTurn: true, type: "whenAttacking" },
+    }),
+    prefix: parsed.prefix,
+  };
+}
+
+function parseDrawCount(
+  sourceText: string,
+  prefix: "[On Play] " | "[When Attacking] ",
+): number | undefined {
+  const match = sourceText.match(
+    /^\[(On Play|When Attacking)\] Draw (\d+) (card|cards)\.$/,
+  );
+  if (match === null) {
+    return undefined;
+  }
+
+  const triggerText = match[1];
+  const expectedPrefix =
+    triggerText === "On Play"
+      ? "[On Play] "
+      : triggerText === "When Attacking"
+        ? "[When Attacking] "
+        : undefined;
+  if (expectedPrefix === undefined) {
+    return undefined;
+  }
+
+  if (expectedPrefix !== prefix) {
+    return undefined;
+  }
+
+  const countText = match[2] ?? "";
+  const count = Number.parseInt(countText, 10);
+  if (!Number.isSafeInteger(count) || count <= 0) {
+    return undefined;
+  }
+
+  if (countText !== String(count)) {
+    return undefined;
+  }
+
+  const noun = match[3];
+  if ((count === 1 && noun !== "card") || (count !== 1 && noun !== "cards")) {
+    return undefined;
+  }
+
+  return count;
+}
+
+function parseDrawCountWithResidue(
+  sourceText: string,
+  prefix: "[On Play] " | "[When Attacking] ",
+): { count: number; prefix: string } | undefined {
+  const match = sourceText.match(
+    /^\[(On Play|When Attacking)\] Draw (\d+) (card|cards)\. /,
+  );
+  if (match === null) {
+    return undefined;
+  }
+
+  const clausePrefix = match[0];
+  const count = parseDrawCount(clausePrefix.slice(0, -1), prefix);
+  if (count === undefined) {
+    return undefined;
+  }
+
+  return { count, prefix: clausePrefix };
+}
+
+function parseDrawThenTrashCounts(
+  sourceText: string,
+  prefix:
+    | "[On Play] "
+    | "[When Attacking] "
+    | "[When Attacking] [Once Per Turn] ",
+): { drawCount: number; trashCount: number } | undefined {
+  const match = sourceText.match(
+    /^(\[On Play\] |\[When Attacking\] |\[When Attacking\] \[Once Per Turn\] )Draw (\d+) (card|cards) and trash (\d+) (card|cards) from your hand\.$/,
+  );
+  if (match === null) {
+    return undefined;
+  }
+
+  if ((match[1] ?? "") !== prefix) {
+    return undefined;
+  }
+
+  const drawCountText = match[2] ?? "";
+  const drawCount = parsePositiveSafeInteger(drawCountText);
+  if (drawCount === undefined) {
+    return undefined;
+  }
+
+  const drawNoun = match[3];
+  if (
+    (drawCount === 1 && drawNoun !== "card") ||
+    (drawCount !== 1 && drawNoun !== "cards")
+  ) {
+    return undefined;
+  }
+
+  const trashCountText = match[4] ?? "";
+  const trashCount = parsePositiveSafeInteger(trashCountText);
+  if (trashCount === undefined) {
+    return undefined;
+  }
+
+  const trashNoun = match[5];
+  if (
+    (trashCount === 1 && trashNoun !== "card") ||
+    (trashCount !== 1 && trashNoun !== "cards")
+  ) {
+    return undefined;
+  }
+
+  return { drawCount, trashCount };
+}
+
+function parseDrawThenTrashCountsWithResidue(
+  sourceText: string,
+  prefix:
+    | "[On Play] "
+    | "[When Attacking] "
+    | "[When Attacking] [Once Per Turn] ",
+): { drawCount: number; prefix: string; trashCount: number } | undefined {
+  const match = sourceText.match(
+    /^(\[On Play\] |\[When Attacking\] |\[When Attacking\] \[Once Per Turn\] )Draw (\d+) (card|cards) and trash (\d+) (card|cards) from your hand\. /,
+  );
+  if (match === null) {
+    return undefined;
+  }
+
+  const clausePrefix = match[0];
+  const parsed = parseDrawThenTrashCounts(clausePrefix.slice(0, -1), prefix);
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return { ...parsed, prefix: clausePrefix };
+}
+
+function parsePositiveSafeInteger(countText: string): number | undefined {
+  const count = Number.parseInt(countText, 10);
+  if (!Number.isSafeInteger(count) || count <= 0) {
+    return undefined;
+  }
+
+  if (countText !== String(count)) {
+    return undefined;
+  }
+
+  return count;
+}
+
+function createDrawThenTrashClauseWithCounts({
+  cardId,
+  drawCount,
+  effectIdSuffix,
+  parserRuleId,
+  trashCount,
+  trigger,
+}: {
+  cardId: CardId;
+  drawCount: number;
+  effectIdSuffix: string;
+  parserRuleId: string;
+  trashCount: number;
+  trigger: { oncePerTurn?: true; type: "onPlay" | "whenAttacking" };
+}): CertifiedClause {
+  const oncePerTurnEffectBlockField =
+    trigger.oncePerTurn === true ? { oncePerTurn: true } : {};
+
+  return {
+    effectBlock: {
+      category: "auto",
+      effect: {
+        effects: [
+          {
+            connector: "always",
+            effect: { count: drawCount, player: "self", type: "draw" },
+          },
+          {
+            connector: "then",
+            effect: {
+              chooser: "self",
+              count: trashCount,
+              player: "self",
+              type: "trashFromHand",
+            },
+          },
+        ],
+        type: "sequence",
+      },
+      id: toEffectId(`${String(cardId)}:${effectIdSuffix}`),
+      ...oncePerTurnEffectBlockField,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: trigger.type },
+    },
+    parserRuleId,
   };
 }
 

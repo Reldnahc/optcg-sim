@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: generated
+status: approved
 summary: >
   Coordinate the generated-support card-data/parser expansion for common draw
   and trash-from-hand card text, using OP10-045 Cavendish as the first real-card

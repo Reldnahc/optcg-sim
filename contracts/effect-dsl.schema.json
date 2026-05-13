@@ -205,6 +205,18 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["type", "player", "chooser", "count"],
+          "properties": {
+            "type": { "const": "trashFromHand" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "chooser": { "$ref": "#/$defs/playerRef" },
+            "count": { "type": "integer", "minimum": 0 },
+            "filter": { "$ref": "#/$defs/cardFilter" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["type", "target"],
           "properties": {
             "type": { "const": "ko" },

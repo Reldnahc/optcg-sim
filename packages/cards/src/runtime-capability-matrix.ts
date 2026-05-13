@@ -29,8 +29,11 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       sinceStory: "CARD-008A",
       supported: true,
       supportedParserRuleIds: [
-        "exact:on-play:draw-1:self",
-        "exact:when-attacking:draw-1:self",
+        "exact:on-play:draw-n:self",
+        "exact:when-attacking:draw-n:self",
+        "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:when-attacking:draw-n:trash-m:hand:self",
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
       ],
     },
     {
@@ -41,20 +44,50 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       sinceStory: "CARD-008A",
       supported: true,
       supportedParserRuleIds: [
-        "exact:on-play:draw-1:self",
-        "exact:when-attacking:draw-1:self",
+        "exact:on-play:draw-n:self",
+        "exact:when-attacking:draw-n:self",
         "line-separated-effect-blocks:v1",
       ],
     },
     {
-      description: "Draw exactly one card for the source controller.",
-      id: "effect:draw:self:count:1",
+      description:
+        "Draw a positive safe-integer number of cards for the source controller.",
+      id: "effect:draw:self:count:positive-safe-integer",
       kind: "effect",
-      sinceStory: "CARD-008A",
+      sinceStory: "CARD-009A",
       supported: true,
       supportedParserRuleIds: [
-        "exact:on-play:draw-1:self",
-        "exact:when-attacking:draw-1:self",
+        "exact:on-play:draw-n:self",
+        "exact:when-attacking:draw-n:self",
+        "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:when-attacking:draw-n:trash-m:hand:self",
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+      ],
+    },
+    {
+      description:
+        "Ordered sequence effects are executable by current runtime.",
+      id: "effect:sequence:ordered",
+      kind: "effect",
+      sinceStory: "CARD-009B",
+      supported: true,
+      supportedParserRuleIds: [
+        "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:when-attacking:draw-n:trash-m:hand:self",
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+      ],
+    },
+    {
+      description:
+        "Trash a positive safe-integer number of cards from self hand using owner choice.",
+      id: "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+      kind: "effect",
+      sinceStory: "CARD-009B",
+      supported: true,
+      supportedParserRuleIds: [
+        "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:when-attacking:draw-n:trash-m:hand:self",
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
       ],
     },
     {
@@ -65,8 +98,11 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       sinceStory: "CARD-008A",
       supported: true,
       supportedParserRuleIds: [
-        "exact:on-play:draw-1:self",
-        "exact:when-attacking:draw-1:self",
+        "exact:on-play:draw-n:self",
+        "exact:when-attacking:draw-n:self",
+        "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:when-attacking:draw-n:trash-m:hand:self",
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
       ],
     },
     {
@@ -75,7 +111,10 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "trigger",
       sinceStory: "CARD-008A",
       supported: true,
-      supportedParserRuleIds: ["exact:on-play:draw-1:self"],
+      supportedParserRuleIds: [
+        "exact:on-play:draw-n:self",
+        "exact:on-play:draw-n:trash-m:hand:self",
+      ],
     },
     {
       description:
@@ -84,20 +123,37 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "trigger",
       sinceStory: "CARD-008A",
       supported: true,
-      supportedParserRuleIds: ["exact:when-attacking:draw-1:self"],
+      supportedParserRuleIds: [
+        "exact:when-attacking:draw-n:self",
+        "exact:when-attacking:draw-n:trash-m:hand:self",
+      ],
+    },
+    {
+      description:
+        "When Attacking once-per-turn trigger timing is executable by current runtime.",
+      id: "trigger:whenAttacking:oncePerTurn",
+      kind: "trigger",
+      sinceStory: "CARD-009B",
+      supported: true,
+      supportedParserRuleIds: [
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+      ],
     },
   ],
-  generatedAtStory: "CARD-008A",
+  generatedAtStory: "CARD-009B",
   id: "generated-support-runtime-capabilities:v1",
 } as const satisfies RuntimeCapabilityMatrix;
 
 export const requiredGeneratedSupportCapabilityIds = [
   "category:auto",
   "composition:line-separated-effect-blocks:v1",
-  "effect:draw:self:count:1",
+  "effect:draw:self:count:positive-safe-integer",
+  "effect:sequence:ordered",
+  "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
   "sourcePresencePolicy:mustRemainInSameZone",
   "trigger:onPlay",
   "trigger:whenAttacking",
+  "trigger:whenAttacking:oncePerTurn",
 ] as const;
 
 export function listSupportedRuntimeCapabilityIds(
