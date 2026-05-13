@@ -32,7 +32,12 @@ export type PostApprovalRole =
   | "pr-gate";
 
 export type PacketRoleContent = {
+  checklist: {
+    heading: "Handoff Checklist" | "Verification Checklist";
+    items: string[];
+  };
   forbiddenActions: string[];
+  requiredInputs: string[];
   requiredOutputs: string[];
   responsibilities: string[];
 };
@@ -281,12 +286,37 @@ export function readPostApprovalRoleContent(
   }
 
   const body = match[1].trim();
+  const checklist = readRoleChecklist(body);
 
   return {
+    checklist,
     forbiddenActions: readInlineRoleBullets(body, "Forbidden Actions"),
+    requiredInputs: readInlineRoleBullets(body, "Required Inputs"),
     requiredOutputs: readInlineRoleBullets(body, "Required Outputs"),
     responsibilities: readInlineRoleBullets(body, "Responsibilities"),
   };
+}
+
+function readRoleChecklist(source: string): {
+  heading: "Handoff Checklist" | "Verification Checklist";
+  items: string[];
+} {
+  for (const heading of [
+    "Handoff Checklist",
+    "Verification Checklist",
+  ] as const) {
+    try {
+      const items = readInlineRoleBullets(source, heading);
+      return {
+        heading,
+        items,
+      };
+    } catch {
+      // Try the other allowed heading before failing closed.
+    }
+  }
+
+  throw new Error("Missing role checklist subsection.");
 }
 
 function isListLine(line: string | undefined) {

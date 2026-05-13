@@ -296,7 +296,6 @@ The parent/orchestrator model is gpt-5.5.
 Story-review agent model is gpt-5.5 with high reasoning.
 Reviewer subagent model is gpt-5.4 with high reasoning.
 Implementation worker subagents default to gpt-5.3-codex with medium reasoning.
-Complex, risky, or integration-heavy implementation stories should use gpt-5.5 with medium reasoning.
 
 Recorded rationale for any model-routing deviation is required in the pull-request review trail and implementation note.
 Any model-routing deviation must be recorded in the pull-request review trail and implementation note.

@@ -1,6 +1,7 @@
 <!-- agent-packet:story-id INF-044B -->
 <!-- agent-packet:story-path stories/approved/INF-044B-role-lifecycle-and-model-routing-policy.yaml -->
 <!-- agent-packet:story-sha256 01f37828d97bd36edc7a483feb39e87b03544849f98a45a8d084ec6d39ebfd15 -->
+<!-- prettier-ignore-start -->
 
 # Story Packet
 
@@ -293,7 +294,6 @@ The parent/orchestrator model is gpt-5.5.
 Story-review agent model is gpt-5.5 with high reasoning.
 Reviewer subagent model is gpt-5.4 with high reasoning.
 Implementation worker subagents default to gpt-5.3-codex with medium reasoning.
-Complex, risky, or integration-heavy implementation stories should use gpt-5.5 with medium reasoning.
 
 Recorded rationale for any model-routing deviation is required in the pull-request review trail and implementation note.
 Any model-routing deviation must be recorded in the pull-request review trail and implementation note.
@@ -423,6 +423,116 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - workflow docs state code-review agents do not silently use gpt-5.5 high
 - workflow docs define pr-gate ownership and forbidden actions for its assigned PR
 
+## Post-Approval Role Sections
+
+### story-orchestrator
+
+Responsibilities
+- own story authority, scope enforcement, ambiguity handling, and role assignment
+- ensure active packet content is current before implementation or review handoff
+- handoff only approved post-approval roles for this story
+
+Forbidden Actions
+- do not perform story-author or story-review pre-approval handoff mechanics
+- do not introduce packet-agent, cleanup-sync-agent, or revision-agent roles
+- do not mutate packet lifecycle semantics outside approved story scope
+
+Required Inputs
+- approved story file under stories/approved/
+- active packet file under agent-packets/
+- AGENTS.md and required workflow docs for the current phase
+
+Required Outputs
+- worker assignment constrained to allowed_touch_points and story boundary
+- implementation handoff instructions bound to packet authority
+- verification handoff readiness note
+
+Handoff Checklist
+- confirm required inputs are present and current
+- confirm forbidden actions are not introduced
+- confirm required outputs are produced for handoff
+
+### implementation
+
+Responsibilities
+- implement only the approved story using packet authority order
+- follow strict TypeScript, lint, and verification requirements
+- report ambiguity instead of inventing uncited behavior
+
+Forbidden Actions
+- do not broaden scope beyond the approved story boundary or allowed_touch_points
+- do not add packet extraction behavior unless the approved story explicitly owns it
+- do not implement story-author/story-review handoff mechanics
+
+Required Inputs
+- active packet content with authoritative spec references
+- approved story scope, non-scope, and acceptance criteria
+- allowed_touch_points and required test list
+
+Required Outputs
+- scoped code and test changes within approved touch points
+- verification command results with pass/fail status
+- assumptions and blockers note
+
+Verification Checklist
+- confirm required inputs are present and current
+- confirm forbidden actions are not introduced
+- confirm required outputs are produced for handoff
+
+### code-review
+
+Responsibilities
+- review correctness, scope fit, and required-test coverage
+- verify no forbidden role sections or lifecycle changes were introduced
+- confirm canonical packet behavior remains enforceable
+
+Forbidden Actions
+- do not author new feature scope outside the reviewed patch
+- do not bypass required tests, packet verification, or CI gate evidence
+- do not approve scope drift that violates story boundary
+
+Required Inputs
+- proposed patch limited to approved touch points
+- active packet, approved story, and cited spec references
+- verification and test evidence for required commands
+
+Required Outputs
+- review findings prioritized by correctness and scope compliance
+- clear disposition for findings (fix/defer/block) with rationale
+- review closure recommendation for pr-gate handoff
+
+Verification Checklist
+- confirm required inputs are present and current
+- confirm forbidden actions are not introduced
+- confirm required outputs are produced for handoff
+
+### pr-gate
+
+Responsibilities
+- own PR gate state, cleanup metadata validation, and human-review handoff
+- confirm cleanup-metadata-guard presence and passing status before handoff
+- preserve reviewed packet lifecycle behavior without scope expansion
+
+Forbidden Actions
+- do not merge without required human review and passing checks
+- do not change cleanup metadata semantics in implementation patches
+- do not implement feature code while serving as gate role
+
+Required Inputs
+- current PR body or durable handoff comment with cleanup metadata source
+- fetched changed files, PR head branch, and status checks
+- review records, revision response, and verification evidence
+
+Required Outputs
+- gate decision with explicit pass/fail blockers
+- human-review-ready handoff with cleanup metadata validation status
+- post-merge cleanup or fallback status confirmation
+
+Handoff Checklist
+- confirm required inputs are present and current
+- confirm forbidden actions are not introduced
+- confirm required outputs are produced for handoff
+
 ## Ambiguity Rule
 
 Policy: fail_and_escalate
@@ -441,3 +551,5 @@ Follow repo tooling and code standard requirements.
 Include tests for the listed acceptance criteria.
 If the spec is ambiguous, report the ambiguity instead of guessing.
 ```
+
+<!-- prettier-ignore-end -->

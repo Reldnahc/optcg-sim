@@ -78,7 +78,14 @@ test("packet extraction emits implementation markdown and json with aligned iden
   assert.ok(Array.isArray(parsed.sharedAuthoritySummary));
   assert.ok(Array.isArray(parsed.responsibilities));
   assert.ok(Array.isArray(parsed.forbiddenActions));
+  assert.ok(Array.isArray(parsed.requiredInputs));
   assert.ok(Array.isArray(parsed.requiredOutputs));
+  assert.equal(
+    typeof parsed.checklist === "object" && parsed.checklist !== null,
+    true,
+  );
+  assert.equal(typeof parsed.checklist.heading, "string");
+  assert.ok(Array.isArray(parsed.checklist.items));
 
   const markdownSource = markdown.stdout ?? "";
   assert.match(markdownSource, /^Role:\s+implementation$/m);
@@ -87,7 +94,12 @@ test("packet extraction emits implementation markdown and json with aligned iden
   assert.match(markdownSource, /^## Shared Authority Summary$/m);
   assert.match(markdownSource, /^## Responsibilities$/m);
   assert.match(markdownSource, /^## Forbidden Actions$/m);
+  assert.match(markdownSource, /^## Required Inputs$/m);
   assert.match(markdownSource, /^## Required Outputs$/m);
+  assert.match(
+    markdownSource,
+    /^## Handoff Checklist$|^## Verification Checklist$/m,
+  );
   assert.deepEqual(
     readMarkdownBullets(markdownSource, "Responsibilities"),
     parsed.responsibilities,
@@ -99,10 +111,20 @@ test("packet extraction emits implementation markdown and json with aligned iden
   );
   assert.deepEqual(parsed.forbiddenActions, packetRoleContent.forbiddenActions);
   assert.deepEqual(
+    readMarkdownBullets(markdownSource, "Required Inputs"),
+    parsed.requiredInputs,
+  );
+  assert.deepEqual(parsed.requiredInputs, packetRoleContent.requiredInputs);
+  assert.deepEqual(
     readMarkdownBullets(markdownSource, "Required Outputs"),
     parsed.requiredOutputs,
   );
   assert.deepEqual(parsed.requiredOutputs, packetRoleContent.requiredOutputs);
+  assert.deepEqual(
+    readMarkdownBullets(markdownSource, parsed.checklist.heading),
+    parsed.checklist.items,
+  );
+  assert.deepEqual(parsed.checklist.items, packetRoleContent.checklist.items);
 });
 
 test("packet extraction emits markdown and json for each post-approval review role", async () => {
@@ -174,10 +196,20 @@ test("packet extraction emits markdown and json for each post-approval review ro
       packetRoleContent.forbiddenActions,
     );
     assert.deepEqual(
+      readMarkdownBullets(markdown.stdout ?? "", "Required Inputs"),
+      parsed.requiredInputs,
+    );
+    assert.deepEqual(parsed.requiredInputs, packetRoleContent.requiredInputs);
+    assert.deepEqual(
       readMarkdownBullets(markdown.stdout ?? "", "Required Outputs"),
       parsed.requiredOutputs,
     );
     assert.deepEqual(parsed.requiredOutputs, packetRoleContent.requiredOutputs);
+    assert.deepEqual(
+      readMarkdownBullets(markdown.stdout ?? "", parsed.checklist.heading),
+      parsed.checklist.items,
+    );
+    assert.deepEqual(parsed.checklist.items, packetRoleContent.checklist.items);
   }
 });
 
@@ -416,10 +448,12 @@ function readPacketRoleBullets(source, role) {
   }
 
   return {
+    checklist: readRoleChecklist(roleMatch[1]),
     forbiddenActions: readRoleSubsectionBullets(
       roleMatch[1],
       "Forbidden Actions",
     ),
+    requiredInputs: readRoleSubsectionBullets(roleMatch[1], "Required Inputs"),
     requiredOutputs: readRoleSubsectionBullets(
       roleMatch[1],
       "Required Outputs",
@@ -429,6 +463,24 @@ function readPacketRoleBullets(source, role) {
       "Responsibilities",
     ),
   };
+}
+
+function readRoleChecklist(source) {
+  for (const heading of ["Handoff Checklist", "Verification Checklist"]) {
+    try {
+      const items = readRoleSubsectionBullets(source, heading);
+      if (items.length > 0) {
+        return {
+          heading,
+          items,
+        };
+      }
+    } catch {
+      // Try the next allowed checklist heading.
+    }
+  }
+
+  throw new Error("Missing role checklist subsection");
 }
 
 function readRoleSubsectionBullets(source, heading) {

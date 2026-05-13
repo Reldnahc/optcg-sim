@@ -160,7 +160,9 @@ async function runExtract(options: {
 
   const roleContent = readPostApprovalRoleContent(packetSource, options.role);
   const payload = {
+    checklist: roleContent.checklist,
     forbiddenActions: roleContent.forbiddenActions,
+    requiredInputs: roleContent.requiredInputs,
     requiredOutputs: roleContent.requiredOutputs,
     responsibilities: roleContent.responsibilities,
     role: options.role,
@@ -198,7 +200,12 @@ function buildSharedAuthoritySummary(packetSource: string) {
 }
 
 function renderMarkdownExtraction(payload: {
+  checklist: {
+    heading: "Handoff Checklist" | "Verification Checklist";
+    items: string[];
+  };
   forbiddenActions: string[];
+  requiredInputs: string[];
   requiredOutputs: string[];
   responsibilities: string[];
   role: ExtractRole;
@@ -228,9 +235,17 @@ function renderMarkdownExtraction(payload: {
     "",
     ...bullets(payload.forbiddenActions),
     "",
+    "## Required Inputs",
+    "",
+    ...bullets(payload.requiredInputs),
+    "",
     "## Required Outputs",
     "",
     ...bullets(payload.requiredOutputs),
+    "",
+    `## ${payload.checklist.heading}`,
+    "",
+    ...bullets(payload.checklist.items),
     "",
   ].join("\n");
 }

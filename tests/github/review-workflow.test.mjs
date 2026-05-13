@@ -237,7 +237,6 @@ test("branch protection guide names the required status checks and subagent revi
     /Parent orchestration runs on gpt-5\.5/i,
     /Implementation worker subagents default to gpt-5\.3-codex medium/i,
     /Reviewer subagents always use gpt-5\.4 high/i,
-    /Complex, risky, or integration-heavy implementation stories should escalate to gpt-5\.5 medium/i,
     /Parent agents own documentation-only authority edits directly/i,
     /Documentation-only authority edits still require separate reviewer subagent review/i,
     /default review path is a spawned reviewer subagent against the PR base branch/i,
@@ -532,7 +531,6 @@ test("agents guidance requires parent orchestration plus separate reviewer subag
     /Parent\/orchestrator model: `gpt-5\.5`/i,
     /Reviewer subagent model: `gpt-5\.4` with `high` reasoning/i,
     /Implementation worker model: default to `gpt-5\.3-codex` with `medium` reasoning/i,
-    /Complex, risky, or integration-heavy implementation stories should use `gpt-5\.5` with `medium` reasoning/i,
     /Parent-owned authority edits: documentation-only changes to `AGENTS\.md`, `specs\/`, story files, packets, and workflow templates should be handled by the parent agent directly/i,
     /Parent-owned authority edits still require tests when applicable, full verification, and separate reviewer subagent review/i,
     /Any model-routing deviation must be recorded in the PR review trail and implementation note/i,
@@ -767,7 +765,6 @@ test("codex integration spec reflects subagent orchestration instead of cli-firs
     /parent\/orchestrator model is gpt-5\.5/i,
     /reviewer subagent model is gpt-5\.4 with high reasoning/i,
     /implementation worker subagents default to gpt-5\.3-codex with medium reasoning/i,
-    /Complex, risky, or integration-heavy implementation stories should use gpt-5\.5 with medium reasoning/i,
     /Documentation-only authority edits should be handled by the parent agent directly/i,
     /Authority edits still require separate reviewer subagent review/i,
     /Any model-routing deviation must be recorded in the pull-request review trail\s+and implementation note/i,
@@ -918,6 +915,14 @@ test("spec and workflow docs share the same complete role model-routing table an
   assert.doesNotMatch(
     codexSpec,
     /code-review agents?.*gpt-5\.5 high.*default/i,
+  );
+  assert.doesNotMatch(
+    workflowGuidance,
+    /Complex, risky, or integration-heavy implementation stories should use `?gpt-5\.5`? with `?medium`? reasoning/i,
+  );
+  assert.doesNotMatch(
+    codexSpec,
+    /Complex, risky, or integration-heavy implementation stories should use gpt-5\.5 with medium reasoning/i,
   );
 });
 

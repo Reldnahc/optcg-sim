@@ -295,7 +295,6 @@ Use the complete role routing table:
 - Reviewer subagent model: `gpt-5.4` with `high` reasoning
 - implementation: default `gpt-5.3-codex` with `medium` reasoning
 - Implementation worker model: default to `gpt-5.3-codex` with `medium` reasoning
-- Complex, risky, or integration-heavy implementation stories should use `gpt-5.5` with `medium` reasoning
 - code-review: `gpt-5.4` with `high` reasoning
 - pr-gate: default `gpt-5.4` with `medium` reasoning; use `high` for parent PRs or cleanup/check failures
 - pr-gate uses gpt-5.4 medium by default and high for parent PRs or cleanup/check failures
