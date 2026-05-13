@@ -19,6 +19,7 @@
     "cli:boot": "corepack pnpm --filter @optcg/cli boot:summary",
     "packets:complete": "node --experimental-strip-types tools/build-agent-packet.ts complete",
     "packets:complete-many": "node --experimental-strip-types tools/build-agent-packet.ts complete-many",
+    "packets:extract": "node --experimental-strip-types tools/build-agent-packet.ts extract",
     "packets:generate": "node --experimental-strip-types tools/build-agent-packet.ts generate",
     "packets:verify": "node --experimental-strip-types tools/build-agent-packet.ts verify-active",
     "cleanup:validate-dry-run": "node --experimental-strip-types tools/post-merge-cleanup.ts",

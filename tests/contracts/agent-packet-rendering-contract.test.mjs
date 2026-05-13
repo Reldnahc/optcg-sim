@@ -366,7 +366,7 @@ test("packet builder renders deterministic post-approval role sections for INF-0
       ],
       forbiddenActions: [
         "do not broaden scope beyond the approved story boundary or allowed_touch_points",
-        "do not add extraction CLI behavior or JSON extraction output",
+        "do not add packet extraction behavior unless the approved story explicitly owns it",
         "do not implement story-author/story-review handoff mechanics",
       ],
       requiredInputs: [

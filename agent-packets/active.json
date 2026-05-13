@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-044C.md",
-      "storyId": "INF-044C",
-      "storyPath": "stories/approved/INF-044C-role-scoped-packet-sections.yaml",
-      "storySha256": "80d652f2bab1678b7bdf4885fbb0215464a91599424233fe3f9c3f3e18a6da85"
+      "packetPath": "agent-packets/INF-044D.md",
+      "storyId": "INF-044D",
+      "storyPath": "stories/approved/INF-044D-packet-role-extraction-tooling.yaml",
+      "storySha256": "ee7ee05211c1221078c066ffb144f67cbaf4481f602c0aedc0dc733eac6fd49e"
     }
   ],
   "version": 1
