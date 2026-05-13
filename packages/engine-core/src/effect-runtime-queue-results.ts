@@ -16,6 +16,7 @@ import {
   toStateSeq,
 } from "./action-results.js";
 import type { EffectQueueGroup } from "./effect-queue-ordering.js";
+import { createSupportedDrawThenTrashSequenceDecision } from "./effect-runtime-draw-trash-sequence.js";
 import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
 import {
   evaluateQueueOrdering,
@@ -343,6 +344,19 @@ export const createEffectRuntimeQueueResults = (
             errorCount: originalState.effectQueue.length,
           },
         );
+      }
+      const drawTrashSequence = createSupportedDrawThenTrashSequenceDecision(
+        nextState,
+        selected,
+        queuedEffect,
+      );
+      if (drawTrashSequence !== undefined) {
+        return drawTrashSequence.ok
+          ? toEngineResult(drawTrashSequence.state, [
+              ...allEvents,
+              ...drawTrashSequence.events,
+            ])
+          : unsupportedEffectQueueResult(originalState);
       }
       const searchEffect = resolveQueuedSearchRevealEffect(nextState, selected);
       if (searchEffect !== undefined) {
