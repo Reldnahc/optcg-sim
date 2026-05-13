@@ -15,15 +15,15 @@ import {
 } from "./index.js";
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import {
-  buildRealCardDslMatchCardManifest,
+  buildFixtureOnlyRealCardDslMatchCardManifest,
+  fixtureOnlyRealCardDslMatchCardManifestPath,
   listRealCardFixtureIds,
   loadCheckedInEb01023OnPlayDraw1EffectDefinition,
+  loadFixtureOnlyRealCardDslMatchCardManifest,
   loadCheckedInOp10045GeneratedSupportEffectDefinition,
   loadCheckedInRealPoneglyphFixture,
-  loadRealCardDslMatchCardManifestFixture,
   realEffectShapeFixtureCorpus,
   realCardDslEffectDefinitionFixturePath,
-  realCardDslMatchCardManifestFixturePath,
 } from "./real-card-fixtures.js";
 
 const toCardId = (value: string): CardId => value as CardId;
@@ -271,7 +271,7 @@ describe("real card fixtures", () => {
   });
 
   it("keeps overlay as gameplay authority and fails closed for unsupported non-vanilla cards in ranked mode", async () => {
-    const manifest = await buildRealCardDslMatchCardManifest();
+    const manifest = await buildFixtureOnlyRealCardDslMatchCardManifest();
     const unsupported = manifest.cards[toCardId("OP05-091")];
     const implementedDsl = manifest.cards[toCardId("EB01-023")];
     const supportedBanishCandidate = manifest.cards[toCardId("OP04-014")];
@@ -367,11 +367,11 @@ describe("real card fixtures", () => {
   });
 
   it("builds the checked-in real-card manifest and keeps raw payload fields out", async () => {
-    const built = await buildRealCardDslMatchCardManifest();
-    const checkedIn = await loadRealCardDslMatchCardManifestFixture();
+    const built = await buildFixtureOnlyRealCardDslMatchCardManifest();
+    const checkedIn = await loadFixtureOnlyRealCardDslMatchCardManifest();
     const serializedCards = JSON.stringify(checkedIn.cards);
 
-    expect(realCardDslMatchCardManifestFixturePath).toBe(
+    expect(fixtureOnlyRealCardDslMatchCardManifestPath).toBe(
       "fixtures/cards/real-card-dsl-match-card-manifest.json",
     );
     expect(built).toEqual(checkedIn);
@@ -398,8 +398,31 @@ describe("real card fixtures", () => {
     expect(serializedCards).not.toContain("available_languages");
   });
 
+  it("keeps the real-card DSL manifest surface fixture-only and detached from runtime admission authority", async () => {
+    const fixtureManifest = await loadFixtureOnlyRealCardDslMatchCardManifest();
+    const builtManifest = await buildFixtureOnlyRealCardDslMatchCardManifest();
+
+    expect(fixtureOnlyRealCardDslMatchCardManifestPath).toBe(
+      "fixtures/cards/real-card-dsl-match-card-manifest.json",
+    );
+    expect(fixtureManifest).toEqual(builtManifest);
+    expect(fixtureManifest.source).toBe("poneglyph-fixture");
+    expect(fixtureManifest.cards[toCardId("EB01-023")]?.support.status).toBe(
+      "implemented-dsl",
+    );
+    expect(fixtureManifest.cards[toCardId("OP04-014")]?.support.status).toBe(
+      "vanilla-confirmed",
+    );
+    expect(fixtureManifest.cards[toCardId("OP10-045")]?.support.status).toBe(
+      "implemented-dsl",
+    );
+    expect(fixtureManifest.cards[toCardId("OP05-091")]?.support.status).toBe(
+      "unsupported",
+    );
+  });
+
   it("links implemented support.effectDefinitionId values to the effect definition registry", async () => {
-    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const manifest = await loadFixtureOnlyRealCardDslMatchCardManifest();
     const effectDefinition =
       await loadCheckedInEb01023OnPlayDraw1EffectDefinition();
     const generatedSupportEffectDefinition =
@@ -451,7 +474,7 @@ describe("real card fixtures", () => {
   });
 
   it("keeps real target-KO fixture support absent until reviewed Poneglyph text supports it", async () => {
-    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const manifest = await loadFixtureOnlyRealCardDslMatchCardManifest();
     const unsupportedRealCards = [
       manifest.cards[toCardId("OP01-060")],
       manifest.cards[toCardId("OP05-091")],
@@ -471,7 +494,7 @@ describe("real card fixtures", () => {
   });
 
   it("fails loadout validation closed for unsupported real non-vanilla cards in ranked mode", async () => {
-    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const manifest = await loadFixtureOnlyRealCardDslMatchCardManifest();
     const result = validateLoadout({
       format: "extra",
       loadout: {
@@ -509,7 +532,7 @@ describe("real card fixtures", () => {
   });
 
   it("accepts OP04-014 in ranked deck and loadout validation after reviewed Banish support", async () => {
-    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const manifest = await loadFixtureOnlyRealCardDslMatchCardManifest();
     const leader = manifest.cards[toCardId("OP03-077")];
     if (leader === undefined) {
       throw new Error("missing OP03-077 manifest leader");
@@ -566,7 +589,7 @@ describe("real card fixtures", () => {
   });
 
   it("accepts OP10-045 in ranked deck and loadout validation after generated-support linkage", async () => {
-    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const manifest = await loadFixtureOnlyRealCardDslMatchCardManifest();
     const leader = manifest.cards[toCardId("OP03-077")];
     if (leader === undefined) {
       throw new Error("missing OP03-077 manifest leader");
@@ -623,7 +646,7 @@ describe("real card fixtures", () => {
   });
 
   it("matches every real mechanics matrix entry to checked-in manifest support metadata without broadening support", async () => {
-    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const manifest = await loadFixtureOnlyRealCardDslMatchCardManifest();
     const supportedCardIds = supportedRealMechanicsMatrix.map(
       (entry) => entry.cardId,
     );
@@ -688,7 +711,7 @@ describe("real card fixtures", () => {
   });
 
   it("rejects every unsupported CARD-005 real effect-shape fixture in ranked decks while allowing sandbox warnings", async () => {
-    const manifest = await loadRealCardDslMatchCardManifestFixture();
+    const manifest = await loadFixtureOnlyRealCardDslMatchCardManifest();
     const deck = realEffectShapeFixtureCorpus.map((entry) => ({
       cardId: toCardId(entry.cardId),
       quantity: 1,
