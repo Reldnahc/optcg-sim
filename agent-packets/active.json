@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-009A.md",
-      "storyId": "CARD-009A",
-      "storyPath": "stories/approved/CARD-009A-parameterized-draw-n-parser-capabilities.yaml",
-      "storySha256": "afa65e6a5b5271fec67941a0b98fd3765aabf3f50d923e6b0daf538f1494d51b"
+      "packetPath": "agent-packets/CARD-009B.md",
+      "storyId": "CARD-009B",
+      "storyPath": "stories/approved/CARD-009B-generated-draw-then-trash-template-evidence.yaml",
+      "storySha256": "53b279571d007f2042a7603eafb236c0765d4604fdfe3e2aee7dce72992d72e8"
     }
   ],
   "version": 1
