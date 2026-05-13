@@ -11,6 +11,7 @@ Every implementation or review note should include:
 - assumptions
 - blockers or ambiguities
 - whether the patch stayed inside `allowed_touch_points`
+- role packet extraction fallback details when extraction failed (failure evidence plus manual fallback record)
 
 ## GitHub And Board Sync
 

@@ -70,6 +70,11 @@ If broad mechanical validation of PR comments or story-review artifacts would be
 - Read `AGENTS.md` first, then the approved story, then the corresponding packet.
 - Implement only one approved story at a time.
 - Approved stories may exist without packets until they become active.
+- Post-approval role handoffs must include role packet extraction output for the assigned role (`story-orchestrator`, `implementation`, `code-review`, or `pr-gate`).
+- Manual packet trimming is not the normal handoff path. Use deterministic role packet extraction output for normal handoffs.
+- packet-agent, cleanup-sync-agent, and revision-agent are not valid role handoff targets.
+- If role packet extraction is unavailable or fails, use temporary manual fallback only for that handoff and record both the extraction failure and the fallback details in the PR trail or implementation trail.
+- If role packet extraction fails, ensure the failure and fallback are recorded in the PR or implementation trail.
 - `worker-ready` means the parent has read `AGENTS.md`, the approved story, and the current active packet, then successfully run packet generation and `pnpm run packets:verify`.
 - Before implementation starts, before a worker or reviewer subagent is assigned, and before PR handoff begins, generate a current checked-in packet for the active story under `agent-packets/`.
 - Track active stories in `agent-packets/active.json` and keep the packet current relative to the approved story.
@@ -95,6 +100,7 @@ Human interaction boundary and path-selection policy:
 - Only the Session Orchestrator interacts directly with the human for story-path decisions.
 - Session Orchestrator owns assignment of story-author, story-review, and story-orchestrator.
 - story-orchestrator owns implementation, code-review, and pr-gate assignment for its assigned story or story set.
+- story-orchestrator handoff, implementation handoff, code-review handoff, and pr-gate handoff each require role packet extraction output for the assigned role.
 - Single-story execution is not the default and parent/substory execution is not the exception.
 - Session Orchestrator presents the single-story versus parent/substory tradeoffs before the human selects the path.
 - Record the selected path only in durable existing artifacts: story draft, story-review artifact, approval note, or PR/review trail.

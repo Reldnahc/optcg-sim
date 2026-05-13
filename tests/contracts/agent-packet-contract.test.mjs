@@ -42,6 +42,15 @@ test("repo guidance documents active-story packet requirements", async () => {
   );
   assert.match(
     agents,
+    /mandatory procedures[\s\S]*docs\/workflow\/story-execution\.md[\s\S]*docs\/workflow\/review-gate\.md[\s\S]*docs\/workflow\/parent-integration-branches\.md[\s\S]*docs\/workflow\/reporting-and-github-sync\.md/i,
+  );
+  assert.doesNotMatch(
+    agents,
+    /## Post-Approval Role Sections/i,
+    "AGENTS.md should stay a concise checklist and link role guidance instead of embedding the full role manual",
+  );
+  assert.match(
+    agents,
     /A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` or `pnpm run packets:complete-many --story <stories\/approved\/\.\.\.yaml> --story <stories\/approved\/\.\.\.yaml>` does not require a separate reviewer subagent run/i,
   );
   assert.match(

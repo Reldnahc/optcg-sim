@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-044D.md",
-      "storyId": "INF-044D",
-      "storyPath": "stories/approved/INF-044D-packet-role-extraction-tooling.yaml",
-      "storySha256": "ee7ee05211c1221078c066ffb144f67cbaf4481f602c0aedc0dc733eac6fd49e"
+      "packetPath": "agent-packets/INF-044E.md",
+      "storyId": "INF-044E",
+      "storyPath": "stories/approved/INF-044E-enforce-role-based-handoffs.yaml",
+      "storySha256": "40a04d276084cfc8fe9f0e64a69ff9bcf481b1b802ba7e1064375ca86486cd59"
     }
   ],
   "version": 1

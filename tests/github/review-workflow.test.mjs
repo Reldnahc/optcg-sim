@@ -845,6 +845,41 @@ test("workflow docs define implementation verification evidence authority and pr
   ]);
 });
 
+test("workflow docs require role-based packet extraction handoffs and recorded extraction failure fallback", async () => {
+  const agents = await readActiveText("AGENTS.md");
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const reporting = await readActiveText(
+    "docs/workflow/reporting-and-github-sync.md",
+  );
+  const workflowGuidance = `${agents}\n${storyExecution}\n${reviewGate}\n${parentBranches}\n${reporting}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /story-orchestrator handoff[\s\S]*role packet extraction output/i,
+    /implementation handoff[\s\S]*role packet extraction output/i,
+    /code-review handoff[\s\S]*role packet extraction output/i,
+    /pr-gate handoff[\s\S]*role packet extraction output/i,
+    /manual packet trimming is not the normal path/i,
+    /packet-agent, cleanup-sync-agent, and revision-agent are not valid role handoff targets/i,
+    /if role packet extraction fails[\s\S]*record(?:ed)? in (?:the )?(?:PR|implementation trail)/i,
+    /pr-gate handoff[\s\S]*current PR body or durable handoff comment/i,
+    /pr-gate handoff[\s\S]*changed files/i,
+    /pr-gate handoff[\s\S]*head branch/i,
+    /pr-gate handoff[\s\S]*review records/i,
+    /pr-gate handoff[\s\S]*revision response state/i,
+    /pr-gate handoff[\s\S]*check status/i,
+    /pr-gate handoff[\s\S]*cleanup-metadata-guard status/i,
+    /pr-gate handoff[\s\S]*human-review readiness context/i,
+    /one story-orchestrator[\s\S]*parent series/i,
+    /one pr-gate[\s\S]*per PR/i,
+  ]);
+});
+
 test("spec and workflow docs share the same complete role model-routing table and deviation rationale rule", async () => {
   const storyExecution = await readActiveText(
     "docs/workflow/story-execution.md",
