@@ -221,4 +221,82 @@ describe("generated support report", () => {
       unsupportedCardIds: ["CARD-009A-001"],
     });
   });
+
+  it("includes draw-then-trash parser rules in report evidence when supported", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-009B-201" as CardId,
+          sourceText: "[On Play] Draw 2 cards and trash 1 card from your hand.",
+          sourceTextHash: "sha256:draw-trash-on-play",
+        },
+        {
+          ...baseInput,
+          cardId: "CARD-009B-202" as CardId,
+          sourceText:
+            "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
+          sourceTextHash: "sha256:draw-trash-when-attacking-1t",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.parserRuleIdsUsed).toEqual(
+      expect.arrayContaining([
+        "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+      ]),
+    );
+    expect(report.unsupportedCardIds).toEqual([]);
+  });
+
+  it("reports missing draw-then-trash runtime capability blockers", () => {
+    const matrixWithoutSequence = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) => capability.id !== "effect:sequence:ordered",
+      ),
+    };
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-009B-203" as CardId,
+          sourceText:
+            "[When Attacking] Draw 2 cards and trash 1 card from your hand.",
+          sourceTextHash: "sha256:missing-sequence",
+        },
+      ],
+      runtimeCapabilityMatrix: matrixWithoutSequence,
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report).toMatchObject({
+      blockerCount: 1,
+      blockers: [
+        {
+          capabilityId: "effect:sequence:ordered",
+          cardId: "CARD-009B-203",
+          code: "missing-runtime-capability",
+          component: "exact:when-attacking:draw-n:trash-m:hand:self",
+        },
+      ],
+      missingRuntimeCapabilityIds: ["effect:sequence:ordered"],
+      statusByCardId: {
+        "CARD-009B-203": {
+          blockerCodes: ["missing-runtime-capability"],
+          missingCapabilityIds: ["effect:sequence:ordered"],
+          parseStatus: "complete",
+          parserRuleIds: ["exact:when-attacking:draw-n:trash-m:hand:self"],
+          status: "unsupported",
+        },
+      },
+      unsupportedCardIds: ["CARD-009B-203"],
+    });
+  });
 });

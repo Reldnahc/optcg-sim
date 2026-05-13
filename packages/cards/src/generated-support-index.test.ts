@@ -105,7 +105,7 @@ describe("generated support index", () => {
       index.effectDefinitions["card-008c-001.generated-support"]?.metadata,
     ).toMatchObject({
       generatedBy: "rule-parser",
-      reviewer: "certified-parser-rule:CARD-009A",
+      reviewer: "certified-parser-rule:CARD-009B",
       tested: true,
     });
   });
@@ -324,6 +324,134 @@ describe("generated support index", () => {
       count: 2,
       player: "self",
       type: "draw",
+    });
+  });
+
+  it.each([
+    {
+      cardId: "CARD-009B-010" as CardId,
+      expectedRuleId: "exact:on-play:draw-n:trash-m:hand:self",
+      sourceText: "[On Play] Draw 2 cards and trash 1 card from your hand.",
+    },
+    {
+      cardId: "CARD-009B-011" as CardId,
+      expectedRuleId: "exact:when-attacking:draw-n:trash-m:hand:self",
+      sourceText:
+        "[When Attacking] Draw 3 cards and trash 2 cards from your hand.",
+    },
+    {
+      cardId: "CARD-009B-012" as CardId,
+      expectedRuleId:
+        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+      sourceText:
+        "[When Attacking] [Once Per Turn] Draw 4 cards and trash 1 card from your hand.",
+    },
+  ])(
+    "supports generated draw-then-trash template parse and capability evidence ($sourceText)",
+    ({ cardId, expectedRuleId, sourceText }) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [{ ...baseCard, cardId, sourceText }],
+        validateEffectDefinition,
+      });
+
+      expect(index.entries[0]).toMatchObject({
+        blockers: [],
+        parseStatus: "complete",
+        parserRuleIds: [expectedRuleId],
+        status: "supported",
+      });
+      expect(index.entries[0]?.capabilityEvidence.length).toBeGreaterThan(0);
+    },
+  );
+
+  it.each([
+    "[On Play] Trash 1 card from your hand and draw 2 cards.",
+    "[When Attacking] Draw 2 cards and trash 1 card from your hand. Then draw 1 card.",
+  ])(
+    "keeps unsupported draw-then-trash near misses blocked (%s)",
+    (sourceText) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [{ ...baseCard, cardId: "CARD-009B-099" as CardId, sourceText }],
+        validateEffectDefinition,
+      });
+
+      expect(index.entries[0]).toMatchObject({
+        blockers: [{ code: "unparsed-span" }],
+        parseStatus: "partial",
+        status: "unsupported",
+      });
+    },
+  );
+
+  it("keeps draw-then-trash unsupported when runtime sequence capability is missing", () => {
+    const matrixWithoutSequence = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) => capability.id !== "effect:sequence:ordered",
+      ),
+    };
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          cardId: "CARD-009B-100" as CardId,
+          sourceText:
+            "[When Attacking] Draw 2 cards and trash 1 card from your hand.",
+        },
+      ],
+      runtimeCapabilityMatrix: matrixWithoutSequence,
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "effect:sequence:ordered",
+          code: "missing-runtime-capability",
+          component: "exact:when-attacking:draw-n:trash-m:hand:self",
+        },
+      ],
+      missingCapabilityIds: ["effect:sequence:ordered"],
+      parseStatus: "complete",
+      parserRuleIds: ["exact:when-attacking:draw-n:trash-m:hand:self"],
+      status: "unsupported",
+    });
+  });
+
+  it("keeps draw-then-trash unsupported when runtime capability lacks parser-rule evidence", () => {
+    const matrixWithoutRuleEvidence = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.map(
+        (capability) =>
+          capability.id === "effect:sequence:ordered"
+            ? { ...capability, supportedParserRuleIds: [] }
+            : capability,
+      ),
+    };
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          cardId: "CARD-009B-101" as CardId,
+          sourceText: "[On Play] Draw 2 cards and trash 1 card from your hand.",
+        },
+      ],
+      runtimeCapabilityMatrix: matrixWithoutRuleEvidence,
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "effect:sequence:ordered",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:draw-n:trash-m:hand:self",
+        },
+      ],
+      missingCapabilityIds: ["effect:sequence:ordered"],
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-play:draw-n:trash-m:hand:self"],
+      status: "unsupported",
     });
   });
 

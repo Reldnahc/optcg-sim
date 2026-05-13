@@ -348,6 +348,42 @@ function capabilityIdsForParserRuleId(parserRuleId: string): readonly string[] {
     return ["composition:line-separated-effect-blocks:v1"];
   }
 
+  if (parserRuleId === "exact:on-play:draw-n:trash-m:hand:self") {
+    return [
+      "category:auto",
+      "effect:draw:self:count:positive-safe-integer",
+      "effect:sequence:ordered",
+      "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+      "sourcePresencePolicy:mustRemainInSameZone",
+      "trigger:onPlay",
+    ];
+  }
+
+  if (parserRuleId === "exact:when-attacking:draw-n:trash-m:hand:self") {
+    return [
+      "category:auto",
+      "effect:draw:self:count:positive-safe-integer",
+      "effect:sequence:ordered",
+      "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+      "sourcePresencePolicy:mustRemainInSameZone",
+      "trigger:whenAttacking",
+    ];
+  }
+
+  if (
+    parserRuleId ===
+    "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self"
+  ) {
+    return [
+      "category:auto",
+      "effect:draw:self:count:positive-safe-integer",
+      "effect:sequence:ordered",
+      "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+      "sourcePresencePolicy:mustRemainInSameZone",
+      "trigger:whenAttacking:oncePerTurn",
+    ];
+  }
+
   return [parserRuleId];
 }
 
