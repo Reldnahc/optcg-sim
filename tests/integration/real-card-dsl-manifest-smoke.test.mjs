@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
-  loadRealCardDslMatchCardManifestFixture,
-  realCardDslMatchCardManifestFixturePath,
+  fixtureOnlyRealCardDslMatchCardManifestPath,
+  loadFixtureOnlyRealCardDslMatchCardManifest,
 } from "../../packages/cards/src/index.ts";
 import { createInitialState } from "../../packages/engine-core/src/index.ts";
 
@@ -19,11 +19,12 @@ const must = (value, label) => {
 
 test("root integration loads real-card DSL manifest fixture into engine initial state", async () => {
   assert.equal(
-    realCardDslMatchCardManifestFixturePath,
+    fixtureOnlyRealCardDslMatchCardManifestPath,
     "fixtures/cards/real-card-dsl-match-card-manifest.json",
   );
 
-  const cardsProducedManifest = await loadRealCardDslMatchCardManifestFixture();
+  const cardsProducedManifest =
+    await loadFixtureOnlyRealCardDslMatchCardManifest();
   const plainManifest = plainDataClone(cardsProducedManifest);
   const leaderCard = must(plainManifest.cards["OP01-060"], "OP01-060");
   const deckCard = must(plainManifest.cards["EB01-023"], "EB01-023");

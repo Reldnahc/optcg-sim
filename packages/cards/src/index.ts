@@ -39,13 +39,13 @@ export type {
 export { createPoneglyphClient } from "./poneglyph-client.js";
 export { validatePoneglyphCardDetail } from "./poneglyph-schema.js";
 export {
-  buildRealCardDslMatchCardManifest,
+  buildFixtureOnlyRealCardDslMatchCardManifest,
+  fixtureOnlyRealCardDslMatchCardManifestPath,
   listRealCardFixtureIds,
   loadCheckedInEb01023OnPlayDraw1EffectDefinition,
+  loadFixtureOnlyRealCardDslMatchCardManifest,
   loadCheckedInRealPoneglyphFixture,
-  loadRealCardDslMatchCardManifestFixture,
   realCardDslEffectDefinitionFixturePath,
-  realCardDslMatchCardManifestFixturePath,
 } from "./real-card-fixtures.js";
 export type { RealCardFixtureId } from "./real-card-fixtures.js";
 export {
@@ -140,3 +140,8 @@ export type {
   RuntimeCapabilityMatrix,
   RuntimeCapabilityRecord,
 } from "./runtime-capability-matrix.js";
+export { evaluateGeneratedSupportPlayability } from "./support-evaluator.js";
+export type {
+  EvaluateGeneratedSupportPlayabilityInput,
+  GeneratedSupportPlayabilityEvaluation,
+} from "./support-evaluator.js";

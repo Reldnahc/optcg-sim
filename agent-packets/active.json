@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-011C.md",
+      "storyId": "CARD-011C",
+      "storyPath": "stories/approved/CARD-011C-fixture-only-manifest-boundary.yaml",
+      "storySha256": "3830692452f71f364f0640ba0a96abefc4cb7a1f3601113b423dff2cae491d7a"
+    }
+  ],
   "version": 1
 }

@@ -1,0 +1,118 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-011
+epic_id: CARD-011
+title: Generated-support playability from authoritative Poneglyph data parent
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: generated
+summary: >
+  Split generated-support playability into a small substory series: a card-data
+  evaluator, a read-only support probe CLI, and fixture-only manifest boundary
+  guardrails. Cards are not admitted or preloaded; support is evaluated from
+  authoritative Poneglyph card data and certified mechanics evidence.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  the approved child stories one at a time, preserving Poneglyph as the owned
+  authoritative card-data source and preserving real-card manifests only as
+  fixture/integration-test evidence. Use the parent-integration-branch workflow:
+  child implementation branches are created from the parent branch, child PRs
+  target the parent branch, child packet completion is deferred until the parent
+  PR lands on main, and the final parent PR carries the human review gate.
+allowed_touch_points:
+  - stories/generated/CARD-011*.yaml
+  - stories/approved/CARD-011*.yaml
+  - agent-packets/CARD-011*.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s019
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s023
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+  - 19-poneglyph-api-contract.s002
+  - 19-poneglyph-api-contract.s003
+  - 19-poneglyph-api-contract.s005
+  - 19-poneglyph-api-contract.s007
+  - 19-poneglyph-api-contract.s010
+  - 19-poneglyph-api-contract.s012
+  - 24-story-schema.s033
+  - 24-story-schema.s034
+scope:
+  - define the CARD-011 child series for generated-support playability from authoritative Poneglyph data
+  - keep cards playable or not playable based on parser, DSL validation, hashes, and runtime capability evidence, not manual per-card admission
+  - keep checked-in real-card DSL manifests as fixture/integration-test evidence only
+  - preserve the normal workflow requirement to approve and activate exactly one child story before implementation
+  - require a parent integration branch for CARD-011, with substory PRs targeting that branch and the final parent PR targeting main
+  - require reconstructable set-level and exact per-story review-status matrix evidence before child activation, child PR handoff, parent PR opening, and parent PR handoff
+non_scope:
+  - direct parent implementation
+  - parser grammar expansion
+  - runtime behavior expansion
+  - Redis cache implementation
+  - server match-time lazy loading
+  - broad live Poneglyph catalog fetching
+  - automatically fetching or committing every released card
+  - fixture-manifest deletion
+  - engine MatchCardManifest removal
+  - server, client, API, UI, database, replay, or browser work
+dependencies:
+  - CARD-009B
+  - ENG-050B
+child_stories:
+  - id: CARD-011A
+    title: Generated-support playability evaluator
+    concern: Compute playable or not playable from normalized authoritative Poneglyph card data, certified parser output, generated DSL validation, hashes, and runtime capability evidence.
+    depends_on: []
+  - id: CARD-011B
+    title: Read-only support probe CLI
+    concern: Add a command-line probe that fetches one explicit live Poneglyph card, runs the evaluator, prints support evidence or blockers, and writes no files.
+    depends_on: [CARD-011A]
+  - id: CARD-011C
+    title: Fixture-only real-card manifest boundary
+    concern: Keep checked-in real-card DSL manifests for fixture and integration tests only, while preventing them from serving as runtime preload or card admission authority.
+    depends_on: []
+card_source_integrity:
+  - not applicable for direct parent implementation because this parent is planning-only and does not enable or change gameplay support for any card
+  - child CARD stories must provide their own card_source_integrity before approval, including fixture provenance or explicit non-applicability when the child does not enable or change gameplay support
+engine_capability_preflight:
+  - not applicable for direct parent implementation because this parent is planning-only and adds no parser grammar, generated DSL, runtime capability, support status, or gameplay behavior
+  - child CARD stories must provide parsed effect shape plus supported and missing runtime capability groups, or explicitly state why the child is pure infrastructure and does not enable gameplay behavior
+acceptance_criteria:
+  - this parent remains generated until explicitly moved through story-review
+  - CARD-011A, CARD-011B, and CARD-011C can be reviewed and implemented independently while their PRs merge into the CARD-011 parent integration branch until the parent PR lands on main
+  - OP03-044 Kaya generated support is proven through evaluator/probe evidence, not through per-card admission
+  - fixture manifests remain available for implementation tests but are not support authority
+  - substory PRs require CI, pnpm verify, reviewer-subagent records, and revision responses, but human review is deferred to the final parent PR
+  - final parent PR records included substory PRs, full-story AI review, revision response, CI and pnpm verify evidence, human-review requirement, and parent post-merge cleanup metadata for all included child stories
+required_tests:
+  - set-level story-review before presenting or approving the CARD-011 decomposed group
+  - exact candidate story-review for each child before child approval
+  - reconstruct and record the parent/substory review-status matrix before child activation, child PR handoff, parent PR opening, and parent PR handoff
+  - future story-specific tests from each child story if approved
+repo_rules:
+  - do not activate or implement this parent directly
+  - implement only one approved CARD-011 child story at a time
+  - create child implementation branches from the CARD-011 parent integration branch
+  - open child PRs against the CARD-011 parent integration branch
+  - do not run packets:complete for child PRs that merge only into the parent integration branch
+  - after all included child PRs merge into the parent branch, open one parent PR to main
+  - after the parent PR merges to main, rely on post-merge packet cleanup automation to run complete-many for all included CARD-011 child stories and bound parent closeout
+  - fail closed on gameplay support ambiguity
+ambiguity_policy: fail_and_escalate

@@ -1,0 +1,249 @@
+{
+  "attribute": ["Wisdom"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "4",
+  "card_number": "OP03-044",
+  "card_type": "Character",
+  "color": ["Blue"],
+  "cost": 1,
+  "counter": 2000,
+  "effect": "[On Play] Draw 2 cards and trash 2 cards from your hand.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Kaya",
+  "official_faq": [],
+  "power": 0,
+  "rarity": "R",
+  "released": true,
+  "released_at": "2023-06-30T00:00:00.000Z",
+  "set": "OP03",
+  "set_name": "Pillars of Strength",
+  "trigger": null,
+  "types": ["East Blue"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP03-044/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP03-044/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "50.00",
+        "low_price": "0.85",
+        "market_price": "1.09",
+        "mid_price": "1.50",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/499973/one-piece-card-game-pillars-of-strength-kaya"
+      },
+      "name": null,
+      "product": {
+        "id": "6fa1f044-63f4-46a2-9a47-42048b7788b6",
+        "name": "Pillars of Strength",
+        "released_at": "2023-06-30T00:00:00.000Z",
+        "set_code": "OP03",
+        "slug": "pillars-of-strength"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP03-044/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP03-044/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Reprint",
+      "market": {
+        "high_price": "4.00",
+        "low_price": "0.15",
+        "market_price": "0.48",
+        "mid_price": "0.55",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/656013/one-piece-card-game-premium-booster-the-best-vol-2-kaya-reprint"
+      },
+      "name": null,
+      "product": {
+        "id": "4d262c70-3787-4fec-8516-438619cb09fa",
+        "name": "One Piece Card the Best Vol.2",
+        "released_at": "2025-10-03T00:00:00.000Z",
+        "set_code": "PRB02",
+        "slug": "one-piece-card-the-best-vol-2"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP03-044/en/stock/2/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP03-044/en/stock/2/thumb.webp"
+        }
+      },
+      "index": 2,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "4.99",
+        "low_price": "0.49",
+        "market_price": "1.02",
+        "mid_price": "1.55",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/537442/one-piece-card-game-one-piece-promotion-cards-kaya-tournament-pack-vol-6"
+      },
+      "name": null,
+      "product": {
+        "id": "a917945e-5487-49d8-addc-efab9eacfabc",
+        "name": "Tournament Pack Vol.6",
+        "released_at": null,
+        "set_code": null,
+        "slug": "tournament-pack-vol-6"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP03-044/en/stock/3/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP03-044/en/stock/3/thumb.webp"
+        }
+      },
+      "index": 3,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "65.00",
+        "low_price": "32.49",
+        "market_price": "38.38",
+        "mid_price": "36.93",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/617588/one-piece-card-game-one-piece-promotion-cards-kaya-one-piece-japanese-version-2nd-anniversary-set"
+      },
+      "name": null,
+      "product": {
+        "id": "0ed66d0c-291a-4352-af68-798167eadbb8",
+        "name": "Japanese 2nd Anniversary Set",
+        "released_at": null,
+        "set_code": null,
+        "slug": "japanese-2nd-anniversary-set"
+      }
+    },
+    {
+      "artist": "Haru Miyajima",
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": "https://cdn.poneglyph.one/images/OP03-044/en/scans/4/display.webp",
+          "full": "https://cdn.poneglyph.one/images/OP03-044/en/scans/4/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP03-044/en/scans/4/thumb.webp"
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 4,
+      "label": "Promo",
+      "market": {
+        "high_price": "49.99",
+        "low_price": "5.58",
+        "market_price": "6.29",
+        "mid_price": "12.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/537443/one-piece-card-game-one-piece-promotion-cards-kaya-winner-pack-vol-6"
+      },
+      "name": null,
+      "product": {
+        "id": "d2dc2792-89a0-4965-8d1b-a7de3fd05f0c",
+        "name": "Winner Pack Vol. 6",
+        "released_at": null,
+        "set_code": null,
+        "slug": "winner-pack-vol-6"
+      }
+    },
+    {
+      "artist": "Haru Miyajima",
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": "https://cdn.poneglyph.one/images/OP03-044/en/scans/5/display.webp",
+          "full": "https://cdn.poneglyph.one/images/OP03-044/en/scans/5/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP03-044/en/scans/5/thumb.webp"
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 5,
+      "label": "Promo",
+      "market": {
+        "high_price": "99.98",
+        "low_price": "31.95",
+        "market_price": "32.41",
+        "mid_price": "34.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/580044/one-piece-card-game-one-piece-promotion-cards-kaya-cs-2024-celebration-pack"
+      },
+      "name": null,
+      "product": {
+        "id": "901abace-a432-4bdf-a30a-142123da096b",
+        "name": "CS 2024 Celebration Pack",
+        "released_at": null,
+        "set_code": null,
+        "slug": "cs-2024-celebration-pack"
+      }
+    }
+  ]
+}

@@ -83,6 +83,22 @@ describe("Poneglyph client", () => {
     });
   });
 
+  it("accepts single-card responses wrapped in a data envelope", async () => {
+    const fixture = validatePoneglyphCardDetail(
+      await readJsonFixture(
+        "fixtures/poneglyph/cards/OP01-060.donquixote-doflamingo.json",
+      ),
+    );
+    const client = createPoneglyphClient({
+      baseUrl: "https://poneglyph.test",
+      fetch: () => Promise.resolve(okJson({ data: fixture })),
+    });
+
+    await expect(client.getCard(toCardId("OP01-060"))).resolves.toMatchObject({
+      card_number: "OP01-060",
+    });
+  });
+
   it("fails closed when a single-card response has a different card number", async () => {
     const fixture = validatePoneglyphCardDetail(
       await readJsonFixture("fixtures/poneglyph/cards/OP05-091.rebecca.json"),

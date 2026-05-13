@@ -1,0 +1,104 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-011B
+epic_id: CARD-011
+title: Read-only support probe CLI
+type: implementation
+area: cards
+primary_concern: cli
+priority: high
+status: generated
+summary: >
+  Add a read-only @optcg/cards command that fetches one explicit card from live
+  Poneglyph, runs the generated-support playability evaluator, prints playable
+  evidence or blockers, and writes no files.
+story_boundary: >
+  Own only the support probe CLI and its package-local test seam. Do not change
+  evaluator semantics beyond consuming CARD-011A, do not write fixtures or
+  manifests, and do not add Redis, server match loading, parser grammar, runtime
+  behavior, or engine-core imports from @optcg/cards.
+allowed_touch_points:
+  - packages/cards/package.json
+  - packages/cards/src/poneglyph-client.ts
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/*support*.test.ts
+  - packages/cards/src/index.ts
+  - stories/generated/CARD-011B-read-only-support-probe-cli.yaml
+  - stories/approved/CARD-011B-read-only-support-probe-cli.yaml
+  - agent-packets/CARD-011B.md
+  - agent-packets/active.json
+spec_refs:
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s019
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s023
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+  - 19-poneglyph-api-contract.s002
+  - 19-poneglyph-api-contract.s003
+  - 19-poneglyph-api-contract.s005
+  - 19-poneglyph-api-contract.s007
+  - 19-poneglyph-api-contract.s010
+  - 19-poneglyph-api-contract.s012
+scope:
+  - add a read-only support probe package script or CLI entry point for one explicit card ID
+  - fetch the requested card from authoritative live Poneglyph when manually invoked
+  - validate the owned Poneglyph contract, normalize the response, run the CARD-011A support evaluator, and print playable or not playable with evidence or blockers
+  - ensure support probe writes no fixture, manifest, generated support report, or cache files
+  - prove OP03-044 Kaya reports playable yes with generated support when probed manually
+non_scope:
+  - evaluator semantics beyond consuming CARD-011A
+  - fixture capture
+  - fixture or manifest writes
+  - Redis cache implementation
+  - server match-time lazy loading
+  - broad live Poneglyph catalog fetching
+  - automatically fetching or committing every released card
+  - parser grammar expansion
+  - runtime behavior expansion
+  - engine-core importing @optcg/cards
+dependencies:
+  - CARD-011A
+card_source_integrity:
+  - this story does not enable or change gameplay support; it exposes a read-only probe over CARD-011A evaluator behavior and must not update support records, fixtures, manifests, generated reports, or cache files
+  - OP03-044 expected proof is anchored to the reviewed checked-in fixture at fixtures/poneglyph/cards/OP03-044.kaya.json, captured from authoritative Poneglyph with `corepack pnpm --filter @optcg/cards capture:fixture -- --card OP03-044`
+  - hermetic tests must inject OP03-044 fixture-shaped Poneglyph detail data and assert behavior-sensitive fields including card_type Character, color Blue, cost 1, power 0, counter 2000, types East Blue, trigger null, and exact effect text `[On Play] Draw 2 cards and trash 2 cards from your hand.`
+  - manual live probe invocation may fetch current OP03-044 from authoritative Poneglyph and print current normalized sourceTextHash and behaviorHash; if Poneglyph data drifts from reviewed evidence, the probe must report evaluator blockers or current hash evidence rather than writing updated evidence
+  - tests for support probe behavior must be hermetic by injecting fake Poneglyph responses rather than calling live Poneglyph in CI
+engine_capability_preflight:
+  - parsed OP03-044 effect shape is inherited from CARD-011A evaluator evidence: an On Play auto sequence that draws self count 2, then trashFromHand self chooser self count 2
+  - supported required runtime capabilities are inherited from CARD-011A and are trigger:onPlay, category:auto, effect:draw:self:count:positive-safe-integer, effect:sequence:ordered, effect:trashFromHand:self:count:positive-safe-integer:owner-chooses, and sourcePresencePolicy:mustRemainInSameZone
+  - missing required runtime capabilities are none
+  - this story adds no parser grammar, DSL primitive, runtime capability, support status, or gameplay behavior; it only invokes the existing CARD-011A evaluator and renders its evidence
+acceptance_criteria:
+  - support probe for OP03-044 fetches live Poneglyph data, writes no files, and reports playable yes with `op03-044.generated-support`
+  - an unsupported probed card reports playable no with blocker evidence
+  - support probe tests do not call live Poneglyph
+  - support probe cannot silently write or update fixtures, manifests, reports, or cache files
+required_tests:
+  - exact candidate story-review before implementation
+  - hermetic support probe command tests using injected fake Poneglyph responses
+  - hermetic unsupported-card probe test proving playable no output includes blocker evidence
+  - test proving support probe writes no fixture or manifest files
+  - package-local OP03-044-shaped probe test proving playable output includes generated support evidence
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-011B packet before implementation
+  - stay within allowed_touch_points
+  - support probe may call live Poneglyph only when manually invoked; tests and CI must not call live Poneglyph
+  - do not broaden into Redis, server lazy loading, live catalog ingestion, fixture capture, or full released-card support
+ambiguity_policy: fail_and_escalate

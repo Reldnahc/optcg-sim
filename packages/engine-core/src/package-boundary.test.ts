@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir as readDir, readFile } from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
@@ -139,3 +140,56 @@ test("package boundary allows plain representative manifest fixture data", async
     "representative manifest fixture should contain card data",
   );
 });
+
+test("production engine-core source files do not import @optcg/cards", async () => {
+  const srcDirectoryPath = path.join(repoRoot, "packages/engine-core/src");
+  const productionSourcePaths =
+    await listProductionSourcePaths(srcDirectoryPath);
+  const cardsImportPattern =
+    /(?:\bimport(?:\s+type)?\b[\s\S]*?\bfrom\s*["']@optcg\/cards(?:\/[^"']*)?["']|\bimport\s*["']@optcg\/cards(?:\/[^"']*)?["']|\bexport(?:\s+type)?\b[\s\S]*?\bfrom\s*["']@optcg\/cards(?:\/[^"']*)?["']|\bimport\s*\(\s*["']@optcg\/cards(?:\/[^"']*)?["']\s*\))/u;
+
+  assert.ok(productionSourcePaths.length > 0);
+  for (const sourcePath of productionSourcePaths) {
+    const source = await readFile(sourcePath, "utf8");
+
+    assert.equal(
+      cardsImportPattern.test(source),
+      false,
+      `engine-core production source must not import @optcg/cards: ${sourcePath}`,
+    );
+  }
+});
+
+async function listProductionSourcePaths(
+  directoryPath: string,
+): Promise<readonly string[]> {
+  const entries: Dirent[] = await readDir(directoryPath, {
+    withFileTypes: true,
+  });
+  const sourcePaths: string[] = [];
+
+  for (const entry of entries) {
+    if (entry.name === "__tests__" || entry.name === "__fixtures__") {
+      continue;
+    }
+    const absolutePath = path.join(directoryPath, entry.name);
+    if (entry.isDirectory()) {
+      const nestedPaths = await listProductionSourcePaths(absolutePath);
+      sourcePaths.push(...nestedPaths);
+      continue;
+    }
+    if (!entry.isFile()) {
+      continue;
+    }
+    if (
+      !entry.name.endsWith(".ts") ||
+      entry.name.endsWith(".test.ts") ||
+      entry.name.endsWith(".spec.ts")
+    ) {
+      continue;
+    }
+    sourcePaths.push(absolutePath);
+  }
+
+  return sourcePaths;
+}

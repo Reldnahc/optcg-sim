@@ -1,0 +1,109 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-011C
+epic_id: CARD-011
+title: Fixture-only real-card manifest boundary
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: generated
+summary: >
+  Preserve checked-in real-card DSL manifests for deterministic implementation
+  and integration tests, while making explicit that they are fixture evidence
+  only and never runtime preload, per-card admission, or generated-support
+  playability authority.
+story_boundary: >
+  Own only fixture-manifest boundary guardrails for real-card DSL manifests.
+  Keep the fixture manifests available for implementation tests. Do not delete
+  fixture-only manifests, remove engine MatchCardManifest snapshots, change
+  evaluator/probe semantics, add parser/runtime behavior, or import @optcg/cards
+  into engine-core production code.
+allowed_touch_points:
+  - packages/cards/src/real-card-fixtures.ts
+  - packages/cards/src/real-card-fixtures.test.ts
+  - packages/cards/src/index.ts
+  - fixtures/cards/real-card-dsl-match-card-manifest.json
+  - tests/integration/real-card-dsl-manifest-smoke.test.mjs
+  - packages/engine-core/src/real-card-dsl-runtime.test.ts
+  - packages/engine-core/src/phases.test.ts
+  - packages/engine-core/src/play-card-support.test.ts
+  - packages/engine-core/src/package-boundary.test.ts
+  - docs/workflow/story-execution.md
+  - docs/workflow/card-fixture-capture.md
+  - stories/generated/CARD-011C-fixture-only-manifest-boundary.yaml
+  - stories/approved/CARD-011C-fixture-only-manifest-boundary.yaml
+  - agent-packets/CARD-011C.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s019
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s023
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+scope:
+  - keep checked-in real-card DSL manifest artifacts available as deterministic fixture and integration-test evidence
+  - make fixture-manifest helper names, comments, tests, or workflow docs explicit that the real-card DSL manifest is fixture-only and not runtime preload, per-card admission, or generated-support playability authority
+  - preserve engine tests that load the manifest as plain JSON fixture data for boundary and runtime regression coverage
+  - ensure production support decisions are documented or guarded to go through authoritative Poneglyph card data and evaluator evidence, not checked-in fixture manifests
+  - preserve reviewed non-generated support fixture coverage for EB01-023 and OP04-014
+non_scope:
+  - deleting fixture-only real-card DSL manifests
+  - deleting representative fixture manifests
+  - deleting engine MatchCardManifest snapshots or the MatchCardManifest type used to snapshot resolved cards for an active match
+  - support probe CLI
+  - evaluator semantics beyond consuming CARD-011A outputs where needed for boundary wording
+  - parser grammar expansion
+  - runtime behavior expansion
+  - Redis cache implementation
+  - server match-time lazy loading
+  - broad live Poneglyph catalog fetching
+  - automatically fetching or committing every released card
+  - engine-core production imports from @optcg/cards
+dependencies: []
+card_source_integrity:
+  - this story does not enable or change gameplay support for any card; source integrity is not applicable as new card-support evidence
+  - existing real-card DSL match-card manifest fixture may remain only as fixture-test evidence; it must not be used as runtime preload, card-support admission authority, or generated-support playability authority
+  - fixture tests may load checked-in manifest JSON to prove deterministic integration behavior and package boundaries
+  - existing fixture provenance and freshness/hash tests must remain the source of truth for checked-in fixture data; if fixture contents change, update the fixture freshness/hash evidence in the same story patch
+  - production generated-support playability must be documented or guarded as evaluator-owned from authoritative Poneglyph card data, not from checked-in fixture manifests
+engine_capability_preflight:
+  - this story is pure fixture-boundary infrastructure and adds no parser grammar, DSL primitive, runtime capability, support status, or gameplay behavior
+  - parsed effect shape is not applicable because no card effect is implemented, parsed, enabled, or changed
+  - supported required runtime capabilities are none
+  - missing required runtime capabilities are none
+  - no prerequisite ENG story is required because this story must not change OP03-044, EB01-023, OP04-014, or OP10-045 gameplay semantics
+acceptance_criteria:
+  - checked-in real-card DSL manifest use is limited to fixture and integration tests
+  - fixture manifests are not described or exported as runtime preload, per-card admission, or generated-support playability authority
+  - existing fixture/integration coverage using plain JSON manifests continues to work
+  - engine-core tests, if updated, consume plain manifest/effect-definition data only and do not import @optcg/cards
+  - existing reviewed support for EB01-023 and OP04-014 remains unchanged
+required_tests:
+  - exact candidate story-review before implementation
+  - fixture-boundary test or export-boundary assertion proving the real-card DSL manifest path is fixture-only and not a runtime/generated-support playability dependency
+  - package-boundary assertion or existing boundary test proving engine-core does not import @optcg/cards
+  - existing real-card fixture manifest freshness/hash test remains passing
+  - existing real-card DSL runtime/integration tests remain passing if touched
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-011C packet before implementation
+  - stay within allowed_touch_points
+  - do not delete fixture-only manifests
+  - do not broaden into Redis, server lazy loading, live catalog ingestion, fixture capture, full released-card support, or engine MatchCardManifest removal
+ambiguity_policy: fail_and_escalate

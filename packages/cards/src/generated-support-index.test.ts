@@ -17,6 +17,7 @@ import {
   type EffectDefinitionValidationResult,
 } from "./generated-support-index.js";
 import { buildMatchCardManifest, validateDecklist } from "./manifest.js";
+import { normalizePoneglyphCardDetail } from "./normalization.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 
 const repoRoot = path.resolve(
@@ -59,6 +60,54 @@ const baseCard = {
 };
 
 describe("generated support index", () => {
+  it("supports checked-in OP03-044 Kaya fixture via certified parser and runtime capability evidence", () => {
+    const fixture = JSON.parse(
+      readFileSync(
+        path.join(repoRoot, "fixtures/poneglyph/cards/OP03-044.kaya.json"),
+        "utf8",
+      ),
+    ) as unknown;
+    const normalized = normalizePoneglyphCardDetail(fixture);
+    const sourceText = normalized.effectText ?? "";
+
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          behaviorHash: normalized.behaviorHash,
+          cardDataVersion: "cards-v1",
+          cardId: normalized.cardId,
+          effectDefinitionsVersion: "effects-v1",
+          rulesVersion: "rules-v1",
+          sourceText,
+          sourceTextHash: normalized.sourceTextHash,
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      blockers: [],
+      cardId: "OP03-044",
+      effectDefinitionId: "op03-044.generated-support",
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-play:draw-n:trash-m:hand:self"],
+      status: "supported",
+    });
+    expect(index.entries[0]?.capabilityEvidence).toEqual(
+      expect.arrayContaining([
+        {
+          capabilityId: "effect:sequence:ordered",
+          parserRuleId: "exact:on-play:draw-n:trash-m:hand:self",
+        },
+        {
+          capabilityId:
+            "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+          parserRuleId: "exact:on-play:draw-n:trash-m:hand:self",
+        },
+      ]),
+    );
+  });
+
   it("creates supported evidence for exact complete-parse card text", () => {
     const index = buildGeneratedSupportIndex({
       cards: [baseCard],

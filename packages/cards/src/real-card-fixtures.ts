@@ -475,8 +475,10 @@ export const realCardDslEffectDefinitionFixturePath =
 export const realCardDslGeneratedSupportFixturePath =
   "fixtures/effect-dsl/valid/op10-045-generated-support.json";
 
-export const realCardDslMatchCardManifestFixturePath =
+const fixtureOnlyRealCardDslMatchCardManifestFixturePath =
   "fixtures/cards/real-card-dsl-match-card-manifest.json";
+export const fixtureOnlyRealCardDslMatchCardManifestPath =
+  fixtureOnlyRealCardDslMatchCardManifestFixturePath;
 
 const realCardMatchManifestCreatedAt = "2026-05-09T00:00:00.000Z";
 
@@ -532,7 +534,7 @@ export async function loadCheckedInOp10045GeneratedSupportEffectDefinition(): Pr
   return JSON.parse(source) as EffectDefinition;
 }
 
-export async function buildRealCardDslMatchCardManifest(): Promise<MatchCardManifest> {
+export async function buildFixtureOnlyRealCardDslMatchCardManifest(): Promise<MatchCardManifest> {
   const effectDefinition =
     await loadCheckedInEb01023OnPlayDraw1EffectDefinition();
   const normalizedFixtures = await Promise.all(
@@ -620,16 +622,16 @@ function hasReviewedNonGeneratedFixtureSupport(
   return fixtureId === "EB01-023" || fixtureId === "OP04-014";
 }
 
-export async function loadRealCardDslMatchCardManifestFixture(): Promise<MatchCardManifest> {
+export async function loadFixtureOnlyRealCardDslMatchCardManifest(): Promise<MatchCardManifest> {
   const source = await readFile(
-    path.join(repoRoot, realCardDslMatchCardManifestFixturePath),
+    path.join(repoRoot, fixtureOnlyRealCardDslMatchCardManifestFixturePath),
     "utf8",
   );
   const parsed = JSON.parse(source) as MatchCardManifest;
 
   if (parsed.manifestHash !== computeMatchCardManifestHash(parsed)) {
     throw new Error(
-      `Real-card DSL manifest fixture ${realCardDslMatchCardManifestFixturePath} has a stale manifestHash.`,
+      `Real-card DSL manifest fixture ${fixtureOnlyRealCardDslMatchCardManifestFixturePath} has a stale manifestHash.`,
     );
   }
 

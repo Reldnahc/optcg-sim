@@ -12,11 +12,13 @@
   },
   "scripts": {
     "capture:fixture": "corepack pnpm exec tsx src/fixture-capture.ts",
+    "support:probe": "corepack pnpm exec tsx src/support-probe.ts",
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run --root ../.. packages/cards/src"
   },
   "dependencies": {
     "@optcg/types": "workspace:*",
+    "ajv": "^8.20.0",
     "zod": "^4.4.3"
   }
 }
