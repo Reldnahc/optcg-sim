@@ -19,7 +19,8 @@ describe("generated support report", () => {
     const matrixWithoutDraw = {
       ...generatedSupportRuntimeCapabilityMatrix,
       capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
-        (capability) => capability.id !== "effect:draw:self:count:1",
+        (capability) =>
+          capability.id !== "effect:draw:self:count:positive-safe-integer",
       ),
     };
     const missingCapabilityIndex = buildGeneratedSupportIndex({
@@ -77,18 +78,20 @@ describe("generated support report", () => {
           },
         },
         {
-          capabilityId: "effect:draw:self:count:1",
+          capabilityId: "effect:draw:self:count:positive-safe-integer",
           cardId: "CARD-008D-003",
           code: "missing-runtime-capability",
-          component: "exact:on-play:draw-1:self",
+          component: "exact:on-play:draw-n:self",
           message:
-            "Missing runtime capability effect:draw:self:count:1 for parser rule exact:on-play:draw-1:self.",
+            "Missing runtime capability effect:draw:self:count:positive-safe-integer for parser rule exact:on-play:draw-n:self.",
         },
       ],
-      missingRuntimeCapabilityIds: ["effect:draw:self:count:1"],
+      missingRuntimeCapabilityIds: [
+        "effect:draw:self:count:positive-safe-integer",
+      ],
       parserRuleIdsUsed: [
-        "exact:on-play:draw-1:self",
-        "exact:when-attacking:draw-1:self",
+        "exact:on-play:draw-n:self",
+        "exact:when-attacking:draw-n:self",
         "line-separated-effect-blocks:v1",
       ],
       statusByCardId: {
@@ -96,21 +99,23 @@ describe("generated support report", () => {
           blockerCodes: [],
           missingCapabilityIds: [],
           parseStatus: "complete",
-          parserRuleIds: ["exact:on-play:draw-1:self"],
+          parserRuleIds: ["exact:on-play:draw-n:self"],
           status: "supported",
         },
         "CARD-008D-002": {
           blockerCodes: ["unparsed-span"],
           missingCapabilityIds: [],
           parseStatus: "partial",
-          parserRuleIds: ["exact:on-play:draw-1:self"],
+          parserRuleIds: ["exact:on-play:draw-n:self"],
           status: "unsupported",
         },
         "CARD-008D-003": {
           blockerCodes: ["missing-runtime-capability"],
-          missingCapabilityIds: ["effect:draw:self:count:1"],
+          missingCapabilityIds: [
+            "effect:draw:self:count:positive-safe-integer",
+          ],
           parseStatus: "complete",
-          parserRuleIds: ["exact:on-play:draw-1:self"],
+          parserRuleIds: ["exact:on-play:draw-n:self"],
           status: "unsupported",
         },
         "CARD-008D-004": {
@@ -118,8 +123,8 @@ describe("generated support report", () => {
           missingCapabilityIds: [],
           parseStatus: "complete",
           parserRuleIds: [
-            "exact:on-play:draw-1:self",
-            "exact:when-attacking:draw-1:self",
+            "exact:on-play:draw-n:self",
+            "exact:when-attacking:draw-n:self",
             "line-separated-effect-blocks:v1",
           ],
           status: "supported",
@@ -172,5 +177,48 @@ describe("generated support report", () => {
         message: "Resting DON is not covered by the runtime matrix.",
       },
     ]);
+  });
+
+  it("reports invalid draw-count blockers deterministically", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-009A-001" as CardId,
+          sourceText: "[On Play] Draw 0 cards.",
+          sourceTextHash: "sha256:invalid-count",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report).toMatchObject({
+      blockerCount: 1,
+      blockers: [
+        {
+          cardId: "CARD-009A-001",
+          code: "unparsed-span",
+          message: "Card text is not covered by certified parser rules.",
+          span: {
+            end: 23,
+            start: 0,
+            text: "[On Play] Draw 0 cards.",
+          },
+        },
+      ],
+      statusByCardId: {
+        "CARD-009A-001": {
+          blockerCodes: ["unparsed-span"],
+          missingCapabilityIds: [],
+          parseStatus: "partial",
+          parserRuleIds: [],
+          status: "unsupported",
+        },
+      },
+      supportedCardIds: [],
+      unsupportedCardIds: ["CARD-009A-001"],
+    });
   });
 });

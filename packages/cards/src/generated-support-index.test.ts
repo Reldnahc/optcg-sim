@@ -71,24 +71,24 @@ describe("generated support index", () => {
       capabilityEvidence: [
         {
           capabilityId: "category:auto",
-          parserRuleId: "exact:on-play:draw-1:self",
+          parserRuleId: "exact:on-play:draw-n:self",
         },
         {
-          capabilityId: "effect:draw:self:count:1",
-          parserRuleId: "exact:on-play:draw-1:self",
+          capabilityId: "effect:draw:self:count:positive-safe-integer",
+          parserRuleId: "exact:on-play:draw-n:self",
         },
         {
           capabilityId: "sourcePresencePolicy:mustRemainInSameZone",
-          parserRuleId: "exact:on-play:draw-1:self",
+          parserRuleId: "exact:on-play:draw-n:self",
         },
         {
           capabilityId: "trigger:onPlay",
-          parserRuleId: "exact:on-play:draw-1:self",
+          parserRuleId: "exact:on-play:draw-n:self",
         },
       ],
       cardId: baseCard.cardId,
       effectDefinitionId: "card-008c-001.generated-support",
-      parserRuleIds: ["exact:on-play:draw-1:self"],
+      parserRuleIds: ["exact:on-play:draw-n:self"],
       sourceTextHash: baseCard.sourceTextHash,
       status: "supported",
       support: {
@@ -105,7 +105,7 @@ describe("generated support index", () => {
       index.effectDefinitions["card-008c-001.generated-support"]?.metadata,
     ).toMatchObject({
       generatedBy: "rule-parser",
-      reviewer: "certified-parser-rule:CARD-008B",
+      reviewer: "certified-parser-rule:CARD-009A",
       tested: true,
     });
   });
@@ -128,7 +128,7 @@ describe("generated support index", () => {
           message: "Unsupported card text remains after certified parsing.",
         },
       ],
-      parserRuleIds: ["exact:on-play:draw-1:self"],
+      parserRuleIds: ["exact:on-play:draw-n:self"],
       status: "unsupported",
     });
     expect(index.effectDefinitions).toEqual({});
@@ -138,7 +138,8 @@ describe("generated support index", () => {
     const matrixWithoutDraw = {
       ...generatedSupportRuntimeCapabilityMatrix,
       capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
-        (capability) => capability.id !== "effect:draw:self:count:1",
+        (capability) =>
+          capability.id !== "effect:draw:self:count:positive-safe-integer",
       ),
     };
 
@@ -151,11 +152,11 @@ describe("generated support index", () => {
     expect(index.entries[0]).toMatchObject({
       blockers: [
         {
-          capabilityId: "effect:draw:self:count:1",
+          capabilityId: "effect:draw:self:count:positive-safe-integer",
           code: "missing-runtime-capability",
         },
       ],
-      missingCapabilityIds: ["effect:draw:self:count:1"],
+      missingCapabilityIds: ["effect:draw:self:count:positive-safe-integer"],
       status: "unsupported",
     });
   });
@@ -165,7 +166,7 @@ describe("generated support index", () => {
       ...generatedSupportRuntimeCapabilityMatrix,
       capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.map(
         (capability) =>
-          capability.id === "effect:draw:self:count:1"
+          capability.id === "effect:draw:self:count:positive-safe-integer"
             ? { ...capability, supportedParserRuleIds: [] }
             : capability,
       ),
@@ -180,12 +181,12 @@ describe("generated support index", () => {
     expect(index.entries[0]).toMatchObject({
       blockers: [
         {
-          capabilityId: "effect:draw:self:count:1",
+          capabilityId: "effect:draw:self:count:positive-safe-integer",
           code: "missing-runtime-capability",
-          component: "exact:on-play:draw-1:self",
+          component: "exact:on-play:draw-n:self",
         },
       ],
-      missingCapabilityIds: ["effect:draw:self:count:1"],
+      missingCapabilityIds: ["effect:draw:self:count:positive-safe-integer"],
       status: "unsupported",
     });
   });
@@ -242,23 +243,23 @@ describe("generated support index", () => {
       capabilityEvidence: [
         {
           capabilityId: "category:auto",
-          parserRuleId: "exact:on-play:draw-1:self",
+          parserRuleId: "exact:on-play:draw-n:self",
         },
         {
-          capabilityId: "effect:draw:self:count:1",
-          parserRuleId: "exact:on-play:draw-1:self",
+          capabilityId: "effect:draw:self:count:positive-safe-integer",
+          parserRuleId: "exact:on-play:draw-n:self",
         },
         {
           capabilityId: "sourcePresencePolicy:mustRemainInSameZone",
-          parserRuleId: "exact:on-play:draw-1:self",
+          parserRuleId: "exact:on-play:draw-n:self",
         },
         {
           capabilityId: "trigger:onPlay",
-          parserRuleId: "exact:on-play:draw-1:self",
+          parserRuleId: "exact:on-play:draw-n:self",
         },
       ],
       parseStatus: "complete",
-      parserRuleIds: ["exact:on-play:draw-1:self"],
+      parserRuleIds: ["exact:on-play:draw-n:self"],
       status: "supported",
     });
     const resolvedCard = createResolvedCard(baseCard.cardId, evidence);
@@ -291,6 +292,69 @@ describe("generated support index", () => {
 
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);
+  });
+
+  it("supports parameterized draw counts for complete parse cards", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          cardId: "CARD-008C-010" as CardId,
+          sourceText: "[On Play] Draw 3 cards.",
+        },
+        {
+          ...baseCard,
+          cardId: "CARD-008C-011" as CardId,
+          sourceText: "[When Attacking] Draw 2 cards.",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    expect(index.entries.map((entry) => entry.status)).toEqual([
+      "supported",
+      "supported",
+    ]);
+    expect(index.entries[0]?.effectDefinition?.effects[0]?.effect).toEqual({
+      count: 3,
+      player: "self",
+      type: "draw",
+    });
+    expect(index.entries[1]?.effectDefinition?.effects[0]?.effect).toEqual({
+      count: 2,
+      player: "self",
+      type: "draw",
+    });
+  });
+
+  it("keeps invalid draw counts unsupported with blocker evidence", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          sourceText: "[On Play] Draw 0 cards.",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      blockers: [
+        {
+          code: "unparsed-span",
+          message: "Card text is not covered by certified parser rules.",
+          span: {
+            end: 23,
+            start: 0,
+            text: "[On Play] Draw 0 cards.",
+          },
+        },
+      ],
+      parseStatus: "partial",
+      parserRuleIds: [],
+      status: "unsupported",
+    });
+    expect(index.effectDefinitions).toEqual({});
   });
 });
 

@@ -21,10 +21,13 @@ describe("generated support runtime capability matrix", () => {
   });
 
   it("exposes the narrow capabilities needed by exact draw parser rules", () => {
+    expect(generatedSupportRuntimeCapabilityMatrix.generatedAtStory).toBe(
+      "CARD-009A",
+    );
     expect(requiredGeneratedSupportCapabilityIds).toEqual([
       "category:auto",
       "composition:line-separated-effect-blocks:v1",
-      "effect:draw:self:count:1",
+      "effect:draw:self:count:positive-safe-integer",
       "sourcePresencePolicy:mustRemainInSameZone",
       "trigger:onPlay",
       "trigger:whenAttacking",

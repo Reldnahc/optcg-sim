@@ -25,7 +25,7 @@ describe("certified card text parser", () => {
       throw new Error("Expected complete parse.");
     }
 
-    expect(result.parserRuleIds).toEqual(["exact:on-play:draw-1:self"]);
+    expect(result.parserRuleIds).toEqual(["exact:on-play:draw-n:self"]);
     expect(result.effectDefinition).toMatchObject({
       cardId,
       implementationStatus: "implemented-dsl",
@@ -41,12 +41,52 @@ describe("certified card text parser", () => {
       metadata: {
         effectDefinitionsVersion: "generated-support-parser-test",
         generatedBy: "rule-parser",
-        reviewer: "certified-parser-rule:CARD-008B",
+        reviewer: "certified-parser-rule:CARD-009A",
         rulesVersion: "rules-test",
         sourceTextHash: "sha256:source",
         tested: true,
       },
     } satisfies Partial<EffectDefinition>);
+  });
+
+  it("parses On Play draw with count 3 to generated DSL", () => {
+    const result = parse("[On Play] Draw 3 cards.");
+
+    expect(result.status).toBe("complete");
+    if (!isCompleteGeneratedSupportParseResult(result)) {
+      throw new Error("Expected complete parse.");
+    }
+
+    expect(result.parserRuleIds).toEqual(["exact:on-play:draw-n:self"]);
+    expect(result.effectDefinition.effects).toEqual([
+      {
+        category: "auto",
+        effect: { count: 3, player: "self", type: "draw" },
+        id: toEffectId("CARD-008B-001:auto-on-play-draw-3"),
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      },
+    ]);
+  });
+
+  it("parses standalone When Attacking draw with count 2 to generated DSL", () => {
+    const result = parse("[When Attacking] Draw 2 cards.");
+
+    expect(result.status).toBe("complete");
+    if (!isCompleteGeneratedSupportParseResult(result)) {
+      throw new Error("Expected complete parse.");
+    }
+
+    expect(result.parserRuleIds).toEqual(["exact:when-attacking:draw-n:self"]);
+    expect(result.effectDefinition.effects).toEqual([
+      {
+        category: "auto",
+        effect: { count: 2, player: "self", type: "draw" },
+        id: toEffectId("CARD-008B-001:auto-when-attacking-draw-2"),
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "whenAttacking" },
+      },
+    ]);
   });
 
   it("fails closed on near-miss wording", () => {
@@ -75,10 +115,15 @@ describe("certified card text parser", () => {
     });
   });
 
-  it("fails closed on standalone When Attacking because only the reviewed composition path is certified", () => {
-    const text = "[When Attacking] Draw 1 card.";
+  it.each([
+    "[On Play] Draw 1 cards.",
+    "[On Play] Draw 2 card.",
+    "[When Attacking] Draw 1 cards.",
+    "[When Attacking] Draw 2 card.",
+  ])("fails closed on singular/plural mismatch (%s)", (text) => {
     const result = parse(text);
 
+    expect(result.status).toBe("partial");
     expect(result).toMatchObject({
       blockers: [
         {
@@ -91,7 +136,13 @@ describe("certified card text parser", () => {
           },
         },
       ],
-      status: "partial",
+      unparsedSpans: [
+        {
+          end: text.length,
+          start: 0,
+          text,
+        },
+      ],
     });
   });
 
@@ -111,7 +162,7 @@ describe("certified card text parser", () => {
           },
         },
       ],
-      parsedRuleIds: ["exact:on-play:draw-1:self"],
+      parsedRuleIds: ["exact:on-play:draw-n:self"],
       unparsedSpans: [
         {
           end: 41,
@@ -124,7 +175,7 @@ describe("certified card text parser", () => {
 
   it("composes the exact line-separated On Play and When Attacking templates into two EffectBlocks", () => {
     const result = parse(
-      "[On Play] Draw 1 card.\n[When Attacking] Draw 1 card.",
+      "[On Play] Draw 1 card.\n[When Attacking] Draw 2 cards.",
     );
 
     expect(result.status).toBe("complete");
@@ -133,8 +184,8 @@ describe("certified card text parser", () => {
     }
 
     expect(result.parserRuleIds).toEqual([
-      "exact:on-play:draw-1:self",
-      "exact:when-attacking:draw-1:self",
+      "exact:on-play:draw-n:self",
+      "exact:when-attacking:draw-n:self",
       "line-separated-effect-blocks:v1",
     ]);
     expect(result.effectDefinition.effects).toEqual([
@@ -147,12 +198,50 @@ describe("certified card text parser", () => {
       },
       {
         category: "auto",
-        effect: { count: 1, player: "self", type: "draw" },
-        id: toEffectId("CARD-008B-001:auto-when-attacking-draw-1"),
+        effect: { count: 2, player: "self", type: "draw" },
+        id: toEffectId("CARD-008B-001:auto-when-attacking-draw-2"),
         sourcePresencePolicy: "mustRemainInSameZone",
         trigger: { type: "whenAttacking" },
       },
     ]);
+  });
+
+  it.each([
+    "[On Play] Draw 0 cards.",
+    "[On Play] Draw -1 cards.",
+    "[On Play] Draw 1.5 cards.",
+    "[On Play] Draw one card.",
+    "[On Play] Draw 9007199254740992 cards.",
+    "[When Attacking] Draw 0 cards.",
+    "[When Attacking] Draw -1 cards.",
+    "[When Attacking] Draw 1.5 cards.",
+    "[When Attacking] Draw two cards.",
+    "[When Attacking] Draw 9007199254740992 cards.",
+    "[On Play] Draw cards.",
+    "[When Attacking] Draw 2cards.",
+  ])("fails closed on invalid draw count wording (%s)", (text) => {
+    const result = parse(text);
+
+    expect(result.status).toBe("partial");
+    expect(result).toMatchObject({
+      blockers: [
+        {
+          code: "unparsed-span",
+          span: {
+            end: text.length,
+            start: 0,
+            text,
+          },
+        },
+      ],
+      unparsedSpans: [
+        {
+          end: text.length,
+          start: 0,
+          text,
+        },
+      ],
+    });
   });
 
   it.each([
