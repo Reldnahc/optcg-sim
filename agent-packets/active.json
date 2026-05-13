@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-044A.md",
-      "storyId": "INF-044A",
-      "storyPath": "stories/approved/INF-044A-role-hierarchy-and-human-selected-story-path.yaml",
-      "storySha256": "8318584132bd51149ece0e2a0c84d3ea9b4a0205c34adec50a4a6e2ac2e7196c"
+      "packetPath": "agent-packets/INF-044B.md",
+      "storyId": "INF-044B",
+      "storyPath": "stories/approved/INF-044B-role-lifecycle-and-model-routing-policy.yaml",
+      "storySha256": "01f37828d97bd36edc7a483feb39e87b03544849f98a45a8d084ec6d39ebfd15"
     }
   ],
   "version": 1

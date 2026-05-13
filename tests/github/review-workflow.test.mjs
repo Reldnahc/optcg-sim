@@ -39,6 +39,21 @@ function assertMatchesAll(text, patterns) {
   }
 }
 
+function extractRoleRoutingTable(markdown) {
+  const match = markdown.match(
+    /Use the complete role routing table:\s*\n\n(?<table>(?:\|.*\n)+)/,
+  );
+
+  if (!match?.groups?.table) {
+    throw new Error("Unable to read complete role routing table");
+  }
+
+  return match.groups.table
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(/\s+/g, " "));
+}
+
 function extractBranchProtectionRequiredChecks(guide) {
   const match = guide.match(
     /## Required Status Checks[\s\S]*?Require the following checks before merge:\n\n(?<checks>(?:- `[^`]+`\n)+)/,
@@ -764,6 +779,110 @@ test("codex integration spec reflects subagent orchestration instead of cli-firs
   assert.doesNotMatch(
     codexSpec,
     /Assign the packet to Codex CLI or Codex cloud/i,
+  );
+});
+
+test("workflow docs define role lifecycle reuse closure and close-before-replace rules", async () => {
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const workflowGuidance = `${storyExecution}\n${reviewGate}\n${parentBranches}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /fresh story-author agent per new standalone story or new parent\/substory set/i,
+    /story-author is reused only within that story or set/i,
+    /story-author closes after story approval, story-set approval, or abandonment/i,
+    /story-review reuse within a story set for low\/medium findings/i,
+    /fresh story-review agent after high\/critical findings/i,
+    /story-review closes after approval-ready or blocked review outcome/i,
+    /one story-orchestrator agent per approved standalone story or approved parent\/substory series/i,
+    /story-orchestrator closes after story or parent PR merge, story\/series completion, or blocked\/abandoned outcome/i,
+    /fresh implementation agent per standalone story or substory/i,
+    /implementation revision reuse for low\/medium code-review findings/i,
+    /fresh implementation agent for high\/critical findings/i,
+    /one code-review agent per PR, reused only for re-review on the same PR/i,
+    /code-review closes after PR review closure or replacement/i,
+    /one pr-gate agent per PR/i,
+    /pr-gate closes after merge\/sync or blocked\/closed outcome/i,
+    /superseded implementation, story-review, or code-review agent must be closed before spawning a required fresh replacement/i,
+    /upgrade low\/medium findings to fresh-agent-required/i,
+    /architecture misunderstanding|scope drift|repeated failed fixes|stale context/i,
+    /approved\/completed handoffs close no-longer-needed reviewer and implementation agents once durable/i,
+    /closing a story-orchestrator.*also closes all implementation, code-review, and pr-gate child agents it owns/i,
+    /story-author and story-review close after story or story-set approval/i,
+  ]);
+});
+
+test("workflow docs define implementation verification evidence authority and pr-gate ownership boundaries", async () => {
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const reporting = await readActiveText(
+    "docs/workflow/reporting-and-github-sync.md",
+  );
+  const workflowGuidance = `${storyExecution}\n${reviewGate}\n${reporting}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /implementation agents may run tests and verification commands/i,
+    /implementation-agent verification results are evidence/i,
+    /story-orchestrator owns final verification-readiness gate/i,
+    /pr-gate owns PR body state/i,
+    /pr-gate owns AI review record tracking/i,
+    /pr-gate owns revision response tracking/i,
+    /pr-gate owns CI\/check state tracking/i,
+    /pr-gate owns cleanup metadata validation/i,
+    /pr-gate owns human-review handoff/i,
+    /pr-gate owns post-merge cleanup\/sync confirmation/i,
+    /pr-gate must not implement feature code/i,
+    /pr-gate must not broaden scope/i,
+    /pr-gate must not bypass human review/i,
+    /pr-gate must not change cleanup automation semantics/i,
+  ]);
+});
+
+test("spec and workflow docs share the same complete role model-routing table and deviation rationale rule", async () => {
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const codexSpec = await readActiveText("specs/32-codex-agent-integration.md");
+  const workflowGuidance = `${storyExecution}\n${reviewGate}\n${parentBranches}`;
+  const workflowRoleRoutingTable = extractRoleRoutingTable(storyExecution);
+  const specRoleRoutingTable = extractRoleRoutingTable(codexSpec);
+
+  const patterns = [
+    /Session Orchestrator.*gpt-5\.5.*high/i,
+    /story-author.*gpt-5\.5.*high/i,
+    /story-review.*gpt-5\.5.*high/i,
+    /story-orchestrator.*gpt-5\.4.*medium.*high for parent series or complex state/i,
+    /implementation.*gpt-5\.3-codex.*medium/i,
+    /code-review.*gpt-5\.4.*high/i,
+    /pr-gate.*gpt-5\.4.*medium.*high for parent PRs or cleanup\/check failures/i,
+    /record(ed)? rationale for any model-routing deviation/i,
+  ];
+
+  assertMatchesAll(workflowGuidance, patterns);
+  assertMatchesAll(codexSpec, patterns);
+  assert.match(
+    storyExecution,
+    /Code-review agents must not silently default to `gpt-5\.5` with `high` reasoning\./i,
+  );
+  assert.deepEqual(workflowRoleRoutingTable, specRoleRoutingTable);
+  assert.doesNotMatch(
+    workflowGuidance,
+    /code-review agents?.*gpt-5\.5 high.*default/i,
+  );
+  assert.doesNotMatch(
+    codexSpec,
+    /code-review agents?.*gpt-5\.5 high.*default/i,
   );
 });
 

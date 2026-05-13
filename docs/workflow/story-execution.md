@@ -102,6 +102,46 @@ Human interaction boundary and path-selection policy:
 - Story-author and story-review work happens before active packet generation; those roles do not receive active packets.
 - packet-agent, cleanup-sync-agent, and revision-agent are not introduced roles in this workflow.
 
+## Role Lifecycle Reuse And Closure
+
+- Use a fresh story-author agent per new standalone story or new parent/substory set.
+- story-author is reused only within that story or set.
+- story-author closes after story approval, story-set approval, or abandonment.
+- story-review reuse within a story set for low/medium findings is allowed.
+- Use a fresh story-review agent after high/critical findings.
+- story-review closes after approval-ready or blocked review outcome.
+- Use one story-orchestrator agent per approved standalone story or approved parent/substory series.
+- story-orchestrator closes after story or parent PR merge, story/series completion, or blocked/abandoned outcome.
+- Use a fresh implementation agent per standalone story or substory.
+- implementation revision reuse for low/medium code-review findings is allowed.
+- Use a fresh implementation agent for high/critical findings.
+- Use one code-review agent per PR, reused only for re-review on the same PR.
+- code-review closes after PR review closure or replacement.
+- Use one pr-gate agent per PR.
+- pr-gate closes after merge/sync or blocked/closed outcome.
+- A superseded implementation, story-review, or code-review agent must be closed before spawning a required fresh replacement.
+- Reviewers may upgrade low/medium findings to fresh-agent-required when they indicate architecture misunderstanding, scope drift, repeated failed fixes, or stale context.
+- Approved/completed handoffs close no-longer-needed reviewer and implementation agents once durable review or implementation records exist.
+- Closing a story-orchestrator after merge, completion, blocked, or abandoned outcome also closes all implementation, code-review, and pr-gate child agents it owns.
+- Story-author and story-review close after story or story-set approval.
+
+## Verification And PR-Gate Authority
+
+- Implementation agents may run tests and verification commands.
+- Implementation-agent verification results are evidence, not final release authority.
+- story-orchestrator owns final verification-readiness gate authority for the assigned story or story set.
+- pr-gate owns PR body state for its assigned PR.
+- pr-gate owns AI review record tracking.
+- pr-gate owns revision response tracking.
+- pr-gate owns CI/check state tracking.
+- pr-gate owns cleanup metadata validation.
+- pr-gate owns human-review handoff.
+- pr-gate owns post-merge cleanup/sync confirmation.
+- pr-gate must not implement feature code.
+- pr-gate must not broaden scope.
+- pr-gate must not bypass human review.
+- pr-gate must not change cleanup automation semantics.
+
 ## Card Manifest Fixture Policy
 
 Real-card and cards-produced fixture coverage is separate integration/card-data coverage. It proves that card-data adapter output, representative manifests, CLI boot paths, hidden-info filtering, and root integration surfaces can consume reviewed local fixtures. It does not replace primitive, unit, regression, synthetic edge-case, fail-closed, hidden-info, event-order, or state-hash coverage for engine behavior.
@@ -227,11 +267,34 @@ When subagents are available in the current Codex surface, use a parent-orchestr
 
 Model routing policy for this workflow:
 
+Use the complete role routing table:
+
+| Role                 | Default model   | Reasoning | Escalation                                          |
+| -------------------- | --------------- | --------- | --------------------------------------------------- |
+| Session Orchestrator | `gpt-5.5`       | `high`    | none                                                |
+| story-author         | `gpt-5.5`       | `high`    | none                                                |
+| story-review         | `gpt-5.5`       | `high`    | none                                                |
+| story-orchestrator   | `gpt-5.4`       | `medium`  | use `high` for parent series or complex state       |
+| implementation       | `gpt-5.3-codex` | `medium`  | none by default                                     |
+| code-review          | `gpt-5.4`       | `high`    | none                                                |
+| pr-gate              | `gpt-5.4`       | `medium`  | use `high` for parent PRs or cleanup/check failures |
+
 - Parent/orchestrator model: `gpt-5.5`
+- Session Orchestrator: `gpt-5.5` with `high` reasoning
+- story-author: `gpt-5.5` with `high` reasoning
 - Story-review agent model: `gpt-5.5` with `high` reasoning
+- story-review: `gpt-5.5` with `high` reasoning
+- story-orchestrator: default `gpt-5.4` with `medium` reasoning; use `high` for parent series or complex state
+- story-orchestrator uses gpt-5.4 medium by default and high for parent series or complex state
 - Reviewer subagent model: `gpt-5.4` with `high` reasoning
+- implementation: default `gpt-5.3-codex` with `medium` reasoning
 - Implementation worker model: default to `gpt-5.3-codex` with `medium` reasoning
 - Complex, risky, or integration-heavy implementation stories should use `gpt-5.5` with `medium` reasoning
+- code-review: `gpt-5.4` with `high` reasoning
+- pr-gate: default `gpt-5.4` with `medium` reasoning; use `high` for parent PRs or cleanup/check failures
+- pr-gate uses gpt-5.4 medium by default and high for parent PRs or cleanup/check failures
+- Code-review agents must not silently default to `gpt-5.5` with `high` reasoning.
+- Recorded rationale for any model-routing deviation is required in the PR review trail and implementation note
 - Any model-routing deviation must be recorded in the PR review trail and implementation note
 
 Parent-owned authority edits:
