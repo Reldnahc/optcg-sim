@@ -41,18 +41,19 @@ For any implementation or review handoff:
 2. Run `pnpm run packets:generate --story <stories/approved/...yaml> --activate` when activating or refreshing the story packet.
 3. Run `pnpm run packets:verify` immediately after packet generation and before worker assignment, reviewer assignment, implementation handoff, or PR handoff.
 4. Treat the story as `worker-ready` only after steps 1-3 are complete.
-5. Assign implementation workers only after `worker-ready`.
-6. Stay inside the story boundary and `allowed_touch_points`.
-7. Implement the story with its required tests.
-8. Run the story-specific tests and `pnpm verify`.
-9. Open the PR before reviewer-subagent review; in approved parent integration workflows, this is the final parent PR to `main`, while substories are represented by reviewed commit evidence on that parent PR or durable handoff comment.
-10. Run cleanup metadata handoff preflight against the actual current PR body or selected durable handoff comment, fetched changed files, and fetched PR head branch, not a copied example or reconstructed local text; the metadata source must use exact `Post-merge cleanup:` syntax with no markdown fence and no `cleanup:` wrapper.
-11. Confirm the remote `cleanup-metadata-guard` check is present and passing before reviewer handoff or human review request.
-12. Post the AI review record or equivalent human-review fallback.
-13. Post or update the revision response when reviewer-subagent review was used.
-14. Request human review only after review records and cleanup metadata handoff checks are current.
-15. Merge only after the required human review gate is satisfied.
-16. Confirm post-merge packet cleanup automation completed the listed story cleanup after merge to `main`, or run manual packet-completion cleanup only as the operational fallback when automation fails or is unavailable.
+5. Before assigning story-orchestrator, implementation, code-review, or pr-gate agents, run role packet extraction for the assigned role and include that output in the handoff. Implementation handoffs must include explicit file ownership and test ownership. Use one implementation worker per active story by default; split the story first unless multiple workers have clearly disjoint, reviewable write scopes.
+6. Assign implementation workers only after `worker-ready`.
+7. Stay inside the story boundary and `allowed_touch_points`.
+8. Implement the story with its required tests.
+9. Run the story-specific tests and `pnpm verify`.
+10. Open the PR before reviewer-subagent review; in approved parent integration workflows, this is the final parent PR to `main`, while substories are represented by reviewed commit evidence on that parent PR or durable handoff comment.
+11. Run cleanup metadata handoff preflight against the actual current PR body or selected durable handoff comment, fetched changed files, and fetched PR head branch, not a copied example or reconstructed local text; the metadata source must use exact `Post-merge cleanup:` syntax with no markdown fence and no `cleanup:` wrapper.
+12. Confirm the remote `cleanup-metadata-guard` check is present and passing before reviewer handoff or human review request.
+13. Post the AI review record or equivalent human-review fallback.
+14. Post or update the revision response when reviewer-subagent review was used.
+15. Request human review only after review records and cleanup metadata handoff checks are current.
+16. Merge only after the required human review gate is satisfied.
+17. Confirm post-merge packet cleanup automation completed the listed story cleanup after merge to `main`, or run manual packet-completion cleanup only as the operational fallback when automation fails or is unavailable.
 
 ## Mandatory Procedures
 
