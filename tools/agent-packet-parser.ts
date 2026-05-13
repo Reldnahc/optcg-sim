@@ -25,6 +25,22 @@ export type StoryData = {
 };
 
 export type StoryChildStory = string | StoryObject;
+export type PostApprovalRole =
+  | "story-orchestrator"
+  | "implementation"
+  | "code-review"
+  | "pr-gate";
+
+export type PacketRoleContent = {
+  checklist: {
+    heading: "Handoff Checklist" | "Verification Checklist";
+    items: string[];
+  };
+  forbiddenActions: string[];
+  requiredInputs: string[];
+  requiredOutputs: string[];
+  responsibilities: string[];
+};
 
 type StoryObject = Record<string, string | string[]>;
 type StoryValue = string | string[] | StoryObject[];
@@ -213,8 +229,113 @@ export function requireOption(options: Map<string, string>, key: string) {
   return value;
 }
 
+export function readPacketMetadata(packetSource: string, key: string) {
+  const match = packetSource.match(
+    new RegExp(`^<!-- agent-packet:${escapeRegExp(key)} ([^\\n]+) -->$`, "m"),
+  );
+  return match?.[1]?.trim() ?? "";
+}
+
+export function readMarkdownSection(source: string, heading: string) {
+  const lines = source.split(/\r?\n/);
+  const sectionHeading = `## ${heading}`;
+  let start = -1;
+  let end = lines.length;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    if (start < 0) {
+      if (lines[index] === sectionHeading) {
+        start = index + 1;
+      }
+      continue;
+    }
+
+    if (lines[index]?.startsWith("## ")) {
+      end = index;
+      break;
+    }
+  }
+
+  if (start < 0) {
+    throw new Error(`Missing required section ${heading}.`);
+  }
+
+  return lines.slice(start, end).join("\n").trim();
+}
+
+export function readMarkdownBullets(source: string, heading: string) {
+  return readMarkdownSection(source, heading)
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2));
+}
+
+export function readPostApprovalRoleContent(
+  packetSource: string,
+  role: PostApprovalRole,
+): PacketRoleContent {
+  const match = packetSource.match(
+    new RegExp(
+      `^### ${escapeRegExp(role)}\\r?\\n([\\s\\S]*?)(?=^### |^## |\\Z)`,
+      "m",
+    ),
+  );
+
+  if (!match?.[1]) {
+    throw new Error(`Missing post-approval role section for ${role}.`);
+  }
+
+  const body = match[1].trim();
+  const checklist = readRoleChecklist(body);
+
+  return {
+    checklist,
+    forbiddenActions: readInlineRoleBullets(body, "Forbidden Actions"),
+    requiredInputs: readInlineRoleBullets(body, "Required Inputs"),
+    requiredOutputs: readInlineRoleBullets(body, "Required Outputs"),
+    responsibilities: readInlineRoleBullets(body, "Responsibilities"),
+  };
+}
+
+function readRoleChecklist(source: string): {
+  heading: "Handoff Checklist" | "Verification Checklist";
+  items: string[];
+} {
+  for (const heading of [
+    "Handoff Checklist",
+    "Verification Checklist",
+  ] as const) {
+    try {
+      const items = readInlineRoleBullets(source, heading);
+      return {
+        heading,
+        items,
+      };
+    } catch {
+      // Try the other allowed heading before failing closed.
+    }
+  }
+
+  throw new Error("Missing role checklist subsection.");
+}
+
 function isListLine(line: string | undefined) {
   return typeof line === "string" && /^ {2}- /.test(line);
+}
+
+function readInlineRoleBullets(source: string, heading: string) {
+  const match = source.match(
+    new RegExp(`^${escapeRegExp(heading)}\\r?\\n((?:- .*\\r?\\n?)*)`, "m"),
+  );
+
+  if (!match?.[1]) {
+    throw new Error(`Missing role subsection ${heading}.`);
+  }
+
+  return match[1]
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2));
 }
 
 function isObjectListLine(line: string | undefined) {
@@ -393,4 +514,8 @@ function isStringArray(value: StoryValue | undefined): value is string[] {
   return (
     Array.isArray(value) && value.every((entry) => typeof entry === "string")
   );
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

@@ -275,16 +275,29 @@ only for associated merged, unprotected story or substory branches.
 
 Section Ref: `32-codex-agent-integration.s014`
 
+Use the complete role routing table:
+
+| Role                 | Default model   | Reasoning | Escalation                                          |
+| -------------------- | --------------- | --------- | --------------------------------------------------- |
+| Session Orchestrator | `gpt-5.5`       | `high`    | none                                                |
+| story-author         | `gpt-5.5`       | `high`    | none                                                |
+| story-review         | `gpt-5.5`       | `high`    | none                                                |
+| story-orchestrator   | `gpt-5.4`       | `medium`  | use `high` for parent series or complex state       |
+| implementation       | `gpt-5.3-codex` | `medium`  | none by default                                     |
+| code-review          | `gpt-5.4`       | `high`    | none                                                |
+| pr-gate              | `gpt-5.4`       | `medium`  | use `high` for parent PRs or cleanup/check failures |
+
+story-orchestrator uses gpt-5.4 medium by default and high for parent series or complex state.
+pr-gate uses gpt-5.4 medium by default and high for parent PRs or cleanup/check failures.
+
+Code-review agents must not silently default to `gpt-5.5` with `high` reasoning.
+
 The parent/orchestrator model is gpt-5.5.
-
 Story-review agent model is gpt-5.5 with high reasoning.
-
 Reviewer subagent model is gpt-5.4 with high reasoning.
-
 Implementation worker subagents default to gpt-5.3-codex with medium reasoning.
 
-Complex, risky, or integration-heavy implementation stories should use gpt-5.5 with medium reasoning.
-
+Recorded rationale for any model-routing deviation is required in the pull-request review trail and implementation note.
 Any model-routing deviation must be recorded in the pull-request review trail and implementation note.
 
 Documentation-only authority edits should be handled by the parent agent directly. Authority edits still require separate reviewer subagent review, tests when applicable, and full verification before PR handoff.

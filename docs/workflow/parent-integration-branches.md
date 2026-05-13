@@ -4,6 +4,7 @@ This document is mandatory workflow guidance linked from `AGENTS.md`. Use it whe
 
 ## Required Flow
 
+- Use exactly one story-orchestrator for the parent series and one pr-gate per PR in that series.
 - Create a parent integration branch from `main` for the full story or decomposed story group, for example `story/typ-001`.
 - Create each substory implementation branch from the parent integration branch, not from `main`.
 - Open each substory PR against the parent integration branch.

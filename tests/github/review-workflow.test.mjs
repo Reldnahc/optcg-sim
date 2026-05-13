@@ -39,6 +39,21 @@ function assertMatchesAll(text, patterns) {
   }
 }
 
+function extractRoleRoutingTable(markdown) {
+  const match = markdown.match(
+    /Use the complete role routing table:\s*\n\n(?<table>(?:\|.*\n)+)/,
+  );
+
+  if (!match?.groups?.table) {
+    throw new Error("Unable to read complete role routing table");
+  }
+
+  return match.groups.table
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(/\s+/g, " "));
+}
+
 function extractBranchProtectionRequiredChecks(guide) {
   const match = guide.match(
     /## Required Status Checks[\s\S]*?Require the following checks before merge:\n\n(?<checks>(?:- `[^`]+`\n)+)/,
@@ -222,7 +237,6 @@ test("branch protection guide names the required status checks and subagent revi
     /Parent orchestration runs on gpt-5\.5/i,
     /Implementation worker subagents default to gpt-5\.3-codex medium/i,
     /Reviewer subagents always use gpt-5\.4 high/i,
-    /Complex, risky, or integration-heavy implementation stories should escalate to gpt-5\.5 medium/i,
     /Parent agents own documentation-only authority edits directly/i,
     /Documentation-only authority edits still require separate reviewer subagent review/i,
     /default review path is a spawned reviewer subagent against the PR base branch/i,
@@ -517,7 +531,6 @@ test("agents guidance requires parent orchestration plus separate reviewer subag
     /Parent\/orchestrator model: `gpt-5\.5`/i,
     /Reviewer subagent model: `gpt-5\.4` with `high` reasoning/i,
     /Implementation worker model: default to `gpt-5\.3-codex` with `medium` reasoning/i,
-    /Complex, risky, or integration-heavy implementation stories should use `gpt-5\.5` with `medium` reasoning/i,
     /Parent-owned authority edits: documentation-only changes to `AGENTS\.md`, `specs\/`, story files, packets, and workflow templates should be handled by the parent agent directly/i,
     /Parent-owned authority edits still require tests when applicable, full verification, and separate reviewer subagent review/i,
     /Any model-routing deviation must be recorded in the PR review trail and implementation note/i,
@@ -715,6 +728,31 @@ test("workflow docs require decomposed-group per-story review-status matrices be
   ]);
 });
 
+test("workflow docs define INF-044A hierarchy, human path selection, and role boundaries", async () => {
+  const agents = await readActiveText("AGENTS.md");
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const workflowGuidance = `${agents}\n${storyExecution}\n${parentBranches}\n${reviewGate}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /Human -> Session Orchestrator -> \(story-author, story-review, story-orchestrator\) -> \(implementation, code-review, pr-gate\)/i,
+    /Only the Session Orchestrator interacts directly with the human for story-path decisions/i,
+    /Session Orchestrator owns assignment of story-author, story-review, and story-orchestrator/i,
+    /story-orchestrator owns implementation, code-review, and pr-gate assignment for its assigned story or story set/i,
+    /Single-story execution is not the default and parent\/substory execution is not the exception/i,
+    /Session Orchestrator presents the single-story versus parent\/substory tradeoffs before the human selects the path/i,
+    /Record the selected path only in durable existing artifacts: story draft, story-review artifact, approval note, or PR\/review trail/i,
+    /Do not create a new mutable current-status file for selected-path tracking/i,
+    /Story-author and story-review work happens before active packet generation; those roles do not receive active packets/i,
+    /packet-agent, cleanup-sync-agent, and revision-agent are not introduced roles in this workflow/i,
+  ]);
+});
+
 test("codex integration spec reflects subagent orchestration instead of cli-first execution", async () => {
   const codexSpec = await readActiveText("specs/32-codex-agent-integration.md");
 
@@ -727,7 +765,6 @@ test("codex integration spec reflects subagent orchestration instead of cli-firs
     /parent\/orchestrator model is gpt-5\.5/i,
     /reviewer subagent model is gpt-5\.4 with high reasoning/i,
     /implementation worker subagents default to gpt-5\.3-codex with medium reasoning/i,
-    /Complex, risky, or integration-heavy implementation stories should use gpt-5\.5 with medium reasoning/i,
     /Documentation-only authority edits should be handled by the parent agent directly/i,
     /Authority edits still require separate reviewer subagent review/i,
     /Any model-routing deviation must be recorded in the pull-request review trail\s+and implementation note/i,
@@ -739,6 +776,153 @@ test("codex integration spec reflects subagent orchestration instead of cli-firs
   assert.doesNotMatch(
     codexSpec,
     /Assign the packet to Codex CLI or Codex cloud/i,
+  );
+});
+
+test("workflow docs define role lifecycle reuse closure and close-before-replace rules", async () => {
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const workflowGuidance = `${storyExecution}\n${reviewGate}\n${parentBranches}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /fresh story-author agent per new standalone story or new parent\/substory set/i,
+    /story-author is reused only within that story or set/i,
+    /story-author closes after story approval, story-set approval, or abandonment/i,
+    /story-review reuse within a story set for low\/medium findings/i,
+    /fresh story-review agent after high\/critical findings/i,
+    /story-review closes after approval-ready or blocked review outcome/i,
+    /one story-orchestrator agent per approved standalone story or approved parent\/substory series/i,
+    /story-orchestrator closes after story or parent PR merge, story\/series completion, or blocked\/abandoned outcome/i,
+    /fresh implementation agent per standalone story or substory/i,
+    /implementation revision reuse for low\/medium code-review findings/i,
+    /fresh implementation agent for high\/critical findings/i,
+    /one code-review agent per PR, reused only for re-review on the same PR/i,
+    /code-review closes after PR review closure or replacement/i,
+    /one pr-gate agent per PR/i,
+    /pr-gate closes after merge\/sync or blocked\/closed outcome/i,
+    /superseded implementation, story-review, or code-review agent must be closed before spawning a required fresh replacement/i,
+    /upgrade low\/medium findings to fresh-agent-required/i,
+    /architecture misunderstanding|scope drift|repeated failed fixes|stale context/i,
+    /approved\/completed handoffs close no-longer-needed reviewer and implementation agents once durable/i,
+    /closing a story-orchestrator.*also closes all implementation, code-review, and pr-gate child agents it owns/i,
+    /story-author and story-review close after story or story-set approval/i,
+  ]);
+});
+
+test("workflow docs define implementation verification evidence authority and pr-gate ownership boundaries", async () => {
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const reporting = await readActiveText(
+    "docs/workflow/reporting-and-github-sync.md",
+  );
+  const workflowGuidance = `${storyExecution}\n${reviewGate}\n${reporting}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /implementation agents may run tests and verification commands/i,
+    /implementation-agent verification results are evidence/i,
+    /story-orchestrator owns final verification-readiness gate/i,
+    /pr-gate owns PR body state/i,
+    /pr-gate owns AI review record tracking/i,
+    /pr-gate owns revision response tracking/i,
+    /pr-gate owns CI\/check state tracking/i,
+    /pr-gate owns cleanup metadata validation/i,
+    /pr-gate owns human-review handoff/i,
+    /pr-gate owns post-merge cleanup\/sync confirmation/i,
+    /pr-gate must not implement feature code/i,
+    /pr-gate must not broaden scope/i,
+    /pr-gate must not bypass human review/i,
+    /pr-gate must not change cleanup automation semantics/i,
+  ]);
+});
+
+test("workflow docs require role-based packet extraction handoffs and recorded extraction failure fallback", async () => {
+  const agents = await readActiveText("AGENTS.md");
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const reporting = await readActiveText(
+    "docs/workflow/reporting-and-github-sync.md",
+  );
+  const workflowGuidance = `${agents}\n${storyExecution}\n${reviewGate}\n${parentBranches}\n${reporting}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /story-orchestrator handoff[\s\S]*role packet extraction output/i,
+    /implementation handoff[\s\S]*role packet extraction output/i,
+    /code-review handoff[\s\S]*role packet extraction output/i,
+    /pr-gate handoff[\s\S]*role packet extraction output/i,
+    /manual packet trimming is not the normal path/i,
+    /packet-agent, cleanup-sync-agent, and revision-agent are not valid role handoff targets/i,
+    /if role packet extraction fails[\s\S]*record(?:ed)? in (?:the )?(?:PR|implementation trail)/i,
+    /pr-gate handoff[\s\S]*current PR body or durable handoff comment/i,
+    /pr-gate handoff[\s\S]*changed files/i,
+    /pr-gate handoff[\s\S]*head branch/i,
+    /pr-gate handoff[\s\S]*review records/i,
+    /pr-gate handoff[\s\S]*revision response state/i,
+    /pr-gate handoff[\s\S]*check status/i,
+    /pr-gate handoff[\s\S]*cleanup-metadata-guard status/i,
+    /pr-gate handoff[\s\S]*human-review readiness context/i,
+    /one story-orchestrator[\s\S]*parent series/i,
+    /one pr-gate[\s\S]*per PR/i,
+  ]);
+});
+
+test("spec and workflow docs share the same complete role model-routing table and deviation rationale rule", async () => {
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const codexSpec = await readActiveText("specs/32-codex-agent-integration.md");
+  const workflowGuidance = `${storyExecution}\n${reviewGate}\n${parentBranches}`;
+  const workflowRoleRoutingTable = extractRoleRoutingTable(storyExecution);
+  const specRoleRoutingTable = extractRoleRoutingTable(codexSpec);
+
+  const patterns = [
+    /Session Orchestrator.*gpt-5\.5.*high/i,
+    /story-author.*gpt-5\.5.*high/i,
+    /story-review.*gpt-5\.5.*high/i,
+    /story-orchestrator.*gpt-5\.4.*medium.*high for parent series or complex state/i,
+    /implementation.*gpt-5\.3-codex.*medium/i,
+    /code-review.*gpt-5\.4.*high/i,
+    /pr-gate.*gpt-5\.4.*medium.*high for parent PRs or cleanup\/check failures/i,
+    /record(ed)? rationale for any model-routing deviation/i,
+  ];
+
+  assertMatchesAll(workflowGuidance, patterns);
+  assertMatchesAll(codexSpec, patterns);
+  assert.match(
+    storyExecution,
+    /Code-review agents must not silently default to `gpt-5\.5` with `high` reasoning\./i,
+  );
+  assert.deepEqual(workflowRoleRoutingTable, specRoleRoutingTable);
+  assert.doesNotMatch(
+    workflowGuidance,
+    /code-review agents?.*gpt-5\.5 high.*default/i,
+  );
+  assert.doesNotMatch(
+    codexSpec,
+    /code-review agents?.*gpt-5\.5 high.*default/i,
+  );
+  assert.doesNotMatch(
+    workflowGuidance,
+    /Complex, risky, or integration-heavy implementation stories should use `?gpt-5\.5`? with `?medium`? reasoning/i,
+  );
+  assert.doesNotMatch(
+    codexSpec,
+    /Complex, risky, or integration-heavy implementation stories should use gpt-5\.5 with medium reasoning/i,
   );
 });
 

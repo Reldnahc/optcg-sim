@@ -26,6 +26,13 @@ Code review is required. Use this flow unless a higher-authority story or packet
 18. if review finds multi-concern drift, split the story or narrow the patch before merge
 19. for decomposed parent/substory workflows, confirm the per-story review-status matrix is reconstructed from durable artifacts before PR opening or PR handoff; fail closed on unknown or pending child exact per-story review
 
+Role handoff requirements:
+
+- code-review handoff must include code-review role packet extraction output and the current PR context.
+- pr-gate handoff must include pr-gate role packet extraction output plus current PR body or durable handoff comment, changed files, head branch, review records, revision response state, check status, cleanup-metadata-guard status, and human-review readiness context.
+- manual packet trimming is not the normal path.
+- if role packet extraction fails, record the extraction failure and the manual fallback in the PR trail before human review request.
+
 The separate reviewer subagent run is a repo-level first-pass gate before human review. It does not replace the merge-gate requirement for a durable review record or equivalent human review step.
 
 Passing AI review does not replace human review.

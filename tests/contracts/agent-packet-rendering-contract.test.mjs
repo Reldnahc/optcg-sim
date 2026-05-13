@@ -10,6 +10,7 @@ import {
   readPacketBullets,
   readPacketRawBullets,
   readPacketSection,
+  repoRoot,
   readStoryValues,
   runPacketTool,
   runPacketToolFromRepo,
@@ -52,6 +53,7 @@ test("packet builder generates the canonical packet sections for an approved sto
   assert.match(packet, /^## Required Tests$/m);
   assert.match(packet, /^## Expected Output$/m);
   assert.match(packet, /^## Acceptance Criteria$/m);
+  assert.match(packet, /^## Post-Approval Role Sections$/m);
   assert.match(packet, /^## Ambiguity Rule$/m);
   assert.match(packet, /^## Agent Instruction Footer$/m);
   assert.match(packet, /26-agent-packet-template\.s005/);
@@ -286,3 +288,263 @@ ambiguity_policy: fail_and_escalate
     /Fallback format when a section ref is unavailable should be:/,
   );
 });
+
+test("packet builder renders deterministic post-approval role sections for INF-044C", async () => {
+  const tempDir = await makeTempDir();
+  const outputPath = path.join(tempDir, "INF-044C.md");
+  const inf044cStoryPath = path.join(
+    repoRoot,
+    "stories",
+    "approved",
+    "INF-044C-role-scoped-packet-sections.yaml",
+  );
+
+  const result = runPacketTool([
+    "generate",
+    "--story",
+    inf044cStoryPath,
+    "--output",
+    outputPath,
+  ]);
+
+  assert.equal(
+    result.status,
+    0,
+    `expected INF-044C packet build to pass\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
+  );
+
+  const packet = await readFile(outputPath, "utf8");
+  assert.match(packet, /^## Post-Approval Role Sections$/m);
+  const rolesSection = readPacketSection(packet, "Post-Approval Role Sections");
+  const roleOrder = Array.from(
+    rolesSection.matchAll(/^### ([a-z-]+)$/gm),
+    (match) => match[1],
+  );
+  assert.deepEqual(roleOrder, [
+    "story-orchestrator",
+    "implementation",
+    "code-review",
+    "pr-gate",
+  ]);
+
+  assert.deepEqual(readRoleBlocks(packet), [
+    {
+      checklistHeading: "Handoff Checklist",
+      checklistBullets: [
+        "confirm required inputs are present and current",
+        "confirm forbidden actions are not introduced",
+        "confirm required outputs are produced for handoff",
+      ],
+      forbiddenActions: [
+        "do not perform story-author or story-review pre-approval handoff mechanics",
+        "do not introduce packet-agent, cleanup-sync-agent, or revision-agent roles",
+        "do not mutate packet lifecycle semantics outside approved story scope",
+      ],
+      requiredInputs: [
+        "approved story file under stories/approved/",
+        "active packet file under agent-packets/",
+        "AGENTS.md and required workflow docs for the current phase",
+      ],
+      requiredOutputs: [
+        "worker assignment constrained to allowed_touch_points and story boundary",
+        "implementation handoff instructions bound to packet authority",
+        "verification handoff readiness note",
+      ],
+      responsibilities: [
+        "own story authority, scope enforcement, ambiguity handling, and role assignment",
+        "ensure active packet content is current before implementation or review handoff",
+        "handoff only approved post-approval roles for this story",
+      ],
+      role: "story-orchestrator",
+    },
+    {
+      checklistHeading: "Verification Checklist",
+      checklistBullets: [
+        "confirm required inputs are present and current",
+        "confirm forbidden actions are not introduced",
+        "confirm required outputs are produced for handoff",
+      ],
+      forbiddenActions: [
+        "do not broaden scope beyond the approved story boundary or allowed_touch_points",
+        "do not add packet extraction behavior unless the approved story explicitly owns it",
+        "do not implement story-author/story-review handoff mechanics",
+      ],
+      requiredInputs: [
+        "active packet content with authoritative spec references",
+        "approved story scope, non-scope, and acceptance criteria",
+        "allowed_touch_points and required test list",
+      ],
+      requiredOutputs: [
+        "scoped code and test changes within approved touch points",
+        "verification command results with pass/fail status",
+        "assumptions and blockers note",
+      ],
+      responsibilities: [
+        "implement only the approved story using packet authority order",
+        "follow strict TypeScript, lint, and verification requirements",
+        "report ambiguity instead of inventing uncited behavior",
+      ],
+      role: "implementation",
+    },
+    {
+      checklistHeading: "Verification Checklist",
+      checklistBullets: [
+        "confirm required inputs are present and current",
+        "confirm forbidden actions are not introduced",
+        "confirm required outputs are produced for handoff",
+      ],
+      forbiddenActions: [
+        "do not author new feature scope outside the reviewed patch",
+        "do not bypass required tests, packet verification, or CI gate evidence",
+        "do not approve scope drift that violates story boundary",
+      ],
+      requiredInputs: [
+        "proposed patch limited to approved touch points",
+        "active packet, approved story, and cited spec references",
+        "verification and test evidence for required commands",
+      ],
+      requiredOutputs: [
+        "review findings prioritized by correctness and scope compliance",
+        "clear disposition for findings (fix/defer/block) with rationale",
+        "review closure recommendation for pr-gate handoff",
+      ],
+      responsibilities: [
+        "review correctness, scope fit, and required-test coverage",
+        "verify no forbidden role sections or lifecycle changes were introduced",
+        "confirm canonical packet behavior remains enforceable",
+      ],
+      role: "code-review",
+    },
+    {
+      checklistHeading: "Handoff Checklist",
+      checklistBullets: [
+        "confirm required inputs are present and current",
+        "confirm forbidden actions are not introduced",
+        "confirm required outputs are produced for handoff",
+      ],
+      forbiddenActions: [
+        "do not merge without required human review and passing checks",
+        "do not change cleanup metadata semantics in implementation patches",
+        "do not implement feature code while serving as gate role",
+      ],
+      requiredInputs: [
+        "current PR body or durable handoff comment with cleanup metadata source",
+        "fetched changed files, PR head branch, and status checks",
+        "review records, revision response, and verification evidence",
+      ],
+      requiredOutputs: [
+        "gate decision with explicit pass/fail blockers",
+        "human-review-ready handoff with cleanup metadata validation status",
+        "post-merge cleanup or fallback status confirmation",
+      ],
+      responsibilities: [
+        "own PR gate state, cleanup metadata validation, and human-review handoff",
+        "confirm cleanup-metadata-guard presence and passing status before handoff",
+        "preserve reviewed packet lifecycle behavior without scope expansion",
+      ],
+      role: "pr-gate",
+    },
+  ]);
+
+  for (const unexpectedRole of [
+    "story-author",
+    "story-review",
+    "packet-agent",
+    "cleanup-sync-agent",
+    "revision-agent",
+  ]) {
+    assert.doesNotMatch(
+      packet,
+      new RegExp(`^### ${unexpectedRole}$`, "m"),
+      `unexpected role section rendered for ${unexpectedRole}`,
+    );
+  }
+});
+
+function readRoleBlocks(packet) {
+  const roleOrder = [
+    "story-orchestrator",
+    "implementation",
+    "code-review",
+    "pr-gate",
+  ];
+
+  return roleOrder.map((role) => {
+    const roleBody = readRoleSection(packet, role);
+    const sections = parseRoleBodySections(roleBody);
+    return {
+      checklistHeading: sections.checklist.heading,
+      checklistBullets: sections.checklist.bullets,
+      forbiddenActions: sections.forbiddenActions,
+      requiredInputs: sections.requiredInputs,
+      requiredOutputs: sections.requiredOutputs,
+      responsibilities: sections.responsibilities,
+      role,
+    };
+  });
+}
+
+function readRoleSection(packet, role) {
+  const escapedRole = role.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const roleMatch = packet.match(
+    new RegExp(`^### ${escapedRole}\\r?\\n([\\s\\S]*?)(?=^### |^## |\\Z)`, "m"),
+  );
+
+  if (!roleMatch?.[1]) {
+    throw new Error(`Unable to read role section ${role}`);
+  }
+
+  return roleMatch[1].trim();
+}
+
+function parseRoleBodySections(body) {
+  const lines = body.split(/\r?\n/);
+  const sectionMap = new Map();
+  let currentHeading = null;
+
+  for (const line of lines) {
+    if (line === "") {
+      continue;
+    }
+
+    if (
+      [
+        "Responsibilities",
+        "Forbidden Actions",
+        "Required Inputs",
+        "Required Outputs",
+        "Verification Checklist",
+        "Handoff Checklist",
+      ].includes(line)
+    ) {
+      currentHeading = line;
+      sectionMap.set(line, []);
+      continue;
+    }
+
+    if (!currentHeading) {
+      throw new Error(`Unexpected role-section content line: ${line}`);
+    }
+
+    if (!line.startsWith("- ")) {
+      throw new Error(`Expected bullet line under ${currentHeading}: ${line}`);
+    }
+
+    sectionMap.get(currentHeading).push(line.slice(2));
+  }
+
+  const checklistHeading = sectionMap.has("Handoff Checklist")
+    ? "Handoff Checklist"
+    : "Verification Checklist";
+
+  return {
+    checklist: {
+      bullets: sectionMap.get(checklistHeading) ?? [],
+      heading: checklistHeading,
+    },
+    forbiddenActions: sectionMap.get("Forbidden Actions") ?? [],
+    requiredInputs: sectionMap.get("Required Inputs") ?? [],
+    requiredOutputs: sectionMap.get("Required Outputs") ?? [],
+    responsibilities: sectionMap.get("Responsibilities") ?? [],
+  };
+}
