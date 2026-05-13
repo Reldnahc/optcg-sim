@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-044B.md",
-      "storyId": "INF-044B",
-      "storyPath": "stories/approved/INF-044B-role-lifecycle-and-model-routing-policy.yaml",
-      "storySha256": "01f37828d97bd36edc7a483feb39e87b03544849f98a45a8d084ec6d39ebfd15"
+      "packetPath": "agent-packets/INF-044C.md",
+      "storyId": "INF-044C",
+      "storyPath": "stories/approved/INF-044C-role-scoped-packet-sections.yaml",
+      "storySha256": "80d652f2bab1678b7bdf4885fbb0215464a91599424233fe3f9c3f3e18a6da85"
     }
   ],
   "version": 1
