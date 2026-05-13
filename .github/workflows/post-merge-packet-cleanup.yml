@@ -20,6 +20,7 @@ jobs:
       - name: Check out trusted default branch
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
@@ -240,11 +241,10 @@ jobs:
             }));
             const buildParentLifecycle = () => {
               const evidenceSources = [
-                { body: pr.body || "", updatedAt: pr.updated_at },
-                ...comments.map((comment) => ({
-                  body: comment.body || "",
-                  updatedAt: comment.updated_at,
-                })),
+                {
+                  body: selected.source || "",
+                  updatedAt: selected.sourceEvidence.updatedAt,
+                },
               ];
               const findScalar = (pattern) => {
                 let latest = null;
@@ -265,17 +265,20 @@ jobs:
                 throw new Error("Parent cleanup evidence is missing integration review or revision response.");
               }
               const substoryRecords = new Map();
-              const substoryPattern = /^Substory AI review record:\s*\n {2}story:\s*(stories\/approved\/[^\s]+\.yaml)\s*\n {2}pr:\s*(\d+)\s*\n {2}record:\s*(\S+)\s*$/gm;
+              const substoryPattern = /^Substory commit evidence:\s*\n {2}story:\s*(stories\/approved\/[^\s]+\.yaml)\s*\n {2}commit:\s*([0-9a-f]{40})\s*\n {2}ai_review_record:\s*(\S+)\s*\n {2}revision_response:\s*(\S+)\s*\n {2}verification:\s*(\S+)\s*$/gim;
               for (const source of evidenceSources) {
                 for (const match of source.body.matchAll(substoryPattern)) {
                   const updatedAt = new Date(source.updatedAt).toISOString();
-                  const previous = substoryRecords.get(match[1]);
-                  if (previous && Date.parse(previous.updatedAt) >= Date.parse(updatedAt)) {
-                    continue;
+                  const storyPath = match[1];
+                  const previous = substoryRecords.get(storyPath);
+                  if (previous) {
+                    throw new Error(`Duplicate durable substory commit evidence for ${storyPath}.`);
                   }
-                  substoryRecords.set(match[1], {
+                  substoryRecords.set(storyPath, {
                     substoryAiReviewRecordId: match[3],
-                    substoryPrNumber: Number(match[2]),
+                    substoryCommitSha: String(match[2]).toLowerCase(),
+                    substoryRevisionResponseId: match[4],
+                    substoryVerificationEvidence: match[5],
                     updatedAt,
                   });
                 }
@@ -287,7 +290,7 @@ jobs:
               const includedStories = stories.map((story) => {
                 const record = substoryRecords.get(story.storyPath);
                 if (!record) {
-                  throw new Error(`Missing durable substory PR review evidence for ${story.storyPath}.`);
+                  throw new Error(`Missing durable substory commit review evidence for ${story.storyPath}.`);
                 }
                 lifecycleUpdatedAtValues.push(record.updatedAt);
                 return {
@@ -295,7 +298,9 @@ jobs:
                   storyId: story.storyId,
                   storyPath: story.storyPath,
                   substoryAiReviewRecordId: record.substoryAiReviewRecordId,
-                  substoryPrNumber: record.substoryPrNumber,
+                  substoryCommitSha: record.substoryCommitSha,
+                  substoryRevisionResponseId: record.substoryRevisionResponseId,
+                  substoryVerificationEvidence: record.substoryVerificationEvidence,
                 };
               });
               const cleanupPlanRecordedAt = new Date(
@@ -357,6 +362,7 @@ jobs:
       - name: Check out trusted default branch for cleanup
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           ref: ${{ github.event.repository.default_branch }}
           token: ${{ secrets.POST_MERGE_PACKET_CLEANUP_TOKEN }}
           persist-credentials: true

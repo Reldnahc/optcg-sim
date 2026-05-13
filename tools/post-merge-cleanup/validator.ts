@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
 
@@ -43,6 +44,7 @@ export async function buildCleanupDryRunPlan(options: {
     evidence: options.evidence,
     metadata: options.metadata,
     metadataSourceRef: options.metadataSourceRef,
+    repoRoot: options.repoRoot,
     stories,
     trustedMainSha: options.trustedMainSha,
   });
@@ -314,11 +316,18 @@ function validateEvidenceBinding(options: {
   evidence: CleanupEvidenceInput;
   metadata: CleanupMetadata;
   metadataSourceRef: string;
+  repoRoot: string;
   stories: CleanupStoryValidation[];
   trustedMainSha: string;
 }) {
-  const { evidence, metadata, metadataSourceRef, stories, trustedMainSha } =
-    options;
+  const {
+    evidence,
+    metadata,
+    metadataSourceRef,
+    repoRoot,
+    stories,
+    trustedMainSha,
+  } = options;
   validateEvidenceShape(evidence);
   if (!evidence.merged) {
     throw new Error("Merged PR evidence is required.");
@@ -414,8 +423,10 @@ function validateEvidenceBinding(options: {
   if (metadata.mode === "parent") {
     validateParentEvidence({
       evidence,
+      repoRoot,
       requiredReviewSubmittedAtMs,
       stories,
+      trustedMainSha,
     });
   }
   return requiredReview;
@@ -460,8 +471,10 @@ function validateStoryAssociation(options: {
 
 function validateParentEvidence(options: {
   evidence: CleanupEvidenceInput;
+  repoRoot: string;
   requiredReviewSubmittedAtMs: number;
   stories: CleanupStoryValidation[];
+  trustedMainSha: string;
 }) {
   const parent = options.evidence.parentLifecycle;
   if (!parent) {
@@ -495,11 +508,6 @@ function validateParentEvidence(options: {
         `Parent evidence missing included-substory entry for ${story.storyPath}.`,
       );
     }
-    if (!child.substoryPrNumber || !child.substoryAiReviewRecordId) {
-      throw new Error(
-        `Parent evidence missing substory PR or AI review record for ${story.storyPath}.`,
-      );
-    }
     if (
       child.storyId !== story.storyId ||
       child.packetPath !== story.packetPath
@@ -508,6 +516,71 @@ function validateParentEvidence(options: {
         `Parent evidence included-substory entry does not match trusted story/packet evidence for ${story.storyPath}.`,
       );
     }
+    if (
+      !child.substoryCommitSha ||
+      !child.substoryAiReviewRecordId ||
+      !child.substoryRevisionResponseId ||
+      !child.substoryVerificationEvidence
+    ) {
+      throw new Error(
+        `Parent evidence missing substory commit, AI review, revision response, or verification evidence for ${story.storyPath}.`,
+      );
+    }
+    if (!/^[0-9a-f]{40}$/.test(child.substoryCommitSha)) {
+      throw new Error(
+        `Parent evidence substory commit must be a full SHA for ${story.storyPath}.`,
+      );
+    }
+    requireCommitReachability({
+      ancestorSha: child.substoryCommitSha,
+      descendantSha: options.trustedMainSha,
+      repoRoot: options.repoRoot,
+      storyPath: story.storyPath,
+    });
+  }
+}
+
+function requireCommitReachability(options: {
+  ancestorSha: string;
+  descendantSha: string;
+  repoRoot: string;
+  storyPath: string;
+}) {
+  try {
+    execFileSync(
+      "git",
+      [
+        "-C",
+        options.repoRoot,
+        "cat-file",
+        "-e",
+        `${options.ancestorSha}^{commit}`,
+      ],
+      { stdio: "ignore" },
+    );
+  } catch {
+    throw new Error(
+      `Parent evidence commit ${options.ancestorSha} cannot be found for ${options.storyPath}.`,
+    );
+  }
+
+  try {
+    execFileSync(
+      "git",
+      [
+        "-C",
+        options.repoRoot,
+        "merge-base",
+        "--is-ancestor",
+        options.ancestorSha,
+        options.descendantSha,
+      ],
+      { stdio: "ignore" },
+    );
+  } catch {
+    throw new Error(
+      `Parent evidence commit ${options.ancestorSha} is not reachable from merged parent PR head for ${options.storyPath}.`,
+    );
   }
 }
 
@@ -622,8 +695,20 @@ function validateStoryBindingEvidenceArray(value: unknown, label: string) {
         `${label} substoryAiReviewRecordId`,
       );
     }
-    if (story["substoryPrNumber"] !== undefined) {
-      requireNumber(story["substoryPrNumber"], `${label} substoryPrNumber`);
+    if (story["substoryCommitSha"] !== undefined) {
+      requireString(story["substoryCommitSha"], `${label} substoryCommitSha`);
+    }
+    if (story["substoryRevisionResponseId"] !== undefined) {
+      requireString(
+        story["substoryRevisionResponseId"],
+        `${label} substoryRevisionResponseId`,
+      );
+    }
+    if (story["substoryVerificationEvidence"] !== undefined) {
+      requireString(
+        story["substoryVerificationEvidence"],
+        `${label} substoryVerificationEvidence`,
+      );
     }
   }
 }

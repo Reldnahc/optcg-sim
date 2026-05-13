@@ -202,7 +202,7 @@ test("pull request template requires story, verification, and subagent review ev
     /Human review requested after the AI review record or fallback review comment was posted/i,
     /Human merge-gate review record is present before merge/i,
     /Parent Integration PRs/i,
-    /Each included substory PR has CI, `pnpm verify`, AI review record, and revision response recorded on its PR/i,
+    /Each included substory commit has story path, commit SHA, AI review record, revision response, and verification evidence recorded in this parent PR body or durable handoff comment/i,
     /Full-story integration reviewer-subagent review is posted on this parent PR/i,
     /Parent PR revision response is posted after full-story integration review/i,
     /Parent PR body or handoff comment is updated to completed-gate language before human review is requested/i,
@@ -631,7 +631,7 @@ test("workflow procedure docs preserve required story and review gates", async (
 
   assertMatchesAll(parentBranches, [
     /Create a parent integration branch from `main`/i,
-    /Create each substory implementation branch from the parent integration branch/i,
+    /Keep implementation on the one parent integration branch for this workflow; do not create substory branches as the normal path/i,
     /Do not run `pnpm run packets:complete` for a substory when it merges only into the parent integration branch/i,
     /Human review is required on the parent PR before it merges to `main`/i,
     /pnpm run packets:complete-many/i,
@@ -698,7 +698,7 @@ test("workflow docs require decomposed-group per-story review-status matrices be
 
   assertMatchesAll(workflowGuidance, [
     /decomposed story groups?[\s\S]*compact per-story review-status matrix/i,
-    /before approval handoff, child activation, packet generation, and parent\/substory PR opening or handoff/i,
+    /before approval handoff, child activation, packet generation, and parent PR handoff/i,
     /reconstruct[\s\S]*durable story-review outputs, story files, PR comments, or recorded blockers/i,
     /do not use chat memory/i,
     /columns?:?[\s\S]*story id[\s\S]*story path[\s\S]*review type[\s\S]*review status[\s\S]*review artifact or blocker reference[\s\S]*disposition summary/i,
@@ -721,7 +721,7 @@ test("workflow docs require decomposed-group per-story review-status matrices be
   ]);
 
   assertMatchesAll(parentBranches, [
-    /before opening or handing off a substory PR or parent PR/i,
+    /before handing off the parent PR/i,
     /compact per-story review-status matrix/i,
     /durable artifacts \(story-review outputs, story files, PR comments, recorded blockers\)/i,
     /fail closed if any child exact per-story status is unknown or pending/i,

@@ -15,7 +15,8 @@ const metadataSource = `Post-merge cleanup:
   branches:
     - story/inf-027-parent
 `;
-const metadataHash = sha256(metadataSource);
+const selectedHandoffSource = `${metadataSource}\n${renderParentLifecycleEvidence()}`;
+const metadataHash = sha256(selectedHandoffSource);
 const handoffRef = `handoff-comment:900:${metadataHash}`;
 
 test("workflow evidence builder selects a durable handoff comment source on human merge", () => {
@@ -46,25 +47,29 @@ test("workflow evidence builder selects a durable handoff comment source on huma
   );
 });
 
-test("workflow evidence builder derives parent lifecycle from durable review comments", () => {
+test("workflow evidence builder derives parent lifecycle from the selected durable handoff comment", () => {
   const evidence = buildWorkflowCleanupEvidence(buildFixtureInputs());
 
   assert.deepEqual(evidence.parentLifecycle, {
-    cleanupPlanRecordedAt: "2026-01-01T09:30:00.000Z",
+    cleanupPlanRecordedAt: "2026-01-01T09:00:00.000Z",
     includedStories: [
       {
         packetPath: "agent-packets/INF-601.md",
         storyId: "INF-601",
         storyPath: "stories/approved/INF-601-a.yaml",
         substoryAiReviewRecordId: "substory-ai-601",
-        substoryPrNumber: 601,
+        substoryCommitSha: "1111111111111111111111111111111111111111",
+        substoryRevisionResponseId: "substory-revision-601",
+        substoryVerificationEvidence: "verify-601",
       },
       {
         packetPath: "agent-packets/INF-602.md",
         storyId: "INF-602",
         storyPath: "stories/approved/INF-602-b.yaml",
         substoryAiReviewRecordId: "substory-ai-602",
-        substoryPrNumber: 602,
+        substoryCommitSha: "2222222222222222222222222222222222222222",
+        substoryRevisionResponseId: "substory-revision-602",
+        substoryVerificationEvidence: "verify-602",
       },
     ],
     parentIntegrationReviewRecordId: "parent-ai-review-700",
@@ -74,8 +79,8 @@ test("workflow evidence builder derives parent lifecycle from durable review com
 
 test("workflow evidence builder can derive parent lifecycle from the PR body", () => {
   const inputs = buildFixtureInputs();
-  inputs.issueComments.splice(1, 1);
-  inputs.pullRequest.body = renderParentLifecycleEvidence();
+  inputs.issueComments = [];
+  inputs.pullRequest.body = `${metadataSource}\n${renderParentLifecycleEvidence()}`;
 
   const evidence = buildWorkflowCleanupEvidence(inputs);
 
@@ -91,7 +96,7 @@ test("workflow evidence builder can derive parent lifecycle from the PR body", (
 
 test("workflow evidence builder accepts merge-event PR body metadata when aggregate PR update follows merge", () => {
   const inputs = buildFixtureInputs();
-  inputs.pullRequest.body = metadataSource;
+  inputs.pullRequest.body = `${metadataSource}\n${renderParentLifecycleEvidence()}`;
   inputs.pullRequest.mergedAt = "2026-01-01T13:00:00.000Z";
   inputs.pullRequest.updatedAt = "2026-01-01T13:00:01.000Z";
   inputs.issueComments.shift();
@@ -150,22 +155,27 @@ test("workflow evidence builder rejects handoff comments changed after merge", (
 
 test("workflow evidence builder rejects parent lifecycle evidence changed after merge", () => {
   const inputs = buildFixtureInputs();
-  inputs.issueComments[1].updatedAt = "2026-01-01T13:30:00.000Z";
+  inputs.issueComments[0].updatedAt = "2026-01-01T13:30:00.000Z";
 
   assert.throws(
     () => buildWorkflowCleanupEvidence(inputs),
-    /Parent lifecycle evidence changed after required review point/,
+    /Cleanup metadata source changed after merge/,
   );
 });
 
-test("workflow evidence builder rejects later duplicate parent lifecycle evidence after merge", () => {
+test("workflow evidence builder ignores duplicate parent lifecycle evidence in non-selected comments", () => {
   const inputs = buildFixtureInputs();
-  inputs.pullRequest.body = renderParentLifecycleEvidence();
-  inputs.issueComments[1].updatedAt = "2026-01-01T13:30:00.000Z";
-
-  assert.throws(
-    () => buildWorkflowCleanupEvidence(inputs),
-    /Parent lifecycle evidence changed after required review point/,
+  inputs.issueComments[1].body = `${renderParentLifecycleEvidence()}Substory commit evidence:
+  story: stories/approved/INF-601-a.yaml
+  commit: 3333333333333333333333333333333333333333
+  ai_review_record: substory-ai-601-dup
+  revision_response: substory-revision-601-dup
+  verification: verify-601-dup
+`;
+  const evidence = buildWorkflowCleanupEvidence(inputs);
+  assert.equal(
+    evidence.parentLifecycle?.includedStories[0]?.substoryCommitSha,
+    "1111111111111111111111111111111111111111",
   );
 });
 
@@ -261,13 +271,79 @@ test("workflow evidence builder rejects fallback comments with blank cleanup met
 
 test("workflow evidence builder rejects parent cleanup without substory review evidence", () => {
   const inputs = buildFixtureInputs();
-  inputs.issueComments[1].body = `Parent integration AI review record: parent-ai-review-700
+  inputs.issueComments[0].body = `${metadataSource}
+Parent integration AI review record: parent-ai-review-700
 Parent revision response: parent-revision-700
 `;
 
   assert.throws(
     () => buildWorkflowCleanupEvidence(inputs),
-    /Missing durable substory PR review evidence/,
+    /Missing durable substory commit review evidence/,
+  );
+});
+
+test("workflow evidence builder rejects duplicate substory commit evidence for the same story path", () => {
+  const inputs = buildFixtureInputs();
+  inputs.issueComments[0].body = `${metadataSource}
+${renderParentLifecycleEvidence()}Substory commit evidence:
+  story: stories/approved/INF-601-a.yaml
+  commit: 3333333333333333333333333333333333333333
+  ai_review_record: substory-ai-601-dup
+  revision_response: substory-revision-601-dup
+  verification: verify-601-dup
+`;
+
+  assert.throws(
+    () => buildWorkflowCleanupEvidence(inputs),
+    /Duplicate durable substory commit evidence/,
+  );
+});
+
+test("workflow evidence builder rejects parent cleanup when substory revision_response is missing", () => {
+  const inputs = buildFixtureInputs();
+  inputs.issueComments[0].body = `${metadataSource}
+Parent integration AI review record: parent-ai-review-700
+Parent revision response: parent-revision-700
+Substory commit evidence:
+  story: stories/approved/INF-601-a.yaml
+  commit: 1111111111111111111111111111111111111111
+  ai_review_record: substory-ai-601
+  verification: verify-601
+Substory commit evidence:
+  story: stories/approved/INF-602-b.yaml
+  commit: 2222222222222222222222222222222222222222
+  ai_review_record: substory-ai-602
+  revision_response: substory-revision-602
+  verification: verify-602
+`;
+
+  assert.throws(
+    () => buildWorkflowCleanupEvidence(inputs),
+    /Missing durable substory commit review evidence/,
+  );
+});
+
+test("workflow evidence builder rejects parent cleanup when substory verification is missing", () => {
+  const inputs = buildFixtureInputs();
+  inputs.issueComments[0].body = `${metadataSource}
+Parent integration AI review record: parent-ai-review-700
+Parent revision response: parent-revision-700
+Substory commit evidence:
+  story: stories/approved/INF-601-a.yaml
+  commit: 1111111111111111111111111111111111111111
+  ai_review_record: substory-ai-601
+  revision_response: substory-revision-601
+Substory commit evidence:
+  story: stories/approved/INF-602-b.yaml
+  commit: 2222222222222222222222222222222222222222
+  ai_review_record: substory-ai-602
+  revision_response: substory-revision-602
+  verification: verify-602
+`;
+
+  assert.throws(
+    () => buildWorkflowCleanupEvidence(inputs),
+    /Missing durable substory commit review evidence/,
   );
 });
 
@@ -332,7 +408,10 @@ test("pre-merge cleanup metadata guard rejects parent metadata without substory 
   const inputs = buildFixtureInputs();
   inputs.issueComments = [
     {
-      body: metadataSource,
+      body: `${metadataSource}
+Parent integration AI review record: parent-ai-review-700
+Parent revision response: parent-revision-700
+`,
       createdAt: "2026-01-01T09:00:00.000Z",
       id: 900,
       updatedAt: "2026-01-01T09:00:00.000Z",
@@ -351,7 +430,7 @@ Parent revision response: parent-revision-700
 
   assert.throws(
     () => validateWorkflowCleanupMetadataGuard(inputs),
-    /Missing durable substory PR review evidence/,
+    /Missing durable substory commit review evidence/,
   );
 });
 
@@ -363,6 +442,34 @@ test("pre-merge cleanup metadata guard accepts parent metadata with lifecycle ev
   assert.equal(
     result.parentLifecycle?.parentIntegrationReviewRecordId,
     "parent-ai-review-700",
+  );
+});
+
+test("workflow evidence builder rejects parent mode when lifecycle evidence exists only in non-selected comments", () => {
+  const inputs = buildFixtureInputs();
+  inputs.issueComments[0].body = `${metadataSource}
+Parent integration AI review record: parent-ai-review-700
+Parent revision response: parent-revision-700
+`;
+  inputs.issueComments[1].body = renderParentLifecycleEvidence();
+
+  assert.throws(
+    () => buildWorkflowCleanupEvidence(inputs),
+    /Missing durable substory commit review evidence/,
+  );
+});
+
+test("pre-merge cleanup metadata guard rejects parent mode when lifecycle evidence exists only in non-selected comments", () => {
+  const inputs = buildFixtureInputs();
+  inputs.issueComments[0].body = `${metadataSource}
+Parent integration AI review record: parent-ai-review-700
+Parent revision response: parent-revision-700
+`;
+  inputs.issueComments[1].body = renderParentLifecycleEvidence();
+
+  assert.throws(
+    () => validateWorkflowCleanupMetadataGuard(inputs),
+    /Missing durable substory commit review evidence/,
   );
 });
 
@@ -388,14 +495,14 @@ function buildFixtureInputs() {
     eventSenderUserType: "User",
     issueComments: [
       {
-        body: metadataSource,
+        body: selectedHandoffSource,
         createdAt: "2026-01-01T09:00:00.000Z",
         id: 900,
         updatedAt: "2026-01-01T09:00:00.000Z",
         userType: "User",
       },
       {
-        body: renderParentLifecycleEvidence(),
+        body: "Implementation thread chatter only.",
         createdAt: "2026-01-01T09:30:00.000Z",
         id: 901,
         updatedAt: "2026-01-01T09:30:00.000Z",
@@ -428,13 +535,17 @@ function buildFixtureInputs() {
 function renderParentLifecycleEvidence() {
   return `Parent integration AI review record: parent-ai-review-700
 Parent revision response: parent-revision-700
-Substory AI review record:
+Substory commit evidence:
   story: stories/approved/INF-601-a.yaml
-  pr: 601
-  record: substory-ai-601
-Substory AI review record:
+  commit: 1111111111111111111111111111111111111111
+  ai_review_record: substory-ai-601
+  revision_response: substory-revision-601
+  verification: verify-601
+Substory commit evidence:
   story: stories/approved/INF-602-b.yaml
-  pr: 602
-  record: substory-ai-602
+  commit: 2222222222222222222222222222222222222222
+  ai_review_record: substory-ai-602
+  revision_response: substory-revision-602
+  verification: verify-602
 `;
 }

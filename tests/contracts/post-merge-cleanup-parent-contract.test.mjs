@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -12,14 +13,15 @@ test("parent cleanup planning rejects absent ambiguous mismatched or already-don
     { id: "INF-601", fileName: "INF-601-a.yaml" },
     { id: "INF-602", fileName: "INF-602-b.yaml" },
   ]);
+  const noParentMainSha = initializeGitRepo(noParentRoot);
   await assert.rejects(
     () =>
       buildCleanupDryRunPlan({
-        evidence: buildParentEvidence(),
+        evidence: buildParentEvidence(noParentMainSha),
         metadata: parentMetadata(),
         metadataSourceRef: "pr-body:pr-501-body:meta-1",
         repoRoot: noParentRoot,
-        trustedMainSha: "abc123",
+        trustedMainSha: noParentMainSha,
       }),
     /exactly one changed approved parent story/i,
   );
@@ -30,7 +32,8 @@ test("parent cleanup planning rejects absent ambiguous mismatched or already-don
     parentStory("CARD-001", ["INF-601", "INF-602"]),
     parentStory("CARD-002", ["INF-601", "INF-602"]),
   ]);
-  const ambiguousEvidence = buildParentEvidence();
+  const multipleParentMainSha = initializeGitRepo(multipleParentRoot);
+  const ambiguousEvidence = buildParentEvidence(multipleParentMainSha);
   ambiguousEvidence.changedFiles.push("stories/approved/CARD-002-parent.yaml");
   await assert.rejects(
     () =>
@@ -39,7 +42,7 @@ test("parent cleanup planning rejects absent ambiguous mismatched or already-don
         metadata: parentMetadata(),
         metadataSourceRef: "pr-body:pr-501-body:meta-1",
         repoRoot: multipleParentRoot,
-        trustedMainSha: "abc123",
+        trustedMainSha: multipleParentMainSha,
       }),
     /multiple changed approved parent stories/i,
   );
@@ -49,14 +52,15 @@ test("parent cleanup planning rejects absent ambiguous mismatched or already-don
     { id: "INF-602", fileName: "INF-602-b.yaml" },
     parentStory("CARD-001", ["INF-601"]),
   ]);
+  const mismatchMainSha = initializeGitRepo(mismatchRoot);
   await assert.rejects(
     () =>
       buildCleanupDryRunPlan({
-        evidence: buildParentEvidence(),
+        evidence: buildParentEvidence(mismatchMainSha),
         metadata: parentMetadata(),
         metadataSourceRef: "pr-body:pr-501-body:meta-1",
         repoRoot: mismatchRoot,
-        trustedMainSha: "abc123",
+        trustedMainSha: mismatchMainSha,
       }),
     /child_stories.*match cleanup child story ids/i,
   );
@@ -66,14 +70,15 @@ test("parent cleanup planning rejects absent ambiguous mismatched or already-don
     { id: "INF-602", fileName: "INF-602-b.yaml" },
     { ...parentStory("CARD-001", ["INF-601", "INF-602"]), status: "done" },
   ]);
+  const doneParentMainSha = initializeGitRepo(doneParentRoot);
   await assert.rejects(
     () =>
       buildCleanupDryRunPlan({
-        evidence: buildParentEvidence(),
+        evidence: buildParentEvidence(doneParentMainSha),
         metadata: parentMetadata(),
         metadataSourceRef: "pr-body:pr-501-body:meta-1",
         repoRoot: doneParentRoot,
-        trustedMainSha: "abc123",
+        trustedMainSha: doneParentMainSha,
       }),
     /parent story.*already done/i,
   );
@@ -83,14 +88,15 @@ test("parent cleanup planning rejects absent ambiguous mismatched or already-don
     { id: "INF-602", fileName: "INF-602-b.yaml" },
     { ...parentStory("CARD-001", ["INF-601", "INF-602"]), writePacket: true },
   ]);
+  const packetizedParentMainSha = initializeGitRepo(packetizedParentRoot);
   await assert.rejects(
     () =>
       buildCleanupDryRunPlan({
-        evidence: buildParentEvidence(),
+        evidence: buildParentEvidence(packetizedParentMainSha),
         metadata: parentMetadata(),
         metadataSourceRef: "pr-body:pr-501-body:meta-1",
         repoRoot: packetizedParentRoot,
-        trustedMainSha: "abc123",
+        trustedMainSha: packetizedParentMainSha,
       }),
     /must be non-packetized/i,
   );
@@ -102,13 +108,14 @@ test("parent cleanup planning accepts object-form parent child stories", async (
     { id: "INF-602", fileName: "INF-602-b.yaml" },
     parentStory("CARD-001", ["INF-601", "INF-602"], "object"),
   ]);
+  const trustedMainSha = initializeGitRepo(repoRoot);
 
   const plan = await buildCleanupDryRunPlan({
-    evidence: buildParentEvidence(),
+    evidence: buildParentEvidence(trustedMainSha),
     metadata: parentMetadata(),
     metadataSourceRef: "pr-body:pr-501-body:meta-1",
     repoRoot,
-    trustedMainSha: "abc123",
+    trustedMainSha,
   });
 
   assert.equal(plan.boundParentStory?.storyId, "CARD-001");
@@ -119,20 +126,142 @@ test("parent cleanup planning accepts object-form parent child stories", async (
   assert.match(plan.boundParentStory?.storySha256 ?? "", /^[0-9a-f]{64}$/);
 });
 
+test("parent cleanup planning rejects missing included child evidence", async () => {
+  const repoRoot = await makeTempRepo([
+    { id: "INF-601", fileName: "INF-601-a.yaml" },
+    { id: "INF-602", fileName: "INF-602-b.yaml" },
+  ]);
+  const trustedMainSha = initializeGitRepo(repoRoot);
+  const evidence = buildParentEvidence(trustedMainSha);
+  evidence.parentLifecycle.includedStories = [
+    evidence.parentLifecycle.includedStories[0],
+  ];
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence,
+        metadata: parentMetadata(),
+        metadataSourceRef: "pr-body:pr-501-body:meta-1",
+        repoRoot,
+        trustedMainSha,
+      }),
+    /missing included-substory/i,
+  );
+});
+
+test("parent cleanup planning rejects mismatched included child evidence", async () => {
+  const repoRoot = await makeTempRepo([
+    { id: "INF-601", fileName: "INF-601-a.yaml" },
+    { id: "INF-602", fileName: "INF-602-b.yaml" },
+  ]);
+  const trustedMainSha = initializeGitRepo(repoRoot);
+  const evidence = buildParentEvidence(trustedMainSha);
+  evidence.parentLifecycle.includedStories[1].packetPath =
+    "agent-packets/INF-999.md";
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence,
+        metadata: parentMetadata(),
+        metadataSourceRef: "pr-body:pr-501-body:meta-1",
+        repoRoot,
+        trustedMainSha,
+      }),
+    /does not match trusted story\/packet evidence/i,
+  );
+});
+
+test("parent cleanup planning rejects lifecycle evidence after human review", async () => {
+  const repoRoot = await makeTempRepo([
+    { id: "INF-601", fileName: "INF-601-a.yaml" },
+    { id: "INF-602", fileName: "INF-602-b.yaml" },
+  ]);
+  const trustedMainSha = initializeGitRepo(repoRoot);
+  const evidence = buildParentEvidence(trustedMainSha);
+  evidence.parentLifecycle.cleanupPlanRecordedAt = "2026-01-02T00:00:01.000Z";
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence,
+        metadata: parentMetadata(),
+        metadataSourceRef: "pr-body:pr-501-body:meta-1",
+        repoRoot,
+        trustedMainSha,
+      }),
+    /recorded before the required human merge-gate review/i,
+  );
+});
+
+test("parent cleanup planning rejects missing substory commit evidence", async () => {
+  const repoRoot = await makeTempRepo([
+    { id: "INF-601", fileName: "INF-601-a.yaml" },
+    { id: "INF-602", fileName: "INF-602-b.yaml" },
+    parentStory("CARD-001", ["INF-601", "INF-602"]),
+  ]);
+  const trustedMainSha = initializeGitRepo(repoRoot);
+  const evidence = buildParentEvidence(trustedMainSha);
+  const missingCommitSha = "1111111111111111111111111111111111111111";
+  evidence.stories[0].substoryCommitSha = missingCommitSha;
+  evidence.parentLifecycle.includedStories[0].substoryCommitSha =
+    missingCommitSha;
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence,
+        metadata: parentMetadata(),
+        metadataSourceRef: "pr-body:pr-501-body:meta-1",
+        repoRoot,
+        trustedMainSha,
+      }),
+    /cannot be found/i,
+  );
+});
+
+test("parent cleanup planning rejects substory commit evidence that exists but is not reachable from merged parent head", async () => {
+  const repoRoot = await makeTempRepo([
+    { id: "INF-601", fileName: "INF-601-a.yaml" },
+    { id: "INF-602", fileName: "INF-602-b.yaml" },
+    parentStory("CARD-001", ["INF-601", "INF-602"]),
+  ]);
+  const trustedMainSha = initializeGitRepo(repoRoot);
+  const unreachableCommitSha = createUnreachableCommit(repoRoot);
+  const evidence = buildParentEvidence(trustedMainSha);
+  evidence.stories[0].substoryCommitSha = unreachableCommitSha;
+  evidence.parentLifecycle.includedStories[0].substoryCommitSha =
+    unreachableCommitSha;
+
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence,
+        metadata: parentMetadata(),
+        metadataSourceRef: "pr-body:pr-501-body:meta-1",
+        repoRoot,
+        trustedMainSha,
+      }),
+    /is not reachable from merged parent PR head/i,
+  );
+});
+
 test("parent cleanup planning fails closed for malformed object-form child story ids", async () => {
   const duplicateRoot = await makeTempRepo([
     { id: "INF-601", fileName: "INF-601-a.yaml" },
     { id: "INF-602", fileName: "INF-602-b.yaml" },
     parentStory("CARD-001", ["INF-601", "INF-601"], "object"),
   ]);
+  const duplicateMainSha = initializeGitRepo(duplicateRoot);
   await assert.rejects(
     () =>
       buildCleanupDryRunPlan({
-        evidence: buildParentEvidence(),
+        evidence: buildParentEvidence(duplicateMainSha),
         metadata: parentMetadata(),
         metadataSourceRef: "pr-body:pr-501-body:meta-1",
         repoRoot: duplicateRoot,
-        trustedMainSha: "abc123",
+        trustedMainSha: duplicateMainSha,
       }),
     /duplicate child_stories id/i,
   );
@@ -142,14 +271,15 @@ test("parent cleanup planning fails closed for malformed object-form child story
     { id: "INF-602", fileName: "INF-602-b.yaml" },
     parentStory("CARD-001", ["INF-601"], "object-missing-id"),
   ]);
+  const missingIdMainSha = initializeGitRepo(missingIdRoot);
   await assert.rejects(
     () =>
       buildCleanupDryRunPlan({
-        evidence: buildParentEvidence(),
+        evidence: buildParentEvidence(missingIdMainSha),
         metadata: parentMetadata(),
         metadataSourceRef: "pr-body:pr-501-body:meta-1",
         repoRoot: missingIdRoot,
-        trustedMainSha: "abc123",
+        trustedMainSha: missingIdMainSha,
       }),
     /malformed child_stories id/i,
   );
@@ -208,7 +338,7 @@ function parentMetadata() {
   };
 }
 
-function buildParentEvidence() {
+function buildParentEvidence(trustedMainSha) {
   return {
     baseBranch: "main",
     changedFiles: [
@@ -219,7 +349,7 @@ function buildParentEvidence() {
       "stories/approved/CARD-001-parent.yaml",
     ],
     defaultBranch: "main",
-    mergeSha: "abc123",
+    mergeSha: trustedMainSha,
     merged: true,
     mergedAt: "2026-01-02T00:00:00.000Z",
     metadataSource: {
@@ -241,14 +371,14 @@ function buildParentEvidence() {
       },
     ],
     stories: [
-      storyEvidence("INF-601", "INF-601-a.yaml", 601),
-      storyEvidence("INF-602", "INF-602-b.yaml", 602),
+      storyEvidence("INF-601", "INF-601-a.yaml", trustedMainSha),
+      storyEvidence("INF-602", "INF-602-b.yaml", trustedMainSha),
     ],
     parentLifecycle: {
       cleanupPlanRecordedAt: "2026-01-01T10:00:00.000Z",
       includedStories: [
-        storyEvidence("INF-601", "INF-601-a.yaml", 601),
-        storyEvidence("INF-602", "INF-602-b.yaml", 602),
+        storyEvidence("INF-601", "INF-601-a.yaml", trustedMainSha),
+        storyEvidence("INF-602", "INF-602-b.yaml", trustedMainSha),
       ],
       parentIntegrationReviewRecordId: "parent-review-1",
       parentRevisionResponseId: "parent-revision-1",
@@ -256,13 +386,53 @@ function buildParentEvidence() {
   };
 }
 
-function storyEvidence(storyId, fileName, prNumber) {
+function initializeGitRepo(tempRoot) {
+  for (const args of [
+    ["init", "-b", "main"],
+    ["config", "user.name", "Fixture User"],
+    ["config", "user.email", "fixture@example.com"],
+    ["add", "."],
+    ["commit", "-m", "fixture"],
+  ]) {
+    const run = spawnSync("git", args, {
+      cwd: tempRoot,
+      encoding: "utf8",
+    });
+    assert.equal(run.status, 0, run.stderr);
+  }
+  return spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: tempRoot,
+    encoding: "utf8",
+  }).stdout.trim();
+}
+
+function createUnreachableCommit(tempRoot) {
+  for (const args of [
+    ["checkout", "-b", "side/unreachable"],
+    ["commit", "--allow-empty", "-m", "unreachable"],
+    ["checkout", "main"],
+  ]) {
+    const run = spawnSync("git", args, {
+      cwd: tempRoot,
+      encoding: "utf8",
+    });
+    assert.equal(run.status, 0, run.stderr);
+  }
+  return spawnSync("git", ["rev-parse", "side/unreachable"], {
+    cwd: tempRoot,
+    encoding: "utf8",
+  }).stdout.trim();
+}
+
+function storyEvidence(storyId, fileName, commitSha) {
   return {
     packetPath: `agent-packets/${storyId}.md`,
     storyId,
     storyPath: `stories/approved/${fileName}`,
     substoryAiReviewRecordId: `ai-${storyId}`,
-    substoryPrNumber: prNumber,
+    substoryCommitSha: commitSha,
+    substoryRevisionResponseId: `revision-${storyId}`,
+    substoryVerificationEvidence: `verify-${storyId}`,
   };
 }
 
