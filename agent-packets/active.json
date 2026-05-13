@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-046.md",
+      "storyId": "INF-046",
+      "storyPath": "stories/approved/INF-046-parent-branch-substory-commit-workflow.yaml",
+      "storySha256": "18dc38efbc180588190420f32077518d207f6f1646959ff83b9cebbf6c764d1d"
+    }
+  ],
   "version": 1
 }

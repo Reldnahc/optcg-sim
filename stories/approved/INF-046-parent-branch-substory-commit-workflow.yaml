@@ -1,0 +1,107 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-046
+epic_id: INF-046
+title: Replace substory PR workflow with parent-branch commit evidence
+type: tooling
+area: infra
+primary_concern: workflow
+priority: high
+status: approved
+summary: >
+  Make the INF-044-style parent/substory workflow the normal path: substories
+  land as reviewed commits on one parent integration branch, and the final
+  parent PR to `main` is the only pull request.
+story_boundary: >
+  Own only the cited workflow specification text, workflow documentation, PR
+  template guidance, cleanup metadata evidence parsing/validation, and tests
+  needed to replace substory PR evidence with substory commit evidence. Do not
+  change gameplay, card support, engine runtime, server/client behavior, packet
+  generation semantics, packet completion semantics, or cleanup direct-push
+  semantics beyond the accepted evidence shape.
+allowed_touch_points:
+  - AGENTS.md
+  - specs/27-spec-driven-story-generation-workflow.md
+  - specs/32-codex-agent-integration.md
+  - docs/workflow/parent-integration-branches.md
+  - docs/workflow/review-gate.md
+  - docs/workflow/story-execution.md
+  - docs/code-standard.md
+  - .github/pull_request_template.md
+  - .github/workflows/cleanup-metadata-guard.yml
+  - .github/workflows/post-merge-packet-cleanup.yml
+  - tools/post-merge-cleanup.ts
+  - tools/post-merge-cleanup/metadata.ts
+  - tools/post-merge-cleanup/types.ts
+  - tools/post-merge-cleanup/validator.ts
+  - tests/github/post-merge-cleanup-closeout.test.mjs
+  - tests/github/review-workflow.test.mjs
+  - tests/github/post-merge-cleanup-evidence-builder.test.mjs
+  - tests/contracts/post-merge-cleanup-contract.test.mjs
+  - tests/contracts/post-merge-cleanup-parent-contract.test.mjs
+  - tests/contracts/post-merge-cleanup-preflight-contract.test.mjs
+  - tests/contracts/post-merge-cleanup-executor-contract.test.mjs
+  - tests/contracts/post-merge-branch-cleanup-contract.test.mjs
+  - stories/approved/INF-046-parent-branch-substory-commit-workflow.yaml
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s010
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 27-spec-driven-story-generation-workflow.s009
+  - 27-spec-driven-story-generation-workflow.s015
+  - 27-spec-driven-story-generation-workflow.s017
+  - 32-codex-agent-integration.s008
+  - 32-codex-agent-integration.s013
+scope:
+  - remove substory pull requests as the normal or required parent/substory workflow mechanism
+  - require one parent integration branch for the story set and one final parent PR to `main`
+  - require each completed substory to be represented by a reviewed commit on the parent branch
+  - require the parent PR body or durable handoff comment to list each substory story path, implementation commit SHA, AI review record, revision response record, and verification evidence
+  - require each listed substory commit SHA to be reachable from the final parent PR head and to bind the AI review record, revision response record, and verification evidence to that exact reviewed commit
+  - require cleanup validation to fail closed when listed substory commit, AI review, revision response, or verification evidence is stale, duplicated, malformed, missing, bound to a different commit, or not reachable from the parent PR head
+  - update the root AGENTS checklist so commit-based parent/substory review is not contradicted by PR-before-review language that only fits single-story or final parent PR handoff
+  - update cited spec authority that currently names substory PRs so the spec and workflow docs agree on commit-based substory evidence
+  - update parent integration docs so substory branches and substory PR comments are no longer required durable evidence
+  - update review-gate docs and PR template language from "included substory PRs" to "included substory commits"
+  - update cleanup metadata evidence parsing to accept commit-based substory lifecycle evidence instead of substory PR numbers
+  - update cleanup validation so parent cleanup binds every listed substory to a trusted story path, packet path, implementation commit SHA, and AI review record before packet completion runs
+  - keep human review required only on the final parent PR to `main`
+  - keep full-story integration review required before parent PR human-review handoff
+  - update tests that currently require durable substory PR evidence so they require durable substory commit evidence
+non_scope:
+  - changing single-story PR workflow
+  - changing packet generation output or packet completion output
+  - changing cleanup direct-push permissions, actor, or trusted-branch checkout model
+  - changing story schema fields
+  - changing role model routing
+  - changing gameplay, card parser/support, engine runtime, server, client, replay, database, or UI behavior
+dependencies:
+  - INF-044
+  - INF-045
+acceptance_criteria:
+  - parent/substory workflow docs no longer instruct agents to open substory PRs
+  - parent/substory workflow docs require one parent branch and one parent PR to `main`
+  - parent/substory workflow docs require durable per-substory commit evidence on the parent PR or durable handoff comment
+  - final parent PR guidance requires substory story path, implementation commit SHA, AI review record, revision response record, and verification evidence for each included substory
+  - cleanup metadata guard accepts valid parent cleanup evidence that uses substory commit records instead of substory PR records
+  - cleanup metadata guard rejects parent cleanup when any listed substory is missing a commit SHA, AI review record, revision response record, or verification evidence
+  - cleanup validation binds substory commit evidence to the listed story path, trusted packet evidence, parent PR head reachability, AI review record, revision response record, and verification evidence before packet completion
+  - cited workflow spec sections no longer require substory PRs for parent/substory execution
+  - PR template no longer asks for included substory PRs or per-substory PR CI
+  - tests prove substory PR evidence is no longer required for parent cleanup
+  - tests prove missing, stale, malformed, duplicated, unreachable, or wrong-commit-bound substory commit, AI review, revision response, and verification evidence fails closed
+required_tests:
+  - run `corepack pnpm run test -- tests/github/review-workflow.test.mjs tests/github/post-merge-cleanup-evidence-builder.test.mjs`
+  - run `corepack pnpm run test -- tests/contracts/post-merge-cleanup-preflight-contract.test.mjs`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm verify`
+repo_rules:
+  - do not silently preserve substory PRs as a default or recommended path
+  - keep parent PR human review as the only human merge gate for parent/substory work
+  - keep one story-orchestrator for the whole parent series and one pr-gate for the final parent PR
+  - preserve cleanup metadata as reviewed request evidence, not standalone authority
+  - fail closed when commit-based substory evidence is absent, malformed, duplicated, or not bound to the cleanup request
+ambiguity_policy: fail_and_escalate
