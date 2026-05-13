@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-050A.md",
-      "storyId": "ENG-050A",
-      "storyPath": "stories/approved/ENG-050A-trash-from-hand-decision-primitive.yaml",
-      "storySha256": "cf0c1d9e6cba837b29136acc7c7586d6c9ccd856152ae2c1893962b2346dd667"
+      "packetPath": "agent-packets/ENG-050B.md",
+      "storyId": "ENG-050B",
+      "storyPath": "stories/approved/ENG-050B-draw-then-trash-sequence-continuation.yaml",
+      "storySha256": "4e07691e604722d7bf9fe54f3c205985cb1ac743b6b5d0e51e1a5a014216df9d"
     }
   ],
   "version": 1
