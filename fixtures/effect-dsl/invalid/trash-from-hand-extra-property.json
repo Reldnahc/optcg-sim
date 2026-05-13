@@ -1,0 +1,24 @@
+{
+  "cardId": "TYP-004-904",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-004-904:auto-on-play-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "trashFromHand",
+        "player": "self",
+        "chooser": "self",
+        "count": 1,
+        "destination": "trash"
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-004-904",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

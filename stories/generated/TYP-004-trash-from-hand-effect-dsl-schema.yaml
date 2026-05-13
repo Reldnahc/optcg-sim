@@ -1,0 +1,87 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-004
+epic_id: CARD-009
+title: Trash from hand effect DSL schema
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: generated
+summary: >
+  Align the checked-in effect DSL JSON schema with the existing canonical
+  `trashFromHand` effect contract so generated draw-then-trash DSL can validate
+  before CARD-009B certifies parser/runtime capability evidence.
+story_boundary: >
+  Own only the effect DSL schema admission and direct schema validation coverage
+  for the existing `trashFromHand` effect shape. Do not add parser grammar,
+  generated support capability evidence, engine runtime behavior, or real-card
+  fixture support in this story.
+allowed_touch_points:
+  - contracts/effect-dsl.schema.json
+  - fixtures/effect-dsl/valid/trash-from-hand-effect.json
+  - fixtures/effect-dsl/valid/draw-then-trash-sequence.json
+  - fixtures/effect-dsl/invalid/trash-from-hand-missing-chooser.json
+  - fixtures/effect-dsl/invalid/trash-from-hand-missing-player.json
+  - fixtures/effect-dsl/invalid/trash-from-hand-missing-count.json
+  - fixtures/effect-dsl/invalid/trash-from-hand-extra-property.json
+  - fixtures/effect-dsl/invalid/trash-from-hand-invalid-player.json
+  - fixtures/effect-dsl/invalid/trash-from-hand-negative-count.json
+  - tests/contracts/effect-dsl-schema.test.mjs
+  - stories/generated/TYP-004-trash-from-hand-effect-dsl-schema.yaml
+  - stories/approved/TYP-004-trash-from-hand-effect-dsl-schema.yaml
+  - agent-packets/TYP-004.md
+  - agent-packets/active.json
+spec_refs:
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s029
+  - 11-testing-quality.s016
+  - 11-testing-quality.s021
+  - 24-story-schema.s016
+scope:
+  - 'add JSON-schema support for `{ type: "trashFromHand", player, chooser, count, filter? }`'
+  - require `type`, `player`, `chooser`, and `count` for the effect schema shape
+  - keep `player` and `chooser` constrained to existing `playerRef`
+  - keep `filter` constrained to the existing `cardFilter`
+  - keep `count` constrained to nonnegative integer values
+  - add committed validation fixtures for accepted and rejected `trashFromHand` effect definitions
+  - update the contract schema test to require the new validation fixtures exist
+non_scope:
+  - parser grammar changes
+  - generated support index/report behavior
+  - runtime capability matrix changes
+  - engine runtime behavior changes
+  - OP10-045 fixture/support evidence
+  - broad effect DSL schema redesign
+  - cost schema changes
+  - server, client, API, UI, Redis, database, replay, or live Poneglyph work
+dependencies:
+  - ENG-050A
+  - ENG-050B
+acceptance_criteria:
+  - 'an effect definition containing `{ type: "trashFromHand", player: "self", chooser: "self", count: 1 }` validates against `contracts/effect-dsl.schema.json`'
+  - a draw-then-trash ordered sequence using `draw` followed by `trashFromHand` validates against the schema
+  - malformed `trashFromHand` definitions missing `chooser`, missing `player`, missing `count`, using invalid player references, using negative counts, or using extra properties remain invalid
+  - committed effect DSL validation fixtures cover valid standalone `trashFromHand`, valid draw-then-trash sequence, and invalid `trashFromHand` examples
+  - no parser, runtime capability, generated support index/report, engine runtime, or real-card fixture behavior changes are included
+required_tests:
+  - exact candidate story-review before implementation
+  - focused schema fixture tests for standalone `trashFromHand` effect validation
+  - focused schema fixture tests for draw-then-trash sequence validation
+  - focused schema fixture tests for malformed `trashFromHand` effect rejection
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm exec vitest run tests/contracts/effect-dsl-schema.test.mjs`
+  - run `corepack pnpm run contracts:validate-effects`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the TYP-004 packet before implementation
+  - stay within allowed_touch_points
+  - keep this as a contract/schema prerequisite for CARD-009B
+  - do not certify CARD-009B generated draw-then-trash support in this story
+ambiguity_policy: fail_and_escalate
