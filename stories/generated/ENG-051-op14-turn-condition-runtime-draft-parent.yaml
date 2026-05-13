@@ -1,0 +1,72 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-051
+epic_id: ENG-051
+title: OP14 turn-condition runtime draft parent
+type: implementation
+area: engine
+primary_concern: rules
+priority: medium
+status: generated
+summary: >
+  Draft future engine runtime group for OP14-054 prerequisites: Leader type
+  condition evaluation, end-of-your-turn timing, and trash-until-hand-size
+  behavior after exact DSL authority is approved.
+story_boundary: >
+  This is a generated draft only. Do not move it to story-review, approval, or
+  implementation as part of ENG-050 or CARD-009. ENG-051C needs explicit DSL
+  authority before this group can become approval-ready.
+allowed_touch_points:
+  - stories/generated/ENG-051*.yaml
+  - stories/approved/ENG-051*.yaml
+spec_refs:
+  - 02-engine-mechanics.s015
+  - 03-game-state-events-decisions.s009
+  - 03-game-state-events-decisions.s013
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s012
+  - 06-visibility-security.s003
+  - 06-visibility-security.s004
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+scope:
+  - draft future engine work needed before CARD-010 can support OP14-054
+  - 'support OP14-054''s conditional On Play draw only through exact existing condition shape `{ type: "hasCardInZone", zone: "leaderArea", player: "self", filter: { categories: ["leader"], typesAny: ["Fish-Man"] } }`'
+  - "support OP14-054's `[End of Your Turn]` timing only after same-player trigger-order behavior is pinned to existing queue-ordering policy"
+  - defer dynamic trash-until-hand-size implementation until an exact DSL effect shape is approved by a SPEC or DSL-authority story
+non_scope:
+  - implementation as part of ENG-050
+  - implementation as part of CARD-009
+  - OP14-054 fixture/generated support evidence
+  - generated parser rules
+  - server, client, API, UI, Redis, database, replay, or live Poneglyph work
+dependencies:
+  - ENG-050
+child_stories:
+  - id: ENG-051A
+    title: Leader-type condition predicate
+    concern: Add runtime support for the exact existing `hasCardInZone` Leader type condition shape needed by OP14-054.
+    depends_on: []
+  - id: ENG-051B
+    title: End-of-your-turn trigger timing
+    concern: Add narrow end-of-your-turn queueing while preserving same-player trigger-order decisions.
+    depends_on: []
+  - id: ENG-051C
+    title: Trash-until-hand-size DSL authority and runtime
+    concern: Define or depend on exact DSL authority for dynamic trash-until-hand-size before adding runtime behavior.
+    depends_on: [ENG-051B]
+acceptance_criteria:
+  - this draft remains generated until explicitly moved through story-review
+  - ENG-051C is blocked unless an exact DSL/effect shape for dynamic trash-until-hand-size is approved
+  - CARD-010 does not claim OP14-054 support until ENG-051A through ENG-051C or equivalent approved stories land
+required_tests:
+  - future exact candidate story-review before approval
+  - future story-specific tests from child stories if approved
+repo_rules:
+  - do not activate or implement ENG-051 as part of ENG-050 or CARD-009
+  - fail closed on Leader type predicate, end-of-turn timing, or dynamic trash-until-hand-size ambiguity
+ambiguity_policy: fail_and_escalate

@@ -51,6 +51,11 @@ import {
   getOptionalActivationLegalActions,
 } from "./optional-activation-actions.js";
 import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
+import {
+  applySupportedTrashFromHandChoiceResponse,
+  getTrashFromHandDecisionLegalActions,
+  isTrashFromHandSelectCardsDecision,
+} from "./effect-runtime-trash-from-hand.js";
 import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
 import {
   applyConcede,
@@ -403,6 +408,7 @@ export const getLegalActions = (
     actions.push(...getBattleDecisionLegalActions(state, playerId));
     actions.push(...getChooseReplacementLegalActions(state, playerId));
     actions.push(...getSearchRevealDecisionLegalActions(state, playerId));
+    actions.push(...getTrashFromHandDecisionLegalActions(state, playerId));
     return actions;
   }
 
@@ -479,6 +485,22 @@ const applyRespondToDecision = (
     String(decision.request.set).startsWith("set:search-reveal:")
   ) {
     return applySupportedSearchRevealChoiceResponse(state, action);
+  }
+  if (isTrashFromHandSelectCardsDecision(decision)) {
+    const trashResult = applySupportedTrashFromHandChoiceResponse(
+      state,
+      action,
+    );
+    if (!trashResult.ok) {
+      return trashResult.result;
+    }
+    return finalizeSelectedTargetEffectResolution(
+      trashResult.state,
+      trashResult.eventBaseState,
+      trashResult.entry,
+      trashResult.allEvents,
+      trashResult.resolutionEvents,
+    );
   }
   const replacementResult = applyChooseReplacementDecisionResponse(
     state,

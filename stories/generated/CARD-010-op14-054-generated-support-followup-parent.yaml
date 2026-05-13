@@ -1,0 +1,83 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-010
+epic_id: CARD-010
+title: OP14-054 generated support follow-up parent
+type: implementation
+area: cards
+primary_concern: rules
+priority: medium
+status: generated
+summary: >
+  Draft follow-up parent story for OP14-054 Fisher Tiger after the draw/trash
+  template and ENG-051 runtime foundations land, covering generated parser,
+  capability, report, and fixture evidence for its complete text.
+story_boundary: >
+  This is a generated draft only. Do not move it to story-review, approval, or
+  implementation as part of CARD-009. It exists to preserve the OP14-054 scope
+  split separately from ENG-051 runtime work and the OP10-045 draw/trash
+  template foundation.
+allowed_touch_points:
+  - stories/generated/CARD-010*.yaml
+  - stories/approved/CARD-010*.yaml
+spec_refs:
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s022
+  - 06-visibility-security.s003
+  - 06-visibility-security.s004
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+scope:
+  - draft a future parent group for OP14-054 Fisher Tiger generated support
+  - support `[On Play] If your Leader has the {Fish-Man} type, draw 3 cards.` only after ENG-051A leader-type condition support exists
+  - support `[End of Your Turn] Trash cards from your hand until you have 5 cards in your hand.` only after ENG-051B and ENG-051C runtime support exists
+  - add OP14-054 checked-in fixture/support/report evidence only when complete printed gameplay-relevant text is supported
+  - preserve complete-parse and runtime capability fail-closed behavior
+non_scope:
+  - implementation as part of CARD-009
+  - implementation as part of ENG-050 or ENG-051
+  - engine runtime behavior
+  - OP10-045 Cavendish support
+  - broad condition grammar
+  - broad end-of-turn trigger framework beyond the narrow approved follow-up
+  - full catalog support
+  - server, client, API, UI, Redis, database, replay, or live Poneglyph in CI
+dependencies:
+  - ENG-051
+  - CARD-009
+child_stories:
+  - id: CARD-010A
+    title: Conditional On Play draw generated-support evidence
+    concern: Add generated parser/capability/index/report evidence for OP14-054's conditional On Play draw after ENG-051A lands.
+    depends_on: []
+  - id: CARD-010B
+    title: End-turn trash-until-hand-size generated-support evidence
+    concern: Add generated parser/capability/index/report evidence for OP14-054's End of Your Turn trash-until-hand-size effect after ENG-051B and ENG-051C land.
+    depends_on: []
+  - id: CARD-010C
+    title: OP14-054 generated support fixture proof
+    concern: Add OP14-054 fixture/generated support/report evidence after both effects in its complete text are supported.
+    depends_on: [CARD-010A, CARD-010B]
+acceptance_criteria:
+  - this draft remains generated until explicitly moved through story-review
+  - OP14-054 is not included in CARD-009 implementation or fixture support
+  - future story-review decides whether CARD-010A and CARD-010B should be separate parent groups before OP14-054 fixture work
+  - complete-parse support remains fail-closed until both OP14-054 printed effects are supported by runtime capability evidence
+required_tests:
+  - future exact candidate story-review before approval
+  - future story-specific tests from child stories if approved
+repo_rules:
+  - do not activate or implement CARD-010 as part of CARD-009
+  - fail closed on leader-type condition, end-of-turn timing, or dynamic trash ambiguity
+ambiguity_policy: fail_and_escalate

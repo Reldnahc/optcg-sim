@@ -16,6 +16,7 @@ import {
   toStateSeq,
 } from "./action-results.js";
 import type { EffectQueueGroup } from "./effect-queue-ordering.js";
+import { createSupportedDrawThenTrashSequenceDecision } from "./effect-runtime-draw-trash-sequence.js";
 import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
 import {
   evaluateQueueOrdering,
@@ -34,6 +35,10 @@ import {
   isSupportedQueuedOptionalNoChoiceDrawEffect,
 } from "./effect-runtime-primitives.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
+import {
+  createSupportedTrashFromHandChoiceDecision,
+  isSupportedQueuedTrashFromHandEffect,
+} from "./effect-runtime-trash-from-hand.js";
 import {
   consumeOncePerTurn,
   isOncePerTurnUsed,
@@ -155,6 +160,21 @@ export const createEffectRuntimeQueueResults = (
       match.failurePolicy !== undefined ||
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
       match.sourcePresencePolicy !== "mustRemainInSameZone"
+    ) {
+      return undefined;
+    }
+    return match.effect;
+  };
+
+  const resolveQueuedTrashFromHandEffect = (
+    state: GameState,
+    entry: EffectQueueEntry,
+  ): Extract<Effect, { type: "trashFromHand" }> | undefined => {
+    const match = resolveQueuedEffectDefinition(state, entry);
+    if (
+      match === undefined ||
+      match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
+      !isSupportedQueuedTrashFromHandEffect(match)
     ) {
       return undefined;
     }
@@ -325,6 +345,19 @@ export const createEffectRuntimeQueueResults = (
           },
         );
       }
+      const drawTrashSequence = createSupportedDrawThenTrashSequenceDecision(
+        nextState,
+        selected,
+        queuedEffect,
+      );
+      if (drawTrashSequence !== undefined) {
+        return drawTrashSequence.ok
+          ? toEngineResult(drawTrashSequence.state, [
+              ...allEvents,
+              ...drawTrashSequence.events,
+            ])
+          : unsupportedEffectQueueResult(originalState);
+      }
       const searchEffect = resolveQueuedSearchRevealEffect(nextState, selected);
       if (searchEffect !== undefined) {
         const searchDecision = createSupportedSearchRevealChoiceDecision(
@@ -379,6 +412,23 @@ export const createEffectRuntimeQueueResults = (
           allEvents.push(...searchDecision.events, resolvedEvent);
         }
         continue;
+      }
+      const trashFromHandEffect = resolveQueuedTrashFromHandEffect(
+        nextState,
+        selected,
+      );
+      if (trashFromHandEffect !== undefined) {
+        const trashDecision = createSupportedTrashFromHandChoiceDecision(
+          nextState,
+          selected,
+          trashFromHandEffect,
+        );
+        return trashDecision.ok
+          ? toEngineResult(trashDecision.state, [
+              ...allEvents,
+              ...trashDecision.events,
+            ])
+          : unsupportedEffectQueueResult(originalState);
       }
       drawEffect ??= resolveQueuedNoChoiceDrawEffect(nextState, selected);
       if (drawEffect === undefined) {

@@ -1,0 +1,104 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-050A
+epic_id: ENG-050
+title: Trash-from-hand decision primitive
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Add the first narrow self trash-from-hand effect runtime decision path with
+  private choice validation, deterministic events, and fail-closed invalid
+  responses.
+story_boundary: >
+  Own only the narrow `trashFromHand` effect primitive for the source
+  controller choosing cards from their own hand. Do not add parser grammar,
+  generated support fixture changes, broad discard semantics, costs, or
+  sequence execution in this story.
+allowed_touch_points:
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/effect-runtime-*.ts
+  - packages/engine-core/src/*decision*.ts
+  - packages/engine-core/src/*player-view*.ts
+  - packages/engine-core/src/*hidden-info*.test.ts
+  - packages/engine-core/src/*effect-runtime*.test.ts
+  - packages/engine-core/src/*event-sequencing*.test.ts
+  - packages/engine-core/src/*state-hash*.test.ts
+  - packages/types/src/decisions.ts
+  - packages/types/src/effects.ts
+  - contracts/types/decisions.ts
+  - contracts/types/effects.ts
+  - stories/generated/ENG-050A-trash-from-hand-decision-primitive.yaml
+  - stories/approved/ENG-050A-trash-from-hand-decision-primitive.yaml
+  - agent-packets/ENG-050A.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s009
+  - 03-game-state-events-decisions.s013
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s022
+  - 06-visibility-security.s003
+  - 06-visibility-security.s004
+  - 06-visibility-security.s006
+  - 06-visibility-security.s007
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+  - 17-first-card-fixtures.s004
+scope:
+  - 'support a narrow effect primitive `{ type: "trashFromHand", player: "self", chooser: "self", count: N }`'
+  - create a private pending decision for the choosing player when cards must be selected from hand
+  - validate the decision responder is the choosing player
+  - validate chosen cards are distinct, currently in that player's hand, and match the required count
+  - move chosen cards from hand to trash through the existing event model
+  - prevent opponent PlayerView, public events, legal actions, and metadata from leaking hidden hand contents or private candidates
+  - emit deterministic events and preserve deterministic state hash behavior
+  - fail closed for unsupported player refs, filters, malformed responses, wrong count, duplicate card IDs, stale card IDs, and opponent responses
+non_scope:
+  - parser grammar changes
+  - draw-then-trash sequence execution
+  - generated support index/report changes
+  - real-card fixture/support evidence
+  - discard as a separate semantic primitive
+  - trash-from-hand costs
+  - target selection from public zones
+  - random discard
+  - opponent-hand trash effects
+  - optional activation behavior
+  - once-per-turn consumption changes
+  - server, client, API, UI, Redis, database, replay, or live Poneglyph work
+dependencies:
+  - ENG-049
+acceptance_criteria:
+  - supported `trashFromHand` primitive creates a private choosing-player decision
+  - valid response moves exactly the chosen hand cards to trash and resumes runtime processing through the existing event model
+  - decline or missing-selection behavior is rejected unless the effect explicitly supports optionality in a later story
+  - malformed, duplicate, wrong-count, stale-card, wrong-player, unsupported-filter, and unsupported-player-ref responses fail closed
+  - PlayerView and event projection tests prove opponent hand contents and private candidate lists do not leak
+  - event order and state hash regressions prove deterministic behavior
+  - no-choice draw behavior remains unchanged
+required_tests:
+  - exact candidate story-review before implementation
+  - synthetic/unit runtime tests for valid trash-from-hand decision creation and resolution
+  - invalid-response/fail-closed tests for malformed, duplicate, wrong-count, stale-card, wrong-player, unsupported-filter, and unsupported-player-ref cases
+  - hidden-info PlayerView/event/legal-action regression tests
+  - deterministic event-order and state-hash regression tests
+  - baseline no-choice draw regression
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/engine-core test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the ENG-050A packet before implementation
+  - stay within allowed_touch_points
+  - use synthetic/unit engine tests; real-card fixtures do not replace primitive behavior tests
+  - preserve engine-core purity and hidden-information boundaries
+ambiguity_policy: fail_and_escalate
