@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-005C.md",
-      "storyId": "TYP-005C",
-      "storyPath": "stories/approved/TYP-005C-classify-canonical-package-downstream-type-gaps.yaml",
-      "storySha256": "6a7f0caffc0ebe2774a4e9a59a661d74726e7624c44541e3ba95cfbb2f72a540"
+      "packetPath": "agent-packets/TYP-005D.md",
+      "storyId": "TYP-005D",
+      "storyPath": "stories/approved/TYP-005D-align-classified-canonical-shared-contract-omissions.yaml",
+      "storySha256": "a0b1eb046da36a42d3141c83cb267ce5fd0e139b122f9c240458388d978ade2f"
     }
   ],
   "version": 1
