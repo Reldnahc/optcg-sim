@@ -210,7 +210,7 @@
             "type": { "const": "trashFromHand" },
             "player": { "$ref": "#/$defs/playerRef" },
             "chooser": { "$ref": "#/$defs/playerRef" },
-            "count": { "type": "integer" },
+            "count": { "type": "integer", "minimum": 0 },
             "filter": { "$ref": "#/$defs/cardFilter" }
           }
         },

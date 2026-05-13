@@ -20,9 +20,11 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/valid/trash-from-hand-effect.json",
     "fixtures/effect-dsl/invalid/deprecated-alias-color-includes.json",
     "fixtures/effect-dsl/invalid/trash-from-hand-extra-property.json",
+    "fixtures/effect-dsl/invalid/trash-from-hand-invalid-player.json",
     "fixtures/effect-dsl/invalid/trash-from-hand-missing-chooser.json",
     "fixtures/effect-dsl/invalid/trash-from-hand-missing-count.json",
     "fixtures/effect-dsl/invalid/trash-from-hand-missing-player.json",
+    "fixtures/effect-dsl/invalid/trash-from-hand-negative-count.json",
   ];
 
   for (const relativePath of requiredPaths) {

@@ -26,6 +26,8 @@ allowed_touch_points:
   - fixtures/effect-dsl/invalid/trash-from-hand-missing-player.json
   - fixtures/effect-dsl/invalid/trash-from-hand-missing-count.json
   - fixtures/effect-dsl/invalid/trash-from-hand-extra-property.json
+  - fixtures/effect-dsl/invalid/trash-from-hand-invalid-player.json
+  - fixtures/effect-dsl/invalid/trash-from-hand-negative-count.json
   - tests/contracts/effect-dsl-schema.test.mjs
   - stories/generated/TYP-004-trash-from-hand-effect-dsl-schema.yaml
   - stories/approved/TYP-004-trash-from-hand-effect-dsl-schema.yaml
@@ -46,7 +48,7 @@ scope:
   - require `type`, `player`, `chooser`, and `count` for the effect schema shape
   - keep `player` and `chooser` constrained to existing `playerRef`
   - keep `filter` constrained to the existing `cardFilter`
-  - keep `count` constrained to integer values
+  - keep `count` constrained to nonnegative integer values
   - add committed validation fixtures for accepted and rejected `trashFromHand` effect definitions
   - update the contract schema test to require the new validation fixtures exist
 non_scope:
@@ -64,7 +66,7 @@ dependencies:
 acceptance_criteria:
   - 'an effect definition containing `{ type: "trashFromHand", player: "self", chooser: "self", count: 1 }` validates against `contracts/effect-dsl.schema.json`'
   - a draw-then-trash ordered sequence using `draw` followed by `trashFromHand` validates against the schema
-  - malformed `trashFromHand` definitions missing `chooser`, missing `player`, missing `count`, or using extra properties remain invalid
+  - malformed `trashFromHand` definitions missing `chooser`, missing `player`, missing `count`, using invalid player references, using negative counts, or using extra properties remain invalid
   - committed effect DSL validation fixtures cover valid standalone `trashFromHand`, valid draw-then-trash sequence, and invalid `trashFromHand` examples
   - no parser, runtime capability, generated support index/report, engine runtime, or real-card fixture behavior changes are included
 required_tests:
