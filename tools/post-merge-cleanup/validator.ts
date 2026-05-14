@@ -800,8 +800,8 @@ function validateStoryCardinality(metadata: CleanupMetadata) {
     throw new Error("Single-mode cleanup requires exactly one story.");
   }
 
-  if (metadata.mode === "parent" && metadata.stories.length < 2) {
-    throw new Error("Parent-mode cleanup requires at least two stories.");
+  if (metadata.mode === "parent" && metadata.stories.length < 1) {
+    throw new Error("Parent-mode cleanup requires at least one story.");
   }
 }
 

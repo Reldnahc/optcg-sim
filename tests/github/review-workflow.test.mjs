@@ -211,7 +211,7 @@ test("pull request template requires story, verification, and subagent review ev
     /Human review is explicitly required before merge to `main`/i,
     /Post-merge lifecycle cleanup plan is recorded: `pnpm run packets:complete-many \.\.\.`/i,
     /Active packet state is explained if non-empty: `agent-packets\/active\.json` is only the current or most recent substory handoff pointer until post-merge cleanup, not the list of unfinished substories/i,
-    /Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` or `pnpm run packets:complete-many --story <stories\/approved\/\.\.\.yaml> --story <stories\/approved\/\.\.\.yaml>` do not use this pull-request review artifact path/i,
+    /Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` or `pnpm run packets:complete-many` with one or more child `--story <stories\/approved\/\.\.\.yaml>` arguments do not use this pull-request review artifact path/i,
     /If cleanup includes any manual edit beyond that command output, use the normal PR checklist above/i,
     /File responsibility checked: guarded source, test, tool, or contract files at 800\+ effective lines are explained here or have a follow-up split\/refactor story/i,
   ]);
@@ -250,7 +250,7 @@ test("branch protection guide names the required status checks and subagent revi
     /When reviewer subagent review is used, pull requests should record the actual worker and reviewer identities or references in the AI review record before human approval/i,
     /When the equivalent human-review fallback is used, pull requests should record the fallback metadata in the fallback review comment before human approval/i,
     /Pull requests should record the human merge-gate review as either an approval link or an equivalent human review step reference before merge/i,
-    /Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` or `pnpm run packets:complete-many --story <stories\/approved\/\.\.\.yaml> --story <stories\/approved\/\.\.\.yaml>` are not pull-request handoffs and do not require reviewer-subagent artifacts/i,
+    /Pure post-merge packet-completion cleanup commits that contain only the exact file changes produced by `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` or `pnpm run packets:complete-many` with one or more child `--story <stories\/approved\/\.\.\.yaml>` arguments are not pull-request handoffs and do not require reviewer-subagent artifacts/i,
     /Exact post-merge packet-completion cleanup may use cleanup-scoped lifecycle verification before direct push because the reviewed PR already passed human review and required checks/i,
     /If a cleanup commit includes any manual edit beyond packet-completion command output, including edits to packet files, `agent-packets\/active\.json`, tooling, tests, fixtures, specs, workflow docs, or story files, use the normal pull-request and reviewer-subagent path/i,
     /required review artifacts are missing: an AI review record plus revision response comment/i,
@@ -299,8 +299,8 @@ test("pull request template declares reviewed post-merge cleanup metadata", asyn
     /The human-controlled merge to `main` authorizes the cleanup metadata snapshot/i,
     /Single-story PRs:/i,
     /Post-merge cleanup:\s*\n\s*mode: single\s*\n\s*stories:\s*\n\s*- stories\/approved\/<STORY-ID>-<slug>\.yaml\s*\n\s*branches:\s*\n\s*- <head-branch>/i,
-    /Parent PRs:/i,
-    /Post-merge cleanup:\s*\n\s*mode: parent\s*\n\s*stories:\s*\n\s*- stories\/approved\/<CHILD-A>\.yaml\s*\n\s*- stories\/approved\/<CHILD-B>\.yaml\s*\n\s*branches:\s*\n\s*- <parent-integration-branch>\s*\n\s*- <optional-substory-branch>/i,
+    /Parent PRs list one or more child story paths:/i,
+    /Post-merge cleanup:\s*\n\s*mode: parent\s*\n\s*stories:\s*\n\s*- stories\/approved\/<CHILD-STORY>\.yaml\s*\n\s*branches:\s*\n\s*- <parent-integration-branch>\s*\n\s*- <optional-substory-branch>/i,
   ]);
   assert.doesNotMatch(
     prTemplate,
