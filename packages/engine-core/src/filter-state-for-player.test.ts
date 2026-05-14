@@ -32,9 +32,6 @@ import {
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
-type EngineInternalPublicCardView = { currentPower?: number };
-const cardCurrentPower = (card: unknown): number | undefined =>
-  (card as EngineInternalPublicCardView).currentPower;
 import { createInitialState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
@@ -192,7 +189,7 @@ test("filters hidden information and keeps public zones", () => {
   assert.equal("audit" in raw, false);
 });
 
-test("projects computed current power only for public board leaders and characters", () => {
+test("does not project computed current power in public card views", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
@@ -228,14 +225,15 @@ test("projects computed current power only for public board leaders and characte
   ).power;
   const view = filterStateForPlayer(state, p1);
 
-  assert.deepEqual(
-    [
-      cardCurrentPower(view.self.leader),
-      cardCurrentPower(view.self.characters[0]),
-      cardCurrentPower(view.opponent.leader),
-      cardCurrentPower(view.opponent.characters[0]),
-    ],
-    [7000, 3000, 5000, 3000],
+  assert.equal("currentPower" in view.self.leader, false);
+  assert.equal(
+    "currentPower" in must(view.self.characters[0], "self char"),
+    false,
+  );
+  assert.equal("currentPower" in view.opponent.leader, false);
+  assert.equal(
+    "currentPower" in must(view.opponent.characters[0], "opponent char"),
+    false,
   );
   assert.deepEqual(
     [
@@ -619,7 +617,7 @@ test("selectTargets projection stays metadata-only and does not expose candidate
   assert.equal(JSON.stringify(forOpponent).includes("request"), false);
 });
 
-test("chooseReplacement projection is private and exposes only DTO-safe replacement metadata", () => {
+test("chooseReplacement projection is private and metadata-only without routing fields", () => {
   const state = createActiveState();
   const p2State = must(state.players[p2], "p2 state");
   const hiddenDecisionPlayerDeckCard = must(
@@ -667,9 +665,6 @@ test("chooseReplacement projection is private and exposes only DTO-safe replacem
     playerId: p2,
     prompt: "Choose replacement effect.",
     causedBy: { type: "ruleProcess", name: "privateCausality" },
-    processId: "process:ko:replacement",
-    replacementIds: ["replacement:would-be-ko-draw-1"],
-    mandatory: false,
   });
   assert.deepEqual(
     forDecisionPlayer.legalActions.filter(
@@ -694,6 +689,12 @@ test("chooseReplacement projection is private and exposes only DTO-safe replacem
     JSON.stringify(forDecisionPlayer).includes("effect-choose-replacement"),
     false,
   );
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("processId"), false);
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("replacementIds"),
+    false,
+  );
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("mandatory"), false);
   assert.equal(
     JSON.stringify(forDecisionPlayer).includes(
       String(hiddenDecisionPlayerDeckCard.cardId),
