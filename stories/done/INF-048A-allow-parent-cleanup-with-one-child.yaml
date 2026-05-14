@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Fix the post-merge cleanup validator so it accepts the valid one-child
   parent/substory workflow that PR #347 used, while retaining the parent
