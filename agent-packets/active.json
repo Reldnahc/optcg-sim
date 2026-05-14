@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-048A.md",
+      "storyId": "INF-048A",
+      "storyPath": "stories/approved/INF-048A-allow-parent-cleanup-with-one-child.yaml",
+      "storySha256": "b173b931ada77162301c9344fca0cfe0fc2e1baf6c48d90d7860b6b2fe84318d"
+    }
+  ],
   "version": 1
 }

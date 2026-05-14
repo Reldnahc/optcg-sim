@@ -6,7 +6,80 @@ import path from "node:path";
 import { test } from "vitest";
 
 import { sha256 } from "../../tools/agent-packet-lifecycle.ts";
-import { buildCleanupDryRunPlan } from "../../tools/post-merge-cleanup/validator.ts";
+import {
+  buildBoundCleanupPlan,
+  buildCleanupDryRunPlan,
+} from "../../tools/post-merge-cleanup/validator.ts";
+
+test("parent cleanup planning accepts exactly one child story with matching non-packetized parent evidence", async () => {
+  const repoRoot = await makeTempRepo([
+    { id: "INF-601", fileName: "INF-601-a.yaml" },
+    parentStory("CARD-001", ["INF-601"]),
+  ]);
+  const trustedMainSha = initializeGitRepo(repoRoot);
+  const metadataSourceHash = sha256("one-child-parent-metadata");
+
+  const plan = await buildCleanupDryRunPlan({
+    evidence: buildParentEvidence(
+      trustedMainSha,
+      [{ fileName: "INF-601-a.yaml", storyId: "INF-601" }],
+      metadataSourceHash,
+    ),
+    metadata: parentMetadata(
+      ["stories/approved/INF-601-a.yaml"],
+      ["story/inf-601"],
+    ),
+    metadataSourceRef: `pr-body:pr-501-body:${metadataSourceHash}`,
+    repoRoot,
+    trustedMainSha,
+  });
+
+  assert.equal(plan.mode, "parent");
+  assert.deepEqual(
+    plan.boundStories.map((story) => story.storyId),
+    ["INF-601"],
+  );
+  assert.equal(plan.boundParentStory?.storyId, "CARD-001");
+  assert.equal(
+    plan.boundParentStory?.storyPath,
+    "stories/approved/CARD-001-parent.yaml",
+  );
+
+  const boundPlan = buildBoundCleanupPlan({
+    generatedAt: "2026-01-02T00:00:00.000Z",
+    inputsHash: sha256("one-child-parent-cleanup"),
+    plan,
+  });
+
+  assert.deepEqual(boundPlan.packetCommand, {
+    args: [
+      "--story",
+      "stories/approved/INF-601-a.yaml",
+      "--parent-story",
+      "stories/approved/CARD-001-parent.yaml",
+      "--parent-story-sha256",
+      plan.boundParentStory?.storySha256,
+    ],
+    command: "packets:complete-many",
+  });
+});
+
+test("parent cleanup planning rejects zero listed child stories", async () => {
+  await assert.rejects(
+    () =>
+      buildCleanupDryRunPlan({
+        evidence: buildParentEvidence(
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          [],
+        ),
+        metadata: parentMetadata([], ["story/parent"]),
+        metadataSourceRef: "pr-body:pr-501-body:meta-1",
+        repoRoot: "unused",
+        trustedMainSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      }),
+    /parent-mode cleanup requires at least one story/i,
+  );
+});
 
 test("parent cleanup planning rejects absent ambiguous mismatched or already-done parent stories", async () => {
   const noParentRoot = await makeTempRepo([
@@ -327,25 +400,43 @@ function parentStory(id, childStoryIds, childStoryForm = "scalar") {
   };
 }
 
-function parentMetadata() {
+function parentMetadata(
+  stories = [
+    "stories/approved/INF-601-a.yaml",
+    "stories/approved/INF-602-b.yaml",
+  ],
+  branches = ["story/inf-601", "story/inf-602"],
+) {
   return {
-    branches: ["story/inf-601", "story/inf-602"],
+    branches,
     mode: "parent",
-    stories: [
-      "stories/approved/INF-601-a.yaml",
-      "stories/approved/INF-602-b.yaml",
-    ],
+    stories,
   };
 }
 
-function buildParentEvidence(trustedMainSha) {
+function buildParentEvidence(
+  trustedMainSha,
+  childStories = [
+    { fileName: "INF-601-a.yaml", storyId: "INF-601" },
+    { fileName: "INF-602-b.yaml", storyId: "INF-602" },
+  ],
+  metadataSourceHash = "meta-1",
+) {
+  const associatedStories = childStories.map((story) =>
+    storyEvidence(story.storyId, story.fileName, trustedMainSha),
+  );
+  const includedStories = childStories.map((story) =>
+    storyEvidence(story.storyId, story.fileName, trustedMainSha),
+  );
+  const childChangedFiles = childStories.flatMap((story) => [
+    `stories/approved/${story.fileName}`,
+    `agent-packets/${story.storyId}.md`,
+  ]);
+
   return {
     baseBranch: "main",
     changedFiles: [
-      "stories/approved/INF-601-a.yaml",
-      "agent-packets/INF-601.md",
-      "stories/approved/INF-602-b.yaml",
-      "agent-packets/INF-602.md",
+      ...childChangedFiles,
       "stories/approved/CARD-001-parent.yaml",
     ],
     defaultBranch: "main",
@@ -353,12 +444,12 @@ function buildParentEvidence(trustedMainSha) {
     merged: true,
     mergedAt: "2026-01-02T00:00:00.000Z",
     metadataSource: {
-      contentSha256: "meta-1",
+      contentSha256: metadataSourceHash,
       kind: "pr-body",
       sourceId: "pr-501-body",
       updatedAt: "2026-01-01T00:00:00.000Z",
     },
-    metadataSourceRef: "pr-body:pr-501-body:meta-1",
+    metadataSourceRef: `pr-body:pr-501-body:${metadataSourceHash}`,
     prNumber: 700,
     reviews: [
       {
@@ -370,16 +461,10 @@ function buildParentEvidence(trustedMainSha) {
         submittedAt: "2026-01-02T00:00:00.000Z",
       },
     ],
-    stories: [
-      storyEvidence("INF-601", "INF-601-a.yaml", trustedMainSha),
-      storyEvidence("INF-602", "INF-602-b.yaml", trustedMainSha),
-    ],
+    stories: associatedStories,
     parentLifecycle: {
       cleanupPlanRecordedAt: "2026-01-01T10:00:00.000Z",
-      includedStories: [
-        storyEvidence("INF-601", "INF-601-a.yaml", trustedMainSha),
-        storyEvidence("INF-602", "INF-602-b.yaml", trustedMainSha),
-      ],
+      includedStories,
       parentIntegrationReviewRecordId: "parent-review-1",
       parentRevisionResponseId: "parent-revision-1",
     },

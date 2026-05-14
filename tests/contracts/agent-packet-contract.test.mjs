@@ -51,7 +51,7 @@ test("repo guidance documents active-story packet requirements", async () => {
   );
   assert.match(
     agents,
-    /A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` or `pnpm run packets:complete-many --story <stories\/approved\/\.\.\.yaml> --story <stories\/approved\/\.\.\.yaml>` does not require a separate reviewer subagent run/i,
+    /A cleanup commit containing only the exact file changes produced by `pnpm run packets:complete --story <stories\/approved\/\.\.\.yaml>` or `pnpm run packets:complete-many` with one or more child `--story <stories\/approved\/\.\.\.yaml>` arguments does not require a separate reviewer subagent run/i,
   );
   assert.match(
     agents,
