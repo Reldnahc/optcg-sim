@@ -8,7 +8,7 @@ type: tooling
 area: cards
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Make the `@optcg/cards` fixture capture package script reproducible by
   removing its dependency on an undeclared `tsx` executable and routing it

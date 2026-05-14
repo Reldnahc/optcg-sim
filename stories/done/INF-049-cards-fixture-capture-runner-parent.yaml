@@ -8,7 +8,7 @@ type: tooling
 area: cards
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the narrow tooling repair that makes the cards fixture capture
   script run through declared repository tooling instead of an undeclared
