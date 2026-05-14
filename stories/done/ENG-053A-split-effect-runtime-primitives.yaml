@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Split the mixed `effect-runtime-primitives.ts` implementation into cohesive
   draw primitive, selected-target K.O. primitive, and selected-target K.O.
