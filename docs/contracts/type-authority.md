@@ -207,3 +207,43 @@ No canonical contract fields are added by TYP-005D. This preserves
 `contracts/canonical-types.ts` and `contracts/types/*` as canonical authority
 for the cited spec sections without promoting package drift or unresolved
 behavior semantics into shared contracts.
+
+## TYP-005E Engine-Consumer Migration Closure
+
+TYP-005E implemented the required engine-core migration for every TYP-005C
+`package_drift_or_engine_internal` disposition before package projection sync.
+Because TYP-005 is using the parent integration branch workflow, the TYP-005E
+story file remains in `stories/approved/` until the parent branch lands on
+`main`; this section records the checked-in substory prerequisite evidence for
+TYP-005F.
+
+Reviewed branch commit:
+
+- `222b4d3` (`TYP-005E migrate engine consumers off package drift`)
+
+The TYP-005E migration removed engine-core reliance on these package-only fields
+or moved the data to internal engine-local representations:
+
+- `Action.respondToDecision.playerId`
+- `PublicCardView.currentPower`
+- `BattleState.counterPower`
+- `BattleState.damageProcess`
+- `TransientCardSet.ownerId`
+- `TransientCardSet.controllerId`
+
+TYP-005E preserved existing gameplay and visibility behavior while aligning
+engine consumers with the settled canonical projection boundary. Its reviewed
+verification evidence includes:
+
+- canonical projection simulation with `types:sync:write` followed by
+  `corepack pnpm exec tsc -p packages/engine-core/tsconfig.json --noEmit`
+- focused engine-core regression coverage for decision responses, battle,
+  replacement, transient-set, and visibility paths
+- `corepack pnpm exec vitest run packages/engine-core/src`
+- `corepack pnpm exec vitest run tests/hidden-info`
+- `corepack pnpm run typecheck`
+- `corepack pnpm run stories:validate`
+- `corepack pnpm verify`
+
+No canonical contract fields were added by TYP-005E. No package projection files
+were changed by TYP-005E.

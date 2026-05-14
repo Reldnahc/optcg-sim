@@ -170,7 +170,6 @@ export type Action =
   | {
       type: "respondToDecision";
       decisionId: DecisionId;
-      playerId?: PlayerId;
       response: DecisionResponse;
     };
 

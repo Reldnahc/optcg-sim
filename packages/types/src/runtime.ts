@@ -95,12 +95,6 @@ export interface BattleState {
   blocker?: CardRef;
   step: BattleStep;
   damageCount: number;
-  counterPower?: number;
-  damageProcess?: {
-    type: "multipleDamage";
-    sourceKeyword: "doubleAttack";
-    remainingDamagePoints: number;
-  };
 }
 
 export interface TurnState {
@@ -172,8 +166,6 @@ export interface TransientCardSet {
   id: SelectionSetId;
   cards: CardRef[];
   origin: ZoneRef | "topOfDeck" | "lifeDamage" | "custom";
-  ownerId: PlayerId;
-  controllerId: PlayerId;
   visibility: EventVisibility;
   cleanupPolicy: "returnToOrigin" | "trashAfterResolution" | "none";
 }

@@ -42,7 +42,6 @@ export interface PublicCardView {
   zone: ZoneRef;
   state?: "active" | "rested";
   attachedDonCount: number;
-  currentPower?: number;
   turnPlayed?: number;
 }
 
@@ -90,9 +89,6 @@ export interface PublicDecision {
   prompt: string;
   causedBy: CausalityRef;
   timeoutMs?: number;
-  processId?: string;
-  replacementIds?: string[];
-  mandatory?: boolean;
 }
 
 export type PublicLegalAction =

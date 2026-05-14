@@ -8,7 +8,6 @@ import type {
   EventVisibility,
   PlayerId,
   QueueEntryId,
-  ReplacementAppliedEventPayload,
   StateSeq,
 } from "./index.js";
 
@@ -50,7 +49,7 @@ test("event visibility variants compile for canonical union", () => {
 });
 
 test("replacementApplied payload exposes only deterministic public identifiers and hashes", () => {
-  const payload: ReplacementAppliedEventPayload = {
+  const payload = {
     processId: "queue-entry:ko:target:0",
     replacementId: "replacement:would-be-ko-draw-1",
     previousPayloadHash:
