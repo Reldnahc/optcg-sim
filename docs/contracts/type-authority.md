@@ -60,7 +60,7 @@ Canonical module to package module mapping is one-to-one by filename:
 - Later sync verification must overwrite or reject manual-only drift in package outputs.
 - Sync write entrypoint: `corepack pnpm run types:sync:write`
 - Stale-output check entrypoint: `corepack pnpm run types:sync:check`
-- The stale-output check entrypoint is not yet wired into root `verify` in this story.
+- The stale-output check entrypoint is enforced through root `contracts`, which is included by root `verify`.
 
 ## Change Authority Rule
 
