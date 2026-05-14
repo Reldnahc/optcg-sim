@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-049A.md",
+      "storyId": "INF-049A",
+      "storyPath": "stories/approved/INF-049A-cards-fixture-capture-runner.yaml",
+      "storySha256": "25343d9c3f4eb398d362cdaa2671d8858159e1fc1dd6bee7c376bf864351302d"
+    }
+  ],
   "version": 1
 }
