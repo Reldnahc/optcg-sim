@@ -5,7 +5,7 @@ id: TYP-006
 epic_id: M1-001
 title: Resolve PlayerView runtime DTO authority
 type: implementation
-area: engine-core
+area: engine
 primary_concern: view
 priority: high
 status: approved

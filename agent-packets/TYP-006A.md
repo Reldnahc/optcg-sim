@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id TYP-006A -->
 <!-- agent-packet:story-path stories/approved/TYP-006A-filter-state-player-view-canonical-dto-guard.yaml -->
-<!-- agent-packet:story-sha256 bb956acf59580322824d5e290f6f9bc385b9eda51f209335ff0ad57908c08c30 -->
+<!-- agent-packet:story-sha256 2f4c284d358b38d49838d31509529f8821c596aad307c8fd2cbcbb70bce22241 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -13,7 +13,7 @@ ID: TYP-006A
 Epic ID: M1-001
 Title: Guard filterStateForPlayer canonical DTO output
 Type: implementation
-Area: engine-core
+Area: engine
 Primary Concern: view
 
 ## Why
