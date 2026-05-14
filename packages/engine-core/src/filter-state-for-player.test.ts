@@ -968,7 +968,7 @@ test("sanitizes player-visible effect lifecycle events without mutating the jour
     type: "damageDealt",
     actor: p1,
     payload: {
-      publicAmount: 1,
+      amount: 1,
       damageProcess: {
         type: "multipleDamage",
         sourceKeyword: "doubleAttack",
@@ -1033,7 +1033,7 @@ test("sanitizes player-visible effect lifecycle events without mutating the jour
       seq: damageEvent.seq,
       type: damageEvent.type,
       actor: damageEvent.actor,
-      payload: { publicAmount: 1 },
+      payload: { amount: 1 },
       visibility: damageEvent.visibility,
       createdAtStateSeq: damageEvent.createdAtStateSeq,
     },

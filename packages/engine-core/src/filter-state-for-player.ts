@@ -258,8 +258,8 @@ const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
     };
   }
   if (event.type === "damageDealt") {
-    return typeof payload["publicAmount"] === "number"
-      ? { publicAmount: payload["publicAmount"] }
+    return typeof payload["amount"] === "number"
+      ? { amount: payload["amount"] }
       : {};
   }
   if (event.type === "cardRevealed") {

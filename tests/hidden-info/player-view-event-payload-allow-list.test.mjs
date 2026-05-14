@@ -55,7 +55,13 @@ test("PlayerView event payload projection omits dangerous unexpected keys", () =
       privateCandidates: [source.instanceId],
       safeish: "value",
     }),
-    visibleEventBase(state, 3, "cardRevealed", {
+    visibleEventBase(state, 3, "damageDealt", {
+      amount: 1,
+      hiddenCardIds: [toCardId("hidden-card-id-damage")],
+      rawProcessPayload: { secret: true },
+      privateCandidates: [source.instanceId],
+    }),
+    visibleEventBase(state, 4, "cardRevealed", {
       playerId: p1,
       instanceId: source.instanceId,
       cardId: source.cardId,
@@ -63,7 +69,7 @@ test("PlayerView event payload projection omits dangerous unexpected keys", () =
       rawProcessPayload: { secret: true },
       privateCandidates: [source.instanceId],
     }),
-    visibleEventBase(state, 4, "cardRevealed", {
+    visibleEventBase(state, 5, "cardRevealed", {
       revealId: "reveal:event-allow-list",
       cards: [
         {
@@ -97,6 +103,9 @@ test("PlayerView event payload projection omits dangerous unexpected keys", () =
         prompt: "Resolve the pending choice.",
       },
       {},
+      {
+        amount: 1,
+      },
       {
         playerId: p1,
         instanceId: source.instanceId,
