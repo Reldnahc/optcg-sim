@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/TYP-006A.md",
+      "storyId": "TYP-006A",
+      "storyPath": "stories/approved/TYP-006A-filter-state-player-view-canonical-dto-guard.yaml",
+      "storySha256": "bb956acf59580322824d5e290f6f9bc385b9eda51f209335ff0ad57908c08c30"
+    }
+  ],
   "version": 1
 }

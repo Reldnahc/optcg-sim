@@ -1,0 +1,65 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-006
+epic_id: M1-001
+title: Resolve PlayerView runtime DTO authority
+type: implementation
+area: engine-core
+primary_concern: view
+priority: high
+status: approved
+summary: >
+  Confirm and enforce that engine-core PlayerView runtime projection emits only
+  fields authorized by the canonical public DTO contracts after TYP-005 made
+  package projections generated canonical output.
+story_boundary: >
+  This parent is not directly implementable. It coordinates one narrow child
+  story that verifies and, if needed, aligns filterStateForPlayer runtime output
+  with canonical PlayerView, PublicCardView, and PublicDecision DTO authority.
+allowed_touch_points:
+  - stories/generated/TYP-006-player-view-runtime-dto-authority-parent.yaml
+  - stories/generated/TYP-006A-filter-state-player-view-canonical-dto-guard.yaml
+  - stories/approved/TYP-006-player-view-runtime-dto-authority-parent.yaml
+  - stories/approved/TYP-006A-filter-state-player-view-canonical-dto-guard.yaml
+  - stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md
+spec_refs:
+  - 03-game-state-events-decisions.s003
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 06-visibility-security.s004
+  - 06-visibility-security.s007
+  - 06-visibility-security.s017
+  - 06-visibility-security.s021
+  - 22-v6-implementation-tightening.s006
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+scope:
+  - coordinate the post-TYP-005 PlayerView runtime DTO authority follow-up as one narrow child story
+  - require the child story to decide field handling only from canonical specs, TYP-005 disposition records, and existing ambiguity records
+  - require unresolved replacement-decision visibility semantics to remain fail-closed and recorded as ambiguity instead of being promoted into public DTOs
+non_scope:
+  - direct implementation from this parent story
+  - packetizing or activating this parent story as an active implementation story
+  - redesigning PlayerView, replacement handling, compute-view, protocol payloads, client UI, replay views, or gameplay rules
+dependencies:
+  - TYP-005
+acceptance_criteria:
+  - approved child story exists for the runtime DTO authority guard
+  - child story stays narrow to filterStateForPlayer public DTO output and its direct tests
+  - child story does not add public DTO fields without explicit canonical authority
+required_tests:
+  - run `corepack pnpm run stories:review-plan -- --parent stories/generated/TYP-006-player-view-runtime-dto-authority-parent.yaml`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - do not packetize this parent as an active implementation story
+  - use child packets only and keep one active child packet at a time
+  - fail closed on hidden-information or replacement-decision visibility ambiguity
+ambiguity_policy: fail_and_escalate
+child_stories:
+  - id: TYP-006A
+    title: Guard filterStateForPlayer canonical DTO output
+    concern: view
+    depends_on: []

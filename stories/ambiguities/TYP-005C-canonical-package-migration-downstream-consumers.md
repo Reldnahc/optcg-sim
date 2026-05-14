@@ -27,6 +27,13 @@ decision semantics are player-visible in canonical `PublicDecision` payloads.
 These fields stay fail-closed behind ambiguity resolution until an approved
 follow-up story or ambiguity decision provides explicit canonical authority.
 
+TYP-006A records the current runtime outcome for that fail-closed posture:
+`filterStateForPlayer` projects `chooseReplacement` as recipient-private
+metadata only and omits `processId`, `replacementIds`, and `mandatory` from the
+public `PlayerView.pendingDecision` JSON while this ambiguity remains
+unresolved. This note does not decide whether those fields should become public
+later; any such change still requires explicit canonical visibility authority.
+
 TYP-005C explicitly forbids changing canonical contracts and forbids engine,
 server, client, replay, UI, database, or gameplay behavior changes. Therefore
 the active story cannot satisfy its required `typecheck` and `verify` gates

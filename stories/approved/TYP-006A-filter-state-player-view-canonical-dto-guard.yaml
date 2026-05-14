@@ -1,0 +1,67 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-006A
+epic_id: M1-001
+title: Guard filterStateForPlayer canonical DTO output
+type: implementation
+area: engine-core
+primary_concern: view
+priority: high
+status: approved
+summary: >
+  Verify and enforce that filterStateForPlayer emits PlayerView JSON matching
+  canonical PublicCardView and PublicDecision DTO authority after TYP-005.
+story_boundary: >
+  Own only filterStateForPlayer public PlayerView DTO projection and focused
+  tests for undeclared public fields. Stop before changing replacement routing,
+  compute-view semantics, client protocol behavior, replay behavior, or the
+  wider view model.
+allowed_touch_points:
+  - packages/engine-core/src/filter-state-for-player.ts
+  - packages/engine-core/src/filter-state-for-player.test.ts
+  - stories/ambiguities/TYP-005C-canonical-package-migration-downstream-consumers.md
+  - stories/generated/TYP-006A-filter-state-player-view-canonical-dto-guard.yaml
+  - stories/approved/TYP-006A-filter-state-player-view-canonical-dto-guard.yaml
+  - agent-packets/TYP-006A.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s003
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 06-visibility-security.s004
+  - 06-visibility-security.s007
+  - 06-visibility-security.s017
+  - 06-visibility-security.s021
+  - 22-v6-implementation-tightening.s006
+scope:
+  - inspect current filterStateForPlayer runtime output for `PublicCardView.currentPower`, `pendingDecision.processId`, `pendingDecision.replacementIds`, and `pendingDecision.mandatory`
+  - keep `currentPower` out of public `PublicCardView` projection unless canonical `PlayerView` authority explicitly adds it
+  - keep replacement-process routing fields out of public `PublicDecision` projection while the TYP-005C ambiguity record says visibility semantics are unresolved
+  - add or tighten focused tests so emitted PlayerView JSON and canonical DTO field sets agree for board card views and chooseReplacement pending decisions
+  - update the existing ambiguity record only if needed to clarify that runtime projection is fail-closed while the replacement-decision visibility question remains unresolved
+non_scope:
+  - adding new canonical DTO fields without explicit spec authority
+  - changing `contracts/types/*` or `packages/types/src/*` unless canonical authority is found and this story is split or revised first
+  - changing replacement-effect routing, decision response semantics, compute-view power calculation, legal-action generation, server protocol payloads, client UI, replay behavior, or gameplay rules
+  - broad hidden-information test reorganization
+dependencies:
+  - TYP-005
+acceptance_criteria:
+  - runtime `filterStateForPlayer` output does not contain undeclared public DTO fields from the inspected field set
+  - canonical `PublicCardView` and `PublicDecision` types match the emitted PlayerView JSON shape for the inspected fields
+  - replacement-decision routing metadata remains internal or ambiguity-gated, not silently public
+  - hidden-information safety is preserved for the focused PlayerView paths
+required_tests:
+  - run `corepack pnpm run packets:generate --story stories/approved/TYP-006A-filter-state-player-view-canonical-dto-guard.yaml --activate`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm exec vitest run packages/engine-core/src/filter-state-for-player.test.ts`
+  - run `corepack pnpm exec vitest run tests/hidden-info`
+  - run `corepack pnpm run contracts`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - use TDD for any production behavior change
+  - fail closed on hidden-information or replacement-decision visibility ambiguity
+  - do not broaden this story to redesign view DTOs, replacement decisions, compute-view, protocol, client, replay, or gameplay behavior
+  - if specs authorize a field as public, stop and split a canonical contract story before adding it
+ambiguity_policy: fail_and_escalate

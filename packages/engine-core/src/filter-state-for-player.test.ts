@@ -253,6 +253,7 @@ test("does not project computed current power in public card views", () => {
     ].map((card) => "currentPower" in card),
     [false, false, false, false, false],
   );
+  assert.equal(JSON.stringify(view).includes("currentPower"), false);
   assert.equal(
     state.cardManifest.cards[p1State.leader.cardId]?.power,
     beforeLeaderPower,
