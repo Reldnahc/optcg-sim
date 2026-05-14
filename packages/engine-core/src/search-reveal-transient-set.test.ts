@@ -1,10 +1,5 @@
 import assert from "node:assert/strict";
-import type {
-  Action,
-  Effect,
-  EngineEvent,
-  TransientCardSet,
-} from "@optcg/types";
+import type { Action, Effect, EngineEvent } from "@optcg/types";
 import { test } from "vitest";
 
 import {
@@ -164,11 +159,11 @@ const respondWithCards = (
     typeof createSearchRevealDecisionState
   >["decision"]["id"],
   cards: ReturnType<typeof createSearchRevealDecisionState>["candidate"][],
-  playerId = p1,
+  playerId?: typeof p1,
 ): Extract<Action, { type: "respondToDecision" }> => ({
   type: "respondToDecision",
   decisionId,
-  playerId,
+  ...(playerId === undefined ? {} : { playerId }),
   response: { type: "cards", cards },
 });
 
@@ -745,8 +740,10 @@ test("malformed search reveal transient set rejects without mutation", () => {
   const state = createActiveState();
   const topDeck = markTopDeckCard(state, "character");
   const entry = queueDrawForP1();
-  const malformedSet: TransientCardSet = {
-    id: "set:search-reveal:queue-entry-1" as TransientCardSet["id"],
+  const malformedSet: Parameters<
+    typeof createSupportedSearchRevealChoiceDecisionFromTransientSet
+  >[3] = {
+    id: "set:search-reveal:queue-entry-1",
     cards: [
       {
         instanceId: topDeck.instanceId,
@@ -755,8 +752,7 @@ test("malformed search reveal transient set rejects without mutation", () => {
         zone: topDeck.zone,
       },
       {
-        instanceId:
-          "extra-instance" as TransientCardSet["cards"][number]["instanceId"],
+        instanceId: "extra-instance" as typeof topDeck.instanceId,
         cardId: topDeck.cardId,
         playerId: p1,
         zone: topDeck.zone,
@@ -785,6 +781,13 @@ test("malformed search reveal transient set rejects without mutation", () => {
   });
   assert.equal(state.pendingDecision, undefined);
   assert.deepEqual(state.revealedCards, []);
+});
+
+test("search reveal response accepts canonical respondToDecision payload without playerId", () => {
+  const { candidate, decision, state } = createSearchRevealDecisionState();
+  const result = applyAction(state, respondWithCards(decision.id, [candidate]));
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
 });
 
 test("valid search reveal choice moves selected Character to hand and clears transient state privately", () => {
@@ -992,7 +995,6 @@ test("invalid search reveal choice responses fail closed without mutation or eve
     {
       type: "respondToDecision",
       decisionId: decision.id,
-      playerId: p1,
       response: { type: "targets", targets: [candidate] },
     },
     respondWithCards(decision.id, [candidate, candidate]),
@@ -1003,6 +1005,12 @@ test("invalid search reveal choice responses fail closed without mutation or eve
       } as typeof candidate,
     ]),
     respondWithCards(decision.id, [candidate], p2),
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      playerId: null,
+      response: { type: "cards", cards: [candidate] },
+    } as unknown as Extract<Action, { type: "respondToDecision" }>,
   ];
 
   for (const action of invalidResponses) {

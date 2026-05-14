@@ -68,6 +68,25 @@ const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
 ];
 
+const hasMalformedRespondToDecisionPlayerId = (
+  action: Extract<Action, { type: "respondToDecision" }>,
+): boolean =>
+  "playerId" in action &&
+  typeof (action as { playerId?: unknown }).playerId !== "string";
+
+const getRespondingPlayerId = (
+  action: Extract<Action, { type: "respondToDecision" }>,
+  decisionPlayerId: PlayerId,
+): PlayerId => {
+  if (
+    "playerId" in action &&
+    typeof (action as { playerId?: unknown }).playerId === "string"
+  ) {
+    return (action as { playerId: PlayerId }).playerId;
+  }
+  return decisionPlayerId;
+};
+
 const isCardRef = (value: unknown): value is CardRef => {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -157,14 +176,12 @@ const getChooseReplacementLegalActions = (
     {
       type: "respondToDecision",
       decisionId: decision.id,
-      playerId: decision.playerId,
       response: { type: "replacement" },
     },
     ...decision.replacementIds.map(
       (replacementId): LegalAction => ({
         type: "respondToDecision",
         decisionId: decision.id,
-        playerId: decision.playerId,
         response: { type: "replacement", replacementId },
       }),
     ),
@@ -190,14 +207,12 @@ const getSearchRevealDecisionLegalActions = (
     {
       type: "respondToDecision",
       decisionId: decision.id,
-      playerId: decision.playerId,
       response: { type: "cards", cards: [] },
     },
     ...decision.candidates.map(
       (candidate): LegalAction => ({
         type: "respondToDecision",
         decisionId: decision.id,
-        playerId: decision.playerId,
         response: { type: "cards", cards: [candidate.card] },
       }),
     ),
@@ -212,7 +227,14 @@ const applyChooseReplacementDecisionResponse = (
   if (decision === undefined || decision.type !== "chooseReplacement") {
     return null;
   }
-  if (action.playerId !== decision.playerId) {
+  if (hasMalformedRespondToDecisionPlayerId(action)) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Player does not match current pending decision."),
+    );
+  }
+  if (getRespondingPlayerId(action, decision.playerId) !== decision.playerId) {
     return toEngineResult(
       state,
       [],
@@ -434,7 +456,19 @@ const applyRespondToDecision = (
       "Decision id does not match current pending decision.",
     );
   }
-  if (action.playerId !== undefined && action.playerId !== decision.playerId) {
+  if (hasMalformedRespondToDecisionPlayerId(action)) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        {
+          type: "invalidDecisionResponse",
+          reason: "Player does not match current pending decision.",
+        },
+      ],
+    );
+  }
+  if (getRespondingPlayerId(action, decision.playerId) !== decision.playerId) {
     return toEngineResult(
       state,
       [],

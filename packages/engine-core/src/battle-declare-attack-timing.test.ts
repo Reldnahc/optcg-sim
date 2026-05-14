@@ -508,8 +508,11 @@ test("ENG-023B: character Counter is usable after attacker and defender attack t
 
   assert.equal(countered.errors, undefined);
   const counterBattle = must(countered.state.battle, "counter battle");
+  const battleWithInternal = counterBattle as typeof counterBattle & {
+    counterPower?: number;
+  };
   assert.equal(counterBattle.step, "counter");
-  assert.equal(counterBattle.counterPower, 1000);
+  assert.equal(battleWithInternal.counterPower, 1000);
   assert.equal(
     countered.events.some((event) => event.type === "counterUsed"),
     true,

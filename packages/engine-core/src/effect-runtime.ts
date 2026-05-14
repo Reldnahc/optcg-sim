@@ -11,12 +11,23 @@ import type {
   GameState,
   MatchCardManifest,
   QueueEntryId,
-  ReplacementAppliedEventPayload,
   ReplacementProcess,
   ResolvedCard,
   SelectTargetsDecision,
   TimingWindowId,
 } from "@optcg/types";
+type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
+  damageProcess?: {
+    type?: string;
+    remainingDamagePoints: number;
+  };
+};
+type EngineInternalReplacementAppliedEventPayload = {
+  processId: ReplacementProcess["id"];
+  replacementId: string;
+  previousPayloadHash: string;
+  transformedPayloadHash: string;
+};
 
 import { appendEvent, rebaseEvents, toEngineResult } from "./action-results.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
@@ -106,10 +117,11 @@ export const detectPendingRuntimeWork = (
 export const isSupportedDamageDeferredEffectQueueState = (
   state: GameState,
 ): boolean => {
+  const battle = state.battle as EngineInternalBattleState | undefined;
   if (
     state.deferredTriggers.length === 0 ||
-    state.battle?.damageProcess?.type !== "multipleDamage" ||
-    state.battle.damageProcess.remainingDamagePoints <= 0
+    battle?.damageProcess?.type !== "multipleDamage" ||
+    battle.damageProcess.remainingDamagePoints <= 0
   ) {
     return false;
   }
@@ -444,7 +456,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
       replacementId: candidate.id,
       previousPayloadHash: hashCanonicalStateValue(process.payload),
       transformedPayloadHash: hashCanonicalStateValue(transformedPayload),
-    } satisfies ReplacementAppliedEventPayload,
+    } satisfies EngineInternalReplacementAppliedEventPayload,
     { type: "public" },
   );
   const applied = events[events.length - 1];

@@ -8,6 +8,12 @@ import type {
   GameState,
   QueueEntryId,
 } from "@optcg/types";
+type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
+  damageProcess?: {
+    type?: string;
+    remainingDamagePoints: number;
+  };
+};
 
 import {
   appendEvent,
@@ -86,8 +92,13 @@ const hasExactIds = (
 };
 
 const isActiveDoubleAttackDamageProcess = (state: GameState): boolean =>
-  state.battle?.damageProcess?.type === "multipleDamage" &&
-  state.battle.damageProcess.remainingDamagePoints > 0;
+  (() => {
+    const battle = state.battle as EngineInternalBattleState | undefined;
+    return (
+      battle?.damageProcess?.type === "multipleDamage" &&
+      battle.damageProcess.remainingDamagePoints > 0
+    );
+  })();
 
 export const createEffectRuntimeQueueResults = (
   dependencies: EffectRuntimeQueueResultsDependencies,

@@ -29,11 +29,12 @@ type PublicChooseReplacementDecision = PublicDecision &
     >,
     "processId" | "replacementIds" | "mandatory"
   >;
+type EngineInternalPublicCardView = PublicCardView & { currentPower?: number };
 
 const toPublicCardView = (
   card: CardInstance,
   currentPower?: number,
-): PublicCardView => ({
+): EngineInternalPublicCardView => ({
   instanceId: card.instanceId,
   cardId: card.cardId,
   owner: card.owner,
@@ -48,7 +49,7 @@ const toPublicCardView = (
 const toBoardPublicCardView = (
   card: CardInstance,
   computedPowerByInstance: ReadonlyMap<InstanceId, number> | undefined,
-): PublicCardView =>
+): EngineInternalPublicCardView =>
   toPublicCardView(card, computedPowerByInstance?.get(card.instanceId));
 
 const toPublicLifeView = (player: PlayerState) => ({

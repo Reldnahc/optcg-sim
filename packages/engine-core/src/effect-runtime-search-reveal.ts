@@ -9,7 +9,6 @@ import type {
   EngineResult,
   GameState,
   SelectCardsDecision,
-  TransientCardSet,
 } from "@optcg/types";
 
 import {
@@ -23,6 +22,15 @@ import { hashCanonicalStateValue } from "./canonical-state.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
 
 type SearchEffect = Extract<Effect, { type: "search" }>;
+type EngineInternalTransientCardSet = {
+  id: string;
+  cards: CardRef[];
+  origin: string;
+  ownerId?: CardInstance["owner"];
+  controllerId?: CardInstance["controller"];
+  visibility: { type: string; playerId: EffectQueueEntry["controllerId"] };
+  cleanupPolicy: string;
+};
 
 export type SearchRevealTransientSetResult =
   | {
@@ -30,7 +38,7 @@ export type SearchRevealTransientSetResult =
       kind: "created";
       ok: true;
       state: GameState;
-      transientSet: TransientCardSet;
+      transientSet: EngineInternalTransientCardSet;
       transientSetHash: string;
     }
   | {
@@ -52,7 +60,7 @@ export type SearchRevealChoiceDecisionResult =
       kind: "decisionCreated";
       ok: true;
       state: GameState;
-      transientSet: TransientCardSet;
+      transientSet: EngineInternalTransientCardSet;
       transientSetHash: string;
     }
   | {
@@ -202,8 +210,8 @@ export const createSupportedSearchRevealTransientSet = (
     };
   }
 
-  const transientSet: TransientCardSet = {
-    id: `set:search-reveal:${String(entry.id)}` as TransientCardSet["id"],
+  const transientSet: EngineInternalTransientCardSet = {
+    id: `set:search-reveal:${String(entry.id)}`,
     cards: [
       {
         instanceId: topDeck.instanceId,
@@ -236,11 +244,28 @@ const decisionIdForEntry = (entry: EffectQueueEntry) =>
   toDecisionId(`decision:selectCards:search-reveal:${String(entry.id)}`);
 
 const transientSetIdForEntry = (entry: EffectQueueEntry) =>
-  `set:search-reveal:${String(entry.id)}` as TransientCardSet["id"];
+  `set:search-reveal:${String(entry.id)}`;
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
 ];
+const hasMalformedRespondToDecisionPlayerId = (
+  action: Extract<Action, { type: "respondToDecision" }>,
+): boolean =>
+  "playerId" in action &&
+  typeof (action as { playerId?: unknown }).playerId !== "string";
+const getRespondingPlayerId = (
+  action: Extract<Action, { type: "respondToDecision" }>,
+  decisionPlayerId: SelectCardsDecision["playerId"],
+): SelectCardsDecision["playerId"] => {
+  if (
+    "playerId" in action &&
+    typeof (action as { playerId?: unknown }).playerId === "string"
+  ) {
+    return (action as { playerId: SelectCardsDecision["playerId"] }).playerId;
+  }
+  return decisionPlayerId;
+};
 
 const cardRefMatches = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
@@ -317,7 +342,7 @@ const hasExpectedTransientSetShape = (
   state: GameState,
   playerId: EffectQueueEntry["controllerId"],
   entry: EffectQueueEntry,
-  transientSet: TransientCardSet,
+  transientSet: EngineInternalTransientCardSet,
 ): boolean => {
   if (
     state.pendingDecision !== undefined ||
@@ -354,7 +379,7 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: SearchEffect,
-  transientSet: TransientCardSet,
+  transientSet: EngineInternalTransientCardSet,
 ): SearchRevealChoiceDecisionResult => {
   const supported = validateSupportedSearchEffect(state, entry, effect);
   if (!supported.ok) {
@@ -388,7 +413,9 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
     request: {
       timing: "onResolution",
       chooser: "self",
-      set: transientSet.id,
+      set: transientSet.id as NonNullable<
+        SelectCardsDecision["request"]["set"]
+      >,
       filter: effect.request.filter,
       min: 0,
       max: 1,
@@ -498,7 +525,11 @@ export const applySupportedSearchRevealChoiceResponse = (
   if (decision.id !== action.decisionId) {
     return fail("Decision id does not match current search reveal decision.");
   }
-  if (action.playerId !== decision.playerId) {
+  if (hasMalformedRespondToDecisionPlayerId(action)) {
+    return fail("Player does not match current search reveal decision.");
+  }
+  const respondingPlayerId = getRespondingPlayerId(action, decision.playerId);
+  if (respondingPlayerId !== decision.playerId) {
     return fail("Player does not match current search reveal decision.");
   }
   if (action.response.type !== "cards") {

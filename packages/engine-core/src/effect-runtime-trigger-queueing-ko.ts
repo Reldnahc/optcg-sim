@@ -6,6 +6,12 @@ import type {
   GameState,
   PlayerId,
 } from "@optcg/types";
+type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
+  damageProcess?: {
+    type?: string;
+    remainingDamagePoints: number;
+  };
+};
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { zonesEqual } from "./action-state.js";
@@ -353,9 +359,10 @@ export const createKOTriggerQueueing = (
     if (appended.length === 0) {
       return undefined;
     }
+    const battle = state.battle as EngineInternalBattleState | undefined;
     const shouldDeferForDamageProcess =
-      state.battle?.damageProcess?.type === "multipleDamage" &&
-      state.battle.damageProcess.remainingDamagePoints > 0 &&
+      battle?.damageProcess?.type === "multipleDamage" &&
+      battle.damageProcess.remainingDamagePoints > 0 &&
       String(resolvedEntry.id).startsWith("queue-entry:life-trigger:") &&
       String(resolvedEntry.timingWindowId).startsWith(
         "timing-window:life-trigger:",

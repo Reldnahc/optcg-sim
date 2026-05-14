@@ -32,6 +32,9 @@ import {
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
+type EngineInternalPublicCardView = { currentPower?: number };
+const cardCurrentPower = (card: unknown): number | undefined =>
+  (card as EngineInternalPublicCardView).currentPower;
 import { createInitialState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
@@ -227,10 +230,10 @@ test("projects computed current power only for public board leaders and characte
 
   assert.deepEqual(
     [
-      view.self.leader.currentPower,
-      view.self.characters[0]?.currentPower,
-      view.opponent.leader.currentPower,
-      view.opponent.characters[0]?.currentPower,
+      cardCurrentPower(view.self.leader),
+      cardCurrentPower(view.self.characters[0]),
+      cardCurrentPower(view.opponent.leader),
+      cardCurrentPower(view.opponent.characters[0]),
     ],
     [7000, 3000, 5000, 3000],
   );

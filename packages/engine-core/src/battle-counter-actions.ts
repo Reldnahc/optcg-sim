@@ -7,6 +7,9 @@ import type {
   LegalAction,
   PlayerId,
 } from "@optcg/types";
+type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
+  counterPower?: number;
+};
 
 import {
   appendEvent,
@@ -31,8 +34,6 @@ import {
 } from "./life-trigger-actions.js";
 import { chooseDonCombos } from "./play-card-legal-actions.js";
 import { getActiveDonCount } from "./play-card-support.js";
-
-type BattleResolver = (state: GameState) => EngineResult;
 
 export const createCounterStepPassDecision = (
   state: GameState,
@@ -490,6 +491,11 @@ const resolveCounterCardUse = (params: {
     );
   }
 
+  const nextBattle: EngineInternalBattleState = {
+    ...battle,
+    counterPower:
+      ((battle as EngineInternalBattleState).counterPower ?? 0) + counterValue,
+  };
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
@@ -503,10 +509,7 @@ const resolveCounterCardUse = (params: {
         trash: nextTrash,
       },
     },
-    battle: {
-      ...battle,
-      counterPower: (battle.counterPower ?? 0) + counterValue,
-    },
+    battle: nextBattle,
     eventJournal: [...state.eventJournal, ...events],
   };
   if (pendingDecision !== undefined) {
@@ -521,7 +524,7 @@ const resolveCounterCardUse = (params: {
 export const applyCounterStepDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
-  resolveSupportedVanillaBattle: BattleResolver,
+  resolveSupportedVanillaBattle: (state: GameState) => EngineResult,
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   const battle = state.battle;

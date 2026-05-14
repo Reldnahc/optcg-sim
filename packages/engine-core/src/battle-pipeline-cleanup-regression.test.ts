@@ -656,7 +656,16 @@ const runEng021dCounterPowerCleanupScript = () => {
     target: must(opened.state.battle, "ENG-021D counter battle").currentTarget,
   });
   assertAcceptedResult(opened.state, countered, "ENG-021D counter use");
-  assert.equal(countered.state.battle?.counterPower, 2000);
+  assert.equal(
+    (
+      countered.state.battle as
+        | (NonNullable<typeof countered.state.battle> & {
+            counterPower?: number;
+          })
+        | undefined
+    )?.counterPower,
+    2000,
+  );
   assertNoCleanupEvent(countered, "ENG-021D counter use");
 
   const passed = applyAction(countered.state, {

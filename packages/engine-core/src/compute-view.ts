@@ -9,6 +9,9 @@ import type {
   PlayerId,
   ResolvedCard,
 } from "@optcg/types";
+type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
+  counterPower?: number;
+};
 
 const unsupportedCombatKeywords = new Set<Keyword>([
   "doubleAttack",
@@ -254,11 +257,12 @@ const computeCardView = (
     card.controller === state.turn.turnPlayerId
       ? card.attachedDon.length * 1000
       : 0;
+  const battle = state.battle as EngineInternalBattleState | undefined;
   const counterBonus =
-    state.battle !== undefined &&
-    state.battle.currentTarget.instanceId === card.instanceId &&
-    state.battle.currentTarget.cardId === card.cardId
-      ? (state.battle.counterPower ?? 0)
+    battle !== undefined &&
+    battle.currentTarget.instanceId === card.instanceId &&
+    battle.currentTarget.cardId === card.cardId
+      ? (battle.counterPower ?? 0)
       : 0;
   const continuousPowerBonus = continuousPowerBonusForCard(state, card);
 
