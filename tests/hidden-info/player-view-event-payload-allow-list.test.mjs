@@ -41,6 +41,9 @@ test("PlayerView event payload projection omits dangerous unexpected keys", () =
   ];
   state.eventJournal = [
     visibleEventBase(state, 1, "decisionCreated", {
+      decisionId: "decision:event-allow-list",
+      decisionType: "selectCards",
+      playerId: p1,
       prompt: "Resolve the pending choice.",
       hiddenCardIds: [toCardId("hidden-card-id")],
       rawProcessPayload: { secret: true },
@@ -87,7 +90,12 @@ test("PlayerView event payload projection omits dangerous unexpected keys", () =
   assert.deepEqual(
     view.events.map((event) => event.payload),
     [
-      { prompt: "Resolve the pending choice." },
+      {
+        decisionId: "decision:event-allow-list",
+        decisionType: "selectCards",
+        playerId: p1,
+        prompt: "Resolve the pending choice.",
+      },
       {},
       {
         playerId: p1,

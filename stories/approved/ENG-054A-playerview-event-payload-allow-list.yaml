@@ -24,7 +24,9 @@ allowed_touch_points:
   - packages/engine-core/src/filter-state-for-player.test.ts
   - packages/engine-core/src/filter-state-for-player.real-states-*.test.ts
   - tests/hidden-info/**
+  - stories/generated/ENG-054-playerview-event-payload-allow-list-parent.yaml
   - stories/generated/ENG-054A-playerview-event-payload-allow-list.yaml
+  - stories/approved/ENG-054-playerview-event-payload-allow-list-parent.yaml
   - stories/approved/ENG-054A-playerview-event-payload-allow-list.yaml
   - agent-packets/ENG-054A.md
   - agent-packets/active.json

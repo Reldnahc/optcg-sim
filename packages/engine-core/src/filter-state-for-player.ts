@@ -219,20 +219,43 @@ const toAllowedRevealCard = (
   };
 };
 
+const pickStringPayloadFields = (
+  payload: Record<string, unknown>,
+  fields: readonly string[],
+): Record<string, string> =>
+  Object.fromEntries(
+    fields.flatMap((field) => {
+      const value = payload[field];
+      return typeof value === "string" ? [[field, value] as const] : [];
+    }),
+  );
+
 const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
   const payload = asRecord(event.payload);
   if (payload === undefined) {
     return {};
   }
   if (event.type === "decisionCreated") {
-    return typeof payload["prompt"] === "string"
-      ? { prompt: payload["prompt"] }
-      : {};
+    return pickStringPayloadFields(payload, [
+      "decisionId",
+      "decisionType",
+      "playerId",
+      "prompt",
+    ]);
   }
   if (event.type === "decisionResolved") {
-    return typeof payload["status"] === "string"
-      ? { status: payload["status"] }
-      : {};
+    const base = pickStringPayloadFields(payload, [
+      "decisionId",
+      "decisionType",
+      "playerId",
+      "responseType",
+      "status",
+    ]);
+    const selectedCount = payload["selectedCount"];
+    return {
+      ...base,
+      ...(typeof selectedCount === "number" ? { selectedCount } : {}),
+    };
   }
   if (event.type === "damageDealt") {
     return typeof payload["publicAmount"] === "number"

@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-054A -->
 <!-- agent-packet:story-path stories/approved/ENG-054A-playerview-event-payload-allow-list.yaml -->
-<!-- agent-packet:story-sha256 0477e5cd8c2d369bc2f70f75a9c7f739e8118ee0e7e1ebc99329f5a51ccfc852 -->
+<!-- agent-packet:story-sha256 affdc18ed9771c10c479ddba9a7c90edbf5bf2e9a6ad798affe9b911aef56599 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -418,7 +418,9 @@ Own only PlayerView event payload projection and focused hidden-info regression 
 - packages/engine-core/src/filter-state-for-player.test.ts
 - packages/engine-core/src/filter-state-for-player.real-states-*.test.ts
 - tests/hidden-info/**
+- stories/generated/ENG-054-playerview-event-payload-allow-list-parent.yaml
 - stories/generated/ENG-054A-playerview-event-payload-allow-list.yaml
+- stories/approved/ENG-054-playerview-event-payload-allow-list-parent.yaml
 - stories/approved/ENG-054A-playerview-event-payload-allow-list.yaml
 - agent-packets/ENG-054A.md
 - agent-packets/active.json
