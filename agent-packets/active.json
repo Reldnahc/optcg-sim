@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-005G.md",
-      "storyId": "TYP-005G",
-      "storyPath": "stories/approved/TYP-005G-whole-surface-type-parity-guard.yaml",
-      "storySha256": "0712fc9e4e5e244b67f694f0ad11fb14f0175d31f43d6c5591584cb8cd27cbaf"
+      "packetPath": "agent-packets/TYP-005E.md",
+      "storyId": "TYP-005E",
+      "storyPath": "stories/approved/TYP-005E-migrate-engine-core-consumers-off-package-only-type-drift.yaml",
+      "storySha256": "8ed5a719f3a56c06a35befcbc087e312e28c23e7538e01366dd6f18001406a0e"
     }
   ],
   "version": 1
