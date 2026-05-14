@@ -116,6 +116,92 @@ test("story review plan accepts pnpm-run argument separator before parent option
   assert.deepEqual(plan.reviewAssignments[0].stories, ["INF-050", "INF-050A"]);
 });
 
+test("story review plan resolves children from the same story directory as the parent", async () => {
+  const repoRoot = await makeStoryFixture({
+    children: [{ id: "INF-051A", title: "Generated child" }],
+    parentDirectory: "stories/generated",
+    parentId: "INF-051",
+  });
+
+  await mkdir(path.join(repoRoot, "stories", "approved"), { recursive: true });
+  await writeFile(
+    path.join(repoRoot, "stories", "approved", "INF-051A-approved-child.yaml"),
+    storySource({
+      epicId: "INF-051",
+      id: "INF-051A",
+      status: "approved",
+      title: "Approved child collision",
+    }),
+  );
+
+  const result = runReviewPlan(repoRoot, [
+    "--parent",
+    "stories/generated/INF-051-parent.yaml",
+    "--format",
+    "json",
+  ]);
+
+  assert.equal(
+    result.status,
+    0,
+    `expected generated parent to resolve generated child\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
+  );
+
+  const plan = JSON.parse(result.stdout ?? "{}");
+  assert.equal(
+    plan.stories.find((story) => story.id === "INF-051A")?.path,
+    "stories/generated/INF-051A-generated-child.yaml",
+  );
+});
+
+test("story review plan markdown includes required coverage", async () => {
+  const repoRoot = await makeStoryFixture({
+    children: [{ id: "INF-052A", title: "Markdown child" }],
+    parentId: "INF-052",
+  });
+
+  const result = runReviewPlan(repoRoot, [
+    "--parent",
+    "stories/approved/INF-052-parent.yaml",
+  ]);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout ?? "", /Required Coverage/i);
+  assert.match(
+    result.stdout ?? "",
+    /parent story authority and non-implementation boundary/i,
+  );
+  assert.match(
+    result.stdout ?? "",
+    /declared child story scope, non-scope, allowed touch points, required tests, and dependencies/i,
+  );
+});
+
+test("story review plan discovers the repo root from a subdirectory", async () => {
+  const repoRoot = await makeStoryFixture({
+    children: [{ id: "INF-053A", title: "Subdirectory child" }],
+    parentId: "INF-053",
+  });
+  const subdirectory = path.join(repoRoot, "docs", "workflow");
+  await mkdir(subdirectory, { recursive: true });
+
+  const result = runReviewPlanFromCwd(repoRoot, subdirectory, [
+    "--parent",
+    "stories/approved/INF-053-parent.yaml",
+    "--format",
+    "json",
+  ]);
+
+  assert.equal(
+    result.status,
+    0,
+    `expected review plan to resolve repo-root-relative parent from subdirectory\nstdout:\n${result.stdout ?? ""}\nstderr:\n${result.stderr ?? ""}`,
+  );
+
+  const plan = JSON.parse(result.stdout ?? "{}");
+  assert.equal(plan.parent.path, "stories/approved/INF-053-parent.yaml");
+});
+
 test("story review plan fails closed when a declared child story cannot be found", async () => {
   const repoRoot = await makeStoryFixture({
     children: [{ id: "INF-049A", title: "Missing child" }],
@@ -135,6 +221,10 @@ test("story review plan fails closed when a declared child story cannot be found
 });
 
 function runReviewPlan(repoRoot, args) {
+  return runReviewPlanFromCwd(repoRoot, repoRoot, args);
+}
+
+function runReviewPlanFromCwd(repoRoot, cwd, args) {
   return spawnSync(
     process.execPath,
     [
@@ -143,7 +233,7 @@ function runReviewPlan(repoRoot, args) {
       ...args,
     ],
     {
-      cwd: repoRoot,
+      cwd,
       encoding: "utf8",
     },
   );
@@ -152,11 +242,16 @@ function runReviewPlan(repoRoot, args) {
 async function makeStoryFixture(options) {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "optcg-review-plan-"));
   tempDirs.push(tempDir);
-  const repoRoot = path.join(tempDir, "repo");
-  await mkdir(path.join(repoRoot, "stories", "approved"), {
+  const repoRoot = path.join(tempDir, "optcg-sim");
+  const parentDirectory = options.parentDirectory ?? "stories/approved";
+  await mkdir(path.join(repoRoot, parentDirectory), {
     recursive: true,
   });
   await mkdir(path.join(repoRoot, "tools"), { recursive: true });
+  await writeFile(
+    path.join(repoRoot, "package.json"),
+    '{"private":true,"type":"module"}\n',
+  );
 
   await writeFile(
     path.join(repoRoot, "tools", "story-review-plan.ts"),
@@ -164,12 +259,7 @@ async function makeStoryFixture(options) {
   );
 
   await writeFile(
-    path.join(
-      repoRoot,
-      "stories",
-      "approved",
-      `${options.parentId}-parent.yaml`,
-    ),
+    path.join(repoRoot, parentDirectory, `${options.parentId}-parent.yaml`),
     storySource({
       childStories: options.children,
       epicId: options.parentId,
@@ -184,8 +274,7 @@ async function makeStoryFixture(options) {
       await writeFile(
         path.join(
           repoRoot,
-          "stories",
-          "approved",
+          parentDirectory,
           `${child.id}-${slugify(child.title)}.yaml`,
         ),
         storySource({

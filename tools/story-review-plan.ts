@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
@@ -58,9 +59,10 @@ async function main() {
         title: parentStory.title,
       },
     ];
+    const parentStoryDirectory = path.dirname(parentPath);
 
     for (const child of parentStory.childStories) {
-      const childPath = await findStoryById(repoRoot, child.id);
+      const childPath = await findStoryById(parentStoryDirectory, child.id);
       if (!childPath) {
         throw new Error(`Unable to find child story ${child.id}.`);
       }
@@ -217,35 +219,25 @@ function readChildStories(source: string): ChildStory[] {
   return childStories;
 }
 
-async function findStoryById(repoRoot: string, storyId: string) {
-  const directories = [
-    "stories/approved",
-    "stories/generated",
-    "stories/blocked",
-    "stories/done",
-  ];
+async function findStoryById(storyDirectory: string, storyId: string) {
+  let entries: string[];
 
-  for (const directory of directories) {
-    const absoluteDirectory = path.join(repoRoot, directory);
-    let entries: string[];
-
-    try {
-      entries = await readdir(absoluteDirectory);
-    } catch (error) {
-      if (isNodeError(error) && error.code === "ENOENT") {
-        continue;
-      }
-      throw error;
+  try {
+    entries = await readdir(storyDirectory);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return null;
     }
+    throw error;
+  }
 
-    const fileName = entries
-      .filter((entry) => entry.endsWith(".yaml"))
-      .sort((left, right) => left.localeCompare(right))
-      .find((entry) => entry.startsWith(`${storyId}-`));
+  const fileName = entries
+    .filter((entry) => entry.endsWith(".yaml"))
+    .sort((left, right) => left.localeCompare(right))
+    .find((entry) => entry.startsWith(`${storyId}-`));
 
-    if (fileName) {
-      return path.join(absoluteDirectory, fileName);
-    }
+  if (fileName) {
+    return path.join(storyDirectory, fileName);
   }
 
   return null;
@@ -255,7 +247,10 @@ function findRepoRoot(startDirectory: string) {
   let current = startDirectory;
 
   for (;;) {
-    if (path.basename(current) === "repo") {
+    if (
+      existsSync(path.join(current, "package.json")) &&
+      existsSync(path.join(current, "stories"))
+    ) {
       return current;
     }
 
@@ -294,6 +289,10 @@ function renderMarkdown(plan: {
     lines.push(
       `- ${assignment.id}: ${assignment.type}; model ${assignment.model}; reasoning ${assignment.reasoning}; stories ${assignment.stories.join(", ")}`,
     );
+    lines.push("  Required Coverage:");
+    for (const coverage of assignment.requiredCoverage) {
+      lines.push(`  - ${coverage}`);
+    }
   }
 
   lines.push("");
