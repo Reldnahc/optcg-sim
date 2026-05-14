@@ -4,9 +4,9 @@ story_schema_version: 1.0.0
 id: ENG-052
 epic_id: ENG-010
 title: Choose replacement decision response contract parent
-type: rules
+type: implementation
 area: engine
-primary_concern: gameplay
+primary_concern: rules
 priority: high
 status: approved
 summary: >

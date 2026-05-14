@@ -4,9 +4,9 @@ story_schema_version: 1.0.0
 id: ENG-052A
 epic_id: ENG-052
 title: Align chooseReplacement response validation
-type: rules
+type: implementation
 area: engine
-primary_concern: gameplay
+primary_concern: rules
 priority: high
 status: approved
 summary: >

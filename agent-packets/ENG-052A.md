@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-052A -->
 <!-- agent-packet:story-path stories/approved/ENG-052A-align-choose-replacement-response-validation.yaml -->
-<!-- agent-packet:story-sha256 5dee39084a1959cfe6456b02d4040591862d0cc798929e00f8095b5e349690d8 -->
+<!-- agent-packet:story-sha256 03566b81eebe063ff7ad3980abff1c20bd2c1116d5d785e41aecb746189ef831 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -12,9 +12,9 @@ Story Schema Version: 1.0.0
 ID: ENG-052A
 Epic ID: ENG-052
 Title: Align chooseReplacement response validation
-Type: rules
+Type: implementation
 Area: engine
-Primary Concern: gameplay
+Primary Concern: rules
 
 ## Why
 
