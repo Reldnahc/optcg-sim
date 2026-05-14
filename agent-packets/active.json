@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CARD-013B.md",
-      "storyId": "CARD-013B",
-      "storyPath": "stories/approved/CARD-013B-engine-supported-keyword-generated-support.yaml",
-      "storySha256": "3995dd6786491e55e9be23304b1999894648942cd887d865c9cc54dc84477746"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

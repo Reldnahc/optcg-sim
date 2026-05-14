@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Split follow-up generated-support work for printed keyword bodies that the
   engine already executes but the cards package has not fully certified through

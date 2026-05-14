@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Capture and verify the exact Poneglyph card fixtures for the human-supplied
   proof-card list that will feed generated-support certification for already
