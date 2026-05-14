@@ -1,0 +1,72 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-052A
+epic_id: ENG-052
+title: Align chooseReplacement response validation
+type: rules
+area: engine
+primary_concern: gameplay
+priority: high
+status: approved
+summary: >
+  Fix the narrow `chooseReplacement` decision response inconsistency in
+  engine-core so replacement responses use the same optional-player
+  `respondToDecision` actor contract as other decisions and mandatory
+  replacement choices accept valid selected replacements.
+story_boundary: >
+  Own only `chooseReplacement` decision response validation and focused
+  engine-core regression coverage. Do not redesign replacement execution,
+  replacement priority, public DTOs, legal-action projection, hidden-info
+  projection, replay, server/client protocol, or broader contract parity.
+allowed_touch_points:
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/effect-runtime-replacement-application.test.ts
+  - packages/engine-core/src/effect-runtime-target-primitives.test.ts
+  - stories/generated/ENG-052A-align-choose-replacement-response-validation.yaml
+  - stories/approved/ENG-052A-align-choose-replacement-response-validation.yaml
+  - agent-packets/ENG-052A.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s013
+  - 18-acceptance-tests.s002
+scope:
+  - confirm live `chooseReplacement` response behavior before implementation
+  - keep omitted `playerId` valid for `respondToDecision` replacement responses when the pending decision belongs to the responding player
+  - preserve rejection for malformed or wrong `playerId` when supplied
+  - fix mandatory replacement handling so a valid accepted replacement is accepted
+  - preserve optional replacement decline as accepted
+  - preserve mandatory replacement decline or missing `replacementId` as rejected
+  - add focused engine-core regression tests for omitted `playerId`, wrong `playerId`, optional decline, mandatory accept, and mandatory decline or missing replacement
+non_scope:
+  - changing `Action` or `LegalAction` type shapes
+  - changing public `PlayerView` or `PublicDecision` DTOs
+  - changing replacement priority, chaining, once-per-process semantics, process transformation, or candidate detection
+  - changing hidden-information filtering, replay format, server/client protocol, cards, database, CLI, or UI behavior
+  - broad contract parity or package type synchronization work
+dependencies:
+  - ENG-010
+acceptance_criteria:
+  - "`chooseReplacement` response handling matches the canonical `respondToDecision` actor contract used by other decision families"
+  - public/client-shaped replacement responses without `playerId` remain accepted when otherwise valid
+  - wrong-player and malformed-player responses still fail closed without mutation
+  - optional replacement decline remains accepted
+  - mandatory replacement accept succeeds when it selects an available replacement
+  - mandatory replacement decline or missing replacement remains rejected without mutation
+  - no unrelated gameplay, DTO, contract-parity, architecture, or projection changes are included
+required_tests:
+  - add or update a failing mandatory replacement accept regression before changing production code
+  - focused `corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/effect-runtime-replacement-application.test.ts`
+  - "`corepack pnpm run packets:verify`"
+  - "`corepack pnpm run stories:validate`"
+  - full `corepack pnpm verify`
+repo_rules:
+  - use TDD and verify the mandatory accept test fails with the current implementation before changing `actions.ts`
+  - keep the patch limited to `chooseReplacement` response validation and focused engine tests
+  - fail closed on any uncited replacement priority, hidden-information, replay, or public DTO ambiguity
+  - use `corepack pnpm`, not plain `pnpm`, when running repo commands in this environment
+ambiguity_policy: fail_and_escalate

@@ -642,6 +642,44 @@ test("chooseReplacement accepts canonical respondToDecision payload without play
   assert.equal(accepted.errors, undefined);
 });
 
+test("chooseReplacement response validation accepts mandatory selected replacement", () => {
+  const paused = pauseForReplacementDecision();
+  const mandatoryState = {
+    ...paused.result.state,
+    pendingDecision: { ...paused.decision, mandatory: true },
+  };
+
+  const accepted = applyAction(mandatoryState, {
+    type: "respondToDecision",
+    decisionId: paused.decision.id,
+    response: {
+      type: "replacement",
+      replacementId: String(paused.effectBlock.id),
+    },
+  });
+  const nextP2 = must(accepted.state.players[p2], "next p2");
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(accepted.state.pendingDecision, undefined);
+  assert.deepEqual(accepted.state.replacementState, []);
+  assert.deepEqual(
+    accepted.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "replacementApplied",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+    ],
+  );
+  assert.equal(
+    nextP2.characters.some(
+      (card) => card.instanceId === paused.target.instanceId,
+    ),
+    true,
+  );
+});
+
 test.each([
   {
     name: "non-object payload",

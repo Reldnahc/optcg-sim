@@ -278,7 +278,7 @@ const applyChooseReplacementDecisionResponse = (
       );
     }
   }
-  if (decision.mandatory) {
+  if (decision.mandatory && replacementId === undefined) {
     return toEngineResult(
       state,
       [],

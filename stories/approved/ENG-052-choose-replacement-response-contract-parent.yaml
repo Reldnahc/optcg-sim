@@ -1,0 +1,62 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-052
+epic_id: ENG-010
+title: Choose replacement decision response contract parent
+type: rules
+area: engine
+primary_concern: gameplay
+priority: high
+status: approved
+summary: >
+  Coordinate the narrow engine fix for `chooseReplacement` decision response
+  handling so replacement decisions follow the canonical `respondToDecision`
+  actor contract and mandatory replacement responses accept valid selected
+  replacements while still failing closed on invalid responses.
+story_boundary: >
+  This parent is not directly implementable. It coordinates exactly one child
+  story for replacement decision response validation in engine-core.
+allowed_touch_points:
+  - stories/generated/ENG-052*.yaml
+  - stories/approved/ENG-052*.yaml
+spec_refs:
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s013
+  - 18-acceptance-tests.s002
+child_stories:
+  - id: ENG-052A
+    title: Align chooseReplacement response validation
+    concern: Fix replacement decision response actor and mandatory acceptance behavior in engine-core with focused tests.
+    depends_on: []
+scope:
+  - coordinate one executable child story for `chooseReplacement` response validation
+  - require replacement decision responses to follow the canonical `respondToDecision` actor contract
+  - require mandatory replacement accept to be valid when the selected replacement is available
+  - preserve wrong-player, malformed-player, invalid replacement, and stale process fail-closed behavior while keeping optional replacement decline accepted
+non_scope:
+  - direct implementation from this parent story
+  - packetizing or activating this parent story as an active implementation story
+  - redesigning replacement mechanics, replacement priority, chaining, or process execution
+  - changing public PlayerView DTOs, legal-action DTO shape, hidden-info projection, replay format, server/client protocol, cards, or database behavior
+dependencies:
+  - ENG-010
+acceptance_criteria:
+  - ENG-052A is the only executable child for this parent
+  - "`chooseReplacement` response handling matches the intended canonical `respondToDecision` actor contract"
+  - mandatory replacement accept succeeds when the response selects an available replacement
+  - optional replacement decline remains accepted and mandatory decline or missing replacement remains rejected
+  - wrong-player responses still fail closed
+required_tests:
+  - story-review for the ENG-052 parent story set using `corepack pnpm run stories:review-plan -- --parent stories/generated/ENG-052-choose-replacement-response-contract-parent.yaml`
+  - story-specific tests from ENG-052A
+  - full `corepack pnpm verify` on the child PR
+repo_rules:
+  - do not implement ENG-052 directly
+  - use the parent/substory workflow even though this parent has one child
+  - keep one active child packet at a time
+  - use TDD and verify the mandatory replacement accept regression fails before changing production code
+ambiguity_policy: fail_and_escalate
