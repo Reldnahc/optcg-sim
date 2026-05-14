@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: visibility
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the PlayerView event payload projection hardening so visible
   events fail closed by event type instead of recursively passing through all

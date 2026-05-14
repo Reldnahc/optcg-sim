@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: visibility
 priority: high
-status: approved
+status: done
 summary: >
   Replace filterStateForPlayer event payload projection's recursive forbidden-key
   deny list with explicit event-type allow-list projection so future event
