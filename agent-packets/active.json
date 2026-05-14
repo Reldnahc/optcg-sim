@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-005E.md",
-      "storyId": "TYP-005E",
-      "storyPath": "stories/approved/TYP-005E-migrate-engine-core-consumers-off-package-only-type-drift.yaml",
-      "storySha256": "8ed5a719f3a56c06a35befcbc087e312e28c23e7538e01366dd6f18001406a0e"
+      "packetPath": "agent-packets/TYP-005F.md",
+      "storyId": "TYP-005F",
+      "storyPath": "stories/approved/TYP-005F-migrate-package-projections-to-settled-canonical-output.yaml",
+      "storySha256": "39804f00e9c920b2bd2a2f6aa297e25270979934e5b48e9b672cd404a397cf92"
     }
   ],
   "version": 1
