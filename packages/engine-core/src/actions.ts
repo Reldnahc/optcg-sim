@@ -173,11 +173,15 @@ const getChooseReplacementLegalActions = (
     return [];
   }
   return [
-    {
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: { type: "replacement" },
-    },
+    ...(decision.mandatory
+      ? []
+      : [
+          {
+            type: "respondToDecision" as const,
+            decisionId: decision.id,
+            response: { type: "replacement" as const },
+          },
+        ]),
     ...decision.replacementIds.map(
       (replacementId): LegalAction => ({
         type: "respondToDecision",
