@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Remove the unapproved generated story backlog so dormant draft artifacts no
   longer obscure the approved, blocked, replaced, and completed story queues.
