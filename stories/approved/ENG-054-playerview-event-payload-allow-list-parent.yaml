@@ -1,0 +1,70 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-054
+epic_id: ENG-054
+title: PlayerView event payload allow-list projection parent
+type: implementation
+area: engine
+primary_concern: visibility
+priority: high
+status: approved
+summary: >
+  Coordinate the PlayerView event payload projection hardening so visible
+  events fail closed by event type instead of recursively passing through all
+  payload keys except a fixed forbidden-key deny list.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  ENG-054A as the executable child story, preserving event visibility, event
+  ordering, event ids, state hashes, replay/source event creation semantics, DTO
+  contracts, protocol behavior, and gameplay rules.
+allowed_touch_points:
+  - stories/generated/ENG-054*.yaml
+  - stories/approved/ENG-054*.yaml
+  - agent-packets/ENG-054A.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s006
+  - 03-game-state-events-decisions.s018
+  - 06-visibility-security.s002
+  - 06-visibility-security.s004
+  - 06-visibility-security.s017
+  - 06-visibility-security.s021
+  - 06-visibility-security.s023
+  - 11-testing-quality.s004
+scope:
+  - require visible PlayerView event payloads to be projected through explicit event-type allow-list logic
+  - require unknown or unsupported visible event payload shapes to project an empty or minimal safe payload instead of arbitrary keys
+  - require existing effectQueued and effectResolved PlayerView payload status handling to remain safe and explicit
+  - require regression coverage for a dangerous unexpected event payload key being omitted from PlayerView.events
+non_scope:
+  - direct parent implementation
+  - event creation semantics
+  - replay format or replay validation behavior
+  - public DTO contract changes
+  - client, server, protocol, card-data, or UI work
+  - gameplay rule changes
+  - replacement, target, or effect runtime behavior changes
+dependencies: []
+child_stories:
+  - id: ENG-054A
+    title: Replace PlayerView event payload deny-listing with allow-list projection
+    concern: Harden filterStateForPlayer event payload projection to fail closed by event type while preserving visible event metadata and existing safe public behavior.
+    depends_on: []
+acceptance_criteria:
+  - ENG-054A is the only executable child for this parent
+  - PlayerView.events no longer pass arbitrary payload keys by default
+  - known safe visible event payloads remain explicitly projected by event type
+  - unsupported or unknown payload shapes project empty or minimal safe payloads
+  - hidden-information safety is preserved and verified
+required_tests:
+  - tool-selected parent story-set review before approval
+  - story-specific tests from ENG-054A
+repo_rules:
+  - do not implement ENG-054 directly
+  - use the parent/substory workflow even though this parent has one child
+  - activate only ENG-054A while implementing this story set
+  - do not broaden into DTO, replay, protocol, card-data, effect runtime, or gameplay changes
+  - fail closed on hidden-information ambiguity
+ambiguity_policy: fail_and_escalate

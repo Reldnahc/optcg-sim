@@ -170,37 +170,128 @@ const toPublicDecisionCausedBy = (
   return causedBy;
 };
 
-const playerEventPayloadForbiddenKeys = new Set([
-  "queueEntryId",
-  "effectBlockId",
-  "triggerIds",
-  "sourceSnapshot",
-  "orderedIds",
-  "sourcePresencePolicy",
-  "orderingGroup",
-  "generation",
-  "damageProcess",
-  "remainingDamagePoints",
-  "sourceKeyword",
-]);
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
 
-const toPlayerEventPayload = (payload: unknown): unknown => {
-  if (payload === null || payload === undefined) {
-    return payload;
+const toAllowedZoneRef = (
+  value: unknown,
+): Record<string, string | number> | undefined => {
+  const zoneRef = asRecord(value);
+  if (zoneRef === undefined || typeof zoneRef["zone"] !== "string") {
+    return undefined;
   }
-  if (Array.isArray(payload)) {
-    return payload.map(toPlayerEventPayload);
-  }
-  if (typeof payload !== "object") {
-    return payload;
-  }
+  const playerId = zoneRef["playerId"];
+  const index = zoneRef["index"];
+  const slot = zoneRef["slot"];
+  return {
+    zone: zoneRef["zone"],
+    ...(typeof playerId === "string" ? { playerId } : {}),
+    ...(typeof index === "number" ? { index } : {}),
+    ...(typeof slot === "string" ? { slot } : {}),
+  };
+};
 
-  const publicEntries = Object.entries(payload).flatMap(([key, value]) =>
-    playerEventPayloadForbiddenKeys.has(key)
-      ? []
-      : [[key, toPlayerEventPayload(value)] as const],
+const toAllowedRevealCard = (
+  value: unknown,
+): Record<string, unknown> | null => {
+  const card = asRecord(value);
+  if (card === undefined) {
+    return null;
+  }
+  const instanceId = card["instanceId"];
+  const cardId = card["cardId"];
+  const playerId = card["playerId"];
+  if (
+    typeof instanceId !== "string" ||
+    typeof cardId !== "string" ||
+    typeof playerId !== "string"
+  ) {
+    return null;
+  }
+  const zone = toAllowedZoneRef(card["zone"]);
+  return {
+    instanceId,
+    cardId,
+    playerId,
+    ...(zone === undefined ? {} : { zone }),
+  };
+};
+
+const pickStringPayloadFields = (
+  payload: Record<string, unknown>,
+  fields: readonly string[],
+): Record<string, string> =>
+  Object.fromEntries(
+    fields.flatMap((field) => {
+      const value = payload[field];
+      return typeof value === "string" ? [[field, value] as const] : [];
+    }),
   );
-  return Object.fromEntries(publicEntries);
+
+const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
+  const payload = asRecord(event.payload);
+  if (payload === undefined) {
+    return {};
+  }
+  if (event.type === "decisionCreated") {
+    return pickStringPayloadFields(payload, [
+      "decisionId",
+      "decisionType",
+      "playerId",
+      "prompt",
+    ]);
+  }
+  if (event.type === "decisionResolved") {
+    const base = pickStringPayloadFields(payload, [
+      "decisionId",
+      "decisionType",
+      "playerId",
+      "responseType",
+      "status",
+    ]);
+    const selectedCount = payload["selectedCount"];
+    return {
+      ...base,
+      ...(typeof selectedCount === "number" ? { selectedCount } : {}),
+    };
+  }
+  if (event.type === "damageDealt") {
+    return typeof payload["amount"] === "number"
+      ? { amount: payload["amount"] }
+      : {};
+  }
+  if (event.type === "cardRevealed") {
+    const revealCards = payload["cards"];
+    if (Array.isArray(revealCards)) {
+      const cards = revealCards.flatMap((card) => {
+        const allowed = toAllowedRevealCard(card);
+        return allowed === null ? [] : [allowed];
+      });
+      const revealId = payload["revealId"];
+      const origin = payload["origin"];
+      const selectionSetId = payload["selectionSetId"];
+      return {
+        ...(typeof revealId === "string" ? { revealId } : {}),
+        cards,
+        ...(typeof origin === "string" ? { origin } : {}),
+        ...(typeof selectionSetId === "string" ? { selectionSetId } : {}),
+      };
+    }
+    const playerId = payload["playerId"];
+    const instanceId = payload["instanceId"];
+    const cardId = payload["cardId"];
+    if (
+      typeof playerId === "string" &&
+      typeof instanceId === "string" &&
+      typeof cardId === "string"
+    ) {
+      return { playerId, instanceId, cardId };
+    }
+    return {};
+  }
+  return {};
 };
 
 const toPlayerEvent = (event: EngineEvent): EngineEvent => {
@@ -223,7 +314,7 @@ const toPlayerEvent = (event: EngineEvent): EngineEvent => {
   if (event.type === "effectResolved") {
     return { ...base, payload: { status: "resolved" } };
   }
-  return { ...base, payload: toPlayerEventPayload(event.payload) };
+  return { ...base, payload: toAllowedPlayerEventPayload(event) };
 };
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
