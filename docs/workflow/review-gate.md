@@ -24,12 +24,12 @@ Code review is required. Use this flow unless a higher-authority story or packet
 16. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, after the revision response comment is up to date when a separate reviewer subagent run was used, after reviewers confirm any post-merge cleanup metadata matches the reviewed story scope, and after `cleanup-metadata-guard` is present and passing before human review is requested
 17. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes; for approved parent integration workflows, human review is deferred to the final parent PR to `main` while substory commit evidence is recorded on that parent PR or durable handoff comment
 18. if review finds multi-concern drift, split the story or narrow the patch before merge
-19. for decomposed parent/substory workflows, confirm the per-story review-status matrix is reconstructed from durable artifacts before PR opening or PR handoff; fail closed on unknown or pending child exact per-story review
+19. for parent/substory workflows, confirm the story-set review-status matrix is reconstructed from durable artifacts before PR opening or PR handoff; fail closed on unknown or pending tool-selected parent-story-set review
 
 Role handoff requirements:
 
 - code-review handoff must include code-review role packet extraction output and the current PR context.
-- pr-gate handoff must include pr-gate role packet extraction output plus current PR body or durable handoff comment, changed files, head branch, review records, revision response state, check status, cleanup-metadata-guard status, and human-review readiness context.
+- Session Orchestrator PR handoff must include the current PR body or durable handoff comment, changed files, head branch, review records, revision response state, check status, cleanup-metadata-guard status, and human-review readiness context.
 - manual packet trimming is not the normal path.
 - if role packet extraction fails, record the extraction failure and the manual fallback in the PR trail before human review request.
 

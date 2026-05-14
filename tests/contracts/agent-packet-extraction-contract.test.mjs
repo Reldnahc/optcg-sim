@@ -8,12 +8,7 @@ import {
   runPacketToolFromRepo,
 } from "./agent-packet-test-support.mjs";
 
-const SUPPORTED_ROLES = [
-  "story-orchestrator",
-  "implementation",
-  "code-review",
-  "pr-gate",
-];
+const SUPPORTED_ROLES = ["implementation", "code-review"];
 
 test("packet extraction emits implementation markdown and json with aligned identity and role content", async () => {
   const tempRepoRoot = await makeTempRepoFixture();
@@ -213,7 +208,7 @@ test("packet extraction emits markdown and json for each post-approval review ro
   }
 });
 
-test("packet extraction rejects story-author and story-review roles", async () => {
+test("packet extraction rejects removed and pre-approval roles", async () => {
   const tempRepoRoot = await makeTempRepoFixture();
   const manifestPath = path.join(tempRepoRoot, "agent-packets", "active.json");
   const storyPath = path.join(
@@ -232,7 +227,12 @@ test("packet extraction rejects story-author and story-review roles", async () =
     "--activate",
   ]);
 
-  for (const role of ["story-author", "story-review"]) {
+  for (const role of [
+    "story-author",
+    "story-review",
+    "story-orchestrator",
+    "pr-gate",
+  ]) {
     const result = runPacketToolFromRepo(tempRepoRoot, [
       "extract",
       "--role",

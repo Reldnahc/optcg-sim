@@ -5633,7 +5633,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Codex packet footer",
       "heading_level": 2,
-      "marker_line": 134,
+      "marker_line": 135,
       "visible_line": "Section Ref: `32-codex-agent-integration.s009`"
     },
     {
@@ -5642,7 +5642,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Review flow",
       "heading_level": 2,
-      "marker_line": 151,
+      "marker_line": 152,
       "visible_line": "Section Ref: `32-codex-agent-integration.s010`"
     },
     {
@@ -5651,7 +5651,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "GitHub-connected modes",
       "heading_level": 2,
-      "marker_line": 161,
+      "marker_line": 162,
       "visible_line": "Section Ref: `32-codex-agent-integration.s011`"
     },
     {
@@ -5660,7 +5660,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Minimal task prompt",
       "heading_level": 2,
-      "marker_line": 176,
+      "marker_line": 177,
       "visible_line": "Section Ref: `32-codex-agent-integration.s012`"
     },
     {
@@ -5669,7 +5669,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Merge gate recommendation",
       "heading_level": 2,
-      "marker_line": 193,
+      "marker_line": 194,
       "visible_line": "Section Ref: `32-codex-agent-integration.s013`"
     },
     {
@@ -5678,7 +5678,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Subagent model routing",
       "heading_level": 2,
-      "marker_line": 265,
+      "marker_line": 266,
       "visible_line": "Section Ref: `32-codex-agent-integration.s014`"
     },
     {

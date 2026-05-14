@@ -147,11 +147,11 @@ Generated or normalized stories must receive story-review agent review before th
 
 Required behavior:
 
-- approval-ready means the exact candidate story has a usable per-story story-review result,
-- set-level or decomposition-group story review does not satisfy per-story candidate approval review,
-- each candidate story needs its own usable story-review result before that exact story is presented for approval,
-- run a set-level story review before a decomposed story group is presented for human approval,
-- run per-story review before each candidate story is presented for approval,
+- before story-review assignment, run `corepack pnpm run stories:review-plan -- --parent <stories/generated/...yaml>` or `corepack pnpm run stories:review-plan -- --parent <stories/approved/...yaml>`,
+- do not manually choose among single-story, set-level, per-story, or parent/substory story-review paths,
+- spawn exactly the review assignments returned by the tool,
+- approval-ready means the parent story set has a usable tool-selected story-review result,
+- a parent with exactly one child is valid and still uses the parent/substory flow,
 - use a story-review agent separate from any implementation worker or implementation patch reviewer,
 - story-review agent uses gpt-5.5 with high reasoning,
 - story-review findings must be fixed, explicitly deferred, or recorded before presentation,
@@ -247,7 +247,7 @@ Section Ref: `27-spec-driven-story-generation-workflow.s011`
 Section Ref: `27-spec-driven-story-generation-workflow.s012`
 
 1. use an agent or script to generate candidate epics and concern-sliced stories from spec sections,
-2. run the pre-presentation story-review gate,
+2. run the pre-presentation story-review gate using `corepack pnpm run stories:review-plan -- --parent <stories/generated/...yaml>` or `corepack pnpm run stories:review-plan -- --parent <stories/approved/...yaml>`,
 3. review and approve the decomposition and the stories,
 4. export approved stories to GitHub issues or draft issues as needed using `tools/spec_board_sync.ts`,
 5. build or refresh the checked-in packet for the active story,
@@ -302,7 +302,7 @@ A story should not be marked done unless:
 
 After a story is marked done, it should not remain under `stories/approved/`, should not retain an active packet, and should not remain listed in `agent-packets/active.json`. The parent agent owns this cleanup because story state and packet authority are orchestration concerns, not worker or reviewer subagent concerns. Repos should provide a single command for normal single-story completion and a multi-story command for parent-story integration cleanup so story movement, packet removal, and manifest cleanup cannot drift independently. Multi-story cleanup tooling must fail closed when manifest or packet evidence for any listed story is missing or stale.
 
-For parent-story integration branches, substories may remain approved after their reviewed substory commits land on the parent integration branch because the authoritative merge to `main` has not happened yet. This exception is valid only when the user explicitly approved parent-level human review for the decomposed story group, every substory commit has CI, reviewer-subagent review evidence, AI review record, revision response record, and verification evidence bound to the exact commit, and the final parent PR receives full-story integration review plus human review before merge to `main`.
+For parent-story integration branches, substories may remain approved after their reviewed substory commits land on the parent integration branch because the authoritative merge to `main` has not happened yet. This exception is valid only when the parent story set uses parent-level human review, every substory commit has CI, reviewer-subagent review evidence, AI review record, revision response record, and verification evidence bound to the exact commit, and the final parent PR receives full-story integration review plus human review before merge to `main`.
 
 During that parent-branch window, `agent-packets/active.json` remains a single-story handoff pointer for the currently active or most recently active substory packet. It should not be read as the inventory of unfinished substories. Substories merged only into the parent integration branch stay approved and keep their packet files until the parent PR lands on `main`, even when they no longer appear in `active.json`.
 

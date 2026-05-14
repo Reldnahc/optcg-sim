@@ -10,6 +10,7 @@
     "build-agent-packet.ts",
     "post-merge-cleanup.ts",
     "spec-metadata.ts",
+    "story-review-plan.ts",
     "validate-stories.ts",
     "validate-effect-dsl-fixtures.ts",
     "validate-database-schema.ts"

@@ -111,11 +111,12 @@ A skill should accelerate a workflow, not replace the authoritative story or pac
 
 Section Ref: `32-codex-agent-integration.s008`
 
-1. Before approving a generated or normalized story, run story-review subagents and resolve, explicitly defer, or record their findings.
-1. Approval-ready means the exact candidate story has a usable per-story story-review result.
-1. Set-level or decomposition-group story review does not satisfy per-story candidate approval review.
-1. Each candidate story needs its own usable story-review result before the parent agent presents that exact story for approval.
-1. Approve a story.
+1. Before approving a generated or normalized parent story set, run `corepack pnpm run stories:review-plan -- --parent <stories/generated/...yaml>` or `corepack pnpm run stories:review-plan -- --parent <stories/approved/...yaml>`.
+1. Do not manually choose among single-story, set-level, per-story, or parent/substory story-review paths.
+1. Spawn exactly the review assignments returned by that tool and resolve, explicitly defer, or record their findings.
+1. Approval-ready means the parent story set has a usable tool-selected story-review result.
+1. A parent with exactly one child is valid and still uses the parent/substory flow.
+1. Approve a parent story set.
 1. Generate or refresh the checked-in packet for the active story.
 1. Treat the story as worker-ready only after the parent reads `AGENTS.md`, the approved story, and the active packet, then runs `pnpm run packets:generate --story <stories/approved/...yaml> --activate` and `pnpm run packets:verify`.
 1. Run `node --experimental-strip-types tools/spec_board_sync.ts --story <path> --dry-run --write-preview`, then perform live sync when ready.
@@ -127,7 +128,7 @@ Section Ref: `32-codex-agent-integration.s008`
 1. Follow the subagent model routing policy.
 1. Require tests and a short assumptions/blockers note.
 1. Link the pull request back to the story issue.
-1. Spawn a separate reviewer subagent plus human review before merge. If the user has explicitly approved a parent-story integration branch workflow for a decomposed story group, reviewed substory commits may land on the parent integration branch after CI, packet verification, reviewer-subagent review evidence, AI review records, revision response records, and verification evidence are bound to the exact commit; human review is then required on the final parent pull request to `main`.
+1. Spawn a separate reviewer subagent plus human review before merge. In the parent-story integration branch workflow, reviewed substory commits may land on the parent integration branch after CI, packet verification, reviewer-subagent review evidence, AI review records, revision response records, and verification evidence are bound to the exact commit; human review is then required on the final parent pull request to `main`.
 1. After merge, have the parent agent run the packet completion command to move
    the completed story to done history, remove the active packet, and clear or
    replace the active packet manifest before starting the next story. In a
@@ -277,18 +278,12 @@ Section Ref: `32-codex-agent-integration.s014`
 
 Use the complete role routing table:
 
-| Role                 | Default model   | Reasoning | Escalation                                          |
-| -------------------- | --------------- | --------- | --------------------------------------------------- |
-| Session Orchestrator | `gpt-5.5`       | `high`    | none                                                |
-| story-author         | `gpt-5.5`       | `high`    | none                                                |
-| story-review         | `gpt-5.5`       | `high`    | none                                                |
-| story-orchestrator   | `gpt-5.4`       | `medium`  | use `high` for parent series or complex state       |
-| implementation       | `gpt-5.3-codex` | `medium`  | none by default                                     |
-| code-review          | `gpt-5.4`       | `high`    | none                                                |
-| pr-gate              | `gpt-5.4`       | `medium`  | use `high` for parent PRs or cleanup/check failures |
-
-story-orchestrator uses gpt-5.4 medium by default and high for parent series or complex state.
-pr-gate uses gpt-5.4 medium by default and high for parent PRs or cleanup/check failures.
+| Role                 | Default model   | Reasoning | Escalation      |
+| -------------------- | --------------- | --------- | --------------- |
+| Session Orchestrator | `gpt-5.5`       | `high`    | none            |
+| story-review         | `gpt-5.5`       | `high`    | none            |
+| implementation       | `gpt-5.3-codex` | `medium`  | none by default |
+| code-review          | `gpt-5.4`       | `high`    | none            |
 
 Code-review agents must not silently default to `gpt-5.5` with `high` reasoning.
 

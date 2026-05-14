@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-047A.md",
+      "storyId": "INF-047A",
+      "storyPath": "stories/approved/INF-047A-collapse-agent-workflow-to-parent-substory-only.yaml",
+      "storySha256": "7e13cc6c2595a48c2f156bd8a30b81627a4b67b0373d1d0fb6b773eb0c3c53e8"
+    }
+  ],
   "version": 1
 }

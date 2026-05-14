@@ -38,11 +38,7 @@ type BuildOptions = PacketLifecycle.BuildOptions;
 type VerifyOptions = PacketLifecycle.VerifyOptions;
 type CompleteOptions = PacketLifecycle.CompleteOptions;
 type CompleteManyOptions = PacketLifecycle.CompleteManyOptions;
-type ExtractRole =
-  | "story-orchestrator"
-  | "implementation"
-  | "code-review"
-  | "pr-gate";
+type ExtractRole = "implementation" | "code-review";
 type ExtractFormat = "markdown" | "json";
 
 async function main() {
@@ -80,7 +76,7 @@ async function main() {
         "  node --experimental-strip-types tools/build-agent-packet.ts verify-active [--manifest <path>]\n" +
         "  node --experimental-strip-types tools/build-agent-packet.ts complete --story <path> [--manifest <path>]\n" +
         "  node --experimental-strip-types tools/build-agent-packet.ts complete-many --story <path> --story <path> [--manifest <path>]\n" +
-        "  node --experimental-strip-types tools/build-agent-packet.ts extract --role <story-orchestrator|implementation|code-review|pr-gate> --format <markdown|json> [--manifest <path>]",
+        "  node --experimental-strip-types tools/build-agent-packet.ts extract --role <implementation|code-review> --format <markdown|json> [--manifest <path>]",
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -95,12 +91,7 @@ function parseExtractOptions(args: string[]) {
   const role = requireOption(options, "--role");
   const format = requireOption(options, "--format");
 
-  if (
-    role !== "story-orchestrator" &&
-    role !== "implementation" &&
-    role !== "code-review" &&
-    role !== "pr-gate"
-  ) {
+  if (role !== "implementation" && role !== "code-review") {
     throw new Error(
       `Unsupported role ${role}. Extraction supports post-approval roles only.`,
     );

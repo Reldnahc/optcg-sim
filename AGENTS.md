@@ -41,7 +41,7 @@ For any implementation or review handoff:
 2. Run `pnpm run packets:generate --story <stories/approved/...yaml> --activate` when activating or refreshing the story packet.
 3. Run `pnpm run packets:verify` immediately after packet generation and before worker assignment, reviewer assignment, implementation handoff, or PR handoff.
 4. Treat the story as `worker-ready` only after steps 1-3 are complete.
-5. Before assigning story-orchestrator, implementation, code-review, or pr-gate agents, run role packet extraction for the assigned role and include that output in the handoff. Implementation handoffs must include explicit file ownership and test ownership. Use one implementation worker per active story by default; split the story first unless multiple workers have clearly disjoint, reviewable write scopes.
+5. Before story-review assignment, run `corepack pnpm run stories:review-plan -- --parent <stories/generated/...yaml>` or `corepack pnpm run stories:review-plan -- --parent <stories/approved/...yaml>` and spawn exactly the review assignments returned by the tool. Before assigning implementation or code-review agents, run role packet extraction for the assigned role and include that output in the handoff. Implementation handoffs must include explicit file ownership and test ownership. Use one implementation worker per active child story by default; split the child story first unless multiple workers have clearly disjoint, reviewable write scopes.
 6. Assign implementation workers only after `worker-ready`.
 7. Stay inside the story boundary and `allowed_touch_points`.
 8. Implement the story with its required tests.
