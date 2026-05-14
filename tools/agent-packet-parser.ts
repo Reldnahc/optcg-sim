@@ -25,11 +25,7 @@ export type StoryData = {
 };
 
 export type StoryChildStory = string | StoryObject;
-export type PostApprovalRole =
-  | "story-orchestrator"
-  | "implementation"
-  | "code-review"
-  | "pr-gate";
+export type PostApprovalRole = "implementation" | "code-review";
 
 export type PacketRoleContent = {
   checklist: {

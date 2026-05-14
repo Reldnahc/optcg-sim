@@ -65,34 +65,10 @@ type PostApprovalRoleSection = {
   requiredInputs: string[];
   requiredOutputs: string[];
   responsibilities: string[];
-  role: "story-orchestrator" | "implementation" | "code-review" | "pr-gate";
+  role: "implementation" | "code-review";
 };
 
 const POST_APPROVAL_ROLE_SECTIONS: PostApprovalRoleSection[] = [
-  {
-    role: "story-orchestrator",
-    responsibilities: [
-      "own story authority, scope enforcement, ambiguity handling, and role assignment",
-      "ensure active packet content is current before implementation or review handoff",
-      "handoff only approved post-approval roles for this story",
-    ],
-    forbiddenActions: [
-      "do not perform story-author or story-review pre-approval handoff mechanics",
-      "do not introduce packet-agent, cleanup-sync-agent, or revision-agent roles",
-      "do not mutate packet lifecycle semantics outside approved story scope",
-    ],
-    requiredInputs: [
-      "approved story file under stories/approved/",
-      "active packet file under agent-packets/",
-      "AGENTS.md and required workflow docs for the current phase",
-    ],
-    requiredOutputs: [
-      "worker assignment constrained to allowed_touch_points and story boundary",
-      "implementation handoff instructions bound to packet authority",
-      "verification handoff readiness note",
-    ],
-    checklistHeading: "Handoff Checklist",
-  },
   {
     role: "implementation",
     responsibilities: [
@@ -137,33 +113,9 @@ const POST_APPROVAL_ROLE_SECTIONS: PostApprovalRoleSection[] = [
     requiredOutputs: [
       "review findings prioritized by correctness and scope compliance",
       "clear disposition for findings (fix/defer/block) with rationale",
-      "review closure recommendation for pr-gate handoff",
+      "review closure recommendation for Session Orchestrator handoff",
     ],
     checklistHeading: "Verification Checklist",
-  },
-  {
-    role: "pr-gate",
-    responsibilities: [
-      "own PR gate state, cleanup metadata validation, and human-review handoff",
-      "confirm cleanup-metadata-guard presence and passing status before handoff",
-      "preserve reviewed packet lifecycle behavior without scope expansion",
-    ],
-    forbiddenActions: [
-      "do not merge without required human review and passing checks",
-      "do not change cleanup metadata semantics in implementation patches",
-      "do not implement feature code while serving as gate role",
-    ],
-    requiredInputs: [
-      "current PR body or durable handoff comment with cleanup metadata source",
-      "fetched changed files, PR head branch, and status checks",
-      "review records, revision response, and verification evidence",
-    ],
-    requiredOutputs: [
-      "gate decision with explicit pass/fail blockers",
-      "human-review-ready handoff with cleanup metadata validation status",
-      "post-merge cleanup or fallback status confirmation",
-    ],
-    checklistHeading: "Handoff Checklist",
   },
 ];
 

@@ -1,0 +1,79 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-047
+epic_id: INF-047
+title: Parent/substory-only agent workflow parent
+type: refactor
+area: docs
+primary_concern: docs
+priority: critical
+status: generated
+summary: >
+  Coordinate the infrastructure workflow simplification that removes the
+  parallel standalone story path and unused or extra workflow roles so agents
+  always execute through one parent/substory integration model, even when the
+  parent has only one child.
+story_boundary: >
+  This parent is not directly implementable. It coordinates the single child
+  story that updates canonical workflow specs, repo workflow docs, packet
+  tooling, a review-plan tool, and workflow tests so they agree on one
+  parent/substory-only execution model.
+allowed_touch_points:
+  - stories/generated/INF-047*.yaml
+  - stories/approved/INF-047*.yaml
+spec_refs:
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+  - 26-agent-packet-template.s001
+  - 26-agent-packet-template.s003
+  - 26-agent-packet-template.s005
+  - 27-spec-driven-story-generation-workflow.s002
+  - 27-spec-driven-story-generation-workflow.s005
+  - 27-spec-driven-story-generation-workflow.s009
+  - 27-spec-driven-story-generation-workflow.s012
+  - 27-spec-driven-story-generation-workflow.s017
+  - 27-spec-driven-story-generation-workflow.s015
+  - 32-codex-agent-integration.s010
+  - 32-codex-agent-integration.s013
+  - 32-codex-agent-integration.s014
+scope:
+  - coordinate a single parent/substory workflow repair child
+  - require the executable child to remove the standalone story execution path from all workflow authority layers
+  - require the executable child to remove `story-author`, `story-orchestrator`, and `pr-gate` as assignable roles
+  - require the executable child to make Session Orchestrator responsibilities explicit for former story-author, story-orchestrator, and pr-gate duties
+  - require the executable child to add a repo tool that reads parent and child story files and prints the required story-review plan
+  - require agents to use the review-plan tool output instead of choosing review count or review topology from prose
+  - allow a parent story to declare exactly one child when no meaningful decomposition is needed
+non_scope:
+  - direct implementation from this parent story
+  - packetizing or activating this parent story as an active implementation story
+  - changing gameplay, engine, card, server, client, replay, persistence, security, or UI behavior
+  - bypassing reviewer-subagent review, cleanup metadata validation, human review, or merge gates
+dependencies: []
+child_stories:
+  - id: INF-047A
+    title: Collapse agent workflow to parent/substory only
+    concern: Update workflow specs, docs, packet tooling, review-plan tooling, and tests so parent/substory integration is the only execution path and Session Orchestrator owns former story-author, story-orchestrator, and pr-gate duties.
+    depends_on: []
+acceptance_criteria:
+  - INF-047A is the only executable child for this parent
+  - the approved workflow states that every executable story is a child of a parent, including one-child parents
+  - no approved workflow authority presents standalone story execution as a separate path
+  - no approved workflow authority names `story-author`, `story-orchestrator`, or `pr-gate` as assignable roles
+  - "`AGENTS.md` explicitly tells agents to use the repo review-plan tool for story-review path selection and does not describe competing review path choices"
+  - story-review assignment is determined by a repo-owned review-plan tool, not by agent interpretation of multiple prose workflow paths
+  - Session Orchestrator ownership of child activation, implementation handoff, review handoff, PR evidence, cleanup metadata, human-review handoff, and post-merge cleanup confirmation is explicit
+required_tests:
+  - one combined bootstrap story-review for INF-047 parent and INF-047A child before approval because the review-plan tool does not exist yet
+  - story-specific tests from INF-047A
+  - full `corepack pnpm verify` on the child and parent PR
+repo_rules:
+  - do not implement INF-047 directly
+  - use the parent/substory integration workflow even though this parent has one child
+  - keep one active child packet at a time
+  - do not run packet completion for INF-047A until the parent branch lands on main
+  - record ambiguity instead of leaving conflicting workflow authority in place
+ambiguity_policy: fail_and_escalate

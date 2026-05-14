@@ -313,43 +313,9 @@ test("packet builder renders deterministic post-approval role sections for INF-0
     rolesSection.matchAll(/^### ([a-z-]+)$/gm),
     (match) => match[1],
   );
-  assert.deepEqual(roleOrder, [
-    "story-orchestrator",
-    "implementation",
-    "code-review",
-    "pr-gate",
-  ]);
+  assert.deepEqual(roleOrder, ["implementation", "code-review"]);
 
   assert.deepEqual(readRoleBlocks(packet), [
-    {
-      checklistHeading: "Handoff Checklist",
-      checklistBullets: [
-        "confirm required inputs are present and current",
-        "confirm forbidden actions are not introduced",
-        "confirm required outputs are produced for handoff",
-      ],
-      forbiddenActions: [
-        "do not perform story-author or story-review pre-approval handoff mechanics",
-        "do not introduce packet-agent, cleanup-sync-agent, or revision-agent roles",
-        "do not mutate packet lifecycle semantics outside approved story scope",
-      ],
-      requiredInputs: [
-        "approved story file under stories/approved/",
-        "active packet file under agent-packets/",
-        "AGENTS.md and required workflow docs for the current phase",
-      ],
-      requiredOutputs: [
-        "worker assignment constrained to allowed_touch_points and story boundary",
-        "implementation handoff instructions bound to packet authority",
-        "verification handoff readiness note",
-      ],
-      responsibilities: [
-        "own story authority, scope enforcement, ambiguity handling, and role assignment",
-        "ensure active packet content is current before implementation or review handoff",
-        "handoff only approved post-approval roles for this story",
-      ],
-      role: "story-orchestrator",
-    },
     {
       checklistHeading: "Verification Checklist",
       checklistBullets: [
@@ -399,7 +365,7 @@ test("packet builder renders deterministic post-approval role sections for INF-0
       requiredOutputs: [
         "review findings prioritized by correctness and scope compliance",
         "clear disposition for findings (fix/defer/block) with rationale",
-        "review closure recommendation for pr-gate handoff",
+        "review closure recommendation for Session Orchestrator handoff",
       ],
       responsibilities: [
         "review correctness, scope fit, and required-test coverage",
@@ -408,40 +374,13 @@ test("packet builder renders deterministic post-approval role sections for INF-0
       ],
       role: "code-review",
     },
-    {
-      checklistHeading: "Handoff Checklist",
-      checklistBullets: [
-        "confirm required inputs are present and current",
-        "confirm forbidden actions are not introduced",
-        "confirm required outputs are produced for handoff",
-      ],
-      forbiddenActions: [
-        "do not merge without required human review and passing checks",
-        "do not change cleanup metadata semantics in implementation patches",
-        "do not implement feature code while serving as gate role",
-      ],
-      requiredInputs: [
-        "current PR body or durable handoff comment with cleanup metadata source",
-        "fetched changed files, PR head branch, and status checks",
-        "review records, revision response, and verification evidence",
-      ],
-      requiredOutputs: [
-        "gate decision with explicit pass/fail blockers",
-        "human-review-ready handoff with cleanup metadata validation status",
-        "post-merge cleanup or fallback status confirmation",
-      ],
-      responsibilities: [
-        "own PR gate state, cleanup metadata validation, and human-review handoff",
-        "confirm cleanup-metadata-guard presence and passing status before handoff",
-        "preserve reviewed packet lifecycle behavior without scope expansion",
-      ],
-      role: "pr-gate",
-    },
   ]);
 
   for (const unexpectedRole of [
     "story-author",
     "story-review",
+    "story-orchestrator",
+    "pr-gate",
     "packet-agent",
     "cleanup-sync-agent",
     "revision-agent",
@@ -455,12 +394,7 @@ test("packet builder renders deterministic post-approval role sections for INF-0
 });
 
 function readRoleBlocks(packet) {
-  const roleOrder = [
-    "story-orchestrator",
-    "implementation",
-    "code-review",
-    "pr-gate",
-  ];
+  const roleOrder = ["implementation", "code-review"];
 
   return roleOrder.map((role) => {
     const roleBody = readRoleSection(packet, role);

@@ -1,0 +1,114 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-047A
+epic_id: INF-047
+title: Collapse agent workflow to parent/substory only
+type: refactor
+area: docs
+primary_concern: docs
+priority: critical
+status: generated
+summary: >
+  Remove the two-path story execution model and the unused or extra
+  story-author/story-orchestrator/pr-gate roles from canonical workflow
+  authority, repo workflow docs, packet tooling, review-plan tooling, and tests
+  so agents have one execution path: parent/substory integration with Session
+  Orchestrator as the owner.
+story_boundary: >
+  Own only workflow authority, packet role extraction/rendering, a deterministic
+  story-review planning tool, package scripts, and tests needed to make the
+  parent/substory-only execution model internally consistent. Do not change
+  story content for unrelated epics or alter product/runtime behavior.
+allowed_touch_points:
+  - AGENTS.md
+  - docs/workflow/story-execution.md
+  - docs/workflow/parent-integration-branches.md
+  - docs/workflow/review-gate.md
+  - docs/code-standard.md
+  - specs/26-agent-packet-template.md
+  - specs/27-spec-driven-story-generation-workflow.md
+  - specs/32-codex-agent-integration.md
+  - specs/spec-manifest.json
+  - specs/section-index.json
+  - .github/pull_request_template.md
+  - tools/agent-packet-parser.ts
+  - tools/agent-packet-renderer.ts
+  - tools/build-agent-packet.ts
+  - tools/story-review-plan.ts
+  - tools/tsconfig.json
+  - package.json
+  - tests/contracts/agent-packet-extraction-contract.test.mjs
+  - tests/contracts/agent-packet-rendering-contract.test.mjs
+  - tests/contracts/story-review-plan-contract.test.mjs
+  - tests/github/review-workflow.test.mjs
+  - tests/contracts/spec-authority-gates.test.mjs
+  - stories/generated/INF-047A-collapse-agent-workflow-to-parent-substory-only.yaml
+  - stories/approved/INF-047A-collapse-agent-workflow-to-parent-substory-only.yaml
+  - agent-packets/INF-047A.md
+  - agent-packets/active.json
+spec_refs:
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+  - 26-agent-packet-template.s001
+  - 26-agent-packet-template.s003
+  - 26-agent-packet-template.s005
+  - 27-spec-driven-story-generation-workflow.s002
+  - 27-spec-driven-story-generation-workflow.s005
+  - 27-spec-driven-story-generation-workflow.s009
+  - 27-spec-driven-story-generation-workflow.s012
+  - 27-spec-driven-story-generation-workflow.s017
+  - 27-spec-driven-story-generation-workflow.s015
+  - 32-codex-agent-integration.s010
+  - 32-codex-agent-integration.s013
+  - 32-codex-agent-integration.s014
+scope:
+  - update canonical workflow specs so every executable story is a child story under a parent, including one-child parents
+  - remove standalone or single-story execution as a separate approved workflow path
+  - remove `story-author`, `story-orchestrator`, and `pr-gate` from assignable role lists, role hierarchy text, lifecycle guidance, role routing tables, packet extraction options, and generated packet role sections
+  - move former story-author, story-orchestrator, and pr-gate responsibilities to Session Orchestrator in workflow docs and packet/tooling guidance
+  - add a deterministic `stories:review-plan` script backed by `tools/story-review-plan.ts`
+  - make the review-plan tool read a parent story path and its declared child stories, then output the required story-review assignments and required coverage for the parent set
+  - update `AGENTS.md` so it explicitly requires agents to use the review-plan tool for story-review path selection and removes prose instructions for choosing between competing review paths
+  - update the pull request template so it no longer asks for removed role handoffs and instead follows Session Orchestrator ownership
+  - require workflow docs to tell agents to run the review-plan tool before spawning story-review agents instead of deciding review count from prose
+  - keep implementation and code-review as assignable post-approval child-story roles
+  - update review-gate wording so Session Orchestrator owns PR body state, review records, revision responses, checks, cleanup metadata validation, human-review handoff, and post-merge cleanup confirmation
+  - update tests that assert workflow role hierarchy, role extraction, packet rendering, and cleanup/handoff wording
+  - add or update tests that fail if `story-orchestrator`, `pr-gate`, or standalone story execution remain as active workflow roles or path choices
+non_scope:
+  - changing gameplay, engine, card, server, client, replay, persistence, security, or UI behavior
+  - changing the story schema fields unless the existing schema cannot express one-child parents
+  - changing cleanup metadata parser syntax
+  - bypassing reviewer-subagent review, cleanup metadata guard, human review, or merge gates
+  - rewriting completed story history or unrelated generated backlog stories
+  - changing GitHub board sync semantics outside terminology needed by this workflow rewrite
+dependencies: []
+acceptance_criteria:
+  - canonical specs, `AGENTS.md`, workflow docs, packet tooling, and workflow tests agree that parent/substory integration is the only story execution path
+  - a parent with exactly one child is explicitly valid and is the way to represent work that does not need decomposition
+  - "`story-author`, `story-orchestrator`, and `pr-gate` are not accepted by packet extraction and do not appear as assignable workflow roles"
+  - "`AGENTS.md` directs agents to the review-plan tool for story-review path selection and contains no competing instructions for choosing story-review topology"
+  - the repo provides a `corepack pnpm run stories:review-plan -- --parent <path>` command that prints the story-review assignments for the parent and declared child stories
+  - story-review docs require agents to follow review-plan tool output instead of choosing between prose-defined review paths
+  - Session Orchestrator duties explicitly include child activation, packet freshness, implementation assignment, review assignment, PR evidence, cleanup metadata validation, human-review handoff, merge readiness, and post-merge cleanup confirmation
+  - implementation and code-review role extraction still work for active child packets
+  - tests prove workflow authority no longer exposes two execution paths or the removed roles
+required_tests:
+  - one combined bootstrap story-review for INF-047 parent and INF-047A child before approval because this story adds the review-plan tool
+  - focused contract tests for `tools/story-review-plan.ts` covering one-child and multi-child parent stories
+  - focused workflow contract tests proving removed role names are rejected by packet extraction
+  - focused packet rendering tests proving generated packets include only implementation and code-review post-approval role sections
+  - focused workflow documentation tests proving parent/substory-only execution, review-plan tool usage, and Session Orchestrator ownership
+  - run `corepack pnpm exec vitest run tests/contracts/story-review-plan-contract.test.mjs tests/contracts/agent-packet-extraction-contract.test.mjs tests/contracts/agent-packet-rendering-contract.test.mjs tests/contracts/spec-authority-gates.test.mjs tests/github/review-workflow.test.mjs`
+  - run `corepack pnpm run stories:validate`
+  - full `corepack pnpm verify`
+repo_rules:
+  - update every authority layer touched by the removed workflow roles in the same change
+  - keep the rewrite terminology consistent; do not leave transitional aliases for `story-author`, `story-orchestrator`, or `pr-gate`
+  - do not remove reviewer-subagent review, cleanup metadata validation, human review, or post-merge cleanup requirements
+  - do not broaden into product behavior or unrelated workflow features
+  - use `corepack pnpm`, not plain `pnpm`, when running repo commands in this environment
+ambiguity_policy: fail_and_escalate

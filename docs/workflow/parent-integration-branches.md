@@ -4,11 +4,11 @@ This document is mandatory workflow guidance linked from `AGENTS.md`. Use it whe
 
 ## Required Flow
 
-- Use exactly one story-orchestrator for the parent series and one pr-gate per PR in that series.
-- Create a parent integration branch from `main` for the full story or decomposed story group, for example `story/typ-001`.
+- Session Orchestrator owns the parent series and all PR-gate duties for each PR in that series.
+- Create a parent integration branch from `main` for the full parent story set, for example `story/typ-001`.
 - Keep implementation on the one parent integration branch for this workflow; do not create substory branches as the normal path.
 - Do not open substory PRs in this flow; land each completed substory as a reviewed commit on the parent integration branch.
-- Before handing off the parent PR in this decomposed flow, reconstruct and refresh the compact per-story review-status matrix from durable artifacts (story-review outputs, story files, PR comments, recorded blockers) and fail closed if any child exact per-story status is unknown or pending.
+- Before handing off the parent PR, reconstruct and refresh the compact story-set review-status matrix from durable artifacts (story-review outputs, story files, PR comments, recorded blockers) and fail closed if the tool-selected parent-story-set review status is unknown or pending.
 - Keep one active substory packet at a time. A substory implementation pass may include only its active substory packet, implementation, tests, and parent-owned story activation files.
 - In a parent integration branch, `agent-packets/active.json` is a handoff pointer for the currently active or most recently active substory packet. It is not the full list of unfinished substories.
 - Substories that already merged into the parent integration branch remain approved and keep their packet files until the parent PR lands on `main`; their absence from `active.json` does not mean they are done.

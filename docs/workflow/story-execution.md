@@ -12,7 +12,7 @@ When starting after a context reset or uncertain session state:
 2. Check `git status --short --branch` to identify the local branch and dirty files.
 3. Read `agent-packets/active.json` to determine whether an active story exists; if it is missing, malformed, or inconsistent with checked-in packet/story files, stop and surface the recovery inconsistency instead of guessing.
 4. Inspect `stories/approved/`, `stories/done/`, `stories/blocked/`, and `stories/ambiguities/` to reconstruct story state.
-5. Inspect the current branch name, recent branch commits, and recent `main` commits to identify whether the worktree is on `main`, a single-story branch, a substory branch, or a parent integration branch.
+5. Inspect the current branch name, recent branch commits, and recent `main` commits to identify whether the worktree is on `main`, a child-story branch, or a parent integration branch.
 6. Use the native GitHub connector to check open pull requests, recent merged pull requests, unresolved review threads, and failing checks, including PR base/head branches.
 7. If an active packet exists, recover by reading the active approved story and packet before doing any implementation or review handoff.
 8. If no active packet exists on a parent integration branch, do not infer that the repo is between stories; reconstruct the parent/substory state from branch history, reviewed substory commits, remaining approved stories, packets, and the parent PR trail.
@@ -25,52 +25,53 @@ Manual chat memory is not authority after reset. If reconstructed state conflict
 Use a pre-presentation story-review gate for generated or normalized story work:
 
 - Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready.
-- Approval-ready means the exact candidate story has a usable per-story story-review result, and material findings for that story are fixed, explicitly deferred, or recorded.
-- Set-level or decomposition-group story review does not satisfy per-story candidate approval review.
-- Each candidate story needs its own usable story-review result before the parent agent presents that exact story for approval.
+- Before story-review assignment, run `corepack pnpm run stories:review-plan -- --parent <stories/generated/...yaml>` or `corepack pnpm run stories:review-plan -- --parent <stories/approved/...yaml>`.
+- Do not decide manually between single-story, set-level, per-story, or parent/substory story-review paths.
+- Spawn exactly the review assignments returned by the tool.
+- Approval-ready means the parent story set has a usable tool-selected story-review result, and material findings for that parent story set are fixed, explicitly deferred, or recorded.
+- A parent with exactly one child is still a valid parent/substory story set.
 - Story-review agent model: `gpt-5.5` with `high` reasoning.
-- Run a set-level story review before presenting a decomposed story group.
-- Run per-story review before presenting each candidate story for approval.
 - Story-review agents review story authority and decomposition, not implementation patches.
 - Story-review findings must be fixed, explicitly deferred, or recorded before the parent agent presents stories as approval-ready.
 - If no usable story-review agent run exists, do not present the story as approval-ready; present it as unreviewed and blocked on story review instead.
 - Implementation patch review remains a separate gate.
 
-### Decomposed Story-Group Review Matrix
+### Parent Story-Set Review Matrix
 
-For decomposed story groups, require a compact per-story review-status matrix before approval handoff, child activation, packet generation, and parent PR handoff.
+For parent story sets, require a compact story-set review-status matrix before approval handoff, child activation, packet generation, and parent PR handoff.
 
 Reconstruct this matrix from durable story-review outputs, story files, PR comments, or recorded blockers; do not use chat memory as the source of truth.
 
 Required columns:
 
-- story ID (parent and each child candidate)
-- story path
-- review type
+- parent story ID
+- child story IDs
+- story paths
+- review assignment ID
 - review status
 - review artifact or blocker reference
 - disposition summary
 
-Allowed review types: `set-level`, `exact per-story`, `not-applicable`.
+Allowed review types: `tool-selected parent-story-set`, `not-applicable`.
 
 Allowed review statuses: `pending`, `approval-ready`, `needs-revision`, `blocked`, `not-applicable`.
 
-Fail closed when any child has unknown or pending exact per-story review. Fail closed when status cannot be reconstructed from durable artifacts.
+Fail closed when the tool-selected parent-story-set review is unknown or pending. Fail closed when status cannot be reconstructed from durable artifacts.
 
 Lost chat context is not a reason to rerun review blindly; reconstruct first and report uncertainty if reconstruction fails.
 
 This matrix is an orchestration aid and PR/review handoff artifact, not a new mutable current-status file and not a second authority over story files.
 
-Ordinary single-story workflows are not required to maintain this parent/substory matrix.
+Single-child parent story sets are still parent/substory workflows.
 
-If broad mechanical validation of PR comments or story-review artifacts would be needed, record a follow-up recommendation instead of widening the patch.
+If broad mechanical validation of PR comments or story-review artifacts would be needed, run the review-plan tool first and record a follow-up recommendation instead of widening the patch.
 
 ## Story Execution Rules
 
 - Read `AGENTS.md` first, then the approved story, then the corresponding packet.
 - Implement only one approved story at a time.
 - Approved stories may exist without packets until they become active.
-- Post-approval role handoffs must include role packet extraction output for the assigned role (`story-orchestrator`, `implementation`, `code-review`, or `pr-gate`).
+- Post-approval role handoffs must include role packet extraction output for the assigned role (`implementation` or `code-review`).
 - Manual packet trimming is not the normal handoff path. Use deterministic role packet extraction output for normal handoffs.
 - packet-agent, cleanup-sync-agent, and revision-agent are not valid role handoff targets.
 - If role packet extraction is unavailable or fails, use temporary manual fallback only for that handoff and record both the extraction failure and the fallback details in the PR trail or implementation trail.
@@ -93,60 +94,48 @@ If broad mechanical validation of PR comments or story-review artifacts would be
 
 Use this workflow hierarchy:
 
-- Human -> Session Orchestrator -> (story-author, story-review, story-orchestrator) -> (implementation, code-review, pr-gate)
+- Human -> Session Orchestrator -> story-review -> (implementation, code-review)
 
 Human interaction boundary and path-selection policy:
 
-- Only the Session Orchestrator interacts directly with the human for story-path decisions.
-- Session Orchestrator owns assignment of story-author, story-review, and story-orchestrator.
-- story-orchestrator owns implementation, code-review, and pr-gate assignment for its assigned story or story set.
-- story-orchestrator handoff, implementation handoff, code-review handoff, and pr-gate handoff each require role packet extraction output for the assigned role.
-- Single-story execution is not the default and parent/substory execution is not the exception.
-- Session Orchestrator presents the single-story versus parent/substory tradeoffs before the human selects the path.
-- Record the selected path only in durable existing artifacts: story draft, story-review artifact, approval note, or PR/review trail.
+- Only the Session Orchestrator interacts directly with the human for story scope and approval decisions.
+- Session Orchestrator runs `corepack pnpm run stories:review-plan -- --parent <stories/generated/...yaml>` and owns story-review assignment.
+- Session Orchestrator runs `corepack pnpm run stories:review-plan -- --parent <stories/approved/...yaml>` and owns story-review assignment.
+- Session Orchestrator owns child activation, packet freshness, implementation assignment, review assignment, PR evidence, cleanup metadata validation, human-review handoff, merge readiness, and post-merge cleanup confirmation.
+- Implementation handoff and code-review handoff each require role packet extraction output for the assigned role.
+- Parent/substory execution is the only story workflow path.
+- A story with one child still uses the parent/substory workflow.
+- Do not document or ask agents to choose a separate single-story path.
 - Do not create a new mutable current-status file for selected-path tracking.
-- Story-author and story-review work happens before active packet generation; those roles do not receive active packets.
-- packet-agent, cleanup-sync-agent, and revision-agent are not introduced roles in this workflow.
+- story-author, story-writer, story-orchestrator, pr-gate, packet-agent, cleanup-sync-agent, and revision-agent are not valid assignable roles in this workflow.
 
 ## Role Lifecycle Reuse And Closure
 
-- Use a fresh story-author agent per new standalone story or new parent/substory set.
-- story-author is reused only within that story or set.
-- story-author closes after story approval, story-set approval, or abandonment.
 - story-review reuse within a story set for low/medium findings is allowed.
 - Use a fresh story-review agent after high/critical findings.
 - story-review closes after approval-ready or blocked review outcome.
-- Use one story-orchestrator agent per approved standalone story or approved parent/substory series.
-- story-orchestrator closes after story or parent PR merge, story/series completion, or blocked/abandoned outcome.
-- Use a fresh implementation agent per standalone story or substory.
+- Use a fresh implementation agent per active child story.
 - implementation revision reuse for low/medium code-review findings is allowed.
 - Use a fresh implementation agent for high/critical findings.
 - Use one code-review agent per PR, reused only for re-review on the same PR.
 - code-review closes after PR review closure or replacement.
-- Use one pr-gate agent per PR.
-- pr-gate closes after merge/sync or blocked/closed outcome.
 - A superseded implementation, story-review, or code-review agent must be closed before spawning a required fresh replacement.
 - Reviewers may upgrade low/medium findings to fresh-agent-required when they indicate architecture misunderstanding, scope drift, repeated failed fixes, or stale context.
 - Approved/completed handoffs close no-longer-needed reviewer and implementation agents once durable review or implementation records exist.
-- Closing a story-orchestrator after merge, completion, blocked, or abandoned outcome also closes all implementation, code-review, and pr-gate child agents it owns.
-- Story-author and story-review close after story or story-set approval.
+- Session Orchestrator closes no-longer-needed implementation and code-review agents after durable records exist.
 
 ## Verification And PR-Gate Authority
 
 - Implementation agents may run tests and verification commands.
 - Implementation-agent verification results are evidence, not final release authority.
-- story-orchestrator owns final verification-readiness gate authority for the assigned story or story set.
-- pr-gate owns PR body state for its assigned PR.
-- pr-gate owns AI review record tracking.
-- pr-gate owns revision response tracking.
-- pr-gate owns CI/check state tracking.
-- pr-gate owns cleanup metadata validation.
-- pr-gate owns human-review handoff.
-- pr-gate owns post-merge cleanup/sync confirmation.
-- pr-gate must not implement feature code.
-- pr-gate must not broaden scope.
-- pr-gate must not bypass human review.
-- pr-gate must not change cleanup automation semantics.
+- Session Orchestrator owns final verification-readiness gate authority for the assigned story set.
+- Session Orchestrator owns PR body state.
+- Session Orchestrator owns AI review record tracking.
+- Session Orchestrator owns revision response tracking.
+- Session Orchestrator owns CI/check state tracking.
+- Session Orchestrator owns cleanup metadata validation.
+- Session Orchestrator owns human-review handoff.
+- Session Orchestrator owns post-merge cleanup/sync confirmation.
 
 ## Card Manifest Fixture Policy
 
@@ -275,29 +264,21 @@ Model routing policy for this workflow:
 
 Use the complete role routing table:
 
-| Role                 | Default model   | Reasoning | Escalation                                          |
-| -------------------- | --------------- | --------- | --------------------------------------------------- |
-| Session Orchestrator | `gpt-5.5`       | `high`    | none                                                |
-| story-author         | `gpt-5.5`       | `high`    | none                                                |
-| story-review         | `gpt-5.5`       | `high`    | none                                                |
-| story-orchestrator   | `gpt-5.4`       | `medium`  | use `high` for parent series or complex state       |
-| implementation       | `gpt-5.3-codex` | `medium`  | none by default                                     |
-| code-review          | `gpt-5.4`       | `high`    | none                                                |
-| pr-gate              | `gpt-5.4`       | `medium`  | use `high` for parent PRs or cleanup/check failures |
+| Role                 | Default model   | Reasoning | Escalation      |
+| -------------------- | --------------- | --------- | --------------- |
+| Session Orchestrator | `gpt-5.5`       | `high`    | none            |
+| story-review         | `gpt-5.5`       | `high`    | none            |
+| implementation       | `gpt-5.3-codex` | `medium`  | none by default |
+| code-review          | `gpt-5.4`       | `high`    | none            |
 
 - Parent/orchestrator model: `gpt-5.5`
 - Session Orchestrator: `gpt-5.5` with `high` reasoning
-- story-author: `gpt-5.5` with `high` reasoning
 - Story-review agent model: `gpt-5.5` with `high` reasoning
 - story-review: `gpt-5.5` with `high` reasoning
-- story-orchestrator: default `gpt-5.4` with `medium` reasoning; use `high` for parent series or complex state
-- story-orchestrator uses gpt-5.4 medium by default and high for parent series or complex state
 - Reviewer subagent model: `gpt-5.4` with `high` reasoning
 - implementation: default `gpt-5.3-codex` with `medium` reasoning
 - Implementation worker model: default to `gpt-5.3-codex` with `medium` reasoning
 - code-review: `gpt-5.4` with `high` reasoning
-- pr-gate: default `gpt-5.4` with `medium` reasoning; use `high` for parent PRs or cleanup/check failures
-- pr-gate uses gpt-5.4 medium by default and high for parent PRs or cleanup/check failures
 - Code-review agents must not silently default to `gpt-5.5` with `high` reasoning.
 - Recorded rationale for any model-routing deviation is required in the PR review trail and implementation note
 - Any model-routing deviation must be recorded in the PR review trail and implementation note
