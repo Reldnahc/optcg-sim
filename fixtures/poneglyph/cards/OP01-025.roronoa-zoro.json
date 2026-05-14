@@ -1,0 +1,213 @@
+{
+  "attribute": ["Slash"],
+  "available_languages": ["en", "ja"],
+  "block": "1",
+  "card_number": "OP01-025",
+  "card_type": "Character",
+  "color": ["Red"],
+  "cost": 3,
+  "counter": null,
+  "effect": "[Rush] (This card can attack on the turn in which it is played.)",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "not_legal"
+    }
+  },
+  "life": null,
+  "name": "Roronoa Zoro",
+  "official_faq": [],
+  "power": 5000,
+  "rarity": "SR",
+  "released": true,
+  "released_at": "2022-12-02T00:00:00.000Z",
+  "set": "OP01",
+  "set_name": "Romance Dawn",
+  "trigger": null,
+  "types": ["Supernovas", "Straw Hat Crew"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP01-025/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP01-025/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Standard",
+      "market": {
+        "high_price": "39.99",
+        "low_price": "2.90",
+        "market_price": "3.56",
+        "mid_price": "6.05",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/453510/one-piece-card-game-romance-dawn-roronoa-zoro-025"
+      },
+      "name": null,
+      "product": {
+        "id": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+        "name": "Romance Dawn",
+        "released_at": "2022-12-02T00:00:00.000Z",
+        "set_code": "OP01",
+        "slug": "romance-dawn"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP01-025/en/stock/2/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP01-025/en/stock/2/thumb.webp"
+        }
+      },
+      "index": 2,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "1200.00",
+        "low_price": "124.99",
+        "market_price": "152.58",
+        "mid_price": "189.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/453511/one-piece-card-game-romance-dawn-roronoa-zoro-025-parallel"
+      },
+      "name": null,
+      "product": {
+        "id": "9c438d47-c70f-48aa-91c5-c40efa7ca4e0",
+        "name": "Romance Dawn",
+        "released_at": "2022-12-02T00:00:00.000Z",
+        "set_code": "OP01",
+        "slug": "romance-dawn"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP01-025/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP01-025/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Reprint",
+      "market": {
+        "high_price": "50.00",
+        "low_price": "1.19",
+        "market_price": "2.13",
+        "mid_price": "2.98",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/527620/one-piece-card-game-one-piece-promotion-cards-roronoa-zoro-op01-025-ultra-deck-the-three-captains"
+      },
+      "name": null,
+      "product": {
+        "id": "1d1cc7a7-d6df-43c5-98c5-f9c62a31a971",
+        "name": "Starter Deck - The Three Captains",
+        "released_at": "2023-11-10T00:00:00.000Z",
+        "set_code": "ST10",
+        "slug": "starter-deck-the-three-captains"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP01-025/en/stock/3/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP01-025/en/stock/3/thumb.webp"
+        }
+      },
+      "index": 3,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "650.00",
+        "low_price": "229.89",
+        "market_price": "229.92",
+        "mid_price": "273.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/557288/one-piece-card-game-one-piece-promotion-cards-roronoa-zoro-english-version-1st-anniversary-set"
+      },
+      "name": null,
+      "product": {
+        "id": "8fcbb066-1cb0-49b5-9a6d-9645e098a033",
+        "name": "English Version 1st Anniversary Set",
+        "released_at": null,
+        "set_code": null,
+        "slug": "english-version-1st-anniversary-set"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 4,
+      "label": "Promo",
+      "market": {
+        "high_price": null,
+        "low_price": null,
+        "market_price": null,
+        "mid_price": null,
+        "tcgplayer_url": "https://www.tcgplayer.com/product/515356/one-piece-card-game-one-piece-promotion-cards-roronoa-zoro-op01-025-treasure-cup"
+      },
+      "name": null,
+      "product": {
+        "id": "add8e69b-7ee4-4d6f-8714-e5c4b55349e4",
+        "name": "Treasure Cup",
+        "released_at": null,
+        "set_code": null,
+        "slug": "treasure-cup"
+      }
+    }
+  ]
+}

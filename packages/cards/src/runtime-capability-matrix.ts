@@ -93,12 +93,48 @@ export const generatedSupportRuntimeCapabilityMatrix = {
     },
     {
       description:
+        "Printed Banish keyword behavior is executable by current runtime.",
+      id: "keyword:banish:printed",
+      kind: "keyword",
+      sinceStory: "ENG-013",
+      supported: true,
+      supportedParserRuleIds: ["exact:keyword:banish:standalone"],
+    },
+    {
+      description:
         "Printed Blocker keyword behavior is executable by current runtime.",
       id: "keyword:blocker:printed",
       kind: "keyword",
       sinceStory: "ENG-014",
       supported: true,
       supportedParserRuleIds: ["exact:keyword:blocker:standalone"],
+    },
+    {
+      description:
+        "Printed Double Attack keyword behavior is executable by current runtime.",
+      id: "keyword:doubleAttack:printed",
+      kind: "keyword",
+      sinceStory: "ENG-046",
+      supported: true,
+      supportedParserRuleIds: ["exact:keyword:double-attack:standalone"],
+    },
+    {
+      description:
+        "Printed Rush keyword behavior is executable by current runtime.",
+      id: "keyword:rush:printed",
+      kind: "keyword",
+      sinceStory: "ENG-011",
+      supported: true,
+      supportedParserRuleIds: ["exact:keyword:rush:standalone"],
+    },
+    {
+      description:
+        "Printed Rush: Character keyword behavior is executable by current runtime.",
+      id: "keyword:rushCharacter:printed",
+      kind: "keyword",
+      sinceStory: "ENG-011",
+      supported: true,
+      supportedParserRuleIds: ["exact:keyword:rush-character:standalone"],
     },
     {
       description:
@@ -122,7 +158,13 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "sourcePresencePolicy",
       sinceStory: "CARD-012",
       supported: true,
-      supportedParserRuleIds: ["exact:keyword:blocker:standalone"],
+      supportedParserRuleIds: [
+        "exact:keyword:banish:standalone",
+        "exact:keyword:blocker:standalone",
+        "exact:keyword:double-attack:standalone",
+        "exact:keyword:rush-character:standalone",
+        "exact:keyword:rush:standalone",
+      ],
     },
     {
       description: "On Play trigger timing is executable by current runtime.",
@@ -159,7 +201,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       ],
     },
   ],
-  generatedAtStory: "CARD-012",
+  generatedAtStory: "CARD-013B",
   id: "generated-support-runtime-capabilities:v1",
 } as const satisfies RuntimeCapabilityMatrix;
 
@@ -169,7 +211,11 @@ export const requiredGeneratedSupportCapabilityIds = [
   "effect:draw:self:count:positive-safe-integer",
   "effect:sequence:ordered",
   "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+  "keyword:banish:printed",
   "keyword:blocker:printed",
+  "keyword:doubleAttack:printed",
+  "keyword:rush:printed",
+  "keyword:rushCharacter:printed",
   "sourcePresencePolicy:mustRemainInSameZone",
   "sourcePresencePolicy:none-for-keyword",
   "trigger:onPlay",

@@ -20,8 +20,14 @@ function toCardId(value: string): CardId {
 }
 
 async function loadOp03044Fixture(): Promise<PoneglyphCardDetail> {
+  return loadFixture("OP03-044.kaya.json");
+}
+
+async function loadFixture(
+  fixtureFileName: string,
+): Promise<PoneglyphCardDetail> {
   const source = await readFile(
-    path.join(repoRoot, "fixtures/poneglyph/cards/OP03-044.kaya.json"),
+    path.join(repoRoot, "fixtures/poneglyph/cards", fixtureFileName),
     "utf8",
   );
 
@@ -266,6 +272,30 @@ describe("support probe", () => {
       'span: "[Opponent\'s Turn] This Character gains +1000 power."',
     );
     expect(text).not.toContain('span: "[Blocker]"');
+  });
+
+  it("prints only Neptunian unsupported residue for mixed EB04-011 Rush: Character text", async () => {
+    const detail = await loadFixture("EB04-011.scaled-neptunian.json");
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("EB04-011"),
+      getCard: () => Promise.resolve(detail),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain(
+      'span: "[On Play] Draw a card for each of your {Neptunian} type Characters. Then, trash the same number of cards from your hand."',
+    );
+    expect(text).not.toContain('span: "[Rush: Character]');
   });
 
   it("does not create, delete, or rewrite fixture, manifest, report, or cache files when probing via CLI", async () => {

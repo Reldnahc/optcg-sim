@@ -2,6 +2,7 @@ import type {
   CardId,
   CardImplementationRecord,
   EffectDefinition,
+  Keyword,
   MatchCardManifest,
   ResolvedCardOverlay,
 } from "@optcg/types";
@@ -81,6 +82,88 @@ const selectedEffectShapeFixturePathById = {
 
 type SelectedEffectShapeFixtureId =
   keyof typeof selectedEffectShapeFixturePathById;
+
+type KeywordProofFixtureId = "OP01-025" | "OP04-014" | "EB04-011" | "P-028";
+
+const keywordProofFixturePathById = {
+  "OP01-025": "fixtures/poneglyph/cards/OP01-025.roronoa-zoro.json",
+  "OP04-014": "fixtures/poneglyph/cards/OP04-014.monkey-d-luffy.json",
+  "EB04-011": "fixtures/poneglyph/cards/EB04-011.scaled-neptunian.json",
+  "P-028": "fixtures/poneglyph/cards/P-028.portgas-d-ace.json",
+} as const satisfies Record<KeywordProofFixtureId, string>;
+
+export type RealKeywordProofRole =
+  | "exact Rush"
+  | "exact Rush: Character"
+  | "exact Double Attack"
+  | "exact Banish"
+  | "mixed Rush residue"
+  | "mixed Rush: Character residue"
+  | "mixed Double Attack residue"
+  | "mixed Banish residue";
+
+export type RealKeywordProofFixtureCorpusEntry = {
+  readonly cardId: KeywordProofFixtureId;
+  readonly expectedBehaviorHash: string;
+  readonly expectedSourceTextHash: string;
+  readonly fixtureFileName: string;
+  readonly intendedProofRole: RealKeywordProofRole;
+  readonly keywordEvidence: string;
+  readonly normalizedPrintedKeywords: readonly Keyword[];
+  readonly residueEvidence: string | undefined;
+};
+
+export const realKeywordProofFixtureCorpus = [
+  {
+    cardId: "OP01-025",
+    expectedBehaviorHash:
+      "502a593d12bd9d371ecf9c1d8cf11cc61854b8e6f7b9f5534eb923d60d024d9e",
+    expectedSourceTextHash:
+      "721b1fbe99b59faf124957d3b68a4259be282d2fea4ade84b881ae1ebddeb442",
+    fixtureFileName: "OP01-025.roronoa-zoro.json",
+    intendedProofRole: "exact Rush",
+    keywordEvidence: "[Rush]",
+    normalizedPrintedKeywords: ["rush"],
+    residueEvidence: undefined,
+  },
+  {
+    cardId: "OP04-014",
+    expectedBehaviorHash:
+      "d5651718a7e9545674381b984060cd8b09abae4f58abdbe25ee16f30de3f89f9",
+    expectedSourceTextHash:
+      "74379c099a0a16ab7bdf274bf6b5cf38829058b1dcc68ef94707c1bd9baac74e",
+    fixtureFileName: "OP04-014.monkey-d-luffy.json",
+    intendedProofRole: "exact Banish",
+    keywordEvidence: "[Banish]",
+    normalizedPrintedKeywords: ["banish"],
+    residueEvidence: undefined,
+  },
+  {
+    cardId: "EB04-011",
+    expectedBehaviorHash:
+      "9517f967be870faafef5ef0c277b0b78ac029f236afc6eebe41d4f7756a85b5c",
+    expectedSourceTextHash:
+      "7a52bc725ef3a2a02ab1e6a281067fe09e6c10593b1fb582b8bb2fe885af0aeb",
+    fixtureFileName: "EB04-011.scaled-neptunian.json",
+    intendedProofRole: "mixed Rush: Character residue",
+    keywordEvidence: "[Rush: Character]",
+    normalizedPrintedKeywords: ["rushCharacter"],
+    residueEvidence:
+      "Neptunian field-count draw-then-trash text remains unsupported residue evidence.",
+  },
+  {
+    cardId: "P-028",
+    expectedBehaviorHash:
+      "196bcf3cbd8e13390980151131be926536bd38b0c29b326b8b327ba72ae06354",
+    expectedSourceTextHash:
+      "c2e64f643f31eff00f424710ea509bc932d9b52516da9357f321391044e39640",
+    fixtureFileName: "P-028.portgas-d-ace.json",
+    intendedProofRole: "exact Double Attack",
+    keywordEvidence: "[Double Attack]",
+    normalizedPrintedKeywords: ["doubleAttack"],
+    residueEvidence: undefined,
+  },
+] as const satisfies readonly RealKeywordProofFixtureCorpusEntry[];
 
 export type RealEffectShapeFixtureFamily =
   | "activate-main"
@@ -452,20 +535,33 @@ export type RealCardFixtureId =
   | "EB01-023"
   | "OP04-014"
   | "OP10-045"
-  | SelectedEffectShapeFixtureId;
+  | SelectedEffectShapeFixtureId
+  | KeywordProofFixtureId;
 
 const checkedInCardFixturePathById = {
   "OP01-060": "fixtures/poneglyph/cards/OP01-060.donquixote-doflamingo.json",
   "OP05-091": "fixtures/poneglyph/cards/OP05-091.rebecca.json",
   "EB01-023": "fixtures/poneglyph/cards/EB01-023.edward-weevil.json",
-  "OP04-014": "fixtures/poneglyph/cards/OP04-014.monkey-d-luffy.json",
   "OP10-045": "fixtures/poneglyph/cards/OP10-045.cavendish.json",
+  ...keywordProofFixturePathById,
   ...selectedEffectShapeFixturePathById,
 } as const satisfies Record<RealCardFixtureId, string>;
 
-const realCardFixtureIds = Object.freeze(
-  Object.keys(checkedInCardFixturePathById) as RealCardFixtureId[],
-);
+const manifestRealCardFixtureIds = Object.freeze([
+  "OP01-060",
+  "OP05-091",
+  "EB01-023",
+  "OP04-014",
+  "OP10-045",
+  ...Object.keys(selectedEffectShapeFixturePathById),
+] as RealCardFixtureId[]);
+
+const realCardFixtureIds = Object.freeze([
+  ...manifestRealCardFixtureIds,
+  "OP01-025",
+  "EB04-011",
+  "P-028",
+] as RealCardFixtureId[]);
 
 const supportedEffectDefinitionId = "eb01-023.on-play-draw-1";
 const supportedEffectRulesVersion = "2026-01-16";
@@ -538,7 +634,7 @@ export async function buildFixtureOnlyRealCardDslMatchCardManifest(): Promise<Ma
   const effectDefinition =
     await loadCheckedInEb01023OnPlayDraw1EffectDefinition();
   const normalizedFixtures = await Promise.all(
-    realCardFixtureIds.map(
+    manifestRealCardFixtureIds.map(
       async (fixtureId): Promise<NormalizedRealCardFixture> => {
         return {
           fixtureId,

@@ -492,4 +492,87 @@ describe("certified card text parser", () => {
       ],
     });
   });
+
+  it.each([
+    {
+      expectedParserRuleId: "exact:keyword:rush:standalone",
+      sourceText: "[Rush]",
+    },
+    {
+      expectedParserRuleId: "exact:keyword:rush:standalone",
+      sourceText:
+        "[Rush] (This card can attack on the turn in which it is played.)",
+    },
+    {
+      expectedParserRuleId: "exact:keyword:rush-character:standalone",
+      sourceText: "[Rush: Character]",
+    },
+    {
+      expectedParserRuleId: "exact:keyword:rush-character:standalone",
+      sourceText:
+        "[Rush: Character] (This card can attack Characters on the turn in which it is played.)",
+    },
+    {
+      expectedParserRuleId: "exact:keyword:double-attack:standalone",
+      sourceText: "[Double Attack]",
+    },
+    {
+      expectedParserRuleId: "exact:keyword:double-attack:standalone",
+      sourceText: "[Double Attack] (This card deals 2 damage.)",
+    },
+    {
+      expectedParserRuleId: "exact:keyword:banish:standalone",
+      sourceText: "[Banish]",
+    },
+    {
+      expectedParserRuleId: "exact:keyword:banish:standalone",
+      sourceText:
+        "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
+    },
+  ])(
+    "parses $sourceText as a certified keyword complete parse",
+    ({ expectedParserRuleId, sourceText }) => {
+      const result = parse(sourceText);
+
+      expect(result.status).toBe("complete");
+      if (!isCompleteGeneratedSupportParseResult(result)) {
+        throw new Error("Expected complete parse.");
+      }
+
+      expect(result.parserRuleIds).toEqual([expectedParserRuleId]);
+      expect(result.effectDefinition.implementationStatus).toBe(
+        "vanilla-confirmed",
+      );
+      expect(result.effectDefinition.effects).toEqual([]);
+    },
+  );
+
+  it("parses mixed Rush: Character fixture text as partial with only unsupported residue", () => {
+    const text =
+      "[Rush: Character] (This card can attack Characters on the turn in which it is played.)\n[On Play] Draw a card for each of your {Neptunian} type Characters. Then, trash the same number of cards from your hand.";
+    const result = parse(text);
+
+    expect(result.status).toBe("partial");
+    expect(result).toMatchObject({
+      blockers: [
+        {
+          code: "unparsed-span",
+          message: "Unsupported card text remains after certified parsing.",
+          span: {
+            end: text.length,
+            start: 87,
+            text: "[On Play] Draw a card for each of your {Neptunian} type Characters. Then, trash the same number of cards from your hand.",
+          },
+        },
+      ],
+      parsedRuleIds: ["exact:keyword:rush-character:standalone"],
+      unparsedSpans: [
+        {
+          end: text.length,
+          start: 87,
+          text: "[On Play] Draw a card for each of your {Neptunian} type Characters. Then, trash the same number of cards from your hand.",
+        },
+      ],
+    });
+  });
 });

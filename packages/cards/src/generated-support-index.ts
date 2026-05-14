@@ -200,6 +200,20 @@ function buildGeneratedSupportIndexEntry(
     });
   }
 
+  const keywordMetadataPrecondition = getKeywordMetadataPrecondition(
+    parseResult.parserRuleIds,
+  );
+  if (
+    keywordMetadataPrecondition !== undefined &&
+    !hasKeywordSupportMetadata(card, keywordMetadataPrecondition.keyword)
+  ) {
+    return unsupportedMetadataEntry({
+      card,
+      message: `Normalized card metadata does not satisfy certified ${keywordMetadataPrecondition.label} keyword support preconditions.`,
+      parserRuleIds: parseResult.parserRuleIds,
+    });
+  }
+
   const capabilityCoverage = resolveCapabilityCoverage({
     matrix:
       input.runtimeCapabilityMatrix ?? generatedSupportRuntimeCapabilityMatrix,
@@ -284,6 +298,13 @@ function hasBlockerKeywordSupportMetadata(
   return card.category === "character" && hasPrintedKeyword(card, "blocker");
 }
 
+function hasKeywordSupportMetadata(
+  card: GeneratedSupportCardTextInput,
+  keyword: Keyword,
+): boolean {
+  return card.category === "character" && hasPrintedKeyword(card, keyword);
+}
+
 function hasEmptyEffectSupportMetadata(
   card: GeneratedSupportCardTextInput,
 ): boolean {
@@ -295,6 +316,28 @@ function hasPrintedKeyword(
   keyword: Keyword,
 ): boolean {
   return card.printedKeywords?.includes(keyword) === true;
+}
+
+function getKeywordMetadataPrecondition(
+  parserRuleIds: readonly string[],
+): { keyword: Keyword; label: string } | undefined {
+  if (parserRuleIds.includes("exact:keyword:rush:standalone")) {
+    return { keyword: "rush", label: "Rush" };
+  }
+
+  if (parserRuleIds.includes("exact:keyword:rush-character:standalone")) {
+    return { keyword: "rushCharacter", label: "Rush: Character" };
+  }
+
+  if (parserRuleIds.includes("exact:keyword:double-attack:standalone")) {
+    return { keyword: "doubleAttack", label: "Double Attack" };
+  }
+
+  if (parserRuleIds.includes("exact:keyword:banish:standalone")) {
+    return { keyword: "banish", label: "Banish" };
+  }
+
+  return undefined;
 }
 
 function supportedVanillaEntry({
@@ -468,6 +511,28 @@ function capabilityIdsForParserRuleId(parserRuleId: string): readonly string[] {
 
   if (parserRuleId === "exact:keyword:blocker:standalone") {
     return ["keyword:blocker:printed", "sourcePresencePolicy:none-for-keyword"];
+  }
+
+  if (parserRuleId === "exact:keyword:rush:standalone") {
+    return ["keyword:rush:printed", "sourcePresencePolicy:none-for-keyword"];
+  }
+
+  if (parserRuleId === "exact:keyword:rush-character:standalone") {
+    return [
+      "keyword:rushCharacter:printed",
+      "sourcePresencePolicy:none-for-keyword",
+    ];
+  }
+
+  if (parserRuleId === "exact:keyword:double-attack:standalone") {
+    return [
+      "keyword:doubleAttack:printed",
+      "sourcePresencePolicy:none-for-keyword",
+    ];
+  }
+
+  if (parserRuleId === "exact:keyword:banish:standalone") {
+    return ["keyword:banish:printed", "sourcePresencePolicy:none-for-keyword"];
   }
 
   if (parserRuleId === "exact:on-play:draw-n:trash-m:hand:self") {

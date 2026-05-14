@@ -195,30 +195,83 @@ describe("support evaluator", () => {
     expect(evaluation.effectDefinitionId).toBe("op03-044.generated-support");
   });
 
-  it("keeps OP04-014 unsupported unless it satisfies the generated-support contract", () => {
-    const op04014 = normalizePoneglyphCardDetail({
-      ...loadOp03044Fixture(),
-      card_number: "OP04-014",
-      effect: "[Banish]",
-      name: "Banish Contract Candidate",
-    });
+  it.each([
+    {
+      expectedRuleId: "exact:keyword:rush:standalone",
+      fixtureFileName: "OP01-025.roronoa-zoro.json",
+      keyword: "rush",
+    },
+    {
+      expectedRuleId: "exact:keyword:banish:standalone",
+      fixtureFileName: "OP04-014.monkey-d-luffy.json",
+      keyword: "banish",
+    },
+    {
+      expectedRuleId: "exact:keyword:double-attack:standalone",
+      fixtureFileName: "P-028.portgas-d-ace.json",
+      keyword: "doubleAttack",
+    },
+  ])(
+    "evaluates exact $keyword CARD-013A fixture as generated-support playable",
+    ({ expectedRuleId, fixtureFileName }) => {
+      const card = normalizePoneglyphCardDetail(loadFixture(fixtureFileName));
+
+      const evaluation = evaluateGeneratedSupportPlayability({
+        card,
+        cardDataVersion: "2026-05-13",
+        effectDefinitionsVersion: "generated-support-v1",
+        expectedBehaviorHash: card.behaviorHash,
+        expectedSourceTextHash: card.sourceTextHash,
+        rulesVersion: "generated-support-v1",
+        validateEffectDefinition,
+      });
+
+      expect(evaluation).toMatchObject({
+        blockers: [],
+        cardId: card.cardId,
+        parseStatus: "complete",
+        parserRuleIds: [expectedRuleId],
+        playable: true,
+        status: "supported",
+        support: {
+          cardId: card.cardId,
+          status: "vanilla-confirmed",
+          tested: true,
+        },
+      });
+      expect(evaluation.effectDefinition).toBeUndefined();
+      expect(evaluation.effectDefinitionId).toBeUndefined();
+    },
+  );
+
+  it("keeps mixed EB04-011 unsupported with only Neptunian residue blockers", () => {
+    const card = normalizePoneglyphCardDetail(
+      loadFixture("EB04-011.scaled-neptunian.json"),
+    );
 
     const evaluation = evaluateGeneratedSupportPlayability({
-      card: op04014,
+      card,
       cardDataVersion: "2026-05-13",
       effectDefinitionsVersion: "generated-support-v1",
-      expectedBehaviorHash: op04014.behaviorHash,
-      expectedSourceTextHash: op04014.sourceTextHash,
+      expectedBehaviorHash: card.behaviorHash,
+      expectedSourceTextHash: card.sourceTextHash,
       rulesVersion: "generated-support-v1",
       validateEffectDefinition,
     });
 
     expect(evaluation.playable).toBe(false);
     expect(evaluation.status).toBe("unsupported");
-    expect(evaluation.blockers).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: "unparsed-span" }),
-      ]),
+    expect(evaluation.parserRuleIds).toEqual([
+      "exact:keyword:rush-character:standalone",
+    ]);
+    const residueBlocker = evaluation.blockers.find(
+      (blocker) => blocker.code === "unparsed-span",
+    );
+    expect(residueBlocker?.span?.text).toBe(
+      "[On Play] Draw a card for each of your {Neptunian} type Characters. Then, trash the same number of cards from your hand.",
+    );
+    expect(JSON.stringify(evaluation.blockers)).not.toContain(
+      "[Rush: Character]",
     );
   });
 
@@ -370,8 +423,12 @@ describe("support evaluator", () => {
 });
 
 function loadOp03044Fixture(): PoneglyphCardDetail {
+  return loadFixture("OP03-044.kaya.json");
+}
+
+function loadFixture(fixtureFileName: string): PoneglyphCardDetail {
   const source = readFileSync(
-    path.join(repoRoot, "fixtures/poneglyph/cards/OP03-044.kaya.json"),
+    path.join(repoRoot, "fixtures/poneglyph/cards", fixtureFileName),
     "utf8",
   );
 

@@ -1,0 +1,141 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-013B
+epic_id: CARD-013
+title: "Certify Rush, Rush: Character, Double Attack, and Banish generated support"
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Add generated-support parser, runtime-capability, evaluator, support-probe,
+  and verification coverage for the remaining printed combat keyword bodies
+  that are already executed by the engine: `[Rush]`, `[Rush: Character]`,
+  `[Double Attack]`, and `[Banish]`. Use only CARD-013A fixture evidence for
+  real-card proof. Any text in those cards that is not one of the targeted
+  already-implemented keywords must stay unsupported.
+story_boundary: >
+  Own only @optcg/cards certified parser rules, normalized printed keyword
+  extraction, generated-support capability evidence, support evaluator/probe
+  output, and cards-package tests needed to certify exact engine-supported
+  printed keyword bodies. Do not change engine-core battle behavior, generated
+  effect runtime semantics, replay, DTOs, protocols, hidden-info filtering,
+  server loading, or broad card fixture corpus behavior.
+allowed_touch_points:
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/normalization.ts
+  - packages/cards/src/normalization.test.ts
+  - packages/cards/src/real-card-fixtures.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - stories/generated/CARD-013-engine-supported-keyword-generated-support-parent.yaml
+  - stories/generated/CARD-013B-engine-supported-keyword-generated-support.yaml
+  - stories/approved/CARD-013-engine-supported-keyword-generated-support-parent.yaml
+  - stories/approved/CARD-013B-engine-supported-keyword-generated-support.yaml
+  - agent-packets/CARD-013B.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s025
+  - 02-engine-mechanics.s045
+  - 04-effect-runtime.s002
+  - 05-effect-dsl-reference.s017
+  - 05-effect-dsl-reference.s018
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+scope:
+  - add certified parser rules for exact `[Rush]`, `[Rush: Character]`, `[Double Attack]`, and `[Banish]` keyword bodies, including their standard parenthetical explanatory notes when present
+  - add parser residue handling so a supported keyword prefix plus unsupported remaining text reports only the unsupported residue
+  - "add runtime capability matrix records for printed Rush, Rush: Character, Double Attack, and Banish keyword bodies, backed by existing engine runtime behavior"
+  - update generated-support capability mapping so each new keyword parser rule requires its matching keyword capability plus the keyword source-presence policy
+  - ensure generated-support evaluator metadata preconditions require normalized category `character` and matching `printedKeywords` for each certified keyword
+  - update normalized printed keyword extraction for `[Rush: Character]` if current normalization does not produce `rushCharacter`
+  - keep standalone Blocker parser, capability evidence, and support behavior unchanged
+  - use the CARD-013A checked-in OP01-025, OP04-014, EB04-011, and P-028 fixtures as the only real-card proof source
+  - "treat EB04-011 as mixed Rush: Character residue evidence; certify only the `[Rush: Character]` span and keep the Neptunian field-count draw-then-trash effect unsupported"
+  - treat every non-target unsupported text span on CARD-013A fixtures as unsupported residue, not as generated-support gameplay support
+non_scope:
+  - "new engine-core battle, attack, damage, blocker, Banish, Rush: Character, Double Attack, or Unblockable behavior"
+  - Counter Event support
+  - conditional keyword-granting effects such as "gains [Banish]" or "gains [Double Attack]"
+  - supporting non-keyword text present on CARD-013A fixtures
+  - EB04-011 Neptunian field-count draw-then-trash support
+  - simultaneous Double Attack plus Banish support beyond existing engine behavior
+  - Double Attack through available blocker paths if currently unsupported by engine
+  - generated DSL effects for keyword-granting text
+  - changing Poneglyph raw text, source hashes, behavior hashes, display text, or fixture files
+  - broad fixture-corpus refreshes or live catalog scraping
+  - per-card manual support overlays for cards that should be admitted by generated support
+  - server, client, replay, protocol, DTO, hidden-info, database, or UI changes
+dependencies:
+  - CARD-012
+  - CARD-013A
+  - ENG-011
+  - ENG-013
+  - ENG-018
+  - ENG-046
+card_source_integrity:
+  - CARD-013B may only use OP01-025, OP04-014, EB04-011, and P-028 fixtures captured or verified by CARD-013A, plus existing checked-in fixture evidence explicitly listed in CARD-013A
+  - no new Poneglyph fixture capture is allowed in CARD-013B; if more fixtures are needed, stop and revise or add a fixture-capture story
+  - exact keyword-only cards from CARD-013A may become generated-support playable only for the certified target keyword body and matching normalized metadata
+  - mixed cards from CARD-013A must remain unsupported overall; parser/evaluator/probe output should remove the certified keyword span from blockers while keeping all other unsupported text as blocker evidence
+  - EB04-011 must remain unsupported overall unless a later story adds DSL/runtime support for its Neptunian field-count draw-then-trash text
+engine_capability_preflight:
+  - Rush required runtime capability is `keyword:rush:printed`, backed by ENG-011 and existing engine support for played-this-turn character attack legality and legal action projection in `packages/engine-core/src/battle-declare-attack-rush.test.ts` and `packages/engine-core/src/compute-view.test.ts`
+  - "Rush: Character required runtime capability is `keyword:rushCharacter:printed`, backed by ENG-011 and existing engine support for played-this-turn character-only attack legality and leader attack exclusion in `packages/engine-core/src/battle-declare-attack-rush.test.ts` and `packages/engine-core/src/compute-view.test.ts`"
+  - Banish required runtime capability is `keyword:banish:printed`, backed by ENG-013 and follow-on battle pipeline coverage for trashing damaged life and suppressing normal trigger/hand movement in `packages/engine-core/src/battle-damage-banish-only.test.ts` and `packages/engine-core/src/real-card-dsl-runtime.test.ts`
+  - Double Attack required runtime capability is `keyword:doubleAttack:printed`, backed by ENG-046 completed multiple-damage work and current coverage in `packages/engine-core/src/battle-damage-multiple.test.ts`; certification is limited to the current supported runtime boundary for two leader damage points
+  - all keyword-only parser rules require `sourcePresencePolicy:none-for-keyword`
+  - Blocker capability `keyword:blocker:printed` is existing evidence from CARD-012 and must remain unchanged
+  - Unblockable is not included because current engine surfaces treat printed Unblockable as unsupported/fail-closed
+  - if implementation discovers that a generated-support status record cannot feed an already-implemented engine keyword path without engine changes, stop and split an ENG prerequisite instead of broadening this CARD story
+acceptance_criteria:
+  - exact `[Rush]` and Rush reminder text parse completely with parser rule `exact:keyword:rush:standalone`
+  - exact `[Rush: Character]` and its supported reminder shape parse completely with parser rule `exact:keyword:rush-character:standalone`
+  - exact `[Double Attack]` and Double Attack reminder text parse completely with parser rule `exact:keyword:double-attack:standalone`
+  - exact `[Banish]` and Banish reminder text parse completely with parser rule `exact:keyword:banish:standalone`
+  - "generated-support evaluates exact keyword-only Rush, Rush: Character, Double Attack, and Banish candidates as supported only when normalized metadata exposes the matching printed keyword and Character category"
+  - missing or mismatched printed keyword metadata keeps the candidate unsupported with explicit blocker evidence
+  - exact keyword-only CARD-013A fixtures among OP01-025, OP04-014, EB04-011, and P-028 evaluate as generated-support playable through matching keyword capability evidence with no generated EffectDefinition and no unparsed-span blockers
+  - mixed CARD-013A fixtures among OP01-025, OP04-014, EB04-011, and P-028 remain unsupported overall, but blocker spans do not include already-certified target keyword or reminder text
+  - support-probe output for mixed keyword-plus-unsupported text prints only the remaining unsupported spans
+  - existing CARD-012 Blocker and empty-effect generated support tests remain passing without expectation changes
+  - no engine-core gameplay, replay, DTO, protocol, hidden-info, fixture, or event behavior changes are included
+required_tests:
+  - exact candidate story-review before approval
+  - "parser unit tests for exact and reminder-text Rush, Rush: Character, Double Attack, and Banish keyword bodies"
+  - parser unit tests for mixed CARD-013A fixture text proving only unsupported residue remains
+  - generated-support index/evaluator tests proving each new keyword-only parser rule emits matching capability evidence and support status
+  - generated-support index/evaluator tests proving mismatched category or missing printed keyword metadata stays unsupported
+  - normalization test proving `[Rush: Character]` extracts `rushCharacter` rather than plain `rush`
+  - evaluator or fixture-backed tests proving exact keyword-only CARD-013A fixtures become generated-support playable only when complete
+  - support-probe tests proving mixed CARD-013A fixture output omits certified keyword spans and includes only remaining unsupported text
+  - regression tests proving CARD-012 Blocker support and empty-effect support remain unchanged
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run verify` if feasible
+repo_rules:
+  - generate and activate the CARD-013B packet before implementation
+  - stay within allowed_touch_points
+  - keep generated-support fail-closed when any parsed component lacks certified parser evidence, normalized metadata evidence, or runtime capability evidence
+  - do not add per-card manual support records for cards that should be validated from generated support and Poneglyph source data
+  - do not capture or edit Poneglyph fixtures in this story
+  - if Double Attack support-status requirements are ambiguous, record an ambiguity or split an ENG prerequisite instead of silently changing engine behavior
+ambiguity_policy: fail_and_escalate
