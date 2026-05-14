@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-054A.md",
+      "storyId": "ENG-054A",
+      "storyPath": "stories/approved/ENG-054A-playerview-event-payload-allow-list.yaml",
+      "storySha256": "0477e5cd8c2d369bc2f70f75a9c7f739e8118ee0e7e1ebc99329f5a51ccfc852"
+    }
+  ],
   "version": 1
 }
