@@ -141,9 +141,7 @@ describe("Poneglyph normalization", () => {
       const card = normalizePoneglyphCardDetail(fixture);
 
       expect(card.cardId).toBe(entry.cardId);
-      expect(card.printedKeywords).toEqual(
-        expectedNormalizedPrintedKeywords(entry),
-      );
+      expect(card.printedKeywords).toEqual(entry.normalizedPrintedKeywords);
       expect(card.effectText ?? card.triggerText ?? "").toContain(
         entry.keywordEvidence,
       );
@@ -168,13 +166,3 @@ describe("Poneglyph normalization", () => {
     expect(card.printedKeywords).toEqual(["rushCharacter"]);
   });
 });
-
-function expectedNormalizedPrintedKeywords(
-  entry: (typeof realKeywordProofFixtureCorpus)[number],
-) {
-  if (entry.cardId === "EB04-011") {
-    return ["rushCharacter"];
-  }
-
-  return entry.normalizedPrintedKeywords;
-}

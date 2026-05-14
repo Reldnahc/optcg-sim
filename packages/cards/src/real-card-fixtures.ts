@@ -147,7 +147,7 @@ export const realKeywordProofFixtureCorpus = [
     fixtureFileName: "EB04-011.scaled-neptunian.json",
     intendedProofRole: "mixed Rush: Character residue",
     keywordEvidence: "[Rush: Character]",
-    normalizedPrintedKeywords: [],
+    normalizedPrintedKeywords: ["rushCharacter"],
     residueEvidence:
       "Neptunian field-count draw-then-trash text remains unsupported residue evidence.",
   },
