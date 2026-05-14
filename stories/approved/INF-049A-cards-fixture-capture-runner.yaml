@@ -1,0 +1,69 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-049A
+epic_id: INF-049
+title: Make cards fixture capture runner declared
+type: tooling
+area: cards
+primary_concern: tooling
+priority: high
+status: approved
+summary: >
+  Make the `@optcg/cards` fixture capture package script reproducible by
+  removing its dependency on an undeclared `tsx` executable and routing it
+  through declared repo-local tooling.
+story_boundary: >
+  Own only the `capture:fixture` runner command for `@optcg/cards`, the minimal
+  package-local loader needed for TypeScript source execution, and focused
+  script-contract coverage. Do not change fixture capture behavior, live
+  Poneglyph fetching behavior, card normalization, generated support output,
+  engine behavior, DTOs, hidden-info projection, replay, protocol, or gameplay
+  behavior.
+allowed_touch_points:
+  - packages/cards/package.json
+  - packages/cards/scripts/source-loader.mjs
+  - tests/cards/cards-package-scripts.test.mjs
+  - stories/generated/INF-049-cards-fixture-capture-runner-parent.yaml
+  - stories/generated/INF-049A-cards-fixture-capture-runner.yaml
+  - stories/approved/INF-049-cards-fixture-capture-runner-parent.yaml
+  - stories/approved/INF-049A-cards-fixture-capture-runner.yaml
+  - agent-packets/INF-049A.md
+  - agent-packets/active.json
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 18-acceptance-tests.s002
+scope:
+  - confirm the live `capture:fixture` script uses `tsx` and that `tsx` is not declared by the root or cards package
+  - prefer a repo-local `node --experimental-strip-types` runner using the existing source-loader pattern so no dependency is added
+  - add focused script-contract coverage proving `capture:fixture` does not invoke `tsx` and does invoke the repo-local TypeScript source runner
+  - verify the safe help path for `capture:fixture` runs without live Poneglyph access
+non_scope:
+  - changing fixture capture CLI arguments, output paths, dry-run behavior, write behavior, or network behavior
+  - changing `support:probe` runner behavior
+  - adding or updating Poneglyph fixtures
+  - changing card normalization, generated support evaluation, manifests, support status, engine behavior, DTOs, hidden-info behavior, replay, protocol, server, client, database, or gameplay behavior
+dependencies:
+  - CARD-003
+acceptance_criteria:
+  - "`packages/cards/package.json` `capture:fixture` no longer references `tsx`"
+  - "`capture:fixture` uses only declared repo tooling available from a clean install"
+  - "`corepack pnpm --filter @optcg/cards capture:fixture -- --help` succeeds without live Poneglyph access"
+  - focused script-contract coverage protects the runner choice
+  - no dependency or lockfile change is introduced unless the repo-local runner approach is proven unsuitable
+  - fixture capture behavior is unchanged
+  - no unrelated card-data, engine, DTO, hidden-info, replay, protocol, or gameplay changes are included
+required_tests:
+  - add a failing script-contract regression before changing `packages/cards/package.json`
+  - "`corepack pnpm exec vitest run tests/cards/cards-package-scripts.test.mjs`"
+  - "`corepack pnpm --filter @optcg/cards capture:fixture -- --help`"
+  - "`corepack pnpm --filter @optcg/cards test`"
+  - "`corepack pnpm run packets:verify`"
+  - "`corepack pnpm run stories:validate`"
+  - full `corepack pnpm verify`
+repo_rules:
+  - use TDD and verify the script-contract test fails while `capture:fixture` still references `tsx`
+  - keep the patch limited to the cards fixture capture runner and focused script-contract coverage
+  - use `corepack pnpm`, not plain `pnpm`, when running repo commands in this environment
+ambiguity_policy: fail_and_escalate
