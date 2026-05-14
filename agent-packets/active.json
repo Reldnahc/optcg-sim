@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-051.md",
+      "storyId": "INF-051",
+      "storyPath": "stories/approved/INF-051-remove-generated-draft-story-backlog.yaml",
+      "storySha256": "0a1399e980cb4658650dcc6401bedf22f6cc5397cea9d1292c475b160dcfb6c3"
+    }
+  ],
   "version": 1
 }
