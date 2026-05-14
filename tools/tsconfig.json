@@ -11,6 +11,7 @@
     "post-merge-cleanup.ts",
     "spec-metadata.ts",
     "story-review-plan.ts",
+    "sync-package-types.ts",
     "validate-stories.ts",
     "validate-effect-dsl-fixtures.ts",
     "validate-database-schema.ts"

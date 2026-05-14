@@ -51,7 +51,6 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
     zone: { zone: "leaderArea", playerId: playerA },
     state: "active",
     attachedDonCount: 0,
-    currentPower: 5000,
   };
   const life: PublicLifeView = { count: 5, faceUpCards: [] };
   const turn: PublicTurnState = {
@@ -103,13 +102,6 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
     playerId: playerA,
     prompt: "Choose whether to mulligan.",
     causedBy: { type: "playerAction", actionId: "action-1" },
-  };
-  const replacementDecision: PublicDecision = {
-    ...decision,
-    type: "chooseReplacement",
-    processId: "process-1",
-    replacementIds: ["replacement-1"],
-    mandatory: false,
   };
   const legalAction: PublicLegalAction = {
     type: "respondToDecision",
@@ -179,7 +171,7 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
   };
 
   expect(playerView.legalActions).toHaveLength(1);
-  expect(replacementDecision.replacementIds).toEqual(["replacement-1"]);
+  expect(playerView.pendingDecision?.type).toBe("mulligan");
   expect(spectatorView.spectatorPolicy.mode).toBe("live-filtered");
 });
 

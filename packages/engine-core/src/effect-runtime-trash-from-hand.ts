@@ -77,6 +77,23 @@ const trashFromHandError = (
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
 ];
+const hasMalformedRespondToDecisionPlayerId = (
+  action: Extract<Action, { type: "respondToDecision" }>,
+): boolean =>
+  "playerId" in action &&
+  typeof (action as { playerId?: unknown }).playerId !== "string";
+const getRespondingPlayerId = (
+  action: Extract<Action, { type: "respondToDecision" }>,
+  decisionPlayerId: SelectCardsDecision["playerId"],
+): SelectCardsDecision["playerId"] => {
+  if (
+    "playerId" in action &&
+    typeof (action as { playerId?: unknown }).playerId === "string"
+  ) {
+    return (action as { playerId: SelectCardsDecision["playerId"] }).playerId;
+  }
+  return decisionPlayerId;
+};
 
 const failClosed = (
   state: GameState,
@@ -354,7 +371,10 @@ export const applySupportedTrashFromHandChoiceResponse = (
   if (decision.id !== action.decisionId) {
     return fail("Decision id does not match current trashFromHand decision.");
   }
-  if (action.playerId !== decision.playerId) {
+  if (hasMalformedRespondToDecisionPlayerId(action)) {
+    return fail("Player does not match current trashFromHand decision.");
+  }
+  if (getRespondingPlayerId(action, decision.playerId) !== decision.playerId) {
     return fail("Player does not match current trashFromHand decision.");
   }
   if (action.response.type !== "cards") {
@@ -516,7 +536,6 @@ export const getTrashFromHandDecisionLegalActions = (
     {
       type: "respondToDecision",
       decisionId: decision.id,
-      playerId: decision.playerId,
       response: { type: "cards", cards },
     },
   ];

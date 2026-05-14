@@ -13,6 +13,12 @@ import type {
   PlayerId,
   ResolvedCard,
 } from "@optcg/types";
+type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
+  damageProcess?: {
+    type?: string;
+    remainingDamagePoints?: number;
+  };
+};
 
 import {
   appendEvent,
@@ -270,13 +276,14 @@ const validateDamageContinuation = (
   state: GameState,
 ): EngineResult | undefined => {
   const battle = state.battle;
+  const battleWithInternal = battle as EngineInternalBattleState | undefined;
   if (battle === undefined) {
     return undefined;
   }
   if (
     battle.damageCount !== 1 ||
-    battle.damageProcess?.type !== "multipleDamage" ||
-    battle.damageProcess.remainingDamagePoints !== 1 ||
+    battleWithInternal?.damageProcess?.type !== "multipleDamage" ||
+    battleWithInternal.damageProcess.remainingDamagePoints !== 1 ||
     !isSupportedBattleResolutionEnvelope(battle) ||
     state.effectQueue.length > 0 ||
     state.deferredTriggers.length > 0 ||

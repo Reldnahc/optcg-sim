@@ -11,6 +11,9 @@ import {
   continuousEffectRecord,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
+type EngineInternalBattleState = NonNullable<
+  ReturnType<typeof setupAttackState>["battle"]
+> & { counterPower?: number };
 test("End of Battle cleanup removes thisBattle effects and preserves longer durations", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -24,7 +27,7 @@ test("End of Battle cleanup removes thisBattle effects and preserves longer dura
   const permanent = continuousEffectRecord(state, "effect-permanent", {
     type: "permanent",
   });
-  state.battle = {
+  const battleWithCounter: EngineInternalBattleState = {
     attacker: cardRef(p1State.leader, p1),
     originalTarget: cardRef(p2State.leader, p2),
     currentTarget: cardRef(p2State.leader, p2),
@@ -32,6 +35,7 @@ test("End of Battle cleanup removes thisBattle effects and preserves longer dura
     damageCount: 1,
     counterPower: 2000,
   };
+  state.battle = battleWithCounter;
   state.continuousEffects = [thisBattle, thisTurn, permanent];
   const before = structuredClone(state);
 

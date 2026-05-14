@@ -148,12 +148,12 @@ const createTrashDecision = (
 const respondWithCards = (
   state: GameState,
   cards: readonly CardRef[],
-  playerId = p1,
+  playerId?: typeof p1,
 ): EngineResult =>
   applyAction(state, {
     type: "respondToDecision",
     decisionId: must(state.pendingDecision, "pending decision").id,
-    playerId,
+    ...(playerId === undefined ? {} : { playerId }),
     response: { type: "cards", cards: [...cards] },
   });
 
@@ -275,40 +275,36 @@ test("trashFromHand rejects malformed, wrong-count, duplicate, stale, and oppone
       decisionId: must(state.pendingDecision, "decision").id,
       playerId: p2,
       response: { type: "cards", cards: [valid] },
-    },
+    } as unknown as Action,
     {
       type: "respondToDecision",
       decisionId: must(state.pendingDecision, "decision").id,
+      playerId: 0,
       response: { type: "cards", cards: [valid] },
-    },
+    } as unknown as Action,
     {
       type: "respondToDecision",
       decisionId: must(state.pendingDecision, "decision").id,
-      playerId: p1,
       response: { type: "cards", cards: [] },
     },
     {
       type: "respondToDecision",
       decisionId: must(state.pendingDecision, "decision").id,
-      playerId: p1,
       response: { type: "cards", cards: [valid, valid] },
     },
     {
       type: "respondToDecision",
       decisionId: must(state.pendingDecision, "decision").id,
-      playerId: p1,
       response: { type: "cards", cards: [stale] },
     },
     {
       type: "respondToDecision",
       decisionId: must(state.pendingDecision, "decision").id,
-      playerId: p1,
       response: { type: "cards", cards: [wrongZone] },
     },
     {
       type: "respondToDecision",
       decisionId: must(state.pendingDecision, "decision").id,
-      playerId: p1,
       response: { type: "targets", targets: [valid] },
     },
   ];

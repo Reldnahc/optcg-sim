@@ -10,6 +10,7 @@ import type {
   EffectQueueEntry,
   EffectId,
   InstanceId,
+  PlayerId,
   QueueEntryId,
   TargetRequest,
   TimingWindowId,
@@ -479,13 +480,11 @@ test("chooseReplacement legal actions expose accept and decline only to the deci
     {
       type: "respondToDecision",
       decisionId: decision.id,
-      playerId: p2,
       response: { type: "replacement" },
     },
     {
       type: "respondToDecision",
       decisionId: decision.id,
-      playerId: p2,
       response: { type: "replacement", replacementId: String(effectBlock.id) },
     },
   ]);
@@ -501,7 +500,6 @@ test("declining optional chooseReplacement resolves to the unreplaced KO process
   const declined = applyAction(result.state, {
     type: "respondToDecision",
     decisionId: decision.id,
-    playerId: p2,
     response: { type: "replacement" },
   });
   const nextP2 = must(declined.state.players[p2], "next p2");
@@ -524,11 +522,6 @@ test.each([
   {
     name: "wrong player",
     playerId: p1,
-    response: { type: "replacement" },
-    reason: "Player does not match current pending decision.",
-  },
-  {
-    name: "missing player",
     response: { type: "replacement" },
     reason: "Player does not match current pending decision.",
   },
@@ -556,27 +549,42 @@ test.each([
     response: { type: "replacement", replacementId: "replacement:unknown" },
     reason: "replacementId must match an available replacement.",
   },
+  {
+    name: "malformed player id",
+    playerId: p2,
+    actionOverride: {
+      type: "respondToDecision",
+      decisionId: "placeholder-decision-id",
+      playerId: null,
+      response: { type: "replacement" },
+    } as unknown as Parameters<typeof applyAction>[1],
+    reason: "Player does not match current pending decision.",
+  },
 ] satisfies {
   name: string;
-  playerId?: typeof p1;
+  playerId: PlayerId;
+  actionOverride?: Parameters<typeof applyAction>[1];
   response?: Record<string, unknown> | null;
   omitResponse?: true;
   reason: string;
 }[])(
   "chooseReplacement response validation rejects $name without mutation",
-  ({ playerId, response, omitResponse, reason }) => {
+  ({ playerId, actionOverride, response, omitResponse, reason }) => {
     const { result } = pauseForReplacementDecision();
     const decision = mustChooseReplacementDecision(
       result.state.pendingDecision,
     );
     const before = structuredClone(result.state);
     const beforeHash = hashCanonicalStateValue(result.state);
-    const action = {
-      type: "respondToDecision" as const,
-      decisionId: decision.id,
-      ...(playerId === undefined ? {} : { playerId }),
-      ...(omitResponse === true ? {} : { response }),
-    } as unknown as Parameters<typeof applyAction>[1];
+    const action =
+      actionOverride === undefined
+        ? ({
+            type: "respondToDecision" as const,
+            decisionId: decision.id,
+            playerId,
+            ...(omitResponse === true ? {} : { response }),
+          } as unknown as Parameters<typeof applyAction>[1])
+        : { ...actionOverride, decisionId: decision.id };
 
     const rejected = applyAction(result.state, action);
 
@@ -602,7 +610,6 @@ test("chooseReplacement response validation rejects mandatory decline without mu
   const rejected = applyAction(mandatoryState, {
     type: "respondToDecision",
     decisionId: decision.id,
-    playerId: p2,
     response: { type: "replacement" },
   });
 

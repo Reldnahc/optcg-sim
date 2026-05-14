@@ -1,0 +1,70 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-005D
+epic_id: TYP-005
+title: Align classified canonical shared contract omissions
+type: implementation
+area: contracts
+primary_concern: contract
+priority: critical
+status: approved
+summary: >
+  Update canonical contract modules only for fields that TYP-005C classifies as
+  legitimate shared contract omissions, or record a no-op closure when
+  classification finds no canonical omissions.
+story_boundary: >
+  Own only canonical contract edits for fields that TYP-005C classified as
+  legitimate shared contract omissions, plus no-op closure evidence when there
+  are no such fields. Do not sync package projections or migrate downstream
+  engine consumers in this story.
+allowed_touch_points:
+  - contracts/canonical-types.ts
+  - contracts/types/**
+  - tests/contracts/canonical-types-compile.test.mjs
+  - tests/contracts/canonical-types-shape.test.mjs
+  - docs/contracts/type-authority.md
+  - stories/approved/TYP-005D-align-classified-canonical-shared-contract-omissions.yaml
+spec_refs:
+  - 03-game-state-events-decisions.s002
+  - 03-game-state-events-decisions.s003
+  - 03-game-state-events-decisions.s016
+  - 06-visibility-security.s004
+  - 06-visibility-security.s007
+  - 06-visibility-security.s021
+  - 22-v6-implementation-tightening.s006
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s011
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+scope:
+  - add only canonical fields explicitly classified by TYP-005C as shared contract omissions
+  - update canonical contract compile and shape coverage for each added field
+  - document why each added field is canonical authority rather than package drift
+  - if TYP-005C classifies no field as a canonical contract omission, record a no-op closure note and make no canonical contract edits
+non_scope:
+  - package projection sync
+  - engine-core consumer migration
+  - adding fields classified as package drift or behavior ambiguity
+  - changing gameplay behavior, visibility filtering, replay serialization, protocol envelopes, or client behavior
+dependencies:
+  - TYP-005C
+acceptance_criteria:
+  - every canonical edit maps to a TYP-005C `canonical_contract_omission` disposition, or the story records that no canonical edits are required
+  - the TYP-005C dependency is the replacement classification story output after the old approved TYP-005C path has been lifecycle-transitioned out of stories/approved
+  - no field classified as package drift or ambiguity is added
+  - canonical contracts compile under strict settings
+required_tests:
+  - exact candidate story-review before implementation
+  - focused canonical shape and compile tests for every added field
+  - run `corepack pnpm exec vitest run tests/contracts/canonical-types-compile.test.mjs tests/contracts/canonical-types-shape.test.mjs`
+  - run `corepack pnpm run typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - depend on the replacement TYP-005C classifier output, not the superseded package-projection migration story with the same ID
+  - do not use package source files as contract authority
+  - stop if a field needs gameplay, hidden-information, replay, or protocol semantics not settled by TYP-005C
+  - use this story as the reviewed no-op closure point if TYP-005C classifies no field as a canonical contract omission
+ambiguity_policy: fail_and_escalate

@@ -7,6 +7,16 @@ import type {
   PlayerId,
   ResolvedCard,
 } from "@optcg/types";
+type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
+  damageProcess?: {
+    type?: string;
+    sourceKeyword?: string;
+    remainingDamagePoints?: number;
+  };
+};
+type EngineInternalGameState = GameState & {
+  battle?: EngineInternalBattleState;
+};
 
 import {
   appendEvent,
@@ -248,9 +258,10 @@ export const resolveSupportedVanillaBattle = (
             damageCount: 1,
           },
         };
+  const battleWithInternal = battle as EngineInternalBattleState;
   const shouldHideDoubleAttackForCombatView =
     (battle.damageCount === 2 ||
-      battle.damageProcess?.sourceKeyword === "doubleAttack") &&
+      battleWithInternal.damageProcess?.sourceKeyword === "doubleAttack") &&
     isSupportedDoubleAttackDamageSource(attackerManifestCard);
   const combatMetadataState = shouldHideDoubleAttackForCombatView
     ? {
@@ -671,21 +682,23 @@ const processLeaderDamagePoint = ({
     },
     { type: "private", playerId: targetPlayerId },
   );
-  const stateWithDecision: GameState = {
-    ...nextState,
-    ...(remainingDamagePoints > 0 && nextState.battle !== undefined
-      ? {
-          battle: {
-            ...nextState.battle,
-            damageCount: remainingDamagePoints,
-            damageProcess: {
-              type: "multipleDamage",
-              sourceKeyword: "doubleAttack",
-              remainingDamagePoints,
-            },
+  const nextBattleWithProcess: EngineInternalBattleState | undefined =
+    remainingDamagePoints > 0 && nextState.battle !== undefined
+      ? ({
+          ...nextState.battle,
+          damageCount: remainingDamagePoints,
+          damageProcess: {
+            type: "multipleDamage",
+            sourceKeyword: "doubleAttack",
+            remainingDamagePoints,
           },
-        }
-      : {}),
+        } satisfies EngineInternalBattleState)
+      : undefined;
+  const stateWithDecision: EngineInternalGameState = {
+    ...nextState,
+    ...(nextBattleWithProcess === undefined
+      ? {}
+      : { battle: nextBattleWithProcess }),
     players: {
       ...nextState.players,
       [targetPlayerId]: {

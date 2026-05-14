@@ -1,0 +1,70 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-005D
+epic_id: TYP-005
+title: Add whole-surface type parity guard
+type: verification
+area: contracts
+primary_concern: verification
+priority: critical
+status: replaced
+summary: >
+  Add merge-blocking verification so future one-sided drift between canonical
+  contract modules and `@optcg/types` fails mechanically across the whole type
+  surface, not just selected export names.
+story_boundary: >
+  Own only parity, export, and stale-output enforcement for canonical contract
+  types and package type outputs. Do not change contract shapes or migrate
+  package type declarations in this story.
+allowed_touch_points:
+  - package.json
+  - packages/types/src/export-cohesion.test.ts
+  - tests/contracts/package-type-sync-tool.test.mjs
+  - tests/contracts/package-type-parity.test.mjs
+  - tests/contracts/root-contracts-lane.test.mjs
+  - docs/contracts/type-authority.md
+  - stories/approved/TYP-005D-whole-surface-type-parity-guard.yaml
+spec_refs:
+  - 22-v6-implementation-tightening.s006
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s011
+  - 23-repo-tooling-and-enforcement.s016
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+scope:
+  - add a whole-surface parity test or check that verifies committed package type output is current with canonical contract modules
+  - ensure `@optcg/types` package-name imports expose every canonical export expected by the ownership manifest
+  - ensure package-only type shape drift fails through stale-output verification or an equivalent whole-surface contract check
+  - wire the parity or stale-output check into the root contract lane and therefore root `verify`
+  - update root contract-lane tests to require the new guard
+non_scope:
+  - changing `contracts/types/*` or `contracts/canonical-types.ts`
+  - changing `packages/types/src/*` declarations except tests or guard wiring
+  - changing gameplay, server, client, replay, database, UI, or protocol behavior
+  - broad story-schema, packet, or workflow tooling changes
+dependencies:
+  - TYP-005C
+acceptance_criteria:
+  - root contract verification fails if a package type file is stale relative to canonical contract output
+  - root contract verification fails if a canonical export is missing from `@optcg/types`
+  - root contract verification fails if `@optcg/types` contains one-sided generated-output drift
+  - the guard covers the full canonical module set, not only the currently known drift fields
+  - "`pnpm verify` includes the guard through the existing contracts lane or an equally explicit root verification path"
+required_tests:
+  - exact candidate story-review before implementation
+  - focused parity test proving stale package output fails
+  - focused parity test proving missing package export fails
+  - root contracts-lane test proving the new check is part of contract verification
+  - run `corepack pnpm exec vitest run tests/contracts/package-type-parity.test.mjs tests/contracts/package-type-sync-tool.test.mjs tests/contracts/root-contracts-lane.test.mjs`
+  - run `corepack pnpm run contracts`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - make future drift fail mechanically instead of relying on reviewer memory
+  - keep the guard contract/tooling-only
+  - do not use this story to resolve new type-shape disputes discovered by the guard
+  - raise a separate ambiguity or contract story if the guard reveals canonical authority is incomplete
+ambiguity_policy: fail_and_escalate

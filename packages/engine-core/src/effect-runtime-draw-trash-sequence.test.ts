@@ -164,12 +164,12 @@ const createSequenceDecision = (
 const respondWithCards = (
   state: GameState,
   cards: readonly CardRef[],
-  playerId = p1,
+  playerId?: typeof p1,
 ): EngineResult =>
   applyAction(state, {
     type: "respondToDecision",
     decisionId: must(state.pendingDecision, "pending decision").id,
-    playerId,
+    ...(playerId === undefined ? {} : { playerId }),
     response: { type: "cards", cards: [...cards] },
   });
 

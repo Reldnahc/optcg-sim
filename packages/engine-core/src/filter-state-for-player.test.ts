@@ -189,7 +189,7 @@ test("filters hidden information and keeps public zones", () => {
   assert.equal("audit" in raw, false);
 });
 
-test("projects computed current power only for public board leaders and characters", () => {
+test("does not project computed current power in public card views", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1 state");
   const p2State = must(state.players[p2], "p2 state");
@@ -225,14 +225,15 @@ test("projects computed current power only for public board leaders and characte
   ).power;
   const view = filterStateForPlayer(state, p1);
 
-  assert.deepEqual(
-    [
-      view.self.leader.currentPower,
-      view.self.characters[0]?.currentPower,
-      view.opponent.leader.currentPower,
-      view.opponent.characters[0]?.currentPower,
-    ],
-    [7000, 3000, 5000, 3000],
+  assert.equal("currentPower" in view.self.leader, false);
+  assert.equal(
+    "currentPower" in must(view.self.characters[0], "self char"),
+    false,
+  );
+  assert.equal("currentPower" in view.opponent.leader, false);
+  assert.equal(
+    "currentPower" in must(view.opponent.characters[0], "opponent char"),
+    false,
   );
   assert.deepEqual(
     [
@@ -616,7 +617,7 @@ test("selectTargets projection stays metadata-only and does not expose candidate
   assert.equal(JSON.stringify(forOpponent).includes("request"), false);
 });
 
-test("chooseReplacement projection is private and exposes only DTO-safe replacement metadata", () => {
+test("chooseReplacement projection is private and metadata-only without routing fields", () => {
   const state = createActiveState();
   const p2State = must(state.players[p2], "p2 state");
   const hiddenDecisionPlayerDeckCard = must(
@@ -664,9 +665,6 @@ test("chooseReplacement projection is private and exposes only DTO-safe replacem
     playerId: p2,
     prompt: "Choose replacement effect.",
     causedBy: { type: "ruleProcess", name: "privateCausality" },
-    processId: "process:ko:replacement",
-    replacementIds: ["replacement:would-be-ko-draw-1"],
-    mandatory: false,
   });
   assert.deepEqual(
     forDecisionPlayer.legalActions.filter(
@@ -691,6 +689,12 @@ test("chooseReplacement projection is private and exposes only DTO-safe replacem
     JSON.stringify(forDecisionPlayer).includes("effect-choose-replacement"),
     false,
   );
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("processId"), false);
+  assert.equal(
+    JSON.stringify(forDecisionPlayer).includes("replacementIds"),
+    false,
+  );
+  assert.equal(JSON.stringify(forDecisionPlayer).includes("mandatory"), false);
   assert.equal(
     JSON.stringify(forDecisionPlayer).includes(
       String(hiddenDecisionPlayerDeckCard.cardId),

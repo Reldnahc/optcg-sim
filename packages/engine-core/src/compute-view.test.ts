@@ -26,6 +26,9 @@ const must = <T>(value: T | undefined, label: string): T => {
   assert.ok(value !== undefined, `missing ${label}`);
   return value;
 };
+type EngineInternalBattleState = NonNullable<
+  ReturnType<typeof createState>["battle"]
+> & { counterPower?: number; damageProcess?: unknown };
 
 const resolvedCard = (params: {
   cardId: CardId;
@@ -901,7 +904,7 @@ test("battle counter power contributes only during active battle", () => {
     withCharacter(p2, toCardId("char-vanilla"), 0, { state: "rested" }),
   ];
   const target = must(p2State.characters[0], "target");
-  state.battle = {
+  const battleWithCounter: EngineInternalBattleState = {
     attacker: battleRef(must(p1State.characters[0], "attacker")),
     originalTarget: battleRef(target),
     currentTarget: battleRef(target),
@@ -909,6 +912,7 @@ test("battle counter power contributes only during active battle", () => {
     damageCount: 1,
     counterPower: 2000,
   };
+  state.battle = battleWithCounter;
 
   const duringBattle = computeView(state);
   assert.equal(duringBattle.cards[target.instanceId]?.currentPower, 5000);
@@ -976,7 +980,7 @@ test("composes battle counter and self continuous power only for current target"
       duration: { type: "whileSourceOnField" },
     }),
   ];
-  state.battle = {
+  const battleWithCounter: EngineInternalBattleState = {
     attacker: battleRef(attacker),
     originalTarget: battleRef(target),
     currentTarget: battleRef(target),
@@ -984,6 +988,7 @@ test("composes battle counter and self continuous power only for current target"
     damageCount: 1,
     counterPower: 2000,
   };
+  state.battle = battleWithCounter;
 
   const firstView = computeView(state);
   const secondView = computeView(state);

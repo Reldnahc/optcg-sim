@@ -394,8 +394,16 @@ test("first Double Attack damage point with supported Life Trigger pauses before
   assert.equal(result.state.pendingDecision?.type, "confirmLifeTrigger");
   assert.equal(result.state.pendingDecision.card.cardId, firstLife.cardId);
   const continuationBattle = must(result.state.battle, "continuation battle");
+  const continuationBattleWithInternal =
+    continuationBattle as typeof continuationBattle & {
+      damageProcess?: {
+        type: string;
+        sourceKeyword: string;
+        remainingDamagePoints: number;
+      };
+    };
   assert.equal(continuationBattle.damageCount, 1);
-  assert.deepEqual(continuationBattle.damageProcess, {
+  assert.deepEqual(continuationBattleWithInternal.damageProcess, {
     type: "multipleDamage",
     sourceKeyword: "doubleAttack",
     remainingDamagePoints: 1,
@@ -802,7 +810,11 @@ test("missing Double Attack Life Trigger continuation marker fails closed withou
   malformed.battle = {
     ...battle,
   };
-  delete malformed.battle.damageProcess;
+  delete (
+    malformed.battle as
+      | (NonNullable<typeof malformed.battle> & { damageProcess?: unknown })
+      | undefined
+  )?.damageProcess;
   const before = structuredClone(malformed);
   const beforeHash = hashCanonicalStateValue(malformed);
 

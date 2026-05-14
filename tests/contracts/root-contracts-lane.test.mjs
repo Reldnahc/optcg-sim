@@ -27,6 +27,7 @@ test("contracts lane aggregates canonical contract subcommands", async () => {
     "corepack pnpm run contracts:validate-effects",
     "corepack pnpm run contracts:validate-db-schema",
     "corepack pnpm run stories:validate",
+    "corepack pnpm run types:sync:check",
     "corepack pnpm run test:contracts",
   ];
 

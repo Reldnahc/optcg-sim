@@ -1,0 +1,73 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-005E
+epic_id: TYP-005
+title: Migrate engine-core consumers off package-only type drift
+type: refactor
+area: engine
+primary_concern: contract
+priority: critical
+status: approved
+summary: >
+  Update engine-core code and tests that currently rely on fields classified by
+  TYP-005C as package drift or engine-internal state, while preserving existing
+  gameplay and visibility behavior, or record a no-op closure when no
+  downstream migration is required.
+story_boundary: >
+  Own only engine-core compile compatibility for fields TYP-005C classified as
+  package drift or engine-internal, plus no-op closure evidence when there are
+  no such fields. Preserve existing gameplay behavior and visibility behavior.
+allowed_touch_points:
+  - packages/engine-core/src/**
+  - tests/hidden-info/**
+  - docs/contracts/type-authority.md
+  - stories/approved/TYP-005E-migrate-engine-core-consumers-off-package-only-type-drift.yaml
+spec_refs:
+  - 03-game-state-events-decisions.s002
+  - 03-game-state-events-decisions.s003
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s006
+  - 03-game-state-events-decisions.s016
+  - 06-visibility-security.s002
+  - 06-visibility-security.s004
+  - 06-visibility-security.s007
+  - 06-visibility-security.s021
+  - 23-repo-tooling-and-enforcement.s006
+  - 23-repo-tooling-and-enforcement.s011
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+scope:
+  - update engine-core code and tests so they do not require package-only fields classified as drift or engine-internal
+  - preserve canonical `Action.respondToDecision` shape when classified as package drift
+  - replace package-only event payload helper types with local or internal typing only when classified as non-canonical
+  - keep hidden-information filtering output behavior unchanged unless a cited canonical contract story has already changed it
+  - if TYP-005C classifies no field as package drift or engine-internal, record a no-op closure note and make no engine-core edits
+non_scope:
+  - canonical contract edits
+  - package projection sync
+  - changing action validation semantics, decision routing, battle resolution, replay behavior, or hidden-information policy
+  - resolving fields classified as behavior ambiguity
+dependencies:
+  - TYP-005C
+acceptance_criteria:
+  - the TYP-005C dependency is the replacement classification story output after the old approved TYP-005C path has been lifecycle-transitioned out of stories/approved
+  - engine-core typecheck passes against settled canonical and package shape assumptions, or the story records that no engine-core migration is required
+  - behavior-sensitive tests demonstrate no gameplay or visibility behavior change for touched paths when engine-core files are touched
+  - no package or canonical projection files are changed
+required_tests:
+  - exact candidate story-review before implementation
+  - focused engine-core tests for each classified and touched decision, battle, transient-set, replacement, or visibility path
+  - if TYP-005C classifies no package drift or engine-internal fields, document no-op evidence and run validation and typecheck without adding behavior tests
+  - run `corepack pnpm exec vitest run packages/engine-core/src`
+  - run `corepack pnpm exec vitest run tests/hidden-info`
+  - run `corepack pnpm run typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - depend on the replacement TYP-005C classifier output, not the superseded package-projection migration story with the same ID
+  - if preserving behavior requires changing canonical contracts, stop and split back to TYP-005D or a new contract story
+  - do not silently absorb gameplay fixes
+  - use this story as the reviewed no-op closure point if TYP-005C classifies no field as package drift or engine-internal
+ambiguity_policy: fail_and_escalate

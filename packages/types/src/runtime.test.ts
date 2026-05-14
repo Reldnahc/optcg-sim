@@ -134,11 +134,6 @@ test("TYP-001F runtime support fixtures compile for timers, rng, player state, b
     },
     step: "damage" as const,
     damageCount: 1,
-    damageProcess: {
-      type: "multipleDamage" as const,
-      sourceKeyword: "doubleAttack" as const,
-      remainingDamagePoints: 1,
-    },
   };
   const turn: TurnState = {
     globalTurn: 1,
@@ -155,7 +150,7 @@ test("TYP-001F runtime support fixtures compile for timers, rng, player state, b
   expect(winner).toBe("draw");
   expect(status.type).toBe("active");
   expect(battle.step).toBe("damage");
-  expect(battle.damageProcess.remainingDamagePoints).toBe(1);
+  expect(battle.damageCount).toBe(1);
   expect(turn.phase).toBe("main");
 });
 
@@ -209,8 +204,6 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
     id: "set-1" as SelectionSetId,
     cards: [source],
     origin: "topOfDeck",
-    ownerId: player,
-    controllerId: player,
     visibility: { type: "private", playerId: player },
     cleanupPolicy: "none",
   };

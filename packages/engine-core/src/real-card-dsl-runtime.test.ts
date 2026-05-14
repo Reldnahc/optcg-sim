@@ -514,7 +514,6 @@ test("loads OP10-045 from plain manifest data and queues draw-before-trash on de
   const resolved = applyAction(opened.state, {
     type: "respondToDecision",
     decisionId: decision.id,
-    playerId: p1,
     response: {
       type: "cards",
       cards: [

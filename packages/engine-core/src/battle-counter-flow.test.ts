@@ -3,6 +3,13 @@ import { test } from "vitest";
 
 import { applyAction, getLegalActions } from "./actions.js";
 import { applyDeclareAttack } from "./battle-actions.js";
+type EngineInternalBattleState = NonNullable<
+  ReturnType<typeof setupAttackState>["battle"]
+> & { counterPower?: number };
+const battleCounterPower = (
+  battle: ReturnType<typeof setupAttackState>["battle"],
+): number | undefined =>
+  (battle as EngineInternalBattleState | undefined)?.counterPower;
 import {
   must,
   p1,
@@ -398,7 +405,7 @@ test("Character Counter power changes Damage Step outcome after pass", () => {
     target: cardRef(target, p2),
   });
   assert.equal(countered.errors, undefined);
-  assert.equal(countered.state.battle?.counterPower, 2000);
+  assert.equal(battleCounterPower(countered.state.battle), 2000);
 
   const result = applyAction(countered.state, {
     type: "respondToDecision",
@@ -446,7 +453,7 @@ test("multiple Character Counters stack before pass", () => {
   });
 
   assert.equal(second.errors, undefined);
-  assert.equal(second.state.battle?.counterPower, 3000);
+  assert.equal(battleCounterPower(second.state.battle), 3000);
   assert.equal(
     second.state.pendingDecision?.id,
     opened.state.pendingDecision?.id,
@@ -490,7 +497,7 @@ test("supported Counter Event appears in defender legal actions and resolves to 
     target,
   });
   assert.equal(used.errors, undefined);
-  assert.equal(used.state.battle?.counterPower, 2000);
+  assert.equal(battleCounterPower(used.state.battle), 2000);
   assert.deepEqual(
     used.events.map((event) => event.type),
     ["counterUsed", "cardMoved", "cardTrashed", "effectResolved"],
@@ -591,7 +598,7 @@ test("supported nonzero-cost Counter Event requires payCost then resolves with r
     ),
     true,
   );
-  assert.equal(paid.state.battle?.counterPower, 1000);
+  assert.equal(battleCounterPower(paid.state.battle), 1000);
   const replay = applyAction(structuredClone(use.state), {
     type: "respondToDecision",
     decisionId: must(use.state.pendingDecision, "decision").id,

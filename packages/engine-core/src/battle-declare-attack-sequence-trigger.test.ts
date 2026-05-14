@@ -178,7 +178,6 @@ test("CARD-009D: draw-then-trash trash decision response trashes selected card a
     const resolved = applyAction(declared.state, {
       type: "respondToDecision",
       decisionId: decision.id,
-      playerId: p1,
       response: { type: "cards", cards: [card] },
     });
     assert.equal(resolved.errors, undefined);

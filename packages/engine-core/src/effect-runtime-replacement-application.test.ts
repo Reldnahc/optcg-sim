@@ -305,7 +305,6 @@ const acceptReplacement = () => {
   const accepted = applyAction(paused.result.state, {
     type: "respondToDecision",
     decisionId: paused.decision.id,
-    playerId: p2,
     response: {
       type: "replacement",
       replacementId: String(paused.effectBlock.id),
@@ -319,7 +318,6 @@ const declineReplacement = () => {
   const declined = applyAction(paused.result.state, {
     type: "respondToDecision",
     decisionId: paused.decision.id,
-    playerId: p2,
     response: { type: "replacement" },
   });
   return { ...paused, declined };
@@ -567,7 +565,6 @@ test.each([
     const result = applyAction(paused.paused.state, {
       type: "respondToDecision",
       decisionId: paused.decision.id,
-      playerId: p2,
       response: response(String(paused.replacementBlock.id)),
     });
 
@@ -632,6 +629,19 @@ test("declining optional chooseReplacement resolves with deterministic hash and 
   );
 });
 
+test("chooseReplacement accepts canonical respondToDecision payload without playerId", () => {
+  const paused = pauseForReplacementDecision();
+  const accepted = applyAction(paused.result.state, {
+    type: "respondToDecision",
+    decisionId: paused.decision.id,
+    response: {
+      type: "replacement",
+      replacementId: String(paused.effectBlock.id),
+    },
+  });
+  assert.equal(accepted.errors, undefined);
+});
+
 test.each([
   {
     name: "non-object payload",
@@ -693,7 +703,6 @@ test.each([
     const rejected = applyAction(malformedState, {
       type: "respondToDecision",
       decisionId: paused.decision.id,
-      playerId: p2,
       response: { type: "replacement" },
     });
 
