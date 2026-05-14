@@ -8,7 +8,7 @@ type: refactor
 area: contracts
 primary_concern: contract
 priority: critical
-status: approved
+status: done
 summary: >
   Sync committed `@optcg/types` projection files only after TYP-005C
   classification and any required canonical or engine consumer work settle the

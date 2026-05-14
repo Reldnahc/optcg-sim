@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: critical
-status: approved
+status: done
 summary: >
   Update canonical contract modules only for fields that TYP-005C classifies as
   legitimate shared contract omissions, or record a no-op closure when

@@ -8,7 +8,7 @@ type: tooling
 area: contracts
 primary_concern: tooling
 priority: critical
-status: approved
+status: done
 summary: >
   Add deterministic tooling that derives `@optcg/types` package type source
   files from canonical contract modules and can verify stale output without

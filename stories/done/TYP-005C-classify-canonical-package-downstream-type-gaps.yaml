@@ -8,7 +8,7 @@ type: design
 area: contracts
 primary_concern: contract
 priority: critical
-status: approved
+status: done
 summary: >
   Classify the downstream fields that blocked the package projection migration
   so later stories know whether each field is a canonical contract omission,

@@ -8,7 +8,7 @@ type: verification
 area: contracts
 primary_concern: verification
 priority: critical
-status: approved
+status: done
 summary: >
   Add merge-blocking verification so future one-sided drift between canonical
   contract modules and `@optcg/types` package projection output fails

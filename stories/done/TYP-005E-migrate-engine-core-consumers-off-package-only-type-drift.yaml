@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: contract
 priority: critical
-status: approved
+status: done
 summary: >
   Update engine-core code and tests that currently rely on fields classified by
   TYP-005C as package drift or engine-internal state, while preserving existing
