@@ -261,6 +261,46 @@ test("PR evidence binding accepts valid parent cleanup with multiple child stori
   });
 });
 
+test("PR evidence binding rejects single-mode cleanup when changed files include an unlisted parent story lifecycle path", async () => {
+  const tempRoot = await makeTempRepo([
+    { id: "INF-501", fileName: "INF-501-story.yaml" },
+    {
+      childStoryIds: ["INF-501"],
+      id: "ENG-053",
+      fileName: "ENG-053-parent.yaml",
+      writePacket: false,
+    },
+  ]);
+  const trustedMainSha = initializeGitRepo(tempRoot);
+
+  for (const parentStoryPath of [
+    "stories/approved/ENG-053-parent.yaml",
+    "stories/done/ENG-053-parent.yaml",
+  ]) {
+    const evidence = buildSingleEvidence();
+    evidence.mergeSha = trustedMainSha;
+    evidence.changedFiles = [
+      "stories/approved/INF-501-story.yaml",
+      "agent-packets/INF-501.md",
+      parentStoryPath,
+    ];
+
+    await assert.rejects(
+      () =>
+        buildCleanupDryRunPlan({
+          evidence,
+          metadata: {
+            branches: ["story/inf-501"],
+            mode: "single",
+            stories: ["stories/approved/INF-501-story.yaml"],
+          },
+          repoRoot: tempRoot,
+        }),
+      /parent-mode cleanup metadata/i,
+    );
+  }
+});
+
 test("rejects metadata that does not match merged PR story evidence", async () => {
   const tempRoot = await makeTempRepo([
     { id: "INF-501", fileName: "INF-501-story.yaml" },

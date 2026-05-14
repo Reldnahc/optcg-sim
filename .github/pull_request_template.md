@@ -33,7 +33,7 @@ Cleanup metadata is a reviewed request, not standalone authority.
 - [ ] Manual edits beyond pure packet-completion output still use the normal PR and reviewer path.
 - [ ] Automation-created cleanup pull requests are not created.
 
-Single-story PRs:
+Single-story PRs: use only when no approved parent story changed in the PR.
 
 <!-- prettier-ignore-start -->
 Post-merge cleanup:
@@ -43,7 +43,7 @@ Post-merge cleanup:
   branches:
     - <head-branch>
 
-Parent PRs list one or more child story paths:
+Parent PRs list one or more child story paths: use parent mode for parent/substory PRs, including one-child parent PRs.
 
 Post-merge cleanup:
   mode: parent

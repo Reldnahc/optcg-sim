@@ -110,6 +110,14 @@ export function parseCleanupMetadataLines(lines: string[]): CleanupMetadata {
   };
 }
 
+export function isParentStoryLifecyclePath(storyPath: string): boolean {
+  return (
+    (storyPath.startsWith("stories/approved/") ||
+      storyPath.startsWith("stories/done/")) &&
+    storyPath.endsWith("-parent.yaml")
+  );
+}
+
 function findMetadataSections(prBody: string) {
   const lines = prBody.replace(/\r\n/g, "\n").split("\n");
   const sections: string[][] = [];
@@ -348,6 +356,20 @@ function requireCleanupMetadataScopeBinding(
   }
 
   const changedFiles = new Set(input.changedFiles.map((file) => file.filename));
+  if (metadata.mode === "single") {
+    const listedStories = new Set(metadata.stories);
+    const changedParentStoryOutsideMetadata = [...changedFiles].find(
+      (changedPath) =>
+        isParentStoryLifecyclePath(changedPath) &&
+        !listedStories.has(changedPath),
+    );
+    if (changedParentStoryOutsideMetadata) {
+      throw new Error(
+        `Single-mode cleanup metadata cannot be used when reviewed changed files include parent story lifecycle path ${changedParentStoryOutsideMetadata}; use parent-mode cleanup metadata so parent closeout is bound.`,
+      );
+    }
+  }
+
   for (const storyPath of metadata.stories) {
     if (!changedFiles.has(storyPath)) {
       throw new Error(

@@ -28,6 +28,14 @@ const BOUND_CLEANUP_PLAN_SCHEMA_VERSION = "post-merge-cleanup-plan.v1";
 const VERIFICATION_COMMAND =
   "node --experimental-strip-types tools/post-merge-cleanup.ts --finalize-plan-file .cleanup/bound-cleanup-plan.json";
 
+function isParentStoryLifecyclePath(storyPath: string): boolean {
+  return (
+    (storyPath.startsWith("stories/approved/") ||
+      storyPath.startsWith("stories/done/")) &&
+    storyPath.endsWith("-parent.yaml")
+  );
+}
+
 export async function buildCleanupDryRunPlan(options: {
   evidence: CleanupEvidenceInput;
   metadata: CleanupMetadata;
@@ -441,6 +449,20 @@ function validateStoryAssociation(options: {
     options.evidence.stories.map((story) => [story.storyPath, story]),
   );
   const changedFiles = new Set(options.evidence.changedFiles);
+  if (options.metadata.mode === "single") {
+    const listedStories = new Set(options.metadata.stories);
+    const changedParentStoryOutsideMetadata = [...changedFiles].find(
+      (changedPath) =>
+        isParentStoryLifecyclePath(changedPath) &&
+        !listedStories.has(changedPath),
+    );
+    if (changedParentStoryOutsideMetadata) {
+      throw new Error(
+        `Single-mode cleanup metadata cannot be used when reviewed changed files include parent story lifecycle path ${changedParentStoryOutsideMetadata}; use parent-mode cleanup metadata so parent closeout is bound.`,
+      );
+    }
+  }
+
   for (const story of options.stories) {
     const binding = storyBindingByPath.get(story.storyPath);
     if (!binding) {
