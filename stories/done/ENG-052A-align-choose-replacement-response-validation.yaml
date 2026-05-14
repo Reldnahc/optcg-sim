@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Fix the narrow `chooseReplacement` decision response inconsistency in
   engine-core so replacement responses use the same optional-player

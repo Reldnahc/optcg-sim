@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the narrow engine fix for `chooseReplacement` decision response
   handling so replacement decisions follow the canonical `respondToDecision`
