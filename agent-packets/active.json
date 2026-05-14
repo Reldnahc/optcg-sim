@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-013A.md",
-      "storyId": "CARD-013A",
-      "storyPath": "stories/approved/CARD-013A-capture-engine-supported-keyword-fixtures.yaml",
-      "storySha256": "2ab4876c1e7527fbcd9c69d96caf11658b1eaf4ddc37033caa6db5b2c7b7173e"
+      "packetPath": "agent-packets/CARD-013B.md",
+      "storyId": "CARD-013B",
+      "storyPath": "stories/approved/CARD-013B-engine-supported-keyword-generated-support.yaml",
+      "storySha256": "3995dd6786491e55e9be23304b1999894648942cd887d865c9cc54dc84477746"
     }
   ],
   "version": 1

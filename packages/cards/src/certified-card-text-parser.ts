@@ -16,6 +16,14 @@ export const whenAttackingOncePerTurnDrawNTrashMFromHandParserRuleId =
   "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self";
 export const standaloneBlockerKeywordParserRuleId =
   "exact:keyword:blocker:standalone";
+export const standaloneRushKeywordParserRuleId =
+  "exact:keyword:rush:standalone";
+export const standaloneRushCharacterKeywordParserRuleId =
+  "exact:keyword:rush-character:standalone";
+export const standaloneDoubleAttackKeywordParserRuleId =
+  "exact:keyword:double-attack:standalone";
+export const standaloneBanishKeywordParserRuleId =
+  "exact:keyword:banish:standalone";
 export const lineSeparatedEffectBlocksCompositionId =
   "line-separated-effect-blocks:v1";
 export const certifiedParserRuleReviewer = "certified-parser-rule:CARD-009B";
@@ -233,6 +241,14 @@ function parseCertifiedLine(
     };
   }
 
+  const standaloneEngineKeywordClause =
+    parseStandaloneEngineKeywordClause(line);
+  if (standaloneEngineKeywordClause !== undefined) {
+    return {
+      clause: standaloneEngineKeywordClause,
+    };
+  }
+
   const onPlayResidue = parseOnPlayDrawResidueClause(cardId, line);
   if (onPlayResidue !== undefined) {
     return {
@@ -313,6 +329,19 @@ function parseCertifiedLine(
     };
   }
 
+  const standaloneEngineKeywordResidue =
+    parseStandaloneEngineKeywordResidueClause(line);
+  if (standaloneEngineKeywordResidue !== undefined) {
+    return {
+      clause: standaloneEngineKeywordResidue.clause,
+      unparsedSpan: residueSpan({
+        offset,
+        prefix: standaloneEngineKeywordResidue.prefix,
+        source: line,
+      }),
+    };
+  }
+
   return {};
 }
 
@@ -347,9 +376,13 @@ function createWhenAttackingDrawClauseWithCount(
 }
 
 function createStandaloneBlockerClause(): CertifiedClause {
+  return createStandaloneKeywordClause(standaloneBlockerKeywordParserRuleId);
+}
+
+function createStandaloneKeywordClause(parserRuleId: string): CertifiedClause {
   return {
     implementationStatus: "vanilla-confirmed",
-    parserRuleId: standaloneBlockerKeywordParserRuleId,
+    parserRuleId,
   };
 }
 
@@ -383,7 +416,8 @@ function parseSupportedSourceText(
     parseOnPlayDrawThenTrashClause(cardId, sourceText) ??
     parseWhenAttackingDrawThenTrashClause(cardId, sourceText) ??
     parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, sourceText) ??
-    parseStandaloneBlockerClause(sourceText)
+    parseStandaloneBlockerClause(sourceText) ??
+    parseStandaloneEngineKeywordClause(sourceText)
   );
 }
 
@@ -496,6 +530,30 @@ const blockerReminderText =
   "(After your opponent declares an attack, you may rest this card to make it the new target of the attack.)";
 const standaloneBlockerSourceText = "[Blocker]";
 const standaloneBlockerWithReminderSourceText = `${standaloneBlockerSourceText} ${blockerReminderText}`;
+const standaloneEngineKeywordDefinitions = [
+  {
+    parserRuleId: standaloneRushKeywordParserRuleId,
+    reminderText: "(This card can attack on the turn in which it is played.)",
+    sourceText: "[Rush]",
+  },
+  {
+    parserRuleId: standaloneRushCharacterKeywordParserRuleId,
+    reminderText:
+      "(This card can attack Characters on the turn in which it is played.)",
+    sourceText: "[Rush: Character]",
+  },
+  {
+    parserRuleId: standaloneDoubleAttackKeywordParserRuleId,
+    reminderText: "(This card deals 2 damage.)",
+    sourceText: "[Double Attack]",
+  },
+  {
+    parserRuleId: standaloneBanishKeywordParserRuleId,
+    reminderText:
+      "(When this card deals damage, the target card is trashed without activating its Trigger.)",
+    sourceText: "[Banish]",
+  },
+] as const;
 
 function parseStandaloneBlockerClause(
   sourceText: string,
@@ -508,6 +566,22 @@ function parseStandaloneBlockerClause(
   }
 
   return undefined;
+}
+
+function parseStandaloneEngineKeywordClause(
+  sourceText: string,
+): CertifiedClause | undefined {
+  const definition = standaloneEngineKeywordDefinitions.find(
+    (candidate) =>
+      sourceText === candidate.sourceText ||
+      sourceText === `${candidate.sourceText} ${candidate.reminderText}`,
+  );
+
+  if (definition === undefined) {
+    return undefined;
+  }
+
+  return createStandaloneKeywordClause(definition.parserRuleId);
 }
 
 function parseOnPlayDrawResidueClause(
@@ -631,6 +705,31 @@ function parseStandaloneBlockerResidueClause(
     clause: createStandaloneBlockerClause(),
     prefix: `${standaloneBlockerSourceText} `,
   };
+}
+
+function parseStandaloneEngineKeywordResidueClause(
+  sourceText: string,
+): ParsedResidueClause | undefined {
+  for (const definition of standaloneEngineKeywordDefinitions) {
+    const sourcePrefix = `${definition.sourceText} `;
+    const reminderPrefix = `${definition.sourceText} ${definition.reminderText} `;
+
+    if (sourceText.startsWith(reminderPrefix)) {
+      return {
+        clause: createStandaloneKeywordClause(definition.parserRuleId),
+        prefix: reminderPrefix,
+      };
+    }
+
+    if (sourceText.startsWith(sourcePrefix)) {
+      return {
+        clause: createStandaloneKeywordClause(definition.parserRuleId),
+        prefix: sourcePrefix,
+      };
+    }
+  }
+
+  return undefined;
 }
 
 function parseDrawCount(

@@ -200,6 +200,165 @@ describe("generated support index", () => {
     });
   });
 
+  it.each([
+    {
+      cardId: "OP01-025" as CardId,
+      expectedCapabilityId: "keyword:rush:printed",
+      expectedRuleId: "exact:keyword:rush:standalone",
+      printedKeywords: ["rush"] as const,
+      sourceText:
+        "[Rush] (This card can attack on the turn in which it is played.)",
+    },
+    {
+      cardId: "EB04-011-KEYWORD" as CardId,
+      expectedCapabilityId: "keyword:rushCharacter:printed",
+      expectedRuleId: "exact:keyword:rush-character:standalone",
+      printedKeywords: ["rushCharacter"] as const,
+      sourceText:
+        "[Rush: Character] (This card can attack Characters on the turn in which it is played.)",
+    },
+    {
+      cardId: "P-028" as CardId,
+      expectedCapabilityId: "keyword:doubleAttack:printed",
+      expectedRuleId: "exact:keyword:double-attack:standalone",
+      printedKeywords: ["doubleAttack"] as const,
+      sourceText: "[Double Attack] (This card deals 2 damage.)",
+    },
+    {
+      cardId: "OP04-014" as CardId,
+      expectedCapabilityId: "keyword:banish:printed",
+      expectedRuleId: "exact:keyword:banish:standalone",
+      printedKeywords: ["banish"] as const,
+      sourceText:
+        "[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)",
+    },
+  ])(
+    "supports $cardId keyword text with runtime capability evidence",
+    ({
+      cardId,
+      expectedCapabilityId,
+      expectedRuleId,
+      printedKeywords,
+      sourceText,
+    }) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseCard,
+            category: "character",
+            cardId,
+            printedKeywords,
+            sourceText,
+          },
+        ],
+        validateEffectDefinition,
+      });
+
+      expect(index.entries[0]).toMatchObject({
+        blockers: [],
+        cardId,
+        parseStatus: "complete",
+        parserRuleIds: [expectedRuleId],
+        status: "supported",
+        support: {
+          cardId,
+          status: "vanilla-confirmed",
+          tested: true,
+        },
+      });
+      expect(index.entries[0]?.capabilityEvidence).toEqual([
+        {
+          capabilityId: expectedCapabilityId,
+          parserRuleId: expectedRuleId,
+        },
+        {
+          capabilityId: "sourcePresencePolicy:none-for-keyword",
+          parserRuleId: expectedRuleId,
+        },
+      ]);
+      expect(index.entries[0]?.effectDefinition).toBeUndefined();
+      expect(index.effectDefinitions).toEqual({});
+    },
+  );
+
+  it.each([
+    {
+      category: "event" as const,
+      expectedLabel: "Rush",
+      printedKeywords: ["rush"] as const,
+      sourceText: "[Rush]",
+    },
+    {
+      category: "character" as const,
+      expectedLabel: "Rush",
+      printedKeywords: [] as const,
+      sourceText: "[Rush]",
+    },
+    {
+      category: "character" as const,
+      expectedLabel: "Rush: Character",
+      printedKeywords: ["rush"] as const,
+      sourceText: "[Rush: Character]",
+    },
+    {
+      category: "event" as const,
+      expectedLabel: "Rush: Character",
+      printedKeywords: ["rushCharacter"] as const,
+      sourceText: "[Rush: Character]",
+    },
+    {
+      category: "character" as const,
+      expectedLabel: "Double Attack",
+      printedKeywords: ["rush"] as const,
+      sourceText: "[Double Attack]",
+    },
+    {
+      category: "event" as const,
+      expectedLabel: "Double Attack",
+      printedKeywords: ["doubleAttack"] as const,
+      sourceText: "[Double Attack]",
+    },
+    {
+      category: "character" as const,
+      expectedLabel: "Banish",
+      printedKeywords: ["rush"] as const,
+      sourceText: "[Banish]",
+    },
+    {
+      category: "event" as const,
+      expectedLabel: "Banish",
+      printedKeywords: ["banish"] as const,
+      sourceText: "[Banish]",
+    },
+  ])(
+    "keeps certified keyword unsupported when normalized metadata is mismatched (%o)",
+    ({ category, expectedLabel, printedKeywords, sourceText }) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseCard,
+            category,
+            cardId: "CARD-013B-MISMATCH" as CardId,
+            printedKeywords,
+            sourceText,
+          },
+        ],
+        validateEffectDefinition,
+      });
+
+      expect(index.entries[0]).toMatchObject({
+        blockers: [
+          {
+            code: "unsupported-primitive",
+            message: `Normalized card metadata does not satisfy certified ${expectedLabel} keyword support preconditions.`,
+          },
+        ],
+        parseStatus: "unsupportedPrimitive",
+        status: "unsupported",
+      });
+    },
+  );
+
   it("supports EB01-005-shaped empty effect text as vanilla-confirmed without generated EffectDefinition", () => {
     const index = buildGeneratedSupportIndex({
       cards: [

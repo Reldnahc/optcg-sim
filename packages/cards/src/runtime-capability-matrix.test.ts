@@ -22,7 +22,7 @@ describe("generated support runtime capability matrix", () => {
 
   it("exposes the narrow capabilities needed by exact draw parser rules", () => {
     expect(generatedSupportRuntimeCapabilityMatrix.generatedAtStory).toBe(
-      "CARD-012",
+      "CARD-013B",
     );
     expect(requiredGeneratedSupportCapabilityIds).toEqual([
       "category:auto",
@@ -30,7 +30,11 @@ describe("generated support runtime capability matrix", () => {
       "effect:draw:self:count:positive-safe-integer",
       "effect:sequence:ordered",
       "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+      "keyword:banish:printed",
       "keyword:blocker:printed",
+      "keyword:doubleAttack:printed",
+      "keyword:rush:printed",
+      "keyword:rushCharacter:printed",
       "sourcePresencePolicy:mustRemainInSameZone",
       "sourcePresencePolicy:none-for-keyword",
       "trigger:onPlay",
@@ -91,6 +95,43 @@ describe("generated support runtime capability matrix", () => {
       ]),
     );
   });
+
+  it.each([
+    {
+      capabilityId: "keyword:rush:printed",
+      parserRuleId: "exact:keyword:rush:standalone",
+    },
+    {
+      capabilityId: "keyword:rushCharacter:printed",
+      parserRuleId: "exact:keyword:rush-character:standalone",
+    },
+    {
+      capabilityId: "keyword:doubleAttack:printed",
+      parserRuleId: "exact:keyword:double-attack:standalone",
+    },
+    {
+      capabilityId: "keyword:banish:printed",
+      parserRuleId: "exact:keyword:banish:standalone",
+    },
+  ])(
+    "certifies $capabilityId for $parserRuleId",
+    ({ capabilityId, parserRuleId }) => {
+      const keywordCapability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (capability) => capability.id === capabilityId,
+        );
+      const sourcePolicyCapability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (capability) =>
+            capability.id === "sourcePresencePolicy:none-for-keyword",
+        );
+
+      expect(keywordCapability?.supportedParserRuleIds).toContain(parserRuleId);
+      expect(sourcePolicyCapability?.supportedParserRuleIds).toContain(
+        parserRuleId,
+      );
+    },
+  );
 
   it("lists only supported capability ids and keeps unsupported probes absent", () => {
     expect(listSupportedRuntimeCapabilityIds()).toEqual(

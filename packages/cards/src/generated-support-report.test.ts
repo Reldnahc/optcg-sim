@@ -377,4 +377,38 @@ describe("generated support report", () => {
       status: "supported",
     });
   });
+
+  it("includes CARD-013B keyword parser rules in supported report evidence", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "OP01-025" as CardId,
+          category: "character",
+          printedKeywords: ["rush"],
+          sourceText:
+            "[Rush] (This card can attack on the turn in which it is played.)",
+          sourceTextHash: "sha256:op01-025-source",
+        },
+        {
+          ...baseInput,
+          cardId: "P-028" as CardId,
+          category: "character",
+          printedKeywords: ["doubleAttack"],
+          sourceText: "[Double Attack] (This card deals 2 damage.)",
+          sourceTextHash: "sha256:p-028-source",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.supportedCardIds).toEqual(["OP01-025", "P-028"]);
+    expect(report.unsupportedCardIds).toEqual([]);
+    expect(report.parserRuleIdsUsed).toEqual([
+      "exact:keyword:double-attack:standalone",
+      "exact:keyword:rush:standalone",
+    ]);
+  });
 });

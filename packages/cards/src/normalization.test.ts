@@ -141,7 +141,9 @@ describe("Poneglyph normalization", () => {
       const card = normalizePoneglyphCardDetail(fixture);
 
       expect(card.cardId).toBe(entry.cardId);
-      expect(card.printedKeywords).toEqual(entry.normalizedPrintedKeywords);
+      expect(card.printedKeywords).toEqual(
+        expectedNormalizedPrintedKeywords(entry),
+      );
       expect(card.effectText ?? card.triggerText ?? "").toContain(
         entry.keywordEvidence,
       );
@@ -154,4 +156,25 @@ describe("Poneglyph normalization", () => {
       expect(card.errata).toEqual([]);
     }
   });
+
+  it("normalizes Rush: Character as a distinct printed keyword", async () => {
+    const card = normalizePoneglyphCardDetail(
+      await readJsonFixture(
+        "fixtures/poneglyph/cards/EB04-011.scaled-neptunian.json",
+      ),
+    );
+
+    expect(card.cardId).toBe("EB04-011");
+    expect(card.printedKeywords).toEqual(["rushCharacter"]);
+  });
 });
+
+function expectedNormalizedPrintedKeywords(
+  entry: (typeof realKeywordProofFixtureCorpus)[number],
+) {
+  if (entry.cardId === "EB04-011") {
+    return ["rushCharacter"];
+  }
+
+  return entry.normalizedPrintedKeywords;
+}

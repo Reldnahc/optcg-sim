@@ -253,6 +253,7 @@ function extractPrintedKeywords(detail: PoneglyphCardDetail): Keyword[] {
   const keywords: Keyword[] = [];
   const keywordPatterns: Array<[RegExp, Keyword]> = [
     [/\[Blocker\]/iu, "blocker"],
+    [/\[Rush: Character\]/iu, "rushCharacter"],
     [/\[Rush\]/iu, "rush"],
     [/\[Double Attack\]/iu, "doubleAttack"],
     [/\[Banish\]/iu, "banish"],
