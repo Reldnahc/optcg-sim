@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: view
 priority: high
-status: approved
+status: done
 summary: >
   Confirm and enforce that engine-core PlayerView runtime projection emits only
   fields authorized by the canonical public DTO contracts after TYP-005 made

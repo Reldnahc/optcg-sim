@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: view
 priority: high
-status: approved
+status: done
 summary: >
   Verify and enforce that filterStateForPlayer emits PlayerView JSON matching
   canonical PublicCardView and PublicDecision DTO authority after TYP-005.
