@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the behavior-preserving split of the mixed effect runtime primitive
   module into cohesive draw, selected-target K.O., and K.O. replacement-process

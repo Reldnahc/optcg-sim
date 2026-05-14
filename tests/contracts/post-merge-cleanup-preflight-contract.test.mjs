@@ -547,6 +547,68 @@ test("agent handoff scope latch rejects cleanup metadata outside reviewed PR sco
   }
 });
 
+test("agent handoff scope latch rejects single-mode cleanup when changed files include an unlisted parent story lifecycle path", async () => {
+  const tempRoot = await mkdtemp(
+    path.join(os.tmpdir(), "optcg-handoff-parent-scope-"),
+  );
+
+  for (const [label, parentStoryPath] of [
+    ["approved-parent", "stories/approved/ENG-053-parent.yaml"],
+    ["renamed-done-parent", "stories/done/ENG-053-parent.yaml"],
+  ]) {
+    const handoffFile = path.join(tempRoot, `${label}.json`);
+    await writeFile(
+      handoffFile,
+      `${JSON.stringify(
+        {
+          changedFiles: [
+            { filename: "stories/approved/INF-701-cleanup-fixture.yaml" },
+            { filename: parentStoryPath },
+          ],
+          issueComments: [],
+          pullRequest: {
+            body: `Post-merge cleanup:
+  mode: single
+  stories:
+    - stories/approved/INF-701-cleanup-fixture.yaml
+  branches:
+    - story/inf-701
+`,
+            headRef: "story/inf-701",
+            number: 237,
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+          statusChecks: [
+            {
+              name: "cleanup-metadata-guard",
+              status: "completed",
+              conclusion: "success",
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const run = spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        "tools/post-merge-cleanup.ts",
+        "--",
+        "--validate-cleanup-handoff-json-file",
+        handoffFile,
+        "--require-cleanup-guard-status",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+
+    assert.notEqual(run.status, 0, label);
+    assert.match(run.stderr, /parent-mode cleanup metadata/i);
+  }
+});
+
 test("bound cleanup plan schema rejects unexpected top-level fields", () => {
   const validArtifact = {
     branches: [],
