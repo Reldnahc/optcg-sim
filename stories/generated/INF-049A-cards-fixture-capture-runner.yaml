@@ -24,7 +24,9 @@ allowed_touch_points:
   - packages/cards/package.json
   - packages/cards/scripts/source-loader.mjs
   - tests/cards/cards-package-scripts.test.mjs
+  - stories/generated/INF-049-cards-fixture-capture-runner-parent.yaml
   - stories/generated/INF-049A-cards-fixture-capture-runner.yaml
+  - stories/approved/INF-049-cards-fixture-capture-runner-parent.yaml
   - stories/approved/INF-049A-cards-fixture-capture-runner.yaml
   - agent-packets/INF-049A.md
   - agent-packets/active.json

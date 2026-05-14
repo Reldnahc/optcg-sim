@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id INF-049A -->
 <!-- agent-packet:story-path stories/approved/INF-049A-cards-fixture-capture-runner.yaml -->
-<!-- agent-packet:story-sha256 25343d9c3f4eb398d362cdaa2671d8858159e1fc1dd6bee7c376bf864351302d -->
+<!-- agent-packet:story-sha256 9447020d710e3a3627b4ec9dddca372e8ec2dbcbd78192b3c122e066194af328 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -136,7 +136,9 @@ Own only the `capture:fixture` runner command for `@optcg/cards`, the minimal pa
 - packages/cards/package.json
 - packages/cards/scripts/source-loader.mjs
 - tests/cards/cards-package-scripts.test.mjs
+- stories/generated/INF-049-cards-fixture-capture-runner-parent.yaml
 - stories/generated/INF-049A-cards-fixture-capture-runner.yaml
+- stories/approved/INF-049-cards-fixture-capture-runner-parent.yaml
 - stories/approved/INF-049A-cards-fixture-capture-runner.yaml
 - agent-packets/INF-049A.md
 - agent-packets/active.json
