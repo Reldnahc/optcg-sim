@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-053A.md",
+      "storyId": "ENG-053A",
+      "storyPath": "stories/approved/ENG-053A-split-effect-runtime-primitives.yaml",
+      "storySha256": "4d23957a99e517b77ea3a4b322d5fe584ce0169d3aa33cc7ac048c284cac1a7e"
+    }
+  ],
   "version": 1
 }
