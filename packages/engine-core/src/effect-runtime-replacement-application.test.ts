@@ -12,13 +12,14 @@ import type {
   EffectQueueEntry,
   EngineEvent,
   GameState,
+  LegalAction,
   QueueEntryId,
   ReplacementProcess,
   TargetRequest,
   TimingWindowId,
 } from "@optcg/types";
 
-import { applyAction } from "./actions.js";
+import { applyAction, getLegalActions } from "./actions.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import {
   createActiveState,
@@ -640,6 +641,72 @@ test("chooseReplacement accepts canonical respondToDecision payload without play
     },
   });
   assert.equal(accepted.errors, undefined);
+});
+
+test("chooseReplacement response validation accepts mandatory selected replacement", () => {
+  const paused = pauseForReplacementDecision();
+  const mandatoryState = {
+    ...paused.result.state,
+    pendingDecision: { ...paused.decision, mandatory: true },
+  };
+
+  const accepted = applyAction(mandatoryState, {
+    type: "respondToDecision",
+    decisionId: paused.decision.id,
+    response: {
+      type: "replacement",
+      replacementId: String(paused.effectBlock.id),
+    },
+  });
+  const nextP2 = must(accepted.state.players[p2], "next p2");
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(accepted.state.pendingDecision, undefined);
+  assert.deepEqual(accepted.state.replacementState, []);
+  assert.deepEqual(
+    accepted.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "replacementApplied",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+    ],
+  );
+  assert.equal(
+    nextP2.characters.some(
+      (card) => card.instanceId === paused.target.instanceId,
+    ),
+    true,
+  );
+});
+
+test("mandatory chooseReplacement legal actions omit decline response", () => {
+  const paused = pauseForReplacementDecision();
+  const mandatoryState: GameState = {
+    ...paused.result.state,
+    pendingDecision: { ...paused.decision, mandatory: true },
+  };
+
+  const replacementActions = getLegalActions(
+    mandatoryState,
+    paused.decision.playerId,
+  ).filter(
+    (action): action is Extract<LegalAction, { type: "respondToDecision" }> =>
+      action.type === "respondToDecision" &&
+      action.decisionId === paused.decision.id,
+  );
+
+  assert.deepEqual(
+    replacementActions,
+    paused.decision.replacementIds.map(
+      (replacementId): Extract<LegalAction, { type: "respondToDecision" }> => ({
+        type: "respondToDecision",
+        decisionId: paused.decision.id,
+        response: { type: "replacement", replacementId },
+      }),
+    ),
+  );
 });
 
 test.each([

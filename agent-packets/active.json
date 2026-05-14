@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-052A.md",
+      "storyId": "ENG-052A",
+      "storyPath": "stories/approved/ENG-052A-align-choose-replacement-response-validation.yaml",
+      "storySha256": "03566b81eebe063ff7ad3980abff1c20bd2c1116d5d785e41aecb746189ef831"
+    }
+  ],
   "version": 1
 }

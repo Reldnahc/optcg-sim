@@ -1,0 +1,400 @@
+<!-- agent-packet:story-id ENG-052A -->
+<!-- agent-packet:story-path stories/approved/ENG-052A-align-choose-replacement-response-validation.yaml -->
+<!-- agent-packet:story-sha256 03566b81eebe063ff7ad3980abff1c20bd2c1116d5d785e41aecb746189ef831 -->
+<!-- prettier-ignore-start -->
+
+# Story Packet
+
+## Story
+
+Spec Version: v6
+Story Schema Version: 1.0.0
+ID: ENG-052A
+Epic ID: ENG-052
+Title: Align chooseReplacement response validation
+Type: implementation
+Area: engine
+Primary Concern: rules
+
+## Why
+
+Fix the narrow `chooseReplacement` decision response inconsistency in engine-core so replacement responses use the same optional-player `respondToDecision` actor contract as other decisions and mandatory replacement choices accept valid selected replacements.
+
+## Authoritative Spec References
+
+- 03-game-state-events-decisions.s015 (Legal actions)
+- 03-game-state-events-decisions.s016 (Action envelope inside the engine)
+- 03-game-state-events-decisions.s017 (Canonical decision routing)
+- 04-effect-runtime.s012 (Player choices during effect resolution)
+- 04-effect-runtime.s013 (Replacement effects)
+- 18-acceptance-tests.s002 (Purpose)
+- 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
+- 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+- 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+- 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+- 15-implementation-kickoff.s012 (Guardrails)
+
+## Relevant Spec Excerpts
+
+### 03-game-state-events-decisions.s015 (Legal actions)
+
+`getLegalActions()` should return actions valid for the current game state and current pending decision.
+
+```ts
+function getLegalActions(state: GameState, playerId: PlayerId): LegalAction[] {
+  if (state.pendingDecision) {
+    return legalResponsesForDecision(state.pendingDecision, playerId, state);
+  }
+
+  return legalPhaseActions(state, playerId);
+}
+```
+
+Legal actions sent to a client must not leak hidden information. For example, the opponent should not receive an action list that implies exactly which hidden counter cards exist.
+
+### 03-game-state-events-decisions.s016 (Action envelope inside the engine)
+
+The server-facing protocol envelope is defined separately. The engine action should be pure data.
+
+```ts
+type Action =
+  | { type: "playCard"; cardInstanceId: InstanceId; costPayment?: PaymentSpec }
+  | {
+      type: "activateEffect";
+      source: CardRef;
+      effectId: string;
+      costPayment?: PaymentSpec;
+    }
+  | { type: "attachDon"; donInstanceId: InstanceId; target: CardRef }
+  | { type: "declareAttack"; attacker: CardRef; target: CardRef }
+  | { type: "activateBlocker"; blocker: CardRef }
+  | { type: "useCounter"; cardInstanceId: InstanceId; target: CardRef }
+  | { type: "endMainPhase" }
+  | { type: "concede"; playerId: PlayerId }
+  | {
+      type: "respondToDecision";
+      decisionId: string;
+      response: DecisionResponse;
+    };
+```
+
+### 03-game-state-events-decisions.s017 (Canonical decision routing)
+
+All player choices are represented as `PendingDecision` and answered by exactly one action shape:
+
+```ts
+{
+  type: ("respondToDecision", decisionId, response);
+}
+```
+
+The engine validates the response against the current pending decision. The client never gets to submit raw target IDs or payment choices outside the active decision context.
+
+The following decision families are implementation-required for Milestones 1-2:
+
+```text
+mulligan
+chooseTriggerOrder
+chooseOptionalActivation
+payCost
+selectTargets
+selectCards
+chooseEffectOption
+confirmTriggerFromLife
+chooseReplacement
+orderCards
+chooseCharacterToTrashForOverflow
+```
+
+Decision IDs are single-use. A response for an old decision ID is stale unless it is an exact idempotent retry already accepted by the match server.
+
+### 04-effect-runtime.s012 (Player choices during effect resolution)
+
+Effects pause through `PendingDecision`.
+
+Example target selection flow:
+
+```ts
+function executeKoEffect(
+  state: GameState,
+  effect: KoEffect,
+  context: EffectContext,
+): EngineResult {
+  const candidates = resolveTargetCandidates(state, effect.target, context);
+
+  if (requiresChoice(effect.target)) {
+    return pauseForDecision(state, {
+      type: "selectTargets",
+      playerId: resolveChooser(effect.target, context),
+      request: effect.target,
+      candidates,
+      causedBy: context.causedBy,
+    });
+  }
+
+  return koTargets(state, candidates.selected, context);
+}
+```
+
+Decision responses are validated by the engine, not the client.
+
+### 04-effect-runtime.s013 (Replacement effects)
+
+Replacement effects intercept replaceable processes.
+
+```ts
+interface ReplacementProcess {
+  id: string;
+  type: ReplaceableProcessType;
+  source?: CardRef;
+  target?: CardRef;
+  payload: unknown;
+  causedBy: CausalityRef;
+  usedReplacementIds: string[];
+}
+```
+
+Processing order:
+
+1. Replacements generated by the card/process being replaced, if applicable.
+2. Turn player's applicable replacements in chosen order.
+3. Non-turn player's applicable replacements in chosen order.
+
+A replacement cannot apply twice to the same replacement process. If a replacement cannot actually perform its replacement, it does not apply.
+
+```ts
+function executeReplaceableProcess(
+  state: GameState,
+  process: ReplacementProcess,
+): EngineStepResult {
+  let current = process;
+  let currentState = state;
+
+  while (true) {
+    const replacements = findApplicableReplacements(currentState, current)
+      .filter((r) => !current.usedReplacementIds.includes(r.id))
+      .filter((r) => canApplyReplacement(r, currentState, current));
+
+    if (replacements.length === 0) {
+      return executeUnreplacedProcess(currentState, current);
+    }
+
+    const choice = chooseReplacementByPriorityOrDecision(
+      currentState,
+      replacements,
+      current,
+    );
+
+    if (choice.pausedForDecision) {
+      return choice.result;
+    }
+
+    if (!choice.chosen) {
+      return executeUnreplacedProcess(currentState, current);
+    }
+
+    current = {
+      ...transformProcessByReplacement(choice.chosen, currentState, current),
+      usedReplacementIds: [...current.usedReplacementIds, choice.chosen.id],
+    };
+
+    currentState = emitReplacementApplied(
+      currentState,
+      choice.chosen,
+      current,
+    ).state;
+  }
+}
+```
+
+Replacement decisions use `PendingDecision.chooseReplacement`. Optional replacements may be declined; mandatory replacements cannot be declined unless more than one mandatory replacement requires a controller-chosen order. A replacement cannot apply twice to the same `process.id`, even if the process is transformed into a new shape.
+
+Every applied replacement emits `replacementApplied` with the original process ID, selected replacement ID, old process payload hash, and transformed process payload hash. This event is at least `replayOnly` and may be public when the replacement effect is public.
+
+### 18-acceptance-tests.s002 (Purpose)
+
+Implementation readiness should be measured by named tests, not only by prose. These tests define the minimum acceptable behavior for each milestone.
+
+### 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
+
+Use `pnpm`; the root workspace must provide `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`, and `pnpm verify` is the canonical local pre-push command.
+
+### 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
+
+Implementation packages stay in strict TypeScript mode, and broad escape hatches such as `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions require explicit justification.
+
+### 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+
+Lint, formatting, and merge-gate verification are mandatory, and CI must fail when checked-in generated artifacts or snapshots are stale.
+
+### 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+
+Boundary enforcement is mechanical: `@optcg/engine-core` cannot import React, browser code, WebSocket transport, Redis, Postgres, or live HTTP clients.
+
+### 15-implementation-kickoff.s012 (Guardrails)
+
+Kickoff guardrails require the engine to stay free of Redis, Postgres, WebSocket, React, and Poneglyph HTTP code; once hidden state exists, the client must use `view-engine` instead of `engine-core`, and effect resolution consumes resolved manifests rather than live HTTP calls.
+
+## Story Boundary
+
+Own only `chooseReplacement` decision response validation and focused engine-core regression coverage. Do not redesign replacement execution, replacement priority, public DTOs, legal-action projection, hidden-info projection, replay, server/client protocol, or broader contract parity.
+
+## Scope
+
+- confirm live `chooseReplacement` response behavior before implementation
+- keep omitted `playerId` valid for `respondToDecision` replacement responses when the pending decision belongs to the responding player
+- preserve rejection for malformed or wrong `playerId` when supplied
+- fix mandatory replacement handling so a valid accepted replacement is accepted
+- preserve optional replacement decline as accepted
+- preserve mandatory replacement decline or missing `replacementId` as rejected
+- add focused engine-core regression tests for omitted `playerId`, wrong `playerId`, optional decline, mandatory accept, and mandatory decline or missing replacement
+
+## Out of Scope
+
+- changing `Action` or `LegalAction` type shapes
+- changing public `PlayerView` or `PublicDecision` DTOs
+- changing replacement priority, chaining, once-per-process semantics, process transformation, or candidate detection
+- changing hidden-information filtering, replay format, server/client protocol, cards, database, CLI, or UI behavior
+- broad contract parity or package type synchronization work
+
+## Allowed Touch Points
+
+<!-- prettier-ignore -->
+- packages/engine-core/src/actions.ts
+- packages/engine-core/src/effect-runtime-replacement-application.test.ts
+- packages/engine-core/src/effect-runtime-target-primitives.test.ts
+- stories/generated/ENG-052A-align-choose-replacement-response-validation.yaml
+- stories/approved/ENG-052A-align-choose-replacement-response-validation.yaml
+- agent-packets/ENG-052A.md
+- agent-packets/active.json
+
+## Constraints
+
+- use TDD and verify the mandatory accept test fails with the current implementation before changing `actions.ts`
+- keep the patch limited to `chooseReplacement` response validation and focused engine tests
+- fail closed on any uncited replacement priority, hidden-information, replay, or public DTO ambiguity
+- use `corepack pnpm`, not plain `pnpm`, when running repo commands in this environment
+- use `pnpm`; the canonical local verification commands are `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`
+- TypeScript stays strict; avoid `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions without explicit justification
+- ESLint with type-aware rules and Prettier formatting are required; CI and local verification must fail when checked-in generated artifacts are stale
+- `@optcg/engine-core` must stay free of React, browser code, WebSocket transport, Redis, Postgres, and live HTTP clients
+- The engine must not import Redis, Postgres, WebSocket, React, or Poneglyph HTTP code; once hidden state exists, the client must use `view-engine` instead of `engine-core`, and effect resolution must consume resolved manifests rather than live HTTP calls
+
+### Code Standard
+
+Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
+
+- stay inside the approved story boundary
+- preserve package boundaries
+- use strict TypeScript without `any`, routine non-null assertions, or ignored TS errors
+- prefer named exports and precise types
+- keep files cohesive; 500 effective lines is suspect, 800 is high-risk, 1000 is the hard mechanical guard
+- split by reason-to-change, not by line count
+- do not over-split into tiny files or generic dumping grounds
+- keep engine-core pure and hidden-info safe
+- prove engine behavior with synthetic/unit/regression tests
+- keep real-card fixture tests separate from engine behavior requirements
+- preserve deterministic event ordering and state hashes
+- record ambiguity instead of inventing behavior
+
+## Required Tests
+
+- add or update a failing mandatory replacement accept regression before changing production code
+- focused `corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-target-primitives.test.ts packages/engine-core/src/effect-runtime-replacement-application.test.ts`
+- `corepack pnpm run packets:verify`
+- `corepack pnpm run stories:validate`
+- full `corepack pnpm verify`
+
+## Expected Output
+
+- code changes
+- tests
+- brief implementation note
+- explicit assumptions list
+
+## Acceptance Criteria
+
+- `chooseReplacement` response handling matches the canonical `respondToDecision` actor contract used by other decision families
+- public/client-shaped replacement responses without `playerId` remain accepted when otherwise valid
+- wrong-player and malformed-player responses still fail closed without mutation
+- optional replacement decline remains accepted
+- mandatory replacement accept succeeds when it selects an available replacement
+- mandatory replacement decline or missing replacement remains rejected without mutation
+- no unrelated gameplay, DTO, contract-parity, architecture, or projection changes are included
+
+## Post-Approval Role Sections
+
+### implementation
+
+Responsibilities
+- implement only the approved story using packet authority order
+- follow strict TypeScript, lint, and verification requirements
+- report ambiguity instead of inventing uncited behavior
+
+Forbidden Actions
+- do not broaden scope beyond the approved story boundary or allowed_touch_points
+- do not add packet extraction behavior unless the approved story explicitly owns it
+- do not implement story-author/story-review handoff mechanics
+
+Required Inputs
+- active packet content with authoritative spec references
+- approved story scope, non-scope, and acceptance criteria
+- allowed_touch_points and required test list
+
+Required Outputs
+- scoped code and test changes within approved touch points
+- verification command results with pass/fail status
+- assumptions and blockers note
+
+Verification Checklist
+- confirm required inputs are present and current
+- confirm forbidden actions are not introduced
+- confirm required outputs are produced for handoff
+
+### code-review
+
+Responsibilities
+- review correctness, scope fit, and required-test coverage
+- verify no forbidden role sections or lifecycle changes were introduced
+- confirm canonical packet behavior remains enforceable
+
+Forbidden Actions
+- do not author new feature scope outside the reviewed patch
+- do not bypass required tests, packet verification, or CI gate evidence
+- do not approve scope drift that violates story boundary
+
+Required Inputs
+- proposed patch limited to approved touch points
+- active packet, approved story, and cited spec references
+- verification and test evidence for required commands
+
+Required Outputs
+- review findings prioritized by correctness and scope compliance
+- clear disposition for findings (fix/defer/block) with rationale
+- review closure recommendation for Session Orchestrator handoff
+
+Verification Checklist
+- confirm required inputs are present and current
+- confirm forbidden actions are not introduced
+- confirm required outputs are produced for handoff
+
+## Ambiguity Rule
+
+Policy: fail_and_escalate
+
+If the story or cited specification is ambiguous, do not invent behavior. Report the ambiguity and stop at the narrowest safe point.
+
+## Agent Instruction Footer
+
+```text
+You are implementing a constrained story in an existing codebase.
+The cited specification is authoritative.
+Do not invent behavior not supported by the cited spec.
+Stay within scope.
+Stay within the approved story boundary and allowed touch points.
+Follow repo tooling and code standard requirements.
+Include tests for the listed acceptance criteria.
+If the spec is ambiguous, report the ambiguity instead of guessing.
+```
+
+<!-- prettier-ignore-end -->
