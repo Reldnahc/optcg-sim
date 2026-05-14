@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-050A.md",
-      "storyId": "INF-050A",
-      "storyPath": "stories/approved/INF-050A-reject-single-mode-parent-cleanup-mismatch.yaml",
-      "storySha256": "3e89b2b167bf7a7086e19e0ecd119d7694ed4e6d4b4d1ee18816cd3c2bbcea13"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

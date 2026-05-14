@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Prevent single-mode post-merge cleanup metadata from passing when the reviewed
   PR also changed an approved parent story outside the listed cleanup story,

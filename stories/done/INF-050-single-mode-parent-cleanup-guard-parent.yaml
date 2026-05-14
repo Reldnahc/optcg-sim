@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: tooling
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the cleanup-tooling repair required after PR #351 cleanup completed
   the child story but left its non-packetized parent story approved because the
