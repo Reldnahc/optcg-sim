@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-005F.md",
-      "storyId": "TYP-005F",
-      "storyPath": "stories/approved/TYP-005F-migrate-package-projections-to-settled-canonical-output.yaml",
-      "storySha256": "39804f00e9c920b2bd2a2f6aa297e25270979934e5b48e9b672cd404a397cf92"
+      "packetPath": "agent-packets/TYP-005G.md",
+      "storyId": "TYP-005G",
+      "storyPath": "stories/approved/TYP-005G-whole-surface-type-parity-guard.yaml",
+      "storySha256": "0712fc9e4e5e244b67f694f0ad11fb14f0175d31f43d6c5591584cb8cd27cbaf"
     }
   ],
   "version": 1
