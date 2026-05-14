@@ -29,7 +29,7 @@ export type CapturePoneglyphCardFixturesResult = {
 };
 
 const defaultBaseUrl = "https://api.poneglyph.one";
-const cardIdPattern = /^[A-Z]{2,6}\d{2}-\d{3}$/;
+const cardIdPattern = /^(?:P-\d{3}|[A-Z]{2,6}\d{2}-\d{3})$/;
 
 export async function capturePoneglyphCardFixtures(
   options: CapturePoneglyphCardFixturesOptions,

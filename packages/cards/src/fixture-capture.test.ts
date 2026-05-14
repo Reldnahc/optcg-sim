@@ -246,6 +246,35 @@ describe("Poneglyph fixture capture", () => {
     expect(await listTempFiles()).toEqual([]);
   });
 
+  it("accepts official one-letter promo card IDs", async () => {
+    const rebecca = await readJsonFixture(
+      "fixtures/poneglyph/cards/OP05-091.rebecca.json",
+    );
+
+    const result = await capturePoneglyphCardFixtures({
+      baseUrl: "https://poneglyph.test",
+      cardIds: [toCardId("P-028")],
+      dryRun: true,
+      fetch: batchFetch({
+        "P-028": {
+          ...(rebecca as Record<string, unknown>),
+          card_number: "P-028",
+        },
+      }),
+      outputDirectory: tempDir,
+    });
+
+    expect(result.captured).toEqual([
+      {
+        cardId: "P-028",
+        filePath: path.join(tempDir, "P-028.rebecca.json"),
+        relativePath: "P-028.rebecca.json",
+        written: false,
+      },
+    ]);
+    expect(await listTempFiles()).toEqual([]);
+  });
+
   it("derives predictable fixture filenames from card IDs and names", () => {
     expect(
       toPoneglyphCardFixtureFileName({

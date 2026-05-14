@@ -22,6 +22,7 @@ import {
   loadFixtureOnlyRealCardDslMatchCardManifest,
   loadCheckedInOp10045GeneratedSupportEffectDefinition,
   loadCheckedInRealPoneglyphFixture,
+  realKeywordProofFixtureCorpus,
   realEffectShapeFixtureCorpus,
   realCardDslEffectDefinitionFixturePath,
 } from "./real-card-fixtures.js";
@@ -88,6 +89,33 @@ const realMechanicsMatrix = [
 ] as const satisfies readonly RealMechanicsMatrixEntry[];
 
 describe("real card fixtures", () => {
+  it("records CARD-013A keyword proof roles for every human-supplied card", () => {
+    expect(realKeywordProofFixtureCorpus).toEqual([
+      expect.objectContaining({
+        cardId: "OP01-025",
+        intendedProofRole: "exact Rush",
+        keywordEvidence: "[Rush]",
+      }),
+      expect.objectContaining({
+        cardId: "OP04-014",
+        intendedProofRole: "exact Banish",
+        keywordEvidence: "[Banish]",
+      }),
+      expect.objectContaining({
+        cardId: "EB04-011",
+        intendedProofRole: "mixed Rush: Character residue",
+        keywordEvidence: "[Rush: Character]",
+        residueEvidence:
+          "Neptunian field-count draw-then-trash text remains unsupported residue evidence.",
+      }),
+      expect.objectContaining({
+        cardId: "P-028",
+        intendedProofRole: "exact Double Attack",
+        keywordEvidence: "[Double Attack]",
+      }),
+    ]);
+  });
+
   it("records a broad selected corpus of unsupported real effect-shape fixtures", () => {
     const cardIds = realEffectShapeFixtureCorpus.map((entry) => entry.cardId);
     const families = new Set(
@@ -181,6 +209,9 @@ describe("real card fixtures", () => {
       "OP04-014",
       "OP10-045",
       ...realEffectShapeFixtureCorpus.map((entry) => entry.cardId),
+      "OP01-025",
+      "EB04-011",
+      "P-028",
     ]);
   });
 
@@ -268,6 +299,58 @@ describe("real card fixtures", () => {
     expect(normalized.officialFaq).toEqual([]);
     expect(normalized.errata).toEqual([]);
     expect(normalized.legality["Extra Regulation"]?.status).toBe("legal");
+  });
+
+  it("records CARD-013A keyword proof fixture fields without promoting gameplay support", async () => {
+    for (const entry of realKeywordProofFixtureCorpus) {
+      const fixture = await loadCheckedInRealPoneglyphFixture(entry.cardId);
+      const normalized = normalizePoneglyphCardDetail(fixture);
+      const sourceText = [fixture.effect, fixture.trigger, fixture.block]
+        .filter((value): value is string => value !== null && value !== "")
+        .join("\n");
+
+      expect(fixture.card_number).toBe(entry.cardId);
+      expect(fixture.card_type.length).toBeGreaterThan(0);
+      expect(sourceText).toContain(entry.keywordEvidence);
+      expect(normalized.cardId).toBe(entry.cardId);
+      expect(normalized.category).toMatch(
+        /^(leader|character|event|stage|don)$/u,
+      );
+      expect(normalized.printedKeywords).toEqual(
+        entry.normalizedPrintedKeywords,
+      );
+      expect(normalized.sourceTextHash).toBe(entry.expectedSourceTextHash);
+      expect(normalized.behaviorHash).toBe(entry.expectedBehaviorHash);
+      expect(normalized.officialFaq).toHaveLength(fixture.official_faq.length);
+      expect(normalized.officialFaq).toEqual(
+        expect.arrayContaining(fixture.official_faq),
+      );
+      expect(normalized.errata).toEqual([]);
+
+      if (entry.residueEvidence === undefined) {
+        expect(entry.intendedProofRole).toMatch(/^exact /u);
+      } else {
+        expect(entry.intendedProofRole).toMatch(/^mixed /u);
+        expect(sourceText).toContain("Neptunian");
+        expect(sourceText).toContain("Draw a card");
+        expect(sourceText).toContain("trash the same number of cards");
+      }
+    }
+  });
+
+  it("keeps newly captured CARD-013A keyword proof fixtures out of runtime admission manifests", async () => {
+    const manifest = await buildFixtureOnlyRealCardDslMatchCardManifest();
+
+    for (const entry of realKeywordProofFixtureCorpus) {
+      if (entry.cardId === "OP04-014") {
+        continue;
+      }
+
+      const card = manifest.cards[toCardId(entry.cardId)];
+
+      expect(card).toBeUndefined();
+      expect(manifest.effectDefinitions?.[entry.cardId]).toBeUndefined();
+    }
   });
 
   it("keeps overlay as gameplay authority and fails closed for unsupported non-vanilla cards in ranked mode", async () => {

@@ -1,0 +1,113 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-013A
+epic_id: CARD-013
+title: Capture human-supplied keyword proof fixtures
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Capture and verify the exact Poneglyph card fixtures for the human-supplied
+  proof-card list that will feed generated-support certification for already
+  implemented printed combat keywords. The implementation worker may not choose
+  substitute proof cards; if the supplied list is incomplete or unsuitable, stop
+  and return the story for human revision.
+story_boundary: >
+  Own only fixture capture, fixture schema/normalization/hash verification, and
+  story metadata updates for the human-supplied keyword proof cards. Do not add
+  parser rules, runtime capability records, generated-support support status,
+  generated effect definitions, engine behavior, support overlays, manifests, or
+  gameplay admission in this story.
+allowed_touch_points:
+  - fixtures/poneglyph/cards/*.json
+  - packages/cards/src/real-card-fixtures.ts
+  - packages/cards/src/real-card-fixtures.test.ts
+  - packages/cards/src/normalization.test.ts
+  - packages/cards/src/fixture-capture.ts
+  - packages/cards/src/fixture-capture.test.ts
+  - stories/generated/CARD-013-engine-supported-keyword-generated-support-parent.yaml
+  - stories/generated/CARD-013A-capture-engine-supported-keyword-fixtures.yaml
+  - stories/generated/CARD-013B-engine-supported-keyword-generated-support.yaml
+  - stories/approved/CARD-013-engine-supported-keyword-generated-support-parent.yaml
+  - stories/approved/CARD-013A-capture-engine-supported-keyword-fixtures.yaml
+  - stories/approved/CARD-013B-engine-supported-keyword-generated-support.yaml
+  - agent-packets/CARD-013A.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s025
+  - 02-engine-mechanics.s045
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+scope:
+  - capture only OP01-025, OP04-014, EB04-011, and P-028 from the human-supplied proof-card list
+  - use `corepack pnpm --filter @optcg/cards capture:fixture -- --card <CARD_ID>` to generate any missing fixture files
+  - use `corepack pnpm --filter @optcg/cards capture:fixture -- --card <CARD_ID> --dry-run` before writing when inspecting newly supplied IDs is useful
+  - verify every captured fixture through the checked-in Poneglyph schema and normalization path
+  - record behavior-sensitive fields for each supplied card: cardId, card_type/category, printed effect text, trigger text, keyword field, normalized printedKeywords, official FAQ, errata, sourceTextHash, and behaviorHash
+  - classify each supplied card as exact keyword-only proof or mixed keyword-plus-unsupported residue proof for CARD-013B
+  - preserve existing checked-in fixtures unless the human-supplied ID points to a fixture whose current checked-in source has drifted and the capture output is reviewed
+  - fix only the capture-runner card ID validation needed to accept the human-supplied promo ID `P-028`, if the existing validation rejects it before capture
+non_scope:
+  - selecting replacement card IDs
+  - parser grammar changes
+  - runtime capability matrix changes
+  - generated-support evaluator or support-probe behavior changes
+  - changing support status, support overlays, effectDefinitions, real-card manifests, deck/loadout validation, or gameplay admission
+  - engine-core changes
+  - live Poneglyph use in CI tests
+  - broad fixture-corpus refreshes or live catalog scraping
+  - capture-runner changes beyond accepting official one-letter promo prefixes such as `P-028`
+dependencies:
+  - CARD-012
+card_source_integrity:
+  - human-supplied card ID list for this proof set is OP01-025, OP04-014, EB04-011, and P-028
+  - OP04-014 already has a checked-in Poneglyph fixture and prior reviewed Banish evidence; verify it remains suitable rather than recapturing it unless source drift is explicitly reviewed
+  - "EB04-011 is the Neptunian card and is intended as mixed Rush: Character residue evidence; CARD-013A must record the `[Rush: Character]` keyword proof separately from the unsupported Neptunian draw-then-trash text"
+  - OP01-025, EB04-011, and P-028 require fixture capture or dry-run/probe evidence before CARD-013B may rely on them
+  - "each supplied card ID must be mapped from checked-in or freshly captured Poneglyph text to one intended proof role: exact Rush, exact Rush: Character, exact Double Attack, exact Banish, mixed Rush residue, mixed Rush: Character residue, mixed Double Attack residue, or mixed Banish residue"
+  - new fixture files must be generated by `corepack pnpm --filter @optcg/cards capture:fixture -- --card <CARD_ID>` and never hand-authored
+  - if a supplied card's live Poneglyph text contains unsupported behavior beyond the targeted keyword, keep it classified as mixed residue evidence for CARD-013B rather than admitting it as playable keyword-only support
+  - if a supplied card does not contain one of the already implemented target keywords, stop and return the story for human revision instead of substituting another card
+engine_capability_preflight:
+  - no engine capability is enabled in CARD-013A; this story only captures source evidence for CARD-013B
+  - "target keywords are limited to engine-supported printed Rush, Rush: Character, Double Attack, and Banish"
+  - EB04-011's Neptunian field-count draw-then-trash effect is not engine-supported for this story and must remain unsupported residue
+  - Blocker is excluded because CARD-012 already owns Blocker generated-support evidence
+  - Unblockable and Counter Event are excluded because they are not part of the already implemented target keyword set for this story
+acceptance_criteria:
+  - OP01-025, OP04-014, EB04-011, and P-028 have deterministic checked-in Poneglyph fixture files or already-reviewed existing fixture files
+  - fixture validation and normalization tests cover every newly captured fixture
+  - the story records each supplied card's intended proof role for CARD-013B
+  - unsupported non-keyword text in supplied cards is explicitly identified as residue evidence, not gameplay support
+  - no generated-support parser, runtime-capability, support-status, manifest, or engine behavior changes are included
+required_tests:
+  - exact candidate story-review before approval
+  - dry-run or probe command evidence for newly supplied card IDs when the fixture is not already checked in
+  - run `corepack pnpm --filter @optcg/cards capture:fixture -- --card OP01-025` if OP01-025 is not already checked in
+  - run `corepack pnpm --filter @optcg/cards capture:fixture -- --card EB04-011` if EB04-011 is not already checked in
+  - run `corepack pnpm --filter @optcg/cards capture:fixture -- --card P-028` if P-028 is not already checked in
+  - regression test proving the capture runner accepts official one-letter promo IDs such as `P-028`
+  - fixture schema validation test coverage for every new fixture
+  - normalization/hash assertion coverage for every new fixture's behavior-sensitive fields
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run verify` if feasible
+repo_rules:
+  - generate and activate the CARD-013A packet before implementation
+  - stay within allowed_touch_points
+  - do not choose proof card IDs in the implementation pass; use only the human-supplied list
+  - do not hand-edit raw Poneglyph fixture text or hashes
+  - do not promote any card support status in this story
+  - if the supplied card list is incomplete, stale, or semantically mismatched, fail closed and return the story for human revision
+ambiguity_policy: fail_and_escalate

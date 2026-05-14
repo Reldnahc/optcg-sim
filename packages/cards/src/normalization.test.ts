@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { normalizePoneglyphCardDetail } from "./normalization.js";
+import { realKeywordProofFixtureCorpus } from "./real-card-fixtures.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -130,5 +131,27 @@ describe("Poneglyph normalization", () => {
         meta: { total: 1 },
       }),
     ).toThrow(/Invalid Poneglyph card detail/);
+  });
+
+  it("normalizes CARD-013A keyword proof fixtures into stable keyword and hash evidence", async () => {
+    for (const entry of realKeywordProofFixtureCorpus) {
+      const fixture = await readJsonFixture(
+        `fixtures/poneglyph/cards/${entry.fixtureFileName}`,
+      );
+      const card = normalizePoneglyphCardDetail(fixture);
+
+      expect(card.cardId).toBe(entry.cardId);
+      expect(card.printedKeywords).toEqual(entry.normalizedPrintedKeywords);
+      expect(card.effectText ?? card.triggerText ?? "").toContain(
+        entry.keywordEvidence,
+      );
+      expect(card.sourceTextHash).toBe(entry.expectedSourceTextHash);
+      expect(card.behaviorHash).toBe(entry.expectedBehaviorHash);
+      expect(card.officialFaq).toEqual(
+        expect.arrayContaining(card.raw.official_faq),
+      );
+      expect(card.officialFaq).toHaveLength(card.raw.official_faq.length);
+      expect(card.errata).toEqual([]);
+    }
   });
 });
