@@ -1,0 +1,30 @@
+{
+  "cardId": "TYP-007D-907",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007D-907:auto-on-play-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "connector": "always",
+            "effect": {
+              "type": "playSelected",
+              "selection": "handSelection:missingProducer",
+              "ignoreCost": true
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007d-907",
+    "rulesVersion": "2026-05-14",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

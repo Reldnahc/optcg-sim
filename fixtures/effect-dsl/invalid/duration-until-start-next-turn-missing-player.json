@@ -1,0 +1,24 @@
+{
+  "cardId": "TYP-007E-902",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007E-902:auto-on-play-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "cannotAttack",
+        "target": { "type": "self" },
+        "duration": {
+          "type": "untilStartOfNextTurn"
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007e-902",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

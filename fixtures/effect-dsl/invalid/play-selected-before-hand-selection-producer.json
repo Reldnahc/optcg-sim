@@ -1,0 +1,44 @@
+{
+  "cardId": "TYP-007D-909",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007D-909:auto-on-play-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "connector": "always",
+            "effect": {
+              "type": "playSelected",
+              "selection": "handSelection:playableCharacter",
+              "ignoreCost": true
+            }
+          },
+          {
+            "connector": "always",
+            "effect": {
+              "type": "selectCards",
+              "zone": "hand",
+              "player": "self",
+              "chooser": "self",
+              "min": 1,
+              "max": 1,
+              "filter": { "categories": ["character"] },
+              "saveAs": "handSelection:playableCharacter",
+              "visibility": "chooserOnly"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007d-909",
+    "rulesVersion": "2026-05-14",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

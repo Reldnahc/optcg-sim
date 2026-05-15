@@ -7,6 +7,8 @@ import type {
   CardSelectionCandidate,
   CardId,
   ChooseEffectOptionDecision,
+  ChooseQuantityDecision,
+  ChooseQuantityResponse,
   ChooseOptionalActivationDecision,
   ChooseReplacementDecision,
   ChooseTriggerOrderDecision,
@@ -15,6 +17,7 @@ import type {
   DecisionResponse,
   DeclareLoopCountDecision,
   EffectId,
+  ExactQuantityDecision,
   LegalAction,
   MulliganDecision,
   OrderCardsDecision,
@@ -104,6 +107,10 @@ test("TYP-001E decision and response contracts compile against canonical variant
   const responseRollbackConsent: DecisionResponse = {
     type: "rollbackConsent",
     allow: true,
+  };
+  const responseChooseQuantity: ChooseQuantityResponse = {
+    type: "chooseQuantity",
+    quantity: 2,
   };
 
   const chooseTriggerOrder: ChooseTriggerOrderDecision = {
@@ -198,6 +205,14 @@ test("TYP-001E decision and response contracts compile against canonical variant
     replacementIds: ["rep-1"],
     mandatory: false,
   };
+  const chooseQuantity: ChooseQuantityDecision = {
+    ...baseDecision,
+    type: "chooseQuantity",
+    min: 1,
+    max: 3,
+    mode: "upTo",
+    defaultResponse: responseChooseQuantity,
+  };
 
   const pending: PendingDecision[] = [
     chooseTriggerOrder,
@@ -212,9 +227,10 @@ test("TYP-001E decision and response contracts compile against canonical variant
     declareLoopCount,
     rollbackConsent,
     chooseReplacement,
+    chooseQuantity,
   ];
 
-  expect(pending).toHaveLength(12);
+  expect(pending).toHaveLength(13);
   expect(responseOrderedIds.type).toBe("orderedIds");
   expect(responseOptionalActivation.type).toBe("optionalActivation");
   expect(responsePayment.type).toBe("payment");
@@ -227,6 +243,7 @@ test("TYP-001E decision and response contracts compile against canonical variant
   expect(responseMulligan.type).toBe("mulligan");
   expect(responseLoopCount.type).toBe("loopCount");
   expect(responseRollbackConsent.type).toBe("rollbackConsent");
+  expect(responseChooseQuantity.type).toBe("chooseQuantity");
 });
 
 test("TYP-001E action contracts compile and reject transport envelope fields", () => {
@@ -236,6 +253,10 @@ test("TYP-001E action contracts compile and reject transport envelope fields", (
     playerId: "player-1" as PlayerId,
   };
   const response: DecisionResponse = { type: "loopCount", count: 1 };
+  const quantityResponse: DecisionResponse = {
+    type: "chooseQuantity",
+    quantity: 2,
+  };
 
   const actions: Action[] = [
     {
@@ -263,12 +284,17 @@ test("TYP-001E action contracts compile and reject transport envelope fields", (
       decisionId: "decision-1" as DecisionId,
       response,
     },
+    {
+      type: "respondToDecision",
+      decisionId: "decision-2" as DecisionId,
+      response: quantityResponse,
+    },
   ];
   const legalActions: LegalAction[] = actions;
   const actionsAgain: Action[] = legalActions;
 
-  expect(actions).toHaveLength(9);
-  expect(actionsAgain).toHaveLength(9);
+  expect(actions).toHaveLength(10);
+  expect(actionsAgain).toHaveLength(10);
 
   const invalidActionClientActionId: Action = {
     type: "endMainPhase",
@@ -319,4 +345,33 @@ test("TYP-001E action contracts compile and reject transport envelope fields", (
   void invalidActionSignature;
   void invalidLegalActionClientActionId;
   void staleDecisionType;
+});
+
+test("TYP-007A exact quantity decisions require matching min and max", () => {
+  const validExactQuantityDecision: ExactQuantityDecision<2> = {
+    id: "decision-3" as DecisionId,
+    type: "chooseQuantity",
+    playerId: "player-1" as PlayerId,
+    prompt: "Choose exactly 2",
+    causedBy: { type: "playerAction", actionId: "action-2" },
+    visibility: { type: "public" },
+    mode: "exact",
+    min: 2,
+    max: 2,
+  };
+  const validUpToQuantityDecision: ChooseQuantityDecision = {
+    ...validExactQuantityDecision,
+    mode: "upTo",
+    min: 0,
+    max: 2,
+  };
+  const invalidExactQuantityDecision: ExactQuantityDecision<2> = {
+    ...validExactQuantityDecision,
+    // @ts-expect-error exact mode requires min and max to be identical.
+    min: 1,
+    max: 2,
+  };
+  expect(validExactQuantityDecision.mode).toBe("exact");
+  expect(validUpToQuantityDecision.mode).toBe("upTo");
+  void invalidExactQuantityDecision;
 });

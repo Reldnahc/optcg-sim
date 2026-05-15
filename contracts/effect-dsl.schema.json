@@ -143,7 +143,19 @@
           "properties": {
             "type": { "const": "restDon" },
             "count": { "type": "integer", "minimum": 0 },
-            "chooser": { "$ref": "#/$defs/playerRef" }
+            "chooser": { "$ref": "#/$defs/playerRef" },
+            "optional": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "count"],
+          "properties": {
+            "type": { "const": "returnDon" },
+            "count": { "type": "integer", "minimum": 0 },
+            "chooser": { "$ref": "#/$defs/playerRef" },
+            "optional": { "type": "boolean" }
           }
         },
         {
@@ -151,7 +163,8 @@
           "additionalProperties": false,
           "required": ["type"],
           "properties": {
-            "type": { "const": "restSelf" }
+            "type": { "const": "restSelf" },
+            "optional": { "type": "boolean" }
           }
         },
         {
@@ -164,7 +177,8 @@
               "type": "array",
               "items": { "$ref": "#/$defs/cost" },
               "minItems": 1
-            }
+            },
+            "optional": { "type": "boolean" }
           }
         }
       ]
@@ -187,6 +201,27 @@
               ]
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "untilEndOfTurn" },
+            "whoseTurn": {
+              "type": "string",
+              "enum": ["current", "sourceController", "targetController"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player"],
+          "properties": {
+            "type": { "const": "untilStartOfNextTurn" },
+            "player": { "$ref": "#/$defs/playerRef" }
+          }
         }
       ]
     },
@@ -205,6 +240,16 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["type", "count", "player"],
+          "properties": {
+            "type": { "const": "drawUpTo" },
+            "count": { "type": "integer", "minimum": 0 },
+            "player": { "$ref": "#/$defs/playerRef" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["type", "player", "chooser", "count"],
           "properties": {
             "type": { "const": "trashFromHand" },
@@ -212,6 +257,43 @@
             "chooser": { "$ref": "#/$defs/playerRef" },
             "count": { "type": "integer", "minimum": 0 },
             "filter": { "$ref": "#/$defs/cardFilter" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "zone",
+            "player",
+            "chooser",
+            "min",
+            "max",
+            "filter",
+            "saveAs",
+            "visibility"
+          ],
+          "properties": {
+            "type": { "const": "selectCards" },
+            "zone": { "const": "hand" },
+            "player": { "const": "self" },
+            "chooser": { "const": "self" },
+            "min": { "type": "integer", "minimum": 0 },
+            "max": { "type": "integer", "minimum": 0 },
+            "filter": { "$ref": "#/$defs/cardFilter" },
+            "saveAs": { "$ref": "#/$defs/handSelectionId" },
+            "visibility": { "const": "chooserOnly" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "selection"],
+          "properties": {
+            "type": { "const": "playSelected" },
+            "selection": { "$ref": "#/$defs/handSelectionId" },
+            "enterRested": { "type": "boolean" },
+            "ignoreCost": { "type": "boolean" }
           }
         },
         {
@@ -237,6 +319,26 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["type", "target", "duration"],
+          "properties": {
+            "type": { "const": "cannotAttack" },
+            "target": { "$ref": "#/$defs/target" },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target", "duration"],
+          "properties": {
+            "type": { "const": "cannotBlock" },
+            "target": { "$ref": "#/$defs/target" },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["type", "effects"],
           "properties": {
             "type": { "const": "sequence" },
@@ -245,7 +347,51 @@
               "items": { "$ref": "#/$defs/sequencedEffect" },
               "minItems": 1
             }
-          }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "effects": {
+                    "type": "array",
+                    "contains": {
+                      "type": "object",
+                      "required": ["effect"],
+                      "properties": {
+                        "effect": {
+                          "type": "object",
+                          "required": ["type"],
+                          "properties": {
+                            "type": { "const": "playSelected" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "effects": {
+                    "type": "array",
+                    "contains": {
+                      "type": "object",
+                      "required": ["effect"],
+                      "properties": {
+                        "effect": {
+                          "type": "object",
+                          "required": ["type"],
+                          "properties": {
+                            "type": { "const": "selectCards" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
         },
         {
           "type": "object",
@@ -262,6 +408,40 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "category", "trigger", "effect"],
+      "allOf": [
+        {
+          "not": {
+            "properties": {
+              "effect": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": { "const": "playSelected" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "category": { "const": "replacement" }
+            },
+            "required": ["category"]
+          },
+          "then": {
+            "properties": {
+              "effect": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": { "const": "replacement" }
+                }
+              }
+            }
+          }
+        }
+      ],
       "properties": {
         "id": {
           "type": "string",
@@ -376,6 +556,93 @@
             "op": { "$ref": "#/$defs/comparator" },
             "value": { "type": "integer", "minimum": 0 }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player", "op", "value"],
+          "properties": {
+            "type": { "const": "lifeCount" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "op": { "$ref": "#/$defs/comparator" },
+            "value": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player", "op", "value"],
+          "properties": {
+            "type": { "const": "fieldCount" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "filter": { "$ref": "#/$defs/cardFilter" },
+            "op": { "$ref": "#/$defs/comparator" },
+            "value": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player", "op", "value"],
+          "properties": {
+            "type": { "const": "handCount" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "op": { "$ref": "#/$defs/comparator" },
+            "value": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target", "state"],
+          "properties": {
+            "type": { "const": "cardState" },
+            "target": { "$ref": "#/$defs/target" },
+            "state": { "type": "string", "enum": ["active", "rested"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "sourceStillInZone" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "conditions"],
+          "properties": {
+            "type": { "const": "and" },
+            "conditions": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/condition" },
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "conditions"],
+          "properties": {
+            "type": { "const": "or" },
+            "conditions": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/condition" },
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "condition"],
+          "properties": {
+            "type": { "const": "not" },
+            "condition": { "$ref": "#/$defs/condition" }
+          }
         }
       ]
     },
@@ -389,6 +656,10 @@
         "blocker",
         "unblockable"
       ]
+    },
+    "handSelectionId": {
+      "type": "string",
+      "pattern": "^handSelection:[A-Za-z0-9][A-Za-z0-9:_-]*$"
     },
     "numericFilter": {
       "oneOf": [
@@ -448,6 +719,9 @@
         "saveResultAs": {
           "type": "string",
           "minLength": 1
+        },
+        "optional": {
+          "type": "boolean"
         }
       }
     },

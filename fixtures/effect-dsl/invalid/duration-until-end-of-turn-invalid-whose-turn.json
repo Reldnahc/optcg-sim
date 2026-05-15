@@ -1,0 +1,26 @@
+{
+  "cardId": "TYP-007E-901",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007E-901:permanent-1",
+      "category": "permanent",
+      "trigger": { "type": "permanent" },
+      "effect": {
+        "type": "modifyPower",
+        "target": { "type": "self" },
+        "value": 1000,
+        "duration": {
+          "type": "untilEndOfTurn",
+          "whoseTurn": "opponent"
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007e-901",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

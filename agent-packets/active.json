@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/TYP-007E.md",
+      "storyId": "TYP-007E",
+      "storyPath": "stories/approved/TYP-007E-duration-modifier-restriction-schema.yaml",
+      "storySha256": "74edd215a02dccf3d7638e76de92d40583fed4c999d4247061d44c0cc0d4e15d"
+    }
+  ],
   "version": 1
 }

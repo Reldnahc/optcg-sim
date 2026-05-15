@@ -13,6 +13,7 @@ import type {
   PublicCardView,
   PublicDecision,
   PublicLegalAction,
+  PublicPendingDecision,
   PublicRevealRecord,
   VisiblePlayerState,
 } from "@optcg/types";
@@ -342,7 +343,7 @@ const shouldIncludePlayerEvent = (
 const toPublicDecision = (
   state: GameState,
   playerId: PlayerId,
-): PublicDecision | undefined => {
+): PublicPendingDecision | undefined => {
   const pending = state.pendingDecision;
   if (pending === undefined || pending.playerId !== playerId) {
     return undefined;
@@ -357,7 +358,16 @@ const toPublicDecision = (
       ? {}
       : { timeoutMs: pending.timeoutMs }),
   };
-  return base;
+  if (pending.type === "chooseQuantity") {
+    return {
+      ...base,
+      type: "chooseQuantity",
+      mode: pending.mode,
+      min: pending.min,
+      max: pending.max,
+    };
+  }
+  return { ...base, type: pending.type };
 };
 
 type LocatedVisibleCard = {

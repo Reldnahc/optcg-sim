@@ -15,6 +15,7 @@ import type {
   PublicDecision,
   PublicLegalAction,
   PublicLifeView,
+  PublicPendingDecision,
   PublicRevealRecord,
   PublicTurnState,
   SpectatorEvent,
@@ -96,12 +97,15 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
     ...opponent,
     playerId: playerA,
   };
-  const decision: PublicDecision = {
+  const decision: PublicPendingDecision = {
     id: "decision-1" as PublicDecision["id"],
-    type: "mulligan",
+    type: "chooseQuantity",
     playerId: playerA,
-    prompt: "Choose whether to mulligan.",
+    prompt: "Choose how many cards to draw.",
     causedBy: { type: "playerAction", actionId: "action-1" },
+    mode: "upTo",
+    min: 0,
+    max: 2,
   };
   const legalAction: PublicLegalAction = {
     type: "respondToDecision",
@@ -171,7 +175,12 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
   };
 
   expect(playerView.legalActions).toHaveLength(1);
-  expect(playerView.pendingDecision?.type).toBe("mulligan");
+  expect(playerView.pendingDecision?.type).toBe("chooseQuantity");
+  if (playerView.pendingDecision?.type !== "chooseQuantity") {
+    throw new Error("expected chooseQuantity public decision");
+  }
+  expect(playerView.pendingDecision.max).toBe(2);
+  expect(playerView.pendingDecision.mode).toBe("upTo");
   expect(spectatorView.spectatorPolicy.mode).toBe("live-filtered");
 });
 
@@ -185,7 +194,13 @@ test("TYP-002A player view excludes opponent hidden identities and private inter
   const noAudit: HasNoKey<PlayerView, "audit"> = true;
   const noPrivateDecisionCandidates: HasNoKey<PublicDecision, "candidates"> =
     true;
+  const noPrivateDecisionCandidateCount: HasNoKey<
+    PublicDecision,
+    "candidateCount"
+  > = true;
   const noPrivateLegalReason: HasNoKey<PublicLegalAction, "reason"> = true;
+  const noQuantityValueInLegalAction: HasNoKey<PublicLegalAction, "quantity"> =
+    true;
 
   expect(noOpponentHandCards).toBe(true);
   expect(noOpponentDeckCards).toBe(true);
@@ -194,7 +209,9 @@ test("TYP-002A player view excludes opponent hidden identities and private inter
   expect(noEffectQueue).toBe(true);
   expect(noAudit).toBe(true);
   expect(noPrivateDecisionCandidates).toBe(true);
+  expect(noPrivateDecisionCandidateCount).toBe(true);
   expect(noPrivateLegalReason).toBe(true);
+  expect(noQuantityValueInLegalAction).toBe(true);
 });
 
 test("TYP-002A initial spectator view excludes hidden identities and player-only choices", () => {

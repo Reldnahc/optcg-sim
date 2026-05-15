@@ -58,6 +58,99 @@ function formatAjvErrors(errors: ErrorObject[] | null | undefined): string {
     .join("\n- ");
 }
 
+function isJsonObject(value: JsonValue | undefined): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function validateSemanticEffectDslGuards(value: JsonValue): string[] {
+  if (!isJsonObject(value)) {
+    return [];
+  }
+
+  const effects = value["effects"];
+  if (!Array.isArray(effects)) {
+    return [];
+  }
+
+  return effects.flatMap((entry, index) =>
+    isJsonObject(entry)
+      ? validateEffectBlockSemantics(entry, `/effects/${String(index)}`)
+      : [],
+  );
+}
+
+function validateEffectBlockSemantics(
+  effectBlock: JsonObject,
+  pathPrefix: string,
+): string[] {
+  return validateEffectSemantics(effectBlock["effect"], `${pathPrefix}/effect`);
+}
+
+function validateEffectSemantics(
+  effect: JsonValue | undefined,
+  pathPrefix: string,
+): string[] {
+  if (!isJsonObject(effect) || typeof effect["type"] !== "string") {
+    return [];
+  }
+
+  if (effect["type"] === "playSelected") {
+    return [`${pathPrefix} playSelected must be inside a producing sequence`];
+  }
+
+  if (effect["type"] !== "sequence") {
+    return [];
+  }
+
+  const sequencedEffects = effect["effects"];
+  if (!Array.isArray(sequencedEffects)) {
+    return [];
+  }
+
+  const producedHandSelections = new Set<string>();
+  const failures: string[] = [];
+
+  sequencedEffects.forEach((entry, index) => {
+    const segmentPath = `${pathPrefix}/effects/${String(index)}`;
+    if (!isJsonObject(entry)) {
+      return;
+    }
+
+    const segmentEffect = entry["effect"];
+    if (!isJsonObject(segmentEffect)) {
+      return;
+    }
+
+    const segmentType = segmentEffect["type"];
+    if (segmentType === "playSelected") {
+      const selection = segmentEffect["selection"];
+      if (
+        typeof selection !== "string" ||
+        !producedHandSelections.has(selection)
+      ) {
+        failures.push(
+          `${segmentPath}/effect playSelected must reference a prior selectCards saveAs in the same sequence`,
+        );
+      }
+    }
+
+    if (segmentType === "sequence") {
+      failures.push(
+        ...validateEffectSemantics(segmentEffect, `${segmentPath}/effect`),
+      );
+    }
+
+    if (
+      segmentType === "selectCards" &&
+      typeof segmentEffect["saveAs"] === "string"
+    ) {
+      producedHandSelections.add(segmentEffect["saveAs"]);
+    }
+  });
+
+  return failures;
+}
+
 export async function validateEffectDslFixtures(
   repoRoot: string,
 ): Promise<ValidationSummary> {
@@ -84,9 +177,15 @@ export async function validateEffectDslFixtures(
   for (const fixturePath of validFixtures) {
     const fixture = await loadJsonFile(fixturePath);
     const isValid = validate(fixture);
+    const semanticFailures = validateSemanticEffectDslGuards(fixture);
     if (!isValid) {
       failures.push(
         `expected valid fixture ${path.relative(repoRoot, fixturePath)} to pass, but got:\n- ${formatAjvErrors(validate.errors)}`,
+      );
+    }
+    if (semanticFailures.length > 0) {
+      failures.push(
+        `expected valid fixture ${path.relative(repoRoot, fixturePath)} to pass semantic guards, but got:\n- ${semanticFailures.join("\n- ")}`,
       );
     }
   }
@@ -94,7 +193,8 @@ export async function validateEffectDslFixtures(
   for (const fixturePath of invalidFixtures) {
     const fixture = await loadJsonFile(fixturePath);
     const isValid = validate(fixture);
-    if (isValid) {
+    const semanticFailures = validateSemanticEffectDslGuards(fixture);
+    if (isValid && semanticFailures.length === 0) {
       failures.push(
         `expected invalid fixture ${path.relative(repoRoot, fixturePath)} to fail, but it passed`,
       );

@@ -1,0 +1,37 @@
+{
+  "cardId": "TYP-007E-002",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007E-002:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "effect": {
+        "type": "cannotAttack",
+        "target": {
+          "type": "choose",
+          "request": {
+            "timing": "onResolution",
+            "chooser": "self",
+            "zone": "characterArea",
+            "player": "opponent",
+            "min": 1,
+            "max": 1,
+            "allowFewerIfUnavailable": false,
+            "filter": { "categories": ["character"] }
+          }
+        },
+        "duration": {
+          "type": "untilEndOfTurn",
+          "whoseTurn": "current"
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007e-002",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

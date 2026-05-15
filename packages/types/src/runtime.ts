@@ -11,7 +11,11 @@ import type {
 } from "./primitives.js";
 import type { CardRef, Keyword, ZoneRef } from "./card-metadata.js";
 import type { CausalityRef, EngineEvent, EventVisibility } from "./events.js";
-import type { Duration } from "./effects.js";
+import type {
+  Duration,
+  SequenceSavedResultReference,
+  SequenceSegmentResult,
+} from "./effects.js";
 
 export interface PlayerGameTimer {
   playerId: PlayerId;
@@ -206,3 +210,10 @@ export interface ComputedGameView {
   legalAttackTargets: Record<InstanceId, InstanceId[]>;
   restrictions: RestrictionIndex;
 }
+
+export type SequenceSegmentResultMap = Record<string, SequenceSegmentResult>;
+
+export type SequenceSavedResultReferenceMap = Record<
+  string,
+  SequenceSavedResultReference
+>;

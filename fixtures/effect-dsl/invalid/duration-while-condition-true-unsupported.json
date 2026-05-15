@@ -1,0 +1,25 @@
+{
+  "cardId": "TYP-007E-905",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007E-905:permanent-1",
+      "category": "permanent",
+      "trigger": { "type": "permanent" },
+      "effect": {
+        "type": "cannotBlock",
+        "target": { "type": "self" },
+        "duration": {
+          "type": "whileConditionTrue",
+          "condition": { "type": "yourTurn" }
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007e-905",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

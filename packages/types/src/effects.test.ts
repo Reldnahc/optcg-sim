@@ -3,6 +3,8 @@ import { expect, test } from "vitest";
 import type {
   CardFilter,
   CardId,
+  CardRef,
+  ExactCardinality,
   CardSelectionRequest,
   Condition,
   Cost,
@@ -15,13 +17,21 @@ import type {
   EffectId,
   EffectOption,
   FailurePolicy,
+  HandSelectCardsEffect,
+  HandSelectionId,
+  PlayHandSelectedEffect,
   ReplacementTrigger,
   SearchRequest,
+  SequenceSavedResultReference,
+  SequenceSavedResultReferenceMap,
+  SequenceSegmentResult,
+  SelectionId,
   SelectionSetId,
   SequencedEffect,
   SourcePresencePolicy,
   Target,
   TargetRequest,
+  UpToCardinality,
   Trigger,
 } from "./index.js";
 
@@ -69,6 +79,14 @@ test("effect support contracts compile with canonical representative values", ()
     min: 1,
     max: 1,
     allowFewerIfUnavailable: false,
+  };
+  const exactOne: ExactCardinality<1> = { mode: "exact", min: 1, max: 1 };
+  const upToThree: UpToCardinality = { mode: "upTo", min: 0, max: 3 };
+  const invalidExactTwo: ExactCardinality<2> = {
+    mode: "exact",
+    min: 2,
+    // @ts-expect-error exact cardinality requires min and max to match.
+    max: 1,
   };
 
   const duration: Duration = {
@@ -155,6 +173,9 @@ test("effect support contracts compile with canonical representative values", ()
   expect(trigger.type).toBe("activateMain");
   expect(condition.type).toBe("attachedDonCount");
   expect(segment.connector).toBe("then");
+  expect(exactOne.max).toBe(1);
+  expect(upToThree.mode).toBe("upTo");
+  void invalidExactTwo;
 });
 
 test("replacement effect contract supports reviewed would-be-KOd self draw shape", () => {
@@ -246,4 +267,405 @@ test("deprecated CardFilter aliases are rejected by canonical contract", () => {
   void powerValueAlias;
   void hasKeywordAlias;
   void lacksKeywordAlias;
+});
+
+test("sequence segment result and saved-result reference contracts compile with canonical shapes", () => {
+  const selectedCard: CardRef = {
+    instanceId: "instance-1" as CardRef["instanceId"],
+    cardId: "OP01-003" as CardId,
+    playerId: "player-1" as CardRef["playerId"],
+  };
+
+  const result: SequenceSegmentResult = {
+    attempted: true,
+    succeeded: true,
+    changedState: false,
+    selectedCards: [selectedCard],
+    selectedTargets: [selectedCard],
+    paidCost: true,
+    playerDeclined: false,
+  };
+
+  const references: SequenceSavedResultReferenceMap = {
+    previousSelection: {
+      kind: "selectedCards",
+      cards: [selectedCard],
+    },
+    previousTarget: {
+      kind: "selectedTargets",
+      targets: [selectedCard],
+    },
+    previousCost: {
+      kind: "paidCost",
+      paidCost: true,
+    },
+    playedObject: {
+      kind: "producedObjects",
+      objects: [selectedCard],
+    },
+  };
+
+  const savedReferenceCandidate = references["previousTarget"];
+  expect(savedReferenceCandidate).toBeDefined();
+  if (!savedReferenceCandidate) {
+    throw new Error("expected saved reference");
+  }
+  const savedReference: SequenceSavedResultReference = savedReferenceCandidate;
+
+  expect(result.succeeded).toBe(true);
+  expect(savedReference.kind).toBe("selectedTargets");
+});
+
+test("sequence saved-result references reject malformed or ambiguous shapes", () => {
+  // @ts-expect-error unknown saved-reference kind is unsupported.
+  const unsupportedKind: SequenceSavedResultReference = { kind: "unknown" };
+  // @ts-expect-error selectedCards references must provide cards.
+  const missingCards: SequenceSavedResultReference = { kind: "selectedCards" };
+  const ambiguousPayload: SequenceSavedResultReference = {
+    kind: "selectedTargets",
+    // @ts-expect-error selectedTargets references must not use card payload.
+    cards: [],
+  };
+  const invalidCostValue: SequenceSavedResultReference = {
+    kind: "paidCost",
+    // @ts-expect-error paidCost references require literal true.
+    paidCost: false,
+  };
+
+  void unsupportedKind;
+  void missingCards;
+  void ambiguousPayload;
+  void invalidCostValue;
+});
+
+test("sequence segment result rejects malformed shapes", () => {
+  // @ts-expect-error segment result requires attempted.
+  const missingAttempted: SequenceSegmentResult = {
+    succeeded: true,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  };
+  const wrongSelectedTargetsPayload: SequenceSegmentResult = {
+    attempted: true,
+    succeeded: true,
+    changedState: false,
+    selectedCards: [],
+    // @ts-expect-error selectedTargets must be resolved CardRef[].
+    selectedTargets: [{ type: "self" }],
+    paidCost: false,
+    playerDeclined: false,
+  };
+
+  void missingAttempted;
+  void wrongSelectedTargetsPayload;
+});
+
+test("sequence saved-result references support producedObjects with CardRef and instance identity", () => {
+  const producedObjects: SequenceSavedResultReference = {
+    kind: "producedObjects",
+    objects: [
+      {
+        instanceId: "instance-2" as CardRef["instanceId"],
+        cardId: "OP01-004" as CardId,
+        playerId: "player-2" as CardRef["playerId"],
+      },
+      {
+        instanceId: "instance-3" as CardRef["instanceId"],
+      },
+    ],
+  };
+
+  expect(producedObjects.kind).toBe("producedObjects");
+  expect(producedObjects.objects).toHaveLength(2);
+});
+
+test("condition and optionality authoring supports composed optional cost and optional effect clauses", () => {
+  const condition: Condition = {
+    type: "and",
+    conditions: [
+      { type: "lifeCount", player: "self", op: "gte", value: 1 },
+      {
+        type: "or",
+        conditions: [
+          { type: "handCount", player: "self", op: "gte", value: 1 },
+          {
+            type: "fieldCount",
+            player: "self",
+            op: "gte",
+            value: 1,
+            filter: { state: "rested" },
+          },
+        ],
+      },
+      { type: "sourceStillInZone" },
+      {
+        type: "not",
+        condition: {
+          type: "cardState",
+          target: { type: "self" },
+          state: "rested",
+        },
+      },
+    ],
+  };
+
+  const optionalCost: Cost = {
+    type: "sequence",
+    optional: true,
+    costs: [
+      { type: "restDon", count: 1, chooser: "self", optional: true },
+      { type: "restSelf" },
+    ],
+  };
+
+  const optionalSequence: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        optional: true,
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+      {
+        connector: "ifYouDo",
+        effect: { type: "ko", target: { type: "self" } },
+      },
+    ],
+  };
+
+  const malformedOptionalCost: Cost = {
+    type: "restDon",
+    count: 1,
+    // @ts-expect-error optional cost clause requires a boolean value.
+    optional: "yes",
+  };
+  const unsupportedOptionalCost: Cost = {
+    type: "trashFromHand",
+    count: 1,
+    chooser: "self",
+    // @ts-expect-error optional cost authoring is limited to schema-supported cost variants.
+    optional: true,
+  };
+
+  const malformedOptionalClause: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        // @ts-expect-error optional effect clause requires a boolean value.
+        optional: "decline",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+  };
+
+  expect(condition.type).toBe("and");
+  expect(optionalCost.type).toBe("sequence");
+  expect(optionalSequence.type).toBe("sequence");
+  void malformedOptionalCost;
+  void unsupportedOptionalCost;
+  void malformedOptionalClause;
+});
+
+test("cost and hand-selection play-from-hand authoring contracts compile with reviewed shapes", () => {
+  const returnDonCost: Cost = {
+    type: "returnDon",
+    count: 2,
+    chooser: "self",
+  };
+  const drawUpTo: Effect = { type: "drawUpTo", count: 2, player: "self" };
+  const handSelectionId = "handSelection:playableCharacter" as HandSelectionId;
+  const selectFromHand: HandSelectCardsEffect = {
+    type: "selectCards",
+    zone: "hand",
+    player: "self",
+    chooser: "self",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    saveAs: handSelectionId,
+    visibility: "chooserOnly",
+  };
+  const playSelected: PlayHandSelectedEffect = {
+    type: "playSelected",
+    selection: handSelectionId,
+    ignoreCost: true,
+    enterRested: true,
+  };
+
+  const malformedReturnDonCost: Cost = {
+    type: "returnDon",
+    // @ts-expect-error returnDon cost count must be a number.
+    count: "2",
+  };
+  // @ts-expect-error drawUpTo requires count.
+  const malformedDrawUpTo: Effect = { type: "drawUpTo", player: "self" };
+  // @ts-expect-error playSelected requires selection.
+  const malformedPlaySelected: Effect = {
+    type: "playSelected",
+    ignoreCost: true,
+  };
+  const broadSelectCards: Effect = {
+    type: "selectCards",
+    zone: "deck",
+    player: "opponent",
+    chooser: "self",
+    min: 0,
+    max: 2,
+    saveAs: "selection:generic" as SelectionId,
+    visibility: "chooserOnly",
+  };
+  const broadPlaySelected: Effect = {
+    type: "playSelected",
+    selection: "savedResult:selectedCards" as SelectionId,
+    ignoreCost: true,
+  };
+  const invalidHandSelectionZone: HandSelectCardsEffect = {
+    type: "selectCards",
+    // @ts-expect-error selectCards is constrained to hand-zone selection.
+    zone: "deck",
+    player: "self",
+    chooser: "self",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    saveAs: handSelectionId,
+    visibility: "chooserOnly",
+  };
+  const invalidHandSelectionPlayer: HandSelectCardsEffect = {
+    type: "selectCards",
+    zone: "hand",
+    // @ts-expect-error selectCards player is constrained to self.
+    player: "opponent",
+    chooser: "self",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    saveAs: handSelectionId,
+    visibility: "chooserOnly",
+  };
+  const invalidHandSelectionChooser: HandSelectCardsEffect = {
+    type: "selectCards",
+    zone: "hand",
+    player: "self",
+    // @ts-expect-error selectCards chooser is constrained to self.
+    chooser: "opponent",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    saveAs: handSelectionId,
+    visibility: "chooserOnly",
+  };
+  const invalidHandSelectionVisibility: HandSelectCardsEffect = {
+    type: "selectCards",
+    zone: "hand",
+    player: "self",
+    chooser: "self",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    saveAs: handSelectionId,
+    // @ts-expect-error selectCards visibility is constrained to chooserOnly.
+    visibility: "bothPlayers",
+  };
+  const invalidHandSelectionReferencePrefix: HandSelectCardsEffect = {
+    type: "selectCards",
+    zone: "hand",
+    player: "self",
+    chooser: "self",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    // @ts-expect-error hand-selection saveAs must use handSelection:* prefix.
+    saveAs: "selection:generic" as SelectionId,
+    visibility: "chooserOnly",
+  };
+  const invalidHandPlaySelectedReferencePrefix: PlayHandSelectedEffect = {
+    type: "playSelected",
+    // @ts-expect-error playSelected references must use handSelection:* prefix.
+    selection: "savedResult:selectedCards" as SelectionId,
+    ignoreCost: true,
+  };
+
+  expect(returnDonCost.type).toBe("returnDon");
+  expect(drawUpTo.type).toBe("drawUpTo");
+  expect(selectFromHand.type).toBe("selectCards");
+  expect(playSelected.type).toBe("playSelected");
+  expect(broadSelectCards.type).toBe("selectCards");
+  expect(broadPlaySelected.type).toBe("playSelected");
+  void malformedReturnDonCost;
+  void malformedDrawUpTo;
+  void malformedPlaySelected;
+  void invalidHandSelectionZone;
+  void invalidHandSelectionPlayer;
+  void invalidHandSelectionChooser;
+  void invalidHandSelectionVisibility;
+  void invalidHandSelectionReferencePrefix;
+  void invalidHandPlaySelectedReferencePrefix;
+});
+
+test("temporary modifier and restriction authoring supports extended durations and normal targets", () => {
+  const chosenTarget: Target = {
+    type: "choose",
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      zone: "characterArea",
+      player: "opponent",
+      min: 1,
+      max: 1,
+      allowFewerIfUnavailable: false,
+      filter: { categories: ["character"] },
+    },
+  };
+
+  const temporaryPowerModifier: Effect = {
+    type: "modifyPower",
+    target: chosenTarget,
+    value: 1000,
+    duration: { type: "untilEndOfTurn", whoseTurn: "targetController" },
+  };
+  const cannotAttack: Effect = {
+    type: "cannotAttack",
+    target: chosenTarget,
+    duration: { type: "untilStartOfNextTurn", player: "self" },
+  };
+  const cannotBlock: Effect = {
+    type: "cannotBlock",
+    target: { type: "self" },
+    duration: { type: "untilEndOfTurn" },
+  };
+
+  const unsupportedSavedSelectionTarget: Target = {
+    // @ts-expect-error saved selection targets are deferred until a field-target producer exists.
+    type: "selection",
+    selection: "handSelection:thatCharacter" as HandSelectionId,
+  };
+  const malformedUntilEndDuration: Duration = {
+    type: "untilEndOfTurn",
+    // @ts-expect-error whoseTurn must use canonical enum values.
+    whoseTurn: "nextTurn",
+  };
+  // @ts-expect-error untilStartOfNextTurn durations require player.
+  const malformedUntilStartDuration: Duration = {
+    type: "untilStartOfNextTurn",
+  };
+  const malformedCannotAttack: Effect = {
+    type: "cannotAttack",
+    // @ts-expect-error saved selection targets are not authorable in TYP-007E.
+    target: { type: "selection" },
+    duration: { type: "untilEndOfTurn" },
+  };
+
+  expect(temporaryPowerModifier.type).toBe("modifyPower");
+  expect(cannotAttack.type).toBe("cannotAttack");
+  expect(cannotBlock.type).toBe("cannotBlock");
+  expect(chosenTarget.type).toBe("choose");
+  void unsupportedSavedSelectionTarget;
+  void malformedUntilEndDuration;
+  void malformedUntilStartDuration;
+  void malformedCannotAttack;
 });

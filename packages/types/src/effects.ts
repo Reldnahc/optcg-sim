@@ -1,5 +1,6 @@
 import type {
   CardId,
+  InstanceId,
   Comparator,
   EffectId,
   PlayerRef,
@@ -10,6 +11,7 @@ import type {
 } from "./primitives.js";
 import type {
   Attribute,
+  CardRef,
   CardCategory,
   CardColor,
   CardSupportStatus,
@@ -84,9 +86,14 @@ export type Condition =
   | { type: "custom"; check: string };
 
 export type Cost =
-  | { type: "restDon"; count: number; chooser?: PlayerRef }
-  | { type: "returnDon"; count: number; chooser?: PlayerRef }
-  | { type: "restSelf" }
+  | { type: "restDon"; count: number; chooser?: PlayerRef; optional?: boolean }
+  | {
+      type: "returnDon";
+      count: number;
+      chooser?: PlayerRef;
+      optional?: boolean;
+    }
+  | { type: "restSelf"; optional?: boolean }
   | {
       type: "trashFromHand";
       count: number;
@@ -100,10 +107,29 @@ export type Cost =
       filter?: CardFilter;
       chooser: PlayerRef;
     }
-  | { type: "discard"; count: number; filter?: CardFilter; chooser: PlayerRef }
-  | { type: "sequence"; costs: Cost[] }
+  | {
+      type: "discard";
+      count: number;
+      filter?: CardFilter;
+      chooser: PlayerRef;
+    }
+  | { type: "sequence"; costs: Cost[]; optional?: boolean }
   | { type: "chooseOne"; options: Cost[] }
   | { type: "custom"; action: string };
+
+export type ExactCardinality<N extends number = number> = {
+  mode: "exact";
+  min: N;
+  max: N;
+};
+
+export interface UpToCardinality {
+  mode: "upTo";
+  min: number;
+  max: number;
+}
+
+export type Cardinality = ExactCardinality | UpToCardinality;
 
 export interface TargetRequest {
   timing: "onActivation" | "onResolution";
@@ -219,7 +245,83 @@ export interface SequencedEffect {
     | "ifYouDo"
     | "ifPossible";
   saveResultAs?: string;
+  optional?: boolean;
 }
+
+export interface SequenceSegmentResult {
+  attempted: boolean;
+  succeeded: boolean;
+  changedState: boolean;
+  selectedCards: CardRef[];
+  selectedTargets: CardRef[];
+  paidCost: boolean;
+  playerDeclined: boolean;
+}
+
+export interface SavedSelectedCardsReference {
+  kind: "selectedCards";
+  cards: CardRef[];
+}
+
+export interface SavedSelectedTargetsReference {
+  kind: "selectedTargets";
+  targets: CardRef[];
+}
+
+export interface SavedPaidCostReference {
+  kind: "paidCost";
+  paidCost: true;
+}
+
+export interface SavedProducedObjectsReference {
+  kind: "producedObjects";
+  objects: Array<
+    | CardRef
+    | {
+        instanceId: InstanceId;
+      }
+  >;
+}
+
+export type SequenceSavedResultReference =
+  | SavedSelectedCardsReference
+  | SavedSelectedTargetsReference
+  | SavedPaidCostReference
+  | SavedProducedObjectsReference;
+
+export type HandSelectionId = SelectionId & `handSelection:${string}`;
+
+export interface SelectCardsEffect {
+  type: "selectCards";
+  zone: Zone;
+  player: PlayerRef;
+  chooser: PlayerRef;
+  min: number;
+  max: number;
+  filter?: CardFilter;
+  saveAs: SelectionId;
+  visibility: Visibility;
+}
+
+export type HandSelectCardsEffect = SelectCardsEffect & {
+  zone: "hand";
+  player: "self";
+  chooser: "self";
+  filter: CardFilter;
+  saveAs: HandSelectionId;
+  visibility: "chooserOnly";
+};
+
+export interface PlaySelectedEffect {
+  type: "playSelected";
+  selection: SelectionId;
+  enterRested?: boolean;
+  ignoreCost?: boolean;
+}
+
+export type PlayHandSelectedEffect = PlaySelectedEffect & {
+  selection: HandSelectionId;
+};
 
 export type Effect =
   | { type: "draw"; count: number; player: PlayerRef }
@@ -250,17 +352,7 @@ export type Effect =
       filter?: CardFilter;
       saveAs: SelectionId;
     }
-  | {
-      type: "selectCards";
-      zone: Zone;
-      player: PlayerRef;
-      chooser: PlayerRef;
-      min: number;
-      max: number;
-      filter?: CardFilter;
-      saveAs: SelectionId;
-      visibility: Visibility;
-    }
+  | SelectCardsEffect
   | {
       type: "moveSelected";
       selection: SelectionId;
@@ -289,12 +381,7 @@ export type Effect =
       filter: CardFilter;
       costModifier?: number;
     }
-  | {
-      type: "playSelected";
-      selection: SelectionId;
-      enterRested?: boolean;
-      ignoreCost?: boolean;
-    }
+  | PlaySelectedEffect
   | {
       type: "returnUnselectedToDeck";
       set: SelectionSetId;
