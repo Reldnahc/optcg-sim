@@ -8,7 +8,7 @@ type: refactor
 area: docs
 primary_concern: docs
 priority: critical
-status: approved
+status: done
 summary: >
   Update workflow authority so Session Orchestrators never author the main
   implementation body of an approved story, even as a fallback, while preserving

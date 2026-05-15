@@ -8,7 +8,7 @@ type: refactor
 area: docs
 primary_concern: docs
 priority: critical
-status: approved
+status: done
 summary: >
   Coordinate the workflow clarification that Session Orchestrators never author
   the main implementation body of an approved story and may only perform narrow
