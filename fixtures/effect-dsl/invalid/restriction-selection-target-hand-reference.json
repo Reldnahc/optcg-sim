@@ -1,0 +1,25 @@
+{
+  "cardId": "TYP-007E-BAD-006",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007E-BAD-006:auto-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "cannotAttack",
+        "target": {
+          "type": "selection",
+          "selection": "handSelection:thatCharacter"
+        },
+        "duration": { "type": "untilEndOfTurn" }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007e-bad-006",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

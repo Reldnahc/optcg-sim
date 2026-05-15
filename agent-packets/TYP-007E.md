@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id TYP-007E -->
 <!-- agent-packet:story-path stories/approved/TYP-007E-duration-modifier-restriction-schema.yaml -->
-<!-- agent-packet:story-sha256 97650c164ebe1ad280be358ee388d766aa07a797813a72bd44b613ab60bc94c0 -->
+<!-- agent-packet:story-sha256 74edd215a02dccf3d7638e76de92d40583fed4c999d4247061d44c0cc0d4e15d -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -18,7 +18,7 @@ Primary Concern: contract
 
 ## Why
 
-Add schema and type authorability for temporary power modifiers and spec-cited restrictions, reusing the saved-reference contracts from TYP-007B when a later sequence step targets an earlier selected object.
+Add schema and type authorability for temporary power modifiers and spec-cited restrictions using currently authorized target shapes. Saved selection targets are deferred until a proper field-target saved-reference producer exists.
 
 ## Authoritative Spec References
 
@@ -457,12 +457,13 @@ Own only canonical schema/type authorability and schema fixtures for duration, m
 - authorize temporary power modifier schema and types
 - authorize schema and types for spec-cited restrictions such as cannotAttack and cannotBlock
 - authorize duration shapes needed by those primitives
-- reuse saved-reference target shapes from TYP-007B where modifier or restriction authoring needs to refer to an earlier selected object
+- use normal target shapes such as self, choose, and all for modifier/restriction authoring
 - add positive and negative schema fixtures for these shapes
 
 ## Out of Scope
 
 - defining new saved-reference or sequence result shapes
+- saved-selection targets for modifier/restriction effects
 - computed-view modifier runtime behavior
 - refresh phase mutation behavior or expiry behavior
 - parser certification or generated-support admission
@@ -532,7 +533,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 ## Acceptance Criteria
 
 - supported temporary modifier and restriction shapes validate
-- modifier/restriction authoring does not define a second saved-reference shape outside TYP-007B
+- modifier/restriction authoring does not use hand-selection references as target references
 - malformed or unsupported duration/modifier/restriction shapes reject
 - exported types align with canonical schema
 - no runtime or card support is added

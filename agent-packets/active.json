@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-007D.md",
-      "storyId": "TYP-007D",
-      "storyPath": "stories/approved/TYP-007D-cost-hand-selection-playselected-drawupto-schema.yaml",
-      "storySha256": "09da1d8a94fc2f24742b1bdaf2a2fe73d75d66f0600b497693776844fe069295"
+      "packetPath": "agent-packets/TYP-007E.md",
+      "storyId": "TYP-007E",
+      "storyPath": "stories/approved/TYP-007E-duration-modifier-restriction-schema.yaml",
+      "storySha256": "74edd215a02dccf3d7638e76de92d40583fed4c999d4247061d44c0cc0d4e15d"
     }
   ],
   "version": 1

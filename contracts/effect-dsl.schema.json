@@ -765,15 +765,6 @@
             "type": { "const": "choose" },
             "request": { "$ref": "#/$defs/targetRequest" }
           }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["type", "selection"],
-          "properties": {
-            "type": { "const": "selection" },
-            "selection": { "$ref": "#/$defs/handSelectionId" }
-          }
         }
       ]
     },

@@ -15,7 +15,7 @@ test("effect DSL validation assets exist", async () => {
   const requiredPaths = [
     "contracts/effect-dsl.schema.json",
     "fixtures/effect-dsl/valid/canonical-policy-enums.json",
-    "fixtures/effect-dsl/valid/cannot-attack-saved-selection-until-end-of-turn.json",
+    "fixtures/effect-dsl/valid/cannot-attack-chosen-target-until-end-of-turn.json",
     "fixtures/effect-dsl/valid/cannot-block-until-end-of-turn.json",
     "fixtures/effect-dsl/valid/condition-optionality-composition.json",
     "fixtures/effect-dsl/valid/draw-then-trash-sequence.json",
@@ -41,6 +41,7 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/play-selected-top-level-effect.json",
     "fixtures/effect-dsl/invalid/replacement-category-effect-block.json",
     "fixtures/effect-dsl/invalid/restriction-cannot-attack-missing-duration.json",
+    "fixtures/effect-dsl/invalid/restriction-selection-target-hand-reference.json",
     "fixtures/effect-dsl/invalid/restriction-selection-target-non-hand-reference.json",
     "fixtures/effect-dsl/invalid/restriction-selection-target-missing-selection.json",
     "fixtures/effect-dsl/invalid/return-don-cost-missing-count.json",

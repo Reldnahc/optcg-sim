@@ -607,23 +607,30 @@ test("cost and hand-selection play-from-hand authoring contracts compile with re
   void invalidHandPlaySelectedReferencePrefix;
 });
 
-test("temporary modifier and restriction authoring supports extended durations and saved selection targets", () => {
-  const savedSelection = "handSelection:thatCharacter" as SelectionId &
-    `handSelection:${string}`;
-  const selectedTarget: Target = {
-    type: "selection",
-    selection: savedSelection,
+test("temporary modifier and restriction authoring supports extended durations and normal targets", () => {
+  const chosenTarget: Target = {
+    type: "choose",
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      zone: "characterArea",
+      player: "opponent",
+      min: 1,
+      max: 1,
+      allowFewerIfUnavailable: false,
+      filter: { categories: ["character"] },
+    },
   };
 
   const temporaryPowerModifier: Effect = {
     type: "modifyPower",
-    target: selectedTarget,
+    target: chosenTarget,
     value: 1000,
     duration: { type: "untilEndOfTurn", whoseTurn: "targetController" },
   };
   const cannotAttack: Effect = {
     type: "cannotAttack",
-    target: selectedTarget,
+    target: chosenTarget,
     duration: { type: "untilStartOfNextTurn", player: "self" },
   };
   const cannotBlock: Effect = {
@@ -632,20 +639,10 @@ test("temporary modifier and restriction authoring supports extended durations a
     duration: { type: "untilEndOfTurn" },
   };
 
-  const malformedSelectionTarget: Target = {
+  const unsupportedSavedSelectionTarget: Target = {
+    // @ts-expect-error saved selection targets are deferred until a field-target producer exists.
     type: "selection",
-    // @ts-expect-error selection targets require a handSelection:* reference.
-    selection: 1,
-  };
-  const nonHandSelectionReference: Target = {
-    type: "selection",
-    // @ts-expect-error selection targets must use handSelection:* references.
-    selection: "savedResult:selectedCards" as SelectionId,
-  };
-  const arbitrarySelectionReference: Target = {
-    type: "selection",
-    // @ts-expect-error selection targets must use handSelection:* references.
-    selection: "selection:generic" as SelectionId,
+    selection: "handSelection:thatCharacter" as HandSelectionId,
   };
   const malformedUntilEndDuration: Duration = {
     type: "untilEndOfTurn",
@@ -658,7 +655,7 @@ test("temporary modifier and restriction authoring supports extended durations a
   };
   const malformedCannotAttack: Effect = {
     type: "cannotAttack",
-    // @ts-expect-error selection targets require selection payload.
+    // @ts-expect-error saved selection targets are not authorable in TYP-007E.
     target: { type: "selection" },
     duration: { type: "untilEndOfTurn" },
   };
@@ -666,10 +663,8 @@ test("temporary modifier and restriction authoring supports extended durations a
   expect(temporaryPowerModifier.type).toBe("modifyPower");
   expect(cannotAttack.type).toBe("cannotAttack");
   expect(cannotBlock.type).toBe("cannotBlock");
-  expect(selectedTarget.type).toBe("selection");
-  void malformedSelectionTarget;
-  void nonHandSelectionReference;
-  void arbitrarySelectionReference;
+  expect(chosenTarget.type).toBe("choose");
+  void unsupportedSavedSelectionTarget;
   void malformedUntilEndDuration;
   void malformedUntilStartDuration;
   void malformedCannotAttack;
