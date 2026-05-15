@@ -300,10 +300,11 @@ Use the complete role routing table:
 - Recorded rationale for any model-routing deviation is required in the PR review trail and implementation note
 - Any model-routing deviation must be recorded in the PR review trail and implementation note
 
-Parent-owned authority edits:
+Parent-owned direct edits:
 
-- Parent-owned authority edits: documentation-only changes to `AGENTS.md`, `specs/`, story files, packets, and workflow templates should be handled by the parent agent directly.
-- Parent-owned authority edits still require tests when applicable, full verification, and separate reviewer subagent review.
+- Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership.
+- Parent direct edits are limited to small out-of-band orchestration/metadata/template/reviewer-response corrections outside an approved story implementation body.
+- Parent-owned direct edits still require tests when applicable, full verification, and separate reviewer subagent review.
 - Pure packet-completion cleanup is the one lifecycle exception: when the patch contains only the exact file changes produced by direct `packets:complete` or `packets:complete-many` output, including command-owned bound parent story closeout when present in the validated cleanup plan, cleanup-scoped lifecycle verification is sufficient and does not require a separate reviewer subagent run.
 - Manual edits beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, require full verification and separate reviewer subagent review.
 - Use worker subagents for implementation code or large bounded documentation rewrites, not small authority-layer corrections.

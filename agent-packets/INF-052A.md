@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id INF-052A -->
 <!-- agent-packet:story-path stories/approved/INF-052A-clarify-session-orchestrator-implementation-boundary.yaml -->
-<!-- agent-packet:story-sha256 bc2702f25cc3f7829b97fb767fdd824c6b00d59c8e708c5affa5aaefd59c3955 -->
+<!-- agent-packet:story-sha256 4e23cbbb6b3eece4890978ff57385dc7d700696606a488f3eda8411b48f718aa -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -181,7 +181,7 @@ Implementation worker subagents default to gpt-5.3-codex with medium reasoning.
 Recorded rationale for any model-routing deviation is required in the pull-request review trail and implementation note.
 Any model-routing deviation must be recorded in the pull-request review trail and implementation note.
 
-Documentation-only authority edits should be handled by the parent agent directly. Authority edits still require separate reviewer subagent review, tests when applicable, and full verification before PR handoff.
+Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership. Parent direct edits are limited to small out-of-band orchestration/metadata/template/reviewer-response corrections outside an approved story implementation body. Parent-owned direct edits still require separate reviewer subagent review, tests when applicable, and full verification before PR handoff.
 
 ### 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
 
@@ -293,7 +293,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - no checked-in workflow authority says parent agents may manually implement a story when worker subagents are unavailable
 - allowed Session Orchestrator edits are explicitly limited to tiny orchestration, integration, verification, PR, packet/metadata, and reviewer-response glue between handoffs
 - implementation workers remain responsible for story implementation code and tests
-- PR/review guidance still allows parent-owned documentation-only authority corrections with separate reviewer-subagent review
+- PR/review guidance still allows small parent-owned out-of-band orchestration/metadata/template/reviewer-response corrections with separate reviewer-subagent review, while documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership
 - workflow tests cover the no-parent-story-implementation rule and the allowed tiny-edit boundary
 
 ## Post-Approval Role Sections

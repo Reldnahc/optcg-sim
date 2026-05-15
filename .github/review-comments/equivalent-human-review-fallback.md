@@ -3,9 +3,9 @@
 - Story ID:
 - Story file:
 - Parent-agent orchestration note:
-- Worker subagent reference(s) or `none: parent-owned documentation-only authority correction`:
+- Worker subagent reference(s):
 - Parent/orchestrator model: `gpt-5.5`
-- Implementation worker model and reasoning: `<gpt-5.3-codex medium | gpt-5.5 medium | none: parent-owned documentation-only authority correction>`
+- Implementation worker model and reasoning: `<gpt-5.3-codex medium | gpt-5.5 medium>`
 - Reviewer model and reasoning: `gpt-5.4 high`
 - Model-routing deviations:
 - Failed or unavailable reviewer-subagent attempts:

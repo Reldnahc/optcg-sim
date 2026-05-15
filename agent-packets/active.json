@@ -4,7 +4,7 @@
       "packetPath": "agent-packets/INF-052A.md",
       "storyId": "INF-052A",
       "storyPath": "stories/approved/INF-052A-clarify-session-orchestrator-implementation-boundary.yaml",
-      "storySha256": "bc2702f25cc3f7829b97fb767fdd824c6b00d59c8e708c5affa5aaefd59c3955"
+      "storySha256": "4e23cbbb6b3eece4890978ff57385dc7d700696606a488f3eda8411b48f718aa"
     }
   ],
   "version": 1

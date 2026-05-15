@@ -57,9 +57,9 @@ GitHub before relying on post-merge packet cleanup automation.
 - Parent orchestration runs on gpt-5.5.
 - Implementation worker subagents default to gpt-5.3-codex medium.
 - Reviewer subagents always use gpt-5.4 high.
-- Complex, risky, or integration-heavy implementation stories should escalate to gpt-5.5 medium.
-- Parent agents own documentation-only authority edits directly.
-- Documentation-only authority edits still require separate reviewer subagent review.
+- Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership.
+- Parent direct edits are limited to small out-of-band orchestration/metadata/template/reviewer-response corrections outside an approved story implementation body.
+- Parent-owned direct edits still require separate reviewer subagent review.
 - The default review path is a spawned reviewer subagent against the PR base branch.
 - The review workflow should allow up to 60 minutes for the reviewer subagent run while it is actively running. Deterministic failures such as unavailable reviewer subagent execution, immediate spawn failure, or immediate runtime failure count as failed immediately.
 - Implementation-worker self-review and parent-coordinator self-review do not satisfy the reviewer gate.

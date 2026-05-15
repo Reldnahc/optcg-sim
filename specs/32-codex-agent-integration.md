@@ -294,4 +294,4 @@ Implementation worker subagents default to gpt-5.3-codex with medium reasoning.
 Recorded rationale for any model-routing deviation is required in the pull-request review trail and implementation note.
 Any model-routing deviation must be recorded in the pull-request review trail and implementation note.
 
-Documentation-only authority edits should be handled by the parent agent directly. Authority edits still require separate reviewer subagent review, tests when applicable, and full verification before PR handoff.
+Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership. Parent direct edits are limited to small out-of-band orchestration/metadata/template/reviewer-response corrections outside an approved story implementation body. Parent-owned direct edits still require separate reviewer subagent review, tests when applicable, and full verification before PR handoff.

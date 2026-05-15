@@ -178,11 +178,11 @@ test("pull request template requires story, verification, and subagent review ev
     /AI review completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
     /Separate reviewer subagent run completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
     /Implementation-worker self-review or parent-coordinator self-review was not used as the review gate/i,
-    /Parent agent stayed within tiny orchestration glue while worker subagent\(s\) handled the approved story implementation body, or this was a parent-owned documentation-only authority correction/i,
+    /Parent agent stayed within tiny orchestration glue while worker subagent\(s\) handled the approved story implementation body; documentation-only approved stories still used implementation-worker ownership unless the approved story explicitly authorized parent ownership/i,
     /Reviewer subagent output came from a different agent than the implementing worker, or equivalent human review fallback was recorded/i,
-    /Worker subagent reference\(s\) or `none: parent-owned documentation-only authority correction`:/i,
+    /Worker subagent reference\(s\):/i,
     /Parent\/orchestrator model: `gpt-5\.5`/i,
-    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium \| none: parent-owned documentation-only authority correction>`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
     /Reviewer model and reasoning: `gpt-5\.4 high`/i,
     /Model-routing deviations:/i,
     /Parent-agent orchestration note:/i,
@@ -237,8 +237,9 @@ test("branch protection guide names the required status checks and subagent revi
     /Parent orchestration runs on gpt-5\.5/i,
     /Implementation worker subagents default to gpt-5\.3-codex medium/i,
     /Reviewer subagents always use gpt-5\.4 high/i,
-    /Parent agents own documentation-only authority edits directly/i,
-    /Documentation-only authority edits still require separate reviewer subagent review/i,
+    /Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership/i,
+    /Parent direct edits are limited to small out-of-band orchestration\/metadata\/template\/reviewer-response corrections outside an approved story implementation body/i,
+    /Parent-owned direct edits still require separate reviewer subagent review/i,
     /default review path is a spawned reviewer subagent against the PR base branch/i,
     /60 minutes/i,
     /Implementation-worker self-review and parent-coordinator self-review do not satisfy the reviewer gate/i,
@@ -261,6 +262,14 @@ test("branch protection guide names the required status checks and subagent revi
   assert.doesNotMatch(guide, /codex\.cmd exec review/i);
   assert.doesNotMatch(guide, /Codex CLI/i);
   assert.doesNotMatch(guide, /@codex review/i);
+  assert.doesNotMatch(
+    guide,
+    /Parent agents own documentation-only authority edits directly/i,
+  );
+  assert.doesNotMatch(
+    guide,
+    /Complex, risky, or integration-heavy implementation stories should escalate to gpt-5\.5 medium/i,
+  );
 });
 
 test("branch protection guide documents only the exact packet cleanup bypass", async () => {
@@ -531,8 +540,9 @@ test("agents guidance requires parent orchestration plus separate reviewer subag
     /Parent\/orchestrator model: `gpt-5\.5`/i,
     /Reviewer subagent model: `gpt-5\.4` with `high` reasoning/i,
     /Implementation worker model: default to `gpt-5\.3-codex` with `medium` reasoning/i,
-    /Parent-owned authority edits: documentation-only changes to `AGENTS\.md`, `specs\/`, story files, packets, and workflow templates should be handled by the parent agent directly/i,
-    /Parent-owned authority edits still require tests when applicable, full verification, and separate reviewer subagent review/i,
+    /Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership/i,
+    /Parent direct edits are limited to small out-of-band orchestration\/metadata\/template\/reviewer-response corrections outside an approved story implementation body/i,
+    /Parent-owned direct edits still require tests when applicable, full verification, and separate reviewer subagent review/i,
     /Any model-routing deviation must be recorded in the PR review trail and implementation note/i,
     /Pure packet-completion cleanup is the one lifecycle exception/i,
     /does not require a separate reviewer subagent run/i,
@@ -553,6 +563,11 @@ test("agents guidance requires parent orchestration plus separate reviewer subag
     /the exact review path and reviewer-subagent identity or mode used/i,
     /Passing AI review does not replace human review/i,
     /60-minute timeout budget for the reviewer-subagent review step/i,
+  ]);
+
+  assertMatchesAll(agents, [
+    /Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership/i,
+    /Parent direct edits are limited to small out-of-band orchestration\/metadata\/template\/reviewer-response corrections outside approved story implementation bodies/i,
   ]);
 
   assert.doesNotMatch(agents, /run a separate Codex review invocation/i);
@@ -731,8 +746,9 @@ test("codex integration spec reflects subagent orchestration instead of cli-firs
     /parent\/orchestrator model is gpt-5\.5/i,
     /reviewer subagent model is gpt-5\.4 with high reasoning/i,
     /implementation worker subagents default to gpt-5\.3-codex with medium reasoning/i,
-    /Documentation-only authority edits should be handled by the parent agent directly/i,
-    /Authority edits still require separate reviewer subagent review/i,
+    /Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership/i,
+    /Parent direct edits are limited to small out-of-band orchestration\/metadata\/template\/reviewer-response corrections outside an approved story implementation body/i,
+    /Parent-owned direct edits still require separate reviewer subagent review/i,
     /Any model-routing deviation must be recorded in the pull-request review trail\s+and implementation note/i,
     /tiny orchestration glue/i,
     /equivalent human review step/i,
@@ -742,6 +758,10 @@ test("codex integration spec reflects subagent orchestration instead of cli-firs
   assert.doesNotMatch(
     codexSpec,
     /Assign the packet to Codex CLI or Codex cloud/i,
+  );
+  assert.doesNotMatch(
+    codexSpec,
+    /Documentation-only authority edits should be handled by the parent agent directly/i,
   );
 });
 
@@ -844,6 +864,7 @@ test("spec and workflow docs share the same complete role model-routing table an
     /Session Orchestrator.*gpt-5\.5.*high/i,
     /story-review.*gpt-5\.5.*high/i,
     /implementation.*gpt-5\.3-codex.*medium/i,
+    /implementation.*none by default/i,
     /code-review.*gpt-5\.4.*high/i,
     /record(ed)? rationale for any model-routing deviation/i,
   ];
@@ -892,9 +913,9 @@ test("checked-in review comment templates exist for AI findings and revisions", 
     /^## AI Review Record$/m,
     /Story ID:/i,
     /Parent-agent orchestration note:/i,
-    /Worker subagent reference\(s\) or `none: parent-owned documentation-only authority correction`:/i,
+    /Worker subagent reference\(s\):/i,
     /Parent\/orchestrator model: `gpt-5\.5`/i,
-    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium \| none: parent-owned documentation-only authority correction>`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
     /Reviewer model and reasoning: `gpt-5\.4 high`/i,
     /Model-routing deviations:/i,
     /Reviewer path: <reviewer subagent \| native PR review artifact>/i,
@@ -915,9 +936,9 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   assertMatchesAll(fallbackReview, [
     /^## Equivalent Human Review Fallback$/m,
     /Parent-agent orchestration note:/i,
-    /Worker subagent reference\(s\) or `none: parent-owned documentation-only authority correction`:/i,
+    /Worker subagent reference\(s\):/i,
     /Parent\/orchestrator model: `gpt-5\.5`/i,
-    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium \| none: parent-owned documentation-only authority correction>`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
     /Reviewer model and reasoning: `gpt-5\.4 high`/i,
     /Model-routing deviations:/i,
     /Failed or unavailable reviewer-subagent attempts:/i,
@@ -936,9 +957,9 @@ test("checked-in review comment templates exist for AI findings and revisions", 
     /^## AI Review Revision Response$/m,
     /AI review record:/i,
     /Parent-agent orchestration note:/i,
-    /Worker subagent reference\(s\) or `none: parent-owned documentation-only authority correction`:/i,
+    /Worker subagent reference\(s\):/i,
     /Parent\/orchestrator model: `gpt-5\.5`/i,
-    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium \| none: parent-owned documentation-only authority correction>`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
     /Reviewer model and reasoning: `gpt-5\.4 high`/i,
     /Model-routing deviations:/i,
     /Reviewer path:/i,

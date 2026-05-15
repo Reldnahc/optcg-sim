@@ -72,7 +72,7 @@ acceptance_criteria:
   - no checked-in workflow authority says parent agents may manually implement a story when worker subagents are unavailable
   - allowed Session Orchestrator edits are explicitly limited to tiny orchestration, integration, verification, PR, packet/metadata, and reviewer-response glue between handoffs
   - implementation workers remain responsible for story implementation code and tests
-  - PR/review guidance still allows parent-owned documentation-only authority corrections with separate reviewer-subagent review
+  - PR/review guidance still allows small parent-owned out-of-band orchestration/metadata/template/reviewer-response corrections with separate reviewer-subagent review, while documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership
   - workflow tests cover the no-parent-story-implementation rule and the allowed tiny-edit boundary
 required_tests:
   - focused workflow documentation test covering Session Orchestrator no-story-implementation wording
