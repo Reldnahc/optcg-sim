@@ -217,8 +217,9 @@ should use the packet completion command to move it to `stories/done/` with
 `status: done`, remove the active packet, and ensure `agent-packets/active.json`
 contains no completed story.
 
-For an explicitly approved parent-story integration branch workflow, substory
-pull requests merge into the parent integration branch before the substory is
+For an explicitly approved parent-story integration branch workflow, the normal
+path uses one parent integration branch and no substory pull requests. Reviewed
+substory commits land on the parent integration branch before the substory is
 marked done. Those substories may remain under `stories/approved/` while the
 parent integration branch is open, but they must not be marked done until the
 parent pull request has merged to `main`. After the parent merge, the parent
@@ -268,7 +269,9 @@ the broad post-cleanup safety net after the cleanup commit is pushed. The
 automation must not open a cleanup
 pull request. Manual fallback is only for operational failure, not the normal
 path. Branch deletion may run only after packet lifecycle cleanup succeeds and
-only for associated merged, unprotected story or substory branches.
+only for associated merged, unprotected story or substory branches. Substory
+branch cleanup is exceptional and limited to legacy or explicitly approved
+non-normal branches that are listed in reviewed cleanup evidence.
 
 ## Subagent model routing
 

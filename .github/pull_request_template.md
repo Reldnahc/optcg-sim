@@ -46,7 +46,16 @@ Post-merge cleanup:
   branches:
     - <head-branch>
 
-Parent PRs list one or more child story paths: use parent mode for parent/substory PRs, including one-child parent PRs.
+Parent PRs list one or more child story paths: use parent mode for the parent integration PR, including one-child parent PRs. The normal parent/substory workflow uses only the parent integration branch; substory branch cleanup is exceptional and must be tied to legacy or explicitly approved exceptional branch evidence.
+
+Post-merge cleanup:
+  mode: parent
+  stories:
+    - stories/approved/<CHILD-STORY>.yaml
+  branches:
+    - <parent-integration-branch>
+
+Exceptional or legacy substory branch cleanup only: add a reviewed non-head substory branch entry only when the parent handoff includes explicit evidence for that exceptional branch.
 
 Post-merge cleanup:
   mode: parent

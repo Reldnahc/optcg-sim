@@ -319,6 +319,9 @@ test("branch protection guide documents only the exact packet cleanup bypass", a
 
 test("pull request template declares reviewed post-merge cleanup metadata", async () => {
   const prTemplate = await readActiveText(".github/pull_request_template.md");
+  const normalParentCleanup = prTemplate.match(
+    /Parent PRs list[\s\S]*?Post-merge cleanup:\s*\n(?<block>\s*mode: parent[\s\S]*?)(?:\n\nExceptional or legacy|<!-- prettier-ignore-end -->)/i,
+  )?.groups?.block;
 
   assertMatchesAll(prTemplate, [
     /^## Post-Merge Cleanup$/m,
@@ -327,26 +330,23 @@ test("pull request template declares reviewed post-merge cleanup metadata", asyn
     /The human-controlled merge to `main` authorizes the cleanup metadata snapshot/i,
     /Single-story PRs:/i,
     /Post-merge cleanup:\s*\n\s*mode: single\s*\n\s*stories:\s*\n\s*- stories\/approved\/<STORY-ID>-<slug>\.yaml\s*\n\s*branches:\s*\n\s*- <head-branch>/i,
-    /Parent PRs list one or more child story paths:/i,
-    /Post-merge cleanup:\s*\n\s*mode: parent\s*\n\s*stories:\s*\n\s*- stories\/approved\/<CHILD-STORY>\.yaml\s*\n\s*branches:\s*\n\s*- <parent-integration-branch>\s*\n\s*- <optional-substory-branch>/i,
+    /Exceptional or legacy substory branch cleanup only[\s\S]*<optional-substory-branch>/i,
   ]);
+  assert.match(
+    normalParentCleanup,
+    /mode: parent[\s\S]*stories:\s*\n\s*- stories\/approved\/<CHILD-STORY>\.yaml[\s\S]*branches:\s*\n\s*- <parent-integration-branch>/i,
+  );
   assert.doesNotMatch(
-    prTemplate,
+    normalParentCleanup ?? "",
+    /<optional-substory-branch>|substory-branch/i,
+  );
+  [
     /Confirm the exact cleanup metadata source ref before merge/i,
-  );
-  assert.doesNotMatch(prTemplate, /names the exact `pr-body:/i);
-  assert.doesNotMatch(
-    prTemplate,
+    /names the exact `pr-body:/i,
     /```yaml[\s\S]*Post-merge cleanup:/i,
-    "cleanup metadata examples must not be fenced YAML because the parser expects the exact source block",
-  );
-  assert.doesNotMatch(
-    prTemplate,
     /^cleanup:\s*\n\s*mode:/im,
-    "cleanup metadata examples must not add a cleanup wrapper key",
-  );
+  ].forEach((pattern) => assert.doesNotMatch(prTemplate, pattern));
 });
-
 test("workflow docs latch cleanup metadata handoff to actual PR source and guard status", async () => {
   const agents = await readActiveText("AGENTS.md");
   const storyExecution = await readActiveText(
@@ -808,18 +808,18 @@ test("codex integration spec reflects subagent orchestration instead of cli-firs
     /Human review is required before protected or default-branch PRs merge/i,
     /Gameplay correctness, policy-sensitive areas, and architecture-sensitive changes are higher-risk review focus/i,
   ]);
-
-  assert.doesNotMatch(
-    codexSpec,
+  [
     /Link the pull request back to the story issue/i,
-  );
-  assert.doesNotMatch(
-    codexSpec,
     /Assign the packet to Codex CLI or Codex cloud/i,
+    /Documentation-only authority edits should be handled by the parent agent directly/i,
+  ].forEach((pattern) => assert.doesNotMatch(codexSpec, pattern));
+  assert.doesNotMatch(
+    codexSpec,
+    /^(?=[^.\n]*(?:normal|workflow|path))(?=[^.\n]*substory (?:pull requests|PRs))(?![^.\n]*\b(?:no|not|do not|without)\b)[^.\n]*/gim,
   );
   assert.doesNotMatch(
     codexSpec,
-    /Documentation-only authority edits should be handled by the parent agent directly/i,
+    /substory (?:pull requests?|PRs)\s+(?:merge|land|target|open)\b/i,
   );
 });
 

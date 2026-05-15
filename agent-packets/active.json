@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-053E.md",
-      "storyId": "INF-053E",
-      "storyPath": "stories/approved/INF-053E-clarify-cleanup-guard-and-handoff-preflight.yaml",
-      "storySha256": "b5e5b529fda015a0c80b65141f669d162fdcf1ceaeaa8b69e9dfa484a783460d"
+      "packetPath": "agent-packets/INF-053F.md",
+      "storyId": "INF-053F",
+      "storyPath": "stories/approved/INF-053F-remove-normal-substory-branch-implications.yaml",
+      "storySha256": "c3e75c612c4adf0419c7abd28f96431d5954f37cd859500876ed6fc5fe203179"
     }
   ],
   "version": 1
