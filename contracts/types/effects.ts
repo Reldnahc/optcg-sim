@@ -168,7 +168,8 @@ export type Target =
   | { type: "blocker" }
   | { type: "triggerCard" }
   | { type: "all"; zone: Zone; player: PlayerRef; filter?: CardFilter }
-  | { type: "choose"; request: TargetRequest };
+  | { type: "choose"; request: TargetRequest }
+  | { type: "selection"; selection: HandSelectionId };
 
 export interface CardFilter {
   cardIds?: CardId[];

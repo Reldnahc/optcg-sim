@@ -201,6 +201,27 @@
               ]
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "untilEndOfTurn" },
+            "whoseTurn": {
+              "type": "string",
+              "enum": ["current", "sourceController", "targetController"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player"],
+          "properties": {
+            "type": { "const": "untilStartOfNextTurn" },
+            "player": { "$ref": "#/$defs/playerRef" }
+          }
         }
       ]
     },
@@ -292,6 +313,26 @@
             "type": { "const": "modifyPower" },
             "target": { "$ref": "#/$defs/target" },
             "value": { "type": "integer" },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target", "duration"],
+          "properties": {
+            "type": { "const": "cannotAttack" },
+            "target": { "$ref": "#/$defs/target" },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target", "duration"],
+          "properties": {
+            "type": { "const": "cannotBlock" },
+            "target": { "$ref": "#/$defs/target" },
             "duration": { "$ref": "#/$defs/duration" }
           }
         },
@@ -704,6 +745,15 @@
           "properties": {
             "type": { "const": "choose" },
             "request": { "$ref": "#/$defs/targetRequest" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "selection"],
+          "properties": {
+            "type": { "const": "selection" },
+            "selection": { "$ref": "#/$defs/handSelectionId" }
           }
         }
       ]

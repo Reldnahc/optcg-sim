@@ -244,6 +244,16 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
   const layer: ModifierLayer = "powerAdd";
   const operation: ModifierOperation = { type: "addPower", value: 1000 };
   const modifier: Modifier = { layer, target: targetSpec, operation };
+  const attackRestrictionModifier: Modifier = {
+    layer: "restriction",
+    target: { type: "selection", selection: "sel-1" as SelectionId },
+    operation: { type: "restriction", restriction: "cannotAttack" },
+  };
+  const blockRestrictionModifier: Modifier = {
+    layer: "restriction",
+    target: { type: "selection", selection: "sel-1" as SelectionId },
+    operation: { type: "restriction", restriction: "cannotBlock" },
+  };
   const protection: Protection = { process: "ko", source };
   const cardView: ComputedCardView = {
     instanceId: source.instanceId,
@@ -309,6 +319,15 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
   expect(gameView.cards[source.instanceId]?.canAttack).toBe(true);
   expect(oncePerTurn.turnNumber).toBe(1);
   expect(continuous.modifier.layer).toBe("powerAdd");
+  expect(attackRestrictionModifier.operation.type).toBe("restriction");
+  if (attackRestrictionModifier.operation.type !== "restriction") {
+    throw new Error("Expected attack restriction modifier operation.");
+  }
+  if (blockRestrictionModifier.operation.type !== "restriction") {
+    throw new Error("Expected block restriction modifier operation.");
+  }
+  expect(attackRestrictionModifier.operation.restriction).toBe("cannotAttack");
+  expect(blockRestrictionModifier.operation.restriction).toBe("cannotBlock");
   expect(audit.type).toBe("test");
   expect(loop.recentStateHashes).toHaveLength(1);
   expect(reveal.cards).toHaveLength(1);

@@ -579,3 +579,71 @@ test("cost and hand-selection play-from-hand authoring contracts compile with re
   void invalidSelectionReferencePrefix;
   void invalidPlaySelectedReferencePrefix;
 });
+
+test("temporary modifier and restriction authoring supports extended durations and saved selection targets", () => {
+  const savedSelection = "handSelection:thatCharacter" as SelectionId &
+    `handSelection:${string}`;
+  const selectedTarget: Target = {
+    type: "selection",
+    selection: savedSelection,
+  };
+
+  const temporaryPowerModifier: Effect = {
+    type: "modifyPower",
+    target: selectedTarget,
+    value: 1000,
+    duration: { type: "untilEndOfTurn", whoseTurn: "targetController" },
+  };
+  const cannotAttack: Effect = {
+    type: "cannotAttack",
+    target: selectedTarget,
+    duration: { type: "untilStartOfNextTurn", player: "self" },
+  };
+  const cannotBlock: Effect = {
+    type: "cannotBlock",
+    target: { type: "self" },
+    duration: { type: "untilEndOfTurn" },
+  };
+
+  const malformedSelectionTarget: Target = {
+    type: "selection",
+    // @ts-expect-error selection targets require a handSelection:* reference.
+    selection: 1,
+  };
+  const nonHandSelectionReference: Target = {
+    type: "selection",
+    // @ts-expect-error selection targets must use handSelection:* references.
+    selection: "savedResult:selectedCards" as SelectionId,
+  };
+  const arbitrarySelectionReference: Target = {
+    type: "selection",
+    // @ts-expect-error selection targets must use handSelection:* references.
+    selection: "selection:generic" as SelectionId,
+  };
+  const malformedUntilEndDuration: Duration = {
+    type: "untilEndOfTurn",
+    // @ts-expect-error whoseTurn must use canonical enum values.
+    whoseTurn: "nextTurn",
+  };
+  // @ts-expect-error untilStartOfNextTurn durations require player.
+  const malformedUntilStartDuration: Duration = {
+    type: "untilStartOfNextTurn",
+  };
+  const malformedCannotAttack: Effect = {
+    type: "cannotAttack",
+    // @ts-expect-error selection targets require selection payload.
+    target: { type: "selection" },
+    duration: { type: "untilEndOfTurn" },
+  };
+
+  expect(temporaryPowerModifier.type).toBe("modifyPower");
+  expect(cannotAttack.type).toBe("cannotAttack");
+  expect(cannotBlock.type).toBe("cannotBlock");
+  expect(selectedTarget.type).toBe("selection");
+  void malformedSelectionTarget;
+  void nonHandSelectionReference;
+  void arbitrarySelectionReference;
+  void malformedUntilEndDuration;
+  void malformedUntilStartDuration;
+  void malformedCannotAttack;
+});
