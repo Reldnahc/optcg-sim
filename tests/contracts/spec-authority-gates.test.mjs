@@ -296,6 +296,29 @@ test("Effect DSL spec pins authorability support ladder and planned-layer guardr
   }
 });
 
+test("Effect DSL spec defines drawUpTo short-deck replay and deck-out authority", async () => {
+  const dslSpec = await readText("specs/05-effect-dsl-reference.md");
+  const effects = extractSection(
+    dslSpec,
+    "05-effect-dsl-reference.s012",
+    "05-effect-dsl-reference.s013",
+  );
+
+  for (const requiredText of [
+    "`drawUpTo` short-deck resolution is do-as-much-as-possible",
+    "If the chosen quantity is greater than the number of cards remaining in that player's deck",
+    "draw every remaining card",
+    "emit draw and card-movement events only for cards actually drawn",
+    "next rule-processing checkpoint detects deck-out",
+    "Event `seq` values for partial-deck drawUpTo resolution must remain strictly increasing by append order",
+    "resolved decision increments `state.seq` once",
+    "State hashes at the replay checkpoints include the post-draw empty deck",
+    "Golden replay coverage for drawUpTo short-deck cases must pin the final state hash",
+  ]) {
+    assertContainsWords(effects, requiredText);
+  }
+});
+
 test("engine mechanics spec preserves parenthetical explanatory note authority", async () => {
   const engineSpec = await readText("specs/02-engine-mechanics.md");
   const explanatoryNotes = extractSectionToEnd(

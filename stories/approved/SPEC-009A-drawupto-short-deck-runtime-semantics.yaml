@@ -1,0 +1,84 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SPEC-009A
+epic_id: SPEC-009
+title: drawUpTo short-deck runtime semantics
+type: specification
+area: docs
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Clarify the runtime authority for drawUpTo when the chosen quantity exceeds
+  the remaining deck, including partial-deck resolution, deck-out timing,
+  deterministic event order, replay expectations, and state-hash coverage.
+story_boundary: >
+  Own only specification authority, generated spec metadata, and narrow
+  authority tests for drawUpTo short-deck runtime semantics. Do not change
+  engine runtime code, canonical type files, effect DSL schema, parser behavior,
+  generated support, fixtures, or gameplay implementation.
+allowed_touch_points:
+  - specs/02-engine-mechanics.md
+  - specs/03-game-state-events-decisions.md
+  - specs/04-effect-runtime.md
+  - specs/05-effect-dsl-reference.md
+  - specs/11-testing-quality.md
+  - specs/source-coverage-matrix.md
+  - specs/section-index.json
+  - specs/spec-manifest.json
+  - specs/SPEC_VERSION.md
+  - tests/contracts/spec-authority-gates.test.mjs
+  - stories/generated/SPEC-009*.yaml
+  - stories/approved/SPEC-009*.yaml
+  - agent-packets/SPEC-009A.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s035
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s016
+  - 04-effect-runtime.s019
+  - 05-effect-dsl-reference.s012
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+  - 11-testing-quality.s010
+dependencies:
+  - SPEC-008B
+  - SPEC-008C
+  - SPEC-008D
+scope:
+  - clarify that drawUpTo remains chooseQuantity-backed and draws no more than the chosen quantity
+  - clarify what happens when the chosen quantity is greater than the number of cards remaining in deck
+  - clarify whether the runtime draws all remaining cards before the next rule-processing deck-out check, or fails closed instead
+  - clarify event-order and state-sequence expectations for partial-deck drawUpTo resolution
+  - clarify replay and state-hash authority for drawUpTo short-deck cases
+  - add or update authority tests that pin the new drawUpTo short-deck wording
+  - update generated spec metadata
+non_scope:
+  - engine runtime implementation
+  - canonical type changes or effect DSL schema changes
+  - parser certification, generated-support admission, real-card fixtures, support reports, server/client/API/UI/database work
+  - general draw behavior unrelated to drawUpTo
+  - replacement generalization
+acceptance_criteria:
+  - specs explicitly define drawUpTo short-deck behavior for chosen quantities greater than remaining deck size
+  - specs explicitly bind drawUpTo short-deck behavior to deck-out timing or fail-closed behavior
+  - specs provide stable authority for deterministic event order, replay, and state-hash expectations for drawUpTo short-deck cases
+  - authority tests pin the clarified drawUpTo short-deck wording
+  - ENG-055H can cite the clarified sections without inventing runtime behavior
+required_tests:
+  - update `tests/contracts/spec-authority-gates.test.mjs` to require drawUpTo short-deck, partial-deck, replay, and state-hash authority wording
+  - run `corepack pnpm run specs:generate-metadata`
+  - run `corepack pnpm run specs:verify-metadata`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - do not implement runtime behavior in this story
+  - do not broaden into unrelated draw or deck-out behavior
+  - fail closed on gameplay, replay, hidden-information, event-order, or state-hash ambiguity
+ambiguity_policy: fail_and_escalate

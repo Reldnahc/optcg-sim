@@ -1,0 +1,82 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SPEC-009B
+epic_id: SPEC-009
+title: playSelected stale saved-selection failure policy
+type: specification
+area: docs
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Clarify the runtime failure policy for playSelected when a later sequence step
+  consumes a saved hand selection whose referenced cards are stale, no longer in
+  hand, no longer legal, or otherwise unusable at resolution time.
+story_boundary: >
+  Own only specification authority, generated spec metadata, and narrow
+  authority tests for stale saved-selection playSelected behavior. Do not change
+  engine runtime code, canonical type files, effect DSL schema, parser behavior,
+  generated support, fixtures, or gameplay implementation.
+allowed_touch_points:
+  - specs/03-game-state-events-decisions.md
+  - specs/04-effect-runtime.md
+  - specs/05-effect-dsl-reference.md
+  - specs/11-testing-quality.md
+  - specs/source-coverage-matrix.md
+  - specs/section-index.json
+  - specs/spec-manifest.json
+  - specs/SPEC_VERSION.md
+  - tests/contracts/spec-authority-gates.test.mjs
+  - stories/generated/SPEC-009*.yaml
+  - stories/approved/SPEC-009*.yaml
+  - agent-packets/SPEC-009B.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s016
+  - 04-effect-runtime.s019
+  - 05-effect-dsl-reference.s026
+  - 05-effect-dsl-reference.s027
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+  - 11-testing-quality.s010
+dependencies:
+  - SPEC-008C
+  - SPEC-008D
+scope:
+  - clarify that playSelected may consume only authorized saved hand selections
+  - clarify the failure policy when a saved selection references a card that is no longer in hand at playSelected resolution time
+  - clarify the failure policy when a saved selection references a card that is still in hand but no longer legal to play
+  - clarify the failure policy when a saved selection references a non-hand object or unsupported saved-reference family
+  - clarify event-order, hidden-information, replay, and state-hash expectations for fail-closed stale saved-selection cases
+  - add or update authority tests that pin the new stale saved-selection wording
+  - update generated spec metadata
+non_scope:
+  - engine runtime implementation
+  - canonical type changes or effect DSL schema changes
+  - parser certification, generated-support admission, real-card fixtures, support reports, server/client/API/UI/database work
+  - generic saved-reference consumers other than the playSelected hand-selection path, except where needed to define the shared fail-closed rule
+  - area-capacity or forced-trash behavior for otherwise legal playSelected cards
+acceptance_criteria:
+  - specs explicitly define playSelected behavior for stale saved hand selections
+  - specs explicitly define fail-closed behavior for non-hand, no-longer-legal, and unsupported saved-selection references consumed by playSelected
+  - specs preserve hidden-information boundaries when stale saved-selection failure is reported or projected
+  - specs provide stable authority for replay and state-hash expectations in stale saved-selection cases
+  - authority tests pin the clarified playSelected stale saved-selection wording
+  - ENG-055G can cite the clarified sections without inventing runtime behavior
+required_tests:
+  - update `tests/contracts/spec-authority-gates.test.mjs` to require playSelected stale saved-selection failure-policy wording
+  - run `corepack pnpm run specs:generate-metadata`
+  - run `corepack pnpm run specs:verify-metadata`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - do not implement runtime behavior in this story
+  - do not broaden into unrelated saved-reference consumers
+  - fail closed on gameplay, hidden-information, replay, event-order, or state-hash ambiguity
+ambiguity_policy: fail_and_escalate

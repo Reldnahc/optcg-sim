@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SPEC-009A.md",
+      "storyId": "SPEC-009A",
+      "storyPath": "stories/approved/SPEC-009A-drawupto-short-deck-runtime-semantics.yaml",
+      "storySha256": "8338e3ee012c6a9e44f5ab4f9a55ce97e5bcc2436a71f0610bddbb1a011bf0e3"
+    }
+  ],
   "version": 1
 }
