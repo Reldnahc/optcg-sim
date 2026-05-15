@@ -99,26 +99,23 @@ export type Cost =
       count: number;
       filter?: CardFilter;
       chooser: PlayerRef;
-      optional?: boolean;
     }
-  | { type: "trashSelf"; optional?: boolean }
+  | { type: "trashSelf" }
   | {
       type: "trashFromField";
       count: number;
       filter?: CardFilter;
       chooser: PlayerRef;
-      optional?: boolean;
     }
   | {
       type: "discard";
       count: number;
       filter?: CardFilter;
       chooser: PlayerRef;
-      optional?: boolean;
     }
   | { type: "sequence"; costs: Cost[]; optional?: boolean }
-  | { type: "chooseOne"; options: Cost[]; optional?: boolean }
-  | { type: "custom"; action: string; optional?: boolean };
+  | { type: "chooseOne"; options: Cost[] }
+  | { type: "custom"; action: string };
 
 export type ExactCardinality<N extends number = number> = {
   mode: "exact";

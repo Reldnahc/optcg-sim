@@ -19,6 +19,7 @@ story_boundary: >
   runtime capability evidence or generated-support card admission.
 allowed_touch_points:
   - contracts/effect-dsl.schema.json
+  - tools/validate-effect-dsl-fixtures.ts
   - tests/contracts/**
   - fixtures/effect-dsl/**
   - stories/generated/TYP-007*.yaml
@@ -40,6 +41,7 @@ dependencies:
 scope:
   - add schema validation tests proving unsupported composed shapes are rejected
   - add malformed composed-shape fixtures that fail clearly
+  - add narrow fixture-validator semantic guardrails only where plain JSON Schema cannot express required same-sequence producer/consumer validation
   - tighten `contracts/effect-dsl.schema.json` only where required to enforce the rejected shapes proven by these guardrails
   - add contract-layer fixtures or assertions proving schema authorability alone is not runtime capability evidence
 non_scope:

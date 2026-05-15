@@ -26,6 +26,7 @@ allowed_touch_points:
   - contracts/types/**
   - packages/types/src/**
   - packages/engine-core/src/filter-state-for-player.ts
+  - tools/validate-effect-dsl-fixtures.ts
   - tests/contracts/**
   - fixtures/effect-dsl/**
   - stories/generated/TYP-007*.yaml

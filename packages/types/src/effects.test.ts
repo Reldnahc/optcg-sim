@@ -439,6 +439,13 @@ test("condition and optionality authoring supports composed optional cost and op
     // @ts-expect-error optional cost clause requires a boolean value.
     optional: "yes",
   };
+  const unsupportedOptionalCost: Cost = {
+    type: "trashFromHand",
+    count: 1,
+    chooser: "self",
+    // @ts-expect-error optional cost authoring is limited to schema-supported cost variants.
+    optional: true,
+  };
 
   const malformedOptionalClause: Effect = {
     type: "sequence",
@@ -456,6 +463,7 @@ test("condition and optionality authoring supports composed optional cost and op
   expect(optionalCost.type).toBe("sequence");
   expect(optionalSequence.type).toBe("sequence");
   void malformedOptionalCost;
+  void unsupportedOptionalCost;
   void malformedOptionalClause;
 });
 

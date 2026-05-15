@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id TYP-007F -->
 <!-- agent-packet:story-path stories/approved/TYP-007F-composition-schema-guardrails.yaml -->
-<!-- agent-packet:story-sha256 fdb470b1faca217210ff03bdc17c6f33c84f0f7c77a9a259bdf9e4516de2c837 -->
+<!-- agent-packet:story-sha256 5642317fc536622d9d53318fc9dbb080949c6f393aa05c0d91f83e2be22a2e22 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -257,6 +257,7 @@ Own only contract/schema guardrail tests, fixtures, and narrow schema tightening
 
 - add schema validation tests proving unsupported composed shapes are rejected
 - add malformed composed-shape fixtures that fail clearly
+- add narrow fixture-validator semantic guardrails only where plain JSON Schema cannot express required same-sequence producer/consumer validation
 - tighten `contracts/effect-dsl.schema.json` only where required to enforce the rejected shapes proven by these guardrails
 - add contract-layer fixtures or assertions proving schema authorability alone is not runtime capability evidence
 
@@ -273,6 +274,7 @@ Own only contract/schema guardrail tests, fixtures, and narrow schema tightening
 
 <!-- prettier-ignore -->
 - contracts/effect-dsl.schema.json
+- tools/validate-effect-dsl-fixtures.ts
 - tests/contracts/**
 - fixtures/effect-dsl/**
 - stories/generated/TYP-007*.yaml
