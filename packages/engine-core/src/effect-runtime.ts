@@ -1,8 +1,10 @@
 import type {
   CardSupportStatus,
   CardRef,
+  DecisionId,
   EffectDefinition,
   EngineError,
+  EngineEvent,
   EngineResult,
   EffectQueueEntry,
   GameState,
@@ -18,7 +20,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
   };
 };
 
-import { toEngineResult } from "./action-results.js";
+import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue-processing.js";
 import { isSupportedEffectResolvedCustomDrawEffect } from "./effect-runtime-primitives.js";
 import { createEffectRuntimeTriggerQueueing } from "./effect-runtime-trigger-queueing.js";
@@ -54,6 +56,127 @@ export interface PendingRuntimeWork {
 export interface UnsupportedPendingRuntimeWorkDetails extends PendingRuntimeWork {
   reason: "unsupported-pending-runtime-work";
 }
+
+export interface ChooseQuantityRuntimeDecisionRequest {
+  playerId: EffectQueueEntry["controllerId"];
+  prompt: string;
+  mode: "exact" | "upTo";
+  min: number;
+  max: number;
+  visibility?: NonNullable<GameState["pendingDecision"]>["visibility"];
+}
+
+interface ChooseQuantityRuntimeErrorDetails {
+  reason:
+    | "entry-not-pending"
+    | "invalid-bounds"
+    | "missing-player"
+    | "pending-decision-exists";
+}
+
+const chooseQuantityRuntimeError = (
+  entry: EffectQueueEntry,
+  reason: ChooseQuantityRuntimeErrorDetails["reason"],
+): EngineError => ({
+  type: "effectRuntimeError",
+  effectId: entry.effectBlockId,
+  details: { reason } satisfies ChooseQuantityRuntimeErrorDetails,
+});
+
+export const createChooseQuantityDecisionForQueuedEffect = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  request: ChooseQuantityRuntimeDecisionRequest,
+): EngineResult => {
+  if (state.pendingDecision !== undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [chooseQuantityRuntimeError(entry, "pending-decision-exists")],
+    );
+  }
+  if (
+    !state.effectQueue.some(
+      (candidate) =>
+        candidate.id === entry.id &&
+        candidate.effectBlockId === entry.effectBlockId &&
+        candidate.state === "pending",
+    )
+  ) {
+    return toEngineResult(
+      state,
+      [],
+      [chooseQuantityRuntimeError(entry, "entry-not-pending")],
+    );
+  }
+  if (state.players[request.playerId] === undefined) {
+    return toEngineResult(
+      state,
+      [],
+      [chooseQuantityRuntimeError(entry, "missing-player")],
+    );
+  }
+  if (
+    !Number.isInteger(request.min) ||
+    !Number.isInteger(request.max) ||
+    request.min < 0 ||
+    request.min > request.max ||
+    (request.mode === "exact" && request.min !== request.max)
+  ) {
+    return toEngineResult(
+      state,
+      [],
+      [chooseQuantityRuntimeError(entry, "invalid-bounds")],
+    );
+  }
+
+  const causedBy = {
+    type: "effect",
+    queueEntryId: entry.id,
+    effectId: entry.effectBlockId,
+  } as const;
+  const visibility = request.visibility ?? {
+    type: "private",
+    playerId: request.playerId,
+  };
+  const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
+    id: `decision:chooseQuantity:${String(entry.id)}` as DecisionId,
+    type: "chooseQuantity",
+    playerId: request.playerId,
+    prompt: request.prompt,
+    causedBy,
+    visibility,
+    mode: request.mode,
+    min: request.min,
+    max: request.max,
+  };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: pendingDecision.id,
+      decisionType: pendingDecision.type,
+      playerId: pendingDecision.playerId,
+    },
+    visibility,
+  );
+  const created = events[0];
+  if (created !== undefined) {
+    created.causedBy = causedBy;
+  }
+
+  return toEngineResult(
+    {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      pendingDecision,
+      eventJournal: [...state.eventJournal, ...events],
+    },
+    events,
+  );
+};
 
 export type EffectDefinitionLookupFailureReason =
   | "unsupported-support-status"
