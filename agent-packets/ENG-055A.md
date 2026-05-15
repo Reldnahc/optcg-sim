@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-055A -->
 <!-- agent-packet:story-path stories/approved/ENG-055A-quantity-decision-runtime.yaml -->
-<!-- agent-packet:story-sha256 def9cb6f3f7f03b59f4a1c98b7d8d5ce7159e4d30b7fae95ca48854df089685f -->
+<!-- agent-packet:story-sha256 8068ce320a6c52448bfcd9364efa6a122a9b76d6f251e5a58f48d899419e6ec3 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -383,6 +383,7 @@ Own only chooseQuantity decision creation, response validation, legal-action pro
 - packages/engine-core/src/actions-pending-decision.test.ts
 - packages/engine-core/src/effect-runtime*.ts
 - packages/engine-core/src/effect-runtime*.test.ts
+- packages/engine-core/src/filter-state-for-player.ts
 - tests/hidden-info/**
 - stories/generated/ENG-055*.yaml
 - stories/approved/ENG-055*.yaml

@@ -244,6 +244,7 @@ const getChooseQuantityLegalActions = (
   if (
     !Number.isInteger(decision.min) ||
     !Number.isInteger(decision.max) ||
+    decision.min < 0 ||
     decision.min > decision.max ||
     !isSupportedChooseQuantityMode(mode) ||
     (mode === "exact" && decision.min !== decision.max)
@@ -310,6 +311,7 @@ const applyChooseQuantityDecisionResponse = (
   if (
     !Number.isInteger(decision.min) ||
     !Number.isInteger(decision.max) ||
+    decision.min < 0 ||
     decision.min > decision.max ||
     !isSupportedChooseQuantityMode(mode) ||
     (mode === "exact" && decision.min !== decision.max)
