@@ -105,11 +105,24 @@ export type Cost =
   | { type: "chooseOne"; options: Cost[] }
   | { type: "custom"; action: string };
 
-export type ExactCardinality<N extends number> = {
-  mode: "exact";
-  min: N;
-  max: N;
-};
+type EnumerateCardinalityValues<
+  Limit extends number,
+  Acc extends number[] = [],
+> = Acc["length"] extends Limit
+  ? Acc[number]
+  : EnumerateCardinalityValues<Limit, [...Acc, Acc["length"]]>;
+
+export type SupportedExactCardinalityValue = EnumerateCardinalityValues<101>;
+
+export type ExactCardinality<
+  N extends SupportedExactCardinalityValue = SupportedExactCardinalityValue,
+> = N extends SupportedExactCardinalityValue
+  ? {
+      mode: "exact";
+      min: N;
+      max: N;
+    }
+  : never;
 
 export interface UpToCardinality {
   mode: "upTo";
@@ -117,7 +130,7 @@ export interface UpToCardinality {
   max: number;
 }
 
-export type Cardinality = ExactCardinality<number> | UpToCardinality;
+export type Cardinality = ExactCardinality | UpToCardinality;
 
 export interface TargetRequest {
   timing: "onActivation" | "onResolution";

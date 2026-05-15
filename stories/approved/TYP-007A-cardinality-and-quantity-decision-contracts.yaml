@@ -15,8 +15,10 @@ summary: >
   later composed effect runtime stories.
 story_boundary: >
   Own only canonical contracts, package type sync, and contract tests for
-  cardinality and chooseQuantity DTOs. Do not implement runtime decision
-  behavior, parser certification, card support, or UI behavior.
+  cardinality and chooseQuantity DTOs, plus the narrow existing PlayerView
+  projection adaptation needed to preserve the declared public pendingDecision
+  shape. Do not implement runtime decision creation, response validation,
+  parser certification, card support, or UI behavior.
 allowed_touch_points:
   - contracts/canonical-types.ts
   - contracts/types/decisions.ts
@@ -31,6 +33,7 @@ allowed_touch_points:
   - packages/types/src/view.ts
   - packages/types/src/view.test.ts
   - packages/types/src/index.ts
+  - packages/engine-core/src/filter-state-for-player.ts
   - tests/contracts/**
   - tools/sync-package-types.ts
   - stories/generated/TYP-007*.yaml
@@ -51,11 +54,12 @@ scope:
   - 'enforce exact-N representation as `mode: "exact"`, `min: N`, and `max: N`; malformed exact ranges must reject'
   - define canonical chooseQuantity pending decision, response, action, and legal-action DTO shapes
   - define public PlayerView pendingDecision exposure for chooseQuantity using only safe public fields such as decision identity, prompt text, min, max, and mode
+  - adapt the existing PlayerView pendingDecision projection so chooseQuantity bounds and mode are not erased if an active chooseQuantity decision is projected
   - keep PlayerView legal actions for chooseQuantity decision-id-only unless an existing canonical public-action pattern requires otherwise
   - add exported package type coverage synchronized from canonical contracts
   - add contract/type tests for valid and invalid chooseQuantity/cardinality shapes
 non_scope:
-  - engine decision creation, response validation, legal-action projection, or stale-decision handling
+  - engine decision creation, response validation, legal-action projection, stale-decision handling, or quantity runtime behavior beyond the narrow PlayerView projection shape adaptation
   - card parser rules or generated-support certification
   - replacement generalization
   - server, client, API, UI, replay, database, or gameplay behavior

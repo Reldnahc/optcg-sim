@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id TYP-007A -->
 <!-- agent-packet:story-path stories/approved/TYP-007A-cardinality-and-quantity-decision-contracts.yaml -->
-<!-- agent-packet:story-sha256 030c5ef9f86718109fcc2be0b7e486c146e5abcd3d807a1929fb4b5991e57a84 -->
+<!-- agent-packet:story-sha256 0c3769f54262e142be88e636ccd006a4b5e6e825c31cf1a9725bf54e7624b7f3 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -33,6 +33,8 @@ Add canonical contract and exported type support for exact-N and up-to-N cardina
 - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
 - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
 - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+- 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+- 15-implementation-kickoff.s012 (Guardrails)
 
 ## Relevant Spec Excerpts
 
@@ -395,9 +397,17 @@ Implementation packages stay in strict TypeScript mode, and broad escape hatches
 
 Lint, formatting, and merge-gate verification are mandatory, and CI must fail when checked-in generated artifacts or snapshots are stale.
 
+### 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+
+Boundary enforcement is mechanical: `@optcg/engine-core` cannot import React, browser code, WebSocket transport, Redis, Postgres, or live HTTP clients.
+
+### 15-implementation-kickoff.s012 (Guardrails)
+
+Kickoff guardrails require the engine to stay free of Redis, Postgres, WebSocket, React, and Poneglyph HTTP code; once hidden state exists, the client must use `view-engine` instead of `engine-core`, and effect resolution consumes resolved manifests rather than live HTTP calls.
+
 ## Story Boundary
 
-Own only canonical contracts, package type sync, and contract tests for cardinality and chooseQuantity DTOs. Do not implement runtime decision behavior, parser certification, card support, or UI behavior.
+Own only canonical contracts, package type sync, and contract tests for cardinality and chooseQuantity DTOs, plus the narrow existing PlayerView projection adaptation needed to preserve the declared public pendingDecision shape. Do not implement runtime decision creation, response validation, parser certification, card support, or UI behavior.
 
 ## Scope
 
@@ -405,13 +415,14 @@ Own only canonical contracts, package type sync, and contract tests for cardinal
 - enforce exact-N representation as `mode: "exact"`, `min: N`, and `max: N`; malformed exact ranges must reject
 - define canonical chooseQuantity pending decision, response, action, and legal-action DTO shapes
 - define public PlayerView pendingDecision exposure for chooseQuantity using only safe public fields such as decision identity, prompt text, min, max, and mode
+- adapt the existing PlayerView pendingDecision projection so chooseQuantity bounds and mode are not erased if an active chooseQuantity decision is projected
 - keep PlayerView legal actions for chooseQuantity decision-id-only unless an existing canonical public-action pattern requires otherwise
 - add exported package type coverage synchronized from canonical contracts
 - add contract/type tests for valid and invalid chooseQuantity/cardinality shapes
 
 ## Out of Scope
 
-- engine decision creation, response validation, legal-action projection, or stale-decision handling
+- engine decision creation, response validation, legal-action projection, stale-decision handling, or quantity runtime behavior beyond the narrow PlayerView projection shape adaptation
 - card parser rules or generated-support certification
 - replacement generalization
 - server, client, API, UI, replay, database, or gameplay behavior
@@ -432,6 +443,7 @@ Own only canonical contracts, package type sync, and contract tests for cardinal
 - packages/types/src/view.ts
 - packages/types/src/view.test.ts
 - packages/types/src/index.ts
+- packages/engine-core/src/filter-state-for-player.ts
 - tests/contracts/**
 - tools/sync-package-types.ts
 - stories/generated/TYP-007*.yaml
@@ -447,6 +459,8 @@ Own only canonical contracts, package type sync, and contract tests for cardinal
 - use `pnpm`; the canonical local verification commands are `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`
 - TypeScript stays strict; avoid `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions without explicit justification
 - ESLint with type-aware rules and Prettier formatting are required; CI and local verification must fail when checked-in generated artifacts are stale
+- `@optcg/engine-core` must stay free of React, browser code, WebSocket transport, Redis, Postgres, and live HTTP clients
+- The engine must not import Redis, Postgres, WebSocket, React, or Poneglyph HTTP code; once hidden state exists, the client must use `view-engine` instead of `engine-core`, and effect resolution must consume resolved manifests rather than live HTTP calls
 
 ### Code Standard
 

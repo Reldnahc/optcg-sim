@@ -92,11 +92,15 @@ test("canonical effects include exact and up-to cardinality contracts", async ()
   );
   assert.match(
     canonicalTypes,
-    /export type ExactCardinality<[^>]+>\s*=\s*\{\s*mode:\s*"exact";\s*min:\s*N;\s*max:\s*N;\s*\}/m,
+    /export type SupportedExactCardinalityValue\s*=\s*EnumerateCardinalityValues<101>;/m,
   );
   assert.match(
     canonicalTypes,
-    /export type Cardinality\s*=\s*ExactCardinality<number>\s*\|\s*UpToCardinality;/m,
+    /export type ExactCardinality<[\s\S]*?N extends SupportedExactCardinalityValue = SupportedExactCardinalityValue[\s\S]*?>\s*=\s*N extends SupportedExactCardinalityValue[\s\S]*?\bmin:\s*N;[\s\S]*?\bmax:\s*N;[\s\S]*?:\s*never;/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type Cardinality\s*=\s*ExactCardinality\s*\|\s*UpToCardinality;/m,
   );
 });
 

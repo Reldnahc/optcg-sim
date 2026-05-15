@@ -17,12 +17,15 @@ story_boundary: >
   Parent planning story only. Do not implement this parent directly. Implement
   the approved TYP-007 child stories one at a time. Keep this series limited to
   canonical contracts, exported package types, effect DSL schema, schema
-  fixtures, and decision/action/legal-action contracts.
+  fixtures, decision/action/legal-action contracts, and narrow existing
+  PlayerView projection shape adaptation when a child story explicitly owns a
+  public PlayerView contract.
 allowed_touch_points:
   - contracts/canonical-types.ts
   - contracts/effect-dsl.schema.json
   - contracts/types/**
   - packages/types/src/**
+  - packages/engine-core/src/filter-state-for-player.ts
   - tests/contracts/**
   - fixtures/effect-dsl/**
   - stories/generated/TYP-007*.yaml
@@ -91,7 +94,7 @@ acceptance_criteria:
   - TYP-007 is not implemented directly
   - TYP-007 and all child stories use `area: contracts`
   - each TYP-007 child is independently reviewable and limited to contract/schema authorability
-  - no runtime behavior, parser certification, or card generated-support behavior is introduced by this series
+  - no runtime behavior beyond explicitly scoped public PlayerView projection shape adaptation, parser certification, or card generated-support behavior is introduced by this series
   - ENG-055 and CARD-014 dependencies on TYP-007 outputs are explicit
 required_tests:
   - run `corepack pnpm run stories:review-plan -- --parent stories/generated/TYP-007-effect-composition-contracts-schema-parent.yaml`

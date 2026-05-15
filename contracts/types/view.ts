@@ -9,6 +9,7 @@ import type {
   StateSeq,
 } from "./primitives.js";
 import type { CardRef, ZoneRef } from "./card-metadata.js";
+import type { PendingDecision } from "./decisions.js";
 import type { CausalityRef, EngineEvent } from "./events.js";
 import type { PublicTimerState } from "./runtime.js";
 
@@ -82,16 +83,16 @@ export interface OpponentVisibleState {
 
 export type SpectatorVisiblePlayerState = OpponentVisibleState;
 
-export interface PublicDecision {
+export interface PublicDecision<TType extends string = string> {
   id: DecisionId;
-  type: string;
+  type: TType;
   playerId: PlayerId;
   prompt: string;
   causedBy: CausalityRef;
   timeoutMs?: number;
 }
 
-export interface PublicChooseQuantityDecision extends PublicDecision {
+export interface PublicChooseQuantityDecision extends PublicDecision<"chooseQuantity"> {
   type: "chooseQuantity";
   mode: "exact" | "upTo";
   min: number;
@@ -99,7 +100,7 @@ export interface PublicChooseQuantityDecision extends PublicDecision {
 }
 
 export type PublicPendingDecision =
-  | PublicDecision
+  | PublicDecision<Exclude<PendingDecision["type"], "chooseQuantity">>
   | PublicChooseQuantityDecision;
 
 export type PublicLegalAction =

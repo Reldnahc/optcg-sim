@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
 import type {
+  Cardinality,
   CardFilter,
   CardId,
   ExactCardinality,
@@ -79,6 +80,12 @@ test("effect support contracts compile with canonical representative values", ()
     min: 2,
     // @ts-expect-error exact cardinality requires min and max to match.
     max: 1,
+  };
+  // @ts-expect-error exported general cardinality rejects malformed exact ranges.
+  const invalidGeneralExact: Cardinality = {
+    mode: "exact",
+    min: 1,
+    max: 2,
   };
 
   const duration: Duration = {
@@ -168,6 +175,7 @@ test("effect support contracts compile with canonical representative values", ()
   expect(exactOne.max).toBe(1);
   expect(upToThree.mode).toBe("upTo");
   void invalidExactTwo;
+  void invalidGeneralExact;
 });
 
 test("replacement effect contract supports reviewed would-be-KOd self draw shape", () => {

@@ -12,10 +12,10 @@ import type {
   PlayerView,
   PublicBattleState,
   PublicCardView,
-  PublicChooseQuantityDecision,
   PublicDecision,
   PublicLegalAction,
   PublicLifeView,
+  PublicPendingDecision,
   PublicRevealRecord,
   PublicTurnState,
   SpectatorEvent,
@@ -97,7 +97,7 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
     ...opponent,
     playerId: playerA,
   };
-  const decision: PublicChooseQuantityDecision = {
+  const decision: PublicPendingDecision = {
     id: "decision-1" as PublicDecision["id"],
     type: "chooseQuantity",
     playerId: playerA,
@@ -176,6 +176,11 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
 
   expect(playerView.legalActions).toHaveLength(1);
   expect(playerView.pendingDecision?.type).toBe("chooseQuantity");
+  if (playerView.pendingDecision?.type !== "chooseQuantity") {
+    throw new Error("expected chooseQuantity public decision");
+  }
+  expect(playerView.pendingDecision.max).toBe(2);
+  expect(playerView.pendingDecision.mode).toBe("upTo");
   expect(spectatorView.spectatorPolicy.mode).toBe("live-filtered");
 });
 
