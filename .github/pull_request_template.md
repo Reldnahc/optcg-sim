@@ -1,7 +1,8 @@
 ## Approved Story
 
 - Story ID:
-- Story file:
+- Approved story file:
+- Synced issue, if one exists:
 
 ## Spec Refs
 

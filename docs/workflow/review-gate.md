@@ -22,7 +22,7 @@ Code review is required. Use this flow unless a higher-authority story or packet
 14. fix the material findings or post a revision response comment that records the disposition of each unresolved item
 15. run the cleanup metadata handoff preflight against the actual current PR body or selected durable handoff comment, fetched changed files, and fetched PR head branch, not a copied example or reconstructed local text; use `node --experimental-strip-types tools/post-merge-cleanup.ts -- --validate-cleanup-handoff-json-file <handoff.json> --require-cleanup-guard-status` when fetched PR metadata and check status are available
 16. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, after the revision response comment is up to date when a separate reviewer subagent run was used, after reviewers confirm any post-merge cleanup metadata matches the reviewed story scope, and after `cleanup-metadata-guard` is present and passing before human review is requested
-17. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes; for approved parent integration workflows, human review is deferred to the final parent PR to `main` while substory commit evidence is recorded on that parent PR or durable handoff comment
+17. require human review before protected or default-branch PRs merge; gameplay, policy-sensitive, and architecture-sensitive changes are higher-risk review focus, not the only cases needing human review; for approved parent integration workflows, human review is deferred to the final parent PR to `main` while substory commit evidence is recorded on that parent PR or durable handoff comment
 18. if review finds multi-concern drift, split the story or narrow the patch before merge
 19. for parent/substory workflows, confirm the story-set review-status matrix is reconstructed from durable artifacts before PR opening or PR handoff; fail closed when the parent-story review is unknown or pending, or when any child-story review is missing, unknown, or pending
 
@@ -35,7 +35,7 @@ Role handoff requirements:
 
 The separate reviewer subagent run is a repo-level first-pass gate before human review. It does not replace the merge-gate requirement for a durable review record or equivalent human review step.
 
-Passing AI review does not replace human review.
+Passing AI review does not replace human review. Human review is required before protected or default-branch PRs merge.
 
 For CARD implementation story review, story reviewers must inspect the
 substance of `card_source_integrity` and `engine_capability_preflight`, not only

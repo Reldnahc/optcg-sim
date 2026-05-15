@@ -174,6 +174,8 @@ test("pull request template requires story, verification, and subagent review ev
   }
 
   assertMatchesAll(prTemplate, [
+    /Approved story file:/i,
+    /Synced issue, if one exists:/i,
     /pnpm verify/i,
     /AI review completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
     /Separate reviewer subagent run completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
@@ -219,6 +221,10 @@ test("pull request template requires story, verification, and subagent review ev
   assert.doesNotMatch(prTemplate, /codex\.cmd exec review/i);
   assert.doesNotMatch(prTemplate, /Codex CLI review command/i);
   assert.doesNotMatch(prTemplate, /@codex review/i);
+  assert.doesNotMatch(
+    prTemplate,
+    /link (?:the )?PR back to (?:the )?story issue/i,
+  );
   assert.doesNotMatch(
     prTemplate,
     /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
@@ -658,6 +664,8 @@ test("workflow procedure docs preserve required story and review gates", async (
     /equivalent human-review fallback/i,
     /revision response comment/i,
     /Passing AI review does not replace human review/i,
+    /Human review is required before protected or default-branch PRs merge/i,
+    /Gameplay, policy-sensitive, and architecture-sensitive changes are higher-risk review focus/i,
   ]);
 
   assertMatchesAll(parentBranches, [
@@ -766,8 +774,15 @@ test("codex integration spec reflects subagent orchestration instead of cli-firs
     /tiny orchestration glue/i,
     /equivalent human review step/i,
     /before merge/i,
+    /Link the pull request to the approved story file and, when one exists, the synced issue/i,
+    /Human review is required before protected or default-branch PRs merge/i,
+    /Gameplay correctness, policy-sensitive areas, and architecture-sensitive changes are higher-risk review focus/i,
   ]);
 
+  assert.doesNotMatch(
+    codexSpec,
+    /Link the pull request back to the story issue/i,
+  );
   assert.doesNotMatch(
     codexSpec,
     /Assign the packet to Codex CLI or Codex cloud/i,

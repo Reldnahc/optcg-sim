@@ -126,7 +126,7 @@ Section Ref: `32-codex-agent-integration.s008`
 1. Allow the parent agent to do only tiny orchestration glue such as rebases, tiny integration edits, verification reruns, PR administration, packet/metadata corrections, and narrowly scoped reviewer-response integration touchups.
 1. Follow the subagent model routing policy.
 1. Require tests and a short assumptions/blockers note.
-1. Link the pull request back to the story issue.
+1. Link the pull request to the approved story file and, when one exists, the synced issue.
 1. Spawn a separate reviewer subagent plus human review before merge. In the parent-story integration branch workflow, reviewed substory commits may land on the parent integration branch after CI, packet verification, reviewer-subagent review evidence, AI review records, revision response records, and verification evidence are bound to the exact commit; human review is then required on the final parent pull request to `main`.
 1. After merge, have the parent agent run the packet completion command to move
    the completed story to done history, remove the active packet, and clear or
@@ -161,7 +161,7 @@ If the spec is ambiguous, stop at the narrowest safe point and open/append an am
 
 Section Ref: `32-codex-agent-integration.s010`
 
-Use a separate reviewer subagent as a fast first-pass reviewer for scope creep, missing tests, and obvious contract drift, but do not treat a passing agent review as authoritative proof of correctness. Human review still owns final acceptance for gameplay correctness and policy-sensitive areas.
+Use a separate reviewer subagent as a fast first-pass reviewer for scope creep, missing tests, and obvious contract drift, but do not treat a passing agent review as authoritative proof of correctness. Human review is required before protected or default-branch PRs merge. Gameplay correctness, policy-sensitive areas, and architecture-sensitive changes are higher-risk review focus, not the only cases needing human review.
 
 Story-review agents are separate from implementation reviewer subagents. Story-review agents review generated or normalized story authority, decomposition, scope, non-scope, dependencies, allowed touch points, acceptance criteria, required tests, and ambiguity policy before human story approval. Implementation reviewer subagents review patches after implementation.
 
@@ -210,6 +210,7 @@ A Codex-authored patch should not be merged unless:
 - required tests are present and passing,
 - no uncited behavior is introduced,
 - the review record includes either a reviewer-subagent artifact or an equivalent human review step.
+- protected or default-branch PRs have human review before merge.
 
 After merge, the story should no longer remain approved or active. The parent agent
 should use the packet completion command to move it to `stories/done/` with
