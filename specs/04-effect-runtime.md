@@ -488,7 +488,7 @@ Default is `doAsMuchAsPossible`, unless a connector or card text requires depend
 For composed execution, failure policy applies to the whole effect block and to each segment through its connector:
 
 - `doAsMuchAsPossible` attempts each supported segment and records per-segment success without rolling back successful independent segments.
-- `requiresAll` fails the composed execution before mutation when every required segment cannot legally complete.
+- `requiresAll` fails the composed execution before mutation when any required segment cannot legally complete.
 - `skipIfNoLegalTarget` skips the composed execution when required activation-time or first required resolution-time targets are absent.
 - `optionalIfPossible` offers the optional instruction only when at least one legal execution path exists; if none exists, the segment is not attempted and does not create a decision.
 

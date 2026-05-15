@@ -292,7 +292,6 @@ interface BaseDecision {
 
 interface ChooseQuantityDecision extends BaseDecision {
   type: "chooseQuantity";
-  label: string;
   min: number;
   max: number;
   mode: "exact" | "upTo";
@@ -469,7 +468,7 @@ orderCards
 chooseCharacterToTrashForOverflow
 ```
 
-For `chooseQuantity`, the response shape is `{ type: "chooseQuantity"; quantity: number }`. A quantity decision response is valid only when it names the active decision ID, has response type `chooseQuantity`, and carries a whole integer `quantity` inside the decision's allowed `min` and `max` bounds.
+For `chooseQuantity`, the response payload shape is `{ type: "chooseQuantity"; quantity: number }`. The outer `respondToDecision.decisionId` must name the active `chooseQuantity` decision. The inner `ChooseQuantityResponse` payload does not carry a decision ID; it is valid only when it has response type `chooseQuantity` and carries a whole integer `quantity` inside the decision's allowed `min` and `max` bounds.
 
 Cardinality is explicit:
 

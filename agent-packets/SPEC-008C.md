@@ -246,7 +246,7 @@ Default is `doAsMuchAsPossible`, unless a connector or card text requires depend
 For composed execution, failure policy applies to the whole effect block and to each segment through its connector:
 
 - `doAsMuchAsPossible` attempts each supported segment and records per-segment success without rolling back successful independent segments.
-- `requiresAll` fails the composed execution before mutation when every required segment cannot legally complete.
+- `requiresAll` fails the composed execution before mutation when any required segment cannot legally complete.
 - `skipIfNoLegalTarget` skips the composed execution when required activation-time or first required resolution-time targets are absent.
 - `optionalIfPossible` offers the optional instruction only when at least one legal execution path exists; if none exists, the segment is not attempted and does not create a decision.
 
@@ -293,6 +293,10 @@ playerDeclined
 ```
 
 Those fields drive later connector decisions and replay determinism. Runtime frame, pause/resume, saved-reference, and failure-policy behavior for composed execution is authoritative in `04-effect-runtime.s010`, `04-effect-runtime.s012`, and `04-effect-runtime.s016`.
+
+Saved references include `saveResultAs`, `SelectionSetId`, and `SelectionId`. A saved reference is contract-defined here, but generated support may rely on it only when schema validation, parser certification, and runtime capability evidence all cover the reference lifetime, visibility, and later-use legality.
+
+Optionality must preserve optional activation, optional cost, and optional effect clause distinctions. These boundaries are part of generated-support capability evidence because a parser that recognizes optional text still cannot make the effect playable unless the runtime can resume and record the correct optional segment result.
 
 ### 05-effect-dsl-reference.s026 (Transient reveal and selection primitives)
 
@@ -351,6 +355,8 @@ type Effect =
 ```
 
 These are not UI concepts. They are deterministic effect-runtime concepts. They let the runtime represent "reveal top card, maybe play it, otherwise return it face-down" without losing hidden-information boundaries.
+
+`playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist. Generated support may not treat a parsed play-from-selection instruction as playable unless the parser covers the complete selection/play/return flow and the runtime capability matrix covers the resulting decision, hidden-information, forced-trash, and zone-movement behavior.
 
 ### 05-effect-dsl-reference.s027 (Effect-play options)
 

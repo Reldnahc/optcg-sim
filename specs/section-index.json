@@ -971,7 +971,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Trigger order",
       "heading_level": 3,
-      "marker_line": 301,
+      "marker_line": 300,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s010`"
     },
     {
@@ -980,7 +980,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Optional activation",
       "heading_level": 3,
-      "marker_line": 317,
+      "marker_line": 316,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s011`"
     },
     {
@@ -989,7 +989,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Cost payment",
       "heading_level": 3,
-      "marker_line": 332,
+      "marker_line": 331,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s012`"
     },
     {
@@ -998,7 +998,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Targets/cards",
       "heading_level": 3,
-      "marker_line": 346,
+      "marker_line": 345,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s013`"
     },
     {
@@ -1007,7 +1007,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Life trigger",
       "heading_level": 3,
-      "marker_line": 366,
+      "marker_line": 365,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s014`"
     },
     {
@@ -1016,7 +1016,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Legal actions",
       "heading_level": 2,
-      "marker_line": 380,
+      "marker_line": 379,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s015`"
     },
     {
@@ -1025,7 +1025,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Action envelope inside the engine",
       "heading_level": 2,
-      "marker_line": 402,
+      "marker_line": 401,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s016`"
     },
     {
@@ -1034,7 +1034,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Canonical decision routing",
       "heading_level": 2,
-      "marker_line": 432,
+      "marker_line": 431,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s017`"
     },
     {
@@ -1043,7 +1043,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Canonical event visibility",
       "heading_level": 2,
-      "marker_line": 478,
+      "marker_line": 477,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s018`"
     },
     {
@@ -1052,7 +1052,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Deterministic RNG",
       "heading_level": 2,
-      "marker_line": 495,
+      "marker_line": 494,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s019`"
     },
     {
@@ -1061,7 +1061,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "State hashing",
       "heading_level": 2,
-      "marker_line": 520,
+      "marker_line": 519,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s020`"
     },
     {
@@ -1070,7 +1070,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Invariant hooks",
       "heading_level": 2,
-      "marker_line": 544,
+      "marker_line": 543,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s021`"
     },
     {
@@ -1079,7 +1079,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Internal state sequencing",
       "heading_level": 2,
-      "marker_line": 568,
+      "marker_line": 567,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s022`"
     },
     {
@@ -1088,7 +1088,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Error handling inside the engine",
       "heading_level": 2,
-      "marker_line": 588,
+      "marker_line": 587,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s023`"
     },
     {
@@ -1097,7 +1097,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Account-level saved loadouts",
       "heading_level": 2,
-      "marker_line": 608,
+      "marker_line": 607,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s024`"
     },
     {

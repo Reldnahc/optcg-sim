@@ -137,6 +137,7 @@ test("decision specs authorize quantity decisions and exact/up-to cardinality", 
   for (const requiredText of [
     "ChooseQuantityDecision",
     'type: "chooseQuantity"',
+    "prompt: string",
     "min: number",
     "max: number",
     'mode: "exact" | "upTo"',
@@ -149,7 +150,9 @@ test("decision specs authorize quantity decisions and exact/up-to cardinality", 
 
   for (const requiredText of [
     "chooseQuantity",
-    "quantity decision response is valid only when it names the active decision ID",
+    'response payload shape is `{ type: "chooseQuantity"; quantity: number }`',
+    "outer `respondToDecision.decisionId` must name the active `chooseQuantity` decision",
+    "inner `ChooseQuantityResponse` payload does not carry a decision ID",
     "whole integer",
     "min",
     "max",
@@ -162,6 +165,8 @@ test("decision specs authorize quantity decisions and exact/up-to cardinality", 
   ]) {
     assertContainsWords(decisionRouting, requiredText);
   }
+
+  assert.doesNotMatch(pendingDecisions, /label:\s*string/);
 
   for (const requiredText of [
     "Quantity decisions exposed through legal actions must advertise only public bounds",
@@ -527,7 +532,7 @@ test("effect runtime spec authorizes composed resumable execution semantics", as
 
   for (const requiredText of [
     "`doAsMuchAsPossible` attempts each supported segment and records per-segment success without rolling back successful independent segments",
-    "`requiresAll` fails the composed execution before mutation when every required segment cannot legally complete",
+    "`requiresAll` fails the composed execution before mutation when any required segment cannot legally complete",
     "`skipIfNoLegalTarget` skips the composed execution when required activation-time or first required resolution-time targets are absent",
     "`optionalIfPossible` offers the optional instruction only when at least one legal execution path exists",
     "Unsupported composed runtime shapes default to fail-closed rather than degrading to partial execution",
