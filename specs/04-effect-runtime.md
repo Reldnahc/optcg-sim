@@ -92,6 +92,8 @@ For generated support, the runtime must expose or consume a capability matrix th
 
 Multiple parsed effects from one card compose into one generated `EffectDefinition` for that card. If any component is unparsed, ambiguous, stale, unsupported, or missing capability evidence, the entire generated support record fails closed for normal play instead of partially enabling the card.
 
+Generated composed runtime shapes must fail closed for normal play when the runtime cannot represent the whole composed execution as a supported resumable frame. Unsupported composed shapes include sequence connectors, saved-result references, optionality boundaries, costs, targets, visibility requirements, or pending-decision continuations that the runtime capability matrix does not cover.
+
 ## Effect queue entry
 
 <!-- SECTION_REF: 04-effect-runtime.s006 -->
@@ -252,6 +254,10 @@ function processEffectQueue(state: GameState): EngineResult {
 
 There is no `return` inside the loop unless the game ends, an unrecoverable error occurs, or a pending decision pauses resolution.
 
+Generic composed execution is represented by a resumable effect execution frame. The frame is runtime context for one resolving effect and is not a client-facing object. It must track at least the queue entry, effect block, current effect path, next segment index, saved result references, segment results, transient selection sets, and pending-decision continuation.
+
+When a sequence segment pauses for a `PendingDecision`, the runtime stores the frame and returns the pending decision with the same causality context. After a valid response, resolution resumes from the stored frame at the paused segment rather than restarting earlier segments. Completed earlier segments must not be re-applied, and their saved result references and segment results remain available for later connector decisions.
+
 ## Conditions and costs
 
 <!-- SECTION_REF: 04-effect-runtime.s011 -->
@@ -266,6 +272,12 @@ Before resolving an effect block:
 4. If activation requires cost, create a `PayCostDecision` when choices are required.
 5. Pay cost atomically and emit `costPaid` events.
 6. Mark once-per-turn usage only after legal commitment: activation conditions passed, required activation-time targets selected, costs paid, and optional activation accepted. Declined optional effects and failed costs do not consume use; legally committed effects that later fizzle do consume use.
+
+Optionality has three distinct meanings:
+
+- Optional activation asks whether the player commits to resolving the effect block. Declining optional activation means the effect block is not legally committed and once-per-turn usage is not consumed.
+- Optional cost asks whether the player pays a non-mandatory cost inside an otherwise committed effect. Declining or failing an optional cost records `paidCost: false` and only skips later instructions whose connector or text depends on that cost being paid.
+- Optional effect clause asks whether the player performs a non-mandatory instruction during resolution. Declining an optional effect clause records `playerDeclined: true` for that segment and does not undo prior legally completed segments.
 
 ```ts
 interface OncePerTurnRecord {
@@ -309,6 +321,10 @@ function executeKoEffect(
 ```
 
 Decision responses are validated by the engine, not the client.
+
+Composed execution records one segment result for every attempted sequence segment or optional clause. A segment result must record `attempted`, `succeeded`, `changedState`, `selectedCards`, `selectedTargets`, `paidCost`, and `playerDeclined`. `succeeded` means the segment legally performed its required instruction, while `changedState` separately records whether canonical state changed. Legal selection without mutation may still drive connectors such as "if you do" when card text depends on choosing or identifying an object.
+
+Saved-result references may bind selected cards, selected targets, paid costs, or produced objects for later text such as `that Character`. A later segment may use a saved-result reference only while the referenced object remains legal for that later instruction; otherwise the later segment follows its connector and failure policy. Saved references must preserve hidden-information visibility and replay determinism.
 
 ## Replacement effects
 
@@ -468,6 +484,15 @@ type FailurePolicy =
 ```
 
 Default is `doAsMuchAsPossible`, unless a connector or card text requires dependency.
+
+For composed execution, failure policy applies to the whole effect block and to each segment through its connector:
+
+- `doAsMuchAsPossible` attempts each supported segment and records per-segment success without rolling back successful independent segments.
+- `requiresAll` fails the composed execution before mutation when any required segment cannot legally complete.
+- `skipIfNoLegalTarget` skips the composed execution when required activation-time or first required resolution-time targets are absent.
+- `optionalIfPossible` offers the optional instruction only when at least one legal execution path exists; if none exists, the segment is not attempted and does not create a decision.
+
+Unsupported composed runtime shapes default to fail-closed rather than degrading to partial execution. Ambiguous connector dependency, saved-reference lifetime, optionality boundary, target visibility, pending-decision continuation, or replacement interaction must be treated as unsupported until the spec and capability matrix authorize it.
 
 ## Transient reveal and selection sets
 

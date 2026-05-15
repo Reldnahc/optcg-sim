@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SPEC-008E.md",
+      "storyId": "SPEC-008E",
+      "storyPath": "stories/approved/SPEC-008E-generated-support-policy-alignment.yaml",
+      "storySha256": "0ff5416ecc371cf67e3860560ab02e54d2aab728e376e3cc0668f2d2d5abb573"
+    }
+  ],
   "version": 1
 }

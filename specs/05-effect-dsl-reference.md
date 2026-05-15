@@ -151,6 +151,8 @@ type PlayerRef =
   | "controller";
 ```
 
+Condition, duration, and restriction primitives outside the schema-supported fixture subset remain planned layers. They are contract-defined by this reference, but they are not fixture-authorable until the schema coverage policy lists them as supported.
+
 ## Costs
 
 <!-- SECTION_REF: 05-effect-dsl-reference.s007 -->
@@ -182,6 +184,7 @@ type Cost =
 ```
 
 If paying a cost requires choosing cards or DON!!, the runtime creates a `PayCostDecision`.
+Cost primitives outside the schema-supported fixture subset remain planned layers. Optional cost behavior must remain separate from optional activation and optional effect clauses as defined by `04-effect-runtime.s011`.
 
 ## Targets
 
@@ -295,6 +298,7 @@ type Duration =
 ```
 
 Use `permanent` sparingly. Field buffs should normally be `whileSourceOnField` or a timing duration.
+Duration primitives not listed in the schema-supported fixture subset are contract-defined planned layers until schema coverage, validation fixtures, and runtime capability evidence are added.
 
 ## Effects
 
@@ -434,6 +438,10 @@ type Effect =
   | { type: "custom"; handler: string };
 ```
 
+Cardinality fields such as `min` and `max` use the exact-N and up-to-N semantics from `03-game-state-events-decisions.s017`. `drawUpTo` is a planned `chooseQuantity`-backed primitive: it must pause through a `chooseQuantity` pending decision, validate the selected whole integer against public min/max bounds, and draw only the chosen amount when a future runtime story makes it executable.
+
+Duration and restriction effects such as `cannotAttack`, `cannotBlock`, `cannotBeAttacked`, `cannotBeBlockedBy`, `invalidateEffects`, and `protectFromKO` remain planned unless the schema coverage policy lists them as schema-supported and the runtime capability matrix proves the active engine can enforce the restriction for the full duration.
+
 ## Sequence connector semantics
 
 <!-- SECTION_REF: 05-effect-dsl-reference.s013 -->
@@ -473,11 +481,16 @@ attempted
 succeeded
 changedState
 selectedCards
+selectedTargets
 paidCost
 playerDeclined
 ```
 
-Those booleans drive later connector decisions and replay determinism.
+Those fields drive later connector decisions and replay determinism. Runtime frame, pause/resume, saved-reference, and failure-policy behavior for composed execution is authoritative in `04-effect-runtime.s010`, `04-effect-runtime.s012`, and `04-effect-runtime.s016`.
+
+Saved references include `saveResultAs`, `SelectionSetId`, and `SelectionId`. A saved reference is contract-defined here, but generated support may rely on it only when schema validation, parser certification, and runtime capability evidence all cover the reference lifetime, visibility, and later-use legality.
+
+Optionality must preserve optional activation, optional cost, and optional effect clause distinctions. These boundaries are part of generated-support capability evidence because a parser that recognizes optional text still cannot make the effect playable unless the runtime can resume and record the correct optional segment result.
 
 ## Search request
 
@@ -730,6 +743,16 @@ The effect-system plan supports three authoring paths:
 2. Custom TypeScript handlers for cards that cannot be expressed in DSL.
 3. Generated DSL from Poneglyph printed card text when certified parser rules produce a complete parse and runtime capability checks pass.
 
+Support ladder:
+
+1. `contract-defined`: a primitive or behavior is described by the Markdown spec or canonical TypeScript contract.
+2. `schema-authorable`: `contracts/effect-dsl.schema.json` can validate JSON fixtures for that primitive.
+3. `runtime-executable`: the current runtime capability matrix proves the engine can execute the primitive, including decisions, visibility, replay, failure policy, and pause/resume behavior.
+4. `parser-certified`: reviewed parser rules produce a complete parse for the relevant printed text shape.
+5. `generated-support playable`: a generated support record may enable normal play only when the parse is complete and every parsed component has current runtime capability evidence.
+
+Schema authorability alone is insufficient for generated-support playable status. Generated support requires runtime capability evidence and complete parser support; schema validation only proves a JSON shape can be authored.
+
 Generated definitions must never be deployed blindly. A new parser rule, ambiguous parse class, custom handler binding, or wording/ruling ambiguity requires review before it can certify support. Once a parser rule is certified, matching complete-parse cards may be generated without a manual per-card allowlist or manual card-to-mechanic map for that common template.
 
 A complete parse covers all gameplay-relevant printed text, trigger text, keyword text, costs, conditions, timing windows, target or selection requirements, visibility requirements, replacement or optionality semantics, and ruling/errata inputs that affect behavior. Multiple parsed effects compose into one generated `EffectDefinition`. Partial parse output may be reported for coverage progress, but it must not make the card playable in normal modes.
@@ -855,6 +878,8 @@ type Effect =
 
 These are not UI concepts. They are deterministic effect-runtime concepts. They let the runtime represent "reveal top card, maybe play it, otherwise return it face-down" without losing hidden-information boundaries.
 
+`playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist. Generated support may not treat a parsed play-from-selection instruction as playable unless the parser covers the complete selection/play/return flow and the runtime capability matrix covers the resulting decision, hidden-information, forced-trash, and zone-movement behavior.
+
 ### Effect-play options
 
 <!-- SECTION_REF: 05-effect-dsl-reference.s027 -->
@@ -886,6 +911,12 @@ Section Ref: `05-effect-dsl-reference.s029`
 `contracts/effect-dsl.schema.json` is the executable JSON fixture contract.
 TypeScript/spec primitives outside that JSON schema are planned/not
 fixture-authorable until schema validation and fixtures exist.
+This list is the fixture-authorability boundary, not generated playable support.
+Schema authorability alone does not imply runtime-executable,
+parser-certified, or generated-support playable status. New TYP schema stories
+may move primitives into the schema-supported fixture subset only when they also
+add schema coverage and validation fixtures; generated playable support still
+requires complete parser support and runtime capability evidence.
 
 Schema-supported fixture subset:
 

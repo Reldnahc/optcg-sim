@@ -262,7 +262,7 @@ type CausalityRef =
 
 Section Ref: `03-game-state-events-decisions.s009`
 
-Effects, costs, target selection, optional activation, simultaneous trigger ordering, and life triggers all pause through the same model.
+Effects, costs, target selection, optional activation, simultaneous trigger ordering, life triggers, and quantity choices all pause through the same model.
 
 ```ts
 type PendingDecision =
@@ -271,6 +271,7 @@ type PendingDecision =
   | PayCostDecision
   | SelectTargetsDecision
   | SelectCardsDecision
+  | ChooseQuantityDecision
   | ChooseEffectOptionDecision
   | ConfirmLifeTriggerDecision
   | OrderCardsDecision
@@ -287,6 +288,19 @@ interface BaseDecision {
   timeoutMs?: number;
   defaultResponse?: DecisionResponse;
   visibility: EventVisibility;
+}
+
+interface ChooseQuantityDecision extends BaseDecision {
+  type: "chooseQuantity";
+  min: number;
+  max: number;
+  mode: "exact" | "upTo";
+  defaultResponse?: ChooseQuantityResponse;
+}
+
+interface ChooseQuantityResponse {
+  type: "chooseQuantity";
+  quantity: number;
 }
 ```
 
@@ -389,6 +403,8 @@ function getLegalActions(state: GameState, playerId: PlayerId): LegalAction[] {
 
 Legal actions sent to a client must not leak hidden information. For example, the opponent should not receive an action list that implies exactly which hidden counter cards exist.
 
+Quantity decisions exposed through legal actions must advertise only public bounds, prompt text, and the active decision ID. They must not reveal hidden candidate counts, must not reveal hidden card identities, and must not encode whether a private candidate set contains a particular card. The authoritative engine may keep private candidate data server-side for validation, but public legal actions remain shaped as `respondToDecision` for the active decision.
+
 ## Action envelope inside the engine
 
 <!-- SECTION_REF: 03-game-state-events-decisions.s016 -->
@@ -444,12 +460,24 @@ chooseOptionalActivation
 payCost
 selectTargets
 selectCards
+chooseQuantity
 chooseEffectOption
 confirmTriggerFromLife
 chooseReplacement
 orderCards
 chooseCharacterToTrashForOverflow
 ```
+
+For `chooseQuantity`, the response payload shape is `{ type: "chooseQuantity"; quantity: number }`. The outer `respondToDecision.decisionId` must name the active `chooseQuantity` decision. The inner `ChooseQuantityResponse` payload does not carry a decision ID; it is valid only when it has response type `chooseQuantity` and carries a whole integer `quantity` inside the decision's allowed `min` and `max` bounds.
+
+Cardinality is explicit:
+
+- exact-N decisions use `mode: "exact"` and must be represented with `min: N` and `max: N`; `mode: "exact"` with different `min` and `max` values is malformed and must not be created. A response below the required value, above it, non-integer, negative when the minimum is non-negative, or otherwise out-of-range is an `invalidDecisionResponse`.
+- up-to-N decisions use `mode: "upTo"` and allow a partial response from `min` through `max`, inclusive. Choosing `max` is legal. Choosing less than `max` is legal only when it is still at least `min`.
+- zero is legal only when the decision's `min` is `0`; exact-0 is represented as `min: 0`, `max: 0`, and `mode: "exact"`.
+- minimum and maximum bounds are authoritative. Responses below `min`, above `max`, non-integer, missing, or with the wrong response type are rejected as `invalidDecisionResponse`.
+
+Quantity decisions exposed through legal actions must advertise only public bounds, prompt text, and the active decision ID. They must not reveal hidden candidate counts, must not reveal hidden card identities, and must not encode whether a private candidate set contains a particular card. If a quantity is constrained by hidden information, the engine validates against the private candidate set internally and returns `invalidDecisionResponse` for illegal responses without disclosing the hidden reason through public legal actions or public events.
 
 Decision IDs are single-use. A response for an old decision ID is stale unless it is an exact idempotent retry already accepted by the match server.
 

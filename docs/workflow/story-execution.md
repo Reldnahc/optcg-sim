@@ -90,6 +90,25 @@ If broad mechanical validation of PR comments or story-review artifacts would be
 - If the needed work crosses concerns, stop and split the story or raise the ambiguity instead of broadening the patch.
 - Supporting tests, fixtures, snapshots, and docs for the same concern are allowed in the same story.
 
+## Layered Parent Story Sets
+
+Broad composed-effect or card-support initiatives may use layered parent story
+sets when one capability crosses contract, runtime, and card-support review
+concerns. Layered parent story sets may split the initiative into
+contracts/schema, engine/runtime, and cards/parser/generated-support parent sets
+while preserving the existing parent/substory workflow and packet lifecycle for
+each active story set.
+
+Implementation stories still keep one primary concern and one primary area.
+TYP-prefixed contract/schema implementation stories use `area: contracts`, not
+`area: types`, even when story validation retains legacy `types` compatibility.
+CARD stories may depend on completed TYP and ENG parent series but must not hide
+runtime work; reusable engine behavior belongs in ENG stories before
+card-specific generated-support or parser linkage work proceeds.
+
+Already-generated downstream TYP, ENG, and CARD implementation story sets must
+be revised or regenerated after the layered rules land before approval handoff.
+
 ## Role Hierarchy And Story Path Selection
 
 Use this workflow hierarchy:

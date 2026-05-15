@@ -114,6 +114,73 @@ test("event specs require append-order strictly increasing event sequences", asy
   );
 });
 
+test("decision specs authorize quantity decisions and exact/up-to cardinality", async () => {
+  const decisionsSpec = await readText(
+    "specs/03-game-state-events-decisions.md",
+  );
+  const pendingDecisions = extractSection(
+    decisionsSpec,
+    "03-game-state-events-decisions.s009",
+    "03-game-state-events-decisions.s010",
+  );
+  const legalActions = extractSection(
+    decisionsSpec,
+    "03-game-state-events-decisions.s015",
+    "03-game-state-events-decisions.s016",
+  );
+  const decisionRouting = extractSection(
+    decisionsSpec,
+    "03-game-state-events-decisions.s017",
+    "03-game-state-events-decisions.s018",
+  );
+
+  for (const requiredText of [
+    "ChooseQuantityDecision",
+    'type: "chooseQuantity"',
+    "prompt: string",
+    "min: number",
+    "max: number",
+    'mode: "exact" | "upTo"',
+    "interface ChooseQuantityResponse",
+    'type: "chooseQuantity"',
+    "quantity: number",
+  ]) {
+    assertContainsWords(pendingDecisions, requiredText);
+  }
+
+  for (const requiredText of [
+    "chooseQuantity",
+    'response payload shape is `{ type: "chooseQuantity"; quantity: number }`',
+    "outer `respondToDecision.decisionId` must name the active `chooseQuantity` decision",
+    "inner `ChooseQuantityResponse` payload does not carry a decision ID",
+    "whole integer",
+    "min",
+    "max",
+    "exact-N",
+    '`mode: "exact"` and must be represented with `min: N` and `max: N`',
+    '`mode: "exact"` with different `min` and `max` values is malformed and must not be created',
+    "up-to-N",
+    "partial",
+    "zero",
+    "out-of-range",
+    "invalidDecisionResponse",
+  ]) {
+    assertContainsWords(decisionRouting, requiredText);
+  }
+
+  assert.doesNotMatch(pendingDecisions, /label:\s*string/);
+
+  for (const requiredText of [
+    "Quantity decisions exposed through legal actions must advertise only public bounds",
+    "must not reveal hidden candidate counts",
+    "must not reveal hidden card identities",
+    "private candidate set",
+  ]) {
+    assertContainsWords(legalActions, requiredText);
+    assertContainsWords(decisionRouting, requiredText);
+  }
+});
+
 test("Effect DSL policy classifies schema-supported and planned primitives", async () => {
   const dslSpec = await readText("specs/05-effect-dsl-reference.md");
 
@@ -155,6 +222,77 @@ test("Effect DSL policy classifies schema-supported and planned primitives", asy
     "cost: returnDon",
   ]) {
     assert.match(dslSpec, new RegExp(plannedPrimitive));
+  }
+});
+
+test("Effect DSL spec pins authorability support ladder and planned-layer guardrails", async () => {
+  const dslSpec = await readText("specs/05-effect-dsl-reference.md");
+  const textToDsl = extractSection(
+    dslSpec,
+    "05-effect-dsl-reference.s022",
+    "05-effect-dsl-reference.s023",
+  );
+  const schemaPolicy = extractSectionToEnd(
+    dslSpec,
+    "05-effect-dsl-reference.s029",
+  );
+  const schemaSupportedSubset = schemaPolicy.slice(
+    schemaPolicy.indexOf("Schema-supported fixture subset:"),
+    schemaPolicy.indexOf("Planned/not fixture-authorable"),
+  );
+
+  for (const requiredText of [
+    "Support ladder",
+    "contract-defined",
+    "schema-authorable",
+    "runtime-executable",
+    "parser-certified",
+    "generated-support playable",
+    "Schema authorability alone is insufficient for generated-support playable status",
+    "Generated support requires runtime capability evidence and complete parser support",
+  ]) {
+    assertContainsWords(textToDsl, requiredText);
+  }
+
+  for (const requiredText of [
+    "Cardinality fields such as `min` and `max` use the exact-N and up-to-N semantics from `03-game-state-events-decisions.s017`",
+    "`drawUpTo` is a planned `chooseQuantity`-backed primitive",
+    "Saved references include `saveResultAs`, `SelectionSetId`, and `SelectionId`",
+    "Optionality must preserve optional activation, optional cost, and optional effect clause distinctions",
+    "Cost primitives outside the schema-supported fixture subset remain planned layers",
+    "`playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist",
+    "Condition, duration, and restriction primitives outside the schema-supported fixture subset remain planned layers",
+  ]) {
+    assertContainsWords(dslSpec, requiredText);
+  }
+
+  for (const plannedPrimitive of [
+    "effect: drawUpTo",
+    "effect: playSelected",
+    "effect: choice",
+    "effect: conditional",
+    "effect: cannotAttack",
+    "duration: untilEndOfTurn",
+    "condition: fieldCount",
+    "cost: returnDon",
+  ]) {
+    assertContainsWords(schemaPolicy, plannedPrimitive);
+  }
+
+  for (const notYetFixtureAuthorable of [
+    "effect: drawUpTo",
+    "effect: playSelected",
+    "effect: choice",
+    "effect: conditional",
+    "effect: cannotAttack",
+    "duration: untilEndOfTurn",
+    "condition: fieldCount",
+    "cost: returnDon",
+  ]) {
+    assert.doesNotMatch(
+      schemaSupportedSubset,
+      new RegExp(notYetFixtureAuthorable),
+    );
   }
 });
 
@@ -220,6 +358,11 @@ test("specs define generated card support from complete parse and runtime capabi
     "09-card-data-and-support-policy.s016",
     "09-card-data-and-support-policy.s017",
   );
+  const effectCoverageReport = extractSection(
+    cardPolicy,
+    "09-card-data-and-support-policy.s018",
+    "09-card-data-and-support-policy.s019",
+  );
   const cardDataTests = extractSection(
     testingSpec,
     "11-testing-quality.s020",
@@ -284,14 +427,24 @@ test("specs define generated card support from complete parse and runtime capabi
     "must not depend on a manual per-card allowlist or a manual card-to-mechanic map",
     "Complete parse means every gameplay-relevant part of a card is parsed",
     "runtime capability matrix records which generated components the current engine can execute",
+    "CARD parser/generated-support stories consume completed contract/schema plus runtime-capability evidence",
+    "Contract/schema completion alone is not playable support",
     "generated support index maps Poneglyph card IDs and source hashes to generated `EffectDefinition` IDs",
     "Multiple parsed effects for one card compose into one generated `EffectDefinition`",
     "Partial support reporting is allowed and encouraged for progress tracking",
-    "Partial support does not make a card playable in normal modes",
+    "partial support or effect coverage progress never enables normal play",
     "Generated support fails closed",
+    "rejected for normal play",
     "New parser rules, ambiguous parse classes, custom handlers, and wording or ruling ambiguity require review",
   ]) {
     assertContainsWords(generatedSupport, requiredText);
+  }
+
+  for (const requiredText of [
+    "Effect coverage and primitive usage reports are progress evidence only",
+    "They must not promote partial, stale, ambiguous, unparsed, unsupported, or capability-missing generated support into playable normal-mode support",
+  ]) {
+    assertContainsWords(effectCoverageReport, requiredText);
   }
 
   for (const requiredText of [
@@ -316,6 +469,77 @@ test("specs define generated card support from complete parse and runtime capabi
     "not evidence for a manual per-card allowlist or partial support",
   ]) {
     assertContainsWords(implementationExamplesPurpose, requiredText);
+  }
+});
+
+test("effect runtime spec authorizes composed resumable execution semantics", async () => {
+  const effectRuntime = await readText("specs/04-effect-runtime.md");
+
+  const cardSupport = extractSection(
+    effectRuntime,
+    "04-effect-runtime.s005",
+    "04-effect-runtime.s006",
+  );
+  const queueProcessing = extractSection(
+    effectRuntime,
+    "04-effect-runtime.s010",
+    "04-effect-runtime.s011",
+  );
+  const conditionsAndCosts = extractSection(
+    effectRuntime,
+    "04-effect-runtime.s011",
+    "04-effect-runtime.s012",
+  );
+  const playerChoices = extractSection(
+    effectRuntime,
+    "04-effect-runtime.s012",
+    "04-effect-runtime.s013",
+  );
+  const failurePolicy = extractSection(
+    effectRuntime,
+    "04-effect-runtime.s016",
+    "04-effect-runtime.s017",
+  );
+
+  for (const requiredText of [
+    "Generated composed runtime shapes must fail closed for normal play when the runtime cannot represent the whole composed execution as a supported resumable frame",
+    "Unsupported composed shapes include sequence connectors, saved-result references, optionality boundaries, costs, targets, visibility requirements, or pending-decision continuations that the runtime capability matrix does not cover",
+  ]) {
+    assertContainsWords(cardSupport, requiredText);
+  }
+
+  for (const requiredText of [
+    "Generic composed execution is represented by a resumable effect execution frame",
+    "queue entry, effect block, current effect path, next segment index, saved result references, segment results, transient selection sets, and pending-decision continuation",
+    "When a sequence segment pauses for a `PendingDecision`, the runtime stores the frame and returns the pending decision with the same causality context",
+    "After a valid response, resolution resumes from the stored frame at the paused segment rather than restarting earlier segments",
+  ]) {
+    assertContainsWords(queueProcessing, requiredText);
+  }
+
+  for (const requiredText of [
+    "Optional activation asks whether the player commits to resolving the effect block",
+    "Optional cost asks whether the player pays a non-mandatory cost inside an otherwise committed effect",
+    "Optional effect clause asks whether the player performs a non-mandatory instruction during resolution",
+  ]) {
+    assertContainsWords(conditionsAndCosts, requiredText);
+  }
+
+  for (const requiredText of [
+    "A segment result must record `attempted`, `succeeded`, `changedState`, `selectedCards`, `selectedTargets`, `paidCost`, and `playerDeclined`",
+    "Saved-result references may bind selected cards, selected targets, paid costs, or produced objects for later text such as `that Character`",
+  ]) {
+    assertContainsWords(playerChoices, requiredText);
+  }
+
+  for (const requiredText of [
+    "`doAsMuchAsPossible` attempts each supported segment and records per-segment success without rolling back successful independent segments",
+    "`requiresAll` fails the composed execution before mutation when any required segment cannot legally complete",
+    "`skipIfNoLegalTarget` skips the composed execution when required activation-time or first required resolution-time targets are absent",
+    "`optionalIfPossible` offers the optional instruction only when at least one legal execution path exists",
+    "Unsupported composed runtime shapes default to fail-closed rather than degrading to partial execution",
+  ]) {
+    assertContainsWords(failurePolicy, requiredText);
   }
 });
 
@@ -500,6 +724,39 @@ test("specs authorize only a narrow post-merge packet cleanup bypass", async () 
   ]) {
     assert.doesNotMatch(completionChecks, prohibitedPattern);
     assert.doesNotMatch(mergeGateRecommendation, prohibitedPattern);
+  }
+});
+
+test("workflow authority pins layered parent story sets for composed effect and card support work", async () => {
+  const workflowSpec = await readText(
+    "specs/27-spec-driven-story-generation-workflow.md",
+  );
+  const storyExecution = await readText("docs/workflow/story-execution.md");
+
+  const generationOutputs = extractSection(
+    workflowSpec,
+    "27-spec-driven-story-generation-workflow.s005",
+    "27-spec-driven-story-generation-workflow.s006",
+  );
+  const promptContract = extractSection(
+    workflowSpec,
+    "27-spec-driven-story-generation-workflow.s006",
+    "27-spec-driven-story-generation-workflow.s007",
+  );
+
+  for (const requiredText of [
+    "layered parent story sets",
+    "Broad composed-effect or card-support initiatives",
+    "contracts/schema, engine/runtime, and cards/parser/generated-support parent sets",
+    "Implementation stories still keep one primary concern and one primary area",
+    "TYP-prefixed contract/schema implementation stories use `area: contracts`, not `area: types`",
+    "CARD stories may depend on completed TYP and ENG parent series",
+    "must not hide runtime work",
+    "Already-generated downstream TYP, ENG, and CARD implementation story sets must be revised or regenerated after the layered rules land before approval handoff",
+  ]) {
+    assertContainsWords(generationOutputs, requiredText);
+    assertContainsWords(promptContract, requiredText);
+    assertContainsWords(storyExecution, requiredText);
   }
 });
 
