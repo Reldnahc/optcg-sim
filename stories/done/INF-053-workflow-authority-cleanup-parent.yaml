@@ -8,7 +8,7 @@ type: tooling
 area: docs
 primary_concern: docs
 priority: critical
-status: approved
+status: done
 summary: >
   Coordinate an ordered workflow-authority cleanup series that removes stale
   process contradictions across repo workflow docs, specs, PR templates,

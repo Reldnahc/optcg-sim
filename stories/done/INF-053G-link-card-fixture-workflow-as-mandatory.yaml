@@ -8,7 +8,7 @@ type: refactor
 area: docs
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Add the card fixture capture workflow to mandatory workflow entry points for
   CARD and card-fixture stories so agents read it when story scope touches real

@@ -8,7 +8,7 @@ type: refactor
 area: docs
 primary_concern: docs
 priority: critical
-status: approved
+status: done
 summary: >
   Remove stale workflow text that presents `gpt-5.5 medium` as a normal or
   recommended implementation-worker path when canonical routing defaults to

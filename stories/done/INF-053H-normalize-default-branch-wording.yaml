@@ -8,7 +8,7 @@ type: refactor
 area: docs
 primary_concern: docs
 priority: medium
-status: approved
+status: done
 summary: >
   Normalize stale main/master wording so repository workflow guidance is
   centered on the default branch and `main`, with `master` retained only as

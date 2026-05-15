@@ -8,7 +8,7 @@ type: tooling
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Reconcile story-schema prose, JSON schema values, committed story evidence,
   validator behavior, and `in_progress` lifecycle status semantics so automation

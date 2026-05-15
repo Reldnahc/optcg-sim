@@ -8,7 +8,7 @@ type: refactor
 area: docs
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Remove stale packet role wording and align planning authority prose with the
   current execution authority order so packet and story-generation specs do not

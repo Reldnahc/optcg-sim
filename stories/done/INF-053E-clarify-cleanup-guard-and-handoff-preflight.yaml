@@ -8,7 +8,7 @@ type: refactor
 area: docs
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Clarify the boundary between the remote cleanup-metadata-guard check and the
   full cleanup handoff preflight so agents understand which evidence each gate

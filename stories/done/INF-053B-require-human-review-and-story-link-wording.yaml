@@ -8,7 +8,7 @@ type: refactor
 area: docs
 primary_concern: docs
 priority: critical
-status: approved
+status: done
 summary: >
   Make protected/default-branch human review mandatory before merge and replace
   stale issue-link wording with approved-story-file linkage plus synced issue

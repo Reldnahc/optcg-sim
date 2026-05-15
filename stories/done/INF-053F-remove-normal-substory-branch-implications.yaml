@@ -8,7 +8,7 @@ type: refactor
 area: docs
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Ensure parent/substory workflow specs, docs, and PR template examples do not
   imply substory branches or substory PRs are the normal path when the current
