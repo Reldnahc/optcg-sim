@@ -25,11 +25,9 @@ Manual chat memory is not authority after reset. If reconstructed state conflict
 Use a pre-presentation story-review gate for generated or normalized story work:
 
 - Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready.
-- Before story-review assignment, run `corepack pnpm run stories:review-plan -- --parent <stories/generated/...yaml>` or `corepack pnpm run stories:review-plan -- --parent <stories/approved/...yaml>`.
-- Do not decide manually between single-story, set-level, per-story, or parent/substory story-review paths.
-- Spawn exactly the review assignments returned by the tool.
-- Approval-ready means the parent story set has a usable tool-selected story-review result, and material findings for that parent story set are fixed, explicitly deferred, or recorded.
+- Approval-ready means the parent story and every child story have usable story-review evidence, and material findings for each reviewed story are fixed, explicitly deferred, or recorded.
 - A parent with exactly one child is still a valid parent/substory story set.
+- Every parent story and every substory must be reviewed. Do not collapse child review into only a parent-level review, and do not infer that one reviewed child covers sibling children.
 - Story-review agent model: `gpt-5.5` with `high` reasoning.
 - Story-review agents review story authority and decomposition, not implementation patches.
 - Story-review findings must be fixed, explicitly deferred, or recorded before the parent agent presents stories as approval-ready.
@@ -42,29 +40,30 @@ For parent story sets, require a compact story-set review-status matrix before a
 
 Reconstruct this matrix from durable story-review outputs, story files, PR comments, or recorded blockers; do not use chat memory as the source of truth.
 
+The matrix must contain one row for the parent story and one row for every child story in the set. A parent-level row does not satisfy any child-story row, and a child-story row does not satisfy the parent row.
+
 Required columns:
 
+- story ID
 - parent story ID
-- child story IDs
+- child story ID when the row is a child
 - story paths
 - review assignment ID
 - review status
 - review artifact or blocker reference
 - disposition summary
 
-Allowed review types: `tool-selected parent-story-set`, `not-applicable`.
+Allowed review types: `parent-story`, `child-story`, `not-applicable`.
 
 Allowed review statuses: `pending`, `approval-ready`, `needs-revision`, `blocked`, `not-applicable`.
 
-Fail closed when the tool-selected parent-story-set review is unknown or pending. Fail closed when status cannot be reconstructed from durable artifacts.
+Fail closed when the parent-story review is unknown or pending. Fail closed when any child-story review is missing, unknown, or pending. Fail closed when status cannot be reconstructed from durable artifacts.
 
 Lost chat context is not a reason to rerun review blindly; reconstruct first and report uncertainty if reconstruction fails.
 
 This matrix is an orchestration aid and PR/review handoff artifact, not a new mutable current-status file and not a second authority over story files.
 
 Single-child parent story sets are still parent/substory workflows.
-
-If broad mechanical validation of PR comments or story-review artifacts would be needed, run the review-plan tool first and record a follow-up recommendation instead of widening the patch.
 
 ## Story Execution Rules
 
@@ -118,8 +117,7 @@ Use this workflow hierarchy:
 Human interaction boundary and path-selection policy:
 
 - Only the Session Orchestrator interacts directly with the human for story scope and approval decisions.
-- Session Orchestrator runs `corepack pnpm run stories:review-plan -- --parent <stories/generated/...yaml>` and owns story-review assignment.
-- Session Orchestrator runs `corepack pnpm run stories:review-plan -- --parent <stories/approved/...yaml>` and owns story-review assignment.
+- Session Orchestrator owns story-review assignment.
 - Session Orchestrator owns child activation, packet freshness, implementation assignment, review assignment, PR evidence, cleanup metadata validation, human-review handoff, merge readiness, and post-merge cleanup confirmation.
 - Implementation handoff and code-review handoff each require role packet extraction output for the assigned role.
 - Parent/substory execution is the only story workflow path.

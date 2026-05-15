@@ -56,7 +56,8 @@ Post-merge cleanup:
 
 ## Review
 
-- [ ] Role-based handoff evidence is present when applicable: story-review plan output before story-review assignment, role packet extraction output for each assigned post-approval role (`implementation`, `code-review`), or a recorded extraction-failure fallback note.
+- [ ] Story-review evidence exists for the parent story and every child story before approval handoff; parent-level review does not satisfy child-story review.
+- [ ] Role-based handoff evidence is present when applicable: role packet extraction output for each assigned post-approval role (`implementation`, `code-review`), or a recorded extraction-failure fallback note.
 - [ ] AI review completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed
 - [ ] Separate reviewer subagent run completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed
 - [ ] Implementation-worker self-review or parent-coordinator self-review was not used as the review gate

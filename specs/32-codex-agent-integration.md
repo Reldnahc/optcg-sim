@@ -111,11 +111,10 @@ A skill should accelerate a workflow, not replace the authoritative story or pac
 
 Section Ref: `32-codex-agent-integration.s008`
 
-1. Before approving a generated or normalized parent story set, run `corepack pnpm run stories:review-plan -- --parent <stories/generated/...yaml>` or `corepack pnpm run stories:review-plan -- --parent <stories/approved/...yaml>`.
-1. Do not manually choose among single-story, set-level, per-story, or parent/substory story-review paths.
-1. Spawn exactly the review assignments returned by that tool and resolve, explicitly defer, or record their findings.
-1. Approval-ready means the parent story set has a usable tool-selected story-review result.
+1. Before approving a generated or normalized parent story set, run story-review subagents for the parent story and every child story, then resolve, explicitly defer, or record their findings.
+1. Approval-ready means the parent story and every child story have usable story-review evidence.
 1. A parent with exactly one child is valid and still uses the parent/substory flow.
+1. Parent-level review does not satisfy child-story review, and one child-story review does not satisfy any sibling child.
 1. Approve a parent story set.
 1. Generate or refresh the checked-in packet for the active story.
 1. Treat the story as worker-ready only after the parent reads `AGENTS.md`, the approved story, and the active packet, then runs `pnpm run packets:generate --story <stories/approved/...yaml> --activate` and `pnpm run packets:verify`.
@@ -235,7 +234,7 @@ parent PR lands on `main` and the multi-story completion command runs.
 
 Before requesting human review on the parent PR, the parent agent should update
 the PR body or post a handoff comment that records completed gates instead of a
-future-tense review plan: included substory story path + commit SHA + AI review record + revision response + verification evidence, full-story reviewer-subagent
+future-tense review language: included substory story path + commit SHA + AI review record + revision response + verification evidence, full-story reviewer-subagent
 record, revision response, CI result, repo verification result, required human
 review, and post-merge multi-story cleanup.
 

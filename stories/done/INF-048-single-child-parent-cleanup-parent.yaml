@@ -54,7 +54,7 @@ acceptance_criteria:
   - cleanup validation continues to reject mismatched, missing, duplicated, packetized, already-done, stale, or ambiguous parent evidence
   - workflow wording no longer implies `packets:complete-many` requires at least two child `--story` arguments
 required_tests:
-  - story-review for the INF-048 parent story set using `corepack pnpm run stories:review-plan -- --parent stories/generated/INF-048-single-child-parent-cleanup-parent.yaml`
+  - story-review for the INF-048 parent story set
   - story-specific tests from INF-048A
   - full `corepack pnpm verify` on the child PR
 repo_rules:

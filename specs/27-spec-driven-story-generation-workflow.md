@@ -165,11 +165,9 @@ Generated or normalized stories must receive story-review agent review before th
 
 Required behavior:
 
-- before story-review assignment, run `corepack pnpm run stories:review-plan -- --parent <stories/generated/...yaml>` or `corepack pnpm run stories:review-plan -- --parent <stories/approved/...yaml>`,
-- do not manually choose among single-story, set-level, per-story, or parent/substory story-review paths,
-- spawn exactly the review assignments returned by the tool,
-- approval-ready means the parent story set has a usable tool-selected story-review result,
+- approval-ready means the parent story and every child story have usable story-review evidence,
 - a parent with exactly one child is valid and still uses the parent/substory flow,
+- every parent story and every substory must be reviewed; parent-level review does not satisfy child-story review, and one child-story review does not satisfy any sibling child,
 - use a story-review agent separate from any implementation worker or implementation patch reviewer,
 - story-review agent uses gpt-5.5 with high reasoning,
 - story-review findings must be fixed, explicitly deferred, or recorded before presentation,
@@ -265,7 +263,7 @@ Section Ref: `27-spec-driven-story-generation-workflow.s011`
 Section Ref: `27-spec-driven-story-generation-workflow.s012`
 
 1. use an agent or script to generate candidate epics and concern-sliced stories from spec sections,
-2. run the pre-presentation story-review gate using `corepack pnpm run stories:review-plan -- --parent <stories/generated/...yaml>` or `corepack pnpm run stories:review-plan -- --parent <stories/approved/...yaml>`,
+2. run the pre-presentation story-review gate,
 3. review and approve the decomposition and the stories,
 4. export approved stories to GitHub issues or draft issues as needed using `tools/spec_board_sync.ts`,
 5. build or refresh the checked-in packet for the active story,
@@ -324,7 +322,7 @@ For parent-story integration branches, substories may remain approved after thei
 
 During that parent-branch window, `agent-packets/active.json` remains a single-story handoff pointer for the currently active or most recently active substory packet. It should not be read as the inventory of unfinished substories. Substories merged only into the parent integration branch stay approved and keep their packet files until the parent PR lands on `main`, even when they no longer appear in `active.json`.
 
-Before human review is requested on a parent PR, the PR body or a handoff comment should be updated from future-tense review plans to completed-gate evidence: included substory story path + commit SHA + AI review record + revision response + verification evidence, full-story AI review record, revision response, CI result, repo verification result, remaining human-review requirement, and the post-merge `packets:complete-many` cleanup plan.
+Before human review is requested on a parent PR, the PR body or a handoff comment should be updated from future-tense review language to completed-gate evidence: included substory story path + commit SHA + AI review record + revision response + verification evidence, full-story AI review record, revision response, CI result, repo verification result, remaining human-review requirement, and the post-merge `packets:complete-many` cleanup plan.
 
 A commit that contains only the exact file changes produced by the packet completion command is a generated lifecycle cleanup and does not need a separate reviewer-subagent pass; exact packet-completion cleanup may use cleanup-scoped lifecycle verification instead of full repo verification before the direct cleanup push. Cleanup-scoped lifecycle verification must prove metadata binding, packet-completion output, story lifecycle state, active packet state, and committed story metadata remain valid; cleanup that includes any manual edit beyond packet-completion output still requires full repo verification and the normal reviewer-subagent path before push or merge. This includes edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files.
 

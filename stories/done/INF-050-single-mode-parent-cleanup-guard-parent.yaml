@@ -59,7 +59,7 @@ acceptance_criteria:
   - the stale ENG-053 parent story is moved to done with done status
   - story validation passes with no approved parent story whose declared children are all done
 required_tests:
-  - story-review for the INF-050 parent story set using `corepack pnpm run stories:review-plan -- --parent stories/generated/INF-050-single-mode-parent-cleanup-guard-parent.yaml`
+  - story-review for the INF-050 parent story set
   - story-specific tests from INF-050A
   - full `corepack pnpm run verify` on the child PR if feasible
 repo_rules:

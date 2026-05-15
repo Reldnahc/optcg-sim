@@ -17,7 +17,7 @@ summary: >
 story_boundary: >
   This parent is not directly implementable. It coordinates the single child
   story that updates canonical workflow specs, repo workflow docs, packet
-  tooling, a review-plan tool, and workflow tests so they agree on one
+  tooling and workflow tests so they agree on one
   parent/substory-only execution model.
 allowed_touch_points:
   - stories/generated/INF-047*.yaml
@@ -44,8 +44,6 @@ scope:
   - require the executable child to remove the standalone story execution path from all workflow authority layers
   - require the executable child to remove `story-author`, `story-orchestrator`, and `pr-gate` as assignable roles
   - require the executable child to make Session Orchestrator responsibilities explicit for former story-author, story-orchestrator, and pr-gate duties
-  - require the executable child to add a repo tool that reads parent and child story files and prints the required story-review plan
-  - require agents to use the review-plan tool output instead of choosing review count or review topology from prose
   - allow a parent story to declare exactly one child when no meaningful decomposition is needed
 non_scope:
   - direct implementation from this parent story
@@ -56,18 +54,16 @@ dependencies: []
 child_stories:
   - id: INF-047A
     title: Collapse agent workflow to parent/substory only
-    concern: Update workflow specs, docs, packet tooling, review-plan tooling, and tests so parent/substory integration is the only execution path and Session Orchestrator owns former story-author, story-orchestrator, and pr-gate duties.
+    concern: Update workflow specs, docs, packet tooling, and tests so parent/substory integration is the only execution path and Session Orchestrator owns former story-author, story-orchestrator, and pr-gate duties.
     depends_on: []
 acceptance_criteria:
   - INF-047A is the only executable child for this parent
   - the approved workflow states that every executable story is a child of a parent, including one-child parents
   - no approved workflow authority presents standalone story execution as a separate path
   - no approved workflow authority names `story-author`, `story-orchestrator`, or `pr-gate` as assignable roles
-  - "`AGENTS.md` explicitly tells agents to use the repo review-plan tool for story-review path selection and does not describe competing review path choices"
-  - story-review assignment is determined by a repo-owned review-plan tool, not by agent interpretation of multiple prose workflow paths
   - Session Orchestrator ownership of child activation, implementation handoff, review handoff, PR evidence, cleanup metadata, human-review handoff, and post-merge cleanup confirmation is explicit
 required_tests:
-  - one combined bootstrap story-review for INF-047 parent and INF-047A child before approval because the review-plan tool does not exist yet
+  - one combined bootstrap story-review for INF-047 parent and INF-047A child before approval
   - story-specific tests from INF-047A
   - full `corepack pnpm verify` on the child and parent PR
 repo_rules:

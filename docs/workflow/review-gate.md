@@ -24,7 +24,7 @@ Code review is required. Use this flow unless a higher-authority story or packet
 16. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, after the revision response comment is up to date when a separate reviewer subagent run was used, after reviewers confirm any post-merge cleanup metadata matches the reviewed story scope, and after `cleanup-metadata-guard` is present and passing before human review is requested
 17. require human review before merge for gameplay, policy-sensitive, or architecture-sensitive changes; for approved parent integration workflows, human review is deferred to the final parent PR to `main` while substory commit evidence is recorded on that parent PR or durable handoff comment
 18. if review finds multi-concern drift, split the story or narrow the patch before merge
-19. for parent/substory workflows, confirm the story-set review-status matrix is reconstructed from durable artifacts before PR opening or PR handoff; fail closed on unknown or pending tool-selected parent-story-set review
+19. for parent/substory workflows, confirm the story-set review-status matrix is reconstructed from durable artifacts before PR opening or PR handoff; fail closed when the parent-story review is unknown or pending, or when any child-story review is missing, unknown, or pending
 
 Role handoff requirements:
 

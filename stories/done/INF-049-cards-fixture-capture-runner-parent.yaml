@@ -47,7 +47,7 @@ acceptance_criteria:
   - fixture capture behavior and output semantics are unchanged
   - verification evidence is recorded on the child PR
 required_tests:
-  - story-review for the INF-049 parent story set using `corepack pnpm run stories:review-plan -- --parent stories/generated/INF-049-cards-fixture-capture-runner-parent.yaml`
+  - story-review for the INF-049 parent story set
   - story-specific tests from INF-049A
   - full `corepack pnpm verify` on the child PR
 repo_rules:

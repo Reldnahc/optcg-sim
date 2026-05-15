@@ -51,7 +51,7 @@ acceptance_criteria:
   - child story stays narrow to filterStateForPlayer public DTO output and its direct tests
   - child story does not add public DTO fields without explicit canonical authority
 required_tests:
-  - run `corepack pnpm run stories:review-plan -- --parent stories/generated/TYP-006-player-view-runtime-dto-authority-parent.yaml`
+  - run story-review for the TYP-006 parent story set
   - run `corepack pnpm run stories:validate`
 repo_rules:
   - do not packetize this parent as an active implementation story

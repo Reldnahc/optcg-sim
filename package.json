@@ -14,7 +14,6 @@
     "contracts:validate-effects": "node --experimental-strip-types tools/validate-effect-dsl-fixtures.ts",
     "contracts:validate-db-schema": "node --experimental-strip-types tools/validate-database-schema.ts",
     "stories:validate": "node --experimental-strip-types tools/validate-stories.ts",
-    "stories:review-plan": "node --experimental-strip-types tools/story-review-plan.ts",
     "specs:generate-metadata": "node --experimental-strip-types tools/spec-metadata.ts generate",
     "specs:verify-metadata": "node --experimental-strip-types tools/spec-metadata.ts verify",
     "types:sync:write": "node --experimental-strip-types tools/sync-package-types.ts write",

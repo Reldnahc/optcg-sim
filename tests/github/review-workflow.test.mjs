@@ -611,6 +611,9 @@ test("workflow procedure docs preserve required story and review gates", async (
 
   assertMatchesAll(storyExecution, [
     /Generated or normalized stories must receive story-review agent review/i,
+    /Approval-ready means the parent story and every child story have usable story-review evidence/i,
+    /Every parent story and every substory must be reviewed/i,
+    /Do not collapse child review into only a parent-level review/i,
     /If no usable story-review agent run exists, do not present the story as approval-ready/i,
     /active\.json` may contain zero active stories or exactly one active story/i,
     /pnpm run packets:generate --story <stories\/approved\/\.\.\.yaml> --activate/i,
@@ -638,59 +641,6 @@ test("workflow procedure docs preserve required story and review gates", async (
   ]);
 });
 
-test("story workflow requires review-plan tooling before story-review assignment", async () => {
-  const agents = await readActiveText("AGENTS.md");
-  const storyExecution = await readActiveText(
-    "docs/workflow/story-execution.md",
-  );
-  const parentBranches = await readActiveText(
-    "docs/workflow/parent-integration-branches.md",
-  );
-  const workflowGuidance = `${agents}\n${storyExecution}\n${parentBranches}`;
-  const storyWorkflow = await readActiveText(
-    "specs/27-spec-driven-story-generation-workflow.md",
-  );
-  const codexSpec = await readActiveText("specs/32-codex-agent-integration.md");
-
-  assertMatchesAll(workflowGuidance, [
-    /corepack pnpm run stories:review-plan -- --parent <stories\/(?:generated|approved)\/\.\.\.yaml>/i,
-    /pre-presentation story-review gate/i,
-    /Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready/i,
-    /Approval-ready means the parent story set has a usable tool-selected story-review result, and material findings for that parent story set are fixed, explicitly deferred, or recorded/i,
-    /Do not decide manually between single-story, set-level, per-story, or parent\/substory story-review paths/i,
-    /A parent with exactly one child is still a valid parent\/substory story set/i,
-    /Story-review agent model: `gpt-5\.5` with `high` reasoning/i,
-    /Spawn exactly the review assignments returned by the tool/i,
-    /story-review agents review story authority and decomposition, not implementation patches/i,
-    /If no usable story-review agent run exists, do not present the story as approval-ready; present it as unreviewed and blocked on story review/i,
-    /implementation patch review remains a separate gate/i,
-  ]);
-
-  assertMatchesAll(storyWorkflow, [
-    /run `corepack pnpm run stories:review-plan -- --parent <stories\/(?:generated|approved)\/\.\.\.yaml>`/i,
-    /pre-presentation story-review gate/i,
-    /approval-ready means the parent story set has a usable tool-selected story-review result/i,
-    /do not manually choose among single-story, set-level, per-story, or parent\/substory story-review paths/i,
-    /spawn exactly the review assignments returned by the tool/i,
-    /a parent with exactly one child is valid and still uses the parent\/substory flow/i,
-    /story-review findings must be fixed, explicitly deferred, or recorded before presentation/i,
-    /do not present a story as approval-ready when no usable story-review agent run exists; present it as unreviewed and blocked on story review instead/i,
-    /story-review agent uses gpt-5\.5 with high reasoning/i,
-  ]);
-
-  assertMatchesAll(codexSpec, [
-    /run `corepack pnpm run stories:review-plan -- --parent <stories\/(?:generated|approved)\/\.\.\.yaml>`/i,
-    /story-review subagents reviewing generated or normalized stories before human approval/i,
-    /approval-ready means the parent story set has a usable tool-selected story-review result/i,
-    /Do not manually choose among single-story, set-level, per-story, or parent\/substory story-review paths/i,
-    /Spawn exactly the review assignments returned by that tool/i,
-    /A parent with exactly one child is valid and still uses the parent\/substory flow/i,
-    /story-review agent model is gpt-5\.5 with high reasoning/i,
-    /story-review agents are separate from implementation reviewer subagents/i,
-    /The parent agent must not present stories as approval-ready until the story-review findings are resolved, explicitly deferred, or recorded/i,
-  ]);
-});
-
 test("workflow docs require parent story-set review-status matrices before handoffs", async () => {
   const storyExecution = await readActiveText(
     "docs/workflow/story-execution.md",
@@ -705,31 +655,36 @@ test("workflow docs require parent story-set review-status matrices before hando
     /parent story sets?[\s\S]*compact story-set review-status matrix/i,
     /before approval handoff, child activation, packet generation, and parent PR handoff/i,
     /reconstruct[\s\S]*durable story-review outputs, story files, PR comments, or recorded blockers/i,
+    /one row for the parent story and one row for every child story/i,
+    /parent-level row does not satisfy any child-story row/i,
     /do not use chat memory/i,
-    /columns?:?[\s\S]*parent story id[\s\S]*child story ids[\s\S]*story paths[\s\S]*review assignment id[\s\S]*review status[\s\S]*review artifact or blocker reference[\s\S]*disposition summary/i,
-    /allowed review types?:?[\s\S]*tool-selected parent-story-set[\s\S]*not-applicable/i,
+    /columns?:?[\s\S]*story id[\s\S]*parent story id[\s\S]*child story id[\s\S]*story paths[\s\S]*review assignment id[\s\S]*review status[\s\S]*review artifact or blocker reference[\s\S]*disposition summary/i,
+    /allowed review types?:?[\s\S]*parent-story[\s\S]*child-story[\s\S]*not-applicable/i,
     /allowed review statuses?:?[\s\S]*pending[\s\S]*approval-ready[\s\S]*needs-revision[\s\S]*blocked[\s\S]*not-applicable/i,
-    /fail closed when the tool-selected parent-story-set review is unknown or pending/i,
+    /fail closed when the parent-story review is unknown or pending/i,
+    /fail closed when any child-story review is missing, unknown, or pending/i,
     /fail closed when status cannot be reconstructed from durable artifacts/i,
     /lost chat context is not a reason to rerun review blindly/i,
     /reconstruct first and report uncertainty if reconstruction fails/i,
     /orchestration aid and PR\/review handoff artifact, not a new mutable current-status file and not a second authority over story files/i,
     /single-child parent story sets are still parent\/substory workflows/i,
-    /if broad mechanical validation of PR comments or story-review artifacts would be needed, run the review-plan tool first and record a follow-up recommendation instead of widening the patch/i,
   ]);
 
   assertMatchesAll(reviewGate, [
     /parent\/substory workflows/i,
     /story-set review-status matrix/i,
     /PR opening or PR handoff/i,
-    /fail closed on unknown or pending tool-selected parent-story-set review/i,
+    /fail closed when the parent-story review is unknown or pending/i,
+    /any child-story review is missing, unknown, or pending/i,
   ]);
 
   assertMatchesAll(parentBranches, [
     /before handing off the parent PR/i,
     /compact story-set review-status matrix/i,
+    /matrix must include the parent story and every child story/i,
     /durable artifacts \(story-review outputs, story files, PR comments, recorded blockers\)/i,
-    /fail closed if the tool-selected parent-story-set review status is unknown or pending/i,
+    /fail closed if the parent-story review is unknown or pending/i,
+    /any child-story review is missing, unknown, or pending/i,
   ]);
 });
 
@@ -747,7 +702,7 @@ test("workflow docs define parent-substory-only hierarchy and removed role bound
   assertMatchesAll(workflowGuidance, [
     /Human -> Session Orchestrator -> story-review -> \(implementation, code-review\)/i,
     /Only the Session Orchestrator interacts directly with the human for story scope and approval decisions/i,
-    /Session Orchestrator runs `corepack pnpm run stories:review-plan -- --parent <stories\/(?:generated|approved)\/\.\.\.yaml>` and owns story-review assignment/i,
+    /Session Orchestrator owns story-review assignment/i,
     /Session Orchestrator owns child activation, packet freshness, implementation assignment, review assignment, PR evidence, cleanup metadata validation, human-review handoff, merge readiness, and post-merge cleanup confirmation/i,
     /Parent\/substory execution is the only story workflow path/i,
     /A story with one child still uses the parent\/substory workflow/i,

@@ -59,7 +59,7 @@ acceptance_criteria:
   - unsupported or unknown payload shapes project empty or minimal safe payloads
   - hidden-information safety is preserved and verified
 required_tests:
-  - tool-selected parent story-set review before approval
+  - parent story-set review before approval
   - story-specific tests from ENG-054A
 repo_rules:
   - do not implement ENG-054 directly

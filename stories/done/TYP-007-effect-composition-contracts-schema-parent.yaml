@@ -98,7 +98,7 @@ acceptance_criteria:
   - no runtime behavior beyond explicitly scoped public PlayerView projection shape adaptation, parser certification, or card generated-support behavior is introduced by this series
   - ENG-055 and CARD-014 dependencies on TYP-007 outputs are explicit
 required_tests:
-  - run `corepack pnpm run stories:review-plan -- --parent stories/generated/TYP-007-effect-composition-contracts-schema-parent.yaml`
+  - run story-review for the TYP-007 parent story set
   - run `corepack pnpm run stories:validate`
 repo_rules:
   - use the parent/substory workflow

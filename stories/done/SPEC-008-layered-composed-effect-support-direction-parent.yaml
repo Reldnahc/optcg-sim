@@ -87,7 +87,7 @@ acceptance_criteria:
   - generic execution frames and saved references have spec authority before ENG implementation stories
   - story-review confirms later implementation handoffs can cite the new or updated spec sections
 required_tests:
-  - run `corepack pnpm run stories:review-plan -- --parent stories/approved/SPEC-008-layered-composed-effect-support-direction-parent.yaml`
+  - run story-review for the SPEC-008 parent story set
   - run `corepack pnpm run stories:validate`
 repo_rules:
   - use the parent/substory workflow

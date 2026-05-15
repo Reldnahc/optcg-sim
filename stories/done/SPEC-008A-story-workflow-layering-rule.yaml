@@ -46,7 +46,7 @@ scope:
   - "create workflow authority that TYP-prefixed contract/schema implementation stories use `area: contracts`, not `area: types`, even while the story schema still permits legacy `types` area values"
   - clarify that CARD stories may depend on completed TYP/ENG parent series but must not hide runtime work
   - record that already-generated downstream TYP/ENG/CARD implementation story sets must be revised or regenerated after SPEC-008 authority lands before approval handoff
-  - preserve existing parent/substory workflow, story-review planning, active packet, and packet lifecycle rules
+  - preserve existing parent/substory workflow, story-review, active packet, and packet lifecycle rules
   - update generated spec metadata
 non_scope:
   - changing story schema validation behavior
@@ -72,6 +72,6 @@ required_tests:
 repo_rules:
   - do not broaden this story into implementation-story rewriting
   - do not approve downstream generated TYP/ENG/CARD implementation story sets until they are aligned to the landed layered workflow authority
-  - preserve story-review planning as the authority for reviewer assignment shape
+  - preserve story-review as required reviewer-assignment evidence
   - fail closed on workflow ambiguity
 ambiguity_policy: fail_and_escalate

@@ -51,7 +51,7 @@ acceptance_criteria:
   - optional replacement decline remains accepted and mandatory decline or missing replacement remains rejected
   - wrong-player responses still fail closed
 required_tests:
-  - story-review for the ENG-052 parent story set using `corepack pnpm run stories:review-plan -- --parent stories/generated/ENG-052-choose-replacement-response-contract-parent.yaml`
+  - story-review for the ENG-052 parent story set
   - story-specific tests from ENG-052A
   - full `corepack pnpm verify` on the child PR
 repo_rules:
