@@ -1,0 +1,56 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-053B
+epic_id: INF-053
+title: Require human merge-gate review and fix story link wording
+type: refactor
+area: docs
+primary_concern: docs
+priority: critical
+status: approved
+summary: >
+  Make protected/default-branch human review mandatory before merge and replace
+  stale issue-link wording with approved-story-file linkage plus synced issue
+  linkage when a synced issue exists.
+story_boundary: >
+  Own only human merge-gate and story-link wording in review guidance, Codex
+  integration spec, PR template, and workflow tests. Do not change cleanup
+  metadata syntax, branch protection settings, or product behavior.
+allowed_touch_points:
+  - docs/workflow/review-gate.md
+  - specs/32-codex-agent-integration.md
+  - .github/pull_request_template.md
+  - tests/github/review-workflow.test.mjs
+spec_refs:
+  - 23-repo-tooling-and-enforcement.s016
+  - 27-spec-driven-story-generation-workflow.s015
+  - 31-github-board-and-story-ops.s002
+  - 31-github-board-and-story-ops.s004
+  - 32-codex-agent-integration.s008
+  - 32-codex-agent-integration.s010
+  - 32-codex-agent-integration.s013
+dependencies:
+  - INF-053A
+scope:
+  - state that protected/default-branch PRs require human review before merge
+  - clarify that gameplay, policy-sensitive, and architecture-sensitive changes are higher-risk review focus, not the only human-review cases
+  - replace stale pull-request link wording with approved story file linkage and synced issue linkage when an issue exists
+  - update workflow tests for mandatory human review and story-link wording
+non_scope:
+  - changing GitHub branch protection automation
+  - changing cleanup metadata parser behavior
+  - removing AI review or reviewer-subagent review
+acceptance_criteria:
+  - review guidance requires human review before protected/default-branch merge
+  - higher-risk categories are described as review focus rather than the only human-review cases
+  - Codex integration spec says PRs link the approved story file and synced issue when one exists
+  - PR template and tests align with the new story-link wording
+required_tests:
+  - run `corepack pnpm run test -- tests/github/review-workflow.test.mjs`
+  - run `corepack pnpm run specs:verify-metadata`
+  - run `corepack pnpm verify`, or record why unavailable
+repo_rules:
+  - stay inside the listed touch points
+  - do not weaken reviewer-subagent review, cleanup metadata validation, or human review
+ambiguity_policy: fail_and_escalate

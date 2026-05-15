@@ -103,14 +103,7 @@
     },
     "status": {
       "type": "string",
-      "enum": [
-        "generated",
-        "approved",
-        "in_progress",
-        "blocked",
-        "done",
-        "replaced"
-      ]
+      "enum": ["generated", "approved", "blocked", "done", "replaced"]
     },
     "summary": {
       "type": "string",

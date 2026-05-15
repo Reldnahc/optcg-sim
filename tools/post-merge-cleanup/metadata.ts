@@ -223,11 +223,25 @@ type MetadataSourceCandidate = {
   sourceRef: string;
 };
 
+export type WorkflowCleanupEvidenceBundle = {
+  evidence: CleanupEvidenceInput;
+  metadata: CleanupMetadata;
+  metadataSource: string;
+  metadataSourceRef: string;
+};
+
 export function buildWorkflowCleanupEvidence(
   input: WorkflowCleanupEvidenceInput,
 ): CleanupEvidenceInput {
+  return buildWorkflowCleanupEvidenceBundle(input).evidence;
+}
+
+export function buildWorkflowCleanupEvidenceBundle(
+  input: WorkflowCleanupEvidenceInput,
+): WorkflowCleanupEvidenceBundle {
   const candidates = buildMetadataSourceCandidates(input, {
     prBodyUpdatedAt: input.pullRequest.mergedAt,
+    reportMalformed: true,
   });
   const reviewEvidence = buildReviewEvidence(input, candidates);
 
@@ -286,7 +300,12 @@ export function buildWorkflowCleanupEvidence(
     });
   }
 
-  return evidence;
+  return {
+    evidence,
+    metadata: selected.metadata,
+    metadataSource: selected.body,
+    metadataSourceRef: selected.sourceRef,
+  };
 }
 
 export function validateWorkflowCleanupMetadataGuard(

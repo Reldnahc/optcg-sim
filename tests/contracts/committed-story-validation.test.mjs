@@ -200,6 +200,21 @@ test("committed story validator rejects unsupported story schema versions", asyn
   );
 });
 
+test("committed story validator rejects in-progress story files", async () => {
+  const tempRoot = await makeTempRepo();
+  await writeStory(tempRoot, "stories/approved/TST-001-in-progress.yaml", {
+    status: "in_progress",
+  });
+
+  const result = await validateCommittedStories({ repoRoot: tempRoot });
+
+  assert.equal(result.ok, false);
+  assert.match(
+    result.diagnostics.join("\n"),
+    /stories\/approved\/TST-001-in-progress\.yaml: \/status must be equal to one of the allowed values/,
+  );
+});
+
 test("committed story validator accepts blocked-story lifecycle metadata", async () => {
   const tempRoot = await makeTempRepo();
   await writeStory(tempRoot, "stories/blocked/TST-001-blocked-story.yaml", {

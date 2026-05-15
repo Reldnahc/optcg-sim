@@ -35,11 +35,10 @@ jobs:
       - name: Install dependencies
         run: corepack pnpm install --frozen-lockfile
 
-      - name: Build cleanup evidence
+      - name: Write cleanup workflow input
         uses: actions/github-script@v7
         with:
           script: |
-            const crypto = require("node:crypto");
             const fs = require("node:fs");
 
             const pr = context.payload.pull_request;
@@ -53,7 +52,6 @@ jobs:
               pull_number: pr.number,
               repo: context.repo.repo,
             });
-            const changedFiles = files.map((file) => file.filename);
 
             const comments = await github.paginate(github.rest.issues.listComments, {
               issue_number: pr.number,
@@ -65,276 +63,45 @@ jobs:
               pull_number: pr.number,
               repo: context.repo.repo,
             });
-            const hash = (source) => crypto.createHash("sha256").update(source).digest("hex");
-            const storyIdFromPath = (storyPath) => {
-              const match = storyPath.match(/^stories\/approved\/([A-Z][A-Z0-9]*-\d{3}[A-Z]?)-[^/]+\.yaml$/);
-              if (!match) {
-                throw new Error(`Cannot derive story id from cleanup path: ${storyPath}.`);
-              }
-              return match[1];
-            };
-            const parseMetadata = (source) => {
-              const lines = source.replace(/\r\n/g, "\n").split("\n");
-              let mode = null;
-              const stories = [];
-              const branches = [];
-              let activeList = null;
-              let found = false;
-              for (let index = 0; index < lines.length; index += 1) {
-                if (lines[index].trim() !== "Post-merge cleanup:") {
-                  continue;
-                }
-                if (found) {
-                  throw new Error("Ambiguous Post-merge cleanup metadata block; expected exactly one.");
-                }
-                found = true;
-                for (let offset = index + 1; offset < lines.length; offset += 1) {
-                  const line = lines[offset];
-                  if (!line.startsWith("  ") && line.trim() !== "") {
-                    break;
-                  }
-                  const modeMatch = line.match(/^ {2}mode:\s*(single|parent)\s*$/);
-                  if (modeMatch) {
-                    mode = modeMatch[1];
-                    activeList = null;
-                    continue;
-                  }
-                  if (line === "  stories:") {
-                    activeList = "stories";
-                    continue;
-                  }
-                  if (line === "  branches:") {
-                    activeList = "branches";
-                    continue;
-                  }
-                  const itemMatch = line.match(/^ {4}-\s+(.+)\s*$/);
-                  if (itemMatch && activeList === "stories") {
-                    stories.push(itemMatch[1].trim());
-                    continue;
-                  }
-                  if (itemMatch && activeList === "branches") {
-                    branches.push(itemMatch[1].trim());
-                    continue;
-                  }
-                  if (line.trim() !== "") {
-                    throw new Error(`Malformed cleanup metadata line: ${line}`);
-                  }
-                }
-              }
-              if (!found) {
-                return null;
-              }
-              if (!mode || stories.length === 0) {
-                throw new Error("Malformed cleanup metadata: missing mode or stories.");
-              }
-              return { branches, mode, stories };
-            };
-            const candidates = [];
-            const addCandidate = ({ source, kind, sourceId, updatedAt, durable }) => {
-              if (!source || source.trim() === "") {
-                return;
-              }
-              const metadata = parseMetadata(source);
-              if (!metadata) {
-                return;
-              }
-              const contentSha256 = hash(source);
-              candidates.push({
-                metadata,
-                source,
-                sourceEvidence: {
-                  contentSha256,
-                  ...(durable === undefined ? {} : { durable }),
-                  kind,
-                  sourceId,
-                  updatedAt: new Date(updatedAt).toISOString(),
-                },
-                sourceRef: `${kind}:${sourceId}:${contentSha256}`,
-              });
-            };
-            addCandidate({
-              kind: "pr-body",
-              source: pr.body || "",
-              sourceId: `pr-${pr.number}-body`,
-              updatedAt: pr.merged_at,
-            });
-            for (const comment of comments) {
-              const source = comment.body || "";
-              if (!source.trimStart().startsWith("Post-merge cleanup:")) {
-                continue;
-              }
-              addCandidate({
-                durable: true,
-                kind: "handoff-comment",
-                source,
-                sourceId: String(comment.id),
-                updatedAt: comment.updated_at,
-              });
-            }
-            const sourceRefsInBody = (body) => candidates
-              .filter((candidate) => body && body.includes(candidate.sourceRef))
-              .map((candidate) => candidate.sourceRef);
-            const reviewEvidence = [{
-              decision: "merged",
-              id: `merge-actor-${pr.number}`,
-              isMergeGate: pr.merged === true,
-              reviewerKind: context.payload.sender?.type === "Bot" ? "bot" : "human",
-              sourceRefs: [],
-              submittedAt: new Date(pr.merged_at).toISOString(),
-            }, ...reviews.map((review) => ({
-              decision: review.state === "APPROVED" ? "approved" : review.state.toLowerCase(),
-              id: String(review.id),
-              isMergeGate: review.state === "APPROVED",
-              reviewerKind: review.user?.type === "Bot" ? "bot" : "human",
-              sourceRefs: sourceRefsInBody(review.body || ""),
-              submittedAt: new Date(review.submitted_at).toISOString(),
-            }))];
-            for (const comment of comments) {
-              if (!comment.body || !comment.body.includes("## Equivalent Human Review Fallback")) {
-                continue;
-              }
-              const hasStrictFallbackCleanupApproval =
-                /^- Fallback human reviewer:\s*\S.+$/m.test(comment.body) &&
-                /^- Cleanup metadata source reviewed before fallback approval:\s*\S.+$/m.test(comment.body);
-              if (!hasStrictFallbackCleanupApproval) {
-                continue;
-              }
-              reviewEvidence.push({
-                decision: "fallback-approved",
-                id: `fallback-comment-${comment.id}`,
-                isMergeGate: true,
-                reviewerKind: "human",
-                sourceRefs: sourceRefsInBody(comment.body || ""),
-                submittedAt: new Date(comment.updated_at).toISOString(),
-              });
-            }
-            if (candidates.length !== 1) {
-              throw new Error("Expected exactly one cleanup metadata source from the PR body or a durable handoff comment.");
-            }
-            const selected = candidates[0];
-            const metadataReview = reviewEvidence
-              .filter((review) =>
-                review.reviewerKind === "human" &&
-                review.isMergeGate &&
-                ["fallback-approved", "merged"].includes(review.decision) &&
-                Date.parse(review.submittedAt) <= Date.parse(pr.merged_at)
-              )
-              .sort((left, right) => left.submittedAt.localeCompare(right.submittedAt))
-              .at(-1);
-            if (!metadataReview) {
-              throw new Error("Missing human merge-gate cleanup approval.");
-            }
-            if (Date.parse(selected.sourceEvidence.updatedAt) > Date.parse(pr.merged_at)) {
-              throw new Error("Cleanup metadata source changed after merge.");
-            }
-            if (metadataReview.decision !== "merged" && Date.parse(selected.sourceEvidence.updatedAt) > Date.parse(metadataReview.submittedAt)) {
-              throw new Error("Cleanup metadata source changed after fallback review.");
-            }
-            const storyPaths = selected.metadata.stories.map((storyPath) => ({
-              storyId: storyIdFromPath(storyPath),
-              storyPath,
-            }));
-            const stories = storyPaths.map((story) => ({
-              packetPath: `agent-packets/${story.storyId}.md`,
-              storyId: story.storyId,
-              storyPath: story.storyPath,
-            }));
-            const buildParentLifecycle = () => {
-              const evidenceSources = [
-                {
-                  body: selected.source || "",
-                  updatedAt: selected.sourceEvidence.updatedAt,
-                },
-              ];
-              const findScalar = (pattern) => {
-                let latest = null;
-                for (const source of evidenceSources) {
-                  const value = source.body.match(pattern)?.[1];
-                  if (value) {
-                    const updatedAt = new Date(source.updatedAt).toISOString();
-                    if (!latest || Date.parse(updatedAt) > Date.parse(latest.updatedAt)) {
-                      latest = { updatedAt, value };
-                    }
-                  }
-                }
-                return latest;
-              };
-              const parentReview = findScalar(/^Parent integration AI review record:\s*(\S+)\s*$/m);
-              const parentRevision = findScalar(/^Parent revision response:\s*(\S+)\s*$/m);
-              if (!parentReview || !parentRevision) {
-                throw new Error("Parent cleanup evidence is missing integration review or revision response.");
-              }
-              const substoryRecords = new Map();
-              const substoryPattern = /^Substory commit evidence:\s*\n {2}story:\s*(stories\/approved\/[^\s]+\.yaml)\s*\n {2}commit:\s*([0-9a-f]{40})\s*\n {2}ai_review_record:\s*(\S+)\s*\n {2}revision_response:\s*(\S+)\s*\n {2}verification:\s*(\S+)\s*$/gim;
-              for (const source of evidenceSources) {
-                for (const match of source.body.matchAll(substoryPattern)) {
-                  const updatedAt = new Date(source.updatedAt).toISOString();
-                  const storyPath = match[1];
-                  const previous = substoryRecords.get(storyPath);
-                  if (previous) {
-                    throw new Error(`Duplicate durable substory commit evidence for ${storyPath}.`);
-                  }
-                  substoryRecords.set(storyPath, {
-                    substoryAiReviewRecordId: match[3],
-                    substoryCommitSha: String(match[2]).toLowerCase(),
-                    substoryRevisionResponseId: match[4],
-                    substoryVerificationEvidence: match[5],
-                    updatedAt,
-                  });
-                }
-              }
-              const lifecycleUpdatedAtValues = [
-                parentReview.updatedAt,
-                parentRevision.updatedAt,
-              ];
-              const includedStories = stories.map((story) => {
-                const record = substoryRecords.get(story.storyPath);
-                if (!record) {
-                  throw new Error(`Missing durable substory commit review evidence for ${story.storyPath}.`);
-                }
-                lifecycleUpdatedAtValues.push(record.updatedAt);
-                return {
-                  packetPath: story.packetPath,
-                  storyId: story.storyId,
-                  storyPath: story.storyPath,
-                  substoryAiReviewRecordId: record.substoryAiReviewRecordId,
-                  substoryCommitSha: record.substoryCommitSha,
-                  substoryRevisionResponseId: record.substoryRevisionResponseId,
-                  substoryVerificationEvidence: record.substoryVerificationEvidence,
-                };
-              });
-              const cleanupPlanRecordedAt = new Date(
-                Math.max(...lifecycleUpdatedAtValues.map((value) => Date.parse(value))),
-              ).toISOString();
-              if (Date.parse(cleanupPlanRecordedAt) > Date.parse(metadataReview.submittedAt)) {
-                throw new Error("Parent lifecycle evidence changed after required review point.");
-              }
-              return {
-                cleanupPlanRecordedAt,
-                includedStories,
-                parentIntegrationReviewRecordId: parentReview.value,
-                parentRevisionResponseId: parentRevision.value,
-              };
-            };
-            fs.writeFileSync("cleanup-metadata.md", selected.source);
-            core.info(`Reviewed cleanup metadata source ref: ${selected.sourceRef}`);
 
-            const evidence = {
-              baseBranch: pr.base.ref,
-              changedFiles,
+            fs.writeFileSync("cleanup-workflow-input.json", `${JSON.stringify({
+              changedFiles: files.map((file) => ({ filename: file.filename })),
               defaultBranch: context.payload.repository.default_branch,
-              mergeSha: pr.merge_commit_sha,
-              merged: pr.merged === true,
-              mergedAt: new Date(pr.merged_at).toISOString(),
-              metadataSource: selected.sourceEvidence,
-              metadataSourceRef: selected.sourceRef,
-              prNumber: pr.number,
-              reviews: reviewEvidence,
-              stories,
-              ...(selected.metadata.mode === "parent" ? { parentLifecycle: buildParentLifecycle() } : {}),
-            };
+              eventSenderUserType: context.payload.sender?.type,
+              issueComments: comments.map((comment) => ({
+                authorAssociation: comment.author_association,
+                body: comment.body || "",
+                createdAt: comment.created_at,
+                id: comment.id,
+                updatedAt: comment.updated_at,
+                userType: comment.user?.type || "",
+              })),
+              pullRequest: {
+                baseRef: pr.base.ref,
+                body: pr.body || "",
+                createdAt: pr.created_at,
+                headRef: pr.head.ref,
+                mergeCommitSha: pr.merge_commit_sha,
+                merged: pr.merged === true,
+                mergedAt: pr.merged_at,
+                number: pr.number,
+                updatedAt: pr.updated_at,
+              },
+              reviews: reviews.map((review) => ({
+                body: review.body || "",
+                id: review.id,
+                state: review.state,
+                submittedAt: review.submitted_at,
+                userType: review.user?.type || "",
+              })),
+            }, null, 2)}\n`);
 
-            fs.writeFileSync("cleanup-evidence.json", `${JSON.stringify(evidence, null, 2)}\n`);
+      - name: Build cleanup evidence
+        run: >
+          node --experimental-strip-types tools/post-merge-cleanup.ts
+          --workflow-evidence-json-file cleanup-workflow-input.json
+          --metadata-source-output-file cleanup-metadata.md
+          --evidence-json-output-file cleanup-evidence.json
 
       - name: Validate cleanup metadata and write preflight plan
         run: >

@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-053I.md",
+      "storyId": "INF-053I",
+      "storyPath": "stories/approved/INF-053I-deduplicate-post-merge-cleanup-parser.yaml",
+      "storySha256": "d39ef1e368e54e4673eb3b313461b9e613554d9f17e572db3aa5ad646033646d"
+    }
+  ],
   "version": 1
 }

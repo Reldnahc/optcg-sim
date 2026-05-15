@@ -172,15 +172,23 @@ test("ci workflow runs the canonical root commands and publishes coverage", asyn
   assert.match(workflow, /coverage-artifact/);
 });
 
-test("post-merge cleanup workflow uses merged_at for PR body metadata source freshness", async () => {
+test("post-merge cleanup workflow delegates cleanup evidence construction to checked-in tooling", async () => {
   const workflow = await readText(
     ".github/workflows/post-merge-packet-cleanup.yml",
   );
-  const prBodyCandidate = workflow.match(
-    /addCandidate\(\{\s*kind: "pr-body",[\s\S]*?\}\);/,
-  );
 
-  assert.ok(prBodyCandidate, "missing PR-body cleanup metadata candidate");
-  assert.match(prBodyCandidate[0], /updatedAt:\s*pr\.merged_at/);
-  assert.doesNotMatch(prBodyCandidate[0], /updatedAt:\s*pr\.updated_at/);
+  assert.match(workflow, /cleanup-workflow-input\.json/);
+  assert.match(
+    workflow,
+    /--workflow-evidence-json-file cleanup-workflow-input\.json/,
+  );
+  assert.match(workflow, /--metadata-source-output-file cleanup-metadata\.md/);
+  assert.match(workflow, /--evidence-json-output-file cleanup-evidence\.json/);
+  assert.match(workflow, /authorAssociation:\s*comment\.author_association/);
+  assert.match(workflow, /mergedAt:\s*pr\.merged_at/);
+  assert.doesNotMatch(workflow, /mergedAt:\s*pr\.updated_at/);
+  assert.doesNotMatch(workflow, /const parseMetadata =/);
+  assert.doesNotMatch(workflow, /const buildParentLifecycle =/);
+  assert.doesNotMatch(workflow, /const sourceRefsInBody =/);
+  assert.doesNotMatch(workflow, /const storyIdFromPath =/);
 });

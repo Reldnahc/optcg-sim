@@ -1,7 +1,8 @@
 ## Approved Story
 
 - Story ID:
-- Story file:
+- Approved story file:
+- Synced issue, if one exists:
 
 ## Spec Refs
 
@@ -25,7 +26,9 @@ Cleanup metadata is a reviewed request, not standalone authority.
 
 - [ ] PR author left exactly one `Post-merge cleanup:` metadata source in the PR body or a durable handoff comment before review handoff.
 - [ ] Cleanup metadata uses the exact source shape below: no markdown fence and no `cleanup:` wrapper.
-- [ ] Cleanup metadata handoff preflight was run against the actual current PR body or selected durable handoff comment, fetched changed files, and fetched PR head branch, not a copied example or reconstructed local text.
+- [ ] Remote `cleanup-metadata-guard` validates cleanup metadata source and shape from the PR body or durable handoff comments; the remote guard does not by itself prove full reviewed-scope binding.
+- [ ] Full cleanup metadata handoff preflight was run against the actual current PR body or selected durable handoff comment, fetched changed files, fetched PR head branch, fetched status checks, and reviewed PR evidence, not a copied example or reconstructed local text.
+- [ ] Full cleanup metadata handoff preflight binds the fetched changed files, fetched PR head branch, fetched status checks, and reviewed PR evidence before reviewer handoff, human review request, or ready-for-human-review language.
 - [ ] `cleanup-metadata-guard` is present and passing before human review is requested.
 - [ ] Reviewers confirm this metadata matches the reviewed story scope before merge.
 - [ ] The human-controlled merge to `main` authorizes the cleanup metadata snapshot; the workflow computes the metadata source ref for audit.
@@ -43,7 +46,16 @@ Post-merge cleanup:
   branches:
     - <head-branch>
 
-Parent PRs list one or more child story paths: use parent mode for parent/substory PRs, including one-child parent PRs.
+Parent PRs list one or more child story paths: use parent mode for the parent integration PR, including one-child parent PRs. The normal parent/substory workflow uses only the parent integration branch; substory branch cleanup is exceptional and must be tied to legacy or explicitly approved exceptional branch evidence.
+
+Post-merge cleanup:
+  mode: parent
+  stories:
+    - stories/approved/<CHILD-STORY>.yaml
+  branches:
+    - <parent-integration-branch>
+
+Exceptional or legacy substory branch cleanup only: add a reviewed non-head substory branch entry only when the parent handoff includes explicit evidence for that exceptional branch.
 
 Post-merge cleanup:
   mode: parent
@@ -67,7 +79,7 @@ Post-merge cleanup:
 - Parent/orchestrator model: `gpt-5.5`
 - Implementation worker model and reasoning: `<gpt-5.3-codex medium>`
 - Reviewer model and reasoning: `gpt-5.4 high`
-- Model-routing deviations:
+- Model-routing deviations and rationale:
 - Parent-agent orchestration note:
 - Review path used: `<reviewer subagent | native PR review artifact | equivalent human review fallback>`
 - Reviewer subagent reference or review surface:

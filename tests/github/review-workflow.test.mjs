@@ -15,8 +15,7 @@ async function readText(relativePath) {
 }
 
 async function readActiveText(relativePath) {
-  const text = await readText(relativePath);
-  return text.replace(/<!--[\s\S]*?-->/g, "");
+  return (await readText(relativePath)).replace(/<!--[\s\S]*?-->/g, "");
 }
 
 async function readJson(relativePath) {
@@ -174,6 +173,8 @@ test("pull request template requires story, verification, and subagent review ev
   }
 
   assertMatchesAll(prTemplate, [
+    /Approved story file:/i,
+    /Synced issue, if one exists:/i,
     /pnpm verify/i,
     /AI review completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
     /Separate reviewer subagent run completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
@@ -184,7 +185,7 @@ test("pull request template requires story, verification, and subagent review ev
     /Parent\/orchestrator model: `gpt-5\.5`/i,
     /Implementation worker model and reasoning: `<gpt-5\.3-codex medium>`/i,
     /Reviewer model and reasoning: `gpt-5\.4 high`/i,
-    /Model-routing deviations:/i,
+    /Model-routing deviations and rationale:/i,
     /Parent-agent orchestration note:/i,
     /Review path used: `<reviewer subagent \| native PR review artifact \| equivalent human review fallback>`/i,
     /Reviewer subagent reference or review surface:/i,
@@ -221,7 +222,15 @@ test("pull request template requires story, verification, and subagent review ev
   assert.doesNotMatch(prTemplate, /@codex review/i);
   assert.doesNotMatch(
     prTemplate,
+    /link (?:the )?PR back to (?:the )?story issue/i,
+  );
+  assert.doesNotMatch(
+    prTemplate,
     /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
+  );
+  assert.doesNotMatch(
+    prTemplate,
+    /Implementation worker model and reasoning:[^\n]*gpt-5\.5 medium/i,
   );
 });
 
@@ -229,7 +238,7 @@ test("branch protection guide names the required status checks and subagent revi
   const guide = await readActiveText(".github/branch-protection.md");
 
   assertMatchesAll(guide, [
-    /quality/i,
+    /(?=.*quality)(?=.*protect the default branch \(`main`\))(?=.*`master`[\s\S]*?compatibility-only)/is,
     /test/i,
     /contracts/i,
     /coverage/i,
@@ -240,6 +249,7 @@ test("branch protection guide names the required status checks and subagent revi
     /separate reviewer subagent run before human review is requested when a reviewer-subagent surface is available/i,
     /Parent orchestration runs on gpt-5\.5/i,
     /Implementation worker subagents default to gpt-5\.3-codex medium/i,
+    /Implementation-worker model-routing deviations require recorded rationale in the PR review trail and implementation note/i,
     /Reviewer subagents always use gpt-5\.4 high/i,
     /Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership/i,
     /Parent direct edits are limited to small out-of-band orchestration\/metadata\/template\/reviewer-response corrections outside an approved story implementation body/i,
@@ -274,6 +284,10 @@ test("branch protection guide names the required status checks and subagent revi
     guide,
     /Complex, risky, or integration-heavy implementation stories should escalate to gpt-5\.5 medium/i,
   );
+  assert.doesNotMatch(
+    guide,
+    /(?:implementation worker|implementation stories)[^\n]*gpt-5\.5 medium/i,
+  );
 });
 
 test("branch protection guide documents only the exact packet cleanup bypass", async () => {
@@ -304,6 +318,9 @@ test("branch protection guide documents only the exact packet cleanup bypass", a
 
 test("pull request template declares reviewed post-merge cleanup metadata", async () => {
   const prTemplate = await readActiveText(".github/pull_request_template.md");
+  const normalParentCleanup = prTemplate.match(
+    /Parent PRs list[\s\S]*?Post-merge cleanup:\s*\n(?<block>\s*mode: parent[\s\S]*?)(?:\n\nExceptional or legacy|<!-- prettier-ignore-end -->)/i,
+  )?.groups?.block;
 
   assertMatchesAll(prTemplate, [
     /^## Post-Merge Cleanup$/m,
@@ -312,26 +329,23 @@ test("pull request template declares reviewed post-merge cleanup metadata", asyn
     /The human-controlled merge to `main` authorizes the cleanup metadata snapshot/i,
     /Single-story PRs:/i,
     /Post-merge cleanup:\s*\n\s*mode: single\s*\n\s*stories:\s*\n\s*- stories\/approved\/<STORY-ID>-<slug>\.yaml\s*\n\s*branches:\s*\n\s*- <head-branch>/i,
-    /Parent PRs list one or more child story paths:/i,
-    /Post-merge cleanup:\s*\n\s*mode: parent\s*\n\s*stories:\s*\n\s*- stories\/approved\/<CHILD-STORY>\.yaml\s*\n\s*branches:\s*\n\s*- <parent-integration-branch>\s*\n\s*- <optional-substory-branch>/i,
+    /Exceptional or legacy substory branch cleanup only[\s\S]*<optional-substory-branch>/i,
   ]);
+  assert.match(
+    normalParentCleanup,
+    /mode: parent[\s\S]*stories:\s*\n\s*- stories\/approved\/<CHILD-STORY>\.yaml[\s\S]*branches:\s*\n\s*- <parent-integration-branch>/i,
+  );
   assert.doesNotMatch(
-    prTemplate,
+    normalParentCleanup ?? "",
+    /<optional-substory-branch>|substory-branch/i,
+  );
+  [
     /Confirm the exact cleanup metadata source ref before merge/i,
-  );
-  assert.doesNotMatch(prTemplate, /names the exact `pr-body:/i);
-  assert.doesNotMatch(
-    prTemplate,
+    /names the exact `pr-body:/i,
     /```yaml[\s\S]*Post-merge cleanup:/i,
-    "cleanup metadata examples must not be fenced YAML because the parser expects the exact source block",
-  );
-  assert.doesNotMatch(
-    prTemplate,
     /^cleanup:\s*\n\s*mode:/im,
-    "cleanup metadata examples must not add a cleanup wrapper key",
-  );
+  ].forEach((pattern) => assert.doesNotMatch(prTemplate, pattern));
 });
-
 test("workflow docs latch cleanup metadata handoff to actual PR source and guard status", async () => {
   const agents = await readActiveText("AGENTS.md");
   const storyExecution = await readActiveText(
@@ -356,21 +370,52 @@ test("workflow docs latch cleanup metadata handoff to actual PR source and guard
   ]);
 });
 
-test("workflow docs separate real-card fixture coverage from engine behavior requirements", async () => {
+test("workflow docs distinguish remote cleanup guard proof from full handoff preflight proof", async () => {
+  const agents = await readActiveText("AGENTS.md");
   const storyExecution = await readActiveText(
     "docs/workflow/story-execution.md",
   );
-  const cardFixtureCapture = await readActiveText(
-    "docs/workflow/card-fixture-capture.md",
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
   );
-  const workflowGuidance = `${storyExecution}\n${cardFixtureCapture}`;
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const prTemplate = await readActiveText(".github/pull_request_template.md");
+  const workflow = await readActiveText(
+    ".github/workflows/cleanup-metadata-guard.yml",
+  );
+  const workflowGuidance = `${agents}\n${storyExecution}\n${parentBranches}\n${reviewGate}\n${prTemplate}`;
 
   assertMatchesAll(workflowGuidance, [
+    /remote `cleanup-metadata-guard` validates cleanup metadata source and shape from the PR body or durable handoff comments/i,
+    /remote guard does not by itself prove full reviewed-scope binding/i,
+    /full cleanup metadata handoff preflight binds the fetched changed files, fetched PR head branch, fetched status checks, and reviewed PR evidence/i,
+    /before reviewer handoff, human review request, or ready-for-human-review language/i,
+  ]);
+
+  assertMatchesAll(workflow, [
+    /issueComments:/i,
+    /pullRequest:\s*{\s*body:/i,
+    /--validate-cleanup-handoff-json-file cleanup-guard-input\.json/i,
+  ]);
+  assert.doesNotMatch(workflow, /changedFiles|headBranch|statusChecks/i);
+});
+
+test("workflow docs separate real-card fixture coverage from engine behavior requirements", async () => {
+  const [agents, readme, storyExecution, cardFixtureCapture] =
+    await Promise.all([
+      readActiveText("AGENTS.md"),
+      readActiveText("README.md"),
+      readActiveText("docs/workflow/story-execution.md"),
+      readActiveText("docs/workflow/card-fixture-capture.md"),
+    ]);
+  const workflowGuidance = `${agents}\n${readme}\n${storyExecution}\n${cardFixtureCapture}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /Card fixture capture workflow for relevant CARD\/card-fixture stories: `docs\/workflow\/card-fixture-capture\.md`\. Agents must read it when a story touches fixture capture, CARD source integrity, generated support, overlays, or real-card fixture evidence\.[\s\S]*Mandatory workflow details live here:[\s\S]*docs\/workflow\/card-fixture-capture\.md[\s\S]*is mandatory for relevant CARD\/card-fixture stories[\s\S]*touches fixture capture, CARD source integrity, generated support, overlays,[\s\S]*or real-card fixture evidence\.[\s\S]*For relevant CARD\/card-fixture stories, `docs\/workflow\/card-fixture-capture\.md`[\s\S]*is mandatory workflow guidance\. Agents must read it when a story touches fixture[\s\S]*capture, CARD source integrity, generated support, overlays, or real-card[\s\S]*fixture evidence\./i,
     /real-card and cards-produced fixture coverage is separate integration\/card-data\s+coverage/i,
     /does not replace primitive, unit, regression,\s+synthetic edge-case, fail-closed, hidden-info, event-order, or state-hash\s+coverage/i,
     /engine and rules stories must keep focused synthetic\/unit\/regression tests for\s+behavior requirements/i,
-    /future engine and effect-runtime stories are not required to add real-card\s+fixtures/i,
-    /create a\s+separate CARD\/FIXTURE\/verification follow-up story/i,
+    /future engine and effect-runtime stories are not required to add real-card\s+fixtures[\s\S]*create a\s+separate CARD\/FIXTURE\/verification follow-up story/i,
   ]);
 
   assert.doesNotMatch(
@@ -429,10 +474,10 @@ test("branch protection required status checks exactly match ci workflow jobs", 
   const ciJobNames = extractCiWorkflowJobNames(workflow);
 
   assert.deepEqual(requiredChecks, ciJobNames);
-  assert.equal(
-    requiredChecks.includes("hidden-info"),
-    true,
-    "hidden-info must be documented as a required status check",
+  assert.equal(requiredChecks.includes("hidden-info"), true);
+  assert.match(
+    workflow,
+    /push:\s*\n\s*branches:\s*\n\s*- main\s*\n\s*- master/i,
   );
 });
 
@@ -449,10 +494,10 @@ test("post-merge cleanup preflight workflow is non-privileged and fail-closed", 
     /ref: \$\{\{ github\.event\.repository\.default_branch \}\}/i,
     /persist-credentials: false/i,
     /tools\/post-merge-cleanup\.ts/i,
+    /--workflow-evidence-json-file cleanup-workflow-input\.json/i,
     /--metadata-source-file cleanup-metadata\.md/i,
     /--evidence-json-file cleanup-evidence\.json/i,
     /--preflight-plan-file bound-cleanup-plan\.json/i,
-    /Date\.parse\(review\.submittedAt\) <= Date\.parse\(pr\.merged_at\)/i,
     /uses: actions\/upload-artifact@v4/i,
     /name: bound-cleanup-plan\.json/i,
   ]);
@@ -649,6 +694,8 @@ test("workflow procedure docs preserve required story and review gates", async (
     /equivalent human-review fallback/i,
     /revision response comment/i,
     /Passing AI review does not replace human review/i,
+    /Human review is required before protected or default-branch PRs merge/i,
+    /Gameplay, policy-sensitive, and architecture-sensitive changes are higher-risk review focus/i,
   ]);
 
   assertMatchesAll(parentBranches, [
@@ -757,15 +804,22 @@ test("codex integration spec reflects subagent orchestration instead of cli-firs
     /tiny orchestration glue/i,
     /equivalent human review step/i,
     /before merge/i,
+    /Link the pull request to the approved story file and, when one exists, the synced issue/i,
+    /Human review is required before protected or default-branch PRs merge/i,
+    /Gameplay correctness, policy-sensitive areas, and architecture-sensitive changes are higher-risk review focus/i,
   ]);
-
+  [
+    /Link the pull request back to the story issue/i,
+    /Assign the packet to Codex CLI or Codex cloud/i,
+    /Documentation-only authority edits should be handled by the parent agent directly/i,
+  ].forEach((pattern) => assert.doesNotMatch(codexSpec, pattern));
   assert.doesNotMatch(
     codexSpec,
-    /Assign the packet to Codex CLI or Codex cloud/i,
+    /^(?=[^.\n]*(?:normal|workflow|path))(?=[^.\n]*substory (?:pull requests|PRs))(?![^.\n]*\b(?:no|not|do not|without)\b)[^.\n]*/gim,
   );
   assert.doesNotMatch(
     codexSpec,
-    /Documentation-only authority edits should be handled by the parent agent directly/i,
+    /substory (?:pull requests?|PRs)\s+(?:merge|land|target|open)\b/i,
   );
 });
 

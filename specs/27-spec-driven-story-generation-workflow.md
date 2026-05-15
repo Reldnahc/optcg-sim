@@ -35,7 +35,8 @@ The required planning flow is:
 7. implementation or review agent execution,
 8. validation against the approved story and cited spec.
 
-The repo may automate some or all of these steps, but it must preserve the same authority order.
+The repo may automate some or all of these steps, but it must preserve the
+applicable authority order for each artifact and execution phase.
 
 ## Authority order
 
@@ -43,13 +44,24 @@ The repo may automate some or all of these steps, but it must preserve the same 
 
 Section Ref: `27-spec-driven-story-generation-workflow.s003`
 
-For planning and execution:
+For story planning, packet construction, and generated reports before an
+execution handoff:
 
 1. specification documents,
 2. approved story,
 3. agent packet,
-4. implementation patch,
-5. generated summaries or reports.
+4. generated summaries or reports.
+
+For Codex or implementation execution, use the execution authority order from
+`32-codex-agent-integration.s004` and `AGENTS.md`:
+
+1. cited specification sections,
+2. approved story file,
+3. generated agent packet,
+4. checked-in repo instructions in `AGENTS.md`,
+5. linked workflow procedure documents under `docs/workflow/`,
+6. local code reality,
+7. proposed patch.
 
 If a lower layer conflicts with a higher layer, the higher layer wins.
 

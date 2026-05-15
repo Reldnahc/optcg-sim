@@ -91,6 +91,10 @@ Mandatory workflow details live here:
 - [`docs/workflow/review-gate.md`](docs/workflow/review-gate.md)
 - [`docs/workflow/parent-integration-branches.md`](docs/workflow/parent-integration-branches.md)
 - [`docs/workflow/reporting-and-github-sync.md`](docs/workflow/reporting-and-github-sync.md)
+- [`docs/workflow/card-fixture-capture.md`](docs/workflow/card-fixture-capture.md)
+  is mandatory for relevant CARD/card-fixture stories. Read it when story scope
+  touches fixture capture, CARD source integrity, generated support, overlays,
+  or real-card fixture evidence.
 
 Do not use this README as an active story handoff or PR tracker. The
 authoritative active-story state is `agent-packets/active.json` plus the active

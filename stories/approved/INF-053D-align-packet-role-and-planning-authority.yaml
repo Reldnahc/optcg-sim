@@ -1,0 +1,54 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-053D
+epic_id: INF-053
+title: Align packet role wording and planning authority order
+type: refactor
+area: docs
+primary_concern: docs
+priority: high
+status: approved
+summary: >
+  Remove stale packet role wording and align planning authority prose with the
+  current execution authority order so packet and story-generation specs do not
+  imply obsolete roles or conflicting authority layers.
+story_boundary: >
+  Own only packet-role wording, planning authority-order wording, and focused
+  spec authority tests. Do not change packet renderer behavior unless tests
+  prove current output contradicts the clarified authority.
+allowed_touch_points:
+  - specs/26-agent-packet-template.md
+  - specs/27-spec-driven-story-generation-workflow.md
+  - tests/contracts/spec-authority-gates.test.mjs
+spec_refs:
+  - 26-agent-packet-template.s001
+  - 26-agent-packet-template.s002
+  - 26-agent-packet-template.s005
+  - 26-agent-packet-template.s007
+  - 27-spec-driven-story-generation-workflow.s002
+  - 27-spec-driven-story-generation-workflow.s003
+  - 32-codex-agent-integration.s004
+dependencies:
+  - INF-053C
+scope:
+  - remove or map `verification agent` wording to the current assignable roles of story-review, implementation, and code-review
+  - scope the older short authority order in spec 27 to planning/report artifacts or align it with the current execution authority order
+  - update focused contract tests so obsolete role/authority wording cannot return silently
+non_scope:
+  - changing role packet extraction behavior
+  - adding new assignable roles
+  - changing story approval or packet completion semantics
+acceptance_criteria:
+  - spec 26 no longer names an obsolete assignable verification-agent role without mapping it to current role semantics
+  - spec 27 authority-order wording no longer conflicts with AGENTS/spec 32 execution authority
+  - contract tests cover role wording and authority-order consistency
+required_tests:
+  - run `corepack pnpm run specs:verify-metadata`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm verify`, or record why unavailable
+repo_rules:
+  - stay inside the listed touch points
+  - do not introduce new role names
+  - preserve stable SECTION_REF citations
+ambiguity_policy: fail_and_escalate

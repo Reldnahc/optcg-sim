@@ -48,8 +48,8 @@ For any implementation or review handoff:
 9. Implement the story with its required tests.
 10. Run the story-specific tests and `pnpm verify`.
 11. Open the PR before reviewer-subagent review; in approved parent integration workflows, this is the final parent PR to `main`, while substories are represented by reviewed commit evidence on that parent PR or durable handoff comment.
-12. Run cleanup metadata handoff preflight against the actual current PR body or selected durable handoff comment, fetched changed files, and fetched PR head branch, not a copied example or reconstructed local text; the metadata source must use exact `Post-merge cleanup:` syntax with no markdown fence and no `cleanup:` wrapper.
-13. Confirm the remote `cleanup-metadata-guard` check is present and passing before reviewer handoff or human review request.
+12. Run cleanup metadata handoff preflight against the actual current PR body or selected durable handoff comment, fetched changed files, fetched PR head branch, fetched status checks, and reviewed PR evidence, not a copied example or reconstructed local text; the metadata source must use exact `Post-merge cleanup:` syntax with no markdown fence and no `cleanup:` wrapper.
+13. Confirm the remote `cleanup-metadata-guard` check is present and passing before reviewer handoff or human review request; the remote guard validates cleanup metadata source and shape from the PR body or durable handoff comments, but it does not by itself prove full reviewed-scope binding.
 14. Post the AI review record or equivalent human-review fallback.
 15. Post or update the revision response when reviewer-subagent review was used.
 16. Request human review only after review records and cleanup metadata handoff checks are current.
@@ -64,6 +64,7 @@ The procedure docs below are part of this repo's agent contract. Read the one th
 - PR review, AI review records, fallback review, and human review procedure: `docs/workflow/review-gate.md`
 - Parent integration branch procedure: `docs/workflow/parent-integration-branches.md`
 - Reporting and GitHub/board sync procedure: `docs/workflow/reporting-and-github-sync.md`
+- Card fixture capture workflow for relevant CARD/card-fixture stories: `docs/workflow/card-fixture-capture.md`. Agents must read it when a story touches fixture capture, CARD source integrity, generated support, overlays, or real-card fixture evidence.
 - Code standard and implementation-quality guidance: `docs/code-standard.md`
 
 ## Non-Negotiable Rules

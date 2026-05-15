@@ -1,6 +1,9 @@
 # Branch Protection Baseline
 
-Apply these settings to `main` and `master` once the repository is connected in GitHub.
+Protect the default branch (`main`) once the repository is connected in GitHub.
+Keep the `master` protected-branch and CI push-trigger entries only as
+compatibility-only coverage for legacy repositories or mirrors that still
+publish `master`.
 
 ## Pull Request Reviews
 
@@ -56,6 +59,7 @@ GitHub before relying on post-merge packet cleanup automation.
 - Pull requests should complete a separate reviewer subagent run before human review is requested when a reviewer-subagent surface is available.
 - Parent orchestration runs on gpt-5.5.
 - Implementation worker subagents default to gpt-5.3-codex medium.
+- Implementation-worker model-routing deviations require recorded rationale in the PR review trail and implementation note.
 - Reviewer subagents always use gpt-5.4 high.
 - Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership.
 - Parent direct edits are limited to small out-of-band orchestration/metadata/template/reviewer-response corrections outside an approved story implementation body.
