@@ -182,7 +182,7 @@ test("pull request template requires story, verification, and subagent review ev
     /Reviewer subagent output came from a different agent than the implementing worker, or equivalent human review fallback was recorded/i,
     /Worker subagent reference\(s\):/i,
     /Parent\/orchestrator model: `gpt-5\.5`/i,
-    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium>`/i,
     /Reviewer model and reasoning: `gpt-5\.4 high`/i,
     /Model-routing deviations:/i,
     /Parent-agent orchestration note:/i,
@@ -219,6 +219,10 @@ test("pull request template requires story, verification, and subagent review ev
   assert.doesNotMatch(prTemplate, /codex\.cmd exec review/i);
   assert.doesNotMatch(prTemplate, /Codex CLI review command/i);
   assert.doesNotMatch(prTemplate, /@codex review/i);
+  assert.doesNotMatch(
+    prTemplate,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
+  );
 });
 
 test("branch protection guide names the required status checks and subagent review policy", async () => {
@@ -915,7 +919,7 @@ test("checked-in review comment templates exist for AI findings and revisions", 
     /Parent-agent orchestration note:/i,
     /Worker subagent reference\(s\):/i,
     /Parent\/orchestrator model: `gpt-5\.5`/i,
-    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium>`/i,
     /Reviewer model and reasoning: `gpt-5\.4 high`/i,
     /Model-routing deviations:/i,
     /Reviewer path: <reviewer subagent \| native PR review artifact>/i,
@@ -932,13 +936,17 @@ test("checked-in review comment templates exist for AI findings and revisions", 
 
   assert.doesNotMatch(aiReview, /Codex CLI/i);
   assert.doesNotMatch(aiReview, /@codex review/i);
+  assert.doesNotMatch(
+    aiReview,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
+  );
 
   assertMatchesAll(fallbackReview, [
     /^## Equivalent Human Review Fallback$/m,
     /Parent-agent orchestration note:/i,
     /Worker subagent reference\(s\):/i,
     /Parent\/orchestrator model: `gpt-5\.5`/i,
-    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium>`/i,
     /Reviewer model and reasoning: `gpt-5\.4 high`/i,
     /Model-routing deviations:/i,
     /Failed or unavailable reviewer-subagent attempts:/i,
@@ -952,6 +960,10 @@ test("checked-in review comment templates exist for AI findings and revisions", 
 
   assert.doesNotMatch(fallbackReview, /Codex review/i);
   assert.doesNotMatch(fallbackReview, /@codex review/i);
+  assert.doesNotMatch(
+    fallbackReview,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
+  );
 
   assertMatchesAll(revisionResponse, [
     /^## AI Review Revision Response$/m,
@@ -959,7 +971,7 @@ test("checked-in review comment templates exist for AI findings and revisions", 
     /Parent-agent orchestration note:/i,
     /Worker subagent reference\(s\):/i,
     /Parent\/orchestrator model: `gpt-5\.5`/i,
-    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium>`/i,
     /Reviewer model and reasoning: `gpt-5\.4 high`/i,
     /Model-routing deviations:/i,
     /Reviewer path:/i,
@@ -972,6 +984,10 @@ test("checked-in review comment templates exist for AI findings and revisions", 
   ]);
 
   assert.doesNotMatch(revisionResponse, /@codex review/i);
+  assert.doesNotMatch(
+    revisionResponse,
+    /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
+  );
 });
 
 test("active packet manifest is empty between stories or points to one current approved story and packet", async () => {

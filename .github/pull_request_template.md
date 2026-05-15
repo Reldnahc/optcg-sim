@@ -65,7 +65,7 @@ Post-merge cleanup:
 - [ ] Reviewer subagent output came from a different agent than the implementing worker, or equivalent human review fallback was recorded
 - Worker subagent reference(s):
 - Parent/orchestrator model: `gpt-5.5`
-- Implementation worker model and reasoning: `<gpt-5.3-codex medium | gpt-5.5 medium>`
+- Implementation worker model and reasoning: `<gpt-5.3-codex medium>`
 - Reviewer model and reasoning: `gpt-5.4 high`
 - Model-routing deviations:
 - Parent-agent orchestration note:

@@ -57,7 +57,7 @@ acceptance_criteria:
   - canonical workflow authority distinguishes implementation-worker story work from tiny Session Orchestrator glue edits
   - parent/substory execution and review-gate requirements remain intact
 required_tests:
-  - one combined story-review for INF-052 parent and INF-052A child before approval
+  - separate usable story-review evidence rows/artifacts for INF-052 parent and INF-052A child before approval handoff; parent review does not satisfy child review
   - story-specific tests from INF-052A
   - run `corepack pnpm run stories:validate`
 repo_rules:
