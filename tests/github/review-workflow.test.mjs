@@ -176,6 +176,7 @@ test("pull request template requires story, verification, and subagent review ev
     /Approved story file:/i,
     /Synced issue, if one exists:/i,
     /pnpm verify/i,
+    /Parent story-review artifact:[\s\S]*Child story-review artifacts:\s*\n\s*-\s*<child story path>:\s*<artifact\/status>[\s\S]*All parent\/child story-review rows approval-ready or blocker recorded:[\s\S]*Packet activation happened after this gate:/i,
     /AI review completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
     /Separate reviewer subagent run completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
     /Implementation-worker self-review or parent-coordinator self-review was not used as the review gate/i,
@@ -217,21 +218,15 @@ test("pull request template requires story, verification, and subagent review ev
     /File responsibility checked: guarded source, test, tool, or contract files at 800\+ effective lines are explained here or have a follow-up split\/refactor story/i,
   ]);
 
-  assert.doesNotMatch(prTemplate, /codex\.cmd exec review/i);
-  assert.doesNotMatch(prTemplate, /Codex CLI review command/i);
-  assert.doesNotMatch(prTemplate, /@codex review/i);
-  assert.doesNotMatch(
-    prTemplate,
+  [
+    /codex\.cmd exec review/i,
+    /Codex CLI review command/i,
+    /@codex review/i,
     /link (?:the )?PR back to (?:the )?story issue/i,
-  );
-  assert.doesNotMatch(
-    prTemplate,
     /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
-  );
-  assert.doesNotMatch(
-    prTemplate,
     /Implementation worker model and reasoning:[^\n]*gpt-5\.5 medium/i,
-  );
+    /Story-review evidence exists for the parent story and every child story before approval handoff/i,
+  ].forEach((pattern) => assert.doesNotMatch(prTemplate, pattern));
 });
 
 test("branch protection guide names the required status checks and subagent review policy", async () => {
@@ -654,6 +649,7 @@ test("agents and codex integration spec agree on workflow procedure authority", 
     /5\. linked workflow procedure docs under `docs\/workflow\/`/i,
     /6\. local code reality/i,
     /7\. proposed patch/i,
+    /Story Approval Review Gate:[\s\S]*pnpm run packets:generate[\s\S]*pnpm run packets:verify[\s\S]*worker-ready[\s\S]*implementation handoff[\s\S]*PR handoff/i,
   ]);
 
   assertMatchesAll(codexSpec, [
@@ -674,10 +670,11 @@ test("workflow procedure docs preserve required story and review gates", async (
   );
 
   assertMatchesAll(storyExecution, [
-    /Generated or normalized stories must receive story-review agent review/i,
+    /Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation/i,
     /Approval-ready means the parent story and every child story have usable story-review evidence/i,
-    /Every parent story and every substory must be reviewed/i,
-    /Do not collapse child review into only a parent-level review/i,
+    /Parent story-review does not satisfy child story-review/i,
+    /Child story-review does not satisfy sibling story-review/i,
+    /missing, pending, unknown, or not reconstructable from durable evidence: STOP/i,
     /If no usable story-review agent run exists, do not present the story as approval-ready/i,
     /active\.json` may contain zero active stories or exactly one active story/i,
     /pnpm run packets:generate --story <stories\/approved\/\.\.\.yaml> --activate/i,
@@ -694,6 +691,7 @@ test("workflow procedure docs preserve required story and review gates", async (
     /equivalent human-review fallback/i,
     /revision response comment/i,
     /Passing AI review does not replace human review/i,
+    /PR review, AI review, implementation code-review, full-story integration review, and human merge-gate review do not satisfy the Story Approval Review Gate/i,
     /Human review is required before protected or default-branch PRs merge/i,
     /Gameplay, policy-sensitive, and architecture-sensitive changes are higher-risk review focus/i,
   ]);
@@ -722,7 +720,7 @@ test("workflow docs require parent story-set review-status matrices before hando
     /before approval handoff, child activation, packet generation, and parent PR handoff/i,
     /reconstruct[\s\S]*durable story-review outputs, story files, PR comments, or recorded blockers/i,
     /one row for the parent story and one row for every child story/i,
-    /parent-level row does not satisfy any child-story row/i,
+    /parent-level row does not satisfy any child-story row[\s\S]*child story-review row does not satisfy[\s\S]*sibling child-story row/i,
     /do not use chat memory/i,
     /columns?:?[\s\S]*story id[\s\S]*parent story id[\s\S]*child story id[\s\S]*story paths[\s\S]*review assignment id[\s\S]*review status[\s\S]*review artifact or blocker reference[\s\S]*disposition summary/i,
     /allowed review types?:?[\s\S]*parent-story[\s\S]*child-story[\s\S]*not-applicable/i,

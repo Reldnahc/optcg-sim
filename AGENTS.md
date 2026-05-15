@@ -38,11 +38,11 @@ Use stable `SECTION_REF` citations from the spec. Do not cite heading anchors or
 For any implementation or review handoff:
 
 1. Read `AGENTS.md`, the approved story, and the active packet.
-2. Run `pnpm run packets:generate --story <stories/approved/...yaml> --activate` when activating or refreshing the story packet.
-3. Run `pnpm run packets:verify` immediately after packet generation and before worker assignment, reviewer assignment, implementation handoff, or PR handoff.
-4. Treat the story as `worker-ready` only after steps 1-3 are complete.
-5. Before assigning implementation or code-review agents, run role packet extraction for the assigned role and include that output in the handoff. Implementation handoffs must include explicit file ownership and test ownership. Use one implementation worker per active child story by default; split the child story first unless multiple workers have clearly disjoint, reviewable write scopes.
-6. Every parent story and every substory requires its own story-review evidence before approval handoff. Parent-level review does not satisfy child-story review, and one child-story review does not satisfy sibling children.
+2. Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
+3. Run `pnpm run packets:generate --story <stories/approved/...yaml> --activate` when activating or refreshing the story packet.
+4. Run `pnpm run packets:verify` immediately after packet generation and before worker assignment, reviewer assignment, implementation handoff, or PR handoff.
+5. Treat the story as `worker-ready` only after steps 1-4 are complete.
+6. Before assigning implementation or code-review agents, run role packet extraction for the assigned role and include that output in the handoff. Implementation handoffs must include explicit file ownership and test ownership. Use one implementation worker per active child story by default; split the child story first unless multiple workers have clearly disjoint, reviewable write scopes.
 7. Assign implementation workers only after `worker-ready`.
 8. Stay inside the story boundary and `allowed_touch_points`.
 9. Implement the story with its required tests.

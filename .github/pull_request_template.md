@@ -68,7 +68,11 @@ Post-merge cleanup:
 
 ## Review
 
-- [ ] Story-review evidence exists for the parent story and every child story before approval handoff; parent-level review does not satisfy child-story review.
+- Parent story-review artifact:
+- Child story-review artifacts:
+  - <child story path>: <artifact/status>
+- All parent/child story-review rows approval-ready or blocker recorded:
+- Packet activation happened after this gate:
 - [ ] Role-based handoff evidence is present when applicable: role packet extraction output for each assigned post-approval role (`implementation`, `code-review`), or a recorded extraction-failure fallback note.
 - [ ] AI review completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed
 - [ ] Separate reviewer subagent run completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed
