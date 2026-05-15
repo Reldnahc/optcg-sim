@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-053C.md",
-      "storyId": "INF-053C",
-      "storyPath": "stories/approved/INF-053C-reconcile-story-schema-prose-and-status.yaml",
-      "storySha256": "47c3a55f23be5822af69df858e812b81bb2f6e253f83d723782fce9419e1725b"
+      "packetPath": "agent-packets/INF-053D.md",
+      "storyId": "INF-053D",
+      "storyPath": "stories/approved/INF-053D-align-packet-role-and-planning-authority.yaml",
+      "storySha256": "9281646fd72500172d1cf35c6fb9fa3a2993575cfb4c5b18b03d56352487365e"
     }
   ],
   "version": 1

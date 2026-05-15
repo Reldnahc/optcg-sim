@@ -808,6 +808,78 @@ test("workflow authority pins layered parent story sets for composed effect and 
   }
 });
 
+test("agent packet spec uses current assignable role names", async () => {
+  const packetSpec = await readText("specs/26-agent-packet-template.md");
+  const introduction = extractSection(
+    packetSpec,
+    "26-agent-packet-template.s001",
+    "26-agent-packet-template.s002",
+  );
+  const reviewFooter = extractSectionToEnd(
+    packetSpec,
+    "26-agent-packet-template.s007",
+  );
+
+  assertContainsWords(
+    introduction,
+    "implementation, story-review, or code-review agent",
+  );
+  assertContainsWords(reviewFooter, "For story-review or code-review agents");
+  assert.doesNotMatch(introduction, /\bverification agents?\b/i);
+  assert.doesNotMatch(reviewFooter, /\bverification agents?\b/i);
+});
+
+test("story workflow authority order defers implementation execution to Codex authority", async () => {
+  const workflowSpec = await readText(
+    "specs/27-spec-driven-story-generation-workflow.md",
+  );
+  const codexSpec = await readText("specs/32-codex-agent-integration.md");
+
+  const workflowSummary = extractSection(
+    workflowSpec,
+    "27-spec-driven-story-generation-workflow.s002",
+    "27-spec-driven-story-generation-workflow.s003",
+  );
+  const workflowAuthority = extractSection(
+    workflowSpec,
+    "27-spec-driven-story-generation-workflow.s003",
+    "27-spec-driven-story-generation-workflow.s004",
+  );
+  const codexAuthority = extractSection(
+    codexSpec,
+    "32-codex-agent-integration.s004",
+    "32-codex-agent-integration.s005",
+  );
+
+  assertContainsWords(
+    workflowSummary,
+    "preserve the applicable authority order",
+  );
+  assertContainsWords(
+    workflowAuthority,
+    "For story planning, packet construction, and generated reports before an execution handoff",
+  );
+  assertContainsWords(
+    workflowAuthority,
+    "For Codex or implementation execution, use the execution authority order from `32-codex-agent-integration.s004` and `AGENTS.md`",
+  );
+
+  for (const executionLayer of [
+    "cited specification sections",
+    "approved story file",
+    "generated agent packet",
+    "checked-in repo instructions in `AGENTS.md`",
+    "linked workflow procedure documents under `docs/workflow/`",
+    "local code reality",
+    "proposed patch",
+  ]) {
+    assertContainsWords(workflowAuthority, executionLayer);
+    assertContainsWords(codexAuthority, executionLayer);
+  }
+
+  assert.doesNotMatch(workflowAuthority, /For planning and execution:/);
+});
+
 test("root license and README scope MIT source publication to repository-owned material", async () => {
   const license = await readText("LICENSE");
   const readme = await readText("README.md");

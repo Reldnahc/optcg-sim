@@ -14,7 +14,8 @@ machine_readable: true
 
 Section Ref: `26-agent-packet-template.s001`
 
-This document defines the standard packet format used to assign one approved story to an implementation, review, or verification agent.
+This document defines the standard packet format used to assign one approved
+story to an implementation, story-review, or code-review agent.
 
 The purpose of a packet is to reduce interpretation overhead. Agents should not be expected to rediscover requirements from the entire specification when a constrained story already exists.
 
@@ -178,7 +179,7 @@ If the spec is ambiguous, report the ambiguity instead of guessing.
 
 Section Ref: `26-agent-packet-template.s007`
 
-For review or verification agents, add:
+For story-review or code-review agents, add:
 
 ```text
 Compare the implementation against the approved story and cited specification.

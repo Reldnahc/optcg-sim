@@ -4940,7 +4940,7 @@
       "doc_path": "26-agent-packet-template.md",
       "heading": "Core rule",
       "heading_level": 2,
-      "marker_line": 14,
+      "marker_line": 15,
       "visible_line": "Section Ref: `26-agent-packet-template.s002`"
     },
     {
@@ -4949,7 +4949,7 @@
       "doc_path": "26-agent-packet-template.md",
       "heading": "Packet requirements",
       "heading_level": 2,
-      "marker_line": 22,
+      "marker_line": 23,
       "visible_line": "Section Ref: `26-agent-packet-template.s003`"
     },
     {
@@ -4958,7 +4958,7 @@
       "doc_path": "26-agent-packet-template.md",
       "heading": "Standard packet template",
       "heading_level": 2,
-      "marker_line": 44,
+      "marker_line": 45,
       "visible_line": "Section Ref: `26-agent-packet-template.s004`"
     },
     {
@@ -4967,7 +4967,7 @@
       "doc_path": "26-agent-packet-template.md",
       "heading": "Packet construction rules",
       "heading_level": 2,
-      "marker_line": 124,
+      "marker_line": 125,
       "visible_line": "Section Ref: `26-agent-packet-template.s005`"
     },
     {
@@ -4976,7 +4976,7 @@
       "doc_path": "26-agent-packet-template.md",
       "heading": "Recommended agent instruction footer",
       "heading_level": 2,
-      "marker_line": 149,
+      "marker_line": 150,
       "visible_line": "Section Ref: `26-agent-packet-template.s006`"
     },
     {
@@ -4985,7 +4985,7 @@
       "doc_path": "26-agent-packet-template.md",
       "heading": "Recommended review-agent footer",
       "heading_level": 2,
-      "marker_line": 168,
+      "marker_line": 169,
       "visible_line": "Section Ref: `26-agent-packet-template.s007`"
     },
     {
@@ -5012,7 +5012,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Authority order",
       "heading_level": 2,
-      "marker_line": 33,
+      "marker_line": 34,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s003`"
     },
     {
@@ -5021,7 +5021,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Story generation inputs",
       "heading_level": 2,
-      "marker_line": 49,
+      "marker_line": 61,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s004`"
     },
     {
@@ -5030,7 +5030,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Story generation outputs",
       "heading_level": 2,
-      "marker_line": 66,
+      "marker_line": 78,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s005`"
     },
     {
@@ -5039,7 +5039,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Story generation prompt contract",
       "heading_level": 2,
-      "marker_line": 95,
+      "marker_line": 107,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s006`"
     },
     {
@@ -5048,7 +5048,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Story normalization rules",
       "heading_level": 2,
-      "marker_line": 126,
+      "marker_line": 138,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s007`"
     },
     {
@@ -5057,7 +5057,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Pre-presentation story-review gate",
       "heading_level": 2,
-      "marker_line": 151,
+      "marker_line": 163,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s017`"
     },
     {
@@ -5066,7 +5066,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Approval rules",
       "heading_level": 2,
-      "marker_line": 171,
+      "marker_line": 183,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s008`"
     },
     {
@@ -5075,7 +5075,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Agent packet generation",
       "heading_level": 2,
-      "marker_line": 191,
+      "marker_line": 203,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s009`"
     },
     {
@@ -5084,7 +5084,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Suggested repo layout",
       "heading_level": 2,
-      "marker_line": 216,
+      "marker_line": 228,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s010`"
     },
     {
@@ -5093,7 +5093,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Recommended automation layers",
       "heading_level": 2,
-      "marker_line": 246,
+      "marker_line": 258,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s011`"
     },
     {
@@ -5102,7 +5102,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Minimum viable process",
       "heading_level": 3,
-      "marker_line": 252,
+      "marker_line": 264,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s012`"
     },
     {
@@ -5111,7 +5111,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Stronger process",
       "heading_level": 3,
-      "marker_line": 268,
+      "marker_line": 280,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s013`"
     },
     {
@@ -5120,7 +5120,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Spec change impact tracing",
       "heading_level": 2,
-      "marker_line": 285,
+      "marker_line": 297,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s014`"
     },
     {
@@ -5129,7 +5129,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Recommended completion checks for story-driven implementation",
       "heading_level": 2,
-      "marker_line": 297,
+      "marker_line": 309,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s015`"
     },
     {
@@ -5138,7 +5138,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "First practical adoption step",
       "heading_level": 2,
-      "marker_line": 340,
+      "marker_line": 352,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s016`"
     },
     {
