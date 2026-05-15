@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate type and schema work that makes composed effect primitives
   authorable in canonical contracts without adding runtime execution or card

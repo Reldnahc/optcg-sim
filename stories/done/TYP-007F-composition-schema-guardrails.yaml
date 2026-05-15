@@ -8,7 +8,7 @@ type: verification
 area: contracts
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add schema validation guardrails proving unsupported or malformed composed
   effect shapes reject and schema authorability does not claim runtime
