@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id TYP-007D -->
 <!-- agent-packet:story-path stories/approved/TYP-007D-cost-hand-selection-playselected-drawupto-schema.yaml -->
-<!-- agent-packet:story-sha256 a1443fcff94b15584ee958152dff6bb17d563b521d0205e2323897df8c78da81 -->
+<!-- agent-packet:story-sha256 09da1d8a94fc2f24742b1bdaf2a2fe73d75d66f0600b497693776844fe069295 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -483,6 +483,8 @@ Own only canonical effect DSL schema, exported types, and schema fixtures that m
 - contracts/types/effects.ts
 - packages/types/src/effects.ts
 - packages/types/src/effects.test.ts
+- packages/types/src/export-cohesion.test.ts
+- packages/types/src/export-ownership.manifest.ts
 - tests/contracts/**
 - fixtures/effect-dsl/**
 - stories/generated/TYP-007*.yaml

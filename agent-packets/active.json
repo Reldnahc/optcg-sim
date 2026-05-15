@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-007F.md",
-      "storyId": "TYP-007F",
-      "storyPath": "stories/approved/TYP-007F-composition-schema-guardrails.yaml",
-      "storySha256": "5642317fc536622d9d53318fc9dbb080949c6f393aa05c0d91f83e2be22a2e22"
+      "packetPath": "agent-packets/TYP-007D.md",
+      "storyId": "TYP-007D",
+      "storyPath": "stories/approved/TYP-007D-cost-hand-selection-playselected-drawupto-schema.yaml",
+      "storySha256": "09da1d8a94fc2f24742b1bdaf2a2fe73d75d66f0600b497693776844fe069295"
     }
   ],
   "version": 1

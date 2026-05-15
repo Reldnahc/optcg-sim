@@ -17,6 +17,9 @@ import type {
   EffectId,
   EffectOption,
   FailurePolicy,
+  HandSelectCardsEffect,
+  HandSelectionId,
+  PlayHandSelectedEffect,
   ReplacementTrigger,
   SearchRequest,
   SequenceSavedResultReference,
@@ -474,9 +477,8 @@ test("cost and hand-selection play-from-hand authoring contracts compile with re
     chooser: "self",
   };
   const drawUpTo: Effect = { type: "drawUpTo", count: 2, player: "self" };
-  const handSelectionId = "handSelection:playableCharacter" as SelectionId &
-    `handSelection:${string}`;
-  const selectFromHand: Effect = {
+  const handSelectionId = "handSelection:playableCharacter" as HandSelectionId;
+  const selectFromHand: HandSelectCardsEffect = {
     type: "selectCards",
     zone: "hand",
     player: "self",
@@ -487,7 +489,7 @@ test("cost and hand-selection play-from-hand authoring contracts compile with re
     saveAs: handSelectionId,
     visibility: "chooserOnly",
   };
-  const playSelected: Effect = {
+  const playSelected: PlayHandSelectedEffect = {
     type: "playSelected",
     selection: handSelectionId,
     ignoreCost: true,
@@ -506,7 +508,22 @@ test("cost and hand-selection play-from-hand authoring contracts compile with re
     type: "playSelected",
     ignoreCost: true,
   };
-  const invalidSelectionZone: Effect = {
+  const broadSelectCards: Effect = {
+    type: "selectCards",
+    zone: "deck",
+    player: "opponent",
+    chooser: "self",
+    min: 0,
+    max: 2,
+    saveAs: "selection:generic" as SelectionId,
+    visibility: "chooserOnly",
+  };
+  const broadPlaySelected: Effect = {
+    type: "playSelected",
+    selection: "savedResult:selectedCards" as SelectionId,
+    ignoreCost: true,
+  };
+  const invalidHandSelectionZone: HandSelectCardsEffect = {
     type: "selectCards",
     // @ts-expect-error selectCards is constrained to hand-zone selection.
     zone: "deck",
@@ -518,7 +535,7 @@ test("cost and hand-selection play-from-hand authoring contracts compile with re
     saveAs: handSelectionId,
     visibility: "chooserOnly",
   };
-  const invalidSelectionPlayer: Effect = {
+  const invalidHandSelectionPlayer: HandSelectCardsEffect = {
     type: "selectCards",
     zone: "hand",
     // @ts-expect-error selectCards player is constrained to self.
@@ -530,7 +547,7 @@ test("cost and hand-selection play-from-hand authoring contracts compile with re
     saveAs: handSelectionId,
     visibility: "chooserOnly",
   };
-  const invalidSelectionChooser: Effect = {
+  const invalidHandSelectionChooser: HandSelectCardsEffect = {
     type: "selectCards",
     zone: "hand",
     player: "self",
@@ -542,7 +559,7 @@ test("cost and hand-selection play-from-hand authoring contracts compile with re
     saveAs: handSelectionId,
     visibility: "chooserOnly",
   };
-  const invalidSelectionVisibility: Effect = {
+  const invalidHandSelectionVisibility: HandSelectCardsEffect = {
     type: "selectCards",
     zone: "hand",
     player: "self",
@@ -554,7 +571,7 @@ test("cost and hand-selection play-from-hand authoring contracts compile with re
     // @ts-expect-error selectCards visibility is constrained to chooserOnly.
     visibility: "bothPlayers",
   };
-  const invalidSelectionReferencePrefix: Effect = {
+  const invalidHandSelectionReferencePrefix: HandSelectCardsEffect = {
     type: "selectCards",
     zone: "hand",
     player: "self",
@@ -566,7 +583,7 @@ test("cost and hand-selection play-from-hand authoring contracts compile with re
     saveAs: "selection:generic" as SelectionId,
     visibility: "chooserOnly",
   };
-  const invalidPlaySelectedReferencePrefix: Effect = {
+  const invalidHandPlaySelectedReferencePrefix: PlayHandSelectedEffect = {
     type: "playSelected",
     // @ts-expect-error playSelected references must use handSelection:* prefix.
     selection: "savedResult:selectedCards" as SelectionId,
@@ -577,15 +594,17 @@ test("cost and hand-selection play-from-hand authoring contracts compile with re
   expect(drawUpTo.type).toBe("drawUpTo");
   expect(selectFromHand.type).toBe("selectCards");
   expect(playSelected.type).toBe("playSelected");
+  expect(broadSelectCards.type).toBe("selectCards");
+  expect(broadPlaySelected.type).toBe("playSelected");
   void malformedReturnDonCost;
   void malformedDrawUpTo;
   void malformedPlaySelected;
-  void invalidSelectionZone;
-  void invalidSelectionPlayer;
-  void invalidSelectionChooser;
-  void invalidSelectionVisibility;
-  void invalidSelectionReferencePrefix;
-  void invalidPlaySelectedReferencePrefix;
+  void invalidHandSelectionZone;
+  void invalidHandSelectionPlayer;
+  void invalidHandSelectionChooser;
+  void invalidHandSelectionVisibility;
+  void invalidHandSelectionReferencePrefix;
+  void invalidHandPlaySelectedReferencePrefix;
 });
 
 test("temporary modifier and restriction authoring supports extended durations and saved selection targets", () => {

@@ -290,7 +290,39 @@ export type SequenceSavedResultReference =
   | SavedPaidCostReference
   | SavedProducedObjectsReference;
 
-type HandSelectionId = SelectionId & `handSelection:${string}`;
+export type HandSelectionId = SelectionId & `handSelection:${string}`;
+
+export interface SelectCardsEffect {
+  type: "selectCards";
+  zone: Zone;
+  player: PlayerRef;
+  chooser: PlayerRef;
+  min: number;
+  max: number;
+  filter?: CardFilter;
+  saveAs: SelectionId;
+  visibility: Visibility;
+}
+
+export type HandSelectCardsEffect = SelectCardsEffect & {
+  zone: "hand";
+  player: "self";
+  chooser: "self";
+  filter: CardFilter;
+  saveAs: HandSelectionId;
+  visibility: "chooserOnly";
+};
+
+export interface PlaySelectedEffect {
+  type: "playSelected";
+  selection: SelectionId;
+  enterRested?: boolean;
+  ignoreCost?: boolean;
+}
+
+export type PlayHandSelectedEffect = PlaySelectedEffect & {
+  selection: HandSelectionId;
+};
 
 export type Effect =
   | { type: "draw"; count: number; player: PlayerRef }
@@ -321,17 +353,7 @@ export type Effect =
       filter?: CardFilter;
       saveAs: SelectionId;
     }
-  | {
-      type: "selectCards";
-      zone: "hand";
-      player: "self";
-      chooser: "self";
-      min: number;
-      max: number;
-      filter: CardFilter;
-      saveAs: HandSelectionId;
-      visibility: "chooserOnly";
-    }
+  | SelectCardsEffect
   | {
       type: "moveSelected";
       selection: SelectionId;
@@ -360,12 +382,7 @@ export type Effect =
       filter: CardFilter;
       costModifier?: number;
     }
-  | {
-      type: "playSelected";
-      selection: HandSelectionId;
-      enterRested?: boolean;
-      ignoreCost?: boolean;
-    }
+  | PlaySelectedEffect
   | {
       type: "returnUnselectedToDeck";
       set: SelectionSetId;

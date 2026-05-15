@@ -9,6 +9,7 @@ export const TYP_001_STORY_OWNERS = [
   "TYP-002A",
   "TYP-007A",
   "TYP-007B",
+  "TYP-007D",
 ] as const;
 
 export type Typ001StoryOwner = (typeof TYP_001_STORY_OWNERS)[number];
@@ -137,6 +138,11 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   SavedPaidCostReference: "TYP-007B",
   SavedProducedObjectsReference: "TYP-007B",
   SequenceSavedResultReference: "TYP-007B",
+  HandSelectionId: "TYP-007D",
+  SelectCardsEffect: "TYP-007D",
+  HandSelectCardsEffect: "TYP-007D",
+  PlaySelectedEffect: "TYP-007D",
+  PlayHandSelectedEffect: "TYP-007D",
   ReplacementTrigger: "TYP-001D",
   EffectOption: "TYP-001D",
   SequencedEffect: "TYP-001D",

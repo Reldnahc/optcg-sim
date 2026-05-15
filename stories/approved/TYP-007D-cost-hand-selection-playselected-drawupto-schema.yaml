@@ -23,6 +23,8 @@ allowed_touch_points:
   - contracts/types/effects.ts
   - packages/types/src/effects.ts
   - packages/types/src/effects.test.ts
+  - packages/types/src/export-cohesion.test.ts
+  - packages/types/src/export-ownership.manifest.ts
   - tests/contracts/**
   - fixtures/effect-dsl/**
   - stories/generated/TYP-007*.yaml
