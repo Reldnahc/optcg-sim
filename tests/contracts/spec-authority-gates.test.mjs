@@ -319,6 +319,31 @@ test("Effect DSL spec defines drawUpTo short-deck replay and deck-out authority"
   }
 });
 
+test("Effect DSL spec defines playSelected stale saved-selection failure policy", async () => {
+  const dslSpec = await readText("specs/05-effect-dsl-reference.md");
+  const transientSelection = extractSection(
+    dslSpec,
+    "05-effect-dsl-reference.s026",
+    "05-effect-dsl-reference.s027",
+  );
+
+  for (const requiredText of [
+    "`playSelected` may consume only an authorized saved hand selection",
+    "the selected card must still be in that player's hand",
+    "must still be legal to play",
+    "A stale, non-hand, no-longer-legal, or unsupported saved-reference family fails closed",
+    "does not emit `cardPlayed` or hand-to-field `cardMoved` events",
+    "records the failed segment as attempted, not succeeded, and not changedState",
+    "must not reveal hidden hand card IDs, private candidates, or unsupported saved-reference details",
+    "Replay and private effect logs may retain the internal saved-reference failure reason",
+    "Event `seq` values and `state.seq` advancement remain deterministic",
+    "State hashes must include the unchanged hand and board state",
+    "Golden replay coverage for stale playSelected failures must pin the final state hash",
+  ]) {
+    assertContainsWords(transientSelection, requiredText);
+  }
+});
+
 test("engine mechanics spec preserves parenthetical explanatory note authority", async () => {
   const engineSpec = await readText("specs/02-engine-mechanics.md");
   const explanatoryNotes = extractSectionToEnd(

@@ -884,6 +884,12 @@ These are not UI concepts. They are deterministic effect-runtime concepts. They 
 
 `playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist. Generated support may not treat a parsed play-from-selection instruction as playable unless the parser covers the complete selection/play/return flow and the runtime capability matrix covers the resulting decision, hidden-information, forced-trash, and zone-movement behavior.
 
+`playSelected` may consume only an authorized saved hand selection produced by the same supported effect execution frame. At playSelected resolution time, the selected card must still be in that player's hand and must still be legal to play under the current rules and the playSelected options. A stale, non-hand, no-longer-legal, or unsupported saved-reference family fails closed.
+
+A fail-closed stale playSelected segment does not emit `cardPlayed` or hand-to-field `cardMoved` events, records the failed segment as attempted, not succeeded, and not changedState, and then follows the active connector and failure policy. Public events, public legal actions, PlayerView, and SpectatorView must not reveal hidden hand card IDs, private candidates, or unsupported saved-reference details. Replay and private effect logs may retain the internal saved-reference failure reason for audit and deterministic replay.
+
+Event `seq` values and `state.seq` advancement remain deterministic for stale playSelected failures under `03-game-state-events-decisions.s005` and `03-game-state-events-decisions.s022`. State hashes must include the unchanged hand and board state after the failed segment. Golden replay coverage for stale playSelected failures must pin the final state hash.
+
 ### Effect-play options
 
 <!-- SECTION_REF: 05-effect-dsl-reference.s027 -->

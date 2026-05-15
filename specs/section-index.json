@@ -1511,7 +1511,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Effect-play options",
       "heading_level": 3,
-      "marker_line": 880,
+      "marker_line": 886,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s027`"
     },
     {
@@ -1520,7 +1520,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example implementation docs",
       "heading_level": 2,
-      "marker_line": 894,
+      "marker_line": 900,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s028`"
     },
     {
@@ -1529,7 +1529,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Schema coverage policy",
       "heading_level": 2,
-      "marker_line": 902,
+      "marker_line": 908,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s029`"
     },
     {
