@@ -1,0 +1,86 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SPEC-008D
+epic_id: SPEC-008
+title: Effect DSL authorability layer spec update
+type: specification
+area: docs
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Update the effect DSL reference to distinguish contract-defined,
+  schema-authorable, runtime-executable, parser-certified, and generated-support
+  playable layers for composed effects.
+story_boundary: >
+  Own only specification authority, generated spec metadata, and narrow
+  authority tests for the DSL authorability layer model. Do not change canonical
+  type files, effect DSL schema, engine runtime behavior, parser behavior, or
+  card support metadata.
+allowed_touch_points:
+  - specs/05-effect-dsl-reference.md
+  - specs/source-coverage-matrix.md
+  - specs/section-index.json
+  - specs/spec-manifest.json
+  - specs/SPEC_VERSION.md
+  - tests/contracts/spec-authority-gates.test.mjs
+  - stories/generated/SPEC-008*.yaml
+  - stories/approved/SPEC-008*.yaml
+  - agent-packets/SPEC-008D.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s018
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s026
+  - 05-effect-dsl-reference.s027
+  - 05-effect-dsl-reference.s029
+  - 11-testing-quality.s004
+dependencies:
+  - SPEC-008B
+  - SPEC-008C
+scope:
+  - clarify the support ladder from contract-defined to schema-authorable to runtime-executable to parser-certified to generated-support playable
+  - clarify that schema authorability alone does not make generated support playable
+  - clarify that generated support requires runtime capability evidence and complete parser support
+  - add or adjust DSL reference language for cardinality, chooseQuantity-backed drawUpTo, saved references, optionality, costs, playSelected, conditions, and duration/restriction primitives as planned layers
+  - keep the schema coverage policy honest by leaving unsupported primitives planned/not fixture-authorable until TYP stories land
+  - add or update authority tests that pin the support-ladder wording
+  - update generated spec metadata
+non_scope:
+  - canonical type changes
+  - "`contracts/effect-dsl.schema.json` changes"
+  - engine runtime behavior
+  - parser certification, generated-support metadata, real-card fixtures, support reports, server/client/API/UI/replay/database work
+acceptance_criteria:
+  - effect DSL reference explicitly distinguishes contract-defined, schema-authorable, runtime-executable, parser-certified, and generated-support playable layers
+  - schema authorability alone is explicitly insufficient for generated playable support
+  - generated support requires runtime capability evidence and complete parser support
+  - planned composed primitives remain planned/not fixture-authorable until their TYP schema stories land
+  - authority tests pin the support ladder wording
+required_tests:
+  - update `tests/contracts/spec-authority-gates.test.mjs` to require effect DSL support-ladder authority wording and planned/not-fixture-authorable guardrails until TYP schema stories land
+  - run `corepack pnpm run specs:generate-metadata`
+  - run `corepack pnpm run specs:verify-metadata`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - do not change schema, runtime, parser, or generated-support behavior in this story
+  - preserve fail-closed policy for unsupported or partially supported generated effects
+ambiguity_policy: fail_and_escalate

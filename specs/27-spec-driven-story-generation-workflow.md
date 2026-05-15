@@ -84,6 +84,19 @@ The generation step should produce:
 - flagged ambiguities when the spec is not decisive,
 - optional dependency suggestions.
 
+Broad composed-effect or card-support initiatives may use layered parent story sets
+when one capability crosses review concerns. Layered parent story sets may split
+the initiative into contracts/schema, engine/runtime, and
+cards/parser/generated-support parent sets while preserving the parent/substory
+workflow for each set. Implementation stories still keep one primary concern and
+one primary area. TYP-prefixed contract/schema implementation stories use
+`area: contracts`, not `area: types`, even when story validation retains legacy
+`types` compatibility. CARD stories may depend on completed TYP and ENG parent
+series but must not hide runtime work; reusable engine behavior belongs in ENG
+stories before card-specific generated-support or parser linkage work proceeds.
+Already-generated downstream TYP, ENG, and CARD implementation story sets must
+be revised or regenerated after the layered rules land before approval handoff.
+
 Generated stories are not approved automatically unless the project explicitly adopts an automated approval rule. The default assumption is human approval.
 
 ## Story generation prompt contract
@@ -101,8 +114,13 @@ Rules:
 - The specification is authoritative.
 - Do not invent features not supported by the text.
 - Generate gameplay or platform capabilities as epics first when the work spans multiple concerns.
+- Broad composed-effect or card-support initiatives may use layered parent story sets split into contracts/schema, engine/runtime, and cards/parser/generated-support parent sets.
 - Break work into small, reviewable stories that fit one main implementation unit and one primary concern.
+- Implementation stories still keep one primary concern and one primary area.
 - Do not combine contract, rules, view, protocol, persistence, and UI work in one story unless the specification makes them inseparable.
+- TYP-prefixed contract/schema implementation stories use `area: contracts`, not `area: types`, even when story validation retains legacy `types` compatibility.
+- CARD stories may depend on completed TYP and ENG parent series but must not hide runtime work.
+- Already-generated downstream TYP, ENG, and CARD implementation story sets must be revised or regenerated after the layered rules land before approval handoff.
 - Use the canonical story schema.
 - Include exact spec references whenever possible.
 - Include `epic_id`, `primary_concern`, `story_boundary`, and `allowed_touch_points`.

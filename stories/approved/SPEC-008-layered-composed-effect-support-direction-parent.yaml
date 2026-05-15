@@ -1,0 +1,97 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SPEC-008
+epic_id: SPEC-008
+title: Layered composed effect support direction parent
+type: specification
+area: docs
+primary_concern: docs
+priority: high
+status: approved
+summary: >
+  Coordinate specification and workflow documentation updates that authorize
+  layered composed-effect delivery before separate contracts, engine, and cards
+  implementation parent series are approved.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  the approved SPEC-008 child stories one at a time. Keep this series limited to
+  specification/workflow documentation, generated spec metadata, and narrow
+  authority tests for spec wording.
+allowed_touch_points:
+  - specs/03-game-state-events-decisions.md
+  - specs/04-effect-runtime.md
+  - specs/05-effect-dsl-reference.md
+  - specs/09-card-data-and-support-policy.md
+  - specs/27-spec-driven-story-generation-workflow.md
+  - docs/workflow/story-execution.md
+  - specs/source-coverage-matrix.md
+  - specs/section-index.json
+  - specs/spec-manifest.json
+  - specs/SPEC_VERSION.md
+  - tests/contracts/spec-authority-gates.test.mjs
+  - stories/generated/SPEC-008*.yaml
+  - stories/approved/SPEC-008*.yaml
+  - agent-packets/SPEC-008*.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 27-spec-driven-story-generation-workflow.s004
+  - 27-spec-driven-story-generation-workflow.s017
+scope:
+  - define the SPEC-008 child stories for layered composed-effect spec authority
+  - authorize the contracts/schema, engine/runtime, and cards/generated-support layer split before TYP, ENG, and CARD implementation story sets rely on it
+  - keep implementation stories focused on one primary concern and one primary area
+  - ensure later TYP, ENG, and CARD handoffs can cite stable spec sections for quantity decisions, generic execution frames, DSL authorability layers, and generated-support policy
+non_scope:
+  - direct parent implementation
+  - TypeScript contract changes, effect DSL schema changes, engine runtime behavior, parser behavior, generated-support metadata, real-card fixtures, or support reports
+  - server, client, API, UI, replay, database, infrastructure, or gameplay implementation
+dependencies: []
+child_stories:
+  - id: SPEC-008A
+    title: Story and workflow layering rule
+    concern: Document the layered parent-series pattern for broad capabilities crossing contracts, engine, and card support.
+    depends_on: []
+  - id: SPEC-008B
+    title: Decision and cardinality spec update
+    concern: Add chooseQuantity and exact/up-to cardinality authority to the decision spec.
+    depends_on: []
+  - id: SPEC-008C
+    title: Generic composed runtime spec update
+    concern: Specify generic execution frames, sequence pause/resume, segment results, saved references, and optionality semantics.
+    depends_on: []
+  - id: SPEC-008D
+    title: Effect DSL authorability layer spec update
+    concern: Specify the support ladder and planned DSL authorability language for composed effects.
+    depends_on: [SPEC-008B, SPEC-008C]
+  - id: SPEC-008E
+    title: Generated support policy alignment
+    concern: Align generated support policy with completed contract/schema and runtime capability evidence.
+    depends_on: [SPEC-008A, SPEC-008D]
+acceptance_criteria:
+  - SPEC-008 is not implemented directly
+  - specs explicitly authorize separate TYP/contracts, ENG/engine, and CARD/cards parent series for broad composed-effect delivery
+  - specs explicitly distinguish schema authorability from runtime capability and generated playable support
+  - chooseQuantity/cardinality has spec authority before TYP/ENG implementation stories
+  - generic execution frames and saved references have spec authority before ENG implementation stories
+  - story-review confirms later implementation handoffs can cite the new or updated spec sections
+required_tests:
+  - run `corepack pnpm run stories:review-plan -- --parent stories/approved/SPEC-008-layered-composed-effect-support-direction-parent.yaml`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - use the parent/substory workflow
+  - activate only one approved SPEC-008 child packet at a time
+  - do not implement runtime, schema, parser, generated-support, or card behavior in this SPEC series
+  - update spec metadata whenever spec sections change
+ambiguity_policy: fail_and_escalate
