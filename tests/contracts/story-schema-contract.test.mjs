@@ -101,7 +101,6 @@ test("story schema enums match the canonical spec vocabulary", async () => {
   assert.deepEqual(schema.properties.status.enum, [
     "generated",
     "approved",
-    "in_progress",
     "blocked",
     "done",
     "replaced",
@@ -127,6 +126,38 @@ test("story schema enums match the canonical spec vocabulary", async () => {
   assert.equal(schema.properties.child_stories.type, "array");
   assert.equal(schema.properties.card_source_integrity.type, "array");
   assert.equal(schema.properties.engine_capability_preflight.type, "array");
+});
+
+test("story schema prose classifies canonical and compatibility enum extensions", async () => {
+  const storySchema = await readFile(
+    path.join(repoRoot, "specs/24-story-schema.md"),
+    "utf8",
+  );
+
+  assert.match(
+    storySchema,
+    /`specification` is\s+a canonical extension of `type`/i,
+  );
+  assert.match(
+    storySchema,
+    /`types` is\s+retained only as a legacy compatibility `area`/i,
+  );
+  assert.match(
+    storySchema,
+    /`visibility` is\s+a canonical extension of `primary_concern`/i,
+  );
+});
+
+test("story schema keeps in_progress reserved outside committed story files", async () => {
+  const schema = await readJson("contracts/story.schema.json");
+  const storySchema = await readFile(
+    path.join(repoRoot, "specs/24-story-schema.md"),
+    "utf8",
+  );
+
+  assert.equal(schema.properties.status.enum.includes("in_progress"), false);
+  assert.match(storySchema, /`in_progress` is\s+reserved/i);
+  assert.match(storySchema, /agent-packets\/active\.json/);
 });
 
 test("story schema supports CARD implementation preflight guard fields", async () => {

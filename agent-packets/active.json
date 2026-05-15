@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-053B.md",
-      "storyId": "INF-053B",
-      "storyPath": "stories/approved/INF-053B-require-human-review-and-story-link-wording.yaml",
-      "storySha256": "213121f0f7ef26dfac8b67fd8d0f707f1624582bd77f0b32e0a5142017d55e62"
+      "packetPath": "agent-packets/INF-053C.md",
+      "storyId": "INF-053C",
+      "storyPath": "stories/approved/INF-053C-reconcile-story-schema-prose-and-status.yaml",
+      "storySha256": "47c3a55f23be5822af69df858e812b81bb2f6e253f83d723782fce9419e1725b"
     }
   ],
   "version": 1

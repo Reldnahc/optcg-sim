@@ -4526,7 +4526,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "Required fields",
       "heading_level": 2,
-      "marker_line": 62,
+      "marker_line": 68,
       "visible_line": "Section Ref: `24-story-schema.s004`"
     },
     {
@@ -4535,7 +4535,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "Field meanings",
       "heading_level": 2,
-      "marker_line": 97,
+      "marker_line": 103,
       "visible_line": "Section Ref: `24-story-schema.s005`"
     },
     {
@@ -4544,7 +4544,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`spec_version`",
       "heading_level": 3,
-      "marker_line": 103,
+      "marker_line": 109,
       "visible_line": "Section Ref: `24-story-schema.s006`"
     },
     {
@@ -4553,7 +4553,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`spec_package_name`",
       "heading_level": 3,
-      "marker_line": 111,
+      "marker_line": 117,
       "visible_line": "Section Ref: `24-story-schema.s007`"
     },
     {
@@ -4562,7 +4562,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`story_schema_version`",
       "heading_level": 3,
-      "marker_line": 119,
+      "marker_line": 125,
       "visible_line": "Section Ref: `24-story-schema.s008`"
     },
     {
@@ -4571,7 +4571,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`id`",
       "heading_level": 3,
-      "marker_line": 127,
+      "marker_line": 133,
       "visible_line": "Section Ref: `24-story-schema.s009`"
     },
     {
@@ -4580,7 +4580,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`title`",
       "heading_level": 3,
-      "marker_line": 138,
+      "marker_line": 144,
       "visible_line": "Section Ref: `24-story-schema.s010`"
     },
     {
@@ -4589,7 +4589,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`type`",
       "heading_level": 3,
-      "marker_line": 146,
+      "marker_line": 152,
       "visible_line": "Section Ref: `24-story-schema.s011`"
     },
     {
@@ -4598,7 +4598,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`area`",
       "heading_level": 3,
-      "marker_line": 154,
+      "marker_line": 160,
       "visible_line": "Section Ref: `24-story-schema.s012`"
     },
     {
@@ -4607,7 +4607,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`priority`",
       "heading_level": 3,
-      "marker_line": 162,
+      "marker_line": 168,
       "visible_line": "Section Ref: `24-story-schema.s013`"
     },
     {
@@ -4616,7 +4616,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`status`",
       "heading_level": 3,
-      "marker_line": 175,
+      "marker_line": 181,
       "visible_line": "Section Ref: `24-story-schema.s014`"
     },
     {
@@ -4625,7 +4625,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`summary`",
       "heading_level": 3,
-      "marker_line": 190,
+      "marker_line": 203,
       "visible_line": "Section Ref: `24-story-schema.s015`"
     },
     {
@@ -4634,7 +4634,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`spec_refs`",
       "heading_level": 3,
-      "marker_line": 198,
+      "marker_line": 211,
       "visible_line": "Section Ref: `24-story-schema.s016`"
     },
     {
@@ -4643,7 +4643,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`scope`",
       "heading_level": 3,
-      "marker_line": 206,
+      "marker_line": 219,
       "visible_line": "Section Ref: `24-story-schema.s017`"
     },
     {
@@ -4652,7 +4652,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`non_scope`",
       "heading_level": 3,
-      "marker_line": 214,
+      "marker_line": 227,
       "visible_line": "Section Ref: `24-story-schema.s018`"
     },
     {
@@ -4661,7 +4661,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`dependencies`",
       "heading_level": 3,
-      "marker_line": 222,
+      "marker_line": 235,
       "visible_line": "Section Ref: `24-story-schema.s019`"
     },
     {
@@ -4670,7 +4670,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`acceptance_criteria`",
       "heading_level": 3,
-      "marker_line": 230,
+      "marker_line": 243,
       "visible_line": "Section Ref: `24-story-schema.s020`"
     },
     {
@@ -4679,7 +4679,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`required_tests`",
       "heading_level": 3,
-      "marker_line": 238,
+      "marker_line": 251,
       "visible_line": "Section Ref: `24-story-schema.s021`"
     },
     {
@@ -4688,7 +4688,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`repo_rules`",
       "heading_level": 3,
-      "marker_line": 246,
+      "marker_line": 259,
       "visible_line": "Section Ref: `24-story-schema.s022`"
     },
     {
@@ -4697,7 +4697,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`card_source_integrity`",
       "heading_level": 3,
-      "marker_line": 254,
+      "marker_line": 267,
       "visible_line": "Section Ref: `24-story-schema.s033`"
     },
     {
@@ -4706,7 +4706,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`engine_capability_preflight`",
       "heading_level": 3,
-      "marker_line": 269,
+      "marker_line": 282,
       "visible_line": "Section Ref: `24-story-schema.s034`"
     },
     {
@@ -4715,7 +4715,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`ambiguity_policy`",
       "heading_level": 3,
-      "marker_line": 284,
+      "marker_line": 297,
       "visible_line": "Section Ref: `24-story-schema.s023`"
     },
     {
@@ -4724,7 +4724,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "Canonical YAML shape",
       "heading_level": 2,
-      "marker_line": 297,
+      "marker_line": 310,
       "visible_line": "Section Ref: `24-story-schema.s024`"
     },
     {
@@ -4733,7 +4733,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "Story sizing rules",
       "heading_level": 2,
-      "marker_line": 359,
+      "marker_line": 372,
       "visible_line": "Section Ref: `24-story-schema.s025`"
     },
     {
@@ -4742,7 +4742,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "Approval rule",
       "heading_level": 2,
-      "marker_line": 385,
+      "marker_line": 398,
       "visible_line": "Section Ref: `24-story-schema.s026`"
     },
     {
@@ -4751,7 +4751,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "Machine-readable validation contract",
       "heading_level": 2,
-      "marker_line": 406,
+      "marker_line": 419,
       "visible_line": "Section Ref: `24-story-schema.s027`"
     },
     {
@@ -4760,7 +4760,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "Concern-first story boundary contract",
       "heading_level": 2,
-      "marker_line": 414,
+      "marker_line": 427,
       "visible_line": "Section Ref: `24-story-schema.s028`"
     },
     {
@@ -4769,7 +4769,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`epic_id`",
       "heading_level": 3,
-      "marker_line": 428,
+      "marker_line": 441,
       "visible_line": "Section Ref: `24-story-schema.s029`"
     },
     {
@@ -4778,7 +4778,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`primary_concern`",
       "heading_level": 3,
-      "marker_line": 436,
+      "marker_line": 449,
       "visible_line": "Section Ref: `24-story-schema.s030`"
     },
     {
@@ -4787,7 +4787,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`story_boundary`",
       "heading_level": 3,
-      "marker_line": 457,
+      "marker_line": 475,
       "visible_line": "Section Ref: `24-story-schema.s031`"
     },
     {
@@ -4796,7 +4796,7 @@
       "doc_path": "24-story-schema.md",
       "heading": "`allowed_touch_points`",
       "heading_level": 3,
-      "marker_line": 465,
+      "marker_line": 483,
       "visible_line": "Section Ref: `24-story-schema.s032`"
     },
     {

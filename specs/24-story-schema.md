@@ -46,6 +46,7 @@ Each story should declare exactly one primary `type`:
 
 - `design`
 - `implementation`
+- `specification`
 - `verification`
 - `refactor`
 - `tooling`
@@ -63,8 +64,13 @@ Each story should also declare one primary `area`:
 - `infra`
 - `docs`
 - `security`
+- `types`
 
-These values may be extended later, but the meaning must remain stable for automation.
+`specification` is a canonical extension of `type` for stories that update
+specification authority rather than implementation artifacts. `types` is retained only as a legacy compatibility `area`; new contract/schema stories should use
+`area: contracts` unless a later spec section explicitly changes that routing
+rule. These values may be extended later, but the meaning must remain stable for
+automation.
 
 ## Required fields
 
@@ -185,14 +191,21 @@ Expected values:
 
 Section Ref: `24-story-schema.s014`
 
-Expected values:
+Expected committed story-file values:
 
 - `generated`
 - `approved`
-- `in_progress`
 - `blocked`
 - `done`
 - `replaced`
+
+`in_progress` is reserved for a future lifecycle mechanism and is not valid in
+committed story YAML. No current workflow role sets `status: in_progress`;
+active implementation or review handoff state is represented by
+`agent-packets/active.json` plus the checked-in active packet while the story
+file remains in its approved, blocked, done, generated, or replaced lifecycle
+state. Until a future spec defines the setter and transition rules, the JSON
+Schema must reject `in_progress`.
 
 ### `summary`
 
@@ -457,7 +470,12 @@ Identifies the main reason the story exists. Initial expected values are:
 - `ui`
 - `cli`
 - `docs`
+- `visibility`
 - `verification`
+
+`visibility` is a canonical extension of `primary_concern` for hidden-information
+and filtered-view safety work that needs distinct review routing from general
+view-model or UI work.
 
 A story should declare exactly one value. Tests, fixtures, snapshots, and docs needed to prove that same concern do not count as a second concern.
 
