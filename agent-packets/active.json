@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SPEC-009B.md",
+      "storyId": "SPEC-009B",
+      "storyPath": "stories/approved/SPEC-009B-playselected-stale-saved-selection-policy.yaml",
+      "storySha256": "a839ee75fe4de6fdd768e644cc1828cd2045ca6187434e221101ef0ed1f6dd47"
+    }
+  ],
   "version": 1
 }

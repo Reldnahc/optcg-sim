@@ -1385,7 +1385,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Sequence connector semantics",
       "heading_level": 2,
-      "marker_line": 438,
+      "marker_line": 442,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s013`"
     },
     {
@@ -1394,7 +1394,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Search request",
       "heading_level": 2,
-      "marker_line": 488,
+      "marker_line": 492,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s014`"
     },
     {
@@ -1403,7 +1403,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Visibility",
       "heading_level": 2,
-      "marker_line": 513,
+      "marker_line": 517,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s015`"
     },
     {
@@ -1412,7 +1412,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Replacement triggers",
       "heading_level": 2,
-      "marker_line": 529,
+      "marker_line": 533,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s016`"
     },
     {
@@ -1421,7 +1421,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Type enums",
       "heading_level": 2,
-      "marker_line": 545,
+      "marker_line": 549,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s017`"
     },
     {
@@ -1430,7 +1430,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: vanilla confirmed card",
       "heading_level": 2,
-      "marker_line": 576,
+      "marker_line": 580,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s018`"
     },
     {
@@ -1439,7 +1439,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: On Play draw 1",
       "heading_level": 2,
-      "marker_line": 596,
+      "marker_line": 600,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s019`"
     },
     {
@@ -1448,7 +1448,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: Activate Main with cost and up-to target",
       "heading_level": 2,
-      "marker_line": 626,
+      "marker_line": 630,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s020`"
     },
     {
@@ -1457,7 +1457,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: permanent power buff",
       "heading_level": 2,
-      "marker_line": 680,
+      "marker_line": 684,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s021`"
     },
     {
@@ -1466,7 +1466,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Poneglyph text-to-DSL pipeline",
       "heading_level": 2,
-      "marker_line": 727,
+      "marker_line": 731,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s022`"
     },
     {
@@ -1475,7 +1475,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "v3 additions from real Poneglyph examples",
       "heading_level": 2,
-      "marker_line": 766,
+      "marker_line": 770,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s023`"
     },
     {
@@ -1484,7 +1484,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Source-attached DON!! condition",
       "heading_level": 3,
-      "marker_line": 774,
+      "marker_line": 778,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s024`"
     },
     {
@@ -1493,7 +1493,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Richer filters",
       "heading_level": 3,
-      "marker_line": 791,
+      "marker_line": 795,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s025`"
     },
     {
@@ -1502,7 +1502,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Transient reveal and selection primitives",
       "heading_level": 3,
-      "marker_line": 812,
+      "marker_line": 816,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s026`"
     },
     {
@@ -1511,7 +1511,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Effect-play options",
       "heading_level": 3,
-      "marker_line": 876,
+      "marker_line": 886,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s027`"
     },
     {
@@ -1520,7 +1520,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example implementation docs",
       "heading_level": 2,
-      "marker_line": 890,
+      "marker_line": 900,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s028`"
     },
     {
@@ -1529,7 +1529,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Schema coverage policy",
       "heading_level": 2,
-      "marker_line": 898,
+      "marker_line": 908,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s029`"
     },
     {
@@ -5066,7 +5066,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Approval rules",
       "heading_level": 2,
-      "marker_line": 173,
+      "marker_line": 171,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s008`"
     },
     {
@@ -5075,7 +5075,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Agent packet generation",
       "heading_level": 2,
-      "marker_line": 193,
+      "marker_line": 191,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s009`"
     },
     {
@@ -5084,7 +5084,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Suggested repo layout",
       "heading_level": 2,
-      "marker_line": 218,
+      "marker_line": 216,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s010`"
     },
     {
@@ -5093,7 +5093,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Recommended automation layers",
       "heading_level": 2,
-      "marker_line": 248,
+      "marker_line": 246,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s011`"
     },
     {
@@ -5102,7 +5102,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Minimum viable process",
       "heading_level": 3,
-      "marker_line": 254,
+      "marker_line": 252,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s012`"
     },
     {
@@ -5111,7 +5111,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Stronger process",
       "heading_level": 3,
-      "marker_line": 270,
+      "marker_line": 268,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s013`"
     },
     {
@@ -5120,7 +5120,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Spec change impact tracing",
       "heading_level": 2,
-      "marker_line": 287,
+      "marker_line": 285,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s014`"
     },
     {
@@ -5129,7 +5129,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Recommended completion checks for story-driven implementation",
       "heading_level": 2,
-      "marker_line": 299,
+      "marker_line": 297,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s015`"
     },
     {
@@ -5138,7 +5138,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "First practical adoption step",
       "heading_level": 2,
-      "marker_line": 342,
+      "marker_line": 340,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s016`"
     },
     {
@@ -5633,7 +5633,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Codex packet footer",
       "heading_level": 2,
-      "marker_line": 135,
+      "marker_line": 134,
       "visible_line": "Section Ref: `32-codex-agent-integration.s009`"
     },
     {
@@ -5642,7 +5642,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Review flow",
       "heading_level": 2,
-      "marker_line": 152,
+      "marker_line": 151,
       "visible_line": "Section Ref: `32-codex-agent-integration.s010`"
     },
     {
@@ -5651,7 +5651,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "GitHub-connected modes",
       "heading_level": 2,
-      "marker_line": 162,
+      "marker_line": 161,
       "visible_line": "Section Ref: `32-codex-agent-integration.s011`"
     },
     {
@@ -5660,7 +5660,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Minimal task prompt",
       "heading_level": 2,
-      "marker_line": 177,
+      "marker_line": 176,
       "visible_line": "Section Ref: `32-codex-agent-integration.s012`"
     },
     {
@@ -5669,7 +5669,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Merge gate recommendation",
       "heading_level": 2,
-      "marker_line": 194,
+      "marker_line": 193,
       "visible_line": "Section Ref: `32-codex-agent-integration.s013`"
     },
     {
@@ -5678,7 +5678,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Subagent model routing",
       "heading_level": 2,
-      "marker_line": 266,
+      "marker_line": 265,
       "visible_line": "Section Ref: `32-codex-agent-integration.s014`"
     },
     {
