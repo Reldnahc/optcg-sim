@@ -1,0 +1,22 @@
+{
+  "cardId": "TYP-007D-902",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007D-902:auto-on-play-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "drawUpTo",
+        "count": -1,
+        "player": "self"
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007d-902",
+    "rulesVersion": "2026-05-14",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

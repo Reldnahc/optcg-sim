@@ -22,6 +22,7 @@ import type {
   SequenceSavedResultReference,
   SequenceSavedResultReferenceMap,
   SequenceSegmentResult,
+  SelectionId,
   SelectionSetId,
   SequencedEffect,
   SourcePresencePolicy,
@@ -456,4 +457,125 @@ test("condition and optionality authoring supports composed optional cost and op
   expect(optionalSequence.type).toBe("sequence");
   void malformedOptionalCost;
   void malformedOptionalClause;
+});
+
+test("cost and hand-selection play-from-hand authoring contracts compile with reviewed shapes", () => {
+  const returnDonCost: Cost = {
+    type: "returnDon",
+    count: 2,
+    chooser: "self",
+  };
+  const drawUpTo: Effect = { type: "drawUpTo", count: 2, player: "self" };
+  const handSelectionId = "handSelection:playableCharacter" as SelectionId &
+    `handSelection:${string}`;
+  const selectFromHand: Effect = {
+    type: "selectCards",
+    zone: "hand",
+    player: "self",
+    chooser: "self",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    saveAs: handSelectionId,
+    visibility: "chooserOnly",
+  };
+  const playSelected: Effect = {
+    type: "playSelected",
+    selection: handSelectionId,
+    ignoreCost: true,
+    enterRested: true,
+  };
+
+  const malformedReturnDonCost: Cost = {
+    type: "returnDon",
+    // @ts-expect-error returnDon cost count must be a number.
+    count: "2",
+  };
+  // @ts-expect-error drawUpTo requires count.
+  const malformedDrawUpTo: Effect = { type: "drawUpTo", player: "self" };
+  // @ts-expect-error playSelected requires selection.
+  const malformedPlaySelected: Effect = {
+    type: "playSelected",
+    ignoreCost: true,
+  };
+  const invalidSelectionZone: Effect = {
+    type: "selectCards",
+    // @ts-expect-error selectCards is constrained to hand-zone selection.
+    zone: "deck",
+    player: "self",
+    chooser: "self",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    saveAs: handSelectionId,
+    visibility: "chooserOnly",
+  };
+  const invalidSelectionPlayer: Effect = {
+    type: "selectCards",
+    zone: "hand",
+    // @ts-expect-error selectCards player is constrained to self.
+    player: "opponent",
+    chooser: "self",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    saveAs: handSelectionId,
+    visibility: "chooserOnly",
+  };
+  const invalidSelectionChooser: Effect = {
+    type: "selectCards",
+    zone: "hand",
+    player: "self",
+    // @ts-expect-error selectCards chooser is constrained to self.
+    chooser: "opponent",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    saveAs: handSelectionId,
+    visibility: "chooserOnly",
+  };
+  const invalidSelectionVisibility: Effect = {
+    type: "selectCards",
+    zone: "hand",
+    player: "self",
+    chooser: "self",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    saveAs: handSelectionId,
+    // @ts-expect-error selectCards visibility is constrained to chooserOnly.
+    visibility: "bothPlayers",
+  };
+  const invalidSelectionReferencePrefix: Effect = {
+    type: "selectCards",
+    zone: "hand",
+    player: "self",
+    chooser: "self",
+    min: 1,
+    max: 1,
+    filter: { categories: ["character"] },
+    // @ts-expect-error hand-selection saveAs must use handSelection:* prefix.
+    saveAs: "selection:generic" as SelectionId,
+    visibility: "chooserOnly",
+  };
+  const invalidPlaySelectedReferencePrefix: Effect = {
+    type: "playSelected",
+    // @ts-expect-error playSelected references must use handSelection:* prefix.
+    selection: "savedResult:selectedCards" as SelectionId,
+    ignoreCost: true,
+  };
+
+  expect(returnDonCost.type).toBe("returnDon");
+  expect(drawUpTo.type).toBe("drawUpTo");
+  expect(selectFromHand.type).toBe("selectCards");
+  expect(playSelected.type).toBe("playSelected");
+  void malformedReturnDonCost;
+  void malformedDrawUpTo;
+  void malformedPlaySelected;
+  void invalidSelectionZone;
+  void invalidSelectionPlayer;
+  void invalidSelectionChooser;
+  void invalidSelectionVisibility;
+  void invalidSelectionReferencePrefix;
+  void invalidPlaySelectedReferencePrefix;
 });

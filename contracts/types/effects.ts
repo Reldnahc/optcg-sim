@@ -292,6 +292,8 @@ export type SequenceSavedResultReference =
   | SavedPaidCostReference
   | SavedProducedObjectsReference;
 
+type HandSelectionId = SelectionId & `handSelection:${string}`;
+
 export type Effect =
   | { type: "draw"; count: number; player: PlayerRef }
   | { type: "drawUpTo"; count: number; player: PlayerRef }
@@ -323,14 +325,14 @@ export type Effect =
     }
   | {
       type: "selectCards";
-      zone: Zone;
-      player: PlayerRef;
-      chooser: PlayerRef;
+      zone: "hand";
+      player: "self";
+      chooser: "self";
       min: number;
       max: number;
-      filter?: CardFilter;
-      saveAs: SelectionId;
-      visibility: Visibility;
+      filter: CardFilter;
+      saveAs: HandSelectionId;
+      visibility: "chooserOnly";
     }
   | {
       type: "moveSelected";
@@ -362,7 +364,7 @@ export type Effect =
     }
   | {
       type: "playSelected";
-      selection: SelectionId;
+      selection: HandSelectionId;
       enterRested?: boolean;
       ignoreCost?: boolean;
     }

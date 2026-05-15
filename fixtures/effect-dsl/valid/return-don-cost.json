@@ -1,0 +1,27 @@
+{
+  "cardId": "TYP-007D-001",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007D-001:auto-on-play-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "cost": {
+        "type": "returnDon",
+        "count": 1,
+        "chooser": "self"
+      },
+      "effect": {
+        "type": "draw",
+        "count": 1,
+        "player": "self"
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007d-001",
+    "rulesVersion": "2026-05-14",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

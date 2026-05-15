@@ -1,0 +1,22 @@
+{
+  "cardId": "TYP-007D-906",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007D-906:auto-on-play-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "playSelected",
+        "selection": "savedResult:selectedCards",
+        "ignoreCost": true
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007d-906",
+    "rulesVersion": "2026-05-14",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

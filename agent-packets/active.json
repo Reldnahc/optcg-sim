@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-007C.md",
-      "storyId": "TYP-007C",
-      "storyPath": "stories/approved/TYP-007C-condition-optionality-dsl-schema.yaml",
-      "storySha256": "405738ec64ebd49f25948f1306df676abf667517a08ff54ea5eda9851a5d13d2"
+      "packetPath": "agent-packets/TYP-007D.md",
+      "storyId": "TYP-007D",
+      "storyPath": "stories/approved/TYP-007D-cost-hand-selection-playselected-drawupto-schema.yaml",
+      "storySha256": "a1443fcff94b15584ee958152dff6bb17d563b521d0205e2323897df8c78da81"
     }
   ],
   "version": 1
