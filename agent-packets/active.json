@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-052A.md",
+      "storyId": "INF-052A",
+      "storyPath": "stories/approved/INF-052A-clarify-session-orchestrator-implementation-boundary.yaml",
+      "storySha256": "4e23cbbb6b3eece4890978ff57385dc7d700696606a488f3eda8411b48f718aa"
+    }
+  ],
   "version": 1
 }

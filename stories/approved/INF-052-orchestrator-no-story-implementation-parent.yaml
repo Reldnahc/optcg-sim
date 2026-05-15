@@ -1,0 +1,68 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-052
+epic_id: INF-052
+title: Session Orchestrator no-story-implementation parent
+type: refactor
+area: docs
+primary_concern: docs
+priority: critical
+status: approved
+summary: >
+  Coordinate the workflow clarification that Session Orchestrators never author
+  the main implementation body of an approved story and may only perform narrow
+  orchestration, integration, and review-response edits between worker and
+  reviewer handoffs.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  the approved INF-052A child story to update canonical Codex workflow authority,
+  repo workflow docs, and workflow tests so the Session Orchestrator coding
+  boundary is unambiguous.
+allowed_touch_points:
+  - stories/generated/INF-052*.yaml
+  - stories/approved/INF-052*.yaml
+spec_refs:
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+  - 27-spec-driven-story-generation-workflow.s008
+  - 27-spec-driven-story-generation-workflow.s009
+  - 27-spec-driven-story-generation-workflow.s017
+  - 32-codex-agent-integration.s008
+  - 32-codex-agent-integration.s010
+  - 32-codex-agent-integration.s014
+dependencies:
+  - INF-047A
+scope:
+  - define one executable workflow child story for the Session Orchestrator implementation boundary
+  - require canonical workflow authority to say Session Orchestrators never implement story bodies
+  - preserve Session Orchestrator ownership of activation, packet freshness, PR evidence, review records, cleanup validation, human-review handoff, and merge readiness
+  - preserve narrow parent-owned edits for orchestration glue, PR administration, packet or metadata corrections, and reviewer-requested integration touchups
+non_scope:
+  - direct implementation from this parent story
+  - gameplay, engine, card, server, client, replay, persistence, security, or UI behavior
+  - removing worker-subagent implementation or reviewer-subagent review requirements
+  - changing cleanup metadata syntax, packet lifecycle semantics, or parent/substory branch strategy
+child_stories:
+  - id: INF-052A
+    title: Clarify Session Orchestrator implementation boundary
+    concern: Update Codex workflow spec, repo workflow docs, and workflow tests so Session Orchestrators never code approved story implementation bodies and may only make tiny orchestration/integration/review-response edits between handoffs.
+    depends_on: [INF-047A]
+acceptance_criteria:
+  - INF-052 is not implemented directly
+  - INF-052A is the only executable child for this parent
+  - story-review evidence exists for both INF-052 and INF-052A before approval handoff
+  - canonical workflow authority distinguishes implementation-worker story work from tiny Session Orchestrator glue edits
+  - parent/substory execution and review-gate requirements remain intact
+required_tests:
+  - separate usable story-review evidence rows/artifacts for INF-052 parent and INF-052A child before approval handoff; parent review does not satisfy child review
+  - story-specific tests from INF-052A
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - use the parent/substory workflow even though this parent has one child
+  - do not activate or packetize this parent story
+  - keep one active child packet at a time
+  - do not weaken reviewer-subagent review, cleanup metadata validation, human review, or merge gates
+ambiguity_policy: fail_and_escalate

@@ -71,6 +71,8 @@ The procedure docs below are part of this repo's agent contract. Read the one th
 - Implement only one approved story at a time.
 - Approved stories may exist without packets until they become active.
 - `agent-packets/active.json` may contain zero active stories or exactly one active story.
+- Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership.
+- Parent direct edits are limited to small out-of-band orchestration/metadata/template/reviewer-response corrections outside approved story implementation bodies.
 - Do not silently absorb adjacent contract, engine, server, client, replay, or UI work just because it is nearby.
 - If the needed work crosses concerns, stop and split the story or raise the ambiguity instead of broadening the patch.
 - Use stable `SECTION_REF` citations from `specs/`.

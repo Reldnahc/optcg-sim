@@ -300,10 +300,11 @@ Use the complete role routing table:
 - Recorded rationale for any model-routing deviation is required in the PR review trail and implementation note
 - Any model-routing deviation must be recorded in the PR review trail and implementation note
 
-Parent-owned authority edits:
+Parent-owned direct edits:
 
-- Parent-owned authority edits: documentation-only changes to `AGENTS.md`, `specs/`, story files, packets, and workflow templates should be handled by the parent agent directly.
-- Parent-owned authority edits still require tests when applicable, full verification, and separate reviewer subagent review.
+- Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership.
+- Parent direct edits are limited to small out-of-band orchestration/metadata/template/reviewer-response corrections outside an approved story implementation body.
+- Parent-owned direct edits still require tests when applicable, full verification, and separate reviewer subagent review.
 - Pure packet-completion cleanup is the one lifecycle exception: when the patch contains only the exact file changes produced by direct `packets:complete` or `packets:complete-many` output, including command-owned bound parent story closeout when present in the validated cleanup plan, cleanup-scoped lifecycle verification is sufficient and does not require a separate reviewer subagent run.
 - Manual edits beyond the packet completion command output, including edits to packet files, `agent-packets/active.json`, tooling, tests, fixtures, specs, workflow docs, or story files, require full verification and separate reviewer subagent review.
 - Use worker subagents for implementation code or large bounded documentation rewrites, not small authority-layer corrections.
@@ -312,10 +313,10 @@ Parent orchestration rules:
 
 1. the parent agent reads `AGENTS.md`, the approved story, and the packet
 2. the parent agent stays mostly in orchestration mode
-3. the parent agent should spawn a worker subagent for the main implementation body of the story whenever delegation is available
-4. the parent agent may still do small local glue work such as rebases, tiny integration edits, verification reruns, PR comment posting, and branch or merge operations
+3. the parent agent must delegate every approved story implementation body to an implementation worker subagent
+4. the parent agent may still do tiny orchestration glue such as rebases, tiny integration edits, verification reruns, PR comment posting, branch or merge operations, packet/metadata corrections, and narrowly scoped reviewer-response integration touchups
 5. the parent agent remains in charge of the story itself: story selection, scope enforcement, packet authority, ambiguity handling, review handoff, and story-state transitions stay with the parent agent rather than the worker or reviewer subagents
-6. the parent agent should not do the main implementation body when a worker subagent is available for that story
+6. the parent agent must not author any approved story implementation body
 7. use one worker subagent per active story by default; if a story appears to need multiple concurrent workers for the main implementation body, split the story first unless the write scopes are clearly disjoint and still reviewable
 
-If worker subagents are unavailable, follow the same boundaries manually, report that the delegation surface was unavailable, and record an explicit implementation note that parent implementation fallback was used.
+If worker subagent surfaces are unavailable, do not use parent implementation fallback. Escalate, block implementation handoff, and record the blocker in the implementation note.

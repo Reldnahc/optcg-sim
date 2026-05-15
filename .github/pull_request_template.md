@@ -61,11 +61,11 @@ Post-merge cleanup:
 - [ ] AI review completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed
 - [ ] Separate reviewer subagent run completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed
 - [ ] Implementation-worker self-review or parent-coordinator self-review was not used as the review gate
-- [ ] Parent agent stayed within small local glue and orchestration while worker subagent(s) handled the main implementation body, or this was a parent-owned documentation-only authority edit
+- [ ] Parent agent stayed within tiny orchestration glue while worker subagent(s) handled the approved story implementation body; documentation-only approved stories still used implementation-worker ownership unless the approved story explicitly authorized parent ownership
 - [ ] Reviewer subagent output came from a different agent than the implementing worker, or equivalent human review fallback was recorded
-- Worker subagent reference(s) or `none: parent-owned authority edit`:
+- Worker subagent reference(s):
 - Parent/orchestrator model: `gpt-5.5`
-- Implementation worker model and reasoning: `<gpt-5.3-codex medium | gpt-5.5 medium | none: parent-owned authority edit>`
+- Implementation worker model and reasoning: `<gpt-5.3-codex medium>`
 - Reviewer model and reasoning: `gpt-5.4 high`
 - Model-routing deviations:
 - Parent-agent orchestration note:
