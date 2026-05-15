@@ -312,10 +312,10 @@ Parent orchestration rules:
 
 1. the parent agent reads `AGENTS.md`, the approved story, and the packet
 2. the parent agent stays mostly in orchestration mode
-3. the parent agent should spawn a worker subagent for the main implementation body of the story whenever delegation is available
-4. the parent agent may still do small local glue work such as rebases, tiny integration edits, verification reruns, PR comment posting, and branch or merge operations
+3. the parent agent must delegate every approved story implementation body to an implementation worker subagent
+4. the parent agent may still do tiny orchestration glue such as rebases, tiny integration edits, verification reruns, PR comment posting, branch or merge operations, packet/metadata corrections, and narrowly scoped reviewer-response integration touchups
 5. the parent agent remains in charge of the story itself: story selection, scope enforcement, packet authority, ambiguity handling, review handoff, and story-state transitions stay with the parent agent rather than the worker or reviewer subagents
-6. the parent agent should not do the main implementation body when a worker subagent is available for that story
+6. the parent agent must not author any approved story implementation body
 7. use one worker subagent per active story by default; if a story appears to need multiple concurrent workers for the main implementation body, split the story first unless the write scopes are clearly disjoint and still reviewable
 
-If worker subagents are unavailable, follow the same boundaries manually, report that the delegation surface was unavailable, and record an explicit implementation note that parent implementation fallback was used.
+If worker subagent surfaces are unavailable, do not use parent implementation fallback. Escalate, block implementation handoff, and record the blocker in the implementation note.

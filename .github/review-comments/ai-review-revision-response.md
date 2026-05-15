@@ -2,9 +2,9 @@
 
 - AI review record:
 - Parent-agent orchestration note:
-- Worker subagent reference(s) or `none: parent-owned authority edit`:
+- Worker subagent reference(s) or `none: parent-owned documentation-only authority correction`:
 - Parent/orchestrator model: `gpt-5.5`
-- Implementation worker model and reasoning: `<gpt-5.3-codex medium | gpt-5.5 medium | none: parent-owned authority edit>`
+- Implementation worker model and reasoning: `<gpt-5.3-codex medium | gpt-5.5 medium | none: parent-owned documentation-only authority correction>`
 - Reviewer model and reasoning: `gpt-5.4 high`
 - Model-routing deviations:
 - Reviewer path:

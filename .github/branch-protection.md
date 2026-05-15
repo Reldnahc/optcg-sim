@@ -51,7 +51,7 @@ GitHub before relying on post-merge packet cleanup automation.
 
 - Pull requests should link the approved story file.
 - Pull requests should include `pnpm verify` evidence.
-- Parent agents should remain mostly orchestration and small local glue while worker subagents handle the main implementation body when delegation is available.
+- Parent agents should remain mostly orchestration and tiny glue while worker subagents handle approved story implementation bodies.
 - Pull requests should complete AI review before human review is requested when reviewer subagent review is available.
 - Pull requests should complete a separate reviewer subagent run before human review is requested when a reviewer-subagent surface is available.
 - Parent orchestration runs on gpt-5.5.

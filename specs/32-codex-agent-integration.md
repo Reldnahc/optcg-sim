@@ -121,9 +121,9 @@ Section Ref: `32-codex-agent-integration.s008`
 1. Run `node --experimental-strip-types tools/spec_board_sync.ts --story <path> --dry-run --write-preview`, then perform live sync when ready.
 1. Verify that the active story packet is present and current before worker assignment, reviewer assignment, or PR handoff.
 1. Have a parent Codex agent read the story, packet, and `AGENTS.md`, stay mostly in orchestration mode, and remain the owner of story authority, scope decisions, ambiguity handling, and review handoff.
-1. Spawn a worker subagent for the main implementation body of the story whenever delegation is available.
+1. Delegate every approved story implementation body to an implementation worker subagent.
 1. Use one implementation worker subagent per active story by default; if more than one worker is needed, split the story first unless write scopes are explicitly disjoint and still reviewable.
-1. Allow the parent agent to do only small local glue work such as rebases, tiny integration edits, verification reruns, and PR administration.
+1. Allow the parent agent to do only tiny orchestration glue such as rebases, tiny integration edits, verification reruns, PR administration, packet/metadata corrections, and narrowly scoped reviewer-response integration touchups.
 1. Follow the subagent model routing policy.
 1. Require tests and a short assumptions/blockers note.
 1. Link the pull request back to the story issue.
@@ -136,7 +136,7 @@ Section Ref: `32-codex-agent-integration.s008`
    one verified packet-tool operation.
 
 The parent agent must not present stories as approval-ready until the story-review findings are resolved, explicitly deferred, or recorded.
-When worker subagents are unavailable, the parent may implement manually but must record an explicit implementation note that worker delegation was unavailable and parent implementation fallback was used.
+The parent agent must not author an approved story implementation body, including when worker subagent surfaces are unavailable. Escalate and block instead of using parent implementation fallback.
 
 ## Codex packet footer
 
