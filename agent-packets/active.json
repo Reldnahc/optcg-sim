@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-053A.md",
+      "storyId": "INF-053A",
+      "storyPath": "stories/approved/INF-053A-remove-stale-implementation-model-escalation.yaml",
+      "storySha256": "604fe20b6a12a5400a03ca941f0879cd47823d63518aa369d60e4f9b46fd0bdc"
+    }
+  ],
   "version": 1
 }

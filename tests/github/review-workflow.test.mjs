@@ -184,7 +184,7 @@ test("pull request template requires story, verification, and subagent review ev
     /Parent\/orchestrator model: `gpt-5\.5`/i,
     /Implementation worker model and reasoning: `<gpt-5\.3-codex medium>`/i,
     /Reviewer model and reasoning: `gpt-5\.4 high`/i,
-    /Model-routing deviations:/i,
+    /Model-routing deviations and rationale:/i,
     /Parent-agent orchestration note:/i,
     /Review path used: `<reviewer subagent \| native PR review artifact \| equivalent human review fallback>`/i,
     /Reviewer subagent reference or review surface:/i,
@@ -223,6 +223,10 @@ test("pull request template requires story, verification, and subagent review ev
     prTemplate,
     /Implementation worker model and reasoning: `<gpt-5\.3-codex medium \| gpt-5\.5 medium>`/i,
   );
+  assert.doesNotMatch(
+    prTemplate,
+    /Implementation worker model and reasoning:[^\n]*gpt-5\.5 medium/i,
+  );
 });
 
 test("branch protection guide names the required status checks and subagent review policy", async () => {
@@ -240,6 +244,7 @@ test("branch protection guide names the required status checks and subagent revi
     /separate reviewer subagent run before human review is requested when a reviewer-subagent surface is available/i,
     /Parent orchestration runs on gpt-5\.5/i,
     /Implementation worker subagents default to gpt-5\.3-codex medium/i,
+    /Implementation-worker model-routing deviations require recorded rationale in the PR review trail and implementation note/i,
     /Reviewer subagents always use gpt-5\.4 high/i,
     /Documentation-only approved stories still require implementation-worker ownership unless the approved story explicitly authorizes parent ownership/i,
     /Parent direct edits are limited to small out-of-band orchestration\/metadata\/template\/reviewer-response corrections outside an approved story implementation body/i,
@@ -273,6 +278,10 @@ test("branch protection guide names the required status checks and subagent revi
   assert.doesNotMatch(
     guide,
     /Complex, risky, or integration-heavy implementation stories should escalate to gpt-5\.5 medium/i,
+  );
+  assert.doesNotMatch(
+    guide,
+    /(?:implementation worker|implementation stories)[^\n]*gpt-5\.5 medium/i,
   );
 });
 

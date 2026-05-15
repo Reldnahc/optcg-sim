@@ -67,7 +67,7 @@ Post-merge cleanup:
 - Parent/orchestrator model: `gpt-5.5`
 - Implementation worker model and reasoning: `<gpt-5.3-codex medium>`
 - Reviewer model and reasoning: `gpt-5.4 high`
-- Model-routing deviations:
+- Model-routing deviations and rationale:
 - Parent-agent orchestration note:
 - Review path used: `<reviewer subagent | native PR review artifact | equivalent human review fallback>`
 - Reviewer subagent reference or review surface:
