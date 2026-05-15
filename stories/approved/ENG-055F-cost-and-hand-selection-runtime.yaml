@@ -1,0 +1,78 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-055F
+epic_id: ENG-055
+title: Cost and hand-selection runtime
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Implement returnDon / DON minus N cost runtime and generic filtered hand
+  selection with private visibility and fail-closed response handling.
+story_boundary: >
+  Own only returnDon cost payment and filtered selectCards-from-hand runtime.
+  Do not implement playSelected, drawUpTo, parser support, or card support.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime*.ts
+  - packages/engine-core/src/effect-runtime*.test.ts
+  - packages/engine-core/src/actions-pending-decision.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-055*.yaml
+  - stories/approved/ENG-055*.yaml
+  - agent-packets/ENG-055F.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s002
+  - 03-game-state-events-decisions.s016
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s026
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - ENG-055B
+  - TYP-007D
+scope:
+  - implement returnDon / DON minus N cost runtime
+  - create `PayCostDecision` when returnDon cost payment requires choosing DON cards and validate valid, stale, malformed, and wrong-player payCost responses
+  - implement generic filtered selectCards from hand
+  - record hand-selection segment results in the ENG-055B execution-context format for later ENG-055G playSelected consumption only
+  - preserve private visibility for hand candidates and responses
+  - reject stale envelopes and invalid responses
+  - add event, event-order, state-hash, and hidden-info tests
+non_scope:
+  - playSelected or play-from-hand resolution
+  - drawUpTo
+  - generic saved-reference legality or resolution semantics beyond recording hand-selection segment results
+  - parser/card support
+  - replacement generalization
+acceptance_criteria:
+  - returnDon pays costs deterministically or fails closed when cost cannot be paid
+  - returnDon cost payment pauses through a chooser-visible PayCostDecision when choices are required, resumes on a valid payCost response, and rejects stale or invalid payCost responses
+  - hand selection exposes only legal private chooser data
+  - hand-selection segment results are recorded for later ENG-055G playSelected consumption without resolving playSelected in this story
+  - stale and invalid hand-selection responses are rejected
+  - hidden-info, deterministic replay, and state-hash behavior are covered
+required_tests:
+  - focused returnDon cost runtime tests, including PayCostDecision creation, legal choice exposure, valid payCost resume, and stale/invalid payCost response rejection
+  - private hand-selection decision tests
+  - costPaid/event assertion and event-order tests for cost payment and selection resolution where events are emitted
+  - replay regression for cost and hand-selection pause/resume plus stale-response rejection
+  - stale envelope, invalid response, hidden-info, and state-hash tests
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - do not import @optcg/cards
+  - fail closed on hand visibility ambiguity
+  - do not broaden into playSelected
+ambiguity_policy: fail_and_escalate

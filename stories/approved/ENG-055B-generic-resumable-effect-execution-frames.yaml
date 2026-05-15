@@ -1,0 +1,76 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-055B
+epic_id: ENG-055
+title: Generic resumable effect execution frames
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Introduce a generic execution context and frame stack that can pause and
+  resume composed effect sequences around decisions.
+story_boundary: >
+  Own only generic effect execution frames, sequence pause/resume mechanics,
+  segment result tracking, and fail-closed unsupported sequence behavior. Do not
+  migrate draw-then-trash or implement specific new primitives in this story.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime*.ts
+  - packages/engine-core/src/effect-runtime*.test.ts
+  - packages/engine-core/src/replay-smoke*.test.ts
+  - packages/engine-core/src/actions-runtime-work.test.ts
+  - packages/engine-core/src/actions-pending-decision.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-055*.yaml
+  - stories/approved/ENG-055*.yaml
+  - agent-packets/ENG-055B.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s002
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s013
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+  - 22-v6-implementation-tightening.s007
+dependencies:
+  - TYP-007B
+scope:
+  - add execution context/frame stack for resumable composed effect execution
+  - support sequence pause/resume around pending decisions from the stored frame at the paused segment without re-applying completed earlier segments
+  - preserve the original queue-entry causality context across pause/resume
+  - track segment results: attempted, succeeded, changedState, selected cards/targets, paidCost, and playerDeclined
+  - store and preserve saved-result-reference slots/metadata across pause/resume for later authorized runtime consumers
+  - preserve transient selection-set state inside execution frames, or fail closed for sequence shapes that require unsupported transient selection-set state
+  - fail closed when a sequence shape is unsupported
+  - add event-order, hidden-info, and state-hash regression coverage
+non_scope:
+  - migrating existing draw-then-trash behavior
+  - implementing optionality, costs, playSelected, drawUpTo, saved-reference consumer semantics, or modifiers
+  - parser/card support
+  - replacement generalization
+acceptance_criteria:
+  - sequence frames can pause and resume around decisions deterministically
+  - valid decision responses resume at the paused segment with prior segment results, saved references, transient sets, and causality context intact
+  - completed earlier sequence segments are not re-applied during resume
+  - segment result metadata is recorded for later runtime consumers
+  - saved-result-reference frame metadata is preserved without resolving later consumer semantics
+  - unsupported sequence shapes fail closed
+  - no existing supported behavior changes
+required_tests:
+  - synthetic runtime tests for sequence pause/resume
+  - fail-closed unsupported sequence tests
+  - replay regression for pause/resume through a stored frame, including stable event order, final state hash, and correct `state.seq` advancement
+  - hidden-info, event-order, and state-hash tests
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - keep the frame model internal to engine-core unless contracts require otherwise
+  - do not import @optcg/cards
+  - fail closed on replay or hidden-info ambiguity
+ambiguity_policy: fail_and_escalate

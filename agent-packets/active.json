@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-055A.md",
+      "storyId": "ENG-055A",
+      "storyPath": "stories/approved/ENG-055A-quantity-decision-runtime.yaml",
+      "storySha256": "def9cb6f3f7f03b59f4a1c98b7d8d5ce7159e4d30b7fae95ca48854df089685f"
+    }
+  ],
   "version": 1
 }

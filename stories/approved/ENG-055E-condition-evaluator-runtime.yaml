@@ -1,0 +1,63 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-055E
+epic_id: ENG-055
+title: Condition evaluator runtime
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Implement supported composed-effect condition evaluators and fail-closed
+  handling for unsupported conditions.
+story_boundary: >
+  Own only engine condition evaluation for the supported condition set. Do not
+  implement parser support, optionality semantics beyond condition use, or card
+  generated support.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime*.ts
+  - packages/engine-core/src/effect-runtime*.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-055*.yaml
+  - stories/approved/ENG-055*.yaml
+  - agent-packets/ENG-055E.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s002
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s024
+  - 05-effect-dsl-reference.s029
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - TYP-007C
+scope:
+  - implement runtime condition evaluation only for the spec-supported fixture subset `yourTurn` and `attachedDonCount`
+  - fail closed for `lifeCount`, `fieldCount`, `handCount`, `cardState`, `sourceStillInZone`, `and`, `or`, and `not` until the schema coverage policy spec lists them as supported runtime-authorable conditions
+  - reject unsupported condition shapes fail-closed
+  - add synthetic runtime tests for true, false, malformed, and unsupported condition cases
+  - preserve deterministic replay and event-order behavior for condition true, condition false, and unsupported fail-closed paths
+non_scope:
+  - parser/card support
+  - leader type or other condition families not authorized by this story
+  - runtime support for `lifeCount`, `fieldCount`, `handCount`, `cardState`, `sourceStillInZone`, `and`, `or`, `not`, `eventPayload`, custom, or other condition families until directly authorized by the schema coverage policy spec
+  - replacement generalization
+acceptance_criteria:
+  - "`yourTurn` and `attachedDonCount` evaluate deterministically from authoritative state"
+  - unsupported conditions fail closed
+  - hidden-info, event-order, deterministic replay, and state-hash behavior is preserved
+required_tests:
+  - focused condition evaluator tests for `yourTurn` and `attachedDonCount`
+  - fail-closed unsupported condition tests
+  - replay, event-order, hidden-info, and state-hash regression tests for condition-true, condition-false, and unsupported-condition fail-closed paths
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - do not import @optcg/cards
+  - do not infer unsupported official wording from parser/card examples
+  - fail closed on condition semantics ambiguity
+ambiguity_policy: fail_and_escalate

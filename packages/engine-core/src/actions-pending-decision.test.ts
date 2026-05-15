@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { Action } from "@optcg/types";
+
 import { createInitialState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";
 import { applyAction, getLegalActions } from "./actions.js";
+import { filterStateForPlayer } from "./filter-state-for-player.js";
 import {
   createActiveState,
   createInput,
@@ -224,4 +227,268 @@ test("respondToDecision rejects stale decision id for pending chooseOptionalActi
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+const setupChooseQuantityDecisionState = () => {
+  const state = createActiveState();
+  state.pendingDecision = {
+    id: toDecisionId("decision:choose-quantity"),
+    type: "chooseQuantity",
+    playerId: p1,
+    prompt: "Choose quantity.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-choose-quantity"),
+      effectId: toEffectId("effect-choose-quantity"),
+    },
+    visibility: { type: "private", playerId: p1 },
+    mode: "upTo",
+    min: 1,
+    max: 3,
+  };
+  return state;
+};
+
+test("getLegalActions exposes chooseQuantity responses only for decision player", () => {
+  const state = setupChooseQuantityDecisionState();
+  const decisionId = state.pendingDecision?.id;
+
+  assert.deepEqual(getLegalActions(state, p1), [
+    { type: "concede", playerId: p1 },
+    {
+      type: "respondToDecision",
+      decisionId,
+      response: { type: "chooseQuantity", quantity: 1 },
+    },
+    {
+      type: "respondToDecision",
+      decisionId,
+      response: { type: "chooseQuantity", quantity: 2 },
+    },
+    {
+      type: "respondToDecision",
+      decisionId,
+      response: { type: "chooseQuantity", quantity: 3 },
+    },
+  ]);
+  assert.deepEqual(getLegalActions(state, p2), [
+    { type: "concede", playerId: p2 },
+  ]);
+});
+
+test("getLegalActions rejects malformed chooseQuantity bounds and mode", () => {
+  const state = setupChooseQuantityDecisionState();
+  const malformedDecisions: NonNullable<typeof state.pendingDecision>[] = [
+    { ...must(state.pendingDecision, "pending decision"), mode: "bogus" },
+    { ...must(state.pendingDecision, "pending decision"), min: 2, max: 1 },
+    {
+      ...must(state.pendingDecision, "pending decision"),
+      mode: "exact",
+      min: 1,
+      max: 3,
+    },
+  ] as NonNullable<typeof state.pendingDecision>[];
+
+  for (const pendingDecision of malformedDecisions) {
+    const candidateState = { ...state, pendingDecision };
+
+    assert.deepEqual(getLegalActions(candidateState, p1), [
+      { type: "concede", playerId: p1 },
+    ]);
+  }
+});
+
+test("respondToDecision accepts valid chooseQuantity response and resolves decision with sequence increment", () => {
+  const state = setupChooseQuantityDecisionState();
+  const decision = must(state.pendingDecision, "pending decision");
+  const before = structuredClone(state);
+  const beforeSeq = state.seq;
+  const beforeActionSeq = state.actionSeq;
+  const beforeJournalLength = state.eventJournal.length;
+
+  const result = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "chooseQuantity", quantity: 2 },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.seq, beforeSeq + 1);
+  assert.equal(result.state.actionSeq, beforeActionSeq + 1);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["decisionResolved"],
+  );
+  assert.deepEqual(result.events[0]?.payload, {
+    decisionId: decision.id,
+    decisionType: decision.type,
+    playerId: decision.playerId,
+    responseType: "chooseQuantity",
+  });
+  assert.deepEqual(
+    result.state.eventJournal.slice(beforeJournalLength),
+    result.events,
+  );
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+  assert.equal(state.pendingDecision?.id, before.pendingDecision?.id);
+});
+
+test("respondToDecision rejects malformed chooseQuantity responses without mutation", () => {
+  const state = setupChooseQuantityDecisionState();
+  const decisionId = must(state.pendingDecision, "pending decision").id;
+  const before = JSON.stringify(state);
+
+  const invalidResponses: Extract<Action, { type: "respondToDecision" }>[] = [
+    {
+      type: "respondToDecision",
+      decisionId,
+      response: { type: "orderedIds", ids: [] },
+    },
+    {
+      type: "respondToDecision",
+      decisionId,
+      response: { type: "chooseQuantity", quantity: 0 },
+    },
+    {
+      type: "respondToDecision",
+      decisionId,
+      response: { type: "chooseQuantity", quantity: 4 },
+    },
+    {
+      type: "respondToDecision",
+      decisionId,
+      response: { type: "chooseQuantity", quantity: 1.5 },
+    },
+    {
+      type: "respondToDecision",
+      decisionId,
+      response: { type: "chooseQuantity", quantity: -1 },
+    },
+    {
+      type: "respondToDecision",
+      decisionId,
+      response: { type: "chooseQuantity" } as Extract<
+        Action,
+        { type: "respondToDecision" }
+      >["response"],
+    },
+    {
+      type: "respondToDecision",
+      decisionId,
+    } as Extract<Action, { type: "respondToDecision" }>,
+    {
+      type: "respondToDecision",
+      decisionId,
+      response: null,
+    } as unknown as Extract<Action, { type: "respondToDecision" }>,
+  ];
+
+  for (const action of invalidResponses) {
+    const result = applyAction(state, action);
+    assert.equal(result.errors?.[0]?.type, "invalidDecisionResponse");
+    assert.deepEqual(result.events, []);
+    assert.equal(JSON.stringify(state), before);
+    assert.equal(JSON.stringify(result.state), before);
+    assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+  }
+});
+
+test("respondToDecision rejects malformed or wrong-player chooseQuantity envelope without mutation", () => {
+  const state = setupChooseQuantityDecisionState();
+  const decisionId = must(state.pendingDecision, "pending decision").id;
+  const before = JSON.stringify(state);
+
+  const malformedPlayerResult = applyAction(state, {
+    type: "respondToDecision",
+    decisionId,
+    playerId: 1,
+    response: { type: "chooseQuantity", quantity: 2 },
+  } as Action);
+  assert.equal(
+    malformedPlayerResult.errors?.[0]?.type,
+    "invalidDecisionResponse",
+  );
+  assert.equal(JSON.stringify(malformedPlayerResult.state), before);
+
+  const wrongPlayerResult = applyAction(state, {
+    type: "respondToDecision",
+    decisionId,
+    playerId: p2,
+    response: { type: "chooseQuantity", quantity: 2 },
+  } as Action);
+  assert.equal(wrongPlayerResult.errors?.[0]?.type, "invalidDecisionResponse");
+  assert.equal(JSON.stringify(wrongPlayerResult.state), before);
+});
+
+test("public legal actions for chooseQuantity expose decision id only and stale id is deterministic", () => {
+  const state = setupChooseQuantityDecisionState();
+  const decisionId = must(state.pendingDecision, "pending decision").id;
+  const ownerView = filterStateForPlayer(state, p1);
+  const opponentView = filterStateForPlayer(state, p2);
+
+  assert.equal(ownerView.pendingDecision?.type, "chooseQuantity");
+  assert.deepEqual(ownerView.legalActions, [
+    { type: "concede", playerId: p1 },
+    { type: "respondToDecision", decisionId },
+  ]);
+  assert.deepEqual(opponentView.legalActions, [
+    { type: "concede", playerId: p2 },
+  ]);
+
+  const before = JSON.stringify(state);
+  const staleResult = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: toDecisionId("decision:stale-choose-quantity"),
+    response: { type: "chooseQuantity", quantity: 2 },
+  });
+
+  assert.deepEqual(staleResult.errors, [
+    {
+      type: "illegalAction",
+      reason: "Decision id does not match current pending decision.",
+    },
+  ]);
+  assert.deepEqual(staleResult.events, []);
+  assert.equal(JSON.stringify(staleResult.state), before);
+  assert.equal(
+    staleResult.stateHash,
+    hashCanonicalStateValue(staleResult.state),
+  );
+});
+
+test("respondToDecision preserves deterministic replay surfaces for accepted and stale chooseQuantity flows", () => {
+  const state = setupChooseQuantityDecisionState();
+  const decisionId = must(state.pendingDecision, "pending decision").id;
+  const acceptedAction: Action = {
+    type: "respondToDecision",
+    decisionId,
+    response: { type: "chooseQuantity", quantity: 2 },
+  };
+  const staleAction: Action = {
+    type: "respondToDecision",
+    decisionId: toDecisionId("decision:stale-choose-quantity"),
+    response: { type: "chooseQuantity", quantity: 2 },
+  };
+
+  const firstAccepted = applyAction(structuredClone(state), acceptedAction);
+  const secondAccepted = applyAction(structuredClone(state), acceptedAction);
+  const firstStale = applyAction(structuredClone(state), staleAction);
+  const secondStale = applyAction(structuredClone(state), staleAction);
+
+  assert.equal(firstAccepted.errors, undefined);
+  assert.deepEqual(firstAccepted.events, secondAccepted.events);
+  assert.equal(firstAccepted.stateHash, secondAccepted.stateHash);
+  assert.deepEqual(
+    firstAccepted.state.eventJournal,
+    secondAccepted.state.eventJournal,
+  );
+  assert.deepEqual(firstStale.errors, secondStale.errors);
+  assert.deepEqual(firstStale.events, []);
+  assert.deepEqual(firstStale.events, secondStale.events);
+  assert.equal(firstStale.stateHash, secondStale.stateHash);
+  assert.deepEqual(
+    firstStale.state.eventJournal,
+    secondStale.state.eventJournal,
+  );
 });
