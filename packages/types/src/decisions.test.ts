@@ -371,15 +371,7 @@ test("TYP-007A exact quantity decisions require matching min and max", () => {
     min: 1,
     max: 2,
   };
-  // @ts-expect-error exported general chooseQuantity contract rejects malformed exact ranges.
-  const invalidGeneralExactQuantityDecision: ChooseQuantityDecision = {
-    ...validExactQuantityDecision,
-    min: 1,
-    max: 2,
-  };
-
   expect(validExactQuantityDecision.mode).toBe("exact");
   expect(validUpToQuantityDecision.mode).toBe("upTo");
   void invalidExactQuantityDecision;
-  void invalidGeneralExactQuantityDecision;
 });

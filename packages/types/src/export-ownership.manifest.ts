@@ -120,7 +120,6 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   Condition: "TYP-001D",
   Cost: "TYP-001D",
   TargetRequest: "TYP-001D",
-  SupportedExactCardinalityValue: "TYP-007A",
   ExactCardinality: "TYP-007A",
   UpToCardinality: "TYP-007A",
   Cardinality: "TYP-007A",

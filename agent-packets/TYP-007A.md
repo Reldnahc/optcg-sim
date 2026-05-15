@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id TYP-007A -->
 <!-- agent-packet:story-path stories/approved/TYP-007A-cardinality-and-quantity-decision-contracts.yaml -->
-<!-- agent-packet:story-sha256 0c3769f54262e142be88e636ccd006a4b5e6e825c31cf1a9725bf54e7624b7f3 -->
+<!-- agent-packet:story-sha256 f8b5a3c4a3b2aad226b4ca50cdcefbc7fef72bd2d1a51d514318b2a12e2543a3 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -412,7 +412,8 @@ Own only canonical contracts, package type sync, and contract tests for cardinal
 ## Scope
 
 - define canonical exact-N and up-to-N cardinality contract shapes for reusable selection and quantity use
-- enforce exact-N representation as `mode: "exact"`, `min: N`, and `max: N`; malformed exact ranges must reject
+- define exact-N representation as `mode: "exact"`, `min: N`, and `max: N`; literal-specialized exact contracts such as `ExactCardinality<N>` must reject mismatched min/max values
+- document that unbounded structural `number` DTOs cannot prove min/max equality at the TypeScript type layer; general malformed exact-range rejection remains a runtime/schema validation responsibility for later ENG/schema stories
 - define canonical chooseQuantity pending decision, response, action, and legal-action DTO shapes
 - define public PlayerView pendingDecision exposure for chooseQuantity using only safe public fields such as decision identity, prompt text, min, max, and mode
 - adapt the existing PlayerView pendingDecision projection so chooseQuantity bounds and mode are not erased if an active chooseQuantity decision is projected
@@ -499,7 +500,8 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 ## Acceptance Criteria
 
 - canonical and package-exported types include exact-N and up-to-N cardinality support
-- exact-N contracts reject `mode: "exact"` shapes where `min` and `max` differ
+- literal-specialized exact-N contracts reject `mode: "exact"` shapes where `min` and `max` differ
+- unbounded general structural DTOs do not introduce an uncited finite numeric cap or required runtime-only brand to force min/max equality
 - canonical and package-exported types include chooseQuantity decision, action, response, and legal-action support
 - public pendingDecision DTOs expose chooseQuantity bounds and mode without hidden candidate counts or hidden card identities
 - public legal-action DTOs for chooseQuantity remain decision-id-only unless an existing canonical public-action pattern requires otherwise

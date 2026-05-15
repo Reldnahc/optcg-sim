@@ -14,7 +14,6 @@ import type {
   Cost,
   EffectOption,
   ExactCardinality,
-  SupportedExactCardinalityValue,
   TargetRequest,
 } from "./effects.js";
 
@@ -154,9 +153,7 @@ export type ChooseQuantityDecision = BaseDecision &
     defaultResponse?: ChooseQuantityResponse;
   };
 
-export type ExactQuantityDecision<
-  N extends SupportedExactCardinalityValue = SupportedExactCardinalityValue,
-> = BaseDecision &
+export type ExactQuantityDecision<N extends number = number> = BaseDecision &
   ExactCardinality<N> & {
     type: "chooseQuantity";
     defaultResponse?: ChooseQuantityResponse;
