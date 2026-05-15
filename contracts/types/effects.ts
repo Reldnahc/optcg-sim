@@ -86,26 +86,39 @@ export type Condition =
   | { type: "custom"; check: string };
 
 export type Cost =
-  | { type: "restDon"; count: number; chooser?: PlayerRef }
-  | { type: "returnDon"; count: number; chooser?: PlayerRef }
-  | { type: "restSelf" }
+  | { type: "restDon"; count: number; chooser?: PlayerRef; optional?: boolean }
+  | {
+      type: "returnDon";
+      count: number;
+      chooser?: PlayerRef;
+      optional?: boolean;
+    }
+  | { type: "restSelf"; optional?: boolean }
   | {
       type: "trashFromHand";
       count: number;
       filter?: CardFilter;
       chooser: PlayerRef;
+      optional?: boolean;
     }
-  | { type: "trashSelf" }
+  | { type: "trashSelf"; optional?: boolean }
   | {
       type: "trashFromField";
       count: number;
       filter?: CardFilter;
       chooser: PlayerRef;
+      optional?: boolean;
     }
-  | { type: "discard"; count: number; filter?: CardFilter; chooser: PlayerRef }
-  | { type: "sequence"; costs: Cost[] }
-  | { type: "chooseOne"; options: Cost[] }
-  | { type: "custom"; action: string };
+  | {
+      type: "discard";
+      count: number;
+      filter?: CardFilter;
+      chooser: PlayerRef;
+      optional?: boolean;
+    }
+  | { type: "sequence"; costs: Cost[]; optional?: boolean }
+  | { type: "chooseOne"; options: Cost[]; optional?: boolean }
+  | { type: "custom"; action: string; optional?: boolean };
 
 export type ExactCardinality<N extends number = number> = {
   mode: "exact";
@@ -235,6 +248,7 @@ export interface SequencedEffect {
     | "ifYouDo"
     | "ifPossible";
   saveResultAs?: string;
+  optional?: boolean;
 }
 
 export interface SequenceSegmentResult {

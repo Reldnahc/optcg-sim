@@ -377,3 +377,83 @@ test("sequence saved-result references support producedObjects with CardRef and 
   expect(producedObjects.kind).toBe("producedObjects");
   expect(producedObjects.objects).toHaveLength(2);
 });
+
+test("condition and optionality authoring supports composed optional cost and optional effect clauses", () => {
+  const condition: Condition = {
+    type: "and",
+    conditions: [
+      { type: "lifeCount", player: "self", op: "gte", value: 1 },
+      {
+        type: "or",
+        conditions: [
+          { type: "handCount", player: "self", op: "gte", value: 1 },
+          {
+            type: "fieldCount",
+            player: "self",
+            op: "gte",
+            value: 1,
+            filter: { state: "rested" },
+          },
+        ],
+      },
+      { type: "sourceStillInZone" },
+      {
+        type: "not",
+        condition: {
+          type: "cardState",
+          target: { type: "self" },
+          state: "rested",
+        },
+      },
+    ],
+  };
+
+  const optionalCost: Cost = {
+    type: "sequence",
+    optional: true,
+    costs: [
+      { type: "restDon", count: 1, chooser: "self", optional: true },
+      { type: "restSelf" },
+    ],
+  };
+
+  const optionalSequence: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        optional: true,
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+      {
+        connector: "ifYouDo",
+        effect: { type: "ko", target: { type: "self" } },
+      },
+    ],
+  };
+
+  const malformedOptionalCost: Cost = {
+    type: "restDon",
+    count: 1,
+    // @ts-expect-error optional cost clause requires a boolean value.
+    optional: "yes",
+  };
+
+  const malformedOptionalClause: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        // @ts-expect-error optional effect clause requires a boolean value.
+        optional: "decline",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+  };
+
+  expect(condition.type).toBe("and");
+  expect(optionalCost.type).toBe("sequence");
+  expect(optionalSequence.type).toBe("sequence");
+  void malformedOptionalCost;
+  void malformedOptionalClause;
+});

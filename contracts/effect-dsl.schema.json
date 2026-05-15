@@ -143,7 +143,8 @@
           "properties": {
             "type": { "const": "restDon" },
             "count": { "type": "integer", "minimum": 0 },
-            "chooser": { "$ref": "#/$defs/playerRef" }
+            "chooser": { "$ref": "#/$defs/playerRef" },
+            "optional": { "type": "boolean" }
           }
         },
         {
@@ -151,7 +152,8 @@
           "additionalProperties": false,
           "required": ["type"],
           "properties": {
-            "type": { "const": "restSelf" }
+            "type": { "const": "restSelf" },
+            "optional": { "type": "boolean" }
           }
         },
         {
@@ -164,7 +166,8 @@
               "type": "array",
               "items": { "$ref": "#/$defs/cost" },
               "minItems": 1
-            }
+            },
+            "optional": { "type": "boolean" }
           }
         }
       ]
@@ -376,6 +379,93 @@
             "op": { "$ref": "#/$defs/comparator" },
             "value": { "type": "integer", "minimum": 0 }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player", "op", "value"],
+          "properties": {
+            "type": { "const": "lifeCount" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "op": { "$ref": "#/$defs/comparator" },
+            "value": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player", "op", "value"],
+          "properties": {
+            "type": { "const": "fieldCount" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "filter": { "$ref": "#/$defs/cardFilter" },
+            "op": { "$ref": "#/$defs/comparator" },
+            "value": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player", "op", "value"],
+          "properties": {
+            "type": { "const": "handCount" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "op": { "$ref": "#/$defs/comparator" },
+            "value": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target", "state"],
+          "properties": {
+            "type": { "const": "cardState" },
+            "target": { "$ref": "#/$defs/target" },
+            "state": { "type": "string", "enum": ["active", "rested"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "sourceStillInZone" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "conditions"],
+          "properties": {
+            "type": { "const": "and" },
+            "conditions": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/condition" },
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "conditions"],
+          "properties": {
+            "type": { "const": "or" },
+            "conditions": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/condition" },
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "condition"],
+          "properties": {
+            "type": { "const": "not" },
+            "condition": { "$ref": "#/$defs/condition" }
+          }
         }
       ]
     },
@@ -448,6 +538,9 @@
         "saveResultAs": {
           "type": "string",
           "minLength": 1
+        },
+        "optional": {
+          "type": "boolean"
         }
       }
     },

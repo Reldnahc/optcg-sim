@@ -1,0 +1,78 @@
+{
+  "cardId": "TYP-007C-001",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007C-001:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "optional": true,
+      "condition": {
+        "type": "and",
+        "conditions": [
+          { "type": "lifeCount", "player": "self", "op": "gte", "value": 1 },
+          {
+            "type": "or",
+            "conditions": [
+              {
+                "type": "handCount",
+                "player": "self",
+                "op": "gte",
+                "value": 1
+              },
+              {
+                "type": "fieldCount",
+                "player": "self",
+                "op": "gte",
+                "value": 1,
+                "filter": { "state": "rested" }
+              }
+            ]
+          },
+          { "type": "sourceStillInZone" },
+          {
+            "type": "not",
+            "condition": {
+              "type": "cardState",
+              "target": { "type": "self" },
+              "state": "rested"
+            }
+          }
+        ]
+      },
+      "cost": {
+        "type": "sequence",
+        "optional": true,
+        "costs": [
+          {
+            "type": "restDon",
+            "count": 1,
+            "chooser": "self",
+            "optional": true
+          },
+          { "type": "restSelf" }
+        ]
+      },
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "connector": "always",
+            "optional": true,
+            "effect": { "type": "draw", "player": "self", "count": 1 }
+          },
+          {
+            "connector": "ifYouDo",
+            "effect": { "type": "ko", "target": { "type": "self" } }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007c-001",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "cardId": "TYP-007C-903",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007C-903:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "cost": {
+        "type": "restDon",
+        "count": 1,
+        "chooser": "self",
+        "optional": "yes"
+      },
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "connector": "always",
+            "optional": "decline",
+            "effect": { "type": "draw", "player": "self", "count": 1 }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007c-903",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-007B.md",
-      "storyId": "TYP-007B",
-      "storyPath": "stories/approved/TYP-007B-sequence-result-saved-reference-contracts.yaml",
-      "storySha256": "e8078839fae71ad6cef186ffee4d772af0ef372791d80cc268c9284d02363d1e"
+      "packetPath": "agent-packets/TYP-007C.md",
+      "storyId": "TYP-007C",
+      "storyPath": "stories/approved/TYP-007C-condition-optionality-dsl-schema.yaml",
+      "storySha256": "405738ec64ebd49f25948f1306df676abf667517a08ff54ea5eda9851a5d13d2"
     }
   ],
   "version": 1
