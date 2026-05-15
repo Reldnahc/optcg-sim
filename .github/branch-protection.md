@@ -1,6 +1,9 @@
 # Branch Protection Baseline
 
-Apply these settings to `main` and `master` once the repository is connected in GitHub.
+Protect the default branch (`main`) once the repository is connected in GitHub.
+Keep the `master` protected-branch and CI push-trigger entries only as
+compatibility-only coverage for legacy repositories or mirrors that still
+publish `master`.
 
 ## Pull Request Reviews
 

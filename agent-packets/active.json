@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-053G.md",
-      "storyId": "INF-053G",
-      "storyPath": "stories/approved/INF-053G-link-card-fixture-workflow-as-mandatory.yaml",
-      "storySha256": "84b22193ff96ecc611e36f97afdd68bba8f7ab4879f248d446bc365b97fe62f7"
+      "packetPath": "agent-packets/INF-053H.md",
+      "storyId": "INF-053H",
+      "storyPath": "stories/approved/INF-053H-normalize-default-branch-wording.yaml",
+      "storySha256": "b2b746b6a14d6e3dec0259c0d015a60172e1a4ec3797d7bc0cc872830659d997"
     }
   ],
   "version": 1

@@ -238,7 +238,7 @@ test("branch protection guide names the required status checks and subagent revi
   const guide = await readActiveText(".github/branch-protection.md");
 
   assertMatchesAll(guide, [
-    /quality/i,
+    /(?=.*quality)(?=.*protect the default branch \(`main`\))(?=.*`master`[\s\S]*?compatibility-only)/is,
     /test/i,
     /contracts/i,
     /coverage/i,
@@ -474,10 +474,10 @@ test("branch protection required status checks exactly match ci workflow jobs", 
   const ciJobNames = extractCiWorkflowJobNames(workflow);
 
   assert.deepEqual(requiredChecks, ciJobNames);
-  assert.equal(
-    requiredChecks.includes("hidden-info"),
-    true,
-    "hidden-info must be documented as a required status check",
+  assert.equal(requiredChecks.includes("hidden-info"), true);
+  assert.match(
+    workflow,
+    /push:\s*\n\s*branches:\s*\n\s*- main\s*\n\s*- master/i,
   );
 });
 
