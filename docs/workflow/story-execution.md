@@ -89,6 +89,17 @@ Single-child parent story sets are still parent/substory workflows.
 - If the needed work crosses concerns, stop and split the story or raise the ambiguity instead of broadening the patch.
 - Supporting tests, fixtures, snapshots, and docs for the same concern are allowed in the same story.
 
+## Mandatory Card Fixture Workflow Entry Point
+
+For relevant CARD/card-fixture stories, `docs/workflow/card-fixture-capture.md`
+is mandatory workflow guidance. Agents must read it when a story touches fixture
+capture, CARD source integrity, generated support, overlays, or real-card
+fixture evidence.
+
+The card fixture capture workflow is an entry-point requirement only. It does
+not authorize changes to fixture capture implementation, generated support
+behavior, or card data semantics outside the approved story boundary.
+
 ## Layered Parent Story Sets
 
 Broad composed-effect or card-support initiatives may use layered parent story

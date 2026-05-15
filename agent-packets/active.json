@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-053F.md",
-      "storyId": "INF-053F",
-      "storyPath": "stories/approved/INF-053F-remove-normal-substory-branch-implications.yaml",
-      "storySha256": "c3e75c612c4adf0419c7abd28f96431d5954f37cd859500876ed6fc5fe203179"
+      "packetPath": "agent-packets/INF-053G.md",
+      "storyId": "INF-053G",
+      "storyPath": "stories/approved/INF-053G-link-card-fixture-workflow-as-mandatory.yaml",
+      "storySha256": "84b22193ff96ecc611e36f97afdd68bba8f7ab4879f248d446bc365b97fe62f7"
     }
   ],
   "version": 1

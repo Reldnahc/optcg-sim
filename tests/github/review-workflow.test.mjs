@@ -15,8 +15,7 @@ async function readText(relativePath) {
 }
 
 async function readActiveText(relativePath) {
-  const text = await readText(relativePath);
-  return text.replace(/<!--[\s\S]*?-->/g, "");
+  return (await readText(relativePath)).replace(/<!--[\s\S]*?-->/g, "");
 }
 
 async function readJson(relativePath) {
@@ -402,20 +401,21 @@ test("workflow docs distinguish remote cleanup guard proof from full handoff pre
 });
 
 test("workflow docs separate real-card fixture coverage from engine behavior requirements", async () => {
-  const storyExecution = await readActiveText(
-    "docs/workflow/story-execution.md",
-  );
-  const cardFixtureCapture = await readActiveText(
-    "docs/workflow/card-fixture-capture.md",
-  );
-  const workflowGuidance = `${storyExecution}\n${cardFixtureCapture}`;
+  const [agents, readme, storyExecution, cardFixtureCapture] =
+    await Promise.all([
+      readActiveText("AGENTS.md"),
+      readActiveText("README.md"),
+      readActiveText("docs/workflow/story-execution.md"),
+      readActiveText("docs/workflow/card-fixture-capture.md"),
+    ]);
+  const workflowGuidance = `${agents}\n${readme}\n${storyExecution}\n${cardFixtureCapture}`;
 
   assertMatchesAll(workflowGuidance, [
+    /Card fixture capture workflow for relevant CARD\/card-fixture stories: `docs\/workflow\/card-fixture-capture\.md`\. Agents must read it when a story touches fixture capture, CARD source integrity, generated support, overlays, or real-card fixture evidence\.[\s\S]*Mandatory workflow details live here:[\s\S]*docs\/workflow\/card-fixture-capture\.md[\s\S]*is mandatory for relevant CARD\/card-fixture stories[\s\S]*touches fixture capture, CARD source integrity, generated support, overlays,[\s\S]*or real-card fixture evidence\.[\s\S]*For relevant CARD\/card-fixture stories, `docs\/workflow\/card-fixture-capture\.md`[\s\S]*is mandatory workflow guidance\. Agents must read it when a story touches fixture[\s\S]*capture, CARD source integrity, generated support, overlays, or real-card[\s\S]*fixture evidence\./i,
     /real-card and cards-produced fixture coverage is separate integration\/card-data\s+coverage/i,
     /does not replace primitive, unit, regression,\s+synthetic edge-case, fail-closed, hidden-info, event-order, or state-hash\s+coverage/i,
     /engine and rules stories must keep focused synthetic\/unit\/regression tests for\s+behavior requirements/i,
-    /future engine and effect-runtime stories are not required to add real-card\s+fixtures/i,
-    /create a\s+separate CARD\/FIXTURE\/verification follow-up story/i,
+    /future engine and effect-runtime stories are not required to add real-card\s+fixtures[\s\S]*create a\s+separate CARD\/FIXTURE\/verification follow-up story/i,
   ]);
 
   assert.doesNotMatch(

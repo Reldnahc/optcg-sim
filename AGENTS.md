@@ -64,6 +64,7 @@ The procedure docs below are part of this repo's agent contract. Read the one th
 - PR review, AI review records, fallback review, and human review procedure: `docs/workflow/review-gate.md`
 - Parent integration branch procedure: `docs/workflow/parent-integration-branches.md`
 - Reporting and GitHub/board sync procedure: `docs/workflow/reporting-and-github-sync.md`
+- Card fixture capture workflow for relevant CARD/card-fixture stories: `docs/workflow/card-fixture-capture.md`. Agents must read it when a story touches fixture capture, CARD source integrity, generated support, overlays, or real-card fixture evidence.
 - Code standard and implementation-quality guidance: `docs/code-standard.md`
 
 ## Non-Negotiable Rules
