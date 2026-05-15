@@ -8,7 +8,10 @@ import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
 import { sha256 } from "../../tools/agent-packet-lifecycle.ts";
-import { parseCleanupMetadataBlock } from "../../tools/post-merge-cleanup/metadata.ts";
+import {
+  buildWorkflowCleanupEvidenceBundle,
+  parseCleanupMetadataBlock,
+} from "../../tools/post-merge-cleanup/metadata.ts";
 import { buildCleanupDryRunPlan as buildRawCleanupDryRunPlan } from "../../tools/post-merge-cleanup/validator.ts";
 
 const repoRoot = path.resolve(
@@ -799,6 +802,70 @@ test("package script rejects unreviewed explicit CLI metadata", () => {
   assert.match(run.stderr, /reviewed PR body or durable handoff comment/);
 });
 
+test("workflow evidence path fails closed for malformed or untrusted sources", () => {
+  const source =
+    "Post-merge cleanup:\n  mode: single\n  stories:\n    - stories/approved/INF-501-story.yaml\n";
+
+  assert.throws(
+    () =>
+      buildWorkflowCleanupEvidenceBundle(
+        workflowEvidenceInput({
+          issueComments: [trustedComment({ body: source })],
+          pullRequest: { body: "Post-merge cleanup:\n  stories:\n    - bad\n" },
+        }),
+      ),
+    /Malformed cleanup metadata source pr-body/i,
+  );
+  assert.throws(
+    () =>
+      buildWorkflowCleanupEvidenceBundle(
+        workflowEvidenceInput({
+          issueComments: [
+            trustedComment({ authorAssociation: "NONE", body: source }),
+          ],
+          pullRequest: { body: "" },
+        }),
+      ),
+    /No cleanup metadata sources were found/,
+  );
+});
+
+function workflowEvidenceInput(overrides) {
+  return {
+    changedFiles: [
+      { filename: "stories/approved/INF-501-story.yaml" },
+      { filename: "agent-packets/INF-501.md" },
+    ],
+    defaultBranch: "main",
+    issueComments: overrides.issueComments ?? [],
+    pullRequest: {
+      baseRef: "main",
+      body: "",
+      createdAt: "2026-01-01T00:00:00Z",
+      headRef: "story/inf-501",
+      mergeCommitSha: "abc123",
+      merged: true,
+      mergedAt: "2026-01-02T00:00:00Z",
+      number: 501,
+      updatedAt: "2026-01-03T00:00:00Z",
+      ...overrides.pullRequest,
+    },
+    reviews: [],
+  };
+}
+
+function trustedComment(overrides) {
+  return {
+    authorAssociation: "OWNER",
+    body: "",
+    createdAt: "2026-01-01T00:00:00Z",
+    id: 77,
+    updatedAt: "2026-01-01T00:00:00Z",
+    userType: "User",
+    ...overrides,
+  };
+}
+
 async function makeTempRepo(stories, options = {}) {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "optcg-cleanup-"));
   await mkdir(path.join(tempRoot, "stories", "approved"), { recursive: true });
@@ -907,6 +974,21 @@ function buildSingleEvidence() {
 function buildParentEvidence(trustedMainSha) {
   const substoryCommitSha =
     trustedMainSha ?? "1111111111111111111111111111111111111111";
+  const includedStories = [
+    { id: "INF-601", suffix: "a" },
+    { id: "INF-602", suffix: "b" },
+  ].map(({ id, suffix }) => {
+    const numericId = id.replace("INF-", "");
+    return {
+      packetPath: `agent-packets/${id}.md`,
+      storyId: id,
+      storyPath: `stories/approved/${id}-${suffix}.yaml`,
+      substoryAiReviewRecordId: `ai-${numericId}`,
+      substoryCommitSha,
+      substoryRevisionResponseId: `substory-revision-${numericId}`,
+      substoryVerificationEvidence: `verify-${numericId}`,
+    };
+  });
   return {
     ...buildSingleEvidence(),
     changedFiles: [
@@ -918,48 +1000,10 @@ function buildParentEvidence(trustedMainSha) {
     ],
     mergeSha: trustedMainSha ?? "abc123",
     prNumber: 700,
-    stories: [
-      {
-        packetPath: "agent-packets/INF-601.md",
-        storyId: "INF-601",
-        storyPath: "stories/approved/INF-601-a.yaml",
-        substoryAiReviewRecordId: "ai-601",
-        substoryCommitSha,
-        substoryRevisionResponseId: "substory-revision-601",
-        substoryVerificationEvidence: "verify-601",
-      },
-      {
-        packetPath: "agent-packets/INF-602.md",
-        storyId: "INF-602",
-        storyPath: "stories/approved/INF-602-b.yaml",
-        substoryAiReviewRecordId: "ai-602",
-        substoryCommitSha,
-        substoryRevisionResponseId: "substory-revision-602",
-        substoryVerificationEvidence: "verify-602",
-      },
-    ],
+    stories: includedStories,
     parentLifecycle: {
       cleanupPlanRecordedAt: "2026-01-01T10:00:00.000Z",
-      includedStories: [
-        {
-          packetPath: "agent-packets/INF-601.md",
-          storyId: "INF-601",
-          storyPath: "stories/approved/INF-601-a.yaml",
-          substoryAiReviewRecordId: "ai-601",
-          substoryCommitSha,
-          substoryRevisionResponseId: "substory-revision-601",
-          substoryVerificationEvidence: "verify-601",
-        },
-        {
-          packetPath: "agent-packets/INF-602.md",
-          storyId: "INF-602",
-          storyPath: "stories/approved/INF-602-b.yaml",
-          substoryAiReviewRecordId: "ai-602",
-          substoryCommitSha,
-          substoryRevisionResponseId: "substory-revision-602",
-          substoryVerificationEvidence: "verify-602",
-        },
-      ],
+      includedStories,
       parentIntegrationReviewRecordId: "parent-review-1",
       parentRevisionResponseId: "parent-revision-1",
     },

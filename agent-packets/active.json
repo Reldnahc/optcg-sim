@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/INF-053H.md",
-      "storyId": "INF-053H",
-      "storyPath": "stories/approved/INF-053H-normalize-default-branch-wording.yaml",
-      "storySha256": "b2b746b6a14d6e3dec0259c0d015a60172e1a4ec3797d7bc0cc872830659d997"
+      "packetPath": "agent-packets/INF-053I.md",
+      "storyId": "INF-053I",
+      "storyPath": "stories/approved/INF-053I-deduplicate-post-merge-cleanup-parser.yaml",
+      "storySha256": "d39ef1e368e54e4673eb3b313461b9e613554d9f17e572db3aa5ad646033646d"
     }
   ],
   "version": 1

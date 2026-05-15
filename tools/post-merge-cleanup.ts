@@ -20,6 +20,9 @@ const { findRepoRoot, resolveCliPath, sha256 }: typeof PacketLifecycle =
 const { parseCleanupMetadataBlock }: typeof Metadata = createRequire(
   import.meta.url,
 )("./post-merge-cleanup/metadata.ts") as typeof Metadata;
+const { buildWorkflowCleanupEvidenceBundle }: typeof Metadata = createRequire(
+  import.meta.url,
+)("./post-merge-cleanup/metadata.ts") as typeof Metadata;
 const { validateWorkflowCleanupMetadataGuard }: typeof Metadata = createRequire(
   import.meta.url,
 )("./post-merge-cleanup/metadata.ts") as typeof Metadata;
@@ -47,6 +50,39 @@ async function main() {
     const repoRoot = parsedRoot.repoRoot ?? findRepoRoot();
     const executePlanFile = parseSinglePathArg(args, "--execute-plan-file");
     const finalizePlanFile = parseSinglePathArg(args, "--finalize-plan-file");
+    const workflowEvidenceOutput = await parseWorkflowEvidenceOutput(args);
+    if (workflowEvidenceOutput !== null) {
+      const bundle = buildWorkflowCleanupEvidenceBundle(
+        workflowEvidenceOutput.input,
+      );
+      await mkdir(path.dirname(workflowEvidenceOutput.metadataSourceFile), {
+        recursive: true,
+      });
+      await mkdir(path.dirname(workflowEvidenceOutput.evidenceJsonFile), {
+        recursive: true,
+      });
+      await writeFile(
+        workflowEvidenceOutput.metadataSourceFile,
+        bundle.metadataSource,
+      );
+      await writeFile(
+        workflowEvidenceOutput.evidenceJsonFile,
+        `${JSON.stringify(bundle.evidence, null, 2)}\n`,
+      );
+      process.stdout.write(
+        `${JSON.stringify(
+          {
+            evidenceJsonFile: workflowEvidenceOutput.evidenceJsonFile,
+            metadataSourceFile: workflowEvidenceOutput.metadataSourceFile,
+            metadataSourceRef: bundle.metadataSourceRef,
+            status: "valid",
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      return;
+    }
     const sourceRefPreview = await parseSourceRefPreview(args);
     if (sourceRefPreview !== null) {
       process.stdout.write(`${JSON.stringify(sourceRefPreview, null, 2)}\n`);
@@ -276,6 +312,143 @@ async function parseCleanupHandoffGuard(args: string[]): Promise<{
   };
 }
 
+async function parseWorkflowEvidenceOutput(args: string[]): Promise<{
+  evidenceJsonFile: string;
+  input: Metadata.WorkflowCleanupEvidenceInput;
+  metadataSourceFile: string;
+} | null> {
+  const workflowEvidenceFile = parseSinglePathArg(
+    args,
+    "--workflow-evidence-json-file",
+  );
+  if (workflowEvidenceFile === null) {
+    return null;
+  }
+
+  const metadataSourceFile = parseSinglePathArg(
+    args,
+    "--metadata-source-output-file",
+  );
+  const evidenceJsonFile = parseSinglePathArg(
+    args,
+    "--evidence-json-output-file",
+  );
+
+  if (metadataSourceFile === null || evidenceJsonFile === null) {
+    throw new Error(
+      "Workflow cleanup evidence requires --metadata-source-output-file and --evidence-json-output-file.",
+    );
+  }
+
+  const allowedArgs = new Set([
+    "--",
+    "--workflow-evidence-json-file",
+    "--metadata-source-output-file",
+    "--evidence-json-output-file",
+  ]);
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token === undefined) {
+      throw new Error("Unexpected missing CLI token.");
+    }
+    if (!allowedArgs.has(token)) {
+      throw new Error(
+        `Unexpected workflow cleanup evidence argument: ${token}`,
+      );
+    }
+    if (token !== "--") {
+      index += 1;
+    }
+  }
+
+  return {
+    evidenceJsonFile,
+    input: parseWorkflowCleanupEvidenceJson(
+      JSON.parse(await readFile(workflowEvidenceFile, "utf8")) as unknown,
+    ),
+    metadataSourceFile,
+  };
+}
+
+function parseWorkflowCleanupEvidenceJson(
+  value: unknown,
+): Metadata.WorkflowCleanupEvidenceInput {
+  const root = requireRecord(value, "workflow cleanup evidence input");
+  const pullRequest = requireRecord(
+    root["pullRequest"],
+    "workflow cleanup evidence pullRequest",
+  );
+  const changedFiles = root["changedFiles"];
+  const issueComments = root["issueComments"];
+  const reviews = root["reviews"];
+
+  if (!Array.isArray(changedFiles)) {
+    throw new Error("Workflow cleanup evidence changedFiles must be an array.");
+  }
+  if (!Array.isArray(issueComments)) {
+    throw new Error(
+      "Workflow cleanup evidence issueComments must be an array.",
+    );
+  }
+  if (!Array.isArray(reviews)) {
+    throw new Error("Workflow cleanup evidence reviews must be an array.");
+  }
+
+  return {
+    changedFiles: changedFiles.map((file) => parseWorkflowChangedFile(file)),
+    defaultBranch: requireJsonString(root["defaultBranch"], "defaultBranch"),
+    ...(typeof root["eventSenderUserType"] === "string"
+      ? {
+          eventSenderUserType: requireJsonString(
+            root["eventSenderUserType"],
+            "eventSenderUserType",
+          ),
+        }
+      : {}),
+    issueComments: issueComments.map((comment) =>
+      parseWorkflowIssueComment(comment),
+    ),
+    pullRequest: {
+      baseRef: requireJsonString(pullRequest["baseRef"], "pullRequest.baseRef"),
+      body: requireJsonString(pullRequest["body"], "pullRequest.body"),
+      createdAt: requireJsonString(
+        pullRequest["createdAt"],
+        "pullRequest.createdAt",
+      ),
+      headRef: requireJsonString(pullRequest["headRef"], "pullRequest.headRef"),
+      mergeCommitSha: requireJsonString(
+        pullRequest["mergeCommitSha"],
+        "pullRequest.mergeCommitSha",
+      ),
+      merged: requireJsonBoolean(pullRequest["merged"], "pullRequest.merged"),
+      mergedAt: requireJsonString(
+        pullRequest["mergedAt"],
+        "pullRequest.mergedAt",
+      ),
+      number: requireJsonInteger(pullRequest["number"], "pullRequest.number"),
+      updatedAt: requireJsonString(
+        pullRequest["updatedAt"],
+        "pullRequest.updatedAt",
+      ),
+    },
+    reviews: reviews.map((review) => parseWorkflowReview(review)),
+  };
+}
+
+function parseWorkflowReview(value: unknown): Metadata.WorkflowReviewInput {
+  const root = requireRecord(value, "workflow cleanup evidence review");
+  return {
+    body: requireJsonString(root["body"], "reviews[].body"),
+    id: requireJsonStringOrNumber(root["id"], "reviews[].id"),
+    state: requireJsonString(root["state"], "reviews[].state"),
+    submittedAt: requireJsonString(
+      root["submittedAt"],
+      "reviews[].submittedAt",
+    ),
+    userType: requireJsonString(root["userType"], "reviews[].userType"),
+  };
+}
+
 function parseCleanupHandoffJson(
   value: unknown,
 ): Metadata.WorkflowCleanupMetadataGuardInput {
@@ -396,6 +569,13 @@ function requireJsonString(value: unknown, label: string) {
 function requireJsonStringOrNumber(value: unknown, label: string) {
   if (typeof value !== "string" && typeof value !== "number") {
     throw new Error(`Cleanup handoff ${label} must be a string or number.`);
+  }
+  return value;
+}
+
+function requireJsonBoolean(value: unknown, label: string) {
+  if (typeof value !== "boolean") {
+    throw new Error(`Cleanup handoff ${label} must be a boolean.`);
   }
   return value;
 }
