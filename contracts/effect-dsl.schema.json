@@ -421,6 +421,25 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "category": { "const": "replacement" }
+            },
+            "required": ["category"]
+          },
+          "then": {
+            "properties": {
+              "effect": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": { "const": "replacement" }
+                }
+              }
+            }
+          }
         }
       ],
       "properties": {

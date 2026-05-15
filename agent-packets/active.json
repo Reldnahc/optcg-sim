@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-007E.md",
-      "storyId": "TYP-007E",
-      "storyPath": "stories/approved/TYP-007E-duration-modifier-restriction-schema.yaml",
-      "storySha256": "97650c164ebe1ad280be358ee388d766aa07a797813a72bd44b613ab60bc94c0"
+      "packetPath": "agent-packets/TYP-007F.md",
+      "storyId": "TYP-007F",
+      "storyPath": "stories/approved/TYP-007F-composition-schema-guardrails.yaml",
+      "storySha256": "fdb470b1faca217210ff03bdc17c6f33c84f0f7c77a9a259bdf9e4516de2c837"
     }
   ],
   "version": 1

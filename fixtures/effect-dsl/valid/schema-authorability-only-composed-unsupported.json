@@ -1,0 +1,36 @@
+{
+  "cardId": "TYP-007F-001",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "TYP-007F-001:auto-on-play-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "optional": true,
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "connector": "always",
+            "effect": { "type": "drawUpTo", "player": "self", "count": 2 }
+          },
+          {
+            "connector": "ifPossible",
+            "effect": {
+              "type": "trashFromHand",
+              "player": "self",
+              "chooser": "self",
+              "count": 1
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007f-001",
+    "rulesVersion": "2026-05-14",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

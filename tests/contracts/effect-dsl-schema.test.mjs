@@ -23,6 +23,7 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/valid/hand-select-play-selected.json",
     "fixtures/effect-dsl/valid/on-play-draw-1.json",
     "fixtures/effect-dsl/valid/return-don-cost.json",
+    "fixtures/effect-dsl/valid/schema-authorability-only-composed-unsupported.json",
     "fixtures/effect-dsl/valid/temporary-modify-power-until-start-next-turn.json",
     "fixtures/effect-dsl/valid/trash-from-hand-effect.json",
     "fixtures/effect-dsl/invalid/condition-empty-and-list.json",
@@ -36,6 +37,7 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/play-selected-arbitrary-reference.json",
     "fixtures/effect-dsl/invalid/play-selected-missing-hand-selection-producer.json",
     "fixtures/effect-dsl/invalid/play-selected-top-level-effect.json",
+    "fixtures/effect-dsl/invalid/replacement-category-effect-block.json",
     "fixtures/effect-dsl/invalid/restriction-cannot-attack-missing-duration.json",
     "fixtures/effect-dsl/invalid/restriction-selection-target-non-hand-reference.json",
     "fixtures/effect-dsl/invalid/restriction-selection-target-missing-selection.json",
@@ -73,6 +75,21 @@ test("effect block policy enums match canonical contract names", async () => {
     "resolveFromLastKnownInformation",
     "noSourceRequired",
   ]);
+});
+
+test("schema-valid composed fixtures stay at contract authorability layer only", async () => {
+  const fixturePath = path.join(
+    repoRoot,
+    "fixtures/effect-dsl/valid/schema-authorability-only-composed-unsupported.json",
+  );
+  const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
+
+  assert.equal(fixture.implementationStatus, "unsupported");
+  assert.equal(fixture.metadata.generatedBy, undefined);
+  assert.equal(fixture.metadata.reviewedBy, undefined);
+  assert.equal(fixture.metadata.reviewedAt, undefined);
+  assert.equal(fixture.metadata.sourceCardVersion, undefined);
+  assert.equal(fixture.metadata.supportStatus, undefined);
 });
 
 test("contracts:validate-effects passes on committed fixtures", () => {

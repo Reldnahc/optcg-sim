@@ -1,0 +1,18 @@
+{
+  "cardId": "TYP-007F-902",
+  "implementationStatus": "implemented-dsl",
+  "effects": [
+    {
+      "id": "TYP-007F-902:replacement-1",
+      "category": "replacement",
+      "trigger": { "type": "onPlay" },
+      "effect": { "type": "draw", "player": "self", "count": 1 }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-007f-902",
+    "rulesVersion": "2026-05-14",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}
