@@ -16,6 +16,12 @@ import {
   resolvedCard,
 } from "./action-test-fixtures.js";
 import {
+  queueDrawForP1,
+  queueingState,
+  reviewedOnPlayDrawDefinition,
+  setupOnPlayDefinition,
+} from "./effect-runtime-queue-processing-test-support.js";
+import {
   setupFullCharacterPlayState,
   setupMainPlayState,
 } from "./play-card-test-fixtures.js";
@@ -236,11 +242,7 @@ const setupChooseQuantityDecisionState = () => {
     type: "chooseQuantity",
     playerId: p1,
     prompt: "Choose quantity.",
-    causedBy: {
-      type: "effect",
-      queueEntryId: toQueueEntryId("queue-choose-quantity"),
-      effectId: toEffectId("effect-choose-quantity"),
-    },
+    causedBy: { type: "ruleProcess", name: "test:chooseQuantity" },
     visibility: { type: "private", playerId: p1 },
     mode: "upTo",
     min: 1,
@@ -325,6 +327,7 @@ test("respondToDecision accepts valid chooseQuantity response and resolves decis
     decisionType: decision.type,
     playerId: decision.playerId,
     responseType: "chooseQuantity",
+    quantity: 2,
   });
   assert.deepEqual(
     result.state.eventJournal.slice(beforeJournalLength),
@@ -332,6 +335,126 @@ test("respondToDecision accepts valid chooseQuantity response and resolves decis
   );
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
   assert.equal(state.pendingDecision?.id, before.pendingDecision?.id);
+});
+
+test("respondToDecision resumes effect-originated chooseQuantity runtime work with chosen quantity evidence", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-choose-quantity-runtime",
+      rulesVersion: "choose-quantity-runtime-rules",
+      sourceTextHash: "choose-quantity-runtime-source",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  setupOnPlayDefinition(
+    state,
+    played,
+    definition,
+    "def-choose-quantity-runtime",
+  );
+  const effect = must(definition.effects[0], "draw effect");
+  const queued = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId("queue-choose-quantity"),
+    source: {
+      instanceId: played.instanceId,
+      cardId: played.cardId,
+      playerId: p1,
+      zone: played.zone,
+    },
+    sourceSnapshot: {
+      instanceId: played.instanceId,
+      cardId: played.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: played.zone,
+      category: "character" as const,
+      colors: ["red" as const],
+      cost: 1,
+      power: 3000,
+      keywords: [],
+    },
+    effectBlockId: effect.id,
+    sourcePresencePolicy: effect.sourcePresencePolicy ?? "mustRemainInSameZone",
+  };
+  state.effectQueue = [queued];
+  state.pendingDecision = {
+    id: toDecisionId("decision:choose-quantity-runtime"),
+    type: "chooseQuantity",
+    playerId: p1,
+    prompt: "Choose quantity.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: queued.id,
+      effectId: queued.effectBlockId,
+    },
+    visibility: { type: "private", playerId: p1 },
+    mode: "upTo",
+    min: 1,
+    max: 3,
+  };
+  const beforeP1 = must(state.players[p1], "p1");
+  const beforeDeck = beforeP1.deck.length;
+  const beforeHand = beforeP1.hand.length;
+
+  const result = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: state.pendingDecision.id,
+    response: { type: "chooseQuantity", quantity: 2 },
+  });
+
+  const afterP1 = must(result.state.players[p1], "p1 result");
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(afterP1.deck.length, beforeDeck - 1);
+  assert.equal(afterP1.hand.length, beforeHand + 1);
+  assert.deepEqual(result.events.map((event) => event.type).slice(0, 4), [
+    "decisionResolved",
+    "cardDrawn",
+    "cardMoved",
+    "cardMoved",
+  ]);
+  assert.deepEqual(result.events[0]?.payload, {
+    decisionId: toDecisionId("decision:choose-quantity-runtime"),
+    decisionType: "chooseQuantity",
+    playerId: p1,
+    responseType: "chooseQuantity",
+    quantity: 2,
+  });
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+test("respondToDecision rejects stale effect-originated chooseQuantity runtime context without mutation", () => {
+  const state = setupChooseQuantityDecisionState();
+  state.pendingDecision = {
+    ...must(state.pendingDecision, "pending decision"),
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-missing"),
+      effectId: toEffectId("effect-missing"),
+    },
+  };
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, {
+    type: "respondToDecision",
+    decisionId: state.pendingDecision.id,
+    response: { type: "chooseQuantity", quantity: 2 },
+  });
+
+  assert.equal(result.errors?.[0]?.type, "invalidDecisionResponse");
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });
 
 test("respondToDecision rejects malformed chooseQuantity responses without mutation", () => {
