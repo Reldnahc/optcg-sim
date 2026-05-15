@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-007A.md",
-      "storyId": "TYP-007A",
-      "storyPath": "stories/approved/TYP-007A-cardinality-and-quantity-decision-contracts.yaml",
-      "storySha256": "f8b5a3c4a3b2aad226b4ca50cdcefbc7fef72bd2d1a51d514318b2a12e2543a3"
+      "packetPath": "agent-packets/TYP-007B.md",
+      "storyId": "TYP-007B",
+      "storyPath": "stories/approved/TYP-007B-sequence-result-saved-reference-contracts.yaml",
+      "storySha256": "e8078839fae71ad6cef186ffee4d772af0ef372791d80cc268c9284d02363d1e"
     }
   ],
   "version": 1

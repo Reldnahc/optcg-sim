@@ -42,6 +42,9 @@ import type {
   RngState,
   SelectionId,
   SelectionSetId,
+  SequenceSavedResultReferenceMap,
+  SequenceSegmentResult,
+  SequenceSegmentResultMap,
   StateSeq,
   TargetSpec,
   TimerState,
@@ -364,4 +367,36 @@ test("TYP-001F does not introduce out-of-scope public or engine result exports",
   const outOfScopeExportWitness: OutOfScopeExportWitness | null = null;
 
   expect(outOfScopeExportWitness).toBeNull();
+});
+
+test("runtime contracts compile with sequence segment result and saved-reference ledgers", () => {
+  const resultLedger: SequenceSegmentResultMap = {
+    opening: {
+      attempted: true,
+      succeeded: true,
+      changedState: false,
+      selectedCards: [],
+      selectedTargets: [],
+      paidCost: false,
+      playerDeclined: false,
+    },
+  };
+
+  const savedReferences: SequenceSavedResultReferenceMap = {
+    openingSelection: {
+      kind: "selectedCards",
+      cards: [],
+    },
+  };
+
+  const firstResult: SequenceSegmentResult | undefined =
+    resultLedger["opening"];
+  const openingSelection = savedReferences["openingSelection"];
+  expect(openingSelection).toBeDefined();
+  if (!openingSelection) {
+    throw new Error("expected opening selection reference");
+  }
+
+  expect(firstResult?.attempted).toBe(true);
+  expect(openingSelection.kind).toBe("selectedCards");
 });

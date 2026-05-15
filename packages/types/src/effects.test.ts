@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import type {
   CardFilter,
   CardId,
+  CardRef,
   ExactCardinality,
   CardSelectionRequest,
   Condition,
@@ -18,6 +19,9 @@ import type {
   FailurePolicy,
   ReplacementTrigger,
   SearchRequest,
+  SequenceSavedResultReference,
+  SequenceSavedResultReferenceMap,
+  SequenceSegmentResult,
   SelectionSetId,
   SequencedEffect,
   SourcePresencePolicy,
@@ -259,4 +263,117 @@ test("deprecated CardFilter aliases are rejected by canonical contract", () => {
   void powerValueAlias;
   void hasKeywordAlias;
   void lacksKeywordAlias;
+});
+
+test("sequence segment result and saved-result reference contracts compile with canonical shapes", () => {
+  const selectedCard: CardRef = {
+    instanceId: "instance-1" as CardRef["instanceId"],
+    cardId: "OP01-003" as CardId,
+    playerId: "player-1" as CardRef["playerId"],
+  };
+
+  const result: SequenceSegmentResult = {
+    attempted: true,
+    succeeded: true,
+    changedState: false,
+    selectedCards: [selectedCard],
+    selectedTargets: [selectedCard],
+    paidCost: true,
+    playerDeclined: false,
+  };
+
+  const references: SequenceSavedResultReferenceMap = {
+    previousSelection: {
+      kind: "selectedCards",
+      cards: [selectedCard],
+    },
+    previousTarget: {
+      kind: "selectedTargets",
+      targets: [selectedCard],
+    },
+    previousCost: {
+      kind: "paidCost",
+      paidCost: true,
+    },
+    playedObject: {
+      kind: "producedObjects",
+      objects: [selectedCard],
+    },
+  };
+
+  const savedReferenceCandidate = references["previousTarget"];
+  expect(savedReferenceCandidate).toBeDefined();
+  if (!savedReferenceCandidate) {
+    throw new Error("expected saved reference");
+  }
+  const savedReference: SequenceSavedResultReference = savedReferenceCandidate;
+
+  expect(result.succeeded).toBe(true);
+  expect(savedReference.kind).toBe("selectedTargets");
+});
+
+test("sequence saved-result references reject malformed or ambiguous shapes", () => {
+  // @ts-expect-error unknown saved-reference kind is unsupported.
+  const unsupportedKind: SequenceSavedResultReference = { kind: "unknown" };
+  // @ts-expect-error selectedCards references must provide cards.
+  const missingCards: SequenceSavedResultReference = { kind: "selectedCards" };
+  const ambiguousPayload: SequenceSavedResultReference = {
+    kind: "selectedTargets",
+    // @ts-expect-error selectedTargets references must not use card payload.
+    cards: [],
+  };
+  const invalidCostValue: SequenceSavedResultReference = {
+    kind: "paidCost",
+    // @ts-expect-error paidCost references require literal true.
+    paidCost: false,
+  };
+
+  void unsupportedKind;
+  void missingCards;
+  void ambiguousPayload;
+  void invalidCostValue;
+});
+
+test("sequence segment result rejects malformed shapes", () => {
+  // @ts-expect-error segment result requires attempted.
+  const missingAttempted: SequenceSegmentResult = {
+    succeeded: true,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  };
+  const wrongSelectedTargetsPayload: SequenceSegmentResult = {
+    attempted: true,
+    succeeded: true,
+    changedState: false,
+    selectedCards: [],
+    // @ts-expect-error selectedTargets must be resolved CardRef[].
+    selectedTargets: [{ type: "self" }],
+    paidCost: false,
+    playerDeclined: false,
+  };
+
+  void missingAttempted;
+  void wrongSelectedTargetsPayload;
+});
+
+test("sequence saved-result references support producedObjects with CardRef and instance identity", () => {
+  const producedObjects: SequenceSavedResultReference = {
+    kind: "producedObjects",
+    objects: [
+      {
+        instanceId: "instance-2" as CardRef["instanceId"],
+        cardId: "OP01-004" as CardId,
+        playerId: "player-2" as CardRef["playerId"],
+      },
+      {
+        instanceId: "instance-3" as CardRef["instanceId"],
+      },
+    ],
+  };
+
+  expect(producedObjects.kind).toBe("producedObjects");
+  expect(producedObjects.objects).toHaveLength(2);
 });

@@ -8,6 +8,7 @@ export const TYP_001_STORY_OWNERS = [
   "TYP-001G",
   "TYP-002A",
   "TYP-007A",
+  "TYP-007B",
 ] as const;
 
 export type Typ001StoryOwner = (typeof TYP_001_STORY_OWNERS)[number];
@@ -71,6 +72,8 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   PlayerGameTimer: "TYP-001F",
   TimerState: "TYP-001F",
   PublicTimerState: "TYP-001F",
+  SequenceSegmentResultMap: "TYP-007B",
+  SequenceSavedResultReferenceMap: "TYP-007B",
   SpectatorPolicy: "TYP-002A",
   PublicTurnState: "TYP-002A",
   PublicBattleState: "TYP-002A",
@@ -128,6 +131,12 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   CardFilter: "TYP-001D",
   Duration: "TYP-001D",
   SearchRequest: "TYP-001D",
+  SequenceSegmentResult: "TYP-007B",
+  SavedSelectedCardsReference: "TYP-007B",
+  SavedSelectedTargetsReference: "TYP-007B",
+  SavedPaidCostReference: "TYP-007B",
+  SavedProducedObjectsReference: "TYP-007B",
+  SequenceSavedResultReference: "TYP-007B",
   ReplacementTrigger: "TYP-001D",
   EffectOption: "TYP-001D",
   SequencedEffect: "TYP-001D",

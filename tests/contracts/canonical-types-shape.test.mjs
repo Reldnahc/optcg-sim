@@ -203,3 +203,24 @@ test("MatchCardManifest includes a string-keyed serializable effect definition r
     /export interface MatchCardManifest\s*{[\s\S]*?\beffectDefinitions\?:\s*Record<string,\s*EffectDefinition>;[\s\S]*?}/m,
   );
 });
+
+test("canonical sequence result and saved-reference contracts remain explicit and deterministic", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+
+  assert.match(
+    canonicalTypes,
+    /export interface SequenceSegmentResult\s*{[\s\S]*?\battempted:\s*boolean;[\s\S]*?\bsucceeded:\s*boolean;[\s\S]*?\bchangedState:\s*boolean;[\s\S]*?\bselectedCards:\s*CardRef\[];[\s\S]*?\bselectedTargets:\s*CardRef\[];[\s\S]*?\bpaidCost:\s*boolean;[\s\S]*?\bplayerDeclined:\s*boolean;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type SequenceSavedResultReference\s*=\s*[\s\S]*SavedSelectedCardsReference[\s\S]*\|\s*SavedSelectedTargetsReference[\s\S]*\|\s*SavedPaidCostReference[\s\S]*\|\s*SavedProducedObjectsReference/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type SequenceSavedResultReferenceMap\s*=\s*Record<[\s\S]*SequenceSavedResultReference[\s\S]*>;/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type SequenceSegmentResultMap\s*=\s*Record<string,\s*SequenceSegmentResult>;/m,
+  );
+});

@@ -1,5 +1,6 @@
 import type {
   CardId,
+  InstanceId,
   Comparator,
   EffectId,
   PlayerRef,
@@ -10,6 +11,7 @@ import type {
 } from "./primitives.js";
 import type {
   Attribute,
+  CardRef,
   CardCategory,
   CardColor,
   CardSupportStatus,
@@ -234,6 +236,47 @@ export interface SequencedEffect {
     | "ifPossible";
   saveResultAs?: string;
 }
+
+export interface SequenceSegmentResult {
+  attempted: boolean;
+  succeeded: boolean;
+  changedState: boolean;
+  selectedCards: CardRef[];
+  selectedTargets: CardRef[];
+  paidCost: boolean;
+  playerDeclined: boolean;
+}
+
+export interface SavedSelectedCardsReference {
+  kind: "selectedCards";
+  cards: CardRef[];
+}
+
+export interface SavedSelectedTargetsReference {
+  kind: "selectedTargets";
+  targets: CardRef[];
+}
+
+export interface SavedPaidCostReference {
+  kind: "paidCost";
+  paidCost: true;
+}
+
+export interface SavedProducedObjectsReference {
+  kind: "producedObjects";
+  objects: Array<
+    | CardRef
+    | {
+        instanceId: InstanceId;
+      }
+  >;
+}
+
+export type SequenceSavedResultReference =
+  | SavedSelectedCardsReference
+  | SavedSelectedTargetsReference
+  | SavedPaidCostReference
+  | SavedProducedObjectsReference;
 
 export type Effect =
   | { type: "draw"; count: number; player: PlayerRef }
