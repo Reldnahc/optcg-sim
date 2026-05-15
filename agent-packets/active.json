@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-009B.md",
-      "storyId": "TYP-009B",
-      "storyPath": "stories/approved/TYP-009B-saved-field-object-reference-consumer-contracts.yaml",
-      "storySha256": "196c866cd558414beaa507d6df271f84028c0f39e0904224deea6df0545330d9"
+      "packetPath": "agent-packets/ENG-055A.md",
+      "storyId": "ENG-055A",
+      "storyPath": "stories/approved/ENG-055A-quantity-decision-runtime.yaml",
+      "storySha256": "def9cb6f3f7f03b59f4a1c98b7d8d5ce7159e4d30b7fae95ca48854df089685f"
     }
   ],
   "version": 1
