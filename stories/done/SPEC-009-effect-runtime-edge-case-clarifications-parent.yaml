@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate narrow specification updates needed before the ENG-055 composed
   effect runtime stories can be regenerated and reviewed with complete authority

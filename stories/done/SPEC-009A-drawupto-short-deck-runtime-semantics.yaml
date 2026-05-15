@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Clarify the runtime authority for drawUpTo when the chosen quantity exceeds
   the remaining deck, including partial-deck resolution, deck-out timing,
