@@ -5055,7 +5055,7 @@
       "section_ref": "27-spec-driven-story-generation-workflow.s017",
       "doc_id": "27-spec-driven-story-generation-workflow",
       "doc_path": "27-spec-driven-story-generation-workflow.md",
-      "heading": "Pre-presentation story-review gate",
+      "heading": "Story Approval Review Gate",
       "heading_level": 2,
       "marker_line": 163,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s017`"
@@ -5066,7 +5066,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Approval rules",
       "heading_level": 2,
-      "marker_line": 183,
+      "marker_line": 185,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s008`"
     },
     {
@@ -5075,7 +5075,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Agent packet generation",
       "heading_level": 2,
-      "marker_line": 203,
+      "marker_line": 206,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s009`"
     },
     {
@@ -5084,7 +5084,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Suggested repo layout",
       "heading_level": 2,
-      "marker_line": 228,
+      "marker_line": 231,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s010`"
     },
     {
@@ -5093,7 +5093,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Recommended automation layers",
       "heading_level": 2,
-      "marker_line": 258,
+      "marker_line": 261,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s011`"
     },
     {
@@ -5102,7 +5102,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Minimum viable process",
       "heading_level": 3,
-      "marker_line": 264,
+      "marker_line": 267,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s012`"
     },
     {
@@ -5111,7 +5111,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Stronger process",
       "heading_level": 3,
-      "marker_line": 280,
+      "marker_line": 283,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s013`"
     },
     {
@@ -5120,7 +5120,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Spec change impact tracing",
       "heading_level": 2,
-      "marker_line": 297,
+      "marker_line": 300,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s014`"
     },
     {
@@ -5129,7 +5129,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "Recommended completion checks for story-driven implementation",
       "heading_level": 2,
-      "marker_line": 309,
+      "marker_line": 312,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s015`"
     },
     {
@@ -5138,7 +5138,7 @@
       "doc_path": "27-spec-driven-story-generation-workflow.md",
       "heading": "First practical adoption step",
       "heading_level": 2,
-      "marker_line": 352,
+      "marker_line": 355,
       "visible_line": "Section Ref: `27-spec-driven-story-generation-workflow.s016`"
     },
     {
@@ -5633,7 +5633,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Codex packet footer",
       "heading_level": 2,
-      "marker_line": 134,
+      "marker_line": 135,
       "visible_line": "Section Ref: `32-codex-agent-integration.s009`"
     },
     {
@@ -5642,7 +5642,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Review flow",
       "heading_level": 2,
-      "marker_line": 151,
+      "marker_line": 152,
       "visible_line": "Section Ref: `32-codex-agent-integration.s010`"
     },
     {
@@ -5651,7 +5651,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "GitHub-connected modes",
       "heading_level": 2,
-      "marker_line": 161,
+      "marker_line": 162,
       "visible_line": "Section Ref: `32-codex-agent-integration.s011`"
     },
     {
@@ -5660,7 +5660,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Minimal task prompt",
       "heading_level": 2,
-      "marker_line": 176,
+      "marker_line": 177,
       "visible_line": "Section Ref: `32-codex-agent-integration.s012`"
     },
     {
@@ -5669,7 +5669,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Merge gate recommendation",
       "heading_level": 2,
-      "marker_line": 193,
+      "marker_line": 194,
       "visible_line": "Section Ref: `32-codex-agent-integration.s013`"
     },
     {
@@ -5678,7 +5678,7 @@
       "doc_path": "32-codex-agent-integration.md",
       "heading": "Subagent model routing",
       "heading_level": 2,
-      "marker_line": 269,
+      "marker_line": 270,
       "visible_line": "Section Ref: `32-codex-agent-integration.s014`"
     },
     {

@@ -20,9 +20,11 @@ When starting after a context reset or uncertain session state:
 
 Manual chat memory is not authority after reset. If reconstructed state conflicts with chat memory, use the repo and GitHub evidence, then surface the conflict explicitly.
 
-## Story Review Gate
+## Story Approval Review Gate
 
-Use a pre-presentation story-review gate for generated or normalized story work:
+Use the Story Approval Review Gate for generated or normalized story work:
+
+Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
 
 - Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready.
 - Approval-ready means the parent story and every child story have usable story-review evidence, and material findings for each reviewed story are fixed, explicitly deferred, or recorded.
@@ -40,7 +42,7 @@ For parent story sets, require a compact story-set review-status matrix before a
 
 Reconstruct this matrix from durable story-review outputs, story files, PR comments, or recorded blockers; do not use chat memory as the source of truth.
 
-The matrix must contain one row for the parent story and one row for every child story in the set. A parent-level row does not satisfy any child-story row, and a child-story row does not satisfy the parent row.
+The matrix must contain one row for the parent story and one row for every child story in the set. A parent-level row does not satisfy any child-story row. A parent story-review row does not satisfy any child-story row, and a child story-review row does not satisfy the parent row or any sibling child-story row.
 
 Required columns:
 
@@ -57,7 +59,7 @@ Allowed review types: `parent-story`, `child-story`, `not-applicable`.
 
 Allowed review statuses: `pending`, `approval-ready`, `needs-revision`, `blocked`, `not-applicable`.
 
-Fail closed when the parent-story review is unknown or pending. Fail closed when any child-story review is missing, unknown, or pending. Fail closed when status cannot be reconstructed from durable artifacts.
+Fail closed when the parent-story review is unknown or pending. Fail closed when any child-story review is missing, unknown, or pending. Fail closed when status cannot be reconstructed from durable artifacts, including when any row is not reconstructable from durable evidence.
 
 Lost chat context is not a reason to rerun review blindly; reconstruct first and report uncertainty if reconstruction fails.
 

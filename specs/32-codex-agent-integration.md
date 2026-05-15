@@ -111,11 +111,12 @@ A skill should accelerate a workflow, not replace the authoritative story or pac
 
 Section Ref: `32-codex-agent-integration.s008`
 
-1. Before approving a generated or normalized parent story set, run story-review subagents for the parent story and every child story, then resolve, explicitly defer, or record their findings.
+1. Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
+1. Before approving a generated or normalized parent story set, run story-review subagents for the parent story and every child story, then resolve, explicitly defer, or record their findings. Approval cannot proceed unless the parent story and every child story have separate story-review evidence.
 1. Approval-ready means the parent story and every child story have usable story-review evidence.
 1. A parent with exactly one child is valid and still uses the parent/substory flow.
 1. Parent-level review does not satisfy child-story review, and one child-story review does not satisfy any sibling child.
-1. Approve a parent story set.
+1. Approve a parent story set only after the Story Approval Review Gate is satisfied.
 1. Generate or refresh the checked-in packet for the active story.
 1. Treat the story as worker-ready only after the parent reads `AGENTS.md`, the approved story, and the active packet, then runs `pnpm run packets:generate --story <stories/approved/...yaml> --activate` and `pnpm run packets:verify`.
 1. Run `node --experimental-strip-types tools/spec_board_sync.ts --story <path> --dry-run --write-preview`, then perform live sync when ready.

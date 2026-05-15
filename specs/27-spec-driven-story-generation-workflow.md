@@ -29,7 +29,7 @@ The required planning flow is:
 1. specification documents,
 2. candidate story generation,
 3. story normalization,
-4. pre-presentation story-review gate,
+4. Story Approval Review Gate,
 5. story approval,
 6. agent packet construction,
 7. implementation or review agent execution,
@@ -167,13 +167,15 @@ Normalization should:
 
 A story that cannot be normalized cleanly should be converted into an ambiguity story or rejected.
 
-## Pre-presentation story-review gate
+## Story Approval Review Gate
 
 <!-- SECTION_REF: 27-spec-driven-story-generation-workflow.s017 -->
 
 Section Ref: `27-spec-driven-story-generation-workflow.s017`
 
 Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready.
+
+Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
 
 Required behavior:
 
@@ -195,7 +197,8 @@ Section Ref: `27-spec-driven-story-generation-workflow.s008`
 
 A story may move from `generated` to `approved` only if:
 
-- the pre-presentation story-review gate has run and material findings are fixed, explicitly deferred, or recorded,
+- the Story Approval Review Gate has run and material findings are fixed, explicitly deferred, or recorded,
+- for parent story sets, approval cannot proceed unless the parent story and every child story have separate story-review evidence,
 - required schema fields are present,
 - spec references are valid,
 - the epic/story decomposition is coherent,
@@ -275,7 +278,7 @@ Section Ref: `27-spec-driven-story-generation-workflow.s011`
 Section Ref: `27-spec-driven-story-generation-workflow.s012`
 
 1. use an agent or script to generate candidate epics and concern-sliced stories from spec sections,
-2. run the pre-presentation story-review gate,
+2. run the Story Approval Review Gate,
 3. review and approve the decomposition and the stories,
 4. export approved stories to GitHub issues or draft issues as needed using `tools/spec_board_sync.ts`,
 5. build or refresh the checked-in packet for the active story,
@@ -295,7 +298,7 @@ Add:
 - dependency graphing,
 - impacted-story detection when spec files change,
 - schema validation for story files,
-- required pre-presentation story-review agents for generated and normalized stories,
+- required Story Approval Review Gate review agents for generated and normalized stories,
 - review-agent checks for scope creep, cross-concern drift, and uncited behavior,
 - story-to-PR boundary checks using `allowed_touch_points`,
 - automatic movement between `generated`, `approved`, `blocked`, and `done` states,

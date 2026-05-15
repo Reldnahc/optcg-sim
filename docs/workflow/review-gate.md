@@ -2,6 +2,8 @@
 
 This document is mandatory workflow guidance linked from `AGENTS.md`. It contains the detailed PR review, AI review, fallback review, revision response, and human review rules.
 
+The Story Approval Review Gate is a pre-approval and pre-activation gate for parent story sets. PR review, AI review, implementation code-review, full-story integration review, and human merge-gate review do not satisfy the Story Approval Review Gate.
+
 ## Review Workflow
 
 Code review is required. Use this flow unless a higher-authority story or packet says otherwise:
@@ -24,7 +26,7 @@ Code review is required. Use this flow unless a higher-authority story or packet
 16. request human review only after the AI review record or explicit equivalent-human-review fallback record exists, after the revision response comment is up to date when a separate reviewer subagent run was used, after reviewers confirm any post-merge cleanup metadata matches the reviewed story scope, and after `cleanup-metadata-guard` is present and passing before human review is requested
 17. require human review before protected or default-branch PRs merge; gameplay, policy-sensitive, and architecture-sensitive changes are higher-risk review focus, not the only cases needing human review; for approved parent integration workflows, human review is deferred to the final parent PR to `main` while substory commit evidence is recorded on that parent PR or durable handoff comment
 18. if review finds multi-concern drift, split the story or narrow the patch before merge
-19. for parent/substory workflows, confirm the story-set review-status matrix is reconstructed from durable artifacts before PR opening or PR handoff; fail closed when the parent-story review is unknown or pending, or when any child-story review is missing, unknown, or pending
+19. for parent/substory workflows, confirm the Story Approval Review Gate story-set review-status matrix is reconstructed from durable artifacts before PR opening or PR handoff; fail closed when the parent-story review is unknown or pending, or when any child-story review is missing, unknown, or pending; also fail closed when any row is not reconstructable from durable evidence
 
 Role handoff requirements:
 
