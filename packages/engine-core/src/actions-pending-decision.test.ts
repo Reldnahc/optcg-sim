@@ -283,6 +283,7 @@ test("getLegalActions rejects malformed chooseQuantity bounds and mode", () => {
   const state = setupChooseQuantityDecisionState();
   const malformedDecisions: NonNullable<typeof state.pendingDecision>[] = [
     { ...must(state.pendingDecision, "pending decision"), mode: "bogus" },
+    { ...must(state.pendingDecision, "pending decision"), min: -1, max: 1 },
     { ...must(state.pendingDecision, "pending decision"), min: 2, max: 1 },
     {
       ...must(state.pendingDecision, "pending decision"),
@@ -336,6 +337,38 @@ test("respondToDecision accepts valid chooseQuantity response and resolves decis
   );
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
   assert.equal(state.pendingDecision?.id, before.pendingDecision?.id);
+});
+
+test("respondToDecision rejects negative chooseQuantity min as malformed without mutation", () => {
+  const state = setupChooseQuantityDecisionState();
+  const pendingDecision = must(state.pendingDecision, "pending decision");
+  if (pendingDecision.type !== "chooseQuantity") {
+    throw new Error("expected chooseQuantity decision");
+  }
+  state.pendingDecision = {
+    ...pendingDecision,
+    min: -1,
+    max: 1,
+  };
+  const decisionId = pendingDecision.id;
+  const before = JSON.stringify(state);
+
+  const result = applyAction(state, {
+    type: "respondToDecision",
+    decisionId,
+    response: { type: "chooseQuantity", quantity: -1 },
+  });
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "invalidDecisionResponse",
+      reason: "chooseQuantity bounds are malformed.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 });
 
 test("respondToDecision resumes effect-originated chooseQuantity runtime work with chosen quantity evidence", () => {
@@ -437,6 +470,32 @@ test("respondToDecision resumes effect-originated chooseQuantity runtime work wi
     quantity: 2,
   });
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+test("player view redacts effect causality for effect-originated chooseQuantity decisions", () => {
+  const state = setupChooseQuantityDecisionState();
+  state.pendingDecision = {
+    ...must(state.pendingDecision, "pending decision"),
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-private-quantity"),
+      effectId: toEffectId("effect-private-quantity"),
+    },
+  };
+
+  const ownerView = filterStateForPlayer(state, p1);
+  const serializedView = JSON.stringify(ownerView);
+
+  assert.deepEqual(ownerView.pendingDecision?.causedBy, {
+    type: "ruleProcess",
+    name: "privateCausality",
+  });
+  assert.deepEqual(ownerView.legalActions, [
+    { type: "concede", playerId: p1 },
+    { type: "respondToDecision", decisionId: state.pendingDecision.id },
+  ]);
+  assert.equal(serializedView.includes("queue-private-quantity"), false);
+  assert.equal(serializedView.includes("effect-private-quantity"), false);
 });
 
 test("createChooseQuantityDecisionForQueuedEffect rejects negative bounds without mutation", () => {
