@@ -261,6 +261,25 @@ const getChooseQuantityLegalActions = (
   return actions;
 };
 
+const hasCurrentChooseQuantityRuntimeContext = (
+  state: GameState,
+  decision: Extract<
+    NonNullable<GameState["pendingDecision"]>,
+    { type: "chooseQuantity" }
+  >,
+): boolean => {
+  const causedBy = decision.causedBy;
+  if (causedBy.type !== "effect") {
+    return true;
+  }
+  return state.effectQueue.some(
+    (entry) =>
+      entry.id === causedBy.queueEntryId &&
+      entry.effectBlockId === causedBy.effectId &&
+      entry.state === "pending",
+  );
+};
+
 const applyChooseQuantityDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -301,6 +320,15 @@ const applyChooseQuantityDecisionResponse = (
       invalidDecision("chooseQuantity bounds are malformed."),
     );
   }
+  if (!hasCurrentChooseQuantityRuntimeContext(state, decision)) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision(
+        "chooseQuantity decision is stale for current effect queue.",
+      ),
+    );
+  }
   const quantity = (response as { quantity?: unknown }).quantity;
   if (
     typeof quantity !== "number" ||
@@ -325,6 +353,7 @@ const applyChooseQuantityDecisionResponse = (
       decisionType: decision.type,
       playerId: decision.playerId,
       responseType,
+      quantity,
     },
     decision.visibility,
   );
