@@ -371,6 +371,36 @@ test("workflow docs latch cleanup metadata handoff to actual PR source and guard
   ]);
 });
 
+test("workflow docs distinguish remote cleanup guard proof from full handoff preflight proof", async () => {
+  const agents = await readActiveText("AGENTS.md");
+  const storyExecution = await readActiveText(
+    "docs/workflow/story-execution.md",
+  );
+  const parentBranches = await readActiveText(
+    "docs/workflow/parent-integration-branches.md",
+  );
+  const reviewGate = await readActiveText("docs/workflow/review-gate.md");
+  const prTemplate = await readActiveText(".github/pull_request_template.md");
+  const workflow = await readActiveText(
+    ".github/workflows/cleanup-metadata-guard.yml",
+  );
+  const workflowGuidance = `${agents}\n${storyExecution}\n${parentBranches}\n${reviewGate}\n${prTemplate}`;
+
+  assertMatchesAll(workflowGuidance, [
+    /remote `cleanup-metadata-guard` validates cleanup metadata source and shape from the PR body or durable handoff comments/i,
+    /remote guard does not by itself prove full reviewed-scope binding/i,
+    /full cleanup metadata handoff preflight binds the fetched changed files, fetched PR head branch, fetched status checks, and reviewed PR evidence/i,
+    /before reviewer handoff, human review request, or ready-for-human-review language/i,
+  ]);
+
+  assertMatchesAll(workflow, [
+    /issueComments:/i,
+    /pullRequest:\s*{\s*body:/i,
+    /--validate-cleanup-handoff-json-file cleanup-guard-input\.json/i,
+  ]);
+  assert.doesNotMatch(workflow, /changedFiles|headBranch|statusChecks/i);
+});
+
 test("workflow docs separate real-card fixture coverage from engine behavior requirements", async () => {
   const storyExecution = await readActiveText(
     "docs/workflow/story-execution.md",
