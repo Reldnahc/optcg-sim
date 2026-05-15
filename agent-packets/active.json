@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-055A.md",
-      "storyId": "ENG-055A",
-      "storyPath": "stories/approved/ENG-055A-quantity-decision-runtime.yaml",
-      "storySha256": "8068ce320a6c52448bfcd9364efa6a122a9b76d6f251e5a58f48d899419e6ec3"
+      "packetPath": "agent-packets/ENG-055B.md",
+      "storyId": "ENG-055B",
+      "storyPath": "stories/approved/ENG-055B-generic-resumable-effect-execution-frames.yaml",
+      "storySha256": "9c84e3650b5ee6bd1596494701f6d9345c9b6ab6dfc1827a0c830a3a6a69c762"
     }
   ],
   "version": 1
