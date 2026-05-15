@@ -1,0 +1,52 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-053E
+epic_id: INF-053
+title: Clarify cleanup guard and handoff preflight evidence
+type: refactor
+area: docs
+primary_concern: docs
+priority: high
+status: approved
+summary: >
+  Clarify the boundary between the remote cleanup-metadata-guard check and the
+  full cleanup handoff preflight so agents understand which evidence each gate
+  proves before human-review handoff.
+story_boundary: >
+  Own only cleanup-guard versus handoff-preflight wording and workflow tests
+  unless the story intentionally changes cleanup-metadata-guard behavior. Prefer
+  documentation and tests over workflow behavior changes.
+allowed_touch_points:
+  - AGENTS.md
+  - docs/workflow/story-execution.md
+  - docs/workflow/review-gate.md
+  - docs/workflow/parent-integration-branches.md
+  - .github/pull_request_template.md
+  - .github/workflows/cleanup-metadata-guard.yml
+  - tests/github/review-workflow.test.mjs
+spec_refs:
+  - 27-spec-driven-story-generation-workflow.s015
+  - 32-codex-agent-integration.s013
+dependencies:
+  - INF-053D
+scope:
+  - document that remote cleanup-metadata-guard validates cleanup metadata source and shape from PR body/comments
+  - document that full cleanup handoff preflight binds fetched changed files, PR head branch, status checks, and reviewed PR evidence
+  - update PR template and workflow tests to preserve that distinction
+  - change `.github/workflows/cleanup-metadata-guard.yml` only if intentionally upgrading the remote guard inputs
+non_scope:
+  - broad cleanup automation redesign
+  - changing post-merge packet completion semantics
+  - changing cleanup metadata syntax
+acceptance_criteria:
+  - workflow docs and PR template no longer imply the remote guard proves full reviewed-scope binding by itself
+  - docs require full handoff preflight before reviewer handoff, human review request, or ready-for-human-review language
+  - tests distinguish remote guard proof from full handoff-preflight proof
+required_tests:
+  - run `corepack pnpm run test -- tests/github/review-workflow.test.mjs`
+  - run `corepack pnpm verify`, or record why unavailable
+repo_rules:
+  - prefer wording/test cleanup unless intentionally upgrading workflow behavior
+  - if workflow behavior changes, preserve trusted-code and fail-closed cleanup semantics
+ambiguity_policy: fail_and_escalate

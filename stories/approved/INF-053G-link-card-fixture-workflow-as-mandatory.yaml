@@ -1,0 +1,49 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-053G
+epic_id: INF-053
+title: Link CARD fixture workflow as mandatory for relevant stories
+type: refactor
+area: docs
+primary_concern: docs
+priority: high
+status: approved
+summary: >
+  Add the card fixture capture workflow to mandatory workflow entry points for
+  CARD and card-fixture stories so agents read it when story scope touches real
+  card fixture evidence, overlays, generated support, or source integrity.
+story_boundary: >
+  Own only mandatory workflow-entry-point docs and tests for card fixture
+  workflow routing. Do not change fixture capture implementation, generated
+  support behavior, or card data semantics.
+allowed_touch_points:
+  - AGENTS.md
+  - README.md
+  - docs/workflow/story-execution.md
+  - tests/github/review-workflow.test.mjs
+spec_refs:
+  - 24-story-schema.s033
+  - 24-story-schema.s034
+  - 32-codex-agent-integration.s006
+dependencies:
+  - INF-053F
+scope:
+  - add `docs/workflow/card-fixture-capture.md` to mandatory workflow guidance for relevant CARD/card-fixture stories
+  - state that agents must read it when a story touches fixture capture, CARD source integrity, generated support, overlays, or real-card fixture evidence
+  - update README and workflow tests to preserve the mandatory link
+non_scope:
+  - changing fixture capture commands or fixtures
+  - changing cards package behavior
+  - changing engine capability preflight semantics
+acceptance_criteria:
+  - AGENTS/workflow docs identify card fixture capture guidance as mandatory for relevant CARD/card-fixture stories
+  - README points agents to the card fixture workflow where appropriate
+  - tests enforce the mandatory workflow link
+required_tests:
+  - run `corepack pnpm run test -- tests/github/review-workflow.test.mjs`
+  - run `corepack pnpm verify`, or record why unavailable
+repo_rules:
+  - stay inside the listed touch points
+  - do not alter real-card support evidence or generated support behavior
+ambiguity_policy: fail_and_escalate
