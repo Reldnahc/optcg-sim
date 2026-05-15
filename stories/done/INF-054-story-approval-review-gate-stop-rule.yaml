@@ -8,7 +8,7 @@ type: tooling
 area: docs
 primary_concern: docs
 priority: critical
-status: approved
+status: done
 summary: >
   Make the parent/substory story-review requirement short, early, and
   mechanically protected so future runs cannot treat child story-review as a

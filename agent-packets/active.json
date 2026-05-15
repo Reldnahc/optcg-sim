@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-054.md",
-      "storyId": "INF-054",
-      "storyPath": "stories/approved/INF-054-story-approval-review-gate-stop-rule.yaml",
-      "storySha256": "ec05f8876e7b12f3000b428b883bd7044fc39dcf3c5bdea6bc2492fc4c993e6b"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
