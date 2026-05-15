@@ -91,6 +91,17 @@ export interface PublicDecision {
   timeoutMs?: number;
 }
 
+export interface PublicChooseQuantityDecision extends PublicDecision {
+  type: "chooseQuantity";
+  mode: "exact" | "upTo";
+  min: number;
+  max: number;
+}
+
+export type PublicPendingDecision =
+  | PublicDecision
+  | PublicChooseQuantityDecision;
+
 export type PublicLegalAction =
   | { type: "playCard"; card: CardRef; costPaymentRequired?: boolean }
   | { type: "activateEffect"; source: CardRef; effectId: EffectId }
@@ -128,7 +139,7 @@ export interface PlayerView {
   self: VisiblePlayerState;
   opponent: OpponentVisibleState;
   battle?: PublicBattleState;
-  pendingDecision?: PublicDecision;
+  pendingDecision?: PublicPendingDecision;
   legalActions: PublicLegalAction[];
   revealedCards: PublicRevealRecord[];
   events: EngineEvent[];

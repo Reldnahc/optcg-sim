@@ -8,10 +8,12 @@ import type {
 import type { CardRef } from "./card-metadata.js";
 import type { CausalityRef, EventVisibility } from "./events.js";
 import type {
+  Cardinality,
   CardFilter,
   CardSelectionRequest,
   Cost,
   EffectOption,
+  ExactCardinality,
   TargetRequest,
 } from "./effects.js";
 
@@ -55,7 +57,13 @@ export type DecisionResponse =
   | { type: "replacement"; replacementId?: string }
   | { type: "mulligan"; keep: boolean }
   | { type: "loopCount"; count: number }
-  | { type: "rollbackConsent"; allow: boolean };
+  | { type: "rollbackConsent"; allow: boolean }
+  | ChooseQuantityResponse;
+
+export interface ChooseQuantityResponse {
+  type: "chooseQuantity";
+  quantity: number;
+}
 
 export interface BaseDecision {
   id: DecisionId;
@@ -139,6 +147,18 @@ export interface ChooseReplacementDecision extends BaseDecision {
   mandatory: boolean;
 }
 
+export type ChooseQuantityDecision = BaseDecision &
+  Cardinality & {
+    type: "chooseQuantity";
+    defaultResponse?: ChooseQuantityResponse;
+  };
+
+export type ExactQuantityDecision<N extends number = number> = BaseDecision &
+  ExactCardinality<N> & {
+    type: "chooseQuantity";
+    defaultResponse?: ChooseQuantityResponse;
+  };
+
 export type PendingDecision =
   | ChooseTriggerOrderDecision
   | ChooseOptionalActivationDecision
@@ -151,7 +171,8 @@ export type PendingDecision =
   | MulliganDecision
   | DeclareLoopCountDecision
   | RollbackConsentDecision
-  | ChooseReplacementDecision;
+  | ChooseReplacementDecision
+  | ChooseQuantityDecision;
 
 export type Action =
   | { type: "playCard"; cardInstanceId: InstanceId; costPayment?: PaymentSpec }

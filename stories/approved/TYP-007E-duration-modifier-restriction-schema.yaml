@@ -1,0 +1,74 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-007E
+epic_id: TYP-007
+title: "Duration, modifier, and restriction DSL schema"
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Add schema and type authorability for temporary power modifiers and
+  spec-cited restrictions, reusing the saved-reference contracts from TYP-007B
+  when a later sequence step targets an earlier selected object.
+story_boundary: >
+  Own only canonical schema/type authorability and schema fixtures for duration,
+  modifier, and restriction shapes. Do not implement modifier runtime behavior.
+allowed_touch_points:
+  - contracts/canonical-types.ts
+  - contracts/effect-dsl.schema.json
+  - contracts/types/effects.ts
+  - contracts/types/runtime.ts
+  - packages/types/src/effects.ts
+  - packages/types/src/runtime.ts
+  - packages/types/src/effects.test.ts
+  - packages/types/src/runtime.test.ts
+  - tests/contracts/**
+  - fixtures/effect-dsl/**
+  - stories/generated/TYP-007*.yaml
+  - stories/approved/TYP-007*.yaml
+  - agent-packets/TYP-007E.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s014
+  - 04-effect-runtime.s015
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s021
+  - 05-effect-dsl-reference.s029
+  - 11-testing-quality.s004
+scope:
+  - authorize temporary power modifier schema and types
+  - authorize schema and types for spec-cited restrictions such as cannotAttack and cannotBlock
+  - authorize duration shapes needed by those primitives
+  - reuse saved-reference target shapes from TYP-007B where modifier or restriction authoring needs to refer to an earlier selected object
+  - add positive and negative schema fixtures for these shapes
+non_scope:
+  - defining new saved-reference or sequence result shapes
+  - computed-view modifier runtime behavior
+  - refresh phase mutation behavior or expiry behavior
+  - parser certification or generated-support admission
+  - replacement generalization
+  - server, client, API, UI, replay, database, or gameplay behavior
+dependencies:
+  - TYP-007B
+acceptance_criteria:
+  - supported temporary modifier and restriction shapes validate
+  - modifier/restriction authoring does not define a second saved-reference shape outside TYP-007B
+  - malformed or unsupported duration/modifier/restriction shapes reject
+  - exported types align with canonical schema
+  - no runtime or card support is added
+required_tests:
+  - positive and negative schema fixture validation for duration, modifier, and restriction shapes
+  - focused type tests for modifier/restriction authoring
+  - run `corepack pnpm run types:sync:check`
+  - run `corepack pnpm run contracts:validate-effects`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - do not mutate canonical runtime behavior in this story
+  - keep duration and modifier semantics narrow to runtime-authorable contracts
+  - fail closed on timing or expiry ambiguity
+ambiguity_policy: fail_and_escalate

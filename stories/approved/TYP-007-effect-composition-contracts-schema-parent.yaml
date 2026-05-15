@@ -1,0 +1,104 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-007
+epic_id: TYP-007
+title: Effect composition contracts and schema parent
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Coordinate type and schema work that makes composed effect primitives
+  authorable in canonical contracts without adding runtime execution or card
+  parser support.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  the approved TYP-007 child stories one at a time. Keep this series limited to
+  canonical contracts, exported package types, effect DSL schema, schema
+  fixtures, and decision/action/legal-action contracts.
+allowed_touch_points:
+  - contracts/canonical-types.ts
+  - contracts/effect-dsl.schema.json
+  - contracts/types/**
+  - packages/types/src/**
+  - tests/contracts/**
+  - fixtures/effect-dsl/**
+  - stories/generated/TYP-007*.yaml
+  - stories/approved/TYP-007*.yaml
+  - agent-packets/TYP-007*.md
+  - agent-packets/active.json
+spec_refs:
+  - 27-spec-driven-story-generation-workflow.s005
+  - 03-game-state-events-decisions.s015
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s002
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s027
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s020
+  - 24-story-schema.s025
+scope:
+  - define the TYP-007 child stories for effect-composition contract and schema authorability
+  - keep type/schema authorability separate from engine runtime behavior and card generated-support certification
+  - make dependencies explicit for later ENG-055 and CARD-014 parent story sets
+  - require schema guardrails that reject malformed or unsupported composed effect shapes
+  - align this TYP-prefixed story set to `area: contracts` per the layered parent-series workflow authority
+  - preserve the support ladder distinction between schema-authorable, runtime-executable, parser-certified, and generated-support playable
+  - preserve generated-support fail-closed policy from the card data/support specification
+non_scope:
+  - direct parent implementation
+  - engine runtime behavior, event order, hidden-info behavior, replay behavior, or state hashes
+  - card parser certification, generated-support support metadata, real-card fixtures, or support reports
+  - replacement generalization
+  - server, client, API, UI, database, or live Poneglyph work
+dependencies: []
+child_stories:
+  - id: TYP-007A
+    title: Cardinality and quantity decision contracts
+    concern: "Define exact N, up to N, chooseQuantity, decision response, action, and legal-action contracts."
+    depends_on: []
+  - id: TYP-007B
+    title: Sequence execution result and saved-reference contracts
+    concern: Define sequence segment result metadata and saved selection/result reference shapes for later segment use.
+    depends_on: []
+  - id: TYP-007C
+    title: Condition and optionality DSL schema
+    concern: Author supported optional activation/cost/effect clause shapes and supported condition shapes in schema and types.
+    depends_on: []
+  - id: TYP-007D
+    title: "Cost, hand-selection, playSelected, and drawUpTo DSL schema"
+    concern: Author returnDon, filtered hand selection, playSelected/play-from-hand, and drawUpTo DSL shapes.
+    depends_on: [TYP-007A, TYP-007B]
+  - id: TYP-007E
+    title: "Duration, modifier, and restriction DSL schema"
+    concern: Author temporary power modifier and spec-cited restriction DSL shapes.
+    depends_on: [TYP-007B]
+  - id: TYP-007F
+    title: Composition schema guardrails
+    concern: Prove unsupported composed shapes are rejected and schema authorability does not imply runtime capability or card support.
+    depends_on: [TYP-007A, TYP-007B, TYP-007C, TYP-007D, TYP-007E]
+acceptance_criteria:
+  - TYP-007 is not implemented directly
+  - TYP-007 and all child stories use `area: contracts`
+  - each TYP-007 child is independently reviewable and limited to contract/schema authorability
+  - no runtime behavior, parser certification, or card generated-support behavior is introduced by this series
+  - ENG-055 and CARD-014 dependencies on TYP-007 outputs are explicit
+required_tests:
+  - run `corepack pnpm run stories:review-plan -- --parent stories/generated/TYP-007-effect-composition-contracts-schema-parent.yaml`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - use the parent/substory workflow
+  - activate only one approved TYP-007 child packet at a time
+  - do not treat schema/type authorability as engine runtime support or card playability
+  - fail closed on contract ambiguity
+ambiguity_policy: fail_and_escalate

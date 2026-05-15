@@ -1,0 +1,75 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-007D
+epic_id: TYP-007
+title: "Cost, hand-selection, playSelected, and drawUpTo DSL schema"
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Add schema and type authorability for returnDon costs, filtered hand
+  selection, playSelected/play-from-hand, and drawUpTo composed DSL primitives.
+story_boundary: >
+  Own only canonical effect DSL schema, exported types, and schema fixtures that
+  move these exact primitives into the schema-supported fixture subset under the
+  existing schema coverage policy. Do not implement runtime behavior or certify
+  parser support.
+allowed_touch_points:
+  - contracts/canonical-types.ts
+  - contracts/effect-dsl.schema.json
+  - contracts/types/effects.ts
+  - packages/types/src/effects.ts
+  - packages/types/src/effects.test.ts
+  - tests/contracts/**
+  - fixtures/effect-dsl/**
+  - stories/generated/TYP-007*.yaml
+  - stories/approved/TYP-007*.yaml
+  - agent-packets/TYP-007D.md
+  - agent-packets/active.json
+spec_refs:
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s026
+  - 05-effect-dsl-reference.s027
+  - 05-effect-dsl-reference.s029
+  - 11-testing-quality.s004
+dependencies:
+  - TYP-007A
+  - TYP-007B
+scope:
+  - authorize returnDon / DON minus N cost schema and types
+  - authorize the exact filtered private hand-selection subset that can safely choose from hand without exposing hidden identities outside the acting player
+  - reject generic selectCards shapes outside that hand-selection subset, including unsupported zones, ambiguous chooser/player combinations, and unsupported visibility semantics
+  - authorize playSelected/play-from-hand only for selections produced by the saved hand-selection contracts from TYP-007B
+  - reject generic playSelected shapes that reference arbitrary selections or non-hand saved results
+  - authorize drawUpTo schema and types using the cardinality/quantity contracts from TYP-007A
+  - add positive and negative schema fixtures for all shapes in this story
+non_scope:
+  - runtime cost payment, selection decisions, play processing, area-capacity handling, forced-trash consequences, or draw execution
+  - parser certification or generated-support admission
+  - replacement generalization
+  - server, client, API, UI, replay, database, or gameplay behavior
+acceptance_criteria:
+  - positive fixtures validate returnDon, hand selection, playSelected/play-from-hand, and drawUpTo shapes
+  - negative fixtures reject malformed, unsupported, hidden-info-unsafe, or overbroad selectCards/playSelected shapes
+  - schema/type output is compatible with TYP-007A and TYP-007B contracts
+  - schema coverage is updated only through schema and fixture evidence, not by claiming runtime or card support
+  - no runtime or card support is added
+required_tests:
+  - positive and negative schema fixture validation for returnDon, hand selection, playSelected/play-from-hand, and drawUpTo
+  - negative fixture coverage for unsupported selectCards zones, ambiguous chooser/player forms, unsupported visibility semantics, and arbitrary playSelected references
+  - focused type tests for the new DSL authoring shapes
+  - run `corepack pnpm run types:sync:check`
+  - run `corepack pnpm run contracts:validate-effects`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - do not imply runtime capability from schema support
+  - use `05-effect-dsl-reference.s029` as the authority for adding schema coverage and validation fixtures in the same story that makes these exact primitives fixture-authorable
+  - reject unsupported partial hand-selection or play-from-hand shapes
+  - fail closed on hidden-information or gameplay ambiguity
+ambiguity_policy: fail_and_escalate

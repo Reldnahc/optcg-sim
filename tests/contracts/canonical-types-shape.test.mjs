@@ -62,6 +62,44 @@ test("Action preserves branded IDs for effect activation and decision responses"
   );
 });
 
+test("chooseQuantity decision and response contracts are present in canonical decisions", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+
+  assert.match(
+    canonicalTypes,
+    /export type DecisionResponse\s*=\s*[\s\S]*?\|\s*ChooseQuantityResponse;/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface ChooseQuantityResponse\s*{[\s\S]*?\btype:\s*"chooseQuantity";[\s\S]*?\bquantity:\s*number;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type ChooseQuantityDecision\s*=\s*BaseDecision\s*&\s*Cardinality\s*&\s*\{[\s\S]*?\btype:\s*"chooseQuantity";[\s\S]*?\}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type PendingDecision\s*=\s*[\s\S]*?\|\s*ChooseQuantityDecision/m,
+  );
+});
+
+test("canonical effects include exact and up-to cardinality contracts", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+
+  assert.match(
+    canonicalTypes,
+    /export interface UpToCardinality\s*{[\s\S]*?\bmode:\s*"upTo";[\s\S]*?\bmin:\s*number;[\s\S]*?\bmax:\s*number;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type ExactCardinality<[^>]+>\s*=\s*\{\s*mode:\s*"exact";\s*min:\s*N;\s*max:\s*N;\s*\}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type Cardinality\s*=\s*ExactCardinality<number>\s*\|\s*UpToCardinality;/m,
+  );
+});
+
 test("EffectBlock uses branded effect IDs consistently with queue and action contracts", async () => {
   const canonicalTypes = await readCanonicalTypes();
 

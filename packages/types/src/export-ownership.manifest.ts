@@ -7,6 +7,7 @@ export const TYP_001_STORY_OWNERS = [
   "TYP-001F",
   "TYP-001G",
   "TYP-002A",
+  "TYP-007A",
 ] as const;
 
 export type Typ001StoryOwner = (typeof TYP_001_STORY_OWNERS)[number];
@@ -79,6 +80,8 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   OpponentVisibleState: "TYP-002A",
   SpectatorVisiblePlayerState: "TYP-002A",
   PublicDecision: "TYP-002A",
+  PublicChooseQuantityDecision: "TYP-007A",
+  PublicPendingDecision: "TYP-007A",
   PublicLegalAction: "TYP-002A",
   PublicRevealRecord: "TYP-002A",
   SpectatorRevealRecord: "TYP-002A",
@@ -117,6 +120,9 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   Condition: "TYP-001D",
   Cost: "TYP-001D",
   TargetRequest: "TYP-001D",
+  ExactCardinality: "TYP-007A",
+  UpToCardinality: "TYP-007A",
+  Cardinality: "TYP-007A",
   CardSelectionRequest: "TYP-001D",
   Target: "TYP-001D",
   CardFilter: "TYP-001D",
@@ -145,6 +151,9 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   DeclareLoopCountDecision: "TYP-001E",
   RollbackConsentDecision: "TYP-001E",
   ChooseReplacementDecision: "TYP-001E",
+  ChooseQuantityResponse: "TYP-007A",
+  ChooseQuantityDecision: "TYP-007A",
+  ExactQuantityDecision: "TYP-007A",
   PendingDecision: "TYP-001E",
   Action: "TYP-001E",
   LegalAction: "TYP-001E",

@@ -105,6 +105,20 @@ export type Cost =
   | { type: "chooseOne"; options: Cost[] }
   | { type: "custom"; action: string };
 
+export type ExactCardinality<N extends number> = {
+  mode: "exact";
+  min: N;
+  max: N;
+};
+
+export interface UpToCardinality {
+  mode: "upTo";
+  min: number;
+  max: number;
+}
+
+export type Cardinality = ExactCardinality<number> | UpToCardinality;
+
 export interface TargetRequest {
   timing: "onActivation" | "onResolution";
   chooser: PlayerRef;

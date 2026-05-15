@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import type {
   CardFilter,
   CardId,
+  ExactCardinality,
   CardSelectionRequest,
   Condition,
   Cost,
@@ -22,6 +23,7 @@ import type {
   SourcePresencePolicy,
   Target,
   TargetRequest,
+  UpToCardinality,
   Trigger,
 } from "./index.js";
 
@@ -69,6 +71,14 @@ test("effect support contracts compile with canonical representative values", ()
     min: 1,
     max: 1,
     allowFewerIfUnavailable: false,
+  };
+  const exactOne: ExactCardinality<1> = { mode: "exact", min: 1, max: 1 };
+  const upToThree: UpToCardinality = { mode: "upTo", min: 0, max: 3 };
+  const invalidExactTwo: ExactCardinality<2> = {
+    mode: "exact",
+    min: 2,
+    // @ts-expect-error exact cardinality requires min and max to match.
+    max: 1,
   };
 
   const duration: Duration = {
@@ -155,6 +165,9 @@ test("effect support contracts compile with canonical representative values", ()
   expect(trigger.type).toBe("activateMain");
   expect(condition.type).toBe("attachedDonCount");
   expect(segment.connector).toBe("then");
+  expect(exactOne.max).toBe(1);
+  expect(upToThree.mode).toBe("upTo");
+  void invalidExactTwo;
 });
 
 test("replacement effect contract supports reviewed would-be-KOd self draw shape", () => {
