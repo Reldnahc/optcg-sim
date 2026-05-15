@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate specification and workflow documentation updates that authorize
   layered composed-effect delivery before separate contracts, engine, and cards

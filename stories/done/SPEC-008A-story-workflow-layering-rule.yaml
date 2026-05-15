@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Update workflow/spec story-generation guidance to explicitly support layered
   parent series for broad capabilities that cross contracts, engine runtime, and

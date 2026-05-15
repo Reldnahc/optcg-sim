@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Align generated card support policy with layered composed-effect delivery so
   CARD stories consume completed contract/schema and runtime capability evidence

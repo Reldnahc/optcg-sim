@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Update effect-runtime specs to authorize generic resumable execution frames,
   sequence pause/resume, segment result metadata, saved references, and

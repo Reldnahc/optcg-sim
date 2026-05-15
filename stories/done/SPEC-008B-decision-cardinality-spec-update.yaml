@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Update the decision specification to authorize chooseQuantity and exact/up-to
   cardinality semantics before contracts or runtime implementation stories rely
