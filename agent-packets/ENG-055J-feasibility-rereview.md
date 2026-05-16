@@ -1,38 +1,36 @@
-# ENG-055J Implementation Feasibility Re-Review
+# ENG-055J Agent Feasibility Re-Review
 
-Review assignment id: `implementation-feasibility-rereview-ENG-055J-2026-05-16`
+Review assignment id: `agent-story-review-ENG-055J-feasibility-2026-05-16`
 
 Reviewed story: `stories/approved/ENG-055J-duration-modifier-restriction-runtime.yaml`
 
 ## Verdict
 
-Proceed.
+`needs-revision`
+
+## Findings
+
+- High: positive `choose` target scope is not approval-ready. There is no
+  durable representation for "this specific chosen field card has a temporary
+  modifier/restriction until cleanup"; current target-choice runtime is KO-only.
+- Medium: `05-effect-dsl-reference.s029` still lists some ENG-055J shapes as
+  planned/not fixture-authorable while ENG-055J relies on completed TYP-007E
+  authorability. Higher-layer spec wording should be reconciled before the story
+  is treated as approval-ready.
 
 ## Hook Trace
 
-- `ContinuousEffectRecord`, `Modifier`, `ModifierOperation`, `TargetSpec`, and
-  `Duration` exist in canonical/package types.
-- `GameState.continuousEffects` already exists and participates in canonical
-  state.
-- `compute-view.ts` already applies a narrow continuous power modifier subset,
-  making it the correct seam for broader temporary power modifier support.
-- `ComputedCardView` already exposes `currentPower`, `canAttack`, and
-  `canBlock`.
-- `ComputedGameView.restrictions` exists.
-- Battle legality paths already call computed-view and currently fail closed
-  when restrictions are present, so ENG-055J has concrete enforcement seams for
-  cannotAttack/cannotBlock.
-- `battle-support.ts`, phase/turn cleanup paths, and battle cleanup already
-  provide duration-expiry hooks to extend.
+- `ContinuousEffectRecord`, `Modifier`, `TargetSpec`, and `Duration` exist.
+- `GameState.continuousEffects` exists.
+- `computeView` owns computed power, `canAttack`, `canBlock`, and legal attack
+  target projection.
+- Battle legality routes through computed view and currently fails closed around
+  restrictions/continuous effects.
+- Duration cleanup seams exist for battle cleanup and turn/phase transitions.
+- Concrete hooks exist for `self` and likely `all`; `choose` is the gap.
 
-## Feasibility Notes
+## Required Story Change
 
-This is a broad runtime story, but it has concrete type and engine seams. The
-main implementation risk is blast radius across battle legality and duration
-cleanup. Keep the story to `modifyPower`, `cannotAttack`, `cannotBlock`, and the
-listed duration families; preserve fail-closed behavior for every excluded
-target, duration, and restriction family.
-
-## Required Follow-Up
-
-No spec/story rewrite needed before implementation.
+Revise ENG-055J to drop/narrow positive `choose` target scope, or add a
+prerequisite contract/runtime story for durable chosen-target carrier semantics.
+Also reconcile stale schema coverage wording in the cited spec.

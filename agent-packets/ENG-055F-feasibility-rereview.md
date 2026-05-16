@@ -1,35 +1,37 @@
-# ENG-055F Implementation Feasibility Re-Review
+# ENG-055F Agent Feasibility Re-Review
 
-Review assignment id: `implementation-feasibility-rereview-ENG-055F-2026-05-16`
+Review assignment id: `agent-story-review-ENG-055F-feasibility-2026-05-16`
 
 Reviewed story: `stories/approved/ENG-055F-cost-and-hand-selection-runtime.yaml`
 
 ## Verdict
 
-Proceed.
+`needs-revision`
+
+## Findings
+
+- High: current allowed touch points are too narrow for the `PayCostDecision`
+  acceptance criteria. Generic effect-runtime `returnDon` pay-cost continuation
+  needs decision routing outside `effect-runtime*.ts`, at least `actions.ts` and
+  likely the legal-action helper path.
+- Medium: the story is missing `02-engine-mechanics.s036`, which defines
+  DON-minus source legality: eligible DON can come from cost area or attached to
+  the player's Leader/Characters, and the cost fails if fewer than N are
+  eligible.
 
 ## Hook Trace
 
-- `Cost.returnDon` and `Cost.sequence` contracts exist.
-- `PayCostDecision` and `PaymentOption.returnDon` exist.
-- `DecisionResponse.payment` already carries `selectedDonInstanceIds`, which is
-  sufficient for returnDon choice validation.
-- Existing play-card and counter-event payCost responders provide local patterns
-  for payCost creation, legal action exposure, stale response rejection, and
-  `costPaid` event emission.
-- `SelectCardsDecision`, `CardSelectionRequest`, and `HandSelectionId` exist.
-- `EffectExecutionFrame` contains `savedReferences`, `segmentResults`, and
-  `transientSets`, so hand-selection segment results can be serialized for
-  ENG-055G.
-- `filterStateForPlayer` already treats `selectCards` as a supported pending
-  decision family with redaction behavior to build on.
+- `Cost.returnDon`, `PaymentOption.returnDon`, and
+  `DecisionResponse.payment.selectedDonInstanceIds` exist.
+- `PayCostDecision` exists.
+- `SelectCardsDecision`, `HandSelectionId`, `EffectExecutionFrame.segmentResults`,
+  `savedReferences`, and `transientSets` exist.
+- Private `selectCards` and frame-resume patterns exist.
+- Missing seam: generic effect-runtime `payCost` response routing is not
+  currently handled by `actions.ts`.
 
-## Feasibility Notes
+## Required Story Change
 
-This story has enough contract authority and runtime seams. The main risk is
-scope control: do not implement playSelected or general selectCards. Keep the
-positive path to private self hand selection and returnDon cost payment.
-
-## Required Follow-Up
-
-No spec/story rewrite needed before implementation.
+Add `02-engine-mechanics.s036` to `spec_refs`, and expand allowed touch points
+to include the pending-decision routing/legal-action files required for generic
+effect-runtime `payCost` responses.

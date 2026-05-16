@@ -1,33 +1,35 @@
-# ENG-055E Implementation Feasibility Re-Review
+# ENG-055E Agent Feasibility Re-Review
 
-Review assignment id: `implementation-feasibility-rereview-ENG-055E-2026-05-16`
+Review assignment id: `agent-story-review-ENG-055E-feasibility-2026-05-16`
 
 Reviewed story: `stories/approved/ENG-055E-condition-evaluator-runtime.yaml`
 
 ## Verdict
 
-Proceed.
+`needs-revision`
+
+## Findings
+
+- Medium: `attachedDonCount` is not fully implementable as written across the
+  current runtime surface. `yourTurn` and live-source/self `attachedDonCount`
+  are implementable, but queued-effect snapshots do not preserve attached-DON
+  state for `resolveFromLastKnownInformation` paths.
+- The previous supplemental note overstated readiness by saying
+  source/self `attachedDonCount` can always be evaluated from source lookup/card
+  state.
 
 ## Hook Trace
 
-- `Condition` contract exists in `packages/types/src/effects.ts` and
-  `contracts/types/effects.ts`.
-- Existing runtime gates currently reject `condition` and `conditionTiming` in
-  no-choice draw, target, trash, and sequence paths. That is an implementation
-  seam rather than a missing contract.
-- `yourTurn` can be evaluated from `GameState.turn.turnPlayerId`.
-- Source/self `attachedDonCount` can be evaluated from the effect queue entry
-  source and authoritative source lookup/card state.
-- Unsupported condition families can remain fail-closed by returning the current
-  unsupported pending runtime work path.
+- `Condition` types exist for `yourTurn` and `attachedDonCount`.
+- `yourTurn` can use `GameState.turn.turnPlayerId`.
+- Live-source `attachedDonCount` can use `CardInstance.attachedDon`.
+- The main queue-resolution seam exists after source-presence evaluation and
+  before primitive execution.
+- Unsupported conditions can continue to use the existing fail-closed queue
+  result path.
 
-## Feasibility Notes
+## Required Story Change
 
-The story is intentionally narrow and does not require a new public decision
-shape, a new saved-reference consumer, or a contract extension. Tests can be
-synthetic and scoped to `effect-runtime*.test.ts` plus hidden-info/state-hash
-coverage.
-
-## Required Follow-Up
-
-No spec/story rewrite needed before implementation.
+Revise ENG-055E to explicitly limit positive `attachedDonCount` support to
+live-source/self evaluation, or add prerequisite snapshot/contract work that
+captures attached-DON state for LKI evaluation.

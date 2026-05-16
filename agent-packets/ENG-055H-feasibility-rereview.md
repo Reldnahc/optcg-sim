@@ -1,30 +1,32 @@
-# ENG-055H Implementation Feasibility Re-Review
+# ENG-055H Agent Feasibility Re-Review
 
-Review assignment id: `implementation-feasibility-rereview-ENG-055H-2026-05-16`
+Review assignment id: `agent-story-review-ENG-055H-feasibility-2026-05-16`
 
 Reviewed story: `stories/approved/ENG-055H-drawupto-runtime.yaml`
 
 ## Verdict
 
-Proceed.
+`approval-ready`
+
+## Findings
+
+- Medium: the implementation cannot blindly call the existing no-choice draw
+  executor after a `chooseQuantity` response. The current draw executor accepts
+  `draw` and increments `state.seq`; chooseQuantity response handling already
+  increments `state.seq` before runtime resumes. ENG-055H needs a
+  continuation-aware drawUpTo resume seam.
+- No blocking spec, contract, or story gap was found.
 
 ## Hook Trace
 
-- `Effect.drawUpTo` exists in package and contract types.
-- `chooseQuantity` pending decision creation and response handling already
-  exist from ENG-055A.
-- `createChooseQuantityDecisionForQueuedEffect` provides an effect-originated
-  decision seam.
-- Existing draw primitive code provides the actual draw/move/event path.
-- SPEC-009A explicitly authorizes short-deck do-as-much-as-possible behavior,
-  event append order, `state.seq` expectations, and state-hash coverage.
+- `drawUpTo` exists in contract/package effect types.
+- `chooseQuantity` decision/response/public-view contracts exist.
+- Serialized `EffectExecutionFrame` continuation state exists.
+- Effect-originated `chooseQuantity` creation and response routing exist.
+- Queue runtime and frame-based resumable flows provide the correct integration
+  seams.
 
-## Feasibility Notes
+## Required Story Change
 
-This story is directly implementable. The main review point should be preserving
-existing mandatory draw behavior while adding drawUpTo-specific quantity
-selection and short-deck behavior.
-
-## Required Follow-Up
-
-No spec/story rewrite needed before implementation.
+No story/spec rewrite required. Implementation must preserve the single
+resolved-decision `state.seq` increment behavior.
