@@ -1,5 +1,6 @@
 export type { DrawExecutionFailureReason } from "./effect-runtime-draw-primitives.js";
 export {
+  executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
   isSupportedEffectResolvedCustomDrawEffect,
   isSupportedNoChoiceMainEventDrawEffect,

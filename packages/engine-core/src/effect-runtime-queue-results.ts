@@ -36,6 +36,7 @@ import type {
   ResolveImplementedDslEffectDefinition,
 } from "./effect-runtime-queue-target-decisions.js";
 import {
+  executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
   isSupportedEffectResolvedCustomDrawEffect,
   isSupportedQueuedNoChoiceDrawEffect,
@@ -156,6 +157,35 @@ export const createEffectRuntimeQueueResults = (
     delete (supportShape as { condition?: unknown }).condition;
     delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
     if (!isSupportedQueuedNoChoiceDrawEffect(supportShape)) {
+      return undefined;
+    }
+    return supportShape.effect;
+  };
+
+  const resolveQueuedDrawUpToEffect = (
+    state: GameState,
+    entry: EffectQueueEntry,
+  ): Extract<Effect, { type: "drawUpTo" }> | undefined => {
+    const match = resolveQueuedEffectDefinition(state, entry);
+    if (
+      match === undefined ||
+      match.sourcePresencePolicy !== entry.sourcePresencePolicy
+    ) {
+      return undefined;
+    }
+    const supportShape = { ...match };
+    delete (supportShape as { condition?: unknown }).condition;
+    delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
+    if (
+      supportShape.category !== "auto" ||
+      supportShape.optional === true ||
+      supportShape.oncePerTurn === true ||
+      supportShape.cost !== undefined ||
+      supportShape.failurePolicy !== undefined ||
+      supportShape.effect.type !== "drawUpTo" ||
+      !Number.isInteger(supportShape.effect.count) ||
+      supportShape.effect.count < 0
+    ) {
       return undefined;
     }
     return supportShape.effect;
@@ -307,6 +337,95 @@ export const createEffectRuntimeQueueResults = (
       eventJournal: [...state.eventJournal, ...events],
     };
     return toEngineResult(nextState, events);
+  };
+
+  const createChooseQuantityDecision = (
+    state: GameState,
+    entry: EffectQueueEntry,
+    effect: Extract<Effect, { type: "drawUpTo" }>,
+  ): EngineResult => {
+    const decisionId =
+      `decision:chooseQuantity:${String(entry.id)}` as DecisionId;
+    const causedBy = {
+      type: "effect",
+      queueEntryId: entry.id,
+      effectId: entry.effectBlockId,
+    } as const;
+    const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
+      id: decisionId,
+      type: "chooseQuantity",
+      playerId: entry.controllerId,
+      prompt: "Choose quantity.",
+      causedBy,
+      visibility: { type: "private", playerId: entry.controllerId },
+      mode: "upTo",
+      min: 0,
+      max: effect.count,
+    };
+    const events: EngineEvent[] = [];
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: pendingDecision.id,
+        decisionType: pendingDecision.type,
+        playerId: pendingDecision.playerId,
+      },
+      pendingDecision.visibility,
+    );
+    const created = events[0];
+    if (created !== undefined) {
+      created.causedBy = causedBy;
+    }
+    return toEngineResult(
+      {
+        ...state,
+        seq: toStateSeq(state.seq + 1),
+        pendingDecision,
+        eventJournal: [...state.eventJournal, ...events],
+      },
+      events,
+    );
+  };
+
+  const resolveQueuedDrawUpToQuantity = (
+    state: GameState,
+    entry: EffectQueueEntry,
+    effect: Extract<Effect, { type: "drawUpTo" }>,
+  ): number | undefined => {
+    const expectedDecisionId =
+      `decision:chooseQuantity:${String(entry.id)}` as DecisionId;
+    for (let index = state.eventJournal.length - 1; index >= 0; index -= 1) {
+      const event = state.eventJournal[index];
+      if (event?.type !== "decisionResolved") {
+        continue;
+      }
+      const payload =
+        typeof event.payload === "object" && event.payload !== null
+          ? (event.payload as Record<string, unknown>)
+          : undefined;
+      if (payload === undefined) {
+        continue;
+      }
+      const decisionId = payload["decisionId"];
+      const decisionType = payload["decisionType"];
+      const responseType = payload["responseType"];
+      const quantity = payload["quantity"];
+      if (
+        decisionId !== expectedDecisionId ||
+        decisionType !== "chooseQuantity" ||
+        responseType !== "chooseQuantity" ||
+        typeof quantity !== "number" ||
+        !Number.isInteger(quantity) ||
+        quantity < 0 ||
+        quantity > effect.count
+      ) {
+        continue;
+      }
+      return quantity;
+    }
+    return undefined;
   };
 
   const resolveQueueEntriesInOrder = (
@@ -491,9 +610,55 @@ export const createEffectRuntimeQueueResults = (
             ])
           : unsupportedEffectQueueResult(originalState);
       }
-      drawEffect ??= resolveQueuedNoChoiceDrawEffect(nextState, selected);
-      if (drawEffect === undefined) {
-        return unsupportedEffectQueueResult(originalState);
+      const drawUpToEffect = resolveQueuedDrawUpToEffect(nextState, selected);
+      let resolutionEventsForTrigger: EngineEvent[] = [];
+      let removedSelectedFromQueue = false;
+      if (drawUpToEffect !== undefined) {
+        const resolvedQuantity = resolveQueuedDrawUpToQuantity(
+          nextState,
+          selected,
+          drawUpToEffect,
+        );
+        if (resolvedQuantity !== undefined) {
+          const resolvingEntry: EffectQueueEntry = {
+            ...selected,
+            state: "resolving",
+          };
+          nextState = {
+            ...nextState,
+            effectQueue: nextState.effectQueue.filter(
+              (entry) => entry.id !== selected.id,
+            ),
+          };
+          removedSelectedFromQueue = true;
+          const resolution = executeDrawPrimitiveForResolvedQuantity(
+            nextState,
+            resolvingEntry,
+            drawUpToEffect.player,
+            resolvedQuantity,
+          );
+          if (resolution.errors !== undefined) {
+            return unsupportedEffectQueueResult(originalState);
+          }
+          nextState = resolution.state;
+          allEvents.push(...resolution.events);
+          resolutionEventsForTrigger = [...resolution.events];
+        } else {
+          const quantityDecision = createChooseQuantityDecision(
+            nextState,
+            selected,
+            drawUpToEffect,
+          );
+          return {
+            ...quantityDecision,
+            events: [...allEvents, ...quantityDecision.events],
+          };
+        }
+      } else {
+        drawEffect ??= resolveQueuedNoChoiceDrawEffect(nextState, selected);
+        if (drawEffect === undefined) {
+          return unsupportedEffectQueueResult(originalState);
+        }
       }
       if (queuedEffect?.oncePerTurn === true) {
         const oncePerTurnKey = toOncePerTurnKey({
@@ -511,23 +676,28 @@ export const createEffectRuntimeQueueResults = (
         ...selected,
         state: "resolving",
       };
-      nextState = {
-        ...nextState,
-        effectQueue: nextState.effectQueue.filter(
-          (entry) => entry.id !== selected.id,
-        ),
-      };
-
-      const resolution = executeNoChoiceEffectPrimitive(
-        nextState,
-        resolvingEntry,
-        drawEffect,
-      );
-      if (resolution.errors !== undefined) {
-        return unsupportedEffectQueueResult(originalState);
+      if (!removedSelectedFromQueue) {
+        nextState = {
+          ...nextState,
+          effectQueue: nextState.effectQueue.filter(
+            (entry) => entry.id !== selected.id,
+          ),
+        };
       }
-      nextState = resolution.state;
-      allEvents.push(...resolution.events);
+
+      if (drawEffect !== undefined) {
+        const resolution = executeNoChoiceEffectPrimitive(
+          nextState,
+          resolvingEntry,
+          drawEffect,
+        );
+        if (resolution.errors !== undefined) {
+          return unsupportedEffectQueueResult(originalState);
+        }
+        nextState = resolution.state;
+        allEvents.push(...resolution.events);
+        resolutionEventsForTrigger = [...resolution.events];
+      }
 
       const resolvedEvents: EngineEvent[] = [];
       const resolvedEventBaseState: GameState = {
@@ -611,7 +781,7 @@ export const createEffectRuntimeQueueResults = (
       const triggered = dependencies.queueEffectResolvedCustomTriggers(
         nextState,
         selected,
-        [...resolution.events, ...resolvedEvents, ...cleanup.events],
+        [...resolutionEventsForTrigger, ...resolvedEvents, ...cleanup.events],
       );
       if (triggered !== undefined) {
         if (triggered.errors !== undefined) {

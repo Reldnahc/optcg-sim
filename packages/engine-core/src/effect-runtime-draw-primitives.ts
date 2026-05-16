@@ -58,6 +58,7 @@ const executeDrawEffect = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: Extract<Effect, { type: "draw" }>,
+  options: { incrementStateSeq?: boolean } = {},
 ): EngineResult => {
   if (!Number.isInteger(effect.count) || effect.count < 0) {
     return toEngineResult(
@@ -135,9 +136,10 @@ const executeDrawEffect = (
     );
   }
 
+  const shouldIncrementStateSeq = options.incrementStateSeq ?? true;
   const nextState: GameState = {
     ...state,
-    seq: toStateSeq(state.seq + 1),
+    ...(shouldIncrementStateSeq ? { seq: toStateSeq(state.seq + 1) } : {}),
     players: {
       ...state.players,
       [playerId]: {
@@ -152,10 +154,24 @@ const executeDrawEffect = (
   return toEngineResult(nextState, events);
 };
 
+export const executeDrawPrimitiveForResolvedQuantity = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  player: PlayerRef,
+  count: number,
+): EngineResult =>
+  executeDrawEffect(
+    state,
+    entry,
+    { type: "draw", count, player },
+    { incrementStateSeq: false },
+  );
+
 export const executeNoChoiceEffectPrimitive = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: Effect,
+  options: { incrementStateSeq?: boolean } = {},
 ): EngineResult => {
   if (effect.type !== "draw") {
     return toEngineResult(
@@ -164,7 +180,7 @@ export const executeNoChoiceEffectPrimitive = (
       [drawExecutionError(entry.effectBlockId, "unsupported-effect-shape")],
     );
   }
-  return executeDrawEffect(state, entry, effect);
+  return executeDrawEffect(state, entry, effect, options);
 };
 
 const isNoChoiceDrawTriggerEffect = (

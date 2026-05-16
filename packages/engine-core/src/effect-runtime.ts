@@ -23,6 +23,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue-processing.js";
 import { isSupportedEffectResolvedCustomDrawEffect } from "./effect-runtime-primitives.js";
+import { resumeSequenceFrameAfterChooseQuantity } from "./effect-runtime-sequence-frames.js";
 import { createEffectRuntimeTriggerQueueing } from "./effect-runtime-trigger-queueing.js";
 
 export type { DrawExecutionFailureReason } from "./effect-runtime-primitives.js";
@@ -496,6 +497,16 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   const queuedFromWhenAttacking = queueWhenAttackingTriggers(state);
   if (queuedFromWhenAttacking !== undefined) {
     return queuedFromWhenAttacking;
+  }
+  const resumedSequenceQuantity = resumeSequenceFrameAfterChooseQuantity(state);
+  if (resumedSequenceQuantity !== undefined) {
+    if (!resumedSequenceQuantity.ok) {
+      return toEngineResult(state, [], [resumedSequenceQuantity.error]);
+    }
+    return toEngineResult(
+      resumedSequenceQuantity.state,
+      resumedSequenceQuantity.events,
+    );
   }
   if (state.deferredTriggers.length > 0) {
     if (isSupportedDamageDeferredEffectQueueState(state)) {

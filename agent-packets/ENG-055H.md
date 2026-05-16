@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-055H -->
 <!-- agent-packet:story-path stories/approved/ENG-055H-drawupto-runtime.yaml -->
-<!-- agent-packet:story-sha256 8d06fe28cfa3e83628fa9dfe9aae210d4a648d0701fd9b91ba32a0a3b241c8ec -->
+<!-- agent-packet:story-sha256 120c5df49f2bd70171057f13a6975842677fdd54c1e22455f040d14b4da964db -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -506,12 +506,13 @@ Kickoff guardrails require the engine to stay free of Redis, Postgres, WebSocket
 
 ## Story Boundary
 
-Own only reusable drawUpTo runtime behavior inside effect-runtime queue and composed sequence execution. Do not implement play-card support gating, parser support, generated card support, or unrelated draw behavior.
+Own only reusable drawUpTo runtime behavior inside effect-runtime queue and composed sequence execution, including the action-layer decision validation needed for sequence chooseQuantity responses to resume through the existing respondToDecision path. Do not implement play-card support gating, parser support, generated card support, or unrelated draw behavior.
 
 ## Scope
 
 - implement drawUpTo through chooseQuantity in reusable effect-runtime queue processing and the generic composed frame pause/resume support from ENG-055B
 - support runtime-created drawUpTo decisions for already queued supported effect entries without requiring play-card support gating to accept drawUpTo card definitions
+- validate sequence drawUpTo chooseQuantity responses at the action layer using current effect queue and sequence frame context before resolving the decision
 - create drawUpTo chooseQuantity decisions with `mode: upTo`, `min: 0`, and `max: count`
 - expose the authored `max: count` public chooseQuantity bound without clamping the maximum to the current deck size
 - support choosing quantity zero as the legal `min: 0` response for drawUpTo
@@ -529,6 +530,7 @@ Own only reusable drawUpTo runtime behavior inside effect-runtime queue and comp
 ## Allowed Touch Points
 
 <!-- prettier-ignore -->
+- packages/engine-core/src/actions.ts
 - packages/engine-core/src/effect-runtime-draw-primitives.ts
 - packages/engine-core/src/effect-runtime-draw.test.ts
 - packages/engine-core/src/effect-runtime*.ts
@@ -572,6 +574,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 - focused drawUpTo runtime tests
 - chooseQuantity integration tests
+- sequence drawUpTo chooseQuantity stale-context regression proving invalid responses do not resolve the decision, emit events, or increment `state.seq`
 - chooseQuantity shape test proving drawUpTo emits `mode: upTo`, `min: 0`, and authored `max: count`
 - composed sequence drawUpTo pause/resume regression covering canonical segment result ledger recording and following no-choice sequence segments without a second resolved-decision `state.seq` increment
 - short-deck replay regression covering legal selection above remaining deck size, append-order event sequencing, exactly one `state.seq` increment for the resolved decision, final empty-deck authoritative state hash, and hidden-info-safe public decision/legal-action shape
@@ -590,6 +593,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 ## Acceptance Criteria
 
 - reusable effect-runtime drawUpTo queue processing creates and resolves quantity choices correctly for already queued supported effect entries
+- sequence drawUpTo chooseQuantity responses fail closed before mutation when the matching queue entry or sequence frame runtime context is stale or missing
 - composed sequence frames can pause for drawUpTo chooseQuantity and resume without double-incrementing `state.seq`
 - resumed sequence drawUpTo records the attempted/succeeded/changedState segment result in the same execution frame before later sequence segments continue
 - zero quantity is accepted when min 0 makes it legal; optional decline semantics remain out of scope

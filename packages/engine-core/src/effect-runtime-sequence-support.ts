@@ -11,12 +11,14 @@ import { isSupportedSequenceHandSelectCardsEffect } from "./effect-runtime-hand-
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 type DrawEffect = Extract<Effect, { type: "draw" }>;
+type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 
 export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
   effect:
     | DrawEffect
+    | DrawUpToEffect
     | TrashFromHandEffect
     | PayCostEffect
     | SelectCardsEffect
@@ -40,6 +42,14 @@ const isSupportedDrawSegment = (
   effect: SequenceSegmentEffect,
 ): effect is DrawEffect =>
   effect.type === "draw" &&
+  effect.player === "self" &&
+  Number.isInteger(effect.count) &&
+  effect.count >= 0;
+
+const isSupportedDrawUpToSegment = (
+  effect: SequenceSegmentEffect,
+): effect is DrawUpToEffect =>
+  effect.type === "drawUpTo" &&
   effect.player === "self" &&
   Number.isInteger(effect.count) &&
   effect.count >= 0;
@@ -94,6 +104,13 @@ export const isSupportedSequenceBlock = (
         if (segment.optional === true) {
           hasPendingDecisionSegment = true;
         }
+        return true;
+      }
+      if (isSupportedDrawUpToSegment(segment.effect)) {
+        if (segment.optional === true) {
+          return false;
+        }
+        hasPendingDecisionSegment = true;
         return true;
       }
       if (isSupportedTrashFromHandSegment(segment.effect)) {

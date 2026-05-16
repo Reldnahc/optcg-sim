@@ -1,4 +1,5 @@
 import type {
+  ChooseQuantityDecision,
   ChooseOptionalActivationDecision,
   EffectExecutionFrame,
   EffectQueueEntry,
@@ -137,6 +138,59 @@ export const createPayCostDecisionForSequenceSegment = (
     defaultResponse: { type: "paymentDeclined" },
     cost,
     paymentOptions: [{ id: cost.type, type: cost.type, count: cost.count }],
+  };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: pendingDecision.id,
+      decisionType: pendingDecision.type,
+      playerId: pendingDecision.playerId,
+    },
+    visibility,
+  );
+  const created = events[0];
+  if (created !== undefined) {
+    created.causedBy = causedBy;
+  }
+  return {
+    events,
+    ok: true,
+    state: {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      pendingDecision,
+      eventJournal: [...state.eventJournal, ...events],
+    },
+  };
+};
+
+export const createChooseQuantityDecisionForSequenceSegment = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  index: number,
+  max: number,
+): { events: EngineEvent[]; ok: true; state: GameState } => {
+  const causedBy = {
+    type: "effect",
+    queueEntryId: entry.id,
+    effectId: entry.effectBlockId,
+  } as const;
+  const visibility = { type: "private", playerId: entry.controllerId } as const;
+  const pendingDecision: ChooseQuantityDecision = {
+    id: toDecisionId(
+      `decision:chooseQuantity:sequence:${String(entry.id)}:${String(index)}`,
+    ),
+    type: "chooseQuantity",
+    playerId: entry.controllerId,
+    prompt: "Choose quantity.",
+    causedBy,
+    visibility,
+    mode: "upTo",
+    min: 0,
+    max,
   };
   const events: EngineEvent[] = [];
   appendEvent(

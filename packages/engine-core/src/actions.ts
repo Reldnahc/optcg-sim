@@ -279,11 +279,28 @@ const hasCurrentChooseQuantityRuntimeContext = (
   if (causedBy.type !== "effect") {
     return true;
   }
-  return state.effectQueue.some(
+  const queueEntry = state.effectQueue.find(
     (entry) =>
       entry.id === causedBy.queueEntryId &&
-      entry.effectBlockId === causedBy.effectId &&
-      entry.state === "pending",
+      entry.effectBlockId === causedBy.effectId,
+  );
+  if (queueEntry === undefined) {
+    return false;
+  }
+  if (queueEntry.state === "pending") {
+    return true;
+  }
+  if (queueEntry.state !== "resolving") {
+    return false;
+  }
+  return state.effectExecutionFrames.some(
+    (frame) =>
+      frame.queueEntryId === causedBy.queueEntryId &&
+      frame.effectBlockId === causedBy.effectId &&
+      frame.pendingDecision.decisionId === decision.id &&
+      frame.pendingDecision.causedBy.type === "effect" &&
+      frame.pendingDecision.causedBy.queueEntryId === causedBy.queueEntryId &&
+      frame.pendingDecision.causedBy.effectId === causedBy.effectId,
   );
 };
 

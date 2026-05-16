@@ -16,6 +16,7 @@ import type {
 import { createSupportedHandSelectionChoiceDecision } from "./effect-runtime-hand-selection.js";
 import { getReturnDonEligibleCount } from "./effect-runtime-return-don.js";
 import {
+  createChooseQuantityDecisionForSequenceSegment,
   createOptionalActivationDecisionForSequenceSegment,
   createPayCostDecisionForSequenceSegment,
   findSequenceFrameByDecisionId,
@@ -27,6 +28,7 @@ import {
   applyPlaySelectedSequenceSegment,
   resumePlaySelectedOverflowFrame,
 } from "./effect-runtime-play-selected.js";
+import { resumeSequenceFrameAfterChooseQuantity as resumeDrawUpToQuantitySequenceFrame } from "./effect-runtime-sequence-draw-upto.js";
 import {
   activeDonCount,
   applyDrawSegment,
@@ -205,6 +207,7 @@ const resumeSequenceFrameFromLedgers = (params: {
     params.frame.nextSegmentIndex,
     params.ledgers,
     params.createTrashDecision,
+    false,
   );
   if (!continued.ok) {
     return {
@@ -246,6 +249,7 @@ const continueNoDecisionSegments = (
   startIndex: number,
   ledgers: SegmentLedgers,
   createTrashDecision: CreateTrashFromHandSequenceDecision,
+  incrementStateSeqForDraw: boolean,
 ): SequenceFrameRunResult => {
   let nextState = state;
   let nextLedgers = ledgers;
@@ -320,6 +324,7 @@ const continueNoDecisionSegments = (
         segment as SupportedSequenceSegment & { effect: DrawEffect },
         index,
         nextLedgers,
+        { incrementStateSeq: incrementStateSeqForDraw },
         emptySegmentResult,
         segmentKey,
       );
@@ -330,6 +335,36 @@ const continueNoDecisionSegments = (
       nextLedgers = drawn.ledgers;
       events.push(...drawn.events);
       continue;
+    }
+    if (segment.effect.type === "drawUpTo") {
+      const quantityDecision = createChooseQuantityDecisionForSequenceSegment(
+        nextState,
+        entry,
+        index,
+        segment.effect.count,
+      );
+      const decision = quantityDecision.state.pendingDecision;
+      if (decision === undefined) {
+        return { ok: false };
+      }
+      const frame = frameForPausedSequenceDecision({
+        decision,
+        entry,
+        index,
+        savedReferences: nextLedgers.savedReferences,
+        segmentResults: nextLedgers.segmentResults,
+        state: quantityDecision.state,
+      });
+      return {
+        events: [...events, ...quantityDecision.events],
+        kind: "paused",
+        ok: true,
+        state: stateWithPausedSequenceFrame(
+          quantityDecision.state,
+          entry,
+          frame,
+        ),
+      };
     }
     const partialResult: SequenceSegmentResult = {
       ...emptySegmentResult(),
@@ -529,6 +564,7 @@ export const createSupportedSequenceFrameDecision = (
     0,
     ledgers,
     createTrashDecision,
+    true,
   );
   if (!run.ok || run.kind !== "paused") {
     return { ok: false };
@@ -733,6 +769,7 @@ export const resumeSequenceFrameAfterOptionalActivation = (
           savedReferences: frame.savedReferences,
           segmentResults: frame.segmentResults,
         },
+        { incrementStateSeq: false },
         emptySegmentResult,
         segmentKey,
       );
@@ -942,5 +979,31 @@ export const resumeSequenceFrameAfterPlaySelectedOverflow = (
     segmentKey,
     sequenceRuntimeError,
     state,
+  });
+};
+
+export const resumeSequenceFrameAfterChooseQuantity = (
+  state: GameState,
+): SequenceFrameResumeResult => {
+  return resumeDrawUpToQuantitySequenceFrame({
+    emptySegmentResult,
+    findFrameQueueEntry,
+    findSequenceEffectBlock,
+    resumeSequenceFrameFromLedgers: (params) =>
+      resumeSequenceFrameFromLedgers(
+        params as {
+          createTrashDecision: CreateTrashFromHandSequenceDecision;
+          effectBlock: SupportedSequenceBlock;
+          entry: EffectQueueEntry;
+          finalizeCompleted: boolean;
+          frame: EffectExecutionFrame;
+          ledgers: SegmentLedgers;
+          state: GameState;
+        },
+      ),
+    segmentKey,
+    sequenceRuntimeError,
+    state,
+    unsupportedTrashDecision: createUnsupportedTrashDecision,
   });
 };

@@ -12,7 +12,10 @@ import type {
 } from "@optcg/types";
 
 import { toCardRef } from "./action-state.js";
-import { executeNoChoiceEffectPrimitive } from "./effect-runtime-primitives.js";
+import {
+  executeDrawPrimitiveForResolvedQuantity,
+  executeNoChoiceEffectPrimitive,
+} from "./effect-runtime-primitives.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type DrawEffect = Extract<Effect, { type: "draw" }>;
@@ -175,6 +178,7 @@ export const applyDrawSegment = (
   segment: SupportedSequenceSegment & { effect: DrawEffect },
   index: number,
   ledgers: SegmentLedgers,
+  options: { incrementStateSeq: boolean },
   emptySegmentResult: () => SequenceSegmentResult,
   segmentKey: (
     segment: SequenceEffect["effects"][number],
@@ -196,6 +200,9 @@ export const applyDrawSegment = (
     state,
     entry,
     segment.effect,
+    {
+      incrementStateSeq: options.incrementStateSeq,
+    },
   );
   if (resolution.errors !== undefined) {
     return { ok: false };
@@ -216,6 +223,86 @@ export const applyDrawSegment = (
           kind: "producedObjects",
           objects: toSavedProducedObjects(
             { ...segment, saveResultAs: segment.saveResultAs },
+            produced,
+            resolution.state.seq,
+          ),
+        });
+  const result: SequenceSegmentResult = {
+    ...emptySegmentResult(),
+    attempted: true,
+    succeeded: true,
+    changedState: resolution.events.length > 0,
+  };
+  return {
+    events: resolution.events,
+    ledgers: {
+      segmentResults: {
+        ...ledgers.segmentResults,
+        [segmentKey(segment, index)]: result,
+      },
+      savedReferences,
+    },
+    ok: true,
+    state: resolution.state,
+  };
+};
+
+export const applyResolvedQuantityDrawSegment = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  segment: SequenceEffect["effects"][number] & {
+    effect: Extract<Effect, { type: "drawUpTo" }>;
+  },
+  index: number,
+  quantity: number,
+  ledgers: SegmentLedgers,
+  emptySegmentResult: () => SequenceSegmentResult,
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      state: GameState;
+    }
+  | { ok: false } => {
+  const beforePlayer = state.players[entry.controllerId];
+  if (beforePlayer === undefined) {
+    return { ok: false };
+  }
+  const resolution = executeDrawPrimitiveForResolvedQuantity(
+    state,
+    entry,
+    segment.effect.player,
+    quantity,
+  );
+  if (resolution.errors !== undefined) {
+    return { ok: false };
+  }
+  const afterPlayer = resolution.state.players[entry.controllerId];
+  if (afterPlayer === undefined) {
+    return { ok: false };
+  }
+  const produced = playerHandProducedByDraw(
+    beforePlayer.hand,
+    afterPlayer.hand,
+    entry.controllerId,
+  );
+  const saveResultAs = segment.saveResultAs;
+  const savedReferences =
+    saveResultAs === undefined
+      ? ledgers.savedReferences
+      : saveReference(ledgers.savedReferences, segment, {
+          kind: "producedObjects",
+          objects: toSavedProducedObjects(
+            {
+              ...segment,
+              saveResultAs,
+              effect: { ...segment.effect, type: "draw" },
+            },
             produced,
             resolution.state.seq,
           ),
