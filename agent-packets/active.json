@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-055K.md",
-      "storyId": "ENG-055K",
-      "storyPath": "stories/approved/ENG-055K-drawupto-play-card-reachability.yaml",
-      "storySha256": "b3b8e2b8c455ef2f2167c7a0dea6d809fe9fa08b54f96f575b8c5ecc9b8249f2"
+      "packetPath": "agent-packets/ENG-055I.md",
+      "storyId": "ENG-055I",
+      "storyPath": "stories/approved/ENG-055I-saved-selections-that-character-runtime.yaml",
+      "storySha256": "a85d020c464eb0bdf16fad650ada328c155444146fd0a20c96999d2148497239"
     }
   ],
   "version": 1
