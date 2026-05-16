@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-055D.md",
-      "storyId": "ENG-055D",
-      "storyPath": "stories/approved/ENG-055D-non-replacement-optionality-runtime.yaml",
-      "storySha256": "8526892a8011b595387be437f9d4b897094f6006f545dd489961318309bc586b"
+      "packetPath": "agent-packets/ENG-055E.md",
+      "storyId": "ENG-055E",
+      "storyPath": "stories/approved/ENG-055E-condition-evaluator-runtime.yaml",
+      "storySha256": "340d3837c1aa79ee1127f3f1e51b2c3309673901ff1d51d63a25f2cb48f1676e"
     }
   ],
   "version": 1
