@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-055H.md",
-      "storyId": "ENG-055H",
-      "storyPath": "stories/approved/ENG-055H-drawupto-runtime.yaml",
-      "storySha256": "120c5df49f2bd70171057f13a6975842677fdd54c1e22455f040d14b4da964db"
+      "packetPath": "agent-packets/ENG-055K.md",
+      "storyId": "ENG-055K",
+      "storyPath": "stories/approved/ENG-055K-drawupto-play-card-reachability.yaml",
+      "storySha256": "20ac10eca3b96bf1c2c04af8efeb403cc69636eb9d0061a482d20c5c42929f98"
     }
   ],
   "version": 1
