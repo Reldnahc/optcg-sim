@@ -15,6 +15,7 @@ import {
   reviewedOnPlayDrawDefinition,
   processEffectRuntime,
   toCardId,
+  toEffectId,
   toInstanceId,
   toQueueEntryId,
   toTimingWindowId,
@@ -25,6 +26,7 @@ import {
   setupOnKODefinition,
   queueingState,
 } from "./effect-runtime-queue-processing-test-support.js";
+import { hashCanonicalStateValue } from "./canonical-state.js";
 
 test("resolves one queued supported On Play draw entry and removes it from effectQueue", () => {
   const { state, played } = queueingState();
@@ -394,4 +396,555 @@ test("non-Life Trigger no-zone queued effects resolve without Life Trigger trash
   assert.equal(eventTypes.includes("effectResolved"), true);
   assert.equal(eventTypes.includes("cardTrashed"), false);
   assert.equal(serializedEvents.includes("lifeTriggerResolved"), false);
+});
+
+test("condition yourTurn true resolves queued draw deterministically", () => {
+  const run = () => {
+    const state = createActiveState();
+    state.turn.turnPlayerId = p1;
+    const source = must(state.players[p1], "p1").leader;
+    const supportCard = resolvedCard({
+      cardId: source.cardId,
+      category: "leader",
+    });
+    const base = reviewedOnPlayDrawDefinition(
+      source.cardId,
+      supportCard.support,
+    );
+    const effect = must(base.effects[0], "effect");
+    setupOnPlayDefinition(
+      state,
+      source,
+      {
+        ...base,
+        effects: [
+          {
+            ...effect,
+            id: toEffectId("your-turn-true"),
+            condition: { type: "yourTurn" },
+          },
+        ],
+      },
+      "def-queue-your-turn-true",
+    );
+    state.effectQueue = [
+      {
+        ...queueDrawForP1(),
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p1,
+          zone: source.zone,
+        },
+        sourceSnapshot: toSourceSnapshot(source, p1, p1),
+        effectBlockId: toEffectId("your-turn-true"),
+        sourcePresencePolicy: "mustRemainInSameZone",
+      },
+    ];
+    return processEffectRuntime(state);
+  };
+
+  const first = run();
+  const second = run();
+
+  assert.equal(first.errors, undefined);
+  assert.equal(first.state.effectQueue.length, 0);
+  assert.deepEqual(first.events.map((event) => event.type).slice(0, 5), [
+    "cardDrawn",
+    "cardMoved",
+    "cardMoved",
+    "effectResolved",
+    "ruleProcessingChecked",
+  ]);
+  assert.deepEqual(first.events, second.events);
+  assert.equal(first.stateHash, second.stateHash);
+});
+
+test("condition yourTurn false removes queued entry without mutation side effects", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  const source = must(state.players[p1], "p1").leader;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const effect = must(base.effects[0], "effect");
+  setupOnPlayDefinition(
+    state,
+    source,
+    {
+      ...base,
+      effects: [
+        {
+          ...effect,
+          id: toEffectId("your-turn-false"),
+          condition: { type: "yourTurn" },
+        },
+      ],
+    },
+    "def-queue-your-turn-false",
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: toEffectId("your-turn-false"),
+      sourcePresencePolicy: "mustRemainInSameZone",
+    },
+  ];
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+  const afterP1 = must(result.state.players[p1], "p1 after");
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.events, []);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(
+    afterP1.hand.length,
+    must(before.players[p1], "p1 before").hand.length,
+  );
+  assert.equal(
+    afterP1.deck.length,
+    must(before.players[p1], "p1 before").deck.length,
+  );
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+test("attachedDonCount self live source true comparator resolves queued draw", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  const attached = must(p1State.hand[1], "attached don source");
+  source.attachedDon = [attached.instanceId];
+  p1State.hand = p1State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index },
+  }));
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const effect = must(base.effects[0], "effect");
+  setupOnPlayDefinition(
+    state,
+    source,
+    {
+      ...base,
+      effects: [
+        {
+          ...effect,
+          id: toEffectId("attached-don-gte"),
+          condition: {
+            type: "attachedDonCount",
+            target: { type: "self" },
+            op: "gte",
+            value: 1,
+          },
+        },
+      ],
+    },
+    "def-attached-don-conditions",
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-attached-don-true"),
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: toEffectId("attached-don-gte"),
+      sourcePresencePolicy: "mustRemainInSameZone",
+    },
+  ];
+  const beforeDeck = p1State.deck.length;
+  const beforeHand = p1State.hand.length;
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(
+    must(result.state.players[p1], "p1").deck.length,
+    beforeDeck - 1,
+  );
+  assert.equal(
+    must(result.state.players[p1], "p1").hand.length,
+    beforeHand + 1,
+  );
+  assert.deepEqual(result.events.map((event) => event.type).slice(0, 5), [
+    "cardDrawn",
+    "cardMoved",
+    "cardMoved",
+    "effectResolved",
+    "ruleProcessingChecked",
+  ]);
+});
+
+test("attachedDonCount self live source false comparator skips queued draw", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  const attached = must(p1State.hand[1], "attached don source");
+  source.attachedDon = [attached.instanceId];
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const effect = must(base.effects[0], "effect");
+  setupOnPlayDefinition(
+    state,
+    source,
+    {
+      ...base,
+      effects: [
+        {
+          ...effect,
+          id: toEffectId("attached-don-gt"),
+          condition: {
+            type: "attachedDonCount",
+            target: { type: "self" },
+            op: "gt",
+            value: 1,
+          },
+        },
+      ],
+    },
+    "def-attached-don-condition-false",
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-attached-don-false"),
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: toEffectId("attached-don-gt"),
+      sourcePresencePolicy: "mustRemainInSameZone",
+    },
+  ];
+  const beforeDeck = p1State.deck.length;
+  const beforeHand = p1State.hand.length;
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(must(result.state.players[p1], "p1").deck.length, beforeDeck);
+  assert.equal(must(result.state.players[p1], "p1").hand.length, beforeHand);
+  assert.deepEqual(result.events, []);
+});
+
+test("attachedDonCount fails closed for non-self target and source-snapshot-only lookup attempts", () => {
+  const state = createActiveState();
+  const source = must(state.players[p1], "p1").leader;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const effect = must(base.effects[0], "effect");
+  setupOnPlayDefinition(
+    state,
+    source,
+    {
+      ...base,
+      effects: [
+        {
+          ...effect,
+          id: toEffectId("attached-don-non-self"),
+          condition: {
+            type: "attachedDonCount",
+            target: { type: "myLeader" },
+            op: "gte",
+            value: 0,
+          },
+        },
+        {
+          ...effect,
+          id: toEffectId("attached-don-lki"),
+          condition: {
+            type: "attachedDonCount",
+            target: { type: "self" },
+            op: "gte",
+            value: 0,
+          },
+        },
+      ],
+    },
+    "def-attached-don-fail-closed",
+  );
+  const nonSelfState = structuredClone(state);
+  nonSelfState.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      effectBlockId: toEffectId("attached-don-non-self"),
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      sourcePresencePolicy: "mustRemainInSameZone",
+    },
+  ];
+  const nonSelfBefore = structuredClone(nonSelfState);
+
+  const nonSelf = processEffectRuntime(nonSelfState);
+
+  assert.deepEqual(nonSelf.state, nonSelfBefore);
+  assert.deepEqual(nonSelf.events, []);
+  assert.equal(must(nonSelf.errors, "errors")[0]?.type, "effectRuntimeError");
+
+  const lkiState = structuredClone(state);
+  lkiState.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      effectBlockId: toEffectId("attached-don-lki"),
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      source: {
+        instanceId: toInstanceId("missing-live-source"),
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: {
+        ...toSourceSnapshot(source, p1, p1),
+        instanceId: toInstanceId("missing-live-source"),
+      },
+    },
+  ];
+  const lkiBefore = structuredClone(lkiState);
+
+  const lki = processEffectRuntime(lkiState);
+
+  assert.deepEqual(lki.state, lkiBefore);
+  assert.deepEqual(lki.events, []);
+  assert.equal(must(lki.errors, "errors")[0]?.type, "effectRuntimeError");
+});
+
+test("unsupported conditions fail closed deterministically", () => {
+  const run = () => {
+    const state = createActiveState();
+    const source = must(state.players[p1], "p1").leader;
+    const supportCard = resolvedCard({
+      cardId: source.cardId,
+      category: "leader",
+    });
+    const base = reviewedOnPlayDrawDefinition(
+      source.cardId,
+      supportCard.support,
+    );
+    const effect = must(base.effects[0], "effect");
+    setupOnPlayDefinition(
+      state,
+      source,
+      {
+        ...base,
+        effects: [
+          {
+            ...effect,
+            id: toEffectId("unsupported-condition"),
+            condition: { type: "opponentTurn" },
+          },
+        ],
+      },
+      "def-unsupported-condition",
+    );
+    state.effectQueue = [
+      {
+        ...queueDrawForP1(),
+        effectBlockId: toEffectId("unsupported-condition"),
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p1,
+          zone: source.zone,
+        },
+        sourceSnapshot: toSourceSnapshot(source, p1, p1),
+        sourcePresencePolicy: "mustRemainInSameZone",
+      },
+    ];
+    return processEffectRuntime(state);
+  };
+
+  const first = run();
+  const second = run();
+
+  assert.deepEqual(first.events, []);
+  assert.equal(must(first.errors, "errors")[0]?.type, "effectRuntimeError");
+  assert.deepEqual(first.state, second.state);
+  assert.equal(first.stateHash, second.stateHash);
+});
+
+test("condition false on first queued entry skips it and still resolves later supported entry", () => {
+  const state = createActiveState();
+  const source = must(state.players[p1], "p1").leader;
+  state.turn.turnPlayerId = p2;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const effect = must(base.effects[0], "effect");
+  setupOnPlayDefinition(
+    state,
+    source,
+    {
+      ...base,
+      effects: [
+        {
+          ...effect,
+          id: toEffectId("queue-cond-false-first"),
+          condition: { type: "yourTurn" },
+        },
+        { ...effect, id: toEffectId("queue-cond-false-second") },
+      ],
+    },
+    "def-queue-cond-false-first",
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-cond-false-first"),
+      effectBlockId: toEffectId("queue-cond-false-first"),
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      createdAtEventSeq: 1,
+      generation: 1,
+    },
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-cond-false-second"),
+      effectBlockId: toEffectId("queue-cond-false-second"),
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      createdAtEventSeq: 2,
+      generation: 2,
+    },
+  ];
+
+  const run = () => processEffectRuntime(structuredClone(state));
+  const first = run();
+  const second = run();
+
+  assert.equal(first.errors, undefined);
+  assert.equal(first.state.effectQueue.length, 0);
+  assert.deepEqual(first.events.map((event) => event.type).slice(0, 5), [
+    "cardDrawn",
+    "cardMoved",
+    "cardMoved",
+    "effectResolved",
+    "ruleProcessingChecked",
+  ]);
+  assert.deepEqual(first.events, second.events);
+  assert.equal(first.stateHash, second.stateHash);
+});
+
+test("unsupported condition on first queued entry fail-closes and does not resolve later entries", () => {
+  const state = createActiveState();
+  const source = must(state.players[p1], "p1").leader;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const effect = must(base.effects[0], "effect");
+  setupOnPlayDefinition(
+    state,
+    source,
+    {
+      ...base,
+      effects: [
+        {
+          ...effect,
+          id: toEffectId("queue-unsupported-first"),
+          condition: { type: "opponentTurn" },
+        },
+        { ...effect, id: toEffectId("queue-supported-second") },
+      ],
+    },
+    "def-queue-unsupported-first",
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-unsupported-first"),
+      effectBlockId: toEffectId("queue-unsupported-first"),
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      createdAtEventSeq: 1,
+      generation: 1,
+    },
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-supported-second"),
+      effectBlockId: toEffectId("queue-supported-second"),
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      createdAtEventSeq: 2,
+      generation: 2,
+    },
+  ];
+
+  const run = () => processEffectRuntime(structuredClone(state));
+  const first = run();
+  const second = run();
+
+  assert.deepEqual(first.events, []);
+  assert.equal(must(first.errors, "errors")[0]?.type, "effectRuntimeError");
+  assert.deepEqual(first.state, second.state);
+  assert.equal(first.stateHash, second.stateHash);
 });

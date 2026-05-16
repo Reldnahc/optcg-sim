@@ -598,6 +598,54 @@ test("direct queued optional no-choice draw creates private chooseOptionalActiva
   assert.equal(first.stateHash, second.stateHash);
 });
 
+test("direct queued optional no-choice draw with yourTurn condition still reaches chooseOptionalActivation", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const source = must(state.players[p1], "p1").leader;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+  });
+  const definition = optionalDefinition(source.cardId, supportCard.support, {
+    type: "onPlay",
+  });
+  const effect = must(definition.effects[0], "optional effect");
+  installDefinition(
+    state,
+    source,
+    {
+      ...definition,
+      effects: [{ ...effect, condition: { type: "yourTurn" } }],
+    },
+    "leader",
+    "def-direct-optional-conditioned",
+  );
+  const entry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId("queue-entry-direct-optional-conditioned"),
+    timingWindowId: toTimingWindowId(
+      "timing-window-direct-optional-conditioned",
+    ),
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    sourceSnapshot: toSourceSnapshot(source, p1, p1),
+    effectBlockId: effect.id,
+    sourcePresencePolicy: must(
+      effect.sourcePresencePolicy,
+      "direct source presence policy",
+    ),
+    queuedAtStateSeq: toStateSeq(state.seq),
+  };
+  state.effectQueue = [entry];
+
+  const result = processEffectRuntime(state);
+  assertOptionalDecision(result, entry);
+});
+
 test("optional On Play queueing reaches chooseOptionalActivation", () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;

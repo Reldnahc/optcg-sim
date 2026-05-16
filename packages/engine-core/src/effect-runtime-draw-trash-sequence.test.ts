@@ -441,7 +441,7 @@ test("unsupported draw-then-trash sequence shapes fail closed before draw or dec
   >[] = [
     { optional: true },
     { cost: { type: "restDon", count: 1 } },
-    { condition: { type: "yourTurn" } },
+    { conditionTiming: "resolution" },
     { failurePolicy: "requiresAll" },
   ];
 
@@ -455,6 +455,25 @@ test("unsupported draw-then-trash sequence shapes fail closed before draw or dec
     assert.deepEqual(result.events, []);
     assert.equal(must(result.errors, "errors")[0]?.type, "effectRuntimeError");
   }
+});
+
+test("conditioned draw-then-trash sequence is supported after queue-level condition pass", () => {
+  const { state } = sequenceQueueState(drawTrashSequence(1, 1), {
+    condition: { type: "yourTurn" },
+  });
+  state.turn.turnPlayerId = p1;
+
+  const result = processEffectRuntime(state);
+  const decision = must(result.state.pendingDecision, "pending decision");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(decision.type, "selectCards");
+  assert.deepEqual(eventTypes(result.events), [
+    "cardDrawn",
+    "cardMoved",
+    "cardMoved",
+    "decisionCreated",
+  ]);
 });
 
 test("once-per-turn draw-then-trash sequence consumes use when the sequence commits and rejects repeated use", () => {

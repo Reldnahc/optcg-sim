@@ -23,6 +23,7 @@ import {
 } from "./action-results.js";
 import type { EffectQueueGroup } from "./effect-queue-ordering.js";
 import { createSupportedDrawThenTrashSequenceDecision } from "./effect-runtime-draw-trash-sequence.js";
+import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
 import {
   evaluateQueueOrdering,
@@ -147,12 +148,26 @@ export const createEffectRuntimeQueueResults = (
     const match = resolveQueuedEffectDefinition(state, entry);
     if (
       match === undefined ||
-      match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      !isSupportedQueuedNoChoiceDrawEffect(match)
+      match.sourcePresencePolicy !== entry.sourcePresencePolicy
     ) {
       return undefined;
     }
-    return match.effect;
+    const supportShape = { ...match };
+    delete (supportShape as { condition?: unknown }).condition;
+    delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
+    if (!isSupportedQueuedNoChoiceDrawEffect(supportShape)) {
+      return undefined;
+    }
+    return supportShape.effect;
+  };
+
+  const withoutConditionFields = (
+    effect: EffectDefinition["effects"][number],
+  ): EffectDefinition["effects"][number] => {
+    const supportShape = { ...effect };
+    delete (supportShape as { condition?: unknown }).condition;
+    delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
+    return supportShape;
   };
 
   const resolveQueuedSearchRevealEffect = (
@@ -166,7 +181,6 @@ export const createEffectRuntimeQueueResults = (
       match.category !== "auto" ||
       match.optional === true ||
       match.oncePerTurn === true ||
-      match.condition !== undefined ||
       match.conditionTiming !== undefined ||
       match.cost !== undefined ||
       match.failurePolicy !== undefined ||
@@ -312,11 +326,32 @@ export const createEffectRuntimeQueueResults = (
         return unsupportedEffectQueueResult(originalState);
       }
       const queuedEffect = resolveQueuedEffectDefinition(nextState, selected);
+      if (queuedEffect?.conditionTiming !== undefined) {
+        return unsupportedEffectQueueResult(originalState);
+      }
+      const conditionResult = evaluateQueuedEffectCondition(
+        nextState,
+        selected,
+        queuedEffect?.condition,
+      );
+      if (!conditionResult.supported) {
+        return unsupportedEffectQueueResult(originalState);
+      }
+      if (!conditionResult.passed) {
+        nextState = {
+          ...nextState,
+          effectQueue: nextState.effectQueue.filter(
+            (entry) => entry.id !== selected.id,
+          ),
+        };
+        continue;
+      }
       let drawEffect: Extract<Effect, { type: "draw" }> | undefined;
       if (queuedEffect?.optional === true) {
+        const optionalSupportShape = withoutConditionFields(queuedEffect);
         if (
           queuedEffect.sourcePresencePolicy !== selected.sourcePresencePolicy ||
-          !isSupportedQueuedOptionalNoChoiceDrawEffect(queuedEffect)
+          !isSupportedQueuedOptionalNoChoiceDrawEffect(optionalSupportShape)
         ) {
           return unsupportedEffectQueueResult(originalState);
         }
@@ -331,7 +366,7 @@ export const createEffectRuntimeQueueResults = (
           }
         }
         if (acceptedOptionalQueueEntryIds.has(selected.id)) {
-          drawEffect = queuedEffect.effect;
+          drawEffect = optionalSupportShape.effect;
         } else {
           const paused = createChooseOptionalActivationDecision(
             nextState,

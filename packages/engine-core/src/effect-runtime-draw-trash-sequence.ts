@@ -46,7 +46,6 @@ const isSupportedDrawThenTrashSequenceEffect = (
     effect.category !== "auto" ||
     effect.optional === true ||
     effect.cost !== undefined ||
-    effect.condition !== undefined ||
     effect.conditionTiming !== undefined ||
     effect.failurePolicy !== undefined ||
     effect.effect.type !== "sequence" ||

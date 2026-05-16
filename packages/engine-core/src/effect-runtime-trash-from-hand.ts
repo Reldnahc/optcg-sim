@@ -181,7 +181,6 @@ export const isSupportedQueuedTrashFromHandEffect = (
   effect.optional !== true &&
   effect.oncePerTurn !== true &&
   effect.cost === undefined &&
-  effect.condition === undefined &&
   effect.conditionTiming === undefined &&
   effect.failurePolicy === undefined &&
   effect.effect.type === "trashFromHand" &&

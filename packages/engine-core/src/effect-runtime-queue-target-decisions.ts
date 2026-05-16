@@ -136,7 +136,6 @@ export const isSupportedTargetChoiceEffectShape = (
   return (
     effect.sourcePresencePolicy !== undefined &&
     effect.cost === undefined &&
-    effect.condition === undefined &&
     effect.conditionTiming === undefined &&
     effect.failurePolicy === undefined &&
     effect.effect.type === "ko" &&

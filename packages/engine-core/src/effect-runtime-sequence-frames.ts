@@ -199,7 +199,6 @@ const isSupportedSequenceBlock = (
     effectBlock.category !== "auto" ||
     effectBlock.optional === true ||
     effectBlock.cost !== undefined ||
-    effectBlock.condition !== undefined ||
     effectBlock.conditionTiming !== undefined ||
     effectBlock.failurePolicy !== undefined ||
     effectBlock.sourcePresencePolicy !== entry.sourcePresencePolicy ||

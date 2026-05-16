@@ -466,7 +466,6 @@ export const isSupportedMainEventTargetKoEffect = (
     effect.optional ||
     effect.oncePerTurn ||
     effect.cost !== undefined ||
-    effect.condition !== undefined ||
     effect.conditionTiming !== undefined ||
     effect.failurePolicy !== undefined ||
     effect.effect.type !== "ko" ||
