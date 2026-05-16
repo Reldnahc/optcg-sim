@@ -58,3 +58,30 @@ Implementation cautions:
   boundaries
 - preserve fail-closed behavior for unsupported/private `all` target resolution
   shapes unless tested support is explicitly implemented
+
+## Third-Pass Re-Review With `choose` In Scope
+
+Review assignment id:
+`agent-story-review-ENG-055J-feasibility-rereview3-choose-2026-05-16`
+
+Verdict: `approval-ready`
+
+The story was revised again because `choose` targets are intended scope for
+ENG-055J. The reviewer found no remaining authority blocker after the story
+explicitly required:
+
+- a `selectTargets` pending-decision pause/resume flow for `choose`
+  modifier/restriction targets
+- a durable continuous-effect target carrier for the exact chosen field object
+  until expiry
+- target-selection and runtime type touch points needed to implement that carrier
+
+Implementation cautions:
+
+- do not persist the continuous-effect target as dynamic
+  `Target.type = "choose"` or as a frame-local saved reference
+- add or use a canonical exact-card continuous-effect target shape for the chosen
+  field object
+- reuse the existing `selectTargets` validation path and `state.seq` semantics
+- preserve hidden-info behavior and keep target resolution fail-closed outside
+  the authorized public field-object target space
