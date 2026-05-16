@@ -244,7 +244,7 @@ export interface EffectOption {
 
 export interface SequencedEffect {
   id?: string;
-  effect: Effect;
+  effect: Effect | PayCostEffect;
   connector:
     | "always"
     | "then"
@@ -474,7 +474,6 @@ export type Effect =
       filter?: CardFilter;
       chooser: PlayerRef;
     }
-  | PayCostEffect
   | { type: "modifyPower"; target: Target; value: number; duration: Duration }
   | { type: "setPowerToZero"; target: Target; duration: Duration }
   | { type: "setBasePower"; target: Target; value: number; duration: Duration }

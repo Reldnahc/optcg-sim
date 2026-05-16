@@ -924,6 +924,33 @@ test("TYP-009A composed optional cost clauses use payCost sequence segments", ()
   void missingOptionalFlag;
 });
 
+test("TYP-009A payCost is not authorable as a top-level effect", () => {
+  const optionalReturnDonCost: OptionalCost = {
+    type: "returnDon",
+    count: 1,
+    chooser: "self",
+    optional: true,
+  };
+  const topLevelPayCostEffect: Effect = {
+    // @ts-expect-error payCost is only authorable as a sequence segment effect.
+    type: "payCost",
+    cost: optionalReturnDonCost,
+  };
+  const topLevelPayCostBlock: EffectBlock = {
+    id: "pay-cost-top-level" as EffectId,
+    category: "activate",
+    trigger: { type: "activateMain" },
+    effect: {
+      // @ts-expect-error payCost is only authorable inside sequence segments.
+      type: "payCost",
+      cost: optionalReturnDonCost,
+    },
+  };
+
+  void topLevelPayCostEffect;
+  void topLevelPayCostBlock;
+});
+
 test("TYP-009A optional cost segment results distinguish accept decline and failure", () => {
   const accepted: OptionalCostSegmentResult = {
     attempted: true,
