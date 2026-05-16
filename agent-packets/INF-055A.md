@@ -155,7 +155,7 @@ only for associated merged, unprotected story or substory branches.
 
 Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready.
 
-Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
+Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. Each required row must have a distinct story-review assignment identity and a distinct durable artifact identity for that row. One story-review assignment, one reviewer run, one matrix, or one durable artifact covering multiple stories satisfies at most one required row. Batch story-review can be supplemental context only and cannot be the approval-gate evidence for multiple rows. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
 
 Required behavior:
 
@@ -163,7 +163,7 @@ Required behavior:
 - a parent with exactly one child is valid and still uses the parent/substory flow,
 - every parent story and every substory must be reviewed; parent-level review does not satisfy child-story review, and one child-story review does not satisfy any sibling child,
 - use a story-review agent separate from any implementation worker or implementation patch reviewer,
-- story-review agent uses gpt-5.5 with high reasoning,
+- story-review agent uses gpt-5.4 with high reasoning,
 - story-review findings must be fixed, explicitly deferred, or recorded before presentation,
 - do not present a story as approval-ready when no usable story-review agent run exists; present it as unreviewed and blocked on story review instead,
 - story-review agents evaluate story authority, decomposition, scope, non-scope, dependencies, allowed touch points, acceptance criteria, required tests, and ambiguity policy,
@@ -171,7 +171,7 @@ Required behavior:
 
 ### 32-codex-agent-integration.s008 (Recommended execution flow)
 
-1. Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
+1. Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. Each required row must have a distinct story-review assignment identity and a distinct durable artifact identity for that row. One story-review assignment, one reviewer run, one matrix, or one durable artifact covering multiple stories satisfies at most one required row. Batch story-review can be supplemental context only and cannot be the approval-gate evidence for multiple rows. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
 1. Before approving a generated or normalized parent story set, run story-review subagents for the parent story and every child story, then resolve, explicitly defer, or record their findings. Approval cannot proceed unless the parent story and every child story have separate story-review evidence.
 1. Approval-ready means the parent story and every child story have usable story-review evidence.
 1. A parent with exactly one child is valid and still uses the parent/substory flow.
@@ -284,14 +284,14 @@ Use the complete role routing table:
 | Role                 | Default model   | Reasoning | Escalation      |
 | -------------------- | --------------- | --------- | --------------- |
 | Session Orchestrator | `gpt-5.5`       | `high`    | none            |
-| story-review         | `gpt-5.5`       | `high`    | none            |
+| story-review         | `gpt-5.4`       | `high`    | none            |
 | implementation       | `gpt-5.3-codex` | `medium`  | none by default |
 | code-review          | `gpt-5.4`       | `high`    | none            |
 
 Code-review agents must not silently default to `gpt-5.5` with `high` reasoning.
 
 The parent/orchestrator model is gpt-5.5.
-Story-review agent model is gpt-5.5 with high reasoning.
+Story-review agent model is gpt-5.4 with high reasoning.
 Reviewer subagent model is gpt-5.4 with high reasoning.
 Implementation worker subagents default to gpt-5.3-codex with medium reasoning.
 

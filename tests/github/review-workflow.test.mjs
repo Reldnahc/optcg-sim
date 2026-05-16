@@ -37,7 +37,6 @@ function assertMatchesAll(text, patterns) {
     assert.match(text, pattern);
   }
 }
-
 function extractRoleRoutingTable(markdown) {
   const match = markdown.match(
     /Use the complete role routing table:\s*\n\n(?<table>(?:\|.*\n)+)/,
@@ -52,7 +51,6 @@ function extractRoleRoutingTable(markdown) {
     .split(/\r?\n/)
     .map((line) => line.trim().replace(/\s+/g, " "));
 }
-
 function extractBranchProtectionRequiredChecks(guide) {
   const match = guide.match(
     /## Required Status Checks[\s\S]*?Require the following checks before merge:\n\n(?<checks>(?:- `[^`]+`\n)+)/,
@@ -176,7 +174,7 @@ test("pull request template requires story, verification, and subagent review ev
     /Approved story file:/i,
     /Synced issue, if one exists:/i,
     /pnpm verify/i,
-    /Parent story-review artifact:[\s\S]*Child story-review artifacts:\s*\n\s*-\s*<child story path>:\s*<artifact\/status>[\s\S]*All parent\/child story-review rows approval-ready or blocker recorded:[\s\S]*Packet activation happened after this gate:/i,
+    /Parent story-review artifact:[\s\S]*Child story-review artifacts:\s*\n\s*-\s*<child story path>:\s*<artifact\/status>[\s\S]*All parent\/child story-review rows approval-ready or blocker recorded:[\s\S]*Each row uses a distinct story-review assignment identity[\s\S]*distinct durable artifact identity[\s\S]*One reviewer run, matrix, or batch artifact may be supplemental context only and satisfies at most one required row[\s\S]*Packet activation happened after this gate:/i,
     /AI review completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
     /Separate reviewer subagent run completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
     /Implementation-worker self-review or parent-coordinator self-review was not used as the review gate/i,
@@ -674,6 +672,7 @@ test("workflow procedure docs preserve required story and review gates", async (
     /Approval-ready means the parent story and every child story have usable story-review evidence/i,
     /Parent story-review does not satisfy child story-review/i,
     /Child story-review does not satisfy sibling story-review/i,
+    /(?=.*Each required row must have a distinct story-review assignment identity for that row)(?=.*Each required row must have a distinct durable artifact identity for that row)(?=.*one story-review assignment, one reviewer run, one matrix, or one durable artifact covering multiple stories satisfies at most one required row)(?=.*batch story-review can be supplemental context only and cannot be the approval-gate evidence for multiple rows)/is,
     /missing, pending, unknown, or not reconstructable from durable evidence: STOP/i,
     /If no usable story-review agent run exists, do not present the story as approval-ready/i,
     /active\.json` may contain zero active stories or exactly one active story/i,
@@ -723,6 +722,7 @@ test("workflow docs require parent story-set review-status matrices before hando
     /parent-level row does not satisfy any child-story row[\s\S]*child story-review row does not satisfy[\s\S]*sibling child-story row/i,
     /do not use chat memory/i,
     /columns?:?[\s\S]*story id[\s\S]*parent story id[\s\S]*child story id[\s\S]*story paths[\s\S]*review assignment id[\s\S]*review status[\s\S]*review artifact or blocker reference[\s\S]*disposition summary/i,
+    /review assignment id[\s\S]*distinct per row[\s\S]*review artifact or blocker reference[\s\S]*distinct artifact identity per row[\s\S]*one reviewer run, one matrix, or one batch artifact can satisfy at most one required row/i,
     /allowed review types?:?[\s\S]*parent-story[\s\S]*child-story[\s\S]*not-applicable/i,
     /allowed review statuses?:?[\s\S]*pending[\s\S]*approval-ready[\s\S]*needs-revision[\s\S]*blocked[\s\S]*not-applicable/i,
     /fail closed when the parent-story review is unknown or pending/i,
@@ -918,7 +918,7 @@ test("spec and workflow docs share the same complete role model-routing table an
 
   const patterns = [
     /Session Orchestrator.*gpt-5\.5.*high/i,
-    /story-review.*gpt-5\.5.*high/i,
+    /story-review.*gpt-5\.4.*high/i,
     /implementation.*gpt-5\.3-codex.*medium/i,
     /implementation.*none by default/i,
     /code-review.*gpt-5\.4.*high/i,
@@ -955,7 +955,6 @@ test("spec and workflow docs share the same complete role model-routing table an
     /Complex, risky, or integration-heavy implementation stories should use gpt-5\.5 with medium reasoning/i,
   );
 });
-
 test("checked-in review comment templates exist for AI findings and revisions", async () => {
   const aiReview = await readActiveText(".github/review-comments/ai-review.md");
   const fallbackReview = await readActiveText(

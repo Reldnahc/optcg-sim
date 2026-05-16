@@ -72,6 +72,9 @@ Post-merge cleanup:
 - Child story-review artifacts:
   - <child story path>: <artifact/status>
 - All parent/child story-review rows approval-ready or blocker recorded:
+- Each row uses a distinct story-review assignment identity (parent and each child cannot share one assignment):
+- Each row uses a distinct durable artifact identity (parent and each child cannot share one artifact):
+- One reviewer run, matrix, or batch artifact may be supplemental context only and satisfies at most one required row:
 - Packet activation happened after this gate:
 - [ ] Role-based handoff evidence is present when applicable: role packet extraction output for each assigned post-approval role (`implementation`, `code-review`), or a recorded extraction-failure fallback note.
 - [ ] AI review completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed

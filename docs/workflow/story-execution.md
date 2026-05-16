@@ -24,13 +24,16 @@ Manual chat memory is not authority after reset. If reconstructed state conflict
 
 Use the Story Approval Review Gate for generated or normalized story work:
 
-Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
+Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. Each required row must have a distinct story-review assignment identity for that row and a distinct durable artifact identity for that row. One story-review assignment, one reviewer run, one matrix, or one durable artifact covering multiple stories satisfies at most one required row. Batch story-review can be supplemental context only and cannot be the approval-gate evidence for multiple rows. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
+
+Each required row must have a distinct durable artifact identity for that row.
+Each required row must have a distinct story-review assignment identity for that row.
 
 - Generated or normalized stories must receive story-review agent review before the parent agent presents them to the human as approval-ready.
 - Approval-ready means the parent story and every child story have usable story-review evidence, and material findings for each reviewed story are fixed, explicitly deferred, or recorded.
 - A parent with exactly one child is still a valid parent/substory story set.
 - Every parent story and every substory must be reviewed. Do not collapse child review into only a parent-level review, and do not infer that one reviewed child covers sibling children.
-- Story-review agent model: `gpt-5.5` with `high` reasoning.
+- Story-review agent model: `gpt-5.4` with `high` reasoning.
 - Story-review agents review story authority and decomposition, not implementation patches.
 - Story-review findings must be fixed, explicitly deferred, or recorded before the parent agent presents stories as approval-ready.
 - If no usable story-review agent run exists, do not present the story as approval-ready; present it as unreviewed and blocked on story review instead.
@@ -54,6 +57,8 @@ Required columns:
 - review status
 - review artifact or blocker reference
 - disposition summary
+
+`review assignment ID` must be distinct per row. `review artifact or blocker reference` must include a distinct artifact identity per row. One reviewer run, one matrix, or one batch artifact can satisfy at most one required row.
 
 Allowed review types: `parent-story`, `child-story`, `not-applicable`.
 
@@ -298,14 +303,14 @@ Use the complete role routing table:
 | Role                 | Default model   | Reasoning | Escalation      |
 | -------------------- | --------------- | --------- | --------------- |
 | Session Orchestrator | `gpt-5.5`       | `high`    | none            |
-| story-review         | `gpt-5.5`       | `high`    | none            |
+| story-review         | `gpt-5.4`       | `high`    | none            |
 | implementation       | `gpt-5.3-codex` | `medium`  | none by default |
 | code-review          | `gpt-5.4`       | `high`    | none            |
 
 - Parent/orchestrator model: `gpt-5.5`
 - Session Orchestrator: `gpt-5.5` with `high` reasoning
-- Story-review agent model: `gpt-5.5` with `high` reasoning
-- story-review: `gpt-5.5` with `high` reasoning
+- Story-review agent model: `gpt-5.4` with `high` reasoning
+- story-review: `gpt-5.4` with `high` reasoning
 - Reviewer subagent model: `gpt-5.4` with `high` reasoning
 - implementation: default `gpt-5.3-codex` with `medium` reasoning
 - Implementation worker model: default to `gpt-5.3-codex` with `medium` reasoning
