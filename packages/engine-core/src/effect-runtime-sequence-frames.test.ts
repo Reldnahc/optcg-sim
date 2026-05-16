@@ -232,15 +232,25 @@ test("sequence pause stores a resumable execution frame with segment results and
     kind: "producedObjects",
     objects: [
       {
-        instanceId: firstDrawn.instanceId,
-        cardId: firstDrawn.cardId,
-        playerId: p1,
-        zone: {
-          zone: "hand",
-          playerId: p1,
-          slot: "hand",
-          index: beforeP1.hand.length,
+        binding: {
+          family: "producedObjects",
+          objectIndex: 0,
+          saveResultAs: "firstDraw",
+          sourceSegmentId: "first-draw",
         },
+        capturedAtStateSeq: result.state.seq - 1,
+        object: {
+          instanceId: firstDrawn.instanceId,
+          cardId: firstDrawn.cardId,
+          playerId: p1,
+          zone: {
+            zone: "hand",
+            playerId: p1,
+            slot: "hand",
+            index: beforeP1.hand.length,
+          },
+        },
+        visibility: "public",
       },
     ],
   });

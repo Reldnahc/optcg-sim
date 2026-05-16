@@ -8,6 +8,7 @@ import type {
   EngineError,
   EngineEvent,
   GameState,
+  SavedFieldObjectReference,
   SelectCardsDecision,
   SequenceSavedResultReference,
   SequenceSegmentResult,
@@ -22,6 +23,7 @@ import {
 } from "./once-per-turn.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
+type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 type DrawEffect = Extract<Effect, { type: "draw" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
@@ -120,14 +122,16 @@ const isSupportedConnector = (
   connector === "then" ||
   connector === "ifPreviousSucceeded";
 
-const isSupportedDrawSegment = (effect: Effect): effect is DrawEffect =>
+const isSupportedDrawSegment = (
+  effect: SequenceSegmentEffect,
+): effect is DrawEffect =>
   effect.type === "draw" &&
   effect.player === "self" &&
   Number.isInteger(effect.count) &&
   effect.count >= 0;
 
 const isSupportedTrashFromHandSegment = (
-  effect: Effect,
+  effect: SequenceSegmentEffect,
 ): effect is TrashFromHandEffect =>
   effect.type === "trashFromHand" &&
   effect.player === "self" &&
@@ -269,6 +273,26 @@ const playerHandProducedByDraw = (
     .map((card) => toCardRef(card, playerId));
 };
 
+const toSavedProducedObjects = (
+  segment: SupportedSequenceSegment & {
+    effect: DrawEffect;
+    saveResultAs: string;
+  },
+  objects: CardRef[],
+  capturedAtStateSeq: GameState["seq"],
+): SavedFieldObjectReference[] =>
+  objects.map((object, objectIndex) => ({
+    binding: {
+      family: "producedObjects",
+      objectIndex,
+      saveResultAs: segment.saveResultAs,
+      ...(segment.id === undefined ? {} : { sourceSegmentId: segment.id }),
+    },
+    capturedAtStateSeq,
+    object,
+    visibility: "public",
+  }));
+
 const saveReference = (
   savedReferences: EffectExecutionFrame["savedReferences"],
   segment: SequenceEffect["effects"][number],
@@ -313,6 +337,17 @@ const applyDrawSegment = (
     afterPlayer.hand,
     entry.controllerId,
   );
+  const savedReferences =
+    segment.saveResultAs === undefined
+      ? ledgers.savedReferences
+      : saveReference(ledgers.savedReferences, segment, {
+          kind: "producedObjects",
+          objects: toSavedProducedObjects(
+            { ...segment, saveResultAs: segment.saveResultAs },
+            produced,
+            resolution.state.seq,
+          ),
+        });
   const result: SequenceSegmentResult = {
     ...emptySegmentResult(),
     attempted: true,
@@ -326,10 +361,7 @@ const applyDrawSegment = (
         ...ledgers.segmentResults,
         [segmentKey(segment, index)]: result,
       },
-      savedReferences: saveReference(ledgers.savedReferences, segment, {
-        kind: "producedObjects",
-        objects: produced,
-      }),
+      savedReferences,
     },
     ok: true,
     state: resolution.state,
