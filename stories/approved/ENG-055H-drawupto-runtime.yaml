@@ -28,6 +28,7 @@ allowed_touch_points:
   - agent-packets/ENG-055H.md
   - agent-packets/active.json
 spec_refs:
+  - 03-game-state-events-decisions.s005
   - 02-engine-mechanics.s035
   - 03-game-state-events-decisions.s016
   - 03-game-state-events-decisions.s017

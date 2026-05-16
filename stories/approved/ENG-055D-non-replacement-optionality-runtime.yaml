@@ -16,6 +16,7 @@ story_boundary: >
   Own only non-replacement optionality runtime semantics and focused tests. Do
   not change replacement optionality, parser support, or card support metadata.
 allowed_touch_points:
+  - packages/engine-core/src/optional-activation-actions.ts
   - packages/engine-core/src/effect-runtime*.ts
   - packages/engine-core/src/effect-runtime-optional-activation*.test.ts
   - packages/engine-core/src/actions-pending-decision.test.ts
@@ -39,8 +40,10 @@ dependencies:
   - TYP-007C
 scope:
   - implement optional activation semantics for composed effect frames
+  - update choose-optional-activation response handling only as needed to route composed-frame accept/decline pause and resume behavior
   - implement optional cost and optional effect clause semantics
   - preserve correct acceptance and commitment timing
+  - "record optional cost decline or failure as `paidCost: false` segment results and optional effect decline as `playerDeclined: true` segment results, with connector behavior driven by those records"
   - preserve deterministic replay for accept and decline branches through pending-decision pause/resume
   - add invalid response, stale decision, decline, acceptance, hidden-info, event-order, and hash coverage
 non_scope:
@@ -50,12 +53,14 @@ non_scope:
 acceptance_criteria:
   - declined optional activation/effect/cost paths do not commit effects incorrectly
   - accepted optional paths commit at the correct point
-  - failed optional costs do not consume once-per-turn usage unless already legally committed under existing policy
+  - failed optional costs do not consume once-per-turn usage; once-per-turn usage is marked only after the `04-effect-runtime.s011` legal-commitment point
+  - "optional cost decline/failure records `paidCost: false`, optional effect decline records `playerDeclined: true`, and dependent connector branches consume those segment results deterministically"
   - hidden-info behavior is preserved for optional decisions and responses
   - replacement optionality is unchanged
   - optional activation, optional cost, and optional effect accept/decline branches replay deterministically without changing canonical event order or state hash
 required_tests:
   - focused optional activation/cost/effect runtime tests
+  - "segment-result and connector tests covering `paidCost: false`, `playerDeclined: true`, and dependent branch skip/continue behavior"
   - invalid response and stale decision tests
   - replay regression across `respondToDecision` accept and decline paths for optional activation, optional cost, and optional effect clauses
   - hidden-info, event-order, and state-hash regression tests

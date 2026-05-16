@@ -61,7 +61,9 @@ scope:
   - implement temporary power modifiers through the computed-view/modifier model
   - implement runtime expiry only for `thisBattle`, `thisTurn`, `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, and `permanent` durations
   - defer `thisAction` runtime until a cited canonical expiration rule exists
-  - implement TYP-007E-authorized restriction runtime only for `cannotAttack` and `cannotBlock` with normal target shapes
+  - implement TYP-007E-authorized restriction runtime only for `cannotAttack` and `cannotBlock` with `self`, `choose`, and `all` target shapes authorized by TYP-007E
+  - fail closed for every non-TYP-007E-authorized restriction target outside `self`, `choose`, and `all`, including `myLeader`, `opponentLeader`, attack-context targets such as `attacker`, `attackTarget`, `blocker`, and `triggerCard`, and saved-selection targets
+  - fail closed for `whileConditionTrue`, malformed turn-relative durations, `thisAction`, and unsupported restriction families
   - add expiry tests for duration boundaries
   - add hidden-info, event-order, deterministic replay, and state-hash regression coverage
 non_scope:
@@ -75,12 +77,12 @@ non_scope:
 acceptance_criteria:
   - temporary power modifiers affect computed view without mutating canonical current power
   - "`cannotAttack` and `cannotBlock` apply and expire at the correct supported duration boundary"
-  - unsupported durations and restriction families fail closed
+  - unsupported targets, durations, malformed duration parameterizations, and restriction families fail closed
   - hidden-info, event order, deterministic replay, and state hashes are preserved
 required_tests:
   - temporary power modifier runtime tests
   - cannotAttack/cannotBlock restriction expiry tests for supported target shapes and supported duration boundaries
-  - fail-closed tests for `thisAction` and unsupported restriction families
+  - fail-closed tests for `thisAction`, `whileConditionTrue`, malformed turn-relative durations, every non-TYP-007E-authorized restriction target outside `self`, `choose`, and `all` including `myLeader`, `opponentLeader`, attack-context targets, and saved-selection targets, plus unsupported restriction families
   - replay regression pinning emitted event order and final state hash across modifier/restriction application and expiry
   - hidden-info, event-order, and state-hash tests
   - run `corepack pnpm --filter @optcg/engine-core typecheck`

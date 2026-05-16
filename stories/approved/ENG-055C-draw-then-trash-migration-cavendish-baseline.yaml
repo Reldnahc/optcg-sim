@@ -52,11 +52,13 @@ non_scope:
 acceptance_criteria:
   - existing draw-then-trash tests pass without expectation changes except internal fixture setup if needed
   - OP10-045/Cavendish regression evidence proves behavior is unchanged
+  - migrated draw-then-trash resolution stores and resumes through the ENG-055B execution-frame boundary around the trash-from-hand decision, without re-applying completed earlier draw segments
   - once-per-turn, hidden-info, event order, deterministic replay, and state hashes are preserved
 required_tests:
   - run focused draw-then-trash and Cavendish regression tests, including existing battle sequence and real-card runtime baselines when they cover Cavendish
   - run focused once-per-turn regression for draw-then-trash sequence commitment
   - run event-order and state-hash regression in `packages/engine-core/src/effect-runtime-draw-trash-sequence.test.ts`
+  - run frame-boundary regression proving the migrated draw-then-trash path stores an ENG-055B execution frame at the trash-from-hand pause and resumes from that frame without duplicating the pre-decision draw
   - run Cavendish hidden-info and determinism regression in `packages/engine-core/src/battle-declare-attack-sequence-trigger.test.ts`
   - run OP10-045 baseline coverage in `packages/engine-core/src/real-card-dsl-runtime.test.ts`
   - run replay-step regression proving the migrated draw-then-trash path replays to the same event order and final state hash

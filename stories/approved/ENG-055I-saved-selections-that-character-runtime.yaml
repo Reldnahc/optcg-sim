@@ -30,7 +30,9 @@ spec_refs:
   - 03-game-state-events-decisions.s022
   - 04-effect-runtime.s002
   - 04-effect-runtime.s005
+  - 04-effect-runtime.s010
   - 04-effect-runtime.s012
+  - 04-effect-runtime.s016
   - 05-effect-dsl-reference.s013
   - 05-effect-dsl-reference.s026
   - 11-testing-quality.s004
@@ -41,8 +43,8 @@ dependencies:
   - TYP-007B
 scope:
   - store saved selections/result references in the execution context
-  - allow later sequence steps to resolve saved `selectedTargets` and `producedObjects` references only for `TargetSpec` selection consumers in the same supported execution frame
-  - limit positive saved-reference consumer coverage to `TargetSpec` selection resolution used by computed-view modifier/protection/restriction plumbing; other effect primitive consumers remain unsupported unless named by another child story
+  - allow later sequence steps to resolve saved `selectedTargets` and `producedObjects` references only for generic field-object `TargetSpec` selection consumers in the same supported execution frame
+  - keep positive saved-reference consumer coverage limited to generic field-object target resolution; modifier, protection, restriction, hand-selection, and playSelected consumers remain unsupported unless named by another child story
   - fail closed when the saved object is gone, illegal, hidden, not a field object, or unsupported under the primitive policy
   - fail closed for saved `selectedCards`, `paidCost`, hand-selection, modifier/restriction target, and other unsupported saved-reference families
   - fail closed when a saved object is used as a modifier/restriction target without a proper field-target saved-reference contract
@@ -54,12 +56,12 @@ non_scope:
   - playSelected saved hand-selection consumption, which belongs to ENG-055G
   - replacement generalization
 acceptance_criteria:
-  - later sequence steps can resolve valid saved selected-target or produced-object field references deterministically for `TargetSpec` selection consumers
+  - later sequence steps can resolve valid saved selected-target or produced-object field references deterministically for generic field-object `TargetSpec` selection consumers in the same supported execution frame
   - gone or illegal saved objects fail closed under the primitive policy
   - unsupported saved-object target use fails closed
   - hidden-info, event-order, deterministic replay, and state-hash safety is preserved
 required_tests:
-  - saved selection/result reference runtime tests for `TargetSpec` selection consumers
+  - saved selection/result reference runtime tests for generic field-object `TargetSpec` selection consumers in the same supported execution frame
   - gone-object and illegal-object fail-closed tests
   - unsupported saved-reference family tests for selectedCards, paidCost, hand-selection, and modifier/restriction target use
   - hidden-info, event-order, replay, `state.seq`, and state-hash tests

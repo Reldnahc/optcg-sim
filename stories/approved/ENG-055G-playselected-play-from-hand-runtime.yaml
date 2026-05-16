@@ -58,14 +58,16 @@ non_scope:
 acceptance_criteria:
   - selected legal hand cards from saved hand selections can be played through runtime effects
   - up-to cardinality can choose zero or fewer legal cards when allowed
-  - stale, non-hand, no-longer-legal, and unsupported saved-reference cases fail closed without `cardPlayed` or hand-to-field `cardMoved` events and without leaking hidden hand details
+  - stale, non-hand, no-longer-legal, and unsupported saved-reference cases fail closed without `cardPlayed` or hand-to-field `cardMoved` events and without leaking hidden hand details through public events, public legal actions, PlayerView, or SpectatorView
   - played cards enter play rested without cost payment unless the primitive explicitly says otherwise
-  - full character/stage area consequences match existing rule processing
+  - full character area creates the forced-trash decision before play completion and resumes deterministically after the response
+  - stage area replacement and other area consequences match existing rule processing
   - hidden-info, event order, deterministic replay, and state hashes are covered
 required_tests:
   - synthetic playSelected/play-from-hand runtime tests
   - cost-free rested play, stage replacement, full-area, and forced-trash tests
-  - stale saved-selection failure tests asserting failed segment fields, no play/move events, and no PlayerView/Spectator/public-event leakage
+  - forced-trash decision timing regression proving the decision is created before play completion and event/order/state resume deterministically after the response
+  - stale saved-selection failure tests asserting failed segment fields, no play/move events, and no public legal action, PlayerView, SpectatorView, or public-event leakage
   - replay and state-hash pinning for stale playSelected failures
   - hidden-info, event-order, and state-hash tests
   - run `corepack pnpm --filter @optcg/engine-core typecheck`
