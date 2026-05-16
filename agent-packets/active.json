@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/TYP-009A.md",
-      "storyId": "TYP-009A",
-      "storyPath": "stories/approved/TYP-009A-optional-cost-clause-runtime-contracts.yaml",
-      "storySha256": "bf9fc2befb08a289823de2c6b42d1bd408ab6948a254eaa5856b2c5ad697b35d"
+      "packetPath": "agent-packets/TYP-009B.md",
+      "storyId": "TYP-009B",
+      "storyPath": "stories/approved/TYP-009B-saved-field-object-reference-consumer-contracts.yaml",
+      "storySha256": "196c866cd558414beaa507d6df271f84028c0f39e0904224deea6df0545330d9"
     }
   ],
   "version": 1
