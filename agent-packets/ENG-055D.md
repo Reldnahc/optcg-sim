@@ -81,6 +81,23 @@ Quantity decisions exposed through legal actions must advertise only public boun
 
 Decision IDs are single-use. A response for an old decision ID is stale unless it is an exact idempotent retry already accepted by the match server.
 
+For optional costs, the only canonical decline route is the active
+`PayCostDecision` answered with `PaymentDeclinedResponse`; optional cost decline
+must not reuse `chooseOptionalActivation` and must not submit a partial
+`PaymentResponse`. A stale optional-cost decision ID, malformed optional-cost
+response, wrong player response, insufficient payment, response whose
+`optionId` is not one of the active `paymentOptions`, or payment selection
+outside the active decision context is rejected as `invalidDecisionResponse`.
+These failures fail closed: they do not resolve the decision, do not record a
+segment result, do not consume once-per-turn usage or other use counters, do not
+emit public events describing hidden payment candidates, and must not reveal
+hidden payment candidates, private DON!! choices, or internal failure details
+through public legal actions, public events, PlayerView, or SpectatorView.
+Optional cost payment uses `PayCostDecision`, not `chooseOptionalActivation`.
+Optional cost decline uses `{ type: "paymentDeclined" }` and never carries
+payment selections.
+A rejected optional-cost response does not consume once-per-turn usage.
+
 ### 04-effect-runtime.s002 (Overview)
 
 The effect runtime executes effect definitions against the authoritative game state.
@@ -135,6 +152,28 @@ Optionality has three distinct meanings:
 - Optional cost asks whether the player pays a non-mandatory cost inside an otherwise committed effect. Declining or failing an optional cost records `paidCost: false` and only skips later instructions whose connector or text depends on that cost being paid.
 - Optional effect clause asks whether the player performs a non-mandatory instruction during resolution. Declining an optional effect clause records `playerDeclined: true` for that segment and does not undo prior legally completed segments.
 
+Optional cost clauses inside composed execution are not effect-block activation
+costs. They occur after legal commitment to the effect block, inside a
+resumable sequence segment. Optional cost accept, decline, and failure do not
+consume once-per-turn usage because usage was consumed at legal commitment
+before the optional cost clause executes. Accepted optional costs pay cost
+atomically and emit the normal cost-payment events. Declined optional costs do
+not emit cost-payment events. Failed optional costs emit no public event that
+reveals hidden payment candidates or private payment details.
+
+Accepted optional cost records `attempted: true`, `succeeded: true`,
+`paidCost: true`, and `playerDeclined: false`; `changedState` records whether
+canonical state actually changed. Declined optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: true`. Failed optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: false`. Optional cost accept, decline,
+and failure do not consume once-per-turn usage, and dependent connectors use
+`paidCost` rather than optional-activation state.
+Event `seq` values and `state.seq` advancement remain deterministic for
+optional cost accept, decline, and failure. State hashes include the frame
+segment result for each branch.
+
 ```ts
 interface OncePerTurnRecord {
   cardInstanceId: InstanceId;
@@ -177,6 +216,28 @@ Decision responses are validated by the engine, not the client.
 Composed execution records one segment result for every attempted sequence segment or optional clause. A segment result must record `attempted`, `succeeded`, `changedState`, `selectedCards`, `selectedTargets`, `paidCost`, and `playerDeclined`. `succeeded` means the segment legally performed its required instruction, while `changedState` separately records whether canonical state changed. Legal selection without mutation may still drive connectors such as "if you do" when card text depends on choosing or identifying an object.
 
 Saved-result references may bind selected cards, selected targets, paid costs, or produced objects for later text such as `that Character`. A later segment may use a saved-result reference only while the referenced object remains legal for that later instruction; otherwise the later segment follows its connector and failure policy. Saved references must preserve hidden-information visibility and replay determinism.
+
+A saved field-object reference is the runtime contract for same-frame `selectedTargets` and `producedObjects` consumers in the same effect execution frame. `selectedTargets` production records the public field objects legally selected by a target request in the segment result and saved-reference ledger. `producedObjects` records public field objects produced by a supported segment when the runtime story for that producer explicitly authorizes the produced-object family. Saved hand-selection/playSelected references remain separate from saved field-object references and must not be consumed as field-object targets.
+
+Field-object consumers must validate the saved family, `saveResultAs`, optional object index, current zone, player/controller, filter, public visibility, and instruction legality at consumption time. unsupported saved-reference families fail closed. stale objects, gone objects, hidden objects, and illegal objects fail closed. A fail-closed saved field-object reference records the segment as attempted, not succeeded, and not changedState, then follows the active connector and failure policy. Public events, public legal actions, PlayerView, and SpectatorView must not reveal hidden identities, hidden candidates, or the private saved-reference failure reason; replay and private effect logs may retain the failure reason for audit. State hashes include the frame saved-reference ledger, the consumer result, and unchanged public/hidden game state so replay, event order, and connector decisions remain deterministic.
+
+Accepted optional cost records `attempted: true`, `succeeded: true`,
+`paidCost: true`, and `playerDeclined: false`. Declined optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: true`. Failed optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: false`. Optional cost accept, decline,
+and failure do not consume once-per-turn usage.
+
+Optional cost segment results participate in the serialized effect execution
+frame and authoritative state hash. Event `seq` values and `state.seq`
+advancement remain deterministic for accepted, declined, and failed optional
+cost branches under `03-game-state-events-decisions.s005` and
+`03-game-state-events-decisions.s022`: resolving a valid optional-cost decision
+advances `state.seq` once, individual internal events do not each advance
+`state.seq`, and rejected stale, malformed, wrong-player, or insufficient
+payment responses do not resolve the decision. State hashes include the frame
+segment result and unchanged game state for decline or failure branches.
 
 ### 05-effect-dsl-reference.s004 (Effect block)
 
@@ -240,7 +301,27 @@ Those fields drive later connector decisions and replay determinism. Runtime fra
 
 Saved references include `saveResultAs`, `SelectionSetId`, and `SelectionId`. A saved reference is contract-defined here, but generated support may rely on it only when schema validation, parser certification, and runtime capability evidence all cover the reference lifetime, visibility, and later-use legality.
 
+A saved field-object reference is a same-frame saved-reference family for later text such as "that Character". The supported field-object families are `selectedTargets` and `producedObjects`; `selectedCards`, `paidCost`, `SelectionSetId`, `SelectionId`, and saved hand-selection references are separate families and are not field-object target references. A segment with `saveResultAs` may expose `selectedTargets` when it legally selected field objects through a target request, and may expose `producedObjects` when a supported runtime story later creates or moves a public field object and records that object as produced by the segment.
+
+A later segment consumes a saved field-object reference with `{ type: "savedFieldObject", binding: { family: "selectedTargets" | "producedObjects", saveResultAs, objectIndex?, sourceSegmentId? }, zone, player, controller?, filter?, visibility: "publicOnly", onFailure: "failClosed" }`. The reference is valid only inside the same effect execution frame, only for the named `saveResultAs` ledger entry, and only while the referenced object remains a public legal object for the later instruction. unsupported saved-reference families fail closed. stale objects, gone objects, hidden objects, and illegal objects fail closed. Public events, public legal actions, PlayerView, and SpectatorView must not reveal hidden identities or the private saved-reference failure reason. State hashes include the frame saved-reference ledger and the failed segment result so replay, event order, and connector decisions remain deterministic.
+
 Optionality must preserve optional activation, optional cost, and optional effect clause distinctions. These boundaries are part of generated-support capability evidence because a parser that recognizes optional text still cannot make the effect playable unless the runtime can resume and record the correct optional segment result.
+
+Optional cost clauses inside composed sequence execution use a sequence segment
+whose effect is `{ type: "payCost"; cost: OptionalCost }`. The optionality flag
+lives on the nested `OptionalCost`; `SequencedEffect.optional` remains reserved
+for optional effect clauses and must not be used to represent optional cost
+decline. Runtime decline for that segment uses the `PayCostDecision` and
+`PaymentDeclinedResponse` contract from `03-game-state-events-decisions.s012`
+and `03-game-state-events-decisions.s017`.
+Optional cost decline uses the active `PayCostDecision` and a
+`PaymentDeclinedResponse` payload.
+
+`ifYouDo` after an optional cost runs only when the previous cost segment
+recorded `paidCost: true`. A declined or failed optional cost segment does not
+run dependent `ifYouDo` segments. Segment-result, event-order, state-hash, and
+once-per-turn timing for optional cost accept, decline, and failure are
+authoritative in `04-effect-runtime.s011` and `04-effect-runtime.s012`.
 
 ### 11-testing-quality.s004 (Unit tests per DSL primitive)
 

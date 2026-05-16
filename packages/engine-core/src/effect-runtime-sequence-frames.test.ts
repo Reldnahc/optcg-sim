@@ -23,6 +23,7 @@ import {
   queueDrawForP1,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
+  toDecisionId,
   toEffectId,
   toQueueEntryId,
   toSourceSnapshot,
@@ -73,6 +74,69 @@ const unsupportedSequence = (): Extract<Effect, { type: "sequence" }> => ({
   ],
 });
 
+const optionalClauseThenPauseSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-draw",
+      connector: "always",
+      optional: true,
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+    {
+      id: "dependent-draw",
+      connector: "ifYouDo",
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+    {
+      id: "pause-after-optional",
+      connector: "always",
+      effect: {
+        type: "trashFromHand",
+        player: "self",
+        chooser: "self",
+        count: 1,
+      },
+    },
+  ],
+});
+
+const optionalCostThenPauseSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-rest-don",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: { type: "restDon", count: 1, optional: true },
+      },
+      saveResultAs: "paidOptionalCost",
+    },
+    {
+      id: "draw-if-paid",
+      connector: "ifYouDo",
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+    {
+      id: "pause-after-cost",
+      connector: "always",
+      effect: {
+        type: "trashFromHand",
+        player: "self",
+        chooser: "self",
+        count: 1,
+      },
+    },
+  ],
+});
+
 const reindexHand = (
   cards: readonly CardInstance[],
   playerId = p1,
@@ -88,6 +152,23 @@ const handRef = (card: CardInstance, playerId = p1): CardRef => ({
   playerId,
   zone: card.zone,
 });
+
+const placeActiveDon = (state: GameState, playerId = p1): void => {
+  const player = must(state.players[playerId], "player");
+  const don = must(player.donDeck[0], "don");
+  player.donDeck = player.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId, slot: "donDeck", index },
+  }));
+  player.costArea = [
+    ...player.costArea,
+    {
+      ...don,
+      zone: { zone: "costArea", playerId, slot: "cost", index: 0 },
+      state: "active",
+    },
+  ];
+};
 
 const setupSequenceDefinition = (
   state: GameState,
@@ -187,6 +268,41 @@ const respondWithCards = (
     decisionId: must(state.pendingDecision, "pending decision").id,
     response: { type: "cards", cards: [...cards] },
   });
+
+const respondWithOptionalActivation = (
+  state: GameState,
+  choice: "activate" | "decline",
+): EngineResult =>
+  applyAction(state, {
+    type: "respondToDecision",
+    decisionId: must(state.pendingDecision, "pending decision").id,
+    response: { type: "optionalActivation", choice },
+  });
+
+const declinePayment = (state: GameState): EngineResult =>
+  applyAction(state, {
+    type: "respondToDecision",
+    decisionId: must(state.pendingDecision, "pending decision").id,
+    response: { type: "paymentDeclined" },
+  });
+
+const payWithFirstActiveDon = (state: GameState): EngineResult => {
+  const decision = must(state.pendingDecision, "pending decision");
+  const player = must(state.players[decision.playerId], "decision player");
+  const don = must(
+    player.costArea.find((card) => card.state === "active"),
+    "active DON",
+  );
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [don.instanceId],
+    },
+  });
+};
 
 const eventTypes = (events: readonly EngineEvent[]): string[] =>
   events.map((event) => event.type);
@@ -328,4 +444,220 @@ test("unsupported generic sequence shapes fail closed before mutation", () => {
   assert.deepEqual(result.state, before);
   assert.deepEqual(result.events, []);
   assert.equal(must(result.errors, "errors")[0]?.type, "effectRuntimeError");
+});
+
+test("optional sequence clause decline records playerDeclined and skips ifYouDo before the next pause", () => {
+  const { state } = sequenceQueueState(optionalClauseThenPauseSequence());
+  const beforeDeckCount = must(state.players[p1], "before p1").deck.length;
+
+  const paused = processEffectRuntime(state);
+  const optionalDecision = must(paused.state.pendingDecision, "optional");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+  assert.equal(optionalDecision.playerId, p1);
+
+  const declined = respondWithOptionalActivation(paused.state, "decline");
+  const trashDecision = must(declined.state.pendingDecision, "trash decision");
+  const frame = must(declined.state.effectExecutionFrames[0], "frame");
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(trashDecision.type, "selectCards");
+  assert.equal(frame.pendingDecision.decisionId, trashDecision.id);
+  assert.deepEqual(frame.segmentResults["0"], {
+    attempted: true,
+    succeeded: false,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: true,
+  });
+  assert.deepEqual(frame.segmentResults["1"], {
+    attempted: false,
+    succeeded: false,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  });
+  assert.equal(
+    must(declined.state.players[p1], "declined p1").deck.length,
+    beforeDeckCount,
+  );
+  assert.equal(
+    JSON.stringify(filterStateForPlayer(declined.state, p2)).includes(
+      "effectExecutionFrames",
+    ),
+    false,
+  );
+});
+
+test("optional sequence clause activation executes and allows dependent ifYouDo before the next pause", () => {
+  const { state } = sequenceQueueState(optionalClauseThenPauseSequence());
+  const beforeDeckCount = must(state.players[p1], "before p1").deck.length;
+
+  const paused = processEffectRuntime(state);
+  const activated = respondWithOptionalActivation(paused.state, "activate");
+  const trashDecision = must(activated.state.pendingDecision, "trash decision");
+  const frame = must(activated.state.effectExecutionFrames[0], "frame");
+
+  assert.equal(activated.errors, undefined);
+  assert.equal(trashDecision.type, "selectCards");
+  assert.deepEqual(frame.segmentResults["0"], {
+    attempted: true,
+    succeeded: true,
+    changedState: true,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  });
+  assert.deepEqual(frame.segmentResults["1"], {
+    attempted: true,
+    succeeded: true,
+    changedState: true,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  });
+  assert.equal(
+    must(activated.state.players[p1], "activated p1").deck.length,
+    beforeDeckCount - 2,
+  );
+});
+
+test("optional cost decline records paidCost false and skips ifYouDo before the next pause", () => {
+  const { state } = sequenceQueueState(optionalCostThenPauseSequence());
+  placeActiveDon(state);
+  const beforeDeckCount = must(state.players[p1], "before p1").deck.length;
+
+  const paused = processEffectRuntime(state);
+  const paymentDecision = must(paused.state.pendingDecision, "pay cost");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(paymentDecision.type, "payCost");
+  assert.equal(paymentDecision.playerId, p1);
+  assert.deepEqual(paymentDecision.defaultResponse, {
+    type: "paymentDeclined",
+  });
+
+  const declined = declinePayment(paused.state);
+  const trashDecision = must(declined.state.pendingDecision, "trash decision");
+  const frame = must(declined.state.effectExecutionFrames[0], "frame");
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(trashDecision.type, "selectCards");
+  assert.deepEqual(frame.segmentResults["0"], {
+    attempted: true,
+    succeeded: false,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: true,
+  });
+  assert.deepEqual(frame.segmentResults["1"], {
+    attempted: false,
+    succeeded: false,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  });
+  assert.equal(frame.savedReferences["paidOptionalCost"], undefined);
+  assert.equal(
+    must(declined.state.players[p1], "declined p1").deck.length,
+    beforeDeckCount,
+  );
+});
+
+test("optional cost payment records paidCost true, saves paidCost, and allows dependent ifYouDo", () => {
+  const { state } = sequenceQueueState(optionalCostThenPauseSequence());
+  placeActiveDon(state);
+  const beforeP1 = must(state.players[p1], "before p1");
+  const beforeDeckCount = beforeP1.deck.length;
+  const activeDon = must(
+    beforeP1.costArea.find((card) => card.state === "active"),
+    "active DON",
+  );
+
+  const paused = processEffectRuntime(state);
+  const paid = payWithFirstActiveDon(paused.state);
+  const trashDecision = must(paid.state.pendingDecision, "trash decision");
+  const frame = must(paid.state.effectExecutionFrames[0], "frame");
+  const afterP1 = must(paid.state.players[p1], "after p1");
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(trashDecision.type, "selectCards");
+  assert.equal(
+    must(
+      afterP1.costArea.find((card) => card.instanceId === activeDon.instanceId),
+      "paid DON",
+    ).state,
+    "rested",
+  );
+  assert.deepEqual(frame.segmentResults["0"], {
+    attempted: true,
+    succeeded: true,
+    changedState: true,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: true,
+    playerDeclined: false,
+  });
+  assert.deepEqual(frame.savedReferences["paidOptionalCost"], {
+    kind: "paidCost",
+    paidCost: true,
+  });
+  assert.deepEqual(frame.segmentResults["1"], {
+    attempted: true,
+    succeeded: true,
+    changedState: true,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  });
+  assert.equal(afterP1.deck.length, beforeDeckCount - 1);
+  assert.deepEqual(
+    eventTypes(paid.events).filter((type) => type === "costPaid"),
+    ["costPaid"],
+  );
+});
+
+test("optional cost decision rejects malformed and stale responses without mutation", () => {
+  const { state } = sequenceQueueState(optionalCostThenPauseSequence());
+  placeActiveDon(state);
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pay cost");
+  const beforeMalformed = structuredClone(paused.state);
+
+  const malformed = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [],
+    },
+  });
+
+  assert.deepEqual(malformed.state, beforeMalformed);
+  assert.equal(
+    must(malformed.errors, "malformed errors")[0]?.type,
+    "invalidDecisionResponse",
+  );
+
+  const stale = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: toDecisionId("decision:stale-optional-cost"),
+    response: { type: "paymentDeclined" },
+  });
+
+  assert.deepEqual(stale.state, paused.state);
+  assert.equal(must(stale.errors, "stale errors")[0]?.type, "illegalAction");
 });
