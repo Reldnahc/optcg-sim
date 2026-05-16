@@ -705,3 +705,89 @@ test("respondToDecision preserves deterministic replay surfaces for accepted and
     secondStale.state.eventJournal,
   );
 });
+
+test("getLegalActions exposes generic runtime payCost returnDon responses across cost-area and attached DON", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const don = must(p1State.donDeck[0], "don0");
+  const don2 = must(p1State.donDeck[1], "don1");
+  p1State.donDeck = p1State.donDeck.slice(2);
+  p1State.costArea = [
+    {
+      ...don,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+      state: "active",
+    },
+    {
+      ...don2,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 1 },
+      state: "active",
+    },
+  ];
+  p1State.leader = {
+    ...p1State.leader,
+    attachedDon: [don.instanceId],
+  };
+  const attachedDon = { ...must(p1State.costArea[0], "attached") };
+  delete attachedDon.state;
+  p1State.costArea[0] = attachedDon;
+  state.pendingDecision = {
+    id: toDecisionId("decision:payCost:sequence:test:0"),
+    type: "payCost",
+    playerId: p1,
+    prompt: "Choose whether to pay this optional cost.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: toQueueEntryId("queue-entry-test"),
+      effectId: toEffectId("effect-test"),
+    },
+    visibility: { type: "private", playerId: p1 },
+    defaultResponse: { type: "paymentDeclined" },
+    cost: { type: "returnDon", count: 2, optional: true },
+    paymentOptions: [{ id: "returnDon", type: "returnDon", count: 2 }],
+  };
+  state.effectExecutionFrames = [
+    {
+      queueEntryId: toQueueEntryId("queue-entry-test"),
+      effectBlockId: toEffectId("effect-test"),
+      effectPath: ["effect", "sequence"],
+      nextSegmentIndex: 1,
+      segmentResults: {},
+      savedReferences: {},
+      transientSets: {},
+      pendingDecision: {
+        decisionId: state.pendingDecision.id,
+        causedBy: state.pendingDecision.causedBy,
+        createdAtStateSeq: state.seq,
+        resumeAtSegmentIndex: 0,
+      },
+    },
+  ];
+
+  const legal = getLegalActions(state, p1).filter(
+    (action): action is Extract<Action, { type: "respondToDecision" }> =>
+      action.type === "respondToDecision" && action.response.type === "payment",
+  );
+  assert.equal(legal.length >= 1, true);
+  assert.equal(
+    legal.some((action) => {
+      if (action.response.type !== "payment") {
+        return false;
+      }
+      const selectedDonIds = action.response.selectedDonInstanceIds;
+      return (
+        selectedDonIds !== undefined &&
+        action.response.optionId === "returnDon" &&
+        selectedDonIds.includes(don.instanceId) &&
+        selectedDonIds.includes(don2.instanceId)
+      );
+    }),
+    true,
+  );
+  assert.equal(
+    getLegalActions(state, p2).some(
+      (action) => action.type === "respondToDecision",
+    ),
+    false,
+  );
+});

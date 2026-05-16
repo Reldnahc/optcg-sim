@@ -58,6 +58,11 @@ import {
   getTrashFromHandDecisionLegalActions,
   isTrashFromHandSelectCardsDecision,
 } from "./effect-runtime-trash-from-hand.js";
+import {
+  applySupportedHandSelectionChoiceResponse,
+  getHandSelectionDecisionLegalActions,
+  isHandSelectionSelectCardsDecision,
+} from "./effect-runtime-hand-selection.js";
 import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
 import {
   applyConcede,
@@ -596,6 +601,7 @@ export const getLegalActions = (
     actions.push(...getChooseQuantityLegalActions(state, playerId));
     actions.push(...getSearchRevealDecisionLegalActions(state, playerId));
     actions.push(...getTrashFromHandDecisionLegalActions(state, playerId));
+    actions.push(...getHandSelectionDecisionLegalActions(state, playerId));
     return actions;
   }
 
@@ -714,6 +720,15 @@ const applyRespondToDecision = (
       ...continued,
       events: [...finalized.events, ...continued.events],
     };
+  }
+  if (isHandSelectionSelectCardsDecision(decision)) {
+    const handSelection = applySupportedHandSelectionChoiceResponse(
+      state,
+      action,
+    );
+    if (handSelection !== null) {
+      return handSelection;
+    }
   }
   const replacementResult = applyChooseReplacementDecisionResponse(
     state,

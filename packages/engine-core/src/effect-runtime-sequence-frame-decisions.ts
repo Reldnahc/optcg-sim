@@ -10,6 +10,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
+import { getReturnDonEligibleInstanceIds } from "./effect-runtime-return-don.js";
 
 const decisionCauseForEntry = (entry: EffectQueueEntry) =>
   ({
@@ -119,7 +120,7 @@ export const createOptionalActivationDecisionForSequenceSegment = (
 export const createPayCostDecisionForSequenceSegment = (
   state: GameState,
   entry: EffectQueueEntry,
-  cost: Extract<OptionalCost, { type: "restDon" }>,
+  cost: Extract<OptionalCost, { type: "restDon" | "returnDon" }>,
   index: number,
 ): { events: EngineEvent[]; ok: true; state: GameState } => {
   const causedBy = decisionCauseForEntry(entry);
@@ -135,7 +136,7 @@ export const createPayCostDecisionForSequenceSegment = (
     visibility,
     defaultResponse: { type: "paymentDeclined" },
     cost,
-    paymentOptions: [{ id: "restDon", type: "restDon", count: cost.count }],
+    paymentOptions: [{ id: cost.type, type: cost.type, count: cost.count }],
   };
   const events: EngineEvent[] = [];
   appendEvent(
@@ -204,25 +205,33 @@ export const getSequencePayCostLegalActions = (
     decision.playerId !== playerId ||
     player === undefined ||
     !hasSequenceFrameForDecision(state, decision.id) ||
-    decision.cost.type !== "restDon"
+    (decision.cost.type !== "restDon" && decision.cost.type !== "returnDon")
   ) {
     return [];
   }
-  const activeDonIds = player.costArea
-    .filter((card) => card.state === "active")
+  const candidateDonIds = player.costArea
+    .filter((card) =>
+      decision.cost.type === "restDon" ? card.state === "active" : false,
+    )
     .map((card) => card.instanceId);
+  const returnDonIds =
+    decision.cost.type === "returnDon"
+      ? getReturnDonEligibleInstanceIds(player)
+      : [];
+  const selectableDonIds =
+    decision.cost.type === "returnDon" ? returnDonIds : candidateDonIds;
   return [
     {
       type: "respondToDecision",
       decisionId: decision.id,
       response: { type: "paymentDeclined" },
     },
-    ...chooseCombos(activeDonIds, decision.cost.count).map((combo) => ({
+    ...chooseCombos(selectableDonIds, decision.cost.count).map((combo) => ({
       type: "respondToDecision" as const,
       decisionId: decision.id,
       response: {
         type: "payment" as const,
-        optionId: "restDon",
+        optionId: decision.cost.type,
         selectedDonInstanceIds: combo,
       },
     })),

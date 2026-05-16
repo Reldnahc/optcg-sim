@@ -1,5 +1,4 @@
 import type {
-  CardInstance,
   CardRef,
   ChooseOptionalActivationDecision,
   Effect,
@@ -10,13 +9,16 @@ import type {
   EngineEvent,
   GameState,
   PayCostDecision,
-  SavedFieldObjectReference,
+  SelectCardsEffect,
   SelectCardsDecision,
-  SequenceSavedResultReference,
   SequenceSegmentResult,
 } from "@optcg/types";
 
-import { toCardRef } from "./action-state.js";
+import {
+  createSupportedHandSelectionChoiceDecision,
+  isSupportedSequenceHandSelectCardsEffect,
+} from "./effect-runtime-hand-selection.js";
+import { getReturnDonEligibleCount } from "./effect-runtime-return-don.js";
 import {
   createOptionalActivationDecisionForSequenceSegment,
   createPayCostDecisionForSequenceSegment,
@@ -25,7 +27,15 @@ import {
   stateWithPausedSequenceFrame,
 } from "./effect-runtime-sequence-frame-decisions.js";
 import { appendEffectResolvedForCompletedSequence } from "./effect-runtime-sequence-frame-events.js";
-import { executeNoChoiceEffectPrimitive } from "./effect-runtime-primitives.js";
+import {
+  activeDonCount,
+  applyDrawSegment,
+  removeFrame,
+  replaceQueueEntry,
+  resolvingEntryFor,
+  saveReference,
+  shouldAttemptSegment,
+} from "./effect-runtime-sequence-segments.js";
 import {
   consumeOncePerTurn,
   isOncePerTurnUsed,
@@ -38,7 +48,7 @@ type DrawEffect = Extract<Effect, { type: "draw" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
-  effect: DrawEffect | TrashFromHandEffect | PayCostEffect;
+  effect: DrawEffect | TrashFromHandEffect | PayCostEffect | SelectCardsEffect;
 };
 
 type SupportedSequenceBlock = EffectDefinition["effects"][number] & {
@@ -185,7 +195,7 @@ const isSupportedPayCostSegment = (
   effect: SequenceSegmentEffect,
 ): effect is PayCostEffect =>
   effect.type === "payCost" &&
-  effect.cost.type === "restDon" &&
+  (effect.cost.type === "restDon" || effect.cost.type === "returnDon") &&
   (effect.cost.chooser === undefined || effect.cost.chooser === "self") &&
   Number.isInteger(effect.cost.count) &&
   effect.cost.count > 0;
@@ -237,194 +247,17 @@ const isSupportedSequenceBlock = (
         hasPendingDecisionSegment = true;
         return true;
       }
+      if (isSupportedSequenceHandSelectCardsEffect(segment.effect)) {
+        if (index === 0) {
+          return false;
+        }
+        hasPendingDecisionSegment = true;
+        return true;
+      }
       return false;
     },
   );
   return allSegmentsSupported && hasPendingDecisionSegment;
-};
-
-const previousSegmentSucceeded = (
-  segmentResults: EffectExecutionFrame["segmentResults"],
-  effect: SequenceEffect,
-  index: number,
-): boolean => {
-  const previous = effect.effects[index - 1];
-  if (previous === undefined) {
-    return false;
-  }
-  const result = segmentResults[segmentKey(previous, index - 1)];
-  return (
-    result !== undefined &&
-    result.succeeded &&
-    (result.changedState ||
-      result.selectedCards.length > 0 ||
-      result.selectedTargets.length > 0 ||
-      result.paidCost)
-  );
-};
-
-const previousSegmentCompleted = (
-  segmentResults: EffectExecutionFrame["segmentResults"],
-  effect: SequenceEffect,
-  index: number,
-): boolean => {
-  const previous = effect.effects[index - 1];
-  if (previous === undefined) {
-    return false;
-  }
-  const result = segmentResults[segmentKey(previous, index - 1)];
-  return result !== undefined && result.attempted && result.succeeded;
-};
-
-const shouldAttemptSegment = (
-  segmentResults: EffectExecutionFrame["segmentResults"],
-  effect: SequenceEffect,
-  index: number,
-): boolean => {
-  const segment = effect.effects[index];
-  if (segment === undefined) {
-    return false;
-  }
-  if (segment.connector === "always") {
-    return true;
-  }
-  if (segment.connector === "then") {
-    return previousSegmentCompleted(segmentResults, effect, index);
-  }
-  return previousSegmentSucceeded(segmentResults, effect, index);
-};
-
-const resolvingEntryFor = (entry: EffectQueueEntry): EffectQueueEntry => ({
-  ...entry,
-  state: "resolving",
-});
-
-const replaceQueueEntry = (
-  state: GameState,
-  entry: EffectQueueEntry,
-): GameState => ({
-  ...state,
-  effectQueue: state.effectQueue.map((candidate) =>
-    candidate.id === entry.id ? entry : candidate,
-  ),
-});
-
-const removeFrame = (
-  state: GameState,
-  frame: EffectExecutionFrame,
-): GameState => ({
-  ...state,
-  effectExecutionFrames: state.effectExecutionFrames.filter(
-    (candidate) =>
-      candidate.queueEntryId !== frame.queueEntryId ||
-      candidate.pendingDecision.decisionId !== frame.pendingDecision.decisionId,
-  ),
-});
-
-const playerHandProducedByDraw = (
-  before: readonly CardInstance[],
-  after: readonly CardInstance[],
-  playerId: EffectQueueEntry["controllerId"],
-): CardRef[] => {
-  const beforeIds = new Set(before.map((card) => card.instanceId));
-  return after
-    .filter((card) => !beforeIds.has(card.instanceId))
-    .map((card) => toCardRef(card, playerId));
-};
-
-const toSavedProducedObjects = (
-  segment: SupportedSequenceSegment & {
-    effect: DrawEffect;
-    saveResultAs: string;
-  },
-  objects: CardRef[],
-  capturedAtStateSeq: GameState["seq"],
-): SavedFieldObjectReference[] =>
-  objects.map((object, objectIndex) => ({
-    binding: {
-      family: "producedObjects",
-      objectIndex,
-      saveResultAs: segment.saveResultAs,
-      ...(segment.id === undefined ? {} : { sourceSegmentId: segment.id }),
-    },
-    capturedAtStateSeq,
-    object,
-    visibility: "public",
-  }));
-
-const saveReference = (
-  savedReferences: EffectExecutionFrame["savedReferences"],
-  segment: SequenceEffect["effects"][number],
-  reference: SequenceSavedResultReference,
-): EffectExecutionFrame["savedReferences"] =>
-  segment.saveResultAs === undefined
-    ? savedReferences
-    : { ...savedReferences, [segment.saveResultAs]: reference };
-
-const applyDrawSegment = (
-  state: GameState,
-  entry: EffectQueueEntry,
-  segment: SupportedSequenceSegment & { effect: DrawEffect },
-  index: number,
-  ledgers: SegmentLedgers,
-):
-  | {
-      events: EngineEvent[];
-      ledgers: SegmentLedgers;
-      ok: true;
-      state: GameState;
-    }
-  | { ok: false } => {
-  const beforePlayer = state.players[entry.controllerId];
-  if (beforePlayer === undefined) {
-    return { ok: false };
-  }
-  const resolution = executeNoChoiceEffectPrimitive(
-    state,
-    entry,
-    segment.effect,
-  );
-  if (resolution.errors !== undefined) {
-    return { ok: false };
-  }
-  const afterPlayer = resolution.state.players[entry.controllerId];
-  if (afterPlayer === undefined) {
-    return { ok: false };
-  }
-  const produced = playerHandProducedByDraw(
-    beforePlayer.hand,
-    afterPlayer.hand,
-    entry.controllerId,
-  );
-  const savedReferences =
-    segment.saveResultAs === undefined
-      ? ledgers.savedReferences
-      : saveReference(ledgers.savedReferences, segment, {
-          kind: "producedObjects",
-          objects: toSavedProducedObjects(
-            { ...segment, saveResultAs: segment.saveResultAs },
-            produced,
-            resolution.state.seq,
-          ),
-        });
-  const result: SequenceSegmentResult = {
-    ...emptySegmentResult(),
-    attempted: true,
-    succeeded: true,
-    changedState: resolution.events.length > 0,
-  };
-  return {
-    events: resolution.events,
-    ledgers: {
-      segmentResults: {
-        ...ledgers.segmentResults,
-        [segmentKey(segment, index)]: result,
-      },
-      savedReferences,
-    },
-    ok: true,
-    state: resolution.state,
-  };
 };
 
 const findFrameQueueEntry = (
@@ -454,13 +287,6 @@ const findSequenceEffectBlock = (
     (effect) => effect.id === entry.effectBlockId,
   );
 };
-
-const activeDonCount = (
-  state: GameState,
-  playerId: EffectQueueEntry["controllerId"],
-): number =>
-  state.players[playerId]?.costArea.filter((card) => card.state === "active")
-    .length ?? 0;
 
 const resumeSequenceFrameFromLedgers = (params: {
   createTrashDecision: CreateTrashFromHandSequenceDecision;
@@ -528,7 +354,14 @@ const continueNoDecisionSegments = (
     if (segment === undefined) {
       return { ok: false };
     }
-    if (!shouldAttemptSegment(nextLedgers.segmentResults, effect, index)) {
+    if (
+      !shouldAttemptSegment(
+        nextLedgers.segmentResults,
+        effect,
+        index,
+        segmentKey,
+      )
+    ) {
       nextLedgers = {
         ...nextLedgers,
         segmentResults: {
@@ -586,6 +419,8 @@ const continueNoDecisionSegments = (
         segment as SupportedSequenceSegment & { effect: DrawEffect },
         index,
         nextLedgers,
+        emptySegmentResult,
+        segmentKey,
       );
       if (!drawn.ok) {
         return { ok: false };
@@ -611,10 +446,19 @@ const continueNoDecisionSegments = (
         effect: PayCostEffect;
       };
       const cost = paySegment.effect.cost;
-      if (cost.type !== "restDon") {
+      if (cost.type !== "restDon" && cost.type !== "returnDon") {
         return { ok: false };
       }
-      if (activeDonCount(nextState, entry.controllerId) < cost.count) {
+      const currentPlayer = nextState.players[entry.controllerId];
+      const returnDonEligibleCount =
+        currentPlayer === undefined
+          ? 0
+          : getReturnDonEligibleCount(currentPlayer);
+      if (
+        (cost.type === "restDon" &&
+          activeDonCount(nextState, entry.controllerId) < cost.count) ||
+        (cost.type === "returnDon" && returnDonEligibleCount < cost.count)
+      ) {
         nextLedgers = {
           ...nextLedgers,
           segmentResults: {
@@ -633,6 +477,45 @@ const continueNoDecisionSegments = (
         cost,
         index,
       );
+      const decision = decisionResult.state.pendingDecision;
+      if (decision === undefined) {
+        return { ok: false };
+      }
+      const frame = frameForPausedSequenceDecision({
+        decision,
+        entry,
+        index,
+        savedReferences: pausedLedgers.savedReferences,
+        segmentResults: pausedLedgers.segmentResults,
+        state: decisionResult.state,
+      });
+      return {
+        events: [...events, ...decisionResult.events],
+        kind: "paused",
+        ok: true,
+        state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
+      };
+    }
+    if (segment.effect.type === "selectCards") {
+      const decisionResult = createSupportedHandSelectionChoiceDecision(
+        nextState,
+        entry,
+        segment.effect,
+        index,
+      );
+      if (!decisionResult.ok) {
+        nextLedgers = {
+          ...nextLedgers,
+          segmentResults: {
+            ...nextLedgers.segmentResults,
+            [segmentKey(segment, index)]: {
+              ...emptySegmentResult(),
+              attempted: true,
+            },
+          },
+        };
+        continue;
+      }
       const decision = decisionResult.state.pendingDecision;
       if (decision === undefined) {
         return { ok: false };
@@ -802,6 +685,78 @@ export const resumeSequenceFrameAfterTrashFromHand = (
   return continued;
 };
 
+export const resumeSequenceFrameAfterHandSelection = (
+  state: GameState,
+  decision: SelectCardsDecision,
+  selectedCards: readonly CardRef[],
+): SequenceFrameResumeResult => {
+  const frame = state.effectExecutionFrames.find(
+    (candidate) => candidate.pendingDecision.decisionId === decision.id,
+  );
+  if (frame === undefined) {
+    return undefined;
+  }
+  const entry = findFrameQueueEntry(state, frame);
+  if (entry === undefined) {
+    return {
+      error: sequenceRuntimeError(frame.effectBlockId, "missing-queue-entry"),
+      ok: false,
+    };
+  }
+  const effectBlock = findSequenceEffectBlock(state, entry);
+  if (!isSupportedSequenceBlock(entry, effectBlock)) {
+    return {
+      error: sequenceRuntimeError(entry.effectBlockId, "missing-effect-block"),
+      ok: false,
+    };
+  }
+  const pausedSegment =
+    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+  if (
+    pausedSegment === undefined ||
+    pausedSegment.effect.type !== "selectCards" ||
+    pausedSegment.effect.zone !== "hand"
+  ) {
+    return {
+      error: sequenceRuntimeError(
+        entry.effectBlockId,
+        "unsupported-sequence-shape",
+      ),
+      ok: false,
+    };
+  }
+  const completedPausedResult: SequenceSegmentResult = {
+    ...emptySegmentResult(),
+    attempted: true,
+    succeeded: true,
+    changedState: false,
+    selectedCards: [...selectedCards],
+  };
+  const ledgers: SegmentLedgers = {
+    segmentResults: {
+      ...frame.segmentResults,
+      [segmentKey(pausedSegment, frame.pendingDecision.resumeAtSegmentIndex)]:
+        completedPausedResult,
+    },
+    savedReferences: {
+      ...frame.savedReferences,
+      [pausedSegment.effect.saveAs]: {
+        kind: "selectedCards",
+        cards: [...selectedCards],
+      },
+    },
+  };
+  return resumeSequenceFrameFromLedgers({
+    createTrashDecision: createUnsupportedTrashDecision,
+    effectBlock,
+    entry,
+    finalizeCompleted: true,
+    frame,
+    ledgers,
+    state,
+  });
+};
+
 export const resumeSequenceFrameAfterOptionalActivation = (
   state: GameState,
   decision: ChooseOptionalActivationDecision,
@@ -857,6 +812,8 @@ export const resumeSequenceFrameAfterOptionalActivation = (
           savedReferences: frame.savedReferences,
           segmentResults: frame.segmentResults,
         },
+        emptySegmentResult,
+        segmentKey,
       );
       if (!drawn.ok) {
         return {
