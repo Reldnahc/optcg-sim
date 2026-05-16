@@ -174,7 +174,7 @@ test("pull request template requires story, verification, and subagent review ev
     /Approved story file:/i,
     /Synced issue, if one exists:/i,
     /pnpm verify/i,
-    /Parent story-review artifact:[\s\S]*Child story-review artifacts:\s*\n\s*-\s*<child story path>:\s*<artifact\/status>[\s\S]*All parent\/child story-review rows approval-ready or blocker recorded:[\s\S]*Each row uses a distinct story-review assignment identity[\s\S]*distinct durable artifact identity[\s\S]*One reviewer run, matrix, or batch artifact may be supplemental context only and satisfies at most one required row[\s\S]*Packet activation happened after this gate:/i,
+    /Parent story-review assignment identity:[\s\S]*Parent story-review artifact identity:[\s\S]*Child story-review evidence rows:[\s\S]*-\s*<child story path>:\s*assignment=<assignment-identity>;\s*artifact=<artifact-identity>;\s*status=<approval-ready\|needs-revision\|blocked\|pending>[\s\S]*All parent\/child story-review rows approval-ready or blocker recorded:[\s\S]*Each row uses a distinct story-review assignment identity[\s\S]*distinct durable artifact identity[\s\S]*One reviewer run, matrix, or batch artifact may be supplemental context only and satisfies at most one required row[\s\S]*Packet activation happened after this gate:/i,
     /AI review completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
     /Separate reviewer subagent run completed before human review request, or equivalent human review fallback recorded because no usable reviewer-subagent run remained after the available reviewer-subagent surfaces were found unavailable, timed out, or failed/i,
     /Implementation-worker self-review or parent-coordinator self-review was not used as the review gate/i,
@@ -932,20 +932,17 @@ test("spec and workflow docs share the same complete role model-routing table an
     /Code-review agents must not silently default to `gpt-5\.5` with `high` reasoning\./i,
   );
   assert.deepEqual(workflowRoleRoutingTable, specRoleRoutingTable);
-  assert.doesNotMatch(
-    workflowGuidance,
+  [
     /code-review agents?.*gpt-5\.5 high.*default/i,
-  );
-  assert.doesNotMatch(workflowGuidance, /\| story-author\s+\|/i);
-  assert.doesNotMatch(workflowGuidance, /\| story-orchestrator\s+\|/i);
-  assert.doesNotMatch(workflowGuidance, /\| pr-gate\s+\|/i);
-  assert.doesNotMatch(
-    codexSpec,
-    /code-review agents?.*gpt-5\.5 high.*default/i,
-  );
-  assert.doesNotMatch(codexSpec, /\| story-author\s+\|/i);
-  assert.doesNotMatch(codexSpec, /\| story-orchestrator\s+\|/i);
-  assert.doesNotMatch(codexSpec, /\| pr-gate\s+\|/i);
+    /\| story-author\s+\|/i,
+    /\| story-orchestrator\s+\|/i,
+    /\| pr-gate\s+\|/i,
+    /story-review.*gpt-5\.5.*high/i,
+    /Story-review agent model.*gpt-5\.5.*high/i,
+  ].forEach((pattern) => {
+    assert.doesNotMatch(workflowGuidance, pattern);
+    assert.doesNotMatch(codexSpec, pattern);
+  });
   assert.doesNotMatch(
     workflowGuidance,
     /Complex, risky, or integration-heavy implementation stories should use `?gpt-5\.5`? with `?medium`? reasoning/i,

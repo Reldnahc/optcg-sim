@@ -68,9 +68,10 @@ Post-merge cleanup:
 
 ## Review
 
-- Parent story-review artifact:
-- Child story-review artifacts:
-  - <child story path>: <artifact/status>
+- Parent story-review assignment identity:
+- Parent story-review artifact identity:
+- Child story-review evidence rows:
+  - <child story path>: assignment=<assignment-identity>; artifact=<artifact-identity>; status=<approval-ready|needs-revision|blocked|pending>
 - All parent/child story-review rows approval-ready or blocker recorded:
 - Each row uses a distinct story-review assignment identity (parent and each child cannot share one assignment):
 - Each row uses a distinct durable artifact identity (parent and each child cannot share one artifact):
