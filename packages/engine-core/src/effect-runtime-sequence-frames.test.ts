@@ -104,6 +104,46 @@ const optionalClauseThenPauseSequence = (): Extract<
   ],
 });
 
+const optionalTrashClauseSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "draw-before-optional-trash",
+      connector: "always",
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+    {
+      id: "optional-trash",
+      connector: "then",
+      optional: true,
+      effect: {
+        type: "trashFromHand",
+        player: "self",
+        chooser: "self",
+        count: 1,
+      },
+    },
+    {
+      id: "draw-if-trashed",
+      connector: "ifYouDo",
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+    {
+      id: "pause-after-optional-trash",
+      connector: "always",
+      effect: {
+        type: "trashFromHand",
+        player: "self",
+        chooser: "self",
+        count: 1,
+      },
+    },
+  ],
+});
+
 const optionalCostThenPauseSequence = (): Extract<
   Effect,
   { type: "sequence" }
@@ -529,6 +569,73 @@ test("optional sequence clause activation executes and allows dependent ifYouDo 
   );
 });
 
+test("optional trashFromHand clause accepts chooseOptionalActivation and resumes into selectCards pause", () => {
+  const { state } = sequenceQueueState(optionalTrashClauseSequence());
+  const beforeDeckCount = must(state.players[p1], "before p1").deck.length;
+
+  const paused = processEffectRuntime(state);
+  const optionalDecision = must(paused.state.pendingDecision, "optional");
+  assert.equal(paused.errors, undefined);
+  assert.equal(optionalDecision.type, "chooseOptionalActivation");
+
+  const accepted = respondWithOptionalActivation(paused.state, "activate");
+  const trashDecision = must(accepted.state.pendingDecision, "trash decision");
+  const frame = must(accepted.state.effectExecutionFrames[0], "frame");
+  assert.equal(accepted.errors, undefined);
+  assert.equal(trashDecision.type, "selectCards");
+  assert.deepEqual(frame.segmentResults["1"], {
+    attempted: true,
+    succeeded: false,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  });
+  assert.equal(
+    must(accepted.state.players[p1], "accepted p1").deck.length,
+    beforeDeckCount - 1,
+  );
+});
+
+test("optional trashFromHand clause decline records playerDeclined and deterministically skips ifYouDo", () => {
+  const runDecline = (): EngineResult => {
+    const { state } = sequenceQueueState(optionalTrashClauseSequence());
+    const paused = processEffectRuntime(state);
+    return respondWithOptionalActivation(paused.state, "decline");
+  };
+  const first = runDecline();
+  const second = runDecline();
+
+  const frame = must(first.state.effectExecutionFrames[0], "frame");
+  assert.equal(first.errors, undefined);
+  assert.equal(
+    must(first.state.pendingDecision, "pending").type,
+    "selectCards",
+  );
+  assert.deepEqual(frame.segmentResults["1"], {
+    attempted: true,
+    succeeded: false,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: true,
+  });
+  assert.deepEqual(frame.segmentResults["2"], {
+    attempted: false,
+    succeeded: false,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  });
+  assert.deepEqual(first.events, second.events);
+  assert.deepEqual(first.state.eventJournal, second.state.eventJournal);
+  assert.equal(first.stateHash, second.stateHash);
+});
+
 test("optional cost decline records paidCost false and skips ifYouDo before the next pause", () => {
   const { state } = sequenceQueueState(optionalCostThenPauseSequence());
   placeActiveDon(state);
@@ -627,6 +734,13 @@ test("optional cost payment records paidCost true, saves paidCost, and allows de
     eventTypes(paid.events).filter((type) => type === "costPaid"),
     ["costPaid"],
   );
+  const costPaidEvent = must(
+    paid.events.find((event) => event.type === "costPaid"),
+    "costPaid event",
+  );
+  assert.deepEqual(costPaidEvent.visibility, { type: "public" });
+  const p2View = filterStateForPlayer(paid.state, p2);
+  assert.equal(JSON.stringify(p2View).includes('"type":"costPaid"'), true);
 });
 
 test("optional cost decision rejects malformed and stale responses without mutation", () => {
@@ -660,4 +774,64 @@ test("optional cost decision rejects malformed and stale responses without mutat
 
   assert.deepEqual(stale.state, paused.state);
   assert.equal(must(stale.errors, "stale errors")[0]?.type, "illegalAction");
+});
+
+test("optional activation accept and decline branches are independently deterministic", () => {
+  const run = (choice: "activate" | "decline") => {
+    const { state } = sequenceQueueState(optionalClauseThenPauseSequence());
+    const paused = processEffectRuntime(state);
+    return respondWithOptionalActivation(paused.state, choice);
+  };
+  const acceptA = run("activate");
+  const acceptB = run("activate");
+  const declineA = run("decline");
+  const declineB = run("decline");
+
+  assert.deepEqual(acceptA.events, acceptB.events);
+  assert.deepEqual(acceptA.state.eventJournal, acceptB.state.eventJournal);
+  assert.equal(acceptA.stateHash, acceptB.stateHash);
+  assert.deepEqual(declineA.events, declineB.events);
+  assert.deepEqual(declineA.state.eventJournal, declineB.state.eventJournal);
+  assert.equal(declineA.stateHash, declineB.stateHash);
+});
+
+test("optional cost accept and decline branches are independently deterministic", () => {
+  const run = (choice: "pay" | "decline") => {
+    const { state } = sequenceQueueState(optionalCostThenPauseSequence());
+    placeActiveDon(state);
+    const paused = processEffectRuntime(state);
+    return choice === "pay"
+      ? payWithFirstActiveDon(paused.state)
+      : declinePayment(paused.state);
+  };
+  const payA = run("pay");
+  const payB = run("pay");
+  const declineA = run("decline");
+  const declineB = run("decline");
+
+  assert.deepEqual(payA.events, payB.events);
+  assert.deepEqual(payA.state.eventJournal, payB.state.eventJournal);
+  assert.equal(payA.stateHash, payB.stateHash);
+  assert.deepEqual(declineA.events, declineB.events);
+  assert.deepEqual(declineA.state.eventJournal, declineB.state.eventJournal);
+  assert.equal(declineA.stateHash, declineB.stateHash);
+});
+
+test("optional effect clause accept and decline branches are independently deterministic", () => {
+  const run = (choice: "activate" | "decline") => {
+    const { state } = sequenceQueueState(optionalTrashClauseSequence());
+    const paused = processEffectRuntime(state);
+    return respondWithOptionalActivation(paused.state, choice);
+  };
+  const acceptA = run("activate");
+  const acceptB = run("activate");
+  const declineA = run("decline");
+  const declineB = run("decline");
+
+  assert.deepEqual(acceptA.events, acceptB.events);
+  assert.deepEqual(acceptA.state.eventJournal, acceptB.state.eventJournal);
+  assert.equal(acceptA.stateHash, acceptB.stateHash);
+  assert.deepEqual(declineA.events, declineB.events);
+  assert.deepEqual(declineA.state.eventJournal, declineB.state.eventJournal);
+  assert.equal(declineA.stateHash, declineB.stateHash);
 });

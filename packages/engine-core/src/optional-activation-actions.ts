@@ -159,7 +159,7 @@ export const applyOptionalActivationDecisionResponse = (
           optionId: "restDon",
           selectedDonInstanceIds: selected,
         },
-        decision.visibility,
+        { type: "public" },
       );
       const paid = events[events.length - 1];
       if (paid !== undefined) {

@@ -16,7 +16,6 @@ import type {
   SequenceSegmentResult,
 } from "@optcg/types";
 
-import { appendEvent, toStateSeq } from "./action-results.js";
 import { toCardRef } from "./action-state.js";
 import {
   createOptionalActivationDecisionForSequenceSegment,
@@ -25,6 +24,7 @@ import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,
 } from "./effect-runtime-sequence-frame-decisions.js";
+import { appendEffectResolvedForCompletedSequence } from "./effect-runtime-sequence-frame-events.js";
 import { executeNoChoiceEffectPrimitive } from "./effect-runtime-primitives.js";
 import {
   consumeOncePerTurn,
@@ -225,7 +225,7 @@ const isSupportedSequenceBlock = (
         return true;
       }
       if (isSupportedTrashFromHandSegment(segment.effect)) {
-        if (segment.optional === true || index === 0) {
+        if (index === 0) {
           return false;
         }
         hasPendingDecisionSegment = true;
@@ -456,53 +456,6 @@ const findSequenceEffectBlock = (
   );
 };
 
-const appendEffectResolvedForCompletedSequence = (
-  state: GameState,
-  entry: EffectQueueEntry,
-  events: EngineEvent[],
-): GameState => {
-  const resolvedEvents: EngineEvent[] = [];
-  const resolvedEventBaseState: GameState = {
-    ...state,
-    seq: toStateSeq(state.seq - 1),
-  };
-  appendEvent(
-    resolvedEventBaseState,
-    resolvedEvents,
-    "effectResolved",
-    {
-      queueEntryId: entry.id,
-      timingWindowId: entry.timingWindowId,
-      generation: entry.generation,
-      effectBlockId: entry.effectBlockId,
-      ...(entry.triggerEventId === undefined
-        ? {}
-        : { triggerEventId: entry.triggerEventId }),
-      sourcePresencePolicy: entry.sourcePresencePolicy,
-      orderingGroup: entry.orderingGroup,
-      status: "resolved" as const,
-    },
-    { type: "public" },
-  );
-  const resolvedEvent = resolvedEvents[0];
-  if (resolvedEvent === undefined) {
-    return state;
-  }
-  resolvedEvent.causedBy = {
-    type: "effect",
-    queueEntryId: entry.id,
-    effectId: entry.effectBlockId,
-  };
-  events.push(resolvedEvent);
-  return {
-    ...state,
-    effectQueue: state.effectQueue.filter(
-      (candidate) => candidate.id !== entry.id,
-    ),
-    eventJournal: [...state.eventJournal, resolvedEvent],
-  };
-};
-
 const activeDonCount = (
   state: GameState,
   playerId: EffectQueueEntry["controllerId"],
@@ -586,48 +539,48 @@ const continueNoDecisionSegments = (
       };
       continue;
     }
-    if (segment.effect.type === "draw") {
-      if (segment.optional === true) {
-        const partialResult: SequenceSegmentResult = {
-          ...emptySegmentResult(),
-          attempted: true,
-        };
-        const pausedLedgers: SegmentLedgers = {
-          ...nextLedgers,
-          segmentResults: {
-            ...nextLedgers.segmentResults,
-            [segmentKey(segment, index)]: partialResult,
-          },
-        };
-        const optionalDecision =
-          createOptionalActivationDecisionForSequenceSegment(
-            nextState,
-            entry,
-            index,
-          );
-        const decision = optionalDecision.state.pendingDecision;
-        if (decision === undefined) {
-          return { ok: false };
-        }
-        const frame = frameForPausedSequenceDecision({
-          decision,
+    if (segment.optional === true) {
+      const partialResult: SequenceSegmentResult = {
+        ...emptySegmentResult(),
+        attempted: true,
+      };
+      const pausedLedgers: SegmentLedgers = {
+        ...nextLedgers,
+        segmentResults: {
+          ...nextLedgers.segmentResults,
+          [segmentKey(segment, index)]: partialResult,
+        },
+      };
+      const optionalDecision =
+        createOptionalActivationDecisionForSequenceSegment(
+          nextState,
           entry,
           index,
-          savedReferences: pausedLedgers.savedReferences,
-          segmentResults: pausedLedgers.segmentResults,
-          state: optionalDecision.state,
-        });
-        return {
-          events: [...events, ...optionalDecision.events],
-          kind: "paused",
-          ok: true,
-          state: stateWithPausedSequenceFrame(
-            optionalDecision.state,
-            entry,
-            frame,
-          ),
-        };
+        );
+      const decision = optionalDecision.state.pendingDecision;
+      if (decision === undefined) {
+        return { ok: false };
       }
+      const frame = frameForPausedSequenceDecision({
+        decision,
+        entry,
+        index,
+        savedReferences: pausedLedgers.savedReferences,
+        segmentResults: pausedLedgers.segmentResults,
+        state: optionalDecision.state,
+      });
+      return {
+        events: [...events, ...optionalDecision.events],
+        kind: "paused",
+        ok: true,
+        state: stateWithPausedSequenceFrame(
+          optionalDecision.state,
+          entry,
+          frame,
+        ),
+      };
+    }
+    if (segment.effect.type === "draw") {
       const drawn = applyDrawSegment(
         nextState,
         entry,
@@ -878,7 +831,8 @@ export const resumeSequenceFrameAfterOptionalActivation = (
     effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
-    pausedSegment.effect.type !== "draw" ||
+    (pausedSegment.effect.type !== "draw" &&
+      pausedSegment.effect.type !== "trashFromHand") ||
     pausedSegment.optional !== true
   ) {
     return {
@@ -894,28 +848,72 @@ export const resumeSequenceFrameAfterOptionalActivation = (
   let events: EngineEvent[] = [];
   let ledgers: SegmentLedgers;
   if (choice === "activate") {
-    const drawn = applyDrawSegment(
-      nextState,
-      entry,
-      pausedSegment as SupportedSequenceSegment & { effect: DrawEffect },
-      frame.pendingDecision.resumeAtSegmentIndex,
-      {
+    if (pausedSegment.effect.type === "draw") {
+      const drawn = applyDrawSegment(
+        nextState,
+        entry,
+        pausedSegment as SupportedSequenceSegment & { effect: DrawEffect },
+        frame.pendingDecision.resumeAtSegmentIndex,
+        {
+          savedReferences: frame.savedReferences,
+          segmentResults: frame.segmentResults,
+        },
+      );
+      if (!drawn.ok) {
+        return {
+          error: sequenceRuntimeError(
+            entry.effectBlockId,
+            "segment-execution-failed",
+          ),
+          ok: false,
+        };
+      }
+      nextState = drawn.state;
+      events = drawn.events;
+      ledgers = drawn.ledgers;
+    } else {
+      const decisionResult = createTrashDecision(
+        nextState,
+        entry,
+        pausedSegment.effect,
+      );
+      if (!decisionResult.ok) {
+        return {
+          error: sequenceRuntimeError(
+            entry.effectBlockId,
+            "segment-execution-failed",
+          ),
+          ok: false,
+        };
+      }
+      const nextDecision = decisionResult.state.pendingDecision;
+      if (nextDecision === undefined) {
+        return {
+          error: sequenceRuntimeError(
+            entry.effectBlockId,
+            "segment-execution-failed",
+          ),
+          ok: false,
+        };
+      }
+      const nextFrame = frameForPausedSequenceDecision({
+        decision: nextDecision,
+        entry,
+        index: frame.pendingDecision.resumeAtSegmentIndex,
         savedReferences: frame.savedReferences,
         segmentResults: frame.segmentResults,
-      },
-    );
-    if (!drawn.ok) {
+        state: decisionResult.state,
+      });
       return {
-        error: sequenceRuntimeError(
-          entry.effectBlockId,
-          "segment-execution-failed",
+        events: decisionResult.events,
+        ok: true,
+        state: stateWithPausedSequenceFrame(
+          decisionResult.state,
+          entry,
+          nextFrame,
         ),
-        ok: false,
       };
     }
-    nextState = drawn.state;
-    events = drawn.events;
-    ledgers = drawn.ledgers;
   } else {
     const declinedResult: SequenceSegmentResult = {
       ...emptySegmentResult(),
