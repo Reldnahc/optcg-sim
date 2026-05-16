@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-055B.md",
-      "storyId": "ENG-055B",
-      "storyPath": "stories/approved/ENG-055B-generic-resumable-effect-execution-frames.yaml",
-      "storySha256": "9c84e3650b5ee6bd1596494701f6d9345c9b6ab6dfc1827a0c830a3a6a69c762"
+      "packetPath": "agent-packets/ENG-055C.md",
+      "storyId": "ENG-055C",
+      "storyPath": "stories/approved/ENG-055C-draw-then-trash-migration-cavendish-baseline.yaml",
+      "storySha256": "95f1eebe9ce3cf33ba53de2fa739fab4abfc9ffcd71ab8df592e88be4fd1e464"
     }
   ],
   "version": 1
