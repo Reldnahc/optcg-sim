@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-055C.md",
-      "storyId": "ENG-055C",
-      "storyPath": "stories/approved/ENG-055C-draw-then-trash-migration-cavendish-baseline.yaml",
-      "storySha256": "95f1eebe9ce3cf33ba53de2fa739fab4abfc9ffcd71ab8df592e88be4fd1e464"
+      "packetPath": "agent-packets/ENG-055D.md",
+      "storyId": "ENG-055D",
+      "storyPath": "stories/approved/ENG-055D-non-replacement-optionality-runtime.yaml",
+      "storySha256": "8526892a8011b595387be437f9d4b897094f6006f545dd489961318309bc586b"
     }
   ],
   "version": 1
