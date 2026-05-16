@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-055K -->
 <!-- agent-packet:story-path stories/approved/ENG-055K-drawupto-play-card-reachability.yaml -->
-<!-- agent-packet:story-sha256 20ac10eca3b96bf1c2c04af8efeb403cc69636eb9d0061a482d20c5c42929f98 -->
+<!-- agent-packet:story-sha256 b3b8e2b8c455ef2f2167c7a0dea6d809fe9fa08b54f96f575b8c5ecc9b8249f2 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -493,12 +493,13 @@ Kickoff guardrails require the engine to stay free of Redis, Postgres, WebSocket
 
 ## Story Boundary
 
-Own only play-card support gating and play-card integration tests needed for supported drawUpTo card definitions to reach the existing ENG-055H runtime. Do not change drawUpTo runtime semantics, parser support, generated card support, or unrelated play-card behavior.
+Own only play-card support gating, the play-card-to-runtime trigger queueing eligibility bridge, and play-card integration tests needed for supported drawUpTo card definitions to reach the existing ENG-055H runtime. Do not change drawUpTo runtime semantics, parser support, generated card support, or unrelated play-card behavior.
 
 ## Scope
 
 - allow supported implemented-DSL Character On Play drawUpTo definitions to pass play-card support gating and queue into the ENG-055H runtime path
 - allow supported implemented-DSL Main Event drawUpTo definitions to pass play-card support gating and queue into the ENG-055H runtime path
+- add only the trigger-queueing eligibility needed for supported drawUpTo definitions to enter the existing ENG-055H queue runtime after play-card support gating
 - preserve the existing playCard unsupported behavior for malformed, unsupported, optional, costly, or out-of-scope drawUpTo shapes
 - prove normal playCard execution reaches chooseQuantity for supported drawUpTo definitions without adding parser/card support
 - preserve hidden-info-safe public legal actions and decision projection for the resulting chooseQuantity prompt
@@ -506,6 +507,7 @@ Own only play-card support gating and play-card integration tests needed for sup
 ## Out of Scope
 
 - drawUpTo primitive or sequence runtime semantics, which belong to ENG-055H
+- general effect-runtime trigger queueing behavior beyond supported drawUpTo play-card reachability
 - parser/card support
 - generated support metadata
 - draw-then-trash migration
@@ -519,6 +521,10 @@ Own only play-card support gating and play-card integration tests needed for sup
 - packages/engine-core/src/play-card.ts
 - packages/engine-core/src/play-card-on-play-runtime.test.ts
 - packages/engine-core/src/play-card-event.test.ts
+- packages/engine-core/src/effect-runtime-trigger-queueing-on-play.ts
+- packages/engine-core/src/effect-runtime-trigger-queueing-on-play.test.ts
+- packages/engine-core/src/effect-runtime-trigger-queueing-main-event.ts
+- packages/engine-core/src/effect-runtime-trigger-queueing-main-event.test.ts
 - tests/hidden-info/**
 - stories/generated/ENG-055*.yaml
 - stories/approved/ENG-055*.yaml

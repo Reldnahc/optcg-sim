@@ -14,15 +14,20 @@ summary: >
   gameplay entry paths by allowing supported implemented-DSL Character On Play
   and Main Event drawUpTo definitions through play-card support gating.
 story_boundary: >
-  Own only play-card support gating and play-card integration tests needed for
-  supported drawUpTo card definitions to reach the existing ENG-055H runtime.
-  Do not change drawUpTo runtime semantics, parser support, generated card
-  support, or unrelated play-card behavior.
+  Own only play-card support gating, the play-card-to-runtime trigger queueing
+  eligibility bridge, and play-card integration tests needed for supported
+  drawUpTo card definitions to reach the existing ENG-055H runtime. Do not
+  change drawUpTo runtime semantics, parser support, generated card support, or
+  unrelated play-card behavior.
 allowed_touch_points:
   - packages/engine-core/src/play-card-support.ts
   - packages/engine-core/src/play-card.ts
   - packages/engine-core/src/play-card-on-play-runtime.test.ts
   - packages/engine-core/src/play-card-event.test.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-on-play.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-on-play.test.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-main-event.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-main-event.test.ts
   - tests/hidden-info/**
   - stories/generated/ENG-055*.yaml
   - stories/approved/ENG-055*.yaml
@@ -44,11 +49,13 @@ dependencies:
 scope:
   - allow supported implemented-DSL Character On Play drawUpTo definitions to pass play-card support gating and queue into the ENG-055H runtime path
   - allow supported implemented-DSL Main Event drawUpTo definitions to pass play-card support gating and queue into the ENG-055H runtime path
+  - add only the trigger-queueing eligibility needed for supported drawUpTo definitions to enter the existing ENG-055H queue runtime after play-card support gating
   - preserve the existing playCard unsupported behavior for malformed, unsupported, optional, costly, or out-of-scope drawUpTo shapes
   - prove normal playCard execution reaches chooseQuantity for supported drawUpTo definitions without adding parser/card support
   - preserve hidden-info-safe public legal actions and decision projection for the resulting chooseQuantity prompt
 non_scope:
   - drawUpTo primitive or sequence runtime semantics, which belong to ENG-055H
+  - general effect-runtime trigger queueing behavior beyond supported drawUpTo play-card reachability
   - parser/card support
   - generated support metadata
   - draw-then-trash migration
