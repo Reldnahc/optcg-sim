@@ -61,13 +61,15 @@ scope:
   - implement temporary power modifiers through the computed-view/modifier model
   - implement runtime expiry only for `thisBattle`, `thisTurn`, `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, and `permanent` durations
   - defer `thisAction` runtime until a cited canonical expiration rule exists
-  - implement TYP-007E-authorized restriction runtime only for `cannotAttack` and `cannotBlock` with `self`, `choose`, and `all` target shapes authorized by TYP-007E
-  - fail closed for every non-TYP-007E-authorized restriction target outside `self`, `choose`, and `all`, including `myLeader`, `opponentLeader`, attack-context targets such as `attacker`, `attackTarget`, `blocker`, and `triggerCard`, and saved-selection targets
+  - implement TYP-007E-authorized restriction runtime only for `cannotAttack` and `cannotBlock` with `self` and `all` target shapes authorized by TYP-007E that can be resolved without a new target-choice pending-decision carrier
+  - fail closed for `choose` restriction targets until a later story authorizes durable selected-target carrier and cleanup semantics for modifier/restriction application
+  - fail closed for every non-TYP-007E-authorized restriction target outside `self` and `all`, including `choose`, `myLeader`, `opponentLeader`, attack-context targets such as `attacker`, `attackTarget`, `blocker`, and `triggerCard`, and saved-selection targets
   - fail closed for `whileConditionTrue`, malformed turn-relative durations, `thisAction`, and unsupported restriction families
   - add expiry tests for duration boundaries
   - add hidden-info, event-order, deterministic replay, and state-hash regression coverage
 non_scope:
   - parser/card support
+  - target-choice pending-decision carrier or selected-target cleanup semantics for temporary modifiers/restrictions
   - permanent effect fixed-point generalization beyond this story
   - "`thisAction` duration runtime"
   - cannotBeAttacked, cannotBeBlockedBy, invalidateEffects, and protectFromKO runtime
@@ -81,8 +83,8 @@ acceptance_criteria:
   - hidden-info, event order, deterministic replay, and state hashes are preserved
 required_tests:
   - temporary power modifier runtime tests
-  - cannotAttack/cannotBlock restriction expiry tests for supported target shapes and supported duration boundaries
-  - fail-closed tests for `thisAction`, `whileConditionTrue`, malformed turn-relative durations, every non-TYP-007E-authorized restriction target outside `self`, `choose`, and `all` including `myLeader`, `opponentLeader`, attack-context targets, and saved-selection targets, plus unsupported restriction families
+  - cannotAttack/cannotBlock restriction expiry tests for supported `self` and `all` target shapes and supported duration boundaries
+  - fail-closed tests for `choose`, `thisAction`, `whileConditionTrue`, malformed turn-relative durations, every non-TYP-007E-authorized restriction target outside `self` and `all` including `myLeader`, `opponentLeader`, attack-context targets, and saved-selection targets, plus unsupported restriction families
   - replay regression pinning emitted event order and final state hash across modifier/restriction application and expiry
   - hidden-info, event-order, and state-hash tests
   - run `corepack pnpm --filter @optcg/engine-core typecheck`

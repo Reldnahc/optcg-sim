@@ -268,26 +268,27 @@ test("Effect DSL spec pins authorability support ladder and planned-layer guardr
     assertContainsWords(dslSpec, requiredText);
   }
 
-  for (const plannedPrimitive of [
+  for (const fixtureAuthorablePrimitive of [
     "effect: drawUpTo",
     "effect: playSelected",
-    "effect: choice",
-    "effect: conditional",
     "effect: cannotAttack",
     "duration: untilEndOfTurn",
     "condition: fieldCount",
+    "cost: returnDon",
+  ]) {
+    assertContainsWords(schemaSupportedSubset, fixtureAuthorablePrimitive);
+  }
+
+  for (const plannedPrimitive of [
+    "effect: choice",
+    "effect: conditional",
   ]) {
     assertContainsWords(schemaPolicy, plannedPrimitive);
   }
 
   for (const notYetFixtureAuthorable of [
-    "effect: drawUpTo",
-    "effect: playSelected",
     "effect: choice",
     "effect: conditional",
-    "effect: cannotAttack",
-    "duration: untilEndOfTurn",
-    "condition: fieldCount",
   ]) {
     assert.doesNotMatch(
       schemaSupportedSubset,

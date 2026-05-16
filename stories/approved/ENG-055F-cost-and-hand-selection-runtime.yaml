@@ -16,15 +16,20 @@ story_boundary: >
   Own only returnDon cost payment and filtered selectCards-from-hand runtime.
   Do not implement playSelected, drawUpTo, parser support, or card support.
 allowed_touch_points:
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/actions*.test.ts
   - packages/engine-core/src/effect-runtime*.ts
   - packages/engine-core/src/effect-runtime*.test.ts
   - packages/engine-core/src/actions-pending-decision.test.ts
+  - packages/engine-core/src/*legal-actions*.ts
+  - packages/engine-core/src/*legal-actions*.test.ts
   - tests/hidden-info/**
   - stories/generated/ENG-055*.yaml
   - stories/approved/ENG-055*.yaml
   - agent-packets/ENG-055F.md
   - agent-packets/active.json
 spec_refs:
+  - 02-engine-mechanics.s036
   - 03-game-state-events-decisions.s009
   - 03-game-state-events-decisions.s012
   - 03-game-state-events-decisions.s013
@@ -49,6 +54,7 @@ dependencies:
   - TYP-007D
 scope:
   - implement returnDon / DON minus N cost runtime
+  - route generic effect-runtime returnDon PayCostDecision legal responses through the existing pending-decision action path rather than limiting legal-action support to play-card cost decisions
   - create `PayCostDecision` when returnDon cost payment requires choosing DON cards and validate valid, stale, malformed, and wrong-player payCost responses
   - implement only the TYP-007D-authorized private filtered selectCards-from-hand subset
   - fail closed for broader `selectCards` shapes including unsupported zones, ambiguous chooser/player combinations, unsupported visibility semantics, and non-hand candidate sets
@@ -64,14 +70,14 @@ non_scope:
   - replacement generalization
 acceptance_criteria:
   - returnDon pays costs deterministically or fails closed when cost cannot be paid
-  - returnDon cost payment pauses through a chooser-visible PayCostDecision when choices are required, resumes on a valid payCost response, and rejects stale or invalid payCost responses
+  - returnDon cost payment pauses through a chooser-visible PayCostDecision when choices are required, exposes legal generic payCost responses for the current pending decision, resumes on a valid payCost response, and rejects stale or invalid payCost responses
   - hand selection exposes only legal private chooser data
   - selectCards support is limited to the TYP-007D private hand-selection subset; broader selectCards shapes fail closed without exposing hidden card identities or private candidate details
   - hand-selection segment results are recorded for later ENG-055G playSelected consumption without resolving playSelected in this story
   - stale and invalid hand-selection responses are rejected
   - hidden-info, deterministic replay, and state-hash behavior are covered
 required_tests:
-  - focused returnDon cost runtime tests, including PayCostDecision creation, legal choice exposure, valid payCost resume, and stale/invalid payCost response rejection
+  - focused returnDon cost runtime tests, including PayCostDecision creation, generic legal choice exposure from `getLegalActions`, valid payCost resume, and stale/invalid payCost response rejection
   - private hand-selection decision tests
   - fail-closed tests for unsupported zones, ambiguous chooser/player combinations, unsupported visibility semantics, and non-hand selectCards candidate sets
   - costPaid/event assertion and event-order tests for cost payment and selection resolution where events are emitted

@@ -36,8 +36,9 @@ spec_refs:
 dependencies:
   - TYP-007C
 scope:
-  - implement runtime condition evaluation only for the spec-supported fixture subset `yourTurn` and source/self-resolved `attachedDonCount`
-  - fail closed for non-source/self `attachedDonCount` target forms until a later target-runtime story authorizes them
+  - implement runtime condition evaluation only for the spec-supported fixture subset `yourTurn` and live-source/self-resolved `attachedDonCount`
+  - evaluate positive `attachedDonCount` only when the current live source field object can be resolved from authoritative state; do not infer attached-DON count from queued source snapshots or last-known information
+  - fail closed for non-source/self `attachedDonCount` target forms and live-source/self cases where the source is no longer a resolvable field object until a later target-runtime or source-snapshot story authorizes them
   - fail closed for `lifeCount`, `fieldCount`, `handCount`, `donCount`, `opponentTurn`, `trashCount`, `hasCardInZone`, `cardState`, `sourceStillInZone`, `attackTarget`, `and`, `or`, `not`, `eventPayload`, and `custom` until the schema coverage policy spec and a runtime story list them as supported runtime-authorable conditions
   - reject unsupported condition shapes fail-closed
   - add synthetic runtime tests for true, false, malformed, and unsupported condition cases
@@ -45,16 +46,16 @@ scope:
 non_scope:
   - parser/card support
   - leader type or other condition families not authorized by this story
-  - runtime support for `lifeCount`, `fieldCount`, `handCount`, `donCount`, `opponentTurn`, `trashCount`, `hasCardInZone`, `cardState`, `sourceStillInZone`, `attackTarget`, `and`, `or`, `not`, `eventPayload`, custom, non-source/self `attachedDonCount` targets, or other condition families until directly authorized by the schema coverage policy spec and a runtime story
+  - runtime support for `lifeCount`, `fieldCount`, `handCount`, `donCount`, `opponentTurn`, `trashCount`, `hasCardInZone`, `cardState`, `sourceStillInZone`, `attackTarget`, `and`, `or`, `not`, `eventPayload`, custom, non-source/self `attachedDonCount` targets, source-snapshot/LKI `attachedDonCount`, or other condition families until directly authorized by the schema coverage policy spec and a runtime story
   - replacement generalization
 acceptance_criteria:
-  - "`yourTurn` and source/self-resolved `attachedDonCount` evaluate deterministically from authoritative state"
-  - non-source/self `attachedDonCount` target forms fail closed without adding target-resolution behavior to this story
+  - "`yourTurn` and live-source/self-resolved `attachedDonCount` evaluate deterministically from authoritative state"
+  - non-source/self `attachedDonCount` target forms and source-snapshot/LKI attached-DON lookups fail closed without adding target-resolution or source-snapshot behavior to this story
   - unsupported conditions fail closed
   - hidden-info, event-order, deterministic replay, and state-hash behavior is preserved
 required_tests:
-  - focused condition evaluator tests for `yourTurn` and source/self-resolved `attachedDonCount`
-  - fail-closed tests for non-source/self `attachedDonCount` target forms
+  - focused condition evaluator tests for `yourTurn` and live-source/self-resolved `attachedDonCount`
+  - fail-closed tests for non-source/self `attachedDonCount` target forms and source-snapshot/LKI attached-DON lookup attempts
   - fail-closed unsupported condition tests
   - replay, event-order, hidden-info, and state-hash regression tests for condition-true, condition-false, and unsupported-condition fail-closed paths
   - run `corepack pnpm --filter @optcg/engine-core typecheck`

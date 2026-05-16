@@ -980,18 +980,30 @@ Schema-supported fixture subset:
 - trigger: custom
 - condition: yourTurn
 - condition: attachedDonCount
+- condition: fieldCount
 - cost: restDon
 - cost: returnDon
 - cost: restSelf
 - cost: sequence
 - target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
   triggerCard, all, choose, savedFieldObject
-- duration: thisAction, thisBattle, thisTurn, whileSourceOnField, permanent
+- duration: thisAction
+- duration: thisBattle
+- duration: thisTurn
+- duration: untilEndOfTurn
+- duration: untilStartOfNextTurn
+- duration: whileSourceOnField
+- duration: permanent
 - effect: draw
+- effect: drawUpTo
 - effect: ko
 - effect: modifyPower
 - effect: payCost
+- effect: selectCards
+- effect: playSelected
 - effect: sequence
+- effect: cannotAttack
+- effect: cannotBlock
 - effect: custom
 - card filters: cardIds, names, nameContains, nameNot, categories, colorsAny,
   colorsAll, typesAny, typesAll, attributesAny, attributesAll, cost, power,
@@ -1003,7 +1015,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - condition: donCount
 - condition: opponentTurn
 - condition: lifeCount
-- condition: fieldCount
 - condition: handCount
 - condition: trashCount
 - condition: hasCardInZone
@@ -1018,23 +1029,18 @@ Planned/not fixture-authorable until schema coverage exists:
 - cost: discard
 - cost: chooseOne
 - cost: custom
-- duration: untilEndOfTurn
-- duration: untilStartOfNextTurn
 - duration: whileConditionTrue
-- effect: drawUpTo
 - effect: search
 - effect: lookAtTop
 - effect: revealFromZone
 - effect: revealTop
 - effect: selectFromSet
-- effect: selectCards
 - effect: moveSelected with position
 - effect: putRemaining
 - effect: shuffleDeck
 - effect: bounce
 - effect: trash
 - effect: play
-- effect: playSelected
 - effect: returnUnselectedToDeck
 - effect: trashFromHand
 - effect: setPowerToZero
@@ -1052,8 +1058,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - effect: damage
 - effect: invalidateEffects
 - effect: protectFromKO
-- effect: cannotAttack
-- effect: cannotBlock
 - effect: cannotBeAttacked
 - effect: cannotBeBlockedBy
 - effect: choice

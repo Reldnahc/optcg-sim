@@ -35,3 +35,22 @@ Reviewed story: `stories/approved/ENG-055F-cost-and-hand-selection-runtime.yaml`
 Add `02-engine-mechanics.s036` to `spec_refs`, and expand allowed touch points
 to include the pending-decision routing/legal-action files required for generic
 effect-runtime `payCost` responses.
+
+## Second-Pass Re-Review
+
+Review assignment id:
+`agent-story-review-ENG-055F-feasibility-rereview2-2026-05-16`
+
+Verdict: `approval-ready`
+
+The revised story now cites `02-engine-mechanics.s036` for DON-minus source
+legality and authorizes the generic pending-decision `payCost` action/legal
+action path through `actions.ts` and legal-action helpers. The reviewer found no
+remaining approval-gate findings.
+
+Implementation cautions:
+
+- keep runtime `payCost` continuation on the existing `respondToDecision` path
+- preserve chooser-private decision envelopes and PlayerView redaction
+- follow the stale-envelope/current-state validation pattern used by existing
+  runtime decision handlers

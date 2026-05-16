@@ -34,3 +34,27 @@ Reviewed story: `stories/approved/ENG-055J-duration-modifier-restriction-runtime
 Revise ENG-055J to drop/narrow positive `choose` target scope, or add a
 prerequisite contract/runtime story for durable chosen-target carrier semantics.
 Also reconcile stale schema coverage wording in the cited spec.
+
+## Second-Pass Re-Review
+
+Review assignment id:
+`agent-story-review-ENG-055J-feasibility-rereview2-2026-05-16`
+
+Verdict: `approval-ready`
+
+The revised story now authorizes positive `cannotAttack`/`cannotBlock` runtime
+only for `self` and `all` targets, and explicitly fail-closes `choose` until a
+later story adds durable selected-target carrier and cleanup semantics. The
+stale `05-effect-dsl-reference.s029` wording was reconciled so the schema
+coverage list matches completed TYP-007D/TYP-007E fixture authorability while
+still stating that schema authorability does not imply runtime/generator
+support.
+
+Implementation cautions:
+
+- keep `choose` out of scope; do not route modifier/restriction application
+  through the existing select-target continuation path
+- add expiry handling only at the cited battle, end-turn, and refresh cleanup
+  boundaries
+- preserve fail-closed behavior for unsupported/private `all` target resolution
+  shapes unless tested support is explicitly implemented

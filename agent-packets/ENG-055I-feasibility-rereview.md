@@ -36,3 +36,34 @@ Rewrite or split ENG-055I before implementation. Options:
 - move positive saved field-object consumption into ENG-055J
 - add a prerequisite story that authorizes a concrete non-J saved-reference
   target consumer
+
+## Second-Pass Re-Review
+
+Review assignment id:
+`agent-story-review-ENG-055I-feasibility-rereview2-2026-05-16`
+
+Verdict: `blocked`
+
+The reviewer confirmed ENG-055I is still not approval-ready as written.
+
+Concrete blockers:
+
+- no in-scope positive consumer exists for non-`playSelected` saved field-object
+  references; `playSelected` is explicitly owned by ENG-055G and excluded by
+  ENG-055I
+- no supported sequence-frame producer exists for saved `selectedTargets`; the
+  current sequence-frame runtime records `producedObjects` for draw and
+  `selectedCards` for trash-from-hand, but not positive selected-target output
+
+Required split/story/spec action:
+
+- add a new child story that owns a concrete same-frame saved field-object
+  consumer, including target-resolution code that reads `frame.savedReferences`
+  and tested legality/visibility/failure handling; if `selectedTargets` remains
+  in scope, that story must also authorize a supported earlier target-selecting
+  segment that can populate it
+- rewrite ENG-055I to that boundary before implementation
+- add spec authority if the intended consumer is not `playSelected`, because
+  the current specs authorize saved references abstractly but do not provide
+  concrete capability-backed authority for a non-`playSelected` field-object
+  consumer
