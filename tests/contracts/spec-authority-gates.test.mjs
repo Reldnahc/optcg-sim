@@ -279,10 +279,7 @@ test("Effect DSL spec pins authorability support ladder and planned-layer guardr
     assertContainsWords(schemaSupportedSubset, fixtureAuthorablePrimitive);
   }
 
-  for (const plannedPrimitive of [
-    "effect: choice",
-    "effect: conditional",
-  ]) {
+  for (const plannedPrimitive of ["effect: choice", "effect: conditional"]) {
     assertContainsWords(schemaPolicy, plannedPrimitive);
   }
 
