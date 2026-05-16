@@ -1,0 +1,26 @@
+{
+  "cardId": "TYP-009A-903",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "TYP-009A-903:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "effect": {
+        "type": "payCost",
+        "cost": {
+          "type": "returnDon",
+          "count": 1,
+          "chooser": "self",
+          "optional": true
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-009a-903",
+    "rulesVersion": "2026-05-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

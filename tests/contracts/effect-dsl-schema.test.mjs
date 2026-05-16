@@ -37,6 +37,7 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/optionality-nonboolean-clauses.json",
     "fixtures/effect-dsl/invalid/optional-cost-segment-uses-effect-optionality.json",
     "fixtures/effect-dsl/invalid/optional-cost-segment-without-optional-cost.json",
+    "fixtures/effect-dsl/invalid/optional-cost-top-level-pay-cost-effect.json",
     "fixtures/effect-dsl/invalid/play-selected-arbitrary-reference.json",
     "fixtures/effect-dsl/invalid/play-selected-before-hand-selection-producer.json",
     "fixtures/effect-dsl/invalid/play-selected-missing-hand-selection-producer.json",

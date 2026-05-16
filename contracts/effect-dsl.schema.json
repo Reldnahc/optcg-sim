@@ -348,15 +348,6 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["type", "cost"],
-          "properties": {
-            "type": { "const": "payCost" },
-            "cost": { "$ref": "#/$defs/optionalCost" }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
           "required": ["type", "target"],
           "properties": {
             "type": { "const": "ko" },
@@ -461,6 +452,15 @@
           }
         }
       ]
+    },
+    "payCostEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "cost"],
+      "properties": {
+        "type": { "const": "payCost" },
+        "cost": { "$ref": "#/$defs/optionalCost" }
+      }
     },
     "effectBlock": {
       "type": "object",
@@ -785,7 +785,7 @@
           "minLength": 1
         },
         "effect": {
-          "$ref": "#/$defs/effect"
+          "$ref": "#/$defs/sequencedEffectEffect"
         },
         "connector": {
           "type": "string",
@@ -805,6 +805,12 @@
           "type": "boolean"
         }
       }
+    },
+    "sequencedEffectEffect": {
+      "oneOf": [
+        { "$ref": "#/$defs/effect" },
+        { "$ref": "#/$defs/payCostEffect" }
+      ]
     },
     "target": {
       "oneOf": [
