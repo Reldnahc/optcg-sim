@@ -291,6 +291,12 @@ export type SavedFieldObjectReferenceFamily =
   | "selectedTargets"
   | "producedObjects";
 
+export type SavedFieldObjectZone =
+  | "leaderArea"
+  | "characterArea"
+  | "stageArea"
+  | "costArea";
+
 export interface SavedFieldObjectTargetBinding {
   family: SavedFieldObjectReferenceFamily;
   saveResultAs: string;
@@ -321,7 +327,7 @@ export interface SavedFieldObjectReferenceFailure {
 export interface SavedFieldObjectTarget {
   type: "savedFieldObject";
   binding: SavedFieldObjectTargetBinding;
-  zone: Zone;
+  zone: SavedFieldObjectZone;
   player: PlayerRef;
   controller?: PlayerRef;
   filter?: CardFilter;

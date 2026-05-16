@@ -35,6 +35,7 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/duration-until-start-next-turn-missing-player.json",
     "fixtures/effect-dsl/invalid/duration-while-condition-true-unsupported.json",
     "fixtures/effect-dsl/invalid/draw-up-to-negative-count.json",
+    "fixtures/effect-dsl/invalid/field-object-hand-zone-reference.json",
     "fixtures/effect-dsl/invalid/field-object-hidden-reference.json",
     "fixtures/effect-dsl/invalid/field-object-unsupported-family.json",
     "fixtures/effect-dsl/invalid/optionality-nonboolean-clauses.json",

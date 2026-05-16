@@ -867,7 +867,7 @@
           "properties": {
             "type": { "const": "savedFieldObject" },
             "binding": { "$ref": "#/$defs/savedFieldObjectTargetBinding" },
-            "zone": { "$ref": "#/$defs/zone" },
+            "zone": { "$ref": "#/$defs/savedFieldObjectZone" },
             "player": { "$ref": "#/$defs/playerRef" },
             "controller": { "$ref": "#/$defs/playerRef" },
             "filter": { "$ref": "#/$defs/cardFilter" },
@@ -899,6 +899,10 @@
           "minLength": 1
         }
       }
+    },
+    "savedFieldObjectZone": {
+      "type": "string",
+      "enum": ["leaderArea", "characterArea", "stageArea", "costArea"]
     },
     "targetRequest": {
       "type": "object",

@@ -556,6 +556,18 @@ test("TYP-009B saved field-object references reject unsupported and ambiguous fa
     // @ts-expect-error saved field-object target consumers must fail closed.
     onFailure: "doAsMuchAsPossible",
   };
+  const handZoneTarget: SavedFieldObjectTarget = {
+    type: "savedFieldObject",
+    binding: {
+      family: "selectedTargets",
+      saveResultAs: "hiddenHandCard",
+    },
+    // @ts-expect-error saved field-object targets must use public field-object zones.
+    zone: "hand",
+    player: "self",
+    visibility: "publicOnly",
+    onFailure: "failClosed",
+  };
   const hiddenFailure: SavedFieldObjectReferenceFailure = {
     reason: "hiddenObject",
     publicReason: "savedFieldObjectUnavailable",
@@ -573,6 +585,7 @@ test("TYP-009B saved field-object references reject unsupported and ambiguous fa
   void unsupportedPaidCostBinding;
   void hiddenVisibilityTarget;
   void ambiguousFailurePolicy;
+  void handZoneTarget;
 });
 
 test("condition and optionality authoring supports composed optional cost and optional effect clauses", () => {
