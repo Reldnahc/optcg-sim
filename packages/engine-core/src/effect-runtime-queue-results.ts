@@ -41,6 +41,7 @@ import {
   isSupportedQueuedOptionalNoChoiceDrawEffect,
 } from "./effect-runtime-primitives.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
+import { createSupportedSequenceFrameDecision } from "./effect-runtime-sequence-frames.js";
 import {
   createSupportedTrashFromHandChoiceDecision,
   isSupportedQueuedTrashFromHandEffect,
@@ -366,6 +367,20 @@ export const createEffectRuntimeQueueResults = (
           ? toEngineResult(drawTrashSequence.state, [
               ...allEvents,
               ...drawTrashSequence.events,
+            ])
+          : unsupportedEffectQueueResult(originalState);
+      }
+      const sequenceFrame = createSupportedSequenceFrameDecision(
+        nextState,
+        selected,
+        queuedEffect,
+        createSupportedTrashFromHandChoiceDecision,
+      );
+      if (sequenceFrame !== undefined) {
+        return sequenceFrame.ok
+          ? toEngineResult(sequenceFrame.state, [
+              ...allEvents,
+              ...sequenceFrame.events,
             ])
           : unsupportedEffectQueueResult(originalState);
       }

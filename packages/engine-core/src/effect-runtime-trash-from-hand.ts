@@ -21,6 +21,7 @@ import {
 } from "./action-results.js";
 import { reindexZoneCards, toCardRef, zonesEqual } from "./action-state.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
+import { resumeSequenceFrameAfterTrashFromHand } from "./effect-runtime-sequence-frames.js";
 
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 
@@ -490,7 +491,7 @@ export const applySupportedTrashFromHandChoiceResponse = (
     }
   }
 
-  const nextState: GameState = {
+  let nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
@@ -505,6 +506,25 @@ export const applySupportedTrashFromHandChoiceResponse = (
     eventJournal: [...state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;
+
+  const selectedRefs = selectedCards.map((card) =>
+    toCardRef(card, decision.playerId),
+  );
+  const sequenceResume = resumeSequenceFrameAfterTrashFromHand(
+    nextState,
+    decision,
+    selectedRefs,
+  );
+  if (sequenceResume !== undefined) {
+    if (!sequenceResume.ok) {
+      return {
+        ok: false,
+        result: toEngineResult(state, [], [sequenceResume.error]),
+      };
+    }
+    nextState = sequenceResume.state;
+    events.push(...sequenceResume.events);
+  }
 
   return {
     allEvents: [...events],
