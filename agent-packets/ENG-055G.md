@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-055G -->
 <!-- agent-packet:story-path stories/approved/ENG-055G-playselected-play-from-hand-runtime.yaml -->
-<!-- agent-packet:story-sha256 47920f81c3101af24859f30da606e85dd74f6f25e761a54ec88d200b8024b37f -->
+<!-- agent-packet:story-sha256 76f9ea5454bae0590068f706aed93e3980fa72f67d7afc0477ff032e3698048e -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -18,7 +18,7 @@ Primary Concern: rules
 
 ## Why
 
-Implement playSelected from hand runtime with up-to cardinality integration, area-capacity handling, and forced-trash consequences.
+Implement Character-only playSelected from hand runtime with up-to cardinality integration, character-area capacity handling, and forced-trash consequences.
 
 ## Authoritative Spec References
 
@@ -413,20 +413,23 @@ Kickoff guardrails require the engine to stay free of Redis, Postgres, WebSocket
 
 ## Story Boundary
 
-Own only playSelected/play-from-hand runtime for selected hand cards. Do not implement parser support, real-card proof, or new card support metadata.
+Own only Character playSelected/play-from-hand runtime for selected hand cards produced by the currently authorized private hand-selection producer. Do not implement Stage, Event, parser support, real-card proof, or new card support metadata.
 
 ## Scope
 
-- implement playSelected from hand runtime only for saved hand selections produced by authorized selectCards runtime
+- implement Character-only playSelected from hand runtime only for saved hand selections produced by authorized selectCards runtime
 - require playSelected to consume only an authorized saved hand selection from the same supported effect execution frame
 - fail closed for stale, non-hand, no-longer-legal, or unsupported saved-reference cases
 - integrate up-to cardinality from chooseQuantity/selection contracts
-- preserve cost-free rested play semantics for selected hand cards
-- preserve area-capacity rules, stage replacement handling, and forced-trash consequences
-- add synthetic engine tests for success, zero-card selection where allowed, full area, invalid card, stage replacement, and forced-trash behavior
+- preserve cost-free rested play semantics for selected Character hand cards
+- preserve character-area capacity rules and forced-trash consequences
+- fail closed for selected Stage or Event cards until a later story authorizes those categories
+- add synthetic engine tests for success, zero-card selection where allowed, full character area, invalid card, Stage/Event fail-closed behavior, and forced-trash behavior
 
 ## Out of Scope
 
+- Stage playSelected or stage replacement runtime
+- Event playSelected or Event play-from-hand runtime
 - card parser/generated support
 - new source fixture capture
 - replacement generalization
@@ -475,11 +478,14 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 ## Required Tests
 
-- synthetic playSelected/play-from-hand runtime tests
-- cost-free rested play, stage replacement, full-area, and forced-trash tests
+- synthetic Character playSelected/play-from-hand runtime tests
+- cost-free rested Character play, full-character-area, and forced-trash tests
+- zero-card up-to hand-selection coverage proving playSelected completes without playing a card when zero is legal
+- fail-closed tests for selected Stage and Event cards
+- fail-closed tests for no-longer-in-hand and no-longer-legal selected Character cards
 - forced-trash decision timing regression proving the decision is created before play completion and event/order/state resume deterministically after the response
 - stale saved-selection failure tests asserting failed segment fields, no play/move events, and no public legal action, PlayerView, SpectatorView, or public-event leakage
-- replay and state-hash pinning for stale playSelected failures
+- replay, state-hash, and event-order pinning for stale, no-longer-in-hand, and no-longer-legal playSelected failures
 - hidden-info, event-order, and state-hash tests
 - run `corepack pnpm --filter @optcg/engine-core typecheck`
 - run `corepack pnpm run stories:validate`
@@ -493,12 +499,11 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 ## Acceptance Criteria
 
-- selected legal hand cards from saved hand selections can be played through runtime effects
+- selected legal Character hand cards from saved hand selections can be played through runtime effects
 - up-to cardinality can choose zero or fewer legal cards when allowed
-- stale, non-hand, no-longer-legal, and unsupported saved-reference cases fail closed without `cardPlayed` or hand-to-field `cardMoved` events and without leaking hidden hand details through public events, public legal actions, PlayerView, or SpectatorView
-- played cards enter play rested without cost payment unless the primitive explicitly says otherwise
+- stale, non-hand, no-longer-legal, Stage, Event, and unsupported saved-reference cases fail closed without `cardPlayed` or hand-to-field `cardMoved` events and without leaking hidden hand details through public events, public legal actions, PlayerView, or SpectatorView
+- played Character cards enter play rested without cost payment unless the primitive explicitly says otherwise
 - full character area creates the forced-trash decision before play completion and resumes deterministically after the response
-- stage area replacement and other area consequences match existing rule processing
 - hidden-info, event order, deterministic replay, and state hashes are covered
 
 ## Post-Approval Role Sections
