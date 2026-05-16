@@ -10,6 +10,23 @@ verdicts below are the durable re-review evidence. E, F, I, and J received
 fresh second-pass reviews after story/spec corrections. J then received a third
 review after `choose` targets were restored to the intended story scope.
 
+## Current Review Status Snapshot
+
+Recorded: 2026-05-16 on `story/eng-055`.
+
+| Story    | Review/implementation status                      | Durable evidence                                                           |
+| -------- | ------------------------------------------------- | -------------------------------------------------------------------------- |
+| ENG-055A | done; not re-reviewed in this feasibility pass    | closed PR / done-story evidence exists outside this matrix                 |
+| ENG-055B | done; not re-reviewed in this feasibility pass    | closed PR / done-story evidence exists outside this matrix                 |
+| ENG-055C | implemented on parent branch with review evidence | substory implementation/review commits already recorded on `story/eng-055` |
+| ENG-055D | blocked                                           | `stories/ambiguities/ENG-055D-optional-cost-runtime-authority-gap.md`      |
+| ENG-055E | approval-ready                                    | `agent-story-review-ENG-055E-feasibility-rereview2-2026-05-16`             |
+| ENG-055F | approval-ready                                    | `agent-story-review-ENG-055F-feasibility-rereview2-2026-05-16`             |
+| ENG-055G | approval-ready after ENG-055F implementation      | `agent-story-review-ENG-055G-feasibility-2026-05-16`                       |
+| ENG-055H | approval-ready                                    | `agent-story-review-ENG-055H-feasibility-2026-05-16`                       |
+| ENG-055I | blocked                                           | `agent-story-review-ENG-055I-feasibility-rereview2-2026-05-16`             |
+| ENG-055J | approval-ready with `choose` in scope             | `agent-story-review-ENG-055J-feasibility-rereview3-choose-2026-05-16`      |
+
 | Story    | Current assignment id                                                 | Current verdict | Feasibility summary                                                                                                                           | Required action before implementation                                                                                               |
 | -------- | --------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | ENG-055E | `agent-story-review-ENG-055E-feasibility-rereview2-2026-05-16`        | approval-ready  | Story is now narrowed to `yourTurn` and live-source/self `attachedDonCount`; sourceSnapshot/LKI and non-source/self cases fail closed.        | None beyond implementation cautions in the story artifact.                                                                          |
