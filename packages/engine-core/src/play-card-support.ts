@@ -38,6 +38,40 @@ const isSupportedMainEventTargetKoEffectAllowingOncePerTurn = (
   return isSupportedMainEventTargetKoEffect(effectWithoutOncePerTurn);
 };
 
+const isSupportedOnPlayDrawUpToEffect = (
+  effect: EffectDefinition["effects"][number],
+): boolean =>
+  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
+  effect.trigger.type === "onPlay" &&
+  effect.category === "auto" &&
+  effect.optional !== true &&
+  effect.oncePerTurn !== true &&
+  effect.cost === undefined &&
+  effect.condition === undefined &&
+  effect.conditionTiming === undefined &&
+  effect.failurePolicy === undefined &&
+  effect.effect.type === "drawUpTo" &&
+  Number.isInteger(effect.effect.count) &&
+  effect.effect.count >= 0 &&
+  effect.effect.player === "self";
+
+const isSupportedMainEventDrawUpToEffect = (
+  effect: EffectDefinition["effects"][number],
+): boolean =>
+  effect.sourcePresencePolicy === "resolveFromDestinationZone" &&
+  effect.trigger.type === "main" &&
+  effect.category === "auto" &&
+  effect.optional !== true &&
+  effect.oncePerTurn !== true &&
+  effect.cost === undefined &&
+  effect.condition === undefined &&
+  effect.conditionTiming === undefined &&
+  effect.failurePolicy === undefined &&
+  effect.effect.type === "drawUpTo" &&
+  Number.isInteger(effect.effect.count) &&
+  effect.effect.count >= 0 &&
+  effect.effect.player === "self";
+
 export const canResolveDestinationConflict = (
   player: GameState["players"][PlayerId],
   category: SupportedPlayMetadata["category"],
@@ -83,7 +117,8 @@ export const getSupportedPlayMetadata = (
     if (resolved.category === "character") {
       if (
         !isSupportedNoChoiceOnPlayDrawEffect(effect) &&
-        !isSupportedOptionalNoChoiceOnPlayDrawEffect(effect)
+        !isSupportedOptionalNoChoiceOnPlayDrawEffect(effect) &&
+        !isSupportedOnPlayDrawUpToEffect(effect)
       ) {
         return null;
       }
@@ -96,6 +131,7 @@ export const getSupportedPlayMetadata = (
       if (
         !isSupportedNoChoiceMainEventDrawEffect(effect) &&
         !isSupportedOptionalNoChoiceMainEventDrawEffect(effect) &&
+        !isSupportedMainEventDrawUpToEffect(effect) &&
         !isSupportedMainEventTargetKoEffectAllowingOncePerTurn(effect)
       ) {
         return null;

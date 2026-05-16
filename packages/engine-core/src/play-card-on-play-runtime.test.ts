@@ -18,12 +18,15 @@ import {
 import {
   must,
   p1,
+  p2,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
 } from "./action-test-fixtures.js";
+import { filterStateForPlayer } from "./filter-state-for-player.js";
 import {
   hasPlayCardAction,
   setupMainPlayState,
+  toTestCardRef,
 } from "./play-card-test-fixtures.js";
 
 const applyPlayCardTestAction = (
@@ -70,6 +73,42 @@ const setupImplementedDslOnPlayDraw = (
   return definition;
 };
 
+const setupImplementedDslOnPlayDrawUpTo = (
+  state: GameState,
+  card: CardInstance,
+  effectDefinitionId = "def-play-card-on-play-draw-upto",
+  count = 2,
+) => {
+  const resolved = resolvedCard({
+    cardId: card.cardId,
+    category: "character",
+    cost: 0,
+    power: 2000,
+    effectText: "[On Play] Draw up to 2 cards.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "r1",
+      sourceTextHash: "source-hash",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(card.cardId, resolved.support);
+  state.cardManifest.effectDefinitionsVersion =
+    base.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    [effectDefinitionId]: {
+      ...base,
+      effects: [
+        {
+          ...must(base.effects[0], "draw effect"),
+          effect: { type: "drawUpTo", count, player: "self" },
+        },
+      ],
+    },
+  };
+  state.cardManifest.cards[card.cardId] = resolved;
+};
+
 const addExtraDeckCard = (state: GameState): void => {
   const p1State = must(state.players[p1], "p1");
   const source = must(p1State.hand[1], "extra deck source");
@@ -87,6 +126,22 @@ const addExtraDeckCard = (state: GameState): void => {
       },
     },
   ];
+};
+
+const payFirstTwoDon = (state: GameState): EngineResult => {
+  const player = must(state.players[p1], "p1");
+  return applyPlayCardTestAction(state, {
+    type: "respondToDecision",
+    decisionId: must(state.pendingDecision, "pay decision").id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [
+        must(player.costArea[0], "don0").instanceId,
+        must(player.costArea[1], "don1").instanceId,
+      ],
+    },
+  });
 };
 
 test("implemented-dsl payCost playCard continuation rejects pending runtime work without mutation", () => {
@@ -259,6 +314,56 @@ test("Character On Play draw events are deterministic after card play events", (
   );
 });
 
+test("supported implemented-dsl Character On Play drawUpTo playCard reachability creates chooseQuantity with hidden-info-safe legal actions", () => {
+  const state = setupMainPlayState();
+  addExtraDeckCard(state);
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "on-play character");
+  setupImplementedDslOnPlayDrawUpTo(
+    state,
+    character,
+    "def-on-play-draw-upto",
+    2,
+  );
+
+  const result = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: character.instanceId,
+  });
+
+  assert.equal(result.errors, undefined);
+  const decision = must(result.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "chooseQuantity");
+  assert.equal(decision.playerId, p1);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    [
+      "cardRevealed",
+      "cardMoved",
+      "cardPlayed",
+      "ruleProcessingChecked",
+      "effectQueued",
+      "decisionCreated",
+    ],
+  );
+  assert.equal(
+    result.events.every(
+      (event, index, events) =>
+        index === 0 || event.seq > must(events[index - 1], "prev").seq,
+    ),
+    true,
+  );
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+  const ownerView = filterStateForPlayer(result.state, p1);
+  const opponentView = filterStateForPlayer(result.state, p2);
+  assert.equal(ownerView.pendingDecision?.type, "chooseQuantity");
+  assert.equal(opponentView.pendingDecision, undefined);
+  assert.equal(
+    opponentView.legalActions.some((action) => action.type === "playCard"),
+    false,
+  );
+});
+
 test("choice custom Event and unsupported On Play effects fail closed without mutation", () => {
   const cases: Array<{
     name: string;
@@ -299,6 +404,36 @@ test("choice custom Event and unsupported On Play effects fail closed without mu
       }),
     },
     {
+      name: "optional-draw-upto",
+      mutate: (
+        definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,
+      ) => ({
+        ...definition,
+        effects: [
+          {
+            ...must(definition.effects[0], "effect"),
+            optional: true,
+            effect: { type: "drawUpTo" as const, count: 2, player: "self" },
+          },
+        ],
+      }),
+    },
+    {
+      name: "cost-bearing-draw-upto",
+      mutate: (
+        definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,
+      ) => ({
+        ...definition,
+        effects: [
+          {
+            ...must(definition.effects[0], "effect"),
+            cost: { type: "restDon", count: 1 },
+            effect: { type: "drawUpTo" as const, count: 2, player: "self" },
+          },
+        ],
+      }),
+    },
+    {
       name: "unsupported",
       mutate: (
         definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,
@@ -307,7 +442,7 @@ test("choice custom Event and unsupported On Play effects fail closed without mu
         effects: [
           {
             ...must(definition.effects[0], "effect"),
-            effect: { type: "drawUpTo" as const, count: 1, player: "self" },
+            effect: { type: "drawUpTo" as const, count: -1, player: "self" },
           },
         ],
       }),
@@ -464,4 +599,224 @@ test("On Play text without supported implemented-dsl definition fails closed wit
   assert.deepEqual(result.events, []);
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
+});
+
+test("Event payment responses reject stale, wrong-player, wrong-decision, malformed, duplicate, wrong-player-DON, rested, attached, and insufficient without mutation", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event");
+  state.cardManifest.cards[eventCard.cardId] = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 2,
+    effectText: "[Main]",
+  });
+  const opened = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: eventCard.instanceId,
+  });
+  const decision = must(opened.state.pendingDecision, "decision");
+  const openedP1 = must(opened.state.players[p1], "opened p1");
+  const openedP2 = must(opened.state.players[p2], "opened p2");
+  const don0 = must(openedP1.costArea[0], "don0");
+  const don1 = must(openedP1.costArea[1], "don1");
+  const p2Don0 = must(openedP2.costArea[0], "p2 don0");
+  const before = JSON.stringify(opened.state);
+  const runInvalid = (
+    action: Extract<Action, { type: "respondToDecision" }>,
+    overrideState = opened.state,
+  ) => {
+    const snapshot = JSON.stringify(overrideState);
+    const result = applyPlayCardTestAction(overrideState, action);
+    assert.equal(result.errors?.[0]?.type, "illegalAction");
+    assert.equal(JSON.stringify(overrideState), snapshot);
+  };
+
+  runInvalid({
+    type: "respondToDecision",
+    decisionId: `${String(decision.id)}:stale` as typeof decision.id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [don0.instanceId, don1.instanceId],
+    },
+  });
+  runInvalid({
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [toTestCardRef(don0, p1)] },
+  });
+  runInvalid({
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [don0.instanceId],
+    },
+  });
+  runInvalid({
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [don0.instanceId, don0.instanceId],
+    },
+  });
+  runInvalid({
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [don0.instanceId, p2Don0.instanceId],
+    },
+  });
+
+  const wrongPlayerState = {
+    ...opened.state,
+    pendingDecision: { ...decision, playerId: p2 },
+  };
+  runInvalid(
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "payment",
+        optionId: "restDon",
+        selectedDonInstanceIds: [don0.instanceId, don1.instanceId],
+      },
+    },
+    wrongPlayerState,
+  );
+
+  const restedState = {
+    ...opened.state,
+    players: {
+      ...opened.state.players,
+      [p1]: {
+        ...openedP1,
+        costArea: openedP1.costArea.map((card) =>
+          card.instanceId === don0.instanceId
+            ? { ...card, state: "rested" }
+            : card,
+        ),
+      },
+    },
+  };
+  runInvalid(
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "payment",
+        optionId: "restDon",
+        selectedDonInstanceIds: [don0.instanceId, don1.instanceId],
+      },
+    },
+    restedState,
+  );
+
+  const attachedState = {
+    ...opened.state,
+    players: {
+      ...opened.state.players,
+      [p1]: {
+        ...openedP1,
+        leader: { ...openedP1.leader, attachedDon: [don0.instanceId] },
+        costArea: openedP1.costArea
+          .filter((card) => card.instanceId !== don0.instanceId)
+          .map((card, index) => ({
+            ...card,
+            zone: { zone: "costArea", playerId: p1, slot: "cost", index },
+          })),
+      },
+    },
+  };
+  runInvalid(
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "payment",
+        optionId: "restDon",
+        selectedDonInstanceIds: [don0.instanceId, don1.instanceId],
+      },
+    },
+    attachedState,
+  );
+
+  assert.equal(JSON.stringify(opened.state), before);
+});
+
+test("Event play rejects stale and forged event card refs without mutation", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const eventCard = must(p1State.hand[0], "event");
+  state.cardManifest.cards[eventCard.cardId] = resolvedCard({
+    cardId: eventCard.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Main]",
+  });
+  const before = JSON.stringify(state);
+  const forged = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: "forged-event-instance" as CardInstance["instanceId"],
+  });
+  assert.equal(forged.errors?.[0]?.type, "illegalAction");
+  assert.equal(JSON.stringify(state), before);
+
+  const staleState = setupMainPlayState();
+  const staleP1 = must(staleState.players[p1], "stale p1");
+  const staleEvent = must(staleP1.hand[0], "stale event");
+  staleState.cardManifest.cards[staleEvent.cardId] = resolvedCard({
+    cardId: staleEvent.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Main]",
+  });
+  staleP1.hand = staleP1.hand
+    .filter((card) => card.instanceId !== staleEvent.instanceId)
+    .map((card, index) => ({
+      ...card,
+      zone: { zone: "hand", playerId: p1, slot: "hand", index },
+    }));
+  const staleBefore = JSON.stringify(staleState);
+  const stale = applyPlayCardTestAction(staleState, {
+    type: "playCard",
+    cardInstanceId: staleEvent.instanceId,
+  });
+  assert.equal(stale.errors?.[0]?.type, "illegalAction");
+  assert.equal(JSON.stringify(staleState), staleBefore);
+});
+
+test("Event play repeated execution is stable for event sequence and state hash", () => {
+  const runScript = () => {
+    const state = setupMainPlayState();
+    const p1State = must(state.players[p1], "p1");
+    const eventCard = must(p1State.hand[0], "event");
+    state.cardManifest.cards[eventCard.cardId] = resolvedCard({
+      cardId: eventCard.cardId,
+      category: "event",
+      cost: 2,
+      effectText: "[Main]",
+    });
+    const opened = applyPlayCardTestAction(state, {
+      type: "playCard",
+      cardInstanceId: eventCard.instanceId,
+    });
+    const resolved = payFirstTwoDon(opened.state);
+    return {
+      openTypes: opened.events.map((event) => event.type),
+      resolveTypes: resolved.events.map((event) => event.type),
+      stateHash: resolved.stateHash,
+    };
+  };
+  const first = runScript();
+  const second = runScript();
+  assert.deepEqual(first.openTypes, second.openTypes);
+  assert.deepEqual(first.resolveTypes, second.resolveTypes);
+  assert.equal(first.stateHash, second.stateHash);
 });
