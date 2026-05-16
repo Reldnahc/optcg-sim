@@ -181,6 +181,12 @@ type Cost =
   | { type: "sequence"; costs: Cost[] }
   | { type: "chooseOne"; options: Cost[] }
   | { type: "custom"; action: string };
+
+type OptionalCost =
+  | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
+  | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
+  | { type: "restSelf"; optional: true }
+  | { type: "sequence"; costs: Cost[]; optional: true };
 ```
 
 If paying a cost requires choosing cards or DON!!, the runtime creates a `PayCostDecision`.
@@ -356,6 +362,7 @@ type Effect =
       filter?: CardFilter;
       chooser: PlayerRef;
     }
+  | { type: "payCost"; cost: OptionalCost }
 
   // Power/cost modification
   | { type: "modifyPower"; target: Target; value: number; duration: Duration }
@@ -495,6 +502,22 @@ Those fields drive later connector decisions and replay determinism. Runtime fra
 Saved references include `saveResultAs`, `SelectionSetId`, and `SelectionId`. A saved reference is contract-defined here, but generated support may rely on it only when schema validation, parser certification, and runtime capability evidence all cover the reference lifetime, visibility, and later-use legality.
 
 Optionality must preserve optional activation, optional cost, and optional effect clause distinctions. These boundaries are part of generated-support capability evidence because a parser that recognizes optional text still cannot make the effect playable unless the runtime can resume and record the correct optional segment result.
+
+Optional cost clauses inside composed sequence execution use a sequence segment
+whose effect is `{ type: "payCost"; cost: OptionalCost }`. The optionality flag
+lives on the nested `OptionalCost`; `SequencedEffect.optional` remains reserved
+for optional effect clauses and must not be used to represent optional cost
+decline. Runtime decline for that segment uses the `PayCostDecision` and
+`PaymentDeclinedResponse` contract from `03-game-state-events-decisions.s012`
+and `03-game-state-events-decisions.s017`.
+Optional cost decline uses the active `PayCostDecision` and a
+`PaymentDeclinedResponse` payload.
+
+`ifYouDo` after an optional cost runs only when the previous cost segment
+recorded `paidCost: true`. A declined or failed optional cost segment does not
+run dependent `ifYouDo` segments. Segment-result, event-order, state-hash, and
+once-per-turn timing for optional cost accept, decline, and failure are
+authoritative in `04-effect-runtime.s011` and `04-effect-runtime.s012`.
 
 ## Search request
 
@@ -952,6 +975,7 @@ Schema-supported fixture subset:
 - condition: yourTurn
 - condition: attachedDonCount
 - cost: restDon
+- cost: returnDon
 - cost: restSelf
 - cost: sequence
 - target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
@@ -960,6 +984,7 @@ Schema-supported fixture subset:
 - effect: draw
 - effect: ko
 - effect: modifyPower
+- effect: payCost
 - effect: sequence
 - effect: custom
 - card filters: cardIds, names, nameContains, nameNot, categories, colorsAny,
@@ -981,7 +1006,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - condition: sourceStillInZone
 - condition: eventPayload
 - condition: and, or, not, custom
-- cost: returnDon
 - cost: trashFromHand
 - cost: trashSelf
 - cost: trashFromField

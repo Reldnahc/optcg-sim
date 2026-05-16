@@ -183,6 +183,55 @@
         }
       ]
     },
+    "optionalCost": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "count", "optional"],
+          "properties": {
+            "type": { "const": "restDon" },
+            "count": { "type": "integer", "minimum": 0 },
+            "chooser": { "$ref": "#/$defs/playerRef" },
+            "optional": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "count", "optional"],
+          "properties": {
+            "type": { "const": "returnDon" },
+            "count": { "type": "integer", "minimum": 0 },
+            "chooser": { "$ref": "#/$defs/playerRef" },
+            "optional": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "optional"],
+          "properties": {
+            "type": { "const": "restSelf" },
+            "optional": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "costs", "optional"],
+          "properties": {
+            "type": { "const": "sequence" },
+            "costs": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/cost" },
+              "minItems": 1
+            },
+            "optional": { "const": true }
+          }
+        }
+      ]
+    },
     "duration": {
       "oneOf": [
         {
@@ -294,6 +343,15 @@
             "selection": { "$ref": "#/$defs/handSelectionId" },
             "enterRested": { "type": "boolean" },
             "ignoreCost": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "cost"],
+          "properties": {
+            "type": { "const": "payCost" },
+            "cost": { "$ref": "#/$defs/optionalCost" }
           }
         },
         {
@@ -698,6 +756,29 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["effect", "connector"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "effect": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": { "const": "payCost" }
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "properties": {
+                "optional": {}
+              },
+              "required": ["optional"]
+            }
+          }
+        }
+      ],
       "properties": {
         "id": {
           "type": "string",

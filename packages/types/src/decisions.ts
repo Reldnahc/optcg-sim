@@ -14,6 +14,7 @@ import type {
   Cost,
   EffectOption,
   ExactCardinality,
+  OptionalCost,
   TargetRequest,
 } from "./effects.js";
 
@@ -41,15 +42,22 @@ export interface CardSelectionCandidate {
   visibility: EventVisibility;
 }
 
+export interface PaymentResponse {
+  type: "payment";
+  optionId: string;
+  selectedCardInstanceIds?: InstanceId[];
+  selectedDonInstanceIds?: InstanceId[];
+}
+
+export interface PaymentDeclinedResponse {
+  type: "paymentDeclined";
+}
+
 export type DecisionResponse =
   | { type: "orderedIds"; ids: string[] }
   | { type: "optionalActivation"; choice: "activate" | "decline" }
-  | {
-      type: "payment";
-      optionId: string;
-      selectedCardInstanceIds?: InstanceId[];
-      selectedDonInstanceIds?: InstanceId[];
-    }
+  | PaymentResponse
+  | PaymentDeclinedResponse
   | { type: "targets"; targets: CardRef[] }
   | { type: "cards"; cards: CardRef[] }
   | { type: "effectOption"; optionId: string }
@@ -93,6 +101,11 @@ export interface PayCostDecision extends BaseDecision {
   type: "payCost";
   cost: Cost;
   paymentOptions: PaymentOption[];
+}
+
+export interface OptionalPayCostDecision extends PayCostDecision {
+  cost: OptionalCost;
+  defaultResponse?: PaymentDeclinedResponse;
 }
 
 export interface SelectTargetsDecision extends BaseDecision {

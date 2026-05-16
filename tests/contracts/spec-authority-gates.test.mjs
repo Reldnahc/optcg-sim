@@ -203,6 +203,7 @@ test("Effect DSL policy classifies schema-supported and planned primitives", asy
     "condition: yourTurn",
     "condition: attachedDonCount",
     "cost: restDon",
+    "cost: returnDon",
     "effect: draw",
     "effect: ko",
     "effect: modifyPower",
@@ -219,7 +220,6 @@ test("Effect DSL policy classifies schema-supported and planned primitives", asy
     "effect: playSelected",
     "effect: replacement",
     "condition: fieldCount",
-    "cost: returnDon",
   ]) {
     assert.match(dslSpec, new RegExp(plannedPrimitive));
   }
@@ -262,6 +262,8 @@ test("Effect DSL spec pins authorability support ladder and planned-layer guardr
     "Cost primitives outside the schema-supported fixture subset remain planned layers",
     "`playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist",
     "Condition, duration, and restriction primitives outside the schema-supported fixture subset remain planned layers",
+    'Optional cost clauses inside composed sequence execution use a sequence segment whose effect is `{ type: "payCost"; cost: OptionalCost }`',
+    "Optional cost decline uses the active `PayCostDecision` and a `PaymentDeclinedResponse` payload",
   ]) {
     assertContainsWords(dslSpec, requiredText);
   }
@@ -274,7 +276,6 @@ test("Effect DSL spec pins authorability support ladder and planned-layer guardr
     "effect: cannotAttack",
     "duration: untilEndOfTurn",
     "condition: fieldCount",
-    "cost: returnDon",
   ]) {
     assertContainsWords(schemaPolicy, plannedPrimitive);
   }
@@ -287,13 +288,14 @@ test("Effect DSL spec pins authorability support ladder and planned-layer guardr
     "effect: cannotAttack",
     "duration: untilEndOfTurn",
     "condition: fieldCount",
-    "cost: returnDon",
   ]) {
     assert.doesNotMatch(
       schemaSupportedSubset,
       new RegExp(notYetFixtureAuthorable),
     );
   }
+
+  assertContainsWords(schemaSupportedSubset, "cost: returnDon");
 });
 
 test("Effect DSL spec defines drawUpTo short-deck replay and deck-out authority", async () => {
@@ -588,6 +590,81 @@ test("effect runtime spec authorizes composed resumable execution semantics", as
     "Unsupported composed runtime shapes default to fail-closed rather than degrading to partial execution",
   ]) {
     assertContainsWords(failurePolicy, requiredText);
+  }
+});
+
+test("optional cost contract pins response failures use consumption and replay semantics", async () => {
+  const decisionsSpec = await readText(
+    "specs/03-game-state-events-decisions.md",
+  );
+  const effectRuntime = await readText("specs/04-effect-runtime.md");
+  const dslSpec = await readText("specs/05-effect-dsl-reference.md");
+
+  const costPayment = extractSection(
+    decisionsSpec,
+    "03-game-state-events-decisions.s012",
+    "03-game-state-events-decisions.s013",
+  );
+  const decisionRouting = extractSection(
+    decisionsSpec,
+    "03-game-state-events-decisions.s017",
+    "03-game-state-events-decisions.s018",
+  );
+  const conditionsAndCosts = extractSection(
+    effectRuntime,
+    "04-effect-runtime.s011",
+    "04-effect-runtime.s012",
+  );
+  const playerChoices = extractSection(
+    effectRuntime,
+    "04-effect-runtime.s012",
+    "04-effect-runtime.s013",
+  );
+  const sequenceConnectors = extractSection(
+    dslSpec,
+    "05-effect-dsl-reference.s013",
+    "05-effect-dsl-reference.s014",
+  );
+
+  for (const requiredText of [
+    "Optional cost payment uses `PayCostDecision`, not `chooseOptionalActivation`",
+    'Optional cost decline uses `{ type: "paymentDeclined" }`',
+    "PaymentDeclinedResponse",
+  ]) {
+    assertContainsWords(costPayment, requiredText);
+    assertContainsWords(decisionRouting, requiredText);
+  }
+
+  for (const requiredText of [
+    "stale optional-cost decision ID",
+    "malformed optional-cost response",
+    "wrong player",
+    "insufficient payment",
+    "invalidDecisionResponse",
+    "must not reveal hidden payment candidates",
+    "does not consume once-per-turn usage",
+  ]) {
+    assertContainsWords(decisionRouting, requiredText);
+  }
+
+  for (const requiredText of [
+    "Accepted optional cost records `attempted: true`, `succeeded: true`, `paidCost: true`, and `playerDeclined: false`",
+    "Declined optional cost records `attempted: true`, `succeeded: false`, `changedState: false`, `paidCost: false`, and `playerDeclined: true`",
+    "Failed optional cost records `attempted: true`, `succeeded: false`, `changedState: false`, `paidCost: false`, and `playerDeclined: false`",
+    "Optional cost accept, decline, and failure do not consume once-per-turn usage",
+    "Event `seq` values and `state.seq` advancement remain deterministic",
+    "State hashes include the frame segment result",
+  ]) {
+    assertContainsWords(conditionsAndCosts, requiredText);
+    assertContainsWords(playerChoices, requiredText);
+  }
+
+  for (const requiredText of [
+    'Optional cost clauses inside composed sequence execution use a sequence segment whose effect is `{ type: "payCost"; cost: OptionalCost }`',
+    "`ifYouDo` after an optional cost runs only when the previous cost segment recorded `paidCost: true`",
+    "A declined or failed optional cost segment does not run dependent `ifYouDo` segments",
+  ]) {
+    assertContainsWords(sequenceConnectors, requiredText);
   }
 });
 

@@ -60,7 +60,25 @@ interface PayCostDecision extends BaseDecision {
   cost: Cost;
   paymentOptions: PaymentOption[];
 }
+
+interface PaymentResponse {
+  type: "payment";
+  optionId: string;
+  selectedCardInstanceIds?: InstanceId[];
+  selectedDonInstanceIds?: InstanceId[];
+}
+
+interface PaymentDeclinedResponse {
+  type: "paymentDeclined";
+}
 ```
+
+Optional cost payment uses `PayCostDecision`, not `chooseOptionalActivation`.
+Optional cost acceptance uses `PaymentResponse`. Optional cost decline uses
+`{ type: "paymentDeclined" }` as the `PaymentDeclinedResponse` payload, with
+no `optionId`, selected cards, selected DON!!, decision ID, hidden candidate
+details, or reason field inside the response payload. The outer
+`respondToDecision.decisionId` identifies the active optional-cost decision.
 
 ### 03-game-state-events-decisions.s016 (Action envelope inside the engine)
 
@@ -130,6 +148,23 @@ Quantity decisions exposed through legal actions must advertise only public boun
 
 Decision IDs are single-use. A response for an old decision ID is stale unless it is an exact idempotent retry already accepted by the match server.
 
+For optional costs, the only canonical decline route is the active
+`PayCostDecision` answered with `PaymentDeclinedResponse`; optional cost decline
+must not reuse `chooseOptionalActivation` and must not submit a partial
+`PaymentResponse`. A stale optional-cost decision ID, malformed optional-cost
+response, wrong player response, insufficient payment, response whose
+`optionId` is not one of the active `paymentOptions`, or payment selection
+outside the active decision context is rejected as `invalidDecisionResponse`.
+These failures fail closed: they do not resolve the decision, do not record a
+segment result, do not consume once-per-turn usage or other use counters, do not
+emit public events describing hidden payment candidates, and must not reveal
+hidden payment candidates, private DON!! choices, or internal failure details
+through public legal actions, public events, PlayerView, or SpectatorView.
+Optional cost payment uses `PayCostDecision`, not `chooseOptionalActivation`.
+Optional cost decline uses `{ type: "paymentDeclined" }` and never carries
+payment selections.
+A rejected optional-cost response does not consume once-per-turn usage.
+
 ### 03-game-state-events-decisions.s022 (Internal state sequencing)
 
 ```ts
@@ -179,6 +214,28 @@ Optionality has three distinct meanings:
 - Optional cost asks whether the player pays a non-mandatory cost inside an otherwise committed effect. Declining or failing an optional cost records `paidCost: false` and only skips later instructions whose connector or text depends on that cost being paid.
 - Optional effect clause asks whether the player performs a non-mandatory instruction during resolution. Declining an optional effect clause records `playerDeclined: true` for that segment and does not undo prior legally completed segments.
 
+Optional cost clauses inside composed execution are not effect-block activation
+costs. They occur after legal commitment to the effect block, inside a
+resumable sequence segment. Optional cost accept, decline, and failure do not
+consume once-per-turn usage because usage was consumed at legal commitment
+before the optional cost clause executes. Accepted optional costs pay cost
+atomically and emit the normal cost-payment events. Declined optional costs do
+not emit cost-payment events. Failed optional costs emit no public event that
+reveals hidden payment candidates or private payment details.
+
+Accepted optional cost records `attempted: true`, `succeeded: true`,
+`paidCost: true`, and `playerDeclined: false`; `changedState` records whether
+canonical state actually changed. Declined optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: true`. Failed optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: false`. Optional cost accept, decline,
+and failure do not consume once-per-turn usage, and dependent connectors use
+`paidCost` rather than optional-activation state.
+Event `seq` values and `state.seq` advancement remain deterministic for
+optional cost accept, decline, and failure. State hashes include the frame
+segment result for each branch.
+
 ```ts
 interface OncePerTurnRecord {
   cardInstanceId: InstanceId;
@@ -222,6 +279,24 @@ Composed execution records one segment result for every attempted sequence segme
 
 Saved-result references may bind selected cards, selected targets, paid costs, or produced objects for later text such as `that Character`. A later segment may use a saved-result reference only while the referenced object remains legal for that later instruction; otherwise the later segment follows its connector and failure policy. Saved references must preserve hidden-information visibility and replay determinism.
 
+Accepted optional cost records `attempted: true`, `succeeded: true`,
+`paidCost: true`, and `playerDeclined: false`. Declined optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: true`. Failed optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: false`. Optional cost accept, decline,
+and failure do not consume once-per-turn usage.
+
+Optional cost segment results participate in the serialized effect execution
+frame and authoritative state hash. Event `seq` values and `state.seq`
+advancement remain deterministic for accepted, declined, and failed optional
+cost branches under `03-game-state-events-decisions.s005` and
+`03-game-state-events-decisions.s022`: resolving a valid optional-cost decision
+advances `state.seq` once, individual internal events do not each advance
+`state.seq`, and rejected stale, malformed, wrong-player, or insufficient
+payment responses do not resolve the decision. State hashes include the frame
+segment result and unchanged game state for decline or failure branches.
+
 ### 05-effect-dsl-reference.s007 (Costs)
 
 ```ts
@@ -246,6 +321,12 @@ type Cost =
   | { type: "sequence"; costs: Cost[] }
   | { type: "chooseOne"; options: Cost[] }
   | { type: "custom"; action: string };
+
+type OptionalCost =
+  | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
+  | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
+  | { type: "restSelf"; optional: true }
+  | { type: "sequence"; costs: Cost[]; optional: true };
 ```
 
 If paying a cost requires choosing cards or DON!!, the runtime creates a `PayCostDecision`.
@@ -297,6 +378,22 @@ Saved references include `saveResultAs`, `SelectionSetId`, and `SelectionId`. A 
 
 Optionality must preserve optional activation, optional cost, and optional effect clause distinctions. These boundaries are part of generated-support capability evidence because a parser that recognizes optional text still cannot make the effect playable unless the runtime can resume and record the correct optional segment result.
 
+Optional cost clauses inside composed sequence execution use a sequence segment
+whose effect is `{ type: "payCost"; cost: OptionalCost }`. The optionality flag
+lives on the nested `OptionalCost`; `SequencedEffect.optional` remains reserved
+for optional effect clauses and must not be used to represent optional cost
+decline. Runtime decline for that segment uses the `PayCostDecision` and
+`PaymentDeclinedResponse` contract from `03-game-state-events-decisions.s012`
+and `03-game-state-events-decisions.s017`.
+Optional cost decline uses the active `PayCostDecision` and a
+`PaymentDeclinedResponse` payload.
+
+`ifYouDo` after an optional cost runs only when the previous cost segment
+recorded `paidCost: true`. A declined or failed optional cost segment does not
+run dependent `ifYouDo` segments. Segment-result, event-order, state-hash, and
+once-per-turn timing for optional cost accept, decline, and failure are
+authoritative in `04-effect-runtime.s011` and `04-effect-runtime.s012`.
+
 ### 05-effect-dsl-reference.s029 (Schema coverage policy)
 
 `contracts/effect-dsl.schema.json` is the executable JSON fixture contract.
@@ -333,6 +430,7 @@ Schema-supported fixture subset:
 - condition: yourTurn
 - condition: attachedDonCount
 - cost: restDon
+- cost: returnDon
 - cost: restSelf
 - cost: sequence
 - target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
@@ -341,6 +439,7 @@ Schema-supported fixture subset:
 - effect: draw
 - effect: ko
 - effect: modifyPower
+- effect: payCost
 - effect: sequence
 - effect: custom
 - card filters: cardIds, names, nameContains, nameNot, categories, colorsAny,
@@ -362,7 +461,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - condition: sourceStillInZone
 - condition: eventPayload
 - condition: and, or, not, custom
-- cost: returnDon
 - cost: trashFromHand
 - cost: trashSelf
 - cost: trashFromField

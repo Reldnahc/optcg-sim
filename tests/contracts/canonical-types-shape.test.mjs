@@ -224,3 +224,28 @@ test("canonical sequence result and saved-reference contracts remain explicit an
     /export type SequenceSegmentResultMap\s*=\s*Record<string,\s*SequenceSegmentResult>;/m,
   );
 });
+
+test("canonical optional cost contracts stay distinct from optional activation", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+
+  assert.match(
+    canonicalTypes,
+    /export type OptionalCost\s*=\s*[\s\S]*optional:\s*true[\s\S]*type:\s*"returnDon"/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface PayCostEffect\s*{[\s\S]*?\btype:\s*"payCost";[\s\S]*?\bcost:\s*OptionalCost;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface PaymentDeclinedResponse\s*{[\s\S]*?\btype:\s*"paymentDeclined";[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface OptionalPayCostDecision\s+extends\s+PayCostDecision\s*{[\s\S]*?\bcost:\s*OptionalCost;[\s\S]*?\bdefaultResponse\?:\s*PaymentDeclinedResponse;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type OptionalCostSegmentResult\s*=\s*[\s\S]*?\bpaidCost:\s*true;[\s\S]*?\bplayerDeclined:\s*false;[\s\S]*?\bpaidCost:\s*false;[\s\S]*?\bplayerDeclined:\s*true;[\s\S]*?\bpaidCost:\s*false;[\s\S]*?\bplayerDeclined:\s*false;/m,
+  );
+});

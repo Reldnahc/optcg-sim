@@ -117,6 +117,12 @@ export type Cost =
   | { type: "chooseOne"; options: Cost[] }
   | { type: "custom"; action: string };
 
+export type OptionalCost =
+  | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
+  | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
+  | { type: "restSelf"; optional: true }
+  | { type: "sequence"; costs: Cost[]; optional: true };
+
 export type ExactCardinality<N extends number = number> = {
   mode: "exact";
   min: N;
@@ -258,6 +264,28 @@ export interface SequenceSegmentResult {
   playerDeclined: boolean;
 }
 
+export type OptionalCostSegmentResult =
+  | (SequenceSegmentResult & {
+      attempted: true;
+      succeeded: true;
+      paidCost: true;
+      playerDeclined: false;
+    })
+  | (SequenceSegmentResult & {
+      attempted: true;
+      succeeded: false;
+      changedState: false;
+      paidCost: false;
+      playerDeclined: true;
+    })
+  | (SequenceSegmentResult & {
+      attempted: true;
+      succeeded: false;
+      changedState: false;
+      paidCost: false;
+      playerDeclined: false;
+    });
+
 export interface SavedSelectedCardsReference {
   kind: "selectedCards";
   cards: CardRef[];
@@ -322,6 +350,11 @@ export interface PlaySelectedEffect {
 export type PlayHandSelectedEffect = PlaySelectedEffect & {
   selection: HandSelectionId;
 };
+
+export interface PayCostEffect {
+  type: "payCost";
+  cost: OptionalCost;
+}
 
 export type Effect =
   | { type: "draw"; count: number; player: PlayerRef }
@@ -397,6 +430,7 @@ export type Effect =
       filter?: CardFilter;
       chooser: PlayerRef;
     }
+  | PayCostEffect
   | { type: "modifyPower"; target: Target; value: number; duration: Duration }
   | { type: "setPowerToZero"; target: Target; duration: Duration }
   | { type: "setBasePower"; target: Target; value: number; duration: Duration }
