@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Add canonical serialized GameState authority for resumable effect execution
   frames so ENG-055B can pause and resume composed sequences without
