@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-055G.md",
-      "storyId": "ENG-055G",
-      "storyPath": "stories/approved/ENG-055G-playselected-play-from-hand-runtime.yaml",
-      "storySha256": "76f9ea5454bae0590068f706aed93e3980fa72f67d7afc0477ff032e3698048e"
+      "packetPath": "agent-packets/ENG-055H.md",
+      "storyId": "ENG-055H",
+      "storyPath": "stories/approved/ENG-055H-drawupto-runtime.yaml",
+      "storySha256": "0d8276a5328a4c2c985bc7f2a82909b3c484f61ce9ad85275b5f59ba46b281c9"
     }
   ],
   "version": 1
