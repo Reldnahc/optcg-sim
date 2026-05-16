@@ -26,6 +26,7 @@ import type {
   CardFilter,
   Condition,
   Duration,
+  SavedFieldObjectTargetBinding,
   SourcePresencePolicy,
   Target,
 } from "./effects.js";
@@ -133,8 +134,16 @@ export interface EffectContext {
 
 export type TargetSpec =
   | Target
+  | ExactCardTargetSpec
   | { type: "selection"; selection: SelectionId }
   | { type: "allMatching"; zone: Zone; player: PlayerRef; filter?: CardFilter };
+
+export interface ExactCardTargetSpec {
+  type: "exactCard";
+  card: CardRef;
+  binding: SavedFieldObjectTargetBinding;
+  createdAtStateSeq: StateSeq;
+}
 
 export type ModifierLayer =
   | "basePowerSet"

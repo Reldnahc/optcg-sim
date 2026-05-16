@@ -20,12 +20,16 @@ import type {
   ExactQuantityDecision,
   LegalAction,
   MulliganDecision,
+  OptionalPayCostDecision,
   OrderCardsDecision,
   PayCostDecision,
+  PaymentDeclinedResponse,
   PaymentOption,
+  PaymentResponse,
   PaymentSpec,
   PendingDecision,
   PlayerId,
+  QueueEntryId,
   RollbackConsentDecision,
   SelectCardsDecision,
   SelectTargetsDecision,
@@ -374,4 +378,53 @@ test("TYP-007A exact quantity decisions require matching min and max", () => {
   expect(validExactQuantityDecision.mode).toBe("exact");
   expect(validUpToQuantityDecision.mode).toBe("upTo");
   void invalidExactQuantityDecision;
+});
+
+test("TYP-009A optional cost uses payCost with a canonical decline response", () => {
+  const optionalCostDecision: OptionalPayCostDecision = {
+    id: "decision-optional-cost-1" as DecisionId,
+    type: "payCost",
+    playerId: "player-1" as PlayerId,
+    prompt: "You may return 1 DON!!",
+    causedBy: {
+      type: "effect",
+      queueEntryId: "queue-1" as QueueEntryId,
+      effectId: "effect-1" as EffectId,
+    },
+    visibility: { type: "public" },
+    cost: {
+      type: "returnDon",
+      count: 1,
+      chooser: "self",
+      optional: true,
+    },
+    paymentOptions: [{ id: "return-1", type: "returnDon", count: 1 }],
+    defaultResponse: { type: "paymentDeclined" },
+  };
+
+  const accepted: PaymentResponse = {
+    type: "payment",
+    optionId: "return-1",
+    selectedDonInstanceIds: ["don-1" as CardRef["instanceId"]],
+  };
+  const declined: PaymentDeclinedResponse = { type: "paymentDeclined" };
+  const acceptedDecisionResponse: DecisionResponse = accepted;
+  const declinedDecisionResponse: DecisionResponse = declined;
+  const pending: PendingDecision = optionalCostDecision;
+
+  const malformedDecline: PaymentDeclinedResponse = {
+    type: "paymentDeclined",
+    // @ts-expect-error optional-cost decline carries no payment option details.
+    optionId: "return-1",
+  };
+  const activationDecline: DecisionResponse = {
+    type: "optionalActivation",
+    choice: "decline",
+  };
+
+  expect(pending.type).toBe("payCost");
+  expect(acceptedDecisionResponse.type).toBe("payment");
+  expect(declinedDecisionResponse.type).toBe("paymentDeclined");
+  expect(activationDecline.type).toBe("optionalActivation");
+  void malformedDecline;
 });

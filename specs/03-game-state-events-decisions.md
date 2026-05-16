@@ -351,7 +351,25 @@ interface PayCostDecision extends BaseDecision {
   cost: Cost;
   paymentOptions: PaymentOption[];
 }
+
+interface PaymentResponse {
+  type: "payment";
+  optionId: string;
+  selectedCardInstanceIds?: InstanceId[];
+  selectedDonInstanceIds?: InstanceId[];
+}
+
+interface PaymentDeclinedResponse {
+  type: "paymentDeclined";
+}
 ```
+
+Optional cost payment uses `PayCostDecision`, not `chooseOptionalActivation`.
+Optional cost acceptance uses `PaymentResponse`. Optional cost decline uses
+`{ type: "paymentDeclined" }` as the `PaymentDeclinedResponse` payload, with
+no `optionId`, selected cards, selected DON!!, decision ID, hidden candidate
+details, or reason field inside the response payload. The outer
+`respondToDecision.decisionId` identifies the active optional-cost decision.
 
 ### Targets/cards
 
@@ -484,6 +502,23 @@ Cardinality is explicit:
 Quantity decisions exposed through legal actions must advertise only public bounds, prompt text, and the active decision ID. They must not reveal hidden candidate counts, must not reveal hidden card identities, and must not encode whether a private candidate set contains a particular card. If a quantity is constrained by hidden information, the engine validates against the private candidate set internally and returns `invalidDecisionResponse` for illegal responses without disclosing the hidden reason through public legal actions or public events.
 
 Decision IDs are single-use. A response for an old decision ID is stale unless it is an exact idempotent retry already accepted by the match server.
+
+For optional costs, the only canonical decline route is the active
+`PayCostDecision` answered with `PaymentDeclinedResponse`; optional cost decline
+must not reuse `chooseOptionalActivation` and must not submit a partial
+`PaymentResponse`. A stale optional-cost decision ID, malformed optional-cost
+response, wrong player response, insufficient payment, response whose
+`optionId` is not one of the active `paymentOptions`, or payment selection
+outside the active decision context is rejected as `invalidDecisionResponse`.
+These failures fail closed: they do not resolve the decision, do not record a
+segment result, do not consume once-per-turn usage or other use counters, do not
+emit public events describing hidden payment candidates, and must not reveal
+hidden payment candidates, private DON!! choices, or internal failure details
+through public legal actions, public events, PlayerView, or SpectatorView.
+Optional cost payment uses `PayCostDecision`, not `chooseOptionalActivation`.
+Optional cost decline uses `{ type: "paymentDeclined" }` and never carries
+payment selections.
+A rejected optional-cost response does not consume once-per-turn usage.
 
 ## Canonical event visibility
 

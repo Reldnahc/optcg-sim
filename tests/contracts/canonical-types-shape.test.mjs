@@ -224,3 +224,57 @@ test("canonical sequence result and saved-reference contracts remain explicit an
     /export type SequenceSegmentResultMap\s*=\s*Record<string,\s*SequenceSegmentResult>;/m,
   );
 });
+
+test("TYP-009B canonical saved field-object references and exact-card target binding stay explicit", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+
+  assert.match(
+    canonicalTypes,
+    /export type SavedFieldObjectReferenceFamily\s*=\s*[\s\S]*"selectedTargets"[\s\S]*\|\s*"producedObjects";/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface SavedFieldObjectTargetBinding\s*{[\s\S]*?\bfamily:\s*SavedFieldObjectReferenceFamily;[\s\S]*?\bsaveResultAs:\s*string;[\s\S]*?\bobjectIndex\?:\s*number;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface SavedFieldObjectTarget\s*{[\s\S]*?\btype:\s*"savedFieldObject";[\s\S]*?\bbinding:\s*SavedFieldObjectTargetBinding;[\s\S]*?\bvisibility:\s*"publicOnly";[\s\S]*?\bonFailure:\s*"failClosed";[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface SavedFieldObjectReferenceFailure\s*{[\s\S]*?\breason:\s*SavedFieldObjectReferenceFailureReason;[\s\S]*?\bpublicReason:\s*"savedFieldObjectUnavailable";[\s\S]*?\bvisibility:\s*"privateEffectLog";[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface ExactCardTargetSpec\s*{[\s\S]*?\btype:\s*"exactCard";[\s\S]*?\bcard:\s*CardRef;[\s\S]*?\bbinding:\s*SavedFieldObjectTargetBinding;[\s\S]*?\bcreatedAtStateSeq:\s*StateSeq;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type TargetSpec\s*=\s*[\s\S]*\|\s*ExactCardTargetSpec[\s\S]*;/m,
+  );
+});
+
+test("canonical optional cost contracts stay distinct from optional activation", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+
+  assert.match(
+    canonicalTypes,
+    /export type OptionalCost\s*=\s*[\s\S]*optional:\s*true[\s\S]*type:\s*"returnDon"/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface PayCostEffect\s*{[\s\S]*?\btype:\s*"payCost";[\s\S]*?\bcost:\s*OptionalCost;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface PaymentDeclinedResponse\s*{[\s\S]*?\btype:\s*"paymentDeclined";[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface OptionalPayCostDecision\s+extends\s+PayCostDecision\s*{[\s\S]*?\bcost:\s*OptionalCost;[\s\S]*?\bdefaultResponse\?:\s*PaymentDeclinedResponse;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type OptionalCostSegmentResult\s*=\s*[\s\S]*?\bpaidCost:\s*true;[\s\S]*?\bplayerDeclined:\s*false;[\s\S]*?\bpaidCost:\s*false;[\s\S]*?\bplayerDeclined:\s*true;[\s\S]*?\bpaidCost:\s*false;[\s\S]*?\bplayerDeclined:\s*false;/m,
+  );
+});

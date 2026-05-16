@@ -998,7 +998,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Targets/cards",
       "heading_level": 3,
-      "marker_line": 349,
+      "marker_line": 367,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s013`"
     },
     {
@@ -1007,7 +1007,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Life trigger",
       "heading_level": 3,
-      "marker_line": 369,
+      "marker_line": 387,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s014`"
     },
     {
@@ -1016,7 +1016,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Legal actions",
       "heading_level": 2,
-      "marker_line": 383,
+      "marker_line": 401,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s015`"
     },
     {
@@ -1025,7 +1025,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Action envelope inside the engine",
       "heading_level": 2,
-      "marker_line": 405,
+      "marker_line": 423,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s016`"
     },
     {
@@ -1034,7 +1034,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Canonical decision routing",
       "heading_level": 2,
-      "marker_line": 435,
+      "marker_line": 453,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s017`"
     },
     {
@@ -1043,7 +1043,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Canonical event visibility",
       "heading_level": 2,
-      "marker_line": 481,
+      "marker_line": 516,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s018`"
     },
     {
@@ -1052,7 +1052,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Deterministic RNG",
       "heading_level": 2,
-      "marker_line": 498,
+      "marker_line": 533,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s019`"
     },
     {
@@ -1061,7 +1061,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "State hashing",
       "heading_level": 2,
-      "marker_line": 523,
+      "marker_line": 558,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s020`"
     },
     {
@@ -1070,7 +1070,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Invariant hooks",
       "heading_level": 2,
-      "marker_line": 547,
+      "marker_line": 582,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s021`"
     },
     {
@@ -1079,7 +1079,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Internal state sequencing",
       "heading_level": 2,
-      "marker_line": 571,
+      "marker_line": 606,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s022`"
     },
     {
@@ -1088,7 +1088,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Error handling inside the engine",
       "heading_level": 2,
-      "marker_line": 591,
+      "marker_line": 626,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s023`"
     },
     {
@@ -1097,7 +1097,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Account-level saved loadouts",
       "heading_level": 2,
-      "marker_line": 611,
+      "marker_line": 646,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s024`"
     },
     {
@@ -1205,7 +1205,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Player choices during effect resolution",
       "heading_level": 2,
-      "marker_line": 284,
+      "marker_line": 306,
       "visible_line": "Section Ref: `04-effect-runtime.s012`"
     },
     {
@@ -1214,7 +1214,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Replacement effects",
       "heading_level": 2,
-      "marker_line": 322,
+      "marker_line": 366,
       "visible_line": "Section Ref: `04-effect-runtime.s013`"
     },
     {
@@ -1223,7 +1223,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Continuous effects as computed view",
       "heading_level": 2,
-      "marker_line": 399,
+      "marker_line": 443,
       "visible_line": "Section Ref: `04-effect-runtime.s014`"
     },
     {
@@ -1232,7 +1232,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Duration expiration",
       "heading_level": 2,
-      "marker_line": 449,
+      "marker_line": 495,
       "visible_line": "Section Ref: `04-effect-runtime.s015`"
     },
     {
@@ -1241,7 +1241,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Failure policy",
       "heading_level": 2,
-      "marker_line": 465,
+      "marker_line": 511,
       "visible_line": "Section Ref: `04-effect-runtime.s016`"
     },
     {
@@ -1250,7 +1250,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Transient reveal and selection sets",
       "heading_level": 2,
-      "marker_line": 490,
+      "marker_line": 536,
       "visible_line": "Section Ref: `04-effect-runtime.s017`"
     },
     {
@@ -1259,7 +1259,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Custom handlers",
       "heading_level": 2,
-      "marker_line": 506,
+      "marker_line": 552,
       "visible_line": "Section Ref: `04-effect-runtime.s018`"
     },
     {
@@ -1268,7 +1268,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Effect logging",
       "heading_level": 2,
-      "marker_line": 534,
+      "marker_line": 580,
       "visible_line": "Section Ref: `04-effect-runtime.s019`"
     },
     {
@@ -1340,7 +1340,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Targets",
       "heading_level": 2,
-      "marker_line": 182,
+      "marker_line": 188,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s008`"
     },
     {
@@ -1349,7 +1349,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Card filters",
       "heading_level": 2,
-      "marker_line": 215,
+      "marker_line": 221,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s009`"
     },
     {
@@ -1358,7 +1358,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Deprecated filter aliases",
       "heading_level": 3,
-      "marker_line": 247,
+      "marker_line": 253,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s010`"
     },
     {
@@ -1367,7 +1367,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Durations",
       "heading_level": 2,
-      "marker_line": 272,
+      "marker_line": 278,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s011`"
     },
     {
@@ -1376,7 +1376,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Effects",
       "heading_level": 2,
-      "marker_line": 296,
+      "marker_line": 302,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s012`"
     },
     {
@@ -1385,7 +1385,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Sequence connector semantics",
       "heading_level": 2,
-      "marker_line": 442,
+      "marker_line": 449,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s013`"
     },
     {
@@ -1394,7 +1394,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Search request",
       "heading_level": 2,
-      "marker_line": 492,
+      "marker_line": 519,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s014`"
     },
     {
@@ -1403,7 +1403,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Visibility",
       "heading_level": 2,
-      "marker_line": 517,
+      "marker_line": 544,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s015`"
     },
     {
@@ -1412,7 +1412,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Replacement triggers",
       "heading_level": 2,
-      "marker_line": 533,
+      "marker_line": 560,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s016`"
     },
     {
@@ -1421,7 +1421,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Type enums",
       "heading_level": 2,
-      "marker_line": 549,
+      "marker_line": 576,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s017`"
     },
     {
@@ -1430,7 +1430,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: vanilla confirmed card",
       "heading_level": 2,
-      "marker_line": 580,
+      "marker_line": 607,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s018`"
     },
     {
@@ -1439,7 +1439,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: On Play draw 1",
       "heading_level": 2,
-      "marker_line": 600,
+      "marker_line": 627,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s019`"
     },
     {
@@ -1448,7 +1448,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: Activate Main with cost and up-to target",
       "heading_level": 2,
-      "marker_line": 630,
+      "marker_line": 657,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s020`"
     },
     {
@@ -1457,7 +1457,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: permanent power buff",
       "heading_level": 2,
-      "marker_line": 684,
+      "marker_line": 711,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s021`"
     },
     {
@@ -1466,7 +1466,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Poneglyph text-to-DSL pipeline",
       "heading_level": 2,
-      "marker_line": 731,
+      "marker_line": 760,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s022`"
     },
     {
@@ -1475,7 +1475,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "v3 additions from real Poneglyph examples",
       "heading_level": 2,
-      "marker_line": 770,
+      "marker_line": 799,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s023`"
     },
     {
@@ -1484,7 +1484,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Source-attached DON!! condition",
       "heading_level": 3,
-      "marker_line": 778,
+      "marker_line": 807,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s024`"
     },
     {
@@ -1493,7 +1493,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Richer filters",
       "heading_level": 3,
-      "marker_line": 795,
+      "marker_line": 824,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s025`"
     },
     {
@@ -1502,7 +1502,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Transient reveal and selection primitives",
       "heading_level": 3,
-      "marker_line": 816,
+      "marker_line": 845,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s026`"
     },
     {
@@ -1511,7 +1511,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Effect-play options",
       "heading_level": 3,
-      "marker_line": 886,
+      "marker_line": 915,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s027`"
     },
     {
@@ -1520,7 +1520,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example implementation docs",
       "heading_level": 2,
-      "marker_line": 900,
+      "marker_line": 929,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s028`"
     },
     {
@@ -1529,7 +1529,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Schema coverage policy",
       "heading_level": 2,
-      "marker_line": 908,
+      "marker_line": 937,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s029`"
     },
     {

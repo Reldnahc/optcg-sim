@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 
+import type * as Types from "./index.js";
 import type {
   CardFilter,
   CardId,
@@ -19,9 +20,15 @@ import type {
   FailurePolicy,
   HandSelectCardsEffect,
   HandSelectionId,
+  OptionalCost,
+  OptionalCostSegmentResult,
+  PayCostEffect,
   PlayHandSelectedEffect,
   ReplacementTrigger,
   SearchRequest,
+  SavedFieldObjectReferenceFailure,
+  SavedFieldObjectTarget,
+  SavedFieldObjectTargetBinding,
   SequenceSavedResultReference,
   SequenceSavedResultReferenceMap,
   SequenceSegmentResult,
@@ -293,7 +300,18 @@ test("sequence segment result and saved-result reference contracts compile with 
     },
     previousTarget: {
       kind: "selectedTargets",
-      targets: [selectedCard],
+      targets: [
+        {
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "previousTarget",
+            objectIndex: 0,
+          },
+          object: selectedCard,
+          capturedAtStateSeq: 1 as Types.StateSeq,
+          visibility: "public",
+        },
+      ],
     },
     previousCost: {
       kind: "paidCost",
@@ -301,7 +319,18 @@ test("sequence segment result and saved-result reference contracts compile with 
     },
     playedObject: {
       kind: "producedObjects",
-      objects: [selectedCard],
+      objects: [
+        {
+          binding: {
+            family: "producedObjects",
+            saveResultAs: "playedObject",
+            objectIndex: 0,
+          },
+          object: selectedCard,
+          capturedAtStateSeq: 1 as Types.StateSeq,
+          visibility: "public",
+        },
+      ],
     },
   };
 
@@ -368,18 +397,195 @@ test("sequence saved-result references support producedObjects with CardRef and 
     kind: "producedObjects",
     objects: [
       {
-        instanceId: "instance-2" as CardRef["instanceId"],
-        cardId: "OP01-004" as CardId,
-        playerId: "player-2" as CardRef["playerId"],
-      },
-      {
-        instanceId: "instance-3" as CardRef["instanceId"],
+        binding: {
+          family: "producedObjects",
+          saveResultAs: "playedCharacter",
+          objectIndex: 0,
+        },
+        object: {
+          instanceId: "instance-2" as CardRef["instanceId"],
+          cardId: "OP01-004" as CardId,
+          playerId: "player-2" as CardRef["playerId"],
+        },
+        capturedAtStateSeq: 1 as Types.StateSeq,
+        visibility: "public",
       },
     ],
   };
 
   expect(producedObjects.kind).toBe("producedObjects");
-  expect(producedObjects.objects).toHaveLength(2);
+  expect(producedObjects.objects).toHaveLength(1);
+});
+
+test("TYP-009B saved field-object references compile for selectedTargets and producedObjects consumers", () => {
+  const selectedTargetBinding: SavedFieldObjectTargetBinding = {
+    family: "selectedTargets",
+    saveResultAs: "chosenCharacter",
+    objectIndex: 0,
+    sourceSegmentId: "choose-character",
+  };
+  const producedObjectBinding: SavedFieldObjectTargetBinding = {
+    family: "producedObjects",
+    saveResultAs: "playedCharacter",
+    objectIndex: 0,
+  };
+  const selectedTarget: SavedFieldObjectTarget = {
+    type: "savedFieldObject",
+    binding: selectedTargetBinding,
+    zone: "characterArea",
+    player: "opponent",
+    controller: "opponent",
+    filter: { categories: ["character"] },
+    visibility: "publicOnly",
+    onFailure: "failClosed",
+  };
+  const producedObject: SavedFieldObjectTarget = {
+    type: "savedFieldObject",
+    binding: producedObjectBinding,
+    zone: "characterArea",
+    player: "self",
+    controller: "self",
+    visibility: "publicOnly",
+    onFailure: "failClosed",
+  };
+  const effect: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        id: "choose-character",
+        connector: "always",
+        saveResultAs: "chosenCharacter",
+        effect: {
+          type: "ko",
+          target: {
+            type: "choose",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              zone: "characterArea",
+              player: "opponent",
+              min: 1,
+              max: 1,
+              allowFewerIfUnavailable: false,
+              filter: { categories: ["character"] },
+            },
+          },
+        },
+      },
+      {
+        connector: "ifPreviousSucceeded",
+        effect: {
+          type: "cannotAttack",
+          target: selectedTarget,
+          duration: { type: "untilEndOfTurn", whoseTurn: "current" },
+        },
+      },
+    ],
+  };
+
+  const selectedTargetsReference: SequenceSavedResultReference = {
+    kind: "selectedTargets",
+    targets: [
+      {
+        binding: selectedTargetBinding,
+        object: {
+          instanceId: "instance-2" as CardRef["instanceId"],
+          cardId: "OP01-004" as CardId,
+          playerId: "player-2" as CardRef["playerId"],
+        },
+        capturedAtStateSeq: 2 as Types.StateSeq,
+        visibility: "public",
+      },
+    ],
+  };
+  const producedObjectsReference: SequenceSavedResultReference = {
+    kind: "producedObjects",
+    objects: [
+      {
+        binding: producedObjectBinding,
+        object: {
+          instanceId: "instance-3" as CardRef["instanceId"],
+          cardId: "OP01-005" as CardId,
+          playerId: "player-1" as CardRef["playerId"],
+        },
+        capturedAtStateSeq: 3 as Types.StateSeq,
+        visibility: "public",
+      },
+    ],
+  };
+
+  expect(effect.type).toBe("sequence");
+  expect(selectedTarget.binding.family).toBe("selectedTargets");
+  expect(producedObject.binding.family).toBe("producedObjects");
+  expect(selectedTargetsReference.kind).toBe("selectedTargets");
+  expect(producedObjectsReference.kind).toBe("producedObjects");
+});
+
+test("TYP-009B saved field-object references reject unsupported and ambiguous families", () => {
+  const unsupportedSelectedCardsBinding: SavedFieldObjectTargetBinding = {
+    // @ts-expect-error selectedCards is a hand/card-selection family, not a field-object target family.
+    family: "selectedCards",
+    saveResultAs: "handCard",
+  };
+  const unsupportedPaidCostBinding: SavedFieldObjectTargetBinding = {
+    // @ts-expect-error paidCost is not a field-object target family.
+    family: "paidCost",
+    saveResultAs: "paidReturnDon",
+  };
+  const hiddenVisibilityTarget: SavedFieldObjectTarget = {
+    type: "savedFieldObject",
+    binding: {
+      family: "selectedTargets",
+      saveResultAs: "chosenCharacter",
+    },
+    zone: "characterArea",
+    player: "opponent",
+    // @ts-expect-error field-object target consumers may not bind hidden or chooser-private objects.
+    visibility: "privateToChooser",
+    onFailure: "failClosed",
+  };
+  const ambiguousFailurePolicy: SavedFieldObjectTarget = {
+    type: "savedFieldObject",
+    binding: {
+      family: "producedObjects",
+      saveResultAs: "playedCharacter",
+    },
+    zone: "characterArea",
+    player: "self",
+    visibility: "publicOnly",
+    // @ts-expect-error saved field-object target consumers must fail closed.
+    onFailure: "doAsMuchAsPossible",
+  };
+  const handZoneTarget: SavedFieldObjectTarget = {
+    type: "savedFieldObject",
+    binding: {
+      family: "selectedTargets",
+      saveResultAs: "hiddenHandCard",
+    },
+    // @ts-expect-error saved field-object targets must use public field-object zones.
+    zone: "hand",
+    player: "self",
+    visibility: "publicOnly",
+    onFailure: "failClosed",
+  };
+  const hiddenFailure: SavedFieldObjectReferenceFailure = {
+    reason: "hiddenObject",
+    publicReason: "savedFieldObjectUnavailable",
+    visibility: "privateEffectLog",
+  };
+  const unsupportedFailure: SavedFieldObjectReferenceFailure = {
+    reason: "unsupportedFamily",
+    publicReason: "savedFieldObjectUnavailable",
+    visibility: "privateEffectLog",
+  };
+
+  expect(hiddenFailure.publicReason).toBe("savedFieldObjectUnavailable");
+  expect(unsupportedFailure.reason).toBe("unsupportedFamily");
+  void unsupportedSelectedCardsBinding;
+  void unsupportedPaidCostBinding;
+  void hiddenVisibilityTarget;
+  void ambiguousFailurePolicy;
+  void handZoneTarget;
 });
 
 test("condition and optionality authoring supports composed optional cost and optional effect clauses", () => {
@@ -668,4 +874,136 @@ test("temporary modifier and restriction authoring supports extended durations a
   void malformedUntilEndDuration;
   void malformedUntilStartDuration;
   void malformedCannotAttack;
+});
+
+test("TYP-009A composed optional cost clauses use payCost sequence segments", () => {
+  const optionalReturnDonCost: OptionalCost = {
+    type: "returnDon",
+    count: 1,
+    chooser: "self",
+    optional: true,
+  };
+  const payOptionalCost: PayCostEffect = {
+    type: "payCost",
+    cost: optionalReturnDonCost,
+  };
+  const optionalCostSequence: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        id: "optional-return-don",
+        connector: "always",
+        effect: payOptionalCost,
+        saveResultAs: "paidReturnDon",
+      },
+      {
+        connector: "ifYouDo",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+  };
+
+  const nonOptionalCost: OptionalCost = {
+    type: "restDon",
+    count: 1,
+    chooser: "self",
+    // @ts-expect-error optional cost clauses require literal optional true.
+    optional: false,
+  };
+  const missingOptionalFlag: OptionalCost = {
+    type: "returnDon",
+    count: 1,
+    chooser: "self",
+    // @ts-expect-error optional cost clauses require the optional flag.
+    optional: undefined,
+  };
+
+  expect(optionalCostSequence.type).toBe("sequence");
+  expect(payOptionalCost.type).toBe("payCost");
+  void nonOptionalCost;
+  void missingOptionalFlag;
+});
+
+test("TYP-009A payCost is not authorable as a top-level effect", () => {
+  const optionalReturnDonCost: OptionalCost = {
+    type: "returnDon",
+    count: 1,
+    chooser: "self",
+    optional: true,
+  };
+  const topLevelPayCostEffect: Effect = {
+    // @ts-expect-error payCost is only authorable as a sequence segment effect.
+    type: "payCost",
+    cost: optionalReturnDonCost,
+  };
+  const topLevelPayCostBlock: EffectBlock = {
+    id: "pay-cost-top-level" as EffectId,
+    category: "activate",
+    trigger: { type: "activateMain" },
+    effect: {
+      // @ts-expect-error payCost is only authorable inside sequence segments.
+      type: "payCost",
+      cost: optionalReturnDonCost,
+    },
+  };
+
+  void topLevelPayCostEffect;
+  void topLevelPayCostBlock;
+});
+
+test("TYP-009A optional cost segment results distinguish accept decline and failure", () => {
+  const accepted: OptionalCostSegmentResult = {
+    attempted: true,
+    succeeded: true,
+    changedState: true,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: true,
+    playerDeclined: false,
+  };
+  const declined: OptionalCostSegmentResult = {
+    attempted: true,
+    succeeded: false,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: true,
+  };
+  const failedPayment: OptionalCostSegmentResult = {
+    attempted: true,
+    succeeded: false,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  };
+
+  // @ts-expect-error declined optional costs are not successful cost payment.
+  const ambiguousDecline: OptionalCostSegmentResult = {
+    attempted: true,
+    succeeded: true,
+    changedState: false,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: true,
+  };
+  // @ts-expect-error failed optional costs do not change canonical state.
+  const ambiguousFailure: OptionalCostSegmentResult = {
+    attempted: true,
+    succeeded: false,
+    changedState: true,
+    selectedCards: [],
+    selectedTargets: [],
+    paidCost: false,
+    playerDeclined: false,
+  };
+
+  expect(accepted.paidCost).toBe(true);
+  expect(declined.playerDeclined).toBe(true);
+  expect(failedPayment.playerDeclined).toBe(false);
+  void ambiguousDecline;
+  void ambiguousFailure;
 });

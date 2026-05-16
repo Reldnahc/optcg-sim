@@ -19,6 +19,7 @@ import type {
   EffectQueueEntry,
   EngineEvent,
   EngineEventId,
+  ExactCardTargetSpec,
   InstanceId,
   LifeCard,
   LoopSignature,
@@ -241,9 +242,25 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
     type: "selection",
     selection: "sel-1" as SelectionId,
   };
+  const exactCardTarget: ExactCardTargetSpec = {
+    type: "exactCard",
+    card: source,
+    binding: {
+      family: "selectedTargets",
+      saveResultAs: "chosenCharacter",
+      objectIndex: 0,
+      sourceSegmentId: "choose-character",
+    },
+    createdAtStateSeq: 1 as StateSeq,
+  };
   const layer: ModifierLayer = "powerAdd";
   const operation: ModifierOperation = { type: "addPower", value: 1000 };
   const modifier: Modifier = { layer, target: targetSpec, operation };
+  const exactCardModifier: Modifier = {
+    layer: "restriction",
+    target: exactCardTarget,
+    operation: { type: "restriction", restriction: "cannotAttack" },
+  };
   const attackRestrictionModifier: Modifier = {
     layer: "restriction",
     target: { type: "selection", selection: "sel-1" as SelectionId },
@@ -319,6 +336,7 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
   expect(gameView.cards[source.instanceId]?.canAttack).toBe(true);
   expect(oncePerTurn.turnNumber).toBe(1);
   expect(continuous.modifier.layer).toBe("powerAdd");
+  expect(exactCardModifier.target.type).toBe("exactCard");
   expect(attackRestrictionModifier.operation.type).toBe("restriction");
   if (attackRestrictionModifier.operation.type !== "restriction") {
     throw new Error("Expected attack restriction modifier operation.");
@@ -331,6 +349,39 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
   expect(audit.type).toBe("test");
   expect(loop.recentStateHashes).toHaveLength(1);
   expect(reveal.cards).toHaveLength(1);
+});
+
+test("TYP-009B exact-card continuous target binding rejects ambiguous saved-reference carriers", () => {
+  const player = "player-1" as PlayerId;
+  const source: CardRef = {
+    instanceId: "i1" as CardRef["instanceId"],
+    cardId: "OP01-002" as CardId,
+    playerId: player,
+  };
+  // @ts-expect-error exact-card continuous targets must retain saved field-object binding provenance.
+  const missingBinding: ExactCardTargetSpec = {
+    type: "exactCard",
+    card: source,
+    createdAtStateSeq: 1 as StateSeq,
+  };
+  const unsupportedFamily: ExactCardTargetSpec = {
+    type: "exactCard",
+    card: source,
+    binding: {
+      // @ts-expect-error exact-card targets bind only saved field-object families.
+      family: "selectedCards",
+      saveResultAs: "handCard",
+    },
+    createdAtStateSeq: 1 as StateSeq,
+  };
+  const staleSelectionCarrier: TargetSpec = {
+    type: "selection",
+    selection: "handSelection:thatCharacter" as SelectionId,
+  };
+
+  void missingBinding;
+  void unsupportedFamily;
+  void staleSelectionCarrier;
 });
 
 test("TYP-001F rejects raw Set for runtime structures requiring arrays/records", () => {

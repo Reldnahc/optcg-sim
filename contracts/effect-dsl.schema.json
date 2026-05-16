@@ -183,6 +183,55 @@
         }
       ]
     },
+    "optionalCost": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "count", "optional"],
+          "properties": {
+            "type": { "const": "restDon" },
+            "count": { "type": "integer", "minimum": 0 },
+            "chooser": { "$ref": "#/$defs/playerRef" },
+            "optional": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "count", "optional"],
+          "properties": {
+            "type": { "const": "returnDon" },
+            "count": { "type": "integer", "minimum": 0 },
+            "chooser": { "$ref": "#/$defs/playerRef" },
+            "optional": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "optional"],
+          "properties": {
+            "type": { "const": "restSelf" },
+            "optional": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "costs", "optional"],
+          "properties": {
+            "type": { "const": "sequence" },
+            "costs": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/cost" },
+              "minItems": 1
+            },
+            "optional": { "const": true }
+          }
+        }
+      ]
+    },
     "duration": {
       "oneOf": [
         {
@@ -403,6 +452,15 @@
           }
         }
       ]
+    },
+    "payCostEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "cost"],
+      "properties": {
+        "type": { "const": "payCost" },
+        "cost": { "$ref": "#/$defs/optionalCost" }
+      }
     },
     "effectBlock": {
       "type": "object",
@@ -698,13 +756,36 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["effect", "connector"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "effect": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": { "const": "payCost" }
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "properties": {
+                "optional": {}
+              },
+              "required": ["optional"]
+            }
+          }
+        }
+      ],
       "properties": {
         "id": {
           "type": "string",
           "minLength": 1
         },
         "effect": {
-          "$ref": "#/$defs/effect"
+          "$ref": "#/$defs/sequencedEffectEffect"
         },
         "connector": {
           "type": "string",
@@ -724,6 +805,12 @@
           "type": "boolean"
         }
       }
+    },
+    "sequencedEffectEffect": {
+      "oneOf": [
+        { "$ref": "#/$defs/effect" },
+        { "$ref": "#/$defs/payCostEffect" }
+      ]
     },
     "target": {
       "oneOf": [
@@ -765,8 +852,57 @@
             "type": { "const": "choose" },
             "request": { "$ref": "#/$defs/targetRequest" }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "binding",
+            "zone",
+            "player",
+            "visibility",
+            "onFailure"
+          ],
+          "properties": {
+            "type": { "const": "savedFieldObject" },
+            "binding": { "$ref": "#/$defs/savedFieldObjectTargetBinding" },
+            "zone": { "$ref": "#/$defs/savedFieldObjectZone" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "controller": { "$ref": "#/$defs/playerRef" },
+            "filter": { "$ref": "#/$defs/cardFilter" },
+            "visibility": { "const": "publicOnly" },
+            "onFailure": { "const": "failClosed" }
+          }
         }
       ]
+    },
+    "savedFieldObjectTargetBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "saveResultAs"],
+      "properties": {
+        "family": {
+          "type": "string",
+          "enum": ["selectedTargets", "producedObjects"]
+        },
+        "saveResultAs": {
+          "type": "string",
+          "minLength": 1
+        },
+        "objectIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sourceSegmentId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "savedFieldObjectZone": {
+      "type": "string",
+      "enum": ["leaderArea", "characterArea", "stageArea", "costArea"]
     },
     "targetRequest": {
       "type": "object",

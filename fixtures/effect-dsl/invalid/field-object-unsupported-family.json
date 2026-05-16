@@ -1,0 +1,33 @@
+{
+  "cardId": "TYP-009B-BAD-002",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "TYP-009B-BAD-002:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "effect": {
+        "type": "modifyPower",
+        "target": {
+          "type": "savedFieldObject",
+          "binding": {
+            "family": "selectedCards",
+            "saveResultAs": "handCard"
+          },
+          "zone": "characterArea",
+          "player": "self",
+          "visibility": "publicOnly",
+          "onFailure": "failClosed"
+        },
+        "value": 1000,
+        "duration": { "type": "untilEndOfTurn", "whoseTurn": "current" }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-009b-bad-002",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

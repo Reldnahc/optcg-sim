@@ -279,6 +279,28 @@ Optionality has three distinct meanings:
 - Optional cost asks whether the player pays a non-mandatory cost inside an otherwise committed effect. Declining or failing an optional cost records `paidCost: false` and only skips later instructions whose connector or text depends on that cost being paid.
 - Optional effect clause asks whether the player performs a non-mandatory instruction during resolution. Declining an optional effect clause records `playerDeclined: true` for that segment and does not undo prior legally completed segments.
 
+Optional cost clauses inside composed execution are not effect-block activation
+costs. They occur after legal commitment to the effect block, inside a
+resumable sequence segment. Optional cost accept, decline, and failure do not
+consume once-per-turn usage because usage was consumed at legal commitment
+before the optional cost clause executes. Accepted optional costs pay cost
+atomically and emit the normal cost-payment events. Declined optional costs do
+not emit cost-payment events. Failed optional costs emit no public event that
+reveals hidden payment candidates or private payment details.
+
+Accepted optional cost records `attempted: true`, `succeeded: true`,
+`paidCost: true`, and `playerDeclined: false`; `changedState` records whether
+canonical state actually changed. Declined optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: true`. Failed optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: false`. Optional cost accept, decline,
+and failure do not consume once-per-turn usage, and dependent connectors use
+`paidCost` rather than optional-activation state.
+Event `seq` values and `state.seq` advancement remain deterministic for
+optional cost accept, decline, and failure. State hashes include the frame
+segment result for each branch.
+
 ```ts
 interface OncePerTurnRecord {
   cardInstanceId: InstanceId;
@@ -325,6 +347,28 @@ Decision responses are validated by the engine, not the client.
 Composed execution records one segment result for every attempted sequence segment or optional clause. A segment result must record `attempted`, `succeeded`, `changedState`, `selectedCards`, `selectedTargets`, `paidCost`, and `playerDeclined`. `succeeded` means the segment legally performed its required instruction, while `changedState` separately records whether canonical state changed. Legal selection without mutation may still drive connectors such as "if you do" when card text depends on choosing or identifying an object.
 
 Saved-result references may bind selected cards, selected targets, paid costs, or produced objects for later text such as `that Character`. A later segment may use a saved-result reference only while the referenced object remains legal for that later instruction; otherwise the later segment follows its connector and failure policy. Saved references must preserve hidden-information visibility and replay determinism.
+
+A saved field-object reference is the runtime contract for same-frame `selectedTargets` and `producedObjects` consumers in the same effect execution frame. `selectedTargets` production records the public field objects legally selected by a target request in the segment result and saved-reference ledger. `producedObjects` records public field objects produced by a supported segment when the runtime story for that producer explicitly authorizes the produced-object family. Saved hand-selection/playSelected references remain separate from saved field-object references and must not be consumed as field-object targets.
+
+Field-object consumers must validate the saved family, `saveResultAs`, optional object index, current zone, player/controller, filter, public visibility, and instruction legality at consumption time. unsupported saved-reference families fail closed. stale objects, gone objects, hidden objects, and illegal objects fail closed. A fail-closed saved field-object reference records the segment as attempted, not succeeded, and not changedState, then follows the active connector and failure policy. Public events, public legal actions, PlayerView, and SpectatorView must not reveal hidden identities, hidden candidates, or the private saved-reference failure reason; replay and private effect logs may retain the failure reason for audit. State hashes include the frame saved-reference ledger, the consumer result, and unchanged public/hidden game state so replay, event order, and connector decisions remain deterministic.
+
+Accepted optional cost records `attempted: true`, `succeeded: true`,
+`paidCost: true`, and `playerDeclined: false`. Declined optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: true`. Failed optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: false`. Optional cost accept, decline,
+and failure do not consume once-per-turn usage.
+
+Optional cost segment results participate in the serialized effect execution
+frame and authoritative state hash. Event `seq` values and `state.seq`
+advancement remain deterministic for accepted, declined, and failed optional
+cost branches under `03-game-state-events-decisions.s005` and
+`03-game-state-events-decisions.s022`: resolving a valid optional-cost decision
+advances `state.seq` once, individual internal events do not each advance
+`state.seq`, and rejected stale, malformed, wrong-player, or insufficient
+payment responses do not resolve the decision. State hashes include the frame
+segment result and unchanged game state for decline or failure branches.
 
 ## Replacement effects
 
@@ -452,6 +496,8 @@ function computeView(state: GameState): ComputedGameView {
 ```
 
 Permanent effects may depend on the computed state. If the official rule requires fixed-point behavior, implement the fixed-point over computed views, not by writing current power/cost into canonical state.
+
+exact-card continuous-effect target binding uses `TargetSpec` shape `{ type: "exactCard"; card: CardRef; binding: SavedFieldObjectTargetBinding; createdAtStateSeq: StateSeq }`. A duration-bearing modifier created from a chosen target resolves the saved field-object reference once, stores the exact card target in the `ContinuousEffectRecord`, and does not re-run the original `choose` target during computed-view recalculation. The modifier remains bound to the same card instance while that instance remains legal for the modifier and the duration; if the object is stale, gone, hidden, or illegal, the modifier fails closed without leaking hidden identities.
 
 ## Duration expiration
 

@@ -1,11 +1,11 @@
 import type {
   CardId,
-  InstanceId,
   Comparator,
   EffectId,
   PlayerRef,
   SelectionId,
   SelectionSetId,
+  StateSeq,
   Visibility,
   Zone,
 } from "./primitives.js";
@@ -117,6 +117,12 @@ export type Cost =
   | { type: "chooseOne"; options: Cost[] }
   | { type: "custom"; action: string };
 
+export type OptionalCost =
+  | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
+  | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
+  | { type: "restSelf"; optional: true }
+  | { type: "sequence"; costs: Cost[]; optional: true };
+
 export type ExactCardinality<N extends number = number> = {
   mode: "exact";
   min: N;
@@ -165,7 +171,8 @@ export type Target =
   | { type: "blocker" }
   | { type: "triggerCard" }
   | { type: "all"; zone: Zone; player: PlayerRef; filter?: CardFilter }
-  | { type: "choose"; request: TargetRequest };
+  | { type: "choose"; request: TargetRequest }
+  | SavedFieldObjectTarget;
 
 export interface CardFilter {
   cardIds?: CardId[];
@@ -237,7 +244,7 @@ export interface EffectOption {
 
 export interface SequencedEffect {
   id?: string;
-  effect: Effect;
+  effect: Effect | PayCostEffect;
   connector:
     | "always"
     | "then"
@@ -258,6 +265,76 @@ export interface SequenceSegmentResult {
   playerDeclined: boolean;
 }
 
+export type OptionalCostSegmentResult =
+  | (SequenceSegmentResult & {
+      attempted: true;
+      succeeded: true;
+      paidCost: true;
+      playerDeclined: false;
+    })
+  | (SequenceSegmentResult & {
+      attempted: true;
+      succeeded: false;
+      changedState: false;
+      paidCost: false;
+      playerDeclined: true;
+    })
+  | (SequenceSegmentResult & {
+      attempted: true;
+      succeeded: false;
+      changedState: false;
+      paidCost: false;
+      playerDeclined: false;
+    });
+
+export type SavedFieldObjectReferenceFamily =
+  | "selectedTargets"
+  | "producedObjects";
+
+export type SavedFieldObjectZone =
+  | "leaderArea"
+  | "characterArea"
+  | "stageArea"
+  | "costArea";
+
+export interface SavedFieldObjectTargetBinding {
+  family: SavedFieldObjectReferenceFamily;
+  saveResultAs: string;
+  objectIndex?: number;
+  sourceSegmentId?: string;
+}
+
+export interface SavedFieldObjectReference {
+  binding: SavedFieldObjectTargetBinding;
+  object: CardRef;
+  capturedAtStateSeq: StateSeq;
+  visibility: "public";
+}
+
+export type SavedFieldObjectReferenceFailureReason =
+  | "unsupportedFamily"
+  | "staleObject"
+  | "goneObject"
+  | "hiddenObject"
+  | "illegalObject";
+
+export interface SavedFieldObjectReferenceFailure {
+  reason: SavedFieldObjectReferenceFailureReason;
+  publicReason: "savedFieldObjectUnavailable";
+  visibility: "privateEffectLog";
+}
+
+export interface SavedFieldObjectTarget {
+  type: "savedFieldObject";
+  binding: SavedFieldObjectTargetBinding;
+  zone: SavedFieldObjectZone;
+  player: PlayerRef;
+  controller?: PlayerRef;
+  filter?: CardFilter;
+  visibility: "publicOnly";
+  onFailure: "failClosed";
+}
+
 export interface SavedSelectedCardsReference {
   kind: "selectedCards";
   cards: CardRef[];
@@ -265,7 +342,7 @@ export interface SavedSelectedCardsReference {
 
 export interface SavedSelectedTargetsReference {
   kind: "selectedTargets";
-  targets: CardRef[];
+  targets: SavedFieldObjectReference[];
 }
 
 export interface SavedPaidCostReference {
@@ -275,12 +352,7 @@ export interface SavedPaidCostReference {
 
 export interface SavedProducedObjectsReference {
   kind: "producedObjects";
-  objects: Array<
-    | CardRef
-    | {
-        instanceId: InstanceId;
-      }
-  >;
+  objects: SavedFieldObjectReference[];
 }
 
 export type SequenceSavedResultReference =
@@ -322,6 +394,11 @@ export interface PlaySelectedEffect {
 export type PlayHandSelectedEffect = PlaySelectedEffect & {
   selection: HandSelectionId;
 };
+
+export interface PayCostEffect {
+  type: "payCost";
+  cost: OptionalCost;
+}
 
 export type Effect =
   | { type: "draw"; count: number; player: PlayerRef }

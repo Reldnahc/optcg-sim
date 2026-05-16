@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/TYP-009B.md",
+      "storyId": "TYP-009B",
+      "storyPath": "stories/approved/TYP-009B-saved-field-object-reference-consumer-contracts.yaml",
+      "storySha256": "196c866cd558414beaa507d6df271f84028c0f39e0904224deea6df0545330d9"
+    }
+  ],
   "version": 1
 }

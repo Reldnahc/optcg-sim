@@ -181,6 +181,12 @@ type Cost =
   | { type: "sequence"; costs: Cost[] }
   | { type: "chooseOne"; options: Cost[] }
   | { type: "custom"; action: string };
+
+type OptionalCost =
+  | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
+  | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
+  | { type: "restSelf"; optional: true }
+  | { type: "sequence"; costs: Cost[]; optional: true };
 ```
 
 If paying a cost requires choosing cards or DON!!, the runtime creates a `PayCostDecision`.
@@ -356,6 +362,7 @@ type Effect =
       filter?: CardFilter;
       chooser: PlayerRef;
     }
+  | { type: "payCost"; cost: OptionalCost }
 
   // Power/cost modification
   | { type: "modifyPower"; target: Target; value: number; duration: Duration }
@@ -494,7 +501,27 @@ Those fields drive later connector decisions and replay determinism. Runtime fra
 
 Saved references include `saveResultAs`, `SelectionSetId`, and `SelectionId`. A saved reference is contract-defined here, but generated support may rely on it only when schema validation, parser certification, and runtime capability evidence all cover the reference lifetime, visibility, and later-use legality.
 
+A saved field-object reference is a same-frame saved-reference family for later text such as "that Character". The supported field-object families are `selectedTargets` and `producedObjects`; `selectedCards`, `paidCost`, `SelectionSetId`, `SelectionId`, and saved hand-selection references are separate families and are not field-object target references. A segment with `saveResultAs` may expose `selectedTargets` when it legally selected field objects through a target request, and may expose `producedObjects` when a supported runtime story later creates or moves a public field object and records that object as produced by the segment.
+
+A later segment consumes a saved field-object reference with `{ type: "savedFieldObject", binding: { family: "selectedTargets" | "producedObjects", saveResultAs, objectIndex?, sourceSegmentId? }, zone, player, controller?, filter?, visibility: "publicOnly", onFailure: "failClosed" }`. The reference is valid only inside the same effect execution frame, only for the named `saveResultAs` ledger entry, and only while the referenced object remains a public legal object for the later instruction. unsupported saved-reference families fail closed. stale objects, gone objects, hidden objects, and illegal objects fail closed. Public events, public legal actions, PlayerView, and SpectatorView must not reveal hidden identities or the private saved-reference failure reason. State hashes include the frame saved-reference ledger and the failed segment result so replay, event order, and connector decisions remain deterministic.
+
 Optionality must preserve optional activation, optional cost, and optional effect clause distinctions. These boundaries are part of generated-support capability evidence because a parser that recognizes optional text still cannot make the effect playable unless the runtime can resume and record the correct optional segment result.
+
+Optional cost clauses inside composed sequence execution use a sequence segment
+whose effect is `{ type: "payCost"; cost: OptionalCost }`. The optionality flag
+lives on the nested `OptionalCost`; `SequencedEffect.optional` remains reserved
+for optional effect clauses and must not be used to represent optional cost
+decline. Runtime decline for that segment uses the `PayCostDecision` and
+`PaymentDeclinedResponse` contract from `03-game-state-events-decisions.s012`
+and `03-game-state-events-decisions.s017`.
+Optional cost decline uses the active `PayCostDecision` and a
+`PaymentDeclinedResponse` payload.
+
+`ifYouDo` after an optional cost runs only when the previous cost segment
+recorded `paidCost: true`. A declined or failed optional cost segment does not
+run dependent `ifYouDo` segments. Segment-result, event-order, state-hash, and
+once-per-turn timing for optional cost accept, decline, and failure are
+authoritative in `04-effect-runtime.s011` and `04-effect-runtime.s012`.
 
 ## Search request
 
@@ -735,6 +762,8 @@ Section Ref: `05-effect-dsl-reference.s021`
 
 The runtime should convert this into a `ContinuousEffectRecord`/modifier and apply it through `computeView()`.
 
+When a duration-bearing effect uses a chosen target and later needs exact-card continuous-effect target binding, the runtime must resolve the saved field-object reference once and create a modifier target using the canonical `TargetSpec` shape `{ type: "exactCard"; card: CardRef; binding: SavedFieldObjectTargetBinding; createdAtStateSeq: StateSeq }`. The chosen target does not re-run the original `choose` target during computed-view recalculation. The modifier remains bound to the same card instance until its duration expires or the exact card is no longer a legal public object for that modifier.
+
 ## Poneglyph text-to-DSL pipeline
 
 <!-- SECTION_REF: 05-effect-dsl-reference.s022 -->
@@ -952,14 +981,16 @@ Schema-supported fixture subset:
 - condition: yourTurn
 - condition: attachedDonCount
 - cost: restDon
+- cost: returnDon
 - cost: restSelf
 - cost: sequence
 - target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
-  triggerCard, all, choose
+  triggerCard, all, choose, savedFieldObject
 - duration: thisAction, thisBattle, thisTurn, whileSourceOnField, permanent
 - effect: draw
 - effect: ko
 - effect: modifyPower
+- effect: payCost
 - effect: sequence
 - effect: custom
 - card filters: cardIds, names, nameContains, nameNot, categories, colorsAny,
@@ -981,7 +1012,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - condition: sourceStillInZone
 - condition: eventPayload
 - condition: and, or, not, custom
-- cost: returnDon
 - cost: trashFromHand
 - cost: trashSelf
 - cost: trashFromField
