@@ -43,6 +43,7 @@ import {
   finalizeSelectedTargetEffectResolution,
   processEffectRuntime,
 } from "./effect-runtime.js";
+import { resumeSequenceFrameAfterPlaySelectedOverflow } from "./effect-runtime-sequence-frames.js";
 import { executeUnreplacedSelectedTargetKoProcess } from "./effect-runtime-primitives.js";
 import {
   applyLifeTriggerDecisionResponse,
@@ -653,6 +654,25 @@ const applyRespondToDecision = (
 
   const playCardResult = applyPlayCardDecisionResponse(state, action);
   if (playCardResult !== null) {
+    if (
+      decision.type === "selectCards" &&
+      playCardResult.errors === undefined &&
+      playCardResult.state.pendingDecision === undefined
+    ) {
+      const resumed = resumeSequenceFrameAfterPlaySelectedOverflow(
+        playCardResult.state,
+        decision.id,
+      );
+      if (resumed !== undefined) {
+        if (!resumed.ok) {
+          return toEngineResult(state, [], [resumed.error]);
+        }
+        return toEngineResult(resumed.state, [
+          ...playCardResult.events,
+          ...resumed.events,
+        ]);
+      }
+    }
     return playCardResult;
   }
   const battleResult = applyBattleDecisionResponse(state, action);

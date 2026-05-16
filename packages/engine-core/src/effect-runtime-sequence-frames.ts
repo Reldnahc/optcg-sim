@@ -9,15 +9,11 @@ import type {
   EngineEvent,
   GameState,
   PayCostDecision,
-  SelectCardsEffect,
   SelectCardsDecision,
   SequenceSegmentResult,
 } from "@optcg/types";
 
-import {
-  createSupportedHandSelectionChoiceDecision,
-  isSupportedSequenceHandSelectCardsEffect,
-} from "./effect-runtime-hand-selection.js";
+import { createSupportedHandSelectionChoiceDecision } from "./effect-runtime-hand-selection.js";
 import { getReturnDonEligibleCount } from "./effect-runtime-return-don.js";
 import {
   createOptionalActivationDecisionForSequenceSegment,
@@ -28,6 +24,10 @@ import {
 } from "./effect-runtime-sequence-frame-decisions.js";
 import { appendEffectResolvedForCompletedSequence } from "./effect-runtime-sequence-frame-events.js";
 import {
+  applyPlaySelectedSequenceSegment,
+  resumePlaySelectedOverflowFrame,
+} from "./effect-runtime-play-selected.js";
+import {
   activeDonCount,
   applyDrawSegment,
   removeFrame,
@@ -36,6 +36,11 @@ import {
   saveReference,
   shouldAttemptSegment,
 } from "./effect-runtime-sequence-segments.js";
+import {
+  isSupportedSequenceBlock,
+  type SupportedSequenceBlock,
+  type SupportedSequenceSegment,
+} from "./effect-runtime-sequence-support.js";
 import {
   consumeOncePerTurn,
   isOncePerTurnUsed,
@@ -47,15 +52,6 @@ type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 type DrawEffect = Extract<Effect, { type: "draw" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
-type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
-  effect: DrawEffect | TrashFromHandEffect | PayCostEffect | SelectCardsEffect;
-};
-
-type SupportedSequenceBlock = EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: SequenceEffect & { effects: SupportedSequenceSegment[] };
-};
-
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
   segmentResults: EffectExecutionFrame["segmentResults"];
@@ -164,101 +160,6 @@ const segmentKey = (
   _segment: SequenceEffect["effects"][number],
   index: number,
 ): string => String(index);
-
-const isSupportedConnector = (
-  connector: SequenceEffect["effects"][number]["connector"],
-): connector is "always" | "then" | "ifPreviousSucceeded" | "ifYouDo" =>
-  connector === "always" ||
-  connector === "then" ||
-  connector === "ifPreviousSucceeded" ||
-  connector === "ifYouDo";
-
-const isSupportedDrawSegment = (
-  effect: SequenceSegmentEffect,
-): effect is DrawEffect =>
-  effect.type === "draw" &&
-  effect.player === "self" &&
-  Number.isInteger(effect.count) &&
-  effect.count >= 0;
-
-const isSupportedTrashFromHandSegment = (
-  effect: SequenceSegmentEffect,
-): effect is TrashFromHandEffect =>
-  effect.type === "trashFromHand" &&
-  effect.player === "self" &&
-  effect.chooser === "self" &&
-  effect.filter === undefined &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0;
-
-const isSupportedPayCostSegment = (
-  effect: SequenceSegmentEffect,
-): effect is PayCostEffect =>
-  effect.type === "payCost" &&
-  (effect.cost.type === "restDon" || effect.cost.type === "returnDon") &&
-  (effect.cost.chooser === undefined || effect.cost.chooser === "self") &&
-  Number.isInteger(effect.cost.count) &&
-  effect.cost.count > 0;
-
-const isSupportedSequenceBlock = (
-  entry: EffectQueueEntry,
-  effectBlock: EffectDefinition["effects"][number] | undefined,
-): effectBlock is SupportedSequenceBlock => {
-  if (
-    effectBlock === undefined ||
-    effectBlock.category !== "auto" ||
-    effectBlock.optional === true ||
-    effectBlock.cost !== undefined ||
-    effectBlock.conditionTiming !== undefined ||
-    effectBlock.failurePolicy !== undefined ||
-    effectBlock.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-    effectBlock.effect.type !== "sequence" ||
-    effectBlock.effect.effects.length === 0
-  ) {
-    return false;
-  }
-
-  let hasPendingDecisionSegment = false;
-  const allSegmentsSupported = effectBlock.effect.effects.every(
-    (segment, index) => {
-      if (
-        !isSupportedConnector(segment.connector) ||
-        (index === 0 && segment.connector !== "always")
-      ) {
-        return false;
-      }
-      if (isSupportedDrawSegment(segment.effect)) {
-        if (segment.optional === true) {
-          hasPendingDecisionSegment = true;
-        }
-        return true;
-      }
-      if (isSupportedTrashFromHandSegment(segment.effect)) {
-        if (index === 0) {
-          return false;
-        }
-        hasPendingDecisionSegment = true;
-        return true;
-      }
-      if (isSupportedPayCostSegment(segment.effect)) {
-        if (segment.optional === true) {
-          return false;
-        }
-        hasPendingDecisionSegment = true;
-        return true;
-      }
-      if (isSupportedSequenceHandSelectCardsEffect(segment.effect)) {
-        if (index === 0) {
-          return false;
-        }
-        hasPendingDecisionSegment = true;
-        return true;
-      }
-      return false;
-    },
-  );
-  return allSegmentsSupported && hasPendingDecisionSegment;
-};
 
 const findFrameQueueEntry = (
   state: GameState,
@@ -534,6 +435,26 @@ const continueNoDecisionSegments = (
         ok: true,
         state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
       };
+    }
+    if (segment.effect.type === "playSelected") {
+      const played = applyPlaySelectedSequenceSegment({
+        emptySegmentResult,
+        entry,
+        events,
+        index,
+        ledgers: nextLedgers,
+        segment: segment as SupportedSequenceSegment & {
+          effect: Extract<SequenceSegmentEffect, { type: "playSelected" }>;
+        },
+        segmentKey,
+        state: nextState,
+      });
+      if (played.kind === "paused") {
+        return played;
+      }
+      nextState = played.state;
+      nextLedgers = played.ledgers;
+      continue;
     }
     const decisionResult = createTrashDecision(
       nextState,
@@ -983,6 +904,43 @@ export const resumeSequenceFrameAfterOptionalCost = (
           segmentResult,
       },
     },
+    state,
+  });
+};
+
+export const resumeSequenceFrameAfterPlaySelectedOverflow = (
+  state: GameState,
+  decisionId: SelectCardsDecision["id"],
+): SequenceFrameResumeResult => {
+  const frame = state.effectExecutionFrames.find(
+    (candidate) => candidate.pendingDecision.decisionId === decisionId,
+  );
+  if (frame === undefined) {
+    return undefined;
+  }
+  const entry = findFrameQueueEntry(state, frame);
+  if (entry === undefined) {
+    return {
+      error: sequenceRuntimeError(frame.effectBlockId, "missing-queue-entry"),
+      ok: false,
+    };
+  }
+  const effectBlock = findSequenceEffectBlock(state, entry);
+  if (!isSupportedSequenceBlock(entry, effectBlock)) {
+    return {
+      error: sequenceRuntimeError(entry.effectBlockId, "missing-effect-block"),
+      ok: false,
+    };
+  }
+  return resumePlaySelectedOverflowFrame({
+    createUnsupportedTrashDecision,
+    effectBlock,
+    emptySegmentResult,
+    entry,
+    frame,
+    resumeSequenceFrameFromLedgers,
+    segmentKey,
+    sequenceRuntimeError,
     state,
   });
 };

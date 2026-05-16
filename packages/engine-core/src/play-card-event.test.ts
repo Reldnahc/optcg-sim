@@ -28,6 +28,7 @@ import {
 import {
   hasPlayCardAction,
   respondToDecisionActions,
+  setupFullCharacterPlayState,
   setupMainPlayState,
   toTestCardRef,
 } from "./play-card-test-fixtures.js";
@@ -465,6 +466,44 @@ test("zero-cost [Main] Event play resolves directly to trash with expected event
       ["cardTrashed", "public"],
       ["cardPlayed", "public"],
       ["ruleProcessingChecked", "replayOnly"],
+    ],
+  );
+});
+
+test("zero-cost Event play does not create Character overflow when Character area is full", () => {
+  const { state, newCharacter } = setupFullCharacterPlayState(0);
+  state.cardManifest.cards[newCharacter.cardId] = resolvedCard({
+    cardId: newCharacter.cardId,
+    category: "event",
+    cost: 0,
+    effectText: "[Main]",
+  });
+
+  const result = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: newCharacter.instanceId,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  const p1State = must(result.state.players[p1], "p1");
+  assert.equal(
+    p1State.hand.some((card) => card.instanceId === newCharacter.instanceId),
+    false,
+  );
+  assert.equal(
+    must(p1State.trash[0], "trash 0").instanceId,
+    newCharacter.instanceId,
+  );
+  assert.equal(p1State.characters.length, 5);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    [
+      "cardRevealed",
+      "cardMoved",
+      "cardTrashed",
+      "cardPlayed",
+      "ruleProcessingChecked",
     ],
   );
 });

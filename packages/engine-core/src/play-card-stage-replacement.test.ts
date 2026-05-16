@@ -17,6 +17,7 @@ import {
 import { must, p1 } from "./action-test-fixtures.js";
 import {
   hasPlayCardAction,
+  setupFullCharacterPlayState,
   setupOccupiedStagePlayState,
 } from "./play-card-test-fixtures.js";
 
@@ -97,6 +98,29 @@ test("zero-cost Stage replacement trashes old Stage before placing new Stage", (
     false,
   );
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+test("zero-cost Stage play does not create Character overflow when Character area is full", () => {
+  const { state, newCharacter } = setupFullCharacterPlayState(0);
+  state.cardManifest.cards[newCharacter.cardId] = {
+    ...must(state.cardManifest.cards[newCharacter.cardId], "stage manifest"),
+    category: "stage",
+  };
+
+  const result = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: newCharacter.instanceId,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  const p1State = must(result.state.players[p1], "p1");
+  assert.equal(p1State.stage?.instanceId, newCharacter.instanceId);
+  assert.equal(p1State.characters.length, 5);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["cardRevealed", "cardMoved", "cardPlayed", "ruleProcessingChecked"],
+  );
 });
 
 test("nonzero occupied-Stage play pays before replacing old Stage", () => {

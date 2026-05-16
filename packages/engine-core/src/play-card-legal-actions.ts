@@ -11,6 +11,8 @@ import { toDecisionId } from "./action-results.js";
 
 const playCardDecisionPrefix = "decision:playCard:cost:";
 const characterOverflowDecisionPrefix = "decision:playCard:overflow:";
+const runtimePlaySelectedOverflowDecisionPrefix =
+  "decision:runtime:playSelected:overflow:";
 
 export const getPlayCardPendingDecisionLegalActions = (
   state: GameState,
@@ -48,7 +50,8 @@ export const getPlayCardPendingDecisionLegalActions = (
   } else if (
     decision.type === "selectCards" &&
     decision.playerId === playerId &&
-    parseCharacterOverflowDecisionInstanceId(decision.id) !== null
+    (parseCharacterOverflowDecisionInstanceId(decision.id) !== null ||
+      parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id) !== null)
   ) {
     for (const candidate of decision.candidates) {
       actions.push({
@@ -90,6 +93,22 @@ export const parseCharacterOverflowDecisionInstanceId = (
   decisionId: DecisionId,
 ): CardInstance["instanceId"] | null =>
   parseDecisionInstanceId(decisionId, characterOverflowDecisionPrefix);
+
+export const getRuntimePlaySelectedOverflowDecisionId = (
+  state: GameState,
+  card: CardInstance,
+): DecisionId =>
+  toDecisionId(
+    `${runtimePlaySelectedOverflowDecisionPrefix}${String(card.instanceId)}:${String(state.seq + 1)}`,
+  );
+
+export const parseRuntimePlaySelectedOverflowDecisionInstanceId = (
+  decisionId: DecisionId,
+): CardInstance["instanceId"] | null =>
+  parseDecisionInstanceId(
+    decisionId,
+    runtimePlaySelectedOverflowDecisionPrefix,
+  );
 
 export const chooseDonCombos = (
   source: readonly CardInstance["instanceId"][],

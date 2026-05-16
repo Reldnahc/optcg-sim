@@ -1,6 +1,7 @@
 import type {
   Action,
   CardInstance,
+  CausalityRef,
   EngineError,
   EngineEvent,
   EngineResult,
@@ -28,6 +29,8 @@ import {
   getCharacterOverflowDecisionId,
   getPlayCardPendingDecisionLegalActions,
   parseCharacterOverflowDecisionInstanceId,
+  getRuntimePlaySelectedOverflowDecisionId,
+  parseRuntimePlaySelectedOverflowDecisionInstanceId,
 } from "./play-card-legal-actions.js";
 import {
   createPlayCardPaymentDecisionResult,
@@ -242,7 +245,8 @@ export const applyPlayCardDecisionResponse = (
   }
   if (
     decision.type === "selectCards" &&
-    parseCharacterOverflowDecisionInstanceId(decision.id) !== null
+    (parseCharacterOverflowDecisionInstanceId(decision.id) !== null ||
+      parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id) !== null)
   ) {
     return applyCharacterOverflowResponse(state, action);
   }
@@ -258,18 +262,31 @@ const createCharacterOverflowDecisionResult = (params: {
   playerId: PlayerId;
   player: GameState["players"][PlayerId];
   handCard: CardInstance;
+  incrementActionSeq?: boolean;
+  decisionIdOverride?: NonNullable<GameState["pendingDecision"]>["id"];
+  causedBy?: CausalityRef;
 }): EngineResult => {
-  const { state, events, playerId, player, handCard } = params;
-  const decisionId = getCharacterOverflowDecisionId(state, handCard);
+  const {
+    state,
+    events,
+    playerId,
+    player,
+    handCard,
+    incrementActionSeq = true,
+    decisionIdOverride,
+    causedBy = {
+      type: "playerAction",
+      actionId: `action:${String(state.actionSeq + 1)}`,
+    },
+  } = params;
+  const decisionId =
+    decisionIdOverride ?? getCharacterOverflowDecisionId(state, handCard);
   const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
     id: decisionId,
     type: "selectCards",
     playerId,
     prompt: `Choose a Character to trash for ${String(handCard.cardId)}`,
-    causedBy: {
-      type: "playerAction",
-      actionId: `action:${String(state.actionSeq + 1)}`,
-    },
+    causedBy,
     visibility: { type: "public" },
     request: {
       timing: "onActivation",
@@ -297,7 +314,7 @@ const createCharacterOverflowDecisionResult = (params: {
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
-    actionSeq: state.actionSeq + 1,
+    actionSeq: incrementActionSeq ? state.actionSeq + 1 : state.actionSeq,
     pendingDecision,
     players: { ...state.players, [playerId]: player },
     eventJournal: [...state.eventJournal, ...events],
@@ -312,8 +329,10 @@ const createPlayedCard = (params: {
   playerId: PlayerId;
   category: Exclude<SupportedPlayMetadata["category"], "event">;
   characterIndex: number;
+  enterRested?: boolean;
 }): CardInstance => {
-  const { state, handCard, playerId, category, characterIndex } = params;
+  const { state, handCard, playerId, category, characterIndex, enterRested } =
+    params;
   const playedCardBase = {
     ...handCard,
     attachedDon: [] as CardInstance["attachedDon"],
@@ -328,12 +347,12 @@ const createPlayedCard = (params: {
           slot: "character",
           index: characterIndex,
         },
-        state: "active",
+        state: enterRested === true ? "rested" : "active",
       }
     : {
         ...playedCardBase,
         zone: { zone: "stageArea", playerId, slot: "stage", index: 0 },
-        state: "active",
+        state: enterRested === true ? "rested" : "active",
       };
 };
 
@@ -347,6 +366,9 @@ const placePlayedCardResult = (params: {
   supported: SupportedPlayMetadata;
   costArea: CardInstance[];
   selectedOverflowCharacterIndex?: number;
+  enterRested?: boolean;
+  resolveOnPlayRuntime?: boolean;
+  incrementActionSeq?: boolean;
 }): EngineResult => {
   const {
     state,
@@ -358,6 +380,9 @@ const placePlayedCardResult = (params: {
     supported,
     costArea,
     selectedOverflowCharacterIndex,
+    enterRested,
+    resolveOnPlayRuntime = true,
+    incrementActionSeq = true,
   } = params;
   const nextHand = reindexZoneCards(
     player.hand.filter((_, index) => index !== handIndex),
@@ -544,6 +569,7 @@ const placePlayedCardResult = (params: {
     playerId,
     category: supported.category,
     characterIndex: nextCharacters.length,
+    ...(enterRested === undefined ? {} : { enterRested }),
   });
   const nextPlayer =
     supported.category === "character"
@@ -589,7 +615,7 @@ const placePlayedCardResult = (params: {
   const nextStateBase: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
-    actionSeq: state.actionSeq + 1,
+    actionSeq: incrementActionSeq ? state.actionSeq + 1 : state.actionSeq,
     players: { ...state.players, [playerId]: nextPlayer },
   };
   delete nextStateBase.pendingDecision;
@@ -602,6 +628,9 @@ const placePlayedCardResult = (params: {
   });
   nextState.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextState);
+  if (!resolveOnPlayRuntime) {
+    return toEngineResult(nextState, events);
+  }
   return resolvePlayCardEffectRuntime(
     state,
     nextState,
@@ -609,6 +638,82 @@ const placePlayedCardResult = (params: {
     handCard,
     supported,
   );
+};
+
+export const applyRuntimePlaySelectedFromHand = (params: {
+  state: GameState;
+  playerId: PlayerId;
+  cardInstanceId: CardInstance["instanceId"];
+  enterRested: boolean;
+  ignoreCost: boolean;
+  causedBy?: CausalityRef;
+}): EngineResult => {
+  const { state, playerId, cardInstanceId, enterRested, ignoreCost, causedBy } =
+    params;
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return illegalAction(state, "playSelected requires an existing player.");
+  }
+  const handIndex = player.hand.findIndex(
+    (card) => card.instanceId === cardInstanceId,
+  );
+  if (handIndex < 0) {
+    return illegalAction(state, "playSelected requires a card in hand.");
+  }
+  const handCard = player.hand[handIndex];
+  if (handCard === undefined) {
+    return illegalAction(state, "playSelected hand card not found.");
+  }
+  const supported = getSupportedPlayMetadata(state, handCard);
+  if (supported === null) {
+    return illegalAction(state, "playSelected card is unsupported.");
+  }
+  if (supported.category !== "character") {
+    return illegalAction(state, "playSelected supports only Character cards.");
+  }
+  if (
+    !ignoreCost &&
+    getActiveDonCount(player.costArea) < supported.printedCost
+  ) {
+    return illegalAction(state, "playSelected requires enough active DON!!.");
+  }
+  if (!canResolveDestinationConflict(player, supported.category)) {
+    return illegalAction(
+      state,
+      "playSelected destination conflict is invalid.",
+    );
+  }
+  if (player.characters.length >= 5) {
+    return createCharacterOverflowDecisionResult({
+      state,
+      events: [],
+      playerId,
+      player,
+      handCard,
+      incrementActionSeq: false,
+      decisionIdOverride: getRuntimePlaySelectedOverflowDecisionId(
+        state,
+        handCard,
+      ),
+      causedBy: causedBy ?? {
+        type: "ruleProcess",
+        name: "effectRuntime:playSelectedOverflow",
+      },
+    });
+  }
+  return placePlayedCardResult({
+    state,
+    events: [],
+    playerId,
+    player,
+    handIndex,
+    handCard,
+    supported,
+    costArea: player.costArea,
+    enterRested,
+    resolveOnPlayRuntime: false,
+    incrementActionSeq: false,
+  });
 };
 
 const applyCharacterOverflowResponse = (
@@ -619,12 +724,10 @@ const applyCharacterOverflowResponse = (
   if (
     decision === undefined ||
     decision.type !== "selectCards" ||
-    parseCharacterOverflowDecisionInstanceId(decision.id) === null
+    (parseCharacterOverflowDecisionInstanceId(decision.id) === null &&
+      parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id) === null)
   ) {
     return illegalAction(state, "Unsupported decision type.");
-  }
-  if (decision.playerId !== state.turn.turnPlayerId) {
-    return illegalAction(state, "Decision player mismatch.");
   }
   if (action.response.type !== "cards") {
     return illegalAction(state, "Unsupported decision response.");
@@ -636,9 +739,11 @@ const applyCharacterOverflowResponse = (
   if (player === undefined) {
     return illegalAction(state, "Decision player does not exist.");
   }
-  const playCardInstanceId = parseCharacterOverflowDecisionInstanceId(
-    decision.id,
-  );
+  const runtimeOverflow =
+    parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id) !== null;
+  const playCardInstanceId =
+    parseCharacterOverflowDecisionInstanceId(decision.id) ??
+    parseRuntimePlaySelectedOverflowDecisionInstanceId(decision.id);
   if (playCardInstanceId === null) {
     return illegalAction(state, "Unsupported overflow decision context.");
   }
@@ -704,6 +809,9 @@ const applyCharacterOverflowResponse = (
     supported,
     costArea: player.costArea,
     selectedOverflowCharacterIndex: selectedIndex,
+    ...(runtimeOverflow ? { enterRested: true } : {}),
+    resolveOnPlayRuntime: !runtimeOverflow,
+    incrementActionSeq: true,
   });
 };
 
