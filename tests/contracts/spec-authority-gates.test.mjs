@@ -346,6 +346,56 @@ test("Effect DSL spec defines playSelected stale saved-selection failure policy"
   }
 });
 
+test("TYP-009B specs define saved field-object references and exact-card continuous binding", async () => {
+  const dslSpec = await readText("specs/05-effect-dsl-reference.md");
+  const runtimeSpec = await readText("specs/04-effect-runtime.md");
+  const sequenceSemantics = extractSection(
+    dslSpec,
+    "05-effect-dsl-reference.s013",
+    "05-effect-dsl-reference.s014",
+  );
+  const permanentExample = extractSection(
+    dslSpec,
+    "05-effect-dsl-reference.s021",
+    "05-effect-dsl-reference.s022",
+  );
+  const playerChoices = extractSection(
+    runtimeSpec,
+    "04-effect-runtime.s012",
+    "04-effect-runtime.s013",
+  );
+  const continuousEffects = extractSection(
+    runtimeSpec,
+    "04-effect-runtime.s014",
+    "04-effect-runtime.s015",
+  );
+
+  for (const requiredText of [
+    "saved field-object reference",
+    "selectedTargets",
+    "producedObjects",
+    "same effect execution frame",
+    "unsupported saved-reference families fail closed",
+    "stale objects, gone objects, hidden objects, and illegal objects fail closed",
+    "must not reveal hidden identities",
+    "State hashes include the frame saved-reference ledger",
+  ]) {
+    assertContainsWords(sequenceSemantics, requiredText);
+    assertContainsWords(playerChoices, requiredText);
+  }
+
+  for (const requiredText of [
+    "exact-card continuous-effect target binding",
+    '`TargetSpec` shape `{ type: "exactCard"',
+    "chosen target",
+    "does not re-run the original `choose` target",
+    "modifier remains bound to the same card instance",
+  ]) {
+    assertContainsWords(permanentExample, requiredText);
+    assertContainsWords(continuousEffects, requiredText);
+  }
+});
+
 test("engine mechanics spec preserves parenthetical explanatory note authority", async () => {
   const engineSpec = await readText("specs/02-engine-mechanics.md");
   const explanatoryNotes = extractSectionToEnd(

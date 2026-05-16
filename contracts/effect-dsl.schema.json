@@ -852,8 +852,53 @@
             "type": { "const": "choose" },
             "request": { "$ref": "#/$defs/targetRequest" }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "binding",
+            "zone",
+            "player",
+            "visibility",
+            "onFailure"
+          ],
+          "properties": {
+            "type": { "const": "savedFieldObject" },
+            "binding": { "$ref": "#/$defs/savedFieldObjectTargetBinding" },
+            "zone": { "$ref": "#/$defs/zone" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "controller": { "$ref": "#/$defs/playerRef" },
+            "filter": { "$ref": "#/$defs/cardFilter" },
+            "visibility": { "const": "publicOnly" },
+            "onFailure": { "const": "failClosed" }
+          }
         }
       ]
+    },
+    "savedFieldObjectTargetBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "saveResultAs"],
+      "properties": {
+        "family": {
+          "type": "string",
+          "enum": ["selectedTargets", "producedObjects"]
+        },
+        "saveResultAs": {
+          "type": "string",
+          "minLength": 1
+        },
+        "objectIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sourceSegmentId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     },
     "targetRequest": {
       "type": "object",

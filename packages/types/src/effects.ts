@@ -1,11 +1,11 @@
 import type {
   CardId,
-  InstanceId,
   Comparator,
   EffectId,
   PlayerRef,
   SelectionId,
   SelectionSetId,
+  StateSeq,
   Visibility,
   Zone,
 } from "./primitives.js";
@@ -171,7 +171,8 @@ export type Target =
   | { type: "blocker" }
   | { type: "triggerCard" }
   | { type: "all"; zone: Zone; player: PlayerRef; filter?: CardFilter }
-  | { type: "choose"; request: TargetRequest };
+  | { type: "choose"; request: TargetRequest }
+  | SavedFieldObjectTarget;
 
 export interface CardFilter {
   cardIds?: CardId[];
@@ -286,6 +287,48 @@ export type OptionalCostSegmentResult =
       playerDeclined: false;
     });
 
+export type SavedFieldObjectReferenceFamily =
+  | "selectedTargets"
+  | "producedObjects";
+
+export interface SavedFieldObjectTargetBinding {
+  family: SavedFieldObjectReferenceFamily;
+  saveResultAs: string;
+  objectIndex?: number;
+  sourceSegmentId?: string;
+}
+
+export interface SavedFieldObjectReference {
+  binding: SavedFieldObjectTargetBinding;
+  object: CardRef;
+  capturedAtStateSeq: StateSeq;
+  visibility: "public";
+}
+
+export type SavedFieldObjectReferenceFailureReason =
+  | "unsupportedFamily"
+  | "staleObject"
+  | "goneObject"
+  | "hiddenObject"
+  | "illegalObject";
+
+export interface SavedFieldObjectReferenceFailure {
+  reason: SavedFieldObjectReferenceFailureReason;
+  publicReason: "savedFieldObjectUnavailable";
+  visibility: "privateEffectLog";
+}
+
+export interface SavedFieldObjectTarget {
+  type: "savedFieldObject";
+  binding: SavedFieldObjectTargetBinding;
+  zone: Zone;
+  player: PlayerRef;
+  controller?: PlayerRef;
+  filter?: CardFilter;
+  visibility: "publicOnly";
+  onFailure: "failClosed";
+}
+
 export interface SavedSelectedCardsReference {
   kind: "selectedCards";
   cards: CardRef[];
@@ -293,7 +336,7 @@ export interface SavedSelectedCardsReference {
 
 export interface SavedSelectedTargetsReference {
   kind: "selectedTargets";
-  targets: CardRef[];
+  targets: SavedFieldObjectReference[];
 }
 
 export interface SavedPaidCostReference {
@@ -303,12 +346,7 @@ export interface SavedPaidCostReference {
 
 export interface SavedProducedObjectsReference {
   kind: "producedObjects";
-  objects: Array<
-    | CardRef
-    | {
-        instanceId: InstanceId;
-      }
-  >;
+  objects: SavedFieldObjectReference[];
 }
 
 export type SequenceSavedResultReference =

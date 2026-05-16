@@ -225,6 +225,35 @@ test("canonical sequence result and saved-reference contracts remain explicit an
   );
 });
 
+test("TYP-009B canonical saved field-object references and exact-card target binding stay explicit", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+
+  assert.match(
+    canonicalTypes,
+    /export type SavedFieldObjectReferenceFamily\s*=\s*[\s\S]*"selectedTargets"[\s\S]*\|\s*"producedObjects";/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface SavedFieldObjectTargetBinding\s*{[\s\S]*?\bfamily:\s*SavedFieldObjectReferenceFamily;[\s\S]*?\bsaveResultAs:\s*string;[\s\S]*?\bobjectIndex\?:\s*number;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface SavedFieldObjectTarget\s*{[\s\S]*?\btype:\s*"savedFieldObject";[\s\S]*?\bbinding:\s*SavedFieldObjectTargetBinding;[\s\S]*?\bvisibility:\s*"publicOnly";[\s\S]*?\bonFailure:\s*"failClosed";[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface SavedFieldObjectReferenceFailure\s*{[\s\S]*?\breason:\s*SavedFieldObjectReferenceFailureReason;[\s\S]*?\bpublicReason:\s*"savedFieldObjectUnavailable";[\s\S]*?\bvisibility:\s*"privateEffectLog";[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface ExactCardTargetSpec\s*{[\s\S]*?\btype:\s*"exactCard";[\s\S]*?\bcard:\s*CardRef;[\s\S]*?\bbinding:\s*SavedFieldObjectTargetBinding;[\s\S]*?\bcreatedAtStateSeq:\s*StateSeq;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type TargetSpec\s*=\s*[\s\S]*\|\s*ExactCardTargetSpec[\s\S]*;/m,
+  );
+});
+
 test("canonical optional cost contracts stay distinct from optional activation", async () => {
   const canonicalTypes = await readCanonicalTypes();
 

@@ -170,6 +170,10 @@ Composed execution records one segment result for every attempted sequence segme
 
 Saved-result references may bind selected cards, selected targets, paid costs, or produced objects for later text such as `that Character`. A later segment may use a saved-result reference only while the referenced object remains legal for that later instruction; otherwise the later segment follows its connector and failure policy. Saved references must preserve hidden-information visibility and replay determinism.
 
+A saved field-object reference is the runtime contract for same-frame `selectedTargets` and `producedObjects` consumers in the same effect execution frame. `selectedTargets` production records the public field objects legally selected by a target request in the segment result and saved-reference ledger. `producedObjects` records public field objects produced by a supported segment when the runtime story for that producer explicitly authorizes the produced-object family. Saved hand-selection/playSelected references remain separate from saved field-object references and must not be consumed as field-object targets.
+
+Field-object consumers must validate the saved family, `saveResultAs`, optional object index, current zone, player/controller, filter, public visibility, and instruction legality at consumption time. unsupported saved-reference families fail closed. stale objects, gone objects, hidden objects, and illegal objects fail closed. A fail-closed saved field-object reference records the segment as attempted, not succeeded, and not changedState, then follows the active connector and failure policy. Public events, public legal actions, PlayerView, and SpectatorView must not reveal hidden identities, hidden candidates, or the private saved-reference failure reason; replay and private effect logs may retain the failure reason for audit. State hashes include the frame saved-reference ledger, the consumer result, and unchanged public/hidden game state so replay, event order, and connector decisions remain deterministic.
+
 Accepted optional cost records `attempted: true`, `succeeded: true`,
 `paidCost: true`, and `playerDeclined: false`. Declined optional cost records
 `attempted: true`, `succeeded: false`, `changedState: false`,
@@ -233,6 +237,8 @@ function computeView(state: GameState): ComputedGameView {
 ```
 
 Permanent effects may depend on the computed state. If the official rule requires fixed-point behavior, implement the fixed-point over computed views, not by writing current power/cost into canonical state.
+
+exact-card continuous-effect target binding uses `TargetSpec` shape `{ type: "exactCard"; card: CardRef; binding: SavedFieldObjectTargetBinding; createdAtStateSeq: StateSeq }`. A duration-bearing modifier created from a chosen target resolves the saved field-object reference once, stores the exact card target in the `ContinuousEffectRecord`, and does not re-run the original `choose` target during computed-view recalculation. The modifier remains bound to the same card instance while that instance remains legal for the modifier and the duration; if the object is stale, gone, hidden, or illegal, the modifier fails closed without leaking hidden identities.
 
 ### 04-effect-runtime.s016 (Failure policy)
 
@@ -299,6 +305,10 @@ Those fields drive later connector decisions and replay determinism. Runtime fra
 
 Saved references include `saveResultAs`, `SelectionSetId`, and `SelectionId`. A saved reference is contract-defined here, but generated support may rely on it only when schema validation, parser certification, and runtime capability evidence all cover the reference lifetime, visibility, and later-use legality.
 
+A saved field-object reference is a same-frame saved-reference family for later text such as "that Character". The supported field-object families are `selectedTargets` and `producedObjects`; `selectedCards`, `paidCost`, `SelectionSetId`, `SelectionId`, and saved hand-selection references are separate families and are not field-object target references. A segment with `saveResultAs` may expose `selectedTargets` when it legally selected field objects through a target request, and may expose `producedObjects` when a supported runtime story later creates or moves a public field object and records that object as produced by the segment.
+
+A later segment consumes a saved field-object reference with `{ type: "savedFieldObject", binding: { family: "selectedTargets" | "producedObjects", saveResultAs, objectIndex?, sourceSegmentId? }, zone, player, controller?, filter?, visibility: "publicOnly", onFailure: "failClosed" }`. The reference is valid only inside the same effect execution frame, only for the named `saveResultAs` ledger entry, and only while the referenced object remains a public legal object for the later instruction. unsupported saved-reference families fail closed. stale objects, gone objects, hidden objects, and illegal objects fail closed. Public events, public legal actions, PlayerView, and SpectatorView must not reveal hidden identities or the private saved-reference failure reason. State hashes include the frame saved-reference ledger and the failed segment result so replay, event order, and connector decisions remain deterministic.
+
 Optionality must preserve optional activation, optional cost, and optional effect clause distinctions. These boundaries are part of generated-support capability evidence because a parser that recognizes optional text still cannot make the effect playable unless the runtime can resume and record the correct optional segment result.
 
 Optional cost clauses inside composed sequence execution use a sequence segment
@@ -359,6 +369,8 @@ authoritative in `04-effect-runtime.s011` and `04-effect-runtime.s012`.
 ```
 
 The runtime should convert this into a `ContinuousEffectRecord`/modifier and apply it through `computeView()`.
+
+When a duration-bearing effect uses a chosen target and later needs exact-card continuous-effect target binding, the runtime must resolve the saved field-object reference once and create a modifier target using the canonical `TargetSpec` shape `{ type: "exactCard"; card: CardRef; binding: SavedFieldObjectTargetBinding; createdAtStateSeq: StateSeq }`. The chosen target does not re-run the original `choose` target during computed-view recalculation. The modifier remains bound to the same card instance until its duration expires or the exact card is no longer a legal public object for that modifier.
 
 ### 05-effect-dsl-reference.s026 (Transient reveal and selection primitives)
 
@@ -466,7 +478,7 @@ Schema-supported fixture subset:
 - cost: restSelf
 - cost: sequence
 - target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
-  triggerCard, all, choose
+  triggerCard, all, choose, savedFieldObject
 - duration: thisAction, thisBattle, thisTurn, whileSourceOnField, permanent
 - effect: draw
 - effect: ko
