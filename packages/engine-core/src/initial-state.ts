@@ -321,6 +321,7 @@ export const createInitialState = (
     },
     oncePerTurn: [],
     effectQueue: [],
+    effectExecutionFrames: [],
     deferredTriggers: [],
     continuousEffects: [],
     replacementState: [],

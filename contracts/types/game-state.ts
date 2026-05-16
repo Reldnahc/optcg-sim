@@ -34,6 +34,7 @@ import type {
   AuditEntry,
   BattleState,
   DeferredTriggerBucket,
+  EffectExecutionFrame,
   LoopSignature,
   MatchStatus,
   PlayerState,
@@ -81,6 +82,7 @@ export interface GameState {
   pendingDecision?: PendingDecision;
   oncePerTurn: OncePerTurnRecord[];
   effectQueue: EffectQueueEntry[];
+  effectExecutionFrames: EffectExecutionFrame[];
   deferredTriggers: DeferredTriggerBucket[];
   continuousEffects: ContinuousEffectRecord[];
   replacementState: ReplacementProcessState[];

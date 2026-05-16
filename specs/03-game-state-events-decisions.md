@@ -26,15 +26,16 @@ The canonical `GameState` is server-only. It includes hidden information, RNG st
 
 Canonical naming decisions:
 
-| Concept                | Canonical name             |
-| ---------------------- | -------------------------- |
-| State sequence         | `stateSeq`                 |
-| Event collection       | `eventJournal`             |
-| Battle sub-state       | `battle`                   |
-| Effect queue           | `effectQueue`              |
-| Continuous modifiers   | `continuousEffects`        |
-| Decision answer action | `Action.respondToDecision` |
-| Hidden/server-only RNG | `rng`                      |
+| Concept                 | Canonical name             |
+| ----------------------- | -------------------------- |
+| State sequence          | `stateSeq`                 |
+| Event collection        | `eventJournal`             |
+| Battle sub-state        | `battle`                   |
+| Effect queue            | `effectQueue`              |
+| Effect execution frames | `effectExecutionFrames`    |
+| Continuous modifiers    | `continuousEffects`        |
+| Decision answer action  | `Action.respondToDecision` |
+| Hidden/server-only RNG  | `rng`                      |
 
 Do not use `eventLog`, `activeBattle`, raw JavaScript `Set`, or transport envelopes inside canonical state. Serializable arrays are required for deterministic hashing.
 
@@ -57,6 +58,7 @@ interface GameState {
   battle?: BattleState;
   pendingDecision?: PendingDecision;
   effectQueue: EffectQueueEntry[];
+  effectExecutionFrames: EffectExecutionFrame[];
   deferredTriggers: DeferredTriggerBucket[];
   continuousEffects: ContinuousEffectRecord[];
   replacementState: ReplacementProcessState[];
@@ -66,6 +68,8 @@ interface GameState {
   audit: AuditEntry[];
 }
 ```
+
+`effectExecutionFrames` is serialized authoritative internal state for resumable effect resolution. Frame records are match-scoped runtime context, participate in canonical state serialization and authoritative state hashes, and are not a client-facing `PlayerView` or `SpectatorView` surface.
 
 Canonical live state also carries the authoritative per-player timer snapshot used for `PlayerView` and reconnect/state-sync payloads. Do not fabricate timer values in filtered views.
 

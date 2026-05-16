@@ -79,7 +79,9 @@ import type {
   EffectContext as PackageEffectContext,
   EffectDefinition as PackageEffectDefinition,
   EffectDefinitionMetadata as PackageEffectDefinitionMetadata,
+  EffectExecutionFrame as PackageEffectExecutionFrame,
   EffectExecutionContext as PackageEffectExecutionContext,
+  EffectExecutionPendingDecisionContinuation as PackageEffectExecutionPendingDecisionContinuation,
   EffectId as PackageEffectId,
   EffectOption as PackageEffectOption,
   EffectQueueEntry as PackageEffectQueueEntry,
@@ -228,6 +230,7 @@ test("TYP-001H every manifest-covered canonical export has exactly one valid own
     "TYP-007A",
     "TYP-007B",
     "TYP-007D",
+    "TYP-008A",
   ]);
   for (const owner of Object.values(EXPORT_OWNERSHIP_MANIFEST)) {
     expect(validOwners.has(owner)).toBe(true);
@@ -296,6 +299,8 @@ test("TYP-001H manifest-covered exports resolve through package-name type import
     PackagePublicTimerState,
     PackageSequenceSegmentResultMap,
     PackageSequenceSavedResultReferenceMap,
+    PackageEffectExecutionPendingDecisionContinuation,
+    PackageEffectExecutionFrame,
     PackageRngState,
     PackageRngDrawResult<PackageCardRef>,
     PackageCardInstance,

@@ -464,7 +464,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
       "ruleProcessingChecked",
     ],
     stateHash:
-      "8af0563c1e8eee5c9f61b42c891ce6c9f0fcf6a3f867d0cb2722465da2988315",
+      "3d55cb9f48f99a785e4641b5cd20bacb637ddac04f8a8b19b7dc5914a2b82038",
   };
   assert.deepEqual(signature(openedForDecline), expectedOpenedSignature);
   const declineDecision = must(
@@ -491,7 +491,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
     ],
     eventTypes: ["decisionResolved", "cardMoved", "cardMoved"],
     stateHash:
-      "30dd6cc15428f02db57f644cef0e2d5fcf717f47967a90c7671c97917a7357a9",
+      "01d5501a62a1523d3df8434f684b5c78b3ba0867bb00c95b0e58f49bd3b662f6",
   });
 
   const openedForActivation = openLifeTrigger();
@@ -544,7 +544,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
       "cardTrashed",
     ],
     stateHash:
-      "3e1606fce04f3e7e6dde0d05d053a69f1399e3288ffad97a2bd3a316a80e7c75",
+      "2207b0fef4e335a13bfb3b046b048fc5a74a22560ad6f55d096e2139700f42ed",
   });
 
   return {

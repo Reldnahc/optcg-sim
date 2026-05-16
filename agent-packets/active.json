@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/TYP-008A.md",
+      "storyId": "TYP-008A",
+      "storyPath": "stories/approved/TYP-008A-canonical-effect-execution-frame-state.yaml",
+      "storySha256": "f43e5e15e12087cabfeaa6376afbb74658cf65fc2567a19f5653b9d7bd0ddbc2"
+    }
+  ],
   "version": 1
 }

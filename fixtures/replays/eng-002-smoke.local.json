@@ -69,25 +69,25 @@
     "checkpoints": [
       {
         "label": "setup",
-        "stateHash": "51c1852bc0fa5ae446d3781d426058f270e5f0c86ef9f61219e0ebae747fa7fd"
+        "stateHash": "03f055b33b8284ee12909f36347e6760bff3600b1f97df365f0f9356b98b3e59"
       },
       {
         "label": "mulligan-started",
-        "stateHash": "f43b20a4f4264668d6259c6020e79f02e52be8c4068ffb1d9bafb8422a11e0ae"
+        "stateHash": "d1eab7099346afd62ebac36eded851489b8e5d521ea6a17af05d60c7fd3a9546"
       },
       {
         "label": "mulligan-response-1",
-        "stateHash": "7293420cebf077e73e6cab83bf7bc5b4c7495bb2f59cb586848858f54848ee90"
+        "stateHash": "cdcde5605db86f47ac55322a6f83c97fca10bcf31af201e7f1a41bbdcf58a32a"
       },
       {
         "label": "mulligan-response-2",
-        "stateHash": "be2f8b7f0873a786be81160adb98cf83f3fbeec25de31232f80fe6f23b311c84"
+        "stateHash": "1d3ad9fb7fa1be80c6ca434235402abb149201256fc2edb66985e90b241f7654"
       },
       {
         "label": "action-1-concede",
-        "stateHash": "75efd0ce2db2d6f72ee3bd956592b22e5ecb7e0ed1a953d8863397e41946c0ef"
+        "stateHash": "0ed24bd8760c204979e86b80e975ddc012d262dafcd9c451ef11eb01c821291e"
       }
     ],
-    "finalStateHash": "75efd0ce2db2d6f72ee3bd956592b22e5ecb7e0ed1a953d8863397e41946c0ef"
+    "finalStateHash": "0ed24bd8760c204979e86b80e975ddc012d262dafcd9c451ef11eb01c821291e"
   }
 }

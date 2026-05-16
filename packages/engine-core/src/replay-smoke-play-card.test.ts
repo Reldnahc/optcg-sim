@@ -30,22 +30,22 @@ test("ENG-005C replay smoke final hashes remain pinned", () => {
       {
         id: "paid-character",
         finalStateHash:
-          "44b92fdbdc0fe5126a1cf835915ffaa983f1068e4c4909ae1e4dc37092f71902",
+          "1724467bac6eb80998a816a1722bd6c1eee75800d768dcc44b936874e0509205",
       },
       {
         id: "stage-replacement",
         finalStateHash:
-          "47400b8386558c12b1285da9c026f74f16cb4d9fbccad331ebe31e24d7b8b993",
+          "fced6b05bbefb5f33fb3ce296502fdbaa07f81092eb35ca78dbd4450c6f998a7",
       },
       {
         id: "character-overflow",
         finalStateHash:
-          "4e25f4b591af1f23c15f7c9983c79a6db68a5c09137bed3dc7906e143068bb5d",
+          "530fcfe88b092919906fc71ffb0bd353ffae41d84fdaa4d4cfb8fce95228d263",
       },
       {
         id: "paid-event",
         finalStateHash:
-          "08ac1decd6cc538d110891bcb2ad6cd4510443bd7245b46a4bcb4bf7cd32469b",
+          "c06c2b8fcd2a6f59fcbf884ba35650144c60bf994cce96efbdceb0d31c6a3dc6",
       },
     ],
   );

@@ -15,6 +15,6 @@ test("ENG-002F replay smoke final hash remains pinned", () => {
 
   assert.equal(
     fixture.expected.finalStateHash,
-    "75efd0ce2db2d6f72ee3bd956592b22e5ecb7e0ed1a953d8863397e41946c0ef",
+    "0ed24bd8760c204979e86b80e975ddc012d262dafcd9c451ef11eb01c821291e",
   );
 });
