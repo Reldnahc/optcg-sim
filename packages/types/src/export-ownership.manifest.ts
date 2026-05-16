@@ -10,6 +10,7 @@ export const TYP_001_STORY_OWNERS = [
   "TYP-007A",
   "TYP-007B",
   "TYP-007D",
+  "TYP-008A",
 ] as const;
 
 export type Typ001StoryOwner = (typeof TYP_001_STORY_OWNERS)[number];
@@ -75,6 +76,8 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   PublicTimerState: "TYP-001F",
   SequenceSegmentResultMap: "TYP-007B",
   SequenceSavedResultReferenceMap: "TYP-007B",
+  EffectExecutionPendingDecisionContinuation: "TYP-008A",
+  EffectExecutionFrame: "TYP-008A",
   SpectatorPolicy: "TYP-002A",
   PublicTurnState: "TYP-002A",
   PublicBattleState: "TYP-002A",

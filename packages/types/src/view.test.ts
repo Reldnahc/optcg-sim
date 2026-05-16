@@ -191,6 +191,8 @@ test("TYP-002A player view excludes opponent hidden identities and private inter
     true;
   const noRng: HasNoKey<PlayerView, "rng"> = true;
   const noEffectQueue: HasNoKey<PlayerView, "effectQueue"> = true;
+  const noEffectExecutionFrames: HasNoKey<PlayerView, "effectExecutionFrames"> =
+    true;
   const noAudit: HasNoKey<PlayerView, "audit"> = true;
   const noPrivateDecisionCandidates: HasNoKey<PublicDecision, "candidates"> =
     true;
@@ -207,6 +209,7 @@ test("TYP-002A player view excludes opponent hidden identities and private inter
   expect(noOpponentDonDeckCards).toBe(true);
   expect(noRng).toBe(true);
   expect(noEffectQueue).toBe(true);
+  expect(noEffectExecutionFrames).toBe(true);
   expect(noAudit).toBe(true);
   expect(noPrivateDecisionCandidates).toBe(true);
   expect(noPrivateDecisionCandidateCount).toBe(true);
@@ -227,6 +230,10 @@ test("TYP-002A initial spectator view excludes hidden identities and player-only
   const noLegalActions: HasNoKey<SpectatorView, "legalActions"> = true;
   const noRng: HasNoKey<SpectatorView, "rng"> = true;
   const noEffectQueue: HasNoKey<SpectatorView, "effectQueue"> = true;
+  const noEffectExecutionFrames: HasNoKey<
+    SpectatorView,
+    "effectExecutionFrames"
+  > = true;
   const noAudit: HasNoKey<SpectatorView, "audit"> = true;
   const player = "player-a" as PlayerId;
   const seq = 1 as StateSeq;
@@ -264,6 +271,7 @@ test("TYP-002A initial spectator view excludes hidden identities and player-only
   expect(noLegalActions).toBe(true);
   expect(noRng).toBe(true);
   expect(noEffectQueue).toBe(true);
+  expect(noEffectExecutionFrames).toBe(true);
   expect(noAudit).toBe(true);
   void privateSpectatorReveal;
   void privateSpectatorEvent;

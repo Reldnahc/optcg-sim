@@ -1,0 +1,64 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-008
+epic_id: TYP-008
+title: Serialized effect execution frame authority parent
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Coordinate the canonical contract authority needed to store resumable effect
+  execution frames in serialized GameState before ENG-055B retries generic
+  composed sequence pause/resume.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  TYP-008A as the single child story, then let ENG-055B consume the new
+  serialized authority in a later engine story.
+allowed_touch_points:
+  - stories/approved/TYP-008*.yaml
+  - agent-packets/TYP-008*.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s004
+  - 01-system-architecture.s021
+  - 03-game-state-events-decisions.s002
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s002
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s016
+  - 11-testing-quality.s008
+dependencies:
+  - TYP-007
+child_stories:
+  - id: TYP-008A
+    title: Canonical effect execution frame state
+    concern: Add serialized GameState frame authority and tests without implementing the ENG-055B runtime runner.
+    depends_on: [TYP-007B]
+scope:
+  - define a single child story for serialized effect execution frame authority
+  - keep the change in contracts/spec/engine initialization and projection tests
+  - unblock ENG-055B only by giving it a canonical serialized state location
+  - preserve parent/substory workflow and one active child packet
+non_scope:
+  - direct parent implementation
+  - generic composed effect runner implementation
+  - parser, generated-support, or card fixture work
+  - server, client, API, UI, database, or live Poneglyph work
+acceptance_criteria:
+  - TYP-008 is not implemented directly
+  - TYP-008A owns the serialized frame authority implementation
+  - TYP-008 and TYP-008A have distinct story-review assignments and durable artifacts
+  - future ENG-055B work can depend on TYP-008A for serialized frame authority
+required_tests:
+  - record per-story story-review for TYP-008
+  - record per-story story-review for TYP-008A
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - use the parent/substory workflow
+  - do not implement ENG-055B in this parent story set
+  - fail closed on replay, hidden-information, or state-hash ambiguity
+ambiguity_policy: fail_and_escalate

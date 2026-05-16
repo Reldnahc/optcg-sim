@@ -1,10 +1,12 @@
 import type {
   BattleStep,
   CardId,
+  DecisionId,
   EffectId,
   EngineEventId,
   InstanceId,
   PlayerId,
+  QueueEntryId,
   SelectionSetId,
   StateSeq,
   TimingWindowId,
@@ -217,3 +219,21 @@ export type SequenceSavedResultReferenceMap = Record<
   string,
   SequenceSavedResultReference
 >;
+
+export interface EffectExecutionPendingDecisionContinuation {
+  decisionId: DecisionId;
+  causedBy: CausalityRef;
+  createdAtStateSeq: StateSeq;
+  resumeAtSegmentIndex: number;
+}
+
+export interface EffectExecutionFrame {
+  queueEntryId: QueueEntryId;
+  effectBlockId: EffectId;
+  effectPath: string[];
+  nextSegmentIndex: number;
+  segmentResults: SequenceSegmentResultMap;
+  savedReferences: SequenceSavedResultReferenceMap;
+  transientSets: Record<SelectionSetId, TransientCardSet>;
+  pendingDecision: EffectExecutionPendingDecisionContinuation;
+}

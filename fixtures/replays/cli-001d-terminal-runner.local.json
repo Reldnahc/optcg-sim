@@ -14,11 +14,11 @@
       "actionCommands": ["concede"],
       "expected": {
         "checkpointHashes": [
-          "c0ec4048199a45f42083ad6d81f465252fc6709689d2330f3b92056b99744ab5",
-          "90523d28a7cc3ca491ee412248b9c24d1044c235099004e62e11debf72d5c08f",
-          "0773fb5c715df11a7456655b72ba8d060fc82ff690ed36cdef0151b00d9fcff3"
+          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
+          "2565f278e048fb1f0243da8bacbd9fce0b80395b30d9e399ee5f5af9226732a7"
         ],
-        "finalHash": "0773fb5c715df11a7456655b72ba8d060fc82ff690ed36cdef0151b00d9fcff3",
+        "finalHash": "2565f278e048fb1f0243da8bacbd9fce0b80395b30d9e399ee5f5af9226732a7",
         "finalStatus": { "type": "completed", "winner": "p2" }
       }
     },
@@ -36,11 +36,11 @@
       "actionCommands": ["attack leader opponent-leader"],
       "expected": {
         "checkpointHashes": [
-          "c0ec4048199a45f42083ad6d81f465252fc6709689d2330f3b92056b99744ab5",
-          "90523d28a7cc3ca491ee412248b9c24d1044c235099004e62e11debf72d5c08f",
-          "e104ffcdcb2bced517190d41326fec14dff58c8a7594e775733072887222618e"
+          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
+          "7f12fbe51125d8935ac0a7146eab4020b702a666c6158c1004d2e77cbfc11be2"
         ],
-        "finalHash": "e104ffcdcb2bced517190d41326fec14dff58c8a7594e775733072887222618e",
+        "finalHash": "7f12fbe51125d8935ac0a7146eab4020b702a666c6158c1004d2e77cbfc11be2",
         "finalStatus": { "type": "completed", "winner": "p1" }
       }
     },
@@ -58,11 +58,11 @@
       "actionCommands": ["pass"],
       "expected": {
         "checkpointHashes": [
-          "c0ec4048199a45f42083ad6d81f465252fc6709689d2330f3b92056b99744ab5",
-          "90523d28a7cc3ca491ee412248b9c24d1044c235099004e62e11debf72d5c08f",
-          "2f3d10d865f0c69b738662ceadb7b0568b699c776378bc0fe43391e68d77e910"
+          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
+          "0e7673b2a2eb0ba169f9881a6c06cb8444711caa82ccd83db1b6409499931b25"
         ],
-        "finalHash": "2f3d10d865f0c69b738662ceadb7b0568b699c776378bc0fe43391e68d77e910",
+        "finalHash": "0e7673b2a2eb0ba169f9881a6c06cb8444711caa82ccd83db1b6409499931b25",
         "finalStatus": { "type": "completed", "winner": "p1" }
       }
     },
@@ -88,12 +88,12 @@
       "actionCommands": ["play 0", "respond pay:0"],
       "expected": {
         "checkpointHashes": [
-          "c0ec4048199a45f42083ad6d81f465252fc6709689d2330f3b92056b99744ab5",
-          "90523d28a7cc3ca491ee412248b9c24d1044c235099004e62e11debf72d5c08f",
-          "f722164c340dbbea4ae40f37c53cdb4fe9cfc1f82aa755d0dcac91dea877bbe5",
-          "fe24d21aeaeac6877d538668ae4361eb3060e1244b8052acfbf8fba680233211"
+          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
+          "0beaceaba8e881dccc115d2811b232f2cdc57f076611c6da3a42c89d8ce6994f",
+          "b42928802f9c0c31fe90c3d3f2aa6044ddc78f04350a34d64674ff01a93dfcb9"
         ],
-        "finalHash": "fe24d21aeaeac6877d538668ae4361eb3060e1244b8052acfbf8fba680233211",
+        "finalHash": "b42928802f9c0c31fe90c3d3f2aa6044ddc78f04350a34d64674ff01a93dfcb9",
         "finalStatus": { "type": "active" }
       }
     },
@@ -119,12 +119,12 @@
       "actionCommands": ["play 1", "respond pay:0,1"],
       "expected": {
         "checkpointHashes": [
-          "c0ec4048199a45f42083ad6d81f465252fc6709689d2330f3b92056b99744ab5",
-          "90523d28a7cc3ca491ee412248b9c24d1044c235099004e62e11debf72d5c08f",
-          "7a9cdda3f940539057ed03950405d925c9efef8e6b0b67414f6e045ba1ba769a",
-          "34ba07416ef8dede3c1ecab432673edb8ea6c0b5b46e4116dfabb949e56e9ee4"
+          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
+          "2173b874313c4cd031ddaa116047e952cad5eed141bae3bf29b783d3ec8b1ed7",
+          "6971617ab708026e7eea80d22ee288680203e6759d19862fa7a690b2c6974cb8"
         ],
-        "finalHash": "34ba07416ef8dede3c1ecab432673edb8ea6c0b5b46e4116dfabb949e56e9ee4",
+        "finalHash": "6971617ab708026e7eea80d22ee288680203e6759d19862fa7a690b2c6974cb8",
         "finalStatus": { "type": "active" }
       }
     },
@@ -150,12 +150,12 @@
       "actionCommands": ["play 0", "respond cards:character:0"],
       "expected": {
         "checkpointHashes": [
-          "c0ec4048199a45f42083ad6d81f465252fc6709689d2330f3b92056b99744ab5",
-          "90523d28a7cc3ca491ee412248b9c24d1044c235099004e62e11debf72d5c08f",
-          "f3c99de7c613111c3b066db4c6a50b70c106535a73c71944a9ec5ba64d97a398",
-          "a0f46e63444e51733b3c0e074bf8a46f0b09ae0d5fafab46c74ec4e84b18fb61"
+          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "4a393338014d0a24967a704055c33af2298bc0df0438c454a5e2e8d718c4ef73",
+          "748f3f20220c39dc59b8978477966240ba05ece111092f871e7c4087bbd6b30c",
+          "30bfc8bcd8b55d491bee096fe9de7e2cb93fb08001111f1d81f8cb0d5180dc24"
         ],
-        "finalHash": "a0f46e63444e51733b3c0e074bf8a46f0b09ae0d5fafab46c74ec4e84b18fb61",
+        "finalHash": "30bfc8bcd8b55d491bee096fe9de7e2cb93fb08001111f1d81f8cb0d5180dc24",
         "finalStatus": { "type": "active" }
       }
     },
@@ -189,32 +189,32 @@
       ],
       "expected": {
         "checkpointHashes": [
-          "c0ec4048199a45f42083ad6d81f465252fc6709689d2330f3b92056b99744ab5",
-          "3c5e2b9bc0bbda2a19f4361058e9ef5f1fc4df5bbfb863e4c6d2216fc645fabf",
-          "8f261b198bc0ab9a266d49dbb45f6b09ce32f578ff5973c99d18c327b034d70b",
-          "e1f474607f915eb1069c152a3f0291ed21b3e72ec3170f8533d58284c6a80da2",
-          "1006d09bdd1fde7376cb2bdbe685019f0228dee8fb1c7e9681d8c2e41c17df57",
-          "2e48e3c14698d0f4be93ca90726f68f4de172c34df297ee3dc001c55d018f9a5",
-          "fe8e7ff26efe62d637937a9bb393a72486aecc0e0c1bdd42837188cb2c910dbe",
-          "a7b7fbb8fd1257d4a28265c5298552e559ef141efba07745c156aeceb3e27bbf",
-          "fd2f07f884e1d3e91cfead0624777e981a16e61c371f9b15e186a86d2a5433e4",
-          "1fc6d6fcdc901de7ec4e24cb6129c2989dea516aebf2f02fdadd95833a1a2fd9",
-          "3f6c460b13ca426932911a91e0af968c38a5bb3a78ea61a0419b6a3df2a52a2c",
-          "021dc438b282b49471ea697289da0616f7e20a062573377796e1d1182840eccb",
-          "995a58d3a3858dc7e034b5a51b3032364603e104ab7edb0a0d11254f01a19fa3",
-          "08218c2a003d06e3e2f2772bb40fea8273ae26b84e1d3d280badd1e1471c341e",
-          "40f46a7d2bde4421cd2f6dccd73c872675df7af340e7ca4b18d3acf469827a1b",
-          "b7c68b1050fd0e0ada316b64412f80d6872d913e94a47fd6fc860c57c9c8afcd",
-          "332e4d9cfca50af6631286875cc6b7d6579ef3d71688011231b097e5a9c2410b",
-          "43baf5094cfbda6a90763e068b3bbc17aa49ef17af4188a309445ad7e9597b48",
-          "10211102d2a4f4e0183cb5b357e4436c7f42207ae436e5dba5ce2b6c3ee91eeb",
-          "98be13a65dcc39d6b6ac3f3cfcd79430b8eb71fddac0b29aa4a84b2cb495bad1",
-          "ee8e511a7e3a1d14023c2647a694eb920686d5745a533c3b5843bc10a6e6a3ae",
-          "272f7d8d61178ad1d32d50a33ed0979af7ce85ddc674a471e598e10d767a21f8",
-          "843243edaa794c30c108f6de7829cc6a0e2f7a488bf176e2287eee1f330faac2",
-          "d09aac928e5f1115f5ddde73cd5cdde2830a7f2eeef21c25667c66ceb26776d8"
+          "e67d209bb593fcc7d6f9b3f586d3742d39e9a12f5a27368e7f58e405a603ef3c",
+          "f8564820d8eac8a117cb5df71677a0e8ab98d4d597427591e55b1fbfc7235cf4",
+          "3f84be9f4071f264f9c5493fceb649bb70d54a07ae207222762d0a933604f977",
+          "bd8d8b2e91a12befd972806201cf6066ddf5d3656e367da821b99ea46e91512a",
+          "ade7ebac246aa8d60e60267c89e2f71d3360148cace02f02b660f88959c0505f",
+          "1d543e96c756a80016dc692b69022c5445d6dc6f8cfead64cd7389cb854d655a",
+          "a54f809fa65378823f96d8c5dd5b15f0523f0439f223f33fd7e5000eee6dad3f",
+          "1658a19f54489bbe3e8341a2ef61dfe3f390200c98068883aa33ee3e87577df5",
+          "3b547fa6f400bb57099607a121be31a2c701411ff5881708b1285b42e0e42a61",
+          "417db4b5f9c9a9f717dbf4bae2abb25e892de33c06a241dabef424f76981d683",
+          "a95edfed1547bef3872ef56a5b9b8b1dca45da98d3c9cdf54b0371d316e41f1a",
+          "5a67f261c3dc038c8092a252c173f1c5ec812ca98d1747d392913be8f99433d9",
+          "cdbcb94a2af8d2b90e65092082c5ca33def46e7abd569fb528bd00203c4cfb72",
+          "d957c955c8af36618c39da7d74533b5c1fa09476a7b29bf19279202a88a3c867",
+          "a67685f639605ee4c1da38a2af4afb47561675e9ddca658e36e98c4b15cbb459",
+          "a94502b0aab149db1e35edb96fa07a2fd23d2d48c7a07a27b9162a0bffc090cf",
+          "544ae689d77516be72c8d71a54a846653eafb7e8f1975551f4d07ef13bf19d83",
+          "7c201bab896e2f83996950e5aac65182b0089a94a5801fcd740f997a1d721117",
+          "17512483a87afb1d54ede1ced695f66c9fd7289e7b2d5ad06a5a8d51f4b86ebc",
+          "cba63274fdf617fb620d09bac893f64281b5c08b2e84bb2530c99a37754a7ef6",
+          "6b941bf7082f5e2ef3c6e37f8ca028b58fbe920a0feb2b856db933a43c3a8a7a",
+          "5741f6cd1bed64cbabecf8069dbfc4136e0df87371258ecdcb52b75c580011cb",
+          "a64b0838b98700da3258a74705555f74286d0d038cf6bbee55548b6d55c6e612",
+          "24c168a17d2403487a7c425c35fd1217155c3383d21f7bd6a54efec451b73cb8"
         ],
-        "finalHash": "d09aac928e5f1115f5ddde73cd5cdde2830a7f2eeef21c25667c66ceb26776d8",
+        "finalHash": "24c168a17d2403487a7c425c35fd1217155c3383d21f7bd6a54efec451b73cb8",
         "finalStatus": { "type": "completed", "winner": "p1" }
       }
     }

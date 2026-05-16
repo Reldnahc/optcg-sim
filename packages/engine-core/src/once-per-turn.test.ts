@@ -106,6 +106,7 @@ const createState = (): GameState => {
     },
     oncePerTurn: [],
     effectQueue: [],
+    effectExecutionFrames: [],
     deferredTriggers: [],
     continuousEffects: [],
     replacementState: [],

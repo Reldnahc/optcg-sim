@@ -308,7 +308,7 @@ test("targeted KO primitive preserves no-replacement state hash through the repl
 
   assert.equal(
     result.stateHash,
-    "eeb5d818c539eb7a4520d92ad6a6cc480f8b40b62185ea9284da0529536f146b",
+    "39c007f2181ccb6cbb515014b55ea0e38130e25406060bbcea99aa43b1ee9207",
   );
 });
 

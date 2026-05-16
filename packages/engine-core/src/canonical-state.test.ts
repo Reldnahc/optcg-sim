@@ -1,10 +1,80 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type {
+  EffectExecutionFrame,
+  GameState,
+  SelectionSetId,
+} from "@optcg/types";
+
+import { createInput, must, p1, toStateSeq } from "./action-test-fixtures.js";
 import {
   canonicalSerializeStateValue,
   hashCanonicalStateValue,
 } from "./canonical-state.js";
+import { createInitialState } from "./initial-state.js";
+
+const representativeEffectExecutionFrame = (
+  state: GameState,
+): EffectExecutionFrame => {
+  const player = must(state.players[p1], "p1 state");
+  const source = player.leader;
+  const selectionSetId = "set:canonical-frame" as SelectionSetId;
+  const sourceRef = {
+    instanceId: source.instanceId,
+    cardId: source.cardId,
+    playerId: p1,
+    zone: source.zone,
+  };
+
+  return {
+    queueEntryId:
+      "queue:canonical-frame" as EffectExecutionFrame["queueEntryId"],
+    effectBlockId:
+      "effect:canonical-frame" as EffectExecutionFrame["effectBlockId"],
+    effectPath: ["effect", "sequence", "0"],
+    nextSegmentIndex: 1,
+    segmentResults: {
+      "0": {
+        attempted: true,
+        succeeded: true,
+        changedState: false,
+        selectedCards: [sourceRef],
+        selectedTargets: [],
+        paidCost: false,
+        playerDeclined: false,
+      },
+    },
+    savedReferences: {
+      selectedLeader: {
+        kind: "selectedCards",
+        cards: [sourceRef],
+      },
+    },
+    transientSets: {
+      [selectionSetId]: {
+        id: selectionSetId,
+        cards: [sourceRef],
+        origin: "topOfDeck",
+        visibility: { type: "private", playerId: p1 },
+        cleanupPolicy: "returnToOrigin",
+      },
+    },
+    pendingDecision: {
+      decisionId:
+        "decision:canonical-frame" as EffectExecutionFrame["pendingDecision"]["decisionId"],
+      causedBy: {
+        type: "effect",
+        queueEntryId:
+          "queue:canonical-frame" as EffectExecutionFrame["queueEntryId"],
+        effectId:
+          "effect:canonical-frame" as EffectExecutionFrame["effectBlockId"],
+      },
+      createdAtStateSeq: toStateSeq(state.seq),
+      resumeAtSegmentIndex: 1,
+    },
+  };
+};
 
 test("canonical hash is stable across repeated runs for identical input", () => {
   const input = {
@@ -145,4 +215,22 @@ test("unsupported values and cyclic structures fail closed", () => {
   const cyclic: { self?: unknown } = {};
   cyclic.self = cyclic;
   assert.throws(() => canonicalSerializeStateValue(cyclic), /cyclic/i);
+});
+
+test("initial state starts with an empty canonical effect execution frame list", () => {
+  const state = createInitialState(createInput());
+
+  assert.deepEqual(state.effectExecutionFrames, []);
+});
+
+test("effect execution frames are canonical serializable and affect authoritative state hash", () => {
+  const state = createInitialState(createInput());
+  const beforeHash = hashCanonicalStateValue(state);
+  const withFrame: GameState = {
+    ...state,
+    effectExecutionFrames: [representativeEffectExecutionFrame(state)],
+  };
+
+  assert.doesNotThrow(() => canonicalSerializeStateValue(withFrame));
+  assert.notEqual(hashCanonicalStateValue(withFrame), beforeHash);
 });
