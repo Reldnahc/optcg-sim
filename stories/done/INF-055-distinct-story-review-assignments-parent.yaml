@@ -8,7 +8,7 @@ type: tooling
 area: docs
 primary_concern: docs
 priority: critical
-status: approved
+status: done
 summary: >
   Coordinate the workflow authority fix that closes the Story Approval Review
   Gate loophole where one batched story-review artifact can be treated as

@@ -8,7 +8,7 @@ type: tooling
 area: docs
 primary_concern: docs
 priority: critical
-status: approved
+status: done
 summary: >
   Close the Story Approval Review Gate loophole by requiring a distinct
   story-review assignment and artifact for each parent and child story, and

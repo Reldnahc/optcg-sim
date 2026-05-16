@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/INF-055A.md",
-      "storyId": "INF-055A",
-      "storyPath": "stories/approved/INF-055A-enforce-distinct-story-review-assignments.yaml",
-      "storySha256": "7c2a9abd0549dc4a87e6674699d11a407e785888d372784df548988d8ac57468"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
