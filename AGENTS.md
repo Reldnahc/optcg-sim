@@ -38,7 +38,7 @@ Use stable `SECTION_REF` citations from the spec. Do not cite heading anchors or
 For any implementation or review handoff:
 
 1. Read `AGENTS.md`, the approved story, and the active packet.
-2. Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
+2. Story Approval Review Gate: before any parent story set is approved, packetized, activated, or handed to implementation, there must be one story-review artifact for the parent story and one story-review artifact for every child story. Parent story-review does not satisfy child story-review. Child story-review does not satisfy sibling story-review. Each required row must have a distinct story-review assignment identity and a distinct durable artifact identity for that row. One story-review assignment, one reviewer run, one matrix, or one durable artifact covering multiple stories satisfies at most one required row. If any row is missing, pending, unknown, or not reconstructable from durable evidence: STOP.
 3. Run `pnpm run packets:generate --story <stories/approved/...yaml> --activate` when activating or refreshing the story packet.
 4. Run `pnpm run packets:verify` immediately after packet generation and before worker assignment, reviewer assignment, implementation handoff, or PR handoff.
 5. Treat the story as `worker-ready` only after steps 1-4 are complete.

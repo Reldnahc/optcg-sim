@@ -1,0 +1,74 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-055
+epic_id: INF-055
+title: Require distinct per-story approval review assignments
+type: tooling
+area: docs
+primary_concern: docs
+priority: critical
+status: approved
+summary: >
+  Coordinate the workflow authority fix that closes the Story Approval Review
+  Gate loophole where one batched story-review artifact can be treated as
+  satisfying parent and child story review.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  the approved INF-055A child story to require distinct per-story story-review
+  assignments/artifacts and to route story-review to gpt-5.4 high.
+allowed_touch_points:
+  - stories/generated/INF-055*.yaml
+  - stories/approved/INF-055*.yaml
+spec_refs:
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+  - 27-spec-driven-story-generation-workflow.s008
+  - 27-spec-driven-story-generation-workflow.s009
+  - 27-spec-driven-story-generation-workflow.s015
+  - 27-spec-driven-story-generation-workflow.s017
+  - 32-codex-agent-integration.s008
+  - 32-codex-agent-integration.s010
+  - 32-codex-agent-integration.s013
+  - 32-codex-agent-integration.s014
+dependencies:
+  - INF-054
+scope:
+  - define one executable workflow child story that fixes Story Approval Review Gate assignment identity
+  - require the INF-055 parent story-review and INF-055A child story-review to be separate durable story-review artifacts from separate story-review assignments
+  - require both INF-055 story-review assignments to use `gpt-5.4` with `high` reasoning
+  - require separate story-review assignment identity and artifact identity for the parent and every child story in a parent story set
+  - make clear that one batched story-review run, one reviewer assignment, or one artifact covering multiple stories cannot satisfy more than one required row
+  - align story-review routing to gpt-5.4 high
+  - preserve existing parent/substory execution, packet, implementation-worker, code-review, PR, cleanup, and human-review gates
+non_scope:
+  - direct implementation from this parent story
+  - gameplay, engine, card, server, client, replay, persistence, security, UI, or product behavior
+  - changing packet lifecycle mechanics beyond documentation/tests for the approval-review gate
+  - changing implementation-worker or code-review model routing
+  - changing cleanup metadata syntax or post-merge cleanup automation
+child_stories:
+  - id: INF-055A
+    title: Enforce distinct per-story approval review assignments
+    concern: Update workflow authority, PR template evidence, and focused tests so every parent/child story requires its own story-review assignment/artifact, and story-review routes to gpt-5.4 high.
+    depends_on: [INF-054]
+acceptance_criteria:
+  - INF-055 is not implemented directly
+  - INF-055A is the only executable child for this parent
+  - INF-055 parent and INF-055A child have distinct durable story-review artifacts from distinct story-review assignments before approval handoff
+  - both INF-055 story-review assignments are recorded as `gpt-5.4 high`
+  - the workflow cannot treat one batched story-review artifact as satisfying the parent and any child, or multiple sibling children
+  - story-review routing is documented as gpt-5.4 high
+required_tests:
+  - distinct `gpt-5.4 high` story-review assignment and artifact evidence for INF-055 parent before approval handoff
+  - distinct `gpt-5.4 high` story-review assignment and artifact evidence for INF-055A child before approval handoff
+  - child-specific required tests from INF-055A
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - use the parent/substory workflow even though this parent has one child
+  - do not activate or packetize this parent story
+  - keep one active child packet at a time
+  - do not weaken implementation-worker, code-review, cleanup metadata, human review, or merge gates
+ambiguity_policy: fail_and_escalate
