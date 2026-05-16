@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-055H -->
 <!-- agent-packet:story-path stories/approved/ENG-055H-drawupto-runtime.yaml -->
-<!-- agent-packet:story-sha256 0d8276a5328a4c2c985bc7f2a82909b3c484f61ce9ad85275b5f59ba46b281c9 -->
+<!-- agent-packet:story-sha256 8d06fe28cfa3e83628fa9dfe9aae210d4a648d0701fd9b91ba32a0a3b241c8ec -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -11,14 +11,14 @@ Spec Version: v6
 Story Schema Version: 1.0.0
 ID: ENG-055H
 Epic ID: ENG-055
-Title: drawUpTo runtime
+Title: drawUpTo runtime primitive and sequence support
 Type: implementation
 Area: engine
 Primary Concern: rules
 
 ## Why
 
-Implement draw up to N runtime through chooseQuantity with zero quantity, short-deck do-as-much-as-possible behavior, event-order, state-hash, deterministic replay, and hidden-information coverage.
+Implement reusable draw up to N runtime through chooseQuantity for queued effect runtime and composed sequence frames, with zero quantity, short-deck do-as-much-as-possible behavior, event-order, state-hash, deterministic replay, and hidden-information coverage.
 
 ## Authoritative Spec References
 
@@ -506,18 +506,22 @@ Kickoff guardrails require the engine to stay free of Redis, Postgres, WebSocket
 
 ## Story Boundary
 
-Own only drawUpTo runtime behavior and its direct decision integration. Do not implement parser support, generated card support, or unrelated draw behavior.
+Own only reusable drawUpTo runtime behavior inside effect-runtime queue and composed sequence execution. Do not implement play-card support gating, parser support, generated card support, or unrelated draw behavior.
 
 ## Scope
 
-- implement drawUpTo through chooseQuantity and the generic composed frame pause/resume support from ENG-055B
-- expose the authored public chooseQuantity bounds without clamping the maximum to the current deck size
-- support choosing quantity zero only where the chooseQuantity bounds allow min 0
+- implement drawUpTo through chooseQuantity in reusable effect-runtime queue processing and the generic composed frame pause/resume support from ENG-055B
+- support runtime-created drawUpTo decisions for already queued supported effect entries without requiring play-card support gating to accept drawUpTo card definitions
+- create drawUpTo chooseQuantity decisions with `mode: upTo`, `min: 0`, and `max: count`
+- expose the authored `max: count` public chooseQuantity bound without clamping the maximum to the current deck size
+- support choosing quantity zero as the legal `min: 0` response for drawUpTo
 - when the chosen quantity exceeds the remaining deck size, draw every remaining card, emit draw/card-movement events only for cards actually drawn, and leave deck-out to the next rule-processing checkpoint
+- record canonical sequence `segmentResults` for resumed drawUpTo segments and preserve same-frame continuation semantics
 - add hidden-info, event-order, and state-hash tests
 
 ## Out of Scope
 
+- play-card support gating or normal playCard reachability for drawUpTo card definitions, which belongs to ENG-055K
 - parser/card support
 - draw-then-trash migration
 - replacement generalization
@@ -568,6 +572,8 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 - focused drawUpTo runtime tests
 - chooseQuantity integration tests
+- chooseQuantity shape test proving drawUpTo emits `mode: upTo`, `min: 0`, and authored `max: count`
+- composed sequence drawUpTo pause/resume regression covering canonical segment result ledger recording and following no-choice sequence segments without a second resolved-decision `state.seq` increment
 - short-deck replay regression covering legal selection above remaining deck size, append-order event sequencing, exactly one `state.seq` increment for the resolved decision, final empty-deck authoritative state hash, and hidden-info-safe public decision/legal-action shape
 - partial deck, hidden-info, event-order, and state-hash tests
 - focused regression that existing non-drawUpTo draw primitive behavior is unchanged
@@ -583,7 +589,9 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 ## Acceptance Criteria
 
-- drawUpTo creates and resolves quantity choices correctly
+- reusable effect-runtime drawUpTo queue processing creates and resolves quantity choices correctly for already queued supported effect entries
+- composed sequence frames can pause for drawUpTo chooseQuantity and resume without double-incrementing `state.seq`
+- resumed sequence drawUpTo records the attempted/succeeded/changedState segment result in the same execution frame before later sequence segments continue
 - zero quantity is accepted when min 0 makes it legal; optional decline semantics remain out of scope
 - short-deck behavior follows do-as-much-as-possible semantics without clamping or immediate fail-closed rejection
 - hidden-info, event ordering, deterministic replay, and state hashes are preserved

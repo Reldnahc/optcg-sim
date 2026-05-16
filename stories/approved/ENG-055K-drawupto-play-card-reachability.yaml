@@ -1,0 +1,75 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-055K
+epic_id: ENG-055
+title: drawUpTo play-card reachability
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Make ENG-055H reusable drawUpTo runtime reachable from normal playCard
+  gameplay entry paths by allowing supported implemented-DSL Character On Play
+  and Main Event drawUpTo definitions through play-card support gating.
+story_boundary: >
+  Own only play-card support gating and play-card integration tests needed for
+  supported drawUpTo card definitions to reach the existing ENG-055H runtime.
+  Do not change drawUpTo runtime semantics, parser support, generated card
+  support, or unrelated play-card behavior.
+allowed_touch_points:
+  - packages/engine-core/src/play-card-support.ts
+  - packages/engine-core/src/play-card.ts
+  - packages/engine-core/src/play-card-on-play-runtime.test.ts
+  - packages/engine-core/src/play-card-event.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-055*.yaml
+  - stories/approved/ENG-055*.yaml
+  - agent-packets/ENG-055K.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s002
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s012
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - ENG-055H
+scope:
+  - allow supported implemented-DSL Character On Play drawUpTo definitions to pass play-card support gating and queue into the ENG-055H runtime path
+  - allow supported implemented-DSL Main Event drawUpTo definitions to pass play-card support gating and queue into the ENG-055H runtime path
+  - preserve the existing playCard unsupported behavior for malformed, unsupported, optional, costly, or out-of-scope drawUpTo shapes
+  - prove normal playCard execution reaches chooseQuantity for supported drawUpTo definitions without adding parser/card support
+  - preserve hidden-info-safe public legal actions and decision projection for the resulting chooseQuantity prompt
+non_scope:
+  - drawUpTo primitive or sequence runtime semantics, which belong to ENG-055H
+  - parser/card support
+  - generated support metadata
+  - draw-then-trash migration
+  - replacement generalization
+  - unrelated play-card support broadening
+acceptance_criteria:
+  - supported Character On Play drawUpTo card definitions can be played and reach a chooseQuantity decision through normal playCard flow
+  - supported Main Event drawUpTo card definitions can be played and reach a chooseQuantity decision through normal playCard flow
+  - unsupported drawUpTo shapes continue to fail closed as unsupported playCard definitions
+  - hidden-info, event ordering, deterministic replay, and state hashes remain stable across the playCard-to-chooseQuantity transition
+required_tests:
+  - play-card On Play drawUpTo reachability test proving normal playCard flow creates a chooseQuantity decision
+  - play-card Main Event drawUpTo reachability test proving normal playCard flow creates a chooseQuantity decision
+  - fail-closed tests for optional drawUpTo, cost-bearing drawUpTo, and at least one malformed or otherwise unsupported drawUpTo play-card shape that should not become supported by this story
+  - hidden-info-safe public decision/legal-action shape test for drawUpTo playCard reachability
+  - event-order, deterministic replay, and state-hash regression for the normal `playCard` action that creates the drawUpTo chooseQuantity decision
+  - regression proving existing no-choice draw playCard support remains unchanged
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - do not import @optcg/cards
+  - do not add parser or generated card support
+  - fail closed on drawUpTo support-shape ambiguity
+ambiguity_policy: fail_and_escalate

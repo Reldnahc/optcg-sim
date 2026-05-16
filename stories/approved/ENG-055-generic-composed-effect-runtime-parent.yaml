@@ -16,8 +16,8 @@ summary: >
 story_boundary: >
   Parent planning story only. Do not implement this parent directly. Implement
   the approved ENG-055 child stories one at a time. Keep this series in
-  engine-core runtime behavior and tests; engine-core must not import
-  @optcg/cards.
+  engine-core runtime behavior, play-card support gating explicitly owned by
+  child stories, and tests; engine-core must not import @optcg/cards.
 allowed_touch_points:
   - tests/hidden-info/**
   - stories/generated/ENG-055*.yaml
@@ -71,9 +71,13 @@ child_stories:
     concern: Implement playSelected from hand, up-to cardinality integration, area-capacity handling, and forced-trash consequences.
     depends_on: [ENG-055A, ENG-055B, ENG-055F, TYP-007D]
   - id: ENG-055H
-    title: drawUpTo runtime
-    concern: Implement draw up to N through chooseQuantity with zero, partial deck, event-order, state-hash, and hidden-info coverage.
+    title: drawUpTo runtime primitive and sequence support
+    concern: Implement reusable draw up to N queue and sequence runtime through chooseQuantity with zero, partial deck, event-order, state-hash, and hidden-info coverage.
     depends_on: [ENG-055A, ENG-055B, TYP-007D]
+  - id: ENG-055K
+    title: drawUpTo play-card reachability
+    concern: Allow supported Character On Play and Main Event drawUpTo definitions to pass normal play-card support gating into the ENG-055H runtime.
+    depends_on: [ENG-055H]
   - id: ENG-055I
     title: Saved selections and that Character runtime
     concern: Implement saved result references for later approved consumers and fail closed when saved objects are gone, illegal, or unsupported.
@@ -90,21 +94,21 @@ scope:
 non_scope:
   - direct parent implementation
   - TYP contract/schema changes except through declared dependencies
-  - card parser rules, generated-support reports, real-card fixtures, or support metadata
+  - card parser rules, generated-support reports, real-card fixtures, or support metadata beyond explicit play-card support gating owned by a child story
   - replacement generalization
   - refresh-lock or cannot-become-active-next-refresh runtime until contract/schema authority exists
   - server, client, API, UI, database, or live Poneglyph work
 acceptance_criteria:
   - ENG-055 is not implemented directly
-  - ENG-055 and every child story ENG-055A through ENG-055J have usable per-story story-review evidence before approval handoff
-  - the parent/child story-set review-status matrix can be reconstructed before approval handoff, child activation, packet generation, and parent PR handoff
+  - ENG-055 and every child story ENG-055A through ENG-055K have usable per-story story-review evidence before approval handoff, with one distinct story-review assignment identity and one distinct durable artifact identity per parent/child row
+  - the parent/child story-set review-status matrix can be reconstructed before approval handoff, child activation, packet generation, parent PR opening, and parent PR handoff
   - each ENG-055 child consumes TYP-007 contracts and remains independently reviewable
   - engine-core does not import @optcg/cards
-  - no parser/card support is added by this series
+  - no parser support, generated support, real-card fixture work, or card-data admission broadening is added by this series; explicit play-card support gating is allowed only where a child story owns it
 required_tests:
   - record set-level story-review for the ENG-055 parent story set
-  - record per-story story-review for ENG-055 and each child ENG-055A through ENG-055J
-  - reconstruct the compact story-set review-status matrix before approval handoff, child activation, packet generation, and parent PR handoff
+  - record per-story story-review for ENG-055 and each child ENG-055A through ENG-055K with one distinct story-review assignment identity and one distinct durable artifact identity per required row
+  - reconstruct the compact story-set review-status matrix before approval handoff, child activation, packet generation, parent PR opening, and parent PR handoff
   - run `corepack pnpm run stories:validate`
 repo_rules:
   - use the parent/substory workflow
