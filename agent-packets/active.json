@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-055F.md",
-      "storyId": "ENG-055F",
-      "storyPath": "stories/approved/ENG-055F-cost-and-hand-selection-runtime.yaml",
-      "storySha256": "9ec9fc159f39dbcf2f31ab8a4d7f63894ce0006ed6243267929f7f32a116ceb9"
+      "packetPath": "agent-packets/ENG-055G.md",
+      "storyId": "ENG-055G",
+      "storyPath": "stories/approved/ENG-055G-playselected-play-from-hand-runtime.yaml",
+      "storySha256": "47920f81c3101af24859f30da606e85dd74f6f25e761a54ec88d200b8024b37f"
     }
   ],
   "version": 1
