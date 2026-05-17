@@ -162,6 +162,37 @@ describe("generated support runtime capability matrix", () => {
     }
   });
 
+  it("certifies the exact draw-up-to parser rule with chooseQuantity-backed ENG capability evidence", () => {
+    const parserRuleId = "exact:on-play:draw-up-to-n:self";
+    const drawUpToCapability =
+      generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+        (capability) => capability.id === "drawUpTo:self:chooseQuantity",
+      );
+    const requiredCapabilityIds = [
+      "category:auto",
+      "drawUpTo:self:chooseQuantity",
+      "sourcePresencePolicy:mustRemainInSameZone",
+      "trigger:onPlay",
+    ];
+
+    expect(drawUpToCapability).toMatchObject({
+      description:
+        "Draw up to a chosen quantity of cards for the source controller using a chooseQuantity decision.",
+      kind: "effect",
+      sinceStory: "ENG-055H",
+      supported: true,
+      supportedParserRuleIds: [parserRuleId],
+    });
+    for (const capabilityId of requiredCapabilityIds) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+    }
+  });
+
   it.each([
     {
       capabilityId: "keyword:rush:printed",

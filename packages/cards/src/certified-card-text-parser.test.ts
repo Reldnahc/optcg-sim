@@ -69,6 +69,34 @@ describe("certified card text parser", () => {
     ]);
   });
 
+  it.each([
+    { count: 1, sourceText: "[On Play] Draw up to 1 card." },
+    { count: 3, sourceText: "[On Play] Draw up to 3 cards." },
+  ])(
+    "parses the exact On Play draw-up-to template to generated DSL ($sourceText)",
+    ({ count, sourceText }) => {
+      const result = parse(sourceText);
+
+      expect(result.status).toBe("complete");
+      if (!isCompleteGeneratedSupportParseResult(result)) {
+        throw new Error("Expected complete parse.");
+      }
+
+      expect(result.parserRuleIds).toEqual(["exact:on-play:draw-up-to-n:self"]);
+      expect(result.effectDefinition.effects).toEqual([
+        {
+          category: "auto",
+          effect: { count, player: "self", type: "drawUpTo" },
+          id: toEffectId(
+            `CARD-008B-001:auto-on-play-draw-up-to-${String(count)}`,
+          ),
+          sourcePresencePolicy: "mustRemainInSameZone",
+          trigger: { type: "onPlay" },
+        },
+      ]);
+    },
+  );
+
   it("parses standalone When Attacking draw with count 2 to generated DSL", () => {
     const result = parse("[When Attacking] Draw 2 cards.");
 
@@ -353,6 +381,13 @@ describe("certified card text parser", () => {
     "[On Play] Trash 2 cards from your hand. Draw 01 card.",
     "[On Play] Trash 2 cards from your hand. Draw one card.",
     "[On Play] Trash 9007199254740992 cards from your hand. Draw 1 card.",
+    "[On Play] Draw up to 0 cards.",
+    "[On Play] Draw up to -1 cards.",
+    "[On Play] Draw up to 1.5 cards.",
+    "[On Play] Draw up to 01 card.",
+    "[On Play] Draw up to one card.",
+    "[On Play] Draw up to 9007199254740992 cards.",
+    "[On Play] Draw up to cards.",
   ])("fails closed on invalid draw count wording (%s)", (text) => {
     const result = parse(text);
 
@@ -373,6 +408,64 @@ describe("certified card text parser", () => {
           end: text.length,
           start: 0,
           text,
+        },
+      ],
+    });
+  });
+
+  it.each([
+    "[On Play] You may draw up to 2 cards.",
+    "[On Play] Draw up to 2 cards from the top of your deck.",
+    "[On Play] Look at up to 2 cards from the top of your deck and add 1 card to your hand.",
+    "[When Attacking] Draw up to 2 cards.",
+    "[On Play] [Once Per Turn] Draw up to 2 cards.",
+  ])("fails closed on unsupported draw-up-to wording (%s)", (text) => {
+    const result = parse(text);
+
+    expect(result.status).toBe("partial");
+    expect(result).toMatchObject({
+      blockers: [
+        {
+          code: "unparsed-span",
+          span: {
+            end: text.length,
+            start: 0,
+            text,
+          },
+        },
+      ],
+      unparsedSpans: [
+        {
+          end: text.length,
+          start: 0,
+          text,
+        },
+      ],
+    });
+  });
+
+  it("records unparsed residue after the exact On Play draw-up-to template", () => {
+    const result = parse("[On Play] Draw up to 2 cards. Then rest 1 DON!!.");
+
+    expect(result.status).toBe("partial");
+    expect(result).toMatchObject({
+      blockers: [
+        {
+          code: "unparsed-span",
+          message: "Unsupported card text remains after certified parsing.",
+          span: {
+            end: 48,
+            start: 30,
+            text: "Then rest 1 DON!!.",
+          },
+        },
+      ],
+      parsedRuleIds: ["exact:on-play:draw-up-to-n:self"],
+      unparsedSpans: [
+        {
+          end: 48,
+          start: 30,
+          text: "Then rest 1 DON!!.",
         },
       ],
     });

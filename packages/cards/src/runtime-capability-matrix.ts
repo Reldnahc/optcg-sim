@@ -148,10 +148,10 @@ export const generatedSupportRuntimeCapabilityMatrix = {
     },
     {
       description:
-        "Draw up to a chosen quantity of cards for the source controller.",
+        "Draw up to a chosen quantity of cards for the source controller using a chooseQuantity decision.",
       id: "drawUpTo:self:chooseQuantity",
       kind: "effect",
-      sinceStory: "CARD-014A",
+      sinceStory: "ENG-055H",
       supported: true,
       supportedParserRuleIds: ["exact:on-play:draw-up-to-n:self"],
     },
