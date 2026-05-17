@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Introduce a generic execution context and frame stack that can pause and
   resume composed effect sequences around decisions.

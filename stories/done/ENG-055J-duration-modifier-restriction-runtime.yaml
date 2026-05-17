@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Implement temporary power modifier and TYP-007E-authorized restriction runtime
   behavior through the engine computed-view/modifier model.

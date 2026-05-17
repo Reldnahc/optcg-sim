@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Implement runtime semantics for non-replacement optional activation,
   optional cost, and optional effect clauses in composed effects.

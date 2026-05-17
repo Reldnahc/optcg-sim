@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Make ENG-055H reusable drawUpTo runtime reachable from normal playCard
   gameplay entry paths by allowing supported implemented-DSL Character On Play

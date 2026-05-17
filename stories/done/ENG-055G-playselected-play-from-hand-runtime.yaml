@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Implement Character-only playSelected from hand runtime with up-to cardinality
   integration, character-area capacity handling, and forced-trash consequences.

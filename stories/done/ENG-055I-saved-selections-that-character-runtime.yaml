@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Implement execution-context saved result references so later sequence steps
   can reuse approved saved objects, including "that Character" patterns where

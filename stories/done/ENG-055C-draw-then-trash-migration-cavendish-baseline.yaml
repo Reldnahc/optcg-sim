@@ -8,7 +8,7 @@ type: refactor
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Migrate the existing draw-then-trash sequence runtime onto the generic
   sequence runner while preserving OP10-045/Cavendish behavior exactly.

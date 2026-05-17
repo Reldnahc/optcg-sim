@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Implement returnDon / DON minus N cost runtime and generic filtered hand
   selection with private visibility and fail-closed response handling.

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Implement reusable draw up to N runtime through chooseQuantity for queued
   effect runtime and composed sequence frames, with zero quantity, short-deck

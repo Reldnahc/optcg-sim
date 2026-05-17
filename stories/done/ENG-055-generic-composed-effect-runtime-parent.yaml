@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate reusable engine runtime behavior for composed effect primitives
   that consume the TYP-007 contracts while preserving hidden information,
