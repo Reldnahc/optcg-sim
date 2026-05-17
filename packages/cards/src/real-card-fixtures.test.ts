@@ -14,6 +14,7 @@ import {
   validateLoadout,
 } from "./index.js";
 import { normalizePoneglyphCardDetail } from "./normalization.js";
+import { listRepresentativeSupportProofMatrixRows } from "./representative-fixtures.js";
 import {
   buildFixtureOnlyRealCardDslMatchCardManifest,
   fixtureOnlyRealCardDslMatchCardManifestPath,
@@ -259,8 +260,12 @@ describe("real card fixtures", () => {
     expect(cavendish.effectText).toBe(
       "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
     );
-    expect(cavendish.sourceTextHash).toMatch(/^[a-f0-9]{64}$/u);
-    expect(cavendish.behaviorHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(cavendish.sourceTextHash).toBe(
+      "021421b539ccd217aba7f1b12a71c8237e0c0fda28985041d9e91d5df1cd2a28",
+    );
+    expect(cavendish.behaviorHash).toBe(
+      "91be13cae1812281f832a9d4801ab16b17f162937783b27a572ce153dc88f234",
+    );
 
     for (const entry of realEffectShapeFixtureCorpus) {
       const fixture = await loadCheckedInRealPoneglyphFixture(entry.cardId);
@@ -726,6 +731,63 @@ describe("real card fixtures", () => {
     expect(deckResult.errors).toEqual([]);
     expect(loadoutResult.valid).toBe(true);
     expect(loadoutResult.errors).toEqual([]);
+  });
+
+  it("binds the CARD-014H included-real proof row to OP10-045 CARD-009C support evidence", async () => {
+    const manifest = await loadFixtureOnlyRealCardDslMatchCardManifest();
+    const matrixRow = listRepresentativeSupportProofMatrixRows().find(
+      (row) => row.candidateId === "op10-045-cavendish",
+    );
+    const card = manifest.cards[toCardId("OP10-045")];
+
+    if (matrixRow?.status !== "included-real") {
+      throw new Error("missing OP10-045 included-real proof row");
+    }
+
+    expect(matrixRow).toMatchObject({
+      cardId: "OP10-045",
+      doneStoryPath:
+        "stories/done/CARD-009C-op10-045-generated-support-fixture-proof.yaml",
+      effectDefinitionId: "op10-045.generated-support",
+      fixturePath: "fixtures/poneglyph/cards/OP10-045.cavendish.json",
+      status: "included-real",
+    });
+    expect(card?.support).toMatchObject({
+      behaviorHash: matrixRow.expectedBehaviorHash,
+      cardDataVersion: "real-card-poneglyph-fixture-v1",
+      cardId: toCardId("OP10-045"),
+      effectDefinitionId: matrixRow.effectDefinitionId,
+      rulesVersion: "2026-01-16",
+      sourceTextHash: matrixRow.expectedSourceTextHash,
+      status: "implemented-dsl",
+      tested: true,
+    });
+    expect(card?.support.sourceTextHash).toBe(card?.sourceTextHash);
+    expect(card?.support.behaviorHash).toBe(card?.behaviorHash);
+    expect(
+      manifest.effectDefinitions?.[String(card?.support.effectDefinitionId)],
+    ).toBeDefined();
+  });
+
+  it("keeps the CARD-014H reverse-Cavendish proof synthetic-only and absent from real-card playable support", async () => {
+    const manifest = await loadFixtureOnlyRealCardDslMatchCardManifest();
+    const matrixRow = listRepresentativeSupportProofMatrixRows().find(
+      (row) => row.candidateId === "reverse-cavendish",
+    );
+
+    expect(matrixRow).toMatchObject({
+      cardId: undefined,
+      realCardPlayableSupport: false,
+      sourceText: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+      status: "synthetic-only",
+    });
+    expect(manifest.cards[toCardId("CARD-014C-SYNTHETIC")]).toBeUndefined();
+    expect(
+      manifest.effectDefinitions?.["card-014c-synthetic.generated-support"],
+    ).toBeUndefined();
+    expect(
+      Object.values(manifest.cards).map((card) => card.cardId),
+    ).not.toContain(toCardId("CARD-014C-SYNTHETIC"));
   });
 
   it("matches every real mechanics matrix entry to checked-in manifest support metadata without broadening support", async () => {

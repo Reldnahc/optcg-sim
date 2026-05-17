@@ -10,6 +10,7 @@ import {
   getRepresentativeFixtureSupportMetadata,
   hasCheckedInRepresentativePoneglyphFixture,
   listRepresentativeFixtureIds,
+  listRepresentativeSupportProofMatrixRows,
   loadCheckedInRepresentativePoneglyphFixture,
   loadRepresentativeMatchCardManifestFixture,
 } from "./representative-fixtures.js";
@@ -101,6 +102,77 @@ describe("representative fixtures", () => {
     expect(
       Object.values(manifest.cards).map((card) => card.support.tested),
     ).toEqual([false, false]);
+  });
+
+  it("records the CARD-014H representative support proof matrix", () => {
+    const rows = listRepresentativeSupportProofMatrixRows();
+
+    expect(
+      rows.map((row) => ({
+        candidateId: row.candidateId,
+        status: row.status,
+      })),
+    ).toEqual([
+      { candidateId: "op10-045-cavendish", status: "included-real" },
+      { candidateId: "reverse-cavendish", status: "synthetic-only" },
+      { candidateId: "ulti-style", status: "blocked-missing-layer" },
+      {
+        candidateId: "impel-down-all-stars-style",
+        status: "blocked-missing-layer",
+      },
+      { candidateId: "rest", status: "blocked-missing-layer" },
+      { candidateId: "lock", status: "blocked-missing-layer" },
+      { candidateId: "power", status: "blocked-missing-layer" },
+    ]);
+
+    const includedReal = rows.find(
+      (row) => row.candidateId === "op10-045-cavendish",
+    );
+    expect(includedReal).toMatchObject({
+      cardId: "OP10-045",
+      doneStoryPath:
+        "stories/done/CARD-009C-op10-045-generated-support-fixture-proof.yaml",
+      effectDefinitionId: "op10-045.generated-support",
+      expectedBehaviorHash:
+        "91be13cae1812281f832a9d4801ab16b17f162937783b27a572ce153dc88f234",
+      expectedSourceTextHash:
+        "021421b539ccd217aba7f1b12a71c8237e0c0fda28985041d9e91d5df1cd2a28",
+      fixturePath: "fixtures/poneglyph/cards/OP10-045.cavendish.json",
+      sourceText:
+        "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
+      status: "included-real",
+    });
+    expect(includedReal?.missingLayers).toEqual([]);
+
+    const syntheticOnly = rows.find(
+      (row) => row.candidateId === "reverse-cavendish",
+    );
+    expect(syntheticOnly).toMatchObject({
+      cardId: undefined,
+      realCardPlayableSupport: false,
+      sourceText: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+      status: "synthetic-only",
+    });
+
+    for (const row of rows.filter(
+      (candidate) => candidate.status === "blocked-missing-layer",
+    )) {
+      expect(row.missingLayers).toEqual(
+        expect.arrayContaining([
+          "exact-card-id",
+          "checked-in-fixture-provenance",
+          "behavior-sensitive-printed-fields",
+          "source-text-hash",
+          "behavior-hash",
+          "parser-rule-evidence",
+          "runtime-capability-record",
+          "support-metadata",
+          "manifest-regeneration-plan",
+        ]),
+      );
+      expect(row.existingDiagnosticCodes.length).toBeGreaterThan(0);
+      expect(row.realCardPlayableSupport).toBe(false);
+    }
   });
 });
 
