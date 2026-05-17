@@ -151,6 +151,46 @@ describe("support evaluator", () => {
     expect(evaluation.support).toBeUndefined();
   });
 
+  it("reports schema failure before runtime-capability failure when both could apply", () => {
+    const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
+    const runtimeCapabilityMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "effect:sequence:ordered" &&
+          capability.id !==
+            "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+      ),
+    };
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: normalized,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: normalized.behaviorHash,
+      expectedSourceTextHash: normalized.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix,
+      validateEffectDefinition: () => ({
+        errors: ["/effects/0/effect/type failed schema validation"],
+        valid: false,
+      }),
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [
+        {
+          code: "invalid-dsl-schema",
+          message: "Generated DSL failed effect DSL schema validation.",
+        },
+      ],
+      missingCapabilityIds: [],
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
+  });
+
   it("fails closed when runtime capability lacks parser-rule evidence", () => {
     const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
     const runtimeCapabilityMatrix = {

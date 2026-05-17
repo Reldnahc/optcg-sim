@@ -248,32 +248,6 @@ function buildGeneratedSupportIndexEntry(
     });
   }
 
-  const capabilityCoverage = evaluateRuntimeCapabilityCoverageForParserRuleIds({
-    matrix:
-      input.runtimeCapabilityMatrix ?? generatedSupportRuntimeCapabilityMatrix,
-    parserRuleIds: parseResult.parserRuleIds,
-  });
-  if (capabilityCoverage.missing.length > 0) {
-    return unsupportedEntry({
-      blockers: capabilityCoverage.blockers,
-      card,
-      missingCapabilityIds: capabilityCoverage.missingCapabilityIds,
-      parseStatus: parseResult.status,
-      parserRuleIds: parseResult.parserRuleIds,
-    });
-  }
-
-  if (
-    parseResult.effectDefinition.implementationStatus === "vanilla-confirmed"
-  ) {
-    return supportedVanillaEntry({
-      capabilityEvidence: capabilityCoverage.evidence,
-      card,
-      parseStatus: parseResult.status,
-      parserRuleIds: parseResult.parserRuleIds,
-    });
-  }
-
   const validation = input.validateEffectDefinition(
     parseResult.effectDefinition,
   );
@@ -286,6 +260,35 @@ function buildGeneratedSupportIndexEntry(
           message: "Generated DSL failed effect DSL schema validation.",
         },
       ],
+      card,
+      parseStatus: parseResult.status,
+      parserRuleIds: parseResult.parserRuleIds,
+    });
+  }
+
+  const capabilityCoverage = evaluateRuntimeCapabilityCoverageForParserRuleIds({
+    matrix:
+      input.runtimeCapabilityMatrix ?? generatedSupportRuntimeCapabilityMatrix,
+    parserRuleIds: parseResult.parserRuleIds,
+  });
+  if (capabilityCoverage.missing.length > 0) {
+    return unsupportedEntry({
+      blockers: capabilityCoverage.blockers.map((blocker) => ({
+        ...blocker,
+        schemaValidated: true,
+      })),
+      card,
+      missingCapabilityIds: capabilityCoverage.missingCapabilityIds,
+      parseStatus: parseResult.status,
+      parserRuleIds: parseResult.parserRuleIds,
+    });
+  }
+
+  if (
+    parseResult.effectDefinition.implementationStatus === "vanilla-confirmed"
+  ) {
+    return supportedVanillaEntry({
+      capabilityEvidence: capabilityCoverage.evidence,
       card,
       parseStatus: parseResult.status,
       parserRuleIds: parseResult.parserRuleIds,

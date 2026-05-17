@@ -3,6 +3,7 @@ import type { CardId } from "@optcg/types";
 import type { GeneratedSupportIndex } from "./generated-support-index.js";
 import type {
   GeneratedSupportBlockerCode,
+  GeneratedSupportDeepestSuccessfulLayer,
   GeneratedSupportDiagnosticLayer,
   GeneratedSupportParserResultStatus,
   GeneratedSupportBlocker,
@@ -25,6 +26,7 @@ export interface GeneratedSupportReport {
 export interface GeneratedSupportReportBlocker {
   cardId: CardId;
   code: GeneratedSupportBlockerCode;
+  deepestSuccessfulLayer?: GeneratedSupportDeepestSuccessfulLayer;
   layer: GeneratedSupportDiagnosticLayer;
   message: string;
   capabilityId?: string;
@@ -55,13 +57,19 @@ export function buildGeneratedSupportReport(
   );
   const blockers = entries
     .flatMap((entry) =>
-      entry.blockers.map(
-        (blocker): GeneratedSupportReportBlocker => ({
-          ...blocker,
+      entry.blockers.map((blocker): GeneratedSupportReportBlocker => {
+        const publicBlocker = stripInternalBlockerFields(blocker);
+        const deepestSuccessfulLayer =
+          determineDeepestSuccessfulLayerForBlocker(blocker);
+        return {
+          ...publicBlocker,
           cardId: entry.cardId,
+          ...(deepestSuccessfulLayer === undefined
+            ? {}
+            : { deepestSuccessfulLayer }),
           layer: classifyGeneratedSupportBlockerLayer(blocker),
-        }),
-      ),
+        };
+      }),
     )
     .sort(compareBlockers);
 
@@ -164,6 +172,14 @@ function sortedUnique<T extends string>(values: readonly T[]): readonly T[] {
   return [...new Set(values)].sort();
 }
 
+function stripInternalBlockerFields(
+  blocker: GeneratedSupportBlocker,
+): Omit<GeneratedSupportBlocker, "schemaValidated"> {
+  const publicBlocker = { ...blocker };
+  delete publicBlocker.schemaValidated;
+  return publicBlocker;
+}
+
 function isUnsupportedPrimitiveComponentLayer(
   layer: GeneratedSupportDiagnosticLayer,
 ): boolean {
@@ -209,6 +225,22 @@ export function classifyGeneratedSupportBlockerLayer(
     default:
       return "unsupported-layer";
   }
+}
+
+export function determineDeepestSuccessfulLayerForBlocker(
+  blocker: Pick<
+    GeneratedSupportBlocker,
+    "code" | "component" | "diagnosticLayer" | "schemaValidated"
+  >,
+): GeneratedSupportDeepestSuccessfulLayer | undefined {
+  const layer = classifyGeneratedSupportBlockerLayer(blocker);
+  if (layer === "runtime-capability" && blocker.schemaValidated === true) {
+    return "schema";
+  }
+  if (layer === "schema") {
+    return "parser";
+  }
+  return undefined;
 }
 
 function classifyUnsupportedPrimitiveLayer(

@@ -12,7 +12,10 @@ import {
   type PoneglyphClient,
 } from "./poneglyph-client.js";
 import type { EffectDefinitionValidationResult } from "./generated-support-index.js";
-import { classifyGeneratedSupportBlockerLayer } from "./generated-support-report.js";
+import {
+  classifyGeneratedSupportBlockerLayer,
+  determineDeepestSuccessfulLayerForBlocker,
+} from "./generated-support-report.js";
 import type { GeneratedSupportBlocker } from "./generated-support-types.js";
 import {
   evaluateGeneratedSupportPlayability,
@@ -89,7 +92,15 @@ export async function runSupportProbe(
 export function formatSupportProbeBlocker(
   blocker: Pick<
     GeneratedSupportBlocker,
-    "code" | "component" | "diagnosticLayer" | "message" | "span"
+    | "capabilityId"
+    | "code"
+    | "component"
+    | "diagnosticLayer"
+    | "expectedHash"
+    | "message"
+    | "receivedHash"
+    | "schemaValidated"
+    | "span"
   >,
 ): string {
   const spanText =
@@ -97,7 +108,13 @@ export function formatSupportProbeBlocker(
       ? ""
       : ` span: ${JSON.stringify(blocker.span.text)}`;
   const layer = classifyGeneratedSupportBlockerLayer(blocker);
-  return `- ${blocker.code} [layer: ${layer}]: ${blocker.message}${spanText}`;
+  const deepestSuccessfulLayer =
+    determineDeepestSuccessfulLayerForBlocker(blocker);
+  const deepestSuccessfulLayerText =
+    deepestSuccessfulLayer === undefined
+      ? ""
+      : ` [deepest-successful-layer: ${deepestSuccessfulLayer}]`;
+  return `- ${blocker.code} [layer: ${layer}]${deepestSuccessfulLayerText}: ${blocker.message}${spanText}`;
 }
 
 export async function runSupportProbeCli(
