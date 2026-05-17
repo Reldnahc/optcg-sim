@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Improve cards-side generated-support probe and report output so unsupported
   text is easier to debug by showing the deepest successful support layer,
