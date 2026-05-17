@@ -61,11 +61,21 @@ export interface GeneratedSupportUnparsedSpan {
   text: string;
 }
 
+export interface GeneratedSupportDiagnosticDecomposition {
+  recognizedActionCandidates: readonly string[];
+  recognizedSyntaxFragments: readonly string[];
+  recognizedTriggerCandidates: readonly string[];
+  reason: string;
+  unsupportedConditionFragments: readonly string[];
+  unsupportedSyntaxFragments: readonly string[];
+}
+
 export interface GeneratedSupportBlocker {
   code: GeneratedSupportBlockerCode;
   message: string;
   capabilityId?: string;
   component?: string;
+  decomposition?: GeneratedSupportDiagnosticDecomposition;
   diagnosticLayer?: GeneratedSupportDiagnosticLayer;
   schemaValidated?: boolean;
   expectedHash?: string;

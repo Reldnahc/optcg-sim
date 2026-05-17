@@ -31,6 +31,7 @@ export interface GeneratedSupportReportBlocker {
   message: string;
   capabilityId?: string;
   component?: string;
+  decomposition?: GeneratedSupportBlocker["decomposition"];
   expectedHash?: string;
   parserRuleId?: string;
   receivedHash?: string;

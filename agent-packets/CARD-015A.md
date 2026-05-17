@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id CARD-015A -->
 <!-- agent-packet:story-path stories/approved/CARD-015A-support-probe-source-span-layer-diagnostics.yaml -->
-<!-- agent-packet:story-sha256 e55de5346ba10eb870b6111f9848d981696787834cbae970bbcf5a32cd85362b -->
+<!-- agent-packet:story-sha256 a20c1a3080054a6df7ba7dd6bc648178ef30c399d18f1e054b3a07a81c3b7ad3 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -18,7 +18,7 @@ Primary Concern: verification
 
 ## Why
 
-Improve cards-side generated-support probe and report output so unsupported text is easier to debug by showing the deepest successful support layer, exact missing layer, and narrow source-span diagnostics where existing parser data already makes that possible.
+Improve cards-side generated-support probe and report output so unsupported text is easier to debug by showing the deepest successful support layer, exact missing layer, narrow source-span diagnostics, and diagnostic-only decomposition of parser failures into recognized candidate pieces and unsupported blocking text.
 
 ## Authoritative Spec References
 
@@ -295,9 +295,15 @@ Own only package-local support probe/report diagnostics, cards-internal diagnost
 - for schema failures after source integrity, metadata, and parser success, report deepest successful layer `parser`
 - for parser failures, stale-hash failures, and any case with no trusted prior successful layer, omit deepest-successful-layer output rather than inventing a successful layer
 - prefer narrow source spans when existing parser or blocker data already allows it, including exact unparsed span, exact residue text, word-number token such as `two`, and unsupported wrapper text such as `[Once Per Game]`
+- for whole-span parser failures where a supported action phrase is recognizable inside an unsupported wrapper or condition, report diagnostic-only decomposition that separates recognized candidate pieces from unsupported blocking pieces
+- for `[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.`, report `[On Play]` as a recognized trigger candidate, the `if` conditional wrapper as recognized syntax, `draw 2 cards` as a recognized supported-action candidate, the multicolored-leader plus hand-count predicates as unsupported condition blockers, and `and` as an unsupported condition-conjunction syntax fragment
+- classify only the exact `and` conjunction in that conditional draw template; do not generalize `or`, because `or` can be a logical condition connector or part of quantity-comparator text such as `or more` / `or less`
+- if an unsupported parser failure contains `or`, `or more`, `or less`, or `up to` wording outside an already certified exact template, leave that wording in the unsupported span or condition predicate rather than inventing a connector/comparator classification
+- diagnostic-only decomposition must not create parser certification, generated DSL, runtime capability evidence, support metadata, or playable support
+- decomposition output must explicitly say the full effect template remains unsupported because the whole condition/action template is not certified
 - preserve blocker identity for existing codes `unparsed-span`, `ambiguous-wording`, `custom-handler-required`, `unsupported-primitive`, `stale-hash`, `invalid-dsl-schema`, and `missing-runtime-capability`
 - keep stale hash as the highest-priority diagnostic and do not silently refresh or rewrite fixture evidence
-- allow whole-card unsupported diagnostics only when no narrower parser component matched
+- allow whole-card unsupported diagnostics only when no narrower parser component or diagnostic-only decomposition matched
 
 ## Out of Scope
 
@@ -361,6 +367,9 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - unsupported word-number reports parser/source-span diagnostic without becoming playable
 - extra sentence after supported text reports residue or unparsed span
 - unsupported timing or wrapper reports parser layer
+- unsupported conditional draw text reports recognized trigger and draw-action candidates plus unsupported condition fragments without becoming playable
+- support-probe output for `[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.` names the supported draw action candidate and the unsupported condition blockers separately
+- generated-support report output for the same conditional draw text exposes the same diagnostic fragments as structured blocker metadata
 - missing runtime capability reports runtime capability layer and capability ID
 - schema-invalid generated DSL reports schema layer
 - stale hash reports stale-hash before parser or capability diagnostics
@@ -390,7 +399,9 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - parser failure and stale-hash failure omit deepest-successful-layer output
 - diagnostics continue to identify source integrity, metadata/review/test status, stale hash, unsupported primitive, unsupported trigger, unsupported cost, unsupported optionality, unsupported condition, unsupported cardinality, unsupported target, unsupported duration/modifier/restriction, and unsupported saved-reference when existing CARD-014I data already provides that layer
 - narrow source spans are reported only when existing parser/blocker data supports them
-- whole-card unsupported diagnostics are used only when no narrower parser component matched
+- parser-failure diagnostics report recognized candidate pieces and unsupported blocking pieces for supported-action-inside-unsupported-wrapper/condition text without changing support status
+- `[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.` remains unsupported but reports `[On Play]`, the `if` wrapper, `draw 2 cards`, `your Leader is multicolored`, `and`, and `you have 5 or less cards in your hand` as separate diagnostic fragments
+- whole-card unsupported diagnostics are used only when no narrower parser component or diagnostic-only decomposition matched
 - stale hash remains highest-priority and does not mutate fixture evidence
 
 ## Post-Approval Role Sections

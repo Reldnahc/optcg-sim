@@ -613,6 +613,45 @@ describe("generated support report", () => {
     });
   });
 
+  it("exposes structured conditional-draw decomposition fragments in report blockers", () => {
+    const sourceText =
+      "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-015A-REPORT-CONDITIONAL" as CardId,
+          sourceText,
+          sourceTextHash: "sha256:card-015a-report-conditional",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          cardId: "CARD-015A-REPORT-CONDITIONAL",
+          code: "unparsed-span",
+          decomposition: {
+            recognizedActionCandidates: ["draw 2 cards"],
+            recognizedSyntaxFragments: ["if-conditional-wrapper"],
+            recognizedTriggerCandidates: ["[On Play]"],
+            reason:
+              "Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
+            unsupportedConditionFragments: [
+              "your Leader is multicolored",
+              "you have 5 or less cards in your hand",
+            ],
+            unsupportedSyntaxFragments: ["condition conjunction: and"],
+          },
+        }),
+      ]),
+    );
+    expect(report.unsupportedCardIds).toEqual(["CARD-015A-REPORT-CONDITIONAL"]);
+  });
+
   it("includes draw-then-trash parser rules in report evidence when supported", () => {
     const index = buildGeneratedSupportIndex({
       cards: [

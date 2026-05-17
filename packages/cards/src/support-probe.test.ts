@@ -471,6 +471,83 @@ describe("support probe", () => {
     expect(text).toContain('span: "[On Play] Draw two cards."');
   });
 
+  it("prints recognized trigger/action candidates and unsupported condition blockers for conditional draw text", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-015A-PROBE-CONDITIONAL"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-015A-PROBE-CONDITIONAL",
+          effect:
+            "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.",
+          name: "Conditional Draw Probe Candidate",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("recognized trigger candidate: [On Play]");
+    expect(text).toContain(
+      "recognized syntax fragment: if-conditional-wrapper",
+    );
+    expect(text).toContain(
+      "recognized supported-action candidate: draw 2 cards",
+    );
+    expect(text).toContain(
+      "unsupported condition predicate: your Leader is multicolored",
+    );
+    expect(text).toContain(
+      "unsupported condition predicate: you have 5 or less cards in your hand",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: condition conjunction: and",
+    );
+    expect(text).not.toContain("condition conjunction: or");
+    expect(text).toContain(
+      "reason: Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
+    );
+  });
+
+  it("prints singular recognized draw action candidates without corrupting card noun", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-015A-PROBE-CONDITIONAL-SINGULAR"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-015A-PROBE-CONDITIONAL-SINGULAR",
+          effect:
+            "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 1 card.",
+          name: "Conditional Draw Singular Probe Candidate",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain(
+      "recognized supported-action candidate: draw 1 card",
+    );
+    expect(text).not.toContain("draw 1 cards");
+  });
+
   it("prints metadata layer for empty-effect metadata precondition blockers", async () => {
     const detail = await loadOp03044Fixture();
     const output: string[] = [];

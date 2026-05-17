@@ -47,12 +47,12 @@ dependencies:
 child_stories:
   - id: CARD-015A
     title: Support probe source-span and layer diagnostics
-    concern: Improve read-only generated-support probe/report diagnostics with deepest successful layer, exact missing layer, and narrow source spans while preserving fail-closed support semantics.
+    concern: Improve read-only generated-support probe/report diagnostics with deepest successful layer, exact missing layer, narrow source spans, and diagnostic-only parser-failure decomposition while preserving fail-closed support semantics.
     depends_on: [CARD-014]
 scope:
   - coordinate CARD-015A as the only child story in this diagnostics set
   - keep the story set diagnostics-only and above existing parser/generated-support/runtime-capability behavior
-  - build only on CARD-014I diagnostics by adding deeper layer presentation and narrower source-span detail; keep CARD-014I's broad missing-layer taxonomy as regression coverage rather than re-owning it
+  - build only on CARD-014I diagnostics by adding deeper layer presentation, narrower source-span detail, and diagnostic-only decomposition of parser failures into recognized candidate pieces and unsupported blocking text; keep CARD-014I's broad missing-layer taxonomy as regression coverage rather than re-owning it
   - improve debuggability of unsupported generated-support text without changing support status
   - require stale source-hash diagnostics to remain highest-priority and non-mutating
   - preserve CARD-008, CARD-009, CARD-012, CARD-013, and CARD-014 support behavior unless the child adds compatibility tests for diagnostic formatting only
@@ -76,6 +76,7 @@ acceptance_criteria:
   - the parent and child each have distinct story-review assignment identity and durable story-review artifact identity before approval handoff or activation
   - CARD-015A is implemented on a parent integration branch for this one-child set, with no child PR to `main` and one final parent PR to `main`
   - probe/report diagnostics become more actionable without broadening generated-support, parser, schema, runtime, fixture, or playable support
+  - parser failures that contain recognizable supported-action candidates inside unsupported conditions or wrappers report the candidate pieces and unsupported blockers separately while staying unsupported
   - unsupported text remains unsupported
   - stale hash remains highest-priority and non-mutating
   - parent/substory cleanup metadata lists CARD-015A and binds the non-packetized CARD-015 parent closeout after merge to main
