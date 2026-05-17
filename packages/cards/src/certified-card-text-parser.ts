@@ -1,31 +1,88 @@
 import type { CardId, EffectBlock, EffectId } from "@optcg/types";
 
+import {
+  buildCompleteParseResult,
+  buildPartialParseResult,
+  buildResidueSpan,
+  buildSequenceEffect,
+  buildUnsupportedWholeTextParseResult,
+  createDeterministicParserRuleId,
+  parseExactPositiveSafeInteger,
+  parseOncePerTurnWrapper,
+  parseSupportedTriggerWrapper,
+} from "./composed-parser-builder.js";
 import type {
   GeneratedSupportParserResult,
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-types.js";
 
-export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self";
-export const whenAttackingDrawNParserRuleId =
-  "exact:when-attacking:draw-n:self";
+export const onPlayDrawNParserRuleId = createDeterministicParserRuleId([
+  "exact",
+  "on-play",
+  "draw-n",
+  "self",
+]);
+export const whenAttackingDrawNParserRuleId = createDeterministicParserRuleId([
+  "exact",
+  "when-attacking",
+  "draw-n",
+  "self",
+]);
 export const onPlayDrawNTrashMFromHandParserRuleId =
-  "exact:on-play:draw-n:trash-m:hand:self";
+  createDeterministicParserRuleId([
+    "exact",
+    "on-play",
+    "draw-n",
+    "trash-m",
+    "hand",
+    "self",
+  ]);
 export const whenAttackingDrawNTrashMFromHandParserRuleId =
-  "exact:when-attacking:draw-n:trash-m:hand:self";
+  createDeterministicParserRuleId([
+    "exact",
+    "when-attacking",
+    "draw-n",
+    "trash-m",
+    "hand",
+    "self",
+  ]);
 export const whenAttackingOncePerTurnDrawNTrashMFromHandParserRuleId =
-  "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self";
+  createDeterministicParserRuleId([
+    "exact",
+    "when-attacking",
+    "once-per-turn",
+    "draw-n",
+    "trash-m",
+    "hand",
+    "self",
+  ]);
 export const standaloneBlockerKeywordParserRuleId =
-  "exact:keyword:blocker:standalone";
+  createDeterministicParserRuleId([
+    "exact",
+    "keyword",
+    "blocker",
+    "standalone",
+  ]);
 export const standaloneRushKeywordParserRuleId =
-  "exact:keyword:rush:standalone";
+  createDeterministicParserRuleId(["exact", "keyword", "rush", "standalone"]);
 export const standaloneRushCharacterKeywordParserRuleId =
-  "exact:keyword:rush-character:standalone";
+  createDeterministicParserRuleId([
+    "exact",
+    "keyword",
+    "rush-character",
+    "standalone",
+  ]);
 export const standaloneDoubleAttackKeywordParserRuleId =
-  "exact:keyword:double-attack:standalone";
+  createDeterministicParserRuleId([
+    "exact",
+    "keyword",
+    "double-attack",
+    "standalone",
+  ]);
 export const standaloneBanishKeywordParserRuleId =
-  "exact:keyword:banish:standalone";
+  createDeterministicParserRuleId(["exact", "keyword", "banish", "standalone"]);
 export const lineSeparatedEffectBlocksCompositionId =
-  "line-separated-effect-blocks:v1";
+  createDeterministicParserRuleId(["line-separated-effect-blocks", "v1"]);
 export const certifiedParserRuleReviewer = "certified-parser-rule:CARD-009B";
 
 export interface CertifiedCardTextParserInput {
@@ -101,35 +158,25 @@ export function parseCertifiedCardText(
   }
 
   if (parsedClauses.length === 0) {
-    return {
-      blockers: unparsedSpans.map((span) => ({
-        code: "unparsed-span",
-        message: "Card text is not covered by certified parser rules.",
-        span,
-      })),
+    return buildPartialParseResult({
       cardId: input.cardId,
+      message: "Card text is not covered by certified parser rules.",
       parsedRuleIds: [],
       sourceText: input.sourceText,
       sourceTextHash: input.sourceTextHash,
-      status: "partial",
       unparsedSpans,
-    };
+    });
   }
 
   if (unparsedSpans.length > 0) {
-    return {
-      blockers: unparsedSpans.map((span) => ({
-        code: "unparsed-span",
-        message: "Unsupported card text remains after certified parsing.",
-        span,
-      })),
+    return buildPartialParseResult({
       cardId: input.cardId,
+      message: "Unsupported card text remains after certified parsing.",
       parsedRuleIds: parsedClauses.map((clause) => clause.parserRuleId),
       sourceText: input.sourceText,
       sourceTextHash: input.sourceTextHash,
-      status: "partial",
       unparsedSpans,
-    };
+    });
   }
 
   return unsupportedWholeText(input);
@@ -139,7 +186,7 @@ function completeParse(
   input: CertifiedCardTextParserInput,
   parsedClauses: readonly CertifiedClause[],
 ): GeneratedSupportParserResult {
-  return {
+  return buildCompleteParseResult({
     cardId: input.cardId,
     effectDefinition: {
       cardId: input.cardId,
@@ -159,34 +206,17 @@ function completeParse(
     parserRuleIds: getCompleteParserRuleIds(parsedClauses),
     sourceText: input.sourceText,
     sourceTextHash: input.sourceTextHash,
-    status: "complete",
-  };
+  });
 }
 
 function unsupportedWholeText(
   input: CertifiedCardTextParserInput,
 ): GeneratedSupportParserResult {
-  const span = {
-    end: input.sourceText.length,
-    start: 0,
-    text: input.sourceText,
-  };
-
-  return {
-    blockers: [
-      {
-        code: "unparsed-span",
-        message: "Card text is not covered by certified parser rules.",
-        span,
-      },
-    ],
+  return buildUnsupportedWholeTextParseResult({
     cardId: input.cardId,
-    parsedRuleIds: [],
     sourceText: input.sourceText,
     sourceTextHash: input.sourceTextHash,
-    status: "partial",
-    unparsedSpans: [span],
-  };
+  });
 }
 
 function parseCertifiedLine(
@@ -253,7 +283,7 @@ function parseCertifiedLine(
   if (onPlayResidue !== undefined) {
     return {
       clause: onPlayResidue.clause,
-      unparsedSpan: residueSpan({
+      unparsedSpan: buildResidueSpan({
         offset,
         prefix: onPlayResidue.prefix,
         source: line,
@@ -268,7 +298,7 @@ function parseCertifiedLine(
   if (onPlayDrawThenTrashResidue !== undefined) {
     return {
       clause: onPlayDrawThenTrashResidue.clause,
-      unparsedSpan: residueSpan({
+      unparsedSpan: buildResidueSpan({
         offset,
         prefix: onPlayDrawThenTrashResidue.prefix,
         source: line,
@@ -283,7 +313,7 @@ function parseCertifiedLine(
   if (whenAttackingResidue !== undefined) {
     return {
       clause: whenAttackingResidue.clause,
-      unparsedSpan: residueSpan({
+      unparsedSpan: buildResidueSpan({
         offset,
         prefix: whenAttackingResidue.prefix,
         source: line,
@@ -296,7 +326,7 @@ function parseCertifiedLine(
   if (whenAttackingDrawThenTrashResidue !== undefined) {
     return {
       clause: whenAttackingDrawThenTrashResidue.clause,
-      unparsedSpan: residueSpan({
+      unparsedSpan: buildResidueSpan({
         offset,
         prefix: whenAttackingDrawThenTrashResidue.prefix,
         source: line,
@@ -309,7 +339,7 @@ function parseCertifiedLine(
   if (whenAttackingOncePerTurnDrawThenTrashResidue !== undefined) {
     return {
       clause: whenAttackingOncePerTurnDrawThenTrashResidue.clause,
-      unparsedSpan: residueSpan({
+      unparsedSpan: buildResidueSpan({
         offset,
         prefix: whenAttackingOncePerTurnDrawThenTrashResidue.prefix,
         source: line,
@@ -321,7 +351,7 @@ function parseCertifiedLine(
   if (standaloneBlockerResidue !== undefined) {
     return {
       clause: standaloneBlockerResidue.clause,
-      unparsedSpan: residueSpan({
+      unparsedSpan: buildResidueSpan({
         offset,
         prefix: standaloneBlockerResidue.prefix,
         source: line,
@@ -334,7 +364,7 @@ function parseCertifiedLine(
   if (standaloneEngineKeywordResidue !== undefined) {
     return {
       clause: standaloneEngineKeywordResidue.clause,
-      unparsedSpan: residueSpan({
+      unparsedSpan: buildResidueSpan({
         offset,
         prefix: standaloneEngineKeywordResidue.prefix,
         source: line,
@@ -736,39 +766,23 @@ function parseDrawCount(
   sourceText: string,
   prefix: "[On Play] " | "[When Attacking] ",
 ): number | undefined {
-  const match = sourceText.match(
-    /^\[(On Play|When Attacking)\] Draw (\d+) (card|cards)\.$/,
-  );
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper === undefined || wrapper.prefix !== prefix) {
+    return undefined;
+  }
+
+  const match = wrapper.bodyText.match(/^Draw (\d+) (card|cards)\.$/);
   if (match === null) {
     return undefined;
   }
 
-  const triggerText = match[1];
-  const expectedPrefix =
-    triggerText === "On Play"
-      ? "[On Play] "
-      : triggerText === "When Attacking"
-        ? "[When Attacking] "
-        : undefined;
-  if (expectedPrefix === undefined) {
+  const countText = match[1] ?? "";
+  const count = parseExactPositiveSafeInteger(countText);
+  if (count === undefined) {
     return undefined;
   }
 
-  if (expectedPrefix !== prefix) {
-    return undefined;
-  }
-
-  const countText = match[2] ?? "";
-  const count = Number.parseInt(countText, 10);
-  if (!Number.isSafeInteger(count) || count <= 0) {
-    return undefined;
-  }
-
-  if (countText !== String(count)) {
-    return undefined;
-  }
-
-  const noun = match[3];
+  const noun = match[2];
   if ((count === 1 && noun !== "card") || (count !== 1 && noun !== "cards")) {
     return undefined;
   }
@@ -780,14 +794,17 @@ function parseDrawCountWithResidue(
   sourceText: string,
   prefix: "[On Play] " | "[When Attacking] ",
 ): { count: number; prefix: string } | undefined {
-  const match = sourceText.match(
-    /^\[(On Play|When Attacking)\] Draw (\d+) (card|cards)\. /,
-  );
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper === undefined || wrapper.prefix !== prefix) {
+    return undefined;
+  }
+
+  const match = wrapper.bodyText.match(/^Draw (\d+) (card|cards)\. /);
   if (match === null) {
     return undefined;
   }
 
-  const clausePrefix = match[0];
+  const clausePrefix = `${wrapper.prefix}${match[0]}`;
   const count = parseDrawCount(clausePrefix.slice(0, -1), prefix);
   if (count === undefined) {
     return undefined;
@@ -803,24 +820,25 @@ function parseDrawThenTrashCounts(
     | "[When Attacking] "
     | "[When Attacking] [Once Per Turn] ",
 ): { drawCount: number; trashCount: number } | undefined {
-  const match = sourceText.match(
-    /^(\[On Play\] |\[When Attacking\] |\[When Attacking\] \[Once Per Turn\] )Draw (\d+) (card|cards) and trash (\d+) (card|cards) from your hand\.$/,
+  const wrapper = parseDrawThenTrashWrapper(sourceText, prefix);
+  if (wrapper === undefined) {
+    return undefined;
+  }
+
+  const match = wrapper.bodyText.match(
+    /^Draw (\d+) (card|cards) and trash (\d+) (card|cards) from your hand\.$/,
   );
   if (match === null) {
     return undefined;
   }
 
-  if ((match[1] ?? "") !== prefix) {
-    return undefined;
-  }
-
-  const drawCountText = match[2] ?? "";
-  const drawCount = parsePositiveSafeInteger(drawCountText);
+  const drawCountText = match[1] ?? "";
+  const drawCount = parseExactPositiveSafeInteger(drawCountText);
   if (drawCount === undefined) {
     return undefined;
   }
 
-  const drawNoun = match[3];
+  const drawNoun = match[2];
   if (
     (drawCount === 1 && drawNoun !== "card") ||
     (drawCount !== 1 && drawNoun !== "cards")
@@ -828,13 +846,13 @@ function parseDrawThenTrashCounts(
     return undefined;
   }
 
-  const trashCountText = match[4] ?? "";
-  const trashCount = parsePositiveSafeInteger(trashCountText);
+  const trashCountText = match[3] ?? "";
+  const trashCount = parseExactPositiveSafeInteger(trashCountText);
   if (trashCount === undefined) {
     return undefined;
   }
 
-  const trashNoun = match[5];
+  const trashNoun = match[4];
   if (
     (trashCount === 1 && trashNoun !== "card") ||
     (trashCount !== 1 && trashNoun !== "cards")
@@ -852,14 +870,19 @@ function parseDrawThenTrashCountsWithResidue(
     | "[When Attacking] "
     | "[When Attacking] [Once Per Turn] ",
 ): { drawCount: number; prefix: string; trashCount: number } | undefined {
-  const match = sourceText.match(
-    /^(\[On Play\] |\[When Attacking\] |\[When Attacking\] \[Once Per Turn\] )Draw (\d+) (card|cards) and trash (\d+) (card|cards) from your hand\. /,
+  const wrapper = parseDrawThenTrashWrapper(sourceText, prefix);
+  if (wrapper === undefined) {
+    return undefined;
+  }
+
+  const match = wrapper.bodyText.match(
+    /^Draw (\d+) (card|cards) and trash (\d+) (card|cards) from your hand\. /,
   );
   if (match === null) {
     return undefined;
   }
 
-  const clausePrefix = match[0];
+  const clausePrefix = `${wrapper.prefix}${match[0]}`;
   const parsed = parseDrawThenTrashCounts(clausePrefix.slice(0, -1), prefix);
   if (parsed === undefined) {
     return undefined;
@@ -868,17 +891,42 @@ function parseDrawThenTrashCountsWithResidue(
   return { ...parsed, prefix: clausePrefix };
 }
 
-function parsePositiveSafeInteger(countText: string): number | undefined {
-  const count = Number.parseInt(countText, 10);
-  if (!Number.isSafeInteger(count) || count <= 0) {
+function parseDrawThenTrashWrapper(
+  sourceText: string,
+  prefix:
+    | "[On Play] "
+    | "[When Attacking] "
+    | "[When Attacking] [Once Per Turn] ",
+): { bodyText: string; prefix: string } | undefined {
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper === undefined) {
     return undefined;
   }
 
-  if (countText !== String(count)) {
+  if (prefix !== "[When Attacking] [Once Per Turn] ") {
+    if (wrapper.prefix !== prefix) {
+      return undefined;
+    }
+
+    return {
+      bodyText: wrapper.bodyText,
+      prefix: wrapper.prefix,
+    };
+  }
+
+  if (wrapper.prefix !== "[When Attacking] ") {
     return undefined;
   }
 
-  return count;
+  const oncePerTurn = parseOncePerTurnWrapper(wrapper.bodyText);
+  if (oncePerTurn === undefined) {
+    return undefined;
+  }
+
+  return {
+    bodyText: oncePerTurn.bodyText,
+    prefix: `${wrapper.prefix}${oncePerTurn.prefix}`,
+  };
 }
 
 function createDrawThenTrashClauseWithCounts({
@@ -902,24 +950,21 @@ function createDrawThenTrashClauseWithCounts({
   return {
     effectBlock: {
       category: "auto",
-      effect: {
-        effects: [
-          {
-            connector: "always",
-            effect: { count: drawCount, player: "self", type: "draw" },
+      effect: buildSequenceEffect([
+        {
+          connector: "always",
+          effect: { count: drawCount, player: "self", type: "draw" },
+        },
+        {
+          connector: "then",
+          effect: {
+            chooser: "self",
+            count: trashCount,
+            player: "self",
+            type: "trashFromHand",
           },
-          {
-            connector: "then",
-            effect: {
-              chooser: "self",
-              count: trashCount,
-              player: "self",
-              type: "trashFromHand",
-            },
-          },
-        ],
-        type: "sequence",
-      },
+        },
+      ]),
       id: toEffectId(`${String(cardId)}:${effectIdSuffix}`),
       ...oncePerTurnEffectBlockField,
       sourcePresencePolicy: "mustRemainInSameZone",
@@ -958,21 +1003,4 @@ function resolveImplementationStatus(
 
 function toEffectId(value: string): EffectId {
   return value as EffectId;
-}
-
-function residueSpan({
-  offset,
-  prefix,
-  source,
-}: {
-  offset: number;
-  prefix: string;
-  source: string;
-}): GeneratedSupportUnparsedSpan {
-  const start = offset + prefix.length;
-  return {
-    end: offset + source.length,
-    start,
-    text: source.slice(prefix.length),
-  };
 }

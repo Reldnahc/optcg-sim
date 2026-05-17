@@ -8,6 +8,7 @@ import type { EffectDefinition, PoneglyphCardDetail } from "@optcg/types";
 
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import type { EffectDefinitionValidationResult } from "./generated-support-index.js";
+import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 import { evaluateGeneratedSupportPlayability } from "./support-evaluator.js";
 
 const repoRoot = path.resolve(
@@ -111,6 +112,83 @@ describe("support evaluator", () => {
     );
     expect(unsupported.effectDefinition).toBeUndefined();
     expect(unsupported.support).toBeUndefined();
+  });
+
+  it("fails closed when runtime capability evidence is missing", () => {
+    const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
+    const runtimeCapabilityMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) => capability.id !== "effect:sequence:ordered",
+      ),
+    };
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: normalized,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: normalized.behaviorHash,
+      expectedSourceTextHash: normalized.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix,
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "effect:sequence:ordered",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:draw-n:trash-m:hand:self",
+        },
+      ],
+      missingCapabilityIds: ["effect:sequence:ordered"],
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
+    expect(evaluation.effectDefinition).toBeUndefined();
+    expect(evaluation.support).toBeUndefined();
+  });
+
+  it("fails closed when runtime capability lacks parser-rule evidence", () => {
+    const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
+    const runtimeCapabilityMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.map(
+        (capability) =>
+          capability.id === "effect:sequence:ordered"
+            ? { ...capability, supportedParserRuleIds: [] }
+            : capability,
+      ),
+    };
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: normalized,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: normalized.behaviorHash,
+      expectedSourceTextHash: normalized.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix,
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "effect:sequence:ordered",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:draw-n:trash-m:hand:self",
+        },
+      ],
+      missingCapabilityIds: ["effect:sequence:ordered"],
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
+    expect(evaluation.effectDefinition).toBeUndefined();
+    expect(evaluation.support).toBeUndefined();
   });
 
   it("fails closed when reviewed source hash evidence is stale", () => {

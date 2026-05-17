@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-014A.md",
-      "storyId": "CARD-014A",
-      "storyPath": "stories/approved/CARD-014A-composed-runtime-capability-matrix-expansion.yaml",
-      "storySha256": "1c94f8976f9737be53dc105a939ccb9503007b2a6c23de4e24f683d52e9ce644"
+      "packetPath": "agent-packets/CARD-014B.md",
+      "storyId": "CARD-014B",
+      "storyPath": "stories/approved/CARD-014B-generic-composed-parser-builder-scaffold.yaml",
+      "storySha256": "489d0211ac96baf9527692b2bd700795cdfe32c29902c1f73d955a52609243aa"
     }
   ],
   "version": 1
