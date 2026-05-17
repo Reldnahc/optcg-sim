@@ -21,6 +21,32 @@ export type GeneratedSupportBlockerCode =
   | "custom-handler-required"
   | "invalid-dsl-schema";
 
+export const generatedSupportDiagnosticLayers = [
+  "parser",
+  "schema",
+  "runtime-capability",
+  "source-integrity",
+  "metadata",
+  "review",
+  "test-status",
+  "stale-hash",
+  "unsupported-primitive",
+  "unsupported-trigger",
+  "unsupported-cost",
+  "unsupported-optionality",
+  "unsupported-condition",
+  "unsupported-cardinality",
+  "unsupported-target",
+  "unsupported-duration",
+  "unsupported-modifier",
+  "unsupported-restriction",
+  "unsupported-saved-reference",
+  "unsupported-layer",
+] as const;
+
+export type GeneratedSupportDiagnosticLayer =
+  (typeof generatedSupportDiagnosticLayers)[number];
+
 export interface GeneratedSupportUnparsedSpan {
   start: number;
   end: number;
@@ -32,6 +58,7 @@ export interface GeneratedSupportBlocker {
   message: string;
   capabilityId?: string;
   component?: string;
+  diagnosticLayer?: GeneratedSupportDiagnosticLayer;
   expectedHash?: string;
   parserRuleId?: string;
   receivedHash?: string;

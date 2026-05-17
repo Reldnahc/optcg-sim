@@ -185,6 +185,7 @@ function buildGeneratedSupportIndexEntry(
     if (!hasEmptyEffectSupportMetadata(card)) {
       return unsupportedMetadataEntry({
         card,
+        diagnosticLayer: undefined,
         message:
           "Normalized card metadata does not satisfy certified empty-effect support preconditions.",
         parserRuleIds: [],
@@ -223,6 +224,8 @@ function buildGeneratedSupportIndexEntry(
   ) {
     return unsupportedMetadataEntry({
       card,
+      component: "metadata:blocker-keyword-precondition",
+      diagnosticLayer: "metadata",
       message:
         "Normalized card metadata does not satisfy certified Blocker keyword support preconditions.",
       parserRuleIds: parseResult.parserRuleIds,
@@ -238,6 +241,8 @@ function buildGeneratedSupportIndexEntry(
   ) {
     return unsupportedMetadataEntry({
       card,
+      component: `metadata:keyword-precondition:${keywordMetadataPrecondition.keyword}`,
+      diagnosticLayer: "metadata",
       message: `Normalized card metadata does not satisfy certified ${keywordMetadataPrecondition.label} keyword support preconditions.`,
       parserRuleIds: parseResult.parserRuleIds,
     });
@@ -394,20 +399,28 @@ function supportedVanillaEntry({
 
 function unsupportedMetadataEntry({
   card,
+  component = "metadata:precondition",
+  diagnosticLayer,
   message,
   parserRuleIds,
 }: {
   card: GeneratedSupportCardTextInput;
+  component?: string;
+  diagnosticLayer?: GeneratedSupportBlocker["diagnosticLayer"];
   message: string;
   parserRuleIds: readonly string[];
 }): GeneratedSupportIndexEntry {
+  const blocker: GeneratedSupportBlocker = {
+    code: "unsupported-primitive",
+    component,
+    message,
+  };
+  if (diagnosticLayer !== undefined) {
+    blocker.diagnosticLayer = diagnosticLayer;
+  }
+
   return unsupportedEntry({
-    blockers: [
-      {
-        code: "unsupported-primitive",
-        message,
-      },
-    ],
+    blockers: [blocker],
     card,
     parseStatus: "unsupportedPrimitive",
     parserRuleIds,

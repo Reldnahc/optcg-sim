@@ -5,7 +5,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { buildGeneratedSupportIndex } from "./generated-support-index.js";
-import { buildGeneratedSupportReport } from "./generated-support-report.js";
+import {
+  buildGeneratedSupportReport,
+  classifyGeneratedSupportBlockerLayer,
+} from "./generated-support-report.js";
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import { listRepresentativeSupportProofMatrixRows } from "./representative-fixtures.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
@@ -26,6 +29,124 @@ const repoRoot = path.resolve(
 );
 
 describe("generated support report", () => {
+  it("classifies blocker layers with fail-closed fallback for unknown unsupported components", () => {
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unparsed-span",
+      }),
+    ).toBe("parser");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "invalid-dsl-schema",
+      }),
+    ).toBe("schema");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "missing-runtime-capability",
+      }),
+    ).toBe("runtime-capability");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "stale-hash",
+      }),
+    ).toBe("stale-hash");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+      }),
+    ).toBe("unsupported-layer");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "metadata:missing-certified-keyword",
+      }),
+    ).toBe("metadata");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "review:missing-review-record",
+      }),
+    ).toBe("review");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "test-status:missing-test-evidence",
+      }),
+    ).toBe("test-status");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "source-integrity:fixture-hash-mismatch",
+      }),
+    ).toBe("source-integrity");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "trigger:event",
+      }),
+    ).toBe("unsupported-trigger");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "payCost:returnDon:self:count-exact",
+      }),
+    ).toBe("unsupported-cost");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "optionalEffectBlock:onPlay:draw-1:self",
+      }),
+    ).toBe("unsupported-optionality");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "condition:yourTurn",
+      }),
+    ).toBe("unsupported-condition");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "sequence:position:segment2",
+      }),
+    ).toBe("unsupported-cardinality");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "selectTargets:field:public:character:max1",
+      }),
+    ).toBe("unsupported-target");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "card014a:unsupported:duration-permanent",
+      }),
+    ).toBe("unsupported-duration");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "modifyPower:self:permanent",
+      }),
+    ).toBe("unsupported-modifier");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "cannotAttack:choose:thisTurn",
+      }),
+    ).toBe("unsupported-restriction");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "savedFieldObject:consumer:generic",
+      }),
+    ).toBe("unsupported-saved-reference");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "mystery:untrusted-shape",
+      }),
+    ).toBe("unsupported-layer");
+  });
+
   it("includes OP03-044 Kaya as supported with certified parser and capability evidence", () => {
     const fixture = JSON.parse(
       readFileSync(
@@ -117,6 +238,7 @@ describe("generated support report", () => {
         {
           cardId: "CARD-008D-002",
           code: "unparsed-span",
+          layer: "parser",
           message: "Unsupported card text remains after certified parsing.",
           span: {
             end: 41,
@@ -129,6 +251,7 @@ describe("generated support report", () => {
           cardId: "CARD-008D-003",
           code: "missing-runtime-capability",
           component: "exact:on-play:draw-n:self",
+          layer: "runtime-capability",
           message:
             "Missing runtime capability effect:draw:self:count:positive-safe-integer for parser rule exact:on-play:draw-n:self.",
         },
@@ -221,9 +344,92 @@ describe("generated support report", () => {
         cardId: "CARD-008D-005",
         code: "unsupported-primitive",
         component: "effect:rest-don",
+        layer: "unsupported-primitive",
         message: "Resting DON is not covered by the runtime matrix.",
       },
     ]);
+  });
+
+  it("classifies metadata precondition blockers as metadata while preserving blocker code identity", () => {
+    const report = buildGeneratedSupportReport({
+      effectDefinitions: {},
+      entries: [
+        {
+          blockers: [
+            {
+              code: "unsupported-primitive",
+              component: "metadata:keyword-precondition",
+              message:
+                "Normalized card metadata does not satisfy certified Blocker keyword support preconditions.",
+            },
+          ],
+          capabilityEvidence: [],
+          cardId: "CARD-014I-META" as CardId,
+          missingCapabilityIds: [],
+          parseStatus: "unsupportedPrimitive",
+          parserRuleIds: [],
+          sourceTextHash: "sha256:meta",
+          status: "unsupported",
+        },
+      ],
+    });
+
+    expect(report.blockers).toEqual([
+      {
+        cardId: "CARD-014I-META",
+        code: "unsupported-primitive",
+        component: "metadata:keyword-precondition",
+        layer: "metadata",
+        message:
+          "Normalized card metadata does not satisfy certified Blocker keyword support preconditions.",
+      },
+    ]);
+  });
+
+  it("excludes non-primitive diagnostic components from unsupportedPrimitiveComponents", () => {
+    const report = buildGeneratedSupportReport({
+      effectDefinitions: {},
+      entries: [
+        {
+          blockers: [
+            {
+              code: "unsupported-primitive",
+              component: "metadata:keyword-precondition",
+              message: "Metadata precondition missing.",
+            },
+            {
+              code: "unsupported-primitive",
+              component: "review:missing-review-record",
+              message: "Review evidence missing.",
+            },
+            {
+              code: "unsupported-primitive",
+              component: "test-status:missing-test-evidence",
+              message: "Test evidence missing.",
+            },
+            {
+              code: "unsupported-primitive",
+              component: "source-integrity:fixture-hash-mismatch",
+              message: "Fixture source integrity mismatch.",
+            },
+            {
+              code: "unsupported-primitive",
+              component: "effect:rest-don",
+              message: "Unsupported runtime primitive.",
+            },
+          ],
+          capabilityEvidence: [],
+          cardId: "CARD-014I-COMPONENTS" as CardId,
+          missingCapabilityIds: [],
+          parseStatus: "unsupportedPrimitive",
+          parserRuleIds: [],
+          sourceTextHash: "sha256:components",
+          status: "unsupported",
+        },
+      ],
+    });
+
+    expect(report.unsupportedPrimitiveComponents).toEqual(["effect:rest-don"]);
   });
 
   it("reports invalid draw-count blockers deterministically", () => {
@@ -430,6 +636,7 @@ describe("generated support report", () => {
         cardId: "CARD-014C-MISSING-CAP",
         code: "missing-runtime-capability",
         component: "exact:on-play:trash-2-from-hand:draw-1:self",
+        layer: "runtime-capability",
         message:
           "Missing runtime capability trashFromHand:segment0:self:self:count-exact for parser rule exact:on-play:trash-2-from-hand:draw-1:self.",
       },
@@ -493,6 +700,7 @@ describe("generated support report", () => {
           code: "missing-runtime-capability",
           component:
             "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+          layer: "runtime-capability",
           message: `Missing runtime capability ${missingCapabilityId} for parser rule exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected.`,
         },
       ]);

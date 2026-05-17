@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-014H.md",
-      "storyId": "CARD-014H",
-      "storyPath": "stories/approved/CARD-014H-representative-support-proof-bundle.yaml",
-      "storySha256": "4784d4ea5c58ea5a5ef4037b4500b00f59fc9c4a839b03d86ddf2195d39e8592"
+      "packetPath": "agent-packets/CARD-014I.md",
+      "storyId": "CARD-014I",
+      "storyPath": "stories/approved/CARD-014I-support-probe-report-integration-composed-effects.yaml",
+      "storySha256": "da88136ba2814e46271a14611211e889d953da542a634752f5378968c6553c57"
     }
   ],
   "version": 1
