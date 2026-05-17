@@ -1,0 +1,100 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-014E
+epic_id: CARD-014
+title: returnDON hand-selection playSelected parser expansion
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add narrow certified exact-template parser support for runtime-supported
+  returnDON or DON-minus cost, hand selection, and playSelected-from-hand shapes.
+story_boundary: >
+  Own only packages/cards parser, generated DSL, capability gating, source
+  integrity for any real-card proof, and tests for narrow play-from-hand shapes.
+  Do not add engine runtime behavior, Stage/Event play support, or broad cost
+  grammar.
+allowed_touch_points:
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - fixtures/poneglyph/cards/**
+  - tests/integration/**
+  - stories/generated/CARD-014*.yaml
+  - stories/approved/CARD-014*.yaml
+  - agent-packets/CARD-014E.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s021
+  - 05-effect-dsl-reference.s026
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+dependencies:
+  - CARD-014A
+  - CARD-014B
+scope:
+  - certify exact-template parser support for runtime-supported play-from-hand shapes
+  - keep support narrow to returnDon or DON!! -N where runtime-supported
+  - support selecting up to 1 matching Character from hand only where runtime capability evidence supports it
+  - support playSelected from hand only for supported Character targets and play consequences
+  - require source integrity and engine_capability_preflight for any real-card proof
+  - fail closed for Stage play, Event play, unsupported cardinality, unsupported filters, residue, malformed cost, or missing capability
+non_scope:
+  - Stage or Event play support unless runtime capability evidence already supports it
+  - runtime behavior
+  - broad cost grammar
+  - optional cost semantics not already authorized by lower layers
+  - server, client, API, UI, database, replay, or live Poneglyph work
+  - replacement generalization
+card_source_integrity:
+  - real-card proof is optional for this draft but mandatory before marking any real card playable
+  - any real-card proof must list exact card ID, capture command or checked-in fixture, behavior-sensitive printed cost and play text, normalized category filters, source hash, behavior hash, and regeneration requirements
+  - synthetic tests may prove parser and support-pipeline behavior but must not be described as real-card support
+engine_capability_preflight:
+  - returnDON or DON-minus cost support must be backed by ENG-055F runtime capability evidence
+  - hand selectCards support must be backed by ENG-055F runtime capability evidence
+  - playSelected-from-hand support must be backed by ENG-055G runtime capability evidence
+  - Stage and Event play remain unsupported unless a later runtime capability record proves support
+acceptance_criteria:
+  - exact supported play-from-hand template parses completely and emits validated generated DSL
+  - generated support requires cost, hand-selection, and playSelected runtime capability evidence
+  - missing capability blocks support with exact diagnostics
+  - Stage/Event play, unsupported filters, malformed cost, unsupported cardinality, and residue fail closed
+  - any real-card proof has complete source integrity and capability preflight evidence before playable support is reported
+required_tests:
+  - exact candidate story-review before approval
+  - parser tests for exact supported returnDON or DON-minus play-from-hand wording
+  - generated DSL validation tests for cost, hand selection, and playSelected sequence
+  - missing capability blocks support tests for cost, hand selection, and playSelected
+  - fail-closed tests for Stage/Event play, malformed cost, unsupported cardinality, unsupported filters, and residue
+  - source-integrity backed tests for any real-card proof included by the approved story
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-014E packet before implementation
+  - stay within allowed_touch_points
+  - do not add runtime behavior or Stage/Event support in this story
+  - fail closed on cost, hand visibility, target filter, cardinality, or capability ambiguity
+ambiguity_policy: fail_and_escalate

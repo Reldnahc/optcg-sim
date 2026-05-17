@@ -1,0 +1,104 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-014C
+epic_id: CARD-014
+title: Draw and trash composed sequence parser expansion
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Preserve existing Cavendish draw-then-trash generated support and add a
+  synthetic cards-layer proof for the reversed pure sequence where trash from
+  hand precedes draw.
+story_boundary: >
+  Own only packages/cards exact-template parser, generated DSL, runtime
+  capability gating, support-index/report evidence, and tests for the reversed
+  pure trash-then-draw sequence. Do not add engine runtime behavior or real-card
+  support in this story.
+allowed_touch_points:
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - stories/generated/CARD-014*.yaml
+  - stories/approved/CARD-014*.yaml
+  - agent-packets/CARD-014C.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-009
+  - CARD-014A
+  - CARD-014B
+scope:
+  - preserve existing draw-then-trash and OP10-045 Cavendish generated support
+  - add synthetic support-pipeline proof for exact text `[On Play] Trash 2 cards from your hand. Draw 1 card.`
+  - generate DSL sequence segment 0 as trashFromHand count 2, player self, chooser self
+  - generate DSL sequence segment 1 as draw count 1, player self
+  - require capability evidence for trashFromHand as sequence segment 0 before generated support can pass
+  - fail closed for may text, cost text, colon text, malformed counts, unparsed residue, and missing capability
+non_scope:
+  - real-card support for reverse-Cavendish text
+  - engine runtime behavior
+  - new shared contracts or effect DSL schema changes
+  - broad sequence grammar
+  - optionality, cost, condition, target, modifier, restriction, Stage, or Event support
+  - replacement generalization
+card_source_integrity:
+  - no real-card support is enabled by the reverse-Cavendish synthetic proof
+  - OP10-045 Cavendish regression must keep using the existing reviewed source evidence from CARD-009C
+  - if a real reverse-Cavendish source card is introduced, stop and draft a separate source-integrity story
+engine_capability_preflight:
+  - reverse sequence support requires truthful runtime capability evidence for trashFromHand as sequence segment 0 followed by draw
+  - if runtime capability cannot truthfully support trashFromHand as segment 0, record a blocker or draft a separate tiny ENG follow-up; do not hide runtime work in CARD
+  - generated support must remain blocked when capability evidence for either segment or the sequence order is missing
+acceptance_criteria:
+  - existing draw-then-trash and Cavendish generated support behavior remains unchanged
+  - exact synthetic reverse sequence parses completely and emits the required two-segment DSL only when capability evidence exists
+  - generated DSL validates against the effect DSL schema
+  - deterministic parser rule IDs are emitted for the reverse sequence
+  - missing capability blocks support with explicit diagnostics
+  - malformed counts and residue text fail closed
+  - may, cost, and colon text are not parsed as this shape
+required_tests:
+  - exact candidate story-review before approval
+  - parser complete-parse test for `[On Play] Trash 2 cards from your hand. Draw 1 card.`
+  - generated DSL validation test for trashFromHand segment 0 and draw segment 1
+  - deterministic parser rule ID test
+  - capability evidence required test
+  - missing capability blocks support test
+  - malformed count fail-closed tests
+  - residue text fail-closed test
+  - regression tests proving existing draw-then-trash and Cavendish behavior unchanged
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-014C packet before implementation
+  - stay within allowed_touch_points
+  - do not enable real-card support for reverse-Cavendish without source integrity
+  - stop and split an ENG follow-up if segment-0 trashFromHand runtime support is missing
+ambiguity_policy: fail_and_escalate

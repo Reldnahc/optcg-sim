@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Define canonical contract and spec authority for same-frame saved field-object
   references, saved field-object consumers, and exact-card continuous-effect

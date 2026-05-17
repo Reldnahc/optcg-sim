@@ -1,0 +1,105 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-014B
+epic_id: CARD-014
+title: Generic composed parser builder scaffold
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Refactor certified parser helpers toward reusable composed parser pieces that
+  later CARD-014 children can consume without broadening generated support.
+story_boundary: >
+  Own only packages/cards parser helper structure, parser-result metadata, and
+  regression tests needed to preserve current behavior while enabling future
+  exact-template composed parser stories. Do not add broad new playable support.
+allowed_touch_points:
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*parser*.ts
+  - packages/cards/src/*parser*.test.ts
+  - stories/generated/CARD-014*.yaml
+  - stories/approved/CARD-014*.yaml
+  - agent-packets/CARD-014B.md
+  - agent-packets/active.json
+spec_refs:
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s021
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s026
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s016
+dependencies:
+  - CARD-008
+  - CARD-009
+  - CARD-012
+  - CARD-013
+  - CARD-014A
+scope:
+  - introduce reusable cards-package helpers for existing supported trigger wrapper parsing
+  - introduce reusable cards-package helpers for once-per-turn wrapper parsing
+  - introduce exact numeric count parsing helpers with existing positive safe-integer guardrails
+  - introduce sequence segment construction helpers for generated DSL assembly
+  - introduce deterministic parser rule ID helpers
+  - introduce residue span helpers and complete/partial parse reporting helpers
+  - preserve existing CARD-008, CARD-009, CARD-012, and CARD-013 behavior without expectation changes unless the story explicitly records a mechanical migration
+non_scope:
+  - broad new playable support
+  - new runtime capability records beyond those already added by CARD-014A
+  - real-card fixture capture or manifest regeneration
+  - engine runtime behavior
+  - shared contracts or effect DSL schema changes
+  - replacement generalization
+card_source_integrity:
+  - no real-card support is enabled by this story
+  - existing fixture-backed generated support must remain hash-bound and unchanged by the helper refactor
+  - if helper refactoring changes source hash, behavior hash, or support status for existing fixtures, stop and split the migration or revise this story
+engine_capability_preflight:
+  - not applicable for new runtime behavior because this story only restructures parser helpers
+  - any parser helper that assembles a candidate generated DSL must preserve capability requirements instead of bypassing CARD-014A gating
+  - implementation must prove existing capability checks still gate all generated support after refactor
+acceptance_criteria:
+  - parser helper boundaries are reusable by later CARD-014 children
+  - parser rule IDs remain deterministic
+  - complete and partial parse reporting remains fail-closed for residue
+  - sequence segment construction helpers preserve connector order and generated DSL shape
+  - generated-support index and evaluator capability checks still block missing runtime capability and missing parser-rule evidence after the refactor
+  - existing CARD-008, CARD-009, CARD-012, and CARD-013 behavior remains unchanged
+  - no newly supported real-card or synthetic composed effect appears solely because of the scaffold
+required_tests:
+  - exact candidate story-review before approval
+  - parser helper unit tests for existing supported trigger wrapper parsing without adding new trigger grammar
+  - parser helper unit tests for once-per-turn wrapper parsing
+  - parser helper unit tests for exact numeric count parsing and malformed counts
+  - parser helper unit tests for sequence segment construction preserving connector order and generated DSL shape
+  - parser helper unit tests for deterministic parser rule IDs and residue spans
+  - parser helper unit tests for complete and partial parse reporting, including unsupported whole text and parsed-with-residue cases
+  - generated-support index/evaluator regressions proving missing runtime capability and missing parser-rule evidence still block support after the refactor
+  - regression tests for existing CARD-008, CARD-009, CARD-012, and CARD-013 generated-support examples, including near-miss, unsupported wrapper/order, residue, and unchanged support-status cases
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-014B packet before implementation
+  - stay within allowed_touch_points
+  - do not broaden parser grammar or generated playability in this scaffold story
+  - keep helper types package-local to packages/cards unless story-review proves shared contract authority is missing
+ambiguity_policy: fail_and_escalate

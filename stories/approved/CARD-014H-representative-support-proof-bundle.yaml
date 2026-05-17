@@ -1,0 +1,117 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-014H
+epic_id: CARD-014
+title: Representative support proof bundle
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Add representative generated-support proofs only for composed-effect shapes
+  that have complete parser, schema, runtime, capability, source, metadata,
+  test, and review evidence.
+story_boundary: >
+  Own only packages/cards representative support proofs, fixture/source
+  integrity evidence, generated support/report assertions, and tests for shapes
+  already implemented by earlier CARD-014 children. Do not broaden parser rules
+  or runtime behavior to make chosen cards pass.
+allowed_touch_points:
+  - fixtures/poneglyph/cards/**
+  - fixtures/effect-dsl/valid/**
+  - fixtures/cards/**
+  - packages/cards/src/real-card-fixtures.ts
+  - packages/cards/src/real-card-fixtures.test.ts
+  - packages/cards/src/representative-fixtures.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/representative-fixtures.test.ts
+  - packages/cards/src/*support*.test.ts
+  - tests/integration/**
+  - stories/generated/CARD-014*.yaml
+  - stories/approved/CARD-014*.yaml
+  - agent-packets/CARD-014H.md
+  - agent-packets/active.json
+spec_refs:
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-009C
+  - CARD-014A
+  - CARD-014C
+  - CARD-014D
+  - CARD-014E
+  - CARD-014F
+  - CARD-014G
+scope:
+  - add representative generated-support proofs only when each shape has complete parser/schema/runtime/capability support
+  - include OP10-045 Cavendish regression bound to CARD-009C source/support evidence
+  - include reverse-Cavendish synthetic proof from CARD-014C, not real-card support
+  - record Ulti-style proof as blocked unless exact card ID, source fixture, parser evidence, and capability evidence are added by pre-approval story revision
+  - record Impel Down All Stars-style proof as blocked unless exact card ID, source fixture, parser evidence, and capability evidence are added by pre-approval story revision
+  - record rest, lock, and power proofs as blocked unless exact card ID, source fixture, parser evidence, and capability evidence are added by pre-approval story revision
+  - maintain a representative proof matrix with statuses included-real, synthetic-only, or blocked-missing-layer
+  - require card_source_integrity and engine_capability_preflight for every real-card proof
+  - fail closed instead of broadening parser rules to make a chosen card pass
+non_scope:
+  - new parser rules
+  - new runtime behavior
+  - new shared contracts or effect DSL schema changes
+  - broad fixture-corpus refreshes
+  - live Poneglyph calls in CI
+  - server, client, API, UI, database, replay, or Redis work
+  - replacement generalization
+card_source_integrity:
+  - "included-real proof matrix row: OP10-045 Cavendish regression, using reviewed CARD-009C evidence for target card OP10-045, checked-in fixture `fixtures/poneglyph/cards/OP10-045.cavendish.json`, done-story artifact `stories/done/CARD-009C-op10-045-generated-support-fixture-proof.yaml`, generated support index/report assertion sources `packages/cards/src/generated-support-index.test.ts` and `packages/cards/src/generated-support-report.test.ts`, CARD-009C sourceTextHash and behaviorHash assertions, fixture/normalization assertions for behavior-sensitive printed fields, and manifest regeneration only if existing CARD-009C evidence changes"
+  - "OP10-045 behavior-sensitive printed fields are `card_type: Character`, `color: [Blue]`, `cost: 4`, `power: 6000`, `counter: null`, `types: [Dressrosa, Beautiful Pirates]`, `effect: [When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.`, `trigger: null`, `set: OP10`, `set_name: Royal Blood`, `released: true`, and `released_at: 2025-03-21T00:00:00.000Z`"
+  - "synthetic-only proof matrix row: reverse-Cavendish exact text `[On Play] Trash 2 cards from your hand. Draw 1 card.` from CARD-014C, no real card ID, no Poneglyph fixture, no playable real-card support"
+  - "blocked-missing-layer proof matrix row: Ulti-style candidate, missing exact card ID, checked-in fixture provenance, behavior-sensitive printed fields, sourceTextHash, behaviorHash, parser rule evidence, runtime capability record, support metadata, and manifest regeneration plan"
+  - "blocked-missing-layer proof matrix row: Impel Down All Stars-style candidate, missing exact card ID, checked-in fixture provenance, behavior-sensitive printed fields, sourceTextHash, behaviorHash, parser rule evidence, runtime capability record, support metadata, and manifest regeneration plan"
+  - "blocked-missing-layer proof matrix row: rest candidate, missing exact card ID, checked-in fixture provenance, behavior-sensitive printed fields, sourceTextHash, behaviorHash, parser rule evidence, runtime capability record, support metadata, and manifest regeneration plan"
+  - "blocked-missing-layer proof matrix row: lock candidate, missing exact card ID, checked-in fixture provenance, behavior-sensitive printed fields, sourceTextHash, behaviorHash, parser rule evidence, runtime capability record, support metadata, and manifest regeneration plan"
+  - "blocked-missing-layer proof matrix row: power candidate, missing exact card ID, checked-in fixture provenance, behavior-sensitive printed fields, sourceTextHash, behaviorHash, parser rule evidence, runtime capability record, support metadata, and manifest regeneration plan"
+engine_capability_preflight:
+  - included-real proof OP10-045 Cavendish requires existing CARD-009C parser rule evidence, draw-then-trash sequence capability evidence, generated support metadata, and runtime proof evidence
+  - synthetic-only reverse-Cavendish requires CARD-014C parser rule evidence and CARD-014A sequence capability evidence but produces no real-card playable support
+  - blocked Ulti-style, Impel Down All Stars-style, rest, lock, and power candidates have missing parser/source/capability evidence and must report blocked-missing-layer diagnostics
+  - support is playable only if parser, schema, runtime, capability, source integrity, support metadata, tests, and review metadata all pass
+  - missing parser, schema, runtime capability, or source integrity evidence must produce an existing unsupported diagnostic instead of playable support; CARD-014I owns any new final diagnostic taxonomy for metadata, test, or review layers
+acceptance_criteria:
+  - representative proof matrix identifies every candidate as included-real, synthetic-only, or blocked-missing-layer
+  - OP10-045 Cavendish regression remains passing and bound to CARD-009C evidence
+  - reverse-Cavendish is represented as synthetic proof only
+  - Ulti-style, Impel Down All Stars-style, rest, lock, and power candidates each have blocked-missing-layer rows with exact missing-layer notes unless this story is revised before approval with complete source and capability evidence
+  - every included real-card proof has complete source integrity and capability preflight evidence
+  - parser rules are not broadened solely to make a chosen card pass
+required_tests:
+  - exact candidate story-review before approval
+  - representative proof matrix test covering OP10-045 Cavendish, reverse-Cavendish, Ulti-style, Impel Down All Stars-style, rest, lock, and power rows
+  - OP10-045 Cavendish regression test bound to CARD-009C source/support evidence
+  - reverse-Cavendish synthetic proof test proving it is not real-card playable support
+  - fail-closed tests for blocked representative candidates with missing parser, schema, runtime capability, or source integrity evidence using existing diagnostics
+  - support report tests proving every named blocked candidate identifies the missing parser, schema, runtime capability, or source integrity layer with existing diagnostics; CARD-014I owns final metadata, test, and review diagnostic taxonomy
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-014H packet before implementation
+  - stay within allowed_touch_points
+  - do not broaden parser or runtime behavior in this proof story
+  - fail closed when source integrity, capability, metadata, test, or review evidence is incomplete
+ambiguity_policy: fail_and_escalate
