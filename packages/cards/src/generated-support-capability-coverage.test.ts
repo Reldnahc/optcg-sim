@@ -7,6 +7,18 @@ describe("generated support capability coverage", () => {
   it("reports CARD-014A missing capabilities as generated-support blockers for future parser rules", () => {
     const coverage = evaluateRuntimeCapabilityCoverageForParserRuleIds({
       parserRuleIds: [
+        "exact:on-play:select-1-opponent-character-target",
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+        "exact:on-play:modify-power:self:this-turn",
+        "exact:on-play:modify-power:self:this-battle",
+        "exact:on-play:modify-power:choose:this-turn",
+        "exact:on-play:modify-power:all:this-turn",
+        "exact:on-play:cannot-attack:self:this-turn",
+        "exact:on-play:cannot-attack:choose:this-turn",
+        "exact:on-play:cannot-attack:all:this-turn",
+        "exact:on-play:cannot-block:self:this-turn",
+        "exact:on-play:cannot-block:choose:this-turn",
+        "exact:on-play:cannot-block:all:this-turn",
         "exact:on-play:draw-up-to-n:self",
         "exact:on-play:optional-effect:draw-1:self",
         "exact:condition:your-turn",
@@ -45,6 +57,27 @@ describe("generated support capability coverage", () => {
         {
           capabilityId: "condition:selfAttachedDonCount",
           parserRuleId: "exact:condition:self-attached-don-count",
+        },
+        {
+          capabilityId: "selectTargets:field:public:character:max1",
+          parserRuleId: "exact:on-play:select-1-opponent-character-target",
+        },
+        {
+          capabilityId: "savedFieldObject:consumer:generic",
+          parserRuleId:
+            "exact:on-play:select-1-opponent-character-then-ko-that-character",
+        },
+        {
+          capabilityId: "modifyPower:choose:thisTurn",
+          parserRuleId: "exact:on-play:modify-power:choose:this-turn",
+        },
+        {
+          capabilityId: "cannotAttack:choose:thisTurn",
+          parserRuleId: "exact:on-play:cannot-attack:choose:this-turn",
+        },
+        {
+          capabilityId: "cannotBlock:choose:thisTurn",
+          parserRuleId: "exact:on-play:cannot-block:choose:this-turn",
         },
       ]),
     );

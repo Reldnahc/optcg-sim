@@ -58,7 +58,7 @@ describe("generated support runtime capability matrix", () => {
 
   it("exposes the narrow capabilities needed by exact draw parser rules", () => {
     expect(generatedSupportRuntimeCapabilityMatrix.generatedAtStory).toBe(
-      "CARD-014A",
+      "CARD-014G",
     );
     expect(requiredGeneratedSupportCapabilityIds).toEqual(
       [...requiredGeneratedSupportCapabilityIds].sort(),
@@ -285,6 +285,108 @@ describe("generated support runtime capability matrix", () => {
 
   it.each([
     {
+      parserRuleId: "exact:on-play:select-1-opponent-character-target",
+      requiredCapabilities: [
+        "category:auto",
+        "savedSelectedTargets:producer",
+        "selectTargets:field:public:character:max1",
+        "sequence:genericFrames",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+      ],
+    },
+    {
+      parserRuleId:
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+      requiredCapabilities: [
+        "category:auto",
+        "effect:ko:saved-field-object:characterArea:public",
+        "savedFieldObject:consumer:generic",
+        "savedSelectedTargets:producer",
+        "selectTargets:field:public:character:max1",
+        "sequence:genericFrames",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+      ],
+    },
+  ])(
+    "certifies CARD-014G selected field-object parser rule $parserRuleId with capability evidence",
+    ({ parserRuleId, requiredCapabilities }) => {
+      for (const capabilityId of requiredCapabilities) {
+        const capability =
+          generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+            (candidate) => candidate.id === capabilityId,
+          );
+
+        expect(capability?.supported).toBe(true);
+        expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+      }
+    },
+  );
+
+  it.each([
+    {
+      parserRuleId: "exact:on-play:modify-power:self:this-turn",
+      requiredCapabilities: ["modifyPower:self:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:modify-power:self:this-battle",
+      requiredCapabilities: ["modifyPower:self:thisBattle"],
+    },
+    {
+      parserRuleId: "exact:on-play:modify-power:choose:this-turn",
+      requiredCapabilities: ["modifyPower:choose:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:modify-power:all:this-turn",
+      requiredCapabilities: ["modifyPower:all:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:cannot-attack:self:this-turn",
+      requiredCapabilities: ["cannotAttack:self:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:cannot-attack:choose:this-turn",
+      requiredCapabilities: ["cannotAttack:choose:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:cannot-attack:all:this-turn",
+      requiredCapabilities: ["cannotAttack:all:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:cannot-block:self:this-turn",
+      requiredCapabilities: ["cannotBlock:self:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:cannot-block:choose:this-turn",
+      requiredCapabilities: ["cannotBlock:choose:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:cannot-block:all:this-turn",
+      requiredCapabilities: ["cannotBlock:all:thisTurn"],
+    },
+  ])(
+    "certifies CARD-014G modifier/restriction parser rule $parserRuleId with capability evidence",
+    ({ parserRuleId, requiredCapabilities }) => {
+      for (const capabilityId of [
+        "category:auto",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+        ...requiredCapabilities,
+      ]) {
+        const capability =
+          generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+            (candidate) => candidate.id === capabilityId,
+          );
+
+        expect(capability?.supported).toBe(true);
+        expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+      }
+    },
+  );
+
+  it.each([
+    {
       capabilityId: "keyword:rush:printed",
       parserRuleId: "exact:keyword:rush:standalone",
     },
@@ -358,6 +460,10 @@ describe("generated support runtime capability matrix", () => {
     ).toBe(false);
     expect(hasRuntimeCapability("modifyPower:self:permanent")).toBe(false);
     expect(hasRuntimeCapability("modifyPower:self:untilStartOfNextTurn")).toBe(
+      false,
+    );
+    expect(hasRuntimeCapability("modifyPower:choose:thisAction")).toBe(false);
+    expect(hasRuntimeCapability("modifyPower:choose:whileConditionTrue")).toBe(
       false,
     );
     expect(

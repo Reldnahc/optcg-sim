@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-014F.md",
-      "storyId": "CARD-014F",
-      "storyPath": "stories/approved/CARD-014F-condition-optionality-parser-expansion.yaml",
-      "storySha256": "fbc4595909a263adbb76a26ca689c72d27185d99d3fbca83e78f71b2f0993548"
+      "packetPath": "agent-packets/CARD-014G.md",
+      "storyId": "CARD-014G",
+      "storyPath": "stories/approved/CARD-014G-selecttargets-saved-field-modifier-restriction-parser-expansion.yaml",
+      "storySha256": "724cb4b48063a5b1f66901cab21dc13ad8598594ac01e64ef4ff9ff2abb09f24"
     }
   ],
   "version": 1

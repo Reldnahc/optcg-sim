@@ -20,6 +20,7 @@ story_boundary: >
   Do not add runtime behavior or reuse hand selection as field targeting.
 allowed_touch_points:
   - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/card014g-composed-parser.ts
   - packages/cards/src/certified-card-text-parser.test.ts
   - packages/cards/src/generated-support-index.ts
   - packages/cards/src/generated-support-index.test.ts
@@ -66,8 +67,8 @@ dependencies:
 scope:
   - certify exact-template support for public field target selection producer shapes
   - certify support for later saved-field-object consumers only for runtime-supported generic field-object consumer shapes
-  - certify temporary modifyPower support only for targets `self`, `choose`, and `all` with durations `thisBattle`, `thisTurn`, `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, and `permanent`
-  - certify cannotAttack and cannotBlock support only for targets `self`, `choose`, and `all` with durations `thisBattle`, `thisTurn`, `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, and `permanent`
+  - certify temporary modifyPower support only for target/duration pairs with existing runtime capability evidence, currently `self` with `thisBattle` or `thisTurn` and `choose` or `all` with `thisTurn`
+  - certify cannotAttack and cannotBlock support only for target/duration pairs with existing runtime capability evidence, currently `self`, `choose`, and `all` with `thisTurn`
   - require source integrity and engine_capability_preflight for any real-card proof
   - fail closed for handSelection used as field target selection
   - fail closed for saved-field-object or saved-selection references used as modifier/restriction targets unless later completed contract/runtime evidence proves support
@@ -87,9 +88,9 @@ engine_capability_preflight:
   - selectTargets producer support must be backed by TYP-010 and ENG-055 selected-target runtime evidence
   - saved field-object consumer support must be backed by completed TYP-009B lifecycle state and ENG-055I runtime evidence, limited to generic field-object consumer shapes
   - modifyPower, cannotAttack, and cannotBlock support must be backed by TYP-007E and ENG-055J runtime evidence for targets `self`, `choose`, and `all` only
-  - supported modifier/restriction durations are `thisBattle`, `thisTurn`, `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, and `permanent`
+  - supported modifier/restriction durations are limited to existing positive cards-side runtime capability records; do not add or imply support for `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, or `permanent` unless a completed ENG/runtime evidence story adds that support
   - saved-field-object and saved-selection modifier/restriction targets are missing capability blockers unless later completed contract/runtime evidence proves support
-  - unsupported duration blockers include `thisAction`, `whileConditionTrue`, and malformed turn-relative durations
+  - unsupported duration blockers include `thisAction`, `whileConditionTrue`, `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, `permanent`, and malformed turn-relative durations unless separate completed runtime evidence exists
   - refresh-lock and cannot become active next refresh remain unsupported unless separate contract/runtime authority exists
 acceptance_criteria:
   - exact supported public field target producer text parses completely and requires selectTargets capability evidence

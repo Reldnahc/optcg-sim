@@ -419,6 +419,143 @@ describe("support evaluator", () => {
     },
   );
 
+  it.each([
+    {
+      expectedCapabilityId: "selectTargets:field:public:character:max1",
+      expectedRuleId: "exact:on-play:select-1-opponent-character-target",
+      sourceText: "[On Play] Select 1 of your opponent's Characters.",
+    },
+    {
+      expectedCapabilityId: "effect:ko:saved-field-object:characterArea:public",
+      expectedRuleId:
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+      sourceText:
+        "[On Play] Select 1 of your opponent's Characters. Then, K.O. that Character.",
+    },
+    {
+      expectedCapabilityId: "modifyPower:choose:thisTurn",
+      expectedRuleId: "exact:on-play:modify-power:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
+    },
+    {
+      expectedCapabilityId: "cannotAttack:choose:thisTurn",
+      expectedRuleId: "exact:on-play:cannot-attack:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters cannot attack during this turn.",
+    },
+    {
+      expectedCapabilityId: "cannotBlock:choose:thisTurn",
+      expectedRuleId: "exact:on-play:cannot-block:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters cannot block during this turn.",
+    },
+  ])(
+    "evaluates CARD-014G $expectedRuleId synthetic text as playable only with matching capability evidence",
+    ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
+      const supportedCard = normalizePoneglyphCardDetail({
+        ...loadOp03044Fixture(),
+        card_number: "CARD-014G-SYNTHETIC",
+        effect: sourceText,
+        name: "Synthetic Target Modifier Restriction Candidate",
+      });
+      const missingCapabilityMatrix = {
+        ...generatedSupportRuntimeCapabilityMatrix,
+        capabilities:
+          generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+            (capability) => capability.id !== expectedCapabilityId,
+          ),
+      };
+
+      const supported = evaluateGeneratedSupportPlayability({
+        card: supportedCard,
+        cardDataVersion: "2026-05-13",
+        effectDefinitionsVersion: "generated-support-v1",
+        expectedBehaviorHash: supportedCard.behaviorHash,
+        expectedSourceTextHash: supportedCard.sourceTextHash,
+        rulesVersion: "generated-support-v1",
+        validateEffectDefinition,
+      });
+      const blocked = evaluateGeneratedSupportPlayability({
+        card: supportedCard,
+        cardDataVersion: "2026-05-13",
+        effectDefinitionsVersion: "generated-support-v1",
+        expectedBehaviorHash: supportedCard.behaviorHash,
+        expectedSourceTextHash: supportedCard.sourceTextHash,
+        rulesVersion: "generated-support-v1",
+        runtimeCapabilityMatrix: missingCapabilityMatrix,
+        validateEffectDefinition,
+      });
+
+      expect(supported).toMatchObject({
+        blockers: [],
+        cardId: "CARD-014G-SYNTHETIC",
+        parseStatus: "complete",
+        parserRuleIds: [expectedRuleId],
+        playable: true,
+        status: "supported",
+      });
+      expect(supported.capabilityEvidence).toEqual(
+        expect.arrayContaining([
+          {
+            capabilityId: expectedCapabilityId,
+            parserRuleId: expectedRuleId,
+          },
+        ]),
+      );
+      expect(blocked).toMatchObject({
+        blockers: [
+          {
+            capabilityId: expectedCapabilityId,
+            code: "missing-runtime-capability",
+            component: expectedRuleId,
+          },
+        ],
+        missingCapabilityIds: [expectedCapabilityId],
+        parseStatus: "complete",
+        playable: false,
+        status: "unsupported",
+      });
+    },
+  );
+
+  it("does not report mutating choose-target support as standalone selectedTargets producer authority", () => {
+    const supportedCard = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "CARD-014G-MUTATING-TARGET",
+      effect:
+        "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
+      name: "Synthetic Mutating Target Candidate",
+    });
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: supportedCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: supportedCard.behaviorHash,
+      expectedSourceTextHash: supportedCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [],
+      parserRuleIds: ["exact:on-play:modify-power:choose:this-turn"],
+      playable: true,
+      status: "supported",
+    });
+    expect(evaluation.capabilityEvidence).toEqual(
+      expect.not.arrayContaining([
+        expect.objectContaining({
+          capabilityId: "savedSelectedTargets:producer",
+        }),
+        expect.objectContaining({
+          capabilityId: "selectTargets:field:public:character:max1",
+        }),
+      ]),
+    );
+  });
+
   it("fails closed when reviewed source hash evidence is stale", () => {
     const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
 

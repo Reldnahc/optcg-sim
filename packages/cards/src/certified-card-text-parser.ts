@@ -6,6 +6,10 @@ import type {
 } from "@optcg/types";
 
 import {
+  parseCard014gClause,
+  parseCard014gResidueClause,
+} from "./card014g-composed-parser.js";
+import {
   buildCompleteParseResult,
   buildPartialParseResult,
   buildResidueSpan,
@@ -198,6 +202,7 @@ function parseFirstCardLineResidueClause(
   line: string,
 ): ParsedResidueClause | undefined {
   return (
+    parseCard014gResidueClause(cardId, line) ??
     parseCard014fResidueClause(cardId, line) ??
     parseCountedResidueClause({
       cardId,
@@ -349,6 +354,7 @@ function parseCardLineEffectClause(
   sourceText: string,
 ): CertifiedClause | undefined {
   return (
+    parseCard014gClause(cardId, sourceText) ??
     parseCard014fClause(cardId, sourceText) ??
     parseOnPlayDrawClause(cardId, sourceText) ??
     parseOnPlayDrawUpToClause(cardId, sourceText) ??
@@ -1077,31 +1083,20 @@ function createDrawThenTrashClauseWithCounts({
   };
 }
 
-function getCompleteParserRuleIds(
-  clauses: readonly CertifiedClause[],
-): readonly string[] {
+function getCompleteParserRuleIds(clauses: readonly CertifiedClause[]) {
   const ruleIds = clauses.map((clause) => clause.parserRuleId);
-
-  if (clauses.length > 1) {
-    return [...ruleIds, "line-separated-effect-blocks:v1"];
-  }
-
-  return ruleIds;
+  return clauses.length > 1
+    ? [...ruleIds, "line-separated-effect-blocks:v1"]
+    : ruleIds;
 }
 
-function resolveImplementationStatus(
-  clauses: readonly CertifiedClause[],
-): "implemented-dsl" | "vanilla-confirmed" {
-  if (
-    clauses.length > 0 &&
+function resolveImplementationStatus(clauses: readonly CertifiedClause[]) {
+  return clauses.length > 0 &&
     clauses.every(
       (clause) => clause.implementationStatus === "vanilla-confirmed",
     )
-  ) {
-    return "vanilla-confirmed";
-  }
-
-  return "implemented-dsl";
+    ? "vanilla-confirmed"
+    : "implemented-dsl";
 }
 
 function toEffectId(value: string): EffectId {

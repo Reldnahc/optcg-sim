@@ -38,6 +38,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:restriction:cannot-attack-all-this-turn",
+        "exact:on-play:cannot-attack:all:this-turn",
       ],
     },
     {
@@ -49,6 +50,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:restriction:cannot-attack-choose-this-turn",
+        "exact:on-play:cannot-attack:choose:this-turn",
       ],
     },
     {
@@ -60,6 +62,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:restriction:cannot-attack-self-this-turn",
+        "exact:on-play:cannot-attack:self:this-turn",
       ],
     },
     {
@@ -71,6 +74,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:restriction:cannot-block-all-this-turn",
+        "exact:on-play:cannot-block:all:this-turn",
       ],
     },
     {
@@ -82,6 +86,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:restriction:cannot-block-choose-this-turn",
+        "exact:on-play:cannot-block:choose:this-turn",
       ],
     },
     {
@@ -93,6 +98,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:restriction:cannot-block-self-this-turn",
+        "exact:on-play:cannot-block:self:this-turn",
       ],
     },
     {
@@ -115,6 +121,18 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
         "card014a:on-play:select-target-modify-power",
+        "exact:on-play:select-1-opponent-character-target",
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+        "exact:on-play:modify-power:self:this-turn",
+        "exact:on-play:modify-power:self:this-battle",
+        "exact:on-play:modify-power:choose:this-turn",
+        "exact:on-play:modify-power:all:this-turn",
+        "exact:on-play:cannot-attack:self:this-turn",
+        "exact:on-play:cannot-attack:choose:this-turn",
+        "exact:on-play:cannot-attack:all:this-turn",
+        "exact:on-play:cannot-block:self:this-turn",
+        "exact:on-play:cannot-block:choose:this-turn",
+        "exact:on-play:cannot-block:all:this-turn",
       ],
     },
     {
@@ -175,6 +193,17 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "exact:condition:your-turn",
         "card014a:sequence:draw-trashFromHand",
         "card014a:sequence:trashFromHand-draw",
+      ],
+    },
+    {
+      description:
+        "Saved public field-object Character references can be consumed by KO effects.",
+      id: "effect:ko:saved-field-object:characterArea:public",
+      kind: "effect",
+      sinceStory: "ENG-055I",
+      supported: true,
+      supportedParserRuleIds: [
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
       ],
     },
     {
@@ -261,7 +290,10 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "modifier",
       sinceStory: "CARD-014A",
       supported: true,
-      supportedParserRuleIds: ["card014a:modifier:power-all-this-turn"],
+      supportedParserRuleIds: [
+        "card014a:modifier:power-all-this-turn",
+        "exact:on-play:modify-power:all:this-turn",
+      ],
     },
     {
       description:
@@ -273,6 +305,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supportedParserRuleIds: [
         "card014a:modifier:power-choose-this-turn",
         "card014a:on-play:select-target-modify-power",
+        "exact:on-play:modify-power:choose:this-turn",
       ],
     },
     {
@@ -282,7 +315,10 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "modifier",
       sinceStory: "CARD-014A",
       supported: true,
-      supportedParserRuleIds: ["card014a:modifier:power-self-this-battle"],
+      supportedParserRuleIds: [
+        "card014a:modifier:power-self-this-battle",
+        "exact:on-play:modify-power:self:this-battle",
+      ],
     },
     {
       description:
@@ -291,7 +327,10 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "modifier",
       sinceStory: "CARD-014A",
       supported: true,
-      supportedParserRuleIds: ["card014a:modifier:power-self-this-turn"],
+      supportedParserRuleIds: [
+        "card014a:modifier:power-self-this-turn",
+        "exact:on-play:modify-power:self:this-turn",
+      ],
     },
     {
       description:
@@ -357,7 +396,10 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "target",
       sinceStory: "CARD-014A",
       supported: true,
-      supportedParserRuleIds: ["card014a:on-play:select-target-modify-power"],
+      supportedParserRuleIds: [
+        "card014a:on-play:select-target-modify-power",
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+      ],
     },
     {
       description:
@@ -366,7 +408,11 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "target",
       sinceStory: "CARD-014A",
       supported: true,
-      supportedParserRuleIds: ["card014a:on-play:select-target-modify-power"],
+      supportedParserRuleIds: [
+        "card014a:on-play:select-target-modify-power",
+        "exact:on-play:select-1-opponent-character-target",
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+      ],
     },
     {
       description:
@@ -387,7 +433,11 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "decision",
       sinceStory: "CARD-014A",
       supported: true,
-      supportedParserRuleIds: ["card014a:on-play:select-target-modify-power"],
+      supportedParserRuleIds: [
+        "card014a:on-play:select-target-modify-power",
+        "exact:on-play:select-1-opponent-character-target",
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+      ],
     },
     {
       description:
@@ -412,6 +462,8 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
         "card014a:on-play:select-target-modify-power",
+        "exact:on-play:select-1-opponent-character-target",
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
       ],
     },
     {
@@ -447,6 +499,18 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
         "card014a:on-play:select-target-modify-power",
+        "exact:on-play:select-1-opponent-character-target",
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+        "exact:on-play:modify-power:self:this-turn",
+        "exact:on-play:modify-power:self:this-battle",
+        "exact:on-play:modify-power:choose:this-turn",
+        "exact:on-play:modify-power:all:this-turn",
+        "exact:on-play:cannot-attack:self:this-turn",
+        "exact:on-play:cannot-attack:choose:this-turn",
+        "exact:on-play:cannot-attack:all:this-turn",
+        "exact:on-play:cannot-block:self:this-turn",
+        "exact:on-play:cannot-block:choose:this-turn",
+        "exact:on-play:cannot-block:all:this-turn",
       ],
     },
     {
@@ -524,6 +588,18 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
         "card014a:on-play:select-target-modify-power",
+        "exact:on-play:select-1-opponent-character-target",
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+        "exact:on-play:modify-power:self:this-turn",
+        "exact:on-play:modify-power:self:this-battle",
+        "exact:on-play:modify-power:choose:this-turn",
+        "exact:on-play:modify-power:all:this-turn",
+        "exact:on-play:cannot-attack:self:this-turn",
+        "exact:on-play:cannot-attack:choose:this-turn",
+        "exact:on-play:cannot-attack:all:this-turn",
+        "exact:on-play:cannot-block:self:this-turn",
+        "exact:on-play:cannot-block:choose:this-turn",
+        "exact:on-play:cannot-block:all:this-turn",
       ],
     },
     {
@@ -550,7 +626,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       ],
     },
   ],
-  generatedAtStory: "CARD-014A",
+  generatedAtStory: "CARD-014G",
   id: "generated-support-runtime-capabilities:v1",
 } as const satisfies RuntimeCapabilityMatrix;
 
@@ -567,6 +643,7 @@ export const requiredGeneratedSupportCapabilityIds = [
   "condition:yourTurn",
   "drawUpTo:self:chooseQuantity",
   "effect:draw:self:count:positive-safe-integer",
+  "effect:ko:saved-field-object:characterArea:public",
   "effect:sequence:ordered",
   "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
   "keyword:banish:printed",
