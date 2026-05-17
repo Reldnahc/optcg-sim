@@ -11,8 +11,9 @@ priority: high
 status: approved
 summary: >
   Define canonical contract and spec authority for same-frame saved field-object
-  references, selectedTargets production, and exact-card continuous-effect target
-  binding so ENG-055I can become implementable.
+  references, saved field-object consumers, and exact-card continuous-effect
+  target binding so ENG-055I can consume producer authority without inventing
+  target/reference behavior.
 story_boundary: >
   Own only saved field-object reference contract/spec/schema/type authority and
   contract tests. Do not implement engine runtime behavior, card parser support,
@@ -61,7 +62,7 @@ dependencies:
   - TYP-007E
   - TYP-008A
 scope:
-  - define the concrete same-frame producer authority for sequence segment `selectedTargets`
+  - define the concrete same-frame saved field-object reference payload and ledger authority for `selectedTargets` and `producedObjects`
   - define the concrete same-frame consumer authority for saved field-object references, including `selectedTargets` and `producedObjects`
   - define legality, visibility, zone, controller, stale-object, gone-object, hidden-object, and unsupported-family fail-closed rules for saved field-object references
   - define how saved field-object references relate to exact-card continuous-effect target binding required by ENG-055J
@@ -69,19 +70,20 @@ scope:
   - keep saved hand-selection/playSelected references separate from saved field-object target references
   - add contract/type/schema fixtures proving supported saved field-object references validate and unsupported saved-reference families reject
 non_scope:
+  - standalone or reachable same-frame selectedTargets producer authority, which belongs to the ENG-055 child TYP-010
   - engine runtime implementation of saved-reference producer or consumer behavior
   - ENG-055J runtime implementation of chosen-target continuous effects
   - saved hand-selection consumption for playSelected, which remains ENG-055G runtime work
   - parser/card support, generated-support admission, real-card fixtures, server, client, API, UI, database, or live Poneglyph work
 acceptance_criteria:
-  - "`selectedTargets` production authority is concrete enough for an ENG story to implement"
+  - "`selectedTargets` and `producedObjects` saved field-object reference payloads are concrete enough for ENG stories to consume"
   - saved `selectedTargets` and `producedObjects` field-object consumer authority is concrete enough for ENG-055I to implement
   - exact-card continuous-effect target binding is canonical and compatible with ENG-055J's `choose` target runtime story
   - unsupported saved-reference families, stale objects, gone objects, hidden objects, and illegal objects fail closed without leaking hidden identities
   - saved field-object reference contracts preserve deterministic replay, event order, and state-hash behavior
   - ENG-055I can cite this story as authority for saved field-object reference runtime implementation
 required_tests:
-  - focused contract/type tests for saved `selectedTargets` production and saved field-object consumer shapes
+  - focused contract/type tests for saved `selectedTargets` and `producedObjects` reference payloads and saved field-object consumer shapes
   - focused contract/type tests for exact-card continuous-effect target binding
   - negative tests proving unsupported saved-reference families and ambiguous hidden/illegal field-object references reject
   - tests or spec-authority guard updates pinning replay, event-order, hidden-info, and state-hash semantics

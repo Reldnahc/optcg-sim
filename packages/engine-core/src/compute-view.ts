@@ -1,4 +1,6 @@
 import type {
+  CardFilter,
+  CardRef,
   CardInstance,
   ComputedCardView,
   ComputedGameView,
@@ -33,12 +35,31 @@ const isSupportedContinuousPowerModifier = (
   effect: ContinuousEffectRecord,
 ): boolean =>
   effect.condition === undefined &&
-  (effect.duration.type === "permanent" ||
-    effect.duration.type === "whileSourceOnField") &&
-  effect.modifier.layer === "powerAdd" &&
-  effect.modifier.target.type === "self" &&
-  effect.modifier.operation.type === "addPower" &&
-  effect.modifier.operation.value === 1000;
+  isSupportedDuration(effect.duration) &&
+  ((effect.modifier.layer === "powerAdd" &&
+    (effect.modifier.target.type === "self" ||
+      effect.modifier.target.type === "all" ||
+      effect.modifier.target.type === "exactCard") &&
+    effect.modifier.operation.type === "addPower" &&
+    (effect.duration.type !== "permanent" ||
+      effect.modifier.operation.value === 1000)) ||
+    (effect.modifier.layer === "restriction" &&
+      (effect.modifier.target.type === "self" ||
+        effect.modifier.target.type === "all" ||
+        effect.modifier.target.type === "exactCard") &&
+      effect.modifier.operation.type === "restriction" &&
+      (effect.modifier.operation.restriction === "cannotAttack" ||
+        effect.modifier.operation.restriction === "cannotBlock")));
+
+const isSupportedDuration = (
+  duration: ContinuousEffectRecord["duration"],
+): boolean =>
+  duration.type === "thisBattle" ||
+  duration.type === "thisTurn" ||
+  duration.type === "untilEndOfTurn" ||
+  duration.type === "untilStartOfNextTurn" ||
+  duration.type === "whileSourceOnField" ||
+  duration.type === "permanent";
 
 const assertSupportedContinuousEffects = (
   continuousEffects: readonly ContinuousEffectRecord[],
@@ -52,6 +73,93 @@ const assertSupportedContinuousEffects = (
   }
 };
 
+const cardMatchesRef = (card: CardInstance, ref: CardRef): boolean =>
+  card.instanceId === ref.instanceId &&
+  card.cardId === ref.cardId &&
+  card.controller === ref.playerId;
+
+const numericFilterMatches = (
+  value: number | undefined,
+  filter: CardFilter["cost"] | CardFilter["power"],
+): boolean => {
+  if (filter === undefined) return true;
+  if (value === undefined) return false;
+  if ("op" in filter) return value === filter.value;
+  if (filter.min !== undefined && value < filter.min) return false;
+  if (filter.max !== undefined && value > filter.max) return false;
+  return true;
+};
+
+const cardMatchesAllFilter = (
+  state: GameState,
+  card: CardInstance,
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) return true;
+  const metadata = state.cardManifest.cards[card.cardId];
+  if (metadata === undefined) return false;
+  if (
+    filter.categories !== undefined &&
+    !filter.categories.includes(metadata.category)
+  ) {
+    return false;
+  }
+  return (
+    numericFilterMatches(metadata.cost, filter.cost) &&
+    numericFilterMatches(metadata.power, filter.power)
+  );
+};
+
+const cardMatchesAllTarget = (
+  state: GameState,
+  card: CardInstance,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  const target = effect.modifier.target;
+  if (target.type !== "all") return false;
+  if (target.zone !== card.zone.zone) return false;
+  if (!cardMatchesAllFilter(state, card, target.filter)) return false;
+  if (target.player === "self") {
+    return card.controller === effect.controller;
+  }
+  if (target.player === "opponent") {
+    return card.controller !== effect.controller;
+  }
+  return false;
+};
+
+const cardMatchesModifierTarget = (
+  state: GameState,
+  card: CardInstance,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  const target = effect.modifier.target;
+  if (target.type === "self") {
+    return cardMatchesRef(card, effect.source);
+  }
+  if (target.type === "exactCard") {
+    const cardZone = card.zone.zone;
+    const targetZone = target.card.zone?.zone;
+    if (target.binding.family !== "selectedTargets") return false;
+    if (targetZone !== "leaderArea" && targetZone !== "characterArea") {
+      return false;
+    }
+    if (cardZone !== targetZone) return false;
+    return cardMatchesRef(card, target.card);
+  }
+  return cardMatchesAllTarget(state, card, effect);
+};
+
+const durationIsActive = (
+  state: GameState,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  if (effect.duration.type === "whileSourceOnField") {
+    return isCardRefLive(state, effect.source);
+  }
+  return true;
+};
+
 const continuousPowerBonusForCard = (
   state: GameState,
   card: CardInstance,
@@ -59,31 +167,33 @@ const continuousPowerBonusForCard = (
   let powerBonus = 0;
 
   for (const effect of state.continuousEffects) {
-    if (
-      effect.duration.type !== "permanent" &&
-      effect.duration.type !== "whileSourceOnField"
-    ) {
-      continue;
-    }
+    if (!durationIsActive(state, effect)) continue;
     if (effect.condition !== undefined) continue;
     if (effect.modifier.layer !== "powerAdd") continue;
-    if (effect.modifier.target.type !== "self") continue;
     if (effect.modifier.operation.type !== "addPower") continue;
-    if (effect.modifier.operation.value !== 1000) continue;
-    if (effect.source.instanceId !== card.instanceId) continue;
-    if (effect.source.cardId !== card.cardId) continue;
-    if (effect.source.playerId !== card.controller) continue;
-    if (
-      effect.duration.type === "whileSourceOnField" &&
-      !isCardRefLive(state, effect.source)
-    ) {
-      continue;
-    }
+    if (!cardMatchesModifierTarget(state, card, effect)) continue;
 
     powerBonus += effect.modifier.operation.value;
   }
 
   return powerBonus;
+};
+
+const hasRestriction = (
+  state: GameState,
+  card: CardInstance,
+  restriction: "cannotAttack" | "cannotBlock",
+): boolean => {
+  for (const effect of state.continuousEffects) {
+    if (!durationIsActive(state, effect)) continue;
+    if (effect.condition !== undefined) continue;
+    if (effect.modifier.layer !== "restriction") continue;
+    if (effect.modifier.operation.type !== "restriction") continue;
+    if (effect.modifier.operation.restriction !== restriction) continue;
+    if (!cardMatchesModifierTarget(state, card, effect)) continue;
+    return true;
+  }
+  return false;
 };
 
 const resolveCombatMetadata = (
@@ -157,6 +267,7 @@ const canAttackNow = (state: GameState, card: CardInstance): boolean => {
   if (state.battle !== undefined) return false;
   if (card.state !== "active") return false;
   if (!isLeaderOrCharacter(card)) return false;
+  if (hasRestriction(state, card, "cannotAttack")) return false;
 
   const turnCount = state.turn.playerTurnCounts[card.controller];
   if (turnCount === 1) return false;
@@ -239,6 +350,7 @@ const canBlockNow = (
   if (card.zone.zone !== "characterArea") return false;
   if (card.state !== "active") return false;
   if (!metadata.printedKeywords.includes("blocker")) return false;
+  if (hasRestriction(state, card, "cannotBlock")) return false;
   const battle = state.battle;
   if (battle === undefined || battle.step !== "block") return false;
   if (!isCardRefLive(state, battle.attacker)) return false;

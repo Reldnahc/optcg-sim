@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { Effect } from "@optcg/types";
 import type {
   CardInstance,
   QueueEntryId,
@@ -20,6 +21,7 @@ import {
   targetSelectionQueueState,
   mixedOrderedDrawThenTargetState,
 } from "./effect-runtime-queue-processing-test-support.js";
+import { advanceEndPhase, advanceRefreshPhase } from "./phases.js";
 
 const removeFieldCardsFromHands = (state: {
   players: Record<string, { hand: CardInstance[]; characters: CardInstance[] }>;
@@ -38,6 +40,27 @@ const removeFieldCardsFromHands = (state: {
         },
       }));
   }
+};
+
+const withQueuedEffect = (
+  state: ReturnType<typeof targetSelectionQueueState>["state"],
+  effect: Effect,
+): void => {
+  const definition = must(
+    state.cardManifest.effectDefinitions?.["def-target-selection"],
+    "target definition",
+  );
+  state.cardManifest.effectDefinitions = {
+    "def-target-selection": {
+      ...definition,
+      effects: [
+        {
+          ...must(definition.effects[0], "target effect"),
+          effect,
+        },
+      ],
+    },
+  };
 };
 
 test("supported queued target request creates selectTargets decision without resolving the effect", () => {
@@ -419,4 +442,338 @@ test("unsupported ordered target after draw fails closed without keeping partial
     [drawEntry.id, targetEntry.id],
   );
   assert.equal(result.state.pendingDecision, undefined);
+});
+
+test("selectTargets response for cannotAttack choose creates exact-card continuous restriction", () => {
+  const { state, entry } = targetSelectionQueueState();
+  const definition = must(
+    state.cardManifest.effectDefinitions?.["def-target-selection"],
+    "target definition",
+  );
+  state.cardManifest.effectDefinitions = {
+    "def-target-selection": {
+      ...definition,
+      effects: [
+        {
+          ...must(definition.effects[0], "target effect"),
+          effect: {
+            type: "cannotAttack",
+            target: { type: "choose", request: publicCharacterTargetRequest() },
+            duration: { type: "thisTurn" },
+          },
+        },
+      ],
+    },
+  };
+  removeFieldCardsFromHands(state);
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectTargets");
+  const selected = must(decision.candidates[0], "first candidate").card;
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "targets", targets: [selected] },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.equal(result.state.continuousEffects.length, 1);
+  const created = must(result.state.continuousEffects[0], "continuous effect");
+  assert.equal(created.modifier.layer, "restriction");
+  assert.equal(created.modifier.operation.type, "restriction");
+  assert.equal(created.modifier.operation.restriction, "cannotAttack");
+  assert.equal(created.modifier.target.type, "exactCard");
+  assert.equal(created.modifier.target.card.instanceId, selected.instanceId);
+  assert.equal(created.duration.type, "thisTurn");
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["decisionResolved", "effectResolved", "ruleProcessingChecked"],
+  );
+  assert.deepEqual(result.events[1]?.payload, {
+    queueEntryId: entry.id,
+    timingWindowId: entry.timingWindowId,
+    generation: entry.generation,
+    effectBlockId: entry.effectBlockId,
+    sourcePresencePolicy: entry.sourcePresencePolicy,
+    orderingGroup: entry.orderingGroup,
+    status: "resolved",
+  });
+});
+
+test("modifyPower self resolves without target decision and preserves queue determinism", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "modifyPower",
+    target: { type: "self" },
+    value: 1000,
+    duration: { type: "thisTurn" },
+  });
+  const beforeQueue = structuredClone(state.effectQueue);
+  const beforeHash = hashCanonicalStateValue(state);
+  const result = processEffectRuntime(state);
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.equal(result.state.continuousEffects.length, 1);
+  const created = must(result.state.continuousEffects[0], "self modifier");
+  assert.equal(created.modifier.layer, "powerAdd");
+  assert.equal(created.modifier.target.type, "self");
+  assert.equal(created.modifier.operation.type, "addPower");
+  assert.equal(created.modifier.operation.value, 1000);
+  assert.equal(created.duration.type, "thisTurn");
+  assert.equal(created.createdAtStateSeq, state.seq);
+  assert.notEqual(hashCanonicalStateValue(result.state), beforeHash);
+  assert.deepEqual(beforeQueue.length, 1);
+});
+
+test("modifyPower all resolves without target decision", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "modifyPower",
+    target: { type: "all", zone: "characterArea", player: "opponent" },
+    value: 1000,
+    duration: { type: "untilEndOfTurn", whoseTurn: "current" },
+  });
+  const result = processEffectRuntime(state);
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.equal(result.state.continuousEffects.length, 1);
+  assert.equal(result.state.continuousEffects[0]?.modifier.target.type, "all");
+});
+
+test("modifyPower choose creates exact-card continuous modifier bound to selected target", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "modifyPower",
+    target: { type: "choose", request: publicCharacterTargetRequest() },
+    value: 1000,
+    duration: { type: "untilStartOfNextTurn", player: "self" },
+  });
+  removeFieldCardsFromHands(state);
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "selectTargets decision");
+  assert.equal(decision.type, "selectTargets");
+  const selected = must(decision.candidates[0], "selected").card;
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "targets", targets: [selected] },
+  });
+  assert.equal(result.errors, undefined);
+  const created = must(result.state.continuousEffects[0], "continuous");
+  assert.equal(created.modifier.layer, "powerAdd");
+  assert.equal(created.modifier.target.type, "exactCard");
+  assert.equal(created.modifier.target.card.instanceId, selected.instanceId);
+  assert.equal(created.modifier.operation.type, "addPower");
+  assert.equal(created.modifier.operation.value, 1000);
+});
+
+test("multi-target choose continuous effect stores distinct exact-card binding objectIndex per target", () => {
+  const { state } = targetSelectionQueueState(
+    publicCharacterTargetRequest({ min: 2, max: 2 }),
+  );
+  withQueuedEffect(state, {
+    type: "modifyPower",
+    target: {
+      type: "choose",
+      request: publicCharacterTargetRequest({ min: 2, max: 2 }),
+    },
+    value: 1000,
+    duration: { type: "thisTurn" },
+  });
+  removeFieldCardsFromHands(state);
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "selectTargets decision");
+  assert.equal(decision.type, "selectTargets");
+  const first = must(decision.candidates[0], "first candidate").card;
+  const second = must(decision.candidates[1], "second candidate").card;
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "targets", targets: [first, second] },
+  });
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.continuousEffects.length, 2);
+  const record0 = must(result.state.continuousEffects[0], "record0");
+  const record1 = must(result.state.continuousEffects[1], "record1");
+  assert.equal(record0.modifier.target.type, "exactCard");
+  assert.equal(record1.modifier.target.type, "exactCard");
+  assert.equal(record0.modifier.target.card.instanceId, first.instanceId);
+  assert.equal(record1.modifier.target.card.instanceId, second.instanceId);
+  assert.equal(record0.modifier.target.binding.objectIndex, 0);
+  assert.equal(record1.modifier.target.binding.objectIndex, 1);
+});
+
+test("cannotBlock self with untilStartOfNextTurn resolves without decision", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "cannotBlock",
+    target: { type: "self" },
+    duration: { type: "untilStartOfNextTurn", player: "self" },
+  });
+  const result = processEffectRuntime(state);
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.continuousEffects.length, 1);
+  const continuousEffect = must(
+    result.state.continuousEffects[0],
+    "continuous cannotBlock effect",
+  );
+  assert.equal(continuousEffect.modifier.operation.type, "restriction");
+  assert.equal(continuousEffect.modifier.operation.restriction, "cannotBlock");
+});
+
+test("unsupported duration thisAction fails closed for queued modifyPower", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "modifyPower",
+    target: { type: "self" },
+    value: 1000,
+    duration: { type: "thisAction" },
+  });
+  const before = structuredClone(state);
+  const result = processEffectRuntime(state);
+  assert.deepEqual(result.events, []);
+  assert.ok(result.errors !== undefined);
+  assert.deepEqual(result.state, before);
+});
+
+test("unsupported duration whileConditionTrue fails closed", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "modifyPower",
+    target: { type: "self" },
+    value: 1000,
+    duration: { type: "whileConditionTrue", condition: { type: "yourTurn" } },
+  });
+  const before = structuredClone(state);
+  const result = processEffectRuntime(state);
+  assert.deepEqual(result.events, []);
+  assert.ok(result.errors !== undefined);
+  assert.deepEqual(result.state, before);
+});
+
+test("unsupported turn-relative duration parameterization fails closed", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "cannotAttack",
+    target: { type: "self" },
+    duration: { type: "untilEndOfTurn", whoseTurn: "targetController" },
+  });
+  const before = structuredClone(state);
+  const result = processEffectRuntime(state);
+  assert.deepEqual(result.events, []);
+  assert.ok(result.errors !== undefined);
+  assert.deepEqual(result.state, before);
+});
+
+test("unsupported untilStartOfNextTurn playerRef parameterization fails closed", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "cannotAttack",
+    target: { type: "self" },
+    duration: { type: "untilStartOfNextTurn", player: "turnPlayer" },
+  });
+  const before = structuredClone(state);
+  const result = processEffectRuntime(state);
+  assert.deepEqual(result.events, []);
+  assert.ok(result.errors !== undefined);
+  assert.deepEqual(result.state, before);
+});
+
+test("unsupported restriction family fails closed", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "cannotBeAttacked",
+    target: { type: "self" },
+    duration: { type: "thisTurn" },
+  });
+  const before = structuredClone(state);
+  const result = processEffectRuntime(state);
+  assert.deepEqual(result.events, []);
+  assert.ok(result.errors !== undefined);
+  assert.deepEqual(result.state, before);
+});
+
+test("unsupported restriction target fails closed", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "cannotAttack",
+    target: { type: "myLeader" },
+    duration: { type: "thisTurn" },
+  });
+  const before = structuredClone(state);
+  const result = processEffectRuntime(state);
+  assert.deepEqual(result.events, []);
+  assert.ok(result.errors !== undefined);
+  assert.deepEqual(result.state, before);
+});
+
+test.each([
+  { name: "opponentLeader", target: { type: "opponentLeader" } as const },
+  { name: "attacker", target: { type: "attacker" } as const },
+  { name: "attackTarget", target: { type: "attackTarget" } as const },
+  { name: "blocker", target: { type: "blocker" } as const },
+  { name: "triggerCard", target: { type: "triggerCard" } as const },
+  {
+    name: "savedFieldObject",
+    target: {
+      type: "savedFieldObject",
+      binding: { family: "selectedTargets", saveResultAs: "x" },
+      zone: "characterArea",
+      player: "self",
+      visibility: "publicOnly",
+      onFailure: "failClosed",
+    } as const,
+  },
+])("unsupported restriction target $name fails closed", ({ target }) => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "cannotAttack",
+    target,
+    duration: { type: "thisTurn" },
+  });
+  const before = structuredClone(state);
+  const result = processEffectRuntime(state);
+  assert.deepEqual(result.events, []);
+  assert.ok(result.errors !== undefined);
+  assert.deepEqual(result.state, before);
+});
+
+test("continuous effect apply+expire remains deterministic in event order and final hash", () => {
+  const run = () => {
+    const { state } = targetSelectionQueueState();
+    removeFieldCardsFromHands(state);
+    withQueuedEffect(state, {
+      type: "modifyPower",
+      target: { type: "self" },
+      value: 1000,
+      duration: { type: "thisTurn" },
+    });
+    const applied = processEffectRuntime(state);
+    assert.equal(applied.errors, undefined);
+    const asEnd = {
+      ...applied.state,
+      turn: { ...applied.state.turn, phase: "end" as const },
+    };
+    const ended = advanceEndPhase(asEnd);
+    assert.equal(ended.errors, undefined);
+    const refreshed = advanceRefreshPhase(ended.state);
+    assert.equal(refreshed.errors, undefined);
+    return {
+      applyEvents: applied.events.map((event) => event.type),
+      endEvents: ended.events.map((event) => event.type),
+      refreshEvents: refreshed.events.map((event) => event.type),
+      finalHash: hashCanonicalStateValue(refreshed.state),
+      finalContinuousCount: refreshed.state.continuousEffects.length,
+    };
+  };
+  const first = run();
+  const second = run();
+  assert.deepEqual(first, second);
+  assert.equal(first.finalContinuousCount, 0);
 });

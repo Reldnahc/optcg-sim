@@ -1,0 +1,107 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-055J
+epic_id: ENG-055
+title: "Duration, modifier, and restriction runtime"
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Implement temporary power modifier and TYP-007E-authorized restriction runtime
+  behavior through the engine computed-view/modifier model.
+story_boundary: >
+  Own only runtime behavior for temporary power modifiers and TYP-007E-authorized
+  restrictions such as cannotAttack/cannotBlock plus expiry tests. Do not
+  implement parser/card support.
+allowed_touch_points:
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-block-actions.ts
+  - packages/engine-core/src/battle-blocker.test.ts
+  - packages/engine-core/src/battle-blocker-flow.test.ts
+  - packages/engine-core/src/battle-blocker-invalid.test.ts
+  - packages/engine-core/src/battle-counter-actions.ts
+  - packages/engine-core/src/battle-counter.test.ts
+  - packages/engine-core/src/battle-counter-flow.test.ts
+  - packages/engine-core/src/battle-counter-invalid.test.ts
+  - packages/engine-core/src/battle-declare-attack-legality.test.ts
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/battle-pipeline-regression.test.ts
+  - packages/engine-core/src/battle-support.ts
+  - packages/engine-core/src/compute-view.ts
+  - packages/engine-core/src/compute-view.test.ts
+  - packages/engine-core/src/effect-runtime*.ts
+  - packages/engine-core/src/effect-runtime*.test.ts
+  - packages/engine-core/src/phases.ts
+  - packages/engine-core/src/phases.test.ts
+  - packages/engine-core/src/target-selection*.ts
+  - packages/engine-core/src/target-selection*.test.ts
+  - packages/engine-core/src/turn-actions.ts
+  - packages/engine-core/src/turn-actions.test.ts
+  - packages/types/src/game-state.ts
+  - packages/types/src/game-state.test.ts
+  - packages/types/src/runtime.ts
+  - packages/types/src/runtime.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-055*.yaml
+  - stories/approved/ENG-055*.yaml
+  - agent-packets/ENG-055J.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s018
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s002
+  - 04-effect-runtime.s014
+  - 04-effect-runtime.s015
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s021
+  - 05-effect-dsl-reference.s029
+  - 11-testing-quality.s008
+dependencies:
+  - TYP-007E
+scope:
+  - implement temporary power modifiers through the computed-view/modifier model
+  - implement runtime expiry only for `thisBattle`, `thisTurn`, `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, and `permanent` durations
+  - defer `thisAction` runtime until a cited canonical expiration rule exists
+  - implement TYP-007E-authorized temporary power modifier target runtime for `self`, `choose`, and `all` target shapes
+  - implement TYP-007E-authorized restriction runtime only for `cannotAttack` and `cannotBlock` with `self`, `choose`, and `all` target shapes authorized by TYP-007E
+  - for `choose` modifier/restriction targets, create or reuse a `selectTargets` pending decision, validate valid/stale/malformed/wrong-player responses, and persist the exact chosen field object in a durable continuous-effect target carrier until the modifier/restriction expires
+  - if the chosen target is gone, no longer a legal field object, hidden, or otherwise unresolvable before continuous-effect creation, fail closed without adding the modifier/restriction
+  - fail closed for every non-TYP-007E-authorized restriction target outside `self`, `choose`, and `all`, including `myLeader`, `opponentLeader`, attack-context targets such as `attacker`, `attackTarget`, `blocker`, and `triggerCard`, and saved-selection targets
+  - fail closed for `whileConditionTrue`, malformed turn-relative durations, `thisAction`, and unsupported restriction families
+  - add expiry tests for duration boundaries
+  - add hidden-info, event-order, deterministic replay, and state-hash regression coverage
+non_scope:
+  - parser/card support
+  - permanent effect fixed-point generalization beyond this story
+  - "`thisAction` duration runtime"
+  - cannotBeAttacked, cannotBeBlockedBy, invalidateEffects, and protectFromKO runtime
+  - refresh-lock or cannot-become-active-next-refresh runtime until contract/schema authority exists
+  - saved-selection modifier/restriction targets until a proper field-target saved-reference contract exists
+  - replacement generalization
+acceptance_criteria:
+  - temporary power modifiers affect computed view without mutating canonical current power
+  - temporary power modifiers and `cannotAttack`/`cannotBlock` restrictions support `self`, `choose`, and `all` target shapes authorized by TYP-007E
+  - "`cannotAttack` and `cannotBlock` apply and expire at the correct supported duration boundary"
+  - "`choose` target modifier/restriction application pauses through a valid `selectTargets` decision when needed, resumes by creating a durable continuous-effect record bound to the chosen field object, and rejects stale, malformed, wrong-player, gone-target, hidden, or illegal responses fail-closed"
+  - unsupported targets, durations, malformed duration parameterizations, and restriction families fail closed
+  - hidden-info, event order, deterministic replay, and state hashes are preserved
+required_tests:
+  - temporary power modifier runtime tests
+  - choose-target modifier/restriction decision tests covering `selectTargets` creation, valid response resume, stale/malformed/wrong-player rejection, gone/illegal target fail-closed behavior, and durable chosen-target binding until expiry
+  - cannotAttack/cannotBlock restriction expiry tests for supported `self`, `choose`, and `all` target shapes and supported duration boundaries
+  - fail-closed tests for `thisAction`, `whileConditionTrue`, malformed turn-relative durations, every non-TYP-007E-authorized restriction target outside `self`, `choose`, and `all` including `myLeader`, `opponentLeader`, attack-context targets, and saved-selection targets, plus unsupported restriction families
+  - replay regression pinning emitted event order and final state hash across modifier/restriction application and expiry
+  - hidden-info, event-order, and state-hash tests
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - do not import @optcg/cards
+  - keep canonical state mutation minimal and deterministic
+  - fail closed on duration or refresh timing ambiguity
+ambiguity_policy: fail_and_escalate

@@ -1,0 +1,323 @@
+import assert from "node:assert/strict";
+import { test } from "vitest";
+
+import type {
+  CardInstance,
+  Effect,
+  EffectDefinition,
+  GameState,
+} from "@optcg/types";
+
+import {
+  applyAction,
+  createActiveState,
+  hashCanonicalStateValue,
+  must,
+  p1,
+  p2,
+  processEffectRuntime,
+  queueDrawForP1,
+  resolvedCard,
+  reviewedOnPlayDrawDefinition,
+  toEffectId,
+  toQueueEntryId,
+  toSourceSnapshot,
+  toTimingWindowId,
+  withCardInZone,
+} from "./effect-runtime-queue-processing-test-support.js";
+
+const setupSequenceDefinition = (
+  state: GameState,
+  source: CardInstance,
+  effect: Effect,
+): EffectDefinition => {
+  const effectDefinitionId = "def-sequence-select-targets";
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "sequence-select-targets-rules",
+      sourceTextHash: "sequence-select-targets-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const baseEffect = must(base.effects[0], "base effect");
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...baseEffect,
+        id: toEffectId("effect-sequence-select-targets"),
+        effect,
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    [effectDefinitionId]: definition,
+  };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  return definition;
+};
+
+const sequenceQueueState = (
+  effect: Effect,
+): { state: GameState; definition: EffectDefinition } => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p1State = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  const definition = setupSequenceDefinition(state, source, effect);
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-sequence-select-targets"),
+      timingWindowId: toTimingWindowId("window-sequence-select-targets"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "sequence effect").id,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: { type: "ruleProcess", name: "sequence-select-targets-test" },
+    },
+  ];
+  return { state, definition };
+};
+
+const selectTargetsThenKoSavedSelectedTargetSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "prelude-draw",
+      connector: "always",
+      effect: { type: "draw", player: "self", count: 0 },
+    },
+    {
+      id: "select-target",
+      connector: "always",
+      saveResultAs: "savedTarget",
+      effect: {
+        type: "selectTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          zone: "characterArea",
+          player: "opponent",
+          min: 1,
+          max: 1,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+        },
+      },
+    },
+    {
+      id: "ko-selected-target",
+      connector: "ifPreviousSucceeded",
+      effect: {
+        type: "ko",
+        target: {
+          type: "savedFieldObject",
+          binding: { family: "selectedTargets", saveResultAs: "savedTarget" },
+          zone: "characterArea",
+          player: "opponent",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+      },
+    },
+  ],
+});
+
+const twoSelectTargetsThenKoSavedSelectedTargetSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "prelude-draw",
+      connector: "always",
+      effect: { type: "draw", player: "self", count: 0 },
+    },
+    {
+      id: "select-target-1",
+      connector: "always",
+      saveResultAs: "savedTargetFirst",
+      effect: {
+        type: "selectTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          zone: "characterArea",
+          player: "opponent",
+          min: 1,
+          max: 1,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+        },
+      },
+    },
+    {
+      id: "select-target-2",
+      connector: "always",
+      saveResultAs: "savedTargetSecond",
+      effect: {
+        type: "selectTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          zone: "characterArea",
+          player: "opponent",
+          min: 1,
+          max: 1,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+        },
+      },
+    },
+    {
+      id: "ko-selected-target",
+      connector: "ifPreviousSucceeded",
+      effect: {
+        type: "ko",
+        target: {
+          type: "savedFieldObject",
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "savedTargetSecond",
+          },
+          zone: "characterArea",
+          player: "opponent",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+      },
+    },
+  ],
+});
+
+test("sequence selectTargets fail-closes when no legal candidates satisfy min without leaving a pending decision", () => {
+  const { state } = sequenceQueueState(
+    selectTargetsThenKoSavedSelectedTargetSequence(),
+  );
+
+  const first = processEffectRuntime(state);
+  const second = processEffectRuntime(state);
+
+  assert.equal(first.errors, undefined);
+  assert.equal(first.state.pendingDecision, undefined);
+  assert.equal(first.state.effectExecutionFrames.length, 0);
+  assert.equal(
+    first.events.some((event) => event.type === "decisionCreated"),
+    false,
+  );
+  assert.equal(
+    first.events.some((event) => event.type === "decisionResolved"),
+    false,
+  );
+  assert.equal(
+    first.events.some((event) => event.type === "cardKOd"),
+    false,
+  );
+  assert.equal(first.events.at(-1)?.type, "effectResolved");
+  assert.equal(
+    must(first.state.players[p2], "p2").characters.length,
+    must(state.players[p2], "original p2").characters.length,
+  );
+  assert.equal(first.stateHash, second.stateHash);
+  assert.equal(first.stateHash, hashCanonicalStateValue(first.state));
+});
+
+test("multiple sequence selectTargets segments use distinct decision ids", () => {
+  const { state } = sequenceQueueState(
+    twoSelectTargetsThenKoSavedSelectedTargetSequence(),
+  );
+  const p2State = must(state.players[p2], "p2");
+  const firstTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "first target"),
+    zone: "characterArea",
+    index: 0,
+  });
+  const secondTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[1], "second target"),
+    zone: "characterArea",
+    index: 1,
+  });
+  state.cardManifest.cards[firstTarget.cardId] = resolvedCard({
+    cardId: firstTarget.cardId,
+    category: "character",
+    power: 2000,
+  });
+  state.cardManifest.cards[secondTarget.cardId] = resolvedCard({
+    cardId: secondTarget.cardId,
+    category: "character",
+    power: 3000,
+  });
+
+  const pausedFirst = processEffectRuntime(state);
+  const firstDecision = must(
+    pausedFirst.state.pendingDecision,
+    "first target selection",
+  );
+  assert.equal(firstDecision.type, "selectTargets");
+
+  const pausedSecond = applyAction(pausedFirst.state, {
+    type: "respondToDecision",
+    decisionId: firstDecision.id,
+    response: {
+      type: "targets",
+      targets: [must(firstDecision.candidates[0], "first candidate").card],
+    },
+  });
+  assert.equal(pausedSecond.errors, undefined);
+  const secondDecision = must(
+    pausedSecond.state.pendingDecision,
+    "second target selection",
+  );
+  assert.equal(secondDecision.type, "selectTargets");
+  assert.notEqual(secondDecision.id, firstDecision.id);
+
+  const resolved = applyAction(pausedSecond.state, {
+    type: "respondToDecision",
+    decisionId: secondDecision.id,
+    response: {
+      type: "targets",
+      targets: [must(secondDecision.candidates[1], "second candidate").card],
+    },
+  });
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(
+    must(resolved.state.players[p2], "resolved p2").characters.some(
+      (card) => card.instanceId === secondTarget.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    must(resolved.state.players[p2], "resolved p2").characters.some(
+      (card) => card.instanceId === firstTarget.instanceId,
+    ),
+    true,
+  );
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});

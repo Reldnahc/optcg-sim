@@ -1,4 +1,5 @@
 import type {
+  EffectDefinition,
   EffectQueueEntry,
   EngineError,
   EngineEvent,
@@ -20,6 +21,26 @@ import {
   findCardInstance,
   toSnapshot,
 } from "./effect-runtime-trigger-source-lookup.js";
+
+const isSupportedOnPlayDrawUpToEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: { type: "drawUpTo"; count: number; player: "self" };
+} =>
+  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
+  effect.trigger.type === "onPlay" &&
+  effect.category === "auto" &&
+  effect.optional !== true &&
+  effect.oncePerTurn !== true &&
+  effect.cost === undefined &&
+  effect.condition === undefined &&
+  effect.conditionTiming === undefined &&
+  effect.failurePolicy === undefined &&
+  effect.effect.type === "drawUpTo" &&
+  Number.isInteger(effect.effect.count) &&
+  effect.effect.count >= 0 &&
+  effect.effect.player === "self";
 
 export const createOnPlayTriggerQueueing = (
   dependencies: Pick<
@@ -119,7 +140,8 @@ export const createOnPlayTriggerQueueing = (
       const matching = onPlayEffects.filter(
         (effect) =>
           isSupportedNoChoiceOnPlayDrawEffect(effect) ||
-          isSupportedOptionalNoChoiceOnPlayDrawEffect(effect),
+          isSupportedOptionalNoChoiceOnPlayDrawEffect(effect) ||
+          isSupportedOnPlayDrawUpToEffect(effect),
       );
       if (matching.length === 0) {
         return toEngineResult(

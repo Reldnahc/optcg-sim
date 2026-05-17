@@ -42,6 +42,26 @@ const isSupportedMainEventTargetKoEffectAllowingOncePerTurn = (
   return isSupportedMainEventTargetKoEffect(effectWithoutOncePerTurn);
 };
 
+const isSupportedMainEventDrawUpToEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: { type: "drawUpTo"; count: number; player: "self" };
+} =>
+  effect.sourcePresencePolicy === "resolveFromDestinationZone" &&
+  effect.trigger.type === "main" &&
+  effect.category === "auto" &&
+  effect.optional !== true &&
+  effect.oncePerTurn !== true &&
+  effect.cost === undefined &&
+  effect.condition === undefined &&
+  effect.conditionTiming === undefined &&
+  effect.failurePolicy === undefined &&
+  effect.effect.type === "drawUpTo" &&
+  Number.isInteger(effect.effect.count) &&
+  effect.effect.count >= 0 &&
+  effect.effect.player === "self";
+
 export const createMainEventTriggerQueueing = (
   dependencies: Pick<
     EffectRuntimeTriggerQueueingDependencies,
@@ -134,6 +154,7 @@ export const createMainEventTriggerQueueing = (
         (effect) =>
           isSupportedNoChoiceMainEventDrawEffect(effect) ||
           isSupportedOptionalNoChoiceMainEventDrawEffect(effect) ||
+          isSupportedMainEventDrawUpToEffect(effect) ||
           isSupportedMainEventTargetKoEffectAllowingOncePerTurn(effect),
       );
       if (matching.length === 0) {

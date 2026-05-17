@@ -23,6 +23,7 @@ import {
 } from "./action-results.js";
 import type { EffectQueueGroup } from "./effect-queue-ordering.js";
 import { createSupportedDrawThenTrashSequenceDecision } from "./effect-runtime-draw-trash-sequence.js";
+import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
 import {
   evaluateQueueOrdering,
@@ -35,12 +36,18 @@ import type {
   ResolveImplementedDslEffectDefinition,
 } from "./effect-runtime-queue-target-decisions.js";
 import {
+  executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
   isSupportedEffectResolvedCustomDrawEffect,
   isSupportedQueuedNoChoiceDrawEffect,
   isSupportedQueuedOptionalNoChoiceDrawEffect,
 } from "./effect-runtime-primitives.js";
+import {
+  createContinuousRecordsForResolvedEffect,
+  isSupportedContinuousQueueEffect,
+} from "./effect-runtime-continuous.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
+import { createSupportedSequenceFrameDecision } from "./effect-runtime-sequence-frames.js";
 import {
   createSupportedTrashFromHandChoiceDecision,
   isSupportedQueuedTrashFromHandEffect,
@@ -146,12 +153,80 @@ export const createEffectRuntimeQueueResults = (
     const match = resolveQueuedEffectDefinition(state, entry);
     if (
       match === undefined ||
-      match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      !isSupportedQueuedNoChoiceDrawEffect(match)
+      match.sourcePresencePolicy !== entry.sourcePresencePolicy
     ) {
       return undefined;
     }
-    return match.effect;
+    const supportShape = { ...match };
+    delete (supportShape as { condition?: unknown }).condition;
+    delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
+    if (!isSupportedQueuedNoChoiceDrawEffect(supportShape)) {
+      return undefined;
+    }
+    return supportShape.effect;
+  };
+
+  const resolveQueuedDrawUpToEffect = (
+    state: GameState,
+    entry: EffectQueueEntry,
+  ): Extract<Effect, { type: "drawUpTo" }> | undefined => {
+    const match = resolveQueuedEffectDefinition(state, entry);
+    if (
+      match === undefined ||
+      match.sourcePresencePolicy !== entry.sourcePresencePolicy
+    ) {
+      return undefined;
+    }
+    const supportShape = { ...match };
+    delete (supportShape as { condition?: unknown }).condition;
+    delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
+    if (
+      supportShape.category !== "auto" ||
+      supportShape.optional === true ||
+      supportShape.oncePerTurn === true ||
+      supportShape.cost !== undefined ||
+      supportShape.failurePolicy !== undefined ||
+      supportShape.effect.type !== "drawUpTo" ||
+      !Number.isInteger(supportShape.effect.count) ||
+      supportShape.effect.count < 0
+    ) {
+      return undefined;
+    }
+    return supportShape.effect;
+  };
+
+  const withoutConditionFields = (
+    effect: EffectDefinition["effects"][number],
+  ): EffectDefinition["effects"][number] => {
+    const supportShape = { ...effect };
+    delete (supportShape as { condition?: unknown }).condition;
+    delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
+    return supportShape;
+  };
+
+  const resolveQueuedContinuousEffect = (
+    state: GameState,
+    entry: EffectQueueEntry,
+  ):
+    | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "cannotAttack" }>
+    | Extract<Effect, { type: "cannotBlock" }>
+    | undefined => {
+    const match = resolveQueuedEffectDefinition(state, entry);
+    if (
+      match === undefined ||
+      match.sourcePresencePolicy !== entry.sourcePresencePolicy
+    ) {
+      return undefined;
+    }
+    const supportShape = withoutConditionFields(match);
+    if (!isSupportedContinuousQueueEffect(supportShape.effect)) {
+      return undefined;
+    }
+    if (supportShape.effect.target.type === "choose") {
+      return undefined;
+    }
+    return supportShape.effect;
   };
 
   const resolveQueuedSearchRevealEffect = (
@@ -165,7 +240,6 @@ export const createEffectRuntimeQueueResults = (
       match.category !== "auto" ||
       match.optional === true ||
       match.oncePerTurn === true ||
-      match.condition !== undefined ||
       match.conditionTiming !== undefined ||
       match.cost !== undefined ||
       match.failurePolicy !== undefined ||
@@ -294,6 +368,95 @@ export const createEffectRuntimeQueueResults = (
     return toEngineResult(nextState, events);
   };
 
+  const createChooseQuantityDecision = (
+    state: GameState,
+    entry: EffectQueueEntry,
+    effect: Extract<Effect, { type: "drawUpTo" }>,
+  ): EngineResult => {
+    const decisionId =
+      `decision:chooseQuantity:${String(entry.id)}` as DecisionId;
+    const causedBy = {
+      type: "effect",
+      queueEntryId: entry.id,
+      effectId: entry.effectBlockId,
+    } as const;
+    const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
+      id: decisionId,
+      type: "chooseQuantity",
+      playerId: entry.controllerId,
+      prompt: "Choose quantity.",
+      causedBy,
+      visibility: { type: "private", playerId: entry.controllerId },
+      mode: "upTo",
+      min: 0,
+      max: effect.count,
+    };
+    const events: EngineEvent[] = [];
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: pendingDecision.id,
+        decisionType: pendingDecision.type,
+        playerId: pendingDecision.playerId,
+      },
+      pendingDecision.visibility,
+    );
+    const created = events[0];
+    if (created !== undefined) {
+      created.causedBy = causedBy;
+    }
+    return toEngineResult(
+      {
+        ...state,
+        seq: toStateSeq(state.seq + 1),
+        pendingDecision,
+        eventJournal: [...state.eventJournal, ...events],
+      },
+      events,
+    );
+  };
+
+  const resolveQueuedDrawUpToQuantity = (
+    state: GameState,
+    entry: EffectQueueEntry,
+    effect: Extract<Effect, { type: "drawUpTo" }>,
+  ): number | undefined => {
+    const expectedDecisionId =
+      `decision:chooseQuantity:${String(entry.id)}` as DecisionId;
+    for (let index = state.eventJournal.length - 1; index >= 0; index -= 1) {
+      const event = state.eventJournal[index];
+      if (event?.type !== "decisionResolved") {
+        continue;
+      }
+      const payload =
+        typeof event.payload === "object" && event.payload !== null
+          ? (event.payload as Record<string, unknown>)
+          : undefined;
+      if (payload === undefined) {
+        continue;
+      }
+      const decisionId = payload["decisionId"];
+      const decisionType = payload["decisionType"];
+      const responseType = payload["responseType"];
+      const quantity = payload["quantity"];
+      if (
+        decisionId !== expectedDecisionId ||
+        decisionType !== "chooseQuantity" ||
+        responseType !== "chooseQuantity" ||
+        typeof quantity !== "number" ||
+        !Number.isInteger(quantity) ||
+        quantity < 0 ||
+        quantity > effect.count
+      ) {
+        continue;
+      }
+      return quantity;
+    }
+    return undefined;
+  };
+
   const resolveQueueEntriesInOrder = (
     state: GameState,
     entries: readonly EffectQueueEntry[],
@@ -311,11 +474,32 @@ export const createEffectRuntimeQueueResults = (
         return unsupportedEffectQueueResult(originalState);
       }
       const queuedEffect = resolveQueuedEffectDefinition(nextState, selected);
+      if (queuedEffect?.conditionTiming !== undefined) {
+        return unsupportedEffectQueueResult(originalState);
+      }
+      const conditionResult = evaluateQueuedEffectCondition(
+        nextState,
+        selected,
+        queuedEffect?.condition,
+      );
+      if (!conditionResult.supported) {
+        return unsupportedEffectQueueResult(originalState);
+      }
+      if (!conditionResult.passed) {
+        nextState = {
+          ...nextState,
+          effectQueue: nextState.effectQueue.filter(
+            (entry) => entry.id !== selected.id,
+          ),
+        };
+        continue;
+      }
       let drawEffect: Extract<Effect, { type: "draw" }> | undefined;
       if (queuedEffect?.optional === true) {
+        const optionalSupportShape = withoutConditionFields(queuedEffect);
         if (
           queuedEffect.sourcePresencePolicy !== selected.sourcePresencePolicy ||
-          !isSupportedQueuedOptionalNoChoiceDrawEffect(queuedEffect)
+          !isSupportedQueuedOptionalNoChoiceDrawEffect(optionalSupportShape)
         ) {
           return unsupportedEffectQueueResult(originalState);
         }
@@ -330,7 +514,7 @@ export const createEffectRuntimeQueueResults = (
           }
         }
         if (acceptedOptionalQueueEntryIds.has(selected.id)) {
-          drawEffect = queuedEffect.effect;
+          drawEffect = optionalSupportShape.effect;
         } else {
           const paused = createChooseOptionalActivationDecision(
             nextState,
@@ -366,6 +550,20 @@ export const createEffectRuntimeQueueResults = (
           ? toEngineResult(drawTrashSequence.state, [
               ...allEvents,
               ...drawTrashSequence.events,
+            ])
+          : unsupportedEffectQueueResult(originalState);
+      }
+      const sequenceFrame = createSupportedSequenceFrameDecision(
+        nextState,
+        selected,
+        queuedEffect,
+        createSupportedTrashFromHandChoiceDecision,
+      );
+      if (sequenceFrame !== undefined) {
+        return sequenceFrame.ok
+          ? toEngineResult(sequenceFrame.state, [
+              ...allEvents,
+              ...sequenceFrame.events,
             ])
           : unsupportedEffectQueueResult(originalState);
       }
@@ -441,9 +639,59 @@ export const createEffectRuntimeQueueResults = (
             ])
           : unsupportedEffectQueueResult(originalState);
       }
-      drawEffect ??= resolveQueuedNoChoiceDrawEffect(nextState, selected);
-      if (drawEffect === undefined) {
-        return unsupportedEffectQueueResult(originalState);
+      const drawUpToEffect = resolveQueuedDrawUpToEffect(nextState, selected);
+      const queuedContinuousEffect = resolveQueuedContinuousEffect(
+        nextState,
+        selected,
+      );
+      let resolutionEventsForTrigger: EngineEvent[] = [];
+      let removedSelectedFromQueue = false;
+      if (drawUpToEffect !== undefined) {
+        const resolvedQuantity = resolveQueuedDrawUpToQuantity(
+          nextState,
+          selected,
+          drawUpToEffect,
+        );
+        if (resolvedQuantity !== undefined) {
+          const resolvingEntry: EffectQueueEntry = {
+            ...selected,
+            state: "resolving",
+          };
+          nextState = {
+            ...nextState,
+            effectQueue: nextState.effectQueue.filter(
+              (entry) => entry.id !== selected.id,
+            ),
+          };
+          removedSelectedFromQueue = true;
+          const resolution = executeDrawPrimitiveForResolvedQuantity(
+            nextState,
+            resolvingEntry,
+            drawUpToEffect.player,
+            resolvedQuantity,
+          );
+          if (resolution.errors !== undefined) {
+            return unsupportedEffectQueueResult(originalState);
+          }
+          nextState = resolution.state;
+          allEvents.push(...resolution.events);
+          resolutionEventsForTrigger = [...resolution.events];
+        } else {
+          const quantityDecision = createChooseQuantityDecision(
+            nextState,
+            selected,
+            drawUpToEffect,
+          );
+          return {
+            ...quantityDecision,
+            events: [...allEvents, ...quantityDecision.events],
+          };
+        }
+      } else {
+        drawEffect ??= resolveQueuedNoChoiceDrawEffect(nextState, selected);
+        if (drawEffect === undefined && queuedContinuousEffect === undefined) {
+          return unsupportedEffectQueueResult(originalState);
+        }
       }
       if (queuedEffect?.oncePerTurn === true) {
         const oncePerTurnKey = toOncePerTurnKey({
@@ -461,23 +709,42 @@ export const createEffectRuntimeQueueResults = (
         ...selected,
         state: "resolving",
       };
-      nextState = {
-        ...nextState,
-        effectQueue: nextState.effectQueue.filter(
-          (entry) => entry.id !== selected.id,
-        ),
-      };
-
-      const resolution = executeNoChoiceEffectPrimitive(
-        nextState,
-        resolvingEntry,
-        drawEffect,
-      );
-      if (resolution.errors !== undefined) {
-        return unsupportedEffectQueueResult(originalState);
+      if (!removedSelectedFromQueue) {
+        nextState = {
+          ...nextState,
+          effectQueue: nextState.effectQueue.filter(
+            (entry) => entry.id !== selected.id,
+          ),
+        };
       }
-      nextState = resolution.state;
-      allEvents.push(...resolution.events);
+
+      if (drawEffect !== undefined) {
+        const resolution = executeNoChoiceEffectPrimitive(
+          nextState,
+          resolvingEntry,
+          drawEffect,
+        );
+        if (resolution.errors !== undefined) {
+          return unsupportedEffectQueueResult(originalState);
+        }
+        nextState = resolution.state;
+        allEvents.push(...resolution.events);
+        resolutionEventsForTrigger = [...resolution.events];
+      }
+      if (queuedContinuousEffect !== undefined) {
+        const records = createContinuousRecordsForResolvedEffect(
+          nextState,
+          resolvingEntry,
+          queuedContinuousEffect,
+        );
+        if (records === null) {
+          return unsupportedEffectQueueResult(originalState);
+        }
+        nextState = {
+          ...nextState,
+          continuousEffects: [...nextState.continuousEffects, ...records],
+        };
+      }
 
       const resolvedEvents: EngineEvent[] = [];
       const resolvedEventBaseState: GameState = {
@@ -561,7 +828,7 @@ export const createEffectRuntimeQueueResults = (
       const triggered = dependencies.queueEffectResolvedCustomTriggers(
         nextState,
         selected,
-        [...resolution.events, ...resolvedEvents, ...cleanup.events],
+        [...resolutionEventsForTrigger, ...resolvedEvents, ...cleanup.events],
       );
       if (triggered !== undefined) {
         if (triggered.errors !== undefined) {

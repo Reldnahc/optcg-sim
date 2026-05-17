@@ -41,7 +41,9 @@ import {
   detectPendingRuntimeWork,
   executeAcceptedSelectedTargetKoReplacementProcess,
   finalizeSelectedTargetEffectResolution,
+  processEffectRuntime,
 } from "./effect-runtime.js";
+import { resumeSequenceFrameAfterPlaySelectedOverflow } from "./effect-runtime-sequence-frames.js";
 import { executeUnreplacedSelectedTargetKoProcess } from "./effect-runtime-primitives.js";
 import {
   applyLifeTriggerDecisionResponse,
@@ -57,6 +59,11 @@ import {
   getTrashFromHandDecisionLegalActions,
   isTrashFromHandSelectCardsDecision,
 } from "./effect-runtime-trash-from-hand.js";
+import {
+  applySupportedHandSelectionChoiceResponse,
+  getHandSelectionDecisionLegalActions,
+  isHandSelectionSelectCardsDecision,
+} from "./effect-runtime-hand-selection.js";
 import { applyChooseTriggerOrderDecisionResponse } from "./trigger-order-actions.js";
 import {
   applyConcede,
@@ -67,6 +74,10 @@ import {
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
 ];
+
+const isSupportedChooseQuantityMode = (
+  mode: unknown,
+): mode is "exact" | "upTo" => mode === "exact" || mode === "upTo";
 
 const hasMalformedRespondToDecisionPlayerId = (
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -221,6 +232,177 @@ const getSearchRevealDecisionLegalActions = (
       }),
     ),
   ];
+};
+
+const getChooseQuantityLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): LegalAction[] => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "chooseQuantity" ||
+    decision.playerId !== playerId
+  ) {
+    return [];
+  }
+  const mode: unknown = decision.mode;
+  if (
+    !Number.isInteger(decision.min) ||
+    !Number.isInteger(decision.max) ||
+    decision.min < 0 ||
+    decision.min > decision.max ||
+    !isSupportedChooseQuantityMode(mode) ||
+    (mode === "exact" && decision.min !== decision.max)
+  ) {
+    return [];
+  }
+  const actions: LegalAction[] = [];
+  for (let quantity = decision.min; quantity <= decision.max; quantity += 1) {
+    actions.push({
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "chooseQuantity", quantity },
+    });
+  }
+  return actions;
+};
+
+const hasCurrentChooseQuantityRuntimeContext = (
+  state: GameState,
+  decision: Extract<
+    NonNullable<GameState["pendingDecision"]>,
+    { type: "chooseQuantity" }
+  >,
+): boolean => {
+  const causedBy = decision.causedBy;
+  if (causedBy.type !== "effect") {
+    return true;
+  }
+  const queueEntry = state.effectQueue.find(
+    (entry) =>
+      entry.id === causedBy.queueEntryId &&
+      entry.effectBlockId === causedBy.effectId,
+  );
+  if (queueEntry === undefined) {
+    return false;
+  }
+  if (queueEntry.state === "pending") {
+    return true;
+  }
+  if (queueEntry.state !== "resolving") {
+    return false;
+  }
+  return state.effectExecutionFrames.some(
+    (frame) =>
+      frame.queueEntryId === causedBy.queueEntryId &&
+      frame.effectBlockId === causedBy.effectId &&
+      frame.pendingDecision.decisionId === decision.id &&
+      frame.pendingDecision.causedBy.type === "effect" &&
+      frame.pendingDecision.causedBy.queueEntryId === causedBy.queueEntryId &&
+      frame.pendingDecision.causedBy.effectId === causedBy.effectId,
+  );
+};
+
+const applyChooseQuantityDecisionResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  if (decision === undefined || decision.type !== "chooseQuantity") {
+    return null;
+  }
+  const response: unknown = action.response;
+  if (typeof response !== "object" || response === null) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("Response must be an object for chooseQuantity."),
+    );
+  }
+  const responseType = (response as { type?: unknown }).type;
+  if (responseType !== "chooseQuantity") {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision(
+        "Response type must be chooseQuantity for chooseQuantity.",
+      ),
+    );
+  }
+  const mode: unknown = decision.mode;
+  if (
+    !Number.isInteger(decision.min) ||
+    !Number.isInteger(decision.max) ||
+    decision.min < 0 ||
+    decision.min > decision.max ||
+    !isSupportedChooseQuantityMode(mode) ||
+    (mode === "exact" && decision.min !== decision.max)
+  ) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("chooseQuantity bounds are malformed."),
+    );
+  }
+  if (!hasCurrentChooseQuantityRuntimeContext(state, decision)) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision(
+        "chooseQuantity decision is stale for current effect queue.",
+      ),
+    );
+  }
+  const quantity = (response as { quantity?: unknown }).quantity;
+  if (
+    typeof quantity !== "number" ||
+    !Number.isInteger(quantity) ||
+    quantity < decision.min ||
+    quantity > decision.max
+  ) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision("quantity must be a whole number within min and max."),
+    );
+  }
+
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "decisionResolved",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+      responseType,
+      quantity,
+    },
+    decision.visibility,
+  );
+  const resolved = events[0];
+  if (resolved !== undefined) {
+    resolved.causedBy = { type: "decision", decisionId: decision.id };
+  }
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  delete nextState.pendingDecision;
+
+  if (detectPendingRuntimeWork(nextState) === undefined) {
+    return toEngineResult(nextState, events);
+  }
+  const resumed = processEffectRuntime(nextState);
+  return {
+    ...resumed,
+    events: [...events, ...resumed.events],
+  };
 };
 
 const applyChooseReplacementDecisionResponse = (
@@ -434,8 +616,10 @@ export const getLegalActions = (
     actions.push(...getPlayCardLegalActions(state, playerId));
     actions.push(...getBattleDecisionLegalActions(state, playerId));
     actions.push(...getChooseReplacementLegalActions(state, playerId));
+    actions.push(...getChooseQuantityLegalActions(state, playerId));
     actions.push(...getSearchRevealDecisionLegalActions(state, playerId));
     actions.push(...getTrashFromHandDecisionLegalActions(state, playerId));
+    actions.push(...getHandSelectionDecisionLegalActions(state, playerId));
     return actions;
   }
 
@@ -487,6 +671,25 @@ const applyRespondToDecision = (
 
   const playCardResult = applyPlayCardDecisionResponse(state, action);
   if (playCardResult !== null) {
+    if (
+      decision.type === "selectCards" &&
+      playCardResult.errors === undefined &&
+      playCardResult.state.pendingDecision === undefined
+    ) {
+      const resumed = resumeSequenceFrameAfterPlaySelectedOverflow(
+        playCardResult.state,
+        decision.id,
+      );
+      if (resumed !== undefined) {
+        if (!resumed.ok) {
+          return toEngineResult(state, [], [resumed.error]);
+        }
+        return toEngineResult(resumed.state, [
+          ...playCardResult.events,
+          ...resumed.events,
+        ]);
+      }
+    }
     return playCardResult;
   }
   const battleResult = applyBattleDecisionResponse(state, action);
@@ -555,12 +758,28 @@ const applyRespondToDecision = (
       events: [...finalized.events, ...continued.events],
     };
   }
+  if (isHandSelectionSelectCardsDecision(decision)) {
+    const handSelection = applySupportedHandSelectionChoiceResponse(
+      state,
+      action,
+    );
+    if (handSelection !== null) {
+      return handSelection;
+    }
+  }
   const replacementResult = applyChooseReplacementDecisionResponse(
     state,
     action,
   );
   if (replacementResult !== null) {
     return replacementResult;
+  }
+  const chooseQuantityResult = applyChooseQuantityDecisionResponse(
+    state,
+    action,
+  );
+  if (chooseQuantityResult !== null) {
+    return chooseQuantityResult;
   }
   return illegalAction(state, "Unsupported decision type.");
 };

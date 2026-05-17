@@ -1,0 +1,72 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-055C
+epic_id: ENG-055
+title: Draw-then-trash migration and Cavendish baseline
+type: refactor
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Migrate the existing draw-then-trash sequence runtime onto the generic
+  sequence runner while preserving OP10-045/Cavendish behavior exactly.
+story_boundary: >
+  Own only behavior-preserving migration of existing draw-then-trash sequence
+  runtime to ENG-055B frames and regression evidence for Cavendish. Do not add
+  parser/card support or new draw/trash semantics.
+allowed_touch_points:
+  - packages/engine-core/src/battle-declare-attack-sequence-trigger.test.ts
+  - packages/engine-core/src/effect-runtime-draw-trash-sequence.ts
+  - packages/engine-core/src/effect-runtime-draw-trash-sequence.test.ts
+  - packages/engine-core/src/effect-runtime*.ts
+  - packages/engine-core/src/effect-runtime*.test.ts
+  - packages/engine-core/src/real-card-dsl-runtime.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-055*.yaml
+  - stories/approved/ENG-055*.yaml
+  - agent-packets/ENG-055C.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s002
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s013
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - ENG-055B
+scope:
+  - migrate existing draw-then-trash runtime onto the generic resumable runner
+  - preserve OP10-045/Cavendish behavior exactly as regression evidence
+  - preserve once-per-turn commitment, hidden-info behavior, event order, deterministic replay, and state hashes
+non_scope:
+  - new draw/trash gameplay support
+  - parser or generated card support
+  - source fixture capture or card support metadata
+  - replacement generalization
+acceptance_criteria:
+  - existing draw-then-trash tests pass without expectation changes except internal fixture setup if needed
+  - OP10-045/Cavendish regression evidence proves behavior is unchanged
+  - migrated draw-then-trash resolution stores and resumes through the ENG-055B execution-frame boundary around the trash-from-hand decision, without re-applying completed earlier draw segments
+  - once-per-turn, hidden-info, event order, deterministic replay, and state hashes are preserved
+required_tests:
+  - run focused draw-then-trash and Cavendish regression tests, including existing battle sequence and real-card runtime baselines when they cover Cavendish
+  - run focused once-per-turn regression for draw-then-trash sequence commitment
+  - run event-order and state-hash regression in `packages/engine-core/src/effect-runtime-draw-trash-sequence.test.ts`
+  - run frame-boundary regression proving the migrated draw-then-trash path stores an ENG-055B execution frame at the trash-from-hand pause and resumes from that frame without duplicating the pre-decision draw
+  - run Cavendish hidden-info and determinism regression in `packages/engine-core/src/battle-declare-attack-sequence-trigger.test.ts`
+  - run OP10-045 baseline coverage in `packages/engine-core/src/real-card-dsl-runtime.test.ts`
+  - run replay-step regression proving the migrated draw-then-trash path replays to the same event order and final state hash
+  - run hidden-info tests relevant to draw/trash sequencing
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - behavior-preserving migration only
+  - do not import @optcg/cards
+  - fail closed if existing behavior is ambiguous
+ambiguity_policy: fail_and_escalate

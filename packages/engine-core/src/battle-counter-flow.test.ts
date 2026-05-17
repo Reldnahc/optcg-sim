@@ -19,6 +19,7 @@ import {
 } from "./action-test-fixtures.js";
 import {
   cardRef,
+  continuousEffectRecord,
   ensureActiveDonInCostArea,
   installSupportedCounterEvent,
   setupAttackState,
@@ -139,6 +140,11 @@ test("Character Counter metadata in defender hand opens counter-step pass decisi
 test("counter-step legal actions expose defender pass and Character Counters without leaking to attacker", () => {
   const { opened, counterCard, decision } =
     setupOpenedCounterStepPassDecision();
+  opened.state.continuousEffects = [
+    continuousEffectRecord(opened.state, "legal-actions-supported-continuous", {
+      type: "thisBattle",
+    }),
+  ];
 
   assert.deepEqual(getLegalActions(opened.state, p2), [
     { type: "concede", playerId: p2 },
@@ -292,10 +298,61 @@ test("counter-step pass emits deterministic decisionResolved sequence and resume
   assert.deepEqual(result.events, replay.events);
 });
 
+test("counter-step pass applies supported continuous power before damage", () => {
+  const { opened, p2State, decision } = setupOpenedCounterStepPassDecision();
+  const target = p2State.leader;
+  opened.state.continuousEffects = [
+    {
+      ...continuousEffectRecord(opened.state, "leader-power-this-battle", {
+        type: "thisBattle",
+      }),
+      modifier: {
+        layer: "powerAdd",
+        target: {
+          type: "all",
+          player: "opponent",
+          zone: "leaderArea",
+        },
+        operation: { type: "addPower", value: 1000 },
+      },
+    },
+  ];
+
+  const result = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.battle, undefined);
+  assert.equal(
+    must(result.state.players[p2], "p2").life.length,
+    p2State.life.length,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "damageDealt"),
+    false,
+  );
+  assert.equal(
+    result.state.continuousEffects.some(
+      (effect) => effect.id === "leader-power-this-battle",
+    ),
+    false,
+  );
+  assert.equal(result.state.players[p2]?.leader.instanceId, target.instanceId);
+});
+
 test("Character Counter moves from hand to trash, emits deterministic events, and keeps Counter Step open", () => {
   const { opened, counterCard, decision } =
     setupOpenedCounterStepPassDecision();
   const target = must(opened.state.battle, "battle").currentTarget;
+  opened.state.continuousEffects = [
+    continuousEffectRecord(opened.state, "use-counter-supported-continuous", {
+      type: "thisBattle",
+    }),
+  ];
 
   const result = applyAction(opened.state, {
     type: "useCounter",

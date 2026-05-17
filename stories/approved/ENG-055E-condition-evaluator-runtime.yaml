@@ -1,0 +1,67 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-055E
+epic_id: ENG-055
+title: Condition evaluator runtime
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Implement supported composed-effect condition evaluators and fail-closed
+  handling for unsupported conditions.
+story_boundary: >
+  Own only engine condition evaluation for the supported condition set. Do not
+  implement parser support, optionality semantics beyond condition use, or card
+  generated support.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime*.ts
+  - packages/engine-core/src/effect-runtime*.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-055*.yaml
+  - stories/approved/ENG-055*.yaml
+  - agent-packets/ENG-055E.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s002
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s024
+  - 05-effect-dsl-reference.s029
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - TYP-007C
+scope:
+  - implement runtime condition evaluation only for the spec-supported fixture subset `yourTurn` and live-source/self-resolved `attachedDonCount`
+  - evaluate positive `attachedDonCount` only when the current live source field object can be resolved from authoritative state; do not infer attached-DON count from queued source snapshots or last-known information
+  - fail closed for non-source/self `attachedDonCount` target forms and live-source/self cases where the source is no longer a resolvable field object until a later target-runtime or source-snapshot story authorizes them
+  - fail closed for `lifeCount`, `fieldCount`, `handCount`, `donCount`, `opponentTurn`, `trashCount`, `hasCardInZone`, `cardState`, `sourceStillInZone`, `attackTarget`, `and`, `or`, `not`, `eventPayload`, and `custom` until the schema coverage policy spec and a runtime story list them as supported runtime-authorable conditions
+  - reject unsupported condition shapes fail-closed
+  - add synthetic runtime tests for true, false, malformed, and unsupported condition cases
+  - preserve deterministic replay and event-order behavior for condition true, condition false, and unsupported fail-closed paths
+non_scope:
+  - parser/card support
+  - leader type or other condition families not authorized by this story
+  - runtime support for `lifeCount`, `fieldCount`, `handCount`, `donCount`, `opponentTurn`, `trashCount`, `hasCardInZone`, `cardState`, `sourceStillInZone`, `attackTarget`, `and`, `or`, `not`, `eventPayload`, custom, non-source/self `attachedDonCount` targets, source-snapshot/LKI `attachedDonCount`, or other condition families until directly authorized by the schema coverage policy spec and a runtime story
+  - replacement generalization
+acceptance_criteria:
+  - "`yourTurn` and live-source/self-resolved `attachedDonCount` evaluate deterministically from authoritative state"
+  - non-source/self `attachedDonCount` target forms and source-snapshot/LKI attached-DON lookups fail closed without adding target-resolution or source-snapshot behavior to this story
+  - unsupported conditions fail closed
+  - hidden-info, event-order, deterministic replay, and state-hash behavior is preserved
+required_tests:
+  - focused condition evaluator tests for `yourTurn` and live-source/self-resolved `attachedDonCount`
+  - fail-closed tests for non-source/self `attachedDonCount` target forms and source-snapshot/LKI attached-DON lookup attempts
+  - fail-closed unsupported condition tests
+  - replay, event-order, hidden-info, and state-hash regression tests for condition-true, condition-false, and unsupported-condition fail-closed paths
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - do not import @optcg/cards
+  - do not infer unsupported official wording from parser/card examples
+  - fail closed on condition semantics ambiguity
+ambiguity_policy: fail_and_escalate

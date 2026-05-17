@@ -108,6 +108,7 @@ function validateEffectSemantics(
   }
 
   const producedHandSelections = new Set<string>();
+  const selectedTargetProducersBySaveResultAs = new Map<string, Set<string>>();
   const failures: string[] = [];
 
   sequencedEffects.forEach((entry, index) => {
@@ -134,6 +135,31 @@ function validateEffectSemantics(
       }
     }
 
+    const selectedTargetBindings = collectSelectedTargetsBindings(
+      segmentEffect,
+      `${segmentPath}/effect`,
+    );
+    for (const { binding, path: bindingPath } of selectedTargetBindings) {
+      const producerIds = selectedTargetProducersBySaveResultAs.get(
+        binding.saveResultAs,
+      );
+      if (!producerIds || producerIds.size === 0) {
+        failures.push(
+          `${bindingPath} savedFieldObject selectedTargets must reference a prior selectTargets segment with matching saveResultAs in the same sequence`,
+        );
+        continue;
+      }
+
+      if (
+        typeof binding.sourceSegmentId === "string" &&
+        !producerIds.has(binding.sourceSegmentId)
+      ) {
+        failures.push(
+          `${bindingPath} savedFieldObject selectedTargets sourceSegmentId must match a prior selectTargets producer segment id with the same saveResultAs`,
+        );
+      }
+    }
+
     if (segmentType === "sequence") {
       failures.push(
         ...validateEffectSemantics(segmentEffect, `${segmentPath}/effect`),
@@ -146,9 +172,88 @@ function validateEffectSemantics(
     ) {
       producedHandSelections.add(segmentEffect["saveAs"]);
     }
+
+    if (
+      segmentType === "selectTargets" &&
+      typeof entry["saveResultAs"] === "string"
+    ) {
+      const producerIds =
+        selectedTargetProducersBySaveResultAs.get(entry["saveResultAs"]) ??
+        new Set<string>();
+      const segmentId = typeof entry["id"] === "string" ? entry["id"] : "";
+      producerIds.add(segmentId);
+      selectedTargetProducersBySaveResultAs.set(
+        entry["saveResultAs"],
+        producerIds,
+      );
+    }
   });
 
   return failures;
+}
+
+interface SelectedTargetsBinding {
+  saveResultAs: string;
+  sourceSegmentId?: string;
+}
+
+interface SelectedTargetsBindingWithPath {
+  binding: SelectedTargetsBinding;
+  path: string;
+}
+
+function collectSelectedTargetsBindings(
+  value: JsonValue | undefined,
+  currentPath: string,
+): SelectedTargetsBindingWithPath[] {
+  if (!isJsonObject(value)) {
+    return [];
+  }
+
+  if (value["type"] === "sequence") {
+    // Nested sequences are validated independently by validateEffectSemantics.
+    return [];
+  }
+
+  const result: SelectedTargetsBindingWithPath[] = [];
+  if (value["type"] === "savedFieldObject" && isJsonObject(value["binding"])) {
+    const binding = value["binding"];
+    if (
+      binding["family"] === "selectedTargets" &&
+      typeof binding["saveResultAs"] === "string"
+    ) {
+      const selectedTargetsBinding: SelectedTargetsBinding = {
+        saveResultAs: binding["saveResultAs"],
+      };
+      if (typeof binding["sourceSegmentId"] === "string") {
+        selectedTargetsBinding.sourceSegmentId = binding["sourceSegmentId"];
+      }
+      result.push({
+        binding: selectedTargetsBinding,
+        path: `${currentPath}/binding`,
+      });
+    }
+  }
+
+  for (const [key, child] of Object.entries(value)) {
+    if (Array.isArray(child)) {
+      child.forEach((arrayValue, index) => {
+        result.push(
+          ...collectSelectedTargetsBindings(
+            arrayValue,
+            `${currentPath}/${key}/${String(index)}`,
+          ),
+        );
+      });
+      continue;
+    }
+
+    result.push(
+      ...collectSelectedTargetsBindings(child, `${currentPath}/${key}`),
+    );
+  }
+
+  return result;
 }
 
 export async function validateEffectDslFixtures(

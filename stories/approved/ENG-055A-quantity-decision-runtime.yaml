@@ -1,0 +1,71 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-055A
+epic_id: ENG-055
+title: Quantity decision runtime
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Implement chooseQuantity decision runtime behavior so effects can ask a
+  player to choose a number within canonical bounds.
+story_boundary: >
+  Own only chooseQuantity decision creation, response validation, legal-action
+  projection, invalid/stale handling, and focused safety tests. Do not implement
+  composed effect frames or card support.
+allowed_touch_points:
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/actions-pending-decision.test.ts
+  - packages/engine-core/src/effect-runtime*.ts
+  - packages/engine-core/src/effect-runtime*.test.ts
+  - packages/engine-core/src/filter-state-for-player.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-055*.yaml
+  - stories/approved/ENG-055*.yaml
+  - agent-packets/ENG-055A.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s002
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+  - 11-testing-quality.s013
+dependencies:
+  - TYP-007A
+scope:
+  - create chooseQuantity pending decisions from engine runtime callers
+  - accept valid quantity responses within exact or up-to bounds
+  - reject wrong-player, stale, malformed, negative, over-limit, and missing decision responses
+  - expose decision-id-only public legal actions for valid quantity responses without leaking hidden data
+  - add hidden-info, event-order, and state-hash regression tests
+  - preserve deterministic replay for accepted, invalid, and stale quantity responses
+non_scope:
+  - generic sequence frame stacks
+  - drawUpTo, playSelected, or hand-selection runtime behavior
+  - card parser/generated support
+  - replacement generalization
+acceptance_criteria:
+  - valid chooseQuantity responses resume the pending runtime work
+  - invalid and stale chooseQuantity responses fail closed
+  - legal actions match the accepted response contract and remain decision-id-only on the public/client path
+  - hidden-info, event order, and state hash behavior are covered
+  - resolved quantity decisions advance `state.seq` according to the decision sequencing contract
+required_tests:
+  - focused chooseQuantity decision/action/legal-action tests
+  - hidden-info regression for private quantity context
+  - event-order, state-hash, and replay-determinism regression tests for accepted and stale chooseQuantity flows
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - engine-core must not import @optcg/cards
+  - keep playerId optional/wrong-player semantics consistent with decision response contracts
+  - fail closed on decision visibility ambiguity
+ambiguity_policy: fail_and_escalate

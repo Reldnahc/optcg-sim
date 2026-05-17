@@ -1,5 +1,6 @@
 export type { DrawExecutionFailureReason } from "./effect-runtime-draw-primitives.js";
 export {
+  executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
   isSupportedEffectResolvedCustomDrawEffect,
   isSupportedNoChoiceMainEventDrawEffect,
@@ -29,6 +30,7 @@ export {
 export type { SelectedTargetKoExecutionFailureReason } from "./effect-runtime-target-ko-primitives.js";
 export {
   executeSelectedTargetEffectPrimitive,
+  resolveSavedFieldObjectKoSelection,
   executeUnreplacedSelectedTargetKoProcess,
   isSupportedMainEventTargetKoEffect,
 } from "./effect-runtime-target-ko-primitives.js";

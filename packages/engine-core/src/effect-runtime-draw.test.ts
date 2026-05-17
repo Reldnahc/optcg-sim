@@ -12,7 +12,17 @@ import type {
 } from "@optcg/types";
 
 import { createActiveState, must, p1 } from "./action-test-fixtures.js";
+import { applyAction } from "./actions.js";
+import { filterStateForPlayer } from "./filter-state-for-player.js";
+import { hashCanonicalStateValue } from "./canonical-state.js";
 import { executeNoChoiceEffectPrimitive } from "./effect-runtime.js";
+import {
+  processEffectRuntime,
+  queueingState,
+  resolvedCard,
+  reviewedOnPlayDrawDefinition,
+  setupOnPlayDefinition,
+} from "./effect-runtime-queue-processing-test-support.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -257,4 +267,315 @@ test("direct invalid draw count and unsupported player ref fail closed without m
   assert.deepEqual(result.events, []);
   assert.ok(result.errors !== undefined);
   assert.deepEqual(result.state, before);
+});
+
+test("respondToDecision resumes effect-originated chooseQuantity runtime work with chosen quantity evidence", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-choose-quantity-runtime",
+      rulesVersion: "choose-quantity-runtime-rules",
+      sourceTextHash: "choose-quantity-runtime-source",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const baseEffect = must(definition.effects[0], "draw effect");
+  const drawUpToEffect = {
+    ...baseEffect,
+    effect: { type: "drawUpTo" as const, count: 3, player: "self" as const },
+  };
+  const runtimeDefinition = {
+    ...definition,
+    effects: [drawUpToEffect],
+  };
+  setupOnPlayDefinition(
+    state,
+    played,
+    runtimeDefinition,
+    "def-choose-quantity-runtime",
+  );
+  const effect = must(runtimeDefinition.effects[0], "draw effect");
+  const queued = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId("queue-choose-quantity"),
+    source: {
+      instanceId: played.instanceId,
+      cardId: played.cardId,
+      playerId: p1,
+      zone: played.zone,
+    },
+    sourceSnapshot: {
+      instanceId: played.instanceId,
+      cardId: played.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: played.zone,
+      category: "character" as const,
+      colors: ["red" as const],
+      cost: 1,
+      power: 3000,
+      keywords: [],
+    },
+    effectBlockId: effect.id,
+    sourcePresencePolicy: effect.sourcePresencePolicy ?? "mustRemainInSameZone",
+  };
+  state.effectQueue = [queued];
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "quantity decision");
+  assert.equal(decision.type, "chooseQuantity");
+  assert.deepEqual(decision.causedBy, {
+    type: "effect",
+    queueEntryId: queued.id,
+    effectId: queued.effectBlockId,
+  });
+  const beforeP1 = must(paused.state.players[p1], "p1");
+  if (beforeP1.deck.length < 2) {
+    const refill = must(beforeP1.hand[0], "p1 hand refill");
+    beforeP1.deck = [
+      ...beforeP1.deck,
+      {
+        ...refill,
+        zone: {
+          zone: "deck" as const,
+          playerId: p1,
+          slot: "deck" as const,
+          index: beforeP1.deck.length,
+        },
+      },
+    ];
+  }
+  const beforeDeck = beforeP1.deck.length;
+  const beforeHand = beforeP1.hand.length;
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "chooseQuantity", quantity: 2 },
+  });
+
+  const afterP1 = must(result.state.players[p1], "p1 result");
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(afterP1.deck.length, beforeDeck - 2);
+  assert.equal(afterP1.hand.length, beforeHand + 2);
+  assert.deepEqual(result.events.map((event) => event.type).slice(0, 4), [
+    "decisionResolved",
+    "cardDrawn",
+    "cardMoved",
+    "cardMoved",
+  ]);
+  assert.equal(
+    result.events.filter((event) => event.type === "effectResolved").length,
+    1,
+  );
+  assert.deepEqual(result.events[0]?.payload, {
+    decisionId: decision.id,
+    decisionType: "chooseQuantity",
+    playerId: p1,
+    responseType: "chooseQuantity",
+    quantity: 2,
+  });
+  assert.equal(result.state.seq, paused.state.seq + 1);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+test("drawUpTo chooseQuantity keeps authored max, draws short deck do-as-much-as-possible, and preserves deterministic event/seq surfaces", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-draw-upto-short-deck",
+      rulesVersion: "draw-upto-short-deck-rules",
+      sourceTextHash: "draw-upto-short-deck-source",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const baseEffect = must(definition.effects[0], "draw effect");
+  const runtimeDefinition = {
+    ...definition,
+    effects: [
+      {
+        ...baseEffect,
+        id: toEffectId("draw-upto-short-deck"),
+        effect: {
+          type: "drawUpTo" as const,
+          count: 3,
+          player: "self" as const,
+        },
+      },
+    ],
+  };
+  setupOnPlayDefinition(
+    state,
+    played,
+    runtimeDefinition,
+    "def-draw-upto-short-deck",
+  );
+  const p1State = must(state.players[p1], "p1");
+  const deckRefill = must(p1State.hand[0], "p1 hand refill");
+  p1State.deck = [
+    must(p1State.deck[0], "deck[0]"),
+    {
+      ...deckRefill,
+      zone: { zone: "deck", playerId: p1, slot: "deck", index: 1 },
+    },
+  ];
+  const queued = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId("queue-draw-upto-short-deck"),
+    source: {
+      instanceId: played.instanceId,
+      cardId: played.cardId,
+      playerId: p1,
+      zone: played.zone,
+    },
+    sourceSnapshot: {
+      instanceId: played.instanceId,
+      cardId: played.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: played.zone,
+      category: "character" as const,
+      colors: ["red" as const],
+      cost: 1,
+      power: 3000,
+      keywords: [],
+    },
+    effectBlockId: toEffectId("draw-upto-short-deck"),
+    sourcePresencePolicy:
+      must(runtimeDefinition.effects[0], "draw upto").sourcePresencePolicy ??
+      "mustRemainInSameZone",
+  };
+  state.effectQueue = [queued];
+
+  const paused = processEffectRuntime(state);
+  const pausedDecision = must(paused.state.pendingDecision, "pending decision");
+  assert.equal(pausedDecision.type, "chooseQuantity");
+  assert.equal(pausedDecision.max, 3);
+
+  const ownerView = filterStateForPlayer(paused.state, p1);
+  assert.deepEqual(ownerView.legalActions, [
+    { type: "concede", playerId: p1 },
+    { type: "respondToDecision", decisionId: pausedDecision.id },
+  ]);
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: pausedDecision.id,
+    response: { type: "chooseQuantity", quantity: 3 },
+  });
+  const resolvedP1 = must(resolved.state.players[p1], "resolved p1");
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolvedP1.deck.length, 0);
+  assert.deepEqual(
+    resolved.events
+      .filter(
+        (event) =>
+          event.type === "decisionResolved" || event.type === "cardDrawn",
+      )
+      .map((event) => event.type),
+    ["decisionResolved", "cardDrawn", "cardDrawn"],
+  );
+  assert.equal(
+    resolved.events.filter((event) => event.type === "effectResolved").length,
+    1,
+  );
+  assert.equal(resolved.state.seq, paused.state.seq + 1);
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("drawUpTo chooseQuantity accepts zero and resolves without draw events", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-draw-upto-zero",
+      rulesVersion: "draw-upto-zero-rules",
+      sourceTextHash: "draw-upto-zero-source",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const baseEffect = must(definition.effects[0], "draw effect");
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...definition,
+      effects: [
+        {
+          ...baseEffect,
+          id: toEffectId("draw-upto-zero"),
+          effect: { type: "drawUpTo", count: 2, player: "self" as const },
+        },
+      ],
+    },
+    "def-draw-upto-zero",
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-draw-upto-zero"),
+      source: {
+        instanceId: played.instanceId,
+        cardId: played.cardId,
+        playerId: p1,
+        zone: played.zone,
+      },
+      sourceSnapshot: {
+        instanceId: played.instanceId,
+        cardId: played.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: played.zone,
+        category: "character",
+        colors: ["red"],
+        cost: 1,
+        power: 3000,
+        keywords: [],
+      },
+      effectBlockId: toEffectId("draw-upto-zero"),
+      sourcePresencePolicy: "mustRemainInSameZone",
+    },
+  ];
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "quantity decision");
+  const before = must(paused.state.players[p1], "before p1");
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "chooseQuantity", quantity: 0 },
+  });
+  const after = must(resolved.state.players[p1], "after p1");
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(after.deck.length, before.deck.length);
+  assert.equal(after.hand.length, before.hand.length);
+  assert.equal(
+    resolved.events.some((event) => event.type === "cardDrawn"),
+    false,
+  );
+  assert.equal(
+    resolved.events.filter((event) => event.type === "effectResolved").length,
+    1,
+  );
 });

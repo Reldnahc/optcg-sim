@@ -20,6 +20,8 @@ import {
 } from "./action-results.js";
 import { reifyCardRef, reindexZoneCards } from "./action-state.js";
 import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
+import { getUnsupportedCombatViewMetadataReason } from "./battle-combat-view-support.js";
+import { getUnsupportedDamageStepContinuationReason } from "./battle-damage-step-continuation.js";
 import {
   hasUnsupportedBattleEffectMetadata,
   isSupportedBattleResolutionEnvelope,
@@ -28,10 +30,6 @@ import {
 import { computeView } from "./compute-view.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
 import { assertGameStateInvariants } from "./invariants.js";
-import {
-  getSupportedLifeTriggerDecision,
-  hasLifeTriggerText,
-} from "./life-trigger-actions.js";
 import { chooseDonCombos } from "./play-card-legal-actions.js";
 import { getActiveDonCount } from "./play-card-support.js";
 
@@ -150,7 +148,6 @@ const getLegalCharacterCounterActions = (
   if (
     detectPendingRuntimeWork(state) !== undefined ||
     state.replacementState.length > 0 ||
-    state.continuousEffects.length > 0 ||
     hasUnsupportedBattleEffectMetadata(combatMetadataState) ||
     !isSupportedBattleResolutionEnvelope(battle) ||
     target === null ||
@@ -275,8 +272,7 @@ export const applyUseCounter = (
   }
   if (
     detectPendingRuntimeWork(state) !== undefined ||
-    state.replacementState.length > 0 ||
-    state.continuousEffects.length > 0
+    state.replacementState.length > 0
   ) {
     return illegalAction(
       state,
@@ -286,6 +282,11 @@ export const applyUseCounter = (
   const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
   if (hasUnsupportedBattleEffectMetadata(combatMetadataState)) {
     return illegalAction(state, "Battle requires unsupported effect metadata.");
+  }
+  const unsupportedCombatViewReason =
+    getUnsupportedCombatViewMetadataReason(combatMetadataState);
+  if (unsupportedCombatViewReason !== undefined) {
+    return illegalAction(state, unsupportedCombatViewReason);
   }
   if (!target.isLeader && target.card.state !== "rested") {
     return illegalAction(
@@ -921,105 +922,4 @@ export const enterCounterStepOrAutoPass = (
   };
   assertGameStateInvariants(nextState);
   return toEngineResult(nextState, events);
-};
-
-const getUnsupportedDamageStepContinuationReason = (
-  state: GameState,
-): string | undefined => {
-  const battle = state.battle;
-  if (
-    battle === undefined ||
-    battle.step !== "counter" ||
-    !isSupportedBattleResolutionEnvelope(battle)
-  ) {
-    return "Battle requires unsupported blocker, step, or multi-damage behavior.";
-  }
-  if (
-    detectPendingRuntimeWork(state) !== undefined ||
-    state.replacementState.length > 0 ||
-    state.continuousEffects.length > 0
-  ) {
-    return "Battle requires unsupported trigger or replacement processing.";
-  }
-  const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
-  if (hasUnsupportedBattleEffectMetadata(combatMetadataState)) {
-    return "Battle requires unsupported effect metadata.";
-  }
-  const attacker = reifyCardRef(state, battle.attacker);
-  const target = reifyCardRef(state, battle.currentTarget);
-  if (attacker === null || target === null) {
-    return "Battle participants are stale or invalid.";
-  }
-  if (battle.blocker !== undefined) {
-    const blocker = reifyCardRef(state, battle.blocker);
-    if (
-      blocker === null ||
-      blocker.isLeader ||
-      !sameCardRef(battle.blocker, battle.currentTarget)
-    ) {
-      return "Battle blocker is stale or invalid.";
-    }
-  }
-
-  let view: ReturnType<typeof computeView>;
-  try {
-    view = computeView(combatMetadataState);
-  } catch {
-    return "Battle requires unsupported combat metadata.";
-  }
-  if (Object.keys(view.restrictions).length > 0) {
-    return "Battle requires unsupported restriction handling.";
-  }
-
-  const attackerView = view.cards[attacker.card.instanceId];
-  const targetView = view.cards[target.card.instanceId];
-  if (
-    attackerView?.currentPower === undefined ||
-    targetView?.currentPower === undefined
-  ) {
-    return "Battle requires unsupported derived power metadata.";
-  }
-  if (
-    attackerView.keywords.includes("doubleAttack") ||
-    targetView.protectedFrom.length > 0
-  ) {
-    return "Battle requires unsupported keyword or protection handling.";
-  }
-  if (
-    attackerView.currentPower >= targetView.currentPower &&
-    !target.isLeader
-  ) {
-    const targetPlayer = state.players[target.playerId];
-    const targetIndex = targetPlayer?.characters.findIndex(
-      (character) => character.instanceId === target.card.instanceId,
-    );
-    if (
-      targetPlayer === undefined ||
-      targetIndex === undefined ||
-      targetIndex < 0 ||
-      target.card.state !== "rested"
-    ) {
-      return "Battle target is no longer a supported rested character target.";
-    }
-  }
-  if (
-    attackerView.currentPower >= targetView.currentPower &&
-    target.isLeader &&
-    !attackerView.keywords.includes("banish")
-  ) {
-    const targetPlayer = state.players[target.playerId];
-    const topLife = targetPlayer?.life[0];
-    const topLifeMeta =
-      topLife && state.cardManifest.cards[topLife.card.cardId];
-    if (
-      topLife !== undefined &&
-      hasLifeTriggerText(topLifeMeta?.triggerText) &&
-      getSupportedLifeTriggerDecision(state, target.playerId, topLife.card) ===
-        undefined
-    ) {
-      return "Life trigger reveal decisions are unsupported in this battle path.";
-    }
-  }
-
-  return undefined;
 };

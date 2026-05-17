@@ -149,6 +149,11 @@ export interface TargetRequest {
   visibility?: "public" | "privateToChooser";
 }
 
+export interface SelectedTargetsRequest extends TargetRequest {
+  zone: SavedFieldObjectZone;
+  visibility: "public";
+}
+
 export interface CardSelectionRequest {
   timing: "onActivation" | "onResolution";
   chooser: PlayerRef;
@@ -375,6 +380,16 @@ export interface SelectCardsEffect {
   visibility: Visibility;
 }
 
+export interface SelectTargetsEffect {
+  type: "selectTargets";
+  request: SelectedTargetsRequest;
+}
+
+export interface SelectTargetsProducerSegment extends SequencedEffect {
+  effect: SelectTargetsEffect;
+  saveResultAs: string;
+}
+
 export type HandSelectCardsEffect = SelectCardsEffect & {
   zone: "hand";
   player: "self";
@@ -430,6 +445,7 @@ export type Effect =
       saveAs: SelectionId;
     }
   | SelectCardsEffect
+  | SelectTargetsEffect
   | {
       type: "moveSelected";
       selection: SelectionId;

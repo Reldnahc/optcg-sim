@@ -17,6 +17,8 @@ import {
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
 import { isUnsupportedSelectTargetsDecision } from "./effect-runtime-queue-target-decisions.js";
+import { resumeSequenceFrameAfterSelectTargets } from "./effect-runtime-sequence-frames.js";
+import { isSequenceFrameSelectTargetsDecision } from "./effect-runtime-sequence-select-targets.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { resolvePublicTargetCandidates } from "./target-selection.js";
 
@@ -166,15 +168,20 @@ export const getSelectTargetsLegalActions = (
   playerId: SelectTargetsDecision["playerId"],
 ): LegalAction[] => {
   const decision = state.pendingDecision;
+  const isSequenceDecision =
+    decision !== undefined &&
+    decision.type === "selectTargets" &&
+    isSequenceFrameSelectTargetsDecision(state, decision.id);
   if (
     decision === undefined ||
     decision.type !== "selectTargets" ||
     decision.playerId !== playerId ||
-    isUnsupportedSelectTargetsDecision(
-      state,
-      decision,
-      resolveImplementedDslEffectDefinition,
-    )
+    (!isSequenceDecision &&
+      isUnsupportedSelectTargetsDecision(
+        state,
+        decision,
+        resolveImplementedDslEffectDefinition,
+      ))
   ) {
     return [];
   }
@@ -263,6 +270,20 @@ export const applySelectTargetsDecisionResponse = (
     eventJournal: [...state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;
+  if (isSequenceFrameSelectTargetsDecision(state, decision.id)) {
+    const resumed = resumeSequenceFrameAfterSelectTargets(
+      nextState,
+      decision,
+      targets,
+    );
+    if (resumed === undefined) {
+      return null;
+    }
+    if (!resumed.ok) {
+      return toEngineResult(state, [], [resumed.error]);
+    }
+    return toEngineResult(resumed.state, [...events, ...resumed.events]);
+  }
   assertGameStateInvariants(nextState);
   const continuation = continueSelectedTargetEffect(
     nextState,

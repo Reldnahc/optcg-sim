@@ -98,6 +98,49 @@ const appendEvent = (
   return event;
 };
 
+const expireTurnBoundaryContinuousEffects = (
+  state: GameState,
+  endingTurnPlayerId: PlayerId,
+): GameState => ({
+  ...state,
+  continuousEffects: state.continuousEffects.filter((effect) => {
+    if (effect.duration.type === "thisTurn") return false;
+    if (effect.duration.type !== "untilEndOfTurn") return true;
+    const whoseTurn = effect.duration.whoseTurn ?? "current";
+    if (whoseTurn === "current") return false;
+    if (whoseTurn === "sourceController") {
+      return effect.source.playerId !== endingTurnPlayerId;
+    }
+    return false;
+  }),
+});
+
+const expireStartOfRefreshContinuousEffects = (
+  state: GameState,
+  refreshingPlayerId: PlayerId,
+): GameState => ({
+  ...state,
+  continuousEffects: state.continuousEffects.filter((effect) => {
+    if (effect.duration.type !== "untilStartOfNextTurn") return true;
+    if (effect.duration.player === "self") {
+      return effect.controller !== refreshingPlayerId;
+    }
+    if (effect.duration.player === "opponent") {
+      return effect.controller === refreshingPlayerId;
+    }
+    if (effect.duration.player === "turnPlayer") {
+      return refreshingPlayerId !== state.turn.turnPlayerId;
+    }
+    if (effect.duration.player === "nonTurnPlayer") {
+      return refreshingPlayerId === state.turn.turnPlayerId;
+    }
+    if (effect.duration.player === "controller") {
+      return effect.controller !== refreshingPlayerId;
+    }
+    return effect.source.playerId !== refreshingPlayerId;
+  }),
+});
+
 const payloadRecord = (
   payload: unknown,
 ): Record<string, unknown> | undefined =>
@@ -228,6 +271,7 @@ export const advanceRefreshPhase = (state: GameState): EngineResult => {
   }
 
   const events: EngineEvent[] = [];
+  state = expireStartOfRefreshContinuousEffects(state, turnPlayerId);
   if (!hasStartedCurrentPhase(state, "refresh", turnPlayerId)) {
     appendEvent(events, state, "phaseStarted", {
       phase: "refresh",
@@ -525,6 +569,10 @@ export const advanceEndPhase = (state: GameState): EngineResult => {
       phase: "refresh",
     },
   };
+  const nextStateWithExpiry = expireTurnBoundaryContinuousEffects(
+    nextState,
+    currentTurnPlayerId,
+  );
   const events: EngineEvent[] = [
     createEvent(state, 1, "phaseEnded", {
       phase: "end",
@@ -536,7 +584,7 @@ export const advanceEndPhase = (state: GameState): EngineResult => {
     }),
   ];
   const nextWithRules = applyRuleProcessingCheckpoint({
-    state: nextState,
+    state: nextStateWithExpiry,
     events,
     phase: "refresh",
     createEvent: (seqOffset, type, payload, visibility) =>

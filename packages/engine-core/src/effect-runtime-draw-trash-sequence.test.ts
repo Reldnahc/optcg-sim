@@ -231,7 +231,41 @@ test("draw-then-trash sequence draws before creating a private trash decision wi
     must(result.state.effectQueue[0], "continuation entry").id,
     toQueueEntryId("queue-entry-draw-trash-sequence"),
   );
+  const frame = must(result.state.effectExecutionFrames[0], "sequence frame");
+  assert.equal(
+    frame.queueEntryId,
+    toQueueEntryId("queue-entry-draw-trash-sequence"),
+  );
+  assert.equal(frame.pendingDecision.decisionId, decision.id);
+  assert.equal(frame.pendingDecision.resumeAtSegmentIndex, 1);
+  assert.equal(frame.nextSegmentIndex, 2);
   assertStrictlyIncreasingEventSeq(result.events);
+});
+
+test("zero-count draw still creates trash decision through sequence frame pause", () => {
+  const { state } = sequenceQueueState(drawTrashSequence(0, 1));
+  const beforeP1 = must(state.players[p1], "p1 before");
+
+  const result = processEffectRuntime(state);
+  const decision = must(result.state.pendingDecision, "pending decision");
+  const afterP1 = must(result.state.players[p1], "p1 after");
+  const frame = must(result.state.effectExecutionFrames[0], "sequence frame");
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(eventTypes(result.events), ["decisionCreated"]);
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.playerId, p1);
+  assert.equal(decision.visibility.type, "private");
+  assert.equal(decision.visibility.playerId, p1);
+  assert.equal(afterP1.deck.length, beforeP1.deck.length);
+  assert.equal(afterP1.hand.length, beforeP1.hand.length);
+  assert.equal(
+    frame.queueEntryId,
+    toQueueEntryId("queue-entry-draw-trash-sequence"),
+  );
+  assert.equal(frame.pendingDecision.decisionId, decision.id);
+  assert.equal(frame.pendingDecision.resumeAtSegmentIndex, 1);
+  assert.equal(frame.nextSegmentIndex, 2);
 });
 
 test("valid sequence trash response resumes through the existing finalizer and completes the original queue entry", () => {
@@ -407,7 +441,7 @@ test("unsupported draw-then-trash sequence shapes fail closed before draw or dec
   >[] = [
     { optional: true },
     { cost: { type: "restDon", count: 1 } },
-    { condition: { type: "yourTurn" } },
+    { conditionTiming: "resolution" },
     { failurePolicy: "requiresAll" },
   ];
 
@@ -421,6 +455,25 @@ test("unsupported draw-then-trash sequence shapes fail closed before draw or dec
     assert.deepEqual(result.events, []);
     assert.equal(must(result.errors, "errors")[0]?.type, "effectRuntimeError");
   }
+});
+
+test("conditioned draw-then-trash sequence is supported after queue-level condition pass", () => {
+  const { state } = sequenceQueueState(drawTrashSequence(1, 1), {
+    condition: { type: "yourTurn" },
+  });
+  state.turn.turnPlayerId = p1;
+
+  const result = processEffectRuntime(state);
+  const decision = must(result.state.pendingDecision, "pending decision");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(decision.type, "selectCards");
+  assert.deepEqual(eventTypes(result.events), [
+    "cardDrawn",
+    "cardMoved",
+    "cardMoved",
+    "decisionCreated",
+  ]);
 });
 
 test("once-per-turn draw-then-trash sequence consumes use when the sequence commits and rejects repeated use", () => {

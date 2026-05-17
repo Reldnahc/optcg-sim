@@ -734,3 +734,71 @@ test("start-of-main smoke path deterministically reaches main action priority", 
   assert.equal(first.pendingDecision, undefined);
   assert.equal(first.legalActionTypes.includes("endMainPhase"), true);
 });
+
+test("end-phase and refresh cleanup expire supported duration-bound continuous effects", () => {
+  const state = createActiveState();
+  state.turn.phase = "end";
+  const p1Leader = must(state.players[p1], "p1").leader;
+  const source = {
+    instanceId: p1Leader.instanceId,
+    cardId: p1Leader.cardId,
+    playerId: p1,
+    zone: p1Leader.zone,
+  } as const;
+  const sourceSnapshot = {
+    instanceId: p1Leader.instanceId,
+    cardId: p1Leader.cardId,
+    ownerId: p1,
+    controllerId: p1,
+    zone: p1Leader.zone,
+    category: "leader" as const,
+    colors: ["red" as const],
+    keywords: [] as [],
+  };
+  state.continuousEffects = [
+    {
+      id: "this-turn",
+      source,
+      sourceSnapshot,
+      controller: p1,
+      modifier: {
+        layer: "restriction",
+        target: { type: "self" },
+        operation: { type: "restriction", restriction: "cannotAttack" },
+      },
+      duration: { type: "thisTurn" },
+      createdBy: { type: "ruleProcess", name: "test" },
+      createdAtStateSeq: state.seq,
+    },
+    {
+      id: "start-next-turn",
+      source,
+      sourceSnapshot,
+      controller: p1,
+      modifier: {
+        layer: "restriction",
+        target: { type: "self" },
+        operation: { type: "restriction", restriction: "cannotAttack" },
+      },
+      duration: { type: "untilStartOfNextTurn", player: "opponent" },
+      createdBy: { type: "ruleProcess", name: "test" },
+      createdAtStateSeq: state.seq,
+    },
+  ];
+
+  const ended = advanceEndPhase(state);
+  assert.equal(ended.errors, undefined);
+  assert.equal(
+    ended.state.continuousEffects.some((e) => e.id === "this-turn"),
+    false,
+  );
+  assert.equal(
+    ended.state.continuousEffects.some((e) => e.id === "start-next-turn"),
+    true,
+  );
+  const refreshed = advanceRefreshPhase(ended.state);
+  assert.equal(
+    refreshed.state.continuousEffects.some((e) => e.id === "start-next-turn"),
+    false,
+  );
+});

@@ -1,0 +1,97 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-010
+epic_id: ENG-055
+title: SelectedTargets producer contract
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Define the canonical contract and spec authority for a reachable same-frame
+  public field-object `selectedTargets` producer so ENG-055I can implement saved
+  selected-target references without inventing DSL or runtime behavior.
+story_boundary: >
+  Own only selectedTargets producer contract/spec/schema/type authority and
+  contract tests. Do not implement engine runtime behavior, card parser support,
+  generated card support, or saved-reference consumers.
+allowed_touch_points:
+  - specs/03-game-state-events-decisions.md
+  - specs/04-effect-runtime.md
+  - specs/05-effect-dsl-reference.md
+  - specs/section-index.json
+  - contracts/canonical-types.ts
+  - contracts/effect-dsl.schema.json
+  - contracts/types/effects.ts
+  - contracts/types/game-state.ts
+  - contracts/types/runtime.ts
+  - packages/types/src/effects.ts
+  - packages/types/src/effects.test.ts
+  - packages/types/src/game-state.ts
+  - packages/types/src/game-state.test.ts
+  - packages/types/src/runtime.ts
+  - packages/types/src/runtime.test.ts
+  - packages/types/src/export-cohesion.test.ts
+  - packages/types/src/export-ownership.manifest.ts
+  - tests/contracts/**
+  - fixtures/effect-dsl/**
+  - tools/validate-effect-dsl-fixtures.ts
+  - stories/approved/ENG-055*.yaml
+  - stories/approved/TYP-010*.yaml
+  - stories/generated/ENG-055*.yaml
+  - stories/generated/TYP-010*.yaml
+  - agent-packets/ENG-055*.md
+  - agent-packets/TYP-010.md
+  - agent-packets/TYP-010-story-review-*.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s026
+  - 05-effect-dsl-reference.s029
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+  - 22-v6-implementation-tightening.s007
+dependencies:
+  - TYP-009B
+scope:
+  - define a concrete sequence producer contract that can save public field-object `selectedTargets` in the same effect execution frame
+  - define whether the producer is a new sequence primitive, a non-mutating target-identification effect, or a constrained existing target request shape
+  - define the producer's pending decision, response, candidates, segment result, saved-reference ledger entry, source segment id, and object index semantics
+  - require the selected object to remain a public field object and legal for later saved-field-object consumers
+  - define stale, gone, hidden, illegal, unsupported-family, wrong-player, and malformed-response fail-closed behavior
+  - define event-order, `state.seq`, replay, and state-hash requirements for producer success and failure branches
+  - add contract/type/schema fixtures proving supported selectedTargets producer shapes validate and unsupported ambiguous shapes reject
+non_scope:
+  - engine runtime implementation of the selectedTargets producer
+  - saved field-object consumer runtime implementation, which remains ENG-055I
+  - producedObjects runtime implementation
+  - modifier/restriction runtime implementation
+  - parser/card support, generated-support admission, real-card fixtures, server, client, API, UI, database, or live Poneglyph work
+acceptance_criteria:
+  - ENG-055I has concrete authority for a reachable same-frame public field-object `selectedTargets` producer
+  - the producer contract does not rely on an unrelated mutating instruction that makes the selected object illegal for later use
+  - saved selected-target ledger entries include stable binding, object index, source segment id, visibility, and captured state sequence semantics
+  - unsupported or ambiguous selectedTargets producer shapes fail closed without leaking hidden identities
+  - producer success and failure branches preserve deterministic replay, event order, `state.seq`, and state-hash behavior
+required_tests:
+  - focused contract/type tests for the selectedTargets producer shape and saved ledger output
+  - positive schema fixture validation for the selectedTargets producer shape if schema changes are required
+  - negative tests proving mutating-target effects do not silently satisfy standalone selectedTargets producer authority
+  - tests or spec-authority guard updates pinning replay, event-order, hidden-info, and state-hash semantics
+  - run `corepack pnpm run types:sync:check`
+  - run `corepack pnpm run contracts:validate-effects`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - do not implement engine runtime behavior in this story
+  - do not treat contract authorability as runtime support
+  - do not merge saved hand-selection references with saved field-object target references
+  - fail closed on selectedTargets producer legality, visibility, replay, event-order, or state-hash ambiguity
+ambiguity_policy: fail_and_escalate

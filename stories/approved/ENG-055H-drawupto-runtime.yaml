@@ -1,0 +1,89 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-055H
+epic_id: ENG-055
+title: drawUpTo runtime primitive and sequence support
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Implement reusable draw up to N runtime through chooseQuantity for queued
+  effect runtime and composed sequence frames, with zero quantity, short-deck
+  do-as-much-as-possible behavior, event-order, state-hash, deterministic
+  replay, and hidden-information coverage.
+story_boundary: >
+  Own only reusable drawUpTo runtime behavior inside effect-runtime queue and
+  composed sequence execution, including the action-layer decision validation
+  needed for sequence chooseQuantity responses to resume through the existing
+  respondToDecision path. Do not implement play-card support gating, parser
+  support, generated card support, or unrelated draw behavior.
+allowed_touch_points:
+  - packages/engine-core/src/actions.ts
+  - packages/engine-core/src/effect-runtime-draw-primitives.ts
+  - packages/engine-core/src/effect-runtime-draw.test.ts
+  - packages/engine-core/src/effect-runtime*.ts
+  - packages/engine-core/src/effect-runtime*.test.ts
+  - packages/engine-core/src/actions-pending-decision.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-055*.yaml
+  - stories/approved/ENG-055*.yaml
+  - agent-packets/ENG-055H.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 02-engine-mechanics.s035
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s002
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s012
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - ENG-055A
+  - ENG-055B
+  - TYP-007D
+scope:
+  - implement drawUpTo through chooseQuantity in reusable effect-runtime queue processing and the generic composed frame pause/resume support from ENG-055B
+  - support runtime-created drawUpTo decisions for already queued supported effect entries without requiring play-card support gating to accept drawUpTo card definitions
+  - validate sequence drawUpTo chooseQuantity responses at the action layer using current effect queue and sequence frame context before resolving the decision
+  - "create drawUpTo chooseQuantity decisions with `mode: upTo`, `min: 0`, and `max: count`"
+  - "expose the authored `max: count` public chooseQuantity bound without clamping the maximum to the current deck size"
+  - "support choosing quantity zero as the legal `min: 0` response for drawUpTo"
+  - when the chosen quantity exceeds the remaining deck size, draw every remaining card, emit draw/card-movement events only for cards actually drawn, and leave deck-out to the next rule-processing checkpoint
+  - record canonical sequence `segmentResults` for resumed drawUpTo segments and preserve same-frame continuation semantics
+  - add hidden-info, event-order, and state-hash tests
+non_scope:
+  - play-card support gating or normal playCard reachability for drawUpTo card definitions, which belongs to ENG-055K
+  - parser/card support
+  - draw-then-trash migration
+  - replacement generalization
+acceptance_criteria:
+  - reusable effect-runtime drawUpTo queue processing creates and resolves quantity choices correctly for already queued supported effect entries
+  - sequence drawUpTo chooseQuantity responses fail closed before mutation when the matching queue entry or sequence frame runtime context is stale or missing
+  - composed sequence frames can pause for drawUpTo chooseQuantity and resume without double-incrementing `state.seq`
+  - resumed sequence drawUpTo records the attempted/succeeded/changedState segment result in the same execution frame before later sequence segments continue
+  - zero quantity is accepted when min 0 makes it legal; optional decline semantics remain out of scope
+  - short-deck behavior follows do-as-much-as-possible semantics without clamping or immediate fail-closed rejection
+  - hidden-info, event ordering, deterministic replay, and state hashes are preserved
+required_tests:
+  - focused drawUpTo runtime tests
+  - chooseQuantity integration tests
+  - sequence drawUpTo chooseQuantity stale-context regression proving invalid responses do not resolve the decision, emit events, or increment `state.seq`
+  - "chooseQuantity shape test proving drawUpTo emits `mode: upTo`, `min: 0`, and authored `max: count`"
+  - composed sequence drawUpTo pause/resume regression covering canonical segment result ledger recording and following no-choice sequence segments without a second resolved-decision `state.seq` increment
+  - short-deck replay regression covering legal selection above remaining deck size, append-order event sequencing, exactly one `state.seq` increment for the resolved decision, final empty-deck authoritative state hash, and hidden-info-safe public decision/legal-action shape
+  - partial deck, hidden-info, event-order, and state-hash tests
+  - focused regression that existing non-drawUpTo draw primitive behavior is unchanged
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - do not import @optcg/cards
+  - fail closed on draw amount ambiguity
+  - keep existing draw primitive behavior unchanged
+ambiguity_policy: fail_and_escalate

@@ -888,6 +888,20 @@ type Effect =
       visibility: Visibility;
     }
   | {
+      type: "selectTargets";
+      request: {
+        timing: "onActivation" | "onResolution";
+        chooser: PlayerRef;
+        zone: "leaderArea" | "characterArea" | "stageArea" | "costArea";
+        player: PlayerRef;
+        min: number;
+        max: number;
+        allowFewerIfUnavailable: boolean;
+        filter?: CardFilter;
+        visibility: "public";
+      };
+    }
+  | {
       type: "playSelected";
       selection: SelectionId;
       enterRested?: boolean;
@@ -910,6 +924,8 @@ type Effect =
 ```
 
 These are not UI concepts. They are deterministic effect-runtime concepts. They let the runtime represent "reveal top card, maybe play it, otherwise return it face-down" without losing hidden-information boundaries.
+
+`selectTargets` is the non-mutating selectedTargets producer contract for same-frame saved field-object references. When a later segment consumes `{ family: "selectedTargets", saveResultAs, ... }`, the producer segment must be `selectTargets` with segment `saveResultAs`; mutating target effects do not act as standalone selectedTargets producer authority.
 
 `playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist. Generated support may not treat a parsed play-from-selection instruction as playable unless the parser covers the complete selection/play/return flow and the runtime capability matrix covers the resulting decision, hidden-information, forced-trash, and zone-movement behavior.
 
@@ -980,18 +996,31 @@ Schema-supported fixture subset:
 - trigger: custom
 - condition: yourTurn
 - condition: attachedDonCount
+- condition: fieldCount
 - cost: restDon
 - cost: returnDon
 - cost: restSelf
 - cost: sequence
 - target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
   triggerCard, all, choose, savedFieldObject
-- duration: thisAction, thisBattle, thisTurn, whileSourceOnField, permanent
+- duration: thisAction
+- duration: thisBattle
+- duration: thisTurn
+- duration: untilEndOfTurn
+- duration: untilStartOfNextTurn
+- duration: whileSourceOnField
+- duration: permanent
 - effect: draw
+- effect: drawUpTo
 - effect: ko
 - effect: modifyPower
 - effect: payCost
+- effect: selectCards
+- effect: selectTargets
+- effect: playSelected
 - effect: sequence
+- effect: cannotAttack
+- effect: cannotBlock
 - effect: custom
 - card filters: cardIds, names, nameContains, nameNot, categories, colorsAny,
   colorsAll, typesAny, typesAll, attributesAny, attributesAll, cost, power,
@@ -1003,7 +1032,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - condition: donCount
 - condition: opponentTurn
 - condition: lifeCount
-- condition: fieldCount
 - condition: handCount
 - condition: trashCount
 - condition: hasCardInZone
@@ -1018,23 +1046,18 @@ Planned/not fixture-authorable until schema coverage exists:
 - cost: discard
 - cost: chooseOne
 - cost: custom
-- duration: untilEndOfTurn
-- duration: untilStartOfNextTurn
 - duration: whileConditionTrue
-- effect: drawUpTo
 - effect: search
 - effect: lookAtTop
 - effect: revealFromZone
 - effect: revealTop
 - effect: selectFromSet
-- effect: selectCards
 - effect: moveSelected with position
 - effect: putRemaining
 - effect: shuffleDeck
 - effect: bounce
 - effect: trash
 - effect: play
-- effect: playSelected
 - effect: returnUnselectedToDeck
 - effect: trashFromHand
 - effect: setPowerToZero
@@ -1052,8 +1075,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - effect: damage
 - effect: invalidateEffects
 - effect: protectFromKO
-- effect: cannotAttack
-- effect: cannotBlock
 - effect: cannotBeAttacked
 - effect: cannotBeBlockedBy
 - effect: choice

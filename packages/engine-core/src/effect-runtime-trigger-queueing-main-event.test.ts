@@ -56,6 +56,23 @@ const reviewedMainEventTargetKoDefinition = (
   },
 });
 
+const reviewedMainEventDrawUpToDefinition = (
+  cardId: EffectDefinition["cardId"],
+  support: ReturnType<typeof resolvedCard>["support"],
+  count = 2,
+): EffectDefinition => {
+  const base = reviewedMainEventDrawDefinition(cardId, support);
+  return {
+    ...base,
+    effects: [
+      {
+        ...must(base.effects[0], "base effect"),
+        effect: { type: "drawUpTo", count, player: "self" },
+      },
+    ],
+  };
+};
+
 const setupMainEventQueueingState = () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;
@@ -191,6 +208,83 @@ test("Main Event queueing fails closed for unsupported target KO request shapes"
     },
   ]);
   assert.equal(result.state.effectQueue.length, 0);
+});
+
+test("Main Event queueing fails closed for optional, cost-bearing, and malformed drawUpTo shapes", () => {
+  const cases: Array<{
+    name: string;
+    mutate: (base: EffectDefinition) => EffectDefinition;
+  }> = [
+    {
+      name: "optional-draw-upto",
+      mutate: (base) => ({
+        ...base,
+        effects: [{ ...must(base.effects[0], "effect"), optional: true }],
+      }),
+    },
+    {
+      name: "cost-bearing-draw-upto",
+      mutate: (base) => ({
+        ...base,
+        effects: [
+          {
+            ...must(base.effects[0], "effect"),
+            cost: { type: "restDon", count: 1 },
+          },
+        ],
+      }),
+    },
+    {
+      name: "malformed-negative-count-draw-upto",
+      mutate: (base) => ({
+        ...base,
+        effects: [
+          {
+            ...must(base.effects[0], "effect"),
+            effect: { type: "drawUpTo", count: -1, player: "self" },
+          },
+        ],
+      }),
+    },
+  ];
+
+  for (const testCase of cases) {
+    const { state, eventInTrash } = setupMainEventQueueingState();
+    const implemented = resolvedCard({
+      cardId: eventInTrash.cardId,
+      category: "event",
+      cost: 1,
+      effectText: "[Main] Draw up to 2 cards.",
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: `def-${testCase.name}`,
+      },
+    });
+    state.cardManifest.cards[eventInTrash.cardId] = implemented;
+    const base = reviewedMainEventDrawUpToDefinition(
+      implemented.cardId,
+      implemented.support,
+    );
+    state.cardManifest.effectDefinitions = {
+      [`def-${testCase.name}`]: testCase.mutate(base),
+    };
+
+    const result = processEffectRuntime(state);
+
+    assert.deepEqual(result.events, [], testCase.name);
+    assert.deepEqual(
+      result.errors,
+      [
+        {
+          type: "effectRuntimeError",
+          effectId: "main-event-trigger-queueing",
+          details: { reason: "unsupported-main-event-definition" },
+        },
+      ],
+      testCase.name,
+    );
+    assert.equal(result.state.effectQueue.length, 0, testCase.name);
+  }
 });
 
 test("Main Event queueing fails closed when the played Event source is no longer in trash", () => {

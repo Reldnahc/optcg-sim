@@ -7,6 +7,7 @@ import {
 } from "./battle-actions.js";
 import { must, p1, p2 } from "./action-test-fixtures.js";
 import {
+  cardRef,
   continuousEffectRecord,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
@@ -255,13 +256,92 @@ test("supported vanilla battle rejects pending runtime queues without mutation o
   run((state) => {
     state.deferredTriggers = [{ timingWindowId: "window-1" } as never];
   });
-  run((state) => {
-    state.continuousEffects = [
-      continuousEffectRecord(state, "active-continuous-effect", {
+});
+
+test("supported continuous power modifiers affect vanilla battle resolution", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  state.cardManifest.cards[attacker.cardId] = {
+    ...must(state.cardManifest.cards[attacker.cardId], "attacker metadata"),
+    power: 3000,
+  };
+  state.cardManifest.cards[target.cardId] = {
+    ...must(state.cardManifest.cards[target.cardId], "target metadata"),
+    power: 5000,
+  };
+  state.battle = {
+    attacker: cardRef(attacker, p1),
+    originalTarget: cardRef(target, p2),
+    currentTarget: cardRef(target, p2),
+    step: "counter",
+    damageCount: 1,
+  };
+  state.continuousEffects = [
+    {
+      ...continuousEffectRecord(state, "attacker-power-this-battle", {
         type: "thisBattle",
       }),
-    ];
-  });
+      source: cardRef(attacker, p1),
+      modifier: {
+        layer: "powerAdd",
+        target: { type: "self" },
+        operation: { type: "addPower", value: 3000 },
+      },
+    },
+  ];
+
+  const result = resolveSupportedVanillaBattle(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    must(result.state.players[p2], "p2").characters.some(
+      (card) => card.instanceId === target.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    result.state.continuousEffects.some(
+      (effect) => effect.id === "attacker-power-this-battle",
+    ),
+    false,
+  );
+});
+
+test("unsupported continuous modifier shapes still fail closed during vanilla battle resolution", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  state.battle = {
+    attacker: cardRef(p1State.leader, p1),
+    originalTarget: cardRef(p2State.leader, p2),
+    currentTarget: cardRef(p2State.leader, p2),
+    step: "counter",
+    damageCount: 1,
+  };
+  state.continuousEffects = [
+    {
+      ...continuousEffectRecord(state, "unsupported-continuous-effect", {
+        type: "thisBattle",
+      }),
+      condition: { type: "yourTurn" },
+    },
+  ];
+  const before = JSON.stringify(state);
+
+  const result = resolveSupportedVanillaBattle(state);
+
+  assert.deepEqual(result.errors, [
+    {
+      type: "illegalAction",
+      reason: "Battle requires unsupported combat metadata.",
+    },
+  ]);
+  assert.deepEqual(result.events, []);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(JSON.stringify(result.state), before);
 });
 
 test("supported vanilla battle preserves replacement fail-closed behavior", () => {

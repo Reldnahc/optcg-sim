@@ -247,6 +247,7 @@ test("TYP-001H every manifest-covered canonical export has exactly one valid own
     "TYP-008A",
     "TYP-009A",
     "TYP-009B",
+    "TYP-010",
   ]);
   for (const owner of Object.values(EXPORT_OWNERSHIP_MANIFEST)) {
     expect(validOwners.has(owner)).toBe(true);

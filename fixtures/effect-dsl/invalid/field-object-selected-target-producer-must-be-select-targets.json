@@ -1,0 +1,65 @@
+{
+  "cardId": "TYP-010-001",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "TYP-010-001:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "id": "ko-character",
+            "connector": "always",
+            "saveResultAs": "chosenCharacter",
+            "effect": {
+              "type": "ko",
+              "target": {
+                "type": "choose",
+                "request": {
+                  "timing": "onResolution",
+                  "chooser": "self",
+                  "zone": "characterArea",
+                  "player": "opponent",
+                  "min": 1,
+                  "max": 1,
+                  "allowFewerIfUnavailable": false,
+                  "visibility": "public",
+                  "filter": { "categories": ["character"] }
+                }
+              }
+            }
+          },
+          {
+            "connector": "ifPreviousSucceeded",
+            "effect": {
+              "type": "modifyPower",
+              "target": {
+                "type": "savedFieldObject",
+                "binding": {
+                  "family": "selectedTargets",
+                  "saveResultAs": "chosenCharacter",
+                  "objectIndex": 0,
+                  "sourceSegmentId": "ko-character"
+                },
+                "zone": "characterArea",
+                "player": "opponent",
+                "visibility": "publicOnly",
+                "onFailure": "failClosed"
+              },
+              "value": -1000,
+              "duration": { "type": "untilEndOfTurn", "whoseTurn": "current" }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-010-001",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}
