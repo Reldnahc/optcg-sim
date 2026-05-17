@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Update cards-side runtime capability evidence so generated support can
   truthfully distinguish ENG-055-supported composed primitives from unsupported

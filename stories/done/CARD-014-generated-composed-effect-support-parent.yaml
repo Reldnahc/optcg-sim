@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the cards/parser/generated-support layer for reusable composed
   effect support that consumes completed TYP contract/schema authority and

@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add representative generated-support proofs only for composed-effect shapes
   that have complete parser, schema, runtime, capability, source, metadata,

@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add certified exact-template cards-layer support for runtime-supported
   drawUpTo text forms using chooseQuantity-backed capability evidence.

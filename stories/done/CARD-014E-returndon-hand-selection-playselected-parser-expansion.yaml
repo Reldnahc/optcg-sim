@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add narrow certified exact-template parser support for runtime-supported
   returnDON or DON-minus cost, hand selection, and playSelected-from-hand shapes.

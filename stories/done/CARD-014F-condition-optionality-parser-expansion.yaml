@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add certified exact-template cards-layer support for supported non-replacement
   optional effect clauses and the narrow ENG-supported condition shapes without
