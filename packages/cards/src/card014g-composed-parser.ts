@@ -40,9 +40,7 @@ export function parseCard014gResidueClause(
   cardId: CardId,
   sourceText: string,
 ): Card014gResidueClause | undefined {
-  const entry = Object.entries(card014gTemplatesByText).find(([text]) =>
-    sourceText.startsWith(`${text} `),
-  );
+  const entry = findLongestResidueTemplate(sourceText);
   if (entry === undefined) {
     return undefined;
   }
@@ -53,6 +51,25 @@ export function parseCard014gResidueClause(
     clause: createCard014gClause(cardId, template),
     prefix: `${text} `,
   };
+}
+
+function findLongestResidueTemplate(
+  sourceText: string,
+): readonly [string, Card014gTemplate] | undefined {
+  let bestMatch: readonly [string, Card014gTemplate] | undefined;
+
+  for (const entry of Object.entries(card014gTemplatesByText)) {
+    const [text] = entry;
+    if (!sourceText.startsWith(`${text} `)) {
+      continue;
+    }
+
+    if (bestMatch === undefined || text.length > bestMatch[0].length) {
+      bestMatch = entry;
+    }
+  }
+
+  return bestMatch;
 }
 
 function createCard014gClause(

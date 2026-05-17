@@ -202,6 +202,37 @@ describe("certified card text parser", () => {
     },
   );
 
+  it("prefers the longest CARD-014G exact prefix before recording unsupported residue", () => {
+    const text =
+      "[On Play] Select 1 of your opponent's Characters. Then, K.O. that Character. Then rest 1 DON!!.";
+    const result = parse(text);
+
+    expect(result.status).toBe("partial");
+    expect(result).toMatchObject({
+      blockers: [
+        {
+          code: "unparsed-span",
+          message: "Unsupported card text remains after certified parsing.",
+          span: {
+            end: text.length,
+            start: 77,
+            text: "Then rest 1 DON!!.",
+          },
+        },
+      ],
+      parsedRuleIds: [
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+      ],
+      unparsedSpans: [
+        {
+          end: text.length,
+          start: 77,
+          text: "Then rest 1 DON!!.",
+        },
+      ],
+    });
+  });
+
   it.each([
     { count: 1, sourceText: "[On Play] Draw up to 1 card." },
     { count: 3, sourceText: "[On Play] Draw up to 3 cards." },

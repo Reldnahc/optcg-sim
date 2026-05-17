@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-014I.md",
-      "storyId": "CARD-014I",
-      "storyPath": "stories/approved/CARD-014I-support-probe-report-integration-composed-effects.yaml",
-      "storySha256": "da88136ba2814e46271a14611211e889d953da542a634752f5378968c6553c57"
+      "packetPath": "agent-packets/CARD-014G.md",
+      "storyId": "CARD-014G",
+      "storyPath": "stories/approved/CARD-014G-selecttargets-saved-field-modifier-restriction-parser-expansion.yaml",
+      "storySha256": "724cb4b48063a5b1f66901cab21dc13ad8598594ac01e64ef4ff9ff2abb09f24"
     }
   ],
   "version": 1
