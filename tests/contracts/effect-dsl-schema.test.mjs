@@ -37,6 +37,8 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/draw-up-to-negative-count.json",
     "fixtures/effect-dsl/invalid/field-object-hand-zone-reference.json",
     "fixtures/effect-dsl/invalid/field-object-hidden-reference.json",
+    "fixtures/effect-dsl/invalid/field-object-selected-target-producer-must-be-select-targets.json",
+    "fixtures/effect-dsl/invalid/field-object-selected-target-unrelated-producer-mismatch.json",
     "fixtures/effect-dsl/invalid/field-object-unsupported-family.json",
     "fixtures/effect-dsl/invalid/optionality-nonboolean-clauses.json",
     "fixtures/effect-dsl/invalid/optional-cost-segment-uses-effect-optionality.json",

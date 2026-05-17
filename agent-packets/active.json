@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-055I.md",
-      "storyId": "ENG-055I",
-      "storyPath": "stories/approved/ENG-055I-saved-selections-that-character-runtime.yaml",
-      "storySha256": "a85d020c464eb0bdf16fad650ada328c155444146fd0a20c96999d2148497239"
+      "packetPath": "agent-packets/TYP-010.md",
+      "storyId": "TYP-010",
+      "storyPath": "stories/approved/TYP-010-selected-targets-producer-contract.yaml",
+      "storySha256": "eb74aef0d56d64465556f0b8974efd15bb9c0a213853d4ce31fc656233da4173"
     }
   ],
   "version": 1

@@ -254,6 +254,23 @@ test("TYP-009B canonical saved field-object references and exact-card target bin
   );
 });
 
+test("TYP-010 canonical selectedTargets producer contracts stay explicit and non-mutating", async () => {
+  const canonicalTypes = await readCanonicalTypes();
+
+  assert.match(
+    canonicalTypes,
+    /export interface SelectedTargetsRequest\s+extends\s+TargetRequest\s*{[\s\S]*?\bzone:\s*SavedFieldObjectZone;[\s\S]*?\bvisibility:\s*"public";[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface SelectTargetsEffect\s*{[\s\S]*?\btype:\s*"selectTargets";[\s\S]*?\brequest:\s*SelectedTargetsRequest;[\s\S]*?}/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export interface SelectTargetsProducerSegment\s+extends\s+SequencedEffect\s*{[\s\S]*?\beffect:\s*SelectTargetsEffect;[\s\S]*?\bsaveResultAs:\s*string;[\s\S]*?}/m,
+  );
+});
+
 test("canonical optional cost contracts stay distinct from optional activation", async () => {
   const canonicalTypes = await readCanonicalTypes();
 

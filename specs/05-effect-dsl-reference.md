@@ -888,6 +888,20 @@ type Effect =
       visibility: Visibility;
     }
   | {
+      type: "selectTargets";
+      request: {
+        timing: "onActivation" | "onResolution";
+        chooser: PlayerRef;
+        zone: "leaderArea" | "characterArea" | "stageArea" | "costArea";
+        player: PlayerRef;
+        min: number;
+        max: number;
+        allowFewerIfUnavailable: boolean;
+        filter?: CardFilter;
+        visibility: "public";
+      };
+    }
+  | {
       type: "playSelected";
       selection: SelectionId;
       enterRested?: boolean;
@@ -910,6 +924,8 @@ type Effect =
 ```
 
 These are not UI concepts. They are deterministic effect-runtime concepts. They let the runtime represent "reveal top card, maybe play it, otherwise return it face-down" without losing hidden-information boundaries.
+
+`selectTargets` is the non-mutating selectedTargets producer contract for same-frame saved field-object references. When a later segment consumes `{ family: "selectedTargets", saveResultAs, ... }`, the producer segment must be `selectTargets` with segment `saveResultAs`; mutating target effects do not act as standalone selectedTargets producer authority.
 
 `playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist. Generated support may not treat a parsed play-from-selection instruction as playable unless the parser covers the complete selection/play/return flow and the runtime capability matrix covers the resulting decision, hidden-information, forced-trash, and zone-movement behavior.
 
@@ -1000,6 +1016,7 @@ Schema-supported fixture subset:
 - effect: modifyPower
 - effect: payCost
 - effect: selectCards
+- effect: selectTargets
 - effect: playSelected
 - effect: sequence
 - effect: cannotAttack

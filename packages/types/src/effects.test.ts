@@ -36,6 +36,7 @@ import type {
   SelectionSetId,
   SequencedEffect,
   SourcePresencePolicy,
+  SelectTargetsProducerSegment,
   Target,
   TargetRequest,
   UpToCardinality,
@@ -456,19 +457,17 @@ test("TYP-009B saved field-object references compile for selectedTargets and pro
         connector: "always",
         saveResultAs: "chosenCharacter",
         effect: {
-          type: "ko",
-          target: {
-            type: "choose",
-            request: {
-              timing: "onResolution",
-              chooser: "self",
-              zone: "characterArea",
-              player: "opponent",
-              min: 1,
-              max: 1,
-              allowFewerIfUnavailable: false,
-              filter: { categories: ["character"] },
-            },
+          type: "selectTargets",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            zone: "characterArea",
+            player: "opponent",
+            min: 1,
+            max: 1,
+            allowFewerIfUnavailable: false,
+            visibility: "public",
+            filter: { categories: ["character"] },
           },
         },
       },
@@ -586,6 +585,55 @@ test("TYP-009B saved field-object references reject unsupported and ambiguous fa
   void hiddenVisibilityTarget;
   void ambiguousFailurePolicy;
   void handZoneTarget;
+});
+
+test("TYP-010 selectedTargets producer segment is non-mutating selectTargets with saveResultAs", () => {
+  const producer: SelectTargetsProducerSegment = {
+    id: "choose-character",
+    connector: "always",
+    saveResultAs: "chosenCharacter",
+    effect: {
+      type: "selectTargets",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        zone: "characterArea",
+        player: "opponent",
+        min: 1,
+        max: 1,
+        allowFewerIfUnavailable: false,
+        visibility: "public",
+        filter: { categories: ["character"] },
+      },
+    },
+  };
+
+  const invalidMutatingProducer: SelectTargetsProducerSegment = {
+    id: "ko-target",
+    connector: "always",
+    saveResultAs: "chosenCharacter",
+    effect: {
+      // @ts-expect-error selectedTargets producer authority is non-mutating selectTargets, not ko.
+      type: "ko",
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          zone: "characterArea",
+          player: "opponent",
+          min: 1,
+          max: 1,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+        },
+      },
+    },
+  };
+
+  expect(producer.effect.type).toBe("selectTargets");
+  expect(producer.saveResultAs).toBe("chosenCharacter");
+  void invalidMutatingProducer;
 });
 
 test("condition and optionality authoring supports composed optional cost and optional effect clauses", () => {

@@ -1,30 +1,33 @@
 {
-  "cardId": "TYP-009B-001",
+  "cardId": "TYP-010-001",
   "implementationStatus": "unsupported",
   "effects": [
     {
-      "id": "TYP-009B-001:activate-main-1",
+      "id": "TYP-010-001:activate-main-1",
       "category": "activate",
       "trigger": { "type": "activateMain" },
       "effect": {
         "type": "sequence",
         "effects": [
           {
-            "id": "choose-character",
+            "id": "ko-character",
             "connector": "always",
             "saveResultAs": "chosenCharacter",
             "effect": {
-              "type": "selectTargets",
-              "request": {
-                "timing": "onResolution",
-                "chooser": "self",
-                "zone": "characterArea",
-                "player": "opponent",
-                "min": 1,
-                "max": 1,
-                "allowFewerIfUnavailable": false,
-                "visibility": "public",
-                "filter": { "categories": ["character"] }
+              "type": "ko",
+              "target": {
+                "type": "choose",
+                "request": {
+                  "timing": "onResolution",
+                  "chooser": "self",
+                  "zone": "characterArea",
+                  "player": "opponent",
+                  "min": 1,
+                  "max": 1,
+                  "allowFewerIfUnavailable": false,
+                  "visibility": "public",
+                  "filter": { "categories": ["character"] }
+                }
               }
             }
           },
@@ -38,12 +41,10 @@
                   "family": "selectedTargets",
                   "saveResultAs": "chosenCharacter",
                   "objectIndex": 0,
-                  "sourceSegmentId": "choose-character"
+                  "sourceSegmentId": "ko-character"
                 },
                 "zone": "characterArea",
                 "player": "opponent",
-                "controller": "opponent",
-                "filter": { "categories": ["character"] },
                 "visibility": "publicOnly",
                 "onFailure": "failClosed"
               },
@@ -56,7 +57,7 @@
     }
   ],
   "metadata": {
-    "sourceTextHash": "sha256:test-typ-009b-001",
+    "sourceTextHash": "sha256:test-typ-010-001",
     "rulesVersion": "2026-01-16",
     "effectDefinitionsVersion": "0.1.0",
     "tested": true

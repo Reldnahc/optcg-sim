@@ -44,7 +44,7 @@ child_stories:
     depends_on: [TYP-007A, TYP-007B, TYP-007C, TYP-007D, TYP-008A]
   - id: TYP-009B
     title: Saved field-object reference consumer contracts
-    concern: Define selectedTargets production, saved field-object consumer authority, exact-card continuous-effect target binding, and fail-closed visibility/legality rules for ENG-055I.
+    concern: Define saved field-object reference consumer authority, reference payload shape, exact-card continuous-effect target binding, and fail-closed visibility/legality rules for ENG-055I.
     depends_on: [TYP-007B, TYP-007E, TYP-008A]
 scope:
   - define two contract substories that unblock ENG-055D and ENG-055I
@@ -58,7 +58,7 @@ non_scope:
 acceptance_criteria:
   - TYP-009 is not implemented directly
   - TYP-009A owns optional-cost contract authority needed by ENG-055D
-  - TYP-009B owns saved field-object reference contract authority needed by ENG-055I
+  - TYP-009B owns saved field-object consumer and reference payload contract authority needed by ENG-055I
   - no engine runtime behavior is implemented by this parent story set
   - TYP-009, TYP-009A, and TYP-009B have distinct story-review assignments and durable artifacts
 required_tests:

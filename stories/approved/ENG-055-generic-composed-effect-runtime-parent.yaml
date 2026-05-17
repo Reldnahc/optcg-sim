@@ -21,8 +21,11 @@ story_boundary: >
 allowed_touch_points:
   - tests/hidden-info/**
   - stories/generated/ENG-055*.yaml
+  - stories/generated/TYP-010*.yaml
   - stories/approved/ENG-055*.yaml
+  - stories/approved/TYP-010*.yaml
   - agent-packets/ENG-055*.md
+  - agent-packets/TYP-010*.md
   - agent-packets/active.json
 spec_refs:
   - 03-game-state-events-decisions.s016
@@ -81,11 +84,15 @@ child_stories:
   - id: ENG-055I
     title: Saved selections and that Character runtime
     concern: Implement saved result references for later approved consumers and fail closed when saved objects are gone, illegal, or unsupported.
-    depends_on: [ENG-055B, TYP-007B]
+    depends_on: [ENG-055B, TYP-007B, TYP-009B, TYP-010]
   - id: ENG-055J
     title: "Duration, modifier, and restriction runtime"
     concern: Implement temporary power modifier and TYP-007E-authorized restriction runtime with expiry tests.
     depends_on: [TYP-007E]
+  - id: TYP-010
+    title: SelectedTargets producer contract
+    concern: Define the concrete same-frame public field-object selectedTargets producer contract required before ENG-055I can implement reachable saved selected-target references.
+    depends_on: [TYP-009B]
 scope:
   - define executable engine-runtime child stories for composed effect support
   - require every child to preserve event order, hidden-info boundaries, state hashes, and deterministic replay behavior
@@ -100,14 +107,14 @@ non_scope:
   - server, client, API, UI, database, or live Poneglyph work
 acceptance_criteria:
   - ENG-055 is not implemented directly
-  - ENG-055 and every child story ENG-055A through ENG-055K have usable per-story story-review evidence before approval handoff, with one distinct story-review assignment identity and one distinct durable artifact identity per parent/child row
+  - ENG-055 and every declared child story have usable per-story story-review evidence before approval handoff, with one distinct story-review assignment identity and one distinct durable artifact identity per parent/child row
   - the parent/child story-set review-status matrix can be reconstructed before approval handoff, child activation, packet generation, parent PR opening, and parent PR handoff
   - each ENG-055 child consumes TYP-007 contracts and remains independently reviewable
   - engine-core does not import @optcg/cards
   - no parser support, generated support, real-card fixture work, or card-data admission broadening is added by this series; explicit play-card support gating is allowed only where a child story owns it
 required_tests:
   - record set-level story-review for the ENG-055 parent story set
-  - record per-story story-review for ENG-055 and each child ENG-055A through ENG-055K with one distinct story-review assignment identity and one distinct durable artifact identity per required row
+  - record per-story story-review for ENG-055 and each declared child story with one distinct story-review assignment identity and one distinct durable artifact identity per required row
   - reconstruct the compact story-set review-status matrix before approval handoff, child activation, packet generation, parent PR opening, and parent PR handoff
   - run `corepack pnpm run stories:validate`
 repo_rules:

@@ -41,9 +41,12 @@ spec_refs:
 dependencies:
   - ENG-055B
   - TYP-007B
+  - TYP-009B
+  - TYP-010
 scope:
   - store saved selections/result references in the execution context
   - allow later sequence steps to resolve saved `selectedTargets` and `producedObjects` references only for generic field-object `TargetSpec` selection consumers in the same supported execution frame
+  - implement positive saved `selectedTargets` reachability only after TYP-010 defines the selectedTargets producer contract; otherwise fail closed rather than inventing a producer shape
   - keep positive saved-reference consumer coverage limited to generic field-object target resolution; modifier, protection, restriction, hand-selection, and playSelected consumers remain unsupported unless named by another child story
   - fail closed when the saved object is gone, illegal, hidden, not a field object, or unsupported under the primitive policy
   - fail closed for saved `selectedCards`, `paidCost`, hand-selection, modifier/restriction target, and other unsupported saved-reference families
