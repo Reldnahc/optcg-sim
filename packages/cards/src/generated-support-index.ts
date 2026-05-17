@@ -601,7 +601,7 @@ const parserRuleCapabilityIds: Readonly<Record<string, readonly string[]>> = {
     "trigger:onPlay",
   ],
   "exact:on-play:cannot-attack:choose:this-turn": [
-    "cannotAttack:choose:thisTurn",
+    "cannotAttack:choose:thisTurn:zeroChoiceBranch",
     "category:auto",
     "sourcePresencePolicy:mustRemainInSameZone",
     "trigger:onPlay",
@@ -619,7 +619,7 @@ const parserRuleCapabilityIds: Readonly<Record<string, readonly string[]>> = {
     "trigger:onPlay",
   ],
   "exact:on-play:cannot-block:choose:this-turn": [
-    "cannotBlock:choose:thisTurn",
+    "cannotBlock:choose:thisTurn:zeroChoiceBranch",
     "category:auto",
     "sourcePresencePolicy:mustRemainInSameZone",
     "trigger:onPlay",
@@ -638,7 +638,7 @@ const parserRuleCapabilityIds: Readonly<Record<string, readonly string[]>> = {
   ],
   "exact:on-play:modify-power:choose:this-turn": [
     "category:auto",
-    "modifyPower:choose:thisTurn",
+    "modifyPower:choose:thisTurn:zeroChoiceBranch",
     "sourcePresencePolicy:mustRemainInSameZone",
     "trigger:onPlay",
   ],

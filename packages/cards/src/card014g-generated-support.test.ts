@@ -419,24 +419,6 @@ describe("CARD-014G generated composed support", () => {
       sourceText:
         "[On Play] Select 1 of your opponent's Characters. Then, K.O. that Character.",
     },
-    {
-      expectedCapabilityId: "modifyPower:choose:thisTurn",
-      expectedRuleId: "exact:on-play:modify-power:choose:this-turn",
-      sourceText:
-        "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
-    },
-    {
-      expectedCapabilityId: "cannotAttack:choose:thisTurn",
-      expectedRuleId: "exact:on-play:cannot-attack:choose:this-turn",
-      sourceText:
-        "[On Play] Up to 1 of your opponent's Characters cannot attack during this turn.",
-    },
-    {
-      expectedCapabilityId: "cannotBlock:choose:thisTurn",
-      expectedRuleId: "exact:on-play:cannot-block:choose:this-turn",
-      sourceText:
-        "[On Play] Up to 1 of your opponent's Characters cannot block during this turn.",
-    },
   ])(
     "supports CARD-014G exact template $expectedRuleId with runtime capability evidence",
     ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
@@ -466,6 +448,50 @@ describe("CARD-014G generated composed support", () => {
           },
         ]),
       );
+    },
+  );
+
+  it.each([
+    {
+      expectedCapabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
+      expectedRuleId: "exact:on-play:modify-power:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
+    },
+    {
+      expectedCapabilityId: "cannotAttack:choose:thisTurn:zeroChoiceBranch",
+      expectedRuleId: "exact:on-play:cannot-attack:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters cannot attack during this turn.",
+    },
+    {
+      expectedCapabilityId: "cannotBlock:choose:thisTurn:zeroChoiceBranch",
+      expectedRuleId: "exact:on-play:cannot-block:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters cannot block during this turn.",
+    },
+  ])(
+    "fails closed generated support for CARD-014G exact template $expectedRuleId until zero-choice runtime exists",
+    ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [{ ...baseCard, sourceText }],
+        validateEffectDefinition,
+      });
+
+      expect(index.entries[0]).toMatchObject({
+        blockers: [
+          {
+            capabilityId: expectedCapabilityId,
+            code: "missing-runtime-capability",
+            component: expectedRuleId,
+          },
+        ],
+        missingCapabilityIds: [expectedCapabilityId],
+        parseStatus: "complete",
+        parserRuleIds: [expectedRuleId],
+        status: "unsupported",
+      });
+      expect(index.effectDefinitions).toEqual({});
     },
   );
 
@@ -517,9 +543,15 @@ describe("CARD-014G generated composed support", () => {
     });
 
     expect(index.entries[0]).toMatchObject({
-      blockers: [],
+      blockers: [
+        {
+          capabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:modify-power:choose:this-turn",
+        },
+      ],
       parserRuleIds: ["exact:on-play:modify-power:choose:this-turn"],
-      status: "supported",
+      status: "unsupported",
     });
     expect(index.entries[0]?.capabilityEvidence).toEqual(
       expect.not.arrayContaining([

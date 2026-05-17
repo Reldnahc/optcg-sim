@@ -432,24 +432,6 @@ describe("support evaluator", () => {
       sourceText:
         "[On Play] Select 1 of your opponent's Characters. Then, K.O. that Character.",
     },
-    {
-      expectedCapabilityId: "modifyPower:choose:thisTurn",
-      expectedRuleId: "exact:on-play:modify-power:choose:this-turn",
-      sourceText:
-        "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
-    },
-    {
-      expectedCapabilityId: "cannotAttack:choose:thisTurn",
-      expectedRuleId: "exact:on-play:cannot-attack:choose:this-turn",
-      sourceText:
-        "[On Play] Up to 1 of your opponent's Characters cannot attack during this turn.",
-    },
-    {
-      expectedCapabilityId: "cannotBlock:choose:thisTurn",
-      expectedRuleId: "exact:on-play:cannot-block:choose:this-turn",
-      sourceText:
-        "[On Play] Up to 1 of your opponent's Characters cannot block during this turn.",
-    },
   ])(
     "evaluates CARD-014G $expectedRuleId synthetic text as playable only with matching capability evidence",
     ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
@@ -519,6 +501,62 @@ describe("support evaluator", () => {
     },
   );
 
+  it.each([
+    {
+      expectedCapabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
+      expectedRuleId: "exact:on-play:modify-power:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
+    },
+    {
+      expectedCapabilityId: "cannotAttack:choose:thisTurn:zeroChoiceBranch",
+      expectedRuleId: "exact:on-play:cannot-attack:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters cannot attack during this turn.",
+    },
+    {
+      expectedCapabilityId: "cannotBlock:choose:thisTurn:zeroChoiceBranch",
+      expectedRuleId: "exact:on-play:cannot-block:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters cannot block during this turn.",
+    },
+  ])(
+    "fails closed CARD-014G $expectedRuleId synthetic text until zero-choice runtime capability exists",
+    ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
+      const blockedCard = normalizePoneglyphCardDetail({
+        ...loadOp03044Fixture(),
+        card_number: "CARD-014G-SYNTHETIC",
+        effect: sourceText,
+        name: "Synthetic Target Modifier Restriction Candidate",
+      });
+
+      const blocked = evaluateGeneratedSupportPlayability({
+        card: blockedCard,
+        cardDataVersion: "2026-05-13",
+        effectDefinitionsVersion: "generated-support-v1",
+        expectedBehaviorHash: blockedCard.behaviorHash,
+        expectedSourceTextHash: blockedCard.sourceTextHash,
+        rulesVersion: "generated-support-v1",
+        validateEffectDefinition,
+      });
+
+      expect(blocked).toMatchObject({
+        blockers: [
+          {
+            capabilityId: expectedCapabilityId,
+            code: "missing-runtime-capability",
+            component: expectedRuleId,
+          },
+        ],
+        missingCapabilityIds: [expectedCapabilityId],
+        parseStatus: "complete",
+        parserRuleIds: [expectedRuleId],
+        playable: false,
+        status: "unsupported",
+      });
+    },
+  );
+
   it("does not report mutating choose-target support as standalone selectedTargets producer authority", () => {
     const supportedCard = normalizePoneglyphCardDetail({
       ...loadOp03044Fixture(),
@@ -539,10 +577,16 @@ describe("support evaluator", () => {
     });
 
     expect(evaluation).toMatchObject({
-      blockers: [],
+      blockers: [
+        {
+          capabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:modify-power:choose:this-turn",
+        },
+      ],
       parserRuleIds: ["exact:on-play:modify-power:choose:this-turn"],
-      playable: true,
-      status: "supported",
+      playable: false,
+      status: "unsupported",
     });
     expect(evaluation.capabilityEvidence).toEqual(
       expect.not.arrayContaining([

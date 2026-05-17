@@ -67,21 +67,12 @@ describe("generated support capability coverage", () => {
           parserRuleId:
             "exact:on-play:select-1-opponent-character-then-ko-that-character",
         },
-        {
-          capabilityId: "modifyPower:choose:thisTurn",
-          parserRuleId: "exact:on-play:modify-power:choose:this-turn",
-        },
-        {
-          capabilityId: "cannotAttack:choose:thisTurn",
-          parserRuleId: "exact:on-play:cannot-attack:choose:this-turn",
-        },
-        {
-          capabilityId: "cannotBlock:choose:thisTurn",
-          parserRuleId: "exact:on-play:cannot-block:choose:this-turn",
-        },
       ]),
     );
     expect(coverage.missingCapabilityIds).toEqual([
+      "cannotAttack:choose:thisTurn:zeroChoiceBranch",
+      "cannotBlock:choose:thisTurn:zeroChoiceBranch",
+      "modifyPower:choose:thisTurn:zeroChoiceBranch",
       "modifyPower:self:permanent",
       "modifyPower:self:untilStartOfNextTurn",
       "playSelected:savedReference:character:max1",

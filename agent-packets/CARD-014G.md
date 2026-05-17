@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id CARD-014G -->
 <!-- agent-packet:story-path stories/approved/CARD-014G-selecttargets-saved-field-modifier-restriction-parser-expansion.yaml -->
-<!-- agent-packet:story-sha256 724cb4b48063a5b1f66901cab21dc13ad8598594ac01e64ef4ff9ff2abb09f24 -->
+<!-- agent-packet:story-sha256 f015098b8a763ade2128ffbf421bfcb62700c830e85b27ee4c752aa2aae1c142 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -795,8 +795,8 @@ Own only packages/cards parser, generated DSL, capability gating, diagnostics, s
 
 - certify exact-template support for public field target selection producer shapes
 - certify support for later saved-field-object consumers only for runtime-supported generic field-object consumer shapes
-- certify temporary modifyPower support only for target/duration pairs with existing runtime capability evidence, currently `self` with `thisBattle` or `thisTurn` and `choose` or `all` with `thisTurn`
-- certify cannotAttack and cannotBlock support only for target/duration pairs with existing runtime capability evidence, currently `self`, `choose`, and `all` with `thisTurn`
+- certify temporary modifyPower support only for target/duration pairs with existing runtime capability evidence, currently `self` with `thisBattle` or `thisTurn` and `all` with `thisTurn`; `choose`/`up to 1` with `thisTurn` must parse but fail generated support until ENG runtime supports the zero-choice branch
+- certify cannotAttack and cannotBlock support only for target/duration pairs with existing runtime capability evidence, currently `self` and `all` with `thisTurn`; `choose`/`up to 1` with `thisTurn` must parse but fail generated support until ENG runtime supports the zero-choice branch
 - require source integrity and engine_capability_preflight for any real-card proof
 - fail closed for handSelection used as field target selection
 - fail closed for saved-field-object or saved-selection references used as modifier/restriction targets unless later completed contract/runtime evidence proves support
@@ -887,7 +887,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 - exact supported public field target producer text parses completely and requires selectTargets capability evidence
 - exact supported saved-field-object consumer text parses completely only for runtime-supported generic field-object consumer shapes and only after TYP-009B lifecycle is reconciled
-- exact supported modifyPower, cannotAttack, and cannotBlock text parses completely only for targets `self`, `choose`, and `all` with supported durations
+- exact supported modifyPower, cannotAttack, and cannotBlock text parses completely only for supported targets `self` and `all` with supported durations; `choose`/`up to 1` templates parse completely but generated-support indexing reports missing zero-choice runtime capability
 - handSelection is not reused as field targeting
 - unsupported target, duration, modifier, restriction, saved-reference modifier/restriction target, refresh-lock, and residue shapes fail closed
 

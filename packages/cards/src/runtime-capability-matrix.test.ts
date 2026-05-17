@@ -334,10 +334,6 @@ describe("generated support runtime capability matrix", () => {
       requiredCapabilities: ["modifyPower:self:thisBattle"],
     },
     {
-      parserRuleId: "exact:on-play:modify-power:choose:this-turn",
-      requiredCapabilities: ["modifyPower:choose:thisTurn"],
-    },
-    {
       parserRuleId: "exact:on-play:modify-power:all:this-turn",
       requiredCapabilities: ["modifyPower:all:thisTurn"],
     },
@@ -346,20 +342,12 @@ describe("generated support runtime capability matrix", () => {
       requiredCapabilities: ["cannotAttack:self:thisTurn"],
     },
     {
-      parserRuleId: "exact:on-play:cannot-attack:choose:this-turn",
-      requiredCapabilities: ["cannotAttack:choose:thisTurn"],
-    },
-    {
       parserRuleId: "exact:on-play:cannot-attack:all:this-turn",
       requiredCapabilities: ["cannotAttack:all:thisTurn"],
     },
     {
       parserRuleId: "exact:on-play:cannot-block:self:this-turn",
       requiredCapabilities: ["cannotBlock:self:thisTurn"],
-    },
-    {
-      parserRuleId: "exact:on-play:cannot-block:choose:this-turn",
-      requiredCapabilities: ["cannotBlock:choose:thisTurn"],
     },
     {
       parserRuleId: "exact:on-play:cannot-block:all:this-turn",
@@ -382,6 +370,31 @@ describe("generated support runtime capability matrix", () => {
         expect(capability?.supported).toBe(true);
         expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
       }
+    },
+  );
+
+  it.each([
+    {
+      capabilityId: "modifyPower:choose:thisTurn",
+      parserRuleId: "exact:on-play:modify-power:choose:this-turn",
+    },
+    {
+      capabilityId: "cannotAttack:choose:thisTurn",
+      parserRuleId: "exact:on-play:cannot-attack:choose:this-turn",
+    },
+    {
+      capabilityId: "cannotBlock:choose:thisTurn",
+      parserRuleId: "exact:on-play:cannot-block:choose:this-turn",
+    },
+  ])(
+    "keeps CARD-014G zero-choice parser rule $parserRuleId unlinked from $capabilityId",
+    ({ capabilityId, parserRuleId }) => {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.supportedParserRuleIds).not.toContain(parserRuleId);
     },
   );
 

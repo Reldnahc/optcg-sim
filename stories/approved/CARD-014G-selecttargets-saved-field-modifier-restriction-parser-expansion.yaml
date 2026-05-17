@@ -67,8 +67,8 @@ dependencies:
 scope:
   - certify exact-template support for public field target selection producer shapes
   - certify support for later saved-field-object consumers only for runtime-supported generic field-object consumer shapes
-  - certify temporary modifyPower support only for target/duration pairs with existing runtime capability evidence, currently `self` with `thisBattle` or `thisTurn` and `choose` or `all` with `thisTurn`
-  - certify cannotAttack and cannotBlock support only for target/duration pairs with existing runtime capability evidence, currently `self`, `choose`, and `all` with `thisTurn`
+  - certify temporary modifyPower support only for target/duration pairs with existing runtime capability evidence, currently `self` with `thisBattle` or `thisTurn` and `all` with `thisTurn`; `choose`/`up to 1` with `thisTurn` must parse but fail generated support until ENG runtime supports the zero-choice branch
+  - certify cannotAttack and cannotBlock support only for target/duration pairs with existing runtime capability evidence, currently `self` and `all` with `thisTurn`; `choose`/`up to 1` with `thisTurn` must parse but fail generated support until ENG runtime supports the zero-choice branch
   - require source integrity and engine_capability_preflight for any real-card proof
   - fail closed for handSelection used as field target selection
   - fail closed for saved-field-object or saved-selection references used as modifier/restriction targets unless later completed contract/runtime evidence proves support
@@ -87,7 +87,7 @@ card_source_integrity:
 engine_capability_preflight:
   - selectTargets producer support must be backed by TYP-010 and ENG-055 selected-target runtime evidence
   - saved field-object consumer support must be backed by completed TYP-009B lifecycle state and ENG-055I runtime evidence, limited to generic field-object consumer shapes
-  - modifyPower, cannotAttack, and cannotBlock support must be backed by TYP-007E and ENG-055J runtime evidence for targets `self`, `choose`, and `all` only
+  - modifyPower, cannotAttack, and cannotBlock support must be backed by TYP-007E and ENG-055J runtime evidence for supported targets `self` and `all`; `choose`/`up to 1` target templates require separate ENG zero-choice branch runtime evidence before generated support may mark them playable
   - supported modifier/restriction durations are limited to existing positive cards-side runtime capability records; do not add or imply support for `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, or `permanent` unless a completed ENG/runtime evidence story adds that support
   - saved-field-object and saved-selection modifier/restriction targets are missing capability blockers unless later completed contract/runtime evidence proves support
   - unsupported duration blockers include `thisAction`, `whileConditionTrue`, `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, `permanent`, and malformed turn-relative durations unless separate completed runtime evidence exists
@@ -95,7 +95,7 @@ engine_capability_preflight:
 acceptance_criteria:
   - exact supported public field target producer text parses completely and requires selectTargets capability evidence
   - exact supported saved-field-object consumer text parses completely only for runtime-supported generic field-object consumer shapes and only after TYP-009B lifecycle is reconciled
-  - exact supported modifyPower, cannotAttack, and cannotBlock text parses completely only for targets `self`, `choose`, and `all` with supported durations
+  - exact supported modifyPower, cannotAttack, and cannotBlock text parses completely only for supported targets `self` and `all` with supported durations; `choose`/`up to 1` templates parse completely but generated-support indexing reports missing zero-choice runtime capability
   - handSelection is not reused as field targeting
   - unsupported target, duration, modifier, restriction, saved-reference modifier/restriction target, refresh-lock, and residue shapes fail closed
 required_tests:

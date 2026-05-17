@@ -50,7 +50,6 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:restriction:cannot-attack-choose-this-turn",
-        "exact:on-play:cannot-attack:choose:this-turn",
       ],
     },
     {
@@ -86,7 +85,6 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:restriction:cannot-block-choose-this-turn",
-        "exact:on-play:cannot-block:choose:this-turn",
       ],
     },
     {
@@ -305,7 +303,6 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supportedParserRuleIds: [
         "card014a:modifier:power-choose-this-turn",
         "card014a:on-play:select-target-modify-power",
-        "exact:on-play:modify-power:choose:this-turn",
       ],
     },
     {
