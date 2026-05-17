@@ -1,0 +1,98 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-014D
+epic_id: CARD-014
+title: drawUpTo parser and generated-support expansion
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add certified exact-template cards-layer support for runtime-supported
+  drawUpTo text forms using chooseQuantity-backed capability evidence.
+story_boundary: >
+  Own only packages/cards parser, generated DSL, support gating, diagnostics,
+  and tests for narrow drawUpTo templates. Do not add runtime behavior or use
+  card selection as a substitute for chooseQuantity-backed drawUpTo support.
+allowed_touch_points:
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - stories/generated/CARD-014*.yaml
+  - stories/approved/CARD-014*.yaml
+  - agent-packets/CARD-014D.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s010
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s016
+dependencies:
+  - CARD-014A
+  - CARD-014B
+scope:
+  - certify exact-template parser support for `[On Play] Draw up to N card(s).` with positive safe-integer N
+  - emit deterministic parser rule ID `exact:on-play:draw-up-to-n:self`
+  - 'generate DSL `{ type: "drawUpTo", count: N, player: "self" }` using chooseQuantity-backed capability evidence'
+  - 'include only the `[On Play]` trigger with `sourcePresencePolicy: "mustRemainInSameZone"` and capability evidence ID `sourcePresencePolicy:mustRemainInSameZone`'
+  - fail closed for malformed counts, broad wording, card-selection wording, unsupported trigger wrappers, residue, or missing capability
+non_scope:
+  - runtime behavior
+  - card selection based draw approximations
+  - broad natural-language draw templates
+  - real-card proof bundle work
+  - shared contracts or effect DSL schema changes
+  - replacement generalization
+card_source_integrity:
+  - no real-card support is enabled by this story
+  - exact drawUpTo tests in this story are synthetic cards-package parser/support-pipeline proofs only
+  - if real-card drawUpTo support is needed later, draft a separate CARD story with exact card ID, fixture provenance, printed text, source hash, behavior hash, and regeneration requirements
+engine_capability_preflight:
+  - drawUpTo generated support requires ENG-055H runtime capability evidence and chooseQuantity decision support from ENG-055A
+  - generated DSL must use drawUpTo rather than selectCards or manual card selection
+  - unsupported trigger or sourcePresencePolicy combinations must remain missing-capability blockers
+acceptance_criteria:
+  - exact `[On Play] Draw up to N card(s).` text parses completely to drawUpTo DSL with parser rule `exact:on-play:draw-up-to-n:self`
+  - 'generated DSL shape is exactly `{ type: "drawUpTo", count: N, player: "self" }`'
+  - 'generated support requires `sourcePresencePolicy: "mustRemainInSameZone"` and capability evidence ID `sourcePresencePolicy:mustRemainInSameZone`'
+  - generated support requires chooseQuantity-backed runtime capability evidence
+  - missing drawUpTo or chooseQuantity capability blocks support
+  - unsupported trigger/sourcePresencePolicy combinations remain unsupported
+  - malformed counts and residue text fail closed
+required_tests:
+  - exact candidate story-review before approval
+  - parser tests for exact `[On Play] Draw up to N card(s).` wording and parser rule `exact:on-play:draw-up-to-n:self`
+  - 'generated DSL validation test proving exact `{ type: "drawUpTo", count: N, player: "self" }` output'
+  - capability tests proving chooseQuantity-backed drawUpTo evidence is required
+  - missing drawUpTo capability blocks support test
+  - missing chooseQuantity-backed capability blocks support test
+  - missing `sourcePresencePolicy:mustRemainInSameZone` capability blocks support test
+  - unsupported trigger/sourcePresencePolicy fail-closed tests
+  - broad wording, card-selection substitute wording, malformed count, and residue fail-closed tests
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-014D packet before implementation
+  - stay within allowed_touch_points
+  - do not substitute card selection for drawUpTo runtime capability
+  - fail closed on trigger, source presence, quantity, or capability ambiguity
+ambiguity_policy: fail_and_escalate

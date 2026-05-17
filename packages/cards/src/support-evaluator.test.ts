@@ -8,6 +8,7 @@ import type { EffectDefinition, PoneglyphCardDetail } from "@optcg/types";
 
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import type { EffectDefinitionValidationResult } from "./generated-support-index.js";
+import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 import { evaluateGeneratedSupportPlayability } from "./support-evaluator.js";
 
 const repoRoot = path.resolve(
@@ -111,6 +112,492 @@ describe("support evaluator", () => {
     );
     expect(unsupported.effectDefinition).toBeUndefined();
     expect(unsupported.support).toBeUndefined();
+  });
+
+  it("fails closed when runtime capability evidence is missing", () => {
+    const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
+    const runtimeCapabilityMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) => capability.id !== "effect:sequence:ordered",
+      ),
+    };
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: normalized,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: normalized.behaviorHash,
+      expectedSourceTextHash: normalized.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix,
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "effect:sequence:ordered",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:draw-n:trash-m:hand:self",
+        },
+      ],
+      missingCapabilityIds: ["effect:sequence:ordered"],
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
+    expect(evaluation.effectDefinition).toBeUndefined();
+    expect(evaluation.support).toBeUndefined();
+  });
+
+  it("fails closed when runtime capability lacks parser-rule evidence", () => {
+    const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
+    const runtimeCapabilityMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.map(
+        (capability) =>
+          capability.id === "effect:sequence:ordered"
+            ? { ...capability, supportedParserRuleIds: [] }
+            : capability,
+      ),
+    };
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: normalized,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: normalized.behaviorHash,
+      expectedSourceTextHash: normalized.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix,
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "effect:sequence:ordered",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:draw-n:trash-m:hand:self",
+        },
+      ],
+      missingCapabilityIds: ["effect:sequence:ordered"],
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
+    expect(evaluation.effectDefinition).toBeUndefined();
+    expect(evaluation.support).toBeUndefined();
+  });
+
+  it("evaluates exact synthetic trash-then-draw text as playable only with segment-0 trash capability evidence", () => {
+    const supportedCard = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "CARD-014C-SYNTHETIC",
+      effect: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+      name: "Synthetic Trash Then Draw Candidate",
+    });
+    const missingSegment0TrashMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "trashFromHand:segment0:self:self:count-exact",
+      ),
+    };
+
+    const supported = evaluateGeneratedSupportPlayability({
+      card: supportedCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: supportedCard.behaviorHash,
+      expectedSourceTextHash: supportedCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+    const blocked = evaluateGeneratedSupportPlayability({
+      card: supportedCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: supportedCard.behaviorHash,
+      expectedSourceTextHash: supportedCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix: missingSegment0TrashMatrix,
+      validateEffectDefinition,
+    });
+
+    expect(supported).toMatchObject({
+      blockers: [],
+      cardId: "CARD-014C-SYNTHETIC",
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-play:trash-2-from-hand:draw-1:self"],
+      playable: true,
+      status: "supported",
+    });
+    expect(supported.capabilityEvidence).toEqual(
+      expect.arrayContaining([
+        {
+          capabilityId: "trashFromHand:segment0:self:self:count-exact",
+          parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
+        },
+      ]),
+    );
+    expect(blocked).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "trashFromHand:segment0:self:self:count-exact",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:trash-2-from-hand:draw-1:self",
+        },
+      ],
+      missingCapabilityIds: ["trashFromHand:segment0:self:self:count-exact"],
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
+  });
+
+  it("evaluates exact synthetic return-DON play-from-hand text as playable only with playSelected capability evidence", () => {
+    const supportedCard = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "CARD-014E-SYNTHETIC",
+      effect:
+        "[On Play] DON!! -1: Select up to 1 Character card from your hand and play it.",
+      name: "Synthetic Return Don Play From Hand Candidate",
+    });
+    const missingIgnoreCostMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "playSelected:hand:character:max1:ignoreCost",
+      ),
+    };
+
+    const supported = evaluateGeneratedSupportPlayability({
+      card: supportedCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: supportedCard.behaviorHash,
+      expectedSourceTextHash: supportedCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+    const blocked = evaluateGeneratedSupportPlayability({
+      card: supportedCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: supportedCard.behaviorHash,
+      expectedSourceTextHash: supportedCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix: missingIgnoreCostMatrix,
+      validateEffectDefinition,
+    });
+
+    expect(supported).toMatchObject({
+      blockers: [],
+      cardId: "CARD-014E-SYNTHETIC",
+      parseStatus: "complete",
+      parserRuleIds: [
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+      ],
+      playable: true,
+      status: "supported",
+    });
+    expect(supported.capabilityEvidence).toEqual(
+      expect.arrayContaining([
+        {
+          capabilityId: "playSelected:hand:character:max1",
+          parserRuleId:
+            "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        },
+        {
+          capabilityId: "playSelected:hand:character:max1:ignoreCost",
+          parserRuleId:
+            "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        },
+      ]),
+    );
+    expect(blocked).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "playSelected:hand:character:max1:ignoreCost",
+          code: "missing-runtime-capability",
+          component:
+            "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        },
+      ],
+      missingCapabilityIds: ["playSelected:hand:character:max1:ignoreCost"],
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
+  });
+
+  it.each([
+    {
+      expectedCapabilityId: "optionalEffectBlock:onPlay:draw-1:self",
+      expectedRuleId: "exact:on-play:optional-effect:draw-1:self",
+      sourceText: "[On Play] You may draw 1 card.",
+    },
+    {
+      expectedCapabilityId: "condition:yourTurn",
+      expectedRuleId: "exact:condition:your-turn",
+      sourceText: "[On Play] During your turn, draw 1 card.",
+    },
+    {
+      expectedCapabilityId: "condition:selfAttachedDonCount",
+      expectedRuleId: "exact:condition:self-attached-don-count",
+      sourceText:
+        "[On Play] If this Character has 1 or more DON!! cards attached, draw 1 card.",
+    },
+  ])(
+    "evaluates CARD-014F $expectedRuleId text as playable only with matching capability evidence",
+    ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
+      const supportedCard = normalizePoneglyphCardDetail({
+        ...loadOp03044Fixture(),
+        card_number: "CARD-014F-SYNTHETIC",
+        effect: sourceText,
+        name: "Synthetic Optionality Condition Candidate",
+      });
+      const missingCapabilityMatrix = {
+        ...generatedSupportRuntimeCapabilityMatrix,
+        capabilities:
+          generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+            (capability) => capability.id !== expectedCapabilityId,
+          ),
+      };
+
+      const supported = evaluateGeneratedSupportPlayability({
+        card: supportedCard,
+        cardDataVersion: "2026-05-13",
+        effectDefinitionsVersion: "generated-support-v1",
+        expectedBehaviorHash: supportedCard.behaviorHash,
+        expectedSourceTextHash: supportedCard.sourceTextHash,
+        rulesVersion: "generated-support-v1",
+        validateEffectDefinition,
+      });
+      const blocked = evaluateGeneratedSupportPlayability({
+        card: supportedCard,
+        cardDataVersion: "2026-05-13",
+        effectDefinitionsVersion: "generated-support-v1",
+        expectedBehaviorHash: supportedCard.behaviorHash,
+        expectedSourceTextHash: supportedCard.sourceTextHash,
+        rulesVersion: "generated-support-v1",
+        runtimeCapabilityMatrix: missingCapabilityMatrix,
+        validateEffectDefinition,
+      });
+
+      expect(supported).toMatchObject({
+        blockers: [],
+        cardId: "CARD-014F-SYNTHETIC",
+        parseStatus: "complete",
+        parserRuleIds: [expectedRuleId],
+        playable: true,
+        status: "supported",
+      });
+      expect(supported.capabilityEvidence).toEqual(
+        expect.arrayContaining([
+          {
+            capabilityId: expectedCapabilityId,
+            parserRuleId: expectedRuleId,
+          },
+        ]),
+      );
+      expect(blocked).toMatchObject({
+        blockers: [
+          {
+            capabilityId: expectedCapabilityId,
+            code: "missing-runtime-capability",
+            component: expectedRuleId,
+          },
+        ],
+        missingCapabilityIds: [expectedCapabilityId],
+        parseStatus: "complete",
+        playable: false,
+        status: "unsupported",
+      });
+    },
+  );
+
+  it.each([
+    {
+      expectedCapabilityId: "selectTargets:field:public:character:max1",
+      expectedRuleId: "exact:on-play:select-1-opponent-character-target",
+      sourceText: "[On Play] Select 1 of your opponent's Characters.",
+    },
+    {
+      expectedCapabilityId: "effect:ko:saved-field-object:characterArea:public",
+      expectedRuleId:
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+      sourceText:
+        "[On Play] Select 1 of your opponent's Characters. Then, K.O. that Character.",
+    },
+  ])(
+    "evaluates CARD-014G $expectedRuleId synthetic text as playable only with matching capability evidence",
+    ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
+      const supportedCard = normalizePoneglyphCardDetail({
+        ...loadOp03044Fixture(),
+        card_number: "CARD-014G-SYNTHETIC",
+        effect: sourceText,
+        name: "Synthetic Target Modifier Restriction Candidate",
+      });
+      const missingCapabilityMatrix = {
+        ...generatedSupportRuntimeCapabilityMatrix,
+        capabilities:
+          generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+            (capability) => capability.id !== expectedCapabilityId,
+          ),
+      };
+
+      const supported = evaluateGeneratedSupportPlayability({
+        card: supportedCard,
+        cardDataVersion: "2026-05-13",
+        effectDefinitionsVersion: "generated-support-v1",
+        expectedBehaviorHash: supportedCard.behaviorHash,
+        expectedSourceTextHash: supportedCard.sourceTextHash,
+        rulesVersion: "generated-support-v1",
+        validateEffectDefinition,
+      });
+      const blocked = evaluateGeneratedSupportPlayability({
+        card: supportedCard,
+        cardDataVersion: "2026-05-13",
+        effectDefinitionsVersion: "generated-support-v1",
+        expectedBehaviorHash: supportedCard.behaviorHash,
+        expectedSourceTextHash: supportedCard.sourceTextHash,
+        rulesVersion: "generated-support-v1",
+        runtimeCapabilityMatrix: missingCapabilityMatrix,
+        validateEffectDefinition,
+      });
+
+      expect(supported).toMatchObject({
+        blockers: [],
+        cardId: "CARD-014G-SYNTHETIC",
+        parseStatus: "complete",
+        parserRuleIds: [expectedRuleId],
+        playable: true,
+        status: "supported",
+      });
+      expect(supported.capabilityEvidence).toEqual(
+        expect.arrayContaining([
+          {
+            capabilityId: expectedCapabilityId,
+            parserRuleId: expectedRuleId,
+          },
+        ]),
+      );
+      expect(blocked).toMatchObject({
+        blockers: [
+          {
+            capabilityId: expectedCapabilityId,
+            code: "missing-runtime-capability",
+            component: expectedRuleId,
+          },
+        ],
+        missingCapabilityIds: [expectedCapabilityId],
+        parseStatus: "complete",
+        playable: false,
+        status: "unsupported",
+      });
+    },
+  );
+
+  it.each([
+    {
+      expectedCapabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
+      expectedRuleId: "exact:on-play:modify-power:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
+    },
+    {
+      expectedCapabilityId: "cannotAttack:choose:thisTurn:zeroChoiceBranch",
+      expectedRuleId: "exact:on-play:cannot-attack:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters cannot attack during this turn.",
+    },
+    {
+      expectedCapabilityId: "cannotBlock:choose:thisTurn:zeroChoiceBranch",
+      expectedRuleId: "exact:on-play:cannot-block:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters cannot block during this turn.",
+    },
+  ])(
+    "fails closed CARD-014G $expectedRuleId synthetic text until zero-choice runtime capability exists",
+    ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
+      const blockedCard = normalizePoneglyphCardDetail({
+        ...loadOp03044Fixture(),
+        card_number: "CARD-014G-SYNTHETIC",
+        effect: sourceText,
+        name: "Synthetic Target Modifier Restriction Candidate",
+      });
+
+      const blocked = evaluateGeneratedSupportPlayability({
+        card: blockedCard,
+        cardDataVersion: "2026-05-13",
+        effectDefinitionsVersion: "generated-support-v1",
+        expectedBehaviorHash: blockedCard.behaviorHash,
+        expectedSourceTextHash: blockedCard.sourceTextHash,
+        rulesVersion: "generated-support-v1",
+        validateEffectDefinition,
+      });
+
+      expect(blocked).toMatchObject({
+        blockers: [
+          {
+            capabilityId: expectedCapabilityId,
+            code: "missing-runtime-capability",
+            component: expectedRuleId,
+          },
+        ],
+        missingCapabilityIds: [expectedCapabilityId],
+        parseStatus: "complete",
+        parserRuleIds: [expectedRuleId],
+        playable: false,
+        status: "unsupported",
+      });
+    },
+  );
+
+  it("does not report mutating choose-target support as standalone selectedTargets producer authority", () => {
+    const supportedCard = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "CARD-014G-MUTATING-TARGET",
+      effect:
+        "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
+      name: "Synthetic Mutating Target Candidate",
+    });
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: supportedCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: supportedCard.behaviorHash,
+      expectedSourceTextHash: supportedCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:modify-power:choose:this-turn",
+        },
+      ],
+      parserRuleIds: ["exact:on-play:modify-power:choose:this-turn"],
+      playable: false,
+      status: "unsupported",
+    });
+    expect(evaluation.capabilityEvidence).toEqual(
+      expect.not.arrayContaining([
+        expect.objectContaining({
+          capabilityId: "savedSelectedTargets:producer",
+        }),
+        expect.objectContaining({
+          capabilityId: "selectTargets:field:public:character:max1",
+        }),
+      ]),
+    );
   });
 
   it("fails closed when reviewed source hash evidence is stale", () => {

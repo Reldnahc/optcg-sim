@@ -1,6 +1,6 @@
-<!-- agent-packet:story-id TYP-009B -->
-<!-- agent-packet:story-path stories/approved/TYP-009B-saved-field-object-reference-consumer-contracts.yaml -->
-<!-- agent-packet:story-sha256 196c866cd558414beaa507d6df271f84028c0f39e0904224deea6df0545330d9 -->
+<!-- agent-packet:story-id CARD-014A -->
+<!-- agent-packet:story-path stories/approved/CARD-014A-composed-runtime-capability-matrix-expansion.yaml -->
+<!-- agent-packet:story-sha256 1c94f8976f9737be53dc105a939ccb9503007b2a6c23de4e24f683d52e9ce644 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -9,79 +9,62 @@
 
 Spec Version: v6
 Story Schema Version: 1.0.0
-ID: TYP-009B
-Epic ID: TYP-009
-Title: Saved field-object reference consumer contracts
+ID: CARD-014A
+Epic ID: CARD-014
+Title: Composed runtime capability matrix expansion
 Type: implementation
-Area: contracts
-Primary Concern: contract
+Area: cards
+Primary Concern: rules
 
 ## Why
 
-Define canonical contract and spec authority for same-frame saved field-object references, selectedTargets production, and exact-card continuous-effect target binding so ENG-055I can become implementable.
+Update cards-side runtime capability evidence so generated support can truthfully distinguish ENG-055-supported composed primitives from unsupported parser/schema/runtime shapes.
 
 ## Authoritative Spec References
 
-- 03-game-state-events-decisions.s016 (Action envelope inside the engine)
-- 03-game-state-events-decisions.s022 (Internal state sequencing)
+- 04-effect-runtime.s005 (Card implementation support)
 - 04-effect-runtime.s010 (Queue processing)
+- 04-effect-runtime.s011 (Conditions and costs)
 - 04-effect-runtime.s012 (Player choices during effect resolution)
 - 04-effect-runtime.s014 (Continuous effects as computed view)
-- 04-effect-runtime.s016 (Failure policy)
+- 04-effect-runtime.s015 (Duration expiration)
 - 05-effect-dsl-reference.s013 (Sequence connector semantics)
 - 05-effect-dsl-reference.s021 (Example: permanent power buff)
+- 05-effect-dsl-reference.s022 (Poneglyph text-to-DSL pipeline)
 - 05-effect-dsl-reference.s026 (Transient reveal and selection primitives)
 - 05-effect-dsl-reference.s029 (Schema coverage policy)
-- 11-testing-quality.s004 (Unit tests per DSL primitive)
-- 11-testing-quality.s008 (Invariant tests)
-- 22-v6-implementation-tightening.s007 (3. DSL schema)
+- 09-card-data-and-support-policy.s010 (Card implementation record)
+- 09-card-data-and-support-policy.s011 (Support policy by mode)
+- 09-card-data-and-support-policy.s012 (Deck validation)
+- 09-card-data-and-support-policy.s013 (Match-time card manifest)
+- 09-card-data-and-support-policy.s016 (Generated support from complete parse)
+- 11-testing-quality.s016 (Coverage gates)
 - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
 - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
 - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
 
 ## Relevant Spec Excerpts
 
-### 03-game-state-events-decisions.s016 (Action envelope inside the engine)
+### 04-effect-runtime.s005 (Card implementation support)
 
-The server-facing protocol envelope is defined separately. The engine action should be pure data.
-
-```ts
-type Action =
-  | { type: "playCard"; cardInstanceId: InstanceId; costPayment?: PaymentSpec }
-  | {
-      type: "activateEffect";
-      source: CardRef;
-      effectId: string;
-      costPayment?: PaymentSpec;
-    }
-  | { type: "attachDon"; donInstanceId: InstanceId; target: CardRef }
-  | { type: "declareAttack"; attacker: CardRef; target: CardRef }
-  | { type: "activateBlocker"; blocker: CardRef }
-  | { type: "useCounter"; cardInstanceId: InstanceId; target: CardRef }
-  | { type: "endMainPhase" }
-  | { type: "concede"; playerId: PlayerId }
-  | {
-      type: "respondToDecision";
-      decisionId: string;
-      response: DecisionResponse;
-    };
-```
-
-### 03-game-state-events-decisions.s022 (Internal state sequencing)
+Effects load only from supported implementation records.
 
 ```ts
-type StateSeq = number & { __brand: "StateSeq" };
-
-interface TurnState {
-  globalTurn: number;
-  playerTurnCounts: Record<PlayerId, number>;
-  turnPlayerId: PlayerId;
-  phase: "refresh" | "draw" | "don" | "main" | "end";
-  step?: BattleStep;
-}
+type CardSupportStatus =
+  | "vanilla-confirmed"
+  | "implemented-dsl"
+  | "implemented-custom"
+  | "unsupported"
+  | "banned-in-simulator";
 ```
 
-Increment `state.seq` after every accepted action or resolved decision, not after every internal event. Internal events have their own sequence inside the event journal.
+A missing effect definition for a non-vanilla card is an error in normal play. Only dev/sandbox modes may allow unsupported cards.
+
+For generated support, the runtime must expose or consume a capability matrix that describes which keyword bodies, DSL primitives, trigger timings, decision types, replacement processes, visibility modes, target shapes, costs, and custom handlers are currently executable. A generated card support record may be considered playable only when the card has a complete parse and every parsed component is covered by that current runtime capability matrix.
+
+Multiple parsed effects from one card compose into one generated `EffectDefinition` for that card. If any component is unparsed, ambiguous, stale, unsupported, or missing capability evidence, the entire generated support record fails closed for normal play instead of partially enabling the card.
+
+Generated composed runtime shapes must fail closed for normal play when the runtime cannot represent the whole composed execution as a supported resumable frame. Unsupported composed shapes include sequence connectors, saved-result references, optionality boundaries, costs, targets, visibility requirements, or pending-decision continuations that the runtime capability matrix does not cover.
 
 ### 04-effect-runtime.s010 (Queue processing)
 
@@ -136,6 +119,54 @@ Generic composed execution is represented by a resumable effect execution frame 
 
 When a sequence segment pauses for a `PendingDecision`, the runtime stores the frame and returns the pending decision with the same causality context. After a valid response, resolution resumes from the stored frame at the paused segment rather than restarting earlier segments. Completed earlier segments must not be re-applied, and their saved result references and segment results remain available for later connector decisions.
 
+### 04-effect-runtime.s011 (Conditions and costs)
+
+Before resolving an effect block:
+
+1. Check source presence policy.
+2. Re-check condition if the effect requires condition-on-resolution.
+3. Check `[Once Per Turn]` usage by `source.instanceId + effectBlock.id + turn`.
+4. If activation requires cost, create a `PayCostDecision` when choices are required.
+5. Pay cost atomically and emit `costPaid` events.
+6. Mark once-per-turn usage only after legal commitment: activation conditions passed, required activation-time targets selected, costs paid, and optional activation accepted. Declined optional effects and failed costs do not consume use; legally committed effects that later fizzle do consume use.
+
+Optionality has three distinct meanings:
+
+- Optional activation asks whether the player commits to resolving the effect block. Declining optional activation means the effect block is not legally committed and once-per-turn usage is not consumed.
+- Optional cost asks whether the player pays a non-mandatory cost inside an otherwise committed effect. Declining or failing an optional cost records `paidCost: false` and only skips later instructions whose connector or text depends on that cost being paid.
+- Optional effect clause asks whether the player performs a non-mandatory instruction during resolution. Declining an optional effect clause records `playerDeclined: true` for that segment and does not undo prior legally completed segments.
+
+Optional cost clauses inside composed execution are not effect-block activation
+costs. They occur after legal commitment to the effect block, inside a
+resumable sequence segment. Optional cost accept, decline, and failure do not
+consume once-per-turn usage because usage was consumed at legal commitment
+before the optional cost clause executes. Accepted optional costs pay cost
+atomically and emit the normal cost-payment events. Declined optional costs do
+not emit cost-payment events. Failed optional costs emit no public event that
+reveals hidden payment candidates or private payment details.
+
+Accepted optional cost records `attempted: true`, `succeeded: true`,
+`paidCost: true`, and `playerDeclined: false`; `changedState` records whether
+canonical state actually changed. Declined optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: true`. Failed optional cost records
+`attempted: true`, `succeeded: false`, `changedState: false`,
+`paidCost: false`, and `playerDeclined: false`. Optional cost accept, decline,
+and failure do not consume once-per-turn usage, and dependent connectors use
+`paidCost` rather than optional-activation state.
+Event `seq` values and `state.seq` advancement remain deterministic for
+optional cost accept, decline, and failure. State hashes include the frame
+segment result for each branch.
+
+```ts
+interface OncePerTurnRecord {
+  cardInstanceId: InstanceId;
+  effectId: string;
+  turnNumber: number;
+  usedAtStateSeq: StateSeq;
+}
+```
+
 ### 04-effect-runtime.s012 (Player choices during effect resolution)
 
 Effects pause through `PendingDecision`.
@@ -170,7 +201,7 @@ Composed execution records one segment result for every attempted sequence segme
 
 Saved-result references may bind selected cards, selected targets, paid costs, or produced objects for later text such as `that Character`. A later segment may use a saved-result reference only while the referenced object remains legal for that later instruction; otherwise the later segment follows its connector and failure policy. Saved references must preserve hidden-information visibility and replay determinism.
 
-A saved field-object reference is the runtime contract for same-frame `selectedTargets` and `producedObjects` consumers in the same effect execution frame. `selectedTargets` production records the public field objects legally selected by a target request in the segment result and saved-reference ledger. `producedObjects` records public field objects produced by a supported segment when the runtime story for that producer explicitly authorizes the produced-object family. Saved hand-selection/playSelected references remain separate from saved field-object references and must not be consumed as field-object targets.
+A saved field-object reference is the runtime contract for same-frame `selectedTargets` and `producedObjects` consumers in the same effect execution frame. `selectedTargets` production records the public field objects legally selected by a non-mutating `selectTargets` request segment in the segment result and saved-reference ledger; mutating target effects are not standalone selectedTargets producer authority. `producedObjects` records public field objects produced by a supported segment when the runtime story for that producer explicitly authorizes the produced-object family. Saved hand-selection/playSelected references remain separate from saved field-object references and must not be consumed as field-object targets.
 
 Field-object consumers must validate the saved family, `saveResultAs`, optional object index, current zone, player/controller, filter, public visibility, and instruction legality at consumption time. unsupported saved-reference families fail closed. stale objects, gone objects, hidden objects, and illegal objects fail closed. A fail-closed saved field-object reference records the segment as attempted, not succeeded, and not changedState, then follows the active connector and failure policy. Public events, public legal actions, PlayerView, and SpectatorView must not reveal hidden identities, hidden candidates, or the private saved-reference failure reason; replay and private effect logs may retain the failure reason for audit. State hashes include the frame saved-reference ledger, the consumer result, and unchanged public/hidden game state so replay, event order, and connector decisions remain deterministic.
 
@@ -240,26 +271,17 @@ Permanent effects may depend on the computed state. If the official rule require
 
 exact-card continuous-effect target binding uses `TargetSpec` shape `{ type: "exactCard"; card: CardRef; binding: SavedFieldObjectTargetBinding; createdAtStateSeq: StateSeq }`. A duration-bearing modifier created from a chosen target resolves the saved field-object reference once, stores the exact card target in the `ContinuousEffectRecord`, and does not re-run the original `choose` target during computed-view recalculation. The modifier remains bound to the same card instance while that instance remains legal for the modifier and the duration; if the object is stale, gone, hidden, or illegal, the modifier fails closed without leaking hidden identities.
 
-### 04-effect-runtime.s016 (Failure policy)
+### 04-effect-runtime.s015 (Duration expiration)
 
-```ts
-type FailurePolicy =
-  | "doAsMuchAsPossible"
-  | "requiresAll"
-  | "skipIfNoLegalTarget"
-  | "optionalIfPossible";
-```
-
-Default is `doAsMuchAsPossible`, unless a connector or card text requires dependency.
-
-For composed execution, failure policy applies to the whole effect block and to each segment through its connector:
-
-- `doAsMuchAsPossible` attempts each supported segment and records per-segment success without rolling back successful independent segments.
-- `requiresAll` fails the composed execution before mutation when any required segment cannot legally complete.
-- `skipIfNoLegalTarget` skips the composed execution when required activation-time or first required resolution-time targets are absent.
-- `optionalIfPossible` offers the optional instruction only when at least one legal execution path exists; if none exists, the segment is not attempted and does not create a decision.
-
-Unsupported composed runtime shapes default to fail-closed rather than degrading to partial execution. Ambiguous connector dependency, saved-reference lifetime, optionality boundary, target visibility, pending-decision continuation, or replacement interaction must be treated as unsupported until the spec and capability matrix authorize it.
+| Duration               | Expiration point                                              |
+| ---------------------- | ------------------------------------------------------------- |
+| `thisBattle`           | End of Battle                                                 |
+| `thisTurn`             | End Phase cleanup                                             |
+| `untilEndOfTurn`       | End Phase cleanup                                             |
+| `untilStartOfNextTurn` | Start of specified player's next Refresh Phase                |
+| `whileSourceOnField`   | When source leaves required zone                              |
+| `whileConditionTrue`   | Not active when condition false; removed or ignored by policy |
+| `permanent`            | Only for true game-permanent changes; avoid for field buffs   |
 
 ### 05-effect-dsl-reference.s013 (Sequence connector semantics)
 
@@ -372,6 +394,41 @@ The runtime should convert this into a `ContinuousEffectRecord`/modifier and app
 
 When a duration-bearing effect uses a chosen target and later needs exact-card continuous-effect target binding, the runtime must resolve the saved field-object reference once and create a modifier target using the canonical `TargetSpec` shape `{ type: "exactCard"; card: CardRef; binding: SavedFieldObjectTargetBinding; createdAtStateSeq: StateSeq }`. The chosen target does not re-run the original `choose` target during computed-view recalculation. The modifier remains bound to the same card instance until its duration expires or the exact card is no longer a legal public object for that modifier.
 
+### 05-effect-dsl-reference.s022 (Poneglyph text-to-DSL pipeline)
+
+The effect-system plan supports three authoring paths:
+
+1. Manual DSL definitions written by developers.
+2. Custom TypeScript handlers for cards that cannot be expressed in DSL.
+3. Generated DSL from Poneglyph printed card text when certified parser rules produce a complete parse and runtime capability checks pass.
+
+Support ladder:
+
+1. `contract-defined`: a primitive or behavior is described by the Markdown spec or canonical TypeScript contract.
+2. `schema-authorable`: `contracts/effect-dsl.schema.json` can validate JSON fixtures for that primitive.
+3. `runtime-executable`: the current runtime capability matrix proves the engine can execute the primitive, including decisions, visibility, replay, failure policy, and pause/resume behavior.
+4. `parser-certified`: reviewed parser rules produce a complete parse for the relevant printed text shape.
+5. `generated-support playable`: a generated support record may enable normal play only when the parse is complete and every parsed component has current runtime capability evidence.
+
+Schema authorability alone is insufficient for generated-support playable status. Generated support requires runtime capability evidence and complete parser support; schema validation only proves a JSON shape can be authored.
+
+Generated definitions must never be deployed blindly. A new parser rule, ambiguous parse class, custom handler binding, or wording/ruling ambiguity requires review before it can certify support. Once a parser rule is certified, matching complete-parse cards may be generated without a manual per-card allowlist or manual card-to-mechanic map for that common template.
+
+A complete parse covers all gameplay-relevant printed text, trigger text, keyword text, costs, conditions, timing windows, target or selection requirements, visibility requirements, replacement or optionality semantics, and ruling/errata inputs that affect behavior. Multiple parsed effects compose into one generated `EffectDefinition`. Partial parse output may be reported for coverage progress, but it must not make the card playable in normal modes.
+
+Bandai or Poneglyph wording drift must invalidate the affected parse/hash evidence or downgrade support until parser and support evidence are updated. If any parsed component is unparsed, ambiguous, stale, unsupported, or missing runtime capability evidence, the generated definition fails closed instead of partially enabling the card.
+
+```ts
+interface EffectDefinitionMetadata {
+  cardId: CardId; // Poneglyph base card ID
+  source: "poneglyph";
+  sourceTextHash: string;
+  generatedBy?: "manual" | "rule-parser" | "llm-assisted";
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+```
+
 ### 05-effect-dsl-reference.s026 (Transient reveal and selection primitives)
 
 ```ts
@@ -407,6 +464,20 @@ type Effect =
       visibility: Visibility;
     }
   | {
+      type: "selectTargets";
+      request: {
+        timing: "onActivation" | "onResolution";
+        chooser: PlayerRef;
+        zone: "leaderArea" | "characterArea" | "stageArea" | "costArea";
+        player: PlayerRef;
+        min: number;
+        max: number;
+        allowFewerIfUnavailable: boolean;
+        filter?: CardFilter;
+        visibility: "public";
+      };
+    }
+  | {
       type: "playSelected";
       selection: SelectionId;
       enterRested?: boolean;
@@ -429,6 +500,8 @@ type Effect =
 ```
 
 These are not UI concepts. They are deterministic effect-runtime concepts. They let the runtime represent "reveal top card, maybe play it, otherwise return it face-down" without losing hidden-information boundaries.
+
+`selectTargets` is the non-mutating selectedTargets producer contract for same-frame saved field-object references. When a later segment consumes `{ family: "selectedTargets", saveResultAs, ... }`, the producer segment must be `selectTargets` with segment `saveResultAs`; mutating target effects do not act as standalone selectedTargets producer authority.
 
 `playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist. Generated support may not treat a parsed play-from-selection instruction as playable unless the parser covers the complete selection/play/return flow and the runtime capability matrix covers the resulting decision, hidden-information, forced-trash, and zone-movement behavior.
 
@@ -473,18 +546,31 @@ Schema-supported fixture subset:
 - trigger: custom
 - condition: yourTurn
 - condition: attachedDonCount
+- condition: fieldCount
 - cost: restDon
 - cost: returnDon
 - cost: restSelf
 - cost: sequence
 - target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
   triggerCard, all, choose, savedFieldObject
-- duration: thisAction, thisBattle, thisTurn, whileSourceOnField, permanent
+- duration: thisAction
+- duration: thisBattle
+- duration: thisTurn
+- duration: untilEndOfTurn
+- duration: untilStartOfNextTurn
+- duration: whileSourceOnField
+- duration: permanent
 - effect: draw
+- effect: drawUpTo
 - effect: ko
 - effect: modifyPower
 - effect: payCost
+- effect: selectCards
+- effect: selectTargets
+- effect: playSelected
 - effect: sequence
+- effect: cannotAttack
+- effect: cannotBlock
 - effect: custom
 - card filters: cardIds, names, nameContains, nameNot, categories, colorsAny,
   colorsAll, typesAny, typesAll, attributesAny, attributesAll, cost, power,
@@ -496,7 +582,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - condition: donCount
 - condition: opponentTurn
 - condition: lifeCount
-- condition: fieldCount
 - condition: handCount
 - condition: trashCount
 - condition: hasCardInZone
@@ -511,23 +596,18 @@ Planned/not fixture-authorable until schema coverage exists:
 - cost: discard
 - cost: chooseOne
 - cost: custom
-- duration: untilEndOfTurn
-- duration: untilStartOfNextTurn
 - duration: whileConditionTrue
-- effect: drawUpTo
 - effect: search
 - effect: lookAtTop
 - effect: revealFromZone
 - effect: revealTop
 - effect: selectFromSet
-- effect: selectCards
 - effect: moveSelected with position
 - effect: putRemaining
 - effect: shuffleDeck
 - effect: bounce
 - effect: trash
 - effect: play
-- effect: playSelected
 - effect: returnUnselectedToDeck
 - effect: trashFromHand
 - effect: setPowerToZero
@@ -545,8 +625,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - effect: damage
 - effect: invalidateEffects
 - effect: protectFromKO
-- effect: cannotAttack
-- effect: cannotBlock
 - effect: cannotBeAttacked
 - effect: cannotBeBlockedBy
 - effect: choice
@@ -557,61 +635,120 @@ Planned/not fixture-authorable until schema coverage exists:
 
 new fixture-authorable primitives must add schema coverage and validation fixtures in the same story that makes the primitive authorable.
 
-### 11-testing-quality.s004 (Unit tests per DSL primitive)
-
-Every primitive has tests independent of specific cards:
-
-- `draw`
-- `ko`
-- `trash`
-- `bounce`
-- `search`
-- `lookAtTop`
-- `modifyPower`
-- `modifyCost`
-- `giveKeyword`
-- `replacement`
-- `damage`
-- `addLife`
-- `attachDon`
-- `returnDon`
-- `choice`
-- `conditional`
-- `sequence`
-
-Primitive tests should assert events, state, decisions, and visibility where applicable.
-
-### 11-testing-quality.s008 (Invariant tests)
-
-Run after every action, decision response, effect resolution, and replay step in test mode.
+### 09-card-data-and-support-policy.s010 (Card implementation record)
 
 ```ts
-assertAllCardsInExactlyOneLocation(state);
-assertNoDuplicateInstanceIds(state);
-assertCharacterAreaSizeAtMostFive(state);
-assertStageAreaSizeAtMostOne(state);
-assertLeaderAreaExactlyOne(state);
-assertAttachedDonConsistency(state);
-assertNoIllegalHiddenInfoInViews(state);
-assertPendingDecisionIsValid(state);
-assertEffectQueueEntriesAreResolvableOrCancelled(state);
-assertStateHashStable(state);
+type CardSupportStatus =
+  | "vanilla-confirmed"
+  | "implemented-dsl"
+  | "implemented-custom"
+  | "unsupported"
+  | "banned-in-simulator";
+
+interface CardImplementationRecord {
+  cardId: CardId; // Poneglyph base card ID
+  status: CardSupportStatus;
+  effectDefinitionId?: string;
+  customHandlerIds?: string[];
+  generatedSupportId?: string;
+  tested: boolean;
+  rulesVersion: string;
+  cardDataVersion: string;
+  sourceTextHash: string; // hash of Poneglyph printed text used for review drift
+  notes?: string;
+}
 ```
 
-### 22-v6-implementation-tightening.s007 (3. DSL schema)
+A card with printed effect text but no implementation must be marked `unsupported`, not omitted. For common templates, implementation may come from a generated support index entry instead of a manual per-card overlay when the complete parse, parser certification, and runtime capability checks all pass.
 
-The canonical schema is `contracts/effect-dsl.schema.json`.
+### 09-card-data-and-support-policy.s011 (Support policy by mode)
 
-Key decisions:
+| Status                |              Dev sandbox | Unranked / custom |                         Ranked |
+| --------------------- | -----------------------: | ----------------: | -----------------------------: |
+| `vanilla-confirmed`   |                  Allowed |           Allowed |                        Allowed |
+| `implemented-dsl`     |                  Allowed |           Allowed |                        Allowed |
+| `implemented-custom`  |                  Allowed | Allowed if tested | Allowed if tested and reviewed |
+| `unsupported`         |     Allowed with warning |          Rejected |                       Rejected |
+| `banned-in-simulator` | Rejected unless override |          Rejected |                       Rejected |
 
-- `CardFilter.costOp` and `CardFilter.costValue` are deprecated.
-- Use `CardFilter.cost: { op, value }` or `CardFilter.cost: { min, max }`.
-- `CardFilter.type`, `typeIncludes`, and `typeIncludesAny` are merged into `typesAny` and `typesAll`.
-- `CardFilter.color` and `colorIncludes` are merged into `colorsAny` and `colorsAll`.
-- `CardFilter.attribute` is merged into `attributesAny` and `attributesAll`.
-- `moveSelected` has one signature: `{ type: "moveSelected", selection, from, to, position? }`.
-- Transient reveal/selection primitives are canonical runtime concepts, not UI concepts.
-- `sequence.effects[]` uses explicit connector semantics.
+Missing overlay records should fail closed in public modes. A non-vanilla Poneglyph card without support metadata is treated as `unsupported`.
+
+### 09-card-data-and-support-policy.s012 (Deck validation)
+
+Deck validation resolves and validates against Poneglyph IDs, Poneglyph legality records, and simulator support metadata. Poneglyph is the canonical external source for format/card legality inputs such as legal status, bans, and copy limits; the simulator may only layer unsupported-card policy or platform-specific constraints on top.
+
+Generated support index output is simulator support metadata. Deck validation may treat a generated record as `implemented-dsl` or `implemented-custom` only when the record has complete parse evidence, current source/behavior hashes, certified parser-rule evidence, and a runtime capability matrix result proving every component is supported.
+
+```ts
+interface DeckValidationResult {
+  valid: boolean;
+  errors: DeckValidationError[];
+  warnings: DeckValidationWarning[];
+  resolvedCards: ResolvedDeckCard[];
+  versions: {
+    cardDataVersion: string;
+    effectDefinitionsVersion: string;
+    overlayVersion: string;
+    banlistVersion: string;
+  };
+}
+```
+
+Validation checks:
+
+- Leader count and leader identity.
+- Main deck size.
+- DON!! deck size.
+- Leader/color restrictions.
+- Per-card copy limits by Poneglyph base `cardId`.
+- Official format restrictions.
+- Simulator-specific bans.
+- Unsupported-card status.
+- Variant IDs resolve to valid Poneglyph variants for the base card.
+
+### 09-card-data-and-support-policy.s013 (Match-time card manifest)
+
+At match creation, snapshot resolved card data versions and implementation data. Replays use this manifest instead of live Poneglyph data. The implementation contract is `MatchCardManifest` in `contracts/canonical-types.ts`.
+
+```ts
+interface MatchCardManifest {
+  manifestHash: string;
+  source: "poneglyph" | "poneglyph-fixture" | "manual-test";
+  cardDataVersion: string;
+  effectDefinitionsVersion: string;
+  customHandlerVersion: string;
+  banlistVersion: string;
+  cards: Record<CardId, ResolvedCard>;
+  createdAt: string;
+}
+```
+
+### 09-card-data-and-support-policy.s016 (Generated support from complete parse)
+
+Common-template card support is generated from complete parsing plus runtime capability checks. It must not depend on a manual per-card allowlist or a manual card-to-mechanic map for templates that parser certification already covers.
+
+CARD parser/generated-support stories consume completed contract/schema plus runtime-capability evidence before parser certification or generated-support linkage may enable normal-mode support. Contract/schema completion alone is not playable support.
+
+Complete parse means every gameplay-relevant part of a card is parsed: printed effect text, trigger text, keyword text, costs, conditions, timing windows, target or selection requirements, visibility requirements, replacement effects, optionality, once-per-turn limits, source-presence rules, and official rulings or errata that affect behavior. Non-gameplay display fields such as images and flavor-like presentation do not need DSL parse evidence, but any field that can affect behavior must be represented or explicitly proven irrelevant.
+
+A runtime capability matrix records which generated components the current engine can execute. It must cover at least keyword bodies, DSL primitives, trigger timings, decision/response types, costs, target/selection shapes, movement operations, replacement processes, continuous modifiers, visibility modes, event/hash requirements, and custom handlers. The matrix is versioned with effect/runtime support evidence and must be updated when runtime capabilities expand or contract.
+
+The generated support index maps Poneglyph card IDs and source hashes to generated `EffectDefinition` IDs, parser-rule versions, parser evidence, runtime capability results, support status, and review state. Multiple parsed effects for one card compose into one generated `EffectDefinition` for that card. If every parsed component is supported by the current runtime capability matrix and parser-rule certification allows automatic support, the generated support index may mark the card playable in the appropriate modes.
+
+Partial support reporting is allowed and encouraged for progress tracking. It may report parsed components, unparsed spans, ambiguous parse classes, missing runtime capabilities, stale hashes, and unsupported custom-handler needs. Partial support does not make a card playable in normal modes, and partial support or effect coverage progress never enables normal play.
+
+Generated support fails closed. If any component is unparsed, ambiguous, stale, unsupported, missing capability evidence, missing parser certification, or affected by Bandai/Poneglyph wording drift, the card is rejected for normal play until parser/support evidence is updated. New parser rules, ambiguous parse classes, custom handlers, and wording or ruling ambiguity require review before they can certify support.
+
+### 11-testing-quality.s016 (Coverage gates)
+
+Suggested early gates:
+
+- 90%+ line coverage in `engine-core` for functions excluding generated card data.
+- 100% of implemented non-vanilla cards have at least one test.
+- 100% of custom handlers have direct tests.
+- 0 stale source text hashes in ranked card pool.
+- 0 unsupported cards allowed in ranked validation fixtures.
+- 0 queue-eligible ranked formats missing ladder configuration.
 
 ### 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
 
@@ -627,59 +764,56 @@ Lint, formatting, and merge-gate verification are mandatory, and CI must fail wh
 
 ## Story Boundary
 
-Own only saved field-object reference contract/spec/schema/type authority and contract tests. Do not implement engine runtime behavior, card parser support, or generated card support.
+Own only packages/cards runtime capability matrix evidence, support evaluator capability gating, diagnostics for missing capability, and focused cards tests. Do not add parser rules, generated support for new card text, DSL schema, or engine runtime behavior.
 
 ## Scope
 
-- define the concrete same-frame producer authority for sequence segment `selectedTargets`
-- define the concrete same-frame consumer authority for saved field-object references, including `selectedTargets` and `producedObjects`
-- define legality, visibility, zone, controller, stale-object, gone-object, hidden-object, and unsupported-family fail-closed rules for saved field-object references
-- define how saved field-object references relate to exact-card continuous-effect target binding required by ENG-055J
-- define whether the exact-card continuous-effect target carrier is a new `TargetSpec` shape or another canonical game-state contract shape
-- keep saved hand-selection/playSelected references separate from saved field-object target references
-- add contract/type/schema fixtures proving supported saved field-object references validate and unsupported saved-reference families reject
+- add cards-side capability records only for runtime-supported composed shapes listed in this story
+- add positive capability ID `drawUpTo:self:chooseQuantity` backed by TYP-007D, ENG-055A, ENG-055H, and ENG-055K when play-card reachability is required
+- preserve existing positive capability IDs `trigger:onPlay`, `category:auto`, and `effect:draw:self:count:positive-safe-integer` when required by composed parser children
+- add positive capability IDs `sequence:draw:trashFromHand`, `sequence:trashFromHand:draw`, `sequence:genericFrames`, and `trashFromHand:segment0:self:self:count-exact` backed by TYP-008, ENG-055B, and ENG-055C
+- add positive capability IDs `returnDon:cost:self:count-exact`, `payCost:returnDon:self:count-exact`, `selectCards:hand:self:character:max1`, `playSelected:hand:character:max1`, and `playSelected:hand:character:max1:ignoreCost` only where backed by TYP-007D, TYP-009A, ENG-055F, and ENG-055G
+- add positive capability IDs `selectTargets:field:public:character:max1`, `savedSelectedTargets:producer`, and `savedFieldObject:consumer:generic` only where backed by TYP-009B, TYP-010, ENG-055I, and the completed selected-target runtime evidence
+- add positive capability ID `optionalEffectBlock:onPlay:draw-1:self` backed by TYP-007C and ENG-055D
+- add positive capability IDs `condition:yourTurn` and `condition:selfAttachedDonCount` backed by TYP-007C and ENG-055E
+- add positive capability IDs `modifyPower:self:thisTurn`, `modifyPower:choose:thisTurn`, `modifyPower:all:thisTurn`, `modifyPower:self:thisBattle`, `cannotAttack:self:thisTurn`, `cannotAttack:choose:thisTurn`, `cannotAttack:all:thisTurn`, `cannotBlock:self:thisTurn`, `cannotBlock:choose:thisTurn`, and `cannotBlock:all:thisTurn` only where backed by TYP-007E and ENG-055J
+- add positive capability IDs `sourcePresencePolicy:mustRemainInSameZone`, `sourcePresencePolicy:resolveFromDestinationZone`, `sourcePresencePolicy:resolveFromLastKnownInformation`, and `sourcePresencePolicy:noSourceRequired` only for trigger/source combinations proven by ENG-055 runtime evidence
+- add explicit unsupported blockers for saved references used as modifier/restriction targets or hand-selection/playSelected inputs unless later runtime authority supports those families
+- add explicit unsupported blockers for sequence positions, targets, durations, trigger/sourcePresencePolicy combinations, and unsupported Stage/Event/replacement/refresh-lock families not listed as positive capabilities
+- add tests proving missing capability blocks generated support
 
 ## Out of Scope
 
-- engine runtime implementation of saved-reference producer or consumer behavior
-- ENG-055J runtime implementation of chosen-target continuous effects
-- saved hand-selection consumption for playSelected, which remains ENG-055G runtime work
-- parser/card support, generated-support admission, real-card fixtures, server, client, API, UI, database, or live Poneglyph work
+- parser rules or parser helper refactors
+- new generated playable support
+- real-card fixture support
+- engine runtime behavior
+- shared contracts or effect DSL schema changes
+- replacement generalization
 
 ## Allowed Touch Points
 
 <!-- prettier-ignore -->
-- specs/03-game-state-events-decisions.md
-- specs/04-effect-runtime.md
-- specs/05-effect-dsl-reference.md
-- specs/section-index.json
-- contracts/canonical-types.ts
-- contracts/effect-dsl.schema.json
-- contracts/types/effects.ts
-- contracts/types/game-state.ts
-- contracts/types/runtime.ts
-- packages/types/src/effects.ts
-- packages/types/src/effects.test.ts
-- packages/types/src/game-state.ts
-- packages/types/src/game-state.test.ts
-- packages/types/src/runtime.ts
-- packages/types/src/runtime.test.ts
-- packages/types/src/export-cohesion.test.ts
-- packages/types/src/export-ownership.manifest.ts
-- tests/contracts/**
-- fixtures/effect-dsl/**
-- stories/approved/TYP-009*.yaml
-- stories/generated/TYP-009*.yaml
-- agent-packets/TYP-009B.md
-- agent-packets/TYP-009*-story-review-*.md
+- packages/cards/src/runtime-capability-matrix.ts
+- packages/cards/src/runtime-capability-matrix.test.ts
+- packages/cards/src/generated-support-index.ts
+- packages/cards/src/generated-support-index.test.ts
+- packages/cards/src/generated-support-report.test.ts
+- packages/cards/src/support-evaluator.ts
+- packages/cards/src/support-evaluator.test.ts
+- packages/cards/src/support-probe.test.ts
+- packages/cards/src/*support*.test.ts
+- stories/generated/CARD-014*.yaml
+- stories/approved/CARD-014*.yaml
+- agent-packets/CARD-014A.md
 - agent-packets/active.json
 
 ## Constraints
 
-- do not implement engine runtime behavior in this story
-- do not merge saved hand-selection/playSelected references with saved field-object target references
-- do not treat contract authorability as runtime support
-- fail closed on saved-reference legality, visibility, replay, event-order, or state-hash ambiguity
+- generate and activate the CARD-014A packet before implementation
+- stay within allowed_touch_points
+- do not add parser rules, real-card proof, engine behavior, or shared schema
+- fail closed when runtime support evidence is incomplete or ambiguous
 - use `pnpm`; the canonical local verification commands are `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`
 - TypeScript stays strict; avoid `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions without explicit justification
 - ESLint with type-aware rules and Prettier formatting are required; CI and local verification must fail when checked-in generated artifacts are stale
@@ -703,14 +837,17 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 ## Required Tests
 
-- focused contract/type tests for saved `selectedTargets` production and saved field-object consumer shapes
-- focused contract/type tests for exact-card continuous-effect target binding
-- negative tests proving unsupported saved-reference families and ambiguous hidden/illegal field-object references reject
-- tests or spec-authority guard updates pinning replay, event-order, hidden-info, and state-hash semantics
-- run `corepack pnpm run types:sync:check`
-- run `corepack pnpm run contracts:validate-effects`
-- run `corepack pnpm run test:contracts`
+- exact candidate story-review before approval
+- runtime capability matrix tests for every exact positive capability ID listed in this story
+- trigger and sourcePresencePolicy combination tests for supported and unsupported combinations
+- negative capability tests for saved references used as modifier/restriction targets and hand-selection/playSelected inputs
+- capability tests for `optionalEffectBlock:onPlay:draw-1:self`, `condition:yourTurn`, and `condition:selfAttachedDonCount`
+- negative capability tests for unsupported sequence position, unsupported target, unsupported duration, and missing capability
+- generated-support evaluator or index test proving missing capability blocks generated support
+- run `corepack pnpm run packets:verify`
 - run `corepack pnpm run stories:validate`
+- run `corepack pnpm --filter @optcg/cards test`
+- full `corepack pnpm verify`
 
 ## Expected Output
 
@@ -721,12 +858,10 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 ## Acceptance Criteria
 
-- `selectedTargets` production authority is concrete enough for an ENG story to implement
-- saved `selectedTargets` and `producedObjects` field-object consumer authority is concrete enough for ENG-055I to implement
-- exact-card continuous-effect target binding is canonical and compatible with ENG-055J's `choose` target runtime story
-- unsupported saved-reference families, stale objects, gone objects, hidden objects, and illegal objects fail closed without leaking hidden identities
-- saved field-object reference contracts preserve deterministic replay, event order, and state-hash behavior
-- ENG-055I can cite this story as authority for saved field-object reference runtime implementation
+- generated-support capability checks can distinguish supported ENG-055 composed shapes from unsupported shapes
+- missing capability evidence blocks generated support with explicit blocker diagnostics
+- no parser rule starts producing new playable support in this story
+- capability records do not overstate Stage, Event, replacement, refresh-lock, unsupported target, unsupported duration, or unsupported trigger support
 
 ## Post-Approval Role Sections
 

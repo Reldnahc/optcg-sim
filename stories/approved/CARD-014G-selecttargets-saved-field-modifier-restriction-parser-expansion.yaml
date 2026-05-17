@@ -1,0 +1,120 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-014G
+epic_id: CARD-014
+title: selectTargets saved field object modifier restriction parser expansion
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add certified exact-template support for public field target selection
+  producer shapes, later saved-field-object consumers, and supported temporary
+  power modifier or restriction shapes.
+story_boundary: >
+  Own only packages/cards parser, generated DSL, capability gating, diagnostics,
+  source integrity for any real-card proof, and tests for supported public field
+  target, saved-field-object, modifyPower, cannotAttack, and cannotBlock shapes.
+  Do not add runtime behavior or reuse hand selection as field targeting.
+allowed_touch_points:
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/card014g-composed-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - fixtures/poneglyph/cards/**
+  - tests/integration/**
+  - stories/generated/CARD-014*.yaml
+  - stories/approved/CARD-014*.yaml
+  - agent-packets/CARD-014G.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s016
+  - 04-effect-runtime.s014
+  - 04-effect-runtime.s015
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s021
+  - 05-effect-dsl-reference.s026
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+dependencies:
+  - TYP-009
+  - TYP-009B
+  - TYP-010
+  - CARD-014A
+  - CARD-014B
+scope:
+  - certify exact-template support for public field target selection producer shapes
+  - certify support for later saved-field-object consumers only for runtime-supported generic field-object consumer shapes
+  - certify temporary modifyPower support only for target/duration pairs with existing runtime capability evidence, currently `self` with `thisBattle` or `thisTurn` and `all` with `thisTurn`; `choose`/`up to 1` with `thisTurn` must parse but fail generated support until ENG runtime supports the zero-choice branch
+  - certify cannotAttack and cannotBlock support only for target/duration pairs with existing runtime capability evidence, currently `self` and `all` with `thisTurn`; `choose`/`up to 1` with `thisTurn` must parse but fail generated support until ENG runtime supports the zero-choice branch
+  - require source integrity and engine_capability_preflight for any real-card proof
+  - fail closed for handSelection used as field target selection
+  - fail closed for saved-field-object or saved-selection references used as modifier/restriction targets unless later completed contract/runtime evidence proves support
+  - fail closed for refresh-lock or cannot become active next refresh without contract/runtime authority
+non_scope:
+  - runtime behavior
+  - handSelection as field targeting
+  - refresh-lock or cannot become active next refresh
+  - cannotBeAttacked, cannotBeBlockedBy, invalidateEffects, protectFromKO, or unsupported restriction families
+  - broad targeting grammar
+  - replacement generalization
+card_source_integrity:
+  - real-card proof is optional for this draft but mandatory before marking any real card playable
+  - any real-card proof must list exact card ID, capture command or checked-in fixture, behavior-sensitive target/modifier/restriction text, source hash, behavior hash, and regeneration requirements
+  - synthetic tests may prove parser and support-pipeline behavior but must not be described as real-card support
+engine_capability_preflight:
+  - selectTargets producer support must be backed by TYP-010 and ENG-055 selected-target runtime evidence
+  - saved field-object consumer support must be backed by completed TYP-009B lifecycle state and ENG-055I runtime evidence, limited to generic field-object consumer shapes
+  - modifyPower, cannotAttack, and cannotBlock support must be backed by TYP-007E and ENG-055J runtime evidence for supported targets `self` and `all`; `choose`/`up to 1` target templates require separate ENG zero-choice branch runtime evidence before generated support may mark them playable
+  - supported modifier/restriction durations are limited to existing positive cards-side runtime capability records; do not add or imply support for `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, or `permanent` unless a completed ENG/runtime evidence story adds that support
+  - saved-field-object and saved-selection modifier/restriction targets are missing capability blockers unless later completed contract/runtime evidence proves support
+  - unsupported duration blockers include `thisAction`, `whileConditionTrue`, `untilEndOfTurn`, `untilStartOfNextTurn`, `whileSourceOnField`, `permanent`, and malformed turn-relative durations unless separate completed runtime evidence exists
+  - refresh-lock and cannot become active next refresh remain unsupported unless separate contract/runtime authority exists
+acceptance_criteria:
+  - exact supported public field target producer text parses completely and requires selectTargets capability evidence
+  - exact supported saved-field-object consumer text parses completely only for runtime-supported generic field-object consumer shapes and only after TYP-009B lifecycle is reconciled
+  - exact supported modifyPower, cannotAttack, and cannotBlock text parses completely only for supported targets `self` and `all` with supported durations; `choose`/`up to 1` templates parse completely but generated-support indexing reports missing zero-choice runtime capability
+  - handSelection is not reused as field targeting
+  - unsupported target, duration, modifier, restriction, saved-reference modifier/restriction target, refresh-lock, and residue shapes fail closed
+required_tests:
+  - exact candidate story-review before approval
+  - parser tests for each included selectTargets producer shape
+  - negative parser/evaluator test proving mutating target effects do not satisfy standalone selectedTargets producer authority
+  - parser tests for each included saved-field-object consumer shape
+  - parser tests for each included modifyPower, cannotAttack, and cannotBlock shape
+  - generated DSL validation tests for produced target, saved reference, modifier, and restriction output
+  - missing capability blocks support tests
+  - fail-closed tests for handSelection-as-field-target, saved references as modifier/restriction targets, unsupported targets, unsupported durations including `thisAction` and `whileConditionTrue`, unsupported restrictions, refresh-lock, and residue
+  - source-integrity backed tests for any real-card proof included by the approved story
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-014G packet before implementation
+  - stay within allowed_touch_points
+  - do not add runtime behavior or shared schema in this story
+  - fail closed on target visibility, saved-reference, duration, modifier, restriction, or capability ambiguity
+ambiguity_policy: fail_and_escalate

@@ -1,0 +1,112 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-014I
+epic_id: CARD-014
+title: Support probe and report integration for composed effects
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Add final cards-side generated-support and playability diagnostics for
+  composed effects so reports identify the exact missing support layer.
+story_boundary: >
+  Own only packages/cards support-probe, support-report, generated-support
+  diagnostics, and tests. Do not add new parser rules, runtime behavior,
+  generated DSL support, fixtures, or card playability in this final
+  diagnostics child.
+allowed_touch_points:
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - tests/integration/**
+  - stories/generated/CARD-014*.yaml
+  - stories/approved/CARD-014*.yaml
+  - agent-packets/CARD-014I.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s014
+  - 04-effect-runtime.s015
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s021
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s026
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-014H
+scope:
+  - report exact missing parser layer
+  - preserve distinct blocker identity for `unparsed-span`, `ambiguous-wording`, and `custom-handler-required`
+  - report exact missing schema layer
+  - report exact missing runtime capability layer
+  - report exact missing source integrity layer
+  - report exact missing metadata, review, test status, or stale hash layer
+  - report unsupported primitive, trigger, cost, optionality, condition, cardinality, target, duration, modifier, restriction, saved-reference, or unsupported-layer output
+  - preserve read-only probe/report behavior
+non_scope:
+  - new parser support
+  - new runtime behavior
+  - new generated playable support
+  - fixture capture or fixture edits
+  - shared contracts or effect DSL schema changes
+  - server, client, API, UI, database, replay, or live Poneglyph work
+  - replacement generalization
+card_source_integrity:
+  - no real-card support is enabled by this diagnostics story
+  - diagnostics must preserve existing source hash and behavior hash reporting without mutating fixture evidence
+  - stale hash diagnostics must not silently refresh or rewrite fixtures
+engine_capability_preflight:
+  - diagnostics must report missing runtime capability evidence without treating missing evidence as support
+  - unsupported runtime layers must remain unsupported even when parser and schema layers pass
+  - no new runtime capability records are added by this story
+acceptance_criteria:
+  - support reports identify the exact missing layer for composed generated support
+  - diagnostics distinguish parser, schema, runtime capability, source integrity, metadata, review, test status, stale hash, unsupported primitive, unsupported trigger, unsupported cost, unsupported optionality, unsupported condition, unsupported cardinality, unsupported target, unsupported duration, unsupported modifier, unsupported restriction, unsupported saved-reference, and unsupported-layer output
+  - diagnostics preserve existing blocker code identity for `unparsed-span`, `ambiguous-wording`, `custom-handler-required`, `unsupported-primitive`, `stale-hash`, `invalid-dsl-schema`, and `missing-runtime-capability`
+  - no new parser/runtime/card support is introduced by this story
+  - existing support-probe and report behavior remains compatible for CARD-008, CARD-009, CARD-012, and CARD-013 examples
+required_tests:
+  - exact candidate story-review before approval
+  - support-report tests for parser, schema, runtime capability, source integrity, metadata/review/test status, stale hash, unsupported primitive, unsupported trigger, unsupported cost, unsupported optionality, unsupported condition, unsupported cardinality, unsupported target, unsupported duration, unsupported modifier, unsupported restriction, unsupported saved-reference, and unsupported-layer output categories
+  - support-report tests proving `unparsed-span`, `ambiguous-wording`, and `custom-handler-required` retain distinct blocker identity instead of being collapsed into a generic parser layer
+  - support-report tests proving existing blocker codes `unsupported-primitive`, `stale-hash`, `invalid-dsl-schema`, and `missing-runtime-capability` retain distinct identity
+  - support-probe tests proving each required missing-layer category is printed with exact layer identity
+  - support-probe tests proving read-only diagnostics and nonzero blocker reporting remain stable
+  - support-probe test proving unknown or untrusted layer classification remains unsupported and reports a fail-closed diagnostic instead of becoming playable
+  - regression tests proving existing support report output remains compatible for prior CARD generated-support examples
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-014I packet before implementation
+  - stay within allowed_touch_points
+  - do not add parser rules, runtime behavior, fixture support, or playable card support
+  - fail closed when diagnostics cannot determine a trusted missing layer
+ambiguity_policy: fail_and_escalate

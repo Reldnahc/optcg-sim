@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-014G.md",
+      "storyId": "CARD-014G",
+      "storyPath": "stories/approved/CARD-014G-selecttargets-saved-field-modifier-restriction-parser-expansion.yaml",
+      "storySha256": "f015098b8a763ade2128ffbf421bfcb62700c830e85b27ee4c752aa2aae1c142"
+    }
+  ],
   "version": 1
 }

@@ -12,6 +12,8 @@ import {
   type PoneglyphClient,
 } from "./poneglyph-client.js";
 import type { EffectDefinitionValidationResult } from "./generated-support-index.js";
+import { classifyGeneratedSupportBlockerLayer } from "./generated-support-report.js";
+import type { GeneratedSupportBlocker } from "./generated-support-types.js";
 import {
   evaluateGeneratedSupportPlayability,
   type EvaluateGeneratedSupportPlayabilityInput,
@@ -77,17 +79,25 @@ export async function runSupportProbe(
   } else {
     options.stdout.write("Blockers:\n");
     for (const blocker of evaluation.blockers) {
-      const spanText =
-        blocker.span === undefined
-          ? ""
-          : ` span: ${JSON.stringify(blocker.span.text)}`;
-      options.stdout.write(
-        `- ${blocker.code}: ${blocker.message}${spanText}\n`,
-      );
+      options.stdout.write(`${formatSupportProbeBlocker(blocker)}\n`);
     }
   }
 
   return 0;
+}
+
+export function formatSupportProbeBlocker(
+  blocker: Pick<
+    GeneratedSupportBlocker,
+    "code" | "component" | "diagnosticLayer" | "message" | "span"
+  >,
+): string {
+  const spanText =
+    blocker.span === undefined
+      ? ""
+      : ` span: ${JSON.stringify(blocker.span.text)}`;
+  const layer = classifyGeneratedSupportBlockerLayer(blocker);
+  return `- ${blocker.code} [layer: ${layer}]: ${blocker.message}${spanText}`;
 }
 
 export async function runSupportProbeCli(

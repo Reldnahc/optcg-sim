@@ -6,7 +6,11 @@ import { describe, expect, it } from "vitest";
 import type { CardId, PoneglyphCardDetail } from "@optcg/types";
 
 import { normalizePoneglyphCardDetail } from "./normalization.js";
-import { runSupportProbe, runSupportProbeCli } from "./support-probe.js";
+import {
+  formatSupportProbeBlocker,
+  runSupportProbe,
+  runSupportProbeCli,
+} from "./support-probe.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -35,6 +39,107 @@ async function loadFixture(
 }
 
 describe("support probe", () => {
+  it("formats blocker output with explicit layer coverage for report/probe integration", () => {
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "source-integrity:fixture-hash-mismatch",
+        message: "Fixture source integrity mismatch.",
+      }),
+    ).toContain("[layer: source-integrity]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "review:missing-review-record",
+        message: "Review evidence missing.",
+      }),
+    ).toContain("[layer: review]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "test-status:missing-test-evidence",
+        message: "Test evidence missing.",
+      }),
+    ).toContain("[layer: test-status]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "trigger:event",
+        message: "Trigger category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-trigger]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "payCost:returnDon:self:count-exact",
+        message: "Cost category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-cost]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "optionalEffectBlock:onPlay:draw-1:self",
+        message: "Optionality category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-optionality]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "condition:yourTurn",
+        message: "Condition category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-condition]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "sequence:position:segment2",
+        message: "Cardinality category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-cardinality]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "selectTargets:field:public:character:max1",
+        message: "Target category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-target]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "card014a:unsupported:duration-until-start-next-turn",
+        message: "Duration category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-duration]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "modifyPower:self:permanent",
+        message: "Modifier category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-modifier]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "cannotAttack:choose:thisTurn",
+        message: "Restriction category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-restriction]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "savedFieldObject:consumer:generic",
+        message: "Saved-reference category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-saved-reference]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "unknown:untrusted",
+        message: "Unknown category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-layer]");
+  });
+
   it("runs CLI path with injected fetch and prints playable output without live network", async () => {
     const detail = await loadOp03044Fixture();
     const normalized = normalizePoneglyphCardDetail(detail);
@@ -239,6 +344,7 @@ describe("support probe", () => {
     expect(text).toContain("Playable: no");
     expect(text).toMatch(/Blockers:/);
     expect(text).toMatch(/unparsed-span|missing-runtime-capability/);
+    expect(text).toContain("layer: parser");
     expect(text).toContain('span: "Then rest 1 DON!!."');
   });
 
@@ -292,10 +398,72 @@ describe("support probe", () => {
     const text = output.join("");
     expect(exitCode).toBe(0);
     expect(text).toContain("Playable: no");
+    expect(text).toContain("layer: parser");
     expect(text).toContain(
       'span: "[On Play] Draw a card for each of your {Neptunian} type Characters. Then, trash the same number of cards from your hand."',
     );
     expect(text).not.toContain('span: "[Rush: Character]');
+  });
+
+  it("prints metadata layer for empty-effect metadata precondition blockers", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-014I-UNKNOWN"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-014I-UNKNOWN",
+          card_type: "Event",
+          effect: null,
+          name: "Unknown Layer Candidate",
+          power: null,
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("layer: metadata");
+  });
+
+  it("prints metadata layer for certified keyword metadata precondition blockers", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-014I-METADATA"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-014I-METADATA",
+          card_type: "Event",
+          effect:
+            "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
+          keyword: ["Blocker"],
+          name: "Metadata Layer Candidate",
+          power: null,
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("unsupported-primitive");
+    expect(text).toContain("layer: metadata");
   });
 
   it("does not create, delete, or rewrite fixture, manifest, report, or cache files when probing via CLI", async () => {

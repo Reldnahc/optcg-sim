@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the contract/spec work needed to unblock ENG-055D optional-cost
   runtime and ENG-055I saved field-object reference runtime without adding

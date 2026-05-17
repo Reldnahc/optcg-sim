@@ -5,8 +5,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { buildGeneratedSupportIndex } from "./generated-support-index.js";
-import { buildGeneratedSupportReport } from "./generated-support-report.js";
+import {
+  buildGeneratedSupportReport,
+  classifyGeneratedSupportBlockerLayer,
+} from "./generated-support-report.js";
 import { normalizePoneglyphCardDetail } from "./normalization.js";
+import { listRepresentativeSupportProofMatrixRows } from "./representative-fixtures.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 
 const baseInput = {
@@ -25,6 +29,124 @@ const repoRoot = path.resolve(
 );
 
 describe("generated support report", () => {
+  it("classifies blocker layers with fail-closed fallback for unknown unsupported components", () => {
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unparsed-span",
+      }),
+    ).toBe("parser");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "invalid-dsl-schema",
+      }),
+    ).toBe("schema");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "missing-runtime-capability",
+      }),
+    ).toBe("runtime-capability");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "stale-hash",
+      }),
+    ).toBe("stale-hash");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+      }),
+    ).toBe("unsupported-layer");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "metadata:missing-certified-keyword",
+      }),
+    ).toBe("metadata");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "review:missing-review-record",
+      }),
+    ).toBe("review");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "test-status:missing-test-evidence",
+      }),
+    ).toBe("test-status");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "source-integrity:fixture-hash-mismatch",
+      }),
+    ).toBe("source-integrity");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "trigger:event",
+      }),
+    ).toBe("unsupported-trigger");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "payCost:returnDon:self:count-exact",
+      }),
+    ).toBe("unsupported-cost");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "optionalEffectBlock:onPlay:draw-1:self",
+      }),
+    ).toBe("unsupported-optionality");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "condition:yourTurn",
+      }),
+    ).toBe("unsupported-condition");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "sequence:position:segment2",
+      }),
+    ).toBe("unsupported-cardinality");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "selectTargets:field:public:character:max1",
+      }),
+    ).toBe("unsupported-target");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "card014a:unsupported:duration-permanent",
+      }),
+    ).toBe("unsupported-duration");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "modifyPower:self:permanent",
+      }),
+    ).toBe("unsupported-modifier");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "cannotAttack:choose:thisTurn",
+      }),
+    ).toBe("unsupported-restriction");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "savedFieldObject:consumer:generic",
+      }),
+    ).toBe("unsupported-saved-reference");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "mystery:untrusted-shape",
+      }),
+    ).toBe("unsupported-layer");
+  });
+
   it("includes OP03-044 Kaya as supported with certified parser and capability evidence", () => {
     const fixture = JSON.parse(
       readFileSync(
@@ -116,6 +238,7 @@ describe("generated support report", () => {
         {
           cardId: "CARD-008D-002",
           code: "unparsed-span",
+          layer: "parser",
           message: "Unsupported card text remains after certified parsing.",
           span: {
             end: 41,
@@ -128,6 +251,7 @@ describe("generated support report", () => {
           cardId: "CARD-008D-003",
           code: "missing-runtime-capability",
           component: "exact:on-play:draw-n:self",
+          layer: "runtime-capability",
           message:
             "Missing runtime capability effect:draw:self:count:positive-safe-integer for parser rule exact:on-play:draw-n:self.",
         },
@@ -220,9 +344,92 @@ describe("generated support report", () => {
         cardId: "CARD-008D-005",
         code: "unsupported-primitive",
         component: "effect:rest-don",
+        layer: "unsupported-primitive",
         message: "Resting DON is not covered by the runtime matrix.",
       },
     ]);
+  });
+
+  it("classifies metadata precondition blockers as metadata while preserving blocker code identity", () => {
+    const report = buildGeneratedSupportReport({
+      effectDefinitions: {},
+      entries: [
+        {
+          blockers: [
+            {
+              code: "unsupported-primitive",
+              component: "metadata:keyword-precondition",
+              message:
+                "Normalized card metadata does not satisfy certified Blocker keyword support preconditions.",
+            },
+          ],
+          capabilityEvidence: [],
+          cardId: "CARD-014I-META" as CardId,
+          missingCapabilityIds: [],
+          parseStatus: "unsupportedPrimitive",
+          parserRuleIds: [],
+          sourceTextHash: "sha256:meta",
+          status: "unsupported",
+        },
+      ],
+    });
+
+    expect(report.blockers).toEqual([
+      {
+        cardId: "CARD-014I-META",
+        code: "unsupported-primitive",
+        component: "metadata:keyword-precondition",
+        layer: "metadata",
+        message:
+          "Normalized card metadata does not satisfy certified Blocker keyword support preconditions.",
+      },
+    ]);
+  });
+
+  it("excludes non-primitive diagnostic components from unsupportedPrimitiveComponents", () => {
+    const report = buildGeneratedSupportReport({
+      effectDefinitions: {},
+      entries: [
+        {
+          blockers: [
+            {
+              code: "unsupported-primitive",
+              component: "metadata:keyword-precondition",
+              message: "Metadata precondition missing.",
+            },
+            {
+              code: "unsupported-primitive",
+              component: "review:missing-review-record",
+              message: "Review evidence missing.",
+            },
+            {
+              code: "unsupported-primitive",
+              component: "test-status:missing-test-evidence",
+              message: "Test evidence missing.",
+            },
+            {
+              code: "unsupported-primitive",
+              component: "source-integrity:fixture-hash-mismatch",
+              message: "Fixture source integrity mismatch.",
+            },
+            {
+              code: "unsupported-primitive",
+              component: "effect:rest-don",
+              message: "Unsupported runtime primitive.",
+            },
+          ],
+          capabilityEvidence: [],
+          cardId: "CARD-014I-COMPONENTS" as CardId,
+          missingCapabilityIds: [],
+          parseStatus: "unsupportedPrimitive",
+          parserRuleIds: [],
+          sourceTextHash: "sha256:components",
+          status: "unsupported",
+        },
+      ],
+    });
+
+    expect(report.unsupportedPrimitiveComponents).toEqual(["effect:rest-don"]);
   });
 
   it("reports invalid draw-count blockers deterministically", () => {
@@ -378,6 +585,196 @@ describe("generated support report", () => {
     });
   });
 
+  it("includes exact synthetic trash-then-draw support and reports missing segment-0 trash capability", () => {
+    const missingSegment0TrashMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "trashFromHand:segment0:self:self:count-exact",
+      ),
+    };
+    const supportedIndex = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-014C-SUPPORTED" as CardId,
+          sourceText: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+          sourceTextHash: "sha256:trash-draw-supported",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const missingCapabilityIndex = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-014C-MISSING-CAP" as CardId,
+          sourceText: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+          sourceTextHash: "sha256:trash-draw-missing",
+        },
+      ],
+      runtimeCapabilityMatrix: missingSegment0TrashMatrix,
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport({
+      effectDefinitions: supportedIndex.effectDefinitions,
+      entries: [...supportedIndex.entries, ...missingCapabilityIndex.entries],
+    });
+
+    expect(report.supportedCardIds).toEqual(["CARD-014C-SUPPORTED"]);
+    expect(report.unsupportedCardIds).toEqual(["CARD-014C-MISSING-CAP"]);
+    expect(report.parserRuleIdsUsed).toEqual([
+      "exact:on-play:trash-2-from-hand:draw-1:self",
+    ]);
+    expect(report.missingRuntimeCapabilityIds).toEqual([
+      "trashFromHand:segment0:self:self:count-exact",
+    ]);
+    expect(report.blockers).toEqual([
+      {
+        capabilityId: "trashFromHand:segment0:self:self:count-exact",
+        cardId: "CARD-014C-MISSING-CAP",
+        code: "missing-runtime-capability",
+        component: "exact:on-play:trash-2-from-hand:draw-1:self",
+        layer: "runtime-capability",
+        message:
+          "Missing runtime capability trashFromHand:segment0:self:self:count-exact for parser rule exact:on-play:trash-2-from-hand:draw-1:self.",
+      },
+    ]);
+  });
+
+  it.each([
+    "selectCards:hand:self:character:max1",
+    "playSelected:hand:character:max1:ignoreCost",
+  ])(
+    "includes exact synthetic return-DON play-from-hand support and reports missing %s capability",
+    (missingCapabilityId) => {
+      const matrixWithoutCapability = {
+        ...generatedSupportRuntimeCapabilityMatrix,
+        capabilities:
+          generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+            (capability) => capability.id !== missingCapabilityId,
+          ),
+      };
+      const supportedIndex = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "CARD-014E-SUPPORTED" as CardId,
+            sourceText:
+              "[On Play] DON!! -1: Select up to 1 Character card from your hand and play it.",
+            sourceTextHash: "sha256:return-don-play-supported",
+          },
+        ],
+        validateEffectDefinition,
+      });
+      const missingCapabilityIndex = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "CARD-014E-MISSING-CAP" as CardId,
+            sourceText:
+              "[On Play] DON!! -1: Select up to 1 Character card from your hand and play it.",
+            sourceTextHash: "sha256:return-don-play-missing",
+          },
+        ],
+        runtimeCapabilityMatrix: matrixWithoutCapability,
+        validateEffectDefinition,
+      });
+
+      const report = buildGeneratedSupportReport({
+        effectDefinitions: supportedIndex.effectDefinitions,
+        entries: [...supportedIndex.entries, ...missingCapabilityIndex.entries],
+      });
+
+      expect(report.supportedCardIds).toEqual(["CARD-014E-SUPPORTED"]);
+      expect(report.unsupportedCardIds).toEqual(["CARD-014E-MISSING-CAP"]);
+      expect(report.parserRuleIdsUsed).toEqual([
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+      ]);
+      expect(report.missingRuntimeCapabilityIds).toEqual([missingCapabilityId]);
+      expect(report.blockers).toEqual([
+        {
+          capabilityId: missingCapabilityId,
+          cardId: "CARD-014E-MISSING-CAP",
+          code: "missing-runtime-capability",
+          component:
+            "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+          layer: "runtime-capability",
+          message: `Missing runtime capability ${missingCapabilityId} for parser rule exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected.`,
+        },
+      ]);
+    },
+  );
+
+  it("reports CARD-014F optionality and condition parser evidence deterministically", () => {
+    const missingOptionalMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "optionalEffectBlock:onPlay:draw-1:self",
+      ),
+    };
+    const supportedIndex = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-014F-YOUR-TURN" as CardId,
+          sourceText: "[On Play] During your turn, draw 1 card.",
+          sourceTextHash: "sha256:your-turn",
+        },
+        {
+          ...baseInput,
+          cardId: "CARD-014F-ATTACHED-DON" as CardId,
+          sourceText:
+            "[On Play] If this Character has 1 or more DON!! cards attached, draw 1 card.",
+          sourceTextHash: "sha256:attached-don",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const missingCapabilityIndex = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-014F-OPTIONAL-MISSING-CAP" as CardId,
+          sourceText: "[On Play] You may draw 1 card.",
+          sourceTextHash: "sha256:optional-missing",
+        },
+      ],
+      runtimeCapabilityMatrix: missingOptionalMatrix,
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport({
+      effectDefinitions: supportedIndex.effectDefinitions,
+      entries: [...supportedIndex.entries, ...missingCapabilityIndex.entries],
+    });
+
+    expect(report.supportedCardIds).toEqual([
+      "CARD-014F-ATTACHED-DON",
+      "CARD-014F-YOUR-TURN",
+    ]);
+    expect(report.unsupportedCardIds).toEqual([
+      "CARD-014F-OPTIONAL-MISSING-CAP",
+    ]);
+    expect(report.parserRuleIdsUsed).toEqual([
+      "exact:condition:self-attached-don-count",
+      "exact:condition:your-turn",
+      "exact:on-play:optional-effect:draw-1:self",
+    ]);
+    expect(report.missingRuntimeCapabilityIds).toEqual([
+      "optionalEffectBlock:onPlay:draw-1:self",
+    ]);
+    expect(report.statusByCardId["CARD-014F-OPTIONAL-MISSING-CAP"]).toEqual({
+      blockerCodes: ["missing-runtime-capability"],
+      missingCapabilityIds: ["optionalEffectBlock:onPlay:draw-1:self"],
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-play:optional-effect:draw-1:self"],
+      status: "unsupported",
+    });
+  });
+
   it("includes CARD-013B keyword parser rules in supported report evidence", () => {
     const index = buildGeneratedSupportIndex({
       cards: [
@@ -410,5 +807,54 @@ describe("generated support report", () => {
       "exact:keyword:double-attack:standalone",
       "exact:keyword:rush:standalone",
     ]);
+  });
+
+  it("reports every blocked CARD-014H representative candidate with existing diagnostics", () => {
+    const blockedRows = listRepresentativeSupportProofMatrixRows().filter(
+      (row) => row.status === "blocked-missing-layer",
+    );
+    const indices = blockedRows.map((row) =>
+      buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: row.syntheticDiagnosticCardId,
+            sourceText: row.sourceText,
+            sourceTextHash: `sha256:${row.candidateId}`,
+          },
+        ],
+        runtimeCapabilityMatrix: generatedSupportRuntimeCapabilityMatrix,
+        validateEffectDefinition,
+      }),
+    );
+
+    const report = buildGeneratedSupportReport({
+      effectDefinitions: {},
+      entries: indices.flatMap((index) => index.entries),
+    });
+
+    expect(report.supportedCardIds).toEqual([]);
+    expect(report.unsupportedCardIds).toEqual(
+      blockedRows
+        .map((row) => row.syntheticDiagnosticCardId)
+        .sort((left, right) => String(left).localeCompare(String(right))),
+    );
+
+    for (const row of blockedRows) {
+      expect(
+        report.statusByCardId[row.syntheticDiagnosticCardId],
+      ).toMatchObject({
+        blockerCodes: row.existingDiagnosticCodes,
+        status: "unsupported",
+      });
+      for (const code of row.existingDiagnosticCodes) {
+        expect(report.blockers).toContainEqual(
+          expect.objectContaining({
+            cardId: row.syntheticDiagnosticCardId,
+            code,
+          }),
+        );
+      }
+    }
   });
 });

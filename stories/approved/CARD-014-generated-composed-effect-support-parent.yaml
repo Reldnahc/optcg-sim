@@ -1,0 +1,150 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-014
+epic_id: CARD-014
+title: Generated composed effect support parent
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Coordinate the cards/parser/generated-support layer for reusable composed
+  effect support that consumes completed TYP contract/schema authority and
+  ENG-055 runtime capability evidence without adding engine runtime behavior.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  CARD-014A through CARD-014I one active child at a time on a parent integration
+  branch. Keep this series above the ENG runtime layer: parser, generated DSL,
+  runtime capability evidence, support metadata, source integrity, reports, and
+  cards-package tests only.
+allowed_touch_points:
+  - stories/generated/CARD-014*.yaml
+  - stories/approved/CARD-014*.yaml
+  - agent-packets/CARD-014*.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s014
+  - 04-effect-runtime.s015
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s021
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s026
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 09-card-data-and-support-policy.s025
+  - 11-testing-quality.s005
+  - 11-testing-quality.s016
+  - 11-testing-quality.s020
+dependencies:
+  - TYP-007
+  - TYP-008
+  - TYP-009
+  - TYP-010
+  - ENG-055
+  - CARD-008
+  - CARD-009
+  - CARD-012
+  - CARD-013
+child_stories:
+  - id: CARD-014A
+    title: Composed runtime capability matrix expansion
+    concern: Expand cards-side runtime capability evidence for only ENG-055-supported composed primitives and prove missing capability blocks generated support.
+    depends_on: [ENG-055, TYP-007, TYP-008, TYP-009, TYP-010, CARD-008]
+  - id: CARD-014B
+    title: Generic composed parser builder scaffold
+    concern: Refactor certified parser helpers toward reusable composed parser pieces while preserving existing generated-support behavior.
+    depends_on: [CARD-014A]
+  - id: CARD-014C
+    title: Draw and trash composed sequence parser expansion
+    concern: Preserve Cavendish support and add synthetic reverse pure sequence proof for trash-from-hand then draw.
+    depends_on: [CARD-014A, CARD-014B, CARD-009]
+  - id: CARD-014D
+    title: drawUpTo parser and generated-support expansion
+    concern: Add certified exact-template drawUpTo generated support using chooseQuantity-backed capability evidence.
+    depends_on: [CARD-014A, CARD-014B]
+  - id: CARD-014E
+    title: returnDON hand-selection playSelected parser expansion
+    concern: Add narrow generated support for runtime-supported returnDON or DON-minus cost, hand selection, and playSelected-from-hand shapes.
+    depends_on: [CARD-014A, CARD-014B]
+  - id: CARD-014F
+    title: Condition and optionality parser expansion
+    concern: Add narrow generated support for supported non-replacement optionality and supported conditions.
+    depends_on: [CARD-014A, CARD-014B]
+  - id: CARD-014G
+    title: selectTargets saved field object modifier restriction parser expansion
+    concern: Add narrow generated support for field target producers, saved field-object consumers, and supported temporary modifier or restriction shapes.
+    depends_on: [CARD-014A, CARD-014B]
+  - id: CARD-014H
+    title: Representative support proof bundle
+    concern: Add representative generated-support proofs only for shapes with complete parser, schema, runtime, capability, source, metadata, test, and review evidence.
+    depends_on: [CARD-014C, CARD-014D, CARD-014E, CARD-014F, CARD-014G]
+  - id: CARD-014I
+    title: Support probe and report integration for composed effects
+    concern: Add final cards-side diagnostics that identify the exact missing layer without adding new parser, runtime, or card support.
+    depends_on: [CARD-014H]
+scope:
+  - coordinate CARD-014A through CARD-014I as a parent integration branch story set
+  - consume existing TYP-007, TYP-008, TYP-009, TYP-010, and ENG-055 authority as lower layers
+  - keep generated support certified exact-template support, not broad inference
+  - keep generated support fail-closed for partial, ambiguous, stale, unsupported, schema-invalid, missing-capability, or unsupported-layer output
+  - require complete parse, DSL validation, runtime capability evidence, source integrity, support metadata, tests, and review metadata before generated support can be marked playable
+  - keep cards-internal helper types in packages/cards unless story-review proves missing shared contract/schema authority
+  - preserve existing CARD-008, CARD-009, CARD-012, and CARD-013 behavior unless a child explicitly migrates it with regression tests
+  - keep reverse-Cavendish proof synthetic only unless a later story adds real source fixture authority
+non_scope:
+  - direct implementation from this parent story
+  - ENG implementation or runtime behavior
+  - new shared TYP/contracts stories unless story-review proves real missing shared contract/schema authority
+  - putting cards-only parser, support-report, capability, or probe helper types into shared contracts for convenience
+  - server, client, API, UI, database, replay, WebSocket, Redis, or live Poneglyph work
+  - replacement generalization
+  - Stage or Event play support unless runtime capability evidence already supports it
+card_source_integrity:
+  - not applicable for direct parent implementation because this parent is planning-only and does not enable or change gameplay support for any card
+  - child stories with real-card proof must list exact card IDs, fixture provenance, behavior-sensitive printed fields, source hash expectations, behavior hash expectations, and regeneration requirements
+  - synthetic proof stories must state that no real-card support is enabled by the synthetic proof
+engine_capability_preflight:
+  - not applicable for direct parent implementation because this parent adds no parser grammar, generated DSL, runtime capability, support status, or gameplay behavior
+  - child stories must bind every supported parser shape to runtime capability records that truthfully reflect completed ENG-055 behavior
+  - if any child discovers missing runtime or shared contract authority, stop and record a blocker or draft a separate prerequisite instead of hiding lower-layer work in CARD-014
+acceptance_criteria:
+  - CARD-014 is not implemented directly
+  - each child is independently reviewable and can be activated one at a time
+  - every child has distinct story-review assignment identity and durable story-review artifact identity before approval
+  - existing CARD-008, CARD-009, CARD-012, and CARD-013 behavior remains unchanged unless explicitly migrated with regression tests
+  - generated parser support remains certified exact-template support and fails closed for residue or ambiguity
+  - new cards-internal helper types stay in packages/cards unless story-review proves shared contract authority is missing
+  - generated support is not marked playable unless complete parse, DSL validation, runtime capability evidence, source integrity, support metadata, tests, and review metadata all pass
+  - parent PR cleanup metadata lists CARD-014A through CARD-014I and durable parent lifecycle evidence binds the changed non-packetized CARD-014 parent story for closeout
+  - post-merge cleanup completes CARD-014A through CARD-014I and bound CARD-014 parent closeout only after the parent branch lands on main
+required_tests:
+  - set-level story-review planning for CARD-014 parent and children before approval
+  - per-story story-review for CARD-014 before approval
+  - per-story story-review for CARD-014A through CARD-014I before approval
+  - story-specific tests from every child story
+  - full `corepack pnpm verify` on every child PR and parent PR
+repo_rules:
+  - do not activate or implement CARD-014 directly
+  - use the parent integration branch workflow if this group is approved
+  - do not approve or activate any CARD-014 child that consumes TYP-009 authority until local story lifecycle state shows TYP-009, TYP-009A, and TYP-009B done or the dependency is otherwise reconciled by story-review
+  - keep one active child packet at a time
+  - do not complete child packets until the parent branch lands on main
+  - require parent PR cleanup metadata for every included child story and reviewed closeout evidence binding the changed non-packetized CARD-014 parent story
+  - use `packets:complete-many` as the operational cleanup mechanism for child cleanup and bound parent closeout after merge to main
+  - fail closed on gameplay support ambiguity, source integrity gaps, runtime capability gaps, parser residue, and review metadata gaps
+ambiguity_policy: fail_and_escalate

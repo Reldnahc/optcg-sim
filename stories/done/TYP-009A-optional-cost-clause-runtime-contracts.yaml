@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Define canonical contract and spec authority for optional cost clauses inside
   composed sequence execution so ENG-055D can implement optional-cost runtime

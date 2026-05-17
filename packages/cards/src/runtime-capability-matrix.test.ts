@@ -8,6 +8,42 @@ import {
 } from "./runtime-capability-matrix.js";
 
 describe("generated support runtime capability matrix", () => {
+  const card014APositiveCapabilityIds = [
+    "category:auto",
+    "condition:selfAttachedDonCount",
+    "condition:yourTurn",
+    "drawUpTo:self:chooseQuantity",
+    "effect:draw:self:count:positive-safe-integer",
+    "modifyPower:all:thisTurn",
+    "modifyPower:choose:thisTurn",
+    "modifyPower:self:thisBattle",
+    "modifyPower:self:thisTurn",
+    "optionalEffectBlock:onPlay:draw-1:self",
+    "payCost:returnDon:self:count-exact",
+    "playSelected:hand:character:max1",
+    "playSelected:hand:character:max1:ignoreCost",
+    "returnDon:cost:self:count-exact",
+    "savedFieldObject:consumer:generic",
+    "savedSelectedTargets:producer",
+    "selectCards:hand:self:character:max1",
+    "selectTargets:field:public:character:max1",
+    "sequence:draw:trashFromHand",
+    "sequence:genericFrames",
+    "sequence:trashFromHand:draw",
+    "sourcePresencePolicy:mustRemainInSameZone",
+    "sourcePresencePolicy:noSourceRequired",
+    "sourcePresencePolicy:resolveFromDestinationZone",
+    "sourcePresencePolicy:resolveFromLastKnownInformation",
+    "trashFromHand:segment0:self:self:count-exact",
+    "trigger:onPlay",
+    "cannotAttack:all:thisTurn",
+    "cannotAttack:choose:thisTurn",
+    "cannotAttack:self:thisTurn",
+    "cannotBlock:all:thisTurn",
+    "cannotBlock:choose:thisTurn",
+    "cannotBlock:self:thisTurn",
+  ].sort();
+
   it("is deterministic and sorted by capability id", () => {
     const capabilityIds =
       generatedSupportRuntimeCapabilityMatrix.capabilities.map(
@@ -22,25 +58,30 @@ describe("generated support runtime capability matrix", () => {
 
   it("exposes the narrow capabilities needed by exact draw parser rules", () => {
     expect(generatedSupportRuntimeCapabilityMatrix.generatedAtStory).toBe(
-      "CARD-013B",
+      "CARD-014G",
     );
-    expect(requiredGeneratedSupportCapabilityIds).toEqual([
-      "category:auto",
-      "composition:line-separated-effect-blocks:v1",
-      "effect:draw:self:count:positive-safe-integer",
-      "effect:sequence:ordered",
-      "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
-      "keyword:banish:printed",
-      "keyword:blocker:printed",
-      "keyword:doubleAttack:printed",
-      "keyword:rush:printed",
-      "keyword:rushCharacter:printed",
-      "sourcePresencePolicy:mustRemainInSameZone",
-      "sourcePresencePolicy:none-for-keyword",
-      "trigger:onPlay",
-      "trigger:whenAttacking",
-      "trigger:whenAttacking:oncePerTurn",
-    ]);
+    expect(requiredGeneratedSupportCapabilityIds).toEqual(
+      [...requiredGeneratedSupportCapabilityIds].sort(),
+    );
+    expect(requiredGeneratedSupportCapabilityIds).toEqual(
+      expect.arrayContaining([
+        "category:auto",
+        "composition:line-separated-effect-blocks:v1",
+        "effect:draw:self:count:positive-safe-integer",
+        "effect:sequence:ordered",
+        "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+        "keyword:banish:printed",
+        "keyword:blocker:printed",
+        "keyword:doubleAttack:printed",
+        "keyword:rush:printed",
+        "keyword:rushCharacter:printed",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "sourcePresencePolicy:none-for-keyword",
+        "trigger:onPlay",
+        "trigger:whenAttacking",
+        "trigger:whenAttacking:oncePerTurn",
+      ]),
+    );
 
     for (const capabilityId of requiredGeneratedSupportCapabilityIds) {
       expect(hasRuntimeCapability(capabilityId)).toBe(true);
@@ -96,6 +137,267 @@ describe("generated support runtime capability matrix", () => {
     );
   });
 
+  it("certifies the exact CARD-014C reverse sequence parser rule with CARD-014A capability evidence", () => {
+    const reverseParserRuleId = "exact:on-play:trash-2-from-hand:draw-1:self";
+    const capabilityIds = [
+      "category:auto",
+      "effect:draw:self:count:positive-safe-integer",
+      "effect:sequence:ordered",
+      "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+      "sequence:genericFrames",
+      "sequence:trashFromHand:draw",
+      "sourcePresencePolicy:mustRemainInSameZone",
+      "trashFromHand:segment0:self:self:count-exact",
+      "trigger:onPlay",
+    ];
+
+    for (const capabilityId of capabilityIds) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.sinceStory).toMatch(/CARD-00|CARD-014A/);
+      expect(capability?.supportedParserRuleIds).toContain(reverseParserRuleId);
+    }
+  });
+
+  it("certifies the exact draw-up-to parser rule with chooseQuantity-backed ENG capability evidence", () => {
+    const parserRuleId = "exact:on-play:draw-up-to-n:self";
+    const drawUpToCapability =
+      generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+        (capability) => capability.id === "drawUpTo:self:chooseQuantity",
+      );
+    const requiredCapabilityIds = [
+      "category:auto",
+      "drawUpTo:self:chooseQuantity",
+      "sourcePresencePolicy:mustRemainInSameZone",
+      "trigger:onPlay",
+    ];
+
+    expect(drawUpToCapability).toMatchObject({
+      description:
+        "Draw up to a chosen quantity of cards for the source controller using a chooseQuantity decision.",
+      kind: "effect",
+      sinceStory: "ENG-055H",
+      supported: true,
+      supportedParserRuleIds: [parserRuleId],
+    });
+    for (const capabilityId of requiredCapabilityIds) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+    }
+  });
+
+  it.each([
+    {
+      parserRuleId: "exact:on-play:optional-effect:draw-1:self",
+      requiredCapabilities: [
+        "category:auto",
+        "effect:draw:self:count:positive-safe-integer",
+        "optionalEffectBlock:onPlay:draw-1:self",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+      ],
+    },
+    {
+      parserRuleId: "exact:condition:your-turn",
+      requiredCapabilities: [
+        "category:auto",
+        "condition:yourTurn",
+        "effect:draw:self:count:positive-safe-integer",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+      ],
+    },
+    {
+      parserRuleId: "exact:condition:self-attached-don-count",
+      requiredCapabilities: [
+        "category:auto",
+        "condition:selfAttachedDonCount",
+        "effect:draw:self:count:positive-safe-integer",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+      ],
+    },
+  ])(
+    "certifies CARD-014F parser rule $parserRuleId with exact capability evidence",
+    ({ parserRuleId, requiredCapabilities }) => {
+      for (const capabilityId of requiredCapabilities) {
+        const capability =
+          generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+            (candidate) => candidate.id === capabilityId,
+          );
+
+        expect(capability?.supported).toBe(true);
+        expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+      }
+    },
+  );
+
+  it("certifies the exact return-DON play-from-hand parser rule with ENG capability evidence", () => {
+    const parserRuleId =
+      "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected";
+    const requiredCapabilities = [
+      { capabilityId: "category:auto", sinceStory: "CARD-008A" },
+      {
+        capabilityId: "payCost:returnDon:self:count-exact",
+        sinceStory: "ENG-055F",
+      },
+      {
+        capabilityId: "playSelected:hand:character:max1",
+        sinceStory: "ENG-055G",
+      },
+      {
+        capabilityId: "playSelected:hand:character:max1:ignoreCost",
+        sinceStory: "ENG-055G",
+      },
+      {
+        capabilityId: "returnDon:cost:self:count-exact",
+        sinceStory: "ENG-055F",
+      },
+      {
+        capabilityId: "selectCards:hand:self:character:max1",
+        sinceStory: "ENG-055F",
+      },
+      { capabilityId: "sequence:genericFrames", sinceStory: "CARD-014A" },
+      {
+        capabilityId: "sourcePresencePolicy:mustRemainInSameZone",
+        sinceStory: "CARD-008A",
+      },
+      { capabilityId: "trigger:onPlay", sinceStory: "CARD-008A" },
+    ];
+
+    for (const { capabilityId, sinceStory } of requiredCapabilities) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.sinceStory).toBe(sinceStory);
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+    }
+  });
+
+  it.each([
+    {
+      parserRuleId: "exact:on-play:select-1-opponent-character-target",
+      requiredCapabilities: [
+        "category:auto",
+        "savedSelectedTargets:producer",
+        "selectTargets:field:public:character:max1",
+        "sequence:genericFrames",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+      ],
+    },
+    {
+      parserRuleId:
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+      requiredCapabilities: [
+        "category:auto",
+        "effect:ko:saved-field-object:characterArea:public",
+        "savedFieldObject:consumer:generic",
+        "savedSelectedTargets:producer",
+        "selectTargets:field:public:character:max1",
+        "sequence:genericFrames",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+      ],
+    },
+  ])(
+    "certifies CARD-014G selected field-object parser rule $parserRuleId with capability evidence",
+    ({ parserRuleId, requiredCapabilities }) => {
+      for (const capabilityId of requiredCapabilities) {
+        const capability =
+          generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+            (candidate) => candidate.id === capabilityId,
+          );
+
+        expect(capability?.supported).toBe(true);
+        expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+      }
+    },
+  );
+
+  it.each([
+    {
+      parserRuleId: "exact:on-play:modify-power:self:this-turn",
+      requiredCapabilities: ["modifyPower:self:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:modify-power:self:this-battle",
+      requiredCapabilities: ["modifyPower:self:thisBattle"],
+    },
+    {
+      parserRuleId: "exact:on-play:modify-power:all:this-turn",
+      requiredCapabilities: ["modifyPower:all:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:cannot-attack:self:this-turn",
+      requiredCapabilities: ["cannotAttack:self:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:cannot-attack:all:this-turn",
+      requiredCapabilities: ["cannotAttack:all:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:cannot-block:self:this-turn",
+      requiredCapabilities: ["cannotBlock:self:thisTurn"],
+    },
+    {
+      parserRuleId: "exact:on-play:cannot-block:all:this-turn",
+      requiredCapabilities: ["cannotBlock:all:thisTurn"],
+    },
+  ])(
+    "certifies CARD-014G modifier/restriction parser rule $parserRuleId with capability evidence",
+    ({ parserRuleId, requiredCapabilities }) => {
+      for (const capabilityId of [
+        "category:auto",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+        ...requiredCapabilities,
+      ]) {
+        const capability =
+          generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+            (candidate) => candidate.id === capabilityId,
+          );
+
+        expect(capability?.supported).toBe(true);
+        expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+      }
+    },
+  );
+
+  it.each([
+    {
+      capabilityId: "modifyPower:choose:thisTurn",
+      parserRuleId: "exact:on-play:modify-power:choose:this-turn",
+    },
+    {
+      capabilityId: "cannotAttack:choose:thisTurn",
+      parserRuleId: "exact:on-play:cannot-attack:choose:this-turn",
+    },
+    {
+      capabilityId: "cannotBlock:choose:thisTurn",
+      parserRuleId: "exact:on-play:cannot-block:choose:this-turn",
+    },
+  ])(
+    "keeps CARD-014G zero-choice parser rule $parserRuleId unlinked from $capabilityId",
+    ({ capabilityId, parserRuleId }) => {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.supportedParserRuleIds).not.toContain(parserRuleId);
+    },
+  );
+
   it.each([
     {
       capabilityId: "keyword:rush:printed",
@@ -139,5 +441,52 @@ describe("generated support runtime capability matrix", () => {
     );
     expect(hasRuntimeCapability("effect:ko:targeted")).toBe(false);
     expect(hasRuntimeCapability("trigger:activateMain")).toBe(false);
+  });
+
+  it("exposes every exact CARD-014A positive capability id without dropping existing records", () => {
+    for (const capabilityId of card014APositiveCapabilityIds) {
+      expect(hasRuntimeCapability(capabilityId)).toBe(true);
+    }
+
+    expect(listSupportedRuntimeCapabilityIds()).toEqual(
+      expect.arrayContaining(card014APositiveCapabilityIds),
+    );
+  });
+
+  it("keeps unsupported CARD-014A families absent from the positive capability matrix", () => {
+    expect(
+      hasRuntimeCapability("savedFieldObject:consumer:modifierTarget"),
+    ).toBe(false);
+    expect(
+      hasRuntimeCapability("savedFieldObject:consumer:restrictionTarget"),
+    ).toBe(false);
+    expect(
+      hasRuntimeCapability("selectCards:hand:savedReference:character:max1"),
+    ).toBe(false);
+    expect(
+      hasRuntimeCapability("playSelected:savedReference:character:max1"),
+    ).toBe(false);
+    expect(hasRuntimeCapability("sequence:position:segment2")).toBe(false);
+    expect(hasRuntimeCapability("sequence:repeat")).toBe(false);
+    expect(
+      hasRuntimeCapability("selectTargets:field:public:opponentLeader:max1"),
+    ).toBe(false);
+    expect(hasRuntimeCapability("modifyPower:self:permanent")).toBe(false);
+    expect(hasRuntimeCapability("modifyPower:self:untilStartOfNextTurn")).toBe(
+      false,
+    );
+    expect(hasRuntimeCapability("modifyPower:choose:thisAction")).toBe(false);
+    expect(hasRuntimeCapability("modifyPower:choose:whileConditionTrue")).toBe(
+      false,
+    );
+    expect(
+      hasRuntimeCapability(
+        "sourcePresencePolicy:resolveFromDestinationZone:trigger:activateMain",
+      ),
+    ).toBe(false);
+    expect(hasRuntimeCapability("trigger:stage")).toBe(false);
+    expect(hasRuntimeCapability("trigger:event")).toBe(false);
+    expect(hasRuntimeCapability("replacement:damage")).toBe(false);
+    expect(hasRuntimeCapability("refreshLock:don")).toBe(false);
   });
 });
