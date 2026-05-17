@@ -172,12 +172,15 @@ test("Character Counter rejects replacement processing without clearing decision
   assert.equal(result.state.battle?.step, "counter");
 });
 
-test("Character Counter rejects active continuous effects without clearing decision", () => {
+test("Character Counter rejects unsupported continuous effects without clearing decision", () => {
   const context = setupOpenedCounterStepPassDecision();
   context.openedState.continuousEffects = [
-    continuousEffectRecord(context.openedState, "use-counter-continuous", {
-      type: "thisBattle",
-    }),
+    {
+      ...continuousEffectRecord(context.openedState, "use-counter-continuous", {
+        type: "thisBattle",
+      }),
+      condition: { type: "yourTurn" },
+    },
   ];
   const before = JSON.stringify(context.openedState);
 
@@ -345,12 +348,15 @@ test("counter-step pass rejects replacement processing without clearing decision
   assert.equal(result.state.battle?.step, "counter");
 });
 
-test("counter-step pass rejects active continuous effects without clearing decision", () => {
+test("counter-step pass rejects unsupported continuous effects without clearing decision", () => {
   const context = setupOpenedCounterStepPassDecision();
   context.openedState.continuousEffects = [
-    continuousEffectRecord(context.openedState, "pass-continuous", {
-      type: "thisBattle",
-    }),
+    {
+      ...continuousEffectRecord(context.openedState, "pass-continuous", {
+        type: "thisBattle",
+      }),
+      condition: { type: "yourTurn" },
+    },
   ];
   const before = JSON.stringify(context.openedState);
 
