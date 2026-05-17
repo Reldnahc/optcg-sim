@@ -137,6 +137,31 @@ describe("generated support runtime capability matrix", () => {
     );
   });
 
+  it("certifies the exact CARD-014C reverse sequence parser rule with CARD-014A capability evidence", () => {
+    const reverseParserRuleId = "exact:on-play:trash-2-from-hand:draw-1:self";
+    const capabilityIds = [
+      "category:auto",
+      "effect:draw:self:count:positive-safe-integer",
+      "effect:sequence:ordered",
+      "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+      "sequence:genericFrames",
+      "sequence:trashFromHand:draw",
+      "sourcePresencePolicy:mustRemainInSameZone",
+      "trashFromHand:segment0:self:self:count-exact",
+      "trigger:onPlay",
+    ];
+
+    for (const capabilityId of capabilityIds) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.sinceStory).toMatch(/CARD-00|CARD-014A/);
+      expect(capability?.supportedParserRuleIds).toContain(reverseParserRuleId);
+    }
+  });
+
   it.each([
     {
       capabilityId: "keyword:rush:printed",

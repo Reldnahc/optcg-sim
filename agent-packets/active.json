@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-014B.md",
-      "storyId": "CARD-014B",
-      "storyPath": "stories/approved/CARD-014B-generic-composed-parser-builder-scaffold.yaml",
-      "storySha256": "489d0211ac96baf9527692b2bd700795cdfe32c29902c1f73d955a52609243aa"
+      "packetPath": "agent-packets/CARD-014C.md",
+      "storyId": "CARD-014C",
+      "storyPath": "stories/approved/CARD-014C-draw-trash-composed-sequence-parser-expansion.yaml",
+      "storySha256": "181947024b1d0141a19a901d0c584d583ca2327c1d3b17819cefb24666fe4086"
     }
   ],
   "version": 1

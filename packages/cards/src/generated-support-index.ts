@@ -688,6 +688,17 @@ const parserRuleCapabilityIds: Readonly<Record<string, readonly string[]>> = {
     "sourcePresencePolicy:mustRemainInSameZone",
     "trigger:onPlay",
   ],
+  "exact:on-play:trash-2-from-hand:draw-1:self": [
+    "category:auto",
+    "effect:draw:self:count:positive-safe-integer",
+    "effect:sequence:ordered",
+    "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+    "sequence:genericFrames",
+    "sequence:trashFromHand:draw",
+    "sourcePresencePolicy:mustRemainInSameZone",
+    "trashFromHand:segment0:self:self:count-exact",
+    "trigger:onPlay",
+  ],
   "exact:when-attacking:draw-n:self": [
     "category:auto",
     "effect:draw:self:count:positive-safe-integer",

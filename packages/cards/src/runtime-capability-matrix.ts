@@ -105,6 +105,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "exact:on-play:draw-n:self",
         "exact:when-attacking:draw-n:self",
         "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:on-play:trash-2-from-hand:draw-1:self",
         "exact:when-attacking:draw-n:trash-m:hand:self",
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
         "exact:on-play:draw-up-to-n:self",
@@ -165,6 +166,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "exact:on-play:draw-n:self",
         "exact:when-attacking:draw-n:self",
         "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:on-play:trash-2-from-hand:draw-1:self",
         "exact:when-attacking:draw-n:trash-m:hand:self",
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
         "exact:on-play:optional-effect:draw-1:self",
@@ -183,6 +185,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supported: true,
       supportedParserRuleIds: [
         "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:on-play:trash-2-from-hand:draw-1:self",
         "exact:when-attacking:draw-n:trash-m:hand:self",
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
         "card014a:sequence:draw-trashFromHand",
@@ -198,6 +201,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supported: true,
       supportedParserRuleIds: [
         "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:on-play:trash-2-from-hand:draw-1:self",
         "exact:when-attacking:draw-n:trash-m:hand:self",
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
         "card014a:sequence:draw-trashFromHand",
@@ -398,6 +402,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supportedParserRuleIds: [
         "card014a:sequence:draw-trashFromHand",
         "card014a:sequence:trashFromHand-draw",
+        "exact:on-play:trash-2-from-hand:draw-1:self",
         "card014a:on-play:return-don-play-selected-character",
         "card014a:on-play:select-target-modify-power",
       ],
@@ -409,7 +414,10 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "composition",
       sinceStory: "CARD-014A",
       supported: true,
-      supportedParserRuleIds: ["card014a:sequence:trashFromHand-draw"],
+      supportedParserRuleIds: [
+        "card014a:sequence:trashFromHand-draw",
+        "exact:on-play:trash-2-from-hand:draw-1:self",
+      ],
     },
     {
       description:
@@ -422,6 +430,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "exact:on-play:draw-n:self",
         "exact:when-attacking:draw-n:self",
         "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:on-play:trash-2-from-hand:draw-1:self",
         "exact:when-attacking:draw-n:trash-m:hand:self",
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
         "exact:on-play:draw-up-to-n:self",
@@ -485,7 +494,10 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       kind: "effect",
       sinceStory: "CARD-014A",
       supported: true,
-      supportedParserRuleIds: ["card014a:sequence:trashFromHand-draw"],
+      supportedParserRuleIds: [
+        "card014a:sequence:trashFromHand-draw",
+        "exact:on-play:trash-2-from-hand:draw-1:self",
+      ],
     },
     {
       description: "On Play trigger timing is executable by current runtime.",
@@ -496,6 +508,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       supportedParserRuleIds: [
         "exact:on-play:draw-n:self",
         "exact:on-play:draw-n:trash-m:hand:self",
+        "exact:on-play:trash-2-from-hand:draw-1:self",
         "exact:on-play:draw-up-to-n:self",
         "exact:on-play:optional-effect:draw-1:self",
         "exact:condition:self-attached-don-count",

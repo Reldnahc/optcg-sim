@@ -771,8 +771,53 @@ describe("generated support index", () => {
     );
   });
 
+  it("supports exact synthetic On Play trash-then-draw text with segment-0 trash capability evidence", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          cardId: "CARD-014C-SYNTHETIC" as CardId,
+          sourceText: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      blockers: [],
+      cardId: "CARD-014C-SYNTHETIC",
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-play:trash-2-from-hand:draw-1:self"],
+      status: "supported",
+      support: {
+        cardId: "CARD-014C-SYNTHETIC",
+        effectDefinitionId: "card-014c-synthetic.generated-support",
+        status: "implemented-dsl",
+        tested: true,
+      },
+    });
+    expect(index.entries[0]?.capabilityEvidence).toEqual(
+      expect.arrayContaining([
+        {
+          capabilityId: "sequence:trashFromHand:draw",
+          parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
+        },
+        {
+          capabilityId: "trashFromHand:segment0:self:self:count-exact",
+          parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
+        },
+      ]),
+    );
+  });
+
   it.each([
     "[On Play] Trash 1 card from your hand and draw 2 cards.",
+    "[On Play] Trash 1 card from your hand. Draw 1 card.",
+    "[On Play] Trash 2 cards from your hand. Draw 2 cards.",
+    "[On Play] You may trash 2 cards from your hand. Draw 1 card.",
+    "[On Play] DON!! -1 Trash 2 cards from your hand. Draw 1 card.",
+    "[On Play]: Trash 2 cards from your hand. Draw 1 card.",
+    "[On Play] Trash 2 cards from your hand. Draw 1 card. Then draw 1 card.",
     "[When Attacking] Draw 2 cards and trash 1 card from your hand. Then draw 1 card.",
   ])(
     "keeps unsupported draw-then-trash near misses blocked (%s)",
@@ -789,6 +834,42 @@ describe("generated support index", () => {
       });
     },
   );
+
+  it("keeps exact synthetic trash-then-draw unsupported when segment-0 trash capability is missing", () => {
+    const matrixWithoutSegment0Trash = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "trashFromHand:segment0:self:self:count-exact",
+      ),
+    };
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          cardId: "CARD-014C-MISSING-CAPABILITY" as CardId,
+          sourceText: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+        },
+      ],
+      runtimeCapabilityMatrix: matrixWithoutSegment0Trash,
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "trashFromHand:segment0:self:self:count-exact",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:trash-2-from-hand:draw-1:self",
+        },
+      ],
+      missingCapabilityIds: ["trashFromHand:segment0:self:self:count-exact"],
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-play:trash-2-from-hand:draw-1:self"],
+      status: "unsupported",
+    });
+    expect(index.effectDefinitions).toEqual({});
+  });
 
   it("keeps draw-then-trash unsupported when runtime sequence capability is missing", () => {
     const matrixWithoutSequence = {

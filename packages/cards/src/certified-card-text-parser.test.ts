@@ -167,6 +167,47 @@ describe("certified card text parser", () => {
     },
   );
 
+  it("parses the exact On Play trash-then-draw template to generated DSL", () => {
+    const result = parse(
+      "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+    );
+
+    expect(result.status).toBe("complete");
+    if (!isCompleteGeneratedSupportParseResult(result)) {
+      throw new Error("Expected complete parse.");
+    }
+
+    expect(result.parserRuleIds).toEqual([
+      "exact:on-play:trash-2-from-hand:draw-1:self",
+    ]);
+    expect(result.effectDefinition.effects).toEqual([
+      {
+        category: "auto",
+        effect: {
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                chooser: "self",
+                count: 2,
+                player: "self",
+                type: "trashFromHand",
+              },
+            },
+            {
+              connector: "then",
+              effect: { count: 1, player: "self", type: "draw" },
+            },
+          ],
+          type: "sequence",
+        },
+        id: toEffectId("CARD-008B-001:auto-on-play-trash-2-then-draw-1"),
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      },
+    ]);
+  });
+
   it("fails closed on near-miss wording", () => {
     const result = parse("[On Play] Draw one card.");
 
@@ -306,6 +347,12 @@ describe("certified card text parser", () => {
     "[When Attacking] Draw two cards and trash 1 card from your hand.",
     "[When Attacking] Draw 9007199254740992 cards and trash 1 card from your hand.",
     "[On Play] Draw 1 card and trash 9007199254740992 cards from your hand.",
+    "[On Play] Trash 0 cards from your hand. Draw 1 card.",
+    "[On Play] Trash 02 cards from your hand. Draw 1 card.",
+    "[On Play] Trash two cards from your hand. Draw 1 card.",
+    "[On Play] Trash 2 cards from your hand. Draw 01 card.",
+    "[On Play] Trash 2 cards from your hand. Draw one card.",
+    "[On Play] Trash 9007199254740992 cards from your hand. Draw 1 card.",
   ])("fails closed on invalid draw count wording (%s)", (text) => {
     const result = parse(text);
 
@@ -333,6 +380,12 @@ describe("certified card text parser", () => {
 
   it.each([
     "[On Play] Trash 1 card from your hand and draw 2 cards.",
+    "[On Play] You may trash 2 cards from your hand. Draw 1 card.",
+    "[On Play] DON!! -1 Trash 2 cards from your hand. Draw 1 card.",
+    "[On Play]: Trash 2 cards from your hand. Draw 1 card.",
+    "[On Play] Trash 2 cards from your hand. Draw 1 card. Then draw 1 card.",
+    "[On Play] Trash 1 card from your hand. Draw 1 card.",
+    "[On Play] Trash 2 cards from your hand. Draw 2 cards.",
     "[When Attacking] [Once Per Turn] Trash 1 card from your hand and draw 2 cards.",
     "[On K.O.] Draw 2 cards and trash 1 card from your hand.",
     "[When Attacking] You may draw 2 cards and trash 1 card from your hand.",

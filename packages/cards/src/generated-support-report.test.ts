@@ -378,6 +378,63 @@ describe("generated support report", () => {
     });
   });
 
+  it("includes exact synthetic trash-then-draw support and reports missing segment-0 trash capability", () => {
+    const missingSegment0TrashMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "trashFromHand:segment0:self:self:count-exact",
+      ),
+    };
+    const supportedIndex = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-014C-SUPPORTED" as CardId,
+          sourceText: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+          sourceTextHash: "sha256:trash-draw-supported",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const missingCapabilityIndex = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-014C-MISSING-CAP" as CardId,
+          sourceText: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+          sourceTextHash: "sha256:trash-draw-missing",
+        },
+      ],
+      runtimeCapabilityMatrix: missingSegment0TrashMatrix,
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport({
+      effectDefinitions: supportedIndex.effectDefinitions,
+      entries: [...supportedIndex.entries, ...missingCapabilityIndex.entries],
+    });
+
+    expect(report.supportedCardIds).toEqual(["CARD-014C-SUPPORTED"]);
+    expect(report.unsupportedCardIds).toEqual(["CARD-014C-MISSING-CAP"]);
+    expect(report.parserRuleIdsUsed).toEqual([
+      "exact:on-play:trash-2-from-hand:draw-1:self",
+    ]);
+    expect(report.missingRuntimeCapabilityIds).toEqual([
+      "trashFromHand:segment0:self:self:count-exact",
+    ]);
+    expect(report.blockers).toEqual([
+      {
+        capabilityId: "trashFromHand:segment0:self:self:count-exact",
+        cardId: "CARD-014C-MISSING-CAP",
+        code: "missing-runtime-capability",
+        component: "exact:on-play:trash-2-from-hand:draw-1:self",
+        message:
+          "Missing runtime capability trashFromHand:segment0:self:self:count-exact for parser rule exact:on-play:trash-2-from-hand:draw-1:self.",
+      },
+    ]);
+  });
+
   it("includes CARD-013B keyword parser rules in supported report evidence", () => {
     const index = buildGeneratedSupportIndex({
       cards: [

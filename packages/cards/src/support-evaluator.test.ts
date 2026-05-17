@@ -191,6 +191,72 @@ describe("support evaluator", () => {
     expect(evaluation.support).toBeUndefined();
   });
 
+  it("evaluates exact synthetic trash-then-draw text as playable only with segment-0 trash capability evidence", () => {
+    const supportedCard = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "CARD-014C-SYNTHETIC",
+      effect: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+      name: "Synthetic Trash Then Draw Candidate",
+    });
+    const missingSegment0TrashMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "trashFromHand:segment0:self:self:count-exact",
+      ),
+    };
+
+    const supported = evaluateGeneratedSupportPlayability({
+      card: supportedCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: supportedCard.behaviorHash,
+      expectedSourceTextHash: supportedCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+    const blocked = evaluateGeneratedSupportPlayability({
+      card: supportedCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: supportedCard.behaviorHash,
+      expectedSourceTextHash: supportedCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix: missingSegment0TrashMatrix,
+      validateEffectDefinition,
+    });
+
+    expect(supported).toMatchObject({
+      blockers: [],
+      cardId: "CARD-014C-SYNTHETIC",
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-play:trash-2-from-hand:draw-1:self"],
+      playable: true,
+      status: "supported",
+    });
+    expect(supported.capabilityEvidence).toEqual(
+      expect.arrayContaining([
+        {
+          capabilityId: "trashFromHand:segment0:self:self:count-exact",
+          parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
+        },
+      ]),
+    );
+    expect(blocked).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "trashFromHand:segment0:self:self:count-exact",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:trash-2-from-hand:draw-1:self",
+        },
+      ],
+      missingCapabilityIds: ["trashFromHand:segment0:self:self:count-exact"],
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
+  });
+
   it("fails closed when reviewed source hash evidence is stale", () => {
     const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
 

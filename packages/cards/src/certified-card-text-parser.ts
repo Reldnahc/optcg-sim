@@ -56,6 +56,14 @@ export const whenAttackingOncePerTurnDrawNTrashMFromHandParserRuleId =
     "hand",
     "self",
   ]);
+export const onPlayTrash2FromHandDraw1ParserRuleId =
+  createDeterministicParserRuleId([
+    "exact",
+    "on-play",
+    "trash-2-from-hand",
+    "draw-1",
+    "self",
+  ]);
 export const standaloneBlockerKeywordParserRuleId =
   createDeterministicParserRuleId([
     "exact",
@@ -238,6 +246,16 @@ function parseCertifiedLine(
   if (onPlayDrawThenTrashClause !== undefined) {
     return {
       clause: onPlayDrawThenTrashClause,
+    };
+  }
+
+  const onPlayTrashThenDrawClause = parseOnPlayTrashThenDrawClause(
+    cardId,
+    line,
+  );
+  if (onPlayTrashThenDrawClause !== undefined) {
+    return {
+      clause: onPlayTrashThenDrawClause,
     };
   }
 
@@ -444,6 +462,7 @@ function parseSupportedSourceText(
     parseOnPlayDrawClause(cardId, sourceText) ??
     parseWhenAttackingDrawClause(cardId, sourceText) ??
     parseOnPlayDrawThenTrashClause(cardId, sourceText) ??
+    parseOnPlayTrashThenDrawClause(cardId, sourceText) ??
     parseWhenAttackingDrawThenTrashClause(cardId, sourceText) ??
     parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, sourceText) ??
     parseStandaloneBlockerClause(sourceText) ??
@@ -554,6 +573,45 @@ function parseWhenAttackingOncePerTurnDrawThenTrashClause(
     trashCount: parsed.trashCount,
     trigger: { oncePerTurn: true, type: "whenAttacking" },
   });
+}
+
+function parseOnPlayTrashThenDrawClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+    return undefined;
+  }
+
+  if (wrapper.bodyText !== "Trash 2 cards from your hand. Draw 1 card.") {
+    return undefined;
+  }
+
+  return {
+    effectBlock: {
+      category: "auto",
+      effect: buildSequenceEffect([
+        {
+          connector: "always",
+          effect: {
+            chooser: "self",
+            count: 2,
+            player: "self",
+            type: "trashFromHand",
+          },
+        },
+        {
+          connector: "then",
+          effect: { count: 1, player: "self", type: "draw" },
+        },
+      ]),
+      id: toEffectId(`${String(cardId)}:auto-on-play-trash-2-then-draw-1`),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "onPlay" },
+    },
+    parserRuleId: onPlayTrash2FromHandDraw1ParserRuleId,
+  };
 }
 
 const blockerReminderText =
