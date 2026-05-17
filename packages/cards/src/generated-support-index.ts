@@ -560,6 +560,17 @@ const parserRuleCapabilityIds: Readonly<Record<string, readonly string[]>> = {
     "sourcePresencePolicy:mustRemainInSameZone",
     "trigger:onPlay",
   ],
+  "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected": [
+    "category:auto",
+    "payCost:returnDon:self:count-exact",
+    "playSelected:hand:character:max1",
+    "playSelected:hand:character:max1:ignoreCost",
+    "returnDon:cost:self:count-exact",
+    "selectCards:hand:self:character:max1",
+    "sequence:genericFrames",
+    "sourcePresencePolicy:mustRemainInSameZone",
+    "trigger:onPlay",
+  ],
   "card014a:on-play:select-target-modify-power": [
     "category:auto",
     "modifyPower:choose:thisTurn",

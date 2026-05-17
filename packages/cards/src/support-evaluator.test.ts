@@ -257,6 +257,82 @@ describe("support evaluator", () => {
     });
   });
 
+  it("evaluates exact synthetic return-DON play-from-hand text as playable only with playSelected capability evidence", () => {
+    const supportedCard = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "CARD-014E-SYNTHETIC",
+      effect:
+        "[On Play] DON!! -1: Select up to 1 Character card from your hand and play it.",
+      name: "Synthetic Return Don Play From Hand Candidate",
+    });
+    const missingIgnoreCostMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "playSelected:hand:character:max1:ignoreCost",
+      ),
+    };
+
+    const supported = evaluateGeneratedSupportPlayability({
+      card: supportedCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: supportedCard.behaviorHash,
+      expectedSourceTextHash: supportedCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+    const blocked = evaluateGeneratedSupportPlayability({
+      card: supportedCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: supportedCard.behaviorHash,
+      expectedSourceTextHash: supportedCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix: missingIgnoreCostMatrix,
+      validateEffectDefinition,
+    });
+
+    expect(supported).toMatchObject({
+      blockers: [],
+      cardId: "CARD-014E-SYNTHETIC",
+      parseStatus: "complete",
+      parserRuleIds: [
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+      ],
+      playable: true,
+      status: "supported",
+    });
+    expect(supported.capabilityEvidence).toEqual(
+      expect.arrayContaining([
+        {
+          capabilityId: "playSelected:hand:character:max1",
+          parserRuleId:
+            "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        },
+        {
+          capabilityId: "playSelected:hand:character:max1:ignoreCost",
+          parserRuleId:
+            "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        },
+      ]),
+    );
+    expect(blocked).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "playSelected:hand:character:max1:ignoreCost",
+          code: "missing-runtime-capability",
+          component:
+            "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        },
+      ],
+      missingCapabilityIds: ["playSelected:hand:character:max1:ignoreCost"],
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
+  });
+
   it("fails closed when reviewed source hash evidence is stale", () => {
     const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
 

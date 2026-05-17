@@ -193,6 +193,50 @@ describe("generated support runtime capability matrix", () => {
     }
   });
 
+  it("certifies the exact return-DON play-from-hand parser rule with ENG capability evidence", () => {
+    const parserRuleId =
+      "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected";
+    const requiredCapabilities = [
+      { capabilityId: "category:auto", sinceStory: "CARD-008A" },
+      {
+        capabilityId: "payCost:returnDon:self:count-exact",
+        sinceStory: "ENG-055F",
+      },
+      {
+        capabilityId: "playSelected:hand:character:max1",
+        sinceStory: "ENG-055G",
+      },
+      {
+        capabilityId: "playSelected:hand:character:max1:ignoreCost",
+        sinceStory: "ENG-055G",
+      },
+      {
+        capabilityId: "returnDon:cost:self:count-exact",
+        sinceStory: "ENG-055F",
+      },
+      {
+        capabilityId: "selectCards:hand:self:character:max1",
+        sinceStory: "ENG-055F",
+      },
+      { capabilityId: "sequence:genericFrames", sinceStory: "CARD-014A" },
+      {
+        capabilityId: "sourcePresencePolicy:mustRemainInSameZone",
+        sinceStory: "CARD-008A",
+      },
+      { capabilityId: "trigger:onPlay", sinceStory: "CARD-008A" },
+    ];
+
+    for (const { capabilityId, sinceStory } of requiredCapabilities) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.sinceStory).toBe(sinceStory);
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+    }
+  });
+
   it.each([
     {
       capabilityId: "keyword:rush:printed",

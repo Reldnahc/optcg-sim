@@ -113,6 +113,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "exact:condition:self-attached-don-count",
         "exact:condition:your-turn",
         "card014a:on-play:return-don-play-selected-character",
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
         "card014a:on-play:select-target-modify-power",
       ],
     },
@@ -306,10 +307,11 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "Return-DON!! costs can be paid atomically by the source controller.",
       id: "payCost:returnDon:self:count-exact",
       kind: "cost",
-      sinceStory: "CARD-014A",
+      sinceStory: "ENG-055F",
       supported: true,
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
       ],
     },
     {
@@ -317,10 +319,11 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "A selected Character from self hand can be played by a composed effect.",
       id: "playSelected:hand:character:max1",
       kind: "effect",
-      sinceStory: "CARD-014A",
+      sinceStory: "ENG-055G",
       supported: true,
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
       ],
     },
     {
@@ -328,10 +331,11 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "A selected Character from self hand can be played while ignoring play cost.",
       id: "playSelected:hand:character:max1:ignoreCost",
       kind: "effect",
-      sinceStory: "CARD-014A",
+      sinceStory: "ENG-055G",
       supported: true,
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
       ],
     },
     {
@@ -339,10 +343,11 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "Returning an exact DON!! count from the source controller can be represented as a cost.",
       id: "returnDon:cost:self:count-exact",
       kind: "cost",
-      sinceStory: "CARD-014A",
+      sinceStory: "ENG-055F",
       supported: true,
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
       ],
     },
     {
@@ -368,10 +373,11 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "A maximum of one Character can be selected from self hand for composed play effects.",
       id: "selectCards:hand:self:character:max1",
       kind: "decision",
-      sinceStory: "CARD-014A",
+      sinceStory: "ENG-055F",
       supported: true,
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
       ],
     },
     {
@@ -404,6 +410,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "card014a:sequence:trashFromHand-draw",
         "exact:on-play:trash-2-from-hand:draw-1:self",
         "card014a:on-play:return-don-play-selected-character",
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
         "card014a:on-play:select-target-modify-power",
       ],
     },
@@ -438,6 +445,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "exact:condition:self-attached-don-count",
         "exact:condition:your-turn",
         "card014a:on-play:return-don-play-selected-character",
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
         "card014a:on-play:select-target-modify-power",
       ],
     },
@@ -514,6 +522,7 @@ export const generatedSupportRuntimeCapabilityMatrix = {
         "exact:condition:self-attached-don-count",
         "exact:condition:your-turn",
         "card014a:on-play:return-don-play-selected-character",
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
         "card014a:on-play:select-target-modify-power",
       ],
     },

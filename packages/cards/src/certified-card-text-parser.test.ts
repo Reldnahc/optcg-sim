@@ -236,6 +236,67 @@ describe("certified card text parser", () => {
     ]);
   });
 
+  it("parses the exact On Play return-DON hand-selection play-from-hand template to generated DSL", () => {
+    const result = parse(
+      "[On Play] DON!! -1: Select up to 1 Character card from your hand and play it.",
+    );
+
+    expect(result.status).toBe("complete");
+    if (!isCompleteGeneratedSupportParseResult(result)) {
+      throw new Error("Expected complete parse.");
+    }
+
+    expect(result.parserRuleIds).toEqual([
+      "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+    ]);
+    expect(result.effectDefinition.effects).toEqual([
+      {
+        category: "auto",
+        effect: {
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                cost: { count: 1, optional: true, type: "returnDon" },
+                type: "payCost",
+              },
+              saveResultAs: "paidReturnDonCost",
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                chooser: "self",
+                filter: { categories: ["character"] },
+                max: 1,
+                min: 0,
+                player: "self",
+                saveAs: "handSelection:playableCharacter",
+                type: "selectCards",
+                visibility: "chooserOnly",
+                zone: "hand",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                enterRested: true,
+                ignoreCost: true,
+                selection: "handSelection:playableCharacter",
+                type: "playSelected",
+              },
+            },
+          ],
+          type: "sequence",
+        },
+        id: toEffectId(
+          "CARD-008B-001:auto-on-play-return-don-1-play-selected-character-from-hand",
+        ),
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      },
+    ]);
+  });
+
   it("fails closed on near-miss wording", () => {
     const result = parse("[On Play] Draw one card.");
 
@@ -388,6 +449,10 @@ describe("certified card text parser", () => {
     "[On Play] Draw up to one card.",
     "[On Play] Draw up to 9007199254740992 cards.",
     "[On Play] Draw up to cards.",
+    "[On Play] DON!! -0: Select up to 1 Character card from your hand and play it.",
+    "[On Play] DON!! -01: Select up to 1 Character card from your hand and play it.",
+    "[On Play] DON!! -1.5: Select up to 1 Character card from your hand and play it.",
+    "[On Play] DON!! -one: Select up to 1 Character card from your hand and play it.",
   ])("fails closed on invalid draw count wording (%s)", (text) => {
     const result = parse(text);
 
@@ -509,6 +574,75 @@ describe("certified card text parser", () => {
       });
     },
   );
+
+  it.each([
+    "[On Play] DON!! -1: Select up to 1 Stage card from your hand and play it.",
+    "[On Play] DON!! -1: Select up to 1 Event card from your hand and play it.",
+    "[On Play] DON!! -1: Select up to 2 Character cards from your hand and play them.",
+    "[On Play] DON!! -1: Select 1 Character card from your hand and play it.",
+    "[On Play] DON!! -1: Select up to 1 Character card from your trash and play it.",
+    "[On Play] Return 1 DON!!: Select up to 1 Character card from your hand and play it.",
+    "[On Play] DON!! -1 Select up to 1 Character card from your hand and play it.",
+    "[On Play] DON!! -1: You may select up to 1 Character card from your hand and play it.",
+  ])(
+    "fails closed on unsupported return-DON play-from-hand wording (%s)",
+    (text) => {
+      const result = parse(text);
+
+      expect(result.status).toBe("partial");
+      expect(result).toMatchObject({
+        blockers: [
+          {
+            code: "unparsed-span",
+            span: {
+              end: text.length,
+              start: 0,
+              text,
+            },
+          },
+        ],
+        unparsedSpans: [
+          {
+            end: text.length,
+            start: 0,
+            text,
+          },
+        ],
+      });
+    },
+  );
+
+  it("captures residue after the exact return-DON hand-selection play-from-hand template", () => {
+    const supportedPrefix =
+      "[On Play] DON!! -1: Select up to 1 Character card from your hand and play it. ";
+    const text = `${supportedPrefix}Draw 1 card.`;
+    const result = parse(text);
+
+    expect(result.status).toBe("partial");
+    expect(result).toMatchObject({
+      blockers: [
+        {
+          code: "unparsed-span",
+          message: "Unsupported card text remains after certified parsing.",
+          span: {
+            end: text.length,
+            start: supportedPrefix.length,
+            text: "Draw 1 card.",
+          },
+        },
+      ],
+      parsedRuleIds: [
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+      ],
+      unparsedSpans: [
+        {
+          end: text.length,
+          start: supportedPrefix.length,
+          text: "Draw 1 card.",
+        },
+      ],
+    });
+  });
 
   it("captures residue for supported draw-then-trash clause followed by unsupported text", () => {
     const text =

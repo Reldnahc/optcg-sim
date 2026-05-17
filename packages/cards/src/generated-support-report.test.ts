@@ -435,6 +435,69 @@ describe("generated support report", () => {
     ]);
   });
 
+  it.each([
+    "selectCards:hand:self:character:max1",
+    "playSelected:hand:character:max1:ignoreCost",
+  ])(
+    "includes exact synthetic return-DON play-from-hand support and reports missing %s capability",
+    (missingCapabilityId) => {
+      const matrixWithoutCapability = {
+        ...generatedSupportRuntimeCapabilityMatrix,
+        capabilities:
+          generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+            (capability) => capability.id !== missingCapabilityId,
+          ),
+      };
+      const supportedIndex = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "CARD-014E-SUPPORTED" as CardId,
+            sourceText:
+              "[On Play] DON!! -1: Select up to 1 Character card from your hand and play it.",
+            sourceTextHash: "sha256:return-don-play-supported",
+          },
+        ],
+        validateEffectDefinition,
+      });
+      const missingCapabilityIndex = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "CARD-014E-MISSING-CAP" as CardId,
+            sourceText:
+              "[On Play] DON!! -1: Select up to 1 Character card from your hand and play it.",
+            sourceTextHash: "sha256:return-don-play-missing",
+          },
+        ],
+        runtimeCapabilityMatrix: matrixWithoutCapability,
+        validateEffectDefinition,
+      });
+
+      const report = buildGeneratedSupportReport({
+        effectDefinitions: supportedIndex.effectDefinitions,
+        entries: [...supportedIndex.entries, ...missingCapabilityIndex.entries],
+      });
+
+      expect(report.supportedCardIds).toEqual(["CARD-014E-SUPPORTED"]);
+      expect(report.unsupportedCardIds).toEqual(["CARD-014E-MISSING-CAP"]);
+      expect(report.parserRuleIdsUsed).toEqual([
+        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+      ]);
+      expect(report.missingRuntimeCapabilityIds).toEqual([missingCapabilityId]);
+      expect(report.blockers).toEqual([
+        {
+          capabilityId: missingCapabilityId,
+          cardId: "CARD-014E-MISSING-CAP",
+          code: "missing-runtime-capability",
+          component:
+            "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+          message: `Missing runtime capability ${missingCapabilityId} for parser rule exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected.`,
+        },
+      ]);
+    },
+  );
+
   it("includes CARD-013B keyword parser rules in supported report evidence", () => {
     const index = buildGeneratedSupportIndex({
       cards: [
