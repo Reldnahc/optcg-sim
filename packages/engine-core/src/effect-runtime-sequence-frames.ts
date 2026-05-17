@@ -9,6 +9,7 @@ import type {
   EngineEvent,
   GameState,
   PayCostDecision,
+  SelectTargetsDecision,
   SelectCardsDecision,
   SequenceSegmentResult,
 } from "@optcg/types";
@@ -28,6 +29,15 @@ import {
   applyPlaySelectedSequenceSegment,
   resumePlaySelectedOverflowFrame,
 } from "./effect-runtime-play-selected.js";
+import {
+  resumeSequenceFrameAfterHandSelection as resumeSequenceFrameAfterHandSelectionHelper,
+  resumeSequenceFrameAfterTrashFromHand as resumeSequenceFrameAfterTrashFromHandHelper,
+} from "./effect-runtime-sequence-select-cards.js";
+import { applySavedFieldObjectKoSequenceSegment } from "./effect-runtime-sequence-saved-field-object.js";
+import {
+  applySelectTargetsSequenceSegment,
+  resumeSequenceFrameAfterSelectTargets as resumeSequenceFrameAfterSelectTargetsHelper,
+} from "./effect-runtime-sequence-select-targets.js";
 import { resumeSequenceFrameAfterChooseQuantity as resumeDrawUpToQuantitySequenceFrame } from "./effect-runtime-sequence-draw-upto.js";
 import {
   activeDonCount,
@@ -471,6 +481,26 @@ const continueNoDecisionSegments = (
         state: stateWithPausedSequenceFrame(decisionResult.state, entry, frame),
       };
     }
+    if (segment.effect.type === "selectTargets") {
+      const selectTargets = applySelectTargetsSequenceSegment({
+        emptySegmentResult,
+        entry,
+        events,
+        index,
+        nextLedgers,
+        nextState,
+        segmentKey,
+        segment: segment as SupportedSequenceSegment & {
+          effect: Extract<SequenceSegmentEffect, { type: "selectTargets" }>;
+        },
+      });
+      if (!selectTargets.ok || selectTargets.kind === "paused") {
+        return selectTargets;
+      }
+      nextState = selectTargets.state;
+      nextLedgers = selectTargets.ledgers;
+      continue;
+    }
     if (segment.effect.type === "playSelected") {
       const played = applyPlaySelectedSequenceSegment({
         emptySegmentResult,
@@ -489,6 +519,21 @@ const continueNoDecisionSegments = (
       }
       nextState = played.state;
       nextLedgers = played.ledgers;
+      continue;
+    }
+    if (segment.effect.type === "ko") {
+      const resolvedKo = applySavedFieldObjectKoSequenceSegment({
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment,
+        segmentKey,
+        state: nextState,
+      });
+      nextState = resolvedKo.state;
+      nextLedgers = resolvedKo.ledgers;
+      events.push(...resolvedKo.events);
       continue;
     }
     const decisionResult = createTrashDecision(
@@ -566,8 +611,19 @@ export const createSupportedSequenceFrameDecision = (
     createTrashDecision,
     true,
   );
-  if (!run.ok || run.kind !== "paused") {
+  if (!run.ok) {
     return { ok: false };
+  }
+  if (run.kind === "completed") {
+    return {
+      events: run.events,
+      ok: true,
+      state: appendEffectResolvedForCompletedSequence(
+        run.state,
+        resolvingEntry,
+        run.events,
+      ),
+    };
   }
   return { events: run.events, ok: true, state: run.state };
 };
@@ -577,69 +633,29 @@ export const resumeSequenceFrameAfterTrashFromHand = (
   decision: SelectCardsDecision,
   selectedCards: readonly CardRef[],
 ): SequenceFrameResumeResult => {
-  const frame = state.effectExecutionFrames.find(
-    (candidate) => candidate.pendingDecision.decisionId === decision.id,
-  );
-  if (frame === undefined) {
-    return undefined;
-  }
-  const entry = findFrameQueueEntry(state, frame);
-  if (entry === undefined) {
-    return {
-      error: sequenceRuntimeError(frame.effectBlockId, "missing-queue-entry"),
-      ok: false,
-    };
-  }
-  const effectBlock = findSequenceEffectBlock(state, entry);
-  if (!isSupportedSequenceBlock(entry, effectBlock)) {
-    return {
-      error: sequenceRuntimeError(entry.effectBlockId, "missing-effect-block"),
-      ok: false,
-    };
-  }
-  const pausedSegment =
-    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
-  if (
-    pausedSegment === undefined ||
-    pausedSegment.effect.type !== "trashFromHand"
-  ) {
-    return {
-      error: sequenceRuntimeError(
-        entry.effectBlockId,
-        "unsupported-sequence-shape",
+  return resumeSequenceFrameAfterTrashFromHandHelper({
+    createUnsupportedTrashDecision,
+    decision,
+    emptySegmentResult,
+    findFrameQueueEntry,
+    findSequenceEffectBlock,
+    resumeSequenceFrameFromLedgers: (params) =>
+      resumeSequenceFrameFromLedgers(
+        params as {
+          createTrashDecision: CreateTrashFromHandSequenceDecision;
+          effectBlock: SupportedSequenceBlock;
+          entry: EffectQueueEntry;
+          finalizeCompleted: boolean;
+          frame: EffectExecutionFrame;
+          ledgers: SegmentLedgers;
+          state: GameState;
+        },
       ),
-      ok: false,
-    };
-  }
-
-  const completedPausedResult: SequenceSegmentResult = {
-    ...emptySegmentResult(),
-    attempted: true,
-    succeeded: true,
-    changedState: selectedCards.length > 0,
-    selectedCards: [...selectedCards],
-  };
-  const ledgers: SegmentLedgers = {
-    segmentResults: {
-      ...frame.segmentResults,
-      [segmentKey(pausedSegment, frame.pendingDecision.resumeAtSegmentIndex)]:
-        completedPausedResult,
-    },
-    savedReferences: saveReference(frame.savedReferences, pausedSegment, {
-      kind: "selectedCards",
-      cards: [...selectedCards],
-    }),
-  };
-  const continued = resumeSequenceFrameFromLedgers({
-    createTrashDecision: createUnsupportedTrashDecision,
-    effectBlock,
-    entry,
-    finalizeCompleted: false,
-    frame,
-    ledgers,
+    segmentKey,
+    selectedCards,
+    sequenceRuntimeError,
     state,
   });
-  return continued;
 };
 
 export const resumeSequenceFrameAfterHandSelection = (
@@ -647,69 +663,57 @@ export const resumeSequenceFrameAfterHandSelection = (
   decision: SelectCardsDecision,
   selectedCards: readonly CardRef[],
 ): SequenceFrameResumeResult => {
-  const frame = state.effectExecutionFrames.find(
-    (candidate) => candidate.pendingDecision.decisionId === decision.id,
-  );
-  if (frame === undefined) {
-    return undefined;
-  }
-  const entry = findFrameQueueEntry(state, frame);
-  if (entry === undefined) {
-    return {
-      error: sequenceRuntimeError(frame.effectBlockId, "missing-queue-entry"),
-      ok: false,
-    };
-  }
-  const effectBlock = findSequenceEffectBlock(state, entry);
-  if (!isSupportedSequenceBlock(entry, effectBlock)) {
-    return {
-      error: sequenceRuntimeError(entry.effectBlockId, "missing-effect-block"),
-      ok: false,
-    };
-  }
-  const pausedSegment =
-    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
-  if (
-    pausedSegment === undefined ||
-    pausedSegment.effect.type !== "selectCards" ||
-    pausedSegment.effect.zone !== "hand"
-  ) {
-    return {
-      error: sequenceRuntimeError(
-        entry.effectBlockId,
-        "unsupported-sequence-shape",
+  return resumeSequenceFrameAfterHandSelectionHelper({
+    createUnsupportedTrashDecision,
+    decision,
+    emptySegmentResult,
+    findFrameQueueEntry,
+    findSequenceEffectBlock,
+    resumeSequenceFrameFromLedgers: (params) =>
+      resumeSequenceFrameFromLedgers(
+        params as {
+          createTrashDecision: CreateTrashFromHandSequenceDecision;
+          effectBlock: SupportedSequenceBlock;
+          entry: EffectQueueEntry;
+          finalizeCompleted: boolean;
+          frame: EffectExecutionFrame;
+          ledgers: SegmentLedgers;
+          state: GameState;
+        },
       ),
-      ok: false,
-    };
-  }
-  const completedPausedResult: SequenceSegmentResult = {
-    ...emptySegmentResult(),
-    attempted: true,
-    succeeded: true,
-    changedState: false,
-    selectedCards: [...selectedCards],
-  };
-  const ledgers: SegmentLedgers = {
-    segmentResults: {
-      ...frame.segmentResults,
-      [segmentKey(pausedSegment, frame.pendingDecision.resumeAtSegmentIndex)]:
-        completedPausedResult,
-    },
-    savedReferences: {
-      ...frame.savedReferences,
-      [pausedSegment.effect.saveAs]: {
-        kind: "selectedCards",
-        cards: [...selectedCards],
-      },
-    },
-  };
-  return resumeSequenceFrameFromLedgers({
-    createTrashDecision: createUnsupportedTrashDecision,
-    effectBlock,
-    entry,
-    finalizeCompleted: true,
-    frame,
-    ledgers,
+    segmentKey,
+    selectedCards,
+    sequenceRuntimeError,
+    state,
+  });
+};
+
+export const resumeSequenceFrameAfterSelectTargets = (
+  state: GameState,
+  decision: SelectTargetsDecision,
+  selectedTargets: readonly CardRef[],
+): SequenceFrameResumeResult => {
+  return resumeSequenceFrameAfterSelectTargetsHelper({
+    createUnsupportedTrashDecision,
+    decision,
+    emptySegmentResult,
+    findFrameQueueEntry,
+    findSequenceEffectBlock,
+    resumeSequenceFrameFromLedgers: (params) =>
+      resumeSequenceFrameFromLedgers(
+        params as {
+          createTrashDecision: CreateTrashFromHandSequenceDecision;
+          effectBlock: SupportedSequenceBlock;
+          entry: EffectQueueEntry;
+          finalizeCompleted: boolean;
+          frame: EffectExecutionFrame;
+          ledgers: SegmentLedgers;
+          state: GameState;
+        },
+      ),
+    segmentKey,
+    selectedTargets,
+    sequenceRuntimeError,
     state,
   });
 };

@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-055I -->
 <!-- agent-packet:story-path stories/approved/ENG-055I-saved-selections-that-character-runtime.yaml -->
-<!-- agent-packet:story-sha256 ad9544c8e248246dbf77a4fe529f4cf601ce753d90b1d62c21b48412860814b0 -->
+<!-- agent-packet:story-sha256 949c98b226a9e45b83ed20d554e78a72ccc616169868576ce422af5dbbc6817e -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -178,7 +178,7 @@ Composed execution records one segment result for every attempted sequence segme
 
 Saved-result references may bind selected cards, selected targets, paid costs, or produced objects for later text such as `that Character`. A later segment may use a saved-result reference only while the referenced object remains legal for that later instruction; otherwise the later segment follows its connector and failure policy. Saved references must preserve hidden-information visibility and replay determinism.
 
-A saved field-object reference is the runtime contract for same-frame `selectedTargets` and `producedObjects` consumers in the same effect execution frame. `selectedTargets` production records the public field objects legally selected by a target request in the segment result and saved-reference ledger. `producedObjects` records public field objects produced by a supported segment when the runtime story for that producer explicitly authorizes the produced-object family. Saved hand-selection/playSelected references remain separate from saved field-object references and must not be consumed as field-object targets.
+A saved field-object reference is the runtime contract for same-frame `selectedTargets` and `producedObjects` consumers in the same effect execution frame. `selectedTargets` production records the public field objects legally selected by a non-mutating `selectTargets` request segment in the segment result and saved-reference ledger; mutating target effects are not standalone selectedTargets producer authority. `producedObjects` records public field objects produced by a supported segment when the runtime story for that producer explicitly authorizes the produced-object family. Saved hand-selection/playSelected references remain separate from saved field-object references and must not be consumed as field-object targets.
 
 Field-object consumers must validate the saved family, `saveResultAs`, optional object index, current zone, player/controller, filter, public visibility, and instruction legality at consumption time. unsupported saved-reference families fail closed. stale objects, gone objects, hidden objects, and illegal objects fail closed. A fail-closed saved field-object reference records the segment as attempted, not succeeded, and not changedState, then follows the active connector and failure policy. Public events, public legal actions, PlayerView, and SpectatorView must not reveal hidden identities, hidden candidates, or the private saved-reference failure reason; replay and private effect logs may retain the failure reason for audit. State hashes include the frame saved-reference ledger, the consumer result, and unchanged public/hidden game state so replay, event order, and connector decisions remain deterministic.
 
@@ -322,6 +322,20 @@ type Effect =
       visibility: Visibility;
     }
   | {
+      type: "selectTargets";
+      request: {
+        timing: "onActivation" | "onResolution";
+        chooser: PlayerRef;
+        zone: "leaderArea" | "characterArea" | "stageArea" | "costArea";
+        player: PlayerRef;
+        min: number;
+        max: number;
+        allowFewerIfUnavailable: boolean;
+        filter?: CardFilter;
+        visibility: "public";
+      };
+    }
+  | {
       type: "playSelected";
       selection: SelectionId;
       enterRested?: boolean;
@@ -344,6 +358,8 @@ type Effect =
 ```
 
 These are not UI concepts. They are deterministic effect-runtime concepts. They let the runtime represent "reveal top card, maybe play it, otherwise return it face-down" without losing hidden-information boundaries.
+
+`selectTargets` is the non-mutating selectedTargets producer contract for same-frame saved field-object references. When a later segment consumes `{ family: "selectedTargets", saveResultAs, ... }`, the producer segment must be `selectTargets` with segment `saveResultAs`; mutating target effects do not act as standalone selectedTargets producer authority.
 
 `playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist. Generated support may not treat a parsed play-from-selection instruction as playable unless the parser covers the complete selection/play/return flow and the runtime capability matrix covers the resulting decision, hidden-information, forced-trash, and zone-movement behavior.
 
@@ -459,6 +475,7 @@ Own only saved result/reference runtime behavior inside composed effect executio
 - packages/engine-core/src/effect-runtime*.test.ts
 - packages/engine-core/src/effect-runtime-target*.ts
 - packages/engine-core/src/effect-runtime-target*.test.ts
+- packages/engine-core/src/target-selection-actions.ts
 - tests/hidden-info/**
 - stories/generated/ENG-055*.yaml
 - stories/approved/ENG-055*.yaml

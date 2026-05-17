@@ -6,10 +6,12 @@ import type {
   EngineError,
   EngineEvent,
   GameState,
+  SavedFieldObjectReference,
   SelectCardsDecision,
   SequenceSegmentResult,
 } from "@optcg/types";
 
+import { toCardRef } from "./action-state.js";
 import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,
@@ -94,6 +96,27 @@ const failedResult = (
   selectedCards: [...selectedCards],
 });
 
+const findProducedPublicFieldObject = (
+  state: GameState,
+  playerId: EffectQueueEntry["controllerId"],
+  instanceId: CardRef["instanceId"],
+): CardRef | null => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return null;
+  }
+  const character = player.characters.find(
+    (card) => card.instanceId === instanceId,
+  );
+  if (character !== undefined) {
+    return toCardRef(character, playerId);
+  }
+  if (player.stage?.instanceId === instanceId) {
+    return toCardRef(player.stage, playerId);
+  }
+  return null;
+};
+
 export const applyPlaySelectedSequenceSegment = (params: {
   emptySegmentResult: () => SequenceSegmentResult;
   entry: EffectQueueEntry;
@@ -165,6 +188,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
 
   let remaining = [...selectedCards];
   let changedState = previousResult?.attempted === true;
+  const producedObjects: CardRef[] = [];
   for (const selected of selectedCards) {
     if (
       selected.playerId !== entry.controllerId ||
@@ -265,12 +289,45 @@ export const applyPlaySelectedSequenceSegment = (params: {
     nextState = played.state;
     events.push(...played.events);
     changedState = changedState || played.events.length > 0;
+    const producedObject = findProducedPublicFieldObject(
+      nextState,
+      entry.controllerId,
+      selected.instanceId,
+    );
+    if (producedObject !== null) {
+      producedObjects.push(producedObject);
+    }
   }
 
+  const saveResultAs = segment.saveResultAs;
+  const savedReferences =
+    saveResultAs === undefined || producedObjects.length === 0
+      ? nextLedgers.savedReferences
+      : {
+          ...nextLedgers.savedReferences,
+          [saveResultAs]: {
+            kind: "producedObjects" as const,
+            objects: producedObjects.map(
+              (object, objectIndex): SavedFieldObjectReference => ({
+                binding: {
+                  family: "producedObjects",
+                  saveResultAs,
+                  objectIndex,
+                  ...(segment.id === undefined
+                    ? {}
+                    : { sourceSegmentId: segment.id }),
+                },
+                capturedAtStateSeq: nextState.seq,
+                object,
+                visibility: "public",
+              }),
+            ),
+          },
+        };
   nextLedgers = {
     ...nextLedgers,
     savedReferences: {
-      ...nextLedgers.savedReferences,
+      ...savedReferences,
       [segment.effect.selection]: { kind: "selectedCards", cards: [] },
     },
     segmentResults: {

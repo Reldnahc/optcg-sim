@@ -10,10 +10,14 @@ import type {
   GameState,
   PlayerId,
   ReplacementProcess,
+  SavedFieldObjectReference,
+  SavedFieldObjectTarget,
+  SequenceSavedResultReference,
   Target,
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import { getOpponentId } from "./action-state.js";
 import { reindexZoneCards } from "./action-state.js";
 import {
   buildSelectedTargetKoReplacementProcess,
@@ -31,6 +35,15 @@ export type SelectedTargetKoExecutionFailureReason =
   | "stale-target"
   | "private-target"
   | "non-character-target";
+
+export type SavedFieldObjectKoSelectionFailureReason =
+  | "unsupported-saved-reference-family"
+  | "missing-saved-reference"
+  | "invalid-object-index"
+  | "missing-object"
+  | "hidden-object"
+  | "illegal-object"
+  | "unsupported-target-policy";
 
 interface SelectedTargetKoExecutionErrorDetails {
   reason: SelectedTargetKoExecutionFailureReason;
@@ -109,6 +122,119 @@ const findCardByInstanceId = (
     }
   }
   return null;
+};
+
+const isPublicFieldZone = (
+  zone: CardRef["zone"],
+): zone is NonNullable<CardRef["zone"]> =>
+  zone?.zone === "leaderArea" ||
+  zone?.zone === "characterArea" ||
+  zone?.zone === "stageArea" ||
+  zone?.zone === "costArea";
+
+const toSavedFieldObjectReferenceList = (
+  saved: SequenceSavedResultReference | undefined,
+  family: SavedFieldObjectTarget["binding"]["family"],
+):
+  | {
+      ok: true;
+      objects: SavedFieldObjectReference[];
+    }
+  | { ok: false; reason: SavedFieldObjectKoSelectionFailureReason } => {
+  if (saved === undefined) {
+    return { ok: false, reason: "missing-saved-reference" };
+  }
+  if (family === "selectedTargets") {
+    return saved.kind === "selectedTargets"
+      ? { ok: true, objects: saved.targets }
+      : { ok: false, reason: "unsupported-saved-reference-family" };
+  }
+  return saved.kind === "producedObjects"
+    ? { ok: true, objects: saved.objects }
+    : { ok: false, reason: "unsupported-saved-reference-family" };
+};
+
+export const resolveSavedFieldObjectKoSelection = (params: {
+  controllerId: EffectQueueEntry["controllerId"];
+  savedReferences: Record<string, SequenceSavedResultReference>;
+  state: GameState;
+  target: SavedFieldObjectTarget;
+}):
+  | { ok: true; selectedTargets: readonly CardRef[] }
+  | { ok: false; reason: SavedFieldObjectKoSelectionFailureReason } => {
+  if (
+    params.target.controller !== undefined ||
+    params.target.filter !== undefined
+  ) {
+    return { ok: false, reason: "unsupported-target-policy" };
+  }
+
+  const refs = toSavedFieldObjectReferenceList(
+    params.savedReferences[params.target.binding.saveResultAs],
+    params.target.binding.family,
+  );
+  if (!refs.ok) {
+    return refs;
+  }
+  const objectIndex = params.target.binding.objectIndex ?? 0;
+  if (!Number.isInteger(objectIndex) || objectIndex < 0) {
+    return { ok: false, reason: "invalid-object-index" };
+  }
+  const object = refs.objects[objectIndex];
+  if (object === undefined) {
+    return { ok: false, reason: "missing-object" };
+  }
+  if (
+    object.binding.saveResultAs !== params.target.binding.saveResultAs ||
+    object.binding.family !== params.target.binding.family ||
+    (params.target.binding.sourceSegmentId !== undefined &&
+      object.binding.sourceSegmentId !== params.target.binding.sourceSegmentId)
+  ) {
+    return { ok: false, reason: "illegal-object" };
+  }
+  if (!isPublicFieldZone(object.object.zone)) {
+    return { ok: false, reason: "hidden-object" };
+  }
+  if (!Object.hasOwn(params.state.players, params.controllerId)) {
+    return { ok: false, reason: "illegal-object" };
+  }
+  const targetPlayerId =
+    params.target.player === "self"
+      ? params.controllerId
+      : params.target.player === "opponent"
+        ? getOpponentId(params.state, params.controllerId)
+        : params.target.player;
+  if (
+    object.object.zone.zone !== params.target.zone ||
+    object.object.playerId !== targetPlayerId
+  ) {
+    return { ok: false, reason: "illegal-object" };
+  }
+  const located = findCardByInstanceId(params.state, object.object.instanceId);
+  if (located === null) {
+    return { ok: false, reason: "missing-object" };
+  }
+  if (!isPublicFieldZone(located.card.zone)) {
+    return { ok: false, reason: "hidden-object" };
+  }
+  if (
+    located.playerId !== object.object.playerId ||
+    located.card.cardId !== object.object.cardId ||
+    located.card.zone.zone !== object.object.zone.zone
+  ) {
+    return { ok: false, reason: "illegal-object" };
+  }
+  return {
+    ok: true,
+    selectedTargets: [
+      {
+        instanceId: located.card.instanceId,
+        cardId: located.card.cardId,
+        playerId: located.playerId,
+        zone: located.card.zone,
+      },
+    ],
+  };
 };
 
 export const executeUnreplacedSelectedTargetKoProcess = (

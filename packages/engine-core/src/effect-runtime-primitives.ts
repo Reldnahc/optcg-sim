@@ -30,6 +30,7 @@ export {
 export type { SelectedTargetKoExecutionFailureReason } from "./effect-runtime-target-ko-primitives.js";
 export {
   executeSelectedTargetEffectPrimitive,
+  resolveSavedFieldObjectKoSelection,
   executeUnreplacedSelectedTargetKoProcess,
   isSupportedMainEventTargetKoEffect,
 } from "./effect-runtime-target-ko-primitives.js";

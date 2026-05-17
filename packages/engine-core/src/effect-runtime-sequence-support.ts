@@ -3,7 +3,9 @@ import type {
   EffectDefinition,
   EffectQueueEntry,
   PlaySelectedEffect,
+  SelectTargetsEffect,
   SelectCardsEffect,
+  Target,
 } from "@optcg/types";
 
 import { isSupportedSequenceHandSelectCardsEffect } from "./effect-runtime-hand-selection.js";
@@ -14,6 +16,9 @@ type DrawEffect = Extract<Effect, { type: "draw" }>;
 type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
+type KoEffect = Extract<Effect, { type: "ko" }> & {
+  target: Extract<Target, { type: "savedFieldObject" }>;
+};
 
 export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
   effect:
@@ -22,7 +27,9 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | TrashFromHandEffect
     | PayCostEffect
     | SelectCardsEffect
-    | PlaySelectedEffect;
+    | SelectTargetsEffect
+    | PlaySelectedEffect
+    | KoEffect;
 };
 
 export type SupportedSequenceBlock = EffectDefinition["effects"][number] & {
@@ -72,6 +79,20 @@ const isSupportedPayCostSegment = (
   (effect.cost.chooser === undefined || effect.cost.chooser === "self") &&
   Number.isInteger(effect.cost.count) &&
   effect.cost.count > 0;
+
+const isSupportedSavedFieldObjectKoTarget = (
+  target: Target,
+): target is Extract<Target, { type: "savedFieldObject" }> =>
+  target.type === "savedFieldObject" &&
+  target.zone === "characterArea" &&
+  (target.player === "self" || target.player === "opponent") &&
+  target.controller === undefined &&
+  target.filter === undefined;
+
+const isSupportedKoSegment = (
+  effect: SequenceSegmentEffect,
+): effect is KoEffect =>
+  effect.type === "ko" && isSupportedSavedFieldObjectKoTarget(effect.target);
 
 export const isSupportedSequenceBlock = (
   entry: EffectQueueEntry,
@@ -134,12 +155,34 @@ export const isSupportedSequenceBlock = (
         hasPendingDecisionSegment = true;
         return true;
       }
+      if (segment.effect.type === "selectTargets") {
+        const request = segment.effect.request;
+        if (
+          request.timing !== "onResolution" ||
+          request.chooser !== "self" ||
+          request.zone !== "characterArea" ||
+          request.player !== "opponent" ||
+          request.filter !== undefined ||
+          !Number.isInteger(request.min) ||
+          !Number.isInteger(request.max) ||
+          request.min < 0 ||
+          request.min > request.max ||
+          request.allowFewerIfUnavailable
+        ) {
+          return false;
+        }
+        hasPendingDecisionSegment = true;
+        return true;
+      }
       if (segment.effect.type === "playSelected") {
         return (
           segment.effect.enterRested === true &&
           segment.effect.ignoreCost === true &&
           String(segment.effect.selection).startsWith("handSelection:")
         );
+      }
+      if (isSupportedKoSegment(segment.effect)) {
+        return true;
       }
       return false;
     },

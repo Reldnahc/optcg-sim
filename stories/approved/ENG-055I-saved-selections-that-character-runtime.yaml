@@ -21,6 +21,7 @@ allowed_touch_points:
   - packages/engine-core/src/effect-runtime*.test.ts
   - packages/engine-core/src/effect-runtime-target*.ts
   - packages/engine-core/src/effect-runtime-target*.test.ts
+  - packages/engine-core/src/target-selection-actions.ts
   - tests/hidden-info/**
   - stories/generated/ENG-055*.yaml
   - stories/approved/ENG-055*.yaml
