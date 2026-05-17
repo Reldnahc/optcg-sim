@@ -42,6 +42,10 @@ import {
   isSupportedQueuedNoChoiceDrawEffect,
   isSupportedQueuedOptionalNoChoiceDrawEffect,
 } from "./effect-runtime-primitives.js";
+import {
+  createContinuousRecordsForResolvedEffect,
+  isSupportedContinuousQueueEffect,
+} from "./effect-runtime-continuous.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
 import { createSupportedSequenceFrameDecision } from "./effect-runtime-sequence-frames.js";
 import {
@@ -198,6 +202,31 @@ export const createEffectRuntimeQueueResults = (
     delete (supportShape as { condition?: unknown }).condition;
     delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
     return supportShape;
+  };
+
+  const resolveQueuedContinuousEffect = (
+    state: GameState,
+    entry: EffectQueueEntry,
+  ):
+    | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "cannotAttack" }>
+    | Extract<Effect, { type: "cannotBlock" }>
+    | undefined => {
+    const match = resolveQueuedEffectDefinition(state, entry);
+    if (
+      match === undefined ||
+      match.sourcePresencePolicy !== entry.sourcePresencePolicy
+    ) {
+      return undefined;
+    }
+    const supportShape = withoutConditionFields(match);
+    if (!isSupportedContinuousQueueEffect(supportShape.effect)) {
+      return undefined;
+    }
+    if (supportShape.effect.target.type === "choose") {
+      return undefined;
+    }
+    return supportShape.effect;
   };
 
   const resolveQueuedSearchRevealEffect = (
@@ -611,6 +640,10 @@ export const createEffectRuntimeQueueResults = (
           : unsupportedEffectQueueResult(originalState);
       }
       const drawUpToEffect = resolveQueuedDrawUpToEffect(nextState, selected);
+      const queuedContinuousEffect = resolveQueuedContinuousEffect(
+        nextState,
+        selected,
+      );
       let resolutionEventsForTrigger: EngineEvent[] = [];
       let removedSelectedFromQueue = false;
       if (drawUpToEffect !== undefined) {
@@ -656,7 +689,7 @@ export const createEffectRuntimeQueueResults = (
         }
       } else {
         drawEffect ??= resolveQueuedNoChoiceDrawEffect(nextState, selected);
-        if (drawEffect === undefined) {
+        if (drawEffect === undefined && queuedContinuousEffect === undefined) {
           return unsupportedEffectQueueResult(originalState);
         }
       }
@@ -697,6 +730,20 @@ export const createEffectRuntimeQueueResults = (
         nextState = resolution.state;
         allEvents.push(...resolution.events);
         resolutionEventsForTrigger = [...resolution.events];
+      }
+      if (queuedContinuousEffect !== undefined) {
+        const records = createContinuousRecordsForResolvedEffect(
+          nextState,
+          resolvingEntry,
+          queuedContinuousEffect,
+        );
+        if (records === null) {
+          return unsupportedEffectQueueResult(originalState);
+        }
+        nextState = {
+          ...nextState,
+          continuousEffects: [...nextState.continuousEffects, ...records],
+        };
       }
 
       const resolvedEvents: EngineEvent[] = [];

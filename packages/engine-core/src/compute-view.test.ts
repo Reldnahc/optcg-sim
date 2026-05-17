@@ -439,18 +439,6 @@ const unsupportedContinuousEffectCases: Array<{
       }),
   },
   {
-    label: "restriction modifier",
-    createEffect: (state) =>
-      continuousPowerEffectRecord(state, {
-        id: "unsupported-restriction",
-        modifier: {
-          layer: "restriction",
-          target: { type: "self" },
-          operation: { type: "restriction", restriction: "cannotAttack" },
-        },
-      }),
-  },
-  {
     label: "protection modifier",
     createEffect: (state) => {
       const base = continuousPowerEffectRecord(state, {
@@ -482,18 +470,6 @@ const unsupportedContinuousEffectCases: Array<{
       }),
   },
   {
-    label: "non-1000 power value",
-    createEffect: (state) =>
-      continuousPowerEffectRecord(state, {
-        id: "unsupported-power-value",
-        modifier: {
-          layer: "powerAdd",
-          target: { type: "self" },
-          operation: { type: "addPower", value: 2000 },
-        },
-      }),
-  },
-  {
     label: "conditional modifier",
     createEffect: (state) =>
       continuousPowerEffectRecord(state, {
@@ -506,7 +482,7 @@ const unsupportedContinuousEffectCases: Array<{
     createEffect: (state) =>
       continuousPowerEffectRecord(state, {
         id: "unsupported-duration",
-        duration: { type: "thisTurn" },
+        duration: { type: "thisAction" },
       }),
   },
 ];

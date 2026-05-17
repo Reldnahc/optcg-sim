@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-055I.md",
-      "storyId": "ENG-055I",
-      "storyPath": "stories/approved/ENG-055I-saved-selections-that-character-runtime.yaml",
-      "storySha256": "949c98b226a9e45b83ed20d554e78a72ccc616169868576ce422af5dbbc6817e"
+      "packetPath": "agent-packets/ENG-055J.md",
+      "storyId": "ENG-055J",
+      "storyPath": "stories/approved/ENG-055J-duration-modifier-restriction-runtime.yaml",
+      "storySha256": "9c539e3be70ebd5b4f5cdee15c80d6ce1e4353be4abda7df4e28005c6d59dee8"
     }
   ],
   "version": 1

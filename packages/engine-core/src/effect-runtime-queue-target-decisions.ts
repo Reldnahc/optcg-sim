@@ -24,6 +24,10 @@ import {
 } from "./action-results.js";
 import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
 import {
+  createContinuousRecordsForResolvedEffect,
+  isSupportedContinuousQueueEffect,
+} from "./effect-runtime-continuous.js";
+import {
   executeSelectedTargetEffectPrimitive,
   isSupportedMainEventTargetKoEffect,
   resolvePlayerId,
@@ -102,6 +106,16 @@ export interface EffectRuntimeQueueTargetDecisions {
 type SupportedSelectedTargetKoEffect = Extract<Effect, { type: "ko" }> & {
   target: Extract<Target, { type: "choose" }>;
 };
+type SupportedSelectedTargetContinuousEffect =
+  | (Extract<Effect, { type: "modifyPower" }> & {
+      target: Extract<Target, { type: "choose" }>;
+    })
+  | (Extract<Effect, { type: "cannotAttack" }> & {
+      target: Extract<Target, { type: "choose" }>;
+    })
+  | (Extract<Effect, { type: "cannotBlock" }> & {
+      target: Extract<Target, { type: "choose" }>;
+    });
 
 const isEffectQueueCausality = (
   causedBy: CausalityRef,
@@ -141,6 +155,33 @@ export const isSupportedTargetChoiceEffectShape = (
     effect.effect.type === "ko" &&
     isChooseTarget(effect.effect.target)
   );
+};
+const isSupportedTargetChoiceContinuousShape = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: SupportedSelectedTargetContinuousEffect;
+} => {
+  if (effect.trigger.type === "main") {
+    if (!isSupportedContinuousQueueEffect(effect.effect)) return false;
+    return (
+      effect.category === "auto" &&
+      effect.cost === undefined &&
+      effect.conditionTiming === undefined &&
+      effect.failurePolicy === undefined
+    );
+  }
+  if (effect.category !== "auto") return false;
+  if (effect.optional || effect.oncePerTurn) return false;
+  if (
+    effect.cost !== undefined ||
+    effect.conditionTiming !== undefined ||
+    effect.failurePolicy !== undefined
+  ) {
+    return false;
+  }
+  if (!isSupportedContinuousQueueEffect(effect.effect)) return false;
+  return effect.effect.target.type === "choose";
 };
 
 type EffectWithTarget = Extract<Effect, { target: unknown }>;
@@ -194,7 +235,8 @@ export const isUnsupportedSelectTargetsDecision = (
   return (
     match !== undefined &&
     (match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      !isSupportedTargetChoiceEffectShape(match) ||
+      (!isSupportedTargetChoiceEffectShape(match) &&
+        !isSupportedTargetChoiceContinuousShape(match)) ||
       !targetRequestsEqual(match.effect.target.request, decision.request))
   );
 };
@@ -237,7 +279,8 @@ export const createEffectRuntimeQueueTargetDecisions = (
     if (
       match === undefined ||
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      !isSupportedTargetChoiceEffectShape(match)
+      (!isSupportedTargetChoiceEffectShape(match) &&
+        !isSupportedTargetChoiceContinuousShape(match))
     ) {
       return undefined;
     }
@@ -251,7 +294,9 @@ export const createEffectRuntimeQueueTargetDecisions = (
     | {
         ok: true;
         entry: EffectQueueEntry;
-        effect: SupportedSelectedTargetKoEffect;
+        effect:
+          | SupportedSelectedTargetKoEffect
+          | SupportedSelectedTargetContinuousEffect;
         oncePerTurn: boolean;
       }
     | { ok: false } => {
@@ -282,7 +327,8 @@ export const createEffectRuntimeQueueTargetDecisions = (
     if (
       match === undefined ||
       match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      !isSupportedTargetChoiceEffectShape(match) ||
+      (!isSupportedTargetChoiceEffectShape(match) &&
+        !isSupportedTargetChoiceContinuousShape(match)) ||
       !targetRequestsEqual(match.effect.target.request, decision.request)
     ) {
       return { ok: false };
@@ -451,6 +497,32 @@ export const createEffectRuntimeQueueTargetDecisions = (
           (entry) => entry.id !== resolved.entry.id,
         ),
       };
+      if (resolved.effect.type !== "ko") {
+        const records = createContinuousRecordsForResolvedEffect(
+          queueRemovedState,
+          resolvingEntry,
+          resolved.effect,
+          selectedTargets,
+        );
+        if (records === null) {
+          return unsupportedContinuationResult(state);
+        }
+        nextState = {
+          ...queueRemovedState,
+          continuousEffects: [
+            ...queueRemovedState.continuousEffects,
+            ...records,
+          ],
+        };
+        const allEvents: EngineEvent[] = [];
+        return finalizeSelectedTargetEffectResolution(
+          nextState,
+          state,
+          resolved.entry,
+          allEvents,
+          [],
+        );
+      }
       const effectForPrimitive: SupportedSelectedTargetKoEffect =
         resolved.effect.target.request.allowFewerIfUnavailable &&
         selectedTargets.length < resolved.effect.target.request.min
