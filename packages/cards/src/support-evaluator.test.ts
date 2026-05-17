@@ -333,6 +333,92 @@ describe("support evaluator", () => {
     });
   });
 
+  it.each([
+    {
+      expectedCapabilityId: "optionalEffectBlock:onPlay:draw-1:self",
+      expectedRuleId: "exact:on-play:optional-effect:draw-1:self",
+      sourceText: "[On Play] You may draw 1 card.",
+    },
+    {
+      expectedCapabilityId: "condition:yourTurn",
+      expectedRuleId: "exact:condition:your-turn",
+      sourceText: "[On Play] During your turn, draw 1 card.",
+    },
+    {
+      expectedCapabilityId: "condition:selfAttachedDonCount",
+      expectedRuleId: "exact:condition:self-attached-don-count",
+      sourceText:
+        "[On Play] If this Character has 1 or more DON!! cards attached, draw 1 card.",
+    },
+  ])(
+    "evaluates CARD-014F $expectedRuleId text as playable only with matching capability evidence",
+    ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
+      const supportedCard = normalizePoneglyphCardDetail({
+        ...loadOp03044Fixture(),
+        card_number: "CARD-014F-SYNTHETIC",
+        effect: sourceText,
+        name: "Synthetic Optionality Condition Candidate",
+      });
+      const missingCapabilityMatrix = {
+        ...generatedSupportRuntimeCapabilityMatrix,
+        capabilities:
+          generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+            (capability) => capability.id !== expectedCapabilityId,
+          ),
+      };
+
+      const supported = evaluateGeneratedSupportPlayability({
+        card: supportedCard,
+        cardDataVersion: "2026-05-13",
+        effectDefinitionsVersion: "generated-support-v1",
+        expectedBehaviorHash: supportedCard.behaviorHash,
+        expectedSourceTextHash: supportedCard.sourceTextHash,
+        rulesVersion: "generated-support-v1",
+        validateEffectDefinition,
+      });
+      const blocked = evaluateGeneratedSupportPlayability({
+        card: supportedCard,
+        cardDataVersion: "2026-05-13",
+        effectDefinitionsVersion: "generated-support-v1",
+        expectedBehaviorHash: supportedCard.behaviorHash,
+        expectedSourceTextHash: supportedCard.sourceTextHash,
+        rulesVersion: "generated-support-v1",
+        runtimeCapabilityMatrix: missingCapabilityMatrix,
+        validateEffectDefinition,
+      });
+
+      expect(supported).toMatchObject({
+        blockers: [],
+        cardId: "CARD-014F-SYNTHETIC",
+        parseStatus: "complete",
+        parserRuleIds: [expectedRuleId],
+        playable: true,
+        status: "supported",
+      });
+      expect(supported.capabilityEvidence).toEqual(
+        expect.arrayContaining([
+          {
+            capabilityId: expectedCapabilityId,
+            parserRuleId: expectedRuleId,
+          },
+        ]),
+      );
+      expect(blocked).toMatchObject({
+        blockers: [
+          {
+            capabilityId: expectedCapabilityId,
+            code: "missing-runtime-capability",
+            component: expectedRuleId,
+          },
+        ],
+        missingCapabilityIds: [expectedCapabilityId],
+        parseStatus: "complete",
+        playable: false,
+        status: "unsupported",
+      });
+    },
+  );
+
   it("fails closed when reviewed source hash evidence is stale", () => {
     const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
 

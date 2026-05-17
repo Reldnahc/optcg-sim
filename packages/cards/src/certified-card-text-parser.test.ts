@@ -69,6 +69,139 @@ describe("certified card text parser", () => {
     ]);
   });
 
+  it("parses the exact On Play optional draw effect template to generated DSL", () => {
+    const result = parse("[On Play] You may draw 1 card.");
+
+    expect(result.status).toBe("complete");
+    if (!isCompleteGeneratedSupportParseResult(result)) {
+      throw new Error("Expected complete parse.");
+    }
+
+    expect(result.parserRuleIds).toEqual([
+      "exact:on-play:optional-effect:draw-1:self",
+    ]);
+    expect(result.effectDefinition.effects).toEqual([
+      {
+        category: "auto",
+        effect: { count: 1, player: "self", type: "draw" },
+        id: toEffectId("CARD-008B-001:auto-on-play-optional-draw-1"),
+        optional: true,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      },
+    ]);
+    expect(result.effectDefinition.effects[0]?.effect).not.toHaveProperty(
+      "optional",
+    );
+  });
+
+  it.each([
+    {
+      expectedEffectId: "CARD-008B-001:auto-on-play-your-turn-draw-1",
+      expectedParserRuleId: "exact:condition:your-turn",
+      expectedCondition: { type: "yourTurn" },
+      sourceText: "[On Play] During your turn, draw 1 card.",
+    },
+    {
+      expectedEffectId:
+        "CARD-008B-001:auto-on-play-self-attached-don-count-gte-1-draw-1",
+      expectedParserRuleId: "exact:condition:self-attached-don-count",
+      expectedCondition: {
+        op: "gte",
+        target: { type: "self" },
+        type: "attachedDonCount",
+        value: 1,
+      },
+      sourceText:
+        "[On Play] If this Character has 1 or more DON!! cards attached, draw 1 card.",
+    },
+  ])(
+    "parses exact conditioned On Play draw template to block-level condition ($sourceText)",
+    ({
+      expectedCondition,
+      expectedEffectId,
+      expectedParserRuleId,
+      sourceText,
+    }) => {
+      const result = parse(sourceText);
+
+      expect(result.status).toBe("complete");
+      if (!isCompleteGeneratedSupportParseResult(result)) {
+        throw new Error("Expected complete parse.");
+      }
+
+      expect(result.parserRuleIds).toEqual([expectedParserRuleId]);
+      expect(result.effectDefinition.effects).toEqual([
+        {
+          category: "auto",
+          condition: expectedCondition,
+          effect: { count: 1, player: "self", type: "draw" },
+          id: toEffectId(expectedEffectId),
+          sourcePresencePolicy: "mustRemainInSameZone",
+          trigger: { type: "onPlay" },
+        },
+      ]);
+      expect(result.effectDefinition.effects[0]).not.toHaveProperty(
+        "conditionTiming",
+      );
+      expect(result.effectDefinition.effects[0]?.effect).not.toHaveProperty(
+        "type",
+        "conditional",
+      );
+    },
+  );
+
+  it.each([
+    {
+      expectedParserRuleId: "exact:on-play:optional-effect:draw-1:self",
+      prefix: "[On Play] You may draw 1 card. ",
+    },
+    {
+      expectedParserRuleId: "exact:condition:your-turn",
+      prefix: "[On Play] During your turn, draw 1 card. ",
+    },
+    {
+      expectedParserRuleId: "exact:condition:self-attached-don-count",
+      prefix:
+        "[On Play] If this Character has 1 or more DON!! cards attached, draw 1 card. ",
+    },
+  ])(
+    "records residue after exact CARD-014F template $expectedParserRuleId",
+    ({ expectedParserRuleId, prefix }) => {
+      const trailingText = "Then rest 1 DON!!.";
+      const sourceText = `${prefix}${trailingText}`;
+      const result = parse(sourceText);
+
+      expect(result.status).toBe("partial");
+      if (result.status !== "partial") {
+        throw new Error("Expected CARD-014F residue to produce partial parse.");
+      }
+      if (isCompleteGeneratedSupportParseResult(result)) {
+        throw new Error("Expected CARD-014F residue to fail closed.");
+      }
+
+      expect(result.parsedRuleIds).toEqual([expectedParserRuleId]);
+      expect(result.unparsedSpans).toEqual([
+        {
+          end: sourceText.length,
+          start: prefix.length,
+          text: trailingText,
+        },
+      ]);
+      expect(result.blockers).toEqual([
+        {
+          code: "unparsed-span",
+          message: "Unsupported card text remains after certified parsing.",
+          span: {
+            end: sourceText.length,
+            start: prefix.length,
+            text: trailingText,
+          },
+        },
+      ]);
+    },
+  );
+
   it.each([
     { count: 1, sourceText: "[On Play] Draw up to 1 card." },
     { count: 3, sourceText: "[On Play] Draw up to 3 cards." },
@@ -477,6 +610,38 @@ describe("certified card text parser", () => {
       ],
     });
   });
+
+  it.each([
+    "[On Play] You may draw 2 cards.",
+    "[On Play] You may draw 1 card and trash 1 card from your hand.",
+    "[On Play] If you do, draw 1 card.",
+    "[On Play] Draw 1 card. If you do, trash 1 card from your hand.",
+    "[On Play] DON!! -1: You may draw 1 card.",
+    "[On Play] DON!! -1 You may draw 1 card.",
+    "[On Play] You may instead draw 1 card.",
+    "[On Play] During your opponent's turn, draw 1 card.",
+    "[On Play] If you have 1 or more cards in your hand, draw 1 card.",
+    "[On Play] If you have 1 or more Life cards, draw 1 card.",
+    "[On Play] If you have 1 or more Characters, draw 1 card.",
+    "[On Play] If this Character is rested, draw 1 card.",
+    "[On Play] If this Character has 2 or more DON!! cards attached, draw 1 card.",
+    "[On Play] If your Leader has 1 or more DON!! cards attached, draw 1 card.",
+  ])(
+    "fails closed on unsupported CARD-014F optionality and conditions (%s)",
+    (text) => {
+      const result = parse(text);
+
+      expect(result.status).toBe("partial");
+      if (isCompleteGeneratedSupportParseResult(result)) {
+        throw new Error("Expected unsupported text to fail closed.");
+      }
+      expect(result.blockers).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: "unparsed-span" }),
+        ]),
+      );
+    },
+  );
 
   it.each([
     "[On Play] You may draw up to 2 cards.",

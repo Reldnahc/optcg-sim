@@ -193,6 +193,52 @@ describe("generated support runtime capability matrix", () => {
     }
   });
 
+  it.each([
+    {
+      parserRuleId: "exact:on-play:optional-effect:draw-1:self",
+      requiredCapabilities: [
+        "category:auto",
+        "effect:draw:self:count:positive-safe-integer",
+        "optionalEffectBlock:onPlay:draw-1:self",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+      ],
+    },
+    {
+      parserRuleId: "exact:condition:your-turn",
+      requiredCapabilities: [
+        "category:auto",
+        "condition:yourTurn",
+        "effect:draw:self:count:positive-safe-integer",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+      ],
+    },
+    {
+      parserRuleId: "exact:condition:self-attached-don-count",
+      requiredCapabilities: [
+        "category:auto",
+        "condition:selfAttachedDonCount",
+        "effect:draw:self:count:positive-safe-integer",
+        "sourcePresencePolicy:mustRemainInSameZone",
+        "trigger:onPlay",
+      ],
+    },
+  ])(
+    "certifies CARD-014F parser rule $parserRuleId with exact capability evidence",
+    ({ parserRuleId, requiredCapabilities }) => {
+      for (const capabilityId of requiredCapabilities) {
+        const capability =
+          generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+            (candidate) => candidate.id === capabilityId,
+          );
+
+        expect(capability?.supported).toBe(true);
+        expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+      }
+    },
+  );
+
   it("certifies the exact return-DON play-from-hand parser rule with ENG capability evidence", () => {
     const parserRuleId =
       "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected";

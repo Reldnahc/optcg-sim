@@ -498,6 +498,74 @@ describe("generated support report", () => {
     },
   );
 
+  it("reports CARD-014F optionality and condition parser evidence deterministically", () => {
+    const missingOptionalMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "optionalEffectBlock:onPlay:draw-1:self",
+      ),
+    };
+    const supportedIndex = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-014F-YOUR-TURN" as CardId,
+          sourceText: "[On Play] During your turn, draw 1 card.",
+          sourceTextHash: "sha256:your-turn",
+        },
+        {
+          ...baseInput,
+          cardId: "CARD-014F-ATTACHED-DON" as CardId,
+          sourceText:
+            "[On Play] If this Character has 1 or more DON!! cards attached, draw 1 card.",
+          sourceTextHash: "sha256:attached-don",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const missingCapabilityIndex = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-014F-OPTIONAL-MISSING-CAP" as CardId,
+          sourceText: "[On Play] You may draw 1 card.",
+          sourceTextHash: "sha256:optional-missing",
+        },
+      ],
+      runtimeCapabilityMatrix: missingOptionalMatrix,
+      validateEffectDefinition,
+    });
+
+    const report = buildGeneratedSupportReport({
+      effectDefinitions: supportedIndex.effectDefinitions,
+      entries: [...supportedIndex.entries, ...missingCapabilityIndex.entries],
+    });
+
+    expect(report.supportedCardIds).toEqual([
+      "CARD-014F-ATTACHED-DON",
+      "CARD-014F-YOUR-TURN",
+    ]);
+    expect(report.unsupportedCardIds).toEqual([
+      "CARD-014F-OPTIONAL-MISSING-CAP",
+    ]);
+    expect(report.parserRuleIdsUsed).toEqual([
+      "exact:condition:self-attached-don-count",
+      "exact:condition:your-turn",
+      "exact:on-play:optional-effect:draw-1:self",
+    ]);
+    expect(report.missingRuntimeCapabilityIds).toEqual([
+      "optionalEffectBlock:onPlay:draw-1:self",
+    ]);
+    expect(report.statusByCardId["CARD-014F-OPTIONAL-MISSING-CAP"]).toEqual({
+      blockerCodes: ["missing-runtime-capability"],
+      missingCapabilityIds: ["optionalEffectBlock:onPlay:draw-1:self"],
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-play:optional-effect:draw-1:self"],
+      status: "unsupported",
+    });
+  });
+
   it("includes CARD-013B keyword parser rules in supported report evidence", () => {
     const index = buildGeneratedSupportIndex({
       cards: [

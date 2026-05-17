@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-014E.md",
-      "storyId": "CARD-014E",
-      "storyPath": "stories/approved/CARD-014E-returndon-hand-selection-playselected-parser-expansion.yaml",
-      "storySha256": "fc7b8adeaddd3e7b24d57a3df2b2acd4a925fd88f5ebad8fc08bc953996a5ca1"
+      "packetPath": "agent-packets/CARD-014F.md",
+      "storyId": "CARD-014F",
+      "storyPath": "stories/approved/CARD-014F-condition-optionality-parser-expansion.yaml",
+      "storySha256": "fbc4595909a263adbb76a26ca689c72d27185d99d3fbca83e78f71b2f0993548"
     }
   ],
   "version": 1

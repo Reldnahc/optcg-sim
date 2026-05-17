@@ -53,14 +53,22 @@ interface ParsedResidueClause {
 
 type TriggerPrefix = "[On Play] " | "[When Attacking] ";
 type DrawTrashPrefix = TriggerPrefix | "[When Attacking] [Once Per Turn] ";
+type DrawThenTrashClauseOptions = Readonly<{
+  cardId: CardId;
+  effectIdPrefix: string;
+  parserRuleId: string;
+  prefix: DrawTrashPrefix;
+  sourceText: string;
+  trigger: { oncePerTurn?: true; type: "onPlay" | "whenAttacking" };
+}>;
 
 export function parseCertifiedCardText(
   input: CertifiedCardTextParserInput,
 ): GeneratedSupportParserResult {
-  const singleLineParse = parseSupportedSourceText(
-    input.cardId,
-    input.sourceText,
-  );
+  const singleLineParse =
+    parseCardLineEffectClause(input.cardId, input.sourceText) ??
+    parseStandaloneBlockerClause(input.sourceText) ??
+    parseStandaloneEngineKeywordClause(input.sourceText);
   if (singleLineParse !== undefined) {
     return completeParse(input, [singleLineParse]);
   }
@@ -163,12 +171,14 @@ function parseCertifiedLine(
   line: string,
   offset: number,
 ): CertifiedLineParse {
-  const clause = parseFirstCardLineClause(cardId, line);
+  const clause = parseCardLineEffectClause(cardId, line);
   if (clause !== undefined) {
     return { clause };
   }
 
-  const standaloneClause = parseFirstStandaloneClause(line);
+  const standaloneClause =
+    parseStandaloneBlockerClause(line) ??
+    parseStandaloneEngineKeywordClause(line);
   if (standaloneClause !== undefined) {
     return { clause: standaloneClause };
   }
@@ -183,34 +193,12 @@ function parseCertifiedLine(
   return {};
 }
 
-function parseFirstCardLineClause(
-  cardId: CardId,
-  line: string,
-): CertifiedClause | undefined {
-  return (
-    parseOnPlayDrawClause(cardId, line) ??
-    parseOnPlayDrawUpToClause(cardId, line) ??
-    parseOnPlayDrawThenTrashClause(cardId, line) ??
-    parseOnPlayTrashThenDrawClause(cardId, line) ??
-    parseOnPlayReturnDonPlaySelectedCharacterFromHandClause(cardId, line) ??
-    parseWhenAttackingDrawClause(cardId, line) ??
-    parseWhenAttackingDrawThenTrashClause(cardId, line) ??
-    parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, line)
-  );
-}
-
-function parseFirstStandaloneClause(line: string): CertifiedClause | undefined {
-  return (
-    parseStandaloneBlockerClause(line) ??
-    parseStandaloneEngineKeywordClause(line)
-  );
-}
-
 function parseFirstCardLineResidueClause(
   cardId: CardId,
   line: string,
 ): ParsedResidueClause | undefined {
   return (
+    parseCard014fResidueClause(cardId, line) ??
     parseCountedResidueClause({
       cardId,
       createClause: createOnPlayDrawClauseWithCount,
@@ -356,24 +344,23 @@ function createDrawEffectBlock({
   };
 }
 
-function parseSupportedSourceText(
+function parseCardLineEffectClause(
   cardId: CardId,
   sourceText: string,
 ): CertifiedClause | undefined {
   return (
+    parseCard014fClause(cardId, sourceText) ??
     parseOnPlayDrawClause(cardId, sourceText) ??
     parseOnPlayDrawUpToClause(cardId, sourceText) ??
-    parseWhenAttackingDrawClause(cardId, sourceText) ??
     parseOnPlayDrawThenTrashClause(cardId, sourceText) ??
     parseOnPlayTrashThenDrawClause(cardId, sourceText) ??
     parseOnPlayReturnDonPlaySelectedCharacterFromHandClause(
       cardId,
       sourceText,
     ) ??
+    parseWhenAttackingDrawClause(cardId, sourceText) ??
     parseWhenAttackingDrawThenTrashClause(cardId, sourceText) ??
-    parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, sourceText) ??
-    parseStandaloneBlockerClause(sourceText) ??
-    parseStandaloneEngineKeywordClause(sourceText)
+    parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, sourceText)
   );
 }
 
@@ -410,6 +397,87 @@ function parseOnPlayDrawClause(
     sourceText,
   });
 }
+
+function parseCard014fClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const template = card014fTemplatesByText[sourceText];
+
+  return template === undefined
+    ? undefined
+    : createCard014fDraw1Clause(cardId, template);
+}
+
+function parseCard014fResidueClause(
+  cardId: CardId,
+  sourceText: string,
+): ParsedResidueClause | undefined {
+  const entry = Object.entries(card014fTemplatesByText).find(([text]) =>
+    sourceText.startsWith(`${text} `),
+  );
+  if (entry === undefined) {
+    return undefined;
+  }
+
+  const [text, template] = entry;
+
+  return {
+    clause: createCard014fDraw1Clause(cardId, template),
+    prefix: `${text} `,
+  };
+}
+
+function createCard014fDraw1Clause(
+  cardId: CardId,
+  template: Card014fTemplate,
+): CertifiedClause {
+  return {
+    effectBlock: {
+      category: "auto",
+      effect: { count: 1, player: "self", type: "draw" },
+      id: toEffectId(`${String(cardId)}:${template.effectIdSuffix}`),
+      ...template.effectBlockFields,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "onPlay" },
+    },
+    parserRuleId: template.parserRuleId,
+  };
+}
+
+type Card014fTemplate = Readonly<{
+  effectBlockFields:
+    | Pick<EffectBlock, "condition">
+    | Required<Pick<EffectBlock, "optional">>;
+  effectIdSuffix: string;
+  parserRuleId: string;
+}>;
+
+const card014fTemplatesByText: Readonly<Record<string, Card014fTemplate>> = {
+  "[On Play] You may draw 1 card.": {
+    effectBlockFields: { optional: true },
+    effectIdSuffix: "auto-on-play-optional-draw-1",
+    parserRuleId: "exact:on-play:optional-effect:draw-1:self",
+  },
+  "[On Play] During your turn, draw 1 card.": {
+    effectBlockFields: { condition: { type: "yourTurn" } },
+    effectIdSuffix: "auto-on-play-your-turn-draw-1",
+    parserRuleId: "exact:condition:your-turn",
+  },
+  "[On Play] If this Character has 1 or more DON!! cards attached, draw 1 card.":
+    {
+      effectBlockFields: {
+        condition: {
+          op: "gte",
+          target: { type: "self" },
+          type: "attachedDonCount",
+          value: 1,
+        },
+      },
+      effectIdSuffix: "auto-on-play-self-attached-don-count-gte-1-draw-1",
+      parserRuleId: "exact:condition:self-attached-don-count",
+    },
+};
 
 function parseOnPlayDrawUpToClause(
   cardId: CardId,
@@ -503,14 +571,7 @@ function parseDrawThenTrashClauseWithPrefix({
   prefix,
   sourceText,
   trigger,
-}: {
-  cardId: CardId;
-  effectIdPrefix: string;
-  parserRuleId: string;
-  prefix: DrawTrashPrefix;
-  sourceText: string;
-  trigger: { oncePerTurn?: true; type: "onPlay" | "whenAttacking" };
-}): CertifiedClause | undefined {
+}: DrawThenTrashClauseOptions): CertifiedClause | undefined {
   const parsed = parseDrawThenTrashCounts(sourceText, prefix);
   if (parsed === undefined) {
     return undefined;
@@ -657,53 +718,47 @@ const standaloneBlockerWithReminderSourceText = `${standaloneBlockerSourceText} 
 const standaloneEngineKeywordDefinitions = [
   [
     "exact:keyword:rush:standalone",
-    "(This card can attack on the turn in which it is played.)",
     "[Rush]",
+    "(This card can attack on the turn in which it is played.)",
   ],
   [
     "exact:keyword:rush-character:standalone",
-    "(This card can attack Characters on the turn in which it is played.)",
     "[Rush: Character]",
+    "(This card can attack Characters on the turn in which it is played.)",
   ],
   [
     "exact:keyword:double-attack:standalone",
-    "(This card deals 2 damage.)",
     "[Double Attack]",
+    "(This card deals 2 damage.)",
   ],
   [
     "exact:keyword:banish:standalone",
-    "(When this card deals damage, the target card is trashed without activating its Trigger.)",
     "[Banish]",
+    "(When this card deals damage, the target card is trashed without activating its Trigger.)",
   ],
 ] as const;
 
-function parseStandaloneBlockerClause(
-  sourceText: string,
-): CertifiedClause | undefined {
+function parseStandaloneBlockerClause(sourceText: string) {
   return sourceText === standaloneBlockerSourceText ||
     sourceText === standaloneBlockerWithReminderSourceText
-    ? {
-        implementationStatus: "vanilla-confirmed",
-        parserRuleId: "exact:keyword:blocker:standalone",
-      }
+    ? createStandaloneKeywordClause("exact:keyword:blocker:standalone")
     : undefined;
 }
 
-function parseStandaloneEngineKeywordClause(
-  sourceText: string,
-): CertifiedClause | undefined {
+function createStandaloneKeywordClause(parserRuleId: string): CertifiedClause {
+  return { implementationStatus: "vanilla-confirmed", parserRuleId };
+}
+
+function parseStandaloneEngineKeywordClause(sourceText: string) {
   const definition = standaloneEngineKeywordDefinitions.find(
     (candidate) =>
-      sourceText === candidate[2] ||
-      sourceText === `${candidate[2]} ${candidate[1]}`,
+      sourceText === candidate[1] ||
+      sourceText === `${candidate[1]} ${candidate[2]}`,
   );
 
   return definition === undefined
     ? undefined
-    : {
-        implementationStatus: "vanilla-confirmed",
-        parserRuleId: definition[0],
-      };
+    : createStandaloneKeywordClause(definition[0]);
 }
 
 function parseCountedResidueClause({
@@ -735,14 +790,7 @@ function parseDrawThenTrashResidueClauseWithPrefix({
   prefix,
   sourceText,
   trigger,
-}: {
-  cardId: CardId;
-  effectIdPrefix: string;
-  parserRuleId: string;
-  prefix: DrawTrashPrefix;
-  sourceText: string;
-  trigger: { oncePerTurn?: true; type: "onPlay" | "whenAttacking" };
-}): ParsedResidueClause | undefined {
+}: DrawThenTrashClauseOptions): ParsedResidueClause | undefined {
   const parsed = parseDrawThenTrashCountsWithResidue(sourceText, prefix);
   if (parsed === undefined) {
     return undefined;
@@ -761,9 +809,7 @@ function parseDrawThenTrashResidueClauseWithPrefix({
   };
 }
 
-function parseStandaloneBlockerResidueClause(
-  sourceText: string,
-): ParsedResidueClause | undefined {
+function parseStandaloneBlockerResidueClause(sourceText: string) {
   const reminderPrefix = `${standaloneBlockerWithReminderSourceText} `;
   const sourcePrefix = `${standaloneBlockerSourceText} `;
   const prefix = sourceText.startsWith(reminderPrefix)
@@ -776,20 +822,15 @@ function parseStandaloneBlockerResidueClause(
   }
 
   return {
-    clause: {
-      implementationStatus: "vanilla-confirmed",
-      parserRuleId: "exact:keyword:blocker:standalone",
-    },
+    clause: createStandaloneKeywordClause("exact:keyword:blocker:standalone"),
     prefix,
   };
 }
 
-function parseStandaloneEngineKeywordResidueClause(
-  sourceText: string,
-): ParsedResidueClause | undefined {
+function parseStandaloneEngineKeywordResidueClause(sourceText: string) {
   for (const definition of standaloneEngineKeywordDefinitions) {
-    const sourcePrefix = `${definition[2]} `;
-    const reminderPrefix = `${definition[2]} ${definition[1]} `;
+    const sourcePrefix = `${definition[1]} `;
+    const reminderPrefix = `${definition[1]} ${definition[2]} `;
     const prefix = sourceText.startsWith(reminderPrefix)
       ? reminderPrefix
       : sourceText.startsWith(sourcePrefix)
@@ -798,10 +839,7 @@ function parseStandaloneEngineKeywordResidueClause(
 
     if (prefix !== undefined) {
       return {
-        clause: {
-          implementationStatus: "vanilla-confirmed",
-          parserRuleId: definition[0],
-        },
+        clause: createStandaloneKeywordClause(definition[0]),
         prefix,
       };
     }
@@ -810,10 +848,7 @@ function parseStandaloneEngineKeywordResidueClause(
   return undefined;
 }
 
-function parseDrawCount(
-  sourceText: string,
-  prefix: TriggerPrefix,
-): number | undefined {
+function parseDrawCount(sourceText: string, prefix: TriggerPrefix) {
   return parseDrawInstructionCount(
     sourceText,
     prefix,
@@ -821,10 +856,7 @@ function parseDrawCount(
   );
 }
 
-function parseDrawUpToCount(
-  sourceText: string,
-  prefix: TriggerPrefix,
-): number | undefined {
+function parseDrawUpToCount(sourceText: string, prefix: TriggerPrefix) {
   return parseDrawInstructionCount(
     sourceText,
     prefix,
@@ -836,7 +868,7 @@ function parseDrawInstructionCount(
   sourceText: string,
   prefix: TriggerPrefix,
   pattern: RegExp,
-): number | undefined {
+) {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
   if (wrapper === undefined || wrapper.prefix !== prefix) {
     return undefined;
@@ -850,10 +882,7 @@ function parseDrawInstructionCount(
   return parsePositiveCardCount(match[1] ?? "", match[2]);
 }
 
-function parseDrawCountWithResidue(
-  sourceText: string,
-  prefix: TriggerPrefix,
-): { count: number; prefix: string } | undefined {
+function parseDrawCountWithResidue(sourceText: string, prefix: TriggerPrefix) {
   return parseDrawInstructionCountWithResidue(
     sourceText,
     prefix,
@@ -865,7 +894,7 @@ function parseDrawCountWithResidue(
 function parseDrawUpToCountWithResidue(
   sourceText: string,
   prefix: TriggerPrefix,
-): { count: number; prefix: string } | undefined {
+) {
   return parseDrawInstructionCountWithResidue(
     sourceText,
     prefix,
@@ -902,10 +931,7 @@ function parseDrawInstructionCountWithResidue(
   return { count, prefix: clausePrefix };
 }
 
-function parseDrawThenTrashCounts(
-  sourceText: string,
-  prefix: DrawTrashPrefix,
-): { drawCount: number; trashCount: number } | undefined {
+function parseDrawThenTrashCounts(sourceText: string, prefix: DrawTrashPrefix) {
   const wrapper = parseDrawThenTrashWrapper(sourceText, prefix);
   if (wrapper === undefined) {
     return undefined;
@@ -933,10 +959,7 @@ function parseDrawThenTrashCounts(
   return { drawCount, trashCount };
 }
 
-function parsePositiveCardCount(
-  countText: string,
-  noun: string | undefined,
-): number | undefined {
+function parsePositiveCardCount(countText: string, noun: string | undefined) {
   const count = parseExactPositiveSafeInteger(countText);
   if (count === undefined) {
     return undefined;
@@ -952,7 +975,7 @@ function parsePositiveCardCount(
 function parseDrawThenTrashCountsWithResidue(
   sourceText: string,
   prefix: DrawTrashPrefix,
-): { drawCount: number; prefix: string; trashCount: number } | undefined {
+) {
   const wrapper = parseDrawThenTrashWrapper(sourceText, prefix);
   if (wrapper === undefined) {
     return undefined;
