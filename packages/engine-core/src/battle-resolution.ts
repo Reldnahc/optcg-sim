@@ -164,8 +164,7 @@ export const resolveSupportedVanillaBattle = (
   if (
     (pendingRuntimeWork !== undefined &&
       !isSupportedDamageDeferredEffectQueueState(state)) ||
-    state.replacementState.length > 0 ||
-    state.continuousEffects.length > 0
+    state.replacementState.length > 0
   ) {
     return unsupportedBattleResolution(
       state,
