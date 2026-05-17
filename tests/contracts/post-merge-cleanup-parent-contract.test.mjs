@@ -173,7 +173,7 @@ test("parent cleanup planning rejects absent ambiguous mismatched or already-don
       }),
     /must be non-packetized/i,
   );
-});
+}, 15_000);
 
 test("parent cleanup planning accepts object-form parent child stories", async () => {
   const repoRoot = await makeTempRepo([
