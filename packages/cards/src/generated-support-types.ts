@@ -47,10 +47,27 @@ export const generatedSupportDiagnosticLayers = [
 export type GeneratedSupportDiagnosticLayer =
   (typeof generatedSupportDiagnosticLayers)[number];
 
+export type GeneratedSupportDeepestSuccessfulLayer =
+  | "source-integrity"
+  | "metadata"
+  | "parser"
+  | "schema"
+  | "runtime-capability"
+  | "support-status";
+
 export interface GeneratedSupportUnparsedSpan {
   start: number;
   end: number;
   text: string;
+}
+
+export interface GeneratedSupportDiagnosticDecomposition {
+  recognizedActionCandidates: readonly string[];
+  recognizedSyntaxFragments: readonly string[];
+  recognizedTriggerCandidates: readonly string[];
+  reason: string;
+  unsupportedConditionFragments: readonly string[];
+  unsupportedSyntaxFragments: readonly string[];
 }
 
 export interface GeneratedSupportBlocker {
@@ -58,7 +75,9 @@ export interface GeneratedSupportBlocker {
   message: string;
   capabilityId?: string;
   component?: string;
+  decomposition?: GeneratedSupportDiagnosticDecomposition;
   diagnosticLayer?: GeneratedSupportDiagnosticLayer;
+  schemaValidated?: boolean;
   expectedHash?: string;
   parserRuleId?: string;
   receivedHash?: string;

@@ -140,6 +140,43 @@ describe("support probe", () => {
     ).toContain("[layer: unsupported-layer]");
   });
 
+  it("formats deepest successful layer for schema/runtime blockers and omits it for parser/stale blockers", () => {
+    expect(
+      formatSupportProbeBlocker({
+        code: "missing-runtime-capability",
+        capabilityId: "effect:draw:self:count:positive-safe-integer",
+        component: "exact:on-play:draw-n:self",
+        message: "Missing runtime capability.",
+        schemaValidated: true,
+      }),
+    ).toContain("[deepest-successful-layer: schema]");
+
+    expect(
+      formatSupportProbeBlocker({
+        code: "invalid-dsl-schema",
+        component: "/effects/0/type must be string",
+        message: "Generated DSL failed effect DSL schema validation.",
+      }),
+    ).toContain("[deepest-successful-layer: parser]");
+
+    expect(
+      formatSupportProbeBlocker({
+        code: "unparsed-span",
+        message: "Card text is not covered by certified parser rules.",
+        span: { start: 0, end: 9, text: "two cards" },
+      }),
+    ).not.toContain("[deepest-successful-layer:");
+
+    expect(
+      formatSupportProbeBlocker({
+        code: "stale-hash",
+        expectedHash: "sha256:old",
+        message: "Poneglyph text hash changed.",
+        receivedHash: "sha256:new",
+      }),
+    ).not.toContain("[deepest-successful-layer:");
+  });
+
   it("runs CLI path with injected fetch and prints playable output without live network", async () => {
     const detail = await loadOp03044Fixture();
     const normalized = normalizePoneglyphCardDetail(detail);
@@ -403,6 +440,112 @@ describe("support probe", () => {
       'span: "[On Play] Draw a card for each of your {Neptunian} type Characters. Then, trash the same number of cards from your hand."',
     );
     expect(text).not.toContain('span: "[Rush: Character]');
+  });
+
+  it("prints parser/source-span diagnostics for unsupported word-number text", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-015A-WORD-NUMBER"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-015A-WORD-NUMBER",
+          effect: "[On Play] Draw two cards.",
+          name: "Word Number Unsupported Candidate",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("unparsed-span");
+    expect(text).toContain("layer: parser");
+    expect(text).toContain('span: "[On Play] Draw two cards."');
+  });
+
+  it("prints recognized trigger/action candidates and unsupported condition blockers for conditional draw text", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-015A-PROBE-CONDITIONAL"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-015A-PROBE-CONDITIONAL",
+          effect:
+            "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.",
+          name: "Conditional Draw Probe Candidate",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("recognized trigger candidate: [On Play]");
+    expect(text).toContain(
+      "recognized syntax fragment: if-conditional-wrapper",
+    );
+    expect(text).toContain(
+      "recognized supported-action candidate: draw 2 cards",
+    );
+    expect(text).toContain(
+      "unsupported condition predicate: your Leader is multicolored",
+    );
+    expect(text).toContain(
+      "unsupported condition predicate: you have 5 or less cards in your hand",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: condition conjunction: and",
+    );
+    expect(text).not.toContain("condition conjunction: or");
+    expect(text).toContain(
+      "reason: Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
+    );
+  });
+
+  it("prints singular recognized draw action candidates without corrupting card noun", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-015A-PROBE-CONDITIONAL-SINGULAR"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-015A-PROBE-CONDITIONAL-SINGULAR",
+          effect:
+            "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 1 card.",
+          name: "Conditional Draw Singular Probe Candidate",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain(
+      "recognized supported-action candidate: draw 1 card",
+    );
+    expect(text).not.toContain("draw 1 cards");
   });
 
   it("prints metadata layer for empty-effect metadata precondition blockers", async () => {

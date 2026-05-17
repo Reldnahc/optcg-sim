@@ -147,6 +147,143 @@ describe("generated support report", () => {
     ).toBe("unsupported-layer");
   });
 
+  it("reports deepest successful layer for schema/runtime blockers and omits it for parser/stale blockers", () => {
+    const report = buildGeneratedSupportReport({
+      effectDefinitions: {},
+      entries: [
+        {
+          blockers: [
+            {
+              code: "missing-runtime-capability",
+              capabilityId: "effect:draw:self:count:positive-safe-integer",
+              component: "exact:on-play:draw-n:self",
+              message: "Missing runtime capability.",
+              schemaValidated: true,
+            },
+          ],
+          capabilityEvidence: [],
+          cardId: "CARD-015A-RUNTIME" as CardId,
+          missingCapabilityIds: [
+            "effect:draw:self:count:positive-safe-integer",
+          ],
+          parseStatus: "complete",
+          parserRuleIds: ["exact:on-play:draw-n:self"],
+          sourceTextHash: "sha256:runtime",
+          status: "unsupported",
+        },
+        {
+          blockers: [
+            {
+              code: "invalid-dsl-schema",
+              component: "/effects/0/type must be string",
+              message: "Generated DSL failed effect DSL schema validation.",
+            },
+          ],
+          capabilityEvidence: [],
+          cardId: "CARD-015A-SCHEMA" as CardId,
+          missingCapabilityIds: [],
+          parseStatus: "complete",
+          parserRuleIds: ["exact:on-play:draw-n:self"],
+          sourceTextHash: "sha256:schema",
+          status: "unsupported",
+        },
+        {
+          blockers: [
+            {
+              code: "unparsed-span",
+              message: "Card text is not covered by certified parser rules.",
+              span: { start: 0, end: 10, text: "two cards" },
+            },
+          ],
+          capabilityEvidence: [],
+          cardId: "CARD-015A-PARSER" as CardId,
+          missingCapabilityIds: [],
+          parseStatus: "partial",
+          parserRuleIds: [],
+          sourceTextHash: "sha256:parser",
+          status: "unsupported",
+        },
+        {
+          blockers: [
+            {
+              code: "stale-hash",
+              expectedHash: "sha256:old",
+              message: "Poneglyph text hash changed.",
+              receivedHash: "sha256:new",
+            },
+          ],
+          capabilityEvidence: [],
+          cardId: "CARD-015A-STALE" as CardId,
+          missingCapabilityIds: [],
+          parseStatus: "staleHash",
+          parserRuleIds: [],
+          sourceTextHash: "sha256:new",
+          status: "unsupported",
+        },
+      ],
+    });
+
+    const runtime = report.blockers.find(
+      (blocker) => blocker.cardId === "CARD-015A-RUNTIME",
+    );
+    const schema = report.blockers.find(
+      (blocker) => blocker.cardId === "CARD-015A-SCHEMA",
+    );
+    const parser = report.blockers.find(
+      (blocker) => blocker.cardId === "CARD-015A-PARSER",
+    );
+    const stale = report.blockers.find(
+      (blocker) => blocker.cardId === "CARD-015A-STALE",
+    );
+
+    expect(runtime?.layer).toBe("runtime-capability");
+    expect(runtime?.deepestSuccessfulLayer).toBe("schema");
+    expect(schema?.layer).toBe("schema");
+    expect(schema?.deepestSuccessfulLayer).toBe("parser");
+    expect(parser?.layer).toBe("parser");
+    expect(parser?.deepestSuccessfulLayer).toBeUndefined();
+    expect(stale?.layer).toBe("stale-hash");
+    expect(stale?.deepestSuccessfulLayer).toBeUndefined();
+  });
+
+  it("prefers schema failure before runtime-capability blockers in real index flow", () => {
+    const matrixWithoutDraw = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "effect:draw:self:count:positive-safe-integer",
+      ),
+    };
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-015A-SCHEMA-FIRST" as CardId,
+          sourceText: "[On Play] Draw 1 card.",
+          sourceTextHash: "sha256:card-015a-schema-first",
+        },
+      ],
+      runtimeCapabilityMatrix: matrixWithoutDraw,
+      validateEffectDefinition: () => ({
+        errors: ["/effects/0/type failed schema validation"],
+        valid: false,
+      }),
+    });
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.blockers).toEqual([
+      {
+        cardId: "CARD-015A-SCHEMA-FIRST",
+        code: "invalid-dsl-schema",
+        component: "/effects/0/type failed schema validation",
+        deepestSuccessfulLayer: "parser",
+        layer: "schema",
+        message: "Generated DSL failed effect DSL schema validation.",
+      },
+    ]);
+    expect(report.missingRuntimeCapabilityIds).toEqual([]);
+  });
+
   it("includes OP03-044 Kaya as supported with certified parser and capability evidence", () => {
     const fixture = JSON.parse(
       readFileSync(
@@ -251,6 +388,7 @@ describe("generated support report", () => {
           cardId: "CARD-008D-003",
           code: "missing-runtime-capability",
           component: "exact:on-play:draw-n:self",
+          deepestSuccessfulLayer: "schema",
           layer: "runtime-capability",
           message:
             "Missing runtime capability effect:draw:self:count:positive-safe-integer for parser rule exact:on-play:draw-n:self.",
@@ -475,6 +613,45 @@ describe("generated support report", () => {
     });
   });
 
+  it("exposes structured conditional-draw decomposition fragments in report blockers", () => {
+    const sourceText =
+      "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-015A-REPORT-CONDITIONAL" as CardId,
+          sourceText,
+          sourceTextHash: "sha256:card-015a-report-conditional",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          cardId: "CARD-015A-REPORT-CONDITIONAL",
+          code: "unparsed-span",
+          decomposition: {
+            recognizedActionCandidates: ["draw 2 cards"],
+            recognizedSyntaxFragments: ["if-conditional-wrapper"],
+            recognizedTriggerCandidates: ["[On Play]"],
+            reason:
+              "Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
+            unsupportedConditionFragments: [
+              "your Leader is multicolored",
+              "you have 5 or less cards in your hand",
+            ],
+            unsupportedSyntaxFragments: ["condition conjunction: and"],
+          },
+        }),
+      ]),
+    );
+    expect(report.unsupportedCardIds).toEqual(["CARD-015A-REPORT-CONDITIONAL"]);
+  });
+
   it("includes draw-then-trash parser rules in report evidence when supported", () => {
     const index = buildGeneratedSupportIndex({
       cards: [
@@ -636,6 +813,7 @@ describe("generated support report", () => {
         cardId: "CARD-014C-MISSING-CAP",
         code: "missing-runtime-capability",
         component: "exact:on-play:trash-2-from-hand:draw-1:self",
+        deepestSuccessfulLayer: "schema",
         layer: "runtime-capability",
         message:
           "Missing runtime capability trashFromHand:segment0:self:self:count-exact for parser rule exact:on-play:trash-2-from-hand:draw-1:self.",
@@ -700,6 +878,7 @@ describe("generated support report", () => {
           code: "missing-runtime-capability",
           component:
             "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+          deepestSuccessfulLayer: "schema",
           layer: "runtime-capability",
           message: `Missing runtime capability ${missingCapabilityId} for parser rule exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected.`,
         },

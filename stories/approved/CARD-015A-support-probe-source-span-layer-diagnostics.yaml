@@ -1,0 +1,129 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-015A
+epic_id: CARD-015
+title: Support probe source-span and layer diagnostics
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Improve cards-side generated-support probe and report output so unsupported
+  text is easier to debug by showing the deepest successful support layer,
+  exact missing layer, narrow source-span diagnostics, and diagnostic-only
+  decomposition of parser failures into recognized candidate pieces and
+  unsupported blocking text.
+story_boundary: >
+  Own only package-local support probe/report diagnostics, cards-internal
+  diagnostic metadata propagation, and tests for the incremental diagnostics
+  delta after CARD-014I. Do not re-own CARD-014I's broad missing-layer
+  taxonomy except as compatibility regression coverage. Do not certify new
+  parser rules, add runtime behavior, make generated support playable for new
+  shapes, edit real-card fixtures, change shared contracts or schemas, or
+  reach into server, client, API, UI, database, replay, or live Poneglyph
+  behavior.
+allowed_touch_points:
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/*support*.test.ts
+  - agent-packets/CARD-015A.md
+  - stories/generated/CARD-015*.yaml
+  - stories/approved/CARD-015*.yaml
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s005
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-014I
+scope:
+  - improve support-probe and generated-support report output for generated composed support diagnostics without changing evaluator support decisions
+  - add incremental diagnostics over CARD-014I: deepest successful layer presentation, narrower source-span and residue details, unsupported wrapper or token details, and stale-hash priority confirmation
+  - preserve CARD-014I's exact missing-layer taxonomy for parser, schema, runtime capability, source integrity, metadata/review/test status, stale hash, unsupported primitive, unsupported trigger, unsupported cost, unsupported optionality, unsupported condition, unsupported cardinality, unsupported target, unsupported duration/modifier/restriction, and unsupported saved-reference as compatibility regression coverage rather than new broad support ownership
+  - report the deepest successful support layer before failure using the explicit ordered progression `source-integrity` -> `metadata` -> `parser` -> `schema` -> `runtime-capability` -> `support-status`
+  - for runtime-capability failures after complete parse and valid DSL schema, report deepest successful layer `schema`
+  - for schema failures after source integrity, metadata, and parser success, report deepest successful layer `parser`
+  - for parser failures, stale-hash failures, and any case with no trusted prior successful layer, omit deepest-successful-layer output rather than inventing a successful layer
+  - prefer narrow source spans when existing parser or blocker data already allows it, including exact unparsed span, exact residue text, word-number token such as `two`, and unsupported wrapper text such as `[Once Per Game]`
+  - for whole-span parser failures where a supported action phrase is recognizable inside an unsupported wrapper or condition, report diagnostic-only decomposition that separates recognized candidate pieces from unsupported blocking pieces
+  - for `[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.`, report `[On Play]` as a recognized trigger candidate, the `if` conditional wrapper as recognized syntax, `draw 2 cards` as a recognized supported-action candidate, the multicolored-leader plus hand-count predicates as unsupported condition blockers, and `and` as an unsupported condition-conjunction syntax fragment
+  - classify only the exact `and` conjunction in that conditional draw template; do not generalize `or`, because `or` can be a logical condition connector or part of quantity-comparator text such as `or more` / `or less`
+  - if an unsupported parser failure contains `or`, `or more`, `or less`, or `up to` wording outside an already certified exact template, leave that wording in the unsupported span or condition predicate rather than inventing a connector/comparator classification
+  - diagnostic-only decomposition must not create parser certification, generated DSL, runtime capability evidence, support metadata, or playable support
+  - decomposition output must explicitly say the full effect template remains unsupported because the whole condition/action template is not certified
+  - preserve blocker identity for existing codes `unparsed-span`, `ambiguous-wording`, `custom-handler-required`, `unsupported-primitive`, `stale-hash`, `invalid-dsl-schema`, and `missing-runtime-capability`
+  - keep stale hash as the highest-priority diagnostic and do not silently refresh or rewrite fixture evidence
+  - allow whole-card unsupported diagnostics only when no narrower parser component or diagnostic-only decomposition matched
+non_scope:
+  - new parser certification
+  - new runtime behavior
+  - new generated playable support
+  - real-card fixture support
+  - shared contracts or effect DSL schema changes unless story-review proves a real shared authority gap
+  - server, client, API, UI, database, replay, WebSocket, Redis, or live Poneglyph work
+  - replacement generalization
+card_source_integrity:
+  - this story does not enable or change gameplay support for any real card and must not edit source fixtures or fixture hashes
+  - stale hash diagnostics must remain higher priority than parser, schema, runtime capability, source integrity, metadata, review, or test-status diagnostics
+  - implementation must not silently refresh, rewrite, recapture, or rebaseline fixture sourceTextHash, behaviorHash, support metadata, or reviewed source evidence
+engine_capability_preflight:
+  - diagnostics may surface missing runtime capability IDs but must not add runtime capability records or treat missing records as support
+  - unsupported runtime layers must remain unsupported even when parser and schema layers pass
+  - no new parser rule, generated DSL primitive, runtime capability, support status, or gameplay behavior is introduced by this story
+acceptance_criteria:
+  - probe/report output is more actionable without broadening generated support
+  - unsupported text remains unsupported
+  - existing CARD-008, CARD-009, CARD-012, CARD-013, and CARD-014 support behavior remains compatible
+  - diagnostics distinguish parser failure from schema failure from missing runtime capability while preserving CARD-014I's existing layer taxonomy as regression behavior
+  - deepest-successful-layer output follows the ordered progression `source-integrity` -> `metadata` -> `parser` -> `schema` -> `runtime-capability` -> `support-status`
+  - runtime-capability failure after complete parse and valid DSL schema reports deepest successful layer `schema`
+  - schema failure after parser success reports deepest successful layer `parser`
+  - parser failure and stale-hash failure omit deepest-successful-layer output
+  - diagnostics continue to identify source integrity, metadata/review/test status, stale hash, unsupported primitive, unsupported trigger, unsupported cost, unsupported optionality, unsupported condition, unsupported cardinality, unsupported target, unsupported duration/modifier/restriction, and unsupported saved-reference when existing CARD-014I data already provides that layer
+  - narrow source spans are reported only when existing parser/blocker data supports them
+  - parser-failure diagnostics report recognized candidate pieces and unsupported blocking pieces for supported-action-inside-unsupported-wrapper/condition text without changing support status
+  - "`[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.` remains unsupported but reports `[On Play]`, the `if` wrapper, `draw 2 cards`, `your Leader is multicolored`, `and`, and `you have 5 or less cards in your hand` as separate diagnostic fragments"
+  - whole-card unsupported diagnostics are used only when no narrower parser component or diagnostic-only decomposition matched
+  - stale hash remains highest-priority and does not mutate fixture evidence
+required_tests:
+  - exact candidate story-review before approval handoff
+  - deepest-successful-layer tests for runtime-capability failure after complete parse and valid DSL schema reporting `schema`
+  - deepest-successful-layer tests for schema failure after parser success reporting `parser`
+  - deepest-successful-layer tests proving parser failure and stale-hash failure omit deepest-successful-layer output
+  - unsupported word-number reports parser/source-span diagnostic without becoming playable
+  - extra sentence after supported text reports residue or unparsed span
+  - unsupported timing or wrapper reports parser layer
+  - unsupported conditional draw text reports recognized trigger and draw-action candidates plus unsupported condition fragments without becoming playable
+  - support-probe output for `[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.` names the supported draw action candidate and the unsupported condition blockers separately
+  - generated-support report output for the same conditional draw text exposes the same diagnostic fragments as structured blocker metadata
+  - missing runtime capability reports runtime capability layer and capability ID
+  - schema-invalid generated DSL reports schema layer
+  - stale hash reports stale-hash before parser or capability diagnostics
+  - existing support-probe and generated-support report snapshots or assertions remain compatible
+  - regression tests proving existing CARD-008, CARD-009, CARD-012, CARD-013, and CARD-014 generated-support behavior remains supported or unsupported exactly as before
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-015A packet before implementation
+  - stay within allowed_touch_points
+  - do not add parser rules, runtime behavior, fixture support, or playable card support
+  - keep diagnostic helper types package-local to packages/cards unless story-review proves a real shared authority gap
+  - fail closed when diagnostics cannot determine a trusted narrower layer or source span
+ambiguity_policy: fail_and_escalate

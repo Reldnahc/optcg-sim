@@ -114,6 +114,51 @@ describe("support evaluator", () => {
     expect(unsupported.support).toBeUndefined();
   });
 
+  it("keeps conditional draw unsupported while surfacing decomposition fragments", () => {
+    const unsupportedCard = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "CARD-015A-EVAL-CONDITIONAL",
+      effect:
+        "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.",
+      name: "Conditional Draw Unsupported Candidate",
+    });
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: unsupportedCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: unsupportedCard.behaviorHash,
+      expectedSourceTextHash: unsupportedCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      parseStatus: "partial",
+      playable: false,
+      status: "unsupported",
+    });
+    expect(evaluation.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "unparsed-span",
+          decomposition: {
+            recognizedActionCandidates: ["draw 2 cards"],
+            recognizedSyntaxFragments: ["if-conditional-wrapper"],
+            recognizedTriggerCandidates: ["[On Play]"],
+            reason:
+              "Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
+            unsupportedConditionFragments: [
+              "your Leader is multicolored",
+              "you have 5 or less cards in your hand",
+            ],
+            unsupportedSyntaxFragments: ["condition conjunction: and"],
+          },
+        }),
+      ]),
+    );
+  });
+
   it("fails closed when runtime capability evidence is missing", () => {
     const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
     const runtimeCapabilityMatrix = {
@@ -149,6 +194,46 @@ describe("support evaluator", () => {
     });
     expect(evaluation.effectDefinition).toBeUndefined();
     expect(evaluation.support).toBeUndefined();
+  });
+
+  it("reports schema failure before runtime-capability failure when both could apply", () => {
+    const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
+    const runtimeCapabilityMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "effect:sequence:ordered" &&
+          capability.id !==
+            "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+      ),
+    };
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: normalized,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: normalized.behaviorHash,
+      expectedSourceTextHash: normalized.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix,
+      validateEffectDefinition: () => ({
+        errors: ["/effects/0/effect/type failed schema validation"],
+        valid: false,
+      }),
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [
+        {
+          code: "invalid-dsl-schema",
+          message: "Generated DSL failed effect DSL schema validation.",
+        },
+      ],
+      missingCapabilityIds: [],
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
   });
 
   it("fails closed when runtime capability lacks parser-rule evidence", () => {

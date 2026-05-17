@@ -12,7 +12,10 @@ import {
   type PoneglyphClient,
 } from "./poneglyph-client.js";
 import type { EffectDefinitionValidationResult } from "./generated-support-index.js";
-import { classifyGeneratedSupportBlockerLayer } from "./generated-support-report.js";
+import {
+  classifyGeneratedSupportBlockerLayer,
+  determineDeepestSuccessfulLayerForBlocker,
+} from "./generated-support-report.js";
 import type { GeneratedSupportBlocker } from "./generated-support-types.js";
 import {
   evaluateGeneratedSupportPlayability,
@@ -89,7 +92,16 @@ export async function runSupportProbe(
 export function formatSupportProbeBlocker(
   blocker: Pick<
     GeneratedSupportBlocker,
-    "code" | "component" | "diagnosticLayer" | "message" | "span"
+    | "capabilityId"
+    | "code"
+    | "component"
+    | "decomposition"
+    | "diagnosticLayer"
+    | "expectedHash"
+    | "message"
+    | "receivedHash"
+    | "schemaValidated"
+    | "span"
   >,
 ): string {
   const spanText =
@@ -97,7 +109,47 @@ export function formatSupportProbeBlocker(
       ? ""
       : ` span: ${JSON.stringify(blocker.span.text)}`;
   const layer = classifyGeneratedSupportBlockerLayer(blocker);
-  return `- ${blocker.code} [layer: ${layer}]: ${blocker.message}${spanText}`;
+  const deepestSuccessfulLayer =
+    determineDeepestSuccessfulLayerForBlocker(blocker);
+  const deepestSuccessfulLayerText =
+    deepestSuccessfulLayer === undefined
+      ? ""
+      : ` [deepest-successful-layer: ${deepestSuccessfulLayer}]`;
+  const decompositionText =
+    blocker.decomposition === undefined
+      ? ""
+      : formatDiagnosticDecomposition(blocker.decomposition);
+  return `- ${blocker.code} [layer: ${layer}]${deepestSuccessfulLayerText}: ${blocker.message}${spanText}${decompositionText}`;
+}
+
+function formatDiagnosticDecomposition(
+  decomposition: NonNullable<GeneratedSupportBlocker["decomposition"]>,
+): string {
+  const recognizedTriggerLines = decomposition.recognizedTriggerCandidates.map(
+    (candidate) => `  recognized trigger candidate: ${candidate}`,
+  );
+  const recognizedActionLines = decomposition.recognizedActionCandidates.map(
+    (candidate) => `  recognized supported-action candidate: ${candidate}`,
+  );
+  const recognizedSyntaxLines = decomposition.recognizedSyntaxFragments.map(
+    (fragment) => `  recognized syntax fragment: ${fragment}`,
+  );
+  const unsupportedConditionLines =
+    decomposition.unsupportedConditionFragments.map(
+      (fragment) => `  unsupported condition predicate: ${fragment}`,
+    );
+  const unsupportedSyntaxLines = decomposition.unsupportedSyntaxFragments.map(
+    (fragment) => `  unsupported syntax blocker: ${fragment}`,
+  );
+  return [
+    "",
+    ...recognizedTriggerLines,
+    ...recognizedSyntaxLines,
+    ...recognizedActionLines,
+    ...unsupportedConditionLines,
+    ...unsupportedSyntaxLines,
+    `  reason: ${decomposition.reason}`,
+  ].join("\n");
 }
 
 export async function runSupportProbeCli(
