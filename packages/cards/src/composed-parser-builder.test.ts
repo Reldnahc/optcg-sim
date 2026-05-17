@@ -8,9 +8,14 @@ import {
   buildSequenceEffect,
   buildUnsupportedWholeTextParseResult,
   createDeterministicParserRuleId,
+  deriveParserDiagnosticDecomposition,
+  parseBooleanConnectorCandidate,
   parseExactPositiveSafeInteger,
+  parseIfWrapper,
   parseOncePerTurnWrapper,
+  parseQuantityComparator,
   parseSupportedTriggerWrapper,
+  parseUpToCardinality,
 } from "./composed-parser-builder.js";
 import { isCompleteGeneratedSupportParseResult } from "./generated-support-types.js";
 
@@ -52,6 +57,71 @@ describe("composed parser builder scaffold", () => {
     expect(parseOncePerTurnWrapper("[Once Per Turn] Draw 2 cards.")).toEqual({
       bodyText: "Draw 2 cards.",
       prefix: "[Once Per Turn] ",
+    });
+  });
+
+  it("parses if wrappers without treating the conjunction as supported certification", () => {
+    expect(
+      parseIfWrapper(
+        "If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.",
+      ),
+    ).toEqual({
+      bodyText: "draw 2 cards.",
+      conditions: [
+        "your Leader is multicolored",
+        "you have 5 or less cards in your hand",
+      ],
+      connector: "and",
+      prefix: "If ",
+    });
+  });
+
+  it.each([
+    ["up to 1", { max: 1, min: 0, text: "up to 1" }],
+    ["up to 10", { max: 10, min: 0, text: "up to 10" }],
+  ])("parses cardinality phrase %s", (text, expected) => {
+    expect(parseUpToCardinality(text)).toEqual(expected);
+  });
+
+  it.each(["up to 0", "up to one", "select 1"])(
+    "rejects unsupported cardinality phrase %s",
+    (text) => {
+      expect(parseUpToCardinality(text)).toBeUndefined();
+    },
+  );
+
+  it.each([
+    [
+      "1000 power or less",
+      { field: "power", op: "lte", text: "1000 power or less", value: 1000 },
+    ],
+    [
+      "5000 power or more",
+      { field: "power", op: "gte", text: "5000 power or more", value: 5000 },
+    ],
+    [
+      "4 cost or less",
+      { field: "cost", op: "lte", text: "4 cost or less", value: 4 },
+    ],
+  ])("parses quantity comparator phrase %s", (text, expected) => {
+    expect(parseQuantityComparator(text)).toEqual(expected);
+  });
+
+  it.each(["1000 power or", "power or less", "1000 cards or less"])(
+    "rejects unsupported quantity comparator phrase %s",
+    (text) => {
+      expect(parseQuantityComparator(text)).toBeUndefined();
+    },
+  );
+
+  it("does not classify comparator or as a boolean connector", () => {
+    expect(
+      parseBooleanConnectorCandidate("1000 power or less"),
+    ).toBeUndefined();
+    expect(parseBooleanConnectorCandidate("Leader or Character")).toEqual({
+      connector: "or",
+      left: "Leader",
+      right: "Character",
     });
   });
 
@@ -269,5 +339,60 @@ describe("composed parser builder scaffold", () => {
         },
       ],
     });
+  });
+
+  it("derives reusable trace components for EB02-027-style bottom-deck text without certifying support", () => {
+    const sourceText =
+      "[On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck.";
+
+    expect(deriveParserDiagnosticDecomposition(sourceText, sourceText)).toEqual(
+      {
+        recognizedActionCandidates: ["place at the bottom of the owner's deck"],
+        recognizedSyntaxFragments: [
+          "trigger-wrapper:onPlay",
+          "cardinality:up-to",
+          "target:opponent-characters",
+          "predicate:quantity-comparator",
+          "destination:owner-deck-bottom",
+        ],
+        recognizedTriggerCandidates: ["[On Play]"],
+        reason:
+          "Parser components were recognized, but the complete action/destination shape is not certified with existing schema and runtime capability evidence; generated support remains fail-closed.",
+        traceComponents: [
+          {
+            kind: "trigger",
+            status: "recognized",
+            text: "[On Play]",
+          },
+          {
+            kind: "cardinality",
+            status: "recognized",
+            text: "up to 1",
+          },
+          {
+            kind: "target",
+            status: "recognized",
+            text: "your opponent's Characters",
+          },
+          {
+            kind: "predicate",
+            status: "recognized",
+            text: "1000 power or less",
+          },
+          {
+            kind: "action",
+            status: "recognized",
+            text: "place at the bottom of the owner's deck",
+          },
+          {
+            kind: "destination",
+            status: "unsupported",
+            text: "bottom of the owner's deck",
+          },
+        ],
+        unsupportedConditionFragments: [],
+        unsupportedSyntaxFragments: ["action/destination:bottom-of-owner-deck"],
+      },
+    );
   });
 });

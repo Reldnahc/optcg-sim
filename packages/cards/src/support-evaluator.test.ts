@@ -138,25 +138,21 @@ describe("support evaluator", () => {
       playable: false,
       status: "unsupported",
     });
-    expect(evaluation.blockers).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "unparsed-span",
-          decomposition: {
-            recognizedActionCandidates: ["draw 2 cards"],
-            recognizedSyntaxFragments: ["if-conditional-wrapper"],
-            recognizedTriggerCandidates: ["[On Play]"],
-            reason:
-              "Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
-            unsupportedConditionFragments: [
-              "your Leader is multicolored",
-              "you have 5 or less cards in your hand",
-            ],
-            unsupportedSyntaxFragments: ["condition conjunction: and"],
-          },
-        }),
-      ]),
+    const blocker = evaluation.blockers.find(
+      (candidate) => candidate.code === "unparsed-span",
     );
+    expect(blocker?.decomposition).toMatchObject({
+      recognizedActionCandidates: ["draw 2 cards"],
+      recognizedSyntaxFragments: ["if-conditional-wrapper"],
+      recognizedTriggerCandidates: ["[On Play]"],
+      reason:
+        "Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
+      unsupportedConditionFragments: [
+        "your Leader is multicolored",
+        "you have 5 or less cards in your hand",
+      ],
+      unsupportedSyntaxFragments: ["condition conjunction: and"],
+    });
   });
 
   it("fails closed when runtime capability evidence is missing", () => {

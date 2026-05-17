@@ -27,6 +27,18 @@ export interface RuntimeCapabilityMatrix {
   capabilities: readonly RuntimeCapabilityRecord[];
 }
 
+export type RuntimeCapabilityParserRuleCoverage =
+  | "explicit-blocker"
+  | "reusable-parser-component"
+  | "runtime-capability-only"
+  | "unclassified";
+
+export interface RuntimeCapabilityParserRuleInventoryEntry {
+  parserRuleId: string;
+  parserRuleKind: string;
+  coverage: RuntimeCapabilityParserRuleCoverage;
+}
+
 export const generatedSupportRuntimeCapabilityMatrix = {
   capabilities: [
     {
@@ -691,4 +703,110 @@ export function hasRuntimeCapability(
   return matrix.capabilities.some(
     (capability) => capability.id === capabilityId && capability.supported,
   );
+}
+
+export function listRuntimeCapabilityParserRuleInventory(
+  matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
+): readonly RuntimeCapabilityParserRuleInventoryEntry[] {
+  return [
+    ...new Set(
+      matrix.capabilities
+        .filter((capability) => capability.supported)
+        .flatMap((capability) => capability.supportedParserRuleIds),
+    ),
+  ]
+    .sort()
+    .map(toParserRuleInventoryEntry);
+}
+
+function toParserRuleInventoryEntry(
+  parserRuleId: string,
+): RuntimeCapabilityParserRuleInventoryEntry {
+  const parserRuleKind = classifyParserRuleKind(parserRuleId);
+  return {
+    coverage: classifyParserRuleCoverage(parserRuleId, parserRuleKind),
+    parserRuleId,
+    parserRuleKind,
+  };
+}
+
+function classifyParserRuleCoverage(
+  parserRuleId: string,
+  parserRuleKind: string,
+): RuntimeCapabilityParserRuleCoverage {
+  if (parserRuleId.includes(":unsupported:")) {
+    return "explicit-blocker";
+  }
+
+  if (parserRuleKind === "source-presence-policy") {
+    return "runtime-capability-only";
+  }
+
+  return parserRuleKind === "unclassified"
+    ? "unclassified"
+    : "reusable-parser-component";
+}
+
+function classifyParserRuleKind(parserRuleId: string): string {
+  if (parserRuleId === "line-separated-effect-blocks:v1") {
+    return "line-separated-composition";
+  }
+  if (parserRuleId.startsWith("exact:keyword:")) {
+    return "keyword";
+  }
+  if (
+    parserRuleId === "exact:on-play:draw-n:self" ||
+    parserRuleId === "exact:when-attacking:draw-n:self"
+  ) {
+    return "triggered-draw";
+  }
+  if (parserRuleId === "exact:on-play:draw-up-to-n:self") {
+    return "draw-up-to";
+  }
+  if (
+    parserRuleId.includes(":draw-n:trash-m:hand:self") ||
+    parserRuleId === "exact:on-play:trash-2-from-hand:draw-1:self" ||
+    parserRuleId.startsWith("card014a:sequence:")
+  ) {
+    return "sequence";
+  }
+  if (parserRuleId.startsWith("exact:condition:")) {
+    return "condition";
+  }
+  if (parserRuleId === "exact:on-play:optional-effect:draw-1:self") {
+    return "optional-effect";
+  }
+  if (
+    parserRuleId.includes("return-don") ||
+    parserRuleId === "card014a:on-play:return-don-play-selected-character"
+  ) {
+    return "cost-hand-selection-play-selected";
+  }
+  if (
+    parserRuleId.includes("select-1-opponent-character") ||
+    parserRuleId === "card014a:on-play:select-target-modify-power"
+  ) {
+    return "field-target-saved-reference";
+  }
+  if (
+    parserRuleId.includes(":modify-power:") ||
+    parserRuleId.startsWith("card014a:modifier:")
+  ) {
+    return "continuous-modifier";
+  }
+  if (
+    parserRuleId.includes(":cannot-attack:") ||
+    parserRuleId.includes(":cannot-block:") ||
+    parserRuleId.startsWith("card014a:restriction:")
+  ) {
+    return "continuous-restriction";
+  }
+  if (
+    parserRuleId.startsWith("card014a:static:") ||
+    parserRuleId.startsWith("card014a:trigger:")
+  ) {
+    return "source-presence-policy";
+  }
+
+  return "unclassified";
 }

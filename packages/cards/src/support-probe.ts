@@ -16,7 +16,10 @@ import {
   classifyGeneratedSupportBlockerLayer,
   determineDeepestSuccessfulLayerForBlocker,
 } from "./generated-support-report.js";
-import type { GeneratedSupportBlocker } from "./generated-support-types.js";
+import type {
+  GeneratedSupportBlocker,
+  GeneratedSupportDiagnosticTraceComponent,
+} from "./generated-support-types.js";
 import {
   evaluateGeneratedSupportPlayability,
   type EvaluateGeneratedSupportPlayabilityInput,
@@ -141,15 +144,65 @@ function formatDiagnosticDecomposition(
   const unsupportedSyntaxLines = decomposition.unsupportedSyntaxFragments.map(
     (fragment) => `  unsupported syntax blocker: ${fragment}`,
   );
+  const traceLines = (decomposition.traceComponents ?? [])
+    .filter(
+      (component) =>
+        component.kind !== "trigger" ||
+        !decomposition.recognizedTriggerCandidates.includes(component.text),
+    )
+    .map((component) => {
+      const statusLabel =
+        component.status === "unsupported" ? "unsupported" : "recognized";
+      const noun = toTraceComponentDisplayName(component.kind);
+      const suffix =
+        component.status === "unsupported" ? "blocker" : "candidate";
+      return `  ${statusLabel} ${noun} ${suffix}: ${component.text}`;
+    });
   return [
     "",
     ...recognizedTriggerLines,
     ...recognizedSyntaxLines,
     ...recognizedActionLines,
+    ...traceLines,
     ...unsupportedConditionLines,
     ...unsupportedSyntaxLines,
     `  reason: ${decomposition.reason}`,
   ].join("\n");
+}
+
+function toTraceComponentDisplayName(
+  kind: GeneratedSupportDiagnosticTraceComponent["kind"],
+): string {
+  switch (kind) {
+    case "action":
+      return "action";
+    case "cardinality":
+      return "cardinality";
+    case "condition":
+      return "condition";
+    case "condition-connector":
+      return "condition connector";
+    case "cost":
+      return "cost";
+    case "destination":
+      return "destination";
+    case "duration":
+      return "duration";
+    case "modifier":
+      return "modifier";
+    case "predicate":
+      return "predicate";
+    case "restriction":
+      return "restriction";
+    case "saved-reference":
+      return "saved-reference";
+    case "target":
+      return "target";
+    case "trigger":
+      return "trigger";
+    case "wrapper":
+      return "wrapper";
+  }
 }
 
 export async function runSupportProbeCli(

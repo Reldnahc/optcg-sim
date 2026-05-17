@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   generatedSupportRuntimeCapabilityMatrix,
   hasRuntimeCapability,
+  listRuntimeCapabilityParserRuleInventory,
   listSupportedRuntimeCapabilityIds,
   requiredGeneratedSupportCapabilityIds,
 } from "./runtime-capability-matrix.js";
@@ -97,6 +98,43 @@ describe("generated support runtime capability matrix", () => {
 
     expect(compositionCapability?.supportedParserRuleIds).toContain(
       "line-separated-effect-blocks:v1",
+    );
+  });
+
+  it("inventories every supported parser rule id with a parser coverage category", () => {
+    const inventory = listRuntimeCapabilityParserRuleInventory();
+    const inventoryRuleIds = inventory.map((entry) => entry.parserRuleId);
+    const matrixRuleIds = [
+      ...new Set(
+        generatedSupportRuntimeCapabilityMatrix.capabilities.flatMap(
+          (capability) => capability.supportedParserRuleIds,
+        ),
+      ),
+    ].sort();
+
+    expect(inventoryRuleIds).toEqual(matrixRuleIds);
+    expect(inventory).not.toContainEqual(
+      expect.objectContaining({ coverage: "unclassified" }),
+    );
+    expect(inventory).toEqual(
+      expect.arrayContaining([
+        {
+          coverage: "reusable-parser-component",
+          parserRuleId: "exact:on-play:draw-n:self",
+          parserRuleKind: "triggered-draw",
+        },
+        {
+          coverage: "reusable-parser-component",
+          parserRuleId:
+            "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+          parserRuleKind: "cost-hand-selection-play-selected",
+        },
+        {
+          coverage: "runtime-capability-only",
+          parserRuleId: "card014a:static:no-source-required",
+          parserRuleKind: "source-presence-policy",
+        },
+      ]),
     );
   });
 

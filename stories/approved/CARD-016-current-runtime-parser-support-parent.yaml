@@ -1,0 +1,98 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-016
+epic_id: CARD-016
+title: Current runtime parser support parent
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Coordinate a CARD story set that replaces exact-template parser growth with
+  reusable parser grammar/components for every generated-support shape the
+  current cards runtime capability matrix truthfully supports.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  exactly one child story, CARD-016A, after story-review approval and packet
+  activation. Keep this set package-local to cards parser/generated-support
+  work over already-existing schema/runtime capability evidence. It must not
+  add runtime behavior, add runtime capability records, change engine behavior,
+  edit real-card fixtures, or create one-off exact text templates as the scaling
+  mechanism.
+allowed_touch_points:
+  - stories/generated/CARD-016*.yaml
+  - stories/approved/CARD-016*.yaml
+  - agent-packets/CARD-016*.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s003
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-014I
+  - CARD-015A
+child_stories:
+  - id: CARD-016A
+    title: Current runtime component parser support
+    concern: Add package-local reusable parser grammar/components that can produce complete generated-support parses for every currently runtime-capability-supported generated-support shape, while retaining fail-closed diagnostics for incomplete or ambiguous text.
+    depends_on: [CARD-015A]
+scope:
+  - coordinate CARD-016A as the only child story in this parser support set
+  - address the CARD-014/CARD-015 scaling gap by replacing one-off exact-template growth with reusable parser grammar/components
+  - require CARD-016A to inventory `generatedSupportRuntimeCapabilityMatrix` and cover every currently supported generated-support parser shape that can truthfully be represented by existing effect DSL schema and existing runtime capability evidence
+  - allow generated support to become playable only when the reusable parser components produce a complete parse, schema validation passes, source integrity and metadata gates pass, and existing runtime capability evidence covers every parsed component
+  - require unsupported generated-support text to remain unsupported when any component is unparsed, ambiguous, stale, schema-invalid, capability-missing, source-invalid, or unsupported by the current runtime matrix
+  - preserve CARD-008, CARD-009, CARD-012, CARD-013, CARD-014, and CARD-015 behavior unless diagnostic formatting changes are explicitly regression-tested
+non_scope:
+  - direct implementation from this parent story
+  - new runtime behavior or runtime capability records
+  - real-card fixture support or fixture recapture
+  - shared contracts or effect DSL schema changes
+  - server, client, API, UI, database, replay, WebSocket, Redis, or live Poneglyph work
+  - one-off exact text template expansion as the primary parser strategy
+card_source_integrity:
+  - not applicable for direct parent implementation because this parent is planning-only and does not enable or change gameplay support for any card
+  - child examples may use real printed text snippets as parser/support probes only, but must not edit real-card fixtures, hashes, overlays, or source evidence
+engine_capability_preflight:
+  - not applicable for direct parent implementation because this parent adds no runtime capability or gameplay behavior
+  - child implementation must use the current cards runtime capability matrix as the support boundary and must not hide missing runtime behavior inside CARD parser work
+acceptance_criteria:
+  - CARD-016 is not implemented directly
+  - CARD-016A is independently reviewable and can be activated as the only child story
+  - the parent and child each have distinct story-review assignment identity and durable story-review artifact identity before approval handoff or activation
+  - CARD-016A is implemented on a parent integration branch for this one-child set, with no child PR to `main` and one final parent PR to `main`
+  - generated parser support is component-driven rather than hard-coded to one exact text template per card or per phrasing
+  - every currently runtime-capability-supported generated-support shape is either covered by reusable parser components or recorded as a concrete blocker with the missing parser/schema/runtime authority named
+  - unsupported text remains unsupported whenever complete parse, schema, source integrity, metadata, or existing runtime capability evidence is missing
+  - no runtime behavior, runtime capability record, fixture support, or shared contract/schema authority is added by this set; missing runtime or schema authority must be recorded as a blocker or split into a prerequisite TYP/ENG story before CARD-016A proceeds
+  - parent/substory cleanup metadata lists CARD-016A and binds the non-packetized CARD-016 parent closeout after merge to main
+required_tests:
+  - set-level story-review planning for CARD-016 parent and CARD-016A child before approval handoff
+  - per-story story-review for CARD-016 before approval handoff
+  - per-story story-review for CARD-016A before approval handoff
+  - story-specific tests from CARD-016A
+  - full `corepack pnpm verify` on the CARD-016A child commit and on the final parent PR
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+repo_rules:
+  - do not activate or implement CARD-016 directly
+  - use the parent integration branch workflow even though this set has exactly one child
+  - do not open a CARD-016A child PR to `main`; land the reviewed child commit on the parent integration branch, then open one final parent PR to `main`
+  - implement only CARD-016A for this set
+  - keep one active child packet at a time
+  - do not complete the child packet until the parent branch lands on main
+  - use parent PR cleanup metadata for CARD-016A and bound CARD-016 parent closeout
+  - fail closed on diagnostic ambiguity that could accidentally mark unsupported text playable
+ambiguity_policy: fail_and_escalate

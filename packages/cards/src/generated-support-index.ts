@@ -7,9 +7,9 @@ import type {
 } from "@optcg/types";
 
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
+import { deriveParserDiagnosticDecomposition } from "./composed-parser-builder.js";
 import {
   isCompleteGeneratedSupportParseResult,
-  type GeneratedSupportDiagnosticDecomposition,
   type GeneratedSupportBlocker,
   type GeneratedSupportParserResultStatus,
 } from "./generated-support-types.js";
@@ -333,7 +333,7 @@ function attachParserDiagnosticDecomposition(
       return blocker;
     }
 
-    const decomposition = deriveConditionalDrawDecomposition(
+    const decomposition = deriveParserDiagnosticDecomposition(
       blocker.span?.text ?? sourceText,
       sourceText,
     );
@@ -346,45 +346,6 @@ function attachParserDiagnosticDecomposition(
       decomposition,
     };
   });
-}
-
-function deriveConditionalDrawDecomposition(
-  text: string,
-  fullSourceText: string,
-): GeneratedSupportDiagnosticDecomposition | undefined {
-  const normalized = text.trim();
-  if (normalized !== fullSourceText.trim()) {
-    return undefined;
-  }
-
-  const match =
-    /^\[On Play\]\s*If\s+(.+?)\s+and\s+(.+?),\s*(draw\s+[1-9]\d*\s+cards?)\.?$/i.exec(
-      normalized,
-    );
-  if (match === null) {
-    return undefined;
-  }
-
-  const firstCondition = match[1]?.trim() ?? "";
-  const secondCondition = match[2]?.trim() ?? "";
-  const drawCandidate = match[3]?.trim();
-  if (
-    firstCondition.length === 0 ||
-    secondCondition.length === 0 ||
-    drawCandidate === undefined
-  ) {
-    return undefined;
-  }
-
-  return {
-    recognizedActionCandidates: [drawCandidate],
-    recognizedSyntaxFragments: ["if-conditional-wrapper"],
-    recognizedTriggerCandidates: ["[On Play]"],
-    reason:
-      "Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
-    unsupportedConditionFragments: [firstCondition, secondCondition],
-    unsupportedSyntaxFragments: ["condition conjunction: and"],
-  };
 }
 
 function hasBlockerKeywordSupportMetadata(

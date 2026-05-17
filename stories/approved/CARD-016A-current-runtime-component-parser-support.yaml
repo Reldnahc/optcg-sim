@@ -1,0 +1,132 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-016A
+epic_id: CARD-016
+title: Current runtime component parser support
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add package-local reusable parser grammar/components so generated support can
+  parse every currently runtime-capability-supported shape without growing by
+  one-off exact text templates, while preserving fail-closed diagnostics for
+  unsupported, incomplete, stale, or ambiguous text.
+story_boundary: >
+  Own only cards-side parser grammar/components, generated-support parse
+  construction over existing effect DSL schema and runtime capability evidence,
+  parser trace diagnostics for failures, support probe/report propagation, and
+  tests. This story must not add runtime behavior, runtime capability records,
+  shared schema authority, fixture evidence, or card-specific one-off exact text
+  templates. Generated support may become playable only for complete parses that
+  pass existing schema, source integrity, metadata, review/test, and runtime
+  capability gates.
+allowed_touch_points:
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - agent-packets/CARD-016A.md
+  - stories/generated/CARD-016*.yaml
+  - stories/approved/CARD-016*.yaml
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s014
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-014I
+  - CARD-015A
+scope:
+  - inventory the current `generatedSupportRuntimeCapabilityMatrix` and current generated-support parser rules before implementation
+  - replace exact-template parser growth with reusable package-local grammar/components for trigger wrappers, once-per-turn wrappers, conditions, connectors, cardinality, quantity comparators, public field targets, hand selections, costs, actions, destinations, durations, modifiers, restrictions, saved references, and sequence segments
+  - produce complete generated-support parses for every currently runtime-capability-supported generated-support shape whose text can be represented by existing effect DSL schema and existing runtime capability evidence
+  - preserve fail-closed support for any currently supported runtime capability that still lacks safe card-layer parser/schema/source/metadata authority, and record a concrete blocker naming the missing authority
+  - emit parser trace diagnostics from the same reusable components when a complete parse cannot be produced
+  - support existing generated-support shapes without relying on one-off exact text templates as the scaling mechanism, including draw, drawUpTo, draw/trash sequences, trash/draw sequences, optional supported draw effects, supported conditions, returnDon plus hand selection plus playSelected, selectTargets plus saved field object KO, self/all supported modifyPower/cannotAttack/cannotBlock shapes, supported keywords, supported source-presence policy combinations, supported costs, supported durations, and supported sequence frames where existing capability evidence is truthful
+  - handle `up to N` as cardinality/choice grammar, not as a bespoke phrase per effect
+  - handle quantity-comparator phrases such as `N power or less`, `N power or more`, and `N cost or less` as predicate/comparator grammar, not as boolean `or` connectors
+  - handle boolean connectors only where unambiguous and where all connected predicate grammar and runtime/schema support exists; ambiguous `or` remains fail-closed with trace output
+  - keep hand-selection grammar separate from public field target grammar
+  - preserve existing CARD-015A conditional draw diagnostics but derive them from reusable trace components where practical
+  - for `[On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck.`, report reusable trace components for `[On Play]`, `up to 1`, `your opponent's Characters`, `1000 power or less`, and the bottom-deck action/destination; make it playable only if existing schema and runtime capability evidence truthfully support that complete move-to-bottom-deck shape, otherwise keep it unsupported with the exact missing authority
+  - keep EB02-027 and EB02-026 text examples as support/diagnostic probes only unless all generated-support gates pass from existing source/schema/runtime metadata
+  - preserve blocker identity for existing codes `unparsed-span`, `ambiguous-wording`, `custom-handler-required`, `unsupported-primitive`, `stale-hash`, `invalid-dsl-schema`, and `missing-runtime-capability`
+  - keep stale hash as the highest-priority diagnostic and do not silently refresh or rewrite fixture evidence
+  - allow whole-card unsupported diagnostics only when no reusable trace component can safely identify a narrower component
+non_scope:
+  - new runtime behavior or runtime capability records
+  - real-card fixture support, fixture capture, fixture recapture, or hash updates
+  - shared contracts or effect DSL schema changes
+  - server, client, API, UI, database, replay, WebSocket, Redis, or live Poneglyph work
+  - replacement generalization
+  - card-specific one-off exact text templates as the scaling strategy
+card_source_integrity:
+  - this story must not edit source fixtures, source hashes, behavior hashes, overlays, or manually reviewed source evidence
+  - generated support may only become playable for live or fixture card text when existing sourceTextHash/behaviorHash/source-integrity gates and generated-support metadata gates already pass
+  - EB02-026 and EB02-027 printed text may be used as probe input; if either becomes generated-supported, tests must prove complete parse, existing schema support, existing runtime capability evidence, source integrity, support metadata, and fail-closed behavior for malformed variants
+engine_capability_preflight:
+  - no new runtime capability or gameplay behavior is introduced by this story
+  - implementation must inventory all currently supported records in `generatedSupportRuntimeCapabilityMatrix` and prove each is either covered by reusable parser grammar or recorded with an explicit missing parser/schema/source/metadata authority blocker
+  - generated support must not mark a shape playable unless every parsed component is covered by existing runtime capability evidence and existing schema authority
+  - bottom-deck placement, target predicates such as `power or less`, and boolean condition conjunction/disjunction are playable only if existing schema and runtime capability evidence already support the complete shape; otherwise they remain unsupported with component trace diagnostics
+acceptance_criteria:
+  - generated-support parser coverage is component-driven rather than one-off exact text template driven
+  - every currently runtime-capability-supported generated-support shape is either covered by reusable parser components or recorded as a concrete blocker with the missing parser/schema/runtime/source/metadata authority named
+  - support-probe and generated-support report diagnostics are more actionable for parser failures because they use the same reusable components as the parser
+  - unsupported text remains unsupported whenever complete parse, schema, source integrity, metadata, or existing runtime capability evidence is missing
+  - existing CARD-008, CARD-009, CARD-012, CARD-013, CARD-014, and CARD-015 generated-support behavior remains compatible
+  - reusable parser components, not one-off card-specific decomposers, produce the parser-failure breakdowns
+  - trace output distinguishes recognized candidates from certified complete generated support
+  - comparator phrases `or less` and `or more` remain part of predicate/cardinality diagnostics and are not misreported as boolean `or` connectors
+  - the text `[On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck.` either becomes generated-supported through complete reusable parser/schema/runtime/source/metadata evidence or remains unsupported with exact missing authority and trigger, cardinality, target, predicate/comparator, and action/destination trace fragments
+  - the text `[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.` either becomes generated-supported through complete reusable parser/schema/runtime/source/metadata evidence or remains unsupported with the CARD-015A conditional draw fragments through the reusable trace path
+  - whole-card unsupported diagnostics are used only when no reusable trace component safely matched
+  - stale hash remains highest-priority and does not mutate fixture evidence
+required_tests:
+  - exact candidate story-review before approval handoff
+  - runtime capability inventory test proving every supported capability matrix record is either covered by reusable parser grammar or recorded with an explicit blocker category
+  - parser component unit tests for trigger wrapper, once-per-turn wrapper, `if` wrapper, exact integer cardinality, `up to N`, `N power or less`, `N power or more`, public field targets, hand selections, costs, actions, destinations, durations, modifiers, restrictions, saved references, sequence segments, and ambiguous `or`
+  - generated-support tests proving existing supported draw, drawUpTo, draw/trash, trash/draw, optional draw, condition, returnDon/hand-selection/playSelected, selectTargets/saved-KO, modifier, restriction, keyword, source-presence, and sequence-frame shapes remain supported through reusable parser components where existing capability evidence is truthful
+  - support-probe test proving EB02-027-style text reports `[On Play]`, `up to 1`, `your opponent's Characters`, `1000 power or less`, and bottom-deck action/destination candidate fragments when unsupported, or proves complete generated support if every existing gate passes
+  - generated-support report test proving EB02-027-style text exposes the same trace fragments or generated-support evidence as structured metadata
+  - support-probe/report tests proving `or less` is not reported as a boolean conjunction
+  - regression tests proving EB02-026-style conditional draw diagnostics from CARD-015A remain present when unsupported, or proving complete generated support if every existing gate passes
+  - missing runtime capability, invalid schema, and stale-hash diagnostics remain unchanged when those deeper layers already apply
+  - existing support-probe and generated-support report snapshots or assertions remain compatible
+  - regression tests proving existing CARD-008, CARD-009, CARD-012, CARD-013, CARD-014, and CARD-015 generated-support behavior remains supported or unsupported exactly as before
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-016A packet before implementation
+  - stay within allowed_touch_points
+  - do not add runtime behavior, runtime capability records, fixture support, shared schema authority, or card-specific one-off exact text templates
+  - keep diagnostic helper types package-local to packages/cards unless story-review proves a real shared authority gap
+  - fail closed when trace components cannot determine a trusted narrower component, connector, comparator, target, action, or source span
+ambiguity_policy: fail_and_escalate
