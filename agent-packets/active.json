@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-017A.md",
-      "storyId": "CARD-017A",
-      "storyPath": "stories/approved/CARD-017A-generated-support-component-evidence-model.yaml",
-      "storySha256": "f1ec27c343a34d28e495249f87701dd225af8e659bdc949ba28123021addba64"
+      "packetPath": "agent-packets/CARD-017B.md",
+      "storyId": "CARD-017B",
+      "storyPath": "stories/approved/CARD-017B-capability-evaluator-component-migration.yaml",
+      "storySha256": "14ffc9d9b73c2ebf15bd71dc6c07265dfc213e6ac3844618683f5342d5c66ca8"
     }
   ],
   "version": 1
