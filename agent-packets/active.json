@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/TYP-011A.md",
-      "storyId": "TYP-011A",
-      "storyPath": "stories/approved/TYP-011A-leader-metadata-condition-contract-authority.yaml",
-      "storySha256": "52dcb175e7f92a803051a165cc351a3487c8a76c78132a22505adecaef555646"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

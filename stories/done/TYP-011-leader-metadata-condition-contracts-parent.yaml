@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the shared contract work needed to represent public Leader metadata
   conditions used by generated conditional effects, especially multicolored
