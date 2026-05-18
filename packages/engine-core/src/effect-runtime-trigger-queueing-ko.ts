@@ -37,6 +37,14 @@ import {
   zoneRefFromUnknown,
 } from "./effect-runtime-trigger-source-lookup.js";
 
+const withoutCondition = (
+  effect: EffectDefinition["effects"][number],
+): EffectDefinition["effects"][number] => {
+  const supportShape = { ...effect };
+  delete (supportShape as { condition?: unknown }).condition;
+  return supportShape;
+};
+
 const isSupportedOnKOSourcePresencePolicy = (
   policy: EffectDefinition["effects"][number]["sourcePresencePolicy"],
 ): policy is EffectQueueEntry["sourcePresencePolicy"] =>
@@ -52,7 +60,6 @@ const isSupportedOnKOQueuedBodyEnvelope = (
   effect.category === "auto" &&
   isSupportedOnKOSourcePresencePolicy(effect.sourcePresencePolicy) &&
   effect.cost === undefined &&
-  effect.condition === undefined &&
   effect.conditionTiming === undefined &&
   effect.failurePolicy === undefined;
 
@@ -73,8 +80,8 @@ const isSupportedOnKOCompatibleQueuedEffect = (
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: Effect;
 } =>
-  isSupportedNoChoiceOnKODrawEffect(effect) ||
-  isSupportedOptionalNoChoiceOnKODrawEffect(effect) ||
+  isSupportedNoChoiceOnKODrawEffect(withoutCondition(effect)) ||
+  isSupportedOptionalNoChoiceOnKODrawEffect(withoutCondition(effect)) ||
   isSupportedOnKODrawUpToEffect(effect);
 
 export const createKOTriggerQueueing = (

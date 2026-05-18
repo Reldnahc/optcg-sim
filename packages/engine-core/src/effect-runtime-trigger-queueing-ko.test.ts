@@ -583,6 +583,33 @@ test("On K.O. drawUpTo queues with deterministic metadata, pauses, and resumes s
   assert.equal(resumed.stateHash, hashCanonicalStateValue(resumed.state));
 });
 
+test("conditioned On K.O. drawUpTo reaches quantity decision path", () => {
+  const queued = onKODrawUpToQueueState();
+  const definition = must(
+    queued.queuedState.cardManifest.effectDefinitions?.["def-on-ko"],
+    "onKO definition",
+  );
+  const effect = must(definition.effects[0], "onKO drawUpTo effect");
+  queued.queuedState.cardManifest.effectDefinitions = {
+    ...queued.queuedState.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          condition: { type: "yourTurn" },
+        },
+      ],
+    },
+  };
+  queued.queuedState.turn.turnPlayerId = p2;
+
+  const result = processEffectRuntime(queued.queuedState);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision?.type, "chooseQuantity");
+});
+
 test("rejects battle K.O. event batches whose move event lacks the K.O.'d card identity", () => {
   const { state, events } = koQueueingState();
   const invalidEvents = events.map((event) => {
@@ -628,15 +655,6 @@ test.each([
     ): EffectDefinition["effects"][number] => ({
       ...effect,
       cost: { type: "restDon", count: 1 },
-    }),
-  },
-  {
-    name: "condition",
-    mutate: (
-      effect: EffectDefinition["effects"][number],
-    ): EffectDefinition["effects"][number] => ({
-      ...effect,
-      condition: { type: "yourTurn" },
     }),
   },
   {
@@ -705,6 +723,30 @@ test.each([
       },
     },
   });
+  assert.deepEqual(state, before);
+});
+
+test("conditioned On K.O. draw shape is detected as a supported trigger candidate", () => {
+  const { state, definition, events } = koQueueingState();
+  const conditioned = {
+    ...must(definition.effects[0], "onKO effect"),
+    condition: { type: "yourTurn" as const },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [conditioned],
+    },
+  };
+  state.turn.turnPlayerId = p2;
+  const before = structuredClone(state);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.candidates.length, 1);
+  assert.equal(result.candidates[0]?.effectBlockId, conditioned.id);
   assert.deepEqual(state, before);
 });
 

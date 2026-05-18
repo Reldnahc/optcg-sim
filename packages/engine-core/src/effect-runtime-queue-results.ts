@@ -492,6 +492,9 @@ export const createEffectRuntimeQueueResults = (
             (entry) => entry.id !== selected.id,
           ),
         };
+        const cleanup = cleanupResolvedLifeTrigger(nextState, selected);
+        nextState = cleanup.state;
+        allEvents.push(...cleanup.events);
         continue;
       }
       let drawEffect: Extract<Effect, { type: "draw" }> | undefined;

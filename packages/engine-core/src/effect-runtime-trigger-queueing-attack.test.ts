@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { CardId, CardInstance, PlayerId } from "@optcg/types";
+import type {
+  CardId,
+  CardInstance,
+  EffectDefinition,
+  PlayerId,
+} from "@optcg/types";
 
 import { must, p1 } from "./action-test-fixtures.js";
 import {
@@ -116,4 +121,74 @@ test("attackDeclared stale target zone rejects On Your Opponent's Attack queuein
     },
   ]);
   assert.deepEqual(result.state, before);
+});
+
+test("conditioned When Attacking draw shape queues without fail-closed rejection", () => {
+  const { state, definition } = attackQueueingState();
+  const effect = must(definition.effects[0], "whenAttacking effect");
+  state.cardManifest.effectDefinitions = {
+    "def-when-attacking": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          condition: { type: "yourTurn" },
+        } satisfies EffectDefinition["effects"][number],
+      ],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.events.some((event) => event.type === "effectQueued"),
+    true,
+  );
+  assert.equal(result.state.effectQueue.length, 1);
+});
+
+test("conditioned When Attacking draw-then-trash sequence reaches decision-pausing path", () => {
+  const { state, definition } = attackQueueingState();
+  const effect = must(definition.effects[0], "whenAttacking effect");
+  state.cardManifest.effectDefinitions = {
+    "def-when-attacking": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          condition: { type: "yourTurn" },
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: { type: "draw", count: 1, player: "self" },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "trashFromHand",
+                  player: "self",
+                  chooser: "self",
+                  count: 1,
+                },
+              },
+            ],
+          },
+        } satisfies EffectDefinition["effects"][number],
+      ],
+    },
+  };
+
+  const first = processEffectRuntime(state);
+  const second = processEffectRuntime(first.state);
+
+  assert.equal(first.errors, undefined);
+  assert.equal(second.errors, undefined);
+  assert.equal(
+    first.state.pendingDecision?.type === "selectCards" ||
+      second.state.pendingDecision?.type === "selectCards",
+    true,
+  );
 });

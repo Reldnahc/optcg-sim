@@ -327,3 +327,155 @@ test("respondToDecision addToHand rejects malformed life trigger responses witho
   assert.deepEqual(malformed.events, []);
   assert.deepEqual(missingCard.events, []);
 });
+
+test("applyAction declareAttack keeps conditioned life trigger activation reachable", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const lifeCardId = toCardId("trigger-life-conditioned");
+  p2State.life[0] = {
+    ...topLife,
+    card: { ...topLife.card, cardId: lifeCardId },
+  };
+  const definition = effectDefinition(lifeCardId, { type: "trigger" });
+  const effect = must(definition.effects[0], "trigger effect");
+  const effectWithoutFlags = { ...effect };
+  delete effectWithoutFlags.optional;
+  delete effectWithoutFlags.oncePerTurn;
+  const supported = {
+    ...definition,
+    effects: [
+      {
+        ...effectWithoutFlags,
+        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+        condition: { type: "yourTurn" as const },
+      },
+    ],
+  };
+  state.cardManifest.cards[lifeCardId] = {
+    ...resolvedCard({
+      cardId: lifeCardId,
+      category: "character",
+      power: 1000,
+    }),
+    triggerText: "TRIGGER: draw 1 card",
+    support: {
+      cardId: lifeCardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def-life-trigger-conditioned",
+      tested: true,
+      rulesVersion: supported.metadata.rulesVersion,
+      cardDataVersion: "fixture",
+      sourceTextHash: supported.metadata.sourceTextHash,
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    supported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-life-trigger-conditioned": supported,
+  };
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision?.type, "confirmLifeTrigger");
+});
+
+test("activated life trigger with false condition skips body and still trashes the revealed life card", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const lifeCardId = toCardId("trigger-life-false-condition");
+  const lifeInstanceId = topLife.card.instanceId;
+  p2State.life[0] = {
+    ...topLife,
+    card: { ...topLife.card, cardId: lifeCardId },
+  };
+  const definition = effectDefinition(lifeCardId, { type: "trigger" });
+  const effect = must(definition.effects[0], "trigger effect");
+  const effectWithoutFlags = { ...effect };
+  delete effectWithoutFlags.optional;
+  delete effectWithoutFlags.oncePerTurn;
+  const supported = {
+    ...definition,
+    effects: [
+      {
+        ...effectWithoutFlags,
+        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+        condition: { type: "yourTurn" as const },
+      },
+    ],
+  };
+  state.cardManifest.cards[lifeCardId] = {
+    ...resolvedCard({
+      cardId: lifeCardId,
+      category: "character",
+      power: 1000,
+    }),
+    triggerText: "TRIGGER: draw 1 card",
+    support: {
+      cardId: lifeCardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def-life-trigger-false-condition",
+      tested: true,
+      rulesVersion: supported.metadata.rulesVersion,
+      cardDataVersion: "fixture",
+      sourceTextHash: supported.metadata.sourceTextHash,
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    supported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-life-trigger-false-condition": supported,
+  };
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  const decision = must(opened.state.pendingDecision, "life trigger decision");
+  const result = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+  const nextP2 = must(result.state.players[p2], "p2 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.revealedCards.length, 0);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(
+    result.events.some((event) => event.type === "cardDrawn"),
+    false,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === lifeInstanceId),
+    true,
+  );
+});

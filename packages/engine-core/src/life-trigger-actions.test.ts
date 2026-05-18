@@ -325,10 +325,6 @@ test("getSupportedLifeTriggerDecision rejects unsupported reusable trigger body 
     ...effect,
     cost: { type: "restDon", count: 1 },
   }));
-  expectUnsupportedLifeTriggerDefinition("condition", (effect) => ({
-    ...effect,
-    condition: { type: "yourTurn" },
-  }));
   expectUnsupportedLifeTriggerDefinition("target-effect", (effect) => ({
     ...effect,
     effect: { type: "ko", target: { type: "opponentLeader" } },

@@ -58,7 +58,6 @@ const isSupportedTriggerEffect = (effect: EffectBlock): boolean => {
     return false;
   }
   if (effect.cost !== undefined) return false;
-  if (effect.condition !== undefined) return false;
   if (effect.conditionTiming !== undefined) return false;
   if (effect.failurePolicy !== undefined) return false;
   if (effect.optional !== undefined && effect.optional) return false;
@@ -89,7 +88,6 @@ const isSupportedTriggerQueuedBody = (effect: Effect): boolean => {
 const hasUnsupportedShape = (effect: EffectBlock): boolean =>
   !isSupportedTriggerQueuedBody(effect.effect) ||
   effect.cost !== undefined ||
-  effect.condition !== undefined ||
   effect.conditionTiming !== undefined ||
   effect.failurePolicy !== undefined ||
   effect.optional !== undefined ||
