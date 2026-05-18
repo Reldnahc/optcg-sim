@@ -1,6 +1,8 @@
 # INF-056B Child Story Review
 
-Assignment ID: `story-review-INF-056B-2026-05-18-02`
+Assignment ID: `SR-INF-056B-2026-05-18-01-R1`
+
+Artifact ID: `SR-INF-056B-2026-05-18-01-R1`
 
 Reviewed story path: `stories/approved/INF-056B-separate-tooling-contracts-from-default-test-lane.yaml`
 
@@ -16,9 +18,9 @@ Required fixes:
 
 Notes:
 
-- The revised `repo_rules` entry matches the required Story Approval Review Gate by naming the revised `INF-056` parent plus both child rows, `INF-056A` and `INF-056B`, and by requiring distinct assignment/artifact identity per row before packet activation or implementation.
-- The parent verification wording is consistent with the parent/substory workflow, requiring full `corepack pnpm run verify` for each reviewed child commit and for the final parent PR.
-- The rest of the child story remains coherent with the cited spec refs, boundary, and allowed touch points.
+- The prior medium finding is fixed. The story still requires the review-workflow proof, and the focused required command now explicitly includes `tests/github/review-workflow.test.mjs`.
+- Against `AGENTS.md` and the Story Approval Review Gate in `docs/workflow/story-execution.md`, there are no remaining material story-authority, scope, allowed-touch-point, acceptance-criteria, required-test, dependency, or ambiguity defects in `INF-056B`.
+- `INF-056B` is approval-ready as a child-story review artifact.
 
 Row statement:
 

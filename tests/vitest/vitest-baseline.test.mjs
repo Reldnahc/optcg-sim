@@ -40,6 +40,11 @@ test("package.json defines vitest-based test and coverage scripts", async () => 
     "coverage should not inherit the narrowed root test lane",
   );
   assert.match(
+    packageJson.scripts.coverage,
+    /--testTimeout\s+15000\b/,
+    "coverage should keep full direct Vitest coverage but allow slow aggregate workflow contracts to finish",
+  );
+  assert.match(
     packageJson.scripts.verify,
     /pnpm run lint/i,
     "verify should orchestrate the canonical lint command",
@@ -73,6 +78,46 @@ test("root vitest lane excludes cleanup-heavy workflow contracts", async () => {
       `root test lane must explicitly exclude ${githubCleanupFile}`,
     );
   }
+  assert.match(
+    packageJson.scripts.test,
+    /--exclude\s+packages\/cli\/src\/\*\*\/\*\.test\.ts\b/,
+    "root test lane must exclude CLI test files",
+  );
+  assert.match(
+    packageJson.scripts.test,
+    /--exclude\s+tests\/lint\/\*\*\/\*\.test\.mjs\b/,
+    "root test lane must exclude lint-config test files",
+  );
+});
+
+test("verify and tooling lanes preserve moved-suite enforcement", async () => {
+  const packageJson = await readJson("package.json");
+
+  assert.equal(
+    typeof packageJson.scripts?.["test:tooling"],
+    "string",
+    "missing test:tooling script",
+  );
+  assert.match(
+    packageJson.scripts["test:tooling"],
+    /\bvitest\s+run\b/,
+    "test:tooling should run vitest",
+  );
+  assert.match(
+    packageJson.scripts["test:tooling"],
+    /\bpackages\/cli\/src\b/,
+    "test:tooling should include CLI suites",
+  );
+  assert.match(
+    packageJson.scripts["test:tooling"],
+    /\btests\/lint\b/,
+    "test:tooling should include lint-config suites",
+  );
+  assert.match(
+    packageJson.scripts.verify,
+    /\bpnpm run test:tooling\b/,
+    "verify should include tooling lane",
+  );
 });
 
 test("vitest baseline files exist", async () => {

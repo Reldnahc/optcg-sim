@@ -56,6 +56,22 @@ function extractHiddenInfoJobBlock(workflowText) {
   return lines.slice(startIndex, endIndex).join("\n");
 }
 
+function extractToolingJobBlock(workflowText) {
+  const lines = workflowText.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) => /^\s{2}tooling:\s*$/.test(line));
+  assert.notEqual(startIndex, -1, "missing tooling job block");
+
+  let endIndex = lines.length;
+  for (let i = startIndex + 1; i < lines.length; i += 1) {
+    if (/^\s{2}[a-zA-Z0-9_-]+:\s*$/.test(lines[i])) {
+      endIndex = i;
+      break;
+    }
+  }
+
+  return lines.slice(startIndex, endIndex).join("\n");
+}
+
 test("package.json exposes the canonical contract lane for CI", async () => {
   const packageJson = await readJson("package.json");
 
@@ -121,6 +137,7 @@ test("ci workflow file exists with the expected verification jobs", async () => 
   assert.match(workflow, /^\s+quality:\s*$/m);
   assert.match(workflow, /^\s+test:\s*$/m);
   assert.match(workflow, /^\s+hidden-info:\s*$/m);
+  assert.match(workflow, /^\s+tooling:\s*$/m);
   assert.match(workflow, /^\s+contracts:\s*$/m);
   assert.match(workflow, /^\s+coverage:\s*$/m);
 });
@@ -129,6 +146,7 @@ test("ci workflow runs the canonical root commands and publishes coverage", asyn
   const workflow = await readText(".github/workflows/ci.yml");
   const contractsJobBlock = extractContractsJobBlock(workflow);
   const hiddenInfoJobBlock = extractHiddenInfoJobBlock(workflow);
+  const toolingJobBlock = extractToolingJobBlock(workflow);
 
   const requiredCommands = [
     "pnpm install --frozen-lockfile",
@@ -154,6 +172,11 @@ test("ci workflow runs the canonical root commands and publishes coverage", asyn
       `workflow should call \`${command}\``,
     );
   }
+  assert.match(
+    toolingJobBlock,
+    /\bpnpm test:tooling\b/,
+    "tooling job should run the canonical tooling lane",
+  );
 
   const forbiddenContractsJobCommands = [
     "pnpm test:contracts",

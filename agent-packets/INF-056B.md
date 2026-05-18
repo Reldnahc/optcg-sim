@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id INF-056B -->
 <!-- agent-packet:story-path stories/approved/INF-056B-separate-tooling-contracts-from-default-test-lane.yaml -->
-<!-- agent-packet:story-sha256 85fd97215761828a28e266e40120b281c1e56be2bd4708c74cc84f92c0de5603 -->
+<!-- agent-packet:story-sha256 336c987664fe3ff1a18d7bde8f189ebfbf6ad8cdee4fffe963259add9dde1432 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -11,14 +11,14 @@ Spec Version: v6
 Story Schema Version: 1.0.0
 ID: INF-056B
 Epic ID: INF-056
-Title: Separate tooling contracts from default test lane
+Title: Separate tooling-heavy tests from default test lane
 Type: tooling
 Area: infra
 Primary Concern: verification
 
 ## Why
 
-Move broad tooling-heavy contract suites out of the default root test lane so `pnpm test` stays focused on product/package behavior and fast smoke coverage, while canonical `contracts`, `verify`, and CI continue to enforce the full contract suite.
+Move broad tooling-heavy contract, CLI, and lint-config suites out of the default root test lane so `pnpm test` stays focused on product/package behavior and fast smoke coverage, while canonical explicit lanes, `verify`, and CI continue to enforce the moved suites.
 
 ## Authoritative Spec References
 
@@ -234,18 +234,23 @@ Lint, formatting, and merge-gate verification are mandatory, and CI must fail wh
 
 ## Story Boundary
 
-Own only root package scripts, test-lane discovery or filters, CI/script contract assertions, and workflow documentation needed to separate default package tests from contract/tooling verification. Do not change contract semantics, cleanup behavior, story lifecycle behavior, packet behavior, or product/runtime behavior.
+Own only root package scripts, test-lane discovery or filters, CI/script contract assertions, and workflow documentation needed to separate default package tests from contract/CLI/lint tooling verification. Do not change contract semantics, cleanup behavior, story lifecycle behavior, packet behavior, or product/runtime behavior.
 
 ## Scope
 
 - move broad `tests/contracts/**/*.test.mjs` tooling-heavy suites out of the default root `pnpm test` lane
+- move `packages/cli/src/**/*.test.ts` CLI suites out of the default root `pnpm test` lane
+- move `tests/lint/**/*.test.mjs` lint-config suites out of the default root `pnpm test` lane
 - keep contract suites enforced by canonical `corepack pnpm run contracts`
+- keep moved CLI and lint-config suites enforced by a canonical explicit tooling test lane
 - keep `corepack pnpm run verify` authoritative by continuing to invoke `contracts`
+- keep `corepack pnpm run verify` authoritative by invoking the explicit tooling test lane
 - preserve CI enforcement by keeping the contracts job wired to `pnpm contracts`
+- preserve CI enforcement by wiring the explicit tooling test lane into a blocking job
 - leave `pnpm coverage` as full direct Vitest coverage unless a later story intentionally designs a separate coverage split
 - keep fast non-contract smoke lanes in default `pnpm test` where they are not under `tests/contracts/**`
 - update script/CI contract tests so future changes cannot silently move contract suites out of all gates
-- update script/CI contract tests so `pnpm test` excludes the contract directory and `pnpm contracts` remains the owning gate
+- update script/CI contract tests so `pnpm test` excludes the contract directory, CLI tests, and lint-config tests while explicit lanes remain the owning gates
 - preserve INF-056A cleanup-specific lane behavior and its explicit cleanup contract command
 
 ## Out of Scope
@@ -254,7 +259,7 @@ Own only root package scripts, test-lane discovery or filters, CI/script contrac
 - marking contract tests skipped, todo, flaky-allowed, or non-failing
 - weakening contract/schema/story/packet/spec/type-sync validation behavior
 - changing cleanup metadata syntax, cleanup guard behavior, packet completion behavior, or post-merge cleanup semantics
-- changing gameplay, engine, card, server, client, replay, persistence, security, or UI behavior
+- changing gameplay, engine, card, server, client, replay, persistence, security, CLI behavior, lint rule behavior, or UI behavior
 - changing `coverage` to inherit the narrowed default test lane
 - broad CI redesign unrelated to test-lane ownership
 
@@ -262,9 +267,11 @@ Own only root package scripts, test-lane discovery or filters, CI/script contrac
 
 <!-- prettier-ignore -->
 - package.json
+- .github/branch-protection.md
 - .github/workflows/ci.yml
 - tests/contracts/root-contracts-lane.test.mjs
 - tests/ci/github-workflows.test.mjs
+- tests/github/review-workflow.test.mjs
 - tests/vitest/vitest-baseline.test.mjs
 - docs/workflow/story-execution.md
 - docs/workflow/review-gate.md
@@ -276,9 +283,10 @@ Own only root package scripts, test-lane discovery or filters, CI/script contrac
 ## Constraints
 
 - the Story Approval Review Gate must pass for the revised INF-056 parent, INF-056A child, and INF-056B child with distinct assignment and artifact identity per row before packet activation or implementation
-- do not weaken contract coverage; move it to the right lane and prove it still runs
+- do not weaken contract, CLI, or lint-config coverage; move it to the right lane and prove it still runs
 - keep `pnpm verify` authoritative and make it run contract suites through `contracts`
-- do not broaden this story into cleanup behavior, packet lifecycle behavior, product behavior, or coverage-lane redesign
+- keep `pnpm verify` authoritative and make it run moved CLI and lint-config suites through `test:tooling`
+- do not broaden this story into cleanup behavior, packet lifecycle behavior, product behavior, CLI behavior, lint rule behavior, or coverage-lane redesign
 - use `corepack pnpm`, not plain `pnpm`, when running repo commands in this environment
 - use `pnpm`; the canonical local verification commands are `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`
 - TypeScript stays strict; avoid `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions without explicit justification
@@ -304,15 +312,23 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 ## Required Tests
 
 - script contract test proving default `pnpm test` excludes `tests/contracts/**/*.test.mjs`
+- script contract test proving default `pnpm test` excludes `packages/cli/src/**/*.test.ts`
+- script contract test proving default `pnpm test` excludes `tests/lint/**/*.test.mjs`
 - script contract test proving `test:contracts` includes non-cleanup `tests/contracts` suites and excludes cleanup-heavy suites already owned by `test:cleanup-contracts`
 - script contract test proving `test:cleanup-contracts` still includes INF-056A cleanup-heavy suites
+- script contract test proving `test:tooling` includes CLI and lint-config suites
 - script contract test proving `contracts` invokes both `test:contracts` and `test:cleanup-contracts`
+- script contract test proving `verify` invokes `test:tooling`
 - script or CI contract test proving `verify` still invokes `contracts`
 - CI workflow test proving the contracts job still runs `pnpm contracts`
+- CI workflow test proving a blocking job or step still runs `pnpm test:tooling`
+- review workflow test proving branch-protection required checks include any new blocking tooling CI job
 - coverage script test proving `coverage` remains direct Vitest coverage and does not call `pnpm run test`
-- run `corepack pnpm exec vitest run tests/contracts/root-contracts-lane.test.mjs tests/ci/github-workflows.test.mjs tests/vitest/vitest-baseline.test.mjs`
+- run `corepack pnpm exec vitest run tests/contracts/root-contracts-lane.test.mjs tests/ci/github-workflows.test.mjs tests/github/review-workflow.test.mjs tests/vitest/vitest-baseline.test.mjs`
+- run `corepack pnpm run test:tooling`
 - run `corepack pnpm run test`
 - run `corepack pnpm run contracts`
+- run `corepack pnpm run coverage`
 - run `corepack pnpm run stories:validate`
 - full `corepack pnpm run verify`
 
@@ -326,14 +342,20 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 ## Acceptance Criteria
 
 - default `pnpm test` does not discover or run `tests/contracts/**/*.test.mjs`
+- default `pnpm test` does not discover or run `packages/cli/src/**/*.test.ts`
+- default `pnpm test` does not discover or run `tests/lint/**/*.test.mjs`
 - `corepack pnpm run test:contracts` remains the explicit owner for non-cleanup contract suites
 - `corepack pnpm run test:cleanup-contracts` remains the explicit owner for cleanup-heavy contract suites from INF-056A
+- `corepack pnpm run test:tooling` remains the explicit owner for CLI and lint-config suites
 - `corepack pnpm run contracts` invokes both contract test lanes and remains reachable from `verify`
+- `corepack pnpm run verify` invokes `test:tooling`
 - CI still runs `pnpm contracts` in a blocking job
+- CI still runs `pnpm test:tooling` in a blocking job or blocking step
 - `pnpm coverage` remains full direct Vitest coverage and does not inherit the narrowed default `pnpm test` lane
 - script contract tests prove moved contract suites are not silently dropped from all gates
+- script contract tests prove moved CLI and lint-config suites are not silently dropped from all gates
 - no contract test is skipped, loosened, or deleted to satisfy this story
-- unrelated package, gameplay, card, engine, server, client, replay, and UI behavior remains unchanged
+- unrelated package, gameplay, card, engine, server, client, replay, CLI behavior, lint rule behavior, and UI behavior remains unchanged
 
 ## Post-Approval Role Sections
 

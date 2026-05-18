@@ -24,6 +24,7 @@ const githubCleanupLaneFiles = [
   "tests/github/post-merge-cleanup-closeout.test.mjs",
   "tests/github/post-merge-cleanup-evidence-builder.test.mjs",
 ];
+const toolingLaneFiles = ["packages/cli/src", "tests/lint"];
 
 async function readJson(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
@@ -73,6 +74,7 @@ test("root test lanes separate cleanup-heavy contracts without dropping coverage
   const rootTestLane = packageJson.scripts?.test;
   const contractsTestLane = packageJson.scripts?.["test:contracts"];
   const cleanupLane = packageJson.scripts?.["test:cleanup-contracts"];
+  const toolingLane = packageJson.scripts?.["test:tooling"];
 
   assert.equal(typeof rootTestLane, "string", "missing root test lane");
   assert.equal(
@@ -85,6 +87,7 @@ test("root test lanes separate cleanup-heavy contracts without dropping coverage
     "string",
     "missing test:cleanup-contracts lane",
   );
+  assert.equal(typeof toolingLane, "string", "missing test:tooling lane");
 
   assert.match(
     contractsTestLane,
@@ -96,6 +99,16 @@ test("root test lanes separate cleanup-heavy contracts without dropping coverage
     rootTestLane,
     /--exclude\s+tests\/contracts\/\*\*\/\*\.test\.mjs\b/,
     "root test lane must exclude broad tests/contracts suites",
+  );
+  assert.match(
+    rootTestLane,
+    /--exclude\s+packages\/cli\/src\/\*\*\/\*\.test\.ts\b/,
+    "root test lane must exclude CLI suites owned by tooling lane",
+  );
+  assert.match(
+    rootTestLane,
+    /--exclude\s+tests\/lint\/\*\*\/\*\.test\.mjs\b/,
+    "root test lane must exclude lint-config suites owned by tooling lane",
   );
   for (const githubCleanupFile of githubCleanupLaneFiles) {
     assert.match(
@@ -137,6 +150,16 @@ test("root test lanes separate cleanup-heavy contracts without dropping coverage
     /\|\|\s*true\b/i,
     "cleanup lane must not bypass failures with fallback clauses",
   );
+
+  for (const toolingTarget of toolingLaneFiles) {
+    assert.match(
+      toolingLane,
+      new RegExp(
+        `\\b${toolingTarget.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+      ),
+      `tooling lane must include ${toolingTarget}`,
+    );
+  }
 });
 
 test("root typecheck compiles workspace package lanes", async () => {

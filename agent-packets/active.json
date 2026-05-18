@@ -4,7 +4,7 @@
       "packetPath": "agent-packets/INF-056B.md",
       "storyId": "INF-056B",
       "storyPath": "stories/approved/INF-056B-separate-tooling-contracts-from-default-test-lane.yaml",
-      "storySha256": "85fd97215761828a28e266e40120b281c1e56be2bd4708c74cc84f92c0de5603"
+      "storySha256": "336c987664fe3ff1a18d7bde8f189ebfbf6ad8cdee4fffe963259add9dde1432"
     }
   ],
   "version": 1
