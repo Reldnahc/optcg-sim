@@ -183,7 +183,10 @@ export const createContinuousRecordsForResolvedEffect = (
   chosenTargets?: readonly CardRef[],
 ): ContinuousEffectRecord[] | null => {
   if (effect.target.type === "choose") {
-    if (chosenTargets === undefined || chosenTargets.length === 0) return null;
+    if (chosenTargets === undefined) return null;
+    if (chosenTargets.length === 0) {
+      return effect.target.request.min === 0 ? [] : null;
+    }
     const records: ContinuousEffectRecord[] = [];
     for (const [index, chosen] of chosenTargets.entries()) {
       if (!isPublicResolvableFieldObject(state, chosen)) {

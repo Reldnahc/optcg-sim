@@ -572,6 +572,121 @@ test("modifyPower choose creates exact-card continuous modifier bound to selecte
   assert.equal(created.modifier.operation.value, 1000);
 });
 
+test("cannotBlock choose creates exact-card continuous restriction bound to selected target", () => {
+  const { state } = targetSelectionQueueState();
+  withQueuedEffect(state, {
+    type: "cannotBlock",
+    target: { type: "choose", request: publicCharacterTargetRequest() },
+    duration: { type: "thisTurn" },
+  });
+  removeFieldCardsFromHands(state);
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "selectTargets decision");
+  assert.equal(decision.type, "selectTargets");
+  const selected = must(decision.candidates[0], "selected").card;
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "targets", targets: [selected] },
+  });
+  assert.equal(result.errors, undefined);
+  const created = must(result.state.continuousEffects[0], "continuous");
+  assert.equal(created.modifier.layer, "restriction");
+  assert.equal(created.modifier.target.type, "exactCard");
+  assert.equal(created.modifier.target.card.instanceId, selected.instanceId);
+  assert.equal(created.modifier.operation.type, "restriction");
+  assert.equal(created.modifier.operation.restriction, "cannotBlock");
+});
+
+test.each([
+  {
+    name: "modifyPower",
+    effect: {
+      type: "modifyPower",
+      target: {
+        type: "choose",
+        request: publicCharacterTargetRequest({ min: 0, max: 1 }),
+      },
+      value: 1000,
+      duration: { type: "thisTurn" },
+    } satisfies Effect,
+  },
+  {
+    name: "cannotAttack",
+    effect: {
+      type: "cannotAttack",
+      target: {
+        type: "choose",
+        request: publicCharacterTargetRequest({ min: 0, max: 1 }),
+      },
+      duration: { type: "thisTurn" },
+    } satisfies Effect,
+  },
+  {
+    name: "cannotBlock",
+    effect: {
+      type: "cannotBlock",
+      target: {
+        type: "choose",
+        request: publicCharacterTargetRequest({ min: 0, max: 1 }),
+      },
+      duration: { type: "thisTurn" },
+    } satisfies Effect,
+  },
+])(
+  "$name choose accepts zero targets as a deterministic no-op",
+  ({ effect }) => {
+    const run = () => {
+      const { state, entry } = targetSelectionQueueState(
+        publicCharacterTargetRequest({ min: 0, max: 1 }),
+      );
+      withQueuedEffect(state, effect);
+      removeFieldCardsFromHands(state);
+      const paused = processEffectRuntime(state);
+      const decision = must(
+        paused.state.pendingDecision,
+        "selectTargets decision",
+      );
+      assert.equal(decision.type, "selectTargets");
+
+      const result = applyAction(paused.state, {
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: { type: "targets", targets: [] },
+      });
+
+      assert.equal(result.errors, undefined);
+      assert.equal(result.state.pendingDecision, undefined);
+      assert.deepEqual(result.state.effectQueue, []);
+      assert.equal(result.state.continuousEffects.length, 0);
+      assert.deepEqual(
+        result.events.map((event) => event.type),
+        ["decisionResolved", "effectResolved", "ruleProcessingChecked"],
+      );
+      assert.deepEqual(result.events[1]?.payload, {
+        queueEntryId: entry.id,
+        timingWindowId: entry.timingWindowId,
+        generation: entry.generation,
+        effectBlockId: entry.effectBlockId,
+        sourcePresencePolicy: entry.sourcePresencePolicy,
+        orderingGroup: entry.orderingGroup,
+        status: "resolved",
+      });
+      assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+      return {
+        eventTypes: result.events.map((event) => event.type),
+        eventSeq: result.events.map((event) => event.seq),
+        journalSeq: result.state.eventJournal.map((event) => event.seq),
+        stateHash: result.stateHash,
+      };
+    };
+
+    const first = run();
+    const second = run();
+    assert.deepEqual(first, second);
+  },
+);
+
 test("multi-target choose continuous effect stores distinct exact-card binding objectIndex per target", () => {
   const { state } = targetSelectionQueueState(
     publicCharacterTargetRequest({ min: 2, max: 2 }),
