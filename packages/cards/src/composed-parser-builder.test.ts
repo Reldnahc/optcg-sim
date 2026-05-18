@@ -180,7 +180,16 @@ describe("composed parser builder scaffold", () => {
       parseSelectOpponentCharacterThenKoInstructionBody(
         "Select 1 of your opponent's Characters. Then, K.O. that Character.",
       ),
-    ).toBe(true);
+    ).toEqual({
+      cardinality: { max: 1, min: 1 },
+      savedReferenceConsumer: "koThatCharacter",
+      target: "opponentCharactersChoose",
+    });
+    expect(
+      parseSelectOpponentCharacterThenKoInstructionBody(
+        "Select 2 of your opponent's Characters. Then, K.O. that Character.",
+      ),
+    ).toBeUndefined();
     expect(
       parseContinuousModifierInstructionBody(
         "All of your opponent's Characters get -2000 power during this turn.",

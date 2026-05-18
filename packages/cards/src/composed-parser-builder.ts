@@ -107,6 +107,19 @@ export type ReturnDonPlaySelectedFromHandParse = {
   readonly returnDonCount: number;
 };
 
+export type SelectOpponentCharacterInstructionParse = {
+  readonly cardinality: {
+    readonly max: 1;
+    readonly min: 1;
+  };
+  readonly target: "opponentCharactersChoose";
+};
+
+export type SelectOpponentCharacterThenKoInstructionParse =
+  SelectOpponentCharacterInstructionParse & {
+    readonly savedReferenceConsumer: "koThatCharacter";
+  };
+
 export type PublicFieldTargetSubject =
   | "opponentCharactersAll"
   | "opponentCharactersChoose"
@@ -411,17 +424,61 @@ export function parseReturnDonPlaySelectedFromHandInstructionBody(
 
 export function parseSelectOpponentCharacterInstructionBody(
   sourceText: string,
-): boolean {
-  return sourceText === "Select 1 of your opponent's Characters.";
+): SelectOpponentCharacterInstructionParse | undefined {
+  return parseSelectOpponentCharacterSegment(sourceText);
 }
 
 export function parseSelectOpponentCharacterThenKoInstructionBody(
   sourceText: string,
-): boolean {
-  return (
-    sourceText ===
-    "Select 1 of your opponent's Characters. Then, K.O. that Character."
+): SelectOpponentCharacterThenKoInstructionParse | undefined {
+  const [selectText, consumerText] = sourceText.split(". Then, ");
+  if (selectText === undefined || consumerText === undefined) {
+    return undefined;
+  }
+
+  const selection = parseSelectOpponentCharacterSegment(`${selectText}.`);
+  const savedReferenceConsumer = parseSavedFieldObjectKoConsumer(consumerText);
+  return selection === undefined || savedReferenceConsumer === undefined
+    ? undefined
+    : { ...selection, savedReferenceConsumer };
+}
+
+function parseSelectOpponentCharacterSegment(
+  sourceText: string,
+): SelectOpponentCharacterInstructionParse | undefined {
+  const match = /^Select (.+) of (your opponent's Characters)\.$/.exec(
+    sourceText,
   );
+  if (match === null) {
+    return undefined;
+  }
+
+  const cardinality = parseExactTargetCardinality(match[1] ?? "");
+  const target = parseOpponentCharacterTargetText(match[2] ?? "");
+  return cardinality === undefined || target === undefined
+    ? undefined
+    : { cardinality, target };
+}
+
+function parseExactTargetCardinality(
+  sourceText: string,
+): SelectOpponentCharacterInstructionParse["cardinality"] | undefined {
+  const count = parseExactPositiveSafeInteger(sourceText);
+  return count === 1 ? { max: 1, min: 1 } : undefined;
+}
+
+function parseOpponentCharacterTargetText(
+  sourceText: string,
+): "opponentCharactersChoose" | undefined {
+  return sourceText === "your opponent's Characters"
+    ? "opponentCharactersChoose"
+    : undefined;
+}
+
+function parseSavedFieldObjectKoConsumer(
+  sourceText: string,
+): "koThatCharacter" | undefined {
+  return sourceText === "K.O. that Character." ? "koThatCharacter" : undefined;
 }
 
 export function parseContinuousModifierInstructionBody(

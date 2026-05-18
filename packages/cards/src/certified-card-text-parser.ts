@@ -420,7 +420,10 @@ function parseCard016ASelectTargetsClause(
     return undefined;
   }
 
-  if (parseSelectOpponentCharacterInstructionBody(wrapper.bodyText)) {
+  const selectOpponentCharacter = parseSelectOpponentCharacterInstructionBody(
+    wrapper.bodyText,
+  );
+  if (selectOpponentCharacter !== undefined) {
     return createCard016AAutoClause({
       cardId,
       effect: buildSequenceEffect([
@@ -439,7 +442,9 @@ function parseCard016ASelectTargetsClause(
     });
   }
 
-  if (parseSelectOpponentCharacterThenKoInstructionBody(wrapper.bodyText)) {
+  const selectOpponentCharacterThenKo =
+    parseSelectOpponentCharacterThenKoInstructionBody(wrapper.bodyText);
+  if (selectOpponentCharacterThenKo !== undefined) {
     return createCard016AAutoClause({
       cardId,
       effect: buildSequenceEffect([
