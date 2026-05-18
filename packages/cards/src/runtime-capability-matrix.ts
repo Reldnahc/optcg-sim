@@ -65,6 +65,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:restriction:cannot-attack-choose-this-turn",
+        "exact:on-play:cannot-attack:choose:this-turn",
       ],
     },
     {
@@ -100,6 +101,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:restriction:cannot-block-choose-this-turn",
+        "exact:on-play:cannot-block:choose:this-turn",
       ],
     },
     {
@@ -128,6 +130,10 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:when-attacking:draw-n:trash-m:hand:self",
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
         "exact:on-play:draw-up-to-n:self",
+        "exact:on-ko:draw-n:self",
+        "exact:on-ko:draw-up-to-n:self",
+        "exact:trigger:draw-n:self",
+        "exact:trigger:draw-up-to-n:self",
         "exact:on-play:optional-effect:draw-1:self",
         "exact:condition:self-attached-don-count",
         "exact:condition:your-turn",
@@ -185,7 +191,11 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       kind: "effect",
       sinceStory: "ENG-055H",
       supported: true,
-      supportedParserRuleIds: ["exact:on-play:draw-up-to-n:self"],
+      supportedParserRuleIds: [
+        "exact:on-play:draw-up-to-n:self",
+        "exact:on-ko:draw-up-to-n:self",
+        "exact:trigger:draw-up-to-n:self",
+      ],
     },
     {
       description:
@@ -202,6 +212,8 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:when-attacking:draw-n:trash-m:hand:self",
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
         "exact:on-play:optional-effect:draw-1:self",
+        "exact:on-ko:draw-n:self",
+        "exact:trigger:draw-n:self",
         "exact:condition:self-attached-don-count",
         "exact:condition:your-turn",
         "card014a:sequence:draw-trashFromHand",
@@ -318,6 +330,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [
         "card014a:modifier:power-choose-this-turn",
         "card014a:on-play:select-target-modify-power",
+        "exact:on-play:modify-power:choose:this-turn",
       ],
     },
     {
@@ -532,7 +545,11 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       kind: "sourcePresencePolicy",
       sinceStory: "CARD-014A",
       supported: true,
-      supportedParserRuleIds: ["card014a:static:no-source-required"],
+      supportedParserRuleIds: [
+        "card014a:static:no-source-required",
+        "exact:trigger:draw-n:self",
+        "exact:trigger:draw-up-to-n:self",
+      ],
     },
     {
       description:
@@ -558,6 +575,8 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:trigger:resolve-from-destination-zone",
+        "exact:on-ko:draw-n:self",
+        "exact:on-ko:draw-up-to-n:self",
       ],
     },
     {
@@ -615,6 +634,29 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       ],
     },
     {
+      description: "On K.O. trigger timing is executable by current runtime.",
+      id: "trigger:onKO",
+      kind: "trigger",
+      sinceStory: "ENG-056B",
+      supported: true,
+      supportedParserRuleIds: [
+        "exact:on-ko:draw-n:self",
+        "exact:on-ko:draw-up-to-n:self",
+      ],
+    },
+    {
+      description:
+        "Life Trigger timing is executable by current runtime for supported generated shapes.",
+      id: "trigger:trigger",
+      kind: "trigger",
+      sinceStory: "ENG-056A",
+      supported: true,
+      supportedParserRuleIds: [
+        "exact:trigger:draw-n:self",
+        "exact:trigger:draw-up-to-n:self",
+      ],
+    },
+    {
       description:
         "When Attacking trigger timing is executable by current runtime.",
       id: "trigger:whenAttacking",
@@ -657,13 +699,15 @@ for (const entry of generatedSupportComponentEvidenceInventory) {
 
 export const generatedSupportRuntimeCapabilityMatrix = {
   ...generatedSupportRuntimeCapabilityMatrixBase,
-  capabilities: generatedSupportRuntimeCapabilityMatrixBase.capabilities.map(
-    (capability) => ({
+  capabilities: generatedSupportRuntimeCapabilityMatrixBase.capabilities
+    .map((capability) => ({
       ...capability,
       supportedComponentIds:
         runtimeCapabilityComponentIdsByCapabilityId.get(capability.id) ?? [],
-    }),
-  ),
+    }))
+    .sort((left, right) =>
+      left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
+    ),
 } as const satisfies RuntimeCapabilityMatrix;
 
 export const requiredGeneratedSupportCapabilityIds = [
@@ -709,7 +753,9 @@ export const requiredGeneratedSupportCapabilityIds = [
   "sourcePresencePolicy:resolveFromDestinationZone",
   "sourcePresencePolicy:resolveFromLastKnownInformation",
   "trashFromHand:segment0:self:self:count-exact",
+  "trigger:onKO",
   "trigger:onPlay",
+  "trigger:trigger",
   "trigger:whenAttacking",
   "trigger:whenAttacking:oncePerTurn",
 ] as const;
@@ -783,11 +829,17 @@ function classifyParserRuleKind(parserRuleId: string): string {
   }
   if (
     parserRuleId === "exact:on-play:draw-n:self" ||
-    parserRuleId === "exact:when-attacking:draw-n:self"
+    parserRuleId === "exact:when-attacking:draw-n:self" ||
+    parserRuleId === "exact:on-ko:draw-n:self" ||
+    parserRuleId === "exact:trigger:draw-n:self"
   ) {
     return "triggered-draw";
   }
-  if (parserRuleId === "exact:on-play:draw-up-to-n:self") {
+  if (
+    parserRuleId === "exact:on-play:draw-up-to-n:self" ||
+    parserRuleId === "exact:on-ko:draw-up-to-n:self" ||
+    parserRuleId === "exact:trigger:draw-up-to-n:self"
+  ) {
     return "draw-up-to";
   }
   if (

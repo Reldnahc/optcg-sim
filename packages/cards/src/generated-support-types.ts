@@ -576,12 +576,9 @@ export const generatedSupportComponentEvidenceInventory = [
     parserRuleId: "exact:on-play:modify-power:choose:this-turn",
     runtimeCapabilityIds: [
       "category:auto",
-      "modifyPower:choose:thisTurn:zeroChoiceBranch",
+      "modifyPower:choose:thisTurn",
       "sourcePresencePolicy:mustRemainInSameZone",
       "trigger:onPlay",
-    ],
-    missingRuntimeCapabilityIds: [
-      "modifyPower:choose:thisTurn:zeroChoiceBranch",
     ],
     shapeId: "on-play-modify-power-choose-this-turn",
   },
@@ -637,12 +634,9 @@ export const generatedSupportComponentEvidenceInventory = [
     parserRuleId: "exact:on-play:cannot-attack:choose:this-turn",
     runtimeCapabilityIds: [
       "category:auto",
-      "cannotAttack:choose:thisTurn:zeroChoiceBranch",
+      "cannotAttack:choose:thisTurn",
       "sourcePresencePolicy:mustRemainInSameZone",
       "trigger:onPlay",
-    ],
-    missingRuntimeCapabilityIds: [
-      "cannotAttack:choose:thisTurn:zeroChoiceBranch",
     ],
     shapeId: "on-play-cannot-attack-choose-this-turn",
   },
@@ -698,14 +692,81 @@ export const generatedSupportComponentEvidenceInventory = [
     parserRuleId: "exact:on-play:cannot-block:choose:this-turn",
     runtimeCapabilityIds: [
       "category:auto",
-      "cannotBlock:choose:thisTurn:zeroChoiceBranch",
+      "cannotBlock:choose:thisTurn",
       "sourcePresencePolicy:mustRemainInSameZone",
       "trigger:onPlay",
     ],
-    missingRuntimeCapabilityIds: [
-      "cannotBlock:choose:thisTurn:zeroChoiceBranch",
-    ],
     shapeId: "on-play-cannot-block-choose-this-turn",
+  },
+  {
+    components: [
+      "wrapper",
+      "body-action",
+      "source-presence-policy",
+      ...parserRuleBaseComponents,
+    ],
+    gates: parserRuleBaseGates,
+    parserRuleId: "exact:trigger:draw-n:self",
+    runtimeCapabilityIds: [
+      "category:auto",
+      "effect:draw:self:count:positive-safe-integer",
+      "sourcePresencePolicy:noSourceRequired",
+      "trigger:trigger",
+    ],
+    shapeId: "trigger-draw",
+  },
+  {
+    components: [
+      "wrapper",
+      "body-action",
+      "cardinality",
+      "source-presence-policy",
+      ...parserRuleBaseComponents,
+    ],
+    gates: parserRuleBaseGates,
+    parserRuleId: "exact:trigger:draw-up-to-n:self",
+    runtimeCapabilityIds: [
+      "category:auto",
+      "drawUpTo:self:chooseQuantity",
+      "sourcePresencePolicy:noSourceRequired",
+      "trigger:trigger",
+    ],
+    shapeId: "trigger-draw-up-to",
+  },
+  {
+    components: [
+      "wrapper",
+      "body-action",
+      "source-presence-policy",
+      ...parserRuleBaseComponents,
+    ],
+    gates: parserRuleBaseGates,
+    parserRuleId: "exact:on-ko:draw-n:self",
+    runtimeCapabilityIds: [
+      "category:auto",
+      "effect:draw:self:count:positive-safe-integer",
+      "sourcePresencePolicy:resolveFromDestinationZone",
+      "trigger:onKO",
+    ],
+    shapeId: "on-ko-draw",
+  },
+  {
+    components: [
+      "wrapper",
+      "body-action",
+      "cardinality",
+      "source-presence-policy",
+      ...parserRuleBaseComponents,
+    ],
+    gates: parserRuleBaseGates,
+    parserRuleId: "exact:on-ko:draw-up-to-n:self",
+    runtimeCapabilityIds: [
+      "category:auto",
+      "drawUpTo:self:chooseQuantity",
+      "sourcePresencePolicy:resolveFromDestinationZone",
+      "trigger:onKO",
+    ],
+    shapeId: "on-ko-draw-up-to",
   },
   {
     components: [

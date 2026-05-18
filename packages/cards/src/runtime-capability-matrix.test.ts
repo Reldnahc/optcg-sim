@@ -83,7 +83,9 @@ describe("generated support runtime capability matrix", () => {
       ]),
     );
     expect(drawUpToCapability?.supportedComponentIds).toEqual([
+      "on-ko-draw-up-to",
       "on-play-draw-up-to",
+      "trigger-draw-up-to",
     ]);
   });
 
@@ -249,8 +251,14 @@ describe("generated support runtime capability matrix", () => {
       kind: "effect",
       sinceStory: "ENG-055H",
       supported: true,
-      supportedParserRuleIds: [parserRuleId],
     });
+    expect(drawUpToCapability?.supportedParserRuleIds).toEqual(
+      expect.arrayContaining([
+        parserRuleId,
+        "exact:on-ko:draw-up-to-n:self",
+        "exact:trigger:draw-up-to-n:self",
+      ]),
+    );
     for (const capabilityId of requiredCapabilityIds) {
       const capability =
         generatedSupportRuntimeCapabilityMatrix.capabilities.find(
@@ -455,14 +463,14 @@ describe("generated support runtime capability matrix", () => {
       parserRuleId: "exact:on-play:cannot-block:choose:this-turn",
     },
   ])(
-    "keeps CARD-014G zero-choice parser rule $parserRuleId unlinked from $capabilityId",
+    "keeps CARD-014G zero-choice parser rule $parserRuleId linked to $capabilityId",
     ({ capabilityId, parserRuleId }) => {
       const capability =
         generatedSupportRuntimeCapabilityMatrix.capabilities.find(
           (candidate) => candidate.id === capabilityId,
         );
 
-      expect(capability?.supportedParserRuleIds).not.toContain(parserRuleId);
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
     },
   );
 

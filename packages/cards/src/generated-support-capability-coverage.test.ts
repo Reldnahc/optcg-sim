@@ -7,7 +7,7 @@ import {
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 
 describe("generated support capability coverage", () => {
-  it("reports CARD-014A missing capabilities as generated-support blockers for future parser rules", () => {
+  it("reports CARD-014A capability coverage for CARD-018A-enabled component evidence", () => {
     const coverage = evaluateRuntimeCapabilityCoverageForComponentEvidenceIds({
       componentEvidenceIds: [
         "on-play-select-opponent-character-target",
@@ -57,11 +57,7 @@ describe("generated support capability coverage", () => {
         }),
       ]),
     );
-    expect(coverage.missingCapabilityIds).toEqual([
-      "cannotAttack:choose:thisTurn:zeroChoiceBranch",
-      "cannotBlock:choose:thisTurn:zeroChoiceBranch",
-      "modifyPower:choose:thisTurn:zeroChoiceBranch",
-    ]);
+    expect(coverage.missingCapabilityIds).toEqual([]);
     expect(coverage.blockers).toEqual(
       coverage.missing.map((missing) => ({
         capabilityId: missing.capabilityId,
