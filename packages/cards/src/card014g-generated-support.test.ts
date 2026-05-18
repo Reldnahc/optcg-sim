@@ -461,19 +461,19 @@ describe("CARD-014G generated composed support", () => {
 
   it.each([
     {
-      expectedCapabilityId: "modifyPower:choose:thisTurn",
+      expectedCapabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
       expectedRuleId: "exact:on-play:modify-power:choose:this-turn",
       sourceText:
         "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
     },
     {
-      expectedCapabilityId: "cannotAttack:choose:thisTurn",
+      expectedCapabilityId: "cannotAttack:choose:thisTurn:zeroChoiceBranch",
       expectedRuleId: "exact:on-play:cannot-attack:choose:this-turn",
       sourceText:
         "[On Play] Up to 1 of your opponent's Characters cannot attack during this turn.",
     },
     {
-      expectedCapabilityId: "cannotBlock:choose:thisTurn",
+      expectedCapabilityId: "cannotBlock:choose:thisTurn:zeroChoiceBranch",
       expectedRuleId: "exact:on-play:cannot-block:choose:this-turn",
       sourceText:
         "[On Play] Up to 1 of your opponent's Characters cannot block during this turn.",

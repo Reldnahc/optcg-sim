@@ -11,7 +11,9 @@ import {
   buildGeneratedSupportIndex,
   type EffectDefinitionValidationResult,
 } from "./generated-support-index.js";
+import { buildGeneratedSupportReport } from "./generated-support-report.js";
 import { isCompleteGeneratedSupportParseResult } from "./generated-support-types.js";
+import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 
 const cardId = "CARD-018A-001" as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -200,6 +202,97 @@ describe("CARD-018A generated support", () => {
           }),
         ]),
       );
+    },
+  );
+
+  it.each([
+    {
+      expectedCapabilityId: "trigger:trigger",
+      expectedRuleId: "exact:trigger:draw-n:self",
+      sourceText: "[Trigger] Draw 1 card.",
+    },
+    {
+      expectedCapabilityId: "trigger:onKO",
+      expectedRuleId: "exact:on-ko:draw-n:self",
+      sourceText: "[On K.O.] Draw 1 card.",
+    },
+    {
+      expectedCapabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
+      expectedRuleId: "exact:on-play:modify-power:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
+    },
+  ])(
+    "reports missing CARD-018A runtime capability evidence for $expectedRuleId",
+    ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
+      const runtimeCapabilityMatrix = {
+        ...generatedSupportRuntimeCapabilityMatrix,
+        capabilities:
+          generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+            (capability) => capability.id !== expectedCapabilityId,
+          ),
+      };
+
+      const index = buildGeneratedSupportIndex({
+        cards: [{ ...baseCard, sourceText }],
+        runtimeCapabilityMatrix,
+        validateEffectDefinition,
+      });
+      const report = buildGeneratedSupportReport(index);
+
+      expect(index.entries[0]).toMatchObject({
+        blockers: [
+          {
+            capabilityId: expectedCapabilityId,
+            code: "missing-runtime-capability",
+          },
+        ],
+        missingCapabilityIds: [expectedCapabilityId],
+        parseStatus: "complete",
+        parserRuleIds: [expectedRuleId],
+        status: "unsupported",
+      });
+      expect(report.blockers[0]).toMatchObject({
+        capabilityId: expectedCapabilityId,
+        code: "missing-runtime-capability",
+        deepestSuccessfulLayer: "schema",
+        layer: "runtime-capability",
+      });
+    },
+  );
+
+  it.each([
+    {
+      sourceText: "[On K.O.] This Character gets +1000 power during this turn.",
+    },
+    {
+      sourceText: "[On K.O.] This Character cannot attack during this turn.",
+    },
+    {
+      sourceText:
+        "[On K.O.] This Character gets +1000 power while this card is on the field.",
+    },
+  ])(
+    "keeps unsupported On K.O. continuous source-policy shape fail-closed ($sourceText)",
+    ({ sourceText }) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [{ ...baseCard, sourceText }],
+        validateEffectDefinition,
+      });
+      const report = buildGeneratedSupportReport(index);
+
+      expect(index.entries[0]).toMatchObject({
+        blockers: [{ code: "unparsed-span" }],
+        missingCapabilityIds: [],
+        parseStatus: "partial",
+        parserRuleIds: [],
+        status: "unsupported",
+      });
+      expect(index.effectDefinitions).toEqual({});
+      expect(report.blockers[0]).toMatchObject({
+        code: "unparsed-span",
+        layer: "parser",
+      });
     },
   );
 });

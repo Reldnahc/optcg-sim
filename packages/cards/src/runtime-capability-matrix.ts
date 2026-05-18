@@ -70,6 +70,15 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
     },
     {
       description:
+        "Up-to-one public field Character attack restriction may legally resolve with zero chosen targets.",
+      id: "cannotAttack:choose:thisTurn:zeroChoiceBranch",
+      kind: "restriction",
+      sinceStory: "ENG-057A",
+      supported: true,
+      supportedParserRuleIds: ["exact:on-play:cannot-attack:choose:this-turn"],
+    },
+    {
+      description:
         "The source Character can be prevented from attacking until turn end.",
       id: "cannotAttack:self:thisTurn",
       kind: "restriction",
@@ -103,6 +112,15 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "card014a:restriction:cannot-block-choose-this-turn",
         "exact:on-play:cannot-block:choose:this-turn",
       ],
+    },
+    {
+      description:
+        "Up-to-one public field Character block restriction may legally resolve with zero chosen targets.",
+      id: "cannotBlock:choose:thisTurn:zeroChoiceBranch",
+      kind: "restriction",
+      sinceStory: "ENG-057A",
+      supported: true,
+      supportedParserRuleIds: ["exact:on-play:cannot-block:choose:this-turn"],
     },
     {
       description:
@@ -332,6 +350,15 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "card014a:on-play:select-target-modify-power",
         "exact:on-play:modify-power:choose:this-turn",
       ],
+    },
+    {
+      description:
+        "Up-to-one public field Character power modifiers may legally resolve with zero chosen targets.",
+      id: "modifyPower:choose:thisTurn:zeroChoiceBranch",
+      kind: "modifier",
+      sinceStory: "ENG-057A",
+      supported: true,
+      supportedParserRuleIds: ["exact:on-play:modify-power:choose:this-turn"],
     },
     {
       description:
@@ -713,9 +740,11 @@ export const generatedSupportRuntimeCapabilityMatrix = {
 export const requiredGeneratedSupportCapabilityIds = [
   "cannotAttack:all:thisTurn",
   "cannotAttack:choose:thisTurn",
+  "cannotAttack:choose:thisTurn:zeroChoiceBranch",
   "cannotAttack:self:thisTurn",
   "cannotBlock:all:thisTurn",
   "cannotBlock:choose:thisTurn",
+  "cannotBlock:choose:thisTurn:zeroChoiceBranch",
   "cannotBlock:self:thisTurn",
   "category:auto",
   "composition:line-separated-effect-blocks:v1",
@@ -733,6 +762,7 @@ export const requiredGeneratedSupportCapabilityIds = [
   "keyword:rushCharacter:printed",
   "modifyPower:all:thisTurn",
   "modifyPower:choose:thisTurn",
+  "modifyPower:choose:thisTurn:zeroChoiceBranch",
   "modifyPower:self:thisBattle",
   "modifyPower:self:thisTurn",
   "optionalEffectBlock:onPlay:draw-1:self",

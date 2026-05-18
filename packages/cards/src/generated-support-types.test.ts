@@ -271,15 +271,15 @@ describe("generated support parser result contracts", () => {
   it("marks CARD-014G choose templates support-ready with zero-choice runtime capabilities", () => {
     const supportedRules = [
       {
-        capabilityId: "modifyPower:choose:thisTurn",
+        capabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
         parserRuleId: "exact:on-play:modify-power:choose:this-turn",
       },
       {
-        capabilityId: "cannotAttack:choose:thisTurn",
+        capabilityId: "cannotAttack:choose:thisTurn:zeroChoiceBranch",
         parserRuleId: "exact:on-play:cannot-attack:choose:this-turn",
       },
       {
-        capabilityId: "cannotBlock:choose:thisTurn",
+        capabilityId: "cannotBlock:choose:thisTurn:zeroChoiceBranch",
         parserRuleId: "exact:on-play:cannot-block:choose:this-turn",
       },
     ] as const;

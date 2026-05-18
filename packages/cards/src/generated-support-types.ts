@@ -577,6 +577,7 @@ export const generatedSupportComponentEvidenceInventory = [
     runtimeCapabilityIds: [
       "category:auto",
       "modifyPower:choose:thisTurn",
+      "modifyPower:choose:thisTurn:zeroChoiceBranch",
       "sourcePresencePolicy:mustRemainInSameZone",
       "trigger:onPlay",
     ],
@@ -635,6 +636,7 @@ export const generatedSupportComponentEvidenceInventory = [
     runtimeCapabilityIds: [
       "category:auto",
       "cannotAttack:choose:thisTurn",
+      "cannotAttack:choose:thisTurn:zeroChoiceBranch",
       "sourcePresencePolicy:mustRemainInSameZone",
       "trigger:onPlay",
     ],
@@ -693,6 +695,7 @@ export const generatedSupportComponentEvidenceInventory = [
     runtimeCapabilityIds: [
       "category:auto",
       "cannotBlock:choose:thisTurn",
+      "cannotBlock:choose:thisTurn:zeroChoiceBranch",
       "sourcePresencePolicy:mustRemainInSameZone",
       "trigger:onPlay",
     ],
