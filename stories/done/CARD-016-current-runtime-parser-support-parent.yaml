@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate a CARD story set that replaces exact-template parser growth with
   reusable parser grammar/components for every generated-support shape the
