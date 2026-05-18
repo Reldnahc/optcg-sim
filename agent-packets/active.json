@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-056A.md",
-      "storyId": "ENG-056A",
-      "storyPath": "stories/approved/ENG-056A-life-trigger-reusable-queued-body-runtime.yaml",
-      "storySha256": "7b4ac11849dcff6e15c87ea1395ac0b0c56b568236a66d5357fb040df290238b"
+      "packetPath": "agent-packets/ENG-056B.md",
+      "storyId": "ENG-056B",
+      "storyPath": "stories/approved/ENG-056B-on-ko-reusable-queued-body-runtime.yaml",
+      "storySha256": "aae4ec2b5bd7f105a32587018d05978f8f59c77e9c2ce607fcda1cf0a41d547c"
     }
   ],
   "version": 1
