@@ -20,6 +20,11 @@ const cleanupContractFiles = [
   "tests/github/post-merge-cleanup-evidence-builder.test.mjs",
 ];
 
+const githubCleanupLaneFiles = [
+  "tests/github/post-merge-cleanup-closeout.test.mjs",
+  "tests/github/post-merge-cleanup-evidence-builder.test.mjs",
+];
+
 async function readJson(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
   const contents = await readFile(absolutePath, "utf8");
@@ -81,14 +86,22 @@ test("root test lanes separate cleanup-heavy contracts without dropping coverage
     "missing test:cleanup-contracts lane",
   );
 
-  for (const cleanupFile of cleanupContractFiles) {
+  assert.match(
+    rootTestLane,
+    /--exclude\s+tests\/contracts\/\*\*\/\*\.test\.mjs\b/,
+    "root test lane must exclude broad tests/contracts suites",
+  );
+  for (const githubCleanupFile of githubCleanupLaneFiles) {
     assert.match(
       rootTestLane,
       new RegExp(
-        `--exclude\\s+${cleanupFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+        `--exclude\\s+${githubCleanupFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
       ),
-      `root test lane must exclude cleanup-heavy file ${cleanupFile}`,
+      `root test lane must explicitly exclude cleanup-heavy file ${githubCleanupFile}`,
     );
+  }
+
+  for (const cleanupFile of cleanupContractFiles) {
     assert.match(
       cleanupLane,
       new RegExp(cleanupFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),

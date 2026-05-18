@@ -3,22 +3,22 @@ spec_package_name: optcg-md-specs-v6
 story_schema_version: 1.0.0
 id: INF-056
 epic_id: INF-056
-title: Cleanup contract test lane parent
+title: Contract test lane separation parent
 type: tooling
 area: infra
 primary_concern: verification
 priority: high
 status: approved
 summary: >
-  Coordinate the verification-lane repair that keeps expensive post-merge
-  cleanup workflow contracts out of the default root test lane while preserving
-  their enforcement in an explicit cleanup or workflow contract gate.
+  Coordinate verification-lane repairs that keep expensive tooling and
+  workflow contracts out of the default root test lane while preserving their
+  enforcement in explicit contract gates.
 story_boundary: >
-  This parent is not directly implementable. It coordinates the single child
-  story that separates slow cleanup contract tests from default test discovery,
-  adds explicit cleanup-lane ownership, and updates CI/script contract evidence
-  so cleanup automation remains covered without blocking unrelated product
-  test runs through workflow-only temp-repo contracts.
+  This parent is not directly implementable. It coordinates child stories that
+  separate slow cleanup and tooling contract tests from default test discovery,
+  add explicit lane ownership, and update CI/script contract evidence so
+  contract coverage remains enforced without blocking unrelated product test
+  runs through workflow-only or tooling-heavy contract suites.
 allowed_touch_points:
   - stories/generated/INF-056*.yaml
   - stories/approved/INF-056*.yaml
@@ -35,10 +35,10 @@ spec_refs:
   - 27-spec-driven-story-generation-workflow.s015
   - 27-spec-driven-story-generation-workflow.s017
 scope:
-  - coordinate one executable child for explicit cleanup contract test lane ownership
-  - require the child to preserve post-merge cleanup coverage instead of deleting or skipping it
-  - require the child to keep default root test runs focused on normal unit and package tests
-  - require the child to keep cleanup/workflow contract failures visible in the appropriate contract or cleanup gate
+  - coordinate executable children for explicit cleanup and tooling contract test lane ownership
+  - require children to preserve contract coverage instead of deleting or skipping it
+  - require children to keep default root test runs focused on normal unit, package, and fast smoke tests
+  - require children to keep cleanup/workflow/tooling contract failures visible in the appropriate contract gate
 non_scope:
   - direct implementation from this parent story
   - deleting post-merge cleanup tests or weakening cleanup automation coverage
@@ -51,21 +51,28 @@ child_stories:
     title: Separate slow cleanup contracts into explicit lane
     concern: Move slow post-merge cleanup workflow contract coverage out of default root test discovery and into an explicit cleanup or workflow contract lane with CI and script-contract enforcement.
     depends_on: []
+  - id: INF-056B
+    title: Separate tooling contracts from default test lane
+    concern: Move broad tooling-heavy contract suites out of default root test discovery while keeping them enforced through the canonical contracts and verify gates.
+    depends_on: [INF-056A]
 acceptance_criteria:
-  - INF-056A is the only executable child for this parent
-  - default `pnpm test` no longer discovers the slow post-merge cleanup temp-repo contract suite
-  - cleanup contract coverage remains enforced by an explicit cleanup or workflow contract lane
-  - CI and local scripts make the lane ownership visible and deterministic
-  - no cleanup coverage is deleted, skipped, or hidden to make unrelated story verification pass
+  - INF-056A owns cleanup-heavy contract lane separation
+  - INF-056B owns broad tooling contract lane separation
+  - default `pnpm test` no longer discovers slow cleanup, workflow, or tooling-heavy contract suites
+  - moved contract coverage remains enforced by explicit contract lanes reachable from `contracts` and `verify`
+  - CI and local scripts make lane ownership visible and deterministic
+  - no contract coverage is deleted, skipped, or hidden to make unrelated story verification pass
 required_tests:
   - distinct story-review artifact for INF-056 parent before approval
   - distinct story-review artifact for INF-056A child before approval
+  - distinct story-review artifact for INF-056B child before approval
   - story-specific tests from INF-056A
-  - full `corepack pnpm run verify` on the child and parent PR
+  - story-specific tests from INF-056B
+  - full `corepack pnpm run verify` for each reviewed child commit on the parent integration branch and for the final parent PR
 repo_rules:
   - do not implement INF-056 directly
-  - use the parent/substory integration workflow even though this parent has one child
+  - use the parent/substory integration workflow
   - keep one active child packet at a time
-  - do not run packet completion for INF-056A until the parent branch lands on main
-  - lane separation may move slow cleanup contracts out of default `pnpm test`, but canonical `pnpm contracts`, `pnpm verify`, and CI must still invoke the explicit cleanup lane
+  - do not run packet completion for INF-056A or INF-056B until the parent branch lands on main
+  - lane separation may move slow contracts out of default `pnpm test`, but canonical `pnpm contracts`, `pnpm verify`, and CI must still invoke the explicit contract lanes
 ambiguity_policy: fail_and_escalate
