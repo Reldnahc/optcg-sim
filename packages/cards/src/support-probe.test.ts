@@ -145,11 +145,20 @@ describe("support probe", () => {
       formatSupportProbeBlocker({
         code: "missing-runtime-capability",
         capabilityId: "effect:draw:self:count:positive-safe-integer",
-        component: "exact:on-play:draw-n:self",
+        component: "on-play-draw",
         message: "Missing runtime capability.",
         schemaValidated: true,
       }),
     ).toContain("[deepest-successful-layer: schema]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "missing-runtime-capability",
+        capabilityId: "effect:draw:self:count:positive-safe-integer",
+        component: "on-play-draw",
+        message: "Missing runtime capability.",
+        schemaValidated: true,
+      }),
+    ).toContain("[component: on-play-draw]");
 
     expect(
       formatSupportProbeBlocker({

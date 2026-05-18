@@ -14,6 +14,7 @@ import {
   generatedSupportSourceIntegrityGateIds,
   generatedSupportParserResultStatuses,
   isCompleteGeneratedSupportParseResult,
+  listComponentEvidenceIdsForParserRuleIds,
   type GeneratedSupportBlocker,
   type GeneratedSupportComponentEvidenceCategory,
   type GeneratedSupportParserResult,
@@ -59,6 +60,7 @@ describe("generated support parser result contracts", () => {
   it("distinguishes complete parse output from every unsupported result", () => {
     const complete = {
       cardId,
+      componentEvidenceIds: ["on-play-draw"],
       effectDefinition,
       parserRuleIds: ["exact:on-play:draw-1:self"],
       sourceText: "[On Play] Draw 1 card.",
@@ -75,6 +77,7 @@ describe("generated support parser result contracts", () => {
     const partial = {
       blockers: [blocker],
       cardId,
+      parsedComponentEvidenceIds: [],
       parsedRuleIds: ["exact:on-play:draw-1:self"],
       sourceText: "[On Play] Draw 1 card. Then do a thing.",
       sourceTextHash: "sha256:source",
@@ -211,6 +214,17 @@ describe("generated support parser result contracts", () => {
         "exact:on-play:draw-n:self",
       ),
     ).toEqual([]);
+  });
+
+  it("derives component evidence IDs from parser rule IDs", () => {
+    expect(
+      listComponentEvidenceIdsForParserRuleIds([
+        "exact:on-play:draw-n:self",
+        "exact:on-play:draw-n:self",
+        "line-separated-effect-blocks:v1",
+        "unknown:transition-only",
+      ]),
+    ).toEqual(["line-separated-effect-blocks-composition", "on-play-draw"]);
   });
 
   it("covers planned generated-support parser rules in migration inventory", () => {

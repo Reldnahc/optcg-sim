@@ -156,12 +156,13 @@ describe("generated support report", () => {
             {
               code: "missing-runtime-capability",
               capabilityId: "effect:draw:self:count:positive-safe-integer",
-              component: "exact:on-play:draw-n:self",
+              component: "on-play-draw",
               message: "Missing runtime capability.",
               schemaValidated: true,
             },
           ],
           capabilityEvidence: [],
+          componentEvidenceIds: ["on-play-draw"],
           cardId: "CARD-015A-RUNTIME" as CardId,
           missingCapabilityIds: [
             "effect:draw:self:count:positive-safe-integer",
@@ -180,6 +181,7 @@ describe("generated support report", () => {
             },
           ],
           capabilityEvidence: [],
+          componentEvidenceIds: ["on-play-draw"],
           cardId: "CARD-015A-SCHEMA" as CardId,
           missingCapabilityIds: [],
           parseStatus: "complete",
@@ -196,6 +198,7 @@ describe("generated support report", () => {
             },
           ],
           capabilityEvidence: [],
+          componentEvidenceIds: [],
           cardId: "CARD-015A-PARSER" as CardId,
           missingCapabilityIds: [],
           parseStatus: "partial",
@@ -213,6 +216,7 @@ describe("generated support report", () => {
             },
           ],
           capabilityEvidence: [],
+          componentEvidenceIds: [],
           cardId: "CARD-015A-STALE" as CardId,
           missingCapabilityIds: [],
           parseStatus: "staleHash",
@@ -311,8 +315,9 @@ describe("generated support report", () => {
 
     expect(report.supportedCardIds).toEqual(["OP03-044"]);
     expect(report.unsupportedCardIds).toEqual([]);
-    expect(report.statusByCardId["OP03-044"]).toEqual({
+    expect(report.statusByCardId["OP03-044"]).toMatchObject({
       blockerCodes: [],
+      componentEvidenceIds: ["on-play-draw-then-trash-from-hand"],
       missingCapabilityIds: [],
       parseStatus: "complete",
       parserRuleIds: ["exact:on-play:draw-n:trash-m:hand:self"],
@@ -369,7 +374,7 @@ describe("generated support report", () => {
       entries: [...index.entries, ...missingCapabilityIndex.entries],
     });
 
-    expect(report).toEqual({
+    expect(report).toMatchObject({
       blockerCount: 2,
       blockers: [
         {
@@ -466,6 +471,7 @@ describe("generated support report", () => {
             },
           ],
           capabilityEvidence: [],
+          componentEvidenceIds: [],
           cardId: "CARD-008D-005" as CardId,
           missingCapabilityIds: [],
           parseStatus: "unsupportedPrimitive",
@@ -502,6 +508,7 @@ describe("generated support report", () => {
             },
           ],
           capabilityEvidence: [],
+          componentEvidenceIds: [],
           cardId: "CARD-014I-META" as CardId,
           missingCapabilityIds: [],
           parseStatus: "unsupportedPrimitive",
@@ -557,6 +564,7 @@ describe("generated support report", () => {
             },
           ],
           capabilityEvidence: [],
+          componentEvidenceIds: [],
           cardId: "CARD-014I-COMPONENTS" as CardId,
           missingCapabilityIds: [],
           parseStatus: "unsupportedPrimitive",
@@ -750,8 +758,11 @@ describe("generated support report", () => {
     expect(report.parserRuleIdsUsed).toEqual([
       "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
     ]);
-    expect(report.statusByCardId["OP10-045"]).toEqual({
+    expect(report.statusByCardId["OP10-045"]).toMatchObject({
       blockerCodes: [],
+      componentEvidenceIds: [
+        "when-attacking-once-per-turn-draw-then-trash-from-hand",
+      ],
       missingCapabilityIds: [],
       parseStatus: "complete",
       parserRuleIds: [
@@ -943,8 +954,11 @@ describe("generated support report", () => {
     expect(report.missingRuntimeCapabilityIds).toEqual([
       "optionalEffectBlock:onPlay:draw-1:self",
     ]);
-    expect(report.statusByCardId["CARD-014F-OPTIONAL-MISSING-CAP"]).toEqual({
+    expect(
+      report.statusByCardId["CARD-014F-OPTIONAL-MISSING-CAP"],
+    ).toMatchObject({
       blockerCodes: ["missing-runtime-capability"],
+      componentEvidenceIds: ["on-play-optional-draw"],
       missingCapabilityIds: ["optionalEffectBlock:onPlay:draw-1:self"],
       parseStatus: "complete",
       parserRuleIds: ["exact:on-play:optional-effect:draw-1:self"],

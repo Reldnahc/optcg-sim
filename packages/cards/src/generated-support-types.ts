@@ -121,12 +121,14 @@ interface GeneratedSupportParserResultBase {
 export interface CompleteGeneratedSupportParseResult extends GeneratedSupportParserResultBase {
   status: "complete";
   effectDefinition: EffectDefinition;
+  componentEvidenceIds: readonly string[];
   parserRuleIds: readonly string[];
 }
 
 export interface PartialGeneratedSupportParseResult extends GeneratedSupportParserResultBase {
   status: "partial";
   blockers: readonly GeneratedSupportBlocker[];
+  parsedComponentEvidenceIds: readonly string[];
   parsedRuleIds: readonly string[];
   unparsedSpans: readonly GeneratedSupportUnparsedSpan[];
 }
@@ -824,6 +826,14 @@ export function findGeneratedSupportComponentEvidenceByParserRuleId(
   );
 }
 
+export function findGeneratedSupportComponentEvidenceByShapeId(
+  shapeId: string,
+): GeneratedSupportComponentEvidenceInventoryEntry | undefined {
+  return generatedSupportComponentEvidenceInventory.find(
+    (entry) => entry.shapeId === shapeId,
+  );
+}
+
 export function listRequiredRuntimeCapabilityIdsForParserRuleId(
   parserRuleId: string,
 ): readonly string[] {
@@ -840,6 +850,38 @@ export function listPlannedMissingRuntimeCapabilityIdsForParserRuleId(
     findGeneratedSupportComponentEvidenceByParserRuleId(parserRuleId)
       ?.missingRuntimeCapabilityIds ?? []
   );
+}
+
+export function listRequiredRuntimeCapabilityIdsForComponentEvidenceId(
+  componentEvidenceId: string,
+): readonly string[] {
+  return (
+    findGeneratedSupportComponentEvidenceByShapeId(componentEvidenceId)
+      ?.runtimeCapabilityIds ?? []
+  );
+}
+
+export function listPlannedMissingRuntimeCapabilityIdsForComponentEvidenceId(
+  componentEvidenceId: string,
+): readonly string[] {
+  return (
+    findGeneratedSupportComponentEvidenceByShapeId(componentEvidenceId)
+      ?.missingRuntimeCapabilityIds ?? []
+  );
+}
+
+export function listComponentEvidenceIdsForParserRuleIds(
+  parserRuleIds: readonly string[],
+): readonly string[] {
+  return [
+    ...new Set(
+      parserRuleIds.flatMap((parserRuleId) => {
+        const entry =
+          findGeneratedSupportComponentEvidenceByParserRuleId(parserRuleId);
+        return entry === undefined ? [] : [entry.shapeId];
+      }),
+    ),
+  ].sort();
 }
 
 type GeneratedSupportComponentEvidenceInventoryEntryOverride = Omit<

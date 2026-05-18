@@ -17,6 +17,7 @@ import type {
   GeneratedSupportUnparsedSpan,
   PartialGeneratedSupportParseResult,
 } from "./generated-support-types.js";
+import { listComponentEvidenceIdsForParserRuleIds } from "./generated-support-types.js";
 
 export type SupportedTriggerWrapperParse = {
   readonly bodyText: string;
@@ -865,6 +866,8 @@ export function buildCompleteParseResult({
 }): CompleteGeneratedSupportParseResult {
   return {
     cardId,
+    componentEvidenceIds:
+      listComponentEvidenceIdsForParserRuleIds(parserRuleIds),
     effectDefinition,
     parserRuleIds,
     sourceText,
@@ -895,6 +898,8 @@ export function buildPartialParseResult({
       span,
     })),
     cardId,
+    parsedComponentEvidenceIds:
+      listComponentEvidenceIdsForParserRuleIds(parsedRuleIds),
     parsedRuleIds,
     sourceText,
     sourceTextHash,
