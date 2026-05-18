@@ -1,0 +1,98 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-011A
+epic_id: TYP-011
+title: Leader metadata condition contract authority
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Add the missing shared DSL/schema/type authority for public Leader color-count
+  conditions and document that Leader type and Leader attribute checks should use
+  existing public Leader-zone CardFilter predicates where sufficient.
+story_boundary: >
+  Own only shared contract/spec/schema/type authority for public Leader metadata
+  condition representation. Do not implement engine condition evaluation, card
+  parser support, generated support admission, support diagnostics, or real-card
+  fixture support.
+allowed_touch_points:
+  - specs/04-effect-runtime.md
+  - specs/05-effect-dsl-reference.md
+  - specs/09-card-data-and-support-policy.md
+  - specs/section-index.json
+  - contracts/canonical-types.ts
+  - contracts/effect-dsl.schema.json
+  - contracts/types/effects.ts
+  - packages/types/src/effects.ts
+  - packages/types/src/effects.test.ts
+  - packages/types/src/export-cohesion.test.ts
+  - packages/types/src/export-ownership.manifest.ts
+  - tests/contracts/**
+  - fixtures/effect-dsl/**
+  - tools/validate-effect-dsl-fixtures.ts
+  - stories/generated/TYP-011*.yaml
+  - stories/approved/TYP-011*.yaml
+  - agent-packets/TYP-011A.md
+  - agent-packets/TYP-011-story-review-*.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 06-visibility-security.s003
+  - 09-card-data-and-support-policy.s003
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - TYP-007C
+scope:
+  - add or refine shared `Condition` contract authority for a public Leader color-count predicate that can represent "your Leader is multicolored" without enumerating color pairs
+  - 'suggested DSL shape: `{ type: "leaderColorCount", player: PlayerRef, op: Comparator, value: number }`'
+  - require the predicate to evaluate only public Leader metadata from the match manifest/resolved card snapshot
+  - define valid `player`, comparator, and non-negative safe-integer `value` constraints
+  - 'define that "multicolored" maps to `leaderColorCount` with `op: "gte"` and `value: 2`'
+  - 'require "your Leader has the {X} type" to use existing public Leader-zone `hasCardInZone` + `CardFilter.typesAny` authority, such as `{ type: "hasCardInZone", zone: "leaderArea", player: "self", filter: { categories: ["leader"], typesAny: [...] } }`'
+  - 'require "your Leader has the [X] attribute" to use existing public Leader-zone `hasCardInZone` + `CardFilter.attributesAny` authority, such as `{ type: "hasCardInZone", zone: "leaderArea", player: "self", filter: { categories: ["leader"], attributesAny: [...] } }`'
+  - admit the required `hasCardInZone` Leader-zone type/attribute representation at the effect DSL schema layer as needed for fixtures, without broadening into unrelated private-zone or arbitrary metadata query support
+  - add positive and negative schema/type fixtures for the admitted public Leader metadata condition shapes
+  - keep boolean condition composition (`and`, `or`, `not`) as existing authority unless story-review proves a schema gap
+  - keep card-layer wording normalization out of this story
+non_scope:
+  - engine runtime evaluation of Leader metadata conditions
+  - parser support for printed conditional text
+  - generated-support capability records, support indexing, probe/report output, or playable support changes
+  - real-card fixture support, fixture capture, source hash updates, behavior hash updates, overlays, or support manifests
+  - private or hidden-zone metadata predicates
+  - new `leaderType` or `leaderAttribute` condition predicates
+  - arbitrary card metadata query language beyond the Leader metadata condition authority needed by ENG-058 and CARD-019
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - shared contracts can represent "your Leader is multicolored" without enumerating color pairs
+  - contract guidance clearly states Leader type and Leader attribute conditions are represented through `hasCardInZone` + `CardFilter`, with no new Leader-specific type or attribute predicate
+  - effect DSL schema accepts the required public Leader-zone `hasCardInZone` + `CardFilter.typesAny` and `attributesAny` representations and rejects unrelated private-zone or unsupported metadata query shapes
+  - admitted Leader metadata predicates are limited to public Leader metadata and do not expose hidden information
+  - schema/type tests accept valid Leader color-count and Leader type/attribute condition fixtures and reject malformed comparator, value, player, filter, or zone shapes
+  - no runtime behavior, card parser support, or generated support admission changes in this story
+required_tests:
+  - story-review for TYP-011A before approval handoff
+  - focused `packages/types` tests for the Leader color-count condition contract
+  - effect DSL schema fixture validation for valid Leader color-count condition
+  - effect DSL schema fixture validation for valid Leader type and attribute condition representation, using existing hasCardInZone + CardFilter authority if accepted by story-review
+  - negative schema/type tests for malformed color-count value, non-safe-integer overflow color-count value, comparator, player, private-zone use, and unsupported Leader metadata condition shape
+  - export cohesion/ownership tests updated if a new exported contract symbol is introduced
+  - run `corepack pnpm run types:sync:check`
+  - run `corepack pnpm run contracts:validate-effects`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the TYP-011A packet before implementation
+  - stay within allowed_touch_points
+  - do not implement runtime/card behavior
+  - do not broaden shared contracts beyond public Leader metadata conditions required for the conditional generated-support chain
+  - fail closed if Leader type or Leader attribute cannot be represented truthfully with existing filter contracts
+ambiguity_policy: fail_and_escalate
