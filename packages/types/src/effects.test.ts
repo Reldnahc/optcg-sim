@@ -724,6 +724,51 @@ test("condition and optionality authoring supports composed optional cost and op
   void malformedOptionalClause;
 });
 
+test("TYP-011A leader metadata conditions compile with public contract shapes", () => {
+  const multicoloredLeader: Condition = {
+    type: "leaderColorCount",
+    player: "self",
+    op: "gte",
+    value: 2,
+  };
+  const leaderType: Condition = {
+    type: "hasCardInZone",
+    zone: "leaderArea",
+    player: "self",
+    filter: { categories: ["leader"], typesAny: ["Straw Hat Crew"] },
+  };
+  const leaderAttribute: Condition = {
+    type: "hasCardInZone",
+    zone: "leaderArea",
+    player: "self",
+    filter: { categories: ["leader"], attributesAny: ["slash"] },
+  };
+  const malformedComparator: Condition = {
+    ...multicoloredLeader,
+    // @ts-expect-error leaderColorCount requires a canonical comparator.
+    op: "atLeast",
+  };
+  // @ts-expect-error leaderColorCount requires a canonical player ref.
+  const malformedPlayer: Condition = { ...multicoloredLeader, player: "you" };
+  // @ts-expect-error leaderColorCount value must be numeric.
+  const malformedValue: Condition = { ...multicoloredLeader, value: "2" };
+  // @ts-expect-error leader type checks use hasCardInZone plus CardFilter.
+  const unsupportedLeaderTypePredicate: Condition = { type: "leaderType" };
+  const unsupportedLeaderAttributePredicate: Condition = {
+    // @ts-expect-error leader attribute checks use hasCardInZone plus CardFilter.
+    type: "leaderAttribute",
+  };
+
+  expect(multicoloredLeader.type).toBe("leaderColorCount");
+  expect(leaderType.type).toBe("hasCardInZone");
+  expect(leaderAttribute.type).toBe("hasCardInZone");
+  void malformedComparator;
+  void malformedPlayer;
+  void malformedValue;
+  void unsupportedLeaderTypePredicate;
+  void unsupportedLeaderAttributePredicate;
+});
+
 test("cost and hand-selection play-from-hand authoring contracts compile with reviewed shapes", () => {
   const returnDonCost: Cost = {
     type: "returnDon",

@@ -805,6 +805,60 @@ test("unsupported conditions fail closed deterministically", () => {
   assert.equal(first.stateHash, second.stateHash);
 });
 
+test("leaderColorCount condition remains unsupported and leaves queued effect unresolved", () => {
+  const state = createActiveState();
+  const source = must(state.players[p1], "p1").leader;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const effect = must(base.effects[0], "effect");
+  setupOnPlayDefinition(
+    state,
+    source,
+    {
+      ...base,
+      effects: [
+        {
+          ...effect,
+          id: toEffectId("leader-color-count-unsupported"),
+          condition: {
+            type: "leaderColorCount",
+            player: "self",
+            op: "gte",
+            value: 2,
+          },
+        },
+      ],
+    },
+    "def-leader-color-count-unsupported",
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      effectBlockId: toEffectId("leader-color-count-unsupported"),
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      sourcePresencePolicy: "mustRemainInSameZone",
+    },
+  ];
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.state, before);
+  assert.deepEqual(result.events, []);
+  assert.equal(must(result.errors, "errors")[0]?.type, "effectRuntimeError");
+  assert.equal(result.state.effectQueue.length, 1);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
 test("condition false on first queued entry skips it and still resolves later supported entry", () => {
   const state = createActiveState();
   const source = must(state.players[p1], "p1").leader;

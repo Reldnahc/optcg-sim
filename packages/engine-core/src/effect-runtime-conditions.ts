@@ -113,6 +113,7 @@ export const evaluateQueuedEffectCondition = (
     case "fieldCount":
     case "handCount":
     case "trashCount":
+    case "leaderColorCount":
     case "hasCardInZone":
     case "cardState":
     case "sourceStillInZone":

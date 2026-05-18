@@ -1,0 +1,41 @@
+{
+  "cardId": "TYP-011A-002",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "TYP-011A-002:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "hasCardInZone",
+            "zone": "leaderArea",
+            "player": "self",
+            "filter": {
+              "categories": ["leader"],
+              "typesAny": ["Straw Hat Crew"]
+            }
+          },
+          {
+            "type": "hasCardInZone",
+            "zone": "leaderArea",
+            "player": "self",
+            "filter": {
+              "categories": ["leader"],
+              "attributesAny": ["slash"]
+            }
+          }
+        ]
+      },
+      "effect": { "type": "draw", "player": "self", "count": 1 }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-011a-002",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

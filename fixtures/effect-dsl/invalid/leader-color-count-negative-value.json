@@ -1,0 +1,24 @@
+{
+  "cardId": "TYP-011A-NEGATIVE",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "TYP-011A-NEGATIVE:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "condition": {
+        "type": "leaderColorCount",
+        "player": "self",
+        "op": "gte",
+        "value": -1
+      },
+      "effect": { "type": "draw", "player": "self", "count": 1 }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-011a-negative",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

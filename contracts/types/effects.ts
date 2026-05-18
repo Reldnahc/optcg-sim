@@ -75,6 +75,12 @@ export type Condition =
       op: Comparator;
       value: number;
     }
+  | {
+      type: "leaderColorCount";
+      player: PlayerRef;
+      op: Comparator;
+      value: number;
+    }
   | { type: "hasCardInZone"; zone: Zone; player: PlayerRef; filter: CardFilter }
   | { type: "attackTarget"; targetType: "leader" | "character" | "any" }
   | { type: "cardState"; target: Target; state: "active" | "rested" }

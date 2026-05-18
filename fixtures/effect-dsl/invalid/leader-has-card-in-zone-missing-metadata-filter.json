@@ -1,0 +1,26 @@
+{
+  "cardId": "TYP-011A-MISSING-FILTER",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "TYP-011A-MISSING-FILTER:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "condition": {
+        "type": "hasCardInZone",
+        "zone": "leaderArea",
+        "player": "self",
+        "filter": {
+          "categories": ["leader"]
+        }
+      },
+      "effect": { "type": "draw", "player": "self", "count": 1 }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-011a-missing-filter",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

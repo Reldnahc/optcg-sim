@@ -1331,7 +1331,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Costs",
       "heading_level": 2,
-      "marker_line": 149,
+      "marker_line": 170,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s007`"
     },
     {
@@ -1340,7 +1340,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Targets",
       "heading_level": 2,
-      "marker_line": 188,
+      "marker_line": 209,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s008`"
     },
     {
@@ -1349,7 +1349,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Card filters",
       "heading_level": 2,
-      "marker_line": 221,
+      "marker_line": 242,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s009`"
     },
     {
@@ -1358,7 +1358,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Deprecated filter aliases",
       "heading_level": 3,
-      "marker_line": 253,
+      "marker_line": 274,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s010`"
     },
     {
@@ -1367,7 +1367,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Durations",
       "heading_level": 2,
-      "marker_line": 278,
+      "marker_line": 299,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s011`"
     },
     {
@@ -1376,7 +1376,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Effects",
       "heading_level": 2,
-      "marker_line": 302,
+      "marker_line": 323,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s012`"
     },
     {
@@ -1385,7 +1385,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Sequence connector semantics",
       "heading_level": 2,
-      "marker_line": 449,
+      "marker_line": 470,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s013`"
     },
     {
@@ -1394,7 +1394,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Search request",
       "heading_level": 2,
-      "marker_line": 519,
+      "marker_line": 540,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s014`"
     },
     {
@@ -1403,7 +1403,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Visibility",
       "heading_level": 2,
-      "marker_line": 544,
+      "marker_line": 565,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s015`"
     },
     {
@@ -1412,7 +1412,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Replacement triggers",
       "heading_level": 2,
-      "marker_line": 560,
+      "marker_line": 581,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s016`"
     },
     {
@@ -1421,7 +1421,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Type enums",
       "heading_level": 2,
-      "marker_line": 576,
+      "marker_line": 597,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s017`"
     },
     {
@@ -1430,7 +1430,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: vanilla confirmed card",
       "heading_level": 2,
-      "marker_line": 607,
+      "marker_line": 628,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s018`"
     },
     {
@@ -1439,7 +1439,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: On Play draw 1",
       "heading_level": 2,
-      "marker_line": 627,
+      "marker_line": 648,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s019`"
     },
     {
@@ -1448,7 +1448,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: Activate Main with cost and up-to target",
       "heading_level": 2,
-      "marker_line": 657,
+      "marker_line": 678,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s020`"
     },
     {
@@ -1457,7 +1457,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: permanent power buff",
       "heading_level": 2,
-      "marker_line": 711,
+      "marker_line": 732,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s021`"
     },
     {
@@ -1466,7 +1466,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Poneglyph text-to-DSL pipeline",
       "heading_level": 2,
-      "marker_line": 760,
+      "marker_line": 781,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s022`"
     },
     {
@@ -1475,7 +1475,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "v3 additions from real Poneglyph examples",
       "heading_level": 2,
-      "marker_line": 799,
+      "marker_line": 820,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s023`"
     },
     {
@@ -1484,7 +1484,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Source-attached DON!! condition",
       "heading_level": 3,
-      "marker_line": 807,
+      "marker_line": 828,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s024`"
     },
     {
@@ -1493,7 +1493,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Richer filters",
       "heading_level": 3,
-      "marker_line": 824,
+      "marker_line": 845,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s025`"
     },
     {
@@ -1502,7 +1502,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Transient reveal and selection primitives",
       "heading_level": 3,
-      "marker_line": 845,
+      "marker_line": 866,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s026`"
     },
     {
@@ -1511,7 +1511,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Effect-play options",
       "heading_level": 3,
-      "marker_line": 931,
+      "marker_line": 952,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s027`"
     },
     {
@@ -1520,7 +1520,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example implementation docs",
       "heading_level": 2,
-      "marker_line": 945,
+      "marker_line": 966,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s028`"
     },
     {
@@ -1529,7 +1529,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Schema coverage policy",
       "heading_level": 2,
-      "marker_line": 953,
+      "marker_line": 974,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s029`"
     },
     {
@@ -2258,7 +2258,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Package responsibility: `@optcg/cards`",
       "heading_level": 2,
-      "marker_line": 42,
+      "marker_line": 47,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s004`"
     },
     {
@@ -2267,7 +2267,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Read-through cache flow",
       "heading_level": 2,
-      "marker_line": 65,
+      "marker_line": 70,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s005`"
     },
     {
@@ -2276,7 +2276,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Why the match server fetches card data",
       "heading_level": 2,
-      "marker_line": 95,
+      "marker_line": 100,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s006`"
     },
     {
@@ -2285,7 +2285,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Client-side Poneglyph use",
       "heading_level": 2,
-      "marker_line": 112,
+      "marker_line": 117,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s007`"
     },
     {
@@ -2294,7 +2294,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Card variants and alternate art",
       "heading_level": 2,
-      "marker_line": 127,
+      "marker_line": 132,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s008`"
     },
     {
@@ -2303,7 +2303,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Simulator overlay shape",
       "heading_level": 2,
-      "marker_line": 154,
+      "marker_line": 159,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s009`"
     },
     {
@@ -2312,7 +2312,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Card implementation record",
       "heading_level": 2,
-      "marker_line": 186,
+      "marker_line": 191,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s010`"
     },
     {
@@ -2321,7 +2321,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Support policy by mode",
       "heading_level": 2,
-      "marker_line": 216,
+      "marker_line": 221,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s011`"
     },
     {
@@ -2330,7 +2330,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Deck validation",
       "heading_level": 2,
-      "marker_line": 232,
+      "marker_line": 237,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s012`"
     },
     {
@@ -2339,7 +2339,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Match-time card manifest",
       "heading_level": 2,
-      "marker_line": 269,
+      "marker_line": 274,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s013`"
     },
     {
@@ -2348,7 +2348,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Canonical Poneglyph normalization",
       "heading_level": 3,
-      "marker_line": 290,
+      "marker_line": 295,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s014`"
     },
     {
@@ -2357,7 +2357,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Poneglyph text hash and stale-card review",
       "heading_level": 2,
-      "marker_line": 307,
+      "marker_line": 312,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s015`"
     },
     {
@@ -2366,7 +2366,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Generated support from complete parse",
       "heading_level": 2,
-      "marker_line": 325,
+      "marker_line": 330,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s016`"
     },
     {
@@ -2375,7 +2375,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Card addition flow - assisted Phase 3",
       "heading_level": 2,
-      "marker_line": 345,
+      "marker_line": 350,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s017`"
     },
     {
@@ -2384,7 +2384,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Effect coverage report",
       "heading_level": 2,
-      "marker_line": 361,
+      "marker_line": 366,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s018`"
     },
     {
@@ -2393,7 +2393,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Failure behavior",
       "heading_level": 2,
-      "marker_line": 395,
+      "marker_line": 400,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s019`"
     },
     {
@@ -2402,7 +2402,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Custom handler governance",
       "heading_level": 2,
-      "marker_line": 413,
+      "marker_line": 418,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s020`"
     },
     {
@@ -2411,7 +2411,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Banlist and simulator ban policy",
       "heading_level": 2,
-      "marker_line": 428,
+      "marker_line": 433,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s021`"
     },
     {
@@ -2420,7 +2420,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Security checklist",
       "heading_level": 2,
-      "marker_line": 454,
+      "marker_line": 459,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s022`"
     },
     {
@@ -2429,7 +2429,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Concrete Poneglyph API contract",
       "heading_level": 2,
-      "marker_line": 469,
+      "marker_line": 474,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s023`"
     },
     {
@@ -2438,7 +2438,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Source hash and behavior hash",
       "heading_level": 2,
-      "marker_line": 485,
+      "marker_line": 490,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s024`"
     },
     {
@@ -2447,7 +2447,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Poneglyph fixture-backed implementation tests",
       "heading_level": 2,
-      "marker_line": 510,
+      "marker_line": 515,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s025`"
     },
     {

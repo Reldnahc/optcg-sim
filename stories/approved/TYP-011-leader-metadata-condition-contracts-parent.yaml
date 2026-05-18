@@ -1,0 +1,73 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-011
+epic_id: TYP-011
+title: Leader metadata condition contracts parent
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Coordinate the shared contract work needed to represent public Leader metadata
+  conditions used by generated conditional effects, especially multicolored
+  Leader checks that current CardFilter predicates cannot express.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  TYP-011A as the only child story after distinct parent and child story-review
+  evidence exists. This parent must not add engine runtime behavior, card parser
+  behavior, generated card support, or fixture support directly.
+allowed_touch_points:
+  - stories/generated/TYP-011*.yaml
+  - stories/approved/TYP-011*.yaml
+  - agent-packets/TYP-011*.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 09-card-data-and-support-policy.s003
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - TYP-007C
+child_stories:
+  - id: TYP-011A
+    title: Leader metadata condition contract authority
+    concern: Add the missing shared condition/schema/type authority for Leader color-count predicates and document how existing public Leader type and attribute predicates are represented.
+    depends_on: [TYP-007C]
+scope:
+  - coordinate exactly one contract child story for public Leader metadata conditions
+  - keep the contract layer focused on shared DSL/schema/type authority only
+  - require the child to distinguish genuinely missing shared authority from predicates already expressible through existing condition/filter contracts
+  - provide a truthful prerequisite for ENG-058 and CARD-019 without implementing runtime or parser behavior
+non_scope:
+  - direct parent implementation
+  - engine runtime condition evaluation
+  - cards parser, generated-support, support probe/report, real-card fixtures, overlays, source hashes, or behavior hashes
+  - broad arbitrary metadata predicate generalization beyond what ENG-058 and CARD-019 need
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - TYP-011 is not implemented directly
+  - TYP-011A is independently reviewable and can be activated as the only child story
+  - parent and child story-review artifacts exist with distinct assignment identity and distinct durable artifact identity before approval handoff, packet generation, activation, implementation handoff, or PR handoff
+  - the parent/substory review-status matrix records the parent row and child row before approval handoff
+  - no runtime behavior, card parser support, or generated support is added by this parent set
+required_tests:
+  - story-review for TYP-011 parent before approval handoff
+  - story-review for TYP-011A child before approval handoff
+  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - story-specific tests from TYP-011A
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - use the parent/substory workflow even though this set has exactly one child
+  - do not activate or implement TYP-011 directly
+  - generate and activate the TYP-011A packet before implementation
+  - keep one active child packet at a time
+  - do not complete the child packet until the parent branch lands on main
+  - use one final parent PR to main
+  - fail closed on shared condition/schema authority ambiguity
+ambiguity_policy: fail_and_escalate

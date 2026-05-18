@@ -116,6 +116,40 @@
         }
       }
     },
+    "leaderMetadataCardFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["categories"],
+      "properties": {
+        "categories": {
+          "type": "array",
+          "prefixItems": [{ "const": "leader" }],
+          "items": false,
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "typesAny": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "attributesAny": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/attribute" },
+          "minItems": 1
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["typesAny"],
+          "properties": { "typesAny": true }
+        },
+        {
+          "required": ["attributesAny"],
+          "properties": { "attributesAny": true }
+        }
+      ]
+    },
     "cardSupportStatus": {
       "type": "string",
       "enum": [
@@ -715,6 +749,32 @@
             "player": { "$ref": "#/$defs/playerRef" },
             "op": { "$ref": "#/$defs/comparator" },
             "value": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player", "op", "value"],
+          "properties": {
+            "type": { "const": "leaderColorCount" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "op": { "$ref": "#/$defs/comparator" },
+            "value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "zone", "player", "filter"],
+          "properties": {
+            "type": { "const": "hasCardInZone" },
+            "zone": { "const": "leaderArea" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "filter": { "$ref": "#/$defs/leaderMetadataCardFilter" }
           }
         },
         {
