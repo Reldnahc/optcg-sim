@@ -450,7 +450,8 @@ const isSupportedNoChoiceLifeTriggerDrawEffect = (
   }
   return (
     effect.effect.type === "draw" &&
-    effect.effect.count === 1 &&
+    Number.isInteger(effect.effect.count) &&
+    effect.effect.count >= 0 &&
     effect.effect.player === "self"
   );
 };

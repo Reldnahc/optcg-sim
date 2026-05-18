@@ -1,0 +1,105 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-056A
+epic_id: ENG-056
+title: Life Trigger reusable queued-body runtime
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Generalize life [Trigger] activation so the existing life-trigger reveal,
+  no-zone queue, resolution, and trash-after-resolution path can execute
+  supported trigger-compatible queued effect bodies beyond exact draw 1.
+story_boundary: >
+  Own only engine-core life-trigger support gates, queue-entry creation, cleanup,
+  and tests needed for existing supported queued effect bodies to run under
+  `trigger: { type: "trigger" }`. Do not add new effect primitives, parser
+  support, generated support metadata, real-card fixtures, or CARD package
+  changes.
+allowed_touch_points:
+  - packages/engine-core/src/life-trigger-actions.ts
+  - packages/engine-core/src/life-trigger-actions.test.ts
+  - packages/engine-core/src/effect-runtime-life-trigger-cleanup.ts
+  - packages/engine-core/src/effect-runtime-queue-results.ts
+  - packages/engine-core/src/effect-runtime-draw-primitives.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts
+  - packages/engine-core/src/battle-damage-life-trigger.test.ts
+  - packages/engine-core/src/battle-damage-multiple.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-056*.yaml
+  - stories/approved/ENG-056*.yaml
+  - agent-packets/ENG-056A.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s021
+  - 02-engine-mechanics.s023
+  - 02-engine-mechanics.s039
+  - 02-engine-mechanics.s040
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s008
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s013
+  - 06-visibility-security.s005
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - ENG-028E
+  - ENG-046C
+  - ENG-055
+scope:
+  - replace the current exact draw-1 life-trigger support gate with a reusable trigger-compatible queued-body gate
+  - support only bodies already executable by the current queue runtime when their source-presence policy is valid for life-trigger no-zone resolution
+  - preserve `confirmLifeTrigger` decision creation, activate-vs-add-to-hand legal actions, public reveal on activation, private decline behavior, no-zone source, effectQueued metadata, triggerEventId, orderingGroup, timingWindowId, and trash-after-resolution cleanup
+  - preserve damage continuation behavior, including multiple-damage deferral rules and the existing fail-closed malformed-continuation guard
+  - preserve hidden information for declined life triggers and private moved-card identities
+  - prove activated trigger bodies that pause for existing supported decisions keep the trigger card revealed/no-zone until the queued effect resolves and then clean up correctly
+  - keep unsupported optionality, cost, condition, target, saved-reference, replacement, unsupported source policy, unsupported primitive, malformed definition, untested metadata, and unreviewed metadata fail-closed
+non_scope:
+  - adding parser support for `[Trigger]`
+  - generated-support runtime capability matrix or cards-package component evidence updates
+  - real-card trigger fixture support or source hash updates
+  - new effect body primitives
+  - counter events, main effects, On K.O., On Play, When Attacking, or other trigger wrappers
+  - replacement generalization
+  - changing Banish life-damage behavior
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - exact supported draw-1 life triggers continue to work
+  - supported trigger-compatible queued bodies beyond exact draw 1 can activate from life through the normal `confirmLifeTrigger` path
+  - trigger activation still reveals the card publicly, queues the effect from no zone, resolves or pauses through the existing queue runtime, and trashes the trigger card after resolution unless existing cleanup rules say otherwise
+  - declining a trigger still moves the card to hand without revealing hidden identity to the opponent
+  - multiple-damage continuation remains deterministic and fail-closed for unsupported queued or deferred trigger shapes
+  - unsupported trigger definitions do not partially reveal, queue, mutate, or clean up state
+  - no CARD parser/generated-support behavior changes in this story
+required_tests:
+  - story-review for ENG-056A before approval handoff
+  - regression for existing draw-1 life trigger activation and decline behavior
+  - activation test for at least one existing supported queued body beyond exact draw 1 that does not require new primitives
+  - activation test for an existing supported queued body that pauses for a decision, proving reveal/no-zone state is retained until resolution and cleanup happens after resolution
+  - fail-closed tests for unsupported cost, unsupported condition or condition timing, unsupported target/saved-reference/replacement shape, unsupported source-presence policy, malformed definition, untested metadata, and unreviewed metadata
+  - hidden-info test proving declined trigger identity remains private and activated trigger reveal remains public
+  - multiple-damage regression proving damage continuation and deferred-trigger behavior remain deterministic
+  - event-order and state-hash regression for activate-trigger and decline-trigger paths
+  - run `corepack pnpm exec vitest run packages/engine-core/src/life-trigger-actions.test.ts packages/engine-core/src/battle-damage-life-trigger.test.ts packages/engine-core/src/battle-damage-multiple.test.ts packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts`
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the ENG-056A packet before implementation
+  - stay within allowed_touch_points
+  - do not import @optcg/cards
+  - do not add parser/generated-support/card fixture work
+  - fail closed if a queued body depends on field source presence, target legality, or cleanup semantics that are not valid for life-trigger no-zone resolution
+ambiguity_policy: fail_and_escalate
