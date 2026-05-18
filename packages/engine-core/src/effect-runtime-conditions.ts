@@ -67,6 +67,9 @@ const isNonNegativeSafeInteger = (value: unknown): value is number =>
 const isFieldZone = (zone: CardInstance["zone"]["zone"]): boolean =>
   zone === "leaderArea" || zone === "characterArea" || zone === "stageArea";
 
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((entry) => typeof entry === "string");
+
 const findLiveSourceFieldCard = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -137,13 +140,26 @@ const resolveConditionPlayer = (
 const readLeaderMetadata = (
   state: GameState,
   playerId: PlayerId,
-): ResolvedCard | undefined => {
+):
+  | (ResolvedCard & {
+      colors: string[];
+      types: string[];
+      attributes: string[];
+    })
+  | undefined => {
   const player = state.players[playerId];
   if (player === undefined) {
     return undefined;
   }
   const card = state.cardManifest.cards[player.leader.cardId];
   if (card === undefined || card.category !== "leader") {
+    return undefined;
+  }
+  if (
+    !isStringArray(card.colors) ||
+    !isStringArray(card.types) ||
+    !isStringArray(card.attributes)
+  ) {
     return undefined;
   }
   return card;

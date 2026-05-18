@@ -812,3 +812,117 @@ test("malformed count values and missing leader metadata fail closed", () => {
     "effectRuntimeError",
   );
 });
+
+test("leaderColorCount fails closed when leader colors metadata is missing or malformed", () => {
+  const sourceResult = (() => {
+    const state = createActiveState();
+    const source = must(state.players[p1], "p1").leader;
+    state.cardManifest.cards[source.cardId] = {
+      ...resolvedCard({ cardId: source.cardId, category: "leader" }),
+      colors: "red",
+    } as unknown as ReturnType<typeof resolvedCard>;
+    return evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "leaderColorCount",
+      player: "self",
+      op: "gte",
+      value: 1,
+    });
+  })();
+
+  const missingResult = (() => {
+    const state = createActiveState();
+    const source = must(state.players[p1], "p1").leader;
+    const malformed = Object.fromEntries(
+      Object.entries(
+        resolvedCard({ cardId: source.cardId, category: "leader" }),
+      ).filter(([key]) => key !== "colors"),
+    );
+    state.cardManifest.cards[source.cardId] =
+      malformed as unknown as ReturnType<typeof resolvedCard>;
+    return evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "leaderColorCount",
+      player: "self",
+      op: "gte",
+      value: 1,
+    });
+  })();
+
+  assert.deepEqual(sourceResult, { supported: false });
+  assert.deepEqual(missingResult, { supported: false });
+});
+
+test("hasCardInZone fails closed when leader types metadata is missing or malformed", () => {
+  const sourceResult = (() => {
+    const state = createActiveState();
+    const source = must(state.players[p1], "p1").leader;
+    state.cardManifest.cards[source.cardId] = {
+      ...resolvedCard({ cardId: source.cardId, category: "leader" }),
+      types: "Straw Hat Crew",
+    } as unknown as ReturnType<typeof resolvedCard>;
+    return evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "hasCardInZone",
+      zone: "leaderArea",
+      player: "self",
+      filter: { categories: ["leader"], typesAny: ["Straw Hat Crew"] },
+    });
+  })();
+
+  const missingResult = (() => {
+    const state = createActiveState();
+    const source = must(state.players[p1], "p1").leader;
+    const malformed = Object.fromEntries(
+      Object.entries(
+        resolvedCard({ cardId: source.cardId, category: "leader" }),
+      ).filter(([key]) => key !== "types"),
+    );
+    state.cardManifest.cards[source.cardId] =
+      malformed as unknown as ReturnType<typeof resolvedCard>;
+    return evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "hasCardInZone",
+      zone: "leaderArea",
+      player: "self",
+      filter: { categories: ["leader"], typesAny: ["Straw Hat Crew"] },
+    });
+  })();
+
+  assert.deepEqual(sourceResult, { supported: false });
+  assert.deepEqual(missingResult, { supported: false });
+});
+
+test("hasCardInZone fails closed when leader attributes metadata is missing or malformed", () => {
+  const sourceResult = (() => {
+    const state = createActiveState();
+    const source = must(state.players[p1], "p1").leader;
+    state.cardManifest.cards[source.cardId] = {
+      ...resolvedCard({ cardId: source.cardId, category: "leader" }),
+      attributes: "slash",
+    } as unknown as ReturnType<typeof resolvedCard>;
+    return evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "hasCardInZone",
+      zone: "leaderArea",
+      player: "self",
+      filter: { categories: ["leader"], attributesAny: ["slash"] },
+    });
+  })();
+
+  const missingResult = (() => {
+    const state = createActiveState();
+    const source = must(state.players[p1], "p1").leader;
+    const malformed = Object.fromEntries(
+      Object.entries(
+        resolvedCard({ cardId: source.cardId, category: "leader" }),
+      ).filter(([key]) => key !== "attributes"),
+    );
+    state.cardManifest.cards[source.cardId] =
+      malformed as unknown as ReturnType<typeof resolvedCard>;
+    return evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "hasCardInZone",
+      zone: "leaderArea",
+      player: "self",
+      filter: { categories: ["leader"], attributesAny: ["slash"] },
+    });
+  })();
+
+  assert.deepEqual(sourceResult, { supported: false });
+  assert.deepEqual(missingResult, { supported: false });
+});
