@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-058A -->
 <!-- agent-packet:story-path stories/approved/ENG-058A-public-condition-evaluator-expansion.yaml -->
-<!-- agent-packet:story-sha256 5fd658adcda49b9d64be555ff9f2fa0de6e265b16665be8218956609de3bd799 -->
+<!-- agent-packet:story-sha256 469650d09d614a594a65018d9f344ad0284f51e91969a91f6aaa4ae75d12b019 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
