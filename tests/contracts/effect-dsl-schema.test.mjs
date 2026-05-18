@@ -46,6 +46,8 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/leader-color-count-bad-player.json",
     "fixtures/effect-dsl/invalid/leader-color-count-negative-value.json",
     "fixtures/effect-dsl/invalid/leader-color-count-unsafe-integer.json",
+    "fixtures/effect-dsl/invalid/leader-has-card-in-zone-missing-metadata-filter.json",
+    "fixtures/effect-dsl/invalid/leader-has-card-in-zone-nonleader-category.json",
     "fixtures/effect-dsl/invalid/leader-has-card-in-zone-private-zone.json",
     "fixtures/effect-dsl/invalid/leader-metadata-unsupported-predicate.json",
     "fixtures/effect-dsl/invalid/optionality-nonboolean-clauses.json",
