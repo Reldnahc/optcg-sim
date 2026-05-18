@@ -1,0 +1,95 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-058
+epic_id: ENG-058
+title: Conditional effect runtime parent
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Coordinate engine runtime work that makes supported block-level conditions
+  reusable across currently supported queued effect trigger wrappers and effect
+  bodies, without adding card parser or generated-support behavior.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  ENG-058A and ENG-058B one at a time only after separate ENG-058 parent,
+  ENG-058A child, and ENG-058B child story-review artifacts exist. This parent
+  owns engine runtime condition evaluation and wrapper reachability only.
+allowed_touch_points:
+  - stories/generated/ENG-058*.yaml
+  - stories/approved/ENG-058*.yaml
+  - agent-packets/ENG-058*.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s021
+  - 02-engine-mechanics.s023
+  - 02-engine-mechanics.s041
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s008
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s010
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 06-visibility-security.s005
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - TYP-011A
+  - ENG-055E
+  - ENG-056A
+  - ENG-056B
+child_stories:
+  - id: ENG-058A
+    title: Public condition evaluator expansion
+    concern: Expand the queued-effect condition evaluator for public Leader metadata predicates, hand/life count predicates, and supported boolean composition while preserving fail-closed behavior for unsupported or hidden predicates.
+    depends_on: [TYP-011A, ENG-055E]
+  - id: ENG-058B
+    title: Conditional queued trigger reachability
+    concern: Allow supported block-level conditions through currently supported queued trigger wrappers so supported bodies under On Play, When Attacking, Trigger, and On K.O. can evaluate conditions at resolution.
+    depends_on: [ENG-058A, ENG-056A, ENG-056B]
+scope:
+  - coordinate ENG-058A and ENG-058B as engine-only child stories
+  - limit wrapper reachability work to the four currently targeted queued wrappers: On Play, When Attacking, life Trigger, and On K.O.
+  - keep condition evaluation reusable at the queued-effect envelope level, not tied to one card text template or one effect body
+  - require supported false conditions to skip the effect cleanly without mutation beyond queue cleanup
+  - require unsupported conditions to fail closed before partial mutation
+  - preserve source presence, trigger ordering, event order, replay determinism, hidden information, and state hashes
+  - provide runtime capability truth for later CARD-019 work without changing cards-package support in this parent
+non_scope:
+  - direct parent implementation
+  - CARD parser rules, generated-support component evidence, support reports, support probes, real-card fixtures, overlays, source hashes, or behavior hashes
+  - new shared TYP/contracts/schema changes beyond consuming TYP-011A
+  - new effect body primitives
+  - trigger-wrapper reachability outside On Play, When Attacking, life Trigger, and On K.O., including onOpponentAttack, onBlock, endOfYourTurn, endOfOpponentTurn, donAttach, activate-main, event main/counter, replacement, permanent/continuous, custom handler, or server/client/API/UI/database/live Poneglyph work
+acceptance_criteria:
+  - ENG-058 is not implemented directly
+  - ENG-058A and ENG-058B are independently reviewable child stories
+  - each child stays engine-only and does not import @optcg/cards
+  - supported conditions are evaluated consistently for queued effects across supported wrappers and bodies
+  - unsupported or ambiguous condition/wrapper/body/source-policy combinations continue to fail closed
+  - later CARD work can truthfully consume resulting runtime capability evidence without relying on exact conditional templates
+required_tests:
+  - story-review for ENG-058 parent before approval handoff
+  - story-review for ENG-058A before approval handoff
+  - story-review for ENG-058B before approval handoff
+  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - use the parent/substory workflow
+  - keep one active child packet at a time
+  - do not complete child packets until the parent branch lands on main
+  - do not open child PRs to main; use one final parent PR after both children are reviewed on the parent branch
+  - fail closed on hidden-information, event-order, replay, source-presence, or condition ambiguity
+ambiguity_policy: fail_and_escalate

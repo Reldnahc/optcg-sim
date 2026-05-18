@@ -1,0 +1,95 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-058A
+epic_id: ENG-058
+title: Public condition evaluator expansion
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Expand engine queued-effect condition evaluation to support public Leader
+  metadata predicates, hand/life count predicates, and supported boolean
+  composition while failing closed on unsupported or hidden predicates.
+story_boundary: >
+  Own only engine-core queued-effect condition evaluation support and tests for
+  admitted public predicates. Do not change trigger queueing gates, card parser
+  support, generated-support records, shared contracts, or real-card fixtures.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime-conditions.ts
+  - packages/engine-core/src/effect-runtime-queue-results.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts
+  - packages/engine-core/src/effect-runtime-condition-search-reveal.test.ts
+  - packages/engine-core/src/effect-runtime-optional-activation.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-targets.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-058*.yaml
+  - stories/approved/ENG-058*.yaml
+  - agent-packets/ENG-058A.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s010
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 06-visibility-security.s005
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - TYP-011A
+  - ENG-055E
+scope:
+  - preserve existing support for `yourTurn` and self `attachedDonCount`
+  - add runtime evaluation for TYP-011A-approved public Leader color-count predicates
+  - 'add runtime evaluation only for TYP-011A-authorized public Leader type and attribute checks represented as `hasCardInZone` with `zone: "leaderArea"`, Leader category filtering, and `CardFilter.typesAny` or `CardFilter.attributesAny`'
+  - add runtime evaluation for self and opponent `handCount` using counts only, without exposing hand identities
+  - add runtime evaluation for self and opponent `lifeCount` using counts only, without exposing face-down life identities
+  - add support for `and`, `or`, and `not` composition only when all child conditions are themselves supported
+  - keep `or more` and `or less` as comparator semantics (`gte` and `lte`), not boolean `or`
+  - use public resolved-card manifest metadata for Leader color/type/attribute checks
+  - fail closed on malformed values, missing Leader metadata, missing manifest entries, unsupported player refs, unsupported zones, private-zone metadata queries, unsupported filters, custom conditions, and unsupported condition families
+  - preserve deterministic event output, queue cleanup, state hashes, and hidden information for true, false, and unsupported condition results
+non_scope:
+  - changing trigger queueing support gates to admit conditions
+  - parser support for printed conditional text
+  - CARD runtime capability matrix or generated-support records
+  - shared TYP/contracts/schema changes
+  - new effect body primitives
+  - new `leaderType` or `leaderAttribute` condition predicates
+  - fieldCount, trashCount, hasCardInZone outside the Leader metadata use accepted by TYP-011A, cardState, attackTarget, sourceStillInZone, eventPayload, custom conditions, or arbitrary metadata query support
+  - activate-main, event main/counter, permanent/continuous, replacement, custom handler, server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - queued-effect condition evaluator supports public Leader multicolor, TYP-011A-authorized Leader-zone `hasCardInZone` type and attribute checks, hand count, and life count predicates
+  - boolean `and`, `or`, and `not` composition works only for supported child predicates
+  - false supported conditions skip the queued effect without executing the body
+  - unsupported conditions fail closed without executing later queued entries or partially mutating state
+  - hidden hand/life identities are never exposed by count predicates, events, player views, or state projection
+  - existing `yourTurn` and self `attachedDonCount` behavior remains unchanged
+required_tests:
+  - story-review for ENG-058A before approval handoff
+  - unit tests for true and false Leader multicolor condition evaluation
+  - unit tests for true and false Leader type and Leader attribute condition evaluation
+  - unit tests for true and false self/opponent hand count and life count predicates
+  - boolean composition tests for supported `and`, `or`, and `not` trees
+  - fail-closed tests for unsupported child conditions inside boolean composition
+  - fail-closed tests for malformed comparator/value/player refs, missing manifest metadata, unsupported filters, unsupported `hasCardInZone` shapes outside the admitted public Leader-zone contract, private-zone metadata, custom conditions, and unsupported condition families
+  - hidden-info tests proving hand/life count predicates do not leak card identities
+  - state-hash/event-order tests for true, false, and unsupported condition paths
+  - run `corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts packages/engine-core/src/effect-runtime-condition-search-reveal.test.ts packages/engine-core/src/effect-runtime-optional-activation.test.ts packages/engine-core/src/effect-runtime-queue-processing-targets.test.ts`
+  - run `corepack pnpm run test:hidden-info`
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the ENG-058A packet before implementation
+  - stay within allowed_touch_points
+  - do not import @optcg/cards
+  - do not add parser/generated-support/card fixture work
+  - fail closed if a condition requires private metadata, unsupported filters, or unavailable source/manifest authority
+ambiguity_policy: fail_and_escalate

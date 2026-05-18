@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-058A.md",
+      "storyId": "ENG-058A",
+      "storyPath": "stories/approved/ENG-058A-public-condition-evaluator-expansion.yaml",
+      "storySha256": "5fd658adcda49b9d64be555ff9f2fa0de6e265b16665be8218956609de3bd799"
+    }
+  ],
   "version": 1
 }
