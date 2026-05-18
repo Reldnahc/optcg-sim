@@ -87,6 +87,12 @@ test("root test lanes separate cleanup-heavy contracts without dropping coverage
   );
 
   assert.match(
+    contractsTestLane,
+    /\bvitest\s+run\s+tests\/contracts\b/,
+    "contract test lane must explicitly include tests/contracts suites",
+  );
+
+  assert.match(
     rootTestLane,
     /--exclude\s+tests\/contracts\/\*\*\/\*\.test\.mjs\b/,
     "root test lane must exclude broad tests/contracts suites",
