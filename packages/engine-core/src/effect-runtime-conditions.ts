@@ -44,6 +44,20 @@ const compare = (op: Comparator, left: number, right: number): boolean => {
   }
 };
 
+const isComparator = (value: unknown): value is Comparator => {
+  switch (value) {
+    case "eq":
+    case "neq":
+    case "gt":
+    case "gte":
+    case "lt":
+    case "lte":
+      return true;
+    default:
+      return false;
+  }
+};
+
 const isNonNegativeSafeInteger = (value: unknown): value is number =>
   typeof value === "number" &&
   Number.isSafeInteger(value) &&
@@ -171,6 +185,9 @@ const evaluateLeaderColorCount = (
   if (!isNonNegativeSafeInteger(condition.value)) {
     return { supported: false };
   }
+  if (!isComparator(condition.op)) {
+    return { supported: false };
+  }
   const playerId = resolveConditionPlayer(state, entry, condition.player);
   if (playerId === undefined) {
     return { supported: false };
@@ -194,6 +211,9 @@ const evaluateCountCondition = (
   actual: (playerId: PlayerId) => number,
 ): ConditionEvaluationResult => {
   if (!isNonNegativeSafeInteger(value)) {
+    return { supported: false };
+  }
+  if (!isComparator(op)) {
     return { supported: false };
   }
   const playerId = resolveConditionPlayer(state, entry, playerRef);
@@ -274,28 +294,26 @@ const evaluateCondition = (
     case "hasCardInZone":
       return evaluateHasCardInZone(state, entry, condition);
     case "and": {
+      let allPassed = true;
       for (const child of condition.conditions) {
         const childResult = evaluateCondition(state, entry, child);
         if (!childResult.supported) {
           return { supported: false };
         }
-        if (!childResult.passed) {
-          return { supported: true, passed: false };
-        }
+        allPassed = allPassed && childResult.passed;
       }
-      return { supported: true, passed: true };
+      return { supported: true, passed: allPassed };
     }
     case "or": {
+      let anyPassed = false;
       for (const child of condition.conditions) {
         const childResult = evaluateCondition(state, entry, child);
         if (!childResult.supported) {
           return { supported: false };
         }
-        if (childResult.passed) {
-          return { supported: true, passed: true };
-        }
+        anyPassed = anyPassed || childResult.passed;
       }
-      return { supported: true, passed: false };
+      return { supported: true, passed: anyPassed };
     }
     case "not": {
       const childResult = evaluateCondition(state, entry, condition.condition);

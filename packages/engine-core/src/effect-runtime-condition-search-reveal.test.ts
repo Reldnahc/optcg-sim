@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 import type { Condition } from "@optcg/types";
+import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 
 import type { EffectQueueEntry } from "./effect-runtime-queue-processing-test-support.js";
 import {
@@ -595,6 +596,29 @@ test("unsupported boolean child fails closed", () => {
   assert.deepEqual(result.state, before);
 });
 
+test("and fails closed when earlier child is false and later child is unsupported", () => {
+  const state = createActiveState();
+  const entry = queueDrawForP1();
+  const result = evaluateQueuedEffectCondition(state, entry, {
+    type: "and",
+    conditions: [
+      { type: "handCount", player: "self", op: "gt", value: 50 },
+      { type: "opponentTurn" },
+    ],
+  });
+  assert.deepEqual(result, { supported: false });
+});
+
+test("or fails closed when earlier child is true and later child is unsupported", () => {
+  const state = createActiveState();
+  const entry = queueDrawForP1();
+  const result = evaluateQueuedEffectCondition(state, entry, {
+    type: "or",
+    conditions: [{ type: "yourTurn" }, { type: "opponentTurn" }],
+  });
+  assert.deepEqual(result, { supported: false });
+});
+
 test("unsupported hasCardInZone shapes fail closed", () => {
   const runWith = (
     condition: Extract<Condition, { type: "hasCardInZone" }>,
@@ -660,6 +684,35 @@ test("unsupported hasCardInZone shapes fail closed", () => {
     must(unsupportedFilter.errors, "unsupportedFilter errors")[0]?.type,
     "effectRuntimeError",
   );
+});
+
+test("malformed comparator for count conditions fails closed", () => {
+  const state = createActiveState();
+  const entry = queueDrawForP1();
+  const malformedConditions = [
+    {
+      type: "leaderColorCount",
+      player: "self",
+      op: "bogus",
+      value: 2,
+    },
+    {
+      type: "handCount",
+      player: "self",
+      op: "bogus",
+      value: 2,
+    },
+    {
+      type: "lifeCount",
+      player: "self",
+      op: "bogus",
+      value: 2,
+    },
+  ] as unknown as Condition[];
+  for (const condition of malformedConditions) {
+    const result = evaluateQueuedEffectCondition(state, entry, condition);
+    assert.deepEqual(result, { supported: false });
+  }
 });
 
 test("malformed count values and missing leader metadata fail closed", () => {
