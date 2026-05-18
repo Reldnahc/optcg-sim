@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-056B.md",
-      "storyId": "ENG-056B",
-      "storyPath": "stories/approved/ENG-056B-on-ko-reusable-queued-body-runtime.yaml",
-      "storySha256": "aae4ec2b5bd7f105a32587018d05978f8f59c77e9c2ce607fcda1cf0a41d547c"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

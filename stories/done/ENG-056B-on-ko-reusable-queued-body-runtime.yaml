@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Generalize [On K.O.] trigger candidate detection and queueing so existing
   supported onKO-compatible queued effect bodies can run from destination-zone

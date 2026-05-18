@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate engine-only runtime work that lets existing supported queued effect
   bodies run under life [Trigger] and [On K.O.] timing wrappers without adding

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Generalize life [Trigger] activation so the existing life-trigger reveal,
   no-zone queue, resolution, and trash-after-resolution path can execute
