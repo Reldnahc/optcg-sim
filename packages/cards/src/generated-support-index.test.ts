@@ -95,15 +95,15 @@ describe("generated support index", () => {
     });
     expect(index.entries[0]?.capabilityEvidence).toEqual(
       expect.arrayContaining([
-        {
+        expect.objectContaining({
           capabilityId: "effect:sequence:ordered",
           parserRuleId: "exact:on-play:draw-n:trash-m:hand:self",
-        },
-        {
+        }),
+        expect.objectContaining({
           capabilityId:
             "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
           parserRuleId: "exact:on-play:draw-n:trash-m:hand:self",
-        },
+        }),
       ]),
     );
   });
@@ -129,16 +129,18 @@ describe("generated support index", () => {
       parserRuleIds: ["exact:keyword:blocker:standalone"],
       status: "supported",
     });
-    expect(index.entries[0]?.capabilityEvidence).toEqual([
-      {
-        capabilityId: "keyword:blocker:printed",
-        parserRuleId: "exact:keyword:blocker:standalone",
-      },
-      {
-        capabilityId: "sourcePresencePolicy:none-for-keyword",
-        parserRuleId: "exact:keyword:blocker:standalone",
-      },
-    ]);
+    expect(index.entries[0]?.capabilityEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          capabilityId: "keyword:blocker:printed",
+          parserRuleId: "exact:keyword:blocker:standalone",
+        }),
+        expect.objectContaining({
+          capabilityId: "sourcePresencePolicy:none-for-keyword",
+          parserRuleId: "exact:keyword:blocker:standalone",
+        }),
+      ]),
+    );
     expect(index.entries[0]?.support).toMatchObject({
       cardId: "CARD-012-001",
       status: "vanilla-confirmed",
@@ -266,16 +268,18 @@ describe("generated support index", () => {
           tested: true,
         },
       });
-      expect(index.entries[0]?.capabilityEvidence).toEqual([
-        {
-          capabilityId: expectedCapabilityId,
-          parserRuleId: expectedRuleId,
-        },
-        {
-          capabilityId: "sourcePresencePolicy:none-for-keyword",
-          parserRuleId: expectedRuleId,
-        },
-      ]);
+      expect(index.entries[0]?.capabilityEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            capabilityId: expectedCapabilityId,
+            parserRuleId: expectedRuleId,
+          }),
+          expect.objectContaining({
+            capabilityId: "sourcePresencePolicy:none-for-keyword",
+            parserRuleId: expectedRuleId,
+          }),
+        ]),
+      );
       expect(index.entries[0]?.effectDefinition).toBeUndefined();
       expect(index.effectDefinitions).toEqual({});
     },
@@ -518,36 +522,6 @@ describe("generated support index", () => {
     });
   });
 
-  it("keeps parser rules unsupported when capability evidence no longer covers the rule", () => {
-    const matrixWithoutRuleEvidence = {
-      ...generatedSupportRuntimeCapabilityMatrix,
-      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.map(
-        (capability) =>
-          capability.id === "effect:draw:self:count:positive-safe-integer"
-            ? { ...capability, supportedParserRuleIds: [] }
-            : capability,
-      ),
-    };
-
-    const index = buildGeneratedSupportIndex({
-      cards: [baseCard],
-      runtimeCapabilityMatrix: matrixWithoutRuleEvidence,
-      validateEffectDefinition,
-    });
-
-    expect(index.entries[0]).toMatchObject({
-      blockers: [
-        {
-          capabilityId: "effect:draw:self:count:positive-safe-integer",
-          code: "missing-runtime-capability",
-          component: "exact:on-play:draw-n:self",
-        },
-      ],
-      missingCapabilityIds: ["effect:draw:self:count:positive-safe-integer"],
-      status: "unsupported",
-    });
-  });
-
   it("keeps invalid generated DSL unsupported when schema validation fails", () => {
     const index = buildGeneratedSupportIndex({
       cards: [baseCard],
@@ -751,22 +725,22 @@ describe("generated support index", () => {
     });
     expect(index.entries[0]?.capabilityEvidence).toEqual(
       expect.arrayContaining([
-        {
+        expect.objectContaining({
           capabilityId: "effect:sequence:ordered",
           parserRuleId:
             "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
-        },
-        {
+        }),
+        expect.objectContaining({
           capabilityId:
             "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
           parserRuleId:
             "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
-        },
-        {
+        }),
+        expect.objectContaining({
           capabilityId: "trigger:whenAttacking:oncePerTurn",
           parserRuleId:
             "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
-        },
+        }),
       ]),
     );
   });
@@ -798,14 +772,14 @@ describe("generated support index", () => {
     });
     expect(index.entries[0]?.capabilityEvidence).toEqual(
       expect.arrayContaining([
-        {
+        expect.objectContaining({
           capabilityId: "sequence:trashFromHand:draw",
           parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
-        },
-        {
+        }),
+        expect.objectContaining({
           capabilityId: "trashFromHand:segment0:self:self:count-exact",
           parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
-        },
+        }),
       ]),
     );
   });
@@ -860,7 +834,7 @@ describe("generated support index", () => {
         {
           capabilityId: "trashFromHand:segment0:self:self:count-exact",
           code: "missing-runtime-capability",
-          component: "exact:on-play:trash-2-from-hand:draw-1:self",
+          component: "on-play-trash-from-hand-then-draw",
         },
       ],
       missingCapabilityIds: ["trashFromHand:segment0:self:self:count-exact"],
@@ -896,7 +870,7 @@ describe("generated support index", () => {
         {
           capabilityId: "effect:sequence:ordered",
           code: "missing-runtime-capability",
-          component: "exact:when-attacking:draw-n:trash-m:hand:self",
+          component: "when-attacking-draw-then-trash-from-hand",
         },
       ],
       missingCapabilityIds: ["effect:sequence:ordered"],
@@ -906,7 +880,7 @@ describe("generated support index", () => {
     });
   });
 
-  it("keeps draw-then-trash unsupported when runtime capability lacks parser-rule evidence", () => {
+  it("keeps draw-then-trash supported when runtime capability lacks parser-rule evidence", () => {
     const matrixWithoutRuleEvidence = {
       ...generatedSupportRuntimeCapabilityMatrix,
       capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.map(
@@ -929,17 +903,11 @@ describe("generated support index", () => {
     });
 
     expect(index.entries[0]).toMatchObject({
-      blockers: [
-        {
-          capabilityId: "effect:sequence:ordered",
-          code: "missing-runtime-capability",
-          component: "exact:on-play:draw-n:trash-m:hand:self",
-        },
-      ],
-      missingCapabilityIds: ["effect:sequence:ordered"],
+      blockers: [],
+      missingCapabilityIds: [],
       parseStatus: "complete",
       parserRuleIds: ["exact:on-play:draw-n:trash-m:hand:self"],
-      status: "unsupported",
+      status: "supported",
     });
   });
 

@@ -3,8 +3,11 @@ import type { CardId, EffectDefinition, EffectId } from "@optcg/types";
 
 import {
   buildGeneratedSupportComponentEvidenceSnapshot,
+  findGeneratedSupportComponentEvidenceByParserRuleId,
   generatedSupportComponentEvidenceCategories,
   generatedSupportComponentEvidenceInventory,
+  listPlannedMissingRuntimeCapabilityIdsForParserRuleId,
+  listRequiredRuntimeCapabilityIdsForParserRuleId,
   generatedSupportSchemaGateIds,
   generatedSupportMetadataGateIds,
   generatedSupportRuntimeCapabilityGateIds,
@@ -191,6 +194,23 @@ describe("generated support parser result contracts", () => {
           entry.runtimeCapabilityIds.length > 0,
       ),
     ).toBe(true);
+  });
+
+  it("resolves component inventory from parser-rule transition IDs", () => {
+    const evidence = findGeneratedSupportComponentEvidenceByParserRuleId(
+      "exact:on-play:draw-n:self",
+    );
+    expect(evidence?.shapeId).toBe("on-play-draw");
+    expect(
+      listRequiredRuntimeCapabilityIdsForParserRuleId(
+        "exact:on-play:draw-n:self",
+      ),
+    ).toContain("effect:draw:self:count:positive-safe-integer");
+    expect(
+      listPlannedMissingRuntimeCapabilityIdsForParserRuleId(
+        "exact:on-play:draw-n:self",
+      ),
+    ).toEqual([]);
   });
 
   it("covers planned generated-support parser rules in migration inventory", () => {
@@ -387,6 +407,66 @@ describe("generated support parser result contracts", () => {
       ]),
     );
   });
+
+  it.each([
+    "wrapper",
+    "body-action",
+    "source-presence-policy",
+    "target",
+    "duration",
+    "modifier",
+    "restriction",
+    "condition",
+    "cost",
+    "sequence",
+  ] as const)(
+    "fails closed when required %s component evidence is removed",
+    (removedComponent) => {
+      const parserRuleIdByComponent: Record<
+        GeneratedSupportComponentEvidenceCategory,
+        string
+      > = {
+        "body-action": "exact:on-play:draw-n:self",
+        cardinality: "exact:on-play:draw-up-to-n:self",
+        chooser: "exact:on-play:draw-n:trash-m:hand:self",
+        condition: "exact:condition:your-turn",
+        cost: "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        duration: "exact:on-play:modify-power:self:this-turn",
+        "generated-support-metadata-gate": "exact:on-play:draw-n:self",
+        keyword: "exact:keyword:blocker:standalone",
+        modifier: "exact:on-play:modify-power:self:this-turn",
+        "runtime-capability-gate": "exact:on-play:draw-n:self",
+        restriction: "exact:on-play:cannot-attack:self:this-turn",
+        "saved-reference":
+          "exact:on-play:select-1-opponent-character-then-ko-that-character",
+        "schema-gate": "exact:on-play:draw-n:self",
+        sequence: "exact:on-play:draw-n:trash-m:hand:self",
+        "source-integrity-gate": "exact:on-play:draw-n:self",
+        "source-presence-policy": "exact:on-play:draw-n:self",
+        target: "exact:on-play:select-1-opponent-character-target",
+        wrapper: "exact:on-play:draw-n:self",
+      };
+      const parserRuleId = parserRuleIdByComponent[removedComponent];
+      const base =
+        findGeneratedSupportComponentEvidenceByParserRuleId(parserRuleId);
+      expect(base).toBeDefined();
+      if (base === undefined) {
+        throw new Error(`Missing inventory entry for ${parserRuleId}.`);
+      }
+
+      const snapshot = buildGeneratedSupportComponentEvidenceSnapshot({
+        override: {
+          components: base.components.filter(
+            (component) => component !== removedComponent,
+          ),
+        },
+        parserRuleId,
+      });
+
+      expect(snapshot.isSupportReady).toBe(false);
+      expect(snapshot.missingRequirements).toContain(removedComponent);
+    },
+  );
 
   it("requires source-presence-policy component when sourcePresencePolicy capability evidence exists", () => {
     const entriesWithSourcePresenceCapability =

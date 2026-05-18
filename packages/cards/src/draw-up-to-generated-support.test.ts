@@ -160,7 +160,7 @@ describe("draw-up-to generated support", () => {
         blockers: expectedMissingCapabilityIds.map((missingCapabilityId) => ({
           capabilityId: missingCapabilityId,
           code: "missing-runtime-capability",
-          component: "exact:on-play:draw-up-to-n:self",
+          component: "on-play-draw-up-to",
         })),
         missingCapabilityIds: expectedMissingCapabilityIds,
         parserRuleIds: ["exact:on-play:draw-up-to-n:self"],

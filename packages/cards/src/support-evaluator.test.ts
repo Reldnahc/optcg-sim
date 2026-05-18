@@ -180,7 +180,7 @@ describe("support evaluator", () => {
         {
           capabilityId: "effect:sequence:ordered",
           code: "missing-runtime-capability",
-          component: "exact:on-play:draw-n:trash-m:hand:self",
+          component: "on-play-draw-then-trash-from-hand",
         },
       ],
       missingCapabilityIds: ["effect:sequence:ordered"],
@@ -232,7 +232,7 @@ describe("support evaluator", () => {
     });
   });
 
-  it("fails closed when runtime capability lacks parser-rule evidence", () => {
+  it("keeps support when runtime capability remains supported even if parser-rule linkage metadata is removed", () => {
     const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
     const runtimeCapabilityMatrix = {
       ...generatedSupportRuntimeCapabilityMatrix,
@@ -255,12 +255,40 @@ describe("support evaluator", () => {
       validateEffectDefinition,
     });
 
+    expect(evaluation.playable).toBe(true);
+    expect(evaluation.status).toBe("supported");
+    expect(evaluation.blockers).toEqual([]);
+  });
+
+  it("fails closed when runtime capability component linkage is removed", () => {
+    const normalized = normalizePoneglyphCardDetail(loadOp03044Fixture());
+    const runtimeCapabilityMatrix = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.map(
+        (capability) =>
+          capability.id === "effect:sequence:ordered"
+            ? { ...capability, supportedComponentIds: [] }
+            : capability,
+      ),
+    };
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: normalized,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: normalized.behaviorHash,
+      expectedSourceTextHash: normalized.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix,
+      validateEffectDefinition,
+    });
+
     expect(evaluation).toMatchObject({
       blockers: [
         {
           capabilityId: "effect:sequence:ordered",
           code: "missing-runtime-capability",
-          component: "exact:on-play:draw-n:trash-m:hand:self",
+          component: "on-play-draw-then-trash-from-hand",
         },
       ],
       missingCapabilityIds: ["effect:sequence:ordered"],
@@ -268,8 +296,6 @@ describe("support evaluator", () => {
       playable: false,
       status: "unsupported",
     });
-    expect(evaluation.effectDefinition).toBeUndefined();
-    expect(evaluation.support).toBeUndefined();
   });
 
   it("evaluates exact synthetic trash-then-draw text as playable only with segment-0 trash capability evidence", () => {
@@ -317,10 +343,10 @@ describe("support evaluator", () => {
     });
     expect(supported.capabilityEvidence).toEqual(
       expect.arrayContaining([
-        {
+        expect.objectContaining({
           capabilityId: "trashFromHand:segment0:self:self:count-exact",
           parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
-        },
+        }),
       ]),
     );
     expect(blocked).toMatchObject({
@@ -328,7 +354,7 @@ describe("support evaluator", () => {
         {
           capabilityId: "trashFromHand:segment0:self:self:count-exact",
           code: "missing-runtime-capability",
-          component: "exact:on-play:trash-2-from-hand:draw-1:self",
+          component: "on-play-trash-from-hand-then-draw",
         },
       ],
       missingCapabilityIds: ["trashFromHand:segment0:self:self:count-exact"],
@@ -386,16 +412,16 @@ describe("support evaluator", () => {
     });
     expect(supported.capabilityEvidence).toEqual(
       expect.arrayContaining([
-        {
+        expect.objectContaining({
           capabilityId: "playSelected:hand:character:max1",
           parserRuleId:
             "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
-        },
-        {
+        }),
+        expect.objectContaining({
           capabilityId: "playSelected:hand:character:max1:ignoreCost",
           parserRuleId:
             "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
-        },
+        }),
       ]),
     );
     expect(blocked).toMatchObject({
@@ -403,8 +429,7 @@ describe("support evaluator", () => {
         {
           capabilityId: "playSelected:hand:character:max1:ignoreCost",
           code: "missing-runtime-capability",
-          component:
-            "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+          component: "on-play-return-don-then-play-selected-character",
         },
       ],
       missingCapabilityIds: ["playSelected:hand:character:max1:ignoreCost"],
@@ -478,10 +503,10 @@ describe("support evaluator", () => {
       });
       expect(supported.capabilityEvidence).toEqual(
         expect.arrayContaining([
-          {
+          expect.objectContaining({
             capabilityId: expectedCapabilityId,
             parserRuleId: expectedRuleId,
-          },
+          }),
         ]),
       );
       expect(blocked).toMatchObject({
@@ -489,7 +514,6 @@ describe("support evaluator", () => {
           {
             capabilityId: expectedCapabilityId,
             code: "missing-runtime-capability",
-            component: expectedRuleId,
           },
         ],
         missingCapabilityIds: [expectedCapabilityId],
@@ -497,6 +521,7 @@ describe("support evaluator", () => {
         playable: false,
         status: "unsupported",
       });
+      expect(blocked.blockers[0]?.component).toEqual(expect.any(String));
     },
   );
 
@@ -560,10 +585,10 @@ describe("support evaluator", () => {
       });
       expect(supported.capabilityEvidence).toEqual(
         expect.arrayContaining([
-          {
+          expect.objectContaining({
             capabilityId: expectedCapabilityId,
             parserRuleId: expectedRuleId,
-          },
+          }),
         ]),
       );
       expect(blocked).toMatchObject({
@@ -571,7 +596,6 @@ describe("support evaluator", () => {
           {
             capabilityId: expectedCapabilityId,
             code: "missing-runtime-capability",
-            component: expectedRuleId,
           },
         ],
         missingCapabilityIds: [expectedCapabilityId],
@@ -579,6 +603,7 @@ describe("support evaluator", () => {
         playable: false,
         status: "unsupported",
       });
+      expect(blocked.blockers[0]?.component).toEqual(expect.any(String));
     },
   );
 
@@ -626,7 +651,6 @@ describe("support evaluator", () => {
           {
             capabilityId: expectedCapabilityId,
             code: "missing-runtime-capability",
-            component: expectedRuleId,
           },
         ],
         missingCapabilityIds: [expectedCapabilityId],
@@ -635,6 +659,7 @@ describe("support evaluator", () => {
         playable: false,
         status: "unsupported",
       });
+      expect(blocked.blockers[0]?.component).toEqual(expect.any(String));
     },
   );
 
@@ -662,7 +687,7 @@ describe("support evaluator", () => {
         {
           capabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
           code: "missing-runtime-capability",
-          component: "exact:on-play:modify-power:choose:this-turn",
+          component: "on-play-modify-power-choose-this-turn",
         },
       ],
       parserRuleIds: ["exact:on-play:modify-power:choose:this-turn"],

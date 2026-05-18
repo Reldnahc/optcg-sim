@@ -816,6 +816,32 @@ export interface GeneratedSupportComponentEvidenceSnapshot {
   isSupportReady: boolean;
 }
 
+export function findGeneratedSupportComponentEvidenceByParserRuleId(
+  parserRuleId: string,
+): GeneratedSupportComponentEvidenceInventoryEntry | undefined {
+  return generatedSupportComponentEvidenceInventory.find(
+    (entry) => entry.parserRuleId === parserRuleId,
+  );
+}
+
+export function listRequiredRuntimeCapabilityIdsForParserRuleId(
+  parserRuleId: string,
+): readonly string[] {
+  return (
+    findGeneratedSupportComponentEvidenceByParserRuleId(parserRuleId)
+      ?.runtimeCapabilityIds ?? []
+  );
+}
+
+export function listPlannedMissingRuntimeCapabilityIdsForParserRuleId(
+  parserRuleId: string,
+): readonly string[] {
+  return (
+    findGeneratedSupportComponentEvidenceByParserRuleId(parserRuleId)
+      ?.missingRuntimeCapabilityIds ?? []
+  );
+}
+
 type GeneratedSupportComponentEvidenceInventoryEntryOverride = Omit<
   Partial<GeneratedSupportComponentEvidenceInventoryEntry>,
   "gates"

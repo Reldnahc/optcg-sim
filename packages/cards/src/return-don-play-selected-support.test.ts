@@ -109,26 +109,31 @@ describe("return-DON playSelected generated support", () => {
     });
     expect(index.entries[0]?.capabilityEvidence).toEqual(
       expect.arrayContaining([
-        {
+        expect.objectContaining({
           capabilityId: "payCost:returnDon:self:count-exact",
+          component: "on-play-return-don-then-play-selected-character",
           parserRuleId: returnDonPlaySelectedRuleId,
-        },
-        {
+        }),
+        expect.objectContaining({
           capabilityId: "returnDon:cost:self:count-exact",
+          component: "on-play-return-don-then-play-selected-character",
           parserRuleId: returnDonPlaySelectedRuleId,
-        },
-        {
+        }),
+        expect.objectContaining({
           capabilityId: "selectCards:hand:self:character:max1",
+          component: "on-play-return-don-then-play-selected-character",
           parserRuleId: returnDonPlaySelectedRuleId,
-        },
-        {
+        }),
+        expect.objectContaining({
           capabilityId: "playSelected:hand:character:max1",
+          component: "on-play-return-don-then-play-selected-character",
           parserRuleId: returnDonPlaySelectedRuleId,
-        },
-        {
+        }),
+        expect.objectContaining({
           capabilityId: "playSelected:hand:character:max1:ignoreCost",
+          component: "on-play-return-don-then-play-selected-character",
           parserRuleId: returnDonPlaySelectedRuleId,
-        },
+        }),
       ]),
     );
   });
@@ -159,7 +164,7 @@ describe("return-DON playSelected generated support", () => {
         {
           capabilityId,
           code: "missing-runtime-capability",
-          component: returnDonPlaySelectedRuleId,
+          component: "on-play-return-don-then-play-selected-character",
         },
       ],
       missingCapabilityIds: [capabilityId],

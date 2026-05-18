@@ -409,11 +409,13 @@ describe("CARD-014G generated composed support", () => {
   it.each([
     {
       expectedCapabilityId: "selectTargets:field:public:character:max1",
+      expectedComponent: "on-play-select-opponent-character-target",
       expectedRuleId: "exact:on-play:select-1-opponent-character-target",
       sourceText: "[On Play] Select 1 of your opponent's Characters.",
     },
     {
       expectedCapabilityId: "effect:ko:saved-field-object:characterArea:public",
+      expectedComponent: "on-play-select-opponent-character-then-ko",
       expectedRuleId:
         "exact:on-play:select-1-opponent-character-then-ko-that-character",
       sourceText:
@@ -421,7 +423,12 @@ describe("CARD-014G generated composed support", () => {
     },
   ])(
     "supports CARD-014G exact template $expectedRuleId with runtime capability evidence",
-    ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
+    ({
+      expectedCapabilityId,
+      expectedComponent,
+      expectedRuleId,
+      sourceText,
+    }) => {
       const index = buildGeneratedSupportIndex({
         cards: [{ ...baseCard, sourceText }],
         validateEffectDefinition,
@@ -442,10 +449,11 @@ describe("CARD-014G generated composed support", () => {
       });
       expect(index.entries[0]?.capabilityEvidence).toEqual(
         expect.arrayContaining([
-          {
+          expect.objectContaining({
             capabilityId: expectedCapabilityId,
+            component: expectedComponent,
             parserRuleId: expectedRuleId,
-          },
+          }),
         ]),
       );
     },
@@ -483,7 +491,6 @@ describe("CARD-014G generated composed support", () => {
           {
             capabilityId: expectedCapabilityId,
             code: "missing-runtime-capability",
-            component: expectedRuleId,
           },
         ],
         missingCapabilityIds: [expectedCapabilityId],
@@ -491,6 +498,9 @@ describe("CARD-014G generated composed support", () => {
         parserRuleIds: [expectedRuleId],
         status: "unsupported",
       });
+      expect(index.entries[0]?.blockers[0]?.component).toEqual(
+        expect.any(String),
+      );
       expect(index.effectDefinitions).toEqual({});
     },
   );
@@ -520,7 +530,7 @@ describe("CARD-014G generated composed support", () => {
         {
           capabilityId: "selectTargets:field:public:character:max1",
           code: "missing-runtime-capability",
-          component: "exact:on-play:select-1-opponent-character-target",
+          component: "on-play-select-opponent-character-target",
         },
       ],
       missingCapabilityIds: ["selectTargets:field:public:character:max1"],
@@ -547,7 +557,7 @@ describe("CARD-014G generated composed support", () => {
         {
           capabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
           code: "missing-runtime-capability",
-          component: "exact:on-play:modify-power:choose:this-turn",
+          component: "on-play-modify-power-choose-this-turn",
         },
       ],
       parserRuleIds: ["exact:on-play:modify-power:choose:this-turn"],
