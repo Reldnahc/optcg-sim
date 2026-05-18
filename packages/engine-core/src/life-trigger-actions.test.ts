@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition, GameState, InstanceId } from "@optcg/types";
+import type {
+  Effect,
+  EffectBlock,
+  EffectDefinition,
+  GameState,
+  InstanceId,
+  PlayerId,
+} from "@optcg/types";
 
 import { applyAction, getLegalActions } from "./actions.js";
 import {
@@ -15,6 +22,7 @@ import {
   effectDefinition,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
+import { hashCanonicalStateValue } from "./canonical-state.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import {
   getSupportedLifeTriggerDecision,
@@ -23,8 +31,9 @@ import {
 
 const supportedLifeTriggerDefinition = (
   cardId: ReturnType<typeof toCardId>,
+  effectBody: Effect = { type: "draw", count: 1, player: "self" },
 ): EffectDefinition => {
-  const definition = effectDefinition(cardId, { type: "trigger" });
+  const definition = effectDefinition(cardId, { type: "trigger" }, effectBody);
   const effect = must(definition.effects[0], "trigger effect");
   const effectWithoutFlags = { ...effect };
   delete effectWithoutFlags.optional;
@@ -40,7 +49,11 @@ const supportedLifeTriggerDefinition = (
   };
 };
 
-const openSupportedLifeTriggerDecision = (): {
+const openLifeTriggerDecision = (options: {
+  cardIdSuffix: string;
+  triggerText: string;
+  definition: EffectDefinition;
+}): {
   state: GameState;
   lifeCardId: ReturnType<typeof toCardId>;
   lifeInstanceId: InstanceId;
@@ -50,8 +63,8 @@ const openSupportedLifeTriggerDecision = (): {
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   const topLife = must(p2State.life[0], "top life");
-  const lifeCardId = toCardId("trigger-life-activation");
-  const definition = supportedLifeTriggerDefinition(lifeCardId);
+  const lifeCardId = toCardId(options.cardIdSuffix);
+  const definition = options.definition;
   p2State.life[0] = {
     ...topLife,
     card: { ...topLife.card, cardId: lifeCardId },
@@ -60,10 +73,10 @@ const openSupportedLifeTriggerDecision = (): {
     cardId: lifeCardId,
     category: "character",
     power: 1000,
-    triggerText: "TRIGGER: draw 1 card",
+    triggerText: options.triggerText,
     support: {
       status: "implemented-dsl",
-      effectDefinitionId: "def-life-trigger-activation",
+      effectDefinitionId: `def-${options.cardIdSuffix}`,
       rulesVersion: definition.metadata.rulesVersion,
       sourceTextHash: definition.metadata.sourceTextHash,
     },
@@ -71,7 +84,7 @@ const openSupportedLifeTriggerDecision = (): {
   state.cardManifest.effectDefinitionsVersion =
     definition.metadata.effectDefinitionsVersion;
   state.cardManifest.effectDefinitions = {
-    "def-life-trigger-activation": definition,
+    [`def-${options.cardIdSuffix}`]: definition,
   };
 
   const result = applyAction(state, {
@@ -96,6 +109,88 @@ const openSupportedLifeTriggerDecision = (): {
     lifeInstanceId: topLife.card.instanceId,
     definition,
   };
+};
+
+const openSupportedLifeTriggerDecision = (): {
+  state: GameState;
+  lifeCardId: ReturnType<typeof toCardId>;
+  lifeInstanceId: InstanceId;
+  definition: EffectDefinition;
+} => {
+  const lifeCardId = toCardId("trigger-life-activation");
+  return openLifeTriggerDecision({
+    cardIdSuffix: "trigger-life-activation",
+    triggerText: "TRIGGER: draw 1 card",
+    definition: supportedLifeTriggerDefinition(lifeCardId),
+  });
+};
+
+const expectUnsupportedLifeTriggerDefinition = (
+  label: string,
+  mutate: (effect: EffectBlock, definition: EffectDefinition) => EffectBlock,
+): void => {
+  const state = setupAttackState();
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const cardId = toCardId(`trigger-life-${label}`);
+  const definition = supportedLifeTriggerDefinition(cardId);
+  const baseEffect = must(definition.effects[0], "effect");
+  const unsupported = {
+    ...definition,
+    effects: [mutate(baseEffect, definition)],
+  };
+
+  topLife.card.cardId = cardId;
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "character",
+    power: 1000,
+    triggerText: "TRIGGER: unsupported shape",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: `def-${label}`,
+      rulesVersion: unsupported.metadata.rulesVersion,
+      sourceTextHash: unsupported.metadata.sourceTextHash,
+    },
+  });
+  state.cardManifest.effectDefinitionsVersion =
+    unsupported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    [`def-${label}`]: unsupported,
+  };
+
+  assert.equal(
+    getSupportedLifeTriggerDecision(state, p2, topLife.card),
+    undefined,
+  );
+};
+
+const ensurePlayerDeckCountFromHand = (
+  state: GameState,
+  playerId: PlayerId,
+  count: number,
+): void => {
+  const player = must(state.players[playerId], "player");
+  while (player.deck.length < count) {
+    const refill = player.hand[0];
+    assert.ok(refill !== undefined, "missing hand card for deck refill");
+    player.hand = player.hand.slice(1).map((card, index) => ({
+      ...card,
+      zone: { zone: "hand", playerId, slot: "hand", index },
+    }));
+    player.deck = [
+      ...player.deck,
+      {
+        ...refill,
+        zone: {
+          zone: "deck",
+          playerId,
+          slot: "deck",
+          index: player.deck.length,
+        },
+      },
+    ];
+  }
 };
 
 test("hasLifeTriggerText only accepts non-empty trigger text", () => {
@@ -151,6 +246,43 @@ test("getSupportedLifeTriggerDecision returns confirmLifeTrigger for exact suppo
   assert.equal(decision.playerId, p2);
 });
 
+test("getSupportedLifeTriggerDecision returns confirmLifeTrigger for supported draw-2 trigger body", () => {
+  const state = setupAttackState();
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const cardId = toCardId("trigger-life-supported-draw-2");
+  const supported = supportedLifeTriggerDefinition(cardId, {
+    type: "draw",
+    count: 2,
+    player: "self",
+  });
+
+  topLife.card.cardId = cardId;
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "character",
+    power: 1000,
+    triggerText: "TRIGGER: draw 2",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-supported-life-trigger-draw-2",
+      rulesVersion: supported.metadata.rulesVersion,
+      sourceTextHash: supported.metadata.sourceTextHash,
+    },
+  });
+  state.cardManifest.effectDefinitionsVersion =
+    supported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-supported-life-trigger-draw-2": supported,
+  };
+
+  const decision = getSupportedLifeTriggerDecision(state, p2, topLife.card);
+
+  assert.ok(decision);
+  assert.equal(decision.type, "confirmLifeTrigger");
+  assert.equal(decision.card.cardId, cardId);
+});
+
 test("getSupportedLifeTriggerDecision rejects unsupported trigger metadata", () => {
   const state = setupAttackState();
   const p2State = must(state.players[p2], "p2");
@@ -186,6 +318,121 @@ test("getSupportedLifeTriggerDecision rejects unsupported trigger metadata", () 
     getSupportedLifeTriggerDecision(state, p2, topLife.card),
     undefined,
   );
+});
+
+test("getSupportedLifeTriggerDecision rejects unsupported reusable trigger body shapes", () => {
+  expectUnsupportedLifeTriggerDefinition("cost", (effect) => ({
+    ...effect,
+    cost: { type: "restDon", count: 1 },
+  }));
+  expectUnsupportedLifeTriggerDefinition("condition", (effect) => ({
+    ...effect,
+    condition: { type: "yourTurn" },
+  }));
+  expectUnsupportedLifeTriggerDefinition("target-effect", (effect) => ({
+    ...effect,
+    effect: { type: "ko", target: { type: "opponentLeader" } },
+  }));
+  expectUnsupportedLifeTriggerDefinition("saved-reference", (effect) => ({
+    ...effect,
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "save-target",
+          connector: "always",
+          saveResultAs: "that-card",
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              zone: "characterArea",
+              player: "opponent",
+              min: 1,
+              max: 1,
+              allowFewerIfUnavailable: false,
+              visibility: "public",
+            },
+          },
+        },
+      ],
+    },
+  }));
+  expectUnsupportedLifeTriggerDefinition("replacement", (effect) => ({
+    ...effect,
+    effect: {
+      type: "replacement",
+      when: { type: "wouldDraw", player: "self" },
+      instead: { type: "draw", count: 1, player: "self" },
+    },
+  }));
+  expectUnsupportedLifeTriggerDefinition("source-policy", (effect) => ({
+    ...effect,
+    sourcePresencePolicy: "mustRemainInSameZone",
+  }));
+});
+
+test("getSupportedLifeTriggerDecision rejects malformed, untested, and unreviewed trigger definitions", () => {
+  const state = setupAttackState();
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const cardId = toCardId("trigger-life-malformed");
+  const supported = supportedLifeTriggerDefinition(cardId);
+  const supportedEffect = must(supported.effects[0], "supported effect");
+  const definitions: Record<string, EffectDefinition> = {
+    "def-malformed-empty": { ...supported, effects: [] },
+    "def-malformed-multiple": {
+      ...supported,
+      effects: [
+        supportedEffect,
+        {
+          ...supportedEffect,
+          id: `${String(cardId)}:effect:2` as EffectBlock["id"],
+        },
+      ],
+    },
+    "def-untested-definition": {
+      ...supported,
+      metadata: { ...supported.metadata, tested: false },
+    },
+    "def-unreviewed-definition": {
+      ...supported,
+      metadata: {
+        sourceTextHash: supported.metadata.sourceTextHash,
+        rulesVersion: supported.metadata.rulesVersion,
+        effectDefinitionsVersion: supported.metadata.effectDefinitionsVersion,
+        tested: true,
+      },
+    },
+  };
+
+  for (const [definitionId, definition] of Object.entries(definitions)) {
+    topLife.card.cardId = cardId;
+    state.cardManifest.cards[cardId] = resolvedCard({
+      cardId,
+      category: "character",
+      power: 1000,
+      triggerText: "TRIGGER: malformed definition",
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: definitionId,
+        rulesVersion: definition.metadata.rulesVersion,
+        sourceTextHash: definition.metadata.sourceTextHash,
+      },
+    });
+    state.cardManifest.effectDefinitionsVersion =
+      definition.metadata.effectDefinitionsVersion;
+    state.cardManifest.effectDefinitions = {
+      [definitionId]: definition,
+    };
+
+    assert.equal(
+      getSupportedLifeTriggerDecision(state, p2, topLife.card),
+      undefined,
+      definitionId,
+    );
+  }
 });
 
 test("getSupportedLifeTriggerDecision rejects untested support metadata before checking trigger shape", () => {
@@ -631,4 +878,135 @@ test("activated draw-1 life trigger resolves from no zone and trashes the trigge
     result.state.eventJournal.slice(-result.events.length),
     result.events,
   );
+});
+
+test("activated draw-2 life trigger resolves through reusable queued body gate", () => {
+  const cardId = toCardId("trigger-life-draw-2-activation");
+  const opened = openLifeTriggerDecision({
+    cardIdSuffix: "trigger-life-draw-2-activation",
+    triggerText: "TRIGGER: draw 2 cards",
+    definition: supportedLifeTriggerDefinition(cardId, {
+      type: "draw",
+      count: 2,
+      player: "self",
+    }),
+  });
+  const decision = must(opened.state.pendingDecision, "life trigger decision");
+  ensurePlayerDeckCountFromHand(opened.state, p2, 2);
+  const beforeP2 = must(opened.state.players[p2], "p2 before");
+  const drawnIds = beforeP2.deck.slice(0, 2).map((card) => card.instanceId);
+
+  const result = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+  const replay = applyAction(structuredClone(opened.state), {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+  const afterP2 = must(result.state.players[p2], "p2 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(replay.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(afterP2.deck.length, beforeP2.deck.length - 2);
+  assert.deepEqual(
+    afterP2.hand.slice(-2).map((card) => card.instanceId),
+    drawnIds,
+  );
+  assert.equal(
+    afterP2.trash.some((card) => card.instanceId === opened.lifeInstanceId),
+    true,
+  );
+  assert.deepEqual(
+    result.events
+      .filter(
+        (event) =>
+          event.type === "cardDrawn" ||
+          event.type === "effectResolved" ||
+          event.type === "cardTrashed",
+      )
+      .map((event) => event.type),
+    ["cardDrawn", "cardDrawn", "effectResolved", "cardTrashed"],
+  );
+  assert.deepEqual(result.events, replay.events);
+  assert.equal(result.stateHash, replay.stateHash);
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+test("activated drawUpTo life trigger keeps reveal no-zone state while paused and cleans up after resolution", () => {
+  const cardId = toCardId("trigger-life-draw-up-to");
+  const opened = openLifeTriggerDecision({
+    cardIdSuffix: "trigger-life-draw-up-to",
+    triggerText: "TRIGGER: draw up to 2 cards",
+    definition: supportedLifeTriggerDefinition(cardId, {
+      type: "drawUpTo",
+      count: 2,
+      player: "self",
+    }),
+  });
+  const decision = must(opened.state.pendingDecision, "life trigger decision");
+  ensurePlayerDeckCountFromHand(opened.state, p2, 2);
+
+  const paused = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "activateTrigger" },
+  });
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "chooseQuantity");
+  assert.equal(paused.state.effectQueue.length, 1);
+  const queued = must(paused.state.effectQueue[0], "paused queue entry");
+  assert.equal(queued.source.zone?.zone, "noZone");
+  assert.equal(queued.sourceSnapshot.zone.zone, "noZone");
+  assert.equal(
+    paused.state.revealedCards.some((record) =>
+      record.cards.some((card) => card.instanceId === opened.lifeInstanceId),
+    ),
+    true,
+  );
+  assert.equal(
+    must(paused.state.players[p2], "paused p2").trash.some(
+      (card) => card.instanceId === opened.lifeInstanceId,
+    ),
+    false,
+  );
+
+  const quantityDecision = must(
+    paused.state.pendingDecision,
+    "chooseQuantity decision",
+  );
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: quantityDecision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+  const afterP2 = must(resolved.state.players[p2], "resolved p2");
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.effectQueue.length, 0);
+  assert.equal(resolved.state.revealedCards.length, 0);
+  assert.equal(
+    afterP2.trash.some((card) => card.instanceId === opened.lifeInstanceId),
+    true,
+  );
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+      "cardMoved",
+      "cardTrashed",
+    ],
+  );
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });

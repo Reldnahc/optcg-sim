@@ -2,6 +2,7 @@ import type {
   Action,
   CardRef,
   CardInstance,
+  Effect,
   ConfirmLifeTriggerDecision,
   EffectBlock,
   EffectQueueEntry,
@@ -56,19 +57,37 @@ const isSupportedTriggerEffect = (effect: EffectBlock): boolean => {
   ) {
     return false;
   }
-  if (effect.effect.type !== "draw") return false;
-  if (effect.effect.count !== 1 || effect.effect.player !== "self") {
-    return false;
-  }
   if (effect.cost !== undefined) return false;
   if (effect.condition !== undefined) return false;
+  if (effect.conditionTiming !== undefined) return false;
+  if (effect.failurePolicy !== undefined) return false;
   if (effect.optional !== undefined && effect.optional) return false;
+  if (effect.optional === false) return false;
   if (effect.oncePerTurn !== undefined && effect.oncePerTurn) return false;
-  return true;
+  if (effect.oncePerTurn === false) return false;
+  return isSupportedTriggerQueuedBody(effect.effect);
+};
+
+const isSupportedTriggerQueuedBody = (effect: Effect): boolean => {
+  if (effect.type === "draw") {
+    return (
+      Number.isInteger(effect.count) &&
+      effect.count >= 0 &&
+      effect.player === "self"
+    );
+  }
+  if (effect.type === "drawUpTo") {
+    return (
+      Number.isInteger(effect.count) &&
+      effect.count >= 0 &&
+      effect.player === "self"
+    );
+  }
+  return false;
 };
 
 const hasUnsupportedShape = (effect: EffectBlock): boolean =>
-  effect.effect.type !== "draw" ||
+  !isSupportedTriggerQueuedBody(effect.effect) ||
   effect.cost !== undefined ||
   effect.condition !== undefined ||
   effect.conditionTiming !== undefined ||
