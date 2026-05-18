@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CARD-018A.md",
-      "storyId": "CARD-018A",
-      "storyPath": "stories/approved/CARD-018A-eng056-057-component-generated-support.yaml",
-      "storySha256": "0e41385ba6463a452dd56c2737c0171363f66a2a5e874b1a0b902ee5a306a070"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

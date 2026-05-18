@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Connect the completed ENG-056 trigger and On K.O. reusable queued-body
   runtime, plus the completed ENG-057 zero-choice continuous choose runtime, to
