@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-056A.md",
+      "storyId": "INF-056A",
+      "storyPath": "stories/approved/INF-056A-separate-slow-cleanup-contracts-into-explicit-lane.yaml",
+      "storySha256": "dc922c7121b066ac9136f3e84d23d0d00140935d403fc81ce1922166ae84c232"
+    }
+  ],
   "version": 1
 }

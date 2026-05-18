@@ -16,6 +16,16 @@ async function readJson(relativePath) {
   return JSON.parse(contents);
 }
 
+const cleanupHeavyFiles = [
+  "tests/contracts/post-merge-cleanup-contract.test.mjs",
+  "tests/contracts/post-merge-cleanup-parent-contract.test.mjs",
+  "tests/contracts/post-merge-cleanup-preflight-contract.test.mjs",
+  "tests/contracts/post-merge-cleanup-executor-contract.test.mjs",
+  "tests/contracts/post-merge-branch-cleanup-contract.test.mjs",
+  "tests/github/post-merge-cleanup-closeout.test.mjs",
+  "tests/github/post-merge-cleanup-evidence-builder.test.mjs",
+];
+
 test("package.json defines vitest-based test and coverage scripts", async () => {
   const packageJson = await readJson("package.json");
 
@@ -28,6 +38,11 @@ test("package.json defines vitest-based test and coverage scripts", async () => 
     packageJson.scripts.coverage,
     /vitest/i,
     "coverage script should run Vitest",
+  );
+  assert.doesNotMatch(
+    packageJson.scripts.coverage,
+    /pnpm run test\b/i,
+    "coverage should not inherit the narrowed root test lane",
   );
   assert.match(
     packageJson.scripts.verify,
@@ -44,6 +59,20 @@ test("package.json defines vitest-based test and coverage scripts", async () => 
     /pnpm run test/i,
     "verify should orchestrate the canonical test command",
   );
+});
+
+test("root vitest lane excludes cleanup-heavy workflow contracts", async () => {
+  const packageJson = await readJson("package.json");
+
+  for (const cleanupFile of cleanupHeavyFiles) {
+    assert.match(
+      packageJson.scripts.test,
+      new RegExp(
+        `--exclude\\s+${cleanupFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+      ),
+      `root test lane must exclude ${cleanupFile}`,
+    );
+  }
 });
 
 test("vitest baseline files exist", async () => {

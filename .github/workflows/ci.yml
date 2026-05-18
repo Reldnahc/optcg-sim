@@ -82,7 +82,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify generated spec metadata artifacts
         run: pnpm run specs:verify-metadata
-      - name: Run contract lane
+      - name: Run contract and cleanup lanes
         run: pnpm contracts
 
   coverage:

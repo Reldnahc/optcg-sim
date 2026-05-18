@@ -1,0 +1,103 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-056A
+epic_id: INF-056
+title: Separate slow cleanup contracts into explicit lane
+type: tooling
+area: infra
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Split slow post-merge cleanup workflow contract coverage into an explicit
+  cleanup or workflow contract test lane so default root test runs stay focused
+  and stable, while cleanup automation remains covered by a deterministic
+  local and CI gate.
+story_boundary: >
+  Own only root package scripts, Vitest discovery or lane configuration, CI
+  workflow wiring, workflow documentation, and tests that prove lane membership
+  for slow post-merge cleanup contracts. Do not change cleanup tool behavior or
+  reduce cleanup validation coverage.
+allowed_touch_points:
+  - package.json
+  - vitest.config.ts
+  - .github/workflows/ci.yml
+  - docs/workflow/story-execution.md
+  - docs/workflow/review-gate.md
+  - docs/workflow/parent-integration-branches.md
+  - tests/contracts/root-contracts-lane.test.mjs
+  - tests/contracts/post-merge-cleanup-contract.test.mjs
+  - tests/contracts/post-merge-cleanup-parent-contract.test.mjs
+  - tests/contracts/post-merge-cleanup-preflight-contract.test.mjs
+  - tests/contracts/post-merge-cleanup-executor-contract.test.mjs
+  - tests/contracts/post-merge-branch-cleanup-contract.test.mjs
+  - tests/github/post-merge-cleanup-closeout.test.mjs
+  - tests/github/post-merge-cleanup-evidence-builder.test.mjs
+  - tests/ci/github-workflows.test.mjs
+  - tests/vitest/vitest-baseline.test.mjs
+  - stories/generated/INF-056A-separate-slow-cleanup-contracts-into-explicit-lane.yaml
+  - stories/approved/INF-056A-separate-slow-cleanup-contracts-into-explicit-lane.yaml
+  - agent-packets/INF-056A.md
+  - agent-packets/active.json
+spec_refs:
+  - 11-testing-quality.s003
+  - 11-testing-quality.s022
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s010
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 27-spec-driven-story-generation-workflow.s015
+  - 27-spec-driven-story-generation-workflow.s017
+scope:
+  - inventory every post-merge cleanup test that creates temp repositories, runs git-heavy cleanup planning or execution, or otherwise belongs to workflow cleanup verification rather than default root unit-test discovery
+  - introduce an explicit cleanup or workflow contract script for the slow post-merge cleanup coverage
+  - update default `pnpm test` discovery so it does not run the slow cleanup temp-repo contract suite
+  - update `test:contracts`, `contracts`, and `verify` so cleanup coverage remains enforced in an explicit gate reachable from canonical local verification
+  - update CI so the cleanup contract lane is run by an appropriate required workflow job or contract job
+  - keep or add a fast script/CI contract test proving the root test lane and cleanup contract lane include the intended files and do not recursively invoke each other
+  - keep cleanup metadata parser, validator, preflight, executor, parent cleanup, branch cleanup, closeout, and evidence-builder coverage represented in the explicit cleanup lane when those suites are temp-repo, git-heavy, or cleanup-workflow heavy
+  - require `tests/contracts/post-merge-cleanup-contract.test.mjs`, `tests/contracts/post-merge-cleanup-parent-contract.test.mjs`, `tests/contracts/post-merge-cleanup-preflight-contract.test.mjs`, `tests/contracts/post-merge-cleanup-executor-contract.test.mjs`, and `tests/contracts/post-merge-branch-cleanup-contract.test.mjs` to be classified explicitly as either fast default/contract coverage or explicit cleanup-lane coverage, with temp-repo or git-heavy cases moved out of default `pnpm test`
+  - preserve default-lane smoke coverage only where it is cheap and useful; heavy temp-repo cleanup scenarios must live in the cleanup lane
+  - prefer lane separation, targeted includes, or suite splitting over increasing Vitest's global timeout
+  - allow a narrowly scoped per-test timeout only when story-review or implementation evidence proves the test is still legitimately long after lane separation
+non_scope:
+  - deleting post-merge cleanup tests because they are slow
+  - marking cleanup tests skipped, todo, flaky-allowed, or non-failing
+  - using `|| true`, broad CI ignores, broad Vitest excludes, or branch-protection bypasses to hide cleanup failures
+  - changing cleanup metadata syntax, reviewed-scope binding, cleanup guard behavior, packet completion behavior, or post-merge cleanup semantics
+  - changing gameplay, engine, card, server, client, replay, persistence, security, or UI behavior
+  - changing ENG-058 or any active gameplay story implementation
+  - broad CI redesign unrelated to test-lane ownership
+dependencies: []
+acceptance_criteria:
+  - default `pnpm test` does not discover or run any temp-repo or git-heavy post-merge cleanup contract suite, including `tests/contracts/post-merge-cleanup-contract.test.mjs`, `tests/contracts/post-merge-cleanup-parent-contract.test.mjs`, `tests/contracts/post-merge-cleanup-preflight-contract.test.mjs`, `tests/contracts/post-merge-cleanup-executor-contract.test.mjs`, and `tests/contracts/post-merge-branch-cleanup-contract.test.mjs` when those suites remain temp-repo or git-heavy
+  - an explicit cleanup or workflow contract script runs the identified slow cleanup contract suites deterministically
+  - "`corepack pnpm run contracts` invokes the cleanup contract lane so cleanup automation remains protected before merge"
+  - "`corepack pnpm run verify` invokes `contracts` and therefore the cleanup contract lane"
+  - CI runs the cleanup contract lane in a named job or named step whose failure blocks the required workflow gate
+  - script contract tests prove cleanup contract tests were moved to the explicit lane and are not silently dropped from all gates
+  - no cleanup test is skipped, loosened, or deleted to satisfy this story
+  - any timeout change is local to a justified cleanup test or cleanup lane and is not the primary fix
+  - docs or workflow tests explain when agents must run the cleanup lane versus the default root test lane
+  - unrelated package, gameplay, card, engine, server, client, replay, and UI behavior remains unchanged
+required_tests:
+  - script or workflow contract test proving default `pnpm test` excludes the slow post-merge cleanup temp-repo contract files
+  - script or workflow contract test proving the explicit cleanup contract script includes the slow post-merge cleanup contract files
+  - script or workflow contract test proving `contracts` invokes the explicit cleanup contract lane
+  - script or workflow contract test proving `verify` still invokes `contracts`
+  - CI workflow test proving the cleanup contract lane is run by the required CI workflow
+  - focused cleanup lane run for the moved cleanup contract suites
+  - run `corepack pnpm exec vitest run tests/contracts/root-contracts-lane.test.mjs tests/ci/github-workflows.test.mjs tests/vitest/vitest-baseline.test.mjs`
+  - run the new explicit cleanup contract script
+  - run `corepack pnpm run test`
+  - run `corepack pnpm run contracts`
+  - run `corepack pnpm run stories:validate`
+  - full `corepack pnpm run verify`
+repo_rules:
+  - story-review must pass for INF-056 parent and INF-056A child before approval or implementation
+  - do not weaken cleanup automation coverage; move it to the right lane and prove it still runs
+  - keep `pnpm verify` authoritative and make it run cleanup contracts through the explicit lane via `contracts`
+  - do not broaden this story into cleanup behavior changes; record a follow-up story for any real cleanup bug found while separating lanes
+  - use `corepack pnpm`, not plain `pnpm`, when running repo commands in this environment
+ambiguity_policy: fail_and_escalate

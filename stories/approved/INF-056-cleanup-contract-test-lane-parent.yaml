@@ -1,0 +1,71 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: INF-056
+epic_id: INF-056
+title: Cleanup contract test lane parent
+type: tooling
+area: infra
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Coordinate the verification-lane repair that keeps expensive post-merge
+  cleanup workflow contracts out of the default root test lane while preserving
+  their enforcement in an explicit cleanup or workflow contract gate.
+story_boundary: >
+  This parent is not directly implementable. It coordinates the single child
+  story that separates slow cleanup contract tests from default test discovery,
+  adds explicit cleanup-lane ownership, and updates CI/script contract evidence
+  so cleanup automation remains covered without blocking unrelated product
+  test runs through workflow-only temp-repo contracts.
+allowed_touch_points:
+  - stories/generated/INF-056*.yaml
+  - stories/approved/INF-056*.yaml
+spec_refs:
+  - 11-testing-quality.s003
+  - 11-testing-quality.s022
+  - 23-repo-tooling-and-enforcement.s005
+  - 23-repo-tooling-and-enforcement.s010
+  - 23-repo-tooling-and-enforcement.s016
+  - 23-repo-tooling-and-enforcement.s023
+  - 24-story-schema.s016
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+  - 27-spec-driven-story-generation-workflow.s015
+  - 27-spec-driven-story-generation-workflow.s017
+scope:
+  - coordinate one executable child for explicit cleanup contract test lane ownership
+  - require the child to preserve post-merge cleanup coverage instead of deleting or skipping it
+  - require the child to keep default root test runs focused on normal unit and package tests
+  - require the child to keep cleanup/workflow contract failures visible in the appropriate contract or cleanup gate
+non_scope:
+  - direct implementation from this parent story
+  - deleting post-merge cleanup tests or weakening cleanup automation coverage
+  - changing cleanup metadata syntax, cleanup guard semantics, packet completion semantics, or post-merge cleanup behavior
+  - changing gameplay, engine, card, server, client, replay, persistence, security, or UI behavior
+  - bypassing reviewer-subagent review, cleanup metadata validation, human review, or merge gates
+dependencies: []
+child_stories:
+  - id: INF-056A
+    title: Separate slow cleanup contracts into explicit lane
+    concern: Move slow post-merge cleanup workflow contract coverage out of default root test discovery and into an explicit cleanup or workflow contract lane with CI and script-contract enforcement.
+    depends_on: []
+acceptance_criteria:
+  - INF-056A is the only executable child for this parent
+  - default `pnpm test` no longer discovers the slow post-merge cleanup temp-repo contract suite
+  - cleanup contract coverage remains enforced by an explicit cleanup or workflow contract lane
+  - CI and local scripts make the lane ownership visible and deterministic
+  - no cleanup coverage is deleted, skipped, or hidden to make unrelated story verification pass
+required_tests:
+  - distinct story-review artifact for INF-056 parent before approval
+  - distinct story-review artifact for INF-056A child before approval
+  - story-specific tests from INF-056A
+  - full `corepack pnpm run verify` on the child and parent PR
+repo_rules:
+  - do not implement INF-056 directly
+  - use the parent/substory integration workflow even though this parent has one child
+  - keep one active child packet at a time
+  - do not run packet completion for INF-056A until the parent branch lands on main
+  - lane separation may move slow cleanup contracts out of default `pnpm test`, but canonical `pnpm contracts`, `pnpm verify`, and CI must still invoke the explicit cleanup lane
+ambiguity_policy: fail_and_escalate

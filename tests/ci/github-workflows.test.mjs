@@ -70,6 +70,11 @@ test("package.json exposes the canonical contract lane for CI", async () => {
     "missing test:contracts script",
   );
   assert.equal(
+    typeof packageJson.scripts?.["test:cleanup-contracts"],
+    "string",
+    "missing test:cleanup-contracts script",
+  );
+  assert.equal(
     typeof packageJson.scripts?.["test:hidden-info"],
     "string",
     "missing test:hidden-info script",
@@ -88,6 +93,11 @@ test("package.json exposes the canonical contract lane for CI", async () => {
     packageJson.scripts.verify,
     /pnpm run contracts/i,
     "verify should include the root contracts lane once it exists",
+  );
+  assert.match(
+    packageJson.scripts.contracts,
+    /pnpm run test:cleanup-contracts/i,
+    "contracts should include the cleanup-heavy contract lane",
   );
   assert.match(
     packageJson.scripts.verify,
@@ -147,6 +157,7 @@ test("ci workflow runs the canonical root commands and publishes coverage", asyn
 
   const forbiddenContractsJobCommands = [
     "pnpm test:contracts",
+    "pnpm test:cleanup-contracts",
     "pnpm run contracts:compile",
     "pnpm run contracts:validate-effects",
     "pnpm run contracts:validate-db-schema",
