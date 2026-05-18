@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-017A.md",
+      "storyId": "CARD-017A",
+      "storyPath": "stories/approved/CARD-017A-generated-support-component-evidence-model.yaml",
+      "storySha256": "f1ec27c343a34d28e495249f87701dd225af8e659bdc949ba28123021addba64"
+    }
+  ],
   "version": 1
 }
