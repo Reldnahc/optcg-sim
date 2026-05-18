@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-056A.md",
+      "storyId": "ENG-056A",
+      "storyPath": "stories/approved/ENG-056A-life-trigger-reusable-queued-body-runtime.yaml",
+      "storySha256": "7b4ac11849dcff6e15c87ea1395ac0b0c56b568236a66d5357fb040df290238b"
+    }
+  ],
   "version": 1
 }
