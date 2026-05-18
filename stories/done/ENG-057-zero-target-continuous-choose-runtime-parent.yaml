@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the engine-only runtime evidence needed to unblock CARD-014G
   `up to 1` choose-target continuous modifier and restriction support without
