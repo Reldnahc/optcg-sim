@@ -1,0 +1,99 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-056
+epic_id: ENG-056
+title: Trigger and On K.O. reusable wrapper runtime parent
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Coordinate engine-only runtime work that lets existing supported queued effect
+  bodies run under life [Trigger] and [On K.O.] timing wrappers without adding
+  parser support, card generated-support metadata, or new effect primitives.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  ENG-056A and ENG-056B one at a time. This parent owns only engine runtime
+  wrapper reachability and fail-closed tests for already-supported queued effect
+  bodies under [Trigger] and [On K.O.] timing. It must not add CARD parser rules,
+  generated-support capability records, real-card support, or new effect body
+  primitives.
+allowed_touch_points:
+  - stories/generated/ENG-056*.yaml
+  - stories/approved/ENG-056*.yaml
+  - agent-packets/ENG-056*.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s021
+  - 02-engine-mechanics.s023
+  - 02-engine-mechanics.s039
+  - 02-engine-mechanics.s040
+  - 02-engine-mechanics.s041
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s008
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s013
+  - 06-visibility-security.s005
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - ENG-027D
+  - ENG-028E
+  - ENG-046C
+  - ENG-055
+child_stories:
+  - id: ENG-056A
+    title: Life Trigger reusable queued-body runtime
+    concern: Generalize life [Trigger] activation from exact draw-1 to existing trigger-compatible queued effect bodies while preserving reveal/no-zone/trash cleanup, damage continuation, hidden information, and fail-closed unsupported shapes.
+    depends_on: [ENG-028E, ENG-046C, ENG-055]
+  - id: ENG-056B
+    title: On K.O. reusable queued-body runtime
+    concern: Generalize On K.O. candidate detection from draw-only shapes to existing onKO-compatible queued effect bodies while preserving K.O. source presence, trigger ordering, battle event order, and fail-closed unsupported shapes.
+    depends_on: [ENG-027D, ENG-055]
+scope:
+  - keep [Trigger] and [On K.O.] as reusable engine timing wrappers for currently supported queued runtime bodies
+  - define implementation stories that remove wrapper-specific draw-only gates where the queue processor already supports the body under the wrapper's source-presence constraints
+  - keep source presence truthful for life-trigger no-zone/LKI/no-source behavior and On K.O. destination/LKI behavior
+  - preserve deterministic effect queue metadata, trigger ordering, event sequencing, state hashes, hidden information, and replay behavior
+  - keep unsupported conditions, costs, targets, saved references, replacement behavior, unsupported source policies, unsupported effect bodies, and malformed definitions fail-closed
+  - provide runtime capability truth for later CARD stories without changing cards-package support in this parent
+non_scope:
+  - direct parent implementation
+  - CARD parser rules, generated-support index/report/probe changes, component evidence records, or real-card fixture support
+  - new effect DSL schema or shared contract changes unless story-review proves a real missing authority gap
+  - new effect body primitives
+  - replacement generalization
+  - broad trigger families beyond life [Trigger] and [On K.O.]
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - ENG-056 is not implemented directly
+  - ENG-056A and ENG-056B are independently reviewable child stories
+  - each child stays engine-only and does not import @optcg/cards
+  - existing supported runtime behavior remains unchanged except for the wrapper reachability explicitly owned by the child
+  - later CARD work can truthfully consume the resulting runtime capability without relying on a full-template parser rule
+  - unsupported or ambiguous wrapper/body combinations continue to fail closed
+required_tests:
+  - story-review for ENG-056 parent before approval handoff
+  - story-review for ENG-056A before approval handoff
+  - story-review for ENG-056B before approval handoff
+  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - use the parent/substory workflow
+  - keep one active child packet at a time
+  - do not complete child packets until the parent branch lands on main
+  - do not open child PRs to main; use one final parent PR after both children are reviewed on the parent branch
+  - fail closed on hidden-information, event-order, replay, source-presence, damage-continuation, or gameplay ambiguity
+ambiguity_policy: fail_and_escalate
