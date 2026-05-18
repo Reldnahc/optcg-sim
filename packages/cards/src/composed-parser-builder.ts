@@ -1,7 +1,10 @@
 import type {
   CardId,
   Effect,
+  EffectBlock,
   EffectDefinition,
+  EffectId,
+  HandSelectionId,
   SequencedEffect,
   Trigger,
 } from "@optcg/types";
@@ -28,6 +31,17 @@ export type OncePerTurnWrapperParse = {
 
 export type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 
+export type ReusableComposedParserClause = {
+  readonly effectBlock?: EffectBlock;
+  readonly implementationStatus?: "implemented-dsl" | "vanilla-confirmed";
+  readonly parserRuleId: string;
+};
+
+export type ReusableComposedParserResidueClause<TClause> = {
+  readonly clause: TClause;
+  readonly prefix: string;
+};
+
 export type IfWrapperParse = {
   readonly bodyText: string;
   readonly conditions: readonly string[];
@@ -52,6 +66,62 @@ export type BooleanConnectorCandidate = {
   readonly connector: "and" | "or";
   readonly left: string;
   readonly right: string;
+};
+
+export type DrawInstructionParse = {
+  readonly count: number;
+  readonly mode: "exact" | "upTo";
+};
+
+export type TrashFromHandInstructionParse = {
+  readonly count: number;
+};
+
+export type DrawThenTrashInstructionParse = {
+  readonly drawCount: number;
+  readonly trashCount: number;
+};
+
+export type TrashThenDrawInstructionParse = {
+  readonly drawCount: number;
+  readonly trashCount: number;
+};
+
+export type OptionalDrawInstructionParse = {
+  readonly count: number;
+};
+
+export type ConditionedDrawInstructionParse =
+  | {
+      readonly condition: "yourTurn";
+      readonly count: number;
+    }
+  | {
+      readonly condition: "selfAttachedDonCount";
+      readonly count: number;
+      readonly donCount: number;
+      readonly op: "gte";
+    };
+
+export type ReturnDonPlaySelectedFromHandParse = {
+  readonly returnDonCount: number;
+};
+
+export type PublicFieldTargetSubject =
+  | "opponentCharactersAll"
+  | "opponentCharactersChoose"
+  | "self";
+
+export type ContinuousModifierInstructionParse = {
+  readonly duration: "thisBattle" | "thisTurn";
+  readonly target: PublicFieldTargetSubject;
+  readonly value: number;
+};
+
+export type ContinuousRestrictionInstructionParse = {
+  readonly duration: "thisTurn";
+  readonly restriction: "cannotAttack" | "cannotBlock";
+  readonly target: PublicFieldTargetSubject;
 };
 
 export function parseSupportedTriggerWrapper(
@@ -211,6 +281,247 @@ export function parseExactPositiveSafeInteger(
   return count;
 }
 
+export function parseDrawInstructionBody(
+  sourceText: string,
+): DrawInstructionParse | undefined {
+  const match = /^(Draw|Draw up to) (\d+) (card|cards)\.$/.exec(sourceText);
+  if (match === null) {
+    return undefined;
+  }
+
+  const count = parsePositiveCardCount(match[2] ?? "", match[3]);
+  if (count === undefined) {
+    return undefined;
+  }
+
+  return {
+    count,
+    mode: match[1] === "Draw up to" ? "upTo" : "exact",
+  };
+}
+
+export function parseTrashFromHandInstructionBody(
+  sourceText: string,
+): TrashFromHandInstructionParse | undefined {
+  const match = /^Trash (\d+) (card|cards) from your hand\.$/.exec(sourceText);
+  if (match === null) {
+    return undefined;
+  }
+
+  const count = parsePositiveCardCount(match[1] ?? "", match[2]);
+  return count === undefined ? undefined : { count };
+}
+
+export function parseDrawThenTrashInstructionBody(
+  sourceText: string,
+): DrawThenTrashInstructionParse | undefined {
+  const match =
+    /^Draw (\d+) (card|cards) and trash (\d+) (card|cards) from your hand\.$/.exec(
+      sourceText,
+    );
+  if (match === null) {
+    return undefined;
+  }
+
+  const drawCount = parsePositiveCardCount(match[1] ?? "", match[2]);
+  const trashCount = parsePositiveCardCount(match[3] ?? "", match[4]);
+  return drawCount === undefined || trashCount === undefined
+    ? undefined
+    : { drawCount, trashCount };
+}
+
+export function parseTrashThenDrawInstructionBody(
+  sourceText: string,
+): TrashThenDrawInstructionParse | undefined {
+  const [trashText, drawText] = sourceText.split(". ");
+  if (trashText === undefined || drawText === undefined) {
+    return undefined;
+  }
+
+  const trash = parseTrashFromHandInstructionBody(`${trashText}.`);
+  const draw = parseDrawInstructionBody(drawText);
+  if (trash === undefined || draw === undefined || draw.mode !== "exact") {
+    return undefined;
+  }
+
+  return {
+    drawCount: draw.count,
+    trashCount: trash.count,
+  };
+}
+
+export function parseOptionalDrawInstructionBody(
+  sourceText: string,
+): OptionalDrawInstructionParse | undefined {
+  const match = /^You may draw (\d+) (card|cards)\.$/.exec(sourceText);
+  if (match === null) {
+    return undefined;
+  }
+
+  const count = parsePositiveCardCount(match[1] ?? "", match[2]);
+  return count === undefined ? undefined : { count };
+}
+
+export function parseConditionedDrawInstructionBody(
+  sourceText: string,
+): ConditionedDrawInstructionParse | undefined {
+  const yourTurnMatch = /^During your turn, draw (\d+) (card|cards)\.$/.exec(
+    sourceText,
+  );
+  if (yourTurnMatch !== null) {
+    const count = parsePositiveCardCount(
+      yourTurnMatch[1] ?? "",
+      yourTurnMatch[2],
+    );
+    return count === undefined ? undefined : { condition: "yourTurn", count };
+  }
+
+  const attachedDonMatch =
+    /^If this Character has (\d+) or more DON!! cards attached, draw (\d+) (card|cards)\.$/.exec(
+      sourceText,
+    );
+  if (attachedDonMatch === null) {
+    return undefined;
+  }
+
+  const donCount = parseExactPositiveSafeInteger(attachedDonMatch[1] ?? "");
+  const count = parsePositiveCardCount(
+    attachedDonMatch[2] ?? "",
+    attachedDonMatch[3],
+  );
+  return donCount === undefined || count === undefined
+    ? undefined
+    : { condition: "selfAttachedDonCount", count, donCount, op: "gte" };
+}
+
+export function parseReturnDonPlaySelectedFromHandInstructionBody(
+  sourceText: string,
+): ReturnDonPlaySelectedFromHandParse | undefined {
+  const match =
+    /^DON!! -(\d+): Select up to 1 Character card from your hand and play it\.$/.exec(
+      sourceText,
+    );
+  if (match === null) {
+    return undefined;
+  }
+
+  const returnDonCount = parseExactPositiveSafeInteger(match[1] ?? "");
+  return returnDonCount === undefined ? undefined : { returnDonCount };
+}
+
+export function parseSelectOpponentCharacterInstructionBody(
+  sourceText: string,
+): boolean {
+  return sourceText === "Select 1 of your opponent's Characters.";
+}
+
+export function parseSelectOpponentCharacterThenKoInstructionBody(
+  sourceText: string,
+): boolean {
+  return (
+    sourceText ===
+    "Select 1 of your opponent's Characters. Then, K.O. that Character."
+  );
+}
+
+export function parseContinuousModifierInstructionBody(
+  sourceText: string,
+): ContinuousModifierInstructionParse | undefined {
+  const match =
+    /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) gets? ([+-]\d+) power during (this turn|this battle)\.$/.exec(
+      sourceText,
+    );
+  if (match === null) {
+    return undefined;
+  }
+
+  const target = parsePublicFieldTargetSubject(match[1] ?? "");
+  const value = parseSignedSafeInteger(match[2] ?? "");
+  const duration = parseDuration(match[3] ?? "");
+  if (target === undefined || value === undefined || duration === undefined) {
+    return undefined;
+  }
+
+  return { duration, target, value };
+}
+
+export function parseContinuousRestrictionInstructionBody(
+  sourceText: string,
+): ContinuousRestrictionInstructionParse | undefined {
+  const match =
+    /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) cannot (attack|block) during this turn\.$/.exec(
+      sourceText,
+    );
+  if (match === null) {
+    return undefined;
+  }
+
+  const target = parsePublicFieldTargetSubject(match[1] ?? "");
+  const action = match[2];
+  if (target === undefined || (action !== "attack" && action !== "block")) {
+    return undefined;
+  }
+
+  return {
+    duration: "thisTurn",
+    restriction: action === "attack" ? "cannotAttack" : "cannotBlock",
+    target,
+  };
+}
+
+function parsePublicFieldTargetSubject(
+  sourceText: string,
+): PublicFieldTargetSubject | undefined {
+  switch (sourceText) {
+    case "All of your opponent's Characters":
+      return "opponentCharactersAll";
+    case "This Character":
+      return "self";
+    case "Up to 1 of your opponent's Characters":
+      return "opponentCharactersChoose";
+    default:
+      return undefined;
+  }
+}
+
+function parseDuration(
+  sourceText: string,
+): ContinuousModifierInstructionParse["duration"] | undefined {
+  switch (sourceText) {
+    case "this battle":
+      return "thisBattle";
+    case "this turn":
+      return "thisTurn";
+    default:
+      return undefined;
+  }
+}
+
+function parseSignedSafeInteger(sourceText: string): number | undefined {
+  if (!/^[+-]\d+$/.test(sourceText)) {
+    return undefined;
+  }
+
+  const value = Number.parseInt(sourceText, 10);
+  return Number.isSafeInteger(value) ? value : undefined;
+}
+
+function parsePositiveCardCount(
+  countText: string,
+  noun: string | undefined,
+): number | undefined {
+  const count = parseExactPositiveSafeInteger(countText);
+  if (count === undefined) {
+    return undefined;
+  }
+
+  if ((count === 1 && noun !== "card") || (count !== 1 && noun !== "cards")) {
+    return undefined;
+  }
+
+  return count;
+}
+
 export function buildSequenceEffect(
   segments: readonly SequencedEffect[],
 ): SequenceEffect {
@@ -218,6 +529,233 @@ export function buildSequenceEffect(
     effects: segments.map((segment) => ({ ...segment })),
     type: "sequence",
   };
+}
+
+export function parseReusableCard016ABaseClause(
+  cardId: CardId,
+  sourceText: string,
+): ReusableComposedParserClause | undefined {
+  return (
+    parseCard014fComponentClause(cardId, sourceText) ??
+    parseOnPlayTrashThenDrawComponentClause(cardId, sourceText) ??
+    parseOnPlayReturnDonPlaySelectedCharacterFromHandComponentClause(
+      cardId,
+      sourceText,
+    )
+  );
+}
+
+function parseCard014fComponentClause(
+  cardId: CardId,
+  sourceText: string,
+): ReusableComposedParserClause | undefined {
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+    return undefined;
+  }
+
+  const optionalDraw = parseOptionalDrawInstructionBody(wrapper.bodyText);
+  if (optionalDraw !== undefined && optionalDraw.count === 1) {
+    return {
+      effectBlock: {
+        category: "auto",
+        effect: { count: 1, player: "self", type: "draw" },
+        id: toEffectId(`${String(cardId)}:auto-on-play-optional-draw-1`),
+        optional: true,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      },
+      parserRuleId: "exact:on-play:optional-effect:draw-1:self",
+    };
+  }
+
+  const conditionedDraw = parseConditionedDrawInstructionBody(wrapper.bodyText);
+  if (conditionedDraw === undefined || conditionedDraw.count !== 1) {
+    return undefined;
+  }
+
+  if (conditionedDraw.condition === "yourTurn") {
+    return {
+      effectBlock: {
+        category: "auto",
+        condition: { type: "yourTurn" },
+        effect: { count: 1, player: "self", type: "draw" },
+        id: toEffectId(`${String(cardId)}:auto-on-play-your-turn-draw-1`),
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      },
+      parserRuleId: "exact:condition:your-turn",
+    };
+  }
+
+  if (conditionedDraw.donCount !== 1) {
+    return undefined;
+  }
+
+  return {
+    effectBlock: {
+      category: "auto",
+      condition: {
+        op: "gte",
+        target: { type: "self" },
+        type: "attachedDonCount",
+        value: 1,
+      },
+      effect: { count: 1, player: "self", type: "draw" },
+      id: toEffectId(
+        `${String(cardId)}:auto-on-play-self-attached-don-count-gte-1-draw-1`,
+      ),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "onPlay" },
+    },
+    parserRuleId: "exact:condition:self-attached-don-count",
+  };
+}
+
+function parseOnPlayTrashThenDrawComponentClause(
+  cardId: CardId,
+  sourceText: string,
+): ReusableComposedParserClause | undefined {
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+    return undefined;
+  }
+
+  const parsed = parseTrashThenDrawInstructionBody(wrapper.bodyText);
+  if (
+    parsed === undefined ||
+    parsed.trashCount !== 2 ||
+    parsed.drawCount !== 1
+  ) {
+    return undefined;
+  }
+
+  return {
+    effectBlock: {
+      category: "auto",
+      effect: buildSequenceEffect([
+        {
+          connector: "always",
+          effect: {
+            chooser: "self",
+            count: parsed.trashCount,
+            player: "self",
+            type: "trashFromHand",
+          },
+        },
+        {
+          connector: "then",
+          effect: { count: parsed.drawCount, player: "self", type: "draw" },
+        },
+      ]),
+      id: toEffectId(
+        `${String(cardId)}:auto-on-play-trash-${String(
+          parsed.trashCount,
+        )}-then-draw-${String(parsed.drawCount)}`,
+      ),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "onPlay" },
+    },
+    parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
+  };
+}
+
+function parseOnPlayReturnDonPlaySelectedCharacterFromHandComponentClause(
+  cardId: CardId,
+  sourceText: string,
+): ReusableComposedParserClause | undefined {
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+    return undefined;
+  }
+
+  const parsed = parseReturnDonPlaySelectedFromHandInstructionBody(
+    wrapper.bodyText,
+  );
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return createReturnDonPlaySelectedCharacterFromHandClause(
+    cardId,
+    parsed.returnDonCount,
+  );
+}
+
+function createReturnDonPlaySelectedCharacterFromHandClause(
+  cardId: CardId,
+  returnDonCount: number,
+): ReusableComposedParserClause {
+  const handSelectionId = "handSelection:playableCharacter" as HandSelectionId;
+
+  return {
+    effectBlock: {
+      category: "auto",
+      effect: buildSequenceEffect([
+        {
+          connector: "always",
+          effect: {
+            cost: { count: returnDonCount, optional: true, type: "returnDon" },
+            type: "payCost",
+          },
+          saveResultAs: "paidReturnDonCost",
+        },
+        {
+          connector: "ifYouDo",
+          effect: {
+            chooser: "self",
+            filter: { categories: ["character"] },
+            max: 1,
+            min: 0,
+            player: "self",
+            saveAs: handSelectionId,
+            type: "selectCards",
+            visibility: "chooserOnly",
+            zone: "hand",
+          },
+        },
+        {
+          connector: "ifPreviousSucceeded",
+          effect: {
+            enterRested: true,
+            ignoreCost: true,
+            selection: handSelectionId,
+            type: "playSelected",
+          },
+        },
+      ]),
+      id: toEffectId(
+        `${String(cardId)}:auto-on-play-return-don-${String(
+          returnDonCount,
+        )}-play-selected-character-from-hand`,
+      ),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "onPlay" },
+    },
+    parserRuleId:
+      "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+  };
+}
+
+export function toEffectId(value: string): EffectId {
+  return value as EffectId;
+}
+
+export function findReusableComposedResiduePrefix<TClause>(
+  sourceText: string,
+  parsePrefix: (prefix: string) => TClause | undefined,
+): ReusableComposedParserResidueClause<TClause> | undefined {
+  for (let index = sourceText.lastIndexOf(". "); index > 0; ) {
+    const prefix = sourceText.slice(0, index + 2);
+    const clause = parsePrefix(prefix.slice(0, -1));
+    if (clause !== undefined) {
+      return { clause, prefix };
+    }
+
+    index = sourceText.lastIndexOf(". ", index - 1);
+  }
+
+  return undefined;
 }
 
 export function createDeterministicParserRuleId(

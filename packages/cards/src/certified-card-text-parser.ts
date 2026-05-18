@@ -1,8 +1,9 @@
 import type {
   CardId,
+  Effect,
   EffectBlock,
-  EffectId,
-  HandSelectionId,
+  SelectedTargetsRequest,
+  Target,
 } from "@optcg/types";
 
 import {
@@ -15,9 +16,17 @@ import {
   buildResidueSpan,
   buildSequenceEffect,
   buildUnsupportedWholeTextParseResult,
-  parseExactPositiveSafeInteger,
+  findReusableComposedResiduePrefix,
+  parseContinuousModifierInstructionBody,
+  parseContinuousRestrictionInstructionBody,
+  parseDrawInstructionBody,
+  parseDrawThenTrashInstructionBody,
   parseOncePerTurnWrapper,
+  parseReusableCard016ABaseClause,
+  parseSelectOpponentCharacterInstructionBody,
+  parseSelectOpponentCharacterThenKoInstructionBody,
   parseSupportedTriggerWrapper,
+  toEffectId,
 } from "./composed-parser-builder.js";
 import type {
   GeneratedSupportParserResult,
@@ -202,8 +211,8 @@ function parseFirstCardLineResidueClause(
   line: string,
 ): ParsedResidueClause | undefined {
   return (
+    parseReusableCard016AResidueClause(cardId, line) ??
     parseCard014gResidueClause(cardId, line) ??
-    parseCard014fResidueClause(cardId, line) ??
     parseCountedResidueClause({
       cardId,
       createClause: createOnPlayDrawClauseWithCount,
@@ -226,10 +235,6 @@ function parseFirstCardLineResidueClause(
       sourceText: line,
       trigger: { type: "onPlay" },
     }) ??
-    parseOnPlayReturnDonPlaySelectedCharacterFromHandResidueClause(
-      cardId,
-      line,
-    ) ??
     parseCountedResidueClause({
       cardId,
       createClause: createWhenAttackingDrawClauseWithCount,
@@ -354,16 +359,11 @@ function parseCardLineEffectClause(
   sourceText: string,
 ): CertifiedClause | undefined {
   return (
+    parseReusableCard016AClause(cardId, sourceText) ??
     parseCard014gClause(cardId, sourceText) ??
-    parseCard014fClause(cardId, sourceText) ??
     parseOnPlayDrawClause(cardId, sourceText) ??
     parseOnPlayDrawUpToClause(cardId, sourceText) ??
     parseOnPlayDrawThenTrashClause(cardId, sourceText) ??
-    parseOnPlayTrashThenDrawClause(cardId, sourceText) ??
-    parseOnPlayReturnDonPlaySelectedCharacterFromHandClause(
-      cardId,
-      sourceText,
-    ) ??
     parseWhenAttackingDrawClause(cardId, sourceText) ??
     parseWhenAttackingDrawThenTrashClause(cardId, sourceText) ??
     parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, sourceText)
@@ -391,6 +391,250 @@ function parseSupportedComposition(
   return [onPlayClause, whenAttackingClause];
 }
 
+function parseReusableCard016AClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  return (
+    parseReusableCard016ABaseClause(cardId, sourceText) ??
+    parseCard016ASelectTargetsClause(cardId, sourceText) ??
+    parseCard016AContinuousClause(cardId, sourceText)
+  );
+}
+
+function parseReusableCard016AResidueClause(
+  cardId: CardId,
+  sourceText: string,
+): ParsedResidueClause | undefined {
+  return findReusableComposedResiduePrefix(sourceText, (prefix) =>
+    parseReusableCard016AClause(cardId, prefix),
+  );
+}
+
+function parseCard016ASelectTargetsClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+    return undefined;
+  }
+
+  if (parseSelectOpponentCharacterInstructionBody(wrapper.bodyText)) {
+    return createCard016AAutoClause({
+      cardId,
+      effect: buildSequenceEffect([
+        {
+          connector: "always",
+          effect: {
+            request: opponentCharacterSelectedTargetsRequest(),
+            type: "selectTargets",
+          },
+          id: "selectOpponentCharacter",
+          saveResultAs: "selectedTarget",
+        },
+      ]),
+      effectIdSuffix: "auto-on-play-select-1-opponent-character-target",
+      parserRuleId: "exact:on-play:select-1-opponent-character-target",
+    });
+  }
+
+  if (parseSelectOpponentCharacterThenKoInstructionBody(wrapper.bodyText)) {
+    return createCard016AAutoClause({
+      cardId,
+      effect: buildSequenceEffect([
+        {
+          connector: "always",
+          effect: {
+            request: opponentCharacterSelectedTargetsRequest(),
+            type: "selectTargets",
+          },
+          id: "selectOpponentCharacter",
+          saveResultAs: "selectedTarget",
+        },
+        {
+          connector: "ifPreviousSucceeded",
+          effect: {
+            target: savedOpponentCharacterTarget(),
+            type: "ko",
+          },
+          id: "koSelectedTarget",
+        },
+      ]),
+      effectIdSuffix: "auto-on-play-select-1-opponent-character-then-ko",
+      parserRuleId:
+        "exact:on-play:select-1-opponent-character-then-ko-that-character",
+    });
+  }
+
+  return undefined;
+}
+
+function parseCard016AContinuousClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+    return undefined;
+  }
+
+  const modifier = parseContinuousModifierInstructionBody(wrapper.bodyText);
+  if (modifier !== undefined) {
+    const target = toCard016ATarget(modifier.target);
+    if (target === undefined) {
+      return undefined;
+    }
+
+    const targetId = toCard016AParserTargetId(modifier.target);
+    const durationId =
+      modifier.duration === "thisBattle" ? "this-battle" : "this-turn";
+    return createCard016AAutoClause({
+      cardId,
+      effect: {
+        duration: { type: modifier.duration },
+        target,
+        type: "modifyPower",
+        value: modifier.value,
+      },
+      effectIdSuffix: `exact:on-play:modify-power:${targetId}:${durationId}`,
+      parserRuleId: `exact:on-play:modify-power:${targetId}:${durationId}`,
+    });
+  }
+
+  const restriction = parseContinuousRestrictionInstructionBody(
+    wrapper.bodyText,
+  );
+  if (restriction === undefined) {
+    return undefined;
+  }
+
+  const target = toCard016ATarget(restriction.target);
+  if (target === undefined) {
+    return undefined;
+  }
+
+  const targetId = toCard016AParserTargetId(restriction.target);
+  const restrictionId =
+    restriction.restriction === "cannotAttack"
+      ? "cannot-attack"
+      : "cannot-block";
+
+  return createCard016AAutoClause({
+    cardId,
+    effect: {
+      duration: { type: "thisTurn" },
+      target,
+      type: restriction.restriction,
+    },
+    effectIdSuffix: `exact:on-play:${restrictionId}:${targetId}:this-turn`,
+    parserRuleId: `exact:on-play:${restrictionId}:${targetId}:this-turn`,
+  });
+}
+
+function createCard016AAutoClause({
+  cardId,
+  effect,
+  effectIdSuffix,
+  parserRuleId,
+}: {
+  cardId: CardId;
+  effect: Effect;
+  effectIdSuffix: string;
+  parserRuleId: string;
+}): CertifiedClause {
+  return {
+    effectBlock: {
+      category: "auto",
+      effect,
+      id: toEffectId(`${String(cardId)}:${effectIdSuffix}`),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "onPlay" },
+    },
+    parserRuleId,
+  };
+}
+
+function toCard016ATarget(
+  target: "opponentCharactersAll" | "opponentCharactersChoose" | "self",
+): Target | undefined {
+  switch (target) {
+    case "opponentCharactersAll":
+      return {
+        filter: { categories: ["character"] },
+        player: "opponent",
+        type: "all",
+        zone: "characterArea",
+      };
+    case "opponentCharactersChoose":
+      return {
+        request: opponentCharacterChooseTargetRequest(),
+        type: "choose",
+      };
+    case "self":
+      return { type: "self" };
+  }
+}
+
+function toCard016AParserTargetId(
+  target: "opponentCharactersAll" | "opponentCharactersChoose" | "self",
+): "all" | "choose" | "self" {
+  switch (target) {
+    case "opponentCharactersAll":
+      return "all";
+    case "opponentCharactersChoose":
+      return "choose";
+    case "self":
+      return "self";
+  }
+}
+
+function opponentCharacterSelectedTargetsRequest(): SelectedTargetsRequest {
+  return {
+    allowFewerIfUnavailable: false,
+    chooser: "self",
+    max: 1,
+    min: 1,
+    player: "opponent",
+    timing: "onResolution",
+    visibility: "public",
+    zone: "characterArea",
+  };
+}
+
+function opponentCharacterChooseTargetRequest(): SelectedTargetsRequest {
+  return {
+    allowFewerIfUnavailable: true,
+    chooser: "self",
+    filter: { categories: ["character"] },
+    max: 1,
+    min: 0,
+    player: "opponent",
+    timing: "onResolution",
+    visibility: "public",
+    zone: "characterArea",
+  };
+}
+
+function savedOpponentCharacterTarget(): Extract<
+  Target,
+  { type: "savedFieldObject" }
+> {
+  return {
+    binding: {
+      family: "selectedTargets",
+      objectIndex: 0,
+      saveResultAs: "selectedTarget",
+      sourceSegmentId: "selectOpponentCharacter",
+    },
+    onFailure: "failClosed",
+    player: "opponent",
+    type: "savedFieldObject",
+    visibility: "publicOnly",
+    zone: "characterArea",
+  };
+}
+
 function parseOnPlayDrawClause(
   cardId: CardId,
   sourceText: string,
@@ -403,87 +647,6 @@ function parseOnPlayDrawClause(
     sourceText,
   });
 }
-
-function parseCard014fClause(
-  cardId: CardId,
-  sourceText: string,
-): CertifiedClause | undefined {
-  const template = card014fTemplatesByText[sourceText];
-
-  return template === undefined
-    ? undefined
-    : createCard014fDraw1Clause(cardId, template);
-}
-
-function parseCard014fResidueClause(
-  cardId: CardId,
-  sourceText: string,
-): ParsedResidueClause | undefined {
-  const entry = Object.entries(card014fTemplatesByText).find(([text]) =>
-    sourceText.startsWith(`${text} `),
-  );
-  if (entry === undefined) {
-    return undefined;
-  }
-
-  const [text, template] = entry;
-
-  return {
-    clause: createCard014fDraw1Clause(cardId, template),
-    prefix: `${text} `,
-  };
-}
-
-function createCard014fDraw1Clause(
-  cardId: CardId,
-  template: Card014fTemplate,
-): CertifiedClause {
-  return {
-    effectBlock: {
-      category: "auto",
-      effect: { count: 1, player: "self", type: "draw" },
-      id: toEffectId(`${String(cardId)}:${template.effectIdSuffix}`),
-      ...template.effectBlockFields,
-      sourcePresencePolicy: "mustRemainInSameZone",
-      trigger: { type: "onPlay" },
-    },
-    parserRuleId: template.parserRuleId,
-  };
-}
-
-type Card014fTemplate = Readonly<{
-  effectBlockFields:
-    | Pick<EffectBlock, "condition">
-    | Required<Pick<EffectBlock, "optional">>;
-  effectIdSuffix: string;
-  parserRuleId: string;
-}>;
-
-const card014fTemplatesByText: Readonly<Record<string, Card014fTemplate>> = {
-  "[On Play] You may draw 1 card.": {
-    effectBlockFields: { optional: true },
-    effectIdSuffix: "auto-on-play-optional-draw-1",
-    parserRuleId: "exact:on-play:optional-effect:draw-1:self",
-  },
-  "[On Play] During your turn, draw 1 card.": {
-    effectBlockFields: { condition: { type: "yourTurn" } },
-    effectIdSuffix: "auto-on-play-your-turn-draw-1",
-    parserRuleId: "exact:condition:your-turn",
-  },
-  "[On Play] If this Character has 1 or more DON!! cards attached, draw 1 card.":
-    {
-      effectBlockFields: {
-        condition: {
-          op: "gte",
-          target: { type: "self" },
-          type: "attachedDonCount",
-          value: 1,
-        },
-      },
-      effectIdSuffix: "auto-on-play-self-attached-don-count-gte-1-draw-1",
-      parserRuleId: "exact:condition:self-attached-don-count",
-    },
-};
 
 function parseOnPlayDrawUpToClause(
   cardId: CardId,
@@ -591,130 +754,6 @@ function parseDrawThenTrashClauseWithPrefix({
     trashCount: parsed.trashCount,
     trigger,
   });
-}
-
-function parseOnPlayTrashThenDrawClause(
-  cardId: CardId,
-  sourceText: string,
-): CertifiedClause | undefined {
-  const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
-    return undefined;
-  }
-
-  if (wrapper.bodyText !== "Trash 2 cards from your hand. Draw 1 card.") {
-    return undefined;
-  }
-
-  return {
-    effectBlock: {
-      category: "auto",
-      effect: buildSequenceEffect([
-        {
-          connector: "always",
-          effect: {
-            chooser: "self",
-            count: 2,
-            player: "self",
-            type: "trashFromHand",
-          },
-        },
-        {
-          connector: "then",
-          effect: { count: 1, player: "self", type: "draw" },
-        },
-      ]),
-      id: toEffectId(`${String(cardId)}:auto-on-play-trash-2-then-draw-1`),
-      sourcePresencePolicy: "mustRemainInSameZone",
-      trigger: { type: "onPlay" },
-    },
-    parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
-  };
-}
-
-function parseOnPlayReturnDonPlaySelectedCharacterFromHandClause(
-  cardId: CardId,
-  sourceText: string,
-): CertifiedClause | undefined {
-  const match = sourceText.match(
-    /^\[On Play\] DON!! -(\d+): Select up to 1 Character card from your hand and play it\.$/,
-  );
-  if (match === null) {
-    return undefined;
-  }
-
-  const returnDonCount = parseExactPositiveSafeInteger(match[1] ?? "");
-  if (returnDonCount === undefined) {
-    return undefined;
-  }
-
-  const handSelectionId = "handSelection:playableCharacter" as HandSelectionId;
-
-  return {
-    effectBlock: {
-      category: "auto",
-      effect: buildSequenceEffect([
-        {
-          connector: "always",
-          effect: {
-            cost: { count: returnDonCount, optional: true, type: "returnDon" },
-            type: "payCost",
-          },
-          saveResultAs: "paidReturnDonCost",
-        },
-        {
-          connector: "ifYouDo",
-          effect: {
-            chooser: "self",
-            filter: { categories: ["character"] },
-            max: 1,
-            min: 0,
-            player: "self",
-            saveAs: handSelectionId,
-            type: "selectCards",
-            visibility: "chooserOnly",
-            zone: "hand",
-          },
-        },
-        {
-          connector: "ifPreviousSucceeded",
-          effect: {
-            enterRested: true,
-            ignoreCost: true,
-            selection: handSelectionId,
-            type: "playSelected",
-          },
-        },
-      ]),
-      id: toEffectId(
-        `${String(cardId)}:auto-on-play-return-don-${String(
-          returnDonCount,
-        )}-play-selected-character-from-hand`,
-      ),
-      sourcePresencePolicy: "mustRemainInSameZone",
-      trigger: { type: "onPlay" },
-    },
-    parserRuleId:
-      "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
-  };
-}
-
-function parseOnPlayReturnDonPlaySelectedCharacterFromHandResidueClause(
-  cardId: CardId,
-  sourceText: string,
-): ParsedResidueClause | undefined {
-  const prefix = sourceText.match(
-    /^\[On Play\] DON!! -\d+: Select up to 1 Character card from your hand and play it\. /,
-  )?.[0];
-  if (prefix === undefined) {
-    return undefined;
-  }
-
-  const clause = parseOnPlayReturnDonPlaySelectedCharacterFromHandClause(
-    cardId,
-    prefix.slice(0, -1),
-  );
-  return clause === undefined ? undefined : { clause, prefix };
 }
 
 const blockerReminderText =
@@ -855,37 +894,25 @@ function parseStandaloneEngineKeywordResidueClause(sourceText: string) {
 }
 
 function parseDrawCount(sourceText: string, prefix: TriggerPrefix) {
-  return parseDrawInstructionCount(
-    sourceText,
-    prefix,
-    /^Draw (\d+) (card|cards)\.$/,
-  );
+  const parsed = parseTriggeredDrawInstruction(sourceText, prefix);
+  return parsed?.mode === "exact" ? parsed.count : undefined;
 }
 
 function parseDrawUpToCount(sourceText: string, prefix: TriggerPrefix) {
-  return parseDrawInstructionCount(
-    sourceText,
-    prefix,
-    /^Draw up to (\d+) (card|cards)\.$/,
-  );
+  const parsed = parseTriggeredDrawInstruction(sourceText, prefix);
+  return parsed?.mode === "upTo" ? parsed.count : undefined;
 }
 
-function parseDrawInstructionCount(
+function parseTriggeredDrawInstruction(
   sourceText: string,
   prefix: TriggerPrefix,
-  pattern: RegExp,
 ) {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
   if (wrapper === undefined || wrapper.prefix !== prefix) {
     return undefined;
   }
 
-  const match = wrapper.bodyText.match(pattern);
-  if (match === null) {
-    return undefined;
-  }
-
-  return parsePositiveCardCount(match[1] ?? "", match[2]);
+  return parseDrawInstructionBody(wrapper.bodyText);
 }
 
 function parseDrawCountWithResidue(sourceText: string, prefix: TriggerPrefix) {
@@ -943,39 +970,7 @@ function parseDrawThenTrashCounts(sourceText: string, prefix: DrawTrashPrefix) {
     return undefined;
   }
 
-  const match = wrapper.bodyText.match(
-    /^Draw (\d+) (card|cards) and trash (\d+) (card|cards) from your hand\.$/,
-  );
-  if (match === null) {
-    return undefined;
-  }
-
-  const drawCountText = match[1] ?? "";
-  const drawCount = parsePositiveCardCount(drawCountText, match[2]);
-  if (drawCount === undefined) {
-    return undefined;
-  }
-
-  const trashCountText = match[3] ?? "";
-  const trashCount = parsePositiveCardCount(trashCountText, match[4]);
-  if (trashCount === undefined) {
-    return undefined;
-  }
-
-  return { drawCount, trashCount };
-}
-
-function parsePositiveCardCount(countText: string, noun: string | undefined) {
-  const count = parseExactPositiveSafeInteger(countText);
-  if (count === undefined) {
-    return undefined;
-  }
-
-  if ((count === 1 && noun !== "card") || (count !== 1 && noun !== "cards")) {
-    return undefined;
-  }
-
-  return count;
+  return parseDrawThenTrashInstructionBody(wrapper.bodyText);
 }
 
 function parseDrawThenTrashCountsWithResidue(
@@ -1097,8 +1092,4 @@ function resolveImplementationStatus(clauses: readonly CertifiedClause[]) {
     )
     ? "vanilla-confirmed"
     : "implemented-dsl";
-}
-
-function toEffectId(value: string): EffectId {
-  return value as EffectId;
 }

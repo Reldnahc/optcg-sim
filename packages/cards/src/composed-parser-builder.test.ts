@@ -10,11 +10,19 @@ import {
   createDeterministicParserRuleId,
   deriveParserDiagnosticDecomposition,
   parseBooleanConnectorCandidate,
+  parseConditionedDrawInstructionBody,
+  parseContinuousModifierInstructionBody,
+  parseContinuousRestrictionInstructionBody,
+  parseDrawInstructionBody,
+  parseDrawThenTrashInstructionBody,
   parseExactPositiveSafeInteger,
   parseIfWrapper,
   parseOncePerTurnWrapper,
   parseQuantityComparator,
+  parseReturnDonPlaySelectedFromHandInstructionBody,
+  parseSelectOpponentCharacterThenKoInstructionBody,
   parseSupportedTriggerWrapper,
+  parseTrashThenDrawInstructionBody,
   parseUpToCardinality,
 } from "./composed-parser-builder.js";
 import { isCompleteGeneratedSupportParseResult } from "./generated-support-types.js";
@@ -122,6 +130,74 @@ describe("composed parser builder scaffold", () => {
       connector: "or",
       left: "Leader",
       right: "Character",
+    });
+  });
+
+  it("parses reusable draw and draw/trash instruction components", () => {
+    expect(parseDrawInstructionBody("Draw 2 cards.")).toEqual({
+      count: 2,
+      mode: "exact",
+    });
+    expect(parseDrawInstructionBody("Draw up to 1 card.")).toEqual({
+      count: 1,
+      mode: "upTo",
+    });
+    expect(
+      parseDrawThenTrashInstructionBody(
+        "Draw 2 cards and trash 1 card from your hand.",
+      ),
+    ).toEqual({ drawCount: 2, trashCount: 1 });
+    expect(
+      parseTrashThenDrawInstructionBody(
+        "Trash 2 cards from your hand. Draw 1 card.",
+      ),
+    ).toEqual({ drawCount: 1, trashCount: 2 });
+  });
+
+  it("parses reusable condition and hand-selection components", () => {
+    expect(
+      parseConditionedDrawInstructionBody("During your turn, draw 1 card."),
+    ).toEqual({ condition: "yourTurn", count: 1 });
+    expect(
+      parseConditionedDrawInstructionBody(
+        "If this Character has 1 or more DON!! cards attached, draw 1 card.",
+      ),
+    ).toEqual({
+      condition: "selfAttachedDonCount",
+      count: 1,
+      donCount: 1,
+      op: "gte",
+    });
+    expect(
+      parseReturnDonPlaySelectedFromHandInstructionBody(
+        "DON!! -1: Select up to 1 Character card from your hand and play it.",
+      ),
+    ).toEqual({ returnDonCount: 1 });
+  });
+
+  it("parses reusable target, modifier, and restriction components", () => {
+    expect(
+      parseSelectOpponentCharacterThenKoInstructionBody(
+        "Select 1 of your opponent's Characters. Then, K.O. that Character.",
+      ),
+    ).toBe(true);
+    expect(
+      parseContinuousModifierInstructionBody(
+        "All of your opponent's Characters get -2000 power during this turn.",
+      ),
+    ).toEqual({
+      duration: "thisTurn",
+      target: "opponentCharactersAll",
+      value: -2000,
+    });
+    expect(
+      parseContinuousRestrictionInstructionBody(
+        "Up to 1 of your opponent's Characters cannot block during this turn.",
+      ),
+    ).toEqual({
+      duration: "thisTurn",
+      restriction: "cannotBlock",
+      target: "opponentCharactersChoose",
     });
   });
 
