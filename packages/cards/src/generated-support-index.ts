@@ -9,7 +9,9 @@ import type {
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import { deriveParserDiagnosticDecomposition } from "./composed-parser-builder.js";
 import {
+  findGeneratedSupportComponentEvidenceByShapeId,
   isCompleteGeneratedSupportParseResult,
+  listComponentEvidenceIdsForParserRuleIds,
   type GeneratedSupportBlocker,
   type GeneratedSupportParserResultStatus,
 } from "./generated-support-types.js";
@@ -52,6 +54,7 @@ export interface GeneratedSupportIndexEntry {
   blockers: readonly GeneratedSupportBlocker[];
   capabilityEvidence: readonly RuntimeCapabilityEvidence[];
   cardId: CardId;
+  componentEvidenceIds: readonly string[];
   effectDefinition?: EffectDefinition;
   effectDefinitionId?: string;
   missingCapabilityIds: readonly string[];
@@ -70,7 +73,8 @@ export interface GeneratedSupportManifestEvidence {
 
 export interface RuntimeCapabilityEvidence {
   capabilityId: string;
-  parserRuleId: string;
+  component?: string;
+  parserRuleId?: string;
 }
 
 export interface RuntimeCapabilityCoverageResult {
@@ -144,14 +148,81 @@ export function evaluateRuntimeCapabilityCoverageForParserRuleIds({
   matrix?: RuntimeCapabilityMatrix;
   parserRuleIds: readonly string[];
 }): RuntimeCapabilityCoverageResult {
-  const coverage = resolveCapabilityCoverage({ matrix, parserRuleIds });
+  const componentEvidenceIds =
+    listComponentEvidenceIdsForParserRuleIds(parserRuleIds);
+  const unmappedParserRuleIds = parserRuleIds.filter(
+    (parserRuleId) =>
+      listComponentEvidenceIdsForParserRuleIds([parserRuleId]).length === 0,
+  );
+  const coverage = resolveCapabilityCoverage({
+    componentEvidenceIds,
+    matrix,
+  });
+  const parserRuleIdsByComponent = new Map<string, readonly string[]>();
+  for (const componentEvidenceId of componentEvidenceIds) {
+    parserRuleIdsByComponent.set(
+      componentEvidenceId,
+      parserRuleIds.filter((parserRuleId) => {
+        const mapped = listComponentEvidenceIdsForParserRuleIds([
+          parserRuleId,
+        ])[0];
+        return mapped === componentEvidenceId;
+      }),
+    );
+  }
+  const evidence = coverage.evidence.flatMap((item) => {
+    const mappedParserRuleIds =
+      parserRuleIdsByComponent.get(item.component ?? "") ?? [];
+    return mappedParserRuleIds.length === 0
+      ? [item]
+      : mappedParserRuleIds.map((parserRuleId) => ({ ...item, parserRuleId }));
+  });
+  const missing = coverage.missing.flatMap((item) => {
+    const mappedParserRuleIds =
+      parserRuleIdsByComponent.get(item.component ?? "") ?? [];
+    return mappedParserRuleIds.length === 0
+      ? [item]
+      : mappedParserRuleIds.map((parserRuleId) => ({ ...item, parserRuleId }));
+  });
+  for (const parserRuleId of unmappedParserRuleIds) {
+    missing.push({
+      capabilityId: `parser-rule-mapping:${parserRuleId}`,
+      component: parserRuleId,
+      parserRuleId,
+    });
+  }
   const missingCapabilityIds = [
-    ...new Set(coverage.missing.map((missing) => missing.capabilityId)),
+    ...new Set(missing.map((missingItem) => missingItem.capabilityId)),
   ].sort();
 
   return {
-    blockers: coverage.missing.map((missing) =>
-      toMissingRuntimeCapabilityBlocker(missing),
+    blockers: missing.map((missingItem) =>
+      toMissingRuntimeCapabilityBlocker(missingItem),
+    ),
+    evidence,
+    missing,
+    missingCapabilityIds,
+  };
+}
+
+export function evaluateRuntimeCapabilityCoverageForComponentEvidenceIds({
+  componentEvidenceIds,
+  matrix = generatedSupportRuntimeCapabilityMatrix,
+}: {
+  componentEvidenceIds: readonly string[];
+  matrix?: RuntimeCapabilityMatrix;
+}): RuntimeCapabilityCoverageResult {
+  const coverage = resolveCapabilityCoverage({
+    componentEvidenceIds,
+    matrix,
+  });
+  const missingCapabilityIds = [
+    ...new Set(coverage.missing.map((missingItem) => missingItem.capabilityId)),
+  ].sort();
+
+  return {
+    blockers: coverage.missing.map((missingItem) =>
+      toMissingRuntimeCapabilityBlocker(missingItem),
     ),
     evidence: coverage.evidence,
     missing: coverage.missing,
@@ -178,6 +249,7 @@ function buildGeneratedSupportIndexEntry(
       ],
       card,
       parseStatus: "staleHash",
+      componentEvidenceIds: [],
       parserRuleIds: [],
     });
   }
@@ -186,6 +258,7 @@ function buildGeneratedSupportIndexEntry(
     if (!hasEmptyEffectSupportMetadata(card)) {
       return unsupportedMetadataEntry({
         card,
+        componentEvidenceIds: [],
         diagnosticLayer: undefined,
         message:
           "Normalized card metadata does not satisfy certified empty-effect support preconditions.",
@@ -196,6 +269,7 @@ function buildGeneratedSupportIndexEntry(
     return supportedVanillaEntry({
       capabilityEvidence: [],
       card,
+      componentEvidenceIds: [],
       parseStatus: "complete",
       parserRuleIds: [],
     });
@@ -216,6 +290,10 @@ function buildGeneratedSupportIndexEntry(
         card.sourceText,
       ),
       card,
+      componentEvidenceIds:
+        "parsedComponentEvidenceIds" in parseResult
+          ? parseResult.parsedComponentEvidenceIds
+          : [],
       parseStatus: parseResult.status,
       parserRuleIds:
         "parsedRuleIds" in parseResult ? parseResult.parsedRuleIds : [],
@@ -228,6 +306,7 @@ function buildGeneratedSupportIndexEntry(
   ) {
     return unsupportedMetadataEntry({
       card,
+      componentEvidenceIds: parseResult.componentEvidenceIds,
       component: "metadata:blocker-keyword-precondition",
       diagnosticLayer: "metadata",
       message:
@@ -245,6 +324,7 @@ function buildGeneratedSupportIndexEntry(
   ) {
     return unsupportedMetadataEntry({
       card,
+      componentEvidenceIds: parseResult.componentEvidenceIds,
       component: `metadata:keyword-precondition:${keywordMetadataPrecondition.keyword}`,
       diagnosticLayer: "metadata",
       message: `Normalized card metadata does not satisfy certified ${keywordMetadataPrecondition.label} keyword support preconditions.`,
@@ -265,14 +345,21 @@ function buildGeneratedSupportIndexEntry(
         },
       ],
       card,
+      componentEvidenceIds: parseResult.componentEvidenceIds,
       parseStatus: parseResult.status,
       parserRuleIds: parseResult.parserRuleIds,
     });
   }
 
-  const capabilityCoverage = evaluateRuntimeCapabilityCoverageForParserRuleIds({
-    matrix:
-      input.runtimeCapabilityMatrix ?? generatedSupportRuntimeCapabilityMatrix,
+  const capabilityCoverage =
+    evaluateRuntimeCapabilityCoverageForComponentEvidenceIds({
+      matrix:
+        input.runtimeCapabilityMatrix ??
+        generatedSupportRuntimeCapabilityMatrix,
+      componentEvidenceIds: parseResult.componentEvidenceIds,
+    });
+  const capabilityEvidenceWithTrace = withParserRuleTrace({
+    capabilityEvidence: capabilityCoverage.evidence,
     parserRuleIds: parseResult.parserRuleIds,
   });
   if (capabilityCoverage.missing.length > 0) {
@@ -282,6 +369,7 @@ function buildGeneratedSupportIndexEntry(
         schemaValidated: true,
       })),
       card,
+      componentEvidenceIds: parseResult.componentEvidenceIds,
       missingCapabilityIds: capabilityCoverage.missingCapabilityIds,
       parseStatus: parseResult.status,
       parserRuleIds: parseResult.parserRuleIds,
@@ -292,8 +380,9 @@ function buildGeneratedSupportIndexEntry(
     parseResult.effectDefinition.implementationStatus === "vanilla-confirmed"
   ) {
     return supportedVanillaEntry({
-      capabilityEvidence: capabilityCoverage.evidence,
+      capabilityEvidence: capabilityEvidenceWithTrace,
       card,
+      componentEvidenceIds: parseResult.componentEvidenceIds,
       parseStatus: parseResult.status,
       parserRuleIds: parseResult.parserRuleIds,
     });
@@ -302,8 +391,9 @@ function buildGeneratedSupportIndexEntry(
   const effectDefinitionId = toGeneratedEffectDefinitionId(card.cardId);
   return {
     blockers: [],
-    capabilityEvidence: capabilityCoverage.evidence,
+    capabilityEvidence: capabilityEvidenceWithTrace,
     cardId: card.cardId,
+    componentEvidenceIds: parseResult.componentEvidenceIds,
     effectDefinition: parseResult.effectDefinition,
     effectDefinitionId,
     missingCapabilityIds: [],
@@ -399,11 +489,13 @@ function getKeywordMetadataPrecondition(
 function supportedVanillaEntry({
   capabilityEvidence,
   card,
+  componentEvidenceIds,
   parseStatus,
   parserRuleIds,
 }: {
   capabilityEvidence: readonly RuntimeCapabilityEvidence[];
   card: GeneratedSupportCardTextInput;
+  componentEvidenceIds: readonly string[];
   parseStatus: GeneratedSupportParserResultStatus;
   parserRuleIds: readonly string[];
 }): GeneratedSupportIndexEntry {
@@ -411,6 +503,7 @@ function supportedVanillaEntry({
     blockers: [],
     capabilityEvidence,
     cardId: card.cardId,
+    componentEvidenceIds,
     missingCapabilityIds: [],
     parseStatus,
     parserRuleIds,
@@ -430,12 +523,14 @@ function supportedVanillaEntry({
 
 function unsupportedMetadataEntry({
   card,
+  componentEvidenceIds,
   component = "metadata:precondition",
   diagnosticLayer,
   message,
   parserRuleIds,
 }: {
   card: GeneratedSupportCardTextInput;
+  componentEvidenceIds: readonly string[];
   component?: string;
   diagnosticLayer?: GeneratedSupportBlocker["diagnosticLayer"];
   message: string;
@@ -453,6 +548,7 @@ function unsupportedMetadataEntry({
   return unsupportedEntry({
     blockers: [blocker],
     card,
+    componentEvidenceIds,
     parseStatus: "unsupportedPrimitive",
     parserRuleIds,
   });
@@ -461,12 +557,14 @@ function unsupportedMetadataEntry({
 function unsupportedEntry({
   blockers,
   card,
+  componentEvidenceIds,
   missingCapabilityIds = [],
   parseStatus,
   parserRuleIds,
 }: {
   blockers: readonly GeneratedSupportBlocker[];
   card: GeneratedSupportCardTextInput;
+  componentEvidenceIds: readonly string[];
   missingCapabilityIds?: readonly string[];
   parseStatus: GeneratedSupportParserResultStatus;
   parserRuleIds: readonly string[];
@@ -475,6 +573,7 @@ function unsupportedEntry({
     blockers,
     capabilityEvidence: [],
     cardId: card.cardId,
+    componentEvidenceIds,
     missingCapabilityIds,
     parseStatus,
     parserRuleIds,
@@ -484,11 +583,11 @@ function unsupportedEntry({
 }
 
 function resolveCapabilityCoverage({
+  componentEvidenceIds,
   matrix,
-  parserRuleIds,
 }: {
+  componentEvidenceIds: readonly string[];
   matrix: RuntimeCapabilityMatrix;
-  parserRuleIds: readonly string[];
 }): {
   evidence: readonly RuntimeCapabilityEvidence[];
   missing: readonly RuntimeCapabilityEvidence[];
@@ -496,19 +595,32 @@ function resolveCapabilityCoverage({
   const evidence: RuntimeCapabilityEvidence[] = [];
   const missing: RuntimeCapabilityEvidence[] = [];
 
-  for (const parserRuleId of parserRuleIds) {
-    for (const capabilityId of capabilityIdsForParserRuleId(parserRuleId)) {
+  for (const componentEvidenceId of componentEvidenceIds) {
+    const inventoryEntry =
+      findGeneratedSupportComponentEvidenceByShapeId(componentEvidenceId);
+    if (inventoryEntry === undefined) {
+      missing.push({
+        capabilityId: `component-evidence-inventory:${componentEvidenceId}`,
+        component: componentEvidenceId,
+      });
+      continue;
+    }
+
+    const capabilityIds = inventoryEntry.runtimeCapabilityIds;
+    for (const capabilityId of capabilityIds) {
       if (
-        hasRuntimeCapabilityForParserRule({
+        !inventoryEntry.missingRuntimeCapabilityIds?.includes(capabilityId) &&
+        hasRuntimeCapability({
           capabilityId,
+          component: componentEvidenceId,
           matrix,
-          parserRuleId,
         })
       ) {
-        evidence.push({ capabilityId, parserRuleId });
-      } else {
-        missing.push({ capabilityId, parserRuleId });
+        evidence.push({ capabilityId, component: componentEvidenceId });
+        continue;
       }
+
+      missing.push({ capabilityId, component: componentEvidenceId });
     }
   }
 
@@ -518,14 +630,14 @@ function resolveCapabilityCoverage({
   };
 }
 
-function hasRuntimeCapabilityForParserRule({
+function hasRuntimeCapability({
   capabilityId,
+  component,
   matrix,
-  parserRuleId,
 }: {
   capabilityId: string;
+  component: string;
   matrix: RuntimeCapabilityMatrix;
-  parserRuleId: string;
 }): boolean {
   const capability = matrix.capabilities.find(
     (candidate) => candidate.id === capabilityId,
@@ -534,7 +646,7 @@ function hasRuntimeCapabilityForParserRule({
   return (
     capability !== undefined &&
     capability.supported &&
-    capability.supportedParserRuleIds.includes(parserRuleId)
+    (capability.supportedComponentIds ?? []).includes(component)
   );
 }
 
@@ -547,320 +659,65 @@ function compareCapabilityEvidence(
     return capabilityOrder;
   }
 
-  return left.parserRuleId.localeCompare(right.parserRuleId);
+  const parserRuleOrder = (left.parserRuleId ?? "").localeCompare(
+    right.parserRuleId ?? "",
+  );
+  if (parserRuleOrder !== 0) {
+    return parserRuleOrder;
+  }
+
+  return (left.component ?? left.parserRuleId ?? "").localeCompare(
+    right.component ?? right.parserRuleId ?? "",
+  );
+}
+
+function withParserRuleTrace({
+  capabilityEvidence,
+  parserRuleIds,
+}: {
+  capabilityEvidence: readonly RuntimeCapabilityEvidence[];
+  parserRuleIds: readonly string[];
+}): readonly RuntimeCapabilityEvidence[] {
+  const parserRuleIdsByComponent = new Map<string, readonly string[]>();
+  for (const componentEvidenceId of listComponentEvidenceIdsForParserRuleIds(
+    parserRuleIds,
+  )) {
+    parserRuleIdsByComponent.set(
+      componentEvidenceId,
+      parserRuleIds.filter((parserRuleId) => {
+        const mapped = listComponentEvidenceIdsForParserRuleIds([
+          parserRuleId,
+        ])[0];
+        return mapped === componentEvidenceId;
+      }),
+    );
+  }
+
+  return capabilityEvidence
+    .flatMap((evidence) => {
+      const mappedParserRuleIds =
+        parserRuleIdsByComponent.get(evidence.component ?? "") ?? [];
+      return mappedParserRuleIds.length === 0
+        ? [evidence]
+        : mappedParserRuleIds.map((parserRuleId) => ({
+            ...evidence,
+            parserRuleId,
+          }));
+    })
+    .sort(compareCapabilityEvidence);
 }
 
 function toMissingRuntimeCapabilityBlocker(
   missing: RuntimeCapabilityEvidence,
 ): GeneratedSupportBlocker {
+  const component =
+    missing.component ?? missing.parserRuleId ?? "unknown-component";
   return {
     capabilityId: missing.capabilityId,
     code: "missing-runtime-capability",
-    component: missing.parserRuleId,
-    message: `Missing runtime capability ${missing.capabilityId} for parser rule ${missing.parserRuleId}.`,
+    component,
+    message: `Missing runtime capability ${missing.capabilityId} for component ${component}.`,
   };
-}
-
-const parserRuleCapabilityIds: Readonly<Record<string, readonly string[]>> = {
-  "exact:condition:self-attached-don-count": [
-    "category:auto",
-    "condition:selfAttachedDonCount",
-    "effect:draw:self:count:positive-safe-integer",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:condition:your-turn": [
-    "category:auto",
-    "condition:yourTurn",
-    "effect:draw:self:count:positive-safe-integer",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "card014a:modifier:power-all-this-turn": ["modifyPower:all:thisTurn"],
-  "card014a:modifier:power-choose-this-turn": ["modifyPower:choose:thisTurn"],
-  "card014a:modifier:power-self-this-battle": ["modifyPower:self:thisBattle"],
-  "card014a:modifier:power-self-this-turn": ["modifyPower:self:thisTurn"],
-  "exact:on-play:draw-up-to-n:self": [
-    "category:auto",
-    "drawUpTo:self:chooseQuantity",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:optional-effect:draw-1:self": [
-    "category:auto",
-    "effect:draw:self:count:positive-safe-integer",
-    "optionalEffectBlock:onPlay:draw-1:self",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "card014a:on-play:return-don-play-selected-character": [
-    "category:auto",
-    "payCost:returnDon:self:count-exact",
-    "playSelected:hand:character:max1",
-    "playSelected:hand:character:max1:ignoreCost",
-    "returnDon:cost:self:count-exact",
-    "selectCards:hand:self:character:max1",
-    "sequence:genericFrames",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected": [
-    "category:auto",
-    "payCost:returnDon:self:count-exact",
-    "playSelected:hand:character:max1",
-    "playSelected:hand:character:max1:ignoreCost",
-    "returnDon:cost:self:count-exact",
-    "selectCards:hand:self:character:max1",
-    "sequence:genericFrames",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "card014a:on-play:select-target-modify-power": [
-    "category:auto",
-    "modifyPower:choose:thisTurn",
-    "savedFieldObject:consumer:generic",
-    "savedSelectedTargets:producer",
-    "selectTargets:field:public:character:max1",
-    "sequence:genericFrames",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:cannot-attack:all:this-turn": [
-    "cannotAttack:all:thisTurn",
-    "category:auto",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:cannot-attack:choose:this-turn": [
-    "cannotAttack:choose:thisTurn:zeroChoiceBranch",
-    "category:auto",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:cannot-attack:self:this-turn": [
-    "cannotAttack:self:thisTurn",
-    "category:auto",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:cannot-block:all:this-turn": [
-    "cannotBlock:all:thisTurn",
-    "category:auto",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:cannot-block:choose:this-turn": [
-    "cannotBlock:choose:thisTurn:zeroChoiceBranch",
-    "category:auto",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:cannot-block:self:this-turn": [
-    "cannotBlock:self:thisTurn",
-    "category:auto",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:modify-power:all:this-turn": [
-    "category:auto",
-    "modifyPower:all:thisTurn",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:modify-power:choose:this-turn": [
-    "category:auto",
-    "modifyPower:choose:thisTurn:zeroChoiceBranch",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:modify-power:self:this-battle": [
-    "category:auto",
-    "modifyPower:self:thisBattle",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:modify-power:self:this-turn": [
-    "category:auto",
-    "modifyPower:self:thisTurn",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "card014a:restriction:cannot-attack-all-this-turn": [
-    "cannotAttack:all:thisTurn",
-  ],
-  "card014a:restriction:cannot-attack-choose-this-turn": [
-    "cannotAttack:choose:thisTurn",
-  ],
-  "card014a:restriction:cannot-attack-self-this-turn": [
-    "cannotAttack:self:thisTurn",
-  ],
-  "card014a:restriction:cannot-block-all-this-turn": [
-    "cannotBlock:all:thisTurn",
-  ],
-  "card014a:restriction:cannot-block-choose-this-turn": [
-    "cannotBlock:choose:thisTurn",
-  ],
-  "card014a:restriction:cannot-block-self-this-turn": [
-    "cannotBlock:self:thisTurn",
-  ],
-  "exact:on-play:select-1-opponent-character-target": [
-    "category:auto",
-    "savedSelectedTargets:producer",
-    "selectTargets:field:public:character:max1",
-    "sequence:genericFrames",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:select-1-opponent-character-then-ko-that-character": [
-    "category:auto",
-    "effect:ko:saved-field-object:characterArea:public",
-    "savedFieldObject:consumer:generic",
-    "savedSelectedTargets:producer",
-    "selectTargets:field:public:character:max1",
-    "sequence:genericFrames",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "card014a:sequence:draw-trashFromHand": [
-    "effect:draw:self:count:positive-safe-integer",
-    "effect:sequence:ordered",
-    "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
-    "sequence:draw:trashFromHand",
-    "sequence:genericFrames",
-  ],
-  "card014a:sequence:trashFromHand-draw": [
-    "effect:draw:self:count:positive-safe-integer",
-    "effect:sequence:ordered",
-    "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
-    "sequence:genericFrames",
-    "sequence:trashFromHand:draw",
-    "trashFromHand:segment0:self:self:count-exact",
-  ],
-  "card014a:static:no-source-required": [
-    "sourcePresencePolicy:noSourceRequired",
-  ],
-  "card014a:trigger:resolve-from-destination-zone": [
-    "sourcePresencePolicy:resolveFromDestinationZone",
-  ],
-  "card014a:trigger:resolve-from-last-known-information": [
-    "sourcePresencePolicy:resolveFromLastKnownInformation",
-  ],
-  "card014a:unsupported:duration-permanent": ["modifyPower:self:permanent"],
-  "card014a:unsupported:duration-until-start-next-turn": [
-    "modifyPower:self:untilStartOfNextTurn",
-  ],
-  "card014a:unsupported:event-trigger": ["trigger:event"],
-  "card014a:unsupported:refresh-lock": ["refreshLock:don"],
-  "card014a:unsupported:replacement-damage": ["replacement:damage"],
-  "card014a:unsupported:saved-field-object-as-modifier-target": [
-    "savedFieldObject:consumer:modifierTarget",
-  ],
-  "card014a:unsupported:saved-field-object-as-restriction-target": [
-    "savedFieldObject:consumer:restrictionTarget",
-  ],
-  "card014a:unsupported:saved-reference-play-selected-input": [
-    "playSelected:savedReference:character:max1",
-  ],
-  "card014a:unsupported:saved-reference-select-cards-hand-input": [
-    "selectCards:hand:savedReference:character:max1",
-  ],
-  "card014a:unsupported:sequence-loop": ["sequence:repeat"],
-  "card014a:unsupported:sequence-third-segment-position": [
-    "sequence:position:segment2",
-  ],
-  "card014a:unsupported:stage-trigger": ["trigger:stage"],
-  "card014a:unsupported:target-opponent-leader": [
-    "selectTargets:field:public:opponentLeader:max1",
-  ],
-  "card014a:unsupported:trigger-activate-main-source-destination": [
-    "sourcePresencePolicy:resolveFromDestinationZone:trigger:activateMain",
-  ],
-  "card014a:unsupported:trigger-on-play-no-source": [
-    "sourcePresencePolicy:noSourceRequired:trigger:onPlay",
-  ],
-  "card014a:unsupported:trigger-on-play-source-destination": [
-    "sourcePresencePolicy:resolveFromDestinationZone:trigger:onPlay",
-  ],
-  "card014a:unsupported:trigger-on-play-source-lki": [
-    "sourcePresencePolicy:resolveFromLastKnownInformation:trigger:onPlay",
-  ],
-  "card014a:unsupported:trigger-when-attacking-no-source": [
-    "sourcePresencePolicy:noSourceRequired:trigger:whenAttacking",
-  ],
-  "exact:keyword:banish:standalone": [
-    "keyword:banish:printed",
-    "sourcePresencePolicy:none-for-keyword",
-  ],
-  "exact:keyword:blocker:standalone": [
-    "keyword:blocker:printed",
-    "sourcePresencePolicy:none-for-keyword",
-  ],
-  "exact:keyword:double-attack:standalone": [
-    "keyword:doubleAttack:printed",
-    "sourcePresencePolicy:none-for-keyword",
-  ],
-  "exact:keyword:rush-character:standalone": [
-    "keyword:rushCharacter:printed",
-    "sourcePresencePolicy:none-for-keyword",
-  ],
-  "exact:keyword:rush:standalone": [
-    "keyword:rush:printed",
-    "sourcePresencePolicy:none-for-keyword",
-  ],
-  "exact:on-play:draw-n:self": [
-    "category:auto",
-    "effect:draw:self:count:positive-safe-integer",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:draw-n:trash-m:hand:self": [
-    "category:auto",
-    "effect:draw:self:count:positive-safe-integer",
-    "effect:sequence:ordered",
-    "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:onPlay",
-  ],
-  "exact:on-play:trash-2-from-hand:draw-1:self": [
-    "category:auto",
-    "effect:draw:self:count:positive-safe-integer",
-    "effect:sequence:ordered",
-    "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
-    "sequence:genericFrames",
-    "sequence:trashFromHand:draw",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trashFromHand:segment0:self:self:count-exact",
-    "trigger:onPlay",
-  ],
-  "exact:when-attacking:draw-n:self": [
-    "category:auto",
-    "effect:draw:self:count:positive-safe-integer",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:whenAttacking",
-  ],
-  "exact:when-attacking:draw-n:trash-m:hand:self": [
-    "category:auto",
-    "effect:draw:self:count:positive-safe-integer",
-    "effect:sequence:ordered",
-    "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:whenAttacking",
-  ],
-  "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self": [
-    "category:auto",
-    "effect:draw:self:count:positive-safe-integer",
-    "effect:sequence:ordered",
-    "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
-    "sourcePresencePolicy:mustRemainInSameZone",
-    "trigger:whenAttacking:oncePerTurn",
-  ],
-  "line-separated-effect-blocks:v1": [
-    "composition:line-separated-effect-blocks:v1",
-  ],
-};
-
-function capabilityIdsForParserRuleId(parserRuleId: string): readonly string[] {
-  return parserRuleCapabilityIds[parserRuleId] ?? [parserRuleId];
 }
 
 function toGeneratedEffectDefinitionId(cardId: CardId): string {

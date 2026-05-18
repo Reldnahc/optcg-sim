@@ -56,6 +56,7 @@ describe("CARD-014F generated support", () => {
         "sourcePresencePolicy:mustRemainInSameZone",
         "trigger:onPlay",
       ],
+      expectedComponent: "on-play-optional-draw",
       expectedEffectBlockFields: { optional: true },
       expectedRuleId: "exact:on-play:optional-effect:draw-1:self",
       sourceText: "[On Play] You may draw 1 card.",
@@ -69,6 +70,7 @@ describe("CARD-014F generated support", () => {
         "sourcePresencePolicy:mustRemainInSameZone",
         "trigger:onPlay",
       ],
+      expectedComponent: "on-play-condition-your-turn-draw",
       expectedEffectBlockFields: { condition: { type: "yourTurn" } },
       expectedRuleId: "exact:condition:your-turn",
       sourceText: "[On Play] During your turn, draw 1 card.",
@@ -82,6 +84,7 @@ describe("CARD-014F generated support", () => {
         "sourcePresencePolicy:mustRemainInSameZone",
         "trigger:onPlay",
       ],
+      expectedComponent: "on-play-condition-self-attached-don-count-draw",
       expectedEffectBlockFields: {
         condition: {
           op: "gte",
@@ -99,6 +102,7 @@ describe("CARD-014F generated support", () => {
     ({
       cardId,
       expectedCapabilities,
+      expectedComponent,
       expectedEffectBlockFields,
       expectedRuleId,
       sourceText,
@@ -119,6 +123,7 @@ describe("CARD-014F generated support", () => {
       expect(index.entries[0]?.capabilityEvidence).toEqual(
         expectedCapabilities.map((capabilityId) => ({
           capabilityId,
+          component: expectedComponent,
           parserRuleId: expectedRuleId,
         })),
       );
@@ -199,7 +204,6 @@ describe("CARD-014F generated support", () => {
           {
             capabilityId: missingCapabilityId,
             code: "missing-runtime-capability",
-            component: expectedRuleId,
           },
         ],
         missingCapabilityIds: [missingCapabilityId],
@@ -207,6 +211,9 @@ describe("CARD-014F generated support", () => {
         parserRuleIds: [expectedRuleId],
         status: "unsupported",
       });
+      expect(index.entries[0]?.blockers[0]?.component).toEqual(
+        expect.any(String),
+      );
       expect(index.effectDefinitions).toEqual({});
     },
   );

@@ -1,0 +1,100 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-017B
+epic_id: CARD-017
+title: Capability evaluator component migration
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Migrate generated-support runtime capability lookup and support indexing to
+  component evidence, removing full-template capability binding while preserving
+  every currently supported shape.
+story_boundary: >
+  Own cards-side runtime capability evidence lookup, generated-support indexing,
+  support evaluation, and parity tests. Do not change parser text coverage,
+  probe/report formatting, runtime behavior, runtime capability truth, shared
+  schema authority, or real-card fixture support.
+allowed_touch_points:
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/*support*.test.ts
+  - agent-packets/CARD-017B.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s013
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-017A
+scope:
+  - migrate generated-support runtime capability lookup from full-template parser rule identity to CARD-017A component evidence
+  - migrate `generatedSupportRuntimeCapabilityMatrix` records used by generated support so supported evidence is expressed in reusable components rather than full text/template IDs
+  - migrate support index evaluation so a generated-support candidate passes only when every required component has matching runtime capability evidence and all existing schema/source/metadata gates pass
+  - preserve every currently supported generated-support shape with no support loss
+  - preserve existing unsupported behavior when a component capability is absent
+  - report missing runtime capability by component evidence ID and capability ID, not by full-template parser rule identity
+  - keep any temporary adapter strictly internal and remove it before CARD-017B completion if it would remain support authority
+  - use support parity and representative composition tests to prove migration safety without enumerating every card or every wrapper/body pairing
+non_scope:
+  - parser grammar expansion or new parser text coverage
+  - probe/report formatting beyond minimal compatibility needed for evaluator output
+  - new runtime behavior or runtime capability records that claim new ENG support
+  - shared contracts or effect DSL schema changes
+  - real-card fixture support, fixture recapture, source hash updates, or behavior hash updates
+  - Trigger wrapper support proof, which belongs to a future ENG-backed CARD story
+  - server, client, API, UI, database, replay, WebSocket, Redis, or live Poneglyph work
+card_source_integrity:
+  - this story does not enable or change real-card gameplay support; source integrity is not applicable because the child migrates support evaluation identity only
+  - no target card IDs are in scope
+  - this story must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or manually reviewed source evidence
+  - existing source integrity gates must remain unchanged and required before any real-card generated support is playable
+engine_capability_preflight:
+  - this story is pure cards-side evaluator infrastructure and does not implement or enable gameplay behavior
+  - no parsed real-card effect shape is targeted by this child
+  - no new runtime capability or gameplay behavior is introduced by this story
+  - before changing evaluator logic, inventory all current generated-support runtime capability records and prove the component replacement is truth-preserving
+  - if a current supported shape cannot be truthfully represented by components without new runtime/schema authority, stop and record the blocker instead of dropping support
+acceptance_criteria:
+  - generated-support evaluator no longer uses full-template parser rule identity as runtime capability authority
+  - all current generated-support supported shapes remain supported
+  - all current unsupported generated-support shapes that lack runtime capability remain unsupported
+  - missing runtime capability diagnostics identify missing component/capability evidence
+  - support indexing requires every parsed component to pass before generated support is playable
+  - runtime capability evidence remains truthful and does not claim new ENG behavior
+  - no parser text coverage expands in this child
+required_tests:
+  - story-review for CARD-017B before approval handoff
+  - support parity test proving every pre-migration supported generated-support fixture/probe remains supported after component evaluator migration
+  - unsupported parity test proving current missing-capability cases remain unsupported
+  - tests proving support fails when wrapper, body, source policy, target, duration, modifier, restriction, condition, cost, or sequence component evidence is missing
+  - tests proving missing runtime capability output includes component evidence ID and capability ID
+  - tests proving full-template parser identity is not needed for support evaluation
+  - tests proving evaluator composition is order/component-gated without a wrapper/body cartesian-product fixture matrix
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-017B packet before implementation
+  - stay within allowed_touch_points
+  - no current generated support may be lost
+  - do not add runtime behavior, runtime capability records, shared schema authority, fixture support, or new parser coverage
+  - fail closed if support parity cannot be proven
+ambiguity_policy: fail_and_escalate

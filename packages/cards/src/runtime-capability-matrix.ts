@@ -1,3 +1,5 @@
+import { generatedSupportComponentEvidenceInventory } from "./generated-support-types.js";
+
 export type RuntimeCapabilityKind =
   | "category"
   | "composition"
@@ -17,6 +19,7 @@ export interface RuntimeCapabilityRecord {
   kind: RuntimeCapabilityKind;
   description: string;
   supported: boolean;
+  supportedComponentIds?: readonly string[];
   supportedParserRuleIds: readonly string[];
   sinceStory: string;
 }
@@ -39,7 +42,7 @@ export interface RuntimeCapabilityParserRuleInventoryEntry {
   coverage: RuntimeCapabilityParserRuleCoverage;
 }
 
-export const generatedSupportRuntimeCapabilityMatrix = {
+const generatedSupportRuntimeCapabilityMatrixBase = {
   capabilities: [
     {
       description:
@@ -637,6 +640,30 @@ export const generatedSupportRuntimeCapabilityMatrix = {
   ],
   generatedAtStory: "CARD-014G",
   id: "generated-support-runtime-capabilities:v1",
+} as const satisfies RuntimeCapabilityMatrix;
+
+const runtimeCapabilityComponentIdsByCapabilityId = new Map<string, string[]>();
+for (const entry of generatedSupportComponentEvidenceInventory) {
+  for (const capabilityId of entry.runtimeCapabilityIds) {
+    const existing =
+      runtimeCapabilityComponentIdsByCapabilityId.get(capabilityId) ?? [];
+    if (!existing.includes(entry.shapeId)) {
+      existing.push(entry.shapeId);
+      existing.sort();
+      runtimeCapabilityComponentIdsByCapabilityId.set(capabilityId, existing);
+    }
+  }
+}
+
+export const generatedSupportRuntimeCapabilityMatrix = {
+  ...generatedSupportRuntimeCapabilityMatrixBase,
+  capabilities: generatedSupportRuntimeCapabilityMatrixBase.capabilities.map(
+    (capability) => ({
+      ...capability,
+      supportedComponentIds:
+        runtimeCapabilityComponentIdsByCapabilityId.get(capability.id) ?? [],
+    }),
+  ),
 } as const satisfies RuntimeCapabilityMatrix;
 
 export const requiredGeneratedSupportCapabilityIds = [

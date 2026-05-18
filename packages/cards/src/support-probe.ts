@@ -118,11 +118,13 @@ export function formatSupportProbeBlocker(
     deepestSuccessfulLayer === undefined
       ? ""
       : ` [deepest-successful-layer: ${deepestSuccessfulLayer}]`;
+  const componentText =
+    blocker.component === undefined ? "" : ` [component: ${blocker.component}]`;
   const decompositionText =
     blocker.decomposition === undefined
       ? ""
       : formatDiagnosticDecomposition(blocker.decomposition);
-  return `- ${blocker.code} [layer: ${layer}]${deepestSuccessfulLayerText}: ${blocker.message}${spanText}${decompositionText}`;
+  return `- ${blocker.code} [layer: ${layer}]${deepestSuccessfulLayerText}${componentText}: ${blocker.message}${spanText}${decompositionText}`;
 }
 
 function formatDiagnosticDecomposition(

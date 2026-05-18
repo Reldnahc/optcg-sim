@@ -13,6 +13,7 @@ import type {
 export interface GeneratedSupportReport {
   blockerCount: number;
   blockers: readonly GeneratedSupportReportBlocker[];
+  componentEvidenceIdsUsed: readonly string[];
   missingRuntimeCapabilityIds: readonly string[];
   parserRuleIdsUsed: readonly string[];
   statusByCardId: Record<string, GeneratedSupportReportCardStatus>;
@@ -40,6 +41,7 @@ export interface GeneratedSupportReportBlocker {
 
 export interface GeneratedSupportReportCardStatus {
   blockerCodes: readonly GeneratedSupportBlockerCode[];
+  componentEvidenceIds: readonly string[];
   missingCapabilityIds: readonly string[];
   parseStatus: GeneratedSupportParserResultStatus;
   parserRuleIds: readonly string[];
@@ -77,6 +79,9 @@ export function buildGeneratedSupportReport(
   return {
     blockerCount: blockers.length,
     blockers,
+    componentEvidenceIdsUsed: sortedUnique(
+      entries.flatMap((entry) => entry.componentEvidenceIds),
+    ),
     missingRuntimeCapabilityIds: sortedUnique(
       entries.flatMap((entry) => entry.missingCapabilityIds),
     ),
@@ -90,6 +95,7 @@ export function buildGeneratedSupportReport(
           blockerCodes: sortedUnique(
             entry.blockers.map((blocker) => blocker.code),
           ),
+          componentEvidenceIds: sortedUnique(entry.componentEvidenceIds),
           missingCapabilityIds: sortedUnique(entry.missingCapabilityIds),
           parseStatus: entry.parseStatus,
           parserRuleIds: sortedUnique(entry.parserRuleIds),

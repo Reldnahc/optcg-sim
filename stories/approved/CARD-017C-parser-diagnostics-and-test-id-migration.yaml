@@ -1,0 +1,123 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-017C
+epic_id: CARD-017
+title: Parser diagnostics and test ID migration
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Migrate parser output, diagnostics, support metadata, and tests to component
+  evidence IDs so generated-support source and tests no longer depend on legacy
+  full-template IDs, with no support loss.
+story_boundary: >
+  Own cards-side parser result identity, parser trace evidence, probe/report
+  diagnostic metadata, generated-support metadata presentation, and cards tests
+  that currently assert full-template generated-support IDs. Do not broaden
+  parser coverage, add runtime behavior, add runtime capability records, edit
+  fixtures, or change supported/unsupported status except for intentional ID
+  and diagnostic metadata migration.
+allowed_touch_points:
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/card014g-composed-parser.ts
+  - packages/cards/src/card014g-generated-support.test.ts
+  - packages/cards/src/draw-up-to-generated-support.test.ts
+  - packages/cards/src/return-don-play-selected-support.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - agent-packets/CARD-017C.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s013
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-017B
+scope:
+  - migrate parser result identity fields from legacy full-template generated-support IDs to component evidence IDs
+  - migrate support-probe and generated-support report output so diagnostics name component evidence instead of full-template parser rules
+  - migrate generated-support metadata tests and support snapshots to component evidence IDs
+  - remove generated-support source/test dependence on legacy full-template IDs
+  - preserve current support status exactly while IDs and diagnostics migrate
+  - preserve blocker identity for `unparsed-span`, `ambiguous-wording`, `custom-handler-required`, `unsupported-primitive`, `stale-hash`, `invalid-dsl-schema`, and `missing-runtime-capability`
+  - preserve CARD-014I missing-layer taxonomy for parser, schema, runtime capability, source integrity, metadata/review/test status, stale hash, unsupported primitive, unsupported trigger, unsupported cost, unsupported optionality, unsupported condition, unsupported cardinality, unsupported target, unsupported duration, unsupported modifier, unsupported restriction, unsupported saved-reference, and unsupported-layer output as compatibility regression behavior
+  - preserve stale hash as highest-priority and non-mutating
+  - preserve CARD-015 diagnostic decomposition behavior while naming reusable component evidence
+  - keep whole-card unsupported diagnostics only when no component can safely match
+  - migrate tests to component and representative diagnostic assertions instead of recreating legacy full-template coverage as exhaustive card or wrapper/body combinations
+non_scope:
+  - parser grammar expansion or new support coverage
+  - runtime behavior or runtime capability records
+  - shared contracts or effect DSL schema changes
+  - real-card fixture support, fixture recapture, source hash updates, or behavior hash updates
+  - Trigger wrapper support proof, which belongs to a future ENG-backed CARD story
+  - server, client, API, UI, database, replay, WebSocket, Redis, or live Poneglyph work
+card_source_integrity:
+  - this story does not enable or change real-card gameplay support; source integrity is not applicable because the child migrates parser identity and diagnostics only
+  - no target card IDs are in scope
+  - this story must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or manually reviewed source evidence
+  - existing source integrity gates and stale-hash priority must remain unchanged
+engine_capability_preflight:
+  - this story is pure cards-side parser/diagnostic infrastructure and does not implement or enable gameplay behavior
+  - no parsed real-card effect shape is targeted by this child
+  - no new runtime capability or gameplay behavior is introduced by this story
+  - migrated parser and diagnostic evidence must continue to use CARD-017B component capability evaluation as the support boundary
+acceptance_criteria:
+  - parser output, generated-support diagnostics, support metadata, and cards-package tests use component evidence IDs
+  - generated-support source and tests do not retain legacy full-template IDs as parser/support authority
+  - all current generated-support supported shapes remain supported
+  - all current unsupported generated-support shapes remain unsupported unless CARD-017B already proved current support
+  - missing runtime capability, invalid schema, stale hash, unsupported primitive, unparsed-span, ambiguous-wording, and custom-handler-required diagnostics remain behaviorally compatible
+  - inherited parser, schema, runtime capability, source integrity, metadata/review/test status, stale hash, and unsupported primitive layer outputs remain distinct and behaviorally compatible
+  - inherited unsupported layer categories remain behaviorally compatible for unsupported trigger, cost, optionality, condition, cardinality, target, duration, modifier, restriction, saved-reference, and unsupported-layer output
+  - whole-card unsupported diagnostics remain behaviorally compatible and are used only when no component can safely match
+  - no parser coverage expands in this child
+required_tests:
+  - story-review for CARD-017C before approval handoff
+  - tests proving parser output uses component evidence IDs for every current supported generated-support shape
+  - tests proving generated-support report and support-probe diagnostics name component evidence IDs
+  - support parity tests proving no current supported generated-support shape loses support
+  - unsupported parity tests proving the current unsupported corpus or generated-support unsupported index remains unsupported, not only a few examples
+  - tests proving stale-hash remains highest-priority and non-mutating
+  - tests proving missing-runtime-capability, invalid-dsl-schema, and stale-hash blocker identity is preserved
+  - tests proving parser, schema, runtime capability, source integrity, metadata/review/test status, stale hash, and unsupported primitive layer outputs remain distinct
+  - tests proving unparsed-span and unsupported-primitive blocker identity is preserved
+  - tests proving ambiguous-wording and custom-handler-required blocker identity is preserved
+  - tests proving inherited unsupported layer categories remain distinct for unsupported trigger, cost, optionality, condition, cardinality, target, duration, modifier, restriction, saved-reference, and unsupported-layer output
+  - tests proving whole-card unsupported fallback is used only when no component can safely match
+  - repository or package-level assertion proving generated-support runtime source and tests do not depend on legacy full-template generated-support IDs as authority
+  - tests proving diagnostics expose component evidence from representative combinations without requiring every card or wrapper/body combination
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-017C packet before implementation
+  - stay within allowed_touch_points
+  - no current generated support may be lost
+  - do not add runtime behavior, runtime capability records, shared schema authority, fixture support, or new parser coverage
+  - fail closed if ID migration changes support status
+ambiguity_policy: fail_and_escalate

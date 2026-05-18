@@ -55,6 +55,36 @@ describe("generated support runtime capability matrix", () => {
     expect(JSON.stringify(generatedSupportRuntimeCapabilityMatrix)).toBe(
       JSON.stringify(generatedSupportRuntimeCapabilityMatrix),
     );
+    expect(
+      generatedSupportRuntimeCapabilityMatrix.capabilities.every((capability) =>
+        capability.supportedComponentIds.every(
+          (componentId) => componentId.length > 0,
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("exposes CARD-017A shape evidence on runtime capabilities used by generated support", () => {
+    const drawCapability =
+      generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+        (capability) =>
+          capability.id === "effect:draw:self:count:positive-safe-integer",
+      );
+    const drawUpToCapability =
+      generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+        (capability) => capability.id === "drawUpTo:self:chooseQuantity",
+      );
+
+    expect(drawCapability?.supportedComponentIds).toEqual(
+      expect.arrayContaining([
+        "on-play-draw",
+        "when-attacking-draw",
+        "on-play-optional-draw",
+      ]),
+    );
+    expect(drawUpToCapability?.supportedComponentIds).toEqual([
+      "on-play-draw-up-to",
+    ]);
   });
 
   it("exposes the narrow capabilities needed by exact draw parser rules", () => {
