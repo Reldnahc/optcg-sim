@@ -627,39 +627,41 @@ describe("support evaluator", () => {
         "[On Play] Up to 1 of your opponent's Characters cannot block during this turn.",
     },
   ])(
-    "fails closed CARD-014G $expectedRuleId synthetic text until zero-choice runtime capability exists",
+    "evaluates CARD-014G $expectedRuleId synthetic text as playable with ENG-057A zero-choice runtime capability",
     ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
-      const blockedCard = normalizePoneglyphCardDetail({
+      const supportedCard = normalizePoneglyphCardDetail({
         ...loadOp03044Fixture(),
         card_number: "CARD-014G-SYNTHETIC",
         effect: sourceText,
         name: "Synthetic Target Modifier Restriction Candidate",
       });
 
-      const blocked = evaluateGeneratedSupportPlayability({
-        card: blockedCard,
+      const supported = evaluateGeneratedSupportPlayability({
+        card: supportedCard,
         cardDataVersion: "2026-05-13",
         effectDefinitionsVersion: "generated-support-v1",
-        expectedBehaviorHash: blockedCard.behaviorHash,
-        expectedSourceTextHash: blockedCard.sourceTextHash,
+        expectedBehaviorHash: supportedCard.behaviorHash,
+        expectedSourceTextHash: supportedCard.sourceTextHash,
         rulesVersion: "generated-support-v1",
         validateEffectDefinition,
       });
 
-      expect(blocked).toMatchObject({
-        blockers: [
-          {
-            capabilityId: expectedCapabilityId,
-            code: "missing-runtime-capability",
-          },
-        ],
-        missingCapabilityIds: [expectedCapabilityId],
+      expect(supported).toMatchObject({
+        blockers: [],
+        missingCapabilityIds: [],
         parseStatus: "complete",
         parserRuleIds: [expectedRuleId],
-        playable: false,
-        status: "unsupported",
+        playable: true,
+        status: "supported",
       });
-      expect(blocked.blockers[0]?.component).toEqual(expect.any(String));
+      expect(supported.capabilityEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            capabilityId: expectedCapabilityId,
+            parserRuleId: expectedRuleId,
+          }),
+        ]),
+      );
     },
   );
 
@@ -683,16 +685,10 @@ describe("support evaluator", () => {
     });
 
     expect(evaluation).toMatchObject({
-      blockers: [
-        {
-          capabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
-          code: "missing-runtime-capability",
-          component: "on-play-modify-power-choose-this-turn",
-        },
-      ],
+      blockers: [],
       parserRuleIds: ["exact:on-play:modify-power:choose:this-turn"],
-      playable: false,
-      status: "unsupported",
+      playable: true,
+      status: "supported",
     });
     expect(evaluation.capabilityEvidence).toEqual(
       expect.not.arrayContaining([

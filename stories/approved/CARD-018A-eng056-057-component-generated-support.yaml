@@ -1,0 +1,159 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-018A
+epic_id: CARD-018
+title: ENG-056 and ENG-057 component generated support
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Connect the completed ENG-056 trigger and On K.O. reusable queued-body
+  runtime, plus the completed ENG-057 zero-choice continuous choose runtime, to
+  the cards-side component generated-support layer without adding engine
+  behavior, shared schema authority, or card-specific exact templates.
+story_boundary: >
+  Own only packages/cards parser/component evidence, runtime capability matrix,
+  generated-support indexing, diagnostics, and tests needed to make currently
+  runtime-supported ENG-056 and ENG-057 shapes available through componentized
+  generated support. Do not add engine behavior, new effect primitives, shared
+  contracts/schema authority, source fixture support, or real-card hash changes.
+allowed_touch_points:
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/card014g-composed-parser.ts
+  - packages/cards/src/card014g-generated-support.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - agent-packets/CARD-018A.md
+  - stories/generated/CARD-018*.yaml
+  - stories/approved/CARD-018*.yaml
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 02-engine-mechanics.s021
+  - 02-engine-mechanics.s023
+  - 02-engine-mechanics.s041
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s008
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s014
+  - 04-effect-runtime.s015
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s021
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-017C
+  - ENG-056A
+  - ENG-056B
+  - ENG-057A
+scope:
+  - inventory current component evidence and runtime capability records for ENG-056 life Trigger, ENG-056 On K.O., and ENG-057 zero-choice continuous choose support before implementation
+  - add cards-side component/runtime capability evidence for life Trigger wrappers only where ENG-056A can truthfully run the parsed body from life-trigger no-zone source presence
+  - add cards-side component/runtime capability evidence for On K.O. wrappers only where ENG-056B can truthfully run the parsed body from supported K.O. source-presence policy
+  - explicitly preserve the ENG-056B-reviewed rejection of generic continuous On K.O. shapes, including continuous self-target effects and whileSourceOnField duration/source-presence shapes
+  - limit On K.O. support to body and source-policy combinations backed by reviewed ENG-056B evidence, including existing supported On K.O. draw behavior and reviewed drawUpTo pause/resume behavior, rather than every component-supported queued body
+  - add cards-side component/runtime capability evidence for zero-choice choose continuous modifyPower, cannotAttack, and cannotBlock shapes now supported by ENG-057A
+  - allow existing reusable body parser components to compose with Trigger and On K.O. wrappers only when wrapper evidence, body evidence, source-presence evidence, schema validation, runtime capability evidence, generated-support metadata, and source integrity all pass
+  - support `up to N` as existing cardinality/choice component grammar for ENG-057A zero-choice continuous modifier and restriction shapes, not as exact text templates
+  - keep self/all continuous templates supported where their existing runtime capability evidence remains truthful
+  - keep hand-selection grammar separate from public field choose-target grammar
+  - preserve parser/report/probe diagnostics from CARD-015 through CARD-017, including component evidence IDs and missing-layer reporting
+  - use representative wrapper/body and zero-choice composition tests rather than testing every body with every wrapper or every card
+  - preserve all existing CARD-008 through CARD-017 generated-support behavior and component IDs unless a migration is explicitly required and regression-tested
+non_scope:
+  - engine runtime behavior
+  - new runtime capability truth not backed by completed ENG work
+  - new effect primitives
+  - shared TYP/contracts/schema changes
+  - real-card fixture support, fixture capture, fixture recapture, source hash updates, behavior hash updates, overlays, or supported-card manifest changes
+  - broad trigger families beyond life Trigger and On K.O.
+  - event-card or stage-card play support beyond already supported generated-support bodies
+  - replacement generalization
+  - generic continuous On K.O. support, continuous self-target On K.O. support, or On K.O. whileSourceOnField support
+  - disappeared selected-target no-op behavior for nonzero choose selections
+  - server, client, API, UI, database, replay, WebSocket, Redis, or live Poneglyph work
+card_source_integrity:
+  - this story must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or manually reviewed source evidence
+  - real-card generated support may become playable only when existing sourceTextHash, behaviorHash, source-integrity, generated-support metadata, review, and test gates already pass
+  - printed card text snippets may be used as parser/support probes only; do not mark a real card playable unless every existing generated-support gate passes
+engine_capability_preflight:
+  - no new engine capability is introduced by this story
+  - ENG-056A is the runtime authority for life Trigger reusable queued-body activation
+  - ENG-056B is the runtime authority for On K.O. reusable queued-body queueing and resolution
+  - ENG-056B does not authorize generic continuous On K.O. support, continuous self-target On K.O. support, or On K.O. whileSourceOnField support
+  - ENG-057A is the runtime authority for zero selected targets on choose continuous modifyPower, cannotAttack, and cannotBlock
+  - generated support must fail closed if any wrapper/body/source-policy/target/duration/modifier/restriction component lacks current runtime capability evidence
+  - if story implementation finds that a desired card-layer shape still needs new engine behavior, shared schema authority, source evidence, or fixture metadata, record the blocker and do not hide it inside CARD-018A
+acceptance_criteria:
+  - life Trigger parser/component support can compose with currently supported trigger-compatible generated-support bodies without exact wrapper/body template IDs
+  - On K.O. parser/component support can compose with currently supported onKO-compatible generated-support bodies without exact wrapper/body template IDs
+  - On K.O. generic continuous, continuous self-target, and whileSourceOnField shapes remain unsupported with clear component or missing-layer diagnostics
+  - zero-choice `up to 1` choose-target continuous modifyPower, cannotAttack, and cannotBlock generated-support shapes pass when ENG-057A-backed runtime capability evidence is present
+  - the same zero-choice shapes report missing runtime capability and remain unsupported when that evidence is absent
+  - malformed, ambiguous, stale, unsupported-wrapper, unsupported-body, unsupported-source-policy, unsupported-target, unsupported-duration, unsupported-modifier, unsupported-restriction, schema-invalid, source-invalid, metadata-invalid, untested, and unreviewed shapes remain unsupported
+  - existing supported generated-support shapes remain supported
+  - existing unsupported generated-support shapes remain unsupported except for the ENG-056 and ENG-057 shapes intentionally enabled by this story
+  - support-probe and generated-support report diagnostics name the missing component or layer when support fails
+  - tests prove representative composition and negative gates without requiring every body to be paired with every wrapper
+required_tests:
+  - story-review for CARD-018A before approval handoff
+  - runtime capability inventory test proving ENG-056 and ENG-057 component evidence is backed by completed runtime stories and does not claim unsupported runtime behavior
+  - parser/component tests for life Trigger wrapper composition with at least one existing supported no-choice body and one existing supported decision-pausing body
+  - parser/component tests for On K.O. wrapper composition with at least one existing supported no-choice body and one existing supported decision-pausing body
+  - generated-support tests proving Trigger and On K.O. wrapper/body support uses component evidence rather than full-template parser rule identity
+  - generated-support tests proving unsupported wrapper/body/source-policy combinations fail closed with component or missing-layer diagnostics
+  - generated-support tests proving generic continuous On K.O., continuous self-target On K.O., and On K.O. whileSourceOnField shapes remain unsupported
+  - generated-support tests for zero-choice choose continuous modifyPower, cannotAttack, and cannotBlock with `up to 1` target cardinality
+  - missing runtime capability tests for zero-choice choose continuous modifier/restriction support
+  - regression tests proving existing self/all continuous modifier and restriction support remains unchanged
+  - regression tests proving current CARD-008 through CARD-017 supported and unsupported behavior remains compatible
+  - support-probe and generated-support report tests proving Trigger, On K.O., and zero-choice failures surface component/layer diagnostics
+  - stale-hash, invalid-dsl-schema, and metadata/review/test gate regressions proving those deeper blockers keep their priority and identity
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - approve CARD-018A only after distinct durable parent and child story-review artifacts exist for the CARD-018 story set
+  - generate and activate the CARD-018A packet before implementation
+  - stay within allowed_touch_points
+  - do not add engine runtime behavior, shared schema authority, fixture support, source hash updates, or card-specific exact templates
+  - use component evidence and representative composition tests rather than wrapper/body cartesian-product testing
+  - fail closed if runtime capability, schema authority, source integrity, metadata, or review/test evidence is missing
+ambiguity_policy: fail_and_escalate

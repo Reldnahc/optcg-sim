@@ -239,6 +239,8 @@ describe("generated support parser result contracts", () => {
       "exact:keyword:double-attack:standalone",
       "exact:keyword:rush-character:standalone",
       "exact:keyword:rush:standalone",
+      "exact:on-ko:draw-n:self",
+      "exact:on-ko:draw-up-to-n:self",
       "exact:on-play:cannot-attack:all:this-turn",
       "exact:on-play:cannot-attack:choose:this-turn",
       "exact:on-play:cannot-attack:self:this-turn",
@@ -257,6 +259,8 @@ describe("generated support parser result contracts", () => {
       "exact:on-play:select-1-opponent-character-target",
       "exact:on-play:select-1-opponent-character-then-ko-that-character",
       "exact:on-play:trash-2-from-hand:draw-1:self",
+      "exact:trigger:draw-n:self",
+      "exact:trigger:draw-up-to-n:self",
       "exact:when-attacking:draw-n:self",
       "exact:when-attacking:draw-n:trash-m:hand:self",
       "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
@@ -264,33 +268,31 @@ describe("generated support parser result contracts", () => {
     ]);
   });
 
-  it("keeps CARD-014G choose templates blocked on zero-choice runtime capabilities", () => {
-    const blockedRules = [
+  it("marks CARD-014G choose templates support-ready with zero-choice runtime capabilities", () => {
+    const supportedRules = [
       {
-        missingCapabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
+        capabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
         parserRuleId: "exact:on-play:modify-power:choose:this-turn",
       },
       {
-        missingCapabilityId: "cannotAttack:choose:thisTurn:zeroChoiceBranch",
+        capabilityId: "cannotAttack:choose:thisTurn:zeroChoiceBranch",
         parserRuleId: "exact:on-play:cannot-attack:choose:this-turn",
       },
       {
-        missingCapabilityId: "cannotBlock:choose:thisTurn:zeroChoiceBranch",
+        capabilityId: "cannotBlock:choose:thisTurn:zeroChoiceBranch",
         parserRuleId: "exact:on-play:cannot-block:choose:this-turn",
       },
     ] as const;
 
-    for (const blockedRule of blockedRules) {
+    for (const supportedRule of supportedRules) {
       const snapshot = buildGeneratedSupportComponentEvidenceSnapshot({
-        parserRuleId: blockedRule.parserRuleId,
+        parserRuleId: supportedRule.parserRuleId,
       });
-      expect(snapshot.isSupportReady).toBe(false);
-      expect(snapshot.missingRequirements).toContain("runtime-capability-gate");
-      expect(snapshot.missingRuntimeCapabilityIds).toContain(
-        blockedRule.missingCapabilityId,
-      );
+      expect(snapshot.isSupportReady).toBe(true);
+      expect(snapshot.missingRequirements).toEqual([]);
+      expect(snapshot.missingRuntimeCapabilityIds).toEqual([]);
       expect(snapshot.runtimeCapabilityIds).toContain(
-        blockedRule.missingCapabilityId,
+        supportedRule.capabilityId,
       );
     }
   });

@@ -22,7 +22,10 @@ import { listComponentEvidenceIdsForParserRuleIds } from "./generated-support-ty
 export type SupportedTriggerWrapperParse = {
   readonly bodyText: string;
   readonly prefix: string;
-  readonly trigger: Extract<Trigger, { type: "onPlay" | "whenAttacking" }>;
+  readonly trigger: Extract<
+    Trigger,
+    { type: "onPlay" | "onKO" | "trigger" | "whenAttacking" }
+  >;
 };
 
 export type OncePerTurnWrapperParse = {
@@ -72,6 +75,20 @@ export type BooleanConnectorCandidate = {
 export type DrawInstructionParse = {
   readonly count: number;
   readonly mode: "exact" | "upTo";
+};
+
+export type TriggeredDrawClauseOptions = {
+  readonly cardId: CardId;
+  readonly effectIdPrefix: string;
+  readonly mode: DrawInstructionParse["mode"];
+  readonly parserRuleId: string;
+  readonly prefix: SupportedTriggerWrapperParse["prefix"];
+  readonly sourcePresencePolicy?: EffectBlock["sourcePresencePolicy"];
+  readonly sourceText: string;
+  readonly trigger: Extract<
+    Trigger,
+    { type: "onKO" | "onPlay" | "trigger" | "whenAttacking" }
+  >;
 };
 
 export type TrashFromHandInstructionParse = {
@@ -143,6 +160,8 @@ export function parseSupportedTriggerWrapper(
 ): SupportedTriggerWrapperParse | undefined {
   const supportedTriggers = [
     { prefix: "[On Play] ", trigger: { type: "onPlay" } },
+    { prefix: "[On K.O.] ", trigger: { type: "onKO" } },
+    { prefix: "[Trigger] ", trigger: { type: "trigger" } },
     { prefix: "[When Attacking] ", trigger: { type: "whenAttacking" } },
   ] as const;
 
@@ -311,6 +330,51 @@ export function parseDrawInstructionBody(
   return {
     count,
     mode: match[1] === "Draw up to" ? "upTo" : "exact",
+  };
+}
+
+export function parseTriggeredDrawClause(
+  options: TriggeredDrawClauseOptions,
+): ReusableComposedParserClause | undefined {
+  const parsed = parseTriggeredDrawInstruction(options);
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return createTriggeredDrawClauseWithCount(options, parsed.count);
+}
+
+function parseTriggeredDrawInstruction(
+  options: TriggeredDrawClauseOptions,
+): DrawInstructionParse | undefined {
+  const wrapper = parseSupportedTriggerWrapper(options.sourceText);
+  if (wrapper === undefined || wrapper.prefix !== options.prefix) {
+    return undefined;
+  }
+
+  const parsed = parseDrawInstructionBody(wrapper.bodyText);
+  return parsed?.mode === options.mode ? parsed : undefined;
+}
+
+function createTriggeredDrawClauseWithCount(
+  options: TriggeredDrawClauseOptions,
+  count: number,
+): ReusableComposedParserClause {
+  const effectType = options.mode === "upTo" ? "drawUpTo" : "draw";
+  const effectIdMiddle = options.mode === "upTo" ? "draw-up-to" : "draw";
+
+  return {
+    effectBlock: {
+      category: "auto",
+      effect: { count, player: "self", type: effectType },
+      id: toEffectId(
+        `${String(options.cardId)}:${options.effectIdPrefix}-${effectIdMiddle}-${String(count)}`,
+      ),
+      sourcePresencePolicy:
+        options.sourcePresencePolicy ?? "mustRemainInSameZone",
+      trigger: options.trigger,
+    },
+    parserRuleId: options.parserRuleId,
   };
 }
 

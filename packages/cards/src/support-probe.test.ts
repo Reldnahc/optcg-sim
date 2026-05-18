@@ -602,6 +602,38 @@ describe("support probe", () => {
     expect(text).not.toContain("condition conjunction: or");
   });
 
+  it("prints parser-layer blockers for unsupported On K.O. continuous generated-support text", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-018A-PROBE-ON-KO-CONTINUOUS"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-018A-PROBE-ON-KO-CONTINUOUS",
+          effect:
+            "[On K.O.] This Character gets +1000 power while this card is on the field.",
+          name: "On KO Continuous Probe Candidate",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("unparsed-span");
+    expect(text).toContain("layer: parser");
+    expect(text).toContain(
+      'span: "[On K.O.] This Character gets +1000 power while this card is on the field."',
+    );
+  });
+
   it("prints metadata layer for empty-effect metadata precondition blockers", async () => {
     const detail = await loadOp03044Fixture();
     const output: string[] = [];

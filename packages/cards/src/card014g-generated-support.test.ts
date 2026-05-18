@@ -479,7 +479,7 @@ describe("CARD-014G generated composed support", () => {
         "[On Play] Up to 1 of your opponent's Characters cannot block during this turn.",
     },
   ])(
-    "fails closed generated support for CARD-014G exact template $expectedRuleId until zero-choice runtime exists",
+    "supports CARD-014G exact template $expectedRuleId when zero-choice runtime exists",
     ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
       const index = buildGeneratedSupportIndex({
         cards: [{ ...baseCard, sourceText }],
@@ -487,21 +487,21 @@ describe("CARD-014G generated composed support", () => {
       });
 
       expect(index.entries[0]).toMatchObject({
-        blockers: [
-          {
-            capabilityId: expectedCapabilityId,
-            code: "missing-runtime-capability",
-          },
-        ],
-        missingCapabilityIds: [expectedCapabilityId],
+        blockers: [],
+        missingCapabilityIds: [],
         parseStatus: "complete",
         parserRuleIds: [expectedRuleId],
-        status: "unsupported",
+        status: "supported",
       });
-      expect(index.entries[0]?.blockers[0]?.component).toEqual(
-        expect.any(String),
+      expect(index.entries[0]?.capabilityEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            capabilityId: expectedCapabilityId,
+            parserRuleId: expectedRuleId,
+          }),
+        ]),
       );
-      expect(index.effectDefinitions).toEqual({});
+      expect(index.effectDefinitions).not.toEqual({});
     },
   );
 
@@ -553,15 +553,9 @@ describe("CARD-014G generated composed support", () => {
     });
 
     expect(index.entries[0]).toMatchObject({
-      blockers: [
-        {
-          capabilityId: "modifyPower:choose:thisTurn:zeroChoiceBranch",
-          code: "missing-runtime-capability",
-          component: "on-play-modify-power-choose-this-turn",
-        },
-      ],
+      blockers: [],
       parserRuleIds: ["exact:on-play:modify-power:choose:this-turn"],
-      status: "unsupported",
+      status: "supported",
     });
     expect(index.entries[0]?.capabilityEvidence).toEqual(
       expect.not.arrayContaining([

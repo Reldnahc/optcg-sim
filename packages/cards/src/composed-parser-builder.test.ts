@@ -42,6 +42,16 @@ describe("composed parser builder scaffold", () => {
       expectedTrigger: { type: "whenAttacking" },
       sourceText: "[When Attacking] [Once Per Turn] Draw 2 cards.",
     },
+    {
+      expectedBody: "Draw 1 card.",
+      expectedTrigger: { type: "trigger" },
+      sourceText: "[Trigger] Draw 1 card.",
+    },
+    {
+      expectedBody: "Draw 1 card.",
+      expectedTrigger: { type: "onKO" },
+      sourceText: "[On K.O.] Draw 1 card.",
+    },
   ])(
     "parses existing supported trigger wrapper without broadening trigger grammar ($sourceText)",
     ({ expectedBody, expectedTrigger, sourceText }) => {
@@ -53,13 +63,12 @@ describe("composed parser builder scaffold", () => {
     },
   );
 
-  it.each([
-    "[On K.O.] Draw 1 card.",
-    "[Activate: Main] Draw 1 card.",
-    "Draw 1 card.",
-  ])("rejects unsupported trigger wrapper %s", (sourceText) => {
-    expect(parseSupportedTriggerWrapper(sourceText)).toBeUndefined();
-  });
+  it.each(["[Activate: Main] Draw 1 card.", "Draw 1 card."])(
+    "rejects unsupported trigger wrapper %s",
+    (sourceText) => {
+      expect(parseSupportedTriggerWrapper(sourceText)).toBeUndefined();
+    },
+  );
 
   it("parses the exact once-per-turn wrapper after a supported trigger", () => {
     expect(parseOncePerTurnWrapper("[Once Per Turn] Draw 2 cards.")).toEqual({

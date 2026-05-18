@@ -740,7 +740,6 @@ describe("certified card text parser", () => {
     "[On Play] Trash 1 card from your hand. Draw 1 card.",
     "[On Play] Trash 2 cards from your hand. Draw 2 cards.",
     "[When Attacking] [Once Per Turn] Trash 1 card from your hand and draw 2 cards.",
-    "[On K.O.] Draw 2 cards and trash 1 card from your hand.",
     "[When Attacking] You may draw 2 cards and trash 1 card from your hand.",
   ])(
     "fails closed on unsupported draw-then-trash wrappers/order/residue (%s)",
