@@ -17,7 +17,6 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { zonesEqual } from "./action-state.js";
-import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
 import {
   isSupportedEffectResolvedCustomDrawEffect,
   isSupportedNoChoiceOnKODrawEffect,
@@ -68,14 +67,6 @@ const isSupportedOnKODrawUpToEffect = (
   effect.effect.count >= 0 &&
   effect.effect.player === "self";
 
-const isSupportedOnKOContinuousNoChoiceEffect = (
-  effect: EffectDefinition["effects"][number],
-): boolean =>
-  isSupportedOnKOQueuedBodyEnvelope(effect) &&
-  effect.optional !== true &&
-  isSupportedContinuousQueueEffect(effect.effect) &&
-  effect.effect.target.type !== "choose";
-
 const isSupportedOnKOCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
@@ -84,8 +75,7 @@ const isSupportedOnKOCompatibleQueuedEffect = (
 } =>
   isSupportedNoChoiceOnKODrawEffect(effect) ||
   isSupportedOptionalNoChoiceOnKODrawEffect(effect) ||
-  isSupportedOnKODrawUpToEffect(effect) ||
-  isSupportedOnKOContinuousNoChoiceEffect(effect);
+  isSupportedOnKODrawUpToEffect(effect);
 
 export const createKOTriggerQueueing = (
   dependencies: EffectRuntimeTriggerQueueingDependencies,

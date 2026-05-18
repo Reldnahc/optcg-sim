@@ -395,19 +395,35 @@ test("simultaneous same-player On K.O. triggers share one timing window and choo
   );
 });
 
-test("detects supported On K.O. continuous no-choice bodies beyond draw-only", () => {
-  const { state, source, trashedSource, definition, events } =
-    koQueueingState();
-  const onKOEffect = must(definition.effects[0], "onKO effect");
-  const continuousEffect: EffectDefinition["effects"][number] = {
-    ...onKOEffect,
-    id: `${String(onKOEffect.id)}:modify-power-self` as EffectDefinition["effects"][number]["id"],
+test.each([
+  {
+    name: "self target",
     effect: {
       type: "modifyPower",
       target: { type: "self" },
       value: 1000,
       duration: { type: "thisTurn" },
     },
+  },
+  {
+    name: "source-dependent duration",
+    effect: {
+      type: "modifyPower",
+      target: { type: "all", zone: "characterArea", player: "opponent" },
+      value: 1000,
+      duration: { type: "whileSourceOnField" },
+    },
+  },
+] satisfies Array<{
+  name: string;
+  effect: EffectDefinition["effects"][number]["effect"];
+}>)("rejects On K.O. continuous $name before queueing", ({ effect }) => {
+  const { state, definition, events } = koQueueingState();
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  const continuousEffect: EffectDefinition["effects"][number] = {
+    ...onKOEffect,
+    id: `${String(onKOEffect.id)}:continuous` as EffectDefinition["effects"][number]["id"],
+    effect,
   };
   state.cardManifest.effectDefinitions = {
     ...state.cardManifest.effectDefinitions,
@@ -420,29 +436,16 @@ test("detects supported On K.O. continuous no-choice bodies beyond draw-only", (
 
   const result = detectBattleKOTriggerCandidates(state, events);
 
-  assert.equal(result.ok, true);
-  assert.deepEqual(result.candidates, [
-    {
-      effectBlockId: continuousEffect.id,
-      controllerId: p2,
-      source: {
-        instanceId: source.instanceId,
-        cardId: source.cardId,
-        playerId: p2,
-        zone: trashedSource.zone,
-      },
-      sourceSnapshot: {
-        ...toSourceSnapshot(trashedSource, p2, p2),
-        power: 3000,
-      },
-      triggerEventId: events[0]?.id,
-      sourcePresencePolicy: "resolveFromDestinationZone",
-      causedBy: {
-        type: "ruleProcess",
-        name: "effectRuntime:onKOTriggerCandidateDetection",
+  assert.deepEqual(result, {
+    ok: false,
+    error: {
+      type: "effectRuntimeError",
+      effectId: "on-ko-trigger-candidate-detection",
+      details: {
+        reason: "unsupported-on-ko-definition",
       },
     },
-  ]);
+  });
   assert.deepEqual(state, before);
 });
 
