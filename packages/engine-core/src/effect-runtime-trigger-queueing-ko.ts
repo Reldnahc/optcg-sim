@@ -1,4 +1,6 @@
 import type {
+  Effect,
+  EffectDefinition,
   EffectQueueEntry,
   EngineError,
   EngineEvent,
@@ -15,6 +17,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { zonesEqual } from "./action-state.js";
+import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
 import {
   isSupportedEffectResolvedCustomDrawEffect,
   isSupportedNoChoiceOnKODrawEffect,
@@ -34,6 +37,55 @@ import {
   toSnapshot,
   zoneRefFromUnknown,
 } from "./effect-runtime-trigger-source-lookup.js";
+
+const isSupportedOnKOSourcePresencePolicy = (
+  policy: EffectDefinition["effects"][number]["sourcePresencePolicy"],
+): policy is EffectQueueEntry["sourcePresencePolicy"] =>
+  policy === "resolveFromDestinationZone" ||
+  policy === "resolveFromLastKnownInformation";
+
+const isSupportedOnKOQueuedBodyEnvelope = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+} =>
+  effect.trigger.type === "onKO" &&
+  effect.category === "auto" &&
+  isSupportedOnKOSourcePresencePolicy(effect.sourcePresencePolicy) &&
+  effect.cost === undefined &&
+  effect.condition === undefined &&
+  effect.conditionTiming === undefined &&
+  effect.failurePolicy === undefined;
+
+const isSupportedOnKODrawUpToEffect = (
+  effect: EffectDefinition["effects"][number],
+): boolean =>
+  isSupportedOnKOQueuedBodyEnvelope(effect) &&
+  effect.optional !== true &&
+  effect.oncePerTurn !== true &&
+  effect.effect.type === "drawUpTo" &&
+  Number.isInteger(effect.effect.count) &&
+  effect.effect.count >= 0 &&
+  effect.effect.player === "self";
+
+const isSupportedOnKOContinuousNoChoiceEffect = (
+  effect: EffectDefinition["effects"][number],
+): boolean =>
+  isSupportedOnKOQueuedBodyEnvelope(effect) &&
+  effect.optional !== true &&
+  isSupportedContinuousQueueEffect(effect.effect) &&
+  effect.effect.target.type !== "choose";
+
+const isSupportedOnKOCompatibleQueuedEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Effect;
+} =>
+  isSupportedNoChoiceOnKODrawEffect(effect) ||
+  isSupportedOptionalNoChoiceOnKODrawEffect(effect) ||
+  isSupportedOnKODrawUpToEffect(effect) ||
+  isSupportedOnKOContinuousNoChoiceEffect(effect);
 
 export const createKOTriggerQueueing = (
   dependencies: EffectRuntimeTriggerQueueingDependencies,
@@ -130,10 +182,14 @@ export const createKOTriggerQueueing = (
       if (onKOEffects.length === 0) {
         continue;
       }
-      const matching = onKOEffects.filter(
-        (effect) =>
-          isSupportedNoChoiceOnKODrawEffect(effect) ||
-          isSupportedOptionalNoChoiceOnKODrawEffect(effect),
+      if (onKOEffects.length !== 1) {
+        return {
+          ok: false,
+          error: onKOTriggerCandidateDetectionError("multiple-on-ko-effects"),
+        };
+      }
+      const matching = onKOEffects.filter((effect) =>
+        isSupportedOnKOCompatibleQueuedEffect(effect),
       );
       if (matching.length === 0 || lookup.definition.effects.length !== 1) {
         return {
@@ -199,6 +255,12 @@ export const createKOTriggerQueueing = (
     }
 
     const appended: EffectQueueEntry[] = [];
+    const firstCandidate = detected.candidates[0];
+    if (firstCandidate === undefined) {
+      return { ok: true, state };
+    }
+    const timingWindowId =
+      `timing-window:${String(firstCandidate.triggerEventId)}:onKO` as EffectQueueEntry["timingWindowId"];
     for (const candidate of detected.candidates) {
       const triggerEvent = events.find(
         (event) => event.id === candidate.triggerEventId,
@@ -219,8 +281,7 @@ export const createKOTriggerQueueing = (
           candidate.effectBlockId,
         )}` as EffectQueueEntry["id"],
         state: "pending",
-        timingWindowId:
-          `timing-window:${String(candidate.triggerEventId)}:onKO` as EffectQueueEntry["timingWindowId"],
+        timingWindowId,
         generation: 0,
         controllerId: candidate.controllerId,
         source: candidate.source,

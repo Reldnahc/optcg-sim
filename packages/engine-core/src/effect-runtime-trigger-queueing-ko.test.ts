@@ -4,6 +4,7 @@ import { test } from "vitest";
 import type {
   CardInstance,
   EffectDefinition,
+  EffectQueueEntry,
   EngineEvent,
   PlayerId,
 } from "@optcg/types";
@@ -19,8 +20,11 @@ import {
 } from "./action-test-fixtures.js";
 import {
   detectBattleKOTriggerCandidates,
+  processEffectRuntime,
   queueBattleKOTriggers,
 } from "./effect-runtime.js";
+import { applyAction } from "./index.js";
+import { hashCanonicalStateValue } from "./canonical-state.js";
 
 const withCardInZone = (params: {
   state: ReturnType<typeof createActiveState>;
@@ -278,6 +282,304 @@ test("queues supported On K.O. candidates with deterministic queue metadata and 
   });
 });
 
+test("simultaneous same-player On K.O. triggers share one timing window and choose order", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p2State = must(state.players[p2], "p2");
+  const firstSource = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "first K.O. source"),
+    zone: "characterArea",
+    index: 0,
+  });
+  const secondSource = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[1], "second K.O. source"),
+    zone: "characterArea",
+    index: 1,
+  });
+  p2State.hand = p2State.hand.slice(2).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const firstDefinition = setupOnKODefinition(
+    state,
+    firstSource,
+    "def-first-on-ko",
+  );
+  const secondDefinition = setupOnKODefinition(
+    state,
+    secondSource,
+    "def-second-on-ko",
+  );
+  const firstTrashed: CardInstance = {
+    ...firstSource,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+  };
+  const secondTrashed: CardInstance = {
+    ...secondSource,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 1 },
+  };
+  p2State.characters = [];
+  p2State.trash = [firstTrashed, secondTrashed];
+  const firstEvents = appendBattleKOEvents(state, firstSource);
+  const secondEvents = appendBattleKOEvents(state, secondSource).map(
+    (event, index) => ({
+      ...event,
+      id: toEngineEventId(
+        `event:${String(state.seq)}:${String(index + 3)}:${event.type}`,
+      ),
+      seq: event.seq + 2,
+      ...(event.type === "cardMoved"
+        ? {
+            payload: {
+              ...event.payload,
+              to: {
+                zone: "trash" as const,
+                playerId: p2,
+                slot: "trash" as const,
+                index: 1,
+              },
+            },
+          }
+        : {}),
+    }),
+  );
+  const events: EngineEvent[] = [...firstEvents, ...secondEvents];
+
+  const queued = queueBattleKOTriggers(state, state, events);
+
+  assert.equal(queued.ok, true);
+  const firstKOEvent = must(firstEvents[0], "first K.O. event");
+  const secondKOEvent = must(secondEvents[0], "second K.O. event");
+  const expectedTimingWindowId = `timing-window:${String(
+    firstKOEvent.id,
+  )}:onKO`;
+  assert.deepEqual(
+    queued.state.effectQueue.map((entry) => ({
+      id: entry.id,
+      timingWindowId: entry.timingWindowId,
+      effectBlockId: entry.effectBlockId,
+      orderingGroup: entry.orderingGroup,
+    })),
+    [
+      {
+        id: `queue-entry:${String(firstKOEvent.id)}:${String(
+          must(firstDefinition.effects[0], "first effect").id,
+        )}`,
+        timingWindowId: expectedTimingWindowId,
+        effectBlockId: must(firstDefinition.effects[0], "first effect").id,
+        orderingGroup: "nonTurnPlayer",
+      },
+      {
+        id: `queue-entry:${String(secondKOEvent.id)}:${String(
+          must(secondDefinition.effects[0], "second effect").id,
+        )}`,
+        timingWindowId: expectedTimingWindowId,
+        effectBlockId: must(secondDefinition.effects[0], "second effect").id,
+        orderingGroup: "nonTurnPlayer",
+      },
+    ],
+  );
+
+  const ordered = processEffectRuntime(queued.state);
+
+  assert.equal(ordered.errors, undefined);
+  const decision = must(ordered.state.pendingDecision, "order decision");
+  assert.equal(decision.type, "chooseTriggerOrder");
+  assert.deepEqual(
+    decision.triggerIds,
+    queued.state.effectQueue.map((entry) => entry.id),
+  );
+});
+
+test("detects supported On K.O. continuous no-choice bodies beyond draw-only", () => {
+  const { state, source, trashedSource, definition, events } =
+    koQueueingState();
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  const continuousEffect: EffectDefinition["effects"][number] = {
+    ...onKOEffect,
+    id: `${String(onKOEffect.id)}:modify-power-self` as EffectDefinition["effects"][number]["id"],
+    effect: {
+      type: "modifyPower",
+      target: { type: "self" },
+      value: 1000,
+      duration: { type: "thisTurn" },
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [continuousEffect],
+    },
+  };
+  const before = structuredClone(state);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.candidates, [
+    {
+      effectBlockId: continuousEffect.id,
+      controllerId: p2,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p2,
+        zone: trashedSource.zone,
+      },
+      sourceSnapshot: {
+        ...toSourceSnapshot(trashedSource, p2, p2),
+        power: 3000,
+      },
+      triggerEventId: events[0]?.id,
+      sourcePresencePolicy: "resolveFromDestinationZone",
+      causedBy: {
+        type: "ruleProcess",
+        name: "effectRuntime:onKOTriggerCandidateDetection",
+      },
+    },
+  ]);
+  assert.deepEqual(state, before);
+});
+
+const onKODrawUpToQueueState = (): {
+  queuedState: ReturnType<typeof createActiveState>;
+  queuedEvents: EngineEvent[];
+  effectBlock: EffectDefinition["effects"][number];
+  triggerEvent: EngineEvent;
+  queuedEntry: EffectQueueEntry;
+} => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p2State = must(state.players[p2], "p2");
+  const sourceCard = must(p2State.hand[0], "K.O. drawUpTo source");
+  const drawCard = must(p2State.hand[1], "drawUpTo deck card");
+  const deckBuffer = must(p2State.hand[2], "drawUpTo deck buffer");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: sourceCard,
+    zone: "characterArea",
+  });
+  p2State.deck = [
+    {
+      ...drawCard,
+      zone: { zone: "deck", playerId: p2, slot: "deck", index: 0 },
+    },
+    {
+      ...deckBuffer,
+      zone: { zone: "deck", playerId: p2, slot: "deck", index: 1 },
+    },
+  ];
+  p2State.hand = p2State.hand.slice(3).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const definition = setupOnKODefinition(state, source);
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  const drawUpToEffect: EffectDefinition["effects"][number] = {
+    ...onKOEffect,
+    id: `${String(onKOEffect.id)}:draw-up-to` as EffectDefinition["effects"][number]["id"],
+    effect: { type: "drawUpTo", count: 2, player: "self" },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [drawUpToEffect],
+    },
+  };
+  const trashedSource: CardInstance = {
+    ...source,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+  };
+  p2State.characters = [];
+  p2State.trash = [trashedSource];
+  const queuedEvents = [...appendBattleKOEvents(state, source)];
+  const queued = queueBattleKOTriggers(state, state, queuedEvents);
+  assert.equal(queued.ok, true);
+  return {
+    queuedState: queued.state,
+    queuedEvents,
+    effectBlock: drawUpToEffect,
+    triggerEvent: must(queuedEvents[0], "K.O. event"),
+    queuedEntry: must(queued.state.effectQueue[0], "queued entry"),
+  };
+};
+
+test("On K.O. drawUpTo queues with deterministic metadata, pauses, and resumes stably", () => {
+  const runPaused = () => {
+    const queued = onKODrawUpToQueueState();
+    const paused = processEffectRuntime(queued.queuedState);
+    return { queued, paused };
+  };
+  const first = runPaused();
+  const second = runPaused();
+  const queuedEvent = must(first.queued.queuedEvents[2], "effectQueued event");
+  const decision = must(
+    first.paused.state.pendingDecision,
+    "quantity decision",
+  );
+
+  assert.equal(first.paused.errors, undefined);
+  assert.equal(decision.type, "chooseQuantity");
+  assert.deepEqual(
+    first.paused.events.map((event) => event.type),
+    ["decisionCreated"],
+  );
+  assert.deepEqual(queuedEvent.payload, {
+    queueEntryId: first.queued.queuedEntry.id,
+    timingWindowId: first.queued.queuedEntry.timingWindowId,
+    generation: 0,
+    effectBlockId: first.queued.effectBlock.id,
+    triggerEventId: first.queued.triggerEvent.id,
+    sourcePresencePolicy: "resolveFromDestinationZone",
+    orderingGroup: "nonTurnPlayer",
+  });
+  assert.deepEqual(decision.causedBy, {
+    type: "effect",
+    queueEntryId: first.queued.queuedEntry.id,
+    effectId: first.queued.effectBlock.id,
+  });
+  assert.deepEqual(first.paused.state.effectQueue, [first.queued.queuedEntry]);
+  assert.deepEqual(first.queued.queuedEvents, second.queued.queuedEvents);
+  assert.deepEqual(first.paused.events, second.paused.events);
+  assert.equal(first.paused.stateHash, second.paused.stateHash);
+
+  const resume = (state: typeof first.paused.state) => {
+    const pending = must(state.pendingDecision, "quantity decision");
+    return applyAction(state, {
+      type: "respondToDecision",
+      decisionId: pending.id,
+      response: { type: "chooseQuantity", quantity: 1 },
+    });
+  };
+  const resumed = resume(first.paused.state);
+  const resumedAgain = resume(second.paused.state);
+
+  assert.equal(resumed.errors, undefined);
+  assert.equal(resumed.state.pendingDecision, undefined);
+  assert.deepEqual(resumed.state.effectQueue, []);
+  assert.deepEqual(
+    resumed.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardDrawn",
+      "cardMoved",
+      "cardMoved",
+      "effectResolved",
+      "ruleProcessingChecked",
+    ],
+  );
+  assert.deepEqual(resumed.events, resumedAgain.events);
+  assert.equal(resumed.stateHash, resumedAgain.stateHash);
+  assert.equal(resumed.stateHash, hashCanonicalStateValue(resumed.state));
+});
+
 test("rejects battle K.O. event batches whose move event lacks the K.O.'d card identity", () => {
   const { state, events } = koQueueingState();
   const invalidEvents = events.map((event) => {
@@ -309,6 +611,206 @@ test("rejects battle K.O. event batches whose move event lacks the K.O.'d card i
       effectId: "on-ko-trigger-candidate-detection",
       details: {
         reason: "invalid-ko-event-batch",
+      },
+    },
+  });
+  assert.deepEqual(state, before);
+});
+
+test.each([
+  {
+    name: "cost",
+    mutate: (
+      effect: EffectDefinition["effects"][number],
+    ): EffectDefinition["effects"][number] => ({
+      ...effect,
+      cost: { type: "restDon", count: 1 },
+    }),
+  },
+  {
+    name: "condition",
+    mutate: (
+      effect: EffectDefinition["effects"][number],
+    ): EffectDefinition["effects"][number] => ({
+      ...effect,
+      condition: { type: "yourTurn" },
+    }),
+  },
+  {
+    name: "condition timing",
+    mutate: (
+      effect: EffectDefinition["effects"][number],
+    ): EffectDefinition["effects"][number] => ({
+      ...effect,
+      conditionTiming: "resolution",
+    }),
+  },
+  {
+    name: "targeting body",
+    mutate: (
+      effect: EffectDefinition["effects"][number],
+    ): EffectDefinition["effects"][number] => ({
+      ...effect,
+      effect: {
+        type: "ko",
+        target: {
+          type: "choose",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+          },
+        },
+      },
+    }),
+  },
+  {
+    name: "unsupported source policy",
+    mutate: (
+      effect: EffectDefinition["effects"][number],
+    ): EffectDefinition["effects"][number] => ({
+      ...effect,
+      sourcePresencePolicy: "mustRemainInSameZone",
+    }),
+  },
+])("rejects unsupported On K.O. $name before queueing", ({ mutate }) => {
+  const { state, definition, events } = koQueueingState();
+  const unsupported = mutate(must(definition.effects[0], "onKO effect"));
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [unsupported],
+    },
+  };
+  const before = structuredClone(state);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: {
+      type: "effectRuntimeError",
+      effectId: "on-ko-trigger-candidate-detection",
+      details: {
+        reason: "unsupported-on-ko-definition",
+      },
+    },
+  });
+  assert.deepEqual(state, before);
+});
+
+test("rejects multiple On K.O. effects before queueing", () => {
+  const { state, definition, events } = koQueueingState();
+  const effect = must(definition.effects[0], "onKO effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        effect,
+        {
+          ...effect,
+          id: `${String(effect.id)}:second` as EffectDefinition["effects"][number]["id"],
+        },
+      ],
+    },
+  };
+  const before = structuredClone(state);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: {
+      type: "effectRuntimeError",
+      effectId: "on-ko-trigger-candidate-detection",
+      details: {
+        reason: "multiple-on-ko-effects",
+      },
+    },
+  });
+  assert.deepEqual(state, before);
+});
+
+test.each([
+  {
+    name: "untested support metadata",
+    mutate: (
+      state: ReturnType<typeof createActiveState>,
+      source: CardInstance,
+    ) => {
+      const card = must(
+        state.cardManifest.cards[source.cardId],
+        "support card",
+      );
+      state.cardManifest.cards[source.cardId] = {
+        ...card,
+        support: { ...card.support, tested: false },
+      };
+    },
+    reason: "untested-support-metadata",
+  },
+  {
+    name: "untested definition metadata",
+    mutate: (state: ReturnType<typeof createActiveState>) => {
+      const definition = must(
+        state.cardManifest.effectDefinitions?.["def-on-ko"],
+        "definition",
+      );
+      state.cardManifest.effectDefinitions = {
+        ...state.cardManifest.effectDefinitions,
+        "def-on-ko": {
+          ...definition,
+          metadata: { ...definition.metadata, tested: false },
+        },
+      };
+    },
+    reason: "untested-definition-metadata",
+  },
+  {
+    name: "unreviewed definition metadata",
+    mutate: (state: ReturnType<typeof createActiveState>) => {
+      const definition = must(
+        state.cardManifest.effectDefinitions?.["def-on-ko"],
+        "definition",
+      );
+      state.cardManifest.effectDefinitions = {
+        ...state.cardManifest.effectDefinitions,
+        "def-on-ko": {
+          ...definition,
+          metadata: {
+            sourceTextHash: definition.metadata.sourceTextHash,
+            rulesVersion: definition.metadata.rulesVersion,
+            effectDefinitionsVersion:
+              definition.metadata.effectDefinitionsVersion,
+            tested: definition.metadata.tested,
+          },
+        },
+      };
+    },
+    reason: "unreviewed-definition-metadata",
+  },
+])("rejects On K.O. with $name", ({ mutate, reason }) => {
+  const { state, source, events } = koQueueingState();
+  mutate(state, source);
+  const before = structuredClone(state);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: {
+      type: "effectRuntimeError",
+      effectId: "effect-definition-lookup",
+      details: {
+        reason,
+        supportStatus: "implemented-dsl",
       },
     },
   });
