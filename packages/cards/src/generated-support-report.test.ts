@@ -629,26 +629,25 @@ describe("generated support report", () => {
     });
     const report = buildGeneratedSupportReport(index);
 
-    expect(report.blockers).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          cardId: "CARD-015A-REPORT-CONDITIONAL",
-          code: "unparsed-span",
-          decomposition: {
-            recognizedActionCandidates: ["draw 2 cards"],
-            recognizedSyntaxFragments: ["if-conditional-wrapper"],
-            recognizedTriggerCandidates: ["[On Play]"],
-            reason:
-              "Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
-            unsupportedConditionFragments: [
-              "your Leader is multicolored",
-              "you have 5 or less cards in your hand",
-            ],
-            unsupportedSyntaxFragments: ["condition conjunction: and"],
-          },
-        }),
-      ]),
+    const blocker = report.blockers.find(
+      (candidate) => candidate.cardId === "CARD-015A-REPORT-CONDITIONAL",
     );
+    expect(blocker).toMatchObject({
+      cardId: "CARD-015A-REPORT-CONDITIONAL",
+      code: "unparsed-span",
+    });
+    expect(blocker?.decomposition).toMatchObject({
+      recognizedActionCandidates: ["draw 2 cards"],
+      recognizedSyntaxFragments: ["if-conditional-wrapper"],
+      recognizedTriggerCandidates: ["[On Play]"],
+      reason:
+        "Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
+      unsupportedConditionFragments: [
+        "your Leader is multicolored",
+        "you have 5 or less cards in your hand",
+      ],
+      unsupportedSyntaxFragments: ["condition conjunction: and"],
+    });
     expect(report.unsupportedCardIds).toEqual(["CARD-015A-REPORT-CONDITIONAL"]);
   });
 

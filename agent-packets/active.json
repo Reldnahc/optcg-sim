@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-016A.md",
+      "storyId": "CARD-016A",
+      "storyPath": "stories/approved/CARD-016A-current-runtime-component-parser-support.yaml",
+      "storySha256": "a896375539b1f06a50ca51ecefa5f209214af4ab52d8e96bf7e30c742aa5d298"
+    }
+  ],
   "version": 1
 }

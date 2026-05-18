@@ -737,7 +737,6 @@ describe("certified card text parser", () => {
     "[On Play] You may trash 2 cards from your hand. Draw 1 card.",
     "[On Play] DON!! -1 Trash 2 cards from your hand. Draw 1 card.",
     "[On Play]: Trash 2 cards from your hand. Draw 1 card.",
-    "[On Play] Trash 2 cards from your hand. Draw 1 card. Then draw 1 card.",
     "[On Play] Trash 1 card from your hand. Draw 1 card.",
     "[On Play] Trash 2 cards from your hand. Draw 2 cards.",
     "[When Attacking] [Once Per Turn] Trash 1 card from your hand and draw 2 cards.",

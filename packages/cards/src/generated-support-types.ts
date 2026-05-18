@@ -66,8 +66,36 @@ export interface GeneratedSupportDiagnosticDecomposition {
   recognizedSyntaxFragments: readonly string[];
   recognizedTriggerCandidates: readonly string[];
   reason: string;
+  traceComponents?: readonly GeneratedSupportDiagnosticTraceComponent[];
   unsupportedConditionFragments: readonly string[];
   unsupportedSyntaxFragments: readonly string[];
+}
+
+export type GeneratedSupportDiagnosticTraceComponentKind =
+  | "action"
+  | "cardinality"
+  | "condition"
+  | "condition-connector"
+  | "cost"
+  | "destination"
+  | "duration"
+  | "modifier"
+  | "predicate"
+  | "restriction"
+  | "saved-reference"
+  | "target"
+  | "trigger"
+  | "wrapper";
+
+export type GeneratedSupportDiagnosticTraceComponentStatus =
+  | "recognized"
+  | "supported"
+  | "unsupported";
+
+export interface GeneratedSupportDiagnosticTraceComponent {
+  kind: GeneratedSupportDiagnosticTraceComponentKind;
+  status: GeneratedSupportDiagnosticTraceComponentStatus;
+  text: string;
 }
 
 export interface GeneratedSupportBlocker {

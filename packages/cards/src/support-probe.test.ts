@@ -548,6 +548,51 @@ describe("support probe", () => {
     expect(text).not.toContain("draw 1 cards");
   });
 
+  it("prints reusable trace components for EB02-027-style bottom-deck parser failures", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-016A-PROBE-BOTTOM-DECK"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-016A-PROBE-BOTTOM-DECK",
+          effect:
+            "[On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck.",
+          name: "Bottom Deck Trace Probe Candidate",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("recognized trigger candidate: [On Play]");
+    expect(text).toContain("recognized cardinality candidate: up to 1");
+    expect(text).toContain(
+      "recognized target candidate: your opponent's Characters",
+    );
+    expect(text).toContain(
+      "recognized predicate candidate: 1000 power or less",
+    );
+    expect(text).toContain(
+      "recognized action candidate: place at the bottom of the owner's deck",
+    );
+    expect(text).toContain(
+      "unsupported destination blocker: bottom of the owner's deck",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: action/destination:bottom-of-owner-deck",
+    );
+    expect(text).not.toContain("condition conjunction: or");
+  });
+
   it("prints metadata layer for empty-effect metadata precondition blockers", async () => {
     const detail = await loadOp03044Fixture();
     const output: string[] = [];
