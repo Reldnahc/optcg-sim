@@ -34,6 +34,7 @@ import {
   toCardId,
 } from "./action-test-fixtures.js";
 import { applyAction, getLegalActions } from "./actions.js";
+import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { applyPlayCard, applyPlayCardDecisionResponse } from "./play-card.js";
 import { setupMainPlayState } from "./play-card-test-fixtures.js";
 
@@ -413,6 +414,59 @@ test("getLegalActions exposes one executable selectTargets response only to the 
     ),
     [],
   );
+});
+
+test("getLegalActions exposes an empty selectTargets response when min is zero", () => {
+  const { state } = setupSelectTargetsDecision(
+    publicCharacterTargetRequest({ min: 0, max: 1 }),
+  );
+  const decision = must(state.pendingDecision, "pending decision");
+
+  assert.deepEqual(
+    getLegalActions(state, p1).filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [
+      {
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: { type: "targets", targets: [] },
+      },
+    ],
+  );
+});
+
+test("PlayerView hides zero-target selectTargets internals while exposing the response affordance", () => {
+  const { state } = setupSelectTargetsDecision(
+    publicCharacterTargetRequest({ min: 0, max: 1 }),
+  );
+  const decision = must(state.pendingDecision, "pending decision");
+  const chooserView = filterStateForPlayer(state, p1);
+  const opponentView = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(chooserView.pendingDecision, {
+    id: decision.id,
+    type: "selectTargets",
+    playerId: p1,
+    prompt: "Select targets.",
+    causedBy: { type: "ruleProcess", name: "privateCausality" },
+  });
+  assert.deepEqual(
+    chooserView.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [{ type: "respondToDecision", decisionId: decision.id }],
+  );
+  assert.equal(opponentView.pendingDecision, undefined);
+  assert.deepEqual(
+    opponentView.legalActions.filter(
+      (action) => action.type === "respondToDecision",
+    ),
+    [],
+  );
+  assert.equal(JSON.stringify(chooserView).includes("candidates"), false);
+  assert.equal(JSON.stringify(chooserView).includes("request"), false);
+  assert.equal(JSON.stringify(chooserView).includes("queueEntryId"), false);
 });
 
 test("valid selectTargets response resolves queued KO with stable replay event order and state hash", () => {

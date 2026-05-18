@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-057A.md",
+      "storyId": "ENG-057A",
+      "storyPath": "stories/approved/ENG-057A-zero-target-continuous-choose-runtime.yaml",
+      "storySha256": "070da79fb6fc5eb56a7fd2e508e0e022458d7aee3491cf3523e7aaf715a40a68"
+    }
+  ],
   "version": 1
 }
