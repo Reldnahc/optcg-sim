@@ -131,6 +131,12 @@ type Condition =
       op: Comparator;
       value: number;
     }
+  | {
+      type: "leaderColorCount";
+      player: PlayerRef;
+      op: Comparator;
+      value: number;
+    }
   | { type: "hasCardInZone"; zone: Zone; player: PlayerRef; filter: CardFilter }
   | { type: "attackTarget"; targetType: "leader" | "character" | "any" }
   | { type: "cardState"; target: Target; state: "active" | "rested" }
@@ -150,6 +156,21 @@ type PlayerRef =
   | "owner"
   | "controller";
 ```
+
+`leaderColorCount` is a public Leader metadata condition. It reads only the
+player's Leader colors from the match manifest or resolved card snapshot, uses a
+canonical `PlayerRef` and `Comparator`, and its `value` is a non-negative safe
+integer. Printed "multicolored" Leader conditions map to
+`{ type: "leaderColorCount", player: "self", op: "gte", value: 2 }`.
+
+Leader type and Leader attribute conditions do not introduce `leaderType` or
+`leaderAttribute` predicates. Represent them through the public Leader Area with
+`hasCardInZone` and `CardFilter`, for example
+`{ type: "hasCardInZone", zone: "leaderArea", player: "self", filter: { categories: ["leader"], typesAny: ["Straw Hat Crew"] } }`
+or
+`{ type: "hasCardInZone", zone: "leaderArea", player: "self", filter: { categories: ["leader"], attributesAny: ["slash"] } }`.
+The schema-supported fixture subset admits only this public Leader-zone metadata
+form and does not authorize private-zone metadata queries.
 
 Condition, duration, and restriction primitives outside the schema-supported fixture subset remain planned layers. They are contract-defined by this reference, but they are not fixture-authorable until the schema coverage policy lists them as supported.
 

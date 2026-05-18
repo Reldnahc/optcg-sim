@@ -46,6 +46,11 @@ Section Ref: `09-card-data-and-support-policy.s003`
 | Card support status     | Simulator overlay                                             | Determines if a card can be used in each play mode.                                                                                                                            |
 | Banlist / restrictions  | Poneglyph legality data plus simulator overlay/format service | Poneglyph is the source of truth for per-format card legality status and copy-limit inputs; simulator overlays add unsupported-card policy and any platform-local enforcement. |
 
+Leader metadata conditions in the Effect DSL read only public Leader metadata
+from this resolved card authority. Leader color count, type, and attribute
+checks must not query hidden or private zones, and type/attribute checks use the
+existing public Leader Area `hasCardInZone` plus `CardFilter` representation.
+
 ## Package responsibility: `@optcg/cards`
 
 <!-- SECTION_REF: 09-card-data-and-support-policy.s004 -->

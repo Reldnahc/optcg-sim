@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id TYP-011A -->
 <!-- agent-packet:story-path stories/approved/TYP-011A-leader-metadata-condition-contract-authority.yaml -->
-<!-- agent-packet:story-sha256 d81f6e6adba52e5f6e04258245992779045dd0444cdb0b4e0957510e3a27b377 -->
+<!-- agent-packet:story-sha256 52dcb175e7f92a803051a165cc351a3487c8a76c78132a22505adecaef555646 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -34,6 +34,8 @@ Add the missing shared DSL/schema/type authority for public Leader color-count c
 - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
 - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
 - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+- 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+- 15-implementation-kickoff.s012 (Guardrails)
 
 ## Relevant Spec Excerpts
 
@@ -120,6 +122,12 @@ type Condition =
       op: Comparator;
       value: number;
     }
+  | {
+      type: "leaderColorCount";
+      player: PlayerRef;
+      op: Comparator;
+      value: number;
+    }
   | { type: "hasCardInZone"; zone: Zone; player: PlayerRef; filter: CardFilter }
   | { type: "attackTarget"; targetType: "leader" | "character" | "any" }
   | { type: "cardState"; target: Target; state: "active" | "rested" }
@@ -139,6 +147,21 @@ type PlayerRef =
   | "owner"
   | "controller";
 ```
+
+`leaderColorCount` is a public Leader metadata condition. It reads only the
+player's Leader colors from the match manifest or resolved card snapshot, uses a
+canonical `PlayerRef` and `Comparator`, and its `value` is a non-negative safe
+integer. Printed "multicolored" Leader conditions map to
+`{ type: "leaderColorCount", player: "self", op: "gte", value: 2 }`.
+
+Leader type and Leader attribute conditions do not introduce `leaderType` or
+`leaderAttribute` predicates. Represent them through the public Leader Area with
+`hasCardInZone` and `CardFilter`, for example
+`{ type: "hasCardInZone", zone: "leaderArea", player: "self", filter: { categories: ["leader"], typesAny: ["Straw Hat Crew"] } }`
+or
+`{ type: "hasCardInZone", zone: "leaderArea", player: "self", filter: { categories: ["leader"], attributesAny: ["slash"] } }`.
+The schema-supported fixture subset admits only this public Leader-zone metadata
+form and does not authorize private-zone metadata queries.
 
 Condition, duration, and restriction primitives outside the schema-supported fixture subset remain planned layers. They are contract-defined by this reference, but they are not fixture-authorable until the schema coverage policy lists them as supported.
 
@@ -203,6 +226,11 @@ interface CardFilter {
 | Card support status     | Simulator overlay                                             | Determines if a card can be used in each play mode.                                                                                                                            |
 | Banlist / restrictions  | Poneglyph legality data plus simulator overlay/format service | Poneglyph is the source of truth for per-format card legality status and copy-limit inputs; simulator overlays add unsupported-card policy and any platform-local enforcement. |
 
+Leader metadata conditions in the Effect DSL read only public Leader metadata
+from this resolved card authority. Leader color count, type, and attribute
+checks must not query hidden or private zones, and type/attribute checks use the
+existing public Leader Area `hasCardInZone` plus `CardFilter` representation.
+
 ### 11-testing-quality.s004 (Unit tests per DSL primitive)
 
 Every primitive has tests independent of specific cards:
@@ -256,6 +284,14 @@ Implementation packages stay in strict TypeScript mode, and broad escape hatches
 
 Lint, formatting, and merge-gate verification are mandatory, and CI must fail when checked-in generated artifacts or snapshots are stale.
 
+### 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+
+Boundary enforcement is mechanical: `@optcg/engine-core` cannot import React, browser code, WebSocket transport, Redis, Postgres, or live HTTP clients.
+
+### 15-implementation-kickoff.s012 (Guardrails)
+
+Kickoff guardrails require the engine to stay free of Redis, Postgres, WebSocket, React, and Poneglyph HTTP code; once hidden state exists, the client must use `view-engine` instead of `engine-core`, and effect resolution consumes resolved manifests rather than live HTTP calls.
+
 ## Story Boundary
 
 Own only shared contract/spec/schema/type authority for public Leader metadata condition representation. Do not implement engine condition evaluation, card parser support, generated support admission, support diagnostics, or real-card fixture support.
@@ -270,13 +306,14 @@ Own only shared contract/spec/schema/type authority for public Leader metadata c
 - require "your Leader has the {X} type" to use existing public Leader-zone `hasCardInZone` + `CardFilter.typesAny` authority, such as `{ type: "hasCardInZone", zone: "leaderArea", player: "self", filter: { categories: ["leader"], typesAny: [...] } }`
 - require "your Leader has the [X] attribute" to use existing public Leader-zone `hasCardInZone` + `CardFilter.attributesAny` authority, such as `{ type: "hasCardInZone", zone: "leaderArea", player: "self", filter: { categories: ["leader"], attributesAny: [...] } }`
 - admit the required `hasCardInZone` Leader-zone type/attribute representation at the effect DSL schema layer as needed for fixtures, without broadening into unrelated private-zone or arbitrary metadata query support
+- maintain existing engine fail-closed exhaustiveness for the new shared condition contract only by adding an explicit unsupported branch where the exhaustive condition switch already rejects unsupported conditions
 - add positive and negative schema/type fixtures for the admitted public Leader metadata condition shapes
 - keep boolean condition composition (`and`, `or`, `not`) as existing authority unless story-review proves a schema gap
 - keep card-layer wording normalization out of this story
 
 ## Out of Scope
 
-- engine runtime evaluation of Leader metadata conditions
+- positive engine runtime evaluation or support for Leader metadata conditions
 - parser support for printed conditional text
 - generated-support capability records, support indexing, probe/report output, or playable support changes
 - real-card fixture support, fixture capture, source hash updates, behavior hash updates, overlays, or support manifests
@@ -299,6 +336,8 @@ Own only shared contract/spec/schema/type authority for public Leader metadata c
 - packages/types/src/effects.test.ts
 - packages/types/src/export-cohesion.test.ts
 - packages/types/src/export-ownership.manifest.ts
+- packages/engine-core/src/effect-runtime-conditions.ts
+- packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts
 - tests/contracts/**
 - fixtures/effect-dsl/**
 - tools/validate-effect-dsl-fixtures.ts
@@ -312,12 +351,14 @@ Own only shared contract/spec/schema/type authority for public Leader metadata c
 
 - generate and activate the TYP-011A packet before implementation
 - stay within allowed_touch_points
-- do not implement runtime/card behavior
+- do not implement runtime/card behavior beyond explicit fail-closed unsupported exhaustiveness maintenance for the new shared condition contract
 - do not broaden shared contracts beyond public Leader metadata conditions required for the conditional generated-support chain
 - fail closed if Leader type or Leader attribute cannot be represented truthfully with existing filter contracts
 - use `pnpm`; the canonical local verification commands are `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`
 - TypeScript stays strict; avoid `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions without explicit justification
 - ESLint with type-aware rules and Prettier formatting are required; CI and local verification must fail when checked-in generated artifacts are stale
+- `@optcg/engine-core` must stay free of React, browser code, WebSocket transport, Redis, Postgres, and live HTTP clients
+- The engine must not import Redis, Postgres, WebSocket, React, or Poneglyph HTTP code; once hidden state exists, the client must use `view-engine` instead of `engine-core`, and effect resolution must consume resolved manifests rather than live HTTP calls
 
 ### Code Standard
 
@@ -344,9 +385,11 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - effect DSL schema fixture validation for valid Leader type and attribute condition representation, using existing hasCardInZone + CardFilter authority if accepted by story-review
 - negative schema/type tests for malformed color-count value, non-safe-integer overflow color-count value, comparator, player, private-zone use, and unsupported Leader metadata condition shape
 - export cohesion/ownership tests updated if a new exported contract symbol is introduced
+- focused engine-core regression proving `leaderColorCount` remains unsupported and fail-closed in queued condition resolution until a later ENG runtime story adds positive evaluation support
 - run `corepack pnpm run types:sync:check`
 - run `corepack pnpm run contracts:validate-effects`
 - run `corepack pnpm run test:contracts`
+- run `corepack pnpm run lint`
 - run `corepack pnpm run stories:validate`
 
 ## Expected Output
@@ -363,6 +406,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - effect DSL schema accepts the required public Leader-zone `hasCardInZone` + `CardFilter.typesAny` and `attributesAny` representations and rejects unrelated private-zone or unsupported metadata query shapes
 - admitted Leader metadata predicates are limited to public Leader metadata and do not expose hidden information
 - schema/type tests accept valid Leader color-count and Leader type/attribute condition fixtures and reject malformed comparator, value, player, filter, or zone shapes
+- existing engine unsupported-condition handling remains fail-closed for `leaderColorCount` until a later ENG runtime story adds positive evaluation support
 - no runtime behavior, card parser support, or generated support admission changes in this story
 
 ## Post-Approval Role Sections

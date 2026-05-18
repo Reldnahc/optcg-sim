@@ -1,0 +1,23 @@
+{
+  "cardId": "TYP-011A-UNSUPPORTED",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "TYP-011A-UNSUPPORTED:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "condition": {
+        "type": "leaderType",
+        "player": "self",
+        "typesAny": ["Straw Hat Crew"]
+      },
+      "effect": { "type": "draw", "player": "self", "count": 1 }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-011a-unsupported",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

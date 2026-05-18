@@ -30,6 +30,8 @@ allowed_touch_points:
   - packages/types/src/effects.test.ts
   - packages/types/src/export-cohesion.test.ts
   - packages/types/src/export-ownership.manifest.ts
+  - packages/engine-core/src/effect-runtime-conditions.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts
   - tests/contracts/**
   - fixtures/effect-dsl/**
   - tools/validate-effect-dsl-fixtures.ts
@@ -59,11 +61,12 @@ scope:
   - 'require "your Leader has the {X} type" to use existing public Leader-zone `hasCardInZone` + `CardFilter.typesAny` authority, such as `{ type: "hasCardInZone", zone: "leaderArea", player: "self", filter: { categories: ["leader"], typesAny: [...] } }`'
   - 'require "your Leader has the [X] attribute" to use existing public Leader-zone `hasCardInZone` + `CardFilter.attributesAny` authority, such as `{ type: "hasCardInZone", zone: "leaderArea", player: "self", filter: { categories: ["leader"], attributesAny: [...] } }`'
   - admit the required `hasCardInZone` Leader-zone type/attribute representation at the effect DSL schema layer as needed for fixtures, without broadening into unrelated private-zone or arbitrary metadata query support
+  - maintain existing engine fail-closed exhaustiveness for the new shared condition contract only by adding an explicit unsupported branch where the exhaustive condition switch already rejects unsupported conditions
   - add positive and negative schema/type fixtures for the admitted public Leader metadata condition shapes
   - keep boolean condition composition (`and`, `or`, `not`) as existing authority unless story-review proves a schema gap
   - keep card-layer wording normalization out of this story
 non_scope:
-  - engine runtime evaluation of Leader metadata conditions
+  - positive engine runtime evaluation or support for Leader metadata conditions
   - parser support for printed conditional text
   - generated-support capability records, support indexing, probe/report output, or playable support changes
   - real-card fixture support, fixture capture, source hash updates, behavior hash updates, overlays, or support manifests
@@ -77,6 +80,7 @@ acceptance_criteria:
   - effect DSL schema accepts the required public Leader-zone `hasCardInZone` + `CardFilter.typesAny` and `attributesAny` representations and rejects unrelated private-zone or unsupported metadata query shapes
   - admitted Leader metadata predicates are limited to public Leader metadata and do not expose hidden information
   - schema/type tests accept valid Leader color-count and Leader type/attribute condition fixtures and reject malformed comparator, value, player, filter, or zone shapes
+  - existing engine unsupported-condition handling remains fail-closed for `leaderColorCount` until a later ENG runtime story adds positive evaluation support
   - no runtime behavior, card parser support, or generated support admission changes in this story
 required_tests:
   - story-review for TYP-011A before approval handoff
@@ -85,14 +89,16 @@ required_tests:
   - effect DSL schema fixture validation for valid Leader type and attribute condition representation, using existing hasCardInZone + CardFilter authority if accepted by story-review
   - negative schema/type tests for malformed color-count value, non-safe-integer overflow color-count value, comparator, player, private-zone use, and unsupported Leader metadata condition shape
   - export cohesion/ownership tests updated if a new exported contract symbol is introduced
+  - focused engine-core regression proving `leaderColorCount` remains unsupported and fail-closed in queued condition resolution until a later ENG runtime story adds positive evaluation support
   - run `corepack pnpm run types:sync:check`
   - run `corepack pnpm run contracts:validate-effects`
   - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run lint`
   - run `corepack pnpm run stories:validate`
 repo_rules:
   - generate and activate the TYP-011A packet before implementation
   - stay within allowed_touch_points
-  - do not implement runtime/card behavior
+  - do not implement runtime/card behavior beyond explicit fail-closed unsupported exhaustiveness maintenance for the new shared condition contract
   - do not broaden shared contracts beyond public Leader metadata conditions required for the conditional generated-support chain
   - fail closed if Leader type or Leader attribute cannot be represented truthfully with existing filter contracts
 ambiguity_policy: fail_and_escalate
