@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate a CARD story set that migrates generated-support identity away
   from full-template parser rule IDs and onto reusable component evidence,

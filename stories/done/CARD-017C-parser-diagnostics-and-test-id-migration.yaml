@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Migrate parser output, diagnostics, support metadata, and tests to component
   evidence IDs so generated-support source and tests no longer depend on legacy

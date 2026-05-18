@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Migrate generated-support runtime capability lookup and support indexing to
   component evidence, removing full-template capability binding while preserving

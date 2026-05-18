@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CARD-017C.md",
-      "storyId": "CARD-017C",
-      "storyPath": "stories/approved/CARD-017C-parser-diagnostics-and-test-id-migration.yaml",
-      "storySha256": "f2dbaf08f5c9592c338dff0e91c3f95d77288a8a2de520bea651583f2d927afc"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

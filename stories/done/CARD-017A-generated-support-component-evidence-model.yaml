@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Define the package-local component evidence model that generated support will
   use instead of full-template parser rule identity, without changing current
