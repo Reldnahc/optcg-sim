@@ -750,6 +750,38 @@ test("conditioned On K.O. draw shape is detected as a supported trigger candidat
   assert.deepEqual(state, before);
 });
 
+test("conditioned optional On K.O. draw queues and routes through chooseOptionalActivation unchanged", () => {
+  const { state, definition, events } = koQueueingState();
+  const effect = must(definition.effects[0], "onKO effect");
+  state.turn.turnPlayerId = p2;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          optional: true,
+          condition: { type: "yourTurn" },
+        },
+      ],
+    },
+  };
+
+  const queued = queueBattleKOTriggers(state, state, events);
+  assert.equal(queued.ok, true);
+
+  const paused = processEffectRuntime(queued.state);
+
+  assert.equal(paused.errors, undefined);
+  assert.deepEqual(
+    paused.events.map((event) => event.type),
+    ["decisionCreated"],
+  );
+  assert.equal(paused.state.pendingDecision?.type, "chooseOptionalActivation");
+  assert.equal(paused.state.effectQueue.length, 1);
+});
+
 test("rejects multiple On K.O. effects before queueing", () => {
   const { state, definition, events } = koQueueingState();
   const effect = must(definition.effects[0], "onKO effect");

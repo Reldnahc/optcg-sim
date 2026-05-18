@@ -192,3 +192,37 @@ test("conditioned When Attacking draw-then-trash sequence reaches decision-pausi
     true,
   );
 });
+
+test("conditioned optional When Attacking draw queues and routes through chooseOptionalActivation unchanged", () => {
+  const { state, definition } = attackQueueingState();
+  const effect = must(definition.effects[0], "whenAttacking effect");
+  state.turn.turnPlayerId = p1;
+  state.cardManifest.effectDefinitions = {
+    "def-when-attacking": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          optional: true,
+          condition: { type: "yourTurn" },
+        } satisfies EffectDefinition["effects"][number],
+      ],
+    },
+  };
+
+  const queued = processEffectRuntime(state);
+  const paused = processEffectRuntime(queued.state);
+
+  assert.equal(queued.errors, undefined);
+  assert.equal(paused.errors, undefined);
+  assert.deepEqual(
+    queued.events.map((event) => event.type),
+    ["effectQueued"],
+  );
+  assert.deepEqual(
+    paused.events.map((event) => event.type),
+    ["decisionCreated"],
+  );
+  assert.equal(paused.state.pendingDecision?.type, "chooseOptionalActivation");
+  assert.equal(paused.state.effectQueue.length, 1);
+});

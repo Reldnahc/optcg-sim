@@ -33,6 +33,7 @@ import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
+import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import { assertGameStateInvariants } from "./invariants.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
@@ -111,9 +112,9 @@ const isExactSupportedTriggerDefinition = (
 
 const resolveSupportedLifeTriggerEffect = (
   state: GameState,
-  cardId: CardInstance["cardId"],
+  card: Pick<CardRef, "instanceId" | "cardId" | "playerId">,
 ): { resolved: ResolvedCard; effect: EffectBlock } | undefined => {
-  const resolved = state.cardManifest.cards[cardId];
+  const resolved = state.cardManifest.cards[card.cardId];
   if (resolved === undefined || !hasLifeTriggerText(resolved.triggerText)) {
     return undefined;
   }
@@ -131,7 +132,64 @@ const resolveSupportedLifeTriggerEffect = (
   if (effect === undefined) {
     return undefined;
   }
+  if (
+    !isSupportedLifeTriggerConditionInNoZoneContext(
+      state,
+      resolved,
+      effect,
+      card,
+    )
+  ) {
+    return undefined;
+  }
   return { resolved, effect };
+};
+
+const isSupportedLifeTriggerConditionInNoZoneContext = (
+  state: GameState,
+  resolved: ResolvedCard,
+  effect: EffectBlock,
+  card: Pick<CardRef, "instanceId" | "cardId" | "playerId">,
+): boolean => {
+  const sourcePresencePolicy = effect.sourcePresencePolicy;
+  if (sourcePresencePolicy === undefined) {
+    return false;
+  }
+  const noZone = {
+    zone: "noZone" as const,
+    playerId: card.playerId,
+    slot: "temporary" as const,
+  };
+  const source: CardRef = {
+    instanceId: card.instanceId,
+    cardId: card.cardId,
+    playerId: card.playerId,
+    zone: noZone,
+  };
+  const preflightEntry: EffectQueueEntry = {
+    id: `queue-entry:life-trigger-preflight:${String(card.instanceId)}:${String(
+      effect.id,
+    )}` as EffectQueueEntry["id"],
+    state: "pending",
+    timingWindowId: `timing-window:life-trigger-preflight:${String(
+      card.instanceId,
+    )}` as EffectQueueEntry["timingWindowId"],
+    generation: 0,
+    controllerId: card.playerId,
+    source,
+    sourceSnapshot: toSourceSnapshot(source, resolved),
+    effectBlockId: effect.id,
+    orderingGroup:
+      card.playerId === state.turn.turnPlayerId
+        ? "turnPlayer"
+        : "nonTurnPlayer",
+    createdAtEventSeq: state.eventJournal.length + 1,
+    queuedAtStateSeq: state.seq,
+    sourcePresencePolicy,
+    causedBy: { type: "ruleProcess", name: "battle:lifeTriggerDecision" },
+  };
+  return evaluateQueuedEffectCondition(state, preflightEntry, effect.condition)
+    .supported;
 };
 
 export const getSupportedLifeTriggerDecision = (
@@ -139,7 +197,13 @@ export const getSupportedLifeTriggerDecision = (
   damagedPlayerId: PlayerId,
   card: CardInstance,
 ): ConfirmLifeTriggerDecision | undefined => {
-  if (resolveSupportedLifeTriggerEffect(state, card.cardId) === undefined) {
+  if (
+    resolveSupportedLifeTriggerEffect(state, {
+      cardId: card.cardId,
+      instanceId: card.instanceId,
+      playerId: damagedPlayerId,
+    }) === undefined
+  ) {
     return undefined;
   }
   return {
@@ -263,8 +327,11 @@ export const getLifeTriggerLegalActions = (
     decision.playerId !== playerId ||
     resolved?.support.status === "unsupported" ||
     (resolved?.support.status === "implemented-dsl" &&
-      resolveSupportedLifeTriggerEffect(state, decision.card.cardId) ===
-        undefined)
+      resolveSupportedLifeTriggerEffect(state, {
+        cardId: decision.card.cardId,
+        instanceId: decision.card.instanceId,
+        playerId: decision.card.playerId,
+      }) === undefined)
   ) {
     return [];
   }
@@ -343,10 +410,11 @@ const applyActivatedTriggerResponse = (
   if (validation !== undefined) {
     return validation;
   }
-  const supported = resolveSupportedLifeTriggerEffect(
-    state,
-    decision.card.cardId,
-  );
+  const supported = resolveSupportedLifeTriggerEffect(state, {
+    cardId: decision.card.cardId,
+    instanceId: decision.card.instanceId,
+    playerId: decision.card.playerId,
+  });
   if (supported === undefined) {
     return toEngineResult(
       state,

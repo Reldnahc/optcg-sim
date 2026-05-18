@@ -274,6 +274,50 @@ test("optional On Play draw support gate queues for optional activation", () => 
   assert.equal(result.state.effectQueue.length, 1);
 });
 
+test("conditioned optional On Play draw support queues and routes through chooseOptionalActivation unchanged", () => {
+  const { state, played } = queueingState();
+  state.turn.turnPlayerId = p1;
+  const baseCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    baseCard.support,
+  );
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...baseDefinition,
+      effects: [
+        {
+          ...must(baseDefinition.effects[0], "onPlay effect"),
+          optional: true,
+          condition: { type: "yourTurn" },
+        },
+      ],
+    },
+    "def-conditioned-optional-on-play",
+  );
+
+  const queued = processEffectRuntime(state);
+  const paused = processEffectRuntime(queued.state);
+
+  assert.equal(queued.errors, undefined);
+  assert.equal(paused.errors, undefined);
+  assert.deepEqual(
+    queued.events.map((event) => event.type),
+    ["effectQueued"],
+  );
+  assert.deepEqual(
+    paused.events.map((event) => event.type),
+    ["decisionCreated"],
+  );
+  assert.equal(paused.state.pendingDecision?.type, "chooseOptionalActivation");
+  assert.equal(paused.state.effectQueue.length, 1);
+});
+
 test("unreviewed On Play definition metadata fails closed without queue mutation or events", () => {
   const { state, played } = queueingState();
   const baseCard = resolvedCard({
