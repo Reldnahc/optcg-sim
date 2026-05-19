@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { CardInstance, Protection } from "@optcg/types";
+
 import {
   applyDeclareAttack,
   resolveSupportedVanillaBattle,
@@ -10,6 +12,61 @@ import {
   effectDefinition,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
+
+const fieldRemovalProtection = (): Protection => ({
+  process: "fieldRemoval",
+  fieldRemoval: {
+    processFamily: "fieldRemoval",
+    classification: "moveFromFieldToTrash",
+    sourceKind: "cardEffect",
+    sourceControllerRelation: "opponentControlled",
+    targetScope: "thisCard",
+    exclusions: {
+      battleKO: "excluded",
+      ruleProcessTrash: "excluded",
+      controllerCost: "excluded",
+      controllerOwnedEffect: "excluded",
+      ambiguousCustomRemoval: "failClosed",
+    },
+  },
+});
+
+const protectTargetFromOpponentEffectRemoval = (
+  state: ReturnType<typeof setupAttackState>,
+  target: CardInstance,
+) => {
+  state.continuousEffects = [
+    {
+      id: `battle-field-removal-protection:${String(target.instanceId)}`,
+      source: {
+        instanceId: target.instanceId,
+        cardId: target.cardId,
+        playerId: target.controller,
+        zone: target.zone,
+      },
+      sourceSnapshot: {
+        instanceId: target.instanceId,
+        cardId: target.cardId,
+        ownerId: target.owner,
+        controllerId: target.controller,
+        zone: target.zone,
+        category: "character",
+        colors: ["red"],
+        power: 3000,
+        keywords: [],
+      },
+      controller: target.controller,
+      modifier: {
+        layer: "protection",
+        target: { type: "self" },
+        operation: { type: "protection", protection: fieldRemovalProtection() },
+      },
+      duration: { type: "permanent" },
+      createdBy: { type: "ruleProcess", name: "battle-protection-test" },
+      createdAtStateSeq: state.seq,
+    },
+  ];
+};
 
 test("equal-or-greater power K.O.s rested character and returns attached DON!! rested", () => {
   const state = setupAttackState();
@@ -60,6 +117,61 @@ test("equal-or-greater power K.O.s rested character and returns attached DON!! r
       (card) => card.instanceId === don.instanceId,
     )?.state,
     "rested",
+  );
+});
+
+test("battle K.O. still removes a Character protected from opponent effect removal", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  protectTargetFromOpponentEffectRemoval(state, target);
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 3000,
+  });
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    must(result.state.players[p2], "p2").characters.some(
+      (card) => card.instanceId === target.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    must(result.state.players[p2], "p2").trash.some(
+      (card) => card.instanceId === target.instanceId,
+    ),
+    true,
+  );
+  assert.deepEqual(
+    result.events
+      .filter((event) =>
+        ["damageDealt", "cardKOd", "cardMoved"].includes(event.type),
+      )
+      .map((event) => event.type),
+    ["damageDealt", "cardKOd", "cardMoved"],
   );
 });
 

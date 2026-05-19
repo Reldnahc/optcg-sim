@@ -25,6 +25,7 @@ import {
 import { hasUnsupportedCounterWindow } from "./battle-counter-actions.js";
 import { computeView } from "./compute-view.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
+import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
 import {
   getSupportedLifeTriggerDecision,
   hasLifeTriggerText,
@@ -201,7 +202,8 @@ const hasUnsupportedBlockDecisionState = (
   }
   if (
     attackerView.keywords.includes("doubleAttack") ||
-    targetView.protectedFrom.length > 0
+    (targetView.protectedFrom.length > 0 &&
+      !hasOnlyFieldRemovalProtections(targetView.protectedFrom))
   ) {
     return true;
   }

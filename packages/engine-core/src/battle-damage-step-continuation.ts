@@ -9,6 +9,7 @@ import {
 } from "./battle-support.js";
 import { computeView } from "./compute-view.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
+import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
 import {
   getSupportedLifeTriggerDecision,
   hasLifeTriggerText,
@@ -72,7 +73,8 @@ export const getUnsupportedDamageStepContinuationReason = (
   if (
     (battle.damageCount !== 2 &&
       attackerView.keywords.includes("doubleAttack")) ||
-    targetView.protectedFrom.length > 0
+    (targetView.protectedFrom.length > 0 &&
+      !hasOnlyFieldRemovalProtections(targetView.protectedFrom))
   ) {
     return "Battle requires unsupported keyword or protection handling.";
   }

@@ -264,36 +264,30 @@ test("targeted KO primitive builds deterministic replacement process for each se
     buildSelectedTargetKoReplacementProcess(entry, target, index),
   );
 
-  assert.deepEqual(processes, [
-    {
-      id: `${entry.id}:ko:${targetA.instanceId}:${String(0)}`,
-      type: "ko",
+  for (const [index, process] of processes.entries()) {
+    const target = must([targetA, targetB][index], "target");
+    assert.equal(
+      process.id,
+      `${entry.id}:ko:${target.instanceId}:${String(index)}`,
+    );
+    assert.equal(process.type, "ko");
+    assert.deepEqual(process.source, entry.source);
+    assert.deepEqual(process.target, target);
+    assert.deepEqual(process.causedBy, entry.causedBy);
+    assert.deepEqual(process.usedReplacementIds, []);
+    assert.deepEqual(process.payload, {
+      effectId: entry.effectBlockId,
+      queueEntryId: entry.id,
       source: entry.source,
-      target: targetA,
-      payload: {
-        effectId: entry.effectBlockId,
-        queueEntryId: entry.id,
-        source: entry.source,
-        target: targetA,
+      target,
+      fieldRemovalAttempt: {
+        processFamily: "fieldRemoval",
+        classification: "moveFromFieldToTrash",
+        sourceKind: "cardEffect",
+        sourceControllerId: entry.controllerId,
       },
-      causedBy: entry.causedBy,
-      usedReplacementIds: [],
-    },
-    {
-      id: `${entry.id}:ko:${targetB.instanceId}:${String(1)}`,
-      type: "ko",
-      source: entry.source,
-      target: targetB,
-      payload: {
-        effectId: entry.effectBlockId,
-        queueEntryId: entry.id,
-        source: entry.source,
-        target: targetB,
-      },
-      causedBy: entry.causedBy,
-      usedReplacementIds: [],
-    },
-  ]);
+    });
+  }
 });
 
 test("targeted KO primitive preserves no-replacement state hash through the replacement wrapper", () => {
@@ -465,6 +459,12 @@ test("targeted KO primitive pauses on a private chooseReplacement decision for s
           cardId: targetA.cardId,
           playerId: p2,
           zone: targetA.zone,
+        },
+        fieldRemovalAttempt: {
+          processFamily: "fieldRemoval",
+          classification: "moveFromFieldToTrash",
+          sourceKind: "cardEffect",
+          sourceControllerId: entry.controllerId,
         },
       },
     },

@@ -14,6 +14,12 @@ import type {
 } from "@optcg/types";
 
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import {
+  fieldRemovalProtectionsForCard,
+  isFieldRemovalProtectionModifier,
+  isSupportedFieldRemovalProtectionModifier,
+  malformedFieldRemovalProtectionMessage,
+} from "./field-removal-protection.js";
 
 type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
   counterPower?: number;
@@ -126,6 +132,10 @@ const continuousEffectConditionPasses = (
 const assertSupportedContinuousEffects = (state: GameState): void => {
   for (const effect of state.continuousEffects) {
     if (isSupportedContinuousPowerModifier(effect)) continue;
+    if (isSupportedFieldRemovalProtectionModifier(effect)) continue;
+    if (isFieldRemovalProtectionModifier(effect)) {
+      throw new TypeError(malformedFieldRemovalProtectionMessage(effect));
+    }
     if (!isSupportedContinuousKeywordModifier(effect)) {
       throw new TypeError(unsupportedContinuousEffectMessage(effect));
     }
@@ -476,6 +486,14 @@ const computeCardView = (
       : 0;
   const continuousPowerBonus = continuousPowerBonusForCard(state, card);
   const keywords = computedKeywordsForCard(state, card, metadata);
+  const fieldRemovalProtections = fieldRemovalProtectionsForCard(state, card);
+  if (!fieldRemovalProtections.ok) {
+    throw new TypeError(
+      `Unsupported continuous effect for ${String(
+        card.instanceId,
+      )}: ${fieldRemovalProtections.reason}.`,
+    );
+  }
 
   return {
     instanceId: card.instanceId,
@@ -486,7 +504,7 @@ const computeCardView = (
     canAttack: canAttackNow(state, card, keywords),
     canBlock: canBlockNow(state, card, keywords),
     cannotBeAttacked: false,
-    protectedFrom: [],
+    protectedFrom: fieldRemovalProtections.protections,
   };
 };
 

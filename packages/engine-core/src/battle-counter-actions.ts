@@ -29,6 +29,7 @@ import {
 } from "./battle-support.js";
 import { computeView } from "./compute-view.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
+import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { chooseDonCombos } from "./play-card-legal-actions.js";
 import { getActiveDonCount } from "./play-card-support.js";
@@ -185,7 +186,8 @@ const getLegalCharacterCounterActions = (
     attackerView?.currentPower === undefined ||
     targetView?.currentPower === undefined ||
     attackerView.keywords.includes("doubleAttack") ||
-    targetView.protectedFrom.length > 0
+    (targetView.protectedFrom.length > 0 &&
+      !hasOnlyFieldRemovalProtections(targetView.protectedFrom))
   ) {
     return [];
   }

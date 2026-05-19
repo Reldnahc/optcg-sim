@@ -48,6 +48,7 @@ import {
   queueBattleKOTriggers,
   releaseDamageDeferredEffectQueue,
 } from "./effect-runtime.js";
+import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import {
   getSupportedLifeTriggerDecision,
@@ -333,7 +334,10 @@ export const resolveSupportedVanillaBattle = (
       "Battle requires unsupported keyword or protection handling.",
     );
   }
-  if (targetView.protectedFrom.length > 0) {
+  if (
+    targetView.protectedFrom.length > 0 &&
+    !hasOnlyFieldRemovalProtections(targetView.protectedFrom)
+  ) {
     return unsupportedBattleResolution(
       state,
       "Battle requires unsupported keyword or protection handling.",
