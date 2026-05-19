@@ -70,18 +70,22 @@ child_stories:
     title: Effect-origin field removal protection
     concern: Add a reusable engine protection layer that classifies field removal by process and source controller so opponent-effect removal can be prevented without blocking battle K.O., rule-process trash, costs, or own effects.
     depends_on: [TYP-012A, ENG-045, ENG-059A]
+  - id: ENG-059E
+    title: Conditional field-removal protection modifiers
+    concern: Add reusable condition evaluation for field-removal protection continuous modifiers so supported public predicates can gate opponent-effect removal protection without card-specific branches.
+    depends_on: [ENG-059A, ENG-059C]
   - id: ENG-059D
     title: Synthetic conditional protection composition proof
     concern: Prove the ENG-059 primitives compose in a synthetic engine fixture built from the decomposed effect parts with no parser, generated-support, real-card fixture, or production card-ID special case.
-    depends_on: [ENG-056B, ENG-059A, ENG-059B, ENG-059C]
+    depends_on: [ENG-056B, ENG-059A, ENG-059B, ENG-059C, ENG-059E]
 scope:
-  - coordinate ENG-059A through ENG-059D as reusable engine-only child stories
+  - coordinate ENG-059A through ENG-059E as reusable engine-only child stories
   - require every production behavior to be expressed as a general runtime primitive, not a card-ID branch or full-text template
   - decompose the conditional predicate into primitive shapes such as "If you have", "7 or more", "cards in your trash", and public zone "trash"; the implementation may represent this as a reusable self trash-count `gte 7` condition
   - decompose the keyword grant into primitive shapes such as target "this Character", grant verb "gains", and a supported public keyword such as "[Blocker]"; the implementation must represent this as a reusable conditional continuous keyword grant, not a Blocker-only branch
   - decompose the protection text into primitive shapes such as protected object "this Character", removal process "removed from the field", source controller "opponent", and source kind "effects"; the implementation must represent this as reusable field-removal protection metadata
   - reuse existing triggered primitive shapes for "[On K.O.]", "Draw", and "1 card" rather than reimplementing On K.O. draw behavior
-  - prove the primitive parts compose with existing On K.O. draw support in a synthetic engine fixture
+  - prove the primitive parts compose with existing On K.O. draw support in a synthetic engine fixture after conditional protection modifiers are supported
   - preserve deterministic events, replay behavior, state hashes, hidden information, source presence, and fail-closed unsupported behavior
   - provide runtime capability truth for later CARD/parser work without changing card parser or generated support in this parent
 non_scope:
@@ -96,7 +100,7 @@ non_scope:
   - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
 acceptance_criteria:
   - ENG-059 is not implemented directly
-  - ENG-059A through ENG-059D are independently reviewable child stories
+  - ENG-059A through ENG-059E are independently reviewable child stories
   - each child stays engine-only and does not import @optcg/cards
   - no production engine code checks a real card ID, the full effect text as one string, or any external-card-list identifier
   - public trash-count conditions, conditional keyword grants, and opponent-effect field-removal protection are reusable by other cards with the same mechanics
@@ -110,13 +114,14 @@ required_tests:
   - story-review for ENG-059B before approval handoff
   - story-review for ENG-059C before approval handoff
   - story-review for ENG-059D before approval handoff
+  - story-review for ENG-059E before approval handoff
   - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
   - run `corepack pnpm run stories:validate`
 repo_rules:
   - use the parent/substory workflow
   - keep one active child packet at a time
   - activate ENG-059A first; do not activate ENG-059B or ENG-059C until ENG-059A has landed as reviewed commit evidence on the parent branch
-  - do not activate ENG-059D until ENG-059A, ENG-059B, and ENG-059C have landed as reviewed commit evidence on the parent branch
+  - do not activate ENG-059D until ENG-059A, ENG-059B, ENG-059C, and ENG-059E have landed as reviewed commit evidence on the parent branch
   - do not complete child packets until the parent branch lands on main
   - do not open child PRs to main; use one final parent PR after all children are reviewed on the parent branch
   - fail closed on hidden-information, event-order, replay, source-presence, protection, or condition ambiguity

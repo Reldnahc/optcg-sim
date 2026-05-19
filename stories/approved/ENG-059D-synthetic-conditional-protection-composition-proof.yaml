@@ -56,6 +56,7 @@ dependencies:
   - ENG-059A
   - ENG-059B
   - ENG-059C
+  - ENG-059E
 scope:
   - create an engine-only synthetic fixture or test setup from phrase-level primitive shapes, not full printed clauses
   - include condition primitive shapes equivalent to "If you have", "7 or more", "cards in your trash", and zone "trash"
@@ -102,7 +103,7 @@ required_tests:
   - run `corepack pnpm run stories:validate`
 repo_rules:
   - generate and activate the ENG-059D packet before implementation
-  - do not activate or hand off ENG-059D until ENG-059A, ENG-059B, and ENG-059C have landed as reviewed commit evidence on the parent branch
+  - do not activate or hand off ENG-059D until ENG-059A, ENG-059B, ENG-059C, and ENG-059E have landed as reviewed commit evidence on the parent branch
   - stay within allowed_touch_points
   - do not import @optcg/cards
   - do not add parser/generated-support/card fixture work
