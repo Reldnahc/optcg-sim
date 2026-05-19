@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-059E.md",
-      "storyId": "ENG-059E",
-      "storyPath": "stories/approved/ENG-059E-conditional-field-removal-protection-modifiers.yaml",
-      "storySha256": "224b0b18ff46f0412c300cff01901aaded9c51c29702a371d407e3ff0899374e"
+      "packetPath": "agent-packets/ENG-059D.md",
+      "storyId": "ENG-059D",
+      "storyPath": "stories/approved/ENG-059D-synthetic-conditional-protection-composition-proof.yaml",
+      "storySha256": "2ebca8b12f8507dbbe4dffb01389ad8ee2f9b5dcf69c84823ce23e679289dd65"
     }
   ],
   "version": 1

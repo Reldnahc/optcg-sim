@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-059D -->
 <!-- agent-packet:story-path stories/approved/ENG-059D-synthetic-conditional-protection-composition-proof.yaml -->
-<!-- agent-packet:story-sha256 da45cff4c7e939c270bf0d4d472012644ec7ce402cea99ec3f091e3b661fd28d -->
+<!-- agent-packet:story-sha256 2ebca8b12f8507dbbe4dffb01389ad8ee2f9b5dcf69c84823ce23e679289dd65 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -742,7 +742,7 @@ Own only engine-core synthetic fixture/proof tests that compose already-reviewed
 ## Constraints
 
 - generate and activate the ENG-059D packet before implementation
-- do not activate or hand off ENG-059D until ENG-059A, ENG-059B, and ENG-059C have landed as reviewed commit evidence on the parent branch
+- do not activate or hand off ENG-059D until ENG-059A, ENG-059B, ENG-059C, and ENG-059E have landed as reviewed commit evidence on the parent branch
 - stay within allowed_touch_points
 - do not import @optcg/cards
 - do not add parser/generated-support/card fixture work
