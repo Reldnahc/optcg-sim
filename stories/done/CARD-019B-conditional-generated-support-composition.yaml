@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Compose supported condition components with all currently supported
   generated-support trigger wrappers and effect bodies backed by ENG-058 runtime

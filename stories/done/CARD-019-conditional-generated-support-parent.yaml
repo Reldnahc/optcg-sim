@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate card-layer generated-support work that parses conditional effect
   wrappers as reusable components and composes them with all currently supported

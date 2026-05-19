@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Build reusable cards-side condition parser components for conditional wrappers,
   supported public condition predicates, and boolean connectors without making
