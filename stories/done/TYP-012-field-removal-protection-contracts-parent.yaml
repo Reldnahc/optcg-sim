@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate contract/type authority for reusable field-removal protection
   metadata before engine runtime implements opponent-effect removal immunity.

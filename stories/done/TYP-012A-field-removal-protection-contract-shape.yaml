@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Extend canonical type contracts so protection metadata can express reusable
   field-removal protection against opponent effects without conflating battle
