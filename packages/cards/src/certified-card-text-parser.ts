@@ -343,6 +343,9 @@ function parseConditionalCardLineEffectClause(
   if (base?.effectBlock === undefined) {
     return undefined;
   }
+  if (base.effectBlock.condition !== undefined) {
+    return undefined;
+  }
 
   return {
     ...base,

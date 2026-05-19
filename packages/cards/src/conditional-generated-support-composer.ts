@@ -1,6 +1,7 @@
 import type { EffectBlock } from "@optcg/types";
 
 import {
+  deriveConditionalConditionDiagnostics,
   parseConditionExpression,
   type ParsedConditionComponent,
 } from "./conditional-parser-components.js";
@@ -29,6 +30,12 @@ export function parseConditionalWrapper(
     oncePerTurn === undefined ? wrapper.bodyText : oncePerTurn.bodyText;
   const conditional = parseIfWrapper(conditionalBody);
   if (conditional === undefined) {
+    return undefined;
+  }
+  const conditionDiagnostics = deriveConditionalConditionDiagnostics(
+    conditional.conditionText,
+  );
+  if (conditionDiagnostics.hasAmbiguousMixedConnectors) {
     return undefined;
   }
 

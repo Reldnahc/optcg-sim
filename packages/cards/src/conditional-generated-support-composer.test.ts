@@ -55,4 +55,12 @@ describe("conditional generated support composer", () => {
       ),
     ).toBeUndefined();
   });
+
+  it("fails closed on ambiguous mixed and/or connectors", () => {
+    expect(
+      parseConditionalWrapper(
+        "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand or your opponent has 1 or more Life cards, draw 1 card.",
+      ),
+    ).toBeUndefined();
+  });
 });

@@ -61,6 +61,74 @@ describe("conditional generated support diagnostics", () => {
     expect(report.supportedCardIds).toEqual(["CARD-015A-REPORT-CONDITIONAL"]);
   });
 
+  it.each([
+    {
+      cardId: "CARD-019B-REPORT-CONDITIONAL-WHEN-ATTACKING",
+      sourceText:
+        "[When Attacking] If your Leader is multicolored, draw 2 cards.",
+    },
+    {
+      cardId: "CARD-019B-REPORT-CONDITIONAL-TRIGGER",
+      sourceText: "[Trigger] If your Leader is multicolored, draw 2 cards.",
+    },
+    {
+      cardId: "CARD-019B-REPORT-CONDITIONAL-ON-KO",
+      sourceText: "[On K.O.] If your Leader is multicolored, draw 2 cards.",
+    },
+  ])(
+    "marks representative non-On-Play conditional wrapper composition as playable ($cardId)",
+    ({ cardId, sourceText }) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: cardId as CardId,
+            sourceText,
+            sourceTextHash: `sha256:${cardId.toLowerCase()}`,
+          },
+        ],
+        validateEffectDefinition,
+      });
+      const report = buildGeneratedSupportReport(index);
+
+      expect(
+        report.blockers.find((candidate) => candidate.cardId === cardId),
+      ).toBeUndefined();
+      expect(report.unsupportedCardIds).toEqual([]);
+      expect(report.supportedCardIds).toEqual([cardId]);
+    },
+  );
+
+  it("fails closed on ambiguous mixed and/or condition chains", () => {
+    const sourceText =
+      "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand or your opponent has 1 or more Life cards, draw 1 card.";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-019B-REPORT-MIXED-CONNECTORS" as CardId,
+          sourceText,
+          sourceTextHash: "sha256:card-019b-report-mixed-connectors",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.supportedCardIds).toEqual([]);
+    expect(report.unsupportedCardIds).toEqual([
+      "CARD-019B-REPORT-MIXED-CONNECTORS",
+    ]);
+    expect(report.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          cardId: "CARD-019B-REPORT-MIXED-CONNECTORS",
+          code: "unparsed-span",
+        }),
+      ]),
+    );
+  });
+
   it("keeps supported child conditions recognized when a connector child fragment is unsupported", async () => {
     const detail = await loadOp03044Fixture();
     const output: string[] = [];

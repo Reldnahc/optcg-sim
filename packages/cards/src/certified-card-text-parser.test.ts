@@ -151,6 +151,24 @@ describe("certified card text parser", () => {
     },
   );
 
+  it("fails closed when conditional wrapper body already has a body-level condition", () => {
+    const sourceText =
+      "[On Play] If your Leader is multicolored, during your turn, draw 1 card.";
+    const result = parse(sourceText);
+
+    expect(result.status).toBe("partial");
+    if (isCompleteGeneratedSupportParseResult(result)) {
+      throw new Error(
+        "Expected nested conditional/body condition collision to fail closed.",
+      );
+    }
+    expect(result.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "unparsed-span" }),
+      ]),
+    );
+  });
+
   it.each([
     {
       expectedParserRuleId: "exact:on-play:optional-effect:draw-1:self",
