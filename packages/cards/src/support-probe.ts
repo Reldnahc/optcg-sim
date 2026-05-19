@@ -24,6 +24,12 @@ import {
   evaluateGeneratedSupportPlayability,
   type EvaluateGeneratedSupportPlayabilityInput,
 } from "./support-evaluator.js";
+import type { RuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
+import {
+  buildGeneratedSupportProofCertificate,
+  formatGeneratedSupportProofCertificate,
+  type GeneratedSupportHashStatus,
+} from "./support-proof-certificate.js";
 
 const defaultBaseUrl = "https://api.poneglyph.one";
 const cardIdPattern = /^[A-Z]{2,6}\d{2}-\d{3}$/;
@@ -34,6 +40,7 @@ export type SupportProbeOptions = {
   expectedBehaviorHash?: string;
   expectedSourceTextHash?: string;
   getCard: PoneglyphClient["getCard"];
+  runtimeCapabilityMatrix?: RuntimeCapabilityMatrix;
   stdout: Pick<NodeJS.WriteStream, "write">;
 };
 
@@ -55,7 +62,27 @@ export async function runSupportProbe(
   if (options.expectedSourceTextHash !== undefined) {
     evaluationInput.expectedSourceTextHash = options.expectedSourceTextHash;
   }
+  if (options.runtimeCapabilityMatrix !== undefined) {
+    evaluationInput.runtimeCapabilityMatrix = options.runtimeCapabilityMatrix;
+  }
   const evaluation = evaluateGeneratedSupportPlayability(evaluationInput);
+  const proofCertificate = buildGeneratedSupportProofCertificate({
+    behaviorHashStatus: toHashStatus(
+      options.expectedBehaviorHash,
+      normalized.behaviorHash,
+    ),
+    blockers: evaluation.blockers,
+    capabilityEvidence: evaluation.capabilityEvidence,
+    componentEvidenceIds: evaluation.componentEvidenceIds,
+    missingCapabilityIds: evaluation.missingCapabilityIds,
+    parseStatus: evaluation.parseStatus,
+    playable: evaluation.playable,
+    sourceHashStatus: toHashStatus(
+      options.expectedSourceTextHash,
+      normalized.sourceTextHash,
+    ),
+    support: evaluation.support,
+  });
 
   options.stdout.write(`Card ID: ${normalized.cardId}\n`);
   options.stdout.write(`Playable: ${evaluation.playable ? "yes" : "no"}\n`);
@@ -72,6 +99,9 @@ export async function runSupportProbe(
   );
   options.stdout.write(
     `effect: ${detail.effect === null ? "null" : detail.effect}\n`,
+  );
+  options.stdout.write(
+    `${formatGeneratedSupportProofCertificate(proofCertificate)}\n`,
   );
 
   if (evaluation.effectDefinitionId !== undefined) {
@@ -90,6 +120,16 @@ export async function runSupportProbe(
   }
 
   return 0;
+}
+
+function toHashStatus(
+  expectedHash: string | undefined,
+  receivedHash: string,
+): GeneratedSupportHashStatus {
+  if (expectedHash === undefined) {
+    return "current";
+  }
+  return expectedHash === receivedHash ? "current" : "stale";
 }
 
 export function formatSupportProbeBlocker(
@@ -162,6 +202,7 @@ function formatDiagnosticDecomposition(
     });
   return [
     "",
+    "  diagnostic support authority: diagnostic-only; remains unsupported",
     ...recognizedTriggerLines,
     ...recognizedSyntaxLines,
     ...recognizedActionLines,
@@ -186,18 +227,26 @@ function toTraceComponentDisplayName(
       return "condition connector";
     case "cost":
       return "cost";
+    case "cost-separator":
+      return "cost separator";
     case "destination":
       return "destination";
     case "duration":
       return "duration";
     case "modifier":
       return "modifier";
+    case "optionality":
+      return "optionality";
     case "predicate":
       return "predicate";
+    case "residue":
+      return "residue";
     case "restriction":
       return "restriction";
     case "saved-reference":
       return "saved-reference";
+    case "sequence-connector":
+      return "sequence connector";
     case "target":
       return "target";
     case "trigger":

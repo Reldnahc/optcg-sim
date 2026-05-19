@@ -11,6 +11,7 @@ import {
   runSupportProbe,
   runSupportProbeCli,
 } from "./support-probe.js";
+import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -364,6 +365,86 @@ describe("support probe", () => {
     );
   });
 
+  it("prints an ordered generated-support proof chain before treating a parsed card as playable", async () => {
+    const detail = await loadOp03044Fixture();
+    const normalized = normalizePoneglyphCardDetail(detail);
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("OP03-044"),
+      expectedBehaviorHash: normalized.behaviorHash,
+      expectedSourceTextHash: normalized.sourceTextHash,
+      getCard: () => Promise.resolve(detail),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: yes");
+    expect(text).toContain("Generated support proof/certificate:");
+    expect(text).toContain(
+      "  1. source/behavior hash status: source=current; behavior=current",
+    );
+    expect(text).toContain("  2. parse completeness: complete");
+    expect(text).toContain("  3. generated DSL schema validation: pass");
+    expect(text).toContain(
+      "  4. component evidence IDs: on-play-draw-then-trash-from-hand",
+    );
+    expect(text).toContain(
+      "  5. required runtime capability IDs: category:auto",
+    );
+    expect(text).toContain("  6. missing runtime capability IDs: none");
+    expect(text).toContain("  7. engine-proof/test-evidence status: present");
+    expect(text).toContain("  8. final playable decision: yes");
+  });
+
+  it("reports parse and schema success separately from playable support when runtime capability evidence is missing", async () => {
+    const detail = await loadOp03044Fixture();
+    const matrixWithoutDraw = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !== "effect:draw:self:count:positive-safe-integer",
+      ),
+    };
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-020D-MISSING-RUNTIME"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-020D-MISSING-RUNTIME",
+          effect: "[On Play] Draw 1 card.",
+          name: "Missing Runtime Proof Candidate",
+        }),
+      runtimeCapabilityMatrix: matrixWithoutDraw,
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("  2. parse completeness: complete");
+    expect(text).toContain("  3. generated DSL schema validation: pass");
+    expect(text).toContain("  4. component evidence IDs: on-play-draw");
+    expect(text).toContain(
+      "  6. missing runtime capability IDs: effect:draw:self:count:positive-safe-integer",
+    );
+    expect(text).toContain("  7. engine-proof/test-evidence status: missing");
+    expect(text).toContain("  8. final playable decision: no");
+  });
+
   it("prints playable no and blocker evidence for unsupported generated-support detail", async () => {
     const detail = await loadOp03044Fixture();
     const output: string[] = [];
@@ -524,6 +605,166 @@ describe("support probe", () => {
     );
     expect(text).not.toContain("condition conjunction: or");
   });
+
+  it("prints generic diagnostic-only scanner components for arbitrary unsupported text", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-020B-SUPERNOVAS"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-020B-SUPERNOVAS",
+          effect:
+            "[On Play]/[When Attacking] If your Leader has the {Supernovas} type and you have no other [Cavendish] Characters, set up to 2 of your DON!! cards as active.",
+          name: "Generic Diagnostic Integration Candidate",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain(
+      "diagnostic support authority: diagnostic-only; remains unsupported",
+    );
+    expect(text).toContain("recognized wrapper candidate: [On Play]");
+    expect(text).toContain("recognized wrapper candidate: [When Attacking]");
+    expect(text).toContain(
+      "recognized condition candidate: your Leader has the {Supernovas} type",
+    );
+    expect(text).toContain("recognized condition connector candidate: and");
+    expect(text).toContain(
+      "unsupported condition blocker: you have no other [Cavendish] Characters",
+    );
+    expect(text).toContain("recognized cardinality candidate: up to 2");
+    expect(text).toContain("recognized target candidate: your DON!! cards");
+    expect(text).toContain(
+      "unsupported action blocker: set up to 2 of your DON!! cards as active",
+    );
+  });
+
+  it.each([
+    {
+      cardId: "CARD-020C-SUPERNOVAS",
+      expected: [
+        "recognized wrapper candidate: [On Play]",
+        "recognized wrapper candidate: [When Attacking]",
+        "recognized condition candidate: your Leader has the {Supernovas} type",
+        "unsupported condition blocker: you have no other [Cavendish] Characters",
+        "recognized cardinality candidate: up to 2",
+        "recognized target candidate: your DON!! cards",
+        "unsupported action blocker: set up to 2 of your DON!! cards as active",
+      ],
+      text: "[On Play]/[When Attacking] If your Leader has the {Supernovas} type and you have no other [Cavendish] Characters, set up to 2 of your DON!! cards as active.",
+    },
+    {
+      cardId: "CARD-020C-KO-SEQUENCE",
+      expected: [
+        "recognized wrapper candidate: [On Play]",
+        "recognized wrapper candidate: [When Attacking]",
+        "recognized cardinality candidate: up to 1",
+        "recognized target candidate: your opponent's Characters",
+        "recognized modifier candidate: −1 cost",
+        "recognized duration candidate: during this turn",
+        "recognized sequence connector candidate: Then",
+        "unsupported action blocker: K.O.",
+        "recognized predicate candidate: cost of 0",
+      ],
+      text: "[On Play]/[When Attacking] Give up to 1 of your opponent's Characters −1 cost during this turn. Then, K.O. up to 1 of your opponent's Characters with a cost of 0.",
+    },
+    {
+      cardId: "CARD-020C-CONDITIONAL-DRAW",
+      expected: [
+        "Playable: yes",
+        "effectDefinitionId: card-020c-conditional-draw.generated-support",
+      ],
+      playableLine: "Playable: yes",
+      text: "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.",
+    },
+    {
+      cardId: "CARD-020C-BOTTOM-DECK",
+      expected: [
+        "recognized trigger candidate: [On Play]",
+        "recognized cardinality candidate: up to 1",
+        "recognized target candidate: your opponent's Characters",
+        "recognized predicate candidate: 1000 power or less",
+        "unsupported destination blocker: bottom of the owner's deck",
+      ],
+      text: "[On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck.",
+    },
+    {
+      cardId: "CARD-020C-ACTIVATE-STAGE",
+      expected: [
+        "recognized wrapper candidate: [Activate: Main]",
+        "recognized optionality candidate: You may",
+        "unsupported cost blocker: rest this Stage",
+        "unsupported cost blocker: turn 1 card from the top of your Life cards face-up",
+        "recognized cost separator candidate: :",
+        "recognized cardinality candidate: Up to 1",
+        "recognized target candidate: your {Straw Hat Crew} type Characters",
+        "recognized modifier candidate: +1000 power",
+        "recognized duration candidate: until the end of your opponent's next turn",
+      ],
+      text: "[Activate: Main] You may rest this Stage and turn 1 card from the top of your Life cards face-up: Up to 1 of your {Straw Hat Crew} type Characters gains +1000 power until the end of your opponent's next turn.",
+    },
+    {
+      cardId: "CARD-020C-CONTINUOUS",
+      expected: [
+        "recognized wrapper candidate: unbracketed If",
+        "recognized condition candidate: your Leader has the {Sky Island} type",
+        "recognized target candidate: this Character",
+        "unsupported action blocker: gains [Rush]",
+      ],
+      text: "If your Leader has the {Sky Island} type, this Character gains [Rush].",
+    },
+  ])(
+    "prints representative CARD-020C diagnostics for $cardId without support admission",
+    async ({
+      cardId,
+      expected,
+      playableLine = "Playable: no",
+      text: effectText,
+    }) => {
+      const detail = await loadOp03044Fixture();
+      const output: string[] = [];
+
+      const exitCode = await runSupportProbe({
+        cardId: toCardId(cardId),
+        getCard: () =>
+          Promise.resolve({
+            ...detail,
+            card_number: cardId,
+            effect: effectText,
+            name: `${cardId} Candidate`,
+          }),
+        stdout: {
+          write(chunk: string | Uint8Array): boolean {
+            output.push(String(chunk));
+            return true;
+          },
+        },
+      });
+
+      const rendered = output.join("");
+      expect(exitCode).toBe(0);
+      expect(rendered).toContain(playableLine);
+      if (playableLine === "Playable: no") {
+        expect(rendered).toContain(
+          "diagnostic support authority: diagnostic-only; remains unsupported",
+        );
+      }
+      for (const expectedText of expected) {
+        expect(rendered).toContain(expectedText);
+      }
+    },
+  );
 
   it("prints parser-layer blockers for unsupported On K.O. continuous generated-support text", async () => {
     const detail = await loadOp03044Fixture();

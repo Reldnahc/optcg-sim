@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-020D.md",
+      "storyId": "CARD-020D",
+      "storyPath": "stories/approved/CARD-020D-generated-support-proof-certificate-reporting.yaml",
+      "storySha256": "ace16fb572511556caa5dd7368a057cb5344a9c978d4417469531dee6c1e239c"
+    }
+  ],
   "version": 1
 }

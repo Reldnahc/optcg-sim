@@ -21,6 +21,7 @@ import {
   generatedSupportRuntimeCapabilityMatrix,
   type RuntimeCapabilityMatrix,
 } from "./runtime-capability-matrix.js";
+import { scanCardTextDiagnostics } from "./support-diagnostics.js";
 
 export interface GeneratedSupportCardTextInput {
   behaviorHash: string;
@@ -575,10 +576,17 @@ function attachParserDiagnosticDecomposition(
       return blocker;
     }
 
-    const decomposition = deriveParserDiagnosticDecomposition(
-      blocker.span?.text ?? sourceText,
+    const blockerText = blocker.span?.text ?? sourceText;
+    const scannerDecomposition =
+      deriveScannerDiagnosticDecomposition(blockerText);
+    const parserDecomposition = deriveParserDiagnosticDecomposition(
+      blockerText,
       sourceText,
     );
+    const decomposition = mergeParserAndScannerDiagnosticDecomposition({
+      parserDecomposition,
+      scannerDecomposition,
+    });
     if (decomposition === undefined) {
       return blocker;
     }
@@ -588,6 +596,69 @@ function attachParserDiagnosticDecomposition(
       decomposition,
     };
   });
+}
+
+function mergeParserAndScannerDiagnosticDecomposition({
+  parserDecomposition,
+  scannerDecomposition,
+}: {
+  parserDecomposition: GeneratedSupportBlocker["decomposition"] | undefined;
+  scannerDecomposition: GeneratedSupportBlocker["decomposition"] | undefined;
+}): GeneratedSupportBlocker["decomposition"] | undefined {
+  if (parserDecomposition === undefined) {
+    return scannerDecomposition;
+  }
+  if (scannerDecomposition?.diagnosticComponents === undefined) {
+    return parserDecomposition;
+  }
+  return {
+    ...parserDecomposition,
+    diagnosticComponents: scannerDecomposition.diagnosticComponents,
+  };
+}
+
+function deriveScannerDiagnosticDecomposition(
+  sourceText: string,
+): GeneratedSupportBlocker["decomposition"] | undefined {
+  const diagnostics = scanCardTextDiagnostics(sourceText);
+  if (diagnostics.components.length === 0) {
+    return undefined;
+  }
+
+  const recognizedComponents = diagnostics.components.filter(
+    (component) => component.status === "recognized",
+  );
+  const unsupportedComponents = diagnostics.components.filter(
+    (component) => component.status === "unsupported",
+  );
+
+  return {
+    diagnosticComponents: diagnostics.components,
+    recognizedActionCandidates: recognizedComponents
+      .filter((component) => component.kind === "action")
+      .map((component) => component.text),
+    recognizedSyntaxFragments: recognizedComponents.map(
+      (component) => component.componentPath,
+    ),
+    recognizedTriggerCandidates: recognizedComponents
+      .filter((component) => component.kind === "wrapper")
+      .map((component) => component.text),
+    reason:
+      "Reusable diagnostic components were recognized, but diagnostic discovery is not generated-support certification; the card remains unsupported.",
+    traceComponents: diagnostics.components.map((component) => ({
+      id: component.id,
+      kind: component.kind,
+      span: component.span,
+      status: component.status,
+      text: component.text,
+    })),
+    unsupportedConditionFragments: unsupportedComponents
+      .filter((component) => component.kind === "condition")
+      .map((component) => component.text),
+    unsupportedSyntaxFragments: unsupportedComponents.map(
+      (component) => component.componentPath,
+    ),
+  };
 }
 
 function hasBlockerKeywordSupportMetadata(

@@ -1,4 +1,5 @@
 import type { CardId, EffectDefinition } from "@optcg/types";
+import type { CardTextDiagnosticComponent } from "./support-diagnostics.js";
 
 export const generatedSupportParserResultStatuses = [
   "complete",
@@ -62,6 +63,7 @@ export interface GeneratedSupportUnparsedSpan {
 }
 
 export interface GeneratedSupportDiagnosticDecomposition {
+  diagnosticComponents?: readonly CardTextDiagnosticComponent[];
   recognizedActionCandidates: readonly string[];
   recognizedSyntaxFragments: readonly string[];
   recognizedTriggerCandidates: readonly string[];
@@ -77,12 +79,16 @@ export type GeneratedSupportDiagnosticTraceComponentKind =
   | "condition"
   | "condition-connector"
   | "cost"
+  | "cost-separator"
   | "destination"
   | "duration"
   | "modifier"
+  | "optionality"
   | "predicate"
+  | "residue"
   | "restriction"
   | "saved-reference"
+  | "sequence-connector"
   | "target"
   | "trigger"
   | "wrapper";

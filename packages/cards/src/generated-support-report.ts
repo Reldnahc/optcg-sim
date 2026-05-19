@@ -9,6 +9,11 @@ import type {
   GeneratedSupportBlocker,
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-types.js";
+import type { CardTextDiagnosticComponent } from "./support-diagnostics.js";
+import {
+  buildProofCertificateForIndexEntry,
+  type GeneratedSupportProofCertificate,
+} from "./support-proof-certificate.js";
 
 export interface GeneratedSupportReport {
   blockerCount: number;
@@ -42,9 +47,11 @@ export interface GeneratedSupportReportBlocker {
 export interface GeneratedSupportReportCardStatus {
   blockerCodes: readonly GeneratedSupportBlockerCode[];
   componentEvidenceIds: readonly string[];
+  diagnosticComponents?: readonly CardTextDiagnosticComponent[];
   missingCapabilityIds: readonly string[];
   parseStatus: GeneratedSupportParserResultStatus;
   parserRuleIds: readonly string[];
+  proofCertificate: GeneratedSupportProofCertificate;
   status: "supported" | "unsupported";
 }
 
@@ -96,9 +103,11 @@ export function buildGeneratedSupportReport(
             entry.blockers.map((blocker) => blocker.code),
           ),
           componentEvidenceIds: sortedUnique(entry.componentEvidenceIds),
+          ...toDiagnosticComponentsStatusField(entry.blockers),
           missingCapabilityIds: sortedUnique(entry.missingCapabilityIds),
           parseStatus: entry.parseStatus,
           parserRuleIds: sortedUnique(entry.parserRuleIds),
+          proofCertificate: buildProofCertificateForIndexEntry(entry),
           status: entry.status,
         } satisfies GeneratedSupportReportCardStatus,
       ]),
@@ -177,6 +186,37 @@ function compareOptional(
 
 function sortedUnique<T extends string>(values: readonly T[]): readonly T[] {
   return [...new Set(values)].sort();
+}
+
+function toDiagnosticComponentsStatusField(
+  blockers: readonly GeneratedSupportBlocker[],
+):
+  | Pick<GeneratedSupportReportCardStatus, "diagnosticComponents">
+  | Record<string, never> {
+  const diagnosticComponents = blockers.flatMap(
+    (blocker) => blocker.decomposition?.diagnosticComponents ?? [],
+  );
+  if (diagnosticComponents.length === 0) {
+    return {};
+  }
+
+  return {
+    diagnosticComponents: [...diagnosticComponents].sort(
+      compareDiagnosticComponents,
+    ),
+  };
+}
+
+function compareDiagnosticComponents(
+  left: CardTextDiagnosticComponent,
+  right: CardTextDiagnosticComponent,
+): number {
+  return (
+    left.span.start - right.span.start ||
+    left.span.end - right.span.end ||
+    left.kind.localeCompare(right.kind) ||
+    left.id.localeCompare(right.id)
+  );
 }
 
 function stripInternalBlockerFields(

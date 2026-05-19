@@ -29,6 +29,7 @@ export interface GeneratedSupportPlayabilityEvaluation {
   blockers: readonly GeneratedSupportBlocker[];
   capabilityEvidence: readonly RuntimeCapabilityEvidence[];
   cardId: NormalizedPoneglyphCard["cardId"];
+  componentEvidenceIds: readonly string[];
   effectDefinition?: EffectDefinition;
   effectDefinitionId?: string;
   missingCapabilityIds: readonly string[];
@@ -59,6 +60,7 @@ export function evaluateGeneratedSupportPlayability(
       ],
       capabilityEvidence: [],
       cardId: input.card.cardId,
+      componentEvidenceIds: [],
       missingCapabilityIds: [],
       parseStatus: "staleHash",
       parserRuleIds: [],
@@ -104,6 +106,7 @@ export function evaluateGeneratedSupportPlayability(
     blockers: entry.blockers,
     capabilityEvidence: entry.capabilityEvidence,
     cardId: entry.cardId,
+    componentEvidenceIds: entry.componentEvidenceIds,
     missingCapabilityIds: entry.missingCapabilityIds,
     parseStatus: entry.parseStatus,
     parserRuleIds: entry.parserRuleIds,

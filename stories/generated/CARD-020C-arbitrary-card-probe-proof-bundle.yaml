@@ -1,0 +1,121 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-020C
+epic_id: CARD-020
+title: Arbitrary-card probe proof bundle
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: generated
+summary: >
+  Add representative support-probe/report proof cases showing that arbitrary
+  unsupported card text is decomposed by reusable diagnostics instead of exact
+  card or full-effect branches.
+story_boundary: >
+  Own only proof/regression tests and small diagnostic integration corrections
+  needed to make the CARD-020A/B generic diagnostics demonstrably useful on
+  representative arbitrary card text. Do not add new generated playable support,
+  runtime behavior, runtime capability records, parser certification, fixture
+  support, source hash updates, behavior hash updates, or exact-card prop-ups.
+allowed_touch_points:
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/*support*.test.ts
+  - packages/cards/src/*diagnostic*.ts
+  - packages/cards/src/*diagnostic*.test.ts
+  - agent-packets/CARD-020C.md
+  - stories/generated/CARD-020*.yaml
+  - stories/approved/CARD-020*.yaml
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s013
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-020B
+scope:
+  - prove the support probe can accept representative arbitrary card text and explain recognizable components plus the exact unsupported or missing layer
+  - prove representative diagnostics come from reusable scanner components by avoiding exact card ID branches, exact full printed-text branches, and one-off full-effect allowlists
+  - keep proof output as cards-layer source-text/support-gating diagnostics above engine execution; proof examples must not execute rules, simulate resolution, infer engine behavior, or enumerate effect permutations
+  - prove representative diagnostics do not come from sample-shaped templates, sample-specific regular expressions, or complete sample-effect branches
+  - "include the Supernovas slash-wrapper conditional DON-active sample as unsupported diagnostic proof: [On Play]/[When Attacking] If your Leader has the {Supernovas} type and you have no other [Cavendish] Characters, set up to 2 of your DON!! cards as active."
+  - for that sample, require diagnostic output for `[On Play]`, `[When Attacking]`, the `If` condition boundary, the Leader type condition, the unsupported no-other-named-character condition, the boolean `and`, `up to 2`, DON target/cardinality, the set-active action candidate, and the missing/unsupported layer that prevents generated support
+  - "include the slash-wrapper sequence cost/K.O. sample as unsupported diagnostic proof: [On Play]/[When Attacking] Give up to 1 of your opponent's Characters −1 cost during this turn. Then, K.O. up to 1 of your opponent's Characters with a cost of 0."
+  - for that sample, require diagnostic output for both wrappers, `up to 1`, opponent Character target, Unicode minus cost modifier, `during this turn`, `Then`, K.O. action candidate, second `up to 1`, cost predicate `cost of 0`, and the exact unsupported/missing layers
+  - "include the EB02-026-style conditional draw sample as unsupported or supported according to existing gates: [On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards."
+  - for that sample, require diagnostic output that distinguishes the `If` wrapper, the boolean `and`, the Leader multicolor condition, the hand-count comparator condition, and the draw action/body; if unsupported, it must say which layer blocks the full condition/body composition
+  - "include the EB02-027-style bottom-deck sample as unsupported or supported according to existing gates: [On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck."
+  - for that sample, require diagnostic output for `[On Play]`, `up to 1`, opponent Character target, `1000 power or less` comparator predicate, bottom-deck destination/action candidate, and the exact unsupported/missing layer
+  - "include the activate-main stage sample as unsupported diagnostic proof: [Activate: Main] You may rest this Stage and turn 1 card from the top of your Life cards face-up: Up to 1 of your {Straw Hat Crew} type Characters gains +1000 power until the end of your opponent's next turn."
+  - for that sample, require diagnostic output for the activate-main wrapper candidate, optionality, rest-this-Stage cost candidate, life face-up cost candidate, colon separator, `up to 1`, trait Character target, power modifier, and next-turn duration, while remaining unsupported if any required layer is missing
+  - "include an unwrapped continuous/static sample as unsupported diagnostic proof: If your Leader has the {Sky Island} type, this Character gains [Rush]."
+  - for that sample, require diagnostic output for the unbracketed condition boundary, Leader type condition, self Character target, gain-keyword action candidate, and missing/unsupported layer
+non_scope:
+  - adding real-card support for the representative examples
+  - adding generated playable support for any sample unless existing gates already fully support it before this story starts
+  - parser certification for new support
+  - engine runtime behavior
+  - runtime capability records
+  - shared contracts/schema changes
+  - source fixture, source hash, behavior hash, overlay, or support manifest changes
+  - exhaustive testing of every card or every wrapper/body combination
+  - exact card ID branches, exact full printed-text branches, one-off full-effect branches, or fake support metadata
+  - sample-shaped templates, sample-specific regular expressions, or complete sample-effect branches used to satisfy proof examples
+card_source_integrity:
+  - this story must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or manually reviewed source evidence
+  - representative printed text is used only as probe input and negative/diagnostic proof unless every existing generated-support gate already supports the complete behavior
+engine_capability_preflight:
+  - no new engine capability is introduced by this story
+  - runtime gaps discovered by representative probes must be reported as missing runtime capability or unsupported component diagnostics, not fixed in this story
+acceptance_criteria:
+  - every representative sample produces narrower diagnostic components than a single whole-card `unparsed-span` whenever reusable components are present
+  - Supernovas slash-wrapper conditional DON-active text clearly reports both supported-looking and unsupported/missing pieces without becoming playable
+  - slash-wrapper cost/K.O. sequence text clearly reports both wrappers, both target/cardinality fragments, Unicode minus cost modifier, sequence boundary, K.O. candidate, predicate, and missing layers without becoming playable
+  - conditional draw text clearly distinguishes `If`, `and`, both condition fragments, draw body, and the missing layer if the full shape is unsupported
+  - bottom-deck text clearly distinguishes cardinality, target, comparator predicate, destination/action, and missing layer if unsupported
+  - activate-main stage text explains wrapper/cost/action/duration components without claiming activate-main support if any required layer is missing
+  - unwrapped continuous/static condition text explains the condition and gain-keyword body without becoming playable
+  - tests guard against exact full-text branches by proving the same component path works for at least one small wording/value variation per major sample class
+  - tests guard against sample-shaped template branches by proving the same component path works for at least one small wording/value variation per major sample class, including slash-wrapper conditional text, slash-wrapper sequence text, conditional draw text, bottom-deck predicate text, activate-main cost/action text, and unwrapped continuous/static text
+required_tests:
+  - story-review for CARD-020C before approval handoff
+  - support-probe tests for every representative sample listed in scope
+  - generated-support-report tests for at least the Supernovas slash-wrapper conditional DON-active sample, the slash-wrapper cost/K.O. sequence sample, the conditional draw sample, and the bottom-deck sample
+  - variation tests proving diagnostics are component-driven for every major sample class, including `up to 2` and another `up to N` value, ASCII and Unicode minus cost modifier text, a different Leader type name, a different named-character condition, a different power/cost comparator value, a different activate-main trait target, and a different unwrapped continuous/static condition target
+  - tests proving every representative sample remains unsupported unless existing complete generated-support gates already pass
+  - regression tests proving stale-hash, invalid-schema, missing-runtime-capability, unsupported-primitive, custom-handler-required, ambiguous-wording, and unparsed-span blocker identities remain stable
+  - regression tests proving existing CARD-008 through CARD-019 support behavior remains compatible
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-020C packet before implementation
+  - stay within allowed_touch_points
+  - keep representative examples as diagnostics/probe proof, not support admission
+  - do not use exact full-text branches to satisfy the proof cases
+  - a child implementation fails review if its proof examples pass only because the exact sample text, card ID, or complete effect sentence appears in implementation logic
+  - a child implementation also fails review if its proof examples pass through sample-shaped templates, sample-specific regular expressions, or complete sample-effect branches that do not decompose through reusable component scanner paths
+  - fail closed when a representative text exposes a missing schema/runtime/source/metadata authority
+ambiguity_policy: fail_and_escalate
