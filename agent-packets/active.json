@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-020A.md",
+      "storyId": "CARD-020A",
+      "storyPath": "stories/approved/CARD-020A-generic-card-text-diagnostic-scanner.yaml",
+      "storySha256": "4de4625b150a16d94d507e19945833e5be8a8bbd0beee48e9e8997fadfe60862"
+    }
+  ],
   "version": 1
 }

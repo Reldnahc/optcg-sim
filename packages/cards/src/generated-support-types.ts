@@ -80,9 +80,12 @@ export type GeneratedSupportDiagnosticTraceComponentKind =
   | "destination"
   | "duration"
   | "modifier"
+  | "optionality"
   | "predicate"
+  | "quantity"
   | "restriction"
   | "saved-reference"
+  | "sequence"
   | "target"
   | "trigger"
   | "wrapper";

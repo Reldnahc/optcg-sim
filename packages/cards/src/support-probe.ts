@@ -192,12 +192,18 @@ function toTraceComponentDisplayName(
       return "duration";
     case "modifier":
       return "modifier";
+    case "optionality":
+      return "optionality";
     case "predicate":
       return "predicate";
+    case "quantity":
+      return "quantity";
     case "restriction":
       return "restriction";
     case "saved-reference":
       return "saved-reference";
+    case "sequence":
+      return "sequence";
     case "target":
       return "target";
     case "trigger":

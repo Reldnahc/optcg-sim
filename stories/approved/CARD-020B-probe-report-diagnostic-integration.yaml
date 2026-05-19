@@ -1,0 +1,121 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-020B
+epic_id: CARD-020
+title: Probe/report diagnostic integration
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Integrate generic card-text diagnostic components into support-probe and
+  generated-support-report output so unsupported cards explain what was
+  recognized, what layer failed, and what text remains unsupported.
+story_boundary: >
+  Own only cards-side support-probe/report diagnostic presentation and metadata
+  propagation over the CARD-020A diagnostic scanner. Do not add parser
+  certification, generated DSL construction, generated playable support, engine
+  runtime behavior, runtime capability records, or fixture/hash changes.
+allowed_touch_points:
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/*support*.test.ts
+  - packages/cards/src/*diagnostic*.ts
+  - packages/cards/src/*diagnostic*.test.ts
+  - agent-packets/CARD-020B.md
+  - stories/generated/CARD-020*.yaml
+  - stories/approved/CARD-020*.yaml
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-020A
+scope:
+  - propagate CARD-020A diagnostic components into support-probe output for unsupported generated-support text
+  - propagate the same diagnostic components into generated-support-report structured output where report metadata can safely carry them
+  - keep support-probe/report diagnostics as a cards source-text/support-gating layer above engine execution; probe/report output may name missing runtime capability, but must not execute rules, simulate resolution, or infer engine behavior
+  - report deepest-successful-layer using the inherited ordered progression `source-integrity` -> `metadata` -> `parser` -> `schema` -> `runtime-capability` -> `support-status`
+  - for runtime-capability failures after complete parse and valid DSL schema, report deepest successful layer `schema`
+  - for schema failures after source integrity, metadata, and parser success, report deepest successful layer `parser`
+  - for parser failures, stale-hash failures, and cases with no trusted prior successful layer, omit deepest-successful-layer output rather than inventing a successful layer for partial diagnostic fragments
+  - report exact missing layer where available, including parser, schema, runtime capability, source integrity, metadata/review/test status, stale hash, unsupported primitive, unsupported trigger, unsupported cost, unsupported optionality, unsupported condition, unsupported cardinality, unsupported target, unsupported destination, unsupported duration, unsupported modifier/restriction, unsupported saved-reference, and unsupported sequence/action composition
+  - keep existing blocker identities stable for `unparsed-span`, `ambiguous-wording`, `custom-handler-required`, `unsupported-primitive`, `stale-hash`, `invalid-dsl-schema`, and `missing-runtime-capability`
+  - keep stale hash as highest-priority and do not run scanner diagnostics ahead of stale-hash reporting
+  - make output distinguish diagnostic recognition from generated-support certification using plain wording such as recognized diagnostic component, unsupported component, missing layer, and remains unsupported
+  - keep whole-card unsupported diagnostics only when no narrower component from CARD-020A is available
+non_scope:
+  - new scanner component categories beyond the CARD-020A model except small integration fixes discovered during implementation
+  - generated playable support
+  - parser certification for new support
+  - generated DSL construction
+  - runtime capability records
+  - engine runtime behavior
+  - shared contracts/schema changes
+  - fixture, hash, overlay, or support manifest changes
+  - server, client, API, UI, database, replay, WebSocket, Redis, or live Poneglyph work
+card_source_integrity:
+  - not applicable because CARD-020B is diagnostic/report metadata integration only and does not enable or change gameplay support for any real card
+  - this story must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or manually reviewed source evidence
+  - diagnostic output may display source text and spans from probe input but must not rewrite source evidence
+engine_capability_preflight:
+  - not applicable for gameplay implementation because CARD-020B only propagates diagnostics/report metadata and does not implement or enable gameplay behavior
+  - no new engine capability is introduced by this story
+  - missing runtime capability remains a reported missing layer and must not be papered over by parser/report output
+acceptance_criteria:
+  - support-probe output for unsupported text includes reusable component diagnostics when components are recognized
+  - generated-support-report output carries equivalent structured component diagnostics where available
+  - output clearly says that recognized diagnostic components are not generated-support certification
+  - stale hash remains the first reported blocker and does not silently refresh evidence
+  - parser failures and stale-hash failures omit deepest-successful-layer output
+  - missing runtime capability output names the capability/component ID when existing data provides it
+  - invalid schema output names schema as the failing layer when generated DSL already exists and schema validation fails
+  - inherited unsupported layer categories remain distinct and behaviorally compatible for unsupported trigger, cost, optionality, condition, cardinality, target, destination, duration, modifier, restriction, saved-reference, sequence/action composition, and unsupported-layer output
+  - parser-failure output names recognized wrappers, conditions, connectors, quantities, targets, predicates, actions, modifiers, durations, destinations, residue, and unsupported components where known
+  - existing supported cards and existing unsupported blocker codes remain compatible
+required_tests:
+  - story-review for CARD-020B before approval handoff
+  - support-probe tests proving arbitrary unsupported text prints diagnostic components and missing layers without changing playable status
+  - generated-support-report tests proving equivalent structured diagnostic metadata is emitted for the same unsupported text
+  - stale-hash test proving stale hash is reported before parser/scanner/capability diagnostics
+  - deepest-successful-layer tests for runtime-capability failure after complete parse and valid DSL schema reporting `schema`
+  - deepest-successful-layer tests for schema failure after parser success reporting `parser`
+  - deepest-successful-layer tests proving parser failure and stale-hash failure omit deepest-successful-layer output
+  - missing-runtime-capability test proving runtime capability layer and capability/component ID are reported
+  - invalid-dsl-schema test proving schema layer is reported without scanner output overriding it
+  - regression tests proving unsupported layer categories remain distinct for unsupported trigger, cost, optionality, condition, cardinality, target, destination, duration, modifier, restriction, saved-reference, sequence/action composition, and unsupported-layer output
+  - compatibility tests for existing `unparsed-span`, `ambiguous-wording`, `custom-handler-required`, `unsupported-primitive`, `stale-hash`, `invalid-dsl-schema`, and `missing-runtime-capability` blocker codes
+  - regression tests proving existing CARD-008 through CARD-019 support-probe/report behavior remains compatible
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-020B packet before implementation
+  - stay within allowed_touch_points
+  - do not use probe/report diagnostics as playable generated-support authority
+  - a child implementation fails review if its proof examples pass only because the exact sample text, card ID, or complete effect sentence appears in implementation logic
+  - a child implementation also fails review if its proof examples pass through sample-shaped templates, sample-specific regular expressions, or complete sample-effect branches that do not decompose through reusable component scanner paths
+  - fail closed when diagnostic metadata cannot identify a safe narrower layer or span
+ambiguity_policy: fail_and_escalate
