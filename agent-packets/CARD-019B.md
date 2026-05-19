@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id CARD-019B -->
 <!-- agent-packet:story-path stories/approved/CARD-019B-conditional-generated-support-composition.yaml -->
-<!-- agent-packet:story-sha256 e9670d237d2e1e30a9b2ee41eb5bf5806e1fc1dcf6b0c12d04e2ece8bd6c6038 -->
+<!-- agent-packet:story-sha256 bceb1bff4c14ce65348b97b2c4078a470c7c9cf492b9762dccc0588ba57c4e9b -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -811,6 +811,8 @@ Own only cards-side generated-support component evidence, runtime capability mat
 ## Allowed Touch Points
 
 <!-- prettier-ignore -->
+- packages/cards/src/conditional-generated-support-composer.ts
+- packages/cards/src/conditional-generated-support-composer.test.ts
 - packages/cards/src/composed-parser-builder.ts
 - packages/cards/src/composed-parser-builder.test.ts
 - packages/cards/src/certified-card-text-parser.ts

@@ -18,4 +18,18 @@ Findings: none.
 
 The prior findings are resolved in the current child story. Approval-ready: yes.
 
+## Touch-Point Correction Recheck
+
+- Assignment ID: `019e3e0a-01bc-7bc0-8323-98452d9bb8e2`
+- Reviewer: `Maxwell the 2nd`
+- Reviewer model: `gpt-5.4`
+- Reason: approved story touch points were corrected to allow a dedicated cards-side conditional generated-support composer helper and focused test file needed to avoid oversized parser-file growth.
+
+Findings: none.
+
+Disposition: CARD-019B remains approval-ready after adding:
+
+- `packages/cards/src/conditional-generated-support-composer.ts`
+- `packages/cards/src/conditional-generated-support-composer.test.ts`
+
 This artifact satisfies only the CARD-019B child row. It does not satisfy the CARD-019 parent row or CARD-019A child row.

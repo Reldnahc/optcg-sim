@@ -20,6 +20,8 @@ story_boundary: >
   not add engine behavior, shared schema authority, new effect primitives,
   source fixture support, or real-card hash changes.
 allowed_touch_points:
+  - packages/cards/src/conditional-generated-support-composer.ts
+  - packages/cards/src/conditional-generated-support-composer.test.ts
   - packages/cards/src/composed-parser-builder.ts
   - packages/cards/src/composed-parser-builder.test.ts
   - packages/cards/src/certified-card-text-parser.ts
