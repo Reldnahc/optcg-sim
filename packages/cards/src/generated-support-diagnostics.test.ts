@@ -181,4 +181,77 @@ describe("generated support diagnostics", () => {
     });
     expect(blocker?.decomposition).toBeUndefined();
   });
+
+  it("keeps representative CARD-020C arbitrary-text probe samples decomposed and fail-closed", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-020C-SUPERNOVAS" as CardId,
+          sourceText:
+            "[On Play]/[When Attacking] If your Leader has the {Supernovas} type and you have no other [Cavendish] Characters, set up to 2 of your DON!! cards as active.",
+          sourceTextHash: "sha256:card-020c-supernovas",
+        },
+        {
+          ...baseInput,
+          cardId: "CARD-020C-SLASH-KO" as CardId,
+          sourceText:
+            "[On Play]/[When Attacking] Give up to 1 of your opponent's Characters -1 cost during this turn. Then, K.O. up to 1 of your opponent's Characters with a cost of 0.",
+          sourceTextHash: "sha256:card-020c-slash-ko",
+        },
+        {
+          ...baseInput,
+          cardId: "CARD-020C-CONDITIONAL-DRAW" as CardId,
+          sourceText:
+            "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.",
+          sourceTextHash: "sha256:card-020c-conditional-draw",
+        },
+        {
+          ...baseInput,
+          cardId: "CARD-020C-BOTTOM-DECK" as CardId,
+          sourceText:
+            "[On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck.",
+          sourceTextHash: "sha256:card-020c-bottom-deck",
+        },
+        {
+          ...baseInput,
+          cardId: "CARD-020C-ACTIVATE-MAIN" as CardId,
+          sourceText:
+            "[Activate: Main] You may rest this Stage and turn 1 card from the top of your Life cards face-up: Up to 1 of your {Straw Hat Crew} type Characters gains +1000 power until the end of your opponent's next turn.",
+          sourceTextHash: "sha256:card-020c-activate-main",
+        },
+        {
+          ...baseInput,
+          cardId: "CARD-020C-UNWRAPPED-CONTINUOUS" as CardId,
+          sourceText:
+            "If your Leader has the {Sky Island} type, this Character gains [Rush].",
+          sourceTextHash: "sha256:card-020c-unwrapped-continuous",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.supportedCardIds).toContain("CARD-020C-CONDITIONAL-DRAW");
+    expect(report.unsupportedCardIds).toEqual(
+      expect.arrayContaining([
+        "CARD-020C-SUPERNOVAS",
+        "CARD-020C-SLASH-KO",
+        "CARD-020C-BOTTOM-DECK",
+        "CARD-020C-ACTIVATE-MAIN",
+        "CARD-020C-UNWRAPPED-CONTINUOUS",
+      ]),
+    );
+
+    const slashKo = report.blockers.find(
+      (candidate) => candidate.cardId === "CARD-020C-SLASH-KO",
+    );
+    expect(slashKo?.decomposition?.recognizedSyntaxFragments).toEqual(
+      expect.arrayContaining([
+        "wrapper:slash",
+        "sequence:then",
+        "modifier:cost-negative",
+      ]),
+    );
+  });
 });

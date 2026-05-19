@@ -10,6 +10,11 @@ import type {
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import { deriveParserDiagnosticDecomposition } from "./composed-parser-builder.js";
 import {
+  scanGenericCardTextDiagnostics,
+  type GenericDiagnosticComponent,
+} from "./generic-card-text-diagnostic-scanner.js";
+import {
+  type GeneratedSupportDiagnosticDecomposition,
   findGeneratedSupportComponentEvidenceByShapeId,
   isCompleteGeneratedSupportParseResult,
   listRequiredRuntimeCapabilityIdsForComponentEvidenceId,
@@ -575,10 +580,12 @@ function attachParserDiagnosticDecomposition(
       return blocker;
     }
 
-    const decomposition = deriveParserDiagnosticDecomposition(
-      blocker.span?.text ?? sourceText,
-      sourceText,
-    );
+    const decomposition =
+      deriveParserDiagnosticDecomposition(
+        blocker.span?.text ?? sourceText,
+        sourceText,
+      ) ??
+      deriveGenericDiagnosticDecomposition(blocker.span?.text ?? sourceText);
     if (decomposition === undefined) {
       return blocker;
     }
@@ -588,6 +595,114 @@ function attachParserDiagnosticDecomposition(
       decomposition,
     };
   });
+}
+
+function deriveGenericDiagnosticDecomposition(
+  sourceText: string,
+): GeneratedSupportDiagnosticDecomposition | undefined {
+  const scan = scanGenericCardTextDiagnostics(sourceText);
+  const recognized = scan.components.filter(
+    (component) => component.status !== "unsupported",
+  );
+  const unsupported = scan.components.filter(
+    (component) => component.status === "unsupported",
+  );
+
+  if (recognized.length === 0) {
+    return undefined;
+  }
+
+  return {
+    recognizedActionCandidates: recognized
+      .filter((component) => component.kind === "action")
+      .map((component) => component.text),
+    recognizedSyntaxFragments: deriveGenericSyntaxFragments(
+      sourceText,
+      recognized,
+    ),
+    recognizedTriggerCandidates: recognized
+      .filter((component) => isTriggerLikeComponent(component))
+      .map((component) => component.text),
+    reason:
+      "Parser components were recognized by generic diagnostics, but generated support remains fail-closed for unsupported or uncertified composition.",
+    traceComponents: scan.components.map((component) => ({
+      id: component.id,
+      kind: component.kind,
+      span: component.span,
+      status: component.status,
+      text: component.text,
+    })),
+    unsupportedConditionFragments: [
+      ...unsupported
+        .filter((component) => component.kind === "condition")
+        .map((component) => component.text),
+      ...extractUnsupportedConditionFragments(sourceText),
+    ],
+    unsupportedSyntaxFragments: unsupported
+      .map((component) => component.text)
+      .map((text) => `unparsed-fragment:${text}`),
+  };
+}
+
+function extractUnsupportedConditionFragments(
+  sourceText: string,
+): readonly string[] {
+  const fragments: string[] = [];
+  const noOtherNamedCharacter =
+    /\byou have no other \[[^\]]+\] Characters\b/i.exec(sourceText)?.[0];
+  if (noOtherNamedCharacter !== undefined) {
+    fragments.push(noOtherNamedCharacter);
+  }
+  return fragments;
+}
+
+function deriveGenericSyntaxFragments(
+  sourceText: string,
+  recognized: readonly GenericDiagnosticComponent[],
+): readonly string[] {
+  const fragments = new Set<string>();
+  if (sourceText.includes("]/[")) {
+    fragments.add("wrapper:slash");
+  }
+  if (
+    recognized.some(
+      (component) =>
+        component.kind === "sequence" && /then/i.test(component.text),
+    )
+  ) {
+    fragments.add("sequence:then");
+  }
+  if (
+    recognized.some(
+      (component) =>
+        component.kind === "modifier" && /[−-]\d+\s+cost/i.test(component.text),
+    )
+  ) {
+    fragments.add("modifier:cost-negative");
+  }
+  if (
+    recognized.some((component) => component.kind === "condition-connector")
+  ) {
+    fragments.add("condition-components:v1");
+  }
+  if (recognized.some((component) => component.kind === "cardinality")) {
+    fragments.add("cardinality:up-to");
+  }
+  return [...fragments].sort();
+}
+
+function isTriggerLikeComponent(
+  component: GenericDiagnosticComponent,
+): boolean {
+  if (component.kind === "wrapper") {
+    return /^\[(on play|when attacking|on k\.o\.|trigger)\]$/i.test(
+      component.text,
+    );
+  }
+  if (component.kind === "trigger") {
+    return true;
+  }
+  return false;
 }
 
 function hasBlockerKeywordSupportMetadata(

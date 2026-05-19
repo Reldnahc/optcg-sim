@@ -27,6 +27,16 @@ export function scanGenericCardTextDiagnostics(
   for (const match of sourceText.matchAll(wrapperRegex)) {
     const text = match[0];
     const start = match.index;
+    const prevChar = start > 0 ? sourceText[start - 1] : "";
+    const isBoundary =
+      start === 0 ||
+      prevChar === "/" ||
+      prevChar === "\n" ||
+      prevChar === "." ||
+      prevChar === "(";
+    if (!isBoundary) {
+      continue;
+    }
     const normalizedText = normalizeDiagnosticText(text);
     const status: GeneratedSupportDiagnosticTraceComponentStatus =
       /^\[activate:\s*main\]$/i.test(text) ? "unsupported" : "recognized";
@@ -67,6 +77,17 @@ export function scanGenericCardTextDiagnostics(
   for (const match of sourceText.matchAll(
     /\b\d+\s+(power|cost)\s+or\s+(less|more)\b/gi,
   )) {
+    const text = match[0];
+    pushComponent(components, recognizedSpans, {
+      kind: "predicate",
+      normalizedText: normalizeDiagnosticText(text),
+      start: match.index,
+      status: "recognized",
+      text,
+    });
+  }
+
+  for (const match of sourceText.matchAll(/\bcost of \d+\b/gi)) {
     const text = match[0];
     pushComponent(components, recognizedSpans, {
       kind: "predicate",
@@ -210,8 +231,11 @@ export function scanGenericCardTextDiagnostics(
   for (const pattern of [
     /\byour opponent's Character cards\b/gi,
     /\byour opponent's Characters\b/gi,
+    /\byour DON!! cards\b/gi,
     /\byour hand\b/gi,
     /\bDON!! card\b/gi,
+    /\bthis Character\b/gi,
+    /\byour \{[^}]+\} type Characters\b/gi,
   ]) {
     for (const match of sourceText.matchAll(pattern)) {
       const text = match[0];
@@ -245,6 +269,9 @@ export function scanGenericCardTextDiagnostics(
     /\bplace\b/gi,
     /\bdraw\b/gi,
     /\btrash\b/gi,
+    /\bset\b/gi,
+    /K\.O\./g,
+    /\bgains\b/gi,
     /\bcannot attack\b/gi,
   ]) {
     for (const match of sourceText.matchAll(pattern)) {
@@ -262,11 +289,15 @@ export function scanGenericCardTextDiagnostics(
   for (const pattern of [
     /\bbottom of the owner's deck\b/gi,
     /\bthis turn\b/gi,
+    /\buntil the end of your opponent's next turn\b/gi,
   ]) {
     for (const match of sourceText.matchAll(pattern)) {
       const text = match[0];
       pushComponent(components, recognizedSpans, {
-        kind: /this turn/i.test(text) ? "duration" : "destination",
+        kind:
+          /this turn/i.test(text) || /until the end of/i.test(text)
+            ? "duration"
+            : "destination",
         normalizedText: normalizeDiagnosticText(text),
         start: match.index,
         status: "recognized",
@@ -281,6 +312,65 @@ export function scanGenericCardTextDiagnostics(
       kind: "modifier",
       normalizedText: normalizeDiagnosticText(text),
       start: match.index,
+      status: "recognized",
+      text,
+    });
+  }
+
+  for (const match of sourceText.matchAll(/[−-]\d+\s+cost/gi)) {
+    const text = match[0];
+    pushComponent(components, recognizedSpans, {
+      kind: "modifier",
+      normalizedText: normalizeDiagnosticText(text),
+      start: match.index,
+      status: "recognized",
+      text,
+    });
+  }
+
+  for (const match of sourceText.matchAll(/[+]\d+\s+power/gi)) {
+    const text = match[0];
+    pushComponent(components, recognizedSpans, {
+      kind: "modifier",
+      normalizedText: normalizeDiagnosticText(text),
+      start: match.index,
+      status: "recognized",
+      text,
+    });
+  }
+
+  for (const match of sourceText.matchAll(
+    /\bset up to \d+ of your DON!! cards as active\b/gi,
+  )) {
+    pushComponent(components, recognizedSpans, {
+      kind: "action",
+      normalizedText: "set as active",
+      start: match.index,
+      status: "recognized",
+      text: "set as active",
+    });
+  }
+
+  for (const match of sourceText.matchAll(
+    /\brest this Stage\b|\bturn 1 card from the top of your Life cards face-up\b/gi,
+  )) {
+    const text = match[0];
+    pushComponent(components, recognizedSpans, {
+      kind: "cost",
+      normalizedText: normalizeDiagnosticText(text),
+      start: match.index,
+      status: "recognized",
+      text,
+    });
+  }
+
+  for (const match of sourceText.matchAll(/face-up:/gi)) {
+    const text = ":";
+    const start = match.index + "face-up".length;
+    pushComponent(components, recognizedSpans, {
+      kind: "cost",
+      normalizedText: ":",
+      start,
       status: "recognized",
       text,
     });
