@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Move broad tooling-heavy contract, CLI, and lint-config suites out of the
   default root test lane so `pnpm test` stays focused on product/package

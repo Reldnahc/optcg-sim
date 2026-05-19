@@ -8,7 +8,7 @@ type: tooling
 area: infra
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate verification-lane repairs that keep expensive tooling and
   workflow tests out of the default root test lane while preserving their
