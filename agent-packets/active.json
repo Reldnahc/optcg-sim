@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-019A.md",
-      "storyId": "CARD-019A",
-      "storyPath": "stories/approved/CARD-019A-conditional-parser-component-scaffold.yaml",
-      "storySha256": "c3282a78c092e2769282a2399da0a063de5f4c9d2dcc4945500fe303ad041904"
+      "packetPath": "agent-packets/CARD-019B.md",
+      "storyId": "CARD-019B",
+      "storyPath": "stories/approved/CARD-019B-conditional-generated-support-composition.yaml",
+      "storySha256": "e9670d237d2e1e30a9b2ee41eb5bf5806e1fc1dcf6b0c12d04e2ece8bd6c6038"
     }
   ],
   "version": 1
