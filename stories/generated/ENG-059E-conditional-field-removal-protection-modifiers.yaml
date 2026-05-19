@@ -1,0 +1,95 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-059E
+epic_id: ENG-059
+title: Conditional field-removal protection modifiers
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Add reusable condition evaluation for field-removal protection continuous
+  modifiers so public conditions such as self trash-count predicates can gate
+  opponent-effect removal protection without card-specific branches.
+story_boundary: >
+  Own only engine-core runtime support and tests for conditionally active
+  field-removal protection continuous modifiers. Reuse the existing condition
+  evaluator and ENG-059C field-removal protection metadata; do not add parser
+  support, generated-support records, real-card fixtures, card IDs, full-card
+  text matching, cards package changes, or new protection contract shapes.
+allowed_touch_points:
+  - packages/engine-core/src/field-removal-protection.ts
+  - packages/engine-core/src/field-removal-protection.test.ts
+  - packages/engine-core/src/**/*protection*.test.ts
+  - packages/engine-core/src/**/*condition*.test.ts
+  - packages/engine-core/src/**/*continuous*.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-059*.yaml
+  - stories/approved/ENG-059*.yaml
+  - agent-packets/ENG-059E.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s038
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s013
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s016
+  - 06-visibility-security.s004
+  - 06-visibility-security.s017
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - ENG-059A
+  - ENG-059C
+scope:
+  - allow field-removal protection continuous modifiers to carry supported public conditions
+  - evaluate supported conditions through the existing condition evaluator, including ENG-059A `trashCount` predicates
+  - use the protection source/controller context already available on the continuous effect; do not infer from card IDs or printed text
+  - treat a false supported condition as no active protection
+  - preserve ENG-059C behavior for unconditional protection, opponent-effect prevention, controller-owned effects, controller costs, rule-process trash, and battle K.O.
+  - preserve fail-closed behavior for unsupported, malformed, ambiguous, or hidden-information-sensitive conditions
+  - preserve deterministic event order, state hashes, and hidden-information projection
+non_scope:
+  - parser support, generated support, support reports, support probes, real-card fixtures, overlays, source hashes, or behavior hashes
+  - production branches for a real card ID, full-card text, or external card list
+  - changing canonical protection types or shared contracts
+  - broad continuous-effect layering beyond conditional field-removal protection activation
+  - new condition primitives beyond those already supported by the engine condition evaluator
+  - changing battle K.O., rule-process trash, controller-cost, or controller-owned-effect semantics
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - unconditional ENG-059C field-removal protection behavior remains unchanged
+  - a supported false `trashCount` condition makes the protection inactive and allows supported opponent-effect field removal
+  - a supported true `trashCount` condition makes the protection active and prevents supported opponent-effect field removal
+  - unsupported or malformed protection conditions fail closed before partial mutation
+  - condition evaluation uses reusable runtime data and contains no real-card ID, full-card text, or external-card-list branch
+  - hidden-information projections do not expose private hand, deck, or face-down life identities through conditional protection evaluation
+required_tests:
+  - story-review for ENG-059E before approval handoff
+  - unit test proving unconditional field-removal protection behavior remains supported
+  - unit test proving below-threshold `trashCount` condition leaves opponent-effect field removal unprotected
+  - unit test proving at-threshold `trashCount` condition prevents opponent-effect field removal
+  - unit test proving unsupported or malformed condition metadata fails closed before zone mutation
+  - regression tests proving battle K.O., rule-process trash, controller-owned effects, and controller costs remain excluded from opponent-effect protection
+  - hidden-info test proving conditional protection evaluation does not expose private hand, deck, or face-down life identities
+  - production-code search or lint-style assertion proving no real-card ID branch or full-card text branch exists in engine source outside test/story text
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run focused engine-core protection, condition, continuous, and hidden-info tests touched by this story
+  - run `corepack pnpm run test:hidden-info`
+  - run `corepack pnpm run verify`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the ENG-059E packet before implementation
+  - do not activate or hand off ENG-059E until ENG-059A and ENG-059C have landed as reviewed commit evidence on the parent branch
+  - update ENG-059D to depend on ENG-059E before rerunning the composition proof
+  - stay within allowed_touch_points
+  - do not import @optcg/cards
+  - do not add parser/generated-support/card fixture work
+  - fail closed if condition evaluation, protection metadata, source controller, hidden-information behavior, or event ordering is ambiguous
+ambiguity_policy: fail_and_escalate

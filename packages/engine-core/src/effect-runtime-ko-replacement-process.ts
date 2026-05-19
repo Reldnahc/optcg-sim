@@ -36,6 +36,12 @@ interface SelectedTargetKoReplacementPayload {
   queueEntryId: EffectQueueEntry["id"];
   source: CardRef;
   target: CardRef;
+  fieldRemovalAttempt: {
+    processFamily: "fieldRemoval";
+    classification: "moveFromFieldToTrash";
+    sourceKind: "cardEffect";
+    sourceControllerId: PlayerId;
+  };
 }
 
 type LocatedReplacementSource = {
@@ -64,6 +70,12 @@ export const buildSelectedTargetKoReplacementProcess = (
     queueEntryId: entry.id,
     source: entry.source,
     target,
+    fieldRemovalAttempt: {
+      processFamily: "fieldRemoval",
+      classification: "moveFromFieldToTrash",
+      sourceKind: "cardEffect",
+      sourceControllerId: entry.controllerId,
+    },
   };
   return {
     id: `${entry.id}:ko:${target.instanceId}:${String(targetIndex)}`,

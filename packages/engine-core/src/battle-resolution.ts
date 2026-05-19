@@ -48,6 +48,7 @@ import {
   queueBattleKOTriggers,
   releaseDamageDeferredEffectQueue,
 } from "./effect-runtime.js";
+import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import {
   getSupportedLifeTriggerDecision,
@@ -230,6 +231,7 @@ export const resolveSupportedVanillaBattle = (
   const attackerPrintedKeywords = attackerManifestCard?.printedKeywords ?? [];
   if (
     battle.damageCount === 2 &&
+    attackerPrintedKeywords.includes("doubleAttack") &&
     !isSupportedDoubleAttackDamageSource(attackerManifestCard)
   ) {
     return unsupportedBattleResolution(
@@ -258,10 +260,12 @@ export const resolveSupportedVanillaBattle = (
           },
         };
   const battleWithInternal = battle as EngineInternalBattleState;
+  const attackerHasPrintedDoubleAttack =
+    isSupportedDoubleAttackDamageSource(attackerManifestCard);
   const shouldHideDoubleAttackForCombatView =
     (battle.damageCount === 2 ||
       battleWithInternal.damageProcess?.sourceKeyword === "doubleAttack") &&
-    isSupportedDoubleAttackDamageSource(attackerManifestCard);
+    attackerHasPrintedDoubleAttack;
   const combatMetadataState = shouldHideDoubleAttackForCombatView
     ? {
         ...baseCombatMetadataState,
@@ -319,7 +323,21 @@ export const resolveSupportedVanillaBattle = (
       "Battle requires unsupported blocker, step, or multi-damage behavior.",
     );
   }
-  if (targetView.protectedFrom.length > 0) {
+  if (
+    battleDamageCount === 2 &&
+    !attackerView.keywords.includes("doubleAttack") &&
+    !attackerHasPrintedDoubleAttack &&
+    battleWithInternal.damageProcess?.sourceKeyword !== "doubleAttack"
+  ) {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported keyword or protection handling.",
+    );
+  }
+  if (
+    targetView.protectedFrom.length > 0 &&
+    !hasOnlyFieldRemovalProtections(targetView.protectedFrom)
+  ) {
     return unsupportedBattleResolution(
       state,
       "Battle requires unsupported keyword or protection handling.",

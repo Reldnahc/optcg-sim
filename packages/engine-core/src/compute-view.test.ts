@@ -434,7 +434,7 @@ const unsupportedContinuousEffectCases: Array<{
         modifier: {
           layer: "keywordAdd",
           target: { type: "self" },
-          operation: { type: "addKeyword", keyword: "banish" },
+          operation: { type: "addKeyword", keyword: "unblockable" },
         },
       }),
   },

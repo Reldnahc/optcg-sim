@@ -19,6 +19,7 @@ const hiddenIds = {
   p2Life: "CARD-002F-P2-FACE-DOWN-LIFE",
   p2DeckTop: "CARD-002F-P2-DECK-TOP",
   p2DeckBottom: "CARD-002F-P2-DECK-BOTTOM",
+  p2Trash: "CARD-002F-P2-PUBLIC-TRASH",
   p1Deck: "CARD-002F-P1-HIDDEN-DECK",
   privateEffectDefinition: "CARD-002F-PRIVATE-EFFECT-DEFINITION",
   privateEffectBlock: "CARD-002F-PRIVATE-EFFECT-BLOCK",
@@ -108,6 +109,7 @@ const createCardsBackedState = async () => {
         hiddenIds.p2Life,
         hiddenIds.p2DeckTop,
         hiddenIds.p2DeckBottom,
+        hiddenIds.p2Trash,
       ],
     },
     donDeckCardIds: {
@@ -250,7 +252,7 @@ test("cards-backed PlayerView excludes manifest internals and hidden opponent st
   assert.equal(p1State.deck[0]?.cardId, hiddenIds.p1Deck);
   assert.deepEqual(
     p2State.deck.map((card) => card.cardId),
-    [hiddenIds.p2DeckTop, hiddenIds.p2DeckBottom],
+    [hiddenIds.p2DeckTop, hiddenIds.p2DeckBottom, hiddenIds.p2Trash],
   );
   assert.equal(p2State.life[0]?.faceUp, false);
   assert.equal(p2State.life[0]?.card.cardId, hiddenIds.p2Life);
@@ -372,4 +374,134 @@ test("hand/life count conditions do not leak hidden opponent card identities", a
   }
   assert.equal(playerView.opponent.handCount, p2State.hand.length);
   assert.equal(playerView.opponent.life.count, p2State.life.length);
+});
+
+test("trash count conditions read public trash count without leaking private zones", async () => {
+  const { state, p2State } = await createCardsBackedState();
+  const p1State = must(state.players[p1], "p1 state");
+  const source = p1State.leader;
+  const publicTrashCard = must(
+    p2State.deck.find((card) => card.cardId === hiddenIds.p2Trash),
+    "p2 public trash card",
+  );
+  p2State.deck = p2State.deck.filter(
+    (card) => card.instanceId !== publicTrashCard.instanceId,
+  );
+  p2State.trash.push({
+    ...publicTrashCard,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+  });
+  const effectDefinitionId = "CARD-002F-TRASH-CONDITION-DEF";
+  const effectBlockId = "CARD-002F-TRASH-CONDITION-BLOCK";
+  const rulesVersion = "card-002f-trash-condition-rules";
+  const sourceTextHash = "card-002f-trash-condition-source";
+  const cardDataVersion = state.cardManifest.cardDataVersion;
+  const effectDefinitionsVersion = state.cardManifest.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: {
+      cardId: source.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: effectBlockId,
+          category: "auto",
+          trigger: { type: "onPlay" },
+          optional: false,
+          oncePerTurn: false,
+          sourcePresencePolicy: "mustRemainInSameZone",
+          condition: {
+            type: "trashCount",
+            player: "opponent",
+            op: "gte",
+            value: 1,
+          },
+          effect: { type: "draw", count: 1, player: "self" },
+        },
+      ],
+      metadata: {
+        sourceTextHash,
+        rulesVersion,
+        effectDefinitionsVersion,
+        tested: true,
+        reviewer: "hidden-info",
+      },
+    },
+  };
+  const sourceManifest = must(
+    state.cardManifest.cards[source.cardId],
+    "source manifest",
+  );
+  state.cardManifest.cards[source.cardId] = {
+    ...sourceManifest,
+    category: "leader",
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      tested: true,
+      rulesVersion,
+      cardDataVersion,
+      sourceTextHash,
+      behaviorHash: "card-002f-trash-condition-behavior",
+      effectDefinitionId,
+    },
+  };
+  delete state.pendingDecision;
+  state.effectQueue = [
+    {
+      id: "CARD-002F-TRASH-QUEUE-ENTRY",
+      state: "pending",
+      timingWindowId: "CARD-002F-TRASH-WINDOW",
+      generation: 1,
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: source.zone,
+        category: "leader",
+        colors: ["red"],
+        keywords: [],
+      },
+      effectBlockId,
+      orderingGroup: "turnPlayer",
+      createdAtEventSeq: 1,
+      queuedAtStateSeq: state.seq,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: { type: "ruleProcess", name: "card-002f-trash-condition" },
+    },
+  ];
+
+  const result = processEffectRuntime(state);
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(
+    result.events.some((event) => event.type === "effectResolved"),
+    true,
+  );
+
+  const playerView = filterStateForPlayer(result.state, p1);
+  const serializedPublicEvents = JSON.stringify(result.events);
+  const serializedPlayerView = JSON.stringify(playerView);
+  const forbidden = [
+    hiddenIds.p2Hand,
+    hiddenIds.p2Life,
+    hiddenIds.p2DeckTop,
+    hiddenIds.p2DeckBottom,
+    must(p2State.hand[0], "hidden p2 hand").instanceId,
+    must(p2State.life[0], "hidden p2 life").card.instanceId,
+  ];
+  for (const secret of forbidden) {
+    assert.equal(serializedPublicEvents.includes(secret), false);
+    assert.equal(serializedPlayerView.includes(secret), false);
+  }
+  assert.equal(playerView.opponent.trash.length, p2State.trash.length);
+  assert.equal(playerView.opponent.trash[0]?.cardId, hiddenIds.p2Trash);
 });

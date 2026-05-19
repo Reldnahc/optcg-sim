@@ -9,6 +9,7 @@ import {
 } from "./battle-support.js";
 import { computeView } from "./compute-view.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
+import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
 import {
   getSupportedLifeTriggerDecision,
   hasLifeTriggerText,
@@ -70,8 +71,10 @@ export const getUnsupportedDamageStepContinuationReason = (
     return "Battle requires unsupported derived power metadata.";
   }
   if (
-    attackerView.keywords.includes("doubleAttack") ||
-    targetView.protectedFrom.length > 0
+    (battle.damageCount !== 2 &&
+      attackerView.keywords.includes("doubleAttack")) ||
+    (targetView.protectedFrom.length > 0 &&
+      !hasOnlyFieldRemovalProtections(targetView.protectedFrom))
   ) {
     return "Battle requires unsupported keyword or protection handling.";
   }

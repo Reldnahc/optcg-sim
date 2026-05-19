@@ -1,0 +1,111 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-059D
+epic_id: ENG-059
+title: Synthetic conditional protection composition proof
+type: implementation
+area: engine
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Prove the ENG-059 runtime primitives compose in a synthetic engine fixture
+  built from phrase-level primitive shapes: a public trash-count condition
+  grants Blocker and opponent effect-removal protection while existing On K.O.
+  draw behavior still works for allowed K.O. processes.
+story_boundary: >
+  Own only engine-core synthetic fixture/proof tests that compose
+  already-reviewed ENG-059 primitives. Do not add production engine behavior,
+  parser support, generated-support records, real-card fixtures, cards package
+  changes, source hashes, behavior hashes, or production card-ID branches. If
+  the proof requires production integration glue, stop and split a prerequisite
+  implementation story instead of widening ENG-059D.
+allowed_touch_points:
+  - packages/engine-core/src/**/*composition*.test.ts
+  - packages/engine-core/src/**/*condition*.test.ts
+  - packages/engine-core/src/**/*continuous*.test.ts
+  - packages/engine-core/src/**/*protection*.test.ts
+  - packages/engine-core/src/**/*ko*.test.ts
+  - packages/engine-core/src/**/*effect*.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-059*.yaml
+  - stories/approved/ENG-059*.yaml
+  - agent-packets/ENG-059D.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s019
+  - 02-engine-mechanics.s025
+  - 02-engine-mechanics.s038
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s013
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s016
+  - 06-visibility-security.s004
+  - 06-visibility-security.s005
+  - 06-visibility-security.s017
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - ENG-056B
+  - ENG-059A
+  - ENG-059B
+  - ENG-059C
+  - ENG-059E
+scope:
+  - create an engine-only synthetic fixture or test setup from phrase-level primitive shapes, not full printed clauses
+  - include condition primitive shapes equivalent to "If you have", "7 or more", "cards in your trash", and zone "trash"
+  - include protection primitive shapes equivalent to protected object "this Character", removal process "removed from the field", source controller "opponent", and source kind "effects"
+  - include keyword-grant primitive shapes equivalent to target "this Character", grant verb "gains", and keyword "[Blocker]"
+  - include existing triggered primitive shapes equivalent to "[On K.O.]", "Draw", and "1 card"
+  - compose a public `trashCount gte 7` condition with conditional Blocker grant and opponent-effect field-removal protection
+  - compose the same synthetic Character with existing supported On K.O. draw-1 behavior
+  - prove below-threshold behavior has no conditional Blocker grant and no opponent-effect removal protection
+  - prove at-threshold behavior grants Blocker and prevents supported opponent-effect field removal
+  - prove battle K.O. remains allowed and queues/resolves the existing On K.O. draw-1 behavior
+  - prove rule-process trash remains allowed and does not fire ordinary On K.O. triggers
+  - preserve deterministic event order, replay, state hashes, source presence, and hidden-information projection across the composed scenarios
+non_scope:
+  - production engine behavior changes or integration glue
+  - production real-card ID checks or full-card text matching
+  - parser certification, generated-support evidence, support reports, support probes, real-card fixtures, overlays, source hashes, or behavior hashes
+  - making any real card playable
+  - adding new primitive behavior beyond narrow integration glue for already-reviewed ENG-059A, ENG-059B, ENG-059C, and ENG-056B capabilities
+  - broad card-list proof, catalog scanning, external-list support assertions, or cards-package runtime capability matrix updates
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - the synthetic fixture is engine-only, built from independent effect parts, and does not consume @optcg/cards
+  - below seven self-trash cards, the synthetic Character does not receive conditional Blocker or opponent-effect removal protection
+  - at seven or more self-trash cards, the synthetic Character receives conditional Blocker and prevents supported opponent-effect field removal
+  - battle K.O. remains allowed at seven or more trash and existing On K.O. draw-1 behavior resolves correctly
+  - rule-process trash remains allowed and does not fire ordinary On K.O. triggers
+  - no production engine code mentions real card IDs, the full effect text as one string, or any external card list
+  - the proof demonstrates reusable primitive composition rather than a direct one-card implementation
+required_tests:
+  - story-review for ENG-059D before approval handoff
+  - synthetic below-threshold test proving no conditional Blocker grant and no opponent-effect removal protection
+  - synthetic at-threshold test proving Blocker eligibility during defender Block Step
+  - synthetic at-threshold test proving supported opponent-effect field removal is prevented
+  - synthetic battle K.O. test proving K.O. remains allowed and On K.O. draw-1 queues/resolves from the supported source-presence path
+  - synthetic rule-process trash test proving removal remains allowed and ordinary On K.O. trigger behavior does not fire
+  - event-order, replay, and state-hash tests for below-threshold, at-threshold prevented removal, battle K.O., and rule-process trash paths
+  - hidden-info tests proving the composed fixture does not expose private hand, deck, or face-down life identities
+  - production-code search or lint-style assertion proving no real-card ID branch or full-card text branch exists in engine source outside test/story text
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run focused engine-core composition, condition, continuous, protection, K.O., replay/hash, and hidden-info tests touched by this story
+  - run `corepack pnpm run test:hidden-info`
+  - run `corepack pnpm run verify`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the ENG-059D packet before implementation
+  - do not activate or hand off ENG-059D until ENG-059A, ENG-059B, ENG-059C, and ENG-059E have landed as reviewed commit evidence on the parent branch
+  - stay within allowed_touch_points
+  - do not import @optcg/cards
+  - do not add parser/generated-support/card fixture work
+  - fail closed if the composition proof requires production card-specific logic or unsupported runtime semantics
+ambiguity_policy: fail_and_escalate

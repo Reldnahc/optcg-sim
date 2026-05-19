@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-059D.md",
+      "storyId": "ENG-059D",
+      "storyPath": "stories/approved/ENG-059D-synthetic-conditional-protection-composition-proof.yaml",
+      "storySha256": "2ebca8b12f8507dbbe4dffb01389ad8ee2f9b5dcf69c84823ce23e679289dd65"
+    }
+  ],
   "version": 1
 }

@@ -13,6 +13,10 @@ import {
   toCardId,
 } from "./action-test-fixtures.js";
 import { setupAttackState } from "./battle-actions-test-fixtures.js";
+import {
+  addTrashMarker,
+  continuousKeywordEffectRecord,
+} from "./battle-actions-test-fixtures.js";
 
 test("banish attacker dealing leader damage moves top life to trash instead of hand", () => {
   const state = setupAttackState();
@@ -33,6 +37,54 @@ test("banish attacker dealing leader damage moves top life to trash instead of h
     attacker: {
       instanceId: p1State.leader.instanceId,
       cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    must(result.state.players[p2], "p2").trash.some(
+      (card) => card.instanceId === expectedLifeCard,
+    ),
+    true,
+  );
+  assert.equal(
+    must(result.state.players[p2], "p2").hand.some(
+      (card) => card.instanceId === expectedLifeCard,
+    ),
+    false,
+  );
+});
+
+test("conditional continuous banish grant moves leader damage life to trash", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = p1State.leader;
+  const expectedLifeCard = must(p2State.life[0], "top life").card.instanceId;
+  addTrashMarker(state, p1);
+  state.continuousEffects = [
+    continuousKeywordEffectRecord(
+      state,
+      "conditional-banish-grant",
+      attacker,
+      "banish",
+      {
+        condition: { type: "trashCount", player: "self", op: "gte", value: 1 },
+      },
+    ),
+  ];
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
       playerId: p1,
     },
     target: {

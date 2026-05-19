@@ -6,7 +6,11 @@ import {
   getDeclareAttackLegalActions,
 } from "./battle-actions.js";
 import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
-import { setupAttackState } from "./battle-actions-test-fixtures.js";
+import {
+  addTrashMarker,
+  continuousKeywordEffectRecord,
+  setupAttackState,
+} from "./battle-actions-test-fixtures.js";
 
 test("played-this-turn rush character can legally attack leader and rested character", () => {
   const state = setupAttackState();
@@ -26,6 +30,48 @@ test("played-this-turn rush character can legally attack leader and rested chara
     category: "character",
     power: 3000,
   });
+
+  const legal = getDeclareAttackLegalActions(state, p1);
+
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.attacker.instanceId === attacker.instanceId &&
+        action.target.instanceId === p2State.leader.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.attacker.instanceId === attacker.instanceId &&
+        action.target.instanceId === restedTarget.instanceId,
+    ),
+    true,
+  );
+});
+
+test("conditional continuous rush grant lets played-this-turn character attack leader and rested character", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "rush attacker");
+  const restedTarget = must(p2State.characters[0], "rested target");
+  attacker.turnPlayed = state.turn.globalTurn;
+  addTrashMarker(state, p1);
+  state.continuousEffects = [
+    continuousKeywordEffectRecord(
+      state,
+      "conditional-rush-grant",
+      attacker,
+      "rush",
+      {
+        condition: { type: "trashCount", player: "self", op: "gte", value: 1 },
+      },
+    ),
+  ];
 
   const legal = getDeclareAttackLegalActions(state, p1);
 
@@ -209,6 +255,169 @@ test("played-this-turn rushCharacter character can attack rested characters but 
       (card) => card.instanceId === restedTarget.instanceId,
     ),
     true,
+  );
+});
+
+test("conditional continuous rushCharacter grant allows rested Character targets only", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "rushCharacter attacker");
+  const restedTarget = must(p2State.characters[0], "rested target");
+  attacker.turnPlayed = state.turn.globalTurn;
+  addTrashMarker(state, p1);
+  state.continuousEffects = [
+    continuousKeywordEffectRecord(
+      state,
+      "conditional-rush-character-grant",
+      attacker,
+      "rushCharacter",
+      {
+        condition: { type: "trashCount", player: "self", op: "gte", value: 1 },
+      },
+    ),
+  ];
+
+  const legal = getDeclareAttackLegalActions(state, p1);
+
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.attacker.instanceId === attacker.instanceId &&
+        action.target.instanceId === p2State.leader.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.attacker.instanceId === attacker.instanceId &&
+        action.target.instanceId === restedTarget.instanceId,
+    ),
+    true,
+  );
+});
+
+test("legal attack projection omits continuous Double Attack leader target when defender has computed Blocker", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = p1State.leader;
+  const defenderBlocker = must(p2State.characters[0], "computed blocker");
+  defenderBlocker.state = "active";
+  addTrashMarker(state, p1);
+  addTrashMarker(state, p2);
+  state.continuousEffects = [
+    continuousKeywordEffectRecord(
+      state,
+      "conditional-double-attack-grant",
+      attacker,
+      "doubleAttack",
+      {
+        condition: { type: "trashCount", player: "self", op: "gte", value: 1 },
+      },
+    ),
+    continuousKeywordEffectRecord(
+      state,
+      "conditional-blocker-grant",
+      defenderBlocker,
+      "blocker",
+      {
+        condition: { type: "trashCount", player: "self", op: "gte", value: 1 },
+      },
+    ),
+  ];
+
+  const legal = getDeclareAttackLegalActions(state, p1);
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.attacker.instanceId === attacker.instanceId &&
+        action.target.instanceId === p2State.leader.instanceId,
+    ),
+    false,
+  );
+  const error = must(result.errors?.[0], "illegal action error");
+  assert.equal(error.type, "illegalAction");
+  assert.equal(
+    error.reason,
+    "declareAttack requires unsupported blocker handling for Double Attack.",
+  );
+});
+
+test("fallback legal attack projection omits printed Double Attack leader target when defender has computed Blocker", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = p1State.leader;
+  const defenderBlocker = must(p2State.characters[0], "computed blocker");
+  defenderBlocker.state = "active";
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "leader",
+    power: 5000,
+    printedKeywords: ["doubleAttack"],
+    support: { status: "implemented-dsl" },
+  });
+  addTrashMarker(state, p2);
+  state.continuousEffects = [
+    continuousKeywordEffectRecord(
+      state,
+      "conditional-blocker-grant",
+      defenderBlocker,
+      "blocker",
+      {
+        condition: { type: "trashCount", player: "self", op: "gte", value: 1 },
+      },
+    ),
+  ];
+
+  const legal = getDeclareAttackLegalActions(state, p1);
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.attacker.instanceId === attacker.instanceId &&
+        action.target.instanceId === p2State.leader.instanceId,
+    ),
+    false,
+  );
+  const error = must(result.errors?.[0], "illegal action error");
+  assert.equal(error.type, "illegalAction");
+  assert.equal(
+    error.reason,
+    "declareAttack requires unsupported blocker handling for Double Attack.",
   );
 });
 

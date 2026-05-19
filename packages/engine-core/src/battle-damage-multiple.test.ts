@@ -18,6 +18,8 @@ import {
   toStateSeq,
 } from "./action-test-fixtures.js";
 import {
+  addTrashMarker,
+  continuousKeywordEffectRecord,
   effectDefinition,
   setupAttackState,
 } from "./battle-actions-test-fixtures.js";
@@ -911,6 +913,51 @@ test("supported doubleAttack declareAttack against leader applies two damage poi
   assertAcceptedHash(result);
   const nextP2 = must(result.state.players[p2], "p2");
   assert.equal(nextP2.life.length, beforeLife - 2);
+  assert.equal(
+    result.events.filter((event) => event.type === "damageDealt").length,
+    2,
+  );
+});
+
+test("conditional continuous doubleAttack grant applies two leader damage points", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = p1State.leader;
+  addTrashMarker(state, p1);
+  state.continuousEffects = [
+    continuousKeywordEffectRecord(
+      state,
+      "conditional-double-attack-grant",
+      attacker,
+      "doubleAttack",
+      {
+        condition: { type: "trashCount", player: "self", op: "gte", value: 1 },
+      },
+    ),
+  ];
+  const beforeLife = p2State.life.length;
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assertAcceptedHash(result);
+  assert.equal(
+    must(result.state.players[p2], "p2").life.length,
+    beforeLife - 2,
+  );
   assert.equal(
     result.events.filter((event) => event.type === "damageDealt").length,
     2,

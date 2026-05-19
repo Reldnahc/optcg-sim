@@ -1,0 +1,130 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-059B
+epic_id: ENG-059
+title: Conditional continuous keyword grants
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add a reusable engine path for conditionally granting supported public
+  keywords through continuous runtime modifiers, proving the allowlisted
+  public combat keywords through the same generic computed-view path without
+  mutating canonical card state.
+story_boundary: >
+  Own only engine-core continuous keyword-grant support, computed-view
+  derivation, and tests for supported public keyword grants. Do not change
+  parser support, generated-support records, real-card fixtures, or field
+  removal protection.
+allowed_touch_points:
+  - packages/engine-core/src/compute-view.ts
+  - packages/engine-core/src/compute-view.test.ts
+  - packages/engine-core/src/battle-block-actions.ts
+  - packages/engine-core/src/battle-blocker*.test.ts
+  - packages/engine-core/src/battle-actions-test-fixtures.ts
+  - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/battle-actions.test.ts
+  - packages/engine-core/src/battle-declare-attack*.test.ts
+  - packages/engine-core/src/battle-resolution.ts
+  - packages/engine-core/src/battle-resolution.test.ts
+  - packages/engine-core/src/battle-damage-step-continuation.ts
+  - packages/engine-core/src/battle-damage*.test.ts
+  - packages/engine-core/src/**/*continuous*.ts
+  - packages/engine-core/src/**/*continuous*.test.ts
+  - packages/engine-core/src/**/*modifier*.ts
+  - packages/engine-core/src/**/*modifier*.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-059*.yaml
+  - stories/approved/ENG-059*.yaml
+  - agent-packets/ENG-059B.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s019
+  - 02-engine-mechanics.s025
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s006
+  - 06-visibility-security.s005
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - ENG-014A
+  - ENG-014B
+  - ENG-014C
+  - ENG-014D
+  - ENG-014E
+  - ENG-044
+  - ENG-059A
+scope:
+  - add or extend reusable runtime support for continuous keyword-grant modifiers
+  - evaluate the modifier condition through the supported condition evaluator, including ENG-059A trash-count predicates
+  - model primitive grant parts equivalent to target "this Character", grant verb "gains", and keyword "[Blocker]" as generic conditional keyword-grant data
+  - admit exactly `blocker`, `banish`, `rush`, `rushCharacter`, and `doubleAttack` as the story-owned supported public keyword grant allowlist because their runtime behavior can be consumed through touched computed-view, attack-declaration, Block Step, battle-resolution, and battle-damage paths
+  - derive granted keywords into computed view without mutating canonical card metadata, card instances, source fixtures, or manifest data
+  - ensure production keyword-grant logic is generic over the supported keyword allowlist and does not branch only for Blocker
+  - make granted Blocker participate in existing computed `canBlock` eligibility exactly as printed Blocker does when the condition is true
+  - make granted Banish participate in existing battle-resolution behavior exactly as printed Banish does when the condition is true
+  - "make granted Rush and Rush: Character participate in existing attack-declaration legality exactly as printed Rush and printed Rush: Character do when the condition is true"
+  - make granted Double Attack participate in existing two-damage battle flow exactly as printed Double Attack does when the condition is true
+  - make granted Blocker disappear when the condition becomes false or the source no longer applies
+  - preserve existing printed behavior for all supported keywords touched by this story and preserve unsupported keyword fail-closed gates
+  - preserve deterministic state hashes, event order, hidden-information projection, and canonical-state nonmutation
+non_scope:
+  - production special cases for a real card ID or full-card text matching
+  - field-removal protection
+  - parser support, generated-support evidence, support reports, real-card fixtures, source hashes, or behavior hashes
+  - adding support for unsupported keywords, private/hidden keyword grants, or broad keyword layering outside the explicit supported public keyword allowlist
+  - claiming full runtime behavior for any keyword outside `blocker`, `banish`, `rush`, `rushCharacter`, and `doubleAttack`
+  - changing Block Step decision flow except where computed eligibility already consumes Blocker
+  - mutating canonical card keywords or manifest metadata
+  - shared TYP/contracts/schema changes unless an approved prerequisite requires them
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - a supported continuous modifier can grant `blocker`, `banish`, `rush`, `rushCharacter`, or `doubleAttack` while its supported condition is true
+  - the same modifier grants no keyword while its supported condition is false
+  - every allowlisted keyword uses the same generic keyword-grant path, with no Blocker-only or keyword-specific production branch beyond routing through existing keyword behavior consumers
+  - computed view and Block Step eligibility consume the granted keyword through the same public computed path as printed Blocker
+  - battle resolution consumes granted Banish through the same public computed path as printed Banish
+  - "attack declaration consumes granted Rush and Rush: Character through the same public computed path as printed Rush and printed Rush: Character"
+  - battle damage consumes granted Double Attack through the same public computed path as printed Double Attack
+  - source removal or stale source state removes the granted keyword from computed view
+  - canonical card metadata, manifest data, and card instances are not mutated by the grant
+  - unsupported keyword grants or unsupported conditions fail closed without exposing hidden information
+  - production engine code does not import @optcg/cards and does not mention real card IDs
+required_tests:
+  - story-review for ENG-059B before approval handoff
+  - unit test proving a Character with a true trash-count condition gains computed Blocker and can block during defender Block Step
+  - unit test proving the same Character does not gain Blocker below the trash-count threshold
+  - "unit tests proving Banish, Rush, Rush: Character, and Double Attack are conditionally granted through the same reusable keyword-grant path"
+  - unit test proving battle resolution consumes granted Banish the same way it consumes printed Banish
+  - "unit tests proving attack declaration consumes granted Rush and granted Rush: Character the same way it consumes printed Rush and printed Rush: Character"
+  - unit test proving battle damage consumes granted Double Attack the same way it consumes printed Double Attack
+  - true, false, stale-source, and unsupported keyword tests cover every allowlisted keyword (`blocker`, `banish`, `rush`, `rushCharacter`, `doubleAttack`) unless a test matrix proves the shared helper path once and behavior-path tests cover each keyword
+  - unit test proving the granted keyword disappears when the condition flips from true to false
+  - unit test proving source removal or stale source state removes the granted keyword from computed view
+  - unit tests proving rested, non-defender, non-Character, stale, and attacker-controlled cards remain ineligible to block
+  - regression tests proving printed Blocker behavior remains unchanged
+  - fail-closed tests for unsupported keyword grants and unsupported grant conditions
+  - canonical-state nonmutation and state-hash tests for true, false, and stale-source paths
+  - eventJournal and no-event mutation checks for true, false, stale-source, and unsupported keyword-grant paths
+  - hidden-info tests proving conditional keyword grants do not expose private zone identities
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run focused engine-core compute-view, battle, continuous-modifier, and hidden-info tests touched by this story
+  - run `corepack pnpm run test:hidden-info`
+  - run `corepack pnpm run coverage`
+  - run `corepack pnpm run verify`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the ENG-059B packet before implementation
+  - do not activate or hand off ENG-059B until ENG-059A has landed as reviewed commit evidence on the parent branch
+  - stay within allowed_touch_points
+  - do not import @optcg/cards
+  - do not add parser/generated-support/card fixture work
+  - fail closed if keyword grant semantics, condition timing, source liveness, Block Step eligibility, or hidden-information behavior is ambiguous
+ambiguity_policy: fail_and_escalate

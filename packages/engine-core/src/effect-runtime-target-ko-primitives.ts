@@ -25,6 +25,7 @@ import {
   normalizeSelectedTargetKoProcess,
   pauseSelectedTargetKoReplacementProcess,
 } from "./effect-runtime-ko-replacement-process.js";
+import { applyFieldRemovalProtection } from "./field-removal-protection.js";
 
 export type SelectedTargetKoExecutionFailureReason =
   | "unsupported-effect-shape"
@@ -34,7 +35,11 @@ export type SelectedTargetKoExecutionFailureReason =
   | "missing-card"
   | "stale-target"
   | "private-target"
-  | "non-character-target";
+  | "non-character-target"
+  | "missing-source-controller"
+  | "unsupported-field-removal-destination"
+  | "ambiguous-field-removal-source"
+  | "malformed-field-removal-protection";
 
 export type SavedFieldObjectKoSelectionFailureReason =
   | "unsupported-saved-reference-family"
@@ -275,6 +280,16 @@ export const executeUnreplacedSelectedTargetKoProcess = (
     return {
       error: selectedTargetKoExecutionError(effectId, "stale-target"),
     };
+  }
+
+  const protection = applyFieldRemovalProtection(state, koCard, process);
+  if (!protection.ok) {
+    return {
+      error: selectedTargetKoExecutionError(effectId, protection.reason),
+    };
+  }
+  if (protection.prevented) {
+    return { state };
   }
 
   const trashedCard: CardInstance = {
