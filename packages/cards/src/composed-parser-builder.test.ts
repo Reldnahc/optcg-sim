@@ -84,11 +84,24 @@ describe("composed parser builder scaffold", () => {
       ),
     ).toEqual({
       bodyText: "draw 2 cards.",
+      conditionText:
+        "your Leader is multicolored and you have 5 or less cards in your hand",
       conditions: [
         "your Leader is multicolored",
         "you have 5 or less cards in your hand",
       ],
       connector: "and",
+      prefix: "If ",
+    });
+  });
+
+  it("does not split comparator phrasing into boolean connectors inside if wrappers", () => {
+    expect(
+      parseIfWrapper("If you have 5 or less cards in your hand, draw 1 card."),
+    ).toEqual({
+      bodyText: "draw 1 card.",
+      conditionText: "you have 5 or less cards in your hand",
+      conditions: ["you have 5 or less cards in your hand"],
       prefix: "If ",
     });
   });
@@ -488,6 +501,120 @@ describe("composed parser builder scaffold", () => {
         ],
         unsupportedConditionFragments: [],
         unsupportedSyntaxFragments: ["action/destination:bottom-of-owner-deck"],
+      },
+    );
+  });
+
+  it("derives conditional decomposition with supported components while remaining fail-closed before CARD-019B", () => {
+    const sourceText =
+      "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.";
+
+    expect(deriveParserDiagnosticDecomposition(sourceText, sourceText)).toEqual(
+      {
+        recognizedActionCandidates: ["draw 2 cards"],
+        recognizedSyntaxFragments: [
+          "if-conditional-wrapper",
+          "condition-components:v1",
+        ],
+        recognizedTriggerCandidates: ["[On Play]"],
+        reason:
+          "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence.",
+        traceComponents: [
+          {
+            kind: "trigger",
+            status: "recognized",
+            text: "[On Play]",
+          },
+          { kind: "wrapper", status: "recognized", text: "If" },
+          {
+            id: "condition:leaderColorCount:self:gte:2",
+            kind: "condition",
+            span: {
+              end: 27,
+              start: 0,
+              text: "your Leader is multicolored",
+            },
+            status: "supported",
+            text: "your Leader is multicolored",
+          },
+          {
+            id: "condition-connector:and:28-31",
+            kind: "condition-connector",
+            span: {
+              end: 31,
+              start: 28,
+              text: "and",
+            },
+            status: "supported",
+            text: "and",
+          },
+          {
+            id: "condition:handCount:self:lte:5",
+            kind: "condition",
+            span: {
+              end: 69,
+              start: 32,
+              text: "you have 5 or less cards in your hand",
+            },
+            status: "supported",
+            text: "you have 5 or less cards in your hand",
+          },
+          {
+            kind: "action",
+            status: "supported",
+            text: "draw 2 cards",
+          },
+        ],
+        unsupportedConditionFragments: [],
+        unsupportedSyntaxFragments: [
+          "conditional-support:blocked-until-CARD-019B",
+        ],
+      },
+    );
+  });
+
+  it("derives conditional decomposition for single supported predicate wrappers while staying fail-closed", () => {
+    const sourceText =
+      "[On Play] If your Leader is multicolored, draw 2 cards.";
+
+    expect(deriveParserDiagnosticDecomposition(sourceText, sourceText)).toEqual(
+      {
+        recognizedActionCandidates: ["draw 2 cards"],
+        recognizedSyntaxFragments: [
+          "if-conditional-wrapper",
+          "condition-components:v1",
+        ],
+        recognizedTriggerCandidates: ["[On Play]"],
+        reason:
+          "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence.",
+        traceComponents: [
+          {
+            kind: "trigger",
+            status: "recognized",
+            text: "[On Play]",
+          },
+          { kind: "wrapper", status: "recognized", text: "If" },
+          {
+            id: "condition:leaderColorCount:self:gte:2",
+            kind: "condition",
+            span: {
+              end: 27,
+              start: 0,
+              text: "your Leader is multicolored",
+            },
+            status: "supported",
+            text: "your Leader is multicolored",
+          },
+          {
+            kind: "action",
+            status: "supported",
+            text: "draw 2 cards",
+          },
+        ],
+        unsupportedConditionFragments: [],
+        unsupportedSyntaxFragments: [
+          "conditional-support:blocked-until-CARD-019B",
+        ],
       },
     );
   });

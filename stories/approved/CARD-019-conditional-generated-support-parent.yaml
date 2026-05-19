@@ -1,0 +1,122 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-019
+epic_id: CARD-019
+title: Conditional generated-support composition parent
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Coordinate card-layer generated-support work that parses conditional effect
+  wrappers as reusable components and composes them with all currently supported
+  effect trigger wrappers and bodies backed by ENG-058 runtime capability.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  CARD-019A and CARD-019B one at a time after distinct parent and child
+  story-review evidence exists. This parent must not add engine runtime
+  behavior, shared schema authority, fixture support, or real-card hash changes.
+  Use one parent integration branch with reviewed child commits; do not open
+  child PRs to main.
+allowed_touch_points:
+  - stories/generated/CARD-019*.yaml
+  - stories/approved/CARD-019*.yaml
+  - agent-packets/CARD-019*.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 02-engine-mechanics.s021
+  - 02-engine-mechanics.s023
+  - 02-engine-mechanics.s041
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s008
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s010
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - TYP-011A
+  - ENG-058A
+  - ENG-058B
+  - CARD-018A
+child_stories:
+  - id: CARD-019A
+    title: Conditional parser component scaffold
+    concern: Build reusable cards-side condition parser components for if wrappers, supported condition predicates, and boolean connectors without marking new generated support playable by itself.
+    depends_on: [TYP-011A, CARD-018A]
+  - id: CARD-019B
+    title: Conditional generated-support composition
+    concern: Compose supported condition components with all currently supported generated-support trigger wrappers and bodies backed by ENG-058 runtime capability evidence.
+    depends_on: [CARD-019A, ENG-058A, ENG-058B]
+scope:
+  - coordinate CARD-019A and CARD-019B as cards-layer children
+  - require a reusable condition component model that composes with supported trigger wrappers and supported effect bodies
+  - consume TYP-011 and ENG-058 as authority without adding shared contracts or engine behavior
+  - require support to remain fail-closed for unsupported condition predicates, unsupported boolean connectors, unsupported wrappers, unsupported bodies, missing runtime capability, stale hashes, metadata/review/test failures, and source-integrity failures
+  - require representative composition tests rather than a cartesian product of every condition with every wrapper and body
+non_scope:
+  - direct parent implementation
+  - engine runtime behavior
+  - shared TYP/contracts/schema changes
+  - new effect body primitives
+  - real-card fixture support, fixture capture, fixture recapture, source hash updates, behavior hash updates, overlays, or supported-card manifest changes
+  - activate-main, event main/counter, permanent/continuous, replacement, or custom-handler conditional support unless ENG-058 explicitly authorizes it
+  - server, client, API, UI, database, replay, WebSocket, Redis, or live Poneglyph work
+card_source_integrity:
+  - not applicable for direct parent implementation because this parent does not enable or change gameplay support for any card
+  - CARD-019 children must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or manually reviewed source evidence unless they explicitly add real-card proof scope and pass source-integrity review
+engine_capability_preflight:
+  - not applicable for direct parent implementation because this parent adds no runtime capability or gameplay behavior
+  - CARD-019 children must use completed TYP-011A and ENG-058A/B evidence as the support boundary and must not hide missing engine behavior inside cards-layer work
+acceptance_criteria:
+  - CARD-019 is not implemented directly
+  - CARD-019A and CARD-019B are independently reviewable child stories
+  - parent and every child story-review artifact exists with distinct assignment identity and distinct durable artifact identity before approval handoff, packet generation, activation, implementation handoff, or PR handoff
+  - the parent/substory review-status matrix records the parent row and both child rows before approval handoff
+  - conditional generated support is componentized and scalable across supported trigger wrappers and supported bodies
+  - no engine behavior, shared schema authority, fixture support, source hash updates, or exact conditional template regression is added by this parent set
+  - parent PR cleanup metadata lists CARD-019A and CARD-019B and binds the non-packetized CARD-019 parent closeout after merge to main
+required_tests:
+  - story-review for CARD-019 parent before approval handoff
+  - story-review for CARD-019A before approval handoff
+  - story-review for CARD-019B before approval handoff
+  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - story-specific tests from CARD-019A and CARD-019B
+  - per-child reviewed commit evidence, AI review record, revision response, and verification evidence for CARD-019A and CARD-019B before parent PR handoff
+  - final parent PR full-story integration review covering both child commits, packet history, cleanup metadata, CI, verification, and unresolved comments before human-review handoff
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - use the parent/substory workflow
+  - do not activate or implement CARD-019 directly
+  - generate and activate one CARD-019 child packet at a time
+  - do not complete child packets until the parent branch lands on main
+  - keep CARD-019A and CARD-019B work on one parent integration branch with reviewed child commits
+  - do not open child PRs to main; use one final parent PR to main
+  - parent PR cleanup metadata must list CARD-019A and CARD-019B and bind the non-packetized CARD-019 parent closeout
+  - fail closed on generated-support ambiguity that could accidentally mark unsupported text playable
+ambiguity_policy: fail_and_escalate

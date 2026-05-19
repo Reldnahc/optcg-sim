@@ -1,0 +1,114 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-019A
+epic_id: CARD-019
+title: Conditional parser component scaffold
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Build reusable cards-side condition parser components for conditional wrappers,
+  supported public condition predicates, and boolean connectors without making
+  new conditional generated support playable by itself.
+story_boundary: >
+  Own only packages/cards parser component scaffolding, condition parsing,
+  diagnostics, and tests needed to represent supported condition components.
+  Do not mark conditional effects generated-supported, add runtime capability
+  records for playable support, change engine behavior, or update real-card
+  fixtures/hashes.
+allowed_touch_points:
+  - packages/cards/src/conditional-parser-components.ts
+  - packages/cards/src/conditional-parser-components.test.ts
+  - packages/cards/src/conditional-generated-support.test.ts
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - stories/generated/CARD-019*.yaml
+  - stories/approved/CARD-019*.yaml
+  - agent-packets/CARD-019A.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s020
+dependencies:
+  - TYP-011A
+  - CARD-018A
+scope:
+  - refactor condition parsing toward reusable components rather than exact conditional templates
+  - parse `If <condition>, <supported-body>` wrappers as a condition component plus residue/body span without admitting support by itself
+  - parse "During your turn" as the existing `yourTurn` condition component
+  - parse "If this Character has N or more DON!! cards attached" as the existing self `attachedDonCount` component
+  - parse "If your Leader is multicolored" as the TYP-011A-approved Leader color-count condition component
+  - parse "If your Leader has the {X} type" and equivalent supported type wording as the TYP-011A-approved Leader type condition representation
+  - parse "If your Leader has the [X] attribute" and equivalent supported attribute wording as the TYP-011A-approved Leader attribute condition representation
+  - parse hand-count and life-count condition wording for self/opponent using exact numeric comparators including `or more` as `gte` and `or less` as `lte`
+  - parse boolean `and` and `or` between supported condition components only when connector boundaries are unambiguous
+  - keep quantity phrases such as `or more` and `or less` distinct from boolean `or`
+  - preserve narrow source spans for unsupported condition fragments, unsupported connectors, unsupported body residue, word-number tokens, and unsupported wrappers
+  - preserve existing CARD-014F, CARD-015, CARD-016, CARD-017, and CARD-018 behavior
+  - keep new condition component IDs diagnostic-only in this child; do not place them in admitted-support inventories, runtime-linked evidence records, or capability records that could make conditional generated support playable before CARD-019B
+non_scope:
+  - marking conditional generated support playable
+  - adding condition component IDs to admitted-support inventories or runtime-linked support evidence
+  - runtime capability matrix support records for conditional playable support
+  - engine runtime behavior
+  - shared TYP/contracts/schema changes
+  - new effect body parsers beyond recognizing the body span for existing supported bodies
+  - real-card fixture support, fixture capture, source hash updates, behavior hash updates, overlays, or support manifests
+  - broad natural-language inference, nested parentheses, replacement optionality, cost punctuation ambiguity, activate-main, event main/counter, permanent/continuous, or custom-handler conditional support
+card_source_integrity:
+  - this story must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or manually reviewed source evidence
+  - printed card text snippets may be used as parser/support-probe examples only and must remain unsupported until CARD-019B admits them through all gates
+engine_capability_preflight:
+  - no new engine capability is introduced by this story
+  - parser components must be labeled as parsed/diagnostic components only; generated support remains blocked until CARD-019B adds ENG-058-backed runtime capability evidence
+  - if a condition cannot be represented by TYP-011A authority, record it as unsupported and do not invent a cards-internal DSL shape
+acceptance_criteria:
+  - supported condition fragments are parsed into reusable condition components with deterministic IDs and source spans
+  - boolean `and` and `or` are parsed only when all child condition components are supported and connector boundaries are unambiguous
+  - quantity comparators `or more` and `or less` are not misclassified as boolean `or`
+  - unsupported condition fragments and residue keep fail-closed diagnostics
+  - no new conditional generated support is marked playable in this story
+  - new condition component IDs remain diagnostic-only and are not linked to runtime capability evidence or admitted-support inventories in this story
+  - existing generated-support behavior remains unchanged
+required_tests:
+  - story-review for CARD-019A before approval handoff
+  - parser component tests for Leader multicolor, Leader type, Leader attribute, hand-count, life-count, yourTurn, and attachedDonCount condition fragments
+  - parser tests proving `or more` and `or less` become numeric comparators and not boolean connectors
+  - parser tests for boolean `and` and boolean `or` between supported condition fragments
+  - fail-closed parser/diagnostic tests for unsupported condition fragments, ambiguous connector boundaries, word-number quantities, unsupported wrappers, cost punctuation ambiguity, and residue text
+  - report/probe tests proving narrow source spans and unsupported condition diagnostics remain actionable
+  - regression tests proving CARD-014F through CARD-018 parser/support behavior remains unchanged
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-019A packet before implementation
+  - stay within allowed_touch_points
+  - do not add playable generated support in this child
+  - do not add condition component IDs to admitted-support inventories or runtime-linked capability evidence in this child
+  - do not add engine runtime behavior, shared schema authority, fixture support, or source hash updates
+  - fail closed on condition wording ambiguity
+ambiguity_policy: fail_and_escalate

@@ -8,15 +8,15 @@ import type {
   SequencedEffect,
   Trigger,
 } from "@optcg/types";
-
 import type {
   CompleteGeneratedSupportParseResult,
   GeneratedSupportDiagnosticDecomposition,
   GeneratedSupportParserResult,
-  GeneratedSupportDiagnosticTraceComponent,
   GeneratedSupportUnparsedSpan,
   PartialGeneratedSupportParseResult,
 } from "./generated-support-types.js";
+
+import { deriveConditionalConditionDiagnostics } from "./conditional-parser-components.js";
 import { listComponentEvidenceIdsForParserRuleIds } from "./generated-support-types.js";
 
 export type SupportedTriggerWrapperParse = {
@@ -48,6 +48,7 @@ export type ReusableComposedParserResidueClause<TClause> = {
 
 export type IfWrapperParse = {
   readonly bodyText: string;
+  readonly conditionText: string;
   readonly conditions: readonly string[];
   readonly connector?: "and" | "or";
   readonly prefix: "If ";
@@ -142,7 +143,6 @@ export type PublicFieldTargetSubject =
   | "opponentCharactersAll"
   | "opponentCharactersChoose"
   | "self";
-
 export type ContinuousModifierInstructionParse = {
   readonly duration: "thisBattle" | "thisTurn";
   readonly target: PublicFieldTargetSubject;
@@ -154,7 +154,6 @@ export type ContinuousRestrictionInstructionParse = {
   readonly restriction: "cannotAttack" | "cannotBlock";
   readonly target: PublicFieldTargetSubject;
 };
-
 export function parseSupportedTriggerWrapper(
   sourceText: string,
 ): SupportedTriggerWrapperParse | undefined {
@@ -208,6 +207,7 @@ export function parseIfWrapper(sourceText: string): IfWrapperParse | undefined {
   if (connector === undefined) {
     return {
       bodyText,
+      conditionText,
       conditions: [conditionText],
       prefix: "If ",
     };
@@ -215,6 +215,7 @@ export function parseIfWrapper(sourceText: string): IfWrapperParse | undefined {
 
   return {
     bodyText,
+    conditionText,
     conditions: [connector.left, connector.right],
     connector: connector.connector,
     prefix: "If ",
@@ -291,6 +292,7 @@ export function parseBooleanConnectorCandidate(
   if (
     left.length === 0 ||
     right.length === 0 ||
+    /^(more|less)\b/i.test(right) ||
     (connector !== "and" && connector !== "or")
   ) {
     return undefined;
@@ -1021,49 +1023,47 @@ function deriveConditionalDrawDiagnosticDecomposition(
   }
 
   const conditional = parseIfWrapper(trigger.bodyText);
-  if (conditional === undefined || conditional.connector === undefined) {
+  if (conditional === undefined) {
     return undefined;
   }
 
-  const actionMatch = /^(draw\s+[1-9]\d*\s+cards?)\.?$/i.exec(
-    conditional.bodyText,
-  );
-  const drawCandidate = actionMatch?.[1]?.trim();
+  const drawCandidate = /^(draw\s+[1-9]\d*\s+cards?)\.?$/i
+    .exec(conditional.bodyText)?.[1]
+    ?.trim();
   if (drawCandidate === undefined) {
     return undefined;
   }
 
+  const conditionDiagnostics = deriveConditionalConditionDiagnostics(
+    conditional.conditionText,
+  );
+
   return {
     recognizedActionCandidates: [drawCandidate],
-    recognizedSyntaxFragments: ["if-conditional-wrapper"],
+    recognizedSyntaxFragments:
+      conditionDiagnostics.hasSupportedConditionComponents
+        ? ["if-conditional-wrapper", "condition-components:v1"]
+        : ["if-conditional-wrapper"],
     recognizedTriggerCandidates: [trigger.prefix.trim()],
-    reason:
-      "Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
+    reason: conditionDiagnostics.isFullySupportedConditionExpression
+      ? "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence."
+      : "Conditional wrapper syntax was recognized, but one or more condition fragments remain unsupported; generated support remains fail-closed.",
     traceComponents: [
       { kind: "trigger", status: "recognized", text: trigger.prefix.trim() },
       { kind: "wrapper", status: "recognized", text: "If" },
-      {
-        kind: "condition-connector",
-        status: "recognized",
-        text: conditional.connector,
-      },
+      ...conditionDiagnostics.traceComponents,
       {
         kind: "action",
         status: "supported",
         text: drawCandidate,
       },
-      ...conditional.conditions.map(
-        (condition): GeneratedSupportDiagnosticTraceComponent => ({
-          kind: "condition",
-          status: "unsupported",
-          text: condition,
-        }),
-      ),
     ],
-    unsupportedConditionFragments: conditional.conditions,
-    unsupportedSyntaxFragments: [
-      `condition conjunction: ${conditional.connector}`,
-    ],
+    unsupportedConditionFragments:
+      conditionDiagnostics.unsupportedConditionFragments,
+    unsupportedSyntaxFragments:
+      conditionDiagnostics.isFullySupportedConditionExpression
+        ? ["conditional-support:blocked-until-CARD-019B"]
+        : conditionDiagnostics.unsupportedSyntaxFragments,
   };
 }
 

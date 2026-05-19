@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-019B.md",
+      "storyId": "CARD-019B",
+      "storyPath": "stories/approved/CARD-019B-conditional-generated-support-composition.yaml",
+      "storySha256": "bceb1bff4c14ce65348b97b2c4078a470c7c9cf492b9762dccc0588ba57c4e9b"
+    }
+  ],
   "version": 1
 }

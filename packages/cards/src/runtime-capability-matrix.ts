@@ -195,6 +195,57 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: ["exact:condition:self-attached-don-count"],
     },
     {
+      description:
+        "Leader color-count conditions are executable by current runtime.",
+      id: "condition:leaderColorCount",
+      kind: "condition",
+      sinceStory: "ENG-058A",
+      supported: true,
+      supportedParserRuleIds: [],
+    },
+    {
+      description:
+        "Leader zone-presence filter conditions are executable by current runtime.",
+      id: "condition:hasCardInZone",
+      kind: "condition",
+      sinceStory: "ENG-058A",
+      supported: true,
+      supportedParserRuleIds: [],
+    },
+    {
+      description: "Hand-count conditions are executable by current runtime.",
+      id: "condition:handCount",
+      kind: "condition",
+      sinceStory: "ENG-058A",
+      supported: true,
+      supportedParserRuleIds: [],
+    },
+    {
+      description: "Life-count conditions are executable by current runtime.",
+      id: "condition:lifeCount",
+      kind: "condition",
+      sinceStory: "ENG-058A",
+      supported: true,
+      supportedParserRuleIds: [],
+    },
+    {
+      description:
+        "Boolean AND condition connectors are executable by runtime.",
+      id: "condition-connector:and",
+      kind: "condition",
+      sinceStory: "ENG-058A",
+      supported: true,
+      supportedParserRuleIds: [],
+    },
+    {
+      description: "Boolean OR condition connectors are executable by runtime.",
+      id: "condition-connector:or",
+      kind: "condition",
+      sinceStory: "ENG-058A",
+      supported: true,
+      supportedParserRuleIds: [],
+    },
+    {
       description: "Your Turn conditions are executable by current runtime.",
       id: "condition:yourTurn",
       kind: "condition",
@@ -749,6 +800,12 @@ export const requiredGeneratedSupportCapabilityIds = [
   "category:auto",
   "composition:line-separated-effect-blocks:v1",
   "condition:selfAttachedDonCount",
+  "condition:leaderColorCount",
+  "condition:hasCardInZone",
+  "condition:handCount",
+  "condition:lifeCount",
+  "condition-connector:and",
+  "condition-connector:or",
   "condition:yourTurn",
   "drawUpTo:self:chooseQuantity",
   "effect:draw:self:count:positive-safe-integer",
@@ -788,7 +845,7 @@ export const requiredGeneratedSupportCapabilityIds = [
   "trigger:trigger",
   "trigger:whenAttacking",
   "trigger:whenAttacking:oncePerTurn",
-] as const;
+].sort() as readonly string[];
 
 export function listSupportedRuntimeCapabilityIds(
   matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,

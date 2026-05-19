@@ -96,6 +96,8 @@ export interface GeneratedSupportDiagnosticTraceComponent {
   kind: GeneratedSupportDiagnosticTraceComponentKind;
   status: GeneratedSupportDiagnosticTraceComponentStatus;
   text: string;
+  id?: string;
+  span?: GeneratedSupportUnparsedSpan;
 }
 
 export interface GeneratedSupportBlocker {
