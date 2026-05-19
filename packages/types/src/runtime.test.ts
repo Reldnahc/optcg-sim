@@ -28,6 +28,12 @@ import type {
   ModifierLayer,
   ModifierOperation,
   OncePerTurnRecord,
+  ProtectionExclusionPolicy,
+  ProtectionFieldRemovalClassification,
+  ProtectionFieldRemovalProcessFamily,
+  ProtectionFieldRemovalSourceControllerRelation,
+  ProtectionFieldRemovalSourceKind,
+  ProtectionFieldRemovalTargetScope,
   PlayerGameTimer,
   PlayerId,
   PlayerState,
@@ -469,4 +475,68 @@ test("runtime contracts compile with sequence segment result and saved-reference
 
   expect(firstResult?.attempted).toBe(true);
   expect(openingSelection.kind).toBe("selectedCards");
+});
+
+test("TYP-012A protection contract supports structured field-removal metadata", () => {
+  const sourceKind: ProtectionFieldRemovalSourceKind = "cardEffect";
+  const sourceControllerRelation: ProtectionFieldRemovalSourceControllerRelation =
+    "opponentControlled";
+  const processFamily: ProtectionFieldRemovalProcessFamily = "fieldRemoval";
+  const classification: ProtectionFieldRemovalClassification =
+    "moveFromFieldToTrash";
+  const targetScope: ProtectionFieldRemovalTargetScope = "thisCard";
+  const exclusionPolicy: ProtectionExclusionPolicy = "failClosed";
+  const protection: Protection = {
+    process: "fieldRemoval",
+    fieldRemoval: {
+      processFamily,
+      classification,
+      sourceKind,
+      sourceControllerRelation,
+      targetScope,
+      exclusions: {
+        battleKO: exclusionPolicy,
+        ruleProcessTrash: exclusionPolicy,
+        controllerCost: exclusionPolicy,
+        controllerOwnedEffect: exclusionPolicy,
+        ambiguousCustomRemoval: exclusionPolicy,
+      },
+    },
+  };
+
+  expect(protection.fieldRemoval.sourceKind).toBe("cardEffect");
+  expect(protection.fieldRemoval.sourceControllerRelation).toBe(
+    "opponentControlled",
+  );
+  expect(protection.fieldRemoval.targetScope).toBe("thisCard");
+});
+
+test("TYP-012A rejects malformed field-removal protection shapes", () => {
+  // @ts-expect-error fieldRemoval process requires structured metadata axes.
+  const missingFieldRemovalMetadata: Protection = {
+    process: "fieldRemoval",
+  };
+  const malformedSimpleProtection = {
+    process: "ko" as const,
+    fieldRemoval: {
+      processFamily: "fieldRemoval" as const,
+      classification: "moveFromFieldToTrash" as const,
+      sourceKind: "cardEffect" as const,
+      sourceControllerRelation: "opponentControlled" as const,
+      targetScope: "thisCard" as const,
+      exclusions: {
+        battleKO: "failClosed" as const,
+        ruleProcessTrash: "failClosed" as const,
+        controllerCost: "failClosed" as const,
+        controllerOwnedEffect: "failClosed" as const,
+        ambiguousCustomRemoval: "failClosed" as const,
+      },
+    },
+  };
+  // @ts-expect-error simple process protections must not carry fieldRemoval metadata.
+  const simpleProcessWithFieldRemovalMetadata: Protection =
+    malformedSimpleProtection;
+
+  void missingFieldRemovalMetadata;
+  void simpleProcessWithFieldRemovalMetadata;
 });

@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/TYP-012A.md",
+      "storyId": "TYP-012A",
+      "storyPath": "stories/approved/TYP-012A-field-removal-protection-contract-shape.yaml",
+      "storySha256": "586145cc5ff49f4d4a9eb9ccfc63d24b7ed95e855862e8425f7356b08a3fc9b5"
+    }
+  ],
   "version": 1
 }

@@ -183,11 +183,68 @@ export interface DeferredTriggerBucket {
   releasePolicy: "afterCurrentProcess" | "afterDamageStep" | "nextWindow";
 }
 
-export interface Protection {
+export type ProtectionFieldRemovalProcessFamily = "fieldRemoval";
+
+export type ProtectionFieldRemovalClassification =
+  | "moveFromFieldToTrash"
+  | "moveFromFieldToHand"
+  | "moveFromFieldToDeck"
+  | "moveFromFieldToLife"
+  | "moveFromFieldToOtherZone";
+
+export type ProtectionFieldRemovalSourceKind =
+  | "cardEffect"
+  | "ruleProcess"
+  | "battle"
+  | "cost"
+  | "custom";
+
+export type ProtectionFieldRemovalSourceControllerRelation =
+  | "opponentControlled"
+  | "selfControlled"
+  | "eitherController"
+  | "unknownController";
+
+export type ProtectionFieldRemovalTargetScope =
+  | "thisCard"
+  | "controllerFieldCharacter"
+  | "controllerField"
+  | "anyFieldCard";
+
+export type ProtectionExclusionPolicy = "excluded" | "failClosed";
+
+export interface ProtectionFieldRemovalExclusions {
+  battleKO: ProtectionExclusionPolicy;
+  ruleProcessTrash: ProtectionExclusionPolicy;
+  controllerCost: ProtectionExclusionPolicy;
+  controllerOwnedEffect: ProtectionExclusionPolicy;
+  ambiguousCustomRemoval: ProtectionExclusionPolicy;
+}
+
+export interface ProtectionFieldRemovalMetadata {
+  processFamily: ProtectionFieldRemovalProcessFamily;
+  classification: ProtectionFieldRemovalClassification;
+  sourceKind: ProtectionFieldRemovalSourceKind;
+  sourceControllerRelation: ProtectionFieldRemovalSourceControllerRelation;
+  targetScope: ProtectionFieldRemovalTargetScope;
+  exclusions: ProtectionFieldRemovalExclusions;
+}
+
+export interface SimpleProtection {
   process: "ko" | "damage" | "trash" | "effect";
+  fieldRemoval?: never;
   source?: CardRef;
   duration?: Duration;
 }
+
+export interface FieldRemovalProtection {
+  process: "fieldRemoval";
+  fieldRemoval: ProtectionFieldRemovalMetadata;
+  source?: CardRef;
+  duration?: Duration;
+}
+
+export type Protection = SimpleProtection | FieldRemovalProtection;
 
 export type RestrictionIndex = Record<string, string[]>;
 
