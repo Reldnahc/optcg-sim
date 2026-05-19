@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-058B.md",
+      "storyId": "ENG-058B",
+      "storyPath": "stories/approved/ENG-058B-conditional-queued-trigger-reachability.yaml",
+      "storySha256": "c73fe5a8255ce375234f1fad9de45c5d6f561ce54f1d6c8e7d27efbf85ad3e0c"
+    }
+  ],
   "version": 1
 }

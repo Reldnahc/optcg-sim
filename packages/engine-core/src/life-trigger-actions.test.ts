@@ -325,10 +325,6 @@ test("getSupportedLifeTriggerDecision rejects unsupported reusable trigger body 
     ...effect,
     cost: { type: "restDon", count: 1 },
   }));
-  expectUnsupportedLifeTriggerDefinition("condition", (effect) => ({
-    ...effect,
-    condition: { type: "yourTurn" },
-  }));
   expectUnsupportedLifeTriggerDefinition("target-effect", (effect) => ({
     ...effect,
     effect: { type: "ko", target: { type: "opponentLeader" } },
@@ -516,6 +512,54 @@ test("getSupportedLifeTriggerDecision rejects trigger metadata with conditionTim
     unsupported.metadata.effectDefinitionsVersion;
   state.cardManifest.effectDefinitions = {
     "def-trigger-condition-timing": unsupported,
+  };
+
+  assert.equal(
+    getSupportedLifeTriggerDecision(state, p2, topLife.card),
+    undefined,
+  );
+});
+
+test("getSupportedLifeTriggerDecision rejects trigger conditions unsupported in no-zone life activation context", () => {
+  const state = setupAttackState();
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const cardId = toCardId("trigger-life-unsupported-condition-no-zone");
+  const definition = effectDefinition(cardId, { type: "trigger" });
+  const effect = must(definition.effects[0], "effect");
+  const unsupported = {
+    ...definition,
+    effects: [
+      {
+        ...effect,
+        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+        condition: {
+          type: "attachedDonCount" as const,
+          target: { type: "self" as const },
+          op: "gte" as const,
+          value: 1,
+        },
+      },
+    ],
+  };
+
+  topLife.card.cardId = cardId;
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "character",
+    power: 1000,
+    triggerText: "TRIGGER: draw 1",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-trigger-unsupported-condition-no-zone",
+      rulesVersion: unsupported.metadata.rulesVersion,
+      sourceTextHash: unsupported.metadata.sourceTextHash,
+    },
+  });
+  state.cardManifest.effectDefinitionsVersion =
+    unsupported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-trigger-unsupported-condition-no-zone": unsupported,
   };
 
   assert.equal(

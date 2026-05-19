@@ -28,6 +28,14 @@ import {
   toSnapshot,
 } from "./effect-runtime-trigger-source-lookup.js";
 
+const withoutCondition = (
+  effect: EffectDefinition["effects"][number],
+): EffectDefinition["effects"][number] => {
+  const supportShape = { ...effect };
+  delete (supportShape as { condition?: unknown }).condition;
+  return supportShape;
+};
+
 const isSupportedWhenAttackingDrawThenTrashSequenceEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
@@ -40,7 +48,6 @@ const isSupportedWhenAttackingDrawThenTrashSequenceEffect = (
     effect.category !== "auto" ||
     effect.optional === true ||
     effect.cost !== undefined ||
-    effect.condition !== undefined ||
     effect.conditionTiming !== undefined ||
     effect.failurePolicy !== undefined ||
     effect.effect.type !== "sequence" ||
@@ -75,6 +82,18 @@ const isSupportedWhenAttackingDrawThenTrashSequenceEffect = (
     trashSegment.effect.filter === undefined
   );
 };
+
+const isSupportedWhenAttackingCompatibleQueuedEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Effect;
+} =>
+  isSupportedNoChoiceWhenAttackingDrawEffect(withoutCondition(effect)) ||
+  isSupportedOptionalNoChoiceWhenAttackingDrawEffect(
+    withoutCondition(effect),
+  ) ||
+  isSupportedWhenAttackingDrawThenTrashSequenceEffect(effect);
 
 export const createAttackTriggerQueueing = (
   dependencies: Pick<
@@ -186,10 +205,7 @@ export const createAttackTriggerQueueing = (
         continue;
       }
       const matching = whenAttackingEffects.filter(
-        (effect) =>
-          isSupportedNoChoiceWhenAttackingDrawEffect(effect) ||
-          isSupportedOptionalNoChoiceWhenAttackingDrawEffect(effect) ||
-          isSupportedWhenAttackingDrawThenTrashSequenceEffect(effect),
+        isSupportedWhenAttackingCompatibleQueuedEffect,
       );
       if (matching.length === 0) {
         return toEngineResult(

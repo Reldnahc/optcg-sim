@@ -1,0 +1,117 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-058B
+epic_id: ENG-058
+title: Conditional queued trigger reachability
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Allow supported block-level conditions through currently supported queued
+  effect trigger wrappers so supported generated bodies can evaluate conditions
+  at resolution under On Play, When Attacking, Trigger, and On K.O. timing.
+story_boundary: >
+  Own only engine-core support gates and tests that currently reject otherwise
+  supported queued effects because an admitted `condition` field is present.
+  Do not add new condition predicates, card parser support, generated-support
+  records, shared contracts, or real-card fixtures.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime-trigger-queueing-on-play.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts
+  - packages/engine-core/src/life-trigger-actions.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-ko.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-attack.test.ts
+  - packages/engine-core/src/effect-runtime-once-per-turn.test.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-source-presence.test.ts
+  - packages/engine-core/src/effect-runtime-trigger-queueing-ko.test.ts
+  - packages/engine-core/src/effect-runtime-ko-triggers.test.ts
+  - packages/engine-core/src/life-trigger-actions.test.ts
+  - packages/engine-core/src/battle-damage-life-trigger.test.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts
+  - packages/engine-core/src/effect-runtime-draw-trash-sequence.ts
+  - packages/engine-core/src/effect-runtime-draw-trash-sequence.test.ts
+  - packages/engine-core/src/effect-runtime-queue-results.ts
+  - packages/engine-core/src/effect-runtime-queue-target-decisions.ts
+  - packages/engine-core/src/effect-runtime-queue-processing-targets.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-058*.yaml
+  - stories/approved/ENG-058*.yaml
+  - agent-packets/ENG-058B.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s021
+  - 02-engine-mechanics.s023
+  - 02-engine-mechanics.s041
+  - 02-engine-mechanics.s042
+  - 03-game-state-events-decisions.s016
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s022
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s008
+  - 04-effect-runtime.s009
+  - 04-effect-runtime.s010
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s006
+  - 06-visibility-security.s005
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - ENG-058A
+  - ENG-056A
+  - ENG-056B
+scope:
+  - inventory every engine support gate that rejects block-level `condition` on otherwise supported queued effects
+  - allow admitted ENG-058A-supported conditions through On Play queueing for currently supported queued bodies
+  - allow admitted ENG-058A-supported conditions through When Attacking queueing for currently supported queued bodies, including existing once-per-turn When Attacking support where already supported
+  - allow admitted ENG-058A-supported conditions through life Trigger activation for currently supported trigger-compatible queued bodies
+  - allow admitted ENG-058A-supported conditions through On K.O. candidate detection and queueing for currently supported onKO-compatible queued bodies
+  - preserve condition evaluation at queued resolution, not at card parsing or trigger detection, unless an existing official timing rule requires an earlier fail-closed gate
+  - if a supported condition is false at resolution, skip the effect cleanly and continue later supported queued entries
+  - if a condition is unsupported, fail closed without partial body execution or hidden-info leakage
+  - preserve source-presence policy requirements for each wrapper family
+  - preserve trigger ordering, optional activation behavior, once-per-turn behavior, event order, replay determinism, state hashes, and hidden-info projection
+non_scope:
+  - new condition predicate evaluation beyond ENG-058A
+  - parser/card generated-support behavior
+  - runtime capability matrix updates in packages/cards
+  - new effect body primitives
+  - activateMain, event main/counter, permanent/continuous effects, replacement effects, custom handlers, or unsupported trigger families
+  - shared TYP/contracts/schema changes
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - On Play, When Attacking, life Trigger, and On K.O. can queue supported conditioned effect blocks for currently supported queued bodies
+  - supported true conditions execute the body normally under each admitted wrapper
+  - supported false conditions skip the body cleanly under each admitted wrapper
+  - unsupported conditions fail closed under each admitted wrapper without partial mutation
+  - conditioned optional wrapper behavior remains supported wherever the corresponding unconditioned optional queued body is already supported, preserving the `chooseOptionalActivation` flow
+  - condition support remains reusable and is not duplicated as one-off wrapper/body templates
+  - all existing supported unconditioned wrapper/body behavior remains unchanged
+  - all unsupported condition/body/source-policy combinations remain unsupported
+required_tests:
+  - story-review for ENG-058B before approval handoff
+  - On Play tests for true, false, and unsupported conditions around at least one no-choice body and one decision-pausing body
+  - When Attacking tests for true, false, and unsupported conditions around the supported no-choice draw path and the supported decision-pausing draw-then-trash path, including once-per-turn behavior where already supported
+  - life Trigger tests for true, false, and unsupported conditions around at least one no-choice body and one decision-pausing body, preserving reveal/no-zone/trash cleanup
+  - On K.O. tests for true, false, and unsupported conditions around at least one no-choice body and one decision-pausing body, preserving destination/LKI source presence
+  - conditioned optional wrapper tests for admitted On Play, When Attacking, and On K.O. optional queued bodies, proving `chooseOptionalActivation` behavior remains unchanged
+  - event-order and state-hash tests for condition true, false, and unsupported branches
+  - hidden-info tests proving false or unsupported conditions do not leak hidden card identities
+  - regression tests proving existing unconditioned supported behavior remains unchanged
+  - fail-closed tests for conditionTiming, costs, unsupported source policies, unsupported bodies, replacement, custom handlers, malformed definitions, untested metadata, and unreviewed metadata
+  - run `corepack pnpm exec vitest run packages/engine-core/src/effect-runtime-trigger-queueing-attack.test.ts packages/engine-core/src/effect-runtime-once-per-turn.test.ts packages/engine-core/src/effect-runtime-trigger-queueing-ko.test.ts packages/engine-core/src/effect-runtime-ko-triggers.test.ts packages/engine-core/src/life-trigger-actions.test.ts packages/engine-core/src/battle-damage-life-trigger.test.ts packages/engine-core/src/effect-runtime-trigger-queueing-source-presence.test.ts packages/engine-core/src/effect-runtime-queue-processing-no-choice.test.ts packages/engine-core/src/effect-runtime-draw-trash-sequence.test.ts packages/engine-core/src/effect-runtime-queue-processing-targets.test.ts`
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the ENG-058B packet before implementation
+  - stay within allowed_touch_points
+  - do not import @optcg/cards
+  - do not add parser/generated-support/card fixture work
+  - fail closed if any wrapper cannot truthfully preserve source presence, trigger ordering, hidden information, or condition timing
+ambiguity_policy: fail_and_escalate
