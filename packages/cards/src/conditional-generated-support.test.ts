@@ -36,7 +36,7 @@ async function loadOp03044Fixture(): Promise<PoneglyphCardDetail> {
 }
 
 describe("conditional generated support diagnostics", () => {
-  it("reports actionable conditional decomposition while staying fail-closed", () => {
+  it("marks supported conditional composition as playable when runtime gates are present", () => {
     const sourceText =
       "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.";
     const index = buildGeneratedSupportIndex({
@@ -52,28 +52,13 @@ describe("conditional generated support diagnostics", () => {
     });
     const report = buildGeneratedSupportReport(index);
 
-    const blocker = report.blockers.find(
-      (candidate) => candidate.cardId === "CARD-015A-REPORT-CONDITIONAL",
-    );
-    expect(blocker).toMatchObject({
-      cardId: "CARD-015A-REPORT-CONDITIONAL",
-      code: "unparsed-span",
-    });
-    expect(blocker?.decomposition).toMatchObject({
-      recognizedActionCandidates: ["draw 2 cards"],
-      recognizedSyntaxFragments: [
-        "if-conditional-wrapper",
-        "condition-components:v1",
-      ],
-      recognizedTriggerCandidates: ["[On Play]"],
-      reason:
-        "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence.",
-      unsupportedConditionFragments: [],
-      unsupportedSyntaxFragments: [
-        "conditional-support:blocked-until-CARD-019B",
-      ],
-    });
-    expect(report.unsupportedCardIds).toEqual(["CARD-015A-REPORT-CONDITIONAL"]);
+    expect(
+      report.blockers.find(
+        (candidate) => candidate.cardId === "CARD-015A-REPORT-CONDITIONAL",
+      ),
+    ).toBeUndefined();
+    expect(report.unsupportedCardIds).toEqual([]);
+    expect(report.supportedCardIds).toEqual(["CARD-015A-REPORT-CONDITIONAL"]);
   });
 
   it("keeps supported child conditions recognized when a connector child fragment is unsupported", async () => {
@@ -110,7 +95,7 @@ describe("conditional generated support diagnostics", () => {
     );
   });
 
-  it("keeps singular draw action candidate wording intact in conditional diagnostics", async () => {
+  it("reports supported singular conditional draw probes as playable with no blockers", async () => {
     const detail = await loadOp03044Fixture();
     const output: string[] = [];
 
@@ -134,9 +119,8 @@ describe("conditional generated support diagnostics", () => {
 
     const text = output.join("");
     expect(exitCode).toBe(0);
-    expect(text).toContain(
-      "recognized supported-action candidate: draw 1 card",
-    );
+    expect(text).toContain("Playable: yes");
+    expect(text).toContain("Blockers: none");
     expect(text).not.toContain("draw 1 cards");
   });
 });

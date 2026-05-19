@@ -651,11 +651,8 @@ describe("certified card text parser", () => {
     "[On Play] DON!! -1 You may draw 1 card.",
     "[On Play] You may instead draw 1 card.",
     "[On Play] During your opponent's turn, draw 1 card.",
-    "[On Play] If you have 1 or more cards in your hand, draw 1 card.",
-    "[On Play] If you have 1 or more Life cards, draw 1 card.",
     "[On Play] If you have 1 or more Characters, draw 1 card.",
     "[On Play] If this Character is rested, draw 1 card.",
-    "[On Play] If this Character has 2 or more DON!! cards attached, draw 1 card.",
     "[On Play] If your Leader has 1 or more DON!! cards attached, draw 1 card.",
   ])(
     "fails closed on unsupported CARD-014F optionality and conditions (%s)",

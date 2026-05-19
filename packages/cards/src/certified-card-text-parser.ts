@@ -29,6 +29,7 @@ import {
   toEffectId,
   type TriggeredDrawClauseOptions,
 } from "./composed-parser-builder.js";
+import { parseConditionalWrapper } from "./conditional-generated-support-composer.js";
 import type {
   GeneratedSupportParserResult,
   GeneratedSupportUnparsedSpan,
@@ -302,6 +303,16 @@ function parseCardLineEffectClause(
   sourceText: string,
 ): CertifiedClause | undefined {
   return (
+    parseNonConditionalCardLineEffectClause(cardId, sourceText) ??
+    parseConditionalCardLineEffectClause(cardId, sourceText)
+  );
+}
+
+function parseNonConditionalCardLineEffectClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  return (
     parseReusableCard016AClause(cardId, sourceText) ??
     parseTriggerDrawClause(cardId, sourceText) ??
     parseTriggerDrawUpToClause(cardId, sourceText) ??
@@ -315,6 +326,39 @@ function parseCardLineEffectClause(
     parseWhenAttackingDrawThenTrashClause(cardId, sourceText) ??
     parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, sourceText)
   );
+}
+
+function parseConditionalCardLineEffectClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const conditional = parseConditionalWrapper(sourceText);
+  if (conditional === undefined) {
+    return undefined;
+  }
+  const base = parseNonConditionalCardLineEffectClause(
+    cardId,
+    `${conditional.prefix}${normalizeConditionalBodyText(conditional.bodyText)}`,
+  );
+  if (base?.effectBlock === undefined) {
+    return undefined;
+  }
+
+  return {
+    ...base,
+    effectBlock: {
+      ...base.effectBlock,
+      condition: conditional.condition,
+    },
+  };
+}
+
+function normalizeConditionalBodyText(bodyText: string): string {
+  if (bodyText.length === 0) {
+    return bodyText;
+  }
+
+  return `${bodyText[0]?.toUpperCase() ?? ""}${bodyText.slice(1)}`;
 }
 
 function parseSupportedComposition(

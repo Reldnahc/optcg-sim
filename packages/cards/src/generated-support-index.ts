@@ -2,6 +2,7 @@ import type {
   CardCategory,
   CardId,
   CardImplementationRecord,
+  Condition,
   EffectDefinition,
   Keyword,
 } from "@optcg/types";
@@ -11,6 +12,7 @@ import { deriveParserDiagnosticDecomposition } from "./composed-parser-builder.j
 import {
   findGeneratedSupportComponentEvidenceByShapeId,
   isCompleteGeneratedSupportParseResult,
+  listRequiredRuntimeCapabilityIdsForComponentEvidenceId,
   listComponentEvidenceIdsForParserRuleIds,
   type GeneratedSupportBlocker,
   type GeneratedSupportParserResultStatus,
@@ -358,19 +360,51 @@ function buildGeneratedSupportIndexEntry(
         generatedSupportRuntimeCapabilityMatrix,
       componentEvidenceIds: parseResult.componentEvidenceIds,
     });
+  const existingCapabilityIds = new Set(
+    capabilityCoverage.evidence.map((item) => item.capabilityId),
+  );
+  const componentRequiredCapabilityIds = new Set(
+    parseResult.componentEvidenceIds.flatMap((componentEvidenceId) =>
+      listRequiredRuntimeCapabilityIdsForComponentEvidenceId(
+        componentEvidenceId,
+      ),
+    ),
+  );
+  const conditionCapabilityCoverage =
+    evaluateConditionRuntimeCapabilityCoverage(
+      parseResult.effectDefinition,
+      input.runtimeCapabilityMatrix ?? generatedSupportRuntimeCapabilityMatrix,
+      existingCapabilityIds,
+      componentRequiredCapabilityIds,
+    );
+  const missingCapabilityIds = [
+    ...new Set([
+      ...capabilityCoverage.missingCapabilityIds,
+      ...conditionCapabilityCoverage.missingCapabilityIds,
+    ]),
+  ].sort();
   const capabilityEvidenceWithTrace = withParserRuleTrace({
-    capabilityEvidence: capabilityCoverage.evidence,
+    capabilityEvidence: [
+      ...capabilityCoverage.evidence,
+      ...conditionCapabilityCoverage.evidence,
+    ],
     parserRuleIds: parseResult.parserRuleIds,
   });
-  if (capabilityCoverage.missing.length > 0) {
+  if (
+    capabilityCoverage.missing.length > 0 ||
+    conditionCapabilityCoverage.missing.length > 0
+  ) {
     return unsupportedEntry({
-      blockers: capabilityCoverage.blockers.map((blocker) => ({
+      blockers: [
+        ...capabilityCoverage.blockers,
+        ...conditionCapabilityCoverage.blockers,
+      ].map((blocker) => ({
         ...blocker,
         schemaValidated: true,
       })),
       card,
       componentEvidenceIds: parseResult.componentEvidenceIds,
-      missingCapabilityIds: capabilityCoverage.missingCapabilityIds,
+      missingCapabilityIds,
       parseStatus: parseResult.status,
       parserRuleIds: parseResult.parserRuleIds,
     });
@@ -412,6 +446,124 @@ function buildGeneratedSupportIndexEntry(
       tested: true,
     },
   };
+}
+
+function evaluateConditionRuntimeCapabilityCoverage(
+  definition: EffectDefinition,
+  matrix: RuntimeCapabilityMatrix,
+  existingCapabilityIds: ReadonlySet<string>,
+  componentRequiredCapabilityIds: ReadonlySet<string>,
+): RuntimeCapabilityCoverageResult {
+  const required = collectConditionCapabilityIds(definition.effects);
+  const evidence: RuntimeCapabilityEvidence[] = [];
+  const missing: RuntimeCapabilityEvidence[] = [];
+
+  for (const capabilityId of required) {
+    if (existingCapabilityIds.has(capabilityId)) {
+      continue;
+    }
+    if (componentRequiredCapabilityIds.has(capabilityId)) {
+      continue;
+    }
+    const record = {
+      capabilityId,
+      component: "condition-expression",
+    } satisfies RuntimeCapabilityEvidence;
+    if (
+      matrix.capabilities.some(
+        (cap) => cap.id === capabilityId && cap.supported,
+      )
+    ) {
+      evidence.push(record);
+    } else {
+      missing.push(record);
+    }
+  }
+
+  const missingCapabilityIds = [
+    ...new Set(missing.map((item) => item.capabilityId)),
+  ].sort();
+  return {
+    blockers: missing.map((item) => toMissingRuntimeCapabilityBlocker(item)),
+    evidence: evidence.sort(compareCapabilityEvidence),
+    missing: missing.sort(compareCapabilityEvidence),
+    missingCapabilityIds,
+  };
+}
+
+function collectConditionCapabilityIds(
+  effects: readonly EffectDefinition["effects"][number][],
+): readonly string[] {
+  const ids = new Set<string>();
+  for (const block of effects) {
+    if (block.condition !== undefined) {
+      addConditionCapabilityIds(block.condition, ids);
+    }
+  }
+  return [...ids].sort();
+}
+
+function addConditionCapabilityIds(
+  condition: Condition,
+  ids: Set<string>,
+): void {
+  switch (condition.type) {
+    case "yourTurn":
+      ids.add("condition:yourTurn");
+      return;
+    case "attachedDonCount":
+      ids.add("condition:selfAttachedDonCount");
+      return;
+    case "leaderColorCount":
+      ids.add("condition:leaderColorCount");
+      return;
+    case "hasCardInZone":
+      if (
+        condition.player === "self" &&
+        condition.zone === "leaderArea" &&
+        condition.filter.categories?.includes("leader")
+      ) {
+        if (
+          (condition.filter.typesAny?.length ?? 0) > 0 ||
+          (condition.filter.attributesAny?.length ?? 0) > 0
+        ) {
+          ids.add("condition:hasCardInZone");
+          return;
+        }
+      }
+      ids.add("condition:unsupported-shape");
+      return;
+    case "handCount":
+      ids.add("condition:handCount");
+      return;
+    case "lifeCount":
+      ids.add("condition:lifeCount");
+      return;
+    case "and":
+      ids.add("condition-connector:and");
+      for (const child of condition.conditions) {
+        addConditionCapabilityIds(child, ids);
+      }
+      return;
+    case "or":
+      ids.add("condition-connector:or");
+      for (const child of condition.conditions) {
+        addConditionCapabilityIds(child, ids);
+      }
+      return;
+    case "not":
+    case "custom":
+    case "donCount":
+    case "opponentTurn":
+    case "fieldCount":
+    case "trashCount":
+    case "attackTarget":
+    case "cardState":
+    case "sourceStillInZone":
+    case "eventPayload":
+      ids.add("condition:unsupported-shape");
+      return;
+  }
 }
 
 function attachParserDiagnosticDecomposition(

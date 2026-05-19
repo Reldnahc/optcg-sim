@@ -114,47 +114,73 @@ describe("support evaluator", () => {
     expect(unsupported.support).toBeUndefined();
   });
 
-  it("keeps conditional draw unsupported while surfacing decomposition fragments", () => {
-    const unsupportedCard = normalizePoneglyphCardDetail({
+  it("supports conditional draw when parser, schema, and runtime capability evidence are present", () => {
+    const conditionalCard = normalizePoneglyphCardDetail({
       ...loadOp03044Fixture(),
       card_number: "CARD-015A-EVAL-CONDITIONAL",
       effect:
         "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.",
-      name: "Conditional Draw Unsupported Candidate",
+      name: "Conditional Draw Candidate",
     });
 
     const evaluation = evaluateGeneratedSupportPlayability({
-      card: unsupportedCard,
+      card: conditionalCard,
       cardDataVersion: "2026-05-13",
       effectDefinitionsVersion: "generated-support-v1",
-      expectedBehaviorHash: unsupportedCard.behaviorHash,
-      expectedSourceTextHash: unsupportedCard.sourceTextHash,
+      expectedBehaviorHash: conditionalCard.behaviorHash,
+      expectedSourceTextHash: conditionalCard.sourceTextHash,
       rulesVersion: "generated-support-v1",
       validateEffectDefinition,
     });
 
     expect(evaluation).toMatchObject({
-      parseStatus: "partial",
+      blockers: [],
+      parseStatus: "complete",
+      playable: true,
+      status: "supported",
+    });
+  });
+
+  it("fails closed when conditional capability evidence is missing", () => {
+    const conditionalCard = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "CARD-015A-EVAL-CONDITIONAL-MISSING-CAP",
+      effect:
+        "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.",
+      name: "Conditional Draw Missing Capability Candidate",
+    });
+    const matrixWithoutConditionConnector = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) => capability.id !== "condition-connector:and",
+      ),
+    };
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card: conditionalCard,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: conditionalCard.behaviorHash,
+      expectedSourceTextHash: conditionalCard.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      runtimeCapabilityMatrix: matrixWithoutConditionConnector,
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      missingCapabilityIds: ["condition-connector:and"],
+      parseStatus: "complete",
       playable: false,
       status: "unsupported",
     });
-    const blocker = evaluation.blockers.find(
-      (candidate) => candidate.code === "unparsed-span",
+    expect(evaluation.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          capabilityId: "condition-connector:and",
+          code: "missing-runtime-capability",
+        }),
+      ]),
     );
-    expect(blocker?.decomposition).toMatchObject({
-      recognizedActionCandidates: ["draw 2 cards"],
-      recognizedSyntaxFragments: [
-        "if-conditional-wrapper",
-        "condition-components:v1",
-      ],
-      recognizedTriggerCandidates: ["[On Play]"],
-      reason:
-        "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence.",
-      unsupportedConditionFragments: [],
-      unsupportedSyntaxFragments: [
-        "conditional-support:blocked-until-CARD-019B",
-      ],
-    });
   });
 
   it("fails closed when runtime capability evidence is missing", () => {
