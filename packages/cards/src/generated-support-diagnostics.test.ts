@@ -111,4 +111,74 @@ describe("generated support diagnostics", () => {
       ],
     });
   });
+
+  it("propagates parser scanner decomposition metadata into structured report blockers", () => {
+    const sourceText =
+      "[On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck.";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-020B-REPORT-DIAGNOSTIC" as CardId,
+          sourceText,
+          sourceTextHash: "sha256:card-020b-report-diagnostic",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+    const blocker = report.blockers.find(
+      (candidate) => candidate.cardId === "CARD-020B-REPORT-DIAGNOSTIC",
+    );
+
+    expect(blocker).toMatchObject({
+      cardId: "CARD-020B-REPORT-DIAGNOSTIC",
+      code: "unparsed-span",
+      layer: "parser",
+    });
+    expect(blocker?.decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "trigger",
+          status: "recognized",
+          text: "[On Play]",
+        }),
+        expect.objectContaining({
+          kind: "destination",
+          status: "unsupported",
+          text: "bottom of the owner's deck",
+        }),
+      ]),
+    );
+  });
+
+  it("keeps invalid schema as schema-layer blocker and does not allow parser decomposition to override it", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-020B-SCHEMA-NO-OVERRIDE" as CardId,
+          sourceText: "[On Play] Draw 1 card.",
+          sourceTextHash: "sha256:card-020b-schema-no-override",
+        },
+      ],
+      validateEffectDefinition: () => ({
+        errors: ["/effects/0/type failed schema validation"],
+        valid: false,
+      }),
+    });
+    const report = buildGeneratedSupportReport(index);
+    const blocker = report.blockers.find(
+      (candidate) => candidate.cardId === "CARD-020B-SCHEMA-NO-OVERRIDE",
+    );
+
+    expect(blocker).toMatchObject({
+      cardId: "CARD-020B-SCHEMA-NO-OVERRIDE",
+      code: "invalid-dsl-schema",
+      component: "/effects/0/type failed schema validation",
+      deepestSuccessfulLayer: "parser",
+      layer: "schema",
+    });
+    expect(blocker?.decomposition).toBeUndefined();
+  });
 });

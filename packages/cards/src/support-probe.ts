@@ -158,10 +158,17 @@ function formatDiagnosticDecomposition(
       const noun = toTraceComponentDisplayName(component.kind);
       const suffix =
         component.status === "unsupported" ? "blocker" : "candidate";
+      if (component.status === "unsupported") {
+        return [
+          `  unsupported ${noun} blocker: ${component.text}`,
+          `  unsupported component blocker: ${component.text}`,
+        ].join("\n");
+      }
       return `  ${statusLabel} ${noun} ${suffix}: ${component.text}`;
     });
   return [
     "",
+    "  diagnostic recognition only; remains unsupported for generated support",
     ...recognizedTriggerLines,
     ...recognizedSyntaxLines,
     ...recognizedActionLines,

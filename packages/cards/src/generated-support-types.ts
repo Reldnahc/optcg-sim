@@ -37,10 +37,12 @@ export const generatedSupportDiagnosticLayers = [
   "unsupported-condition",
   "unsupported-cardinality",
   "unsupported-target",
+  "unsupported-destination",
   "unsupported-duration",
   "unsupported-modifier",
   "unsupported-restriction",
   "unsupported-saved-reference",
+  "unsupported-sequence-action-composition",
   "unsupported-layer",
 ] as const;
 

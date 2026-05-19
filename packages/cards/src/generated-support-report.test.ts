@@ -142,6 +142,18 @@ describe("generated support report", () => {
     expect(
       classifyGeneratedSupportBlockerLayer({
         code: "unsupported-primitive",
+        component: "destination:owner-deck-bottom",
+      }),
+    ).toBe("unsupported-destination");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
+        component: "sequence-action-composition:draw-then-trash",
+      }),
+    ).toBe("unsupported-sequence-action-composition");
+    expect(
+      classifyGeneratedSupportBlockerLayer({
+        code: "unsupported-primitive",
         component: "mystery:untrusted-shape",
       }),
     ).toBe("unsupported-layer");

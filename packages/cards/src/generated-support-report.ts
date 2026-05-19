@@ -198,10 +198,12 @@ function isUnsupportedPrimitiveComponentLayer(
     layer === "unsupported-condition" ||
     layer === "unsupported-cardinality" ||
     layer === "unsupported-target" ||
+    layer === "unsupported-destination" ||
     layer === "unsupported-duration" ||
     layer === "unsupported-modifier" ||
     layer === "unsupported-restriction" ||
     layer === "unsupported-saved-reference" ||
+    layer === "unsupported-sequence-action-composition" ||
     layer === "unsupported-layer"
   );
 }
@@ -287,8 +289,14 @@ function classifyUnsupportedPrimitiveLayer(
   if (component.includes("target") || component.includes("selectTargets")) {
     return "unsupported-target";
   }
+  if (component.includes("destination")) {
+    return "unsupported-destination";
+  }
   if (component.includes("sequence:repeat") || component.includes("segment2")) {
     return "unsupported-cardinality";
+  }
+  if (component.includes("sequence-action-composition")) {
+    return "unsupported-sequence-action-composition";
   }
   if (component.includes("condition")) {
     return "unsupported-condition";
