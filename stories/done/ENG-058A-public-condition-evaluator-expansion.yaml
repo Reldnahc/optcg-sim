@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Expand engine queued-effect condition evaluation to support public Leader
   metadata predicates, hand/life count predicates, and supported boolean

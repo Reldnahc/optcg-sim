@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Allow supported block-level conditions through currently supported queued
   effect trigger wrappers so supported generated bodies can evaluate conditions
