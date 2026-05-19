@@ -1,0 +1,89 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-059A
+epic_id: ENG-059
+title: Public trash-count condition runtime
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add reusable engine condition evaluation for public trash-count predicates so
+  effects can test self or opponent trash size with supported comparator
+  primitives without exposing hidden information or relying on card-specific
+  templates.
+story_boundary: >
+  Own only engine-core condition evaluation and tests for public trash-count
+  predicates. Do not change parser support, generated-support records, real-card
+  fixtures, shared contracts, trigger reachability, or effect body primitives.
+allowed_touch_points:
+  - packages/engine-core/src/effect-runtime-conditions.ts
+  - packages/engine-core/src/effect-runtime-queue-results.ts
+  - packages/engine-core/src/**/*condition*.test.ts
+  - packages/engine-core/src/**/*queue*.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-059*.yaml
+  - stories/approved/ENG-059*.yaml
+  - agent-packets/ENG-059A.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s006
+  - 06-visibility-security.s005
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - ENG-058A
+scope:
+  - preserve existing supported condition behavior
+  - add runtime evaluation for public `trashCount` conditions for self and opponent player refs
+  - support comparator semantics needed for `gte`, `lte`, and exact equality where the condition model already admits them
+  - model primitive condition parts equivalent to "If you have", "7 or more", "cards in your trash", and zone "trash" as generic trash-count condition data
+  - prove the "7 or more" comparator as reusable `gte 7` behavior over a public trash-zone count, not as card-specific behavior
+  - treat trash as a public zone count and never inspect private hand, deck, or face-down life identities to satisfy the predicate
+  - return false for supported predicates whose count comparison is false
+  - fail closed for malformed values, unsupported player refs, unsupported comparators, unsupported filters, private-zone metadata queries, custom conditions, and unsupported condition families
+  - preserve deterministic events, queue cleanup, state hashes, and hidden-info projection for true, false, and unsupported condition results
+non_scope:
+  - production special cases for a real card ID or full-card text matching
+  - conditional keyword grants
+  - field-removal protection
+  - trigger reachability changes
+  - parser support, generated-support evidence, support reports, real-card fixtures, source hashes, or behavior hashes
+  - shared TYP/contracts/schema changes
+  - new effect body primitives
+  - arbitrary zone-count or card-metadata query support outside public trash-count predicates
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - self and opponent trash-count predicates evaluate true and false from public zone counts
+  - threshold primitive `gte 7` covers the behavior generically without card ID or full-text branches
+  - false supported trash-count conditions skip the associated conditioned effect without executing its body
+  - unsupported trash-count shapes fail closed without partial mutation or hidden-info leakage
+  - existing supported conditions keep their current behavior
+  - production engine code does not import @optcg/cards and does not mention real card IDs
+required_tests:
+  - story-review for ENG-059A before approval handoff
+  - unit tests for self trash count below, at, and above a `gte 7` threshold
+  - unit tests for opponent trash count below, at, and above a supported threshold
+  - comparator edge tests for supported less-than-or-equal and exact-count semantics where already admitted by the condition model
+  - false-condition queue-processing test proving the body is skipped cleanly
+  - fail-closed tests for malformed count values, malformed player refs, unsupported comparators, unsupported filters, private-zone metadata queries, custom conditions, and unsupported condition families
+  - hidden-info tests proving trash-count conditions do not expose hand, deck, or face-down life identities
+  - state-hash and event-order tests for true, false, and unsupported condition paths
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run focused engine-core condition and queue-processing Vitest tests touched by this story
+  - run `corepack pnpm run test:hidden-info`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the ENG-059A packet before implementation
+  - stay within allowed_touch_points
+  - do not import @optcg/cards
+  - do not add parser/generated-support/card fixture work
+  - fail closed if a trash-count condition requires private metadata, unsupported filters, or unavailable authority
+ambiguity_policy: fail_and_escalate

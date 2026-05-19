@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-059A.md",
+      "storyId": "ENG-059A",
+      "storyPath": "stories/approved/ENG-059A-public-trash-count-condition-runtime.yaml",
+      "storySha256": "fec695cca7bb5d131aefd7607a1d67d1eb31593f44fc7ff4258bb86191f49c7b"
+    }
+  ],
   "version": 1
 }
