@@ -133,10 +133,14 @@ const collectDeclareAttackLegalActions = (
       if (
         options.filterUnsupportedDoubleAttackBlockers &&
         target.isLeader &&
-        isSupportedDoubleAttackCombatMetadata(
-          state.cardManifest.cards[attacker.card.cardId],
-        ) &&
-        hasActivePrintedBlocker(state, target.playerId)
+        attackerHasDoubleAttack(view, state, attacker.card) &&
+        hasComputedBlocker(state, target.playerId, {
+          attacker: toCardRef(attacker.card, attacker.playerId),
+          originalTarget: toCardRef(target.card, target.playerId),
+          currentTarget: toCardRef(target.card, target.playerId),
+          step: "block",
+          damageCount: 2,
+        })
       ) {
         continue;
       }
@@ -150,23 +154,49 @@ const collectDeclareAttackLegalActions = (
   return actions;
 };
 
-const hasActivePrintedBlocker = (
+const attackerHasDoubleAttack = (
+  view: ReturnType<typeof computeView>,
+  state: GameState,
+  attacker: CardInstance,
+): boolean => {
+  return (
+    view.cards[attacker.instanceId]?.keywords.includes("doubleAttack") ===
+      true ||
+    isSupportedDoubleAttackCombatMetadata(
+      state.cardManifest.cards[attacker.cardId],
+    )
+  );
+};
+
+const hasComputedBlocker = (
   state: GameState,
   defenderId: PlayerId,
+  candidateBattle?: NonNullable<GameState["battle"]>,
 ): boolean => {
   const defender = state.players[defenderId];
   if (defender === undefined) {
     return false;
   }
-  return defender.characters.some((character) => {
-    const metadata = state.cardManifest.cards[character.cardId];
-    return (
-      character.controller === defenderId &&
-      character.state === "active" &&
-      metadata?.category === "character" &&
-      metadata.printedKeywords.includes("blocker")
+  try {
+    const battle = candidateBattle ?? state.battle;
+    const blockState =
+      battle === undefined
+        ? state
+        : ({
+            ...state,
+            battle: { ...battle, step: "block" },
+          } satisfies GameState);
+    const sanitizedBlockState = hideSupportedDoubleAttackKeywords(
+      blockState,
+      getCombatCardIds(blockState),
+    ).state;
+    const view = computeView(sanitizedBlockState);
+    return defender.characters.some(
+      (character) => view.cards[character.instanceId]?.canBlock === true,
     );
-  });
+  } catch {
+    return true;
+  }
 };
 
 const hasPotentialBlockerForUnsupportedDoubleAttackWindow = (
@@ -180,7 +210,7 @@ const hasPotentialBlockerForUnsupportedDoubleAttackWindow = (
   if (target === null) {
     return false;
   }
-  return hasActivePrintedBlocker(state, target.playerId);
+  return hasComputedBlocker(state, target.playerId);
 };
 
 export const getDeclareAttackLegalActions = (
@@ -201,7 +231,7 @@ export const getDeclareAttackLegalActions = (
   try {
     const view = computeView(legalActionState);
     return collectDeclareAttackLegalActions(state, playerId, view, {
-      filterUnsupportedDoubleAttackBlockers: false,
+      filterUnsupportedDoubleAttackBlockers: true,
     });
   } catch {
     // Fail closed when computed combat metadata is unsupported or invalid.

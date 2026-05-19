@@ -11,7 +11,9 @@ import {
   toCardId,
 } from "./action-test-fixtures.js";
 import {
+  addTrashMarker,
   cardRef,
+  continuousKeywordEffectRecord,
   setupAttackState,
   setupOpenedBlockStepDecision,
   setupOpenedCharacterTargetBlockStepDecision,
@@ -112,6 +114,59 @@ test("applyDeclareAttack enters block step and opens defender decline decision w
   });
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(result.events, replay.events);
+});
+
+test("conditional continuous blocker grant opens Block Step decision and can be activated", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const defenderBlocker = must(p2State.characters[0], "defender blocker");
+  defenderBlocker.state = "active";
+  addTrashMarker(state, p2);
+  state.continuousEffects = [
+    continuousKeywordEffectRecord(
+      state,
+      "conditional-blocker-grant",
+      defenderBlocker,
+      "blocker",
+      {
+        condition: { type: "trashCount", player: "self", op: "gte", value: 1 },
+      },
+    ),
+  ];
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.equal(opened.errors, undefined);
+  const pending = must(opened.state.pendingDecision, "block decision");
+  assert.equal(pending.type, "selectCards");
+  assert.deepEqual(pending.candidates, [
+    {
+      card: cardRef(defenderBlocker, p2),
+      visibility: { type: "public" },
+    },
+  ]);
+
+  const result = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: pending.id,
+    response: { type: "cards", cards: [cardRef(defenderBlocker, p2)] },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.events.some((event) => event.type === "blockerActivated"),
+    true,
+  );
+  assert.equal(
+    must(result.state.players[p2], "p2 result").trash.some(
+      (card) => card.instanceId === defenderBlocker.instanceId,
+    ),
+    true,
+  );
 });
 
 test("empty block-step respondToDecision declines and resumes existing no-block battle resolution path", () => {

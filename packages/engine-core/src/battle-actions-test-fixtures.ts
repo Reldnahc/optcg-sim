@@ -6,6 +6,7 @@ import type {
   ContinuousEffectRecord,
   EffectDefinition,
   EffectId,
+  Keyword,
   PlayerId,
 } from "@optcg/types";
 
@@ -298,6 +299,73 @@ export const continuousEffectRecord = (
     createdBy: { type: "ruleProcess", name: "test" },
     createdAtStateSeq: state.seq,
   };
+};
+
+export const continuousKeywordEffectRecord = (
+  state: ReturnType<typeof setupAttackState>,
+  id: string,
+  source: CardInstance,
+  keyword: Keyword,
+  options?: {
+    controller?: PlayerId;
+    condition?: ContinuousEffectRecord["condition"];
+    duration?: ContinuousEffectRecord["duration"];
+  },
+): ContinuousEffectRecord => {
+  const category = source.zone.zone === "leaderArea" ? "leader" : "character";
+  const record: ContinuousEffectRecord = {
+    id,
+    source: cardRef(source, source.controller),
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: source.owner,
+      controllerId: source.controller,
+      zone: source.zone,
+      category,
+      colors: ["red"],
+      power: category === "leader" ? 5000 : 3000,
+      keywords: [],
+    },
+    controller: options?.controller ?? source.controller,
+    modifier: {
+      layer: "keywordAdd",
+      target: { type: "self" },
+      operation: { type: "addKeyword", keyword },
+    },
+    duration: options?.duration ?? { type: "whileSourceOnField" },
+    createdBy: { type: "ruleProcess", name: "test-keyword-grant" },
+    createdAtStateSeq: state.seq,
+  };
+  if (options?.condition !== undefined) {
+    record.condition = options.condition;
+  }
+  return record;
+};
+
+export const addTrashMarker = (
+  state: ReturnType<typeof setupAttackState>,
+  playerId: PlayerId,
+  cardId: CardId = toCardId(`${String(playerId)}-trash-marker`),
+): void => {
+  const player = must(state.players[playerId], "trash marker player");
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "character",
+    power: 1000,
+  });
+  player.trash = [
+    {
+      instanceId:
+        `${String(playerId)}:trash:keyword-marker` as CardInstance["instanceId"],
+      cardId,
+      owner: playerId,
+      controller: playerId,
+      zone: { zone: "trash", playerId, slot: "trash", index: 0 },
+      state: "active",
+      attachedDon: [],
+    },
+  ];
 };
 
 export const setupOpenedBlockStepDecision = () => {

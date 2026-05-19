@@ -70,7 +70,8 @@ export const getUnsupportedDamageStepContinuationReason = (
     return "Battle requires unsupported derived power metadata.";
   }
   if (
-    attackerView.keywords.includes("doubleAttack") ||
+    (battle.damageCount !== 2 &&
+      attackerView.keywords.includes("doubleAttack")) ||
     targetView.protectedFrom.length > 0
   ) {
     return "Battle requires unsupported keyword or protection handling.";

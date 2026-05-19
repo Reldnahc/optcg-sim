@@ -40,14 +40,6 @@ const getBlockStepDecisionId = (
     `decision:blockStep:decline:${String(attacker.instanceId)}:${String(state.seq + 1)}`,
   );
 
-const isPrintedBlocker = (state: GameState, card: CardInstance): boolean => {
-  const metadata = state.cardManifest.cards[card.cardId];
-  if (metadata?.category !== "character") {
-    return false;
-  }
-  return metadata.printedKeywords.includes("blocker");
-};
-
 const toPublicCardSelectionCandidate = (
   card: CardInstance,
   playerId: PlayerId,
@@ -71,7 +63,6 @@ const getLegalBlockerCandidates = (
       return (
         character.controller === defenderId &&
         character.state === "active" &&
-        isPrintedBlocker(state, character) &&
         computed?.canBlock === true
       );
     })
@@ -174,7 +165,6 @@ const hasUnsupportedBlockDecisionState = (
   if (
     detectPendingRuntimeWork(state) !== undefined ||
     state.replacementState.length > 0 ||
-    state.continuousEffects.length > 0 ||
     battle.blocker !== undefined ||
     battle.damageCount !== 1 ||
     (battle.step !== "attack" && battle.step !== "block")
@@ -246,8 +236,7 @@ const isLegalBlockerSelection = (
     blocker.playerId !== defenderId ||
     blocker.card.controller !== defenderId ||
     blocker.card.zone.zone !== "characterArea" ||
-    blocker.card.state !== "active" ||
-    !isPrintedBlocker(state, blocker.card)
+    blocker.card.state !== "active"
   ) {
     return false;
   }

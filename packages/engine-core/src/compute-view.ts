@@ -5,12 +5,16 @@ import type {
   ComputedCardView,
   ComputedGameView,
   ContinuousEffectRecord,
+  EffectQueueEntry,
   GameState,
   InstanceId,
   Keyword,
   PlayerId,
   ResolvedCard,
 } from "@optcg/types";
+
+import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+
 type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
   counterPower?: number;
 };
@@ -24,6 +28,13 @@ const supportedDslCombatKeywords = new Set<Keyword>([
   "rushCharacter",
   "banish",
   "blocker",
+]);
+const supportedContinuousKeywordGrants = new Set<Keyword>([
+  "blocker",
+  "banish",
+  "rush",
+  "rushCharacter",
+  "doubleAttack",
 ]);
 
 const isLeaderOrCharacter = (
@@ -51,6 +62,17 @@ const isSupportedContinuousPowerModifier = (
       (effect.modifier.operation.restriction === "cannotAttack" ||
         effect.modifier.operation.restriction === "cannotBlock")));
 
+const isSupportedContinuousKeywordModifier = (
+  effect: ContinuousEffectRecord,
+): boolean =>
+  isSupportedDuration(effect.duration) &&
+  effect.modifier.layer === "keywordAdd" &&
+  (effect.modifier.target.type === "self" ||
+    effect.modifier.target.type === "all" ||
+    effect.modifier.target.type === "exactCard") &&
+  effect.modifier.operation.type === "addKeyword" &&
+  supportedContinuousKeywordGrants.has(effect.modifier.operation.keyword);
+
 const isSupportedDuration = (
   duration: ContinuousEffectRecord["duration"],
 ): boolean =>
@@ -61,15 +83,54 @@ const isSupportedDuration = (
   duration.type === "whileSourceOnField" ||
   duration.type === "permanent";
 
-const assertSupportedContinuousEffects = (
-  continuousEffects: readonly ContinuousEffectRecord[],
-): void => {
-  for (const effect of continuousEffects) {
-    if (!isSupportedContinuousPowerModifier(effect)) {
-      throw new TypeError(
-        `Unsupported continuous effect ${effect.id}: only unconditional self +1000 powerAdd modifiers with permanent or whileSourceOnField duration are supported by computeView.`,
-      );
+const unsupportedContinuousEffectMessage = (
+  effect: ContinuousEffectRecord,
+): string =>
+  `Unsupported continuous effect ${effect.id}: only unconditional self +1000 powerAdd modifiers with permanent or whileSourceOnField duration are supported by computeView.`;
+
+const toConditionQueueEntry = (
+  effect: ContinuousEffectRecord,
+): EffectQueueEntry => ({
+  id: `continuous-condition:${effect.id}` as EffectQueueEntry["id"],
+  state: "resolving",
+  timingWindowId:
+    `continuous-condition:${effect.id}` as EffectQueueEntry["timingWindowId"],
+  generation: 0,
+  controllerId: effect.controller,
+  source: effect.source,
+  sourceSnapshot: effect.sourceSnapshot,
+  effectBlockId:
+    `continuous-condition:${effect.id}` as EffectQueueEntry["effectBlockId"],
+  orderingGroup: "turnPlayer",
+  createdAtEventSeq: 0,
+  queuedAtStateSeq: effect.createdAtStateSeq,
+  sourcePresencePolicy: "mustRemainInSameZone",
+  causedBy: effect.createdBy,
+});
+
+const continuousEffectConditionPasses = (
+  state: GameState,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  const condition = evaluateQueuedEffectCondition(
+    state,
+    toConditionQueueEntry(effect),
+    effect.condition,
+  );
+  if (!condition.supported) {
+    throw new TypeError(unsupportedContinuousEffectMessage(effect));
+  }
+  return condition.passed;
+};
+
+const assertSupportedContinuousEffects = (state: GameState): void => {
+  for (const effect of state.continuousEffects) {
+    if (isSupportedContinuousPowerModifier(effect)) continue;
+    if (!isSupportedContinuousKeywordModifier(effect)) {
+      throw new TypeError(unsupportedContinuousEffectMessage(effect));
     }
+    if (!durationIsActive(state, effect)) continue;
+    continuousEffectConditionPasses(state, effect);
   }
 };
 
@@ -196,6 +257,40 @@ const hasRestriction = (
   return false;
 };
 
+const continuousKeywordsForCard = (
+  state: GameState,
+  card: CardInstance,
+): Keyword[] => {
+  const keywords: Keyword[] = [];
+  for (const effect of state.continuousEffects) {
+    if (!durationIsActive(state, effect)) continue;
+    if (!isSupportedContinuousKeywordModifier(effect)) continue;
+    if (!continuousEffectConditionPasses(state, effect)) continue;
+    if (!cardMatchesModifierTarget(state, card, effect)) continue;
+    const operation = effect.modifier.operation;
+    if (operation.type !== "addKeyword") continue;
+    const keyword = operation.keyword;
+    if (!keywords.includes(keyword)) {
+      keywords.push(keyword);
+    }
+  }
+  return keywords;
+};
+
+const computedKeywordsForCard = (
+  state: GameState,
+  card: CardInstance,
+  metadata: ResolvedCard,
+): Keyword[] => {
+  const keywords = [...metadata.printedKeywords] as Keyword[];
+  for (const keyword of continuousKeywordsForCard(state, card)) {
+    if (!keywords.includes(keyword)) {
+      keywords.push(keyword);
+    }
+  }
+  return keywords;
+};
+
 const resolveCombatMetadata = (
   state: GameState,
   card: CardInstance,
@@ -261,7 +356,11 @@ const resolveCombatMetadata = (
   return resolved as ResolvedCard & { power: number };
 };
 
-const canAttackNow = (state: GameState, card: CardInstance): boolean => {
+const canAttackNow = (
+  state: GameState,
+  card: CardInstance,
+  keywords: readonly Keyword[],
+): boolean => {
   if (card.controller !== state.turn.turnPlayerId) return false;
   if (state.turn.phase !== "main") return false;
   if (state.battle !== undefined) return false;
@@ -276,9 +375,8 @@ const canAttackNow = (state: GameState, card: CardInstance): boolean => {
     card.zone.zone === "characterArea" &&
     card.turnPlayed === state.turn.globalTurn
   ) {
-    const metadata = resolveCombatMetadata(state, card);
-    const hasRush = metadata.printedKeywords.includes("rush");
-    const hasRushCharacter = metadata.printedKeywords.includes("rushCharacter");
+    const hasRush = keywords.includes("rush");
+    const hasRushCharacter = keywords.includes("rushCharacter");
     if (!hasRush && !hasRushCharacter) return false;
   }
   return true;
@@ -288,7 +386,9 @@ const legalTargetsForAttacker = (
   state: GameState,
   attacker: CardInstance,
 ): InstanceId[] => {
-  if (!canAttackNow(state, attacker)) return [];
+  const metadata = resolveCombatMetadata(state, attacker);
+  const attackerKeywords = computedKeywordsForCard(state, attacker, metadata);
+  if (!canAttackNow(state, attacker, attackerKeywords)) return [];
   const opponentId = (Object.keys(state.players) as PlayerId[]).find(
     (playerId) => playerId !== attacker.controller,
   );
@@ -297,13 +397,11 @@ const legalTargetsForAttacker = (
   if (opponent === undefined) return [];
 
   const targets: InstanceId[] = [];
-  const metadata = resolveCombatMetadata(state, attacker);
   const isPlayedThisTurnCharacter =
     attacker.zone.zone === "characterArea" &&
     attacker.turnPlayed === state.turn.globalTurn;
   const rushCharacterOnly =
-    isPlayedThisTurnCharacter &&
-    metadata.printedKeywords.includes("rushCharacter");
+    isPlayedThisTurnCharacter && attackerKeywords.includes("rushCharacter");
 
   if (!rushCharacterOnly) {
     resolveCombatMetadata(state, opponent.leader);
@@ -345,11 +443,11 @@ const isCardRefLive = (
 const canBlockNow = (
   state: GameState,
   card: CardInstance,
-  metadata: ResolvedCard & { power: number },
+  keywords: readonly Keyword[],
 ): boolean => {
   if (card.zone.zone !== "characterArea") return false;
   if (card.state !== "active") return false;
-  if (!metadata.printedKeywords.includes("blocker")) return false;
+  if (!keywords.includes("blocker")) return false;
   if (hasRestriction(state, card, "cannotBlock")) return false;
   const battle = state.battle;
   if (battle === undefined || battle.step !== "block") return false;
@@ -377,22 +475,23 @@ const computeCardView = (
       ? (battle.counterPower ?? 0)
       : 0;
   const continuousPowerBonus = continuousPowerBonusForCard(state, card);
+  const keywords = computedKeywordsForCard(state, card, metadata);
 
   return {
     instanceId: card.instanceId,
     cardId: card.cardId,
     basePower,
     currentPower: basePower + donBonus + counterBonus + continuousPowerBonus,
-    keywords: [...metadata.printedKeywords] as Keyword[],
-    canAttack: canAttackNow(state, card),
-    canBlock: canBlockNow(state, card, metadata),
+    keywords,
+    canAttack: canAttackNow(state, card, keywords),
+    canBlock: canBlockNow(state, card, keywords),
     cannotBeAttacked: false,
     protectedFrom: [],
   };
 };
 
 export const computeView = (state: GameState): ComputedGameView => {
-  assertSupportedContinuousEffects(state.continuousEffects);
+  assertSupportedContinuousEffects(state);
 
   const cards: ComputedGameView["cards"] = {};
   const legalAttackTargets: ComputedGameView["legalAttackTargets"] = {};

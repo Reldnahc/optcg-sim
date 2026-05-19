@@ -230,6 +230,7 @@ export const resolveSupportedVanillaBattle = (
   const attackerPrintedKeywords = attackerManifestCard?.printedKeywords ?? [];
   if (
     battle.damageCount === 2 &&
+    attackerPrintedKeywords.includes("doubleAttack") &&
     !isSupportedDoubleAttackDamageSource(attackerManifestCard)
   ) {
     return unsupportedBattleResolution(
@@ -258,10 +259,12 @@ export const resolveSupportedVanillaBattle = (
           },
         };
   const battleWithInternal = battle as EngineInternalBattleState;
+  const attackerHasPrintedDoubleAttack =
+    isSupportedDoubleAttackDamageSource(attackerManifestCard);
   const shouldHideDoubleAttackForCombatView =
     (battle.damageCount === 2 ||
       battleWithInternal.damageProcess?.sourceKeyword === "doubleAttack") &&
-    isSupportedDoubleAttackDamageSource(attackerManifestCard);
+    attackerHasPrintedDoubleAttack;
   const combatMetadataState = shouldHideDoubleAttackForCombatView
     ? {
         ...baseCombatMetadataState,
@@ -317,6 +320,17 @@ export const resolveSupportedVanillaBattle = (
     return unsupportedBattleResolution(
       state,
       "Battle requires unsupported blocker, step, or multi-damage behavior.",
+    );
+  }
+  if (
+    battleDamageCount === 2 &&
+    !attackerView.keywords.includes("doubleAttack") &&
+    !attackerHasPrintedDoubleAttack &&
+    battleWithInternal.damageProcess?.sourceKeyword !== "doubleAttack"
+  ) {
+    return unsupportedBattleResolution(
+      state,
+      "Battle requires unsupported keyword or protection handling.",
     );
   }
   if (targetView.protectedFrom.length > 0) {
