@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate reusable engine runtime primitives for public trash-count
   conditions, conditional continuous keyword grants, effect-origin field

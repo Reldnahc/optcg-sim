@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add reusable condition evaluation for field-removal protection continuous
   modifiers so public conditions such as self trash-count predicates can gate

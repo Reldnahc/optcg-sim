@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add a reusable engine path for conditionally granting supported public
   keywords through continuous runtime modifiers, proving the allowlisted

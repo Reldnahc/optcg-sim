@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add a reusable engine protection layer that classifies field-removal attempts
   by process and source controller so a supported Character can be protected

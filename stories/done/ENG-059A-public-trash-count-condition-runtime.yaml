@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add reusable engine condition evaluation for public trash-count predicates so
   effects can test self or opponent trash size with supported comparator

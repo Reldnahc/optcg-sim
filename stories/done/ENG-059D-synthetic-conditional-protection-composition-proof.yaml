@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Prove the ENG-059 runtime primitives compose in a synthetic engine fixture
   built from phrase-level primitive shapes: a public trash-count condition
