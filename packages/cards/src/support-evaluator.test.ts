@@ -143,15 +143,17 @@ describe("support evaluator", () => {
     );
     expect(blocker?.decomposition).toMatchObject({
       recognizedActionCandidates: ["draw 2 cards"],
-      recognizedSyntaxFragments: ["if-conditional-wrapper"],
+      recognizedSyntaxFragments: [
+        "if-conditional-wrapper",
+        "condition-components:v1",
+      ],
       recognizedTriggerCandidates: ["[On Play]"],
       reason:
-        "Conditional wrapper syntax was recognized, but the condition predicates and their conjunction are not certified for this generated-support template; generated support remains fail-closed.",
-      unsupportedConditionFragments: [
-        "your Leader is multicolored",
-        "you have 5 or less cards in your hand",
+        "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence.",
+      unsupportedConditionFragments: [],
+      unsupportedSyntaxFragments: [
+        "conditional-support:blocked-until-CARD-019B",
       ],
-      unsupportedSyntaxFragments: ["condition conjunction: and"],
     });
   });
 

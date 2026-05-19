@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id CARD-019A -->
 <!-- agent-packet:story-path stories/approved/CARD-019A-conditional-parser-component-scaffold.yaml -->
-<!-- agent-packet:story-sha256 0e235e28ef9620f390d15eb7516429a5bd98bea8f19752f54a7c4ebe7b1b1143 -->
+<!-- agent-packet:story-sha256 c3282a78c092e2769282a2399da0a063de5f4c9d2dcc4945500fe303ad041904 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -363,6 +363,9 @@ Own only packages/cards parser component scaffolding, condition parsing, diagnos
 ## Allowed Touch Points
 
 <!-- prettier-ignore -->
+- packages/cards/src/conditional-parser-components.ts
+- packages/cards/src/conditional-parser-components.test.ts
+- packages/cards/src/conditional-generated-support.test.ts
 - packages/cards/src/composed-parser-builder.ts
 - packages/cards/src/composed-parser-builder.test.ts
 - packages/cards/src/certified-card-text-parser.ts

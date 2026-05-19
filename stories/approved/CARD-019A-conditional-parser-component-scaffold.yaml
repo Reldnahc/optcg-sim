@@ -20,6 +20,9 @@ story_boundary: >
   records for playable support, change engine behavior, or update real-card
   fixtures/hashes.
 allowed_touch_points:
+  - packages/cards/src/conditional-parser-components.ts
+  - packages/cards/src/conditional-parser-components.test.ts
+  - packages/cards/src/conditional-generated-support.test.ts
   - packages/cards/src/composed-parser-builder.ts
   - packages/cards/src/composed-parser-builder.test.ts
   - packages/cards/src/certified-card-text-parser.ts
