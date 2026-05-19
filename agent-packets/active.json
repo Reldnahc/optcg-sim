@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-020C.md",
-      "storyId": "CARD-020C",
-      "storyPath": "stories/approved/CARD-020C-arbitrary-card-probe-proof-bundle.yaml",
-      "storySha256": "f75c7f535ab03a347bcae29387d20f0006ba141825ec49f834d607da5ee91bc9"
+      "packetPath": "agent-packets/CARD-020D.md",
+      "storyId": "CARD-020D",
+      "storyPath": "stories/approved/CARD-020D-generated-support-proof-certificate-reporting.yaml",
+      "storySha256": "7f0422816589265d9e1de90baf2a843744c092db9cd59dddff7b5bc1962a22b2"
     }
   ],
   "version": 1
