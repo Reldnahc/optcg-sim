@@ -14,6 +14,7 @@ export const TYP_001_STORY_OWNERS = [
   "TYP-009A",
   "TYP-009B",
   "TYP-010",
+  "TYP-012A",
 ] as const;
 
 export type Typ001StoryOwner = (typeof TYP_001_STORY_OWNERS)[number];
@@ -114,6 +115,16 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   RevealRecord: "TYP-001F",
   ReplacementProcessState: "TYP-001F",
   DeferredTriggerBucket: "TYP-001F",
+  ProtectionFieldRemovalProcessFamily: "TYP-012A",
+  ProtectionFieldRemovalClassification: "TYP-012A",
+  ProtectionFieldRemovalSourceKind: "TYP-012A",
+  ProtectionFieldRemovalSourceControllerRelation: "TYP-012A",
+  ProtectionFieldRemovalTargetScope: "TYP-012A",
+  ProtectionExclusionPolicy: "TYP-012A",
+  ProtectionFieldRemovalExclusions: "TYP-012A",
+  ProtectionFieldRemovalMetadata: "TYP-012A",
+  SimpleProtection: "TYP-012A",
+  FieldRemovalProtection: "TYP-012A",
   Protection: "TYP-001F",
   RestrictionIndex: "TYP-001F",
   ComputedCardView: "TYP-001F",
