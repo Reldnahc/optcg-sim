@@ -66,6 +66,23 @@ jobs:
       - name: Run hidden-info lane
         run: pnpm test:hidden-info
 
+  tooling:
+    name: tooling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run tooling lane
+        run: pnpm test:tooling
+
   contracts:
     name: contracts
     runs-on: ubuntu-latest
@@ -82,7 +99,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify generated spec metadata artifacts
         run: pnpm run specs:verify-metadata
-      - name: Run contract lane
+      - name: Run contract and cleanup lanes
         run: pnpm contracts
 
   coverage:

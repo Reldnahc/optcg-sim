@@ -9,7 +9,7 @@
     "format": "corepack pnpm exec prettier --write .",
     "format:check": "corepack pnpm exec prettier --check .",
     "lint": "corepack pnpm exec eslint . --max-warnings=0 --ext .js,.mjs,.cjs,.ts,.mts,.cts",
-    "contracts": "corepack pnpm run contracts:compile && corepack pnpm run contracts:validate-effects && corepack pnpm run contracts:validate-db-schema && corepack pnpm run stories:validate && corepack pnpm run types:sync:check && corepack pnpm run test:contracts",
+    "contracts": "corepack pnpm run contracts:compile && corepack pnpm run contracts:validate-effects && corepack pnpm run contracts:validate-db-schema && corepack pnpm run stories:validate && corepack pnpm run types:sync:check && corepack pnpm run test:contracts && corepack pnpm run test:cleanup-contracts",
     "contracts:compile": "corepack pnpm exec tsc -p contracts/tsconfig.json --noEmit",
     "contracts:validate-effects": "node --experimental-strip-types tools/validate-effect-dsl-fixtures.ts",
     "contracts:validate-db-schema": "node --experimental-strip-types tools/validate-database-schema.ts",
@@ -27,11 +27,13 @@
     "cleanup:validate-dry-run": "node --experimental-strip-types tools/post-merge-cleanup.ts",
     "cleanup:validate-handoff": "node --experimental-strip-types tools/post-merge-cleanup.ts -- --validate-cleanup-handoff",
     "typecheck": "corepack pnpm exec tsc -p packages/types/tsconfig.json --noEmit && corepack pnpm exec tsc -p packages/engine-core/tsconfig.json --noEmit && corepack pnpm exec tsc -p packages/cli/tsconfig.json --noEmit && corepack pnpm exec tsc -p packages/cards/tsconfig.json --noEmit && corepack pnpm exec tsc -p tools/tsconfig.json --noEmit",
-    "test": "corepack pnpm exec vitest run",
+    "test": "corepack pnpm exec vitest run --exclude tests/contracts/**/*.test.mjs --exclude packages/cli/src/**/*.test.ts --exclude tests/lint/**/*.test.mjs --exclude tests/github/post-merge-cleanup-closeout.test.mjs --exclude tests/github/post-merge-cleanup-evidence-builder.test.mjs",
     "test:hidden-info": "corepack pnpm exec vitest run tests/hidden-info",
-    "test:contracts": "corepack pnpm exec vitest run tests/contracts",
-    "coverage": "corepack pnpm exec vitest run --coverage",
-    "verify": "corepack pnpm run format:check && corepack pnpm run lint && corepack pnpm run typecheck && corepack pnpm run packets:verify && corepack pnpm run specs:verify-metadata && corepack pnpm run test && corepack pnpm run test:hidden-info && corepack pnpm run contracts"
+    "test:contracts": "corepack pnpm exec vitest run tests/contracts --exclude tests/contracts/post-merge-cleanup-contract.test.mjs --exclude tests/contracts/post-merge-cleanup-parent-contract.test.mjs --exclude tests/contracts/post-merge-cleanup-preflight-contract.test.mjs --exclude tests/contracts/post-merge-cleanup-executor-contract.test.mjs --exclude tests/contracts/post-merge-branch-cleanup-contract.test.mjs",
+    "test:cleanup-contracts": "corepack pnpm exec vitest run --no-file-parallelism tests/contracts/post-merge-cleanup-contract.test.mjs tests/contracts/post-merge-cleanup-parent-contract.test.mjs tests/contracts/post-merge-cleanup-preflight-contract.test.mjs tests/contracts/post-merge-cleanup-executor-contract.test.mjs tests/contracts/post-merge-branch-cleanup-contract.test.mjs tests/github/post-merge-cleanup-closeout.test.mjs tests/github/post-merge-cleanup-evidence-builder.test.mjs",
+    "test:tooling": "corepack pnpm exec vitest run packages/cli/src tests/lint",
+    "coverage": "corepack pnpm exec vitest run --coverage --testTimeout 15000",
+    "verify": "corepack pnpm run format:check && corepack pnpm run lint && corepack pnpm run typecheck && corepack pnpm run packets:verify && corepack pnpm run specs:verify-metadata && corepack pnpm run test && corepack pnpm run test:hidden-info && corepack pnpm run test:tooling && corepack pnpm run contracts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

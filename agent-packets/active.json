@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/INF-056B.md",
+      "storyId": "INF-056B",
+      "storyPath": "stories/approved/INF-056B-separate-tooling-contracts-from-default-test-lane.yaml",
+      "storySha256": "336c987664fe3ff1a18d7bde8f189ebfbf6ad8cdee4fffe963259add9dde1432"
+    }
+  ],
   "version": 1
 }

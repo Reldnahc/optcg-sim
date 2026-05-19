@@ -10,6 +10,22 @@ const repoRoot = path.resolve(
   "..",
 );
 
+const cleanupContractFiles = [
+  "tests/contracts/post-merge-cleanup-contract.test.mjs",
+  "tests/contracts/post-merge-cleanup-parent-contract.test.mjs",
+  "tests/contracts/post-merge-cleanup-preflight-contract.test.mjs",
+  "tests/contracts/post-merge-cleanup-executor-contract.test.mjs",
+  "tests/contracts/post-merge-branch-cleanup-contract.test.mjs",
+  "tests/github/post-merge-cleanup-closeout.test.mjs",
+  "tests/github/post-merge-cleanup-evidence-builder.test.mjs",
+];
+
+const githubCleanupLaneFiles = [
+  "tests/github/post-merge-cleanup-closeout.test.mjs",
+  "tests/github/post-merge-cleanup-evidence-builder.test.mjs",
+];
+const toolingLaneFiles = ["packages/cli/src", "tests/lint"];
+
 async function readJson(relativePath) {
   const absolutePath = path.join(repoRoot, relativePath);
   const contents = await readFile(absolutePath, "utf8");
@@ -29,6 +45,7 @@ test("contracts lane aggregates canonical contract subcommands", async () => {
     "corepack pnpm run stories:validate",
     "corepack pnpm run types:sync:check",
     "corepack pnpm run test:contracts",
+    "corepack pnpm run test:cleanup-contracts",
   ];
 
   const actualSubcommands = contractsLane
@@ -50,6 +67,99 @@ test("contracts lane aggregates canonical contract subcommands", async () => {
     /\|\|\s*true\b/i,
     "contracts lane must not bypass failures with fallback clauses",
   );
+});
+
+test("root test lanes separate cleanup-heavy contracts without dropping coverage", async () => {
+  const packageJson = await readJson("package.json");
+  const rootTestLane = packageJson.scripts?.test;
+  const contractsTestLane = packageJson.scripts?.["test:contracts"];
+  const cleanupLane = packageJson.scripts?.["test:cleanup-contracts"];
+  const toolingLane = packageJson.scripts?.["test:tooling"];
+
+  assert.equal(typeof rootTestLane, "string", "missing root test lane");
+  assert.equal(
+    typeof contractsTestLane,
+    "string",
+    "missing test:contracts lane",
+  );
+  assert.equal(
+    typeof cleanupLane,
+    "string",
+    "missing test:cleanup-contracts lane",
+  );
+  assert.equal(typeof toolingLane, "string", "missing test:tooling lane");
+
+  assert.match(
+    contractsTestLane,
+    /\bvitest\s+run\s+tests\/contracts\b/,
+    "contract test lane must explicitly include tests/contracts suites",
+  );
+
+  assert.match(
+    rootTestLane,
+    /--exclude\s+tests\/contracts\/\*\*\/\*\.test\.mjs\b/,
+    "root test lane must exclude broad tests/contracts suites",
+  );
+  assert.match(
+    rootTestLane,
+    /--exclude\s+packages\/cli\/src\/\*\*\/\*\.test\.ts\b/,
+    "root test lane must exclude CLI suites owned by tooling lane",
+  );
+  assert.match(
+    rootTestLane,
+    /--exclude\s+tests\/lint\/\*\*\/\*\.test\.mjs\b/,
+    "root test lane must exclude lint-config suites owned by tooling lane",
+  );
+  for (const githubCleanupFile of githubCleanupLaneFiles) {
+    assert.match(
+      rootTestLane,
+      new RegExp(
+        `--exclude\\s+${githubCleanupFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+      ),
+      `root test lane must explicitly exclude cleanup-heavy file ${githubCleanupFile}`,
+    );
+  }
+
+  for (const cleanupFile of cleanupContractFiles) {
+    assert.match(
+      cleanupLane,
+      new RegExp(cleanupFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+      `cleanup lane must include cleanup-heavy file ${cleanupFile}`,
+    );
+  }
+
+  for (const cleanupFile of cleanupContractFiles.filter((file) =>
+    file.startsWith("tests/contracts/"),
+  )) {
+    assert.match(
+      contractsTestLane,
+      new RegExp(
+        `--exclude\\s+${cleanupFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+      ),
+      `contract test lane must exclude cleanup-heavy file ${cleanupFile}`,
+    );
+  }
+
+  assert.match(
+    cleanupLane,
+    /--no-file-parallelism\b/,
+    "cleanup lane should isolate git-heavy cleanup suites from file-level parallelism",
+  );
+  assert.doesNotMatch(
+    cleanupLane,
+    /\|\|\s*true\b/i,
+    "cleanup lane must not bypass failures with fallback clauses",
+  );
+
+  for (const toolingTarget of toolingLaneFiles) {
+    assert.match(
+      toolingLane,
+      new RegExp(
+        `\\b${toolingTarget.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+      ),
+      `tooling lane must include ${toolingTarget}`,
+    );
+  }
 });
 
 test("root typecheck compiles workspace package lanes", async () => {
