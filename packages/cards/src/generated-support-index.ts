@@ -9,6 +9,7 @@ import type {
 
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import { deriveParserDiagnosticDecomposition } from "./composed-parser-builder.js";
+import { deriveCard020ADiagnosticDecomposition } from "./generated-support-diagnostics.js";
 import {
   findGeneratedSupportComponentEvidenceByShapeId,
   isCompleteGeneratedSupportParseResult,
@@ -290,6 +291,7 @@ function buildGeneratedSupportIndexEntry(
       blockers: attachParserDiagnosticDecomposition(
         parseResult.blockers,
         card.sourceText,
+        "parsedRuleIds" in parseResult ? parseResult.parsedRuleIds : [],
       ),
       card,
       componentEvidenceIds:
@@ -569,7 +571,11 @@ function addConditionCapabilityIds(
 function attachParserDiagnosticDecomposition(
   blockers: readonly GeneratedSupportBlocker[],
   sourceText: string,
+  parsedRuleIds: readonly string[],
 ): readonly GeneratedSupportBlocker[] {
+  const unparsedSpanCount = blockers.filter(
+    (blocker) => blocker.code === "unparsed-span",
+  ).length;
   return blockers.map((blocker) => {
     if (blocker.code !== "unparsed-span") {
       return blocker;
@@ -579,13 +585,20 @@ function attachParserDiagnosticDecomposition(
       blocker.span?.text ?? sourceText,
       sourceText,
     );
-    if (decomposition === undefined) {
+    const card020aDecomposition =
+      decomposition ??
+      deriveCard020ADiagnosticDecomposition({
+        fullSourceText: sourceText,
+        parsedRuleIds: unparsedSpanCount === 1 ? parsedRuleIds : [],
+        spanText: blocker.span?.text ?? sourceText,
+      });
+    if (card020aDecomposition === undefined) {
       return blocker;
     }
 
     return {
       ...blocker,
-      decomposition,
+      decomposition: card020aDecomposition,
     };
   });
 }

@@ -1,0 +1,105 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-020
+epic_id: CARD-020
+title: Unsupported composed-effect diagnostics parent
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Coordinate a small diagnostics-only CARD story set that improves
+  support-probe and generated-support report output for unsupported composed
+  effect text by decomposing recognized wrappers, conditions, bodies, and exact
+  unsupported components without broadening generated support.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  exactly one child story, CARD-020A, after story-review approval and packet
+  activation. Keep the set cards-side and diagnostics-only: no new parser
+  certification, generated DSL admission, runtime capability records, real-card
+  fixture support, or playable generated support.
+allowed_touch_points:
+  - stories/generated/CARD-020*.yaml
+  - stories/approved/CARD-020*.yaml
+  - agent-packets/CARD-020*.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s005
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-015A
+  - CARD-018A
+  - CARD-019B
+child_stories:
+  - id: CARD-020A
+    title: Unsupported wrapper and component diagnostics
+    concern: Decompose unsupported composed-effect text into recognized diagnostic candidates and exact missing wrapper, condition, body, target, or runtime-capability pieces while keeping support fail-closed.
+    depends_on: [CARD-015A, CARD-018A, CARD-019B]
+scope:
+  - coordinate CARD-020A as the only child story in this diagnostics set
+  - improve debuggability for unsupported generated-support text that contains currently recognizable component pieces
+  - require diagnostics to distinguish recognized candidates from support-admitted parser rules
+  - keep unsupported text unsupported even when diagnostics recognize a wrapper candidate, condition candidate, body candidate, or partial component
+  - target the immediate gap exposed by combined trigger wrappers, continuous/static conditional text, unsupported condition fragments, and unsupported effect bodies
+  - preserve CARD-008 through CARD-019 generated-support behavior unless the child adds compatibility assertions for diagnostic formatting only
+non_scope:
+  - direct implementation from this parent story
+  - new parser certification
+  - new generated DSL support
+  - new runtime behavior
+  - new runtime capability records
+  - new generated playable support
+  - real-card fixture support
+  - source hash, behavior hash, overlay, or supported-card manifest changes
+  - shared contracts or effect DSL schema changes unless story-review proves a real shared authority gap
+  - server, client, API, UI, database, replay, WebSocket, Redis, or live Poneglyph work
+card_source_integrity:
+  - not applicable for direct parent implementation because this parent is planning-only and does not enable or change gameplay support for any real card
+  - printed examples in the child are diagnostic probe/report examples only and must not promote real-card playability
+  - stale source-hash diagnostics remain highest-priority and must not silently refresh, rewrite, recapture, or rebaseline fixture evidence
+engine_capability_preflight:
+  - not applicable for direct parent implementation because this parent adds no parser grammar, generated DSL primitive, runtime capability, support status, or gameplay behavior
+  - child diagnostics may name missing runtime capability or missing card-layer body support, but must not add or imply support for those capabilities
+acceptance_criteria:
+  - CARD-020 is not implemented directly
+  - CARD-020A is independently reviewable and can be activated as the only child story
+  - the parent and child each have distinct story-review assignment identity and durable story-review artifact identity before approval handoff or activation
+  - the parent/substory review-status matrix has one CARD-020 parent row and one CARD-020A child row, with distinct assignment IDs and distinct durable artifact references for each row, before approval handoff, packet generation, activation, implementation handoff, or parent PR handoff
+  - CARD-020A is implemented on a parent integration branch for this one-child set, with no child PR to main and one final parent PR to main
+  - support-probe and generated-support report diagnostics become more actionable for unsupported composed-effect text without broadening support
+  - unsupported text remains unsupported
+  - diagnostic recognition of component text never counts as parser certification, generated DSL validation, runtime capability evidence, support metadata, or playability
+  - stale hash remains highest-priority and non-mutating
+  - parent/substory cleanup metadata lists CARD-020A and binds the non-packetized CARD-020 parent closeout after merge to main
+required_tests:
+  - set-level story-review planning for CARD-020 parent and CARD-020A child before approval handoff
+  - per-story story-review for CARD-020 before approval handoff
+  - per-story story-review for CARD-020A before approval handoff
+  - reconstruct and record the parent/substory review-status matrix with distinct CARD-020 and CARD-020A assignment IDs and durable artifact references before approval or implementation handoff
+  - story-specific tests from CARD-020A
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - do not activate or implement CARD-020 directly
+  - use the parent integration branch workflow even though this set has exactly one child
+  - do not open a CARD-020A child PR to main; land the reviewed child commit on the parent integration branch, then open one final parent PR to main
+  - implement only CARD-020A for this set
+  - keep one active child packet at a time
+  - do not complete the child packet until the parent branch lands on main
+  - use parent PR cleanup metadata for CARD-020A and bound CARD-020 parent closeout
+  - fail closed on diagnostic ambiguity that could accidentally mark unsupported text playable
+ambiguity_policy: fail_and_escalate

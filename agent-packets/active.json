@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-020A.md",
+      "storyId": "CARD-020A",
+      "storyPath": "stories/approved/CARD-020A-unsupported-wrapper-component-diagnostics.yaml",
+      "storySha256": "2f9330e3cf77a6abb7fbe17bb037a7de8c20c2a9c6be4fda941bc3b3ea9d2d76"
+    }
+  ],
   "version": 1
 }

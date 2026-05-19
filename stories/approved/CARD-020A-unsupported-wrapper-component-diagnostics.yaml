@@ -1,0 +1,124 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-020A
+epic_id: CARD-020
+title: Unsupported wrapper and component diagnostics
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Improve cards-side support-probe and generated-support report diagnostics for
+  unsupported composed-effect text by decomposing recognized wrapper,
+  condition, action, and body candidates from exact unsupported components while
+  preserving fail-closed generated support.
+story_boundary: >
+  Own only package-local diagnostics and diagnostic metadata for unsupported
+  generated-support text. Do not certify new parser rules, add generated DSL
+  admission, add runtime capability records, add engine behavior, edit real-card
+  fixtures, change source or behavior hashes, or make any new card/effect shape
+  playable.
+allowed_touch_points:
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-diagnostics.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/*support*.test.ts
+  - stories/generated/CARD-020*.yaml
+  - stories/approved/CARD-020*.yaml
+  - agent-packets/CARD-020A.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s005
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-015A
+  - CARD-018A
+  - CARD-019B
+scope:
+  - improve support-probe and generated-support report output for unsupported composed-effect text without changing support decisions
+  - decompose parser failures that contain recognizable component candidates into diagnostic fragments for recognized wrapper syntax, recognized condition candidates, recognized action/body candidates, and exact unsupported blocking fragments
+  - label diagnostic fragments explicitly so recognized candidates cannot be confused with support-admitted parser rules
+  - recognize slash-combined trigger wrapper text such as `[On Play]/[When Attacking]` as diagnostic wrapper syntax only
+  - for slash-combined trigger wrapper diagnostics, report `[On Play]` and `[When Attacking]` as recognized wrapper candidates when each individual wrapper is currently recognized elsewhere by generated support, but report the combined wrapper shape itself as unsupported unless another approved story certifies it
+  - recognize conditional syntax `If <condition>, <body>` as diagnostic syntax for unsupported rows when condition parser components can identify at least one condition candidate or unsupported condition fragment
+  - recognize unwrapped continuous/static conditional text such as `If <condition>, <body>.` as an unsupported wrapper category when it is not attached to a supported effect trigger
+  - preserve CARD-019 condition parser diagnostics for supported fragments such as `your Leader has the {Supernovas} type`
+  - report unsupported condition fragments separately, including `you have no other [Cavendish] Characters` as missing field-count, name-filter, and exclude-self or other-self semantics
+  - report unsupported body/action fragments separately, including `set up to 2 of your DON!! cards as active` as missing generated body support and missing truthful runtime capability evidence if the runtime layer does not currently expose the needed effect behavior
+  - report recognized supported child effects inside unsupported whole-card text when safe, including `[On K.O.] Draw 1 card.` as a supported wrapper/body candidate while leaving the whole card unsupported if another line is blocked
+  - for `If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].`, report the unwrapped continuous/static conditional wrapper as unsupported, condition/body fragments separately, and multi-body `and` composition as unsupported unless already certified
+  - for `[On Play]/[When Attacking] If your Leader has the {Supernovas} type and you have no other [Cavendish] Characters, set up to 2 of your DON!! cards as active.`, report recognized wrapper candidates, recognized conditional syntax, recognized Leader-type condition, unsupported `no other [Cavendish] Characters` condition, and unsupported DON-active body separately
+  - whole-card unsupported diagnostics are acceptable only when no narrower diagnostic decomposition matched
+  - preserve blocker identity for existing codes `unparsed-span`, `ambiguous-wording`, `custom-handler-required`, `unsupported-primitive`, `stale-hash`, `invalid-dsl-schema`, and `missing-runtime-capability`
+  - stale hash remains the highest-priority diagnostic and must not silently refresh or rewrite fixture evidence
+  - keep any new diagnostic helper types package-local to `packages/cards`
+non_scope:
+  - new parser certification
+  - slash-combined trigger wrapper support
+  - continuous/static/permanent generated support
+  - new condition support for field counts, name filters, exclude-self semantics, trash counts, protection text, keyword grants, or multi-body composition
+  - new effect body support for setting DON!! cards as active
+  - new runtime behavior
+  - new runtime capability records
+  - new generated playable support
+  - real-card fixture support
+  - source hash, behavior hash, overlay, or supported-card manifest changes
+  - shared contracts or effect DSL schema changes unless story-review proves a real shared authority gap
+  - server, client, API, UI, database, replay, WebSocket, Redis, or live Poneglyph work
+  - broad natural-language inference or replacement generalization
+card_source_integrity:
+  - this story does not enable or change gameplay support for any real card and must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or manually reviewed source evidence
+  - printed examples are diagnostic probe/report examples only and must remain unsupported unless an already-supported line is reported as a diagnostic candidate inside an unsupported card
+  - implementation must not silently refresh, rewrite, recapture, or rebaseline fixture sourceTextHash, behaviorHash, support metadata, or reviewed source evidence
+engine_capability_preflight:
+  - this story adds no engine capability and must not add runtime capability matrix support records
+  - diagnostics may name missing runtime capability evidence when an unsupported body appears to require engine behavior, but missing capability must keep support unsupported
+  - if implementation finds an effect body or wrapper is actually runtime-supported but not card-layer-admitted, report that as card-layer/body support missing rather than adding support in this story
+acceptance_criteria:
+  - support-probe output is more actionable for unsupported composed-effect text by naming recognized candidates and exact unsupported components
+  - generated-support report output exposes the same diagnostic decomposition as structured blocker metadata where the report format already carries blocker metadata
+  - unsupported text remains unsupported
+  - '"[On Play]/[When Attacking]" is recognized only as diagnostic slash-combined wrapper syntax and does not become generated-supported'
+  - unwrapped `If <condition>, <body>.` continuous/static text is recognized only as an unsupported wrapper category and does not become generated-supported
+  - recognized component candidates are clearly labeled as diagnostic candidates, not certified parser support
+  - the Supernovas/Cavendish/DON-active example reports recognized wrapper candidates, recognized Leader-type condition, unsupported no-other-Cavendish field-count, name-filter, and exclude-self or other-self condition pieces, plus unsupported DON-active effect body, up-to cardinality, own-DON target, active-state result, and missing body or runtime-capability evidence pieces separately
+  - the continuous protection plus `[On K.O.] Draw 1 card.` example reports the unsupported unwrapped continuous/static wrapper, trash-count condition fragment, protection body fragment, keyword-grant body fragment, and unsupported multi-body `and` composition separately, while still identifying the On K.O. draw line as a recognized candidate without making the whole card playable
+  - stale hash remains highest-priority and non-mutating
+  - existing CARD-008 through CARD-019 supported and unsupported behavior remains compatible
+required_tests:
+  - story-review for CARD-020A before approval handoff
+  - support-probe test for `[On Play]/[When Attacking] If your Leader has the {Supernovas} type and you have no other [Cavendish] Characters, set up to 2 of your DON!! cards as active.` proving the output reports recognized `[On Play]` and `[When Attacking]` wrapper candidates, diagnostic slash-combined wrapper syntax, conditional syntax, recognized Leader-type condition, unsupported no-other-Cavendish field-count, name-filter, and exclude-self or other-self condition pieces, plus unsupported DON-active effect body, up-to cardinality, own-DON target, active-state result, and missing body or runtime-capability evidence pieces while staying unsupported
+  - generated-support report test for the same Supernovas/Cavendish/DON-active text proving equivalent structured blocker metadata for the same wrapper, condition, and DON-active body subcomponents while staying unsupported
+  - fail-closed test proving slash-combined wrapper diagnostic recognition does not produce complete parser support, generated DSL admission, runtime capability evidence, or playable support
+  - support-probe test for `If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].\n[On K.O.] Draw 1 card.` proving the output reports the unsupported unwrapped continuous/static wrapper, trash-count condition fragment, protection body fragment, keyword-grant body fragment, and unsupported multi-body `and` composition separately, and reports `[On K.O.] Draw 1 card.` as a recognized candidate while the whole card remains unsupported
+  - generated-support report test for the same continuous plus On K.O. text proving equivalent structured blocker metadata for the unsupported wrapper, trash-count condition, protection body, keyword-grant body, multi-body connector, and recognized On K.O. draw candidate while staying unsupported
+  - regression tests proving whole-card unsupported diagnostics are used only when no narrower decomposition matched
+  - regression tests proving stale hash reports `stale-hash` before parser, diagnostic decomposition, schema, or runtime capability diagnostics
+  - regression tests proving existing CARD-008 through CARD-019 generated-support behavior remains supported or unsupported exactly as before, except for diagnostic text or metadata formatting intentionally changed by this story
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-020A packet before implementation
+  - stay within allowed_touch_points
+  - do not add parser rules, runtime behavior, runtime capability records, fixture support, or playable generated support
+  - keep diagnostic helper types package-local to packages/cards unless story-review proves a real shared authority gap
+  - fail closed when diagnostics cannot determine a trusted narrower component or source span
+ambiguity_policy: fail_and_escalate

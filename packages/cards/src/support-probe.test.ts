@@ -557,6 +557,132 @@ describe("support probe", () => {
     );
   });
 
+  it("prints decomposed slash-wrapper/conditional diagnostics for Supernovas Cavendish DON-active unsupported text", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+    const effectText =
+      "[On Play]/[When Attacking] If your Leader has the {Supernovas} type and you have no other [Cavendish] Characters, set up to 2 of your DON!! cards as active.";
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-020A-PROBE-SUPERNOVAS"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-020A-PROBE-SUPERNOVAS",
+          effect: effectText,
+          name: "CARD-020A Supernovas Probe",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).not.toContain("effectDefinitionId:");
+    expect(text).toContain("recognized trigger candidate: [On Play]");
+    expect(text).toContain("recognized trigger candidate: [When Attacking]");
+    expect(text).toContain(
+      "recognized syntax fragment: wrapper:slash-combined",
+    );
+    expect(text).toContain(
+      "recognized syntax fragment: if-conditional-wrapper",
+    );
+    expect(text).toContain(
+      "recognized condition candidate: your Leader has the {Supernovas} type",
+    );
+    expect(text).not.toContain(
+      "recognized supported-action candidate: set up to 2 of your DON!! cards as active",
+    );
+    expect(text).toContain(
+      "unsupported action blocker: set up to 2 of your DON!! cards as active",
+    );
+    expect(text).toContain(
+      "unsupported condition predicate: you have no other [Cavendish] Characters",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: condition:field-count-missing",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: condition:name-filter-missing",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: condition:exclude-self-or-other-self-missing",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: action:don-set-active-unsupported",
+    );
+    expect(text).toContain("recognized cardinality candidate: up to 2");
+    expect(text).not.toContain(
+      "unsupported syntax blocker: action:up-to-cardinality-unsupported",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: action:own-don-target-unsupported",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: action:active-state-result-unsupported",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: body-or-runtime-capability-evidence:missing",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: runtime-capability:don-set-active-missing",
+    );
+  });
+
+  it("prints decomposed unsupported continuous-wrapper diagnostics while still identifying On K.O. draw candidate", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+    const effectText =
+      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].\n[On K.O.] Draw 1 card.";
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-020A-PROBE-CONTINUOUS"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-020A-PROBE-CONTINUOUS",
+          effect: effectText,
+          name: "CARD-020A Continuous Probe",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain(
+      "recognized syntax fragment: wrapper:unwrapped-continuous-static-if",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: condition:trash-count-unsupported",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: body:protection-removal-unsupported",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: body:keyword-grant-blocker-unsupported",
+    );
+    expect(text).toContain(
+      "unsupported syntax blocker: body:and-composition-unsupported",
+    );
+    expect(text).toContain("unsupported action blocker: and");
+    expect(text).not.toContain("unsupported condition connector blocker: and");
+    expect(text).toContain("recognized trigger candidate: [On K.O.]");
+    expect(text).toContain(
+      "recognized supported-action candidate: Draw 1 card",
+    );
+  });
+
   it("prints metadata layer for empty-effect metadata precondition blockers", async () => {
     const detail = await loadOp03044Fixture();
     const output: string[] = [];
