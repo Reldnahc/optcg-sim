@@ -307,6 +307,18 @@ const evaluateCondition = (
         condition.op,
         (playerId) => state.players[playerId]?.life.length ?? 0,
       );
+    case "trashCount":
+      if (condition.filter !== undefined) {
+        return { supported: false };
+      }
+      return evaluateCountCondition(
+        state,
+        entry,
+        condition.player,
+        condition.value,
+        condition.op,
+        (playerId) => state.players[playerId]?.trash.length ?? 0,
+      );
     case "hasCardInZone":
       return evaluateHasCardInZone(state, entry, condition);
     case "and": {
@@ -343,7 +355,6 @@ const evaluateCondition = (
     case "donCount":
     case "opponentTurn":
     case "fieldCount":
-    case "trashCount":
     case "cardState":
     case "sourceStillInZone":
     case "eventPayload":
