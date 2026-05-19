@@ -134,6 +134,20 @@ describe("support probe", () => {
     expect(
       formatSupportProbeBlocker({
         code: "unsupported-primitive",
+        component: "destination:owner-deck-bottom",
+        message: "Destination category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-destination]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
+        component: "sequence-action-composition:draw-then-trash",
+        message: "Sequence/action composition category unsupported.",
+      }),
+    ).toContain("[layer: unsupported-sequence-action-composition]");
+    expect(
+      formatSupportProbeBlocker({
+        code: "unsupported-primitive",
         component: "unknown:untrusted",
         message: "Unknown category unsupported.",
       }),
@@ -278,6 +292,38 @@ describe("support probe", () => {
     expect(text).toContain("Playable: no");
     expect(text).toContain("stale-hash");
     expect(text).toContain("Poneglyph behavior hash changed.");
+  });
+
+  it("prioritizes stale-hash blockers ahead of parser/scanner diagnostics", async () => {
+    const detail = await loadOp03044Fixture();
+    const normalized = normalizePoneglyphCardDetail(detail);
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-020B-STALE-FIRST"),
+      expectedSourceTextHash: normalized.sourceTextHash,
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-020B-STALE-FIRST",
+          effect:
+            "[On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck.",
+          name: "CARD-020B stale hash priority",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("stale-hash");
+    expect(text).not.toContain("unparsed-span");
+    expect(text).not.toContain("recognized trigger candidate");
   });
 
   it("returns CLI parse error to stderr when --card is missing", async () => {
@@ -505,6 +551,9 @@ describe("support probe", () => {
     const text = output.join("");
     expect(exitCode).toBe(0);
     expect(text).toContain("Playable: no");
+    expect(text).toContain(
+      "diagnostic recognition only; remains unsupported for generated support",
+    );
     expect(text).toContain("recognized trigger candidate: [On Play]");
     expect(text).toContain("recognized cardinality candidate: up to 1");
     expect(text).toContain(
@@ -522,7 +571,44 @@ describe("support probe", () => {
     expect(text).toContain(
       "unsupported syntax blocker: action/destination:bottom-of-owner-deck",
     );
+    expect(text).toContain(
+      "unsupported component blocker: bottom of the owner's deck",
+    );
     expect(text).not.toContain("condition conjunction: or");
+  });
+
+  it("keeps unsupported parser diagnostics as recognition-only metadata and does not imply playability", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-020B-UNSUPPORTED-RECOGNIZED"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "CARD-020B-UNSUPPORTED-RECOGNIZED",
+          effect:
+            "[On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck.",
+          name: "CARD-020B recognized but unsupported",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain(
+      "diagnostic recognition only; remains unsupported for generated support",
+    );
+    expect(text).toContain("recognized trigger candidate: [On Play]");
+    expect(text).toContain(
+      "unsupported syntax blocker: action/destination:bottom-of-owner-deck",
+    );
   });
 
   it("prints parser-layer blockers for unsupported On K.O. continuous generated-support text", async () => {

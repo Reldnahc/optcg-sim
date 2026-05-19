@@ -13,13 +13,18 @@ import {
 } from "./poneglyph-client.js";
 import type { EffectDefinitionValidationResult } from "./generated-support-index.js";
 import {
+  buildGeneratedSupportProofCertificate,
   classifyGeneratedSupportBlockerLayer,
   determineDeepestSuccessfulLayerForBlocker,
+  type GeneratedSupportProofCertificate,
+  type GeneratedSupportProofCertificateLayer,
+  type GeneratedSupportProofCertificateInput,
 } from "./generated-support-report.js";
 import type {
   GeneratedSupportBlocker,
   GeneratedSupportDiagnosticTraceComponent,
 } from "./generated-support-types.js";
+import { listComponentEvidenceIdsForParserRuleIds } from "./generated-support-types.js";
 import {
   evaluateGeneratedSupportPlayability,
   type EvaluateGeneratedSupportPlayabilityInput,
@@ -80,6 +85,17 @@ export async function runSupportProbe(
     );
   }
 
+  options.stdout.write(
+    formatGeneratedSupportProofCertificate(
+      buildGeneratedSupportProofCertificate(
+        toProofCertificateInput({
+          behaviorHash: normalized.behaviorHash,
+          evaluation,
+        }),
+      ),
+    ),
+  );
+
   if (evaluation.blockers.length === 0) {
     options.stdout.write("Blockers: none\n");
   } else {
@@ -90,6 +106,122 @@ export async function runSupportProbe(
   }
 
   return 0;
+}
+
+function toProofCertificateInput({
+  behaviorHash,
+  evaluation,
+}: {
+  behaviorHash: string;
+  evaluation: ReturnType<typeof evaluateGeneratedSupportPlayability>;
+}): GeneratedSupportProofCertificateInput {
+  const componentEvidenceIds = listComponentEvidenceIdsForParserRuleIds(
+    evaluation.parserRuleIds,
+  );
+  const input: GeneratedSupportProofCertificateInput = {
+    behaviorHash,
+    blockers: evaluation.blockers,
+    capabilityEvidence: evaluation.capabilityEvidence,
+    cardId: evaluation.cardId,
+    componentEvidenceIds,
+    missingCapabilityIds: evaluation.missingCapabilityIds,
+    parseStatus: evaluation.parseStatus,
+    parserRuleIds: evaluation.parserRuleIds,
+    sourceTextHash: evaluation.sourceTextHash,
+    status: evaluation.status,
+  };
+  if (evaluation.effectDefinition !== undefined) {
+    input.effectDefinition = evaluation.effectDefinition;
+  }
+  if (evaluation.support !== undefined) {
+    input.support = evaluation.support;
+  }
+  return input;
+}
+
+function formatGeneratedSupportProofCertificate(
+  certificate: GeneratedSupportProofCertificate,
+): string {
+  return [
+    "Generated-support proof certificate:",
+    ...certificate.chain.map(formatProofCertificateLayer),
+    "",
+  ].join("\n");
+}
+
+function formatProofCertificateLayer(
+  layer: GeneratedSupportProofCertificateLayer,
+): string {
+  const suffix = formatProofCertificateLayerSuffix(layer);
+  return `- ${toProofCertificateLayerLabel(layer.layer)}: ${
+    layer.layer === "final-playable-decision"
+      ? finalDecisionText(layer)
+      : layer.status
+  }${suffix}`;
+}
+
+function finalDecisionText(
+  layer: GeneratedSupportProofCertificateLayer,
+): string {
+  return layer.status === "passed" ? "yes" : "no";
+}
+
+function formatProofCertificateLayerSuffix(
+  layer: GeneratedSupportProofCertificateLayer,
+): string {
+  if (layer.missingCapabilityIds !== undefined) {
+    return ` (${formatList(layer.missingCapabilityIds)})`;
+  }
+  if (layer.capabilityIds !== undefined) {
+    return ` (${formatList(layer.capabilityIds)})`;
+  }
+  if (layer.evidenceIds !== undefined) {
+    return ` (${formatList(layer.evidenceIds)})`;
+  }
+  if (
+    layer.layer === "missing-runtime-capabilities" &&
+    layer.status === "passed"
+  ) {
+    return " (none)";
+  }
+  return "";
+}
+
+function formatList(values: readonly string[]): string {
+  return values.length === 0 ? "none" : values.join(", ");
+}
+
+function toProofCertificateLayerLabel(
+  layer: GeneratedSupportProofCertificateLayer["layer"],
+): string {
+  switch (layer) {
+    case "source-hash":
+      return "source hash status";
+    case "behavior-hash":
+      return "behavior hash status";
+    case "parse-completeness":
+      return "parse completeness";
+    case "parser-rule-certification":
+      return "parser-rule certification/evidence";
+    case "generated-dsl-schema":
+      return "generated DSL schema";
+    case "component-evidence":
+      return "component evidence IDs";
+    case "required-runtime-capabilities":
+      return "required runtime capability IDs";
+    case "missing-runtime-capabilities":
+      return "missing runtime capability IDs";
+    case "engine-proof-test-evidence":
+      return "engine-proof/test-evidence";
+    case "support-metadata":
+      return "support metadata gate";
+    case "review-state":
+      return "review state gate";
+    case "tested-state":
+      return "tested-state gate";
+    case "final-playable-decision":
+      return "final playable decision";
+  }
 }
 
 export function formatSupportProbeBlocker(
@@ -158,10 +290,17 @@ function formatDiagnosticDecomposition(
       const noun = toTraceComponentDisplayName(component.kind);
       const suffix =
         component.status === "unsupported" ? "blocker" : "candidate";
+      if (component.status === "unsupported") {
+        return [
+          `  unsupported ${noun} blocker: ${component.text}`,
+          `  unsupported component blocker: ${component.text}`,
+        ].join("\n");
+      }
       return `  ${statusLabel} ${noun} ${suffix}: ${component.text}`;
     });
   return [
     "",
+    "  diagnostic recognition only; remains unsupported for generated support",
     ...recognizedTriggerLines,
     ...recognizedSyntaxLines,
     ...recognizedActionLines,
@@ -192,12 +331,18 @@ function toTraceComponentDisplayName(
       return "duration";
     case "modifier":
       return "modifier";
+    case "optionality":
+      return "optionality";
     case "predicate":
       return "predicate";
+    case "quantity":
+      return "quantity";
     case "restriction":
       return "restriction";
     case "saved-reference":
       return "saved-reference";
+    case "sequence":
+      return "sequence";
     case "target":
       return "target";
     case "trigger":

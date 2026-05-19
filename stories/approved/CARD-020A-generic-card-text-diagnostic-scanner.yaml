@@ -1,0 +1,125 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-020A
+epic_id: CARD-020
+title: Generic card-text diagnostic scanner
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Build a reusable package-local diagnostic scanner for arbitrary card text so
+  unsupported support-probe input can be decomposed into recognizable wrappers,
+  conditions, connectors, quantities, targets, actions, and missing components
+  without making the card playable.
+story_boundary: >
+  Own only cards-side diagnostic scanning infrastructure and scanner tests. The
+  scanner may reuse existing parser/component helpers or replace diagnostic-only
+  probe internals, but it must not create generated DSL, admit generated
+  support, add runtime capability records, change engine behavior, or edit
+  fixtures/hashes. Diagnostic examples are not templates and must not be
+  implemented as exact card-text branches.
+allowed_touch_points:
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/conditional-parser-components.ts
+  - packages/cards/src/conditional-parser-components.test.ts
+  - packages/cards/src/*support*.test.ts
+  - packages/cards/src/*diagnostic*.ts
+  - packages/cards/src/*diagnostic*.test.ts
+  - agent-packets/CARD-020A.md
+  - stories/generated/CARD-020*.yaml
+  - stories/approved/CARD-020*.yaml
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s005
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-017C
+  - CARD-018A
+  - CARD-019B
+scope:
+  - define package-local diagnostic component output with stable IDs, source spans, normalized text, component kind, diagnostic recognition status, and optional missing-layer/reason metadata
+  - keep the scanner as a cards diagnostic layer over source text and support gating, not an engine execution layer; it must not execute rules, simulate resolution, or enumerate effect permutations
+  - support diagnostic component kinds for trigger wrappers, slash-combined wrappers, continuous/no-bracket text, activate-main wrapper candidates, optionality words, condition wrappers, condition fragments, boolean connectors, sequence connectors, cost separators, cardinality, numeric quantities, comparators, public field targets, hand targets, DON targets, card-type filters, trait filters, named-card filters, power/cost predicates, actions, destinations, durations, modifiers, restrictions, and unsupported residue
+  - normalize source text only for diagnostics where safe, including ASCII `-` and Unicode `−` minus signs, while preserving original source spans in output
+  - distinguish boolean `or` from quantity/comparator phrases such as `or more` and `or less`
+  - distinguish `up to N` cardinality from exact `N` counts without limiting diagnostics to `up to 1`
+  - identify `and` as a condition connector only inside recognized condition boundaries, not as proof that the full condition expression is supported
+  - emit component diagnostics for recognized partial text even when the full card remains an `unparsed-span`
+  - keep unsupported actions such as setting DON active, cost reduction, K.O. by predicate, bottom-deck placement, and source-protection/gain-keyword bodies as unsupported diagnostic components unless existing generated-support gates already support them through other stories
+  - keep scanner output separate from generated-support component evidence used for playable support unless later children explicitly route it as diagnostics-only metadata
+non_scope:
+  - support-probe CLI formatting changes beyond helper integration needed for tests
+  - generated-support report presentation changes beyond helper integration needed for tests
+  - generated playable support
+  - generated DSL construction
+  - runtime capability records
+  - engine runtime behavior
+  - shared contracts/schema changes
+  - source fixture, source hash, behavior hash, overlay, or support manifest changes
+  - exact card ID branches, exact full-effect text branches, full-card allowlists, or fake support evidence
+card_source_integrity:
+  - this story must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or manually reviewed source evidence
+  - printed examples are diagnostic inputs only and do not authorize real-card playable support
+engine_capability_preflight:
+  - this story is diagnostic-scanner-only and does not implement or enable gameplay behavior, generated DSL execution, runtime capability records, or playable support
+  - diagnostic effect-shape families that the scanner may recognize are trigger wrappers, slash-combined wrappers, continuous/no-bracket text, activate-main wrapper candidates, optionality words, condition wrappers and fragments, boolean and sequence connectors, cost separators, cardinality and quantity phrases, comparators, targets, filters, predicates, actions, destinations, durations, modifiers, restrictions, and unsupported residue
+  - supported/read-only runtime interaction is limited to naming existing generated-support or runtime-capability metadata where the current cards layer already exposes it; scanner output must not be treated as parser certification, generated DSL evidence, runtime capability evidence, engine proof, or support metadata
+  - missing or unsupported runtime-capability groups include activate-main costs, field-count/name-filter/exclude-self conditions, DON active-state actions, K.O. by predicate, bottom-deck placement, source protection, keyword grants, cost or power modifiers, durations, destinations, saved references, and sequence or multi-body composition unless existing gates already prove them
+  - no prerequisite ENG story is created by this scanner story because reusable engine behavior is intentionally out of scope; any missing runtime behavior must remain fail-closed diagnostic output or become a separate prerequisite ENG story before playable support can be claimed
+acceptance_criteria:
+  - arbitrary unsupported card text can be scanned for reusable diagnostic components without throwing and without becoming playable
+  - stable diagnostic component IDs are deterministic across repeated scans of the same input and remain stable for normalized-equivalent variants where the component identity is the same even when source spans differ
+  - scanner results include narrow source spans for every recognized component and residue span
+  - examples are tested as representative inputs, not implemented as exact branches
+  - scanner proof fails review if examples pass through sample-shaped templates, sample-specific regular expressions, or complete sample-effect branches instead of reusable component paths
+  - slash-combined wrappers report each wrapper component separately
+  - condition fragments and connectors are reported independently from the action/body fragment
+  - up to 2 reports a generic `upTo` cardinality with value 2 rather than an unsupported special case because it is not `up to 1`
+  - comparator phrases such as 1000 power or less, 5 or less cards, and 7 or more cards are not misclassified as boolean `or`
+  - Unicode minus in −1 cost and ASCII minus in -1 cost are treated consistently for diagnostics while preserving the original span text
+  - unsupported actions remain unsupported diagnostic components and do not create generated support
+  - whole-card unsupported is emitted only when no narrower component safely matches
+required_tests:
+  - story-review for CARD-020A before approval handoff
+  - scanner unit tests for bracket wrappers, slash-combined wrappers, continuous/no-bracket text, activate-main candidates, optionality words, condition boundaries, boolean connectors, sequence connectors, cost separators, cardinality, quantities, comparators, targets, predicates, actions, destinations, durations, modifiers, restrictions, and residue
+  - scanner variation tests proving the same component path under at least one wording or value variation for wrapper parsing, condition fragments/connectors, target/predicate fragments, cardinality/quantity fragments, and action/duration/modifier or destination fragments
+  - scanner tests proving stable diagnostic component IDs across repeated scans and normalized-equivalent variants where component identity is unchanged
+  - scanner tests proving `or more` and `or less` are comparator phrases and not boolean connectors
+  - scanner tests proving `up to 1`, `up to 2`, and another `up to N` value use the same cardinality component path
+  - scanner tests proving ASCII `-1 cost` and Unicode `−1 cost` share normalized diagnostics while preserving source spans
+  - negative tests proving diagnostic recognition does not add generated DSL, runtime capability evidence, support metadata, source integrity, or playable status
+  - regression tests proving existing CARD-008 through CARD-019 generated-support behavior is not changed by scanner-only work
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-020A packet before implementation
+  - stay within allowed_touch_points
+  - keep new diagnostic helper types package-local to packages/cards unless story-review proves a real shared authority gap
+  - do not connect diagnostic-only scanner output to playable generated-support gates
+  - a child implementation fails review if its proof examples pass only because the exact sample text, card ID, or complete effect sentence appears in implementation logic
+  - a child implementation also fails review if its proof examples pass through sample-shaped templates, sample-specific regular expressions, or complete sample-effect branches that do not decompose through reusable component scanner paths
+  - fail closed when a span cannot be safely classified
+ambiguity_policy: fail_and_escalate
