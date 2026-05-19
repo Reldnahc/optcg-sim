@@ -56,6 +56,7 @@ dependencies:
   - ENG-045
   - ENG-056
   - ENG-058
+# prettier-ignore
 child_stories:
   - id: ENG-059A
     title: Public trash-count condition runtime
@@ -64,8 +65,7 @@ child_stories:
   - id: ENG-059B
     title: Conditional continuous keyword grants
     concern: Add a reusable continuous modifier path for conditionally granting the allowlisted supported public combat keywords through the same computed-view path without mutating canonical card state.
-    depends_on:
-      [ENG-014A, ENG-014B, ENG-014C, ENG-014D, ENG-014E, ENG-044, ENG-059A]
+    depends_on: [ENG-014A,ENG-014B,ENG-014C,ENG-014D,ENG-014E,ENG-044,ENG-059A]
   - id: ENG-059C
     title: Effect-origin field removal protection
     concern: Add a reusable engine protection layer that classifies field removal by process and source controller so opponent-effect removal can be prevented without blocking battle K.O., rule-process trash, costs, or own effects.
