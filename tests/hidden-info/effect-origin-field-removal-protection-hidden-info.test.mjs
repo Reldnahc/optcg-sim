@@ -12,7 +12,7 @@ import {
 import { filterStateForPlayer } from "../../packages/engine-core/src/filter-state-for-player.ts";
 import { executeSelectedTargetEffectPrimitive } from "../../packages/engine-core/src/effect-runtime-primitives.ts";
 
-const protectTargetFromOpponentEffectRemoval = (state, target) => {
+const protectTargetFromOpponentEffectRemoval = (state, target, condition) => {
   state.continuousEffects = [
     {
       id: `hidden-info-field-removal-protection:${String(target.instanceId)}`,
@@ -59,6 +59,7 @@ const protectTargetFromOpponentEffectRemoval = (state, target) => {
         },
       },
       duration: { type: "permanent" },
+      ...(condition === undefined ? {} : { condition }),
       createdBy: { type: "ruleProcess", name: "hidden-info-protection-test" },
       createdAtStateSeq: state.seq,
     },
@@ -72,6 +73,8 @@ test("prevented opponent field removal does not expose private opponent card ide
   const source = must(p1State.hand[0], "source");
   const targetHandCard = must(p2State.hand[0], "target");
   const hiddenHandCard = must(p2State.hand[1], "hidden hand");
+  const trashSeedCard = must(p2State.hand[2], "trash seed");
+  const hiddenDeckCard = must(p2State.deck[0], "hidden deck");
   const hiddenLifeCard = must(p2State.life[0], "hidden life").card;
   const sourceOnField = {
     ...source,
@@ -94,10 +97,19 @@ test("prevented opponent field removal does not expose private opponent card ide
     zone: { zone: "hand", playerId: p1, slot: "hand", index },
   }));
   p2State.characters = [protectedTarget];
-  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
-    ...card,
-    zone: { zone: "hand", playerId: p2, slot: "hand", index },
-  }));
+  p2State.hand = p2State.hand
+    .slice(1)
+    .filter((card) => card.instanceId !== trashSeedCard.instanceId)
+    .map((card, index) => ({
+      ...card,
+      zone: { zone: "hand", playerId: p2, slot: "hand", index },
+    }));
+  p2State.trash = [
+    {
+      ...trashSeedCard,
+      zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+    },
+  ];
   state.cardManifest.cards[sourceOnField.cardId] = resolvedCard({
     cardId: sourceOnField.cardId,
     category: "character",
@@ -108,7 +120,12 @@ test("prevented opponent field removal does not expose private opponent card ide
     category: "character",
     power: 3000,
   });
-  protectTargetFromOpponentEffectRemoval(state, protectedTarget);
+  protectTargetFromOpponentEffectRemoval(state, protectedTarget, {
+    type: "trashCount",
+    player: "self",
+    op: "gte",
+    value: 1,
+  });
 
   const result = executeSelectedTargetEffectPrimitive(
     state,
@@ -174,6 +191,7 @@ test("prevented opponent field removal does not expose private opponent card ide
 
   assert.equal(serialized.includes(String(protectedTarget.cardId)), true);
   assert.equal(serialized.includes(String(hiddenHandCard.cardId)), false);
+  assert.equal(serialized.includes(String(hiddenDeckCard.cardId)), false);
   assert.equal(serialized.includes(String(hiddenLifeCard.cardId)), false);
   assert.equal(
     must(result.state.players[p2], "result p2").trash.some(

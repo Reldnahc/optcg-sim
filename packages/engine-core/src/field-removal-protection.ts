@@ -1,11 +1,14 @@
 import type {
   CardInstance,
   ContinuousEffectRecord,
+  EffectQueueEntry,
   GameState,
   PlayerId,
   Protection,
   ReplacementProcess,
 } from "@optcg/types";
+
+import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 
 export type FieldRemovalProtectionFailureReason =
   | "missing-source-controller"
@@ -125,10 +128,46 @@ export const isSupportedFieldRemovalProtectionModifier = (
   effect: ContinuousEffectRecord,
 ): boolean =>
   isFieldRemovalProtectionModifier(effect) &&
-  effect.condition === undefined &&
   isSupportedDuration(effect.duration) &&
   effect.modifier.target.type === "self" &&
   isSupportedFieldRemovalProtection(effect.modifier.operation.protection);
+
+const toConditionQueueEntry = (
+  effect: ContinuousEffectRecord,
+): EffectQueueEntry => ({
+  id: `field-removal-protection-condition:${effect.id}` as EffectQueueEntry["id"],
+  state: "resolving",
+  timingWindowId:
+    `field-removal-protection-condition:${effect.id}` as EffectQueueEntry["timingWindowId"],
+  generation: 0,
+  controllerId: effect.controller,
+  source: effect.source,
+  sourceSnapshot: effect.sourceSnapshot,
+  effectBlockId:
+    `field-removal-protection-condition:${effect.id}` as EffectQueueEntry["effectBlockId"],
+  orderingGroup: "turnPlayer",
+  createdAtEventSeq: 0,
+  queuedAtStateSeq: effect.createdAtStateSeq,
+  sourcePresencePolicy: "mustRemainInSameZone",
+  causedBy: effect.createdBy,
+});
+
+const conditionIsActive = (
+  state: GameState,
+  effect: ContinuousEffectRecord,
+):
+  | { ok: true; active: boolean }
+  | { ok: false; reason: FieldRemovalProtectionFailureReason } => {
+  const result = evaluateQueuedEffectCondition(
+    state,
+    toConditionQueueEntry(effect),
+    effect.condition,
+  );
+  if (!result.supported) {
+    return { ok: false, reason: "malformed-field-removal-protection" };
+  }
+  return { ok: true, active: result.passed };
+};
 
 const cardMatchesSelfProtection = (
   card: CardInstance,
@@ -153,6 +192,9 @@ export const fieldRemovalProtectionsForCard = (
     }
     if (!durationIsActive(state, effect)) continue;
     if (!cardMatchesSelfProtection(card, effect)) continue;
+    const condition = conditionIsActive(state, effect);
+    if (!condition.ok) return condition;
+    if (!condition.active) continue;
     protections.push(effect.modifier.operation.protection);
   }
   return { ok: true, protections };

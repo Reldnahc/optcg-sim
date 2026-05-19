@@ -6,6 +6,7 @@ import type {
   CardId,
   CardInstance,
   CardRef,
+  Condition,
   Effect,
   EffectDefinition,
   EffectQueueEntry,
@@ -196,6 +197,7 @@ const protectTargetFromOpponentEffectRemoval = (
   state: ReturnType<typeof createActiveState>,
   target: CardInstance,
   protection: Protection = fieldRemovalProtection(),
+  condition?: Condition,
 ) => {
   state.continuousEffects = [
     {
@@ -224,8 +226,65 @@ const protectTargetFromOpponentEffectRemoval = (
         operation: { type: "protection", protection },
       },
       duration: { type: "permanent" },
+      ...(condition === undefined ? {} : { condition }),
       createdBy: { type: "ruleProcess", name: "field-removal-test" },
       createdAtStateSeq: state.seq,
+    },
+  ];
+};
+
+const appendSelfFieldRemovalProtection = (
+  state: GameState,
+  source: CardInstance,
+  protection: Protection = fieldRemovalProtection(),
+  condition?: Condition,
+  duration: GameState["continuousEffects"][number]["duration"] = {
+    type: "permanent",
+  },
+): void => {
+  state.continuousEffects.push({
+    id: `field-removal-protection:${String(source.instanceId)}`,
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: source.controller,
+      zone: source.zone,
+    },
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: source.owner,
+      controllerId: source.controller,
+      zone: source.zone,
+      category: "character",
+      colors: ["red"],
+      power: 3000,
+      keywords: [],
+    },
+    controller: source.controller,
+    modifier: {
+      layer: "protection",
+      target: { type: "self" },
+      operation: { type: "protection", protection },
+    },
+    duration,
+    ...(condition === undefined ? {} : { condition }),
+    createdBy: { type: "ruleProcess", name: "field-removal-test" },
+    createdAtStateSeq: state.seq,
+  });
+};
+
+const moveP2HandCardToTrash = (state: GameState): void => {
+  const p2State = must(state.players[p2], "p2");
+  const trashCard = must(p2State.hand[0], "p2 trash seed");
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  p2State.trash = [
+    {
+      ...trashCard,
+      zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
     },
   ];
 };
@@ -387,6 +446,159 @@ test("opponent effect field removal is prevented for a protected Character befor
   );
   assert.equal(hashCanonicalStateValue(result.state), result.stateHash);
   assert.deepEqual(state, before);
+});
+
+test("false self trashCount condition leaves opponent effect field removal unprotected", () => {
+  const { state, entry, target, targetRef } =
+    setupFieldRemovalProtectionState();
+  protectTargetFromOpponentEffectRemoval(
+    state,
+    target,
+    fieldRemovalProtection(),
+    {
+      type: "trashCount",
+      player: "self",
+      op: "gte",
+      value: 1,
+    },
+  );
+
+  const result = executeSelectedTargetEffectPrimitive(
+    state,
+    entry,
+    koChooseEffect(),
+    [targetRef],
+  );
+  const nextP2 = must(result.state.players[p2], "next p2");
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["cardKOd", "cardMoved", "donReturned"],
+  );
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === target.instanceId),
+    false,
+  );
+  assert.equal(nextP2.trash[0]?.instanceId, target.instanceId);
+});
+
+test("true self trashCount condition prevents opponent effect field removal before mutation", () => {
+  const { state, entry, target, targetRef } =
+    setupFieldRemovalProtectionState();
+  moveP2HandCardToTrash(state);
+  protectTargetFromOpponentEffectRemoval(
+    state,
+    target,
+    fieldRemovalProtection(),
+    {
+      type: "trashCount",
+      player: "self",
+      op: "gte",
+      value: 1,
+    },
+  );
+  const before = structuredClone(state);
+
+  const result = executeSelectedTargetEffectPrimitive(
+    state,
+    entry,
+    koChooseEffect(),
+    [targetRef],
+  );
+  const nextP2 = must(result.state.players[p2], "next p2");
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.events, []);
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === target.instanceId),
+    true,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === target.instanceId),
+    false,
+  );
+  assert.deepEqual(state, before);
+});
+
+test("inactive whileSourceOnField source-dependent protection disappears instead of blocking unrelated field removal", () => {
+  const { state, target, targetRef, sourceOnField } =
+    setupFieldRemovalProtectionState();
+  appendSelfFieldRemovalProtection(
+    state,
+    sourceOnField,
+    fieldRemovalProtection(),
+    {
+      type: "attachedDonCount",
+      target: { type: "self" },
+      op: "gte",
+      value: 1,
+    },
+    { type: "whileSourceOnField" },
+  );
+  const p1State = must(state.players[p1], "p1");
+  p1State.characters = [];
+  p1State.trash = [
+    {
+      ...sourceOnField,
+      zone: { zone: "trash", playerId: p1, slot: "trash", index: 0 },
+      attachedDon: [],
+    },
+  ];
+  const process: ReplacementProcess = {
+    id: "opponent-effect-field-removal-with-stale-protection",
+    type: "trash",
+    source: targetRef,
+    target: targetRef,
+    payload: {
+      fieldRemovalAttempt: {
+        processFamily: "fieldRemoval",
+        classification: "moveFromFieldToTrash",
+        sourceKind: "cardEffect",
+        sourceControllerId: p1,
+      },
+    },
+    causedBy: { type: "ruleProcess", name: "stale-protection-test" },
+    usedReplacementIds: [],
+  };
+
+  const result = applyFieldRemovalProtection(state, target, process);
+
+  assert.deepEqual(result, { ok: true, prevented: false });
+});
+
+test("unrelated conditional protection record does not fail closed for the removed target", () => {
+  const { state, target, targetRef, sourceOnField } =
+    setupFieldRemovalProtectionState();
+  appendSelfFieldRemovalProtection(
+    state,
+    sourceOnField,
+    fieldRemovalProtection(),
+    {
+      type: "custom",
+      check: "unsupported-unrelated-field-removal-condition",
+    },
+  );
+  const process: ReplacementProcess = {
+    id: "opponent-effect-field-removal-with-unrelated-protection",
+    type: "trash",
+    source: targetRef,
+    target: targetRef,
+    payload: {
+      fieldRemovalAttempt: {
+        processFamily: "fieldRemoval",
+        classification: "moveFromFieldToTrash",
+        sourceKind: "cardEffect",
+        sourceControllerId: p1,
+      },
+    },
+    causedBy: { type: "ruleProcess", name: "unrelated-protection-test" },
+    usedReplacementIds: [],
+  };
+
+  const result = applyFieldRemovalProtection(state, target, process);
+
+  assert.deepEqual(result, { ok: true, prevented: false });
 });
 
 test("sixth-character overflow rule-process trash removes a protected Character without ordinary On K.O. triggers", () => {
@@ -676,6 +888,57 @@ test("fails closed before mutation for malformed field-removal protection metada
     },
   ]);
 });
+
+test.each([
+  {
+    name: "unsupported custom condition",
+    condition: {
+      type: "custom",
+      check: "unsupported-field-removal-condition",
+    },
+  },
+  {
+    name: "malformed trashCount comparator",
+    condition: {
+      type: "trashCount",
+      player: "self",
+      op: "between",
+      value: 1,
+    } as unknown as Condition,
+  },
+] satisfies { name: string; condition: Condition }[])(
+  "fails closed before mutation for $name on field-removal protection",
+  ({ condition }) => {
+    const { state, entry, target, targetRef } =
+      setupFieldRemovalProtectionState();
+    protectTargetFromOpponentEffectRemoval(
+      state,
+      target,
+      fieldRemovalProtection(),
+      condition,
+    );
+    const before = structuredClone(state);
+    const beforeHash = hashCanonicalStateValue(state);
+
+    const result = executeSelectedTargetEffectPrimitive(
+      state,
+      entry,
+      koChooseEffect(),
+      [targetRef],
+    );
+
+    assert.deepEqual(result.events, []);
+    assert.deepEqual(result.state, before);
+    assert.equal(result.stateHash, beforeHash);
+    assert.deepEqual(result.errors, [
+      {
+        type: "effectRuntimeError",
+        effectId: entry.effectBlockId,
+        details: { reason: "malformed-field-removal-protection" },
+      },
+    ]);
+  },
+);
 
 test("computeView fails closed for malformed field-removal protection metadata", () => {
   const { state, target } = setupFieldRemovalProtectionState();
