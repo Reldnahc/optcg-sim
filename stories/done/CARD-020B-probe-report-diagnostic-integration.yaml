@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Integrate generic card-text diagnostic components into support-probe and
   generated-support-report output so unsupported cards explain what was

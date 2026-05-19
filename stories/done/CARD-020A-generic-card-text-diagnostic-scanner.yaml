@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Build a reusable package-local diagnostic scanner for arbitrary card text so
   unsupported support-probe input can be decomposed into recognizable wrappers,

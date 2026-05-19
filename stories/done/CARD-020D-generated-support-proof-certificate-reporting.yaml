@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add generated-support proof/certificate reporting so support-probe and
   generated-support-report output distinguish parsed text, schema-valid DSL,

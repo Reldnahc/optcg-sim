@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate a cards-side diagnostics story set that makes the support probe
   useful for arbitrary card text by decomposing unsupported text into reusable

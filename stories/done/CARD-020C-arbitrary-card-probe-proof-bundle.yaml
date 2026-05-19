@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add representative support-probe/report proof cases showing that arbitrary
   unsupported card text is decomposed by reusable diagnostics instead of exact
