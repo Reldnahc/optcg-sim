@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-059A.md",
-      "storyId": "ENG-059A",
-      "storyPath": "stories/approved/ENG-059A-public-trash-count-condition-runtime.yaml",
-      "storySha256": "fec695cca7bb5d131aefd7607a1d67d1eb31593f44fc7ff4258bb86191f49c7b"
+      "packetPath": "agent-packets/ENG-059B.md",
+      "storyId": "ENG-059B",
+      "storyPath": "stories/approved/ENG-059B-conditional-continuous-keyword-grants.yaml",
+      "storySha256": "081ed9a679a2a6c68aec1208c1485f0619db12277db854e4adc76838c77e790e"
     }
   ],
   "version": 1
