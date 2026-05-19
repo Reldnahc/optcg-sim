@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-059B.md",
-      "storyId": "ENG-059B",
-      "storyPath": "stories/approved/ENG-059B-conditional-continuous-keyword-grants.yaml",
-      "storySha256": "081ed9a679a2a6c68aec1208c1485f0619db12277db854e4adc76838c77e790e"
+      "packetPath": "agent-packets/ENG-059C.md",
+      "storyId": "ENG-059C",
+      "storyPath": "stories/approved/ENG-059C-effect-origin-field-removal-protection.yaml",
+      "storySha256": "a819478ea4a27f72722f8a387b5ff4b39c19188f7dbc53b7a58af5fec2973a2a"
     }
   ],
   "version": 1
