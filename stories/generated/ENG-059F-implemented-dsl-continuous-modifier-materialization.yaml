@@ -1,0 +1,122 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-059F
+epic_id: ENG-059
+title: Implemented-DSL continuous modifier materialization
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Add the reusable engine bridge that consumes schema-authorable permanent
+  continuous Effect DSL blocks and exposes the corresponding keyword-grant and
+  field-removal protection continuous modifiers to the existing runtime paths.
+  This is the runtime prerequisite between TYP-012B authorability and CARD-021
+  generated-support promotion.
+story_boundary: >
+  Own only engine-core consumption of reviewed implemented-DSL permanent
+  continuous modifier definitions for keyword grants and field-removal
+  protection grants. Do not change shared contracts/schema, card parser
+  support, generated-support records, runtime capability matrix files in
+  packages/cards, real-card fixtures, overlays, source hashes, behavior hashes,
+  or cards-produced manifests.
+allowed_touch_points:
+  - packages/engine-core/src/compute-view.ts
+  - packages/engine-core/src/compute-view.test.ts
+  - packages/engine-core/src/field-removal-protection.ts
+  - packages/engine-core/src/field-removal-protection.test.ts
+  - packages/engine-core/src/phases.ts
+  - packages/engine-core/src/phases.test.ts
+  - packages/engine-core/src/play-card-support.ts
+  - packages/engine-core/src/play-card-support.test.ts
+  - packages/engine-core/src/**/*continuous*.ts
+  - packages/engine-core/src/**/*continuous*.test.ts
+  - packages/engine-core/src/**/*protection*.ts
+  - packages/engine-core/src/**/*protection*.test.ts
+  - packages/engine-core/src/**/*condition*.ts
+  - packages/engine-core/src/**/*condition*.test.ts
+  - tests/hidden-info/**
+  - stories/generated/ENG-059*.yaml
+  - stories/approved/ENG-059*.yaml
+  - agent-packets/ENG-059F.md
+  - agent-packets/active.json
+spec_refs:
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s013
+  - 04-effect-runtime.s014
+  - 04-effect-runtime.s015
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s016
+  - 06-visibility-security.s005
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s004
+  - 11-testing-quality.s008
+dependencies:
+  - TYP-012B
+  - ENG-059A
+  - ENG-059B
+  - ENG-059C
+  - ENG-059E
+scope:
+  - "consume implemented-DSL effect definitions with `category: permanent`, `trigger: permanent`, and reviewed/tested support metadata through the existing effect-definition lookup gates"
+  - materialize or otherwise deterministically derive continuous modifier records for schema-authorable `giveKeyword` effects targeting `self`
+  - materialize or otherwise deterministically derive continuous protection records for schema-authorable field-removal `giveProtection` effects targeting `self`
+  - preserve the TYP-012A structured protection metadata exactly when deriving field-removal protection modifiers
+  - support permanent blocks whose condition is a public runtime-supported condition such as self `trashCount gte N`
+  - support a permanent block body that is a sequence of continuous modifier effects, giving every derived modifier the same supported block condition and source provenance
+  - integrate derived keyword modifiers with the existing ENG-059B computed keyword path and derived protection modifiers with the existing ENG-059C/E field-removal protection path
+  - preserve source liveness, source zone, stale-source, controller, replay, event-order, state-hash, and hidden-information behavior
+  - keep unsupported permanent DSL shapes fail-closed before gameplay can proceed
+non_scope:
+  - shared contracts/schema/type changes, including adding the `giveProtection` contract shape
+  - packages/cards generated-support runtime capability matrix changes
+  - card parser rules, support-probe/report behavior, generated-support admission, source hash updates, behavior hash updates, overlays, support manifests, cards-produced manifests, or real-card fixtures
+  - exact full-card text branches, exact full-effect sentence branches, one real card, or a human-held adjacent-card list
+  - continuous modifier families outside keyword grants and TYP-012A field-removal protection grants
+  - unsupported protection families, private conditions, hidden/private keyword grants, or unsupported field-removal classifications
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - a reviewed implemented-DSL permanent block can derive a conditional continuous keyword grant for a live source Character without mutating card metadata or card instances
+  - a reviewed implemented-DSL permanent block can derive conditional opponent-effect field-removal protection for a live source Character using TYP-012A metadata
+  - a reviewed implemented-DSL permanent sequence can derive both keyword and protection continuous modifiers from one condition and one source
+  - below a supported public threshold, neither the keyword grant nor the protection modifier applies
+  - at the supported public threshold, both modifiers apply through the same runtime paths proven by ENG-059B and ENG-059E
+  - stale, missing, unreviewed, untested, unsupported, malformed, or capability-unknown permanent definitions fail closed without partial mutation
+  - battle K.O., rule-process trash, controller-owned effects, and controller costs remain excluded from opponent-effect protection
+  - production engine code does not import @optcg/cards and does not mention real card IDs, exact full printed text, or an external card list
+required_tests:
+  - story-review for ENG-059F before approval handoff
+  - unit test proving a reviewed permanent DSL keyword grant with true self trash-count condition contributes the computed keyword
+  - unit test proving the same keyword grant contributes nothing below the trash-count threshold
+  - unit test proving a reviewed permanent DSL field-removal protection grant with true self trash-count condition prevents supported opponent-effect field removal
+  - unit test proving the same protection grant contributes no protection below the trash-count threshold
+  - unit test proving one permanent sequence derives both keyword and protection modifiers with shared source provenance and condition
+  - stale-source, source-left-field, unreviewed metadata, untested metadata, missing definition, malformed protection metadata, unsupported keyword, unsupported condition, and unsupported permanent shape fail-closed tests
+  - regression tests proving manually seeded ENG-059B and ENG-059E continuous records still behave unchanged
+  - hidden-info tests proving permanent DSL condition evaluation and derived modifiers do not expose private hand, deck, or face-down life identities
+  - deterministic eventJournal and state-hash tests for true, false, stale-source, and fail-closed paths
+  - production-code search or lint-style assertion proving no real-card ID branch or full-card text branch exists in engine source outside test/story text
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run focused engine-core permanent/continuous, condition, keyword, protection, battle, and hidden-info tests touched by this story
+  - run `corepack pnpm run test:hidden-info`
+  - run `corepack pnpm run verify`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the ENG-059F packet before implementation
+  - do not activate or hand off ENG-059F until TYP-012B is merged and ENG-059B, ENG-059C, and ENG-059E have landed as reviewed evidence
+  - stay within allowed touch points
+  - do not import @optcg/cards from engine-core
+  - do not add card parser, generated-support, fixture, overlay, source-hash, behavior-hash, or manifest work
+  - fail closed if permanent DSL materialization, source provenance, condition timing, protection metadata, event ordering, replay behavior, or hidden-information projection is ambiguous
+ambiguity_policy: fail_and_escalate
