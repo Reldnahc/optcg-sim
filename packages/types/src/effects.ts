@@ -421,6 +421,37 @@ export interface PayCostEffect {
   cost: OptionalCost;
 }
 
+export interface EffectDslFieldRemovalProtection {
+  process: "fieldRemoval";
+  fieldRemoval: {
+    processFamily: "fieldRemoval";
+    classification:
+      | "moveFromFieldToTrash"
+      | "moveFromFieldToHand"
+      | "moveFromFieldToDeck"
+      | "moveFromFieldToLife"
+      | "moveFromFieldToOtherZone";
+    sourceKind: "cardEffect" | "ruleProcess" | "battle" | "cost" | "custom";
+    sourceControllerRelation:
+      | "opponentControlled"
+      | "selfControlled"
+      | "eitherController"
+      | "unknownController";
+    targetScope:
+      | "thisCard"
+      | "controllerFieldCharacter"
+      | "controllerField"
+      | "anyFieldCard";
+    exclusions: {
+      battleKO: "excluded" | "failClosed";
+      ruleProcessTrash: "excluded" | "failClosed";
+      controllerCost: "excluded" | "failClosed";
+      controllerOwnedEffect: "excluded" | "failClosed";
+      ambiguousCustomRemoval: "excluded" | "failClosed";
+    };
+  };
+}
+
 export type Effect =
   | { type: "draw"; count: number; player: PlayerRef }
   | { type: "drawUpTo"; count: number; player: PlayerRef }
@@ -519,6 +550,12 @@ export type Effect =
       type: "removeKeyword";
       target: Target;
       keyword: Keyword;
+      duration: Duration;
+    }
+  | {
+      type: "giveProtection";
+      target: Target;
+      protection: EffectDslFieldRemovalProtection;
       duration: Duration;
     }
   | { type: "addDon"; count: number; player: PlayerRef }

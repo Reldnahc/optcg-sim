@@ -13,7 +13,10 @@ import type {
   ContinuousEffect,
   ContinuousEffectRecord,
   DeferredTriggerBucket,
+  Effect,
+  EffectBlock,
   EffectContext,
+  EffectDslFieldRemovalProtection,
   EffectExecutionContext,
   EffectId,
   EffectQueueEntry,
@@ -62,6 +65,67 @@ import type {
   Winner,
   ZoneRef,
 } from "./index.js";
+
+test("TYP-012B DSL field-removal protection composes with permanent trash-count effects", () => {
+  const protection: EffectDslFieldRemovalProtection = {
+    process: "fieldRemoval",
+    fieldRemoval: {
+      processFamily: "fieldRemoval",
+      classification: "moveFromFieldToTrash",
+      sourceKind: "cardEffect",
+      sourceControllerRelation: "opponentControlled",
+      targetScope: "thisCard",
+      exclusions: {
+        battleKO: "excluded",
+        ruleProcessTrash: "excluded",
+        controllerCost: "excluded",
+        controllerOwnedEffect: "excluded",
+        ambiguousCustomRemoval: "excluded",
+      },
+    },
+  };
+  const effect: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "giveKeyword",
+          target: { type: "self" },
+          keyword: "blocker",
+          duration: { type: "permanent" },
+        },
+      },
+      {
+        connector: "always",
+        effect: {
+          type: "giveProtection",
+          target: { type: "self" },
+          protection,
+          duration: { type: "permanent" },
+        },
+      },
+    ],
+  };
+  const block: EffectBlock = {
+    id: "typ-012b-permanent-1" as EffectId,
+    category: "permanent",
+    trigger: { type: "permanent" },
+    condition: { type: "trashCount", player: "self", op: "gte", value: 10 },
+    effect,
+  };
+  const unsupportedSimpleProtection: Effect = {
+    type: "giveProtection",
+    target: { type: "self" },
+    // @ts-expect-error TYP-012B DSL giveProtection is field-removal structured metadata only.
+    protection: { process: "ko" },
+    duration: { type: "permanent" },
+  };
+
+  expect(block.condition?.type).toBe("trashCount");
+  expect(effect.type).toBe("sequence");
+  void unsupportedSimpleProtection;
+});
 
 test("TYP-001F runtime support fixtures compile for timers, rng, player state, battle, and turn", () => {
   const playerA = "player-a" as PlayerId;

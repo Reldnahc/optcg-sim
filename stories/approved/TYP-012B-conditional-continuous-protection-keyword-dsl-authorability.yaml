@@ -1,0 +1,109 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: TYP-012B
+epic_id: TYP-012
+title: Conditional continuous protection and keyword DSL authorability
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Reopen the TYP-012 field-removal protection line with the missing
+  Effect DSL authorability needed for reusable conditional continuous
+  protection and keyword-grant definitions. This story records the contract
+  and schema work that must exist before CARD stories can truthfully promote
+  recognized card text into playable generated support.
+story_boundary: >
+  Own only shared Effect DSL contract, schema, fixture, and spec-authorability
+  updates for public trash-count conditions, continuous keyword grants, and
+  field-removal protection grants. Do not implement engine materialization,
+  runtime capability evidence, card parser/generated-support promotion,
+  support manifests, source hashes, behavior hashes, overlays, or real-card
+  fixture support.
+allowed_touch_points:
+  - specs/05-effect-dsl-reference.md
+  - contracts/canonical-types.ts
+  - contracts/effect-dsl.schema.json
+  - contracts/types/effects.ts
+  - contracts/types/runtime.ts
+  - packages/types/src/effects.ts
+  - packages/types/src/runtime.ts
+  - packages/types/src/effects.test.ts
+  - packages/types/src/runtime.test.ts
+  - packages/types/src/export-cohesion.test.ts
+  - packages/types/src/export-ownership.manifest.ts
+  - tests/contracts/**
+  - fixtures/effect-dsl/**
+  - stories/generated/TYP-012*.yaml
+  - stories/approved/TYP-012*.yaml
+  - agent-packets/TYP-012B.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s013
+  - 04-effect-runtime.s014
+  - 04-effect-runtime.s015
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s016
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s004
+  - 11-testing-quality.s020
+dependencies:
+  - TYP-007C
+  - TYP-007E
+  - TYP-007F
+  - TYP-012A
+scope:
+  - authorize the Effect DSL schema and exported contract types for public `trashCount` conditions using `player`, `op`, and non-negative safe-integer `value`
+  - authorize the Effect DSL schema and exported contract types for continuous keyword grants using a reusable target, keyword token, and duration shape
+  - add a reusable Effect DSL protection-grant primitive, such as `giveProtection`, that carries the existing TYP-012A `Protection` metadata, target, and duration without using a string template or card-specific branch
+  - authorize a schema-valid permanent continuous effect block that combines a public condition with a sequence of continuous keyword-grant and field-removal protection-grant effects
+  - use the existing TYP-012A field-removal protection metadata axes for opponent-controlled card-effect field removal, target scope `thisCard`, and explicit battle/rule/cost/controller-owned/custom exclusions
+  - update the Effect DSL fixture-authorability policy so the newly authorable primitives move out of the planned-only list with narrow wording
+  - add positive and negative schema/type fixtures proving the reusable primitive shapes, composition shape, and malformed protection metadata boundaries
+  - preserve the distinction that schema/type authorability is not engine runtime support, runtime capability evidence, parser certification, generated-support playability, or real-card support
+non_scope:
+  - engine runtime behavior or materializing permanent/continuous Effect DSL blocks into `ContinuousEffectRecord`s
+  - runtime capability matrix updates
+  - card parser rules, card-layer generated support, support-probe/report promotion, support manifests, cards-produced manifests, overlays, source hashes, behavior hashes, or real-card fixture capture
+  - exact full-card text branches, exact full-effect sentence branches, one real card, or a human-held adjacent-card list
+  - new protection families beyond TYP-012A opponent-effect field-removal metadata
+  - hidden/private conditions, private-zone predicates, arbitrary condition query language, or unsupported field-removal process classifications
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - schema/type fixtures can represent a permanent continuous effect block gated by `trashCount` and containing both a continuous keyword grant and a field-removal protection grant
+  - the protection-grant primitive uses structured TYP-012A `Protection` metadata instead of text, card IDs, or full-sentence templates
+  - malformed protection metadata, unsupported protection families, malformed condition values, and unsupported composition shapes reject through contract/schema validation
+  - the updated Effect DSL reference clearly marks only the newly covered primitives as fixture-authorable and keeps still-unsupported nearby primitives planned-only
+  - tests or fixtures prove schema-valid authorability does not imply runtime capability evidence, parser certification, generated-support status, or card playability
+  - downstream ENG and CARD stories can cite this story as the missing contract/schema prerequisite without changing contracts again for this protection/keyword/condition composition shape
+required_tests:
+  - story-review for TYP-012B before approval handoff
+  - positive schema fixture for a permanent continuous block with `trashCount` condition, `giveKeyword`, and field-removal `giveProtection`
+  - positive type tests for the new protection-grant effect contract and the reusable conditional continuous composition shape
+  - negative schema fixtures for malformed protection metadata, unsupported protection family, malformed trash-count condition, malformed keyword grant, and unsupported composition shapes
+  - contract-layer guard test or fixture assertion proving schema-valid DSL remains authorability-only and does not claim runtime capability, parser certification, generated support, or card playability
+  - run `corepack pnpm exec tsc -p packages/types/tsconfig.json --noEmit`
+  - run `corepack pnpm exec vitest run packages/types/src/effects.test.ts packages/types/src/runtime.test.ts packages/types/src/export-cohesion.test.ts`
+  - run `corepack pnpm run types:sync:check`
+  - run `corepack pnpm run contracts:validate-effects`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the TYP-012B packet before implementation
+  - stay within allowed touch points
+  - keep the patch contract/schema focused and do not add engine-core runtime behavior
+  - do not update `packages/cards` runtime capability matrix or generated-support admission in this story
+  - fail closed if the protection-grant primitive cannot be represented with structured TYP-012A metadata
+  - fail closed if the proposed composition would require card-specific text authority or broad natural-language inference
+ambiguity_policy: fail_and_escalate

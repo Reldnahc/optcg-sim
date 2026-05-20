@@ -15,6 +15,7 @@ export const TYP_001_STORY_OWNERS = [
   "TYP-009B",
   "TYP-010",
   "TYP-012A",
+  "TYP-012B",
 ] as const;
 
 export type Typ001StoryOwner = (typeof TYP_001_STORY_OWNERS)[number];
@@ -173,6 +174,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   PlaySelectedEffect: "TYP-007D",
   PlayHandSelectedEffect: "TYP-007D",
   PayCostEffect: "TYP-009A",
+  EffectDslFieldRemovalProtection: "TYP-012B",
   ReplacementTrigger: "TYP-001D",
   EffectOption: "TYP-001D",
   SequencedEffect: "TYP-001D",
