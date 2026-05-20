@@ -22,6 +22,7 @@ export type GeneratedSupportDiagnosticTraceComponentKind =
   | "cost"
   | "destination"
   | "duration"
+  | "keyword"
   | "modifier"
   | "optionality"
   | "predicate"
@@ -31,6 +32,7 @@ export type GeneratedSupportDiagnosticTraceComponentKind =
   | "sequence"
   | "target"
   | "trigger"
+  | "verb"
   | "wrapper";
 
 export type GeneratedSupportDiagnosticTraceComponentStatus =

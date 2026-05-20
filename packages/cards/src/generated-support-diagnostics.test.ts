@@ -182,6 +182,151 @@ describe("generated support diagnostics", () => {
     expect(blocker?.decomposition).toBeUndefined();
   });
 
+  it("reports recognized conditional keyword-grant components while keeping generated support unsupported", () => {
+    const sourceText =
+      "If your Leader is multicolored, this Character gains [Double Attack].";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-021B-KEYWORD-GRANT-DIAGNOSTIC" as CardId,
+          sourceText,
+          sourceTextHash: "sha256:card-021b-keyword-grant-diagnostic",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+    const blocker = report.blockers.find(
+      (candidate) => candidate.cardId === "CARD-021B-KEYWORD-GRANT-DIAGNOSTIC",
+    );
+
+    expect(report.supportedCardIds).toEqual([]);
+    expect(report.unsupportedCardIds).toEqual([
+      "CARD-021B-KEYWORD-GRANT-DIAGNOSTIC",
+    ]);
+    expect(report.statusByCardId["CARD-021B-KEYWORD-GRANT-DIAGNOSTIC"]).toEqual(
+      {
+        blockerCodes: ["unparsed-span"],
+        componentEvidenceIds: [],
+        missingCapabilityIds: [],
+        parseStatus: "partial",
+        parserRuleIds: [],
+        status: "unsupported",
+      },
+    );
+    expect(blocker).toMatchObject({
+      code: "unparsed-span",
+      layer: "parser",
+      span: { text: sourceText },
+    });
+    expect(blocker?.decomposition).toMatchObject({
+      recognizedActionCandidates: ["this Character gains [Double Attack]"],
+      recognizedSyntaxFragments: [
+        "if-conditional-wrapper",
+        "condition-components:v1",
+        "keyword-grant-components:v1",
+      ],
+      unsupportedSyntaxFragments: [
+        "conditional-keyword-grant:schema-runtime-bridge-missing",
+      ],
+    });
+    expect(blocker?.decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "keyword-grant:target:self-character",
+          kind: "target",
+          text: "this Character",
+        }),
+        expect.objectContaining({
+          id: "keyword-grant:verb:gains",
+          kind: "verb",
+          text: "gains",
+        }),
+        expect.objectContaining({
+          id: "keyword-grant:keyword:doubleAttack",
+          kind: "keyword",
+          text: "[Double Attack]",
+        }),
+      ]),
+    );
+  });
+
+  it("reports narrow unsupported keyword-grant components instead of dropping body diagnostics", () => {
+    const sourceText =
+      "If your Leader is multicolored, this Character gains [Guard].";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-021B-UNSUPPORTED-KEYWORD-GRANT-DIAGNOSTIC" as CardId,
+          sourceText,
+          sourceTextHash:
+            "sha256:card-021b-unsupported-keyword-grant-diagnostic",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+    const blocker = report.blockers.find(
+      (candidate) =>
+        candidate.cardId === "CARD-021B-UNSUPPORTED-KEYWORD-GRANT-DIAGNOSTIC",
+    );
+
+    expect(blocker).toMatchObject({
+      code: "unparsed-span",
+      layer: "parser",
+      span: { text: sourceText },
+    });
+    expect(blocker?.decomposition).toMatchObject({
+      recognizedActionCandidates: ["this Character gains [Guard]"],
+      recognizedSyntaxFragments: [
+        "if-conditional-wrapper",
+        "condition-components:v1",
+      ],
+      unsupportedSyntaxFragments: ["keyword-grant-fragment:unsupported"],
+    });
+    expect(blocker?.decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "keyword-grant:unsupported-keyword:21-28",
+          kind: "keyword",
+          span: { end: 60, start: 53, text: "[Guard]" },
+          status: "unsupported",
+          text: "[Guard]",
+        }),
+      ]),
+    );
+  });
+
+  it("does not classify unrelated bracketed conditional text as a keyword grant", () => {
+    const sourceText =
+      "If your Leader is multicolored, reveal up to 1 [Zou] type card from your deck.";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-021B-BRACKETED-NON-GRANT-DIAGNOSTIC" as CardId,
+          sourceText,
+          sourceTextHash: "sha256:card-021b-bracketed-non-grant-diagnostic",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+    const blocker = report.blockers.find(
+      (candidate) =>
+        candidate.cardId === "CARD-021B-BRACKETED-NON-GRANT-DIAGNOSTIC",
+    );
+
+    expect(blocker?.decomposition?.unsupportedSyntaxFragments).not.toContain(
+      "keyword-grant-fragment:unsupported",
+    );
+    expect(blocker?.decomposition?.recognizedSyntaxFragments).not.toContain(
+      "keyword-grant-components:v1",
+    );
+  });
+
   it("keeps representative CARD-020C arbitrary-text probe samples decomposed and fail-closed", () => {
     const index = buildGeneratedSupportIndex({
       cards: [

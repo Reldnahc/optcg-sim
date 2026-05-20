@@ -329,6 +329,8 @@ function toTraceComponentDisplayName(
       return "destination";
     case "duration":
       return "duration";
+    case "keyword":
+      return "keyword";
     case "modifier":
       return "modifier";
     case "optionality":
@@ -347,6 +349,8 @@ function toTraceComponentDisplayName(
       return "target";
     case "trigger":
       return "trigger";
+    case "verb":
+      return "verb";
     case "wrapper":
       return "wrapper";
   }

@@ -618,4 +618,62 @@ describe("composed parser builder scaffold", () => {
       },
     );
   });
+
+  it("derives conditional keyword-grant decomposition while staying fail-closed for generated support", () => {
+    const sourceText =
+      "If your Leader is multicolored, this Character gains [Rush].";
+
+    expect(deriveParserDiagnosticDecomposition(sourceText, sourceText)).toEqual(
+      {
+        recognizedActionCandidates: ["this Character gains [Rush]"],
+        recognizedSyntaxFragments: [
+          "if-conditional-wrapper",
+          "condition-components:v1",
+          "keyword-grant-components:v1",
+        ],
+        recognizedTriggerCandidates: [],
+        reason:
+          "Conditional keyword-grant components were recognized, but generated support remains fail-closed until schema/runtime bridge evidence represents this continuous component.",
+        traceComponents: [
+          { kind: "wrapper", status: "recognized", text: "If" },
+          {
+            id: "condition:leaderColorCount:self:gte:2",
+            kind: "condition",
+            span: {
+              end: 27,
+              start: 0,
+              text: "your Leader is multicolored",
+            },
+            status: "supported",
+            text: "your Leader is multicolored",
+          },
+          {
+            id: "keyword-grant:target:self-character",
+            kind: "target",
+            span: { end: 46, start: 32, text: "this Character" },
+            status: "supported",
+            text: "this Character",
+          },
+          {
+            id: "keyword-grant:verb:gains",
+            kind: "verb",
+            span: { end: 52, start: 47, text: "gains" },
+            status: "supported",
+            text: "gains",
+          },
+          {
+            id: "keyword-grant:keyword:rush",
+            kind: "keyword",
+            span: { end: 59, start: 53, text: "[Rush]" },
+            status: "supported",
+            text: "[Rush]",
+          },
+        ],
+        unsupportedConditionFragments: [],
+        unsupportedSyntaxFragments: [
+          "conditional-keyword-grant:schema-runtime-bridge-missing",
+        ],
+      },
+    );
+  });
 });

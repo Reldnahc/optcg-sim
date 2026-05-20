@@ -477,6 +477,10 @@ describe("generated support runtime capability matrix", () => {
 
   it.each([
     {
+      capabilityId: "keyword:blocker:printed",
+      parserRuleId: "exact:keyword:blocker:standalone",
+    },
+    {
       capabilityId: "keyword:rush:printed",
       parserRuleId: "exact:keyword:rush:standalone",
     },

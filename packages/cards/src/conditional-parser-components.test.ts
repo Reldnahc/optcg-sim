@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  deriveConditionalKeywordGrantDiagnostics,
   deriveConditionalConditionDiagnostics,
   parseConditionExpression,
+  parseKeywordGrantBody,
 } from "./conditional-parser-components.js";
 
 describe("conditional parser components", () => {
@@ -436,5 +438,147 @@ describe("conditional parser components", () => {
     expect(diagnostics.unsupportedSyntaxFragments).toEqual([
       "condition-boundary:ambiguous-mixed-connectors",
     ]);
+  });
+
+  it("parses self keyword-grant target, verb, and keyword components with narrow spans", () => {
+    expect(parseKeywordGrantBody("this Character gains [Blocker]")).toEqual({
+      id: "keyword-grant:self-character:gains:blocker",
+      keyword: {
+        component: { keyword: "blocker", type: "keywordToken" },
+        id: "keyword-grant:keyword:blocker",
+        span: { end: 30, start: 21, text: "[Blocker]" },
+        text: "[Blocker]",
+      },
+      span: { end: 30, start: 0, text: "this Character gains [Blocker]" },
+      target: {
+        component: { category: "character", type: "self" },
+        id: "keyword-grant:target:self-character",
+        span: { end: 14, start: 0, text: "this Character" },
+        text: "this Character",
+      },
+      text: "this Character gains [Blocker]",
+      type: "supported",
+      verb: {
+        component: { type: "gains" },
+        id: "keyword-grant:verb:gains",
+        span: { end: 20, start: 15, text: "gains" },
+        text: "gains",
+      },
+    });
+  });
+
+  it.each([
+    { keyword: "banish", printed: "[Banish]" },
+    { keyword: "rush", printed: "[Rush]" },
+    { keyword: "rushCharacter", printed: "[Rush: Character]" },
+    { keyword: "doubleAttack", printed: "[Double Attack]" },
+  ] as const)(
+    "parses allowlisted keyword grant token $printed through the shared path",
+    ({ keyword, printed }) => {
+      const parsed = parseKeywordGrantBody(`this Character gains ${printed}`);
+
+      expect(parsed).toMatchObject({
+        id: `keyword-grant:self-character:gains:${keyword}`,
+        keyword: {
+          component: { keyword, type: "keywordToken" },
+          id: `keyword-grant:keyword:${keyword}`,
+          text: printed,
+        },
+        target: { id: "keyword-grant:target:self-character" },
+        type: "supported",
+        verb: { id: "keyword-grant:verb:gains" },
+      });
+    },
+  );
+
+  it("parses allowlisted keyword grant values generically without exact sentence branches", () => {
+    expect(
+      parseKeywordGrantBody("  this Character   gains   [Rush]  "),
+    ).toMatchObject({
+      id: "keyword-grant:self-character:gains:rush",
+      keyword: {
+        component: { keyword: "rush", type: "keywordToken" },
+        text: "[Rush]",
+      },
+      text: "this Character   gains   [Rush]",
+      type: "supported",
+    });
+    expect(
+      parseKeywordGrantBody("this Character gains [Double Attack]"),
+    ).toMatchObject({
+      id: "keyword-grant:self-character:gains:doubleAttack",
+      keyword: {
+        component: { keyword: "doubleAttack", type: "keywordToken" },
+        text: "[Double Attack]",
+      },
+      type: "supported",
+    });
+  });
+
+  it.each([
+    {
+      expectedId: "keyword-grant:unsupported-keyword:21-28",
+      sourceText: "this Character gains [Guard]",
+    },
+    {
+      expectedId: "keyword-grant:unsupported-target:0-11",
+      sourceText: "your Leader gains [Blocker]",
+    },
+    {
+      expectedId: "keyword-grant:unsupported-verb:15-19",
+      sourceText: "this Character gets [Blocker]",
+    },
+    {
+      expectedId: "keyword-grant:missing-keyword:20-20",
+      sourceText: "this Character gains",
+    },
+    {
+      expectedId: "keyword-grant:unsupported-residue:31-45",
+      sourceText: "this Character gains [Blocker] until end turn",
+    },
+  ])(
+    "fails closed for unsupported keyword-grant body $sourceText",
+    ({ expectedId, sourceText }) => {
+      expect(parseKeywordGrantBody(sourceText)).toMatchObject({
+        id: expectedId,
+        text: sourceText.trim(),
+        type: "unsupported-fragment",
+      });
+    },
+  );
+
+  it("derives keyword-grant diagnostics without requiring card IDs or full-card text", () => {
+    const diagnostics = deriveConditionalKeywordGrantDiagnostics(
+      "this Character gains [Banish]",
+    );
+
+    expect(diagnostics).toEqual({
+      hasSupportedKeywordGrantComponents: true,
+      isFullySupportedKeywordGrantBody: true,
+      traceComponents: [
+        {
+          id: "keyword-grant:target:self-character",
+          kind: "target",
+          span: { end: 14, start: 0, text: "this Character" },
+          status: "supported",
+          text: "this Character",
+        },
+        {
+          id: "keyword-grant:verb:gains",
+          kind: "verb",
+          span: { end: 20, start: 15, text: "gains" },
+          status: "supported",
+          text: "gains",
+        },
+        {
+          id: "keyword-grant:keyword:banish",
+          kind: "keyword",
+          span: { end: 29, start: 21, text: "[Banish]" },
+          status: "supported",
+          text: "[Banish]",
+        },
+      ],
+      unsupportedSyntaxFragments: [],
+    });
   });
 });

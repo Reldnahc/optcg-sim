@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-021A.md",
-      "storyId": "CARD-021A",
-      "storyPath": "stories/approved/CARD-021A-trash-count-condition-parser-support.yaml",
-      "storySha256": "be0cfa73c9cb9ae75093e9e7aca301f920d257a9f80d9784ebd6d8c0ff753bba"
+      "packetPath": "agent-packets/CARD-021B.md",
+      "storyId": "CARD-021B",
+      "storyPath": "stories/approved/CARD-021B-conditional-keyword-grant-text-components.yaml",
+      "storySha256": "dd0133f036790daaf63b29a5af34e72a047f8876c3ed2945f09b177c38a8edd4"
     }
   ],
   "version": 1

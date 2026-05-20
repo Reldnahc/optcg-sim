@@ -1,4 +1,5 @@
 import type {
+  GeneratedSupportDiagnosticDecomposition,
   GeneratedSupportDiagnosticTraceComponent,
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-types.js";
@@ -48,6 +49,51 @@ export type ParsedConditionComponent =
       readonly value: number;
     };
 
+export type ConditionalKeywordGrantKeyword =
+  | "banish"
+  | "blocker"
+  | "doubleAttack"
+  | "rush"
+  | "rushCharacter";
+
+export type ParsedKeywordGrantBody =
+  | {
+      readonly id: string;
+      readonly keyword: {
+        readonly component: {
+          readonly keyword: ConditionalKeywordGrantKeyword;
+          readonly type: "keywordToken";
+        };
+        readonly id: string;
+        readonly span: GeneratedSupportUnparsedSpan;
+        readonly text: string;
+      };
+      readonly span: GeneratedSupportUnparsedSpan;
+      readonly target: {
+        readonly component: {
+          readonly category: "character";
+          readonly type: "self";
+        };
+        readonly id: string;
+        readonly span: GeneratedSupportUnparsedSpan;
+        readonly text: string;
+      };
+      readonly text: string;
+      readonly type: "supported";
+      readonly verb: {
+        readonly component: { readonly type: "gains" };
+        readonly id: string;
+        readonly span: GeneratedSupportUnparsedSpan;
+        readonly text: string;
+      };
+    }
+  | {
+      readonly id: string;
+      readonly span: GeneratedSupportUnparsedSpan;
+      readonly text: string;
+      readonly type: "unsupported-fragment";
+    };
+
 export type ConditionExpressionParse =
   | {
       readonly component: ParsedConditionComponent;
@@ -89,6 +135,13 @@ type ConditionalDiagnostics = {
   readonly isFullySupportedConditionExpression: boolean;
   readonly traceComponents: readonly GeneratedSupportDiagnosticTraceComponent[];
   readonly unsupportedConditionFragments: readonly string[];
+  readonly unsupportedSyntaxFragments: readonly string[];
+};
+
+type KeywordGrantDiagnostics = {
+  readonly hasSupportedKeywordGrantComponents: boolean;
+  readonly isFullySupportedKeywordGrantBody: boolean;
+  readonly traceComponents: readonly GeneratedSupportDiagnosticTraceComponent[];
   readonly unsupportedSyntaxFragments: readonly string[];
 };
 
@@ -205,6 +258,344 @@ export function deriveConditionalConditionDiagnostics(
       ? ["condition-boundary:ambiguous-mixed-connectors"]
       : collectUnsupportedConditionSyntaxFragments(parsed),
   };
+}
+
+export function parseKeywordGrantBody(
+  sourceText: string,
+): ParsedKeywordGrantBody {
+  const normalized = sourceText.trim();
+  const trimmedStart = sourceText.indexOf(normalized);
+  const absoluteStart = Math.max(trimmedStart, 0);
+  const span = toSpan(normalized, absoluteStart);
+
+  const targetMatch = /^this Character\b/i.exec(normalized);
+  const gainsMatch = /\bgains\b/i.exec(normalized);
+  const supportedTargetEnd = targetMatch?.[0].length;
+  if (supportedTargetEnd === undefined) {
+    const unsupportedTargetEnd = findUnsupportedTargetEnd(normalized);
+    return toUnsupportedKeywordGrantFragment({
+      idPrefix: "keyword-grant:unsupported-target",
+      normalized,
+      span: toSpan(normalized.slice(0, unsupportedTargetEnd), absoluteStart),
+    });
+  }
+
+  const targetText = normalized.slice(0, supportedTargetEnd);
+  const verbStart = findNextNonWhitespaceIndex(normalized, supportedTargetEnd);
+  const verbMatch =
+    verbStart === undefined
+      ? undefined
+      : /^\S+/.exec(normalized.slice(verbStart));
+  const verbText = verbMatch?.[0];
+  if (verbStart === undefined || verbText === undefined) {
+    return toUnsupportedKeywordGrantFragment({
+      idPrefix: "keyword-grant:unsupported-verb",
+      normalized,
+      span: toSpan("", absoluteStart + supportedTargetEnd),
+    });
+  }
+  if (gainsMatch === null || gainsMatch.index !== verbStart) {
+    return toUnsupportedKeywordGrantFragment({
+      idPrefix: "keyword-grant:unsupported-verb",
+      normalized,
+      span: toSpan(verbText, absoluteStart + verbStart),
+    });
+  }
+
+  const keywordStart = findNextNonWhitespaceIndex(
+    normalized,
+    verbStart + verbText.length,
+  );
+  if (keywordStart === undefined) {
+    const missingKeywordStart = absoluteStart + normalized.length;
+    return toUnsupportedKeywordGrantFragment({
+      idPrefix: "keyword-grant:missing-keyword",
+      normalized,
+      span: { end: missingKeywordStart, start: missingKeywordStart, text: "" },
+    });
+  }
+
+  const keywordTextMatch = /^\[[^\]]+\]/.exec(normalized.slice(keywordStart));
+  const keywordText = keywordTextMatch?.[0];
+  if (keywordText === undefined) {
+    return toUnsupportedKeywordGrantFragment({
+      idPrefix: "keyword-grant:unsupported-keyword",
+      normalized,
+      span: toSpan(
+        normalized.slice(keywordStart),
+        absoluteStart + keywordStart,
+      ),
+    });
+  }
+
+  const keyword = parseKeywordGrantToken(keywordText);
+  if (keyword === undefined) {
+    return toUnsupportedKeywordGrantFragment({
+      idPrefix: "keyword-grant:unsupported-keyword",
+      normalized,
+      span: toSpan(keywordText, absoluteStart + keywordStart),
+    });
+  }
+
+  const residueStart = findNextNonWhitespaceIndex(
+    normalized,
+    keywordStart + keywordText.length,
+  );
+  if (residueStart !== undefined) {
+    return toUnsupportedKeywordGrantFragment({
+      idPrefix: "keyword-grant:unsupported-residue",
+      normalized,
+      span: toSpan(
+        normalized.slice(residueStart),
+        absoluteStart + residueStart,
+      ),
+    });
+  }
+
+  return {
+    id: `keyword-grant:self-character:gains:${keyword}`,
+    keyword: {
+      component: { keyword, type: "keywordToken" },
+      id: `keyword-grant:keyword:${keyword}`,
+      span: toSpan(keywordText, absoluteStart + keywordStart),
+      text: keywordText,
+    },
+    span,
+    target: {
+      component: { category: "character", type: "self" },
+      id: "keyword-grant:target:self-character",
+      span: toSpan(targetText, absoluteStart),
+      text: targetText,
+    },
+    text: normalized,
+    type: "supported",
+    verb: {
+      component: { type: "gains" },
+      id: "keyword-grant:verb:gains",
+      span: toSpan(verbText, absoluteStart + verbStart),
+      text: verbText,
+    },
+  };
+}
+
+export function deriveConditionalKeywordGrantDiagnostics(
+  bodyText: string,
+): KeywordGrantDiagnostics {
+  const parsed = parseKeywordGrantBody(bodyText);
+  if (parsed.type === "unsupported-fragment") {
+    return {
+      hasSupportedKeywordGrantComponents: false,
+      isFullySupportedKeywordGrantBody: false,
+      traceComponents: [
+        {
+          id: parsed.id,
+          kind: "keyword",
+          span: parsed.span,
+          status: "unsupported",
+          text: parsed.span.text,
+        },
+      ],
+      unsupportedSyntaxFragments: ["keyword-grant-fragment:unsupported"],
+    };
+  }
+
+  return {
+    hasSupportedKeywordGrantComponents: true,
+    isFullySupportedKeywordGrantBody: true,
+    traceComponents: [
+      {
+        id: parsed.target.id,
+        kind: "target",
+        span: parsed.target.span,
+        status: "supported",
+        text: parsed.target.text,
+      },
+      {
+        id: parsed.verb.id,
+        kind: "verb",
+        span: parsed.verb.span,
+        status: "supported",
+        text: parsed.verb.text,
+      },
+      {
+        id: parsed.keyword.id,
+        kind: "keyword",
+        span: parsed.keyword.span,
+        status: "supported",
+        text: parsed.keyword.text,
+      },
+    ],
+    unsupportedSyntaxFragments: [],
+  };
+}
+
+export function deriveConditionalKeywordGrantDiagnosticDecomposition(
+  sourceText: string,
+): GeneratedSupportDiagnosticDecomposition | undefined {
+  const conditional = parseIfDiagnosticWrapper(sourceText);
+  if (conditional === undefined) {
+    return undefined;
+  }
+
+  const conditionDiagnostics = deriveConditionalConditionDiagnostics(
+    conditional.conditionText,
+  );
+  const keywordGrantDiagnostics = deriveConditionalKeywordGrantDiagnostics(
+    conditional.bodyText,
+  );
+  if (
+    !keywordGrantDiagnostics.hasSupportedKeywordGrantComponents &&
+    !looksLikeKeywordGrantBody(conditional.bodyText)
+  ) {
+    return undefined;
+  }
+
+  return {
+    recognizedActionCandidates: [conditional.bodyText],
+    recognizedSyntaxFragments: [
+      "if-conditional-wrapper",
+      ...(conditionDiagnostics.hasSupportedConditionComponents
+        ? ["condition-components:v1"]
+        : []),
+      ...(keywordGrantDiagnostics.hasSupportedKeywordGrantComponents
+        ? ["keyword-grant-components:v1"]
+        : []),
+    ],
+    recognizedTriggerCandidates: [],
+    reason:
+      conditionDiagnostics.isFullySupportedConditionExpression &&
+      keywordGrantDiagnostics.isFullySupportedKeywordGrantBody
+        ? "Conditional keyword-grant components were recognized, but generated support remains fail-closed until schema/runtime bridge evidence represents this continuous component."
+        : "Conditional keyword-grant syntax was recognized, but one or more components remain unsupported; generated support remains fail-closed.",
+    traceComponents: [
+      { kind: "wrapper", status: "recognized", text: "If" },
+      ...conditionDiagnostics.traceComponents,
+      ...offsetTraceComponentSpans(
+        keywordGrantDiagnostics.traceComponents,
+        conditional.bodyTextStart,
+      ),
+    ],
+    unsupportedConditionFragments:
+      conditionDiagnostics.unsupportedConditionFragments,
+    unsupportedSyntaxFragments:
+      conditionDiagnostics.isFullySupportedConditionExpression &&
+      keywordGrantDiagnostics.isFullySupportedKeywordGrantBody
+        ? ["conditional-keyword-grant:schema-runtime-bridge-missing"]
+        : [
+            ...conditionDiagnostics.unsupportedSyntaxFragments,
+            ...keywordGrantDiagnostics.unsupportedSyntaxFragments,
+          ],
+  };
+}
+
+export function deriveConditionalDiagnosticDecomposition(
+  sourceText: string,
+): GeneratedSupportDiagnosticDecomposition | undefined {
+  return (
+    deriveConditionalKeywordGrantDiagnosticDecomposition(sourceText) ??
+    deriveConditionalDrawDiagnosticDecomposition(sourceText)
+  );
+}
+
+function deriveConditionalDrawDiagnosticDecomposition(
+  sourceText: string,
+): GeneratedSupportDiagnosticDecomposition | undefined {
+  const prefix = "[On Play] ";
+  if (!sourceText.startsWith(prefix)) {
+    return undefined;
+  }
+
+  const conditional = parseIfDiagnosticWrapper(sourceText.slice(prefix.length));
+  const drawCandidate =
+    conditional === undefined
+      ? undefined
+      : /^(draw\s+[1-9]\d*\s+cards?)$/i.exec(conditional.bodyText)?.[1]?.trim();
+  if (conditional === undefined || drawCandidate === undefined) {
+    return undefined;
+  }
+
+  const conditionDiagnostics = deriveConditionalConditionDiagnostics(
+    conditional.conditionText,
+  );
+
+  return {
+    recognizedActionCandidates: [drawCandidate],
+    recognizedSyntaxFragments:
+      conditionDiagnostics.hasSupportedConditionComponents
+        ? ["if-conditional-wrapper", "condition-components:v1"]
+        : ["if-conditional-wrapper"],
+    recognizedTriggerCandidates: [prefix.trim()],
+    reason: conditionDiagnostics.isFullySupportedConditionExpression
+      ? "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence."
+      : "Conditional wrapper syntax was recognized, but one or more condition fragments remain unsupported; generated support remains fail-closed.",
+    traceComponents: [
+      { kind: "trigger", status: "recognized", text: prefix.trim() },
+      { kind: "wrapper", status: "recognized", text: "If" },
+      ...conditionDiagnostics.traceComponents,
+      {
+        kind: "action",
+        status: "supported",
+        text: drawCandidate,
+      },
+    ],
+    unsupportedConditionFragments:
+      conditionDiagnostics.unsupportedConditionFragments,
+    unsupportedSyntaxFragments:
+      conditionDiagnostics.isFullySupportedConditionExpression
+        ? ["conditional-support:blocked-until-CARD-019B"]
+        : conditionDiagnostics.unsupportedSyntaxFragments,
+  };
+}
+
+function parseIfDiagnosticWrapper(sourceText: string):
+  | {
+      readonly bodyText: string;
+      readonly bodyTextStart: number;
+      readonly conditionText: string;
+    }
+  | undefined {
+  const normalized = sourceText.trim();
+  const match = /^If\s+(.+?),\s*(.+)$/i.exec(normalized);
+  if (match === null) {
+    return undefined;
+  }
+
+  const conditionText = match[1]?.trim() ?? "";
+  const rawBodyText = match[2]?.trim() ?? "";
+  const bodyText = rawBodyText.replace(/\.$/, "");
+  if (conditionText.length === 0 || bodyText.length === 0) {
+    return undefined;
+  }
+
+  return {
+    bodyText,
+    bodyTextStart: normalized.indexOf(rawBodyText),
+    conditionText,
+  };
+}
+
+function looksLikeKeywordGrantBody(bodyText: string): boolean {
+  return /^this Character\s+(?:gains|gets)\s+\[[^\]]+\]/i.test(bodyText);
+}
+
+function offsetTraceComponentSpans(
+  components: readonly GeneratedSupportDiagnosticTraceComponent[],
+  offset: number,
+): readonly GeneratedSupportDiagnosticTraceComponent[] {
+  return components.map((component) => {
+    if (component.span === undefined) {
+      return component;
+    }
+
+    return {
+      ...component,
+      span: {
+        ...component.span,
+        end: component.span.end + offset,
+        start: component.span.start + offset,
+      },
+    };
+  });
 }
 
 function parseConditionConnectorCandidates(
@@ -378,6 +769,76 @@ function parseExactPositiveSafeInteger(countText: string): number | undefined {
   }
 
   return count;
+}
+
+function parseKeywordGrantToken(
+  keywordText: string,
+): ConditionalKeywordGrantKeyword | undefined {
+  switch (keywordText.toLowerCase()) {
+    case "[banish]":
+      return "banish";
+    case "[blocker]":
+      return "blocker";
+    case "[double attack]":
+      return "doubleAttack";
+    case "[rush]":
+      return "rush";
+    case "[rush: character]":
+      return "rushCharacter";
+    default:
+      return undefined;
+  }
+}
+
+function findNextNonWhitespaceIndex(
+  sourceText: string,
+  start: number,
+): number | undefined {
+  for (let index = start; index < sourceText.length; index += 1) {
+    if (!/\s/.test(sourceText[index] ?? "")) {
+      return index;
+    }
+  }
+  return undefined;
+}
+
+function findUnsupportedTargetEnd(sourceText: string): number {
+  const grantVerb = /\s+(?:gains|gets)\b/i.exec(sourceText);
+  if (grantVerb !== null) {
+    return grantVerb.index;
+  }
+
+  const keyword = /\s+\[[^\]]+\]/.exec(sourceText);
+  if (keyword !== null) {
+    return keyword.index;
+  }
+
+  return sourceText.length;
+}
+
+function toUnsupportedKeywordGrantFragment({
+  idPrefix,
+  normalized,
+  span,
+}: {
+  readonly idPrefix: string;
+  readonly normalized: string;
+  readonly span: GeneratedSupportUnparsedSpan;
+}): ParsedKeywordGrantBody {
+  return {
+    id: `${idPrefix}:${String(span.start)}-${String(span.end)}`,
+    span,
+    text: normalized,
+    type: "unsupported-fragment",
+  };
+}
+
+function toSpan(text: string, start: number): GeneratedSupportUnparsedSpan {
+  return {
+    end: start + text.length,
+    start,
+    text,
+  };
 }
 
 function isSupportedConditionExpression(

@@ -91,10 +91,12 @@ describe("support probe diagnostics", () => {
         "If your Leader has the {Sky Island} type, this Character gains [Rush].",
       expected: [
         "Playable: no",
-        "recognized condition candidate: If",
+        "recognized wrapper candidate: If",
         "recognized condition candidate: your Leader has the {Sky Island} type",
         "recognized target candidate: this Character",
-        "recognized action candidate: gains",
+        "recognized verb candidate: gains",
+        "recognized keyword candidate: [Rush]",
+        "unsupported syntax blocker: conditional-keyword-grant:schema-runtime-bridge-missing",
       ],
     },
   ])(
@@ -184,10 +186,12 @@ describe("support probe diagnostics", () => {
       effect:
         "If your Leader has the {Revolutionary Army} type, this Character gains [Banish].",
       expected: [
-        "recognized condition candidate: If",
+        "recognized wrapper candidate: If",
         "recognized condition candidate: your Leader has the {Revolutionary Army} type",
         "recognized target candidate: this Character",
-        "recognized action candidate: gains",
+        "recognized verb candidate: gains",
+        "recognized keyword candidate: [Banish]",
+        "unsupported syntax blocker: conditional-keyword-grant:schema-runtime-bridge-missing",
       ],
       playable: "Playable: no",
     },

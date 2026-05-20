@@ -16,7 +16,7 @@ import type {
   PartialGeneratedSupportParseResult,
 } from "./generated-support-types.js";
 
-import { deriveConditionalConditionDiagnostics } from "./conditional-parser-components.js";
+import { deriveConditionalDiagnosticDecomposition } from "./conditional-parser-components.js";
 import { listComponentEvidenceIdsForParserRuleIds } from "./generated-support-types.js";
 
 export type SupportedTriggerWrapperParse = {
@@ -1009,62 +1009,9 @@ export function deriveParserDiagnosticDecomposition(
   }
 
   return (
-    deriveConditionalDrawDiagnosticDecomposition(normalized) ??
+    deriveConditionalDiagnosticDecomposition(normalized) ??
     deriveBottomDeckDiagnosticDecomposition(normalized)
   );
-}
-
-function deriveConditionalDrawDiagnosticDecomposition(
-  sourceText: string,
-): GeneratedSupportDiagnosticDecomposition | undefined {
-  const trigger = parseSupportedTriggerWrapper(sourceText);
-  if (trigger === undefined || trigger.prefix !== "[On Play] ") {
-    return undefined;
-  }
-
-  const conditional = parseIfWrapper(trigger.bodyText);
-  if (conditional === undefined) {
-    return undefined;
-  }
-
-  const drawCandidate = /^(draw\s+[1-9]\d*\s+cards?)\.?$/i
-    .exec(conditional.bodyText)?.[1]
-    ?.trim();
-  if (drawCandidate === undefined) {
-    return undefined;
-  }
-
-  const conditionDiagnostics = deriveConditionalConditionDiagnostics(
-    conditional.conditionText,
-  );
-
-  return {
-    recognizedActionCandidates: [drawCandidate],
-    recognizedSyntaxFragments:
-      conditionDiagnostics.hasSupportedConditionComponents
-        ? ["if-conditional-wrapper", "condition-components:v1"]
-        : ["if-conditional-wrapper"],
-    recognizedTriggerCandidates: [trigger.prefix.trim()],
-    reason: conditionDiagnostics.isFullySupportedConditionExpression
-      ? "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence."
-      : "Conditional wrapper syntax was recognized, but one or more condition fragments remain unsupported; generated support remains fail-closed.",
-    traceComponents: [
-      { kind: "trigger", status: "recognized", text: trigger.prefix.trim() },
-      { kind: "wrapper", status: "recognized", text: "If" },
-      ...conditionDiagnostics.traceComponents,
-      {
-        kind: "action",
-        status: "supported",
-        text: drawCandidate,
-      },
-    ],
-    unsupportedConditionFragments:
-      conditionDiagnostics.unsupportedConditionFragments,
-    unsupportedSyntaxFragments:
-      conditionDiagnostics.isFullySupportedConditionExpression
-        ? ["conditional-support:blocked-until-CARD-019B"]
-        : conditionDiagnostics.unsupportedSyntaxFragments,
-  };
 }
 
 function deriveBottomDeckDiagnosticDecomposition(
