@@ -16,7 +16,10 @@ import type {
   PartialGeneratedSupportParseResult,
 } from "./generated-support-types.js";
 
-import { deriveConditionalDiagnosticDecomposition } from "./conditional-parser-components.js";
+import {
+  deriveConditionalDiagnosticDecomposition,
+  deriveProtectionBodyDiagnosticDecomposition,
+} from "./conditional-parser-components.js";
 import { listComponentEvidenceIdsForParserRuleIds } from "./generated-support-types.js";
 
 export type SupportedTriggerWrapperParse = {
@@ -1010,6 +1013,7 @@ export function deriveParserDiagnosticDecomposition(
 
   return (
     deriveConditionalDiagnosticDecomposition(normalized) ??
+    deriveProtectionBodyDiagnosticDecomposition(normalized) ??
     deriveBottomDeckDiagnosticDecomposition(normalized)
   );
 }

@@ -676,4 +676,65 @@ describe("composed parser builder scaffold", () => {
       },
     );
   });
+
+  it("derives opponent-effect field-removal protection decomposition while staying fail-closed for generated support", () => {
+    const sourceText =
+      "this Character cannot be removed from the field by your opponent's effects";
+
+    expect(deriveParserDiagnosticDecomposition(sourceText, sourceText)).toEqual(
+      {
+        recognizedActionCandidates: [
+          "this Character cannot be removed from the field by your opponent's effects",
+        ],
+        recognizedSyntaxFragments: [
+          "protection-components:v1",
+          "protection:opponent-effect-field-removal",
+        ],
+        recognizedTriggerCandidates: [],
+        reason:
+          "Opponent-effect field-removal protection components were recognized, but generated support remains fail-closed until schema/runtime bridge evidence represents this continuous protection component.",
+        traceComponents: [
+          {
+            id: "protection:protected-object:self-character",
+            kind: "target",
+            span: { end: 14, start: 0, text: "this Character" },
+            status: "supported",
+            text: "this Character",
+          },
+          {
+            id: "protection:removal-process:field-removal",
+            kind: "action",
+            span: { end: 32, start: 15, text: "cannot be removed" },
+            status: "supported",
+            text: "cannot be removed",
+          },
+          {
+            id: "protection:field-zone:field",
+            kind: "destination",
+            span: { end: 47, start: 33, text: "from the field" },
+            status: "supported",
+            text: "from the field",
+          },
+          {
+            id: "protection:source-controller:opponent",
+            kind: "predicate",
+            span: { end: 64, start: 51, text: "your opponent" },
+            status: "supported",
+            text: "your opponent",
+          },
+          {
+            id: "protection:source-kind:effects",
+            kind: "predicate",
+            span: { end: 74, start: 67, text: "effects" },
+            status: "supported",
+            text: "effects",
+          },
+        ],
+        unsupportedConditionFragments: [],
+        unsupportedSyntaxFragments: [
+          "protection:schema-runtime-bridge-missing",
+        ],
+      },
+    );
+  });
 });

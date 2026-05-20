@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  deriveProtectionBodyDiagnostics,
   deriveConditionalKeywordGrantDiagnostics,
   deriveConditionalConditionDiagnostics,
   parseConditionExpression,
   parseKeywordGrantBody,
+  parseProtectionBody,
 } from "./conditional-parser-components.js";
 
 describe("conditional parser components", () => {
@@ -576,6 +578,173 @@ describe("conditional parser components", () => {
           span: { end: 29, start: 21, text: "[Banish]" },
           status: "supported",
           text: "[Banish]",
+        },
+      ],
+      unsupportedSyntaxFragments: [],
+    });
+  });
+
+  it("parses opponent-effect field-removal protection components with narrow spans", () => {
+    expect(
+      parseProtectionBody(
+        "this Character cannot be removed from the field by your opponent's effects",
+      ),
+    ).toEqual({
+      fieldZone: {
+        component: { from: "field", type: "fieldZone" },
+        id: "protection:field-zone:field",
+        span: { end: 47, start: 33, text: "from the field" },
+        text: "from the field",
+      },
+      id: "protection:self-character:cannot-be-removed:field:opponent-effects",
+      protectedObject: {
+        component: { category: "character", type: "self" },
+        id: "protection:protected-object:self-character",
+        span: { end: 14, start: 0, text: "this Character" },
+        text: "this Character",
+      },
+      removalProcess: {
+        component: { process: "fieldRemoval", type: "preventedProcess" },
+        id: "protection:removal-process:field-removal",
+        span: { end: 32, start: 15, text: "cannot be removed" },
+        text: "cannot be removed",
+      },
+      sourceController: {
+        component: { controller: "opponent", type: "sourceController" },
+        id: "protection:source-controller:opponent",
+        span: { end: 64, start: 51, text: "your opponent" },
+        text: "your opponent",
+      },
+      sourceKind: {
+        component: { kind: "effects", type: "sourceKind" },
+        id: "protection:source-kind:effects",
+        span: { end: 74, start: 67, text: "effects" },
+        text: "effects",
+      },
+      span: {
+        end: 74,
+        start: 0,
+        text: "this Character cannot be removed from the field by your opponent's effects",
+      },
+      text: "this Character cannot be removed from the field by your opponent's effects",
+      type: "supported",
+    });
+  });
+
+  it.each([
+    "This Character cannot be removed from the field by your opponent's effect",
+    "  this Character   cannot be removed   from the field   by your opponent's effects  ",
+  ])(
+    "parses protection components through reusable phrases instead of an exact sentence branch: %s",
+    (sourceText) => {
+      const parsed = parseProtectionBody(sourceText);
+
+      expect(parsed).toMatchObject({
+        fieldZone: { id: "protection:field-zone:field" },
+        protectedObject: { id: "protection:protected-object:self-character" },
+        removalProcess: { id: "protection:removal-process:field-removal" },
+        sourceController: { id: "protection:source-controller:opponent" },
+        sourceKind: { id: "protection:source-kind:effects" },
+        type: "supported",
+      });
+    },
+  );
+
+  it.each([
+    {
+      expectedId: "protection:unsupported-protected-object:0-11",
+      sourceText:
+        "your Leader cannot be removed from the field by your opponent's effects",
+    },
+    {
+      expectedId: "protection:unsupported-removal-process:15-31",
+      sourceText:
+        "this Character cannot be K.O.'d from the field by your opponent's effects",
+    },
+    {
+      expectedId: "protection:unsupported-removal-process:15-32",
+      sourceText:
+        "this Character cannot be trashed from the field by your opponent's effects",
+    },
+    {
+      expectedId: "protection:unsupported-field-zone:33-42",
+      sourceText:
+        "this Character cannot be removed from play by your opponent's effects",
+    },
+    {
+      expectedId: "protection:unsupported-source-controller:51-55",
+      sourceText:
+        "this Character cannot be removed from the field by your effects",
+    },
+    {
+      expectedId: "protection:unsupported-source-kind:67-72",
+      sourceText:
+        "this Character cannot be removed from the field by your opponent's costs",
+    },
+    {
+      expectedId: "protection:unsupported-residue:75-89",
+      sourceText:
+        "this Character cannot be removed from the field by your opponent's effects this turn only",
+    },
+    {
+      expectedId: "protection:unsupported-source-controller:48-64",
+      sourceText:
+        "this Character cannot be removed from the field during this turn",
+    },
+  ])(
+    "fails closed with narrow unsupported protection component diagnostics for $sourceText",
+    ({ expectedId, sourceText }) => {
+      expect(parseProtectionBody(sourceText)).toMatchObject({
+        id: expectedId,
+        text: sourceText.trim(),
+        type: "unsupported-fragment",
+      });
+    },
+  );
+
+  it("derives protection diagnostics without requiring card IDs or full-card text", () => {
+    const diagnostics = deriveProtectionBodyDiagnostics(
+      "this Character cannot be removed from the field by your opponent's effects",
+    );
+
+    expect(diagnostics).toEqual({
+      hasSupportedProtectionComponents: true,
+      isFullySupportedProtectionBody: true,
+      traceComponents: [
+        {
+          id: "protection:protected-object:self-character",
+          kind: "target",
+          span: { end: 14, start: 0, text: "this Character" },
+          status: "supported",
+          text: "this Character",
+        },
+        {
+          id: "protection:removal-process:field-removal",
+          kind: "action",
+          span: { end: 32, start: 15, text: "cannot be removed" },
+          status: "supported",
+          text: "cannot be removed",
+        },
+        {
+          id: "protection:field-zone:field",
+          kind: "destination",
+          span: { end: 47, start: 33, text: "from the field" },
+          status: "supported",
+          text: "from the field",
+        },
+        {
+          id: "protection:source-controller:opponent",
+          kind: "predicate",
+          span: { end: 64, start: 51, text: "your opponent" },
+          status: "supported",
+          text: "your opponent",
+        },
+        {
+          id: "protection:source-kind:effects",
+          kind: "predicate",
+          span: { end: 74, start: 67, text: "effects" },
+          status: "supported",
+          text: "effects",
         },
       ],
       unsupportedSyntaxFragments: [],

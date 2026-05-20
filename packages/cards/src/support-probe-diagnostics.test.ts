@@ -195,6 +195,37 @@ describe("support probe diagnostics", () => {
       ],
       playable: "Playable: no",
     },
+    {
+      cardId: "CARD-021C-VAR-PROTECTION",
+      effect:
+        "This Character cannot be removed from the field by your opponent's effect",
+      expected: [
+        "recognized syntax fragment: protection-components:v1",
+        "recognized syntax fragment: protection:opponent-effect-field-removal",
+        "recognized target candidate: This Character",
+        "recognized action candidate: cannot be removed",
+        "recognized destination candidate: from the field",
+        "recognized predicate candidate: your opponent",
+        "recognized predicate candidate: effect",
+        "unsupported syntax blocker: protection:schema-runtime-bridge-missing",
+      ],
+      playable: "Playable: no",
+    },
+    {
+      cardId: "CARD-021C-VAR-PROTECTION-UNSUPPORTED",
+      effect:
+        "this Character cannot be removed from the field by your opponent's costs",
+      expected: [
+        "recognized syntax fragment: protection-components:v1",
+        "recognized target candidate: this Character",
+        "recognized action candidate: cannot be removed",
+        "recognized destination candidate: from the field",
+        "recognized predicate candidate: your opponent",
+        "unsupported predicate blocker: costs",
+        "unsupported syntax blocker: protection-fragment:unsupported",
+      ],
+      playable: "Playable: no",
+    },
   ])(
     "proves component-driven variation diagnostics for CARD-020C class $cardId",
     async ({ cardId, effect, expected, playable }) => {

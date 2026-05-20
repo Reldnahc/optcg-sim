@@ -4,6 +4,13 @@ import type {
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-types.js";
 
+export {
+  deriveProtectionBodyDiagnosticDecomposition,
+  deriveProtectionBodyDiagnostics,
+  parseProtectionBody,
+  type ParsedProtectionBody,
+} from "./protection-diagnostic-components.js";
+
 export type ParsedConditionComponent =
   | { readonly type: "yourTurn" }
   | {

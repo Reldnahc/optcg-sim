@@ -327,6 +327,149 @@ describe("generated support diagnostics", () => {
     );
   });
 
+  it("reports recognized opponent-effect field-removal protection components while keeping generated support unsupported", () => {
+    const sourceText =
+      "this Character cannot be removed from the field by your opponent's effects";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-021C-PROTECTION-DIAGNOSTIC" as CardId,
+          sourceText,
+          sourceTextHash: "sha256:card-021c-protection-diagnostic",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+    const blocker = report.blockers.find(
+      (candidate) => candidate.cardId === "CARD-021C-PROTECTION-DIAGNOSTIC",
+    );
+
+    expect(report.supportedCardIds).toEqual([]);
+    expect(report.unsupportedCardIds).toEqual([
+      "CARD-021C-PROTECTION-DIAGNOSTIC",
+    ]);
+    expect(report.statusByCardId["CARD-021C-PROTECTION-DIAGNOSTIC"]).toEqual({
+      blockerCodes: ["unparsed-span"],
+      componentEvidenceIds: [],
+      missingCapabilityIds: [],
+      parseStatus: "partial",
+      parserRuleIds: [],
+      status: "unsupported",
+    });
+    expect(blocker).toMatchObject({
+      code: "unparsed-span",
+      layer: "parser",
+      span: { text: sourceText },
+    });
+    expect(blocker?.decomposition).toMatchObject({
+      recognizedActionCandidates: [sourceText],
+      recognizedSyntaxFragments: [
+        "protection-components:v1",
+        "protection:opponent-effect-field-removal",
+      ],
+      unsupportedSyntaxFragments: ["protection:schema-runtime-bridge-missing"],
+    });
+    expect(blocker?.decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "protection:protected-object:self-character",
+          kind: "target",
+          text: "this Character",
+        }),
+        expect.objectContaining({
+          id: "protection:removal-process:field-removal",
+          kind: "action",
+          text: "cannot be removed",
+        }),
+        expect.objectContaining({
+          id: "protection:field-zone:field",
+          kind: "destination",
+          text: "from the field",
+        }),
+        expect.objectContaining({
+          id: "protection:source-controller:opponent",
+          kind: "predicate",
+          text: "your opponent",
+        }),
+        expect.objectContaining({
+          id: "protection:source-kind:effects",
+          kind: "predicate",
+          text: "effects",
+        }),
+      ]),
+    );
+  });
+
+  it("keeps unsupported protection wording fail-closed with narrow report diagnostics", () => {
+    const sourceText =
+      "this Character cannot be removed from play by your opponent's effects";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-021C-PROTECTION-UNSUPPORTED-ZONE" as CardId,
+          sourceText,
+          sourceTextHash: "sha256:card-021c-protection-unsupported-zone",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+    const blocker = report.blockers.find(
+      (candidate) =>
+        candidate.cardId === "CARD-021C-PROTECTION-UNSUPPORTED-ZONE",
+    );
+
+    expect(blocker?.decomposition).toMatchObject({
+      recognizedActionCandidates: [sourceText],
+      recognizedSyntaxFragments: ["protection-components:v1"],
+      unsupportedSyntaxFragments: ["protection-fragment:unsupported"],
+    });
+    expect(blocker?.decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "protection:unsupported-field-zone:33-42",
+          kind: "destination",
+          span: { end: 42, start: 33, text: "from play" },
+          status: "unsupported",
+          text: "from play",
+        }),
+      ]),
+    );
+    expect(report.supportedCardIds).toEqual([]);
+  });
+
+  it("does not classify unrelated cannot-be text as field-removal protection", () => {
+    const sourceText = "This Character cannot be played this turn.";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-021C-NON-PROTECTION-DIAGNOSTIC" as CardId,
+          sourceText,
+          sourceTextHash: "sha256:card-021c-non-protection-diagnostic",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+    const blocker = report.blockers.find(
+      (candidate) => candidate.cardId === "CARD-021C-NON-PROTECTION-DIAGNOSTIC",
+    );
+
+    expect(blocker?.decomposition?.recognizedSyntaxFragments).not.toContain(
+      "protection-components:v1",
+    );
+    expect(blocker?.decomposition?.recognizedSyntaxFragments).not.toContain(
+      "protection:opponent-effect-field-removal",
+    );
+    expect(blocker?.decomposition?.unsupportedSyntaxFragments).not.toContain(
+      "protection-fragment:unsupported",
+    );
+  });
+
   it("keeps representative CARD-020C arbitrary-text probe samples decomposed and fail-closed", () => {
     const index = buildGeneratedSupportIndex({
       cards: [
