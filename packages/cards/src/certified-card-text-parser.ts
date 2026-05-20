@@ -29,7 +29,11 @@ import {
   toEffectId,
   type TriggeredDrawClauseOptions,
 } from "./composed-parser-builder.js";
-import { parseConditionalWrapper } from "./conditional-generated-support-composer.js";
+import {
+  buildConditionalContinuousCompositionClauseFromSource,
+  conditionalContinuousTrashCountParserRuleId,
+  parseConditionalWrapper,
+} from "./conditional-generated-support-composer.js";
 import type {
   GeneratedSupportParserResult,
   GeneratedSupportUnparsedSpan,
@@ -149,6 +153,11 @@ export function parseCertifiedCardText(
       sourceTextHash: input.sourceTextHash,
       unparsedSpans,
     });
+  }
+
+  const parserRuleIds = parsedClauses.map((clause) => clause.parserRuleId);
+  if (parserRuleIds.includes(conditionalContinuousTrashCountParserRuleId)) {
+    return completeParse(input, parsedClauses);
   }
 
   return buildUnsupportedWholeTextParseResult({
@@ -303,10 +312,14 @@ function parseCardLineEffectClause(
   sourceText: string,
 ): CertifiedClause | undefined {
   return (
+    parseConditionalContinuousCompositionClause(cardId, sourceText) ??
     parseNonConditionalCardLineEffectClause(cardId, sourceText) ??
     parseConditionalCardLineEffectClause(cardId, sourceText)
   );
 }
+
+const parseConditionalContinuousCompositionClause =
+  buildConditionalContinuousCompositionClauseFromSource;
 
 function parseNonConditionalCardLineEffectClause(
   cardId: CardId,

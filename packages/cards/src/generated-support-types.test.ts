@@ -234,6 +234,7 @@ describe("generated support parser result contracts", () => {
     expect(parserRuleIds).toEqual([
       "exact:condition:self-attached-don-count",
       "exact:condition:your-turn",
+      "exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character",
       "exact:keyword:banish:standalone",
       "exact:keyword:blocker:standalone",
       "exact:keyword:double-attack:standalone",

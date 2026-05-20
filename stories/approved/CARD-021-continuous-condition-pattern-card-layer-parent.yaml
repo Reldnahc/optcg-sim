@@ -13,10 +13,11 @@ summary: >
   Coordinate cards-layer parser, generated-support evidence, and probe/report
   diagnostics for reusable public trash-count conditions, conditional keyword
   grants, opponent-effect field-removal protection text, and composition with
-  existing On K.O. draw support without naming or targeting any real card.
+  existing On K.O. draw support, then promote the fully gated composition
+  through generated support without naming or targeting any real card.
 story_boundary: >
   Parent planning story only. Do not implement this parent directly. Implement
-  CARD-021A through CARD-021D one at a time after distinct parent and child
+  CARD-021A through CARD-021E one at a time after distinct parent and child
   story-review evidence exists. This parent owns cards-layer parser/component
   and generated-support gating work only; it must not add engine runtime
   behavior, shared contract/schema authority, fixture support, source hash
@@ -60,7 +61,9 @@ dependencies:
   - ENG-059C
   - ENG-059D
   - ENG-059E
+  - ENG-059F
   - TYP-012A
+  - TYP-012B
 child_stories:
   - id: CARD-021A
     title: Trash-count condition parser support
@@ -78,14 +81,19 @@ child_stories:
     title: Continuous condition composition diagnostics
     concern: Compose the new condition, keyword-grant, and protection components with existing line-separated On K.O. draw evidence using synthetic snippets and fail-closed support gates.
     depends_on: [CARD-021A, CARD-021B, CARD-021C]
+  - id: CARD-021E
+    title: Conditional continuous generated-support promotion
+    concern: Promote only fully gated conditional continuous composition parses into generated support while preserving independent On K.O. draw support and fail-closed diagnostics.
+    depends_on: [CARD-021D, TYP-012A, TYP-012B, ENG-056B, ENG-059F]
 scope:
-  - coordinate CARD-021A through CARD-021D as cards-layer children
+  - coordinate CARD-021A through CARD-021E as cards-layer children
   - require parser and generated-support work to decompose source text into reusable primitives rather than exact full-line templates
   - parse condition primitive shapes such as "If you have", "7 or more", "cards in your trash", and "cards in their trash" as generic public `trashCount` condition data where supported
   - parse keyword-grant primitive shapes such as target "this Character", grant verb "gains", and supported keyword tokens `[Blocker]`, `[Banish]`, `[Rush]`, `[Rush: Character]`, and `[Double Attack]`
   - parse field-removal protection primitive shapes such as protected object "this Character", removal process "removed from the field", source controller "opponent", and source kind "effects"
   - compose supported and diagnostic components under the same conditional wrapper only when parser boundaries are unambiguous
   - preserve existing line-separated On K.O. draw support and component evidence when the triggered line is independently supported
+  - promote complete conditional continuous composition generated support only after parser certification, schema validation, runtime capability evidence, support metadata, review state, tested state, source integrity, and behavior hash gates pass
   - require synthetic parser/probe/generated-support examples; synthetic card IDs may be obvious non-Poneglyph test IDs only
   - keep complete generated support fail-closed whenever parser certification, generated DSL schema validation, runtime capability evidence, generated-support bridge evidence, source integrity, metadata, review, or test evidence is missing
   - keep the human-held adjacent-card list completely outside story text, tests, fixtures, source-integrity evidence, and implementation authority
@@ -109,26 +117,31 @@ engine_capability_preflight:
   - ENG-059B is reusable runtime authority for conditional continuous grants of `blocker`, `banish`, `rush`, `rushCharacter`, and `doubleAttack`
   - ENG-059C and ENG-059E are reusable runtime authority for conditional opponent-effect field-removal protection modifiers
   - ENG-059D is synthetic runtime composition proof for the condition, keyword grant, protection, and On K.O. draw primitives
+  - TYP-012A provides field-removal protection contract/type authority for the protection component shape
+  - TYP-012B provides schema/type authorability for the conditional continuous composition DSL shape
+  - ENG-059F provides runtime capability evidence for implemented-DSL permanent continuous keyword/protection materialization
+  - ENG-056B provides existing On K.O. draw runtime authority
   - children must fail closed if the cards layer cannot truthfully represent, schema-validate, or capability-gate a generated DSL or support record for the continuous components
 acceptance_criteria:
   - CARD-021 is not implemented directly
-  - CARD-021A through CARD-021D are independently reviewable child stories
+  - CARD-021A through CARD-021E are independently reviewable child stories
   - parent and every child story-review artifact exists with distinct assignment identity and distinct durable artifact identity before approval handoff, packet generation, activation, implementation handoff, or PR handoff
   - parser/component support is primitive-driven and reusable across similar text
   - no implementation or test depends on real card IDs, the human-held adjacent-card list, exact full printed text, or one-off full-effect sentence branches
   - complete generated support remains unsupported unless the full generated-support chain passes, including parser certification, schema validation, runtime capability evidence, engine proof/test evidence, metadata, review, tested state, and source integrity
   - synthetic snippets demonstrate partial component recognition for adjacent patterns without promoting any real card
   - existing CARD-008 through CARD-020 generated-support behavior remains compatible
-  - parent PR cleanup metadata lists CARD-021A through CARD-021D and binds the non-packetized CARD-021 parent closeout after merge to main
+  - parent PR cleanup metadata lists CARD-021A through CARD-021E and binds the non-packetized CARD-021 parent closeout after merge to main
 required_tests:
   - story-review for CARD-021 parent before approval handoff
   - story-review for CARD-021A before approval handoff
   - story-review for CARD-021B before approval handoff
   - story-review for CARD-021C before approval handoff
   - story-review for CARD-021D before approval handoff
+  - story-review for CARD-021E before approval handoff
   - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
-  - story-specific tests from CARD-021A, CARD-021B, CARD-021C, and CARD-021D
-  - per-child reviewed commit evidence, AI review record, revision response, and verification evidence for CARD-021A through CARD-021D before parent PR handoff
+  - story-specific tests from CARD-021A, CARD-021B, CARD-021C, CARD-021D, and CARD-021E
+  - per-child reviewed commit evidence, AI review record, revision response, and verification evidence for CARD-021A through CARD-021E before parent PR handoff
   - role packet extraction output before each implementation handoff and before each code-review handoff
   - final parent PR full-story integration review covering all child commits, packet history, cleanup metadata, CI, verification, and unresolved comments before human-review handoff
   - run `corepack pnpm run stories:validate`
@@ -140,9 +153,9 @@ repo_rules:
   - do not activate or implement CARD-021 directly
   - generate and activate one CARD-021 child packet at a time
   - do not complete child packets until the parent branch lands on main
-  - keep CARD-021A through CARD-021D work on one parent integration branch with reviewed child commits
+  - keep CARD-021A through CARD-021E work on one parent integration branch with reviewed child commits
   - do not open child PRs to main; use one final parent PR to main
-  - parent PR cleanup metadata must list CARD-021A through CARD-021D and bind the non-packetized CARD-021 parent closeout
+  - parent PR cleanup metadata must list CARD-021A through CARD-021E and bind the non-packetized CARD-021 parent closeout
   - run role packet extraction before implementation and code-review handoffs
   - fail closed on any parser, schema, runtime capability, source integrity, metadata, review, test, or wording ambiguity that could accidentally mark unsupported text playable
 ambiguity_policy: fail_and_escalate

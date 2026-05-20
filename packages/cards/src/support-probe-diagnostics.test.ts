@@ -240,7 +240,7 @@ describe("support probe diagnostics", () => {
 
   it("prints CARD-021D synthetic composition diagnostics alongside existing On K.O. draw evidence", async () => {
     const effect =
-      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].\n[On K.O.] Draw 1 card.";
+      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Guard].\n[On K.O.] Draw 1 card.";
     const output: string[] = [];
 
     const exitCode = await runSupportProbe({
@@ -269,15 +269,10 @@ describe("support probe diagnostics", () => {
       "recognized condition candidate: you have 7 or more cards in your trash",
     );
     expect(text).toContain("recognized action candidate: cannot be removed");
-    expect(text).toContain("recognized keyword candidate: [Blocker]");
-    expect(text).toContain("recognized action candidate: gains");
-    expect(text).not.toContain("unsupported keyword blocker: gains");
-    expect(text).not.toContain("unsupported action blocker: gains [Blocker]");
-    expect(text).not.toContain(
-      "unsupported syntax blocker: keyword-grant-fragment:unsupported",
-    );
+    expect(text).toContain("unsupported keyword blocker: gains");
+    expect(text).toContain("unsupported action blocker: gains [Guard]");
     expect(text).toContain(
-      "unsupported syntax blocker: conditional-continuous-composition:schema-runtime-bridge-missing",
+      "unsupported syntax blocker: keyword-grant-fragment:unsupported",
     );
   });
 });

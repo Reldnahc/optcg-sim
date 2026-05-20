@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-021D.md",
-      "storyId": "CARD-021D",
-      "storyPath": "stories/approved/CARD-021D-continuous-condition-composition-diagnostics.yaml",
-      "storySha256": "cbef5b554c5ff66f88f4f42ef72f263bac175ccab60e86a5879247d47c1ed5bf"
+      "packetPath": "agent-packets/CARD-021E.md",
+      "storyId": "CARD-021E",
+      "storyPath": "stories/approved/CARD-021E-conditional-continuous-generated-support-promotion.yaml",
+      "storySha256": "d90ca447967f9e362196655fdcf2f97a1ed45dad83be2829e5f6050878bf5fcb"
     }
   ],
   "version": 1

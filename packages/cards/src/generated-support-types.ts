@@ -832,6 +832,31 @@ export const generatedSupportComponentEvidenceInventory = [
     shapeId: "keyword-banish",
   },
   {
+    components: [
+      "condition",
+      "sequence",
+      "keyword",
+      "restriction",
+      "source-presence-policy",
+      ...parserRuleBaseComponents,
+    ],
+    gates: {
+      ...parserRuleBaseGates,
+      schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
+    },
+    parserRuleId:
+      "exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character",
+    runtimeCapabilityIds: [
+      "category:permanent",
+      "trigger:permanent",
+      "effect:sequence:ordered",
+      "effect:giveKeyword:self:permanent:allowlisted",
+      "effect:giveProtection:fieldRemoval:thisCard:permanent",
+      "sourcePresencePolicy:mustRemainInSameZone",
+    ],
+    shapeId: "conditional-continuous-trash-count-keyword-grant-and-protection",
+  },
+  {
     components: ["sequence", ...parserRuleBaseComponents],
     gates: {
       ...parserRuleBaseGates,

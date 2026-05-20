@@ -89,7 +89,7 @@ describe("trash-count generated support", () => {
     },
   );
 
-  it("fails closed on schema validation for trash-count conditional blocks even when parser/composer succeed", () => {
+  it("keeps trash-count conditional blocks supported when schema validation passes", () => {
     const index = buildGeneratedSupportIndex({
       cards: [
         {
@@ -103,21 +103,23 @@ describe("trash-count generated support", () => {
     });
 
     expect(index.entries[0]).toMatchObject({
-      blockers: [
-        {
-          code: "invalid-dsl-schema",
-          message: "Generated DSL failed effect DSL schema validation.",
-        },
-      ],
+      blockers: [],
       cardId: "CARD-021A-TRASH-SCHEMA-BLOCKED",
       missingCapabilityIds: [],
       parseStatus: "complete",
-      status: "unsupported",
+      status: "supported",
     });
-    expect(index.entries[0]?.capabilityEvidence).toEqual([]);
+    expect(index.entries[0]?.capabilityEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          capabilityId: "condition:trashCount",
+          component: "condition-expression",
+        }),
+      ]),
+    );
   });
 
-  it("keeps schema-failure precedence for trash-count blocks even when condition:trashCount capability is removed", () => {
+  it("fails closed on missing condition:trashCount runtime capability", () => {
     const matrixWithoutTrashCount = {
       ...generatedSupportRuntimeCapabilityMatrix,
       capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
@@ -140,12 +142,13 @@ describe("trash-count generated support", () => {
     expect(index.entries[0]).toMatchObject({
       blockers: [
         {
-          code: "invalid-dsl-schema",
-          message: "Generated DSL failed effect DSL schema validation.",
+          capabilityId: "condition:trashCount",
+          code: "missing-runtime-capability",
+          component: "condition-expression",
         },
       ],
       cardId: "CARD-021A-TRASH-SCHEMA-BLOCKED-NO-CAP",
-      missingCapabilityIds: [],
+      missingCapabilityIds: ["condition:trashCount"],
       parseStatus: "complete",
       status: "unsupported",
     });

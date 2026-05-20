@@ -472,7 +472,7 @@ describe("generated support diagnostics", () => {
 
   it("reports two-line continuous composition diagnostics without losing On K.O. draw evidence", () => {
     const continuousLine =
-      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].";
+      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Guard].";
     const sourceText = `${continuousLine}\n[On K.O.] Draw 1 card.`;
     const index = buildGeneratedSupportIndex({
       cards: [
@@ -518,7 +518,6 @@ describe("generated support diagnostics", () => {
     expect(blocker?.decomposition).toMatchObject({
       recognizedActionCandidates: [
         "this Character cannot be removed from the field by your opponent's effects",
-        "gains [Blocker]",
       ],
       recognizedSyntaxFragments: [
         "if-conditional-wrapper",
@@ -526,10 +525,10 @@ describe("generated support diagnostics", () => {
         "conditional-body-conjunction:and",
         "protection-components:v1",
         "protection:opponent-effect-field-removal",
-        "keyword-grant-components:v1",
       ],
       unsupportedSyntaxFragments: [
-        "conditional-continuous-composition:schema-runtime-bridge-missing",
+        "keyword-grant-fragment:unsupported",
+        "conditional-continuous-composition:unsupported-body-fragment",
       ],
     });
     expect(blocker?.decomposition?.traceComponents).toEqual(
@@ -545,9 +544,9 @@ describe("generated support diagnostics", () => {
           text: "effects",
         }),
         expect.objectContaining({
-          id: "keyword-grant:keyword:blocker",
+          id: "keyword-grant:unsupported-target:0-5",
           kind: "keyword",
-          text: "[Blocker]",
+          text: "gains",
         }),
       ]),
     );
