@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Reopen the field-removal protection contract line for the missing Effect DSL
   authorability needed before downstream engine and card-support stories can

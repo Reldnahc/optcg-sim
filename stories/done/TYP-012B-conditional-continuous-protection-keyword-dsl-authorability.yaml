@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Reopen the TYP-012 field-removal protection line with the missing
   Effect DSL authorability needed for reusable conditional continuous
