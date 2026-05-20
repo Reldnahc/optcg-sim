@@ -291,19 +291,23 @@ function buildGeneratedSupportIndexEntry(
   });
 
   if (!isCompleteGeneratedSupportParseResult(parseResult)) {
+    const blockers = attachParserDiagnosticDecomposition(
+      parseResult.blockers,
+      card.sourceText,
+    );
+    const diagnosticParserRuleIds = collectDiagnosticParserRuleIds(blockers);
+    const parsedRuleIds =
+      "parsedRuleIds" in parseResult ? parseResult.parsedRuleIds : [];
+    const parserRuleIds = [
+      ...new Set([...parsedRuleIds, ...diagnosticParserRuleIds]),
+    ];
     return unsupportedEntry({
-      blockers: attachParserDiagnosticDecomposition(
-        parseResult.blockers,
-        card.sourceText,
-      ),
+      blockers,
       card,
       componentEvidenceIds:
-        "parsedComponentEvidenceIds" in parseResult
-          ? parseResult.parsedComponentEvidenceIds
-          : [],
+        listComponentEvidenceIdsForParserRuleIds(parserRuleIds),
       parseStatus: parseResult.status,
-      parserRuleIds:
-        "parsedRuleIds" in parseResult ? parseResult.parsedRuleIds : [],
+      parserRuleIds,
     });
   }
 
@@ -1017,4 +1021,24 @@ function toMissingRuntimeCapabilityBlocker(
 
 function toGeneratedEffectDefinitionId(cardId: CardId): string {
   return `${String(cardId).toLowerCase()}.generated-support`;
+}
+
+function collectDiagnosticParserRuleIds(
+  blockers: readonly GeneratedSupportBlocker[],
+): readonly string[] {
+  const ids = new Set<string>();
+  for (const blocker of blockers) {
+    for (const component of blocker.decomposition?.traceComponents ?? []) {
+      const componentId = component.id;
+      if (
+        component.kind === "condition" &&
+        component.status !== "unsupported" &&
+        componentId !== undefined &&
+        componentId.startsWith("condition:fieldCount:don:")
+      ) {
+        ids.add("condition-component:field-count-don-public");
+      }
+    }
+  }
+  return [...ids].sort();
 }

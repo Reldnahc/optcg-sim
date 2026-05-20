@@ -3,6 +3,7 @@ import type {
   GeneratedSupportDiagnosticTraceComponent,
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-types.js";
+import { toConditionConnectorId } from "./conditional-parser-id-helpers.js";
 
 export {
   deriveProtectionBodyDiagnosticDecomposition,
@@ -225,7 +226,7 @@ function parseConditionExpressionAtOffset(
           start: connector.connectorStart,
           text: connector.connector,
         },
-        id: toConnectorId(connector),
+        id: toConditionConnectorId(connector),
         left,
         right,
         span,
@@ -252,7 +253,7 @@ function parseConditionExpressionAtOffset(
       start: fallback.connectorStart,
       text: fallback.connector,
     },
-    id: toConnectorId(fallback),
+    id: toConditionConnectorId(fallback),
     left: parseConditionExpressionAtOffset(fallback.left, fallback.leftStart),
     right: parseConditionExpressionAtOffset(
       fallback.right,
@@ -751,7 +752,9 @@ function parseConditionComponent(
     );
   if (fieldCountMatch !== null) {
     const playerText = fieldCountMatch[1]?.toLowerCase();
-    const value = parseExactPositiveSafeInteger(fieldCountMatch[2] ?? "");
+    const valueText = fieldCountMatch[2] ?? "";
+    const value =
+      valueText === "0" ? 0 : parseExactPositiveSafeInteger(valueText);
     const comparatorText = fieldCountMatch[3]?.toLowerCase();
     const fieldOwnerText = fieldCountMatch[4]?.toLowerCase();
     if (
@@ -828,7 +831,6 @@ function parseExactPositiveSafeInteger(countText: string): number | undefined {
   if (countText !== String(count)) {
     return undefined;
   }
-
   return count;
 }
 
@@ -1067,8 +1069,4 @@ function toConditionComponentId(component: ParsedConditionComponent): string {
         ? `condition:fieldCount:don:${component.player}:${component.op}:${String(component.value)}`
         : `condition:${component.type}:${component.player}:${component.op}:${String(component.value)}`;
   }
-}
-
-function toConnectorId(candidate: ConnectorCandidate): string {
-  return `condition-connector:${candidate.connector}:${String(candidate.connectorStart)}-${String(candidate.connectorEnd)}`;
 }

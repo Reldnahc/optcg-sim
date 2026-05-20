@@ -120,6 +120,34 @@ describe("SUP-001E DON field-count condition card components", () => {
       id: "condition:fieldCount:don:opponent:lte:10",
       type: "supported",
     });
+    expect(
+      parseConditionExpression("you have 0 DON!! cards on your field"),
+    ).toMatchObject({
+      component: {
+        filter: { categories: ["don"] },
+        op: "eq",
+        player: "self",
+        type: "fieldCount",
+        value: 0,
+      },
+      id: "condition:fieldCount:don:self:eq:0",
+      type: "supported",
+    });
+    expect(
+      parseConditionExpression(
+        "your opponent has 0 or more DON!! cards on their field",
+      ),
+    ).toMatchObject({
+      component: {
+        filter: { categories: ["don"] },
+        op: "gte",
+        player: "opponent",
+        type: "fieldCount",
+        value: 0,
+      },
+      id: "condition:fieldCount:don:opponent:gte:0",
+      type: "supported",
+    });
   });
 
   it("emits supported diagnostics for DON field-count condition components", () => {
@@ -230,10 +258,14 @@ describe("SUP-001E DON field-count condition card components", () => {
     expect(report.supportedCardIds).toEqual([]);
     expect(report.unsupportedCardIds).toEqual(["SUP-001E-CONDITIONAL-DRAW"]);
     expect(report.statusByCardId["SUP-001E-CONDITIONAL-DRAW"]).toMatchObject({
-      componentEvidenceIds: [],
-      parserRuleIds: [],
+      componentEvidenceIds: ["condition-field-count-don-public"],
+      parserRuleIds: ["condition-component:field-count-don-public"],
       status: "unsupported",
     });
+    expect(
+      report.proofCertificatesByCardId["SUP-001E-CONDITIONAL-DRAW"]
+        ?.requiredRuntimeCapabilityIds,
+    ).toEqual(["condition:fieldCount:don:public"]);
     expect(report.blockers).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -265,6 +297,15 @@ describe("SUP-001E DON field-count condition card components", () => {
 
     expect(report.supportedCardIds).toEqual([]);
     expect(report.unsupportedCardIds).toEqual(["SUP-001E-UNSUPPORTED-BODY"]);
+    expect(report.statusByCardId["SUP-001E-UNSUPPORTED-BODY"]).toMatchObject({
+      componentEvidenceIds: ["condition-field-count-don-public"],
+      parserRuleIds: ["condition-component:field-count-don-public"],
+      status: "unsupported",
+    });
+    expect(
+      report.proofCertificatesByCardId["SUP-001E-UNSUPPORTED-BODY"]
+        ?.requiredRuntimeCapabilityIds,
+    ).toEqual(["condition:fieldCount:don:public"]);
     expect(blocker?.decomposition?.traceComponents).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
