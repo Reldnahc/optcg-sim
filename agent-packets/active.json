@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-001F.md",
-      "storyId": "SUP-001F",
-      "storyPath": "stories/approved/SUP-001F-conditional-opponent-power-modifier-card-components.yaml",
-      "storySha256": "6fb98442cefc75f842fffbd9a74a39eeb4ffbe971943d5c25ebc0c273ee8c104"
+      "packetPath": "agent-packets/SUP-001G.md",
+      "storyId": "SUP-001G",
+      "storyPath": "stories/approved/SUP-001G-don-minus-conditional-power-generated-support-promotion.yaml",
+      "storySha256": "1d9686eb2ef9516a045d7f1d6673a43667c76c75f3978b23a09b35c3c82a5205"
     }
   ],
   "version": 1
