@@ -43,6 +43,7 @@ import {
   getClauseParserRuleIds,
   getCompleteParserRuleIds,
 } from "./parser-rule-id-components.js";
+import { isCertifiedLineSeparatedEffectBlockComposition } from "./line-separated-composition.js";
 import { parseReturnDonCostWrapperResidueClause } from "./return-don-cost-wrapper-components.js";
 import {
   parseStandaloneBlockerClause,
@@ -65,7 +66,6 @@ export interface CertifiedCardTextParserInput {
   sourceText: string;
   sourceTextHash: string;
 }
-
 interface CertifiedLineParse {
   readonly clause?: CertifiedClause;
   readonly unparsedSpan?: GeneratedSupportUnparsedSpan;
@@ -412,20 +412,31 @@ function parseSupportedComposition(
   sourceText: string,
 ): readonly CertifiedClause[] | undefined {
   const lines = sourceText.split("\n");
-  if (lines.length !== 2) {
+  if (lines.length < 2) {
     return undefined;
   }
 
-  const onPlayClause = parseOnPlayDrawClause(cardId, lines[0] ?? "");
-  const whenAttackingClause = parseWhenAttackingDrawClause(
-    cardId,
-    lines[1] ?? "",
+  const clauses: CertifiedClause[] = [];
+  for (const line of lines) {
+    const clause =
+      parseCardLineEffectClause(cardId, line) ??
+      parseStandaloneBlockerClause(line) ??
+      parseStandaloneEngineKeywordClause(line);
+    if (clause === undefined) {
+      return undefined;
+    }
+    clauses.push(clause);
+  }
+
+  return isCertifiedLineSeparatedComposition(clauses) ? clauses : undefined;
+}
+
+function isCertifiedLineSeparatedComposition(
+  clauses: readonly CertifiedClause[],
+): boolean {
+  return isCertifiedLineSeparatedEffectBlockComposition(
+    clauses.map((clause) => clause.effectBlock),
   );
-  if (onPlayClause === undefined || whenAttackingClause === undefined) {
-    return undefined;
-  }
-
-  return [onPlayClause, whenAttackingClause];
 }
 
 function parseReusableCard016AClause(
