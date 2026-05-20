@@ -8,6 +8,7 @@ import type {
   GameState,
   PlayerId,
   PlayerState,
+  ResolvedCard,
   StateSeq,
 } from "@optcg/types";
 
@@ -17,6 +18,10 @@ import {
   detectPendingRuntimeWork,
   processEffectRuntime,
 } from "./effect-runtime.js";
+import {
+  deriveImplementedDslPermanentContinuousEffects,
+  hasCombatSafeImplementedDslDefinition,
+} from "./effect-runtime-continuous.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 import { hasUnsupportedSupportGateText } from "./battle-support.js";
@@ -180,6 +185,23 @@ const withIndexedZone = (
 const hasUnsupportedBoardCardSupport = (status: CardSupportStatus): boolean =>
   status !== "vanilla-confirmed";
 
+const isSupportedImplementedDslBoardCard = (
+  state: GameState,
+  card: CardInstance,
+  resolved: ResolvedCard,
+): boolean => {
+  if (resolved.support.status !== "implemented-dsl") return false;
+  if (card.zone.zone !== "leaderArea" && card.zone.zone !== "characterArea") {
+    return false;
+  }
+  const effectDefinitionId = resolved.support.effectDefinitionId;
+  return (
+    effectDefinitionId !== undefined &&
+    resolved.support.customHandlerIds === undefined &&
+    hasCombatSafeImplementedDslDefinition(state, effectDefinitionId)
+  );
+};
+
 const unsupportedStartOfMain = (
   state: GameState,
   details: unknown,
@@ -194,6 +216,7 @@ const findUnsupportedBoardCard = (
   state: GameState,
 ): { cardId: CardInstance["cardId"]; reason: string } | undefined => {
   const cards: CardInstance[] = [];
+  let firstImplementedDslCard: CardInstance | undefined;
   for (const player of Object.values(state.players)) {
     cards.push(player.leader, ...player.characters);
     if (player.stage !== undefined) {
@@ -205,6 +228,16 @@ const findUnsupportedBoardCard = (
     const resolved = state.cardManifest.cards[card.cardId];
     if (resolved === undefined) {
       return { cardId: card.cardId, reason: "missing-manifest" };
+    }
+    if (resolved.support.status === "implemented-dsl") {
+      if (!isSupportedImplementedDslBoardCard(state, card, resolved)) {
+        return {
+          cardId: card.cardId,
+          reason: "unsupported-implemented-dsl-support",
+        };
+      }
+      firstImplementedDslCard ??= card;
+      continue;
     }
     if (hasUnsupportedBoardCardSupport(resolved.support.status)) {
       return { cardId: card.cardId, reason: "non-vanilla-support-status" };
@@ -220,6 +253,17 @@ const findUnsupportedBoardCard = (
     }
     if (hasUnsupportedSupportGateText(resolved.triggerText, resolved)) {
       return { cardId: card.cardId, reason: "trigger-text-present" };
+    }
+  }
+  if (firstImplementedDslCard !== undefined) {
+    try {
+      deriveImplementedDslPermanentContinuousEffects(state);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        cardId: firstImplementedDslCard.cardId,
+        reason: `unsupported-implemented-dsl-materialization:${message}`,
+      };
     }
   }
   return undefined;

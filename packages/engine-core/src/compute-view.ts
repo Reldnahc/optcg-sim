@@ -15,6 +15,10 @@ import type {
 
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import {
+  deriveImplementedDslPermanentContinuousEffects,
+  hasCombatSafeImplementedDslDefinition,
+} from "./effect-runtime-continuous.js";
+import {
   fieldRemovalProtectionsForCard,
   isFieldRemovalProtectionModifier,
   isSupportedFieldRemovalProtectionModifier,
@@ -130,7 +134,8 @@ const continuousEffectConditionPasses = (
 };
 
 const assertSupportedContinuousEffects = (state: GameState): void => {
-  for (const effect of state.continuousEffects) {
+  const effects = allContinuousEffects(state);
+  for (const effect of effects) {
     if (isSupportedContinuousPowerModifier(effect)) continue;
     if (isSupportedFieldRemovalProtectionModifier(effect)) continue;
     if (isFieldRemovalProtectionModifier(effect)) {
@@ -236,8 +241,9 @@ const continuousPowerBonusForCard = (
   card: CardInstance,
 ): number => {
   let powerBonus = 0;
+  const effects = allContinuousEffects(state);
 
-  for (const effect of state.continuousEffects) {
+  for (const effect of effects) {
     if (!durationIsActive(state, effect)) continue;
     if (effect.condition !== undefined) continue;
     if (effect.modifier.layer !== "powerAdd") continue;
@@ -255,7 +261,8 @@ const hasRestriction = (
   card: CardInstance,
   restriction: "cannotAttack" | "cannotBlock",
 ): boolean => {
-  for (const effect of state.continuousEffects) {
+  const effects = allContinuousEffects(state);
+  for (const effect of effects) {
     if (!durationIsActive(state, effect)) continue;
     if (effect.condition !== undefined) continue;
     if (effect.modifier.layer !== "restriction") continue;
@@ -272,7 +279,8 @@ const continuousKeywordsForCard = (
   card: CardInstance,
 ): Keyword[] => {
   const keywords: Keyword[] = [];
-  for (const effect of state.continuousEffects) {
+  const effects = allContinuousEffects(state);
+  for (const effect of effects) {
     if (!durationIsActive(state, effect)) continue;
     if (!isSupportedContinuousKeywordModifier(effect)) continue;
     if (!continuousEffectConditionPasses(state, effect)) continue;
@@ -329,8 +337,18 @@ const resolveCombatMetadata = (
       `Unsupported support status ${resolved.support.status} for ${String(card.cardId)}.`,
     );
   }
-  if (
-    resolved.support.effectDefinitionId !== undefined ||
+  if (resolved.support.effectDefinitionId !== undefined) {
+    if (
+      !hasCombatSafeImplementedDslDefinition(
+        state,
+        resolved.support.effectDefinitionId,
+      )
+    ) {
+      throw new TypeError(
+        `Unsupported combat effect definition for ${String(card.cardId)}.`,
+      );
+    }
+  } else if (
     Object.values(state.cardManifest.effectDefinitions ?? {}).some(
       (definition) => definition.cardId === card.cardId,
     )
@@ -532,3 +550,9 @@ export const computeView = (state: GameState): ComputedGameView => {
     restrictions: {},
   };
 };
+const allContinuousEffects = (
+  state: GameState,
+): readonly ContinuousEffectRecord[] => [
+  ...state.continuousEffects,
+  ...deriveImplementedDslPermanentContinuousEffects(state),
+];

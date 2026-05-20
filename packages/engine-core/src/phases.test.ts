@@ -7,6 +7,7 @@ import { test } from "vitest";
 import type {
   CardId,
   CardInstance,
+  EffectDefinition,
   EngineEvent,
   EngineResult,
   MatchCardManifest,
@@ -93,6 +94,31 @@ const resolvedVanillaCard = (
     cardDataVersion: "fixture",
     sourceTextHash: "source-hash",
     behaviorHash: "behavior-hash",
+  },
+});
+
+const permanentBlockerDefinition = (cardId: CardId): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: "perm:blocker" as never,
+      category: "permanent",
+      trigger: { type: "permanent" },
+      effect: {
+        type: "giveKeyword",
+        target: { type: "self" },
+        keyword: "blocker",
+        duration: { type: "permanent" },
+      },
+    },
+  ],
+  metadata: {
+    sourceTextHash: "source-hash",
+    rulesVersion: "r1",
+    effectDefinitionsVersion: "fixture",
+    tested: true,
+    reviewer: "reviewer",
   },
 });
 
@@ -608,6 +634,109 @@ test("enterMainPhase rejects when on-board manifest card has triggerText", () =>
   const before = JSON.stringify(state);
 
   const result = enterMainPhase(state);
+  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
+  assert.equal(result.events.length, 0);
+  assert.equal(JSON.stringify(state), before);
+});
+
+test("enterMainPhase accepts reviewed implemented-dsl permanent continuous board card", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "implemented dsl source");
+  p1State.hand = p1State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index },
+  }));
+  p1State.characters = [
+    {
+      ...source,
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 0,
+      },
+      state: "active",
+      attachedDon: [],
+      turnPlayed: 0,
+    },
+  ];
+  state.cardManifest.cards[source.cardId] = {
+    ...resolvedVanillaCard(source.cardId, "character"),
+    effectText: "Permanent implemented DSL text.",
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:phase:blocker",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    "def:phase:blocker": permanentBlockerDefinition(source.cardId),
+  };
+
+  const result = enterMainPhase(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.turn.phase, "main");
+});
+
+test("enterMainPhase rejects stale implemented-dsl permanent continuous definition", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "implemented dsl source");
+  p1State.hand = p1State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index },
+  }));
+  p1State.characters = [
+    {
+      ...source,
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 0,
+      },
+      state: "active",
+      attachedDon: [],
+      turnPlayed: 0,
+    },
+  ];
+  state.cardManifest.cards[source.cardId] = {
+    ...resolvedVanillaCard(source.cardId, "character"),
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:phase:blocker",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    "def:phase:blocker": {
+      ...permanentBlockerDefinition(source.cardId),
+      metadata: {
+        ...permanentBlockerDefinition(source.cardId).metadata,
+        sourceTextHash: "stale-source-hash",
+      },
+    },
+  };
+  const before = JSON.stringify(state);
+
+  const result = enterMainPhase(state);
+
   assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
   assert.equal(result.events.length, 0);
   assert.equal(JSON.stringify(state), before);

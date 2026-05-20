@@ -5,6 +5,8 @@ import type {
   CardId,
   CardInstance,
   ContinuousEffectRecord,
+  EffectDefinition,
+  EffectDslFieldRemovalProtection,
   MatchCardManifest,
   MatchId,
   PlayerId,
@@ -12,6 +14,7 @@ import type {
 } from "@optcg/types";
 
 import { computeView } from "./compute-view.js";
+import { deriveImplementedDslPermanentContinuousEffects } from "./effect-runtime-continuous.js";
 import { createInitialState } from "./initial-state.js";
 
 const toMatchId = (value: string): MatchId => value as MatchId;
@@ -421,4 +424,381 @@ test("exact-card modifier fails closed when stored zone provenance mismatches", 
   ];
   const view = computeView(state);
   assert.equal(view.cards[c0.instanceId]?.currentPower, 3000);
+});
+
+const reviewedProtection = (): EffectDslFieldRemovalProtection => ({
+  process: "fieldRemoval",
+  fieldRemoval: {
+    processFamily: "fieldRemoval",
+    classification: "moveFromFieldToTrash",
+    sourceKind: "cardEffect",
+    sourceControllerRelation: "opponentControlled",
+    targetScope: "thisCard",
+    exclusions: {
+      battleKO: "excluded",
+      ruleProcessTrash: "excluded",
+      controllerCost: "excluded",
+      controllerOwnedEffect: "excluded",
+      ambiguousCustomRemoval: "failClosed",
+    },
+  },
+});
+
+const reviewedPermanentDefinition = (cardId: CardId): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: "perm:blocker+protection" as EffectDefinition["effects"][number]["id"],
+      category: "permanent",
+      trigger: { type: "permanent" },
+      condition: { type: "trashCount", player: "self", op: "gte", value: 7 },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "giveKeyword",
+              target: { type: "self" },
+              keyword: "blocker",
+              duration: { type: "permanent" },
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "giveProtection",
+              target: { type: "self" },
+              protection: reviewedProtection(),
+              duration: { type: "permanent" },
+            },
+          },
+        ],
+      },
+    },
+  ],
+  metadata: {
+    sourceTextHash: "source-hash",
+    rulesVersion: "r1",
+    effectDefinitionsVersion: "fixture",
+    tested: true,
+    reviewer: "reviewer",
+  },
+});
+
+const installPermanentDslCandidate = (
+  state: ReturnType<typeof createState>,
+  source: CardInstance,
+  definition: EffectDefinition,
+  supportOverrides?: Partial<
+    NonNullable<
+      ReturnType<typeof createState>["cardManifest"]["cards"][CardId]
+    >["support"]
+  >,
+): void => {
+  state.cardManifest.cards[source.cardId] = {
+    ...must(state.cardManifest.cards[source.cardId], "source card"),
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:perm:test",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+      ...supportOverrides,
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    "def:perm:test": definition,
+  };
+};
+
+const withoutReviewer = (
+  metadata: EffectDefinition["metadata"],
+): EffectDefinition["metadata"] => {
+  const { reviewer, ...rest } = metadata;
+  void reviewer;
+  return rest;
+};
+
+test("derives keyword and protection continuous records from one reviewed permanent sequence", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  state.cardManifest.cards[source.cardId] = {
+    ...must(state.cardManifest.cards[source.cardId], "source card"),
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:perm:1",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    "def:perm:1": reviewedPermanentDefinition(source.cardId),
+  };
+
+  const derived = deriveImplementedDslPermanentContinuousEffects(state);
+  assert.equal(derived.length, 2);
+  const first = must(derived[0], "first derived");
+  const second = must(derived[1], "second derived");
+  assert.equal(first.condition?.type, "trashCount");
+  assert.equal(second.condition?.type, "trashCount");
+  assert.equal(first.source.instanceId, source.instanceId);
+  assert.equal(second.source.instanceId, source.instanceId);
+});
+
+test("fails closed for unreviewed permanent metadata and unsupported keyword", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  state.cardManifest.cards[source.cardId] = {
+    ...must(state.cardManifest.cards[source.cardId], "source card"),
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:perm:bad",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  const invalid = reviewedPermanentDefinition(source.cardId);
+  invalid.metadata = withoutReviewer(invalid.metadata);
+  const seq = invalid.effects[0]?.effect;
+  if (seq?.type === "sequence") {
+    const first = seq.effects[0];
+    if (first?.effect.type === "giveKeyword") {
+      first.effect.keyword = "unblockable";
+    }
+  }
+  state.cardManifest.effectDefinitions = { "def:perm:bad": invalid };
+
+  assert.throws(
+    () => deriveImplementedDslPermanentContinuousEffects(state),
+    /Unsupported continuous effect/i,
+  );
+});
+
+test("fails closed for unreviewed permanent metadata", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  const definition = reviewedPermanentDefinition(source.cardId);
+  definition.metadata = withoutReviewer(definition.metadata);
+  installPermanentDslCandidate(state, source, definition);
+  assert.throws(
+    () => deriveImplementedDslPermanentContinuousEffects(state),
+    /stale or unreviewed definition/i,
+  );
+});
+
+test("fails closed for missing effectDefinitionId when implemented-dsl text indicates candidate permanent support", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  state.cardManifest.cards[source.cardId] = {
+    ...must(state.cardManifest.cards[source.cardId], "source card"),
+    effectText: "synthetic permanent effect text",
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  assert.throws(
+    () => deriveImplementedDslPermanentContinuousEffects(state),
+    /stale or missing support/i,
+  );
+});
+
+test("derived DSL continuous keyword is removed when source leaves field", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  const definition = reviewedPermanentDefinition(source.cardId);
+  const block = must(definition.effects[0], "permanent block");
+  delete block.condition;
+  block.effect = {
+    type: "giveKeyword",
+    target: { type: "self" },
+    keyword: "blocker",
+    duration: { type: "permanent" },
+  };
+  installPermanentDslCandidate(state, source, definition);
+  const withSource = computeView(state);
+  assert.equal(
+    withSource.cards[source.instanceId]?.keywords.includes("blocker"),
+    true,
+  );
+
+  p1State.characters = [];
+  p1State.trash.push({
+    ...source,
+    zone: { zone: "trash", playerId: p1, slot: "trash", index: 0 },
+  });
+  const withoutSource = computeView(state);
+  assert.equal(withoutSource.cards[source.instanceId], undefined);
+});
+
+test("fails closed for missing permanent definition", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  state.cardManifest.cards[source.cardId] = {
+    ...must(state.cardManifest.cards[source.cardId], "source card"),
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:missing",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitions = {};
+  assert.throws(
+    () => deriveImplementedDslPermanentContinuousEffects(state),
+    /missing effect definition/i,
+  );
+});
+
+test("fails closed for untested support metadata", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  installPermanentDslCandidate(
+    state,
+    source,
+    reviewedPermanentDefinition(source.cardId),
+    { tested: false },
+  );
+  assert.throws(
+    () => deriveImplementedDslPermanentContinuousEffects(state),
+    /stale or missing support/i,
+  );
+});
+
+test("fails closed for untested definition metadata", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  const definition = reviewedPermanentDefinition(source.cardId);
+  definition.metadata.tested = false;
+  installPermanentDslCandidate(state, source, definition);
+  assert.throws(
+    () => deriveImplementedDslPermanentContinuousEffects(state),
+    /stale or unreviewed definition/i,
+  );
+});
+
+test("fails closed for malformed protection metadata", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  const definition = reviewedPermanentDefinition(source.cardId);
+  const seq = definition.effects[0]?.effect;
+  if (seq?.type === "sequence") {
+    const second = seq.effects[1];
+    if (second?.effect.type === "giveProtection") {
+      second.effect.protection.fieldRemoval.sourceControllerRelation =
+        "unknownController";
+    }
+  }
+  installPermanentDslCandidate(state, source, definition);
+  assert.throws(
+    () => deriveImplementedDslPermanentContinuousEffects(state),
+    /malformed field-removal protection metadata/i,
+  );
+});
+
+test("fails closed for unsupported condition on permanent block", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  const definition = reviewedPermanentDefinition(source.cardId);
+  const block = definition.effects[0];
+  if (block !== undefined) {
+    block.condition = { type: "custom", check: "unsupported" };
+  }
+  installPermanentDslCandidate(state, source, definition);
+  assert.throws(
+    () => deriveImplementedDslPermanentContinuousEffects(state),
+    /unsupported condition/i,
+  );
+});
+
+test("fails closed for unsupported permanent shape", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  const definition = reviewedPermanentDefinition(source.cardId);
+  definition.effects[0] = {
+    ...must(definition.effects[0], "permanent block"),
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "ifYouDo",
+          effect: {
+            type: "giveKeyword",
+            target: { type: "self" },
+            keyword: "blocker",
+            duration: { type: "permanent" },
+          },
+        },
+      ],
+    },
+  };
+  installPermanentDslCandidate(state, source, definition);
+  assert.throws(
+    () => deriveImplementedDslPermanentContinuousEffects(state),
+    /unsupported permanent shape/i,
+  );
+});
+
+test("fails closed when definition mixes permanent block with unsupported non-permanent block", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  const definition = reviewedPermanentDefinition(source.cardId);
+  definition.effects.push({
+    id: "unsupported:onko:custom" as never,
+    category: "auto",
+    trigger: { type: "onKO" },
+    sourcePresencePolicy: "resolveFromDestinationZone",
+    effect: { type: "custom", handler: "unsupported-handler" },
+  });
+  installPermanentDslCandidate(state, source, definition);
+  assert.throws(
+    () => deriveImplementedDslPermanentContinuousEffects(state),
+    /unsupported permanent shape/i,
+  );
 });
