@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Reopen the conditional protection runtime line for the missing
   implemented-DSL materialization bridge needed after the reusable condition,

@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/ENG-059F.md",
-      "storyId": "ENG-059F",
-      "storyPath": "stories/approved/ENG-059F-implemented-dsl-continuous-modifier-materialization.yaml",
-      "storySha256": "af80d447372aaac6c4b96430191f1afc4aa09b4cf4cf1fbb55767f737740a6af"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

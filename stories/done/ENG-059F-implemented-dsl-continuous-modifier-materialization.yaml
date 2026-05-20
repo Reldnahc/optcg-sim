@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add the reusable engine bridge that consumes schema-authorable permanent
   continuous Effect DSL blocks and exposes the corresponding keyword-grant and
