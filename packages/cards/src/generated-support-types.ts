@@ -3,6 +3,11 @@ import type {
   GeneratedSupportDiagnosticDecomposition,
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-diagnostic-types.js";
+import {
+  returnDonCostWrapperComponentEvidenceId,
+  returnDonCostWrapperParserRuleId,
+  returnDonCostWrapperRuntimeCapabilityIds,
+} from "./return-don-cost-wrapper-components.js";
 
 export type {
   GeneratedSupportDiagnosticDecomposition,
@@ -446,6 +451,13 @@ export const generatedSupportComponentEvidenceInventory = [
       "trigger:onPlay",
     ],
     shapeId: "on-play-return-don-then-play-selected-character",
+  },
+  {
+    components: ["cost", ...parserRuleBaseComponents],
+    gates: parserRuleBaseGates,
+    parserRuleId: returnDonCostWrapperParserRuleId,
+    runtimeCapabilityIds: returnDonCostWrapperRuntimeCapabilityIds,
+    shapeId: returnDonCostWrapperComponentEvidenceId,
   },
   {
     components: [

@@ -1,4 +1,5 @@
 import { generatedSupportComponentEvidenceInventory } from "./generated-support-types.js";
+import { returnDonCostWrapperParserRuleId } from "./return-don-cost-wrapper-components.js";
 
 export type RuntimeCapabilityKind =
   | "category"
@@ -502,6 +503,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        returnDonCostWrapperParserRuleId,
       ],
     },
     {
@@ -514,6 +516,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        returnDonCostWrapperParserRuleId,
       ],
     },
     {
@@ -945,6 +948,7 @@ function classifyParserRuleKind(parserRuleId: string): string {
   }
   if (
     parserRuleId.includes("return-don") ||
+    parserRuleId === returnDonCostWrapperParserRuleId ||
     parserRuleId === "card014a:on-play:return-don-play-selected-character"
   ) {
     return "cost-hand-selection-play-selected";

@@ -38,6 +38,7 @@ import type {
   GeneratedSupportParserResult,
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-types.js";
+import { parseReturnDonCostWrapperResidueClause } from "./return-don-cost-wrapper-components.js";
 
 export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self";
 export const whenAttackingDrawNParserRuleId =
@@ -227,6 +228,7 @@ function parseFirstCardLineResidueClause(
 ): ParsedResidueClause | undefined {
   return (
     parseReusableCard016AResidueClause(cardId, line) ??
+    parseReturnDonCostWrapperResidueClause(line) ??
     parseCard014gResidueClause(cardId, line) ??
     parseTriggeredDrawResidueClause({
       cardId,

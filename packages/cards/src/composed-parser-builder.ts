@@ -22,6 +22,12 @@ import {
 } from "./conditional-parser-components.js";
 import { deriveConditionalContinuousCompositionDiagnosticDecomposition } from "./conditional-continuous-composition-diagnostics.js";
 import { listComponentEvidenceIdsForParserRuleIds } from "./generated-support-types.js";
+import {
+  deriveReturnDonCostWrapperDiagnosticDecomposition,
+  parseReturnDonCostWrapper,
+} from "./return-don-cost-wrapper-components.js";
+
+export { parseReturnDonCostWrapper } from "./return-don-cost-wrapper-components.js";
 
 export type SupportedTriggerWrapperParse = {
   readonly bodyText: string;
@@ -481,16 +487,16 @@ export function parseConditionedDrawInstructionBody(
 export function parseReturnDonPlaySelectedFromHandInstructionBody(
   sourceText: string,
 ): ReturnDonPlaySelectedFromHandParse | undefined {
-  const match =
-    /^DON!! -(\d+): Select up to 1 Character card from your hand and play it\.$/.exec(
-      sourceText,
-    );
-  if (match === null) {
+  const wrapper = parseReturnDonCostWrapper(sourceText);
+  if (
+    wrapper === undefined ||
+    wrapper.bodyText !==
+      "Select up to 1 Character card from your hand and play it."
+  ) {
     return undefined;
   }
 
-  const returnDonCount = parseExactPositiveSafeInteger(match[1] ?? "");
-  return returnDonCount === undefined ? undefined : { returnDonCount };
+  return { returnDonCount: wrapper.count };
 }
 
 export function parseSelectOpponentCharacterInstructionBody(
@@ -1008,6 +1014,15 @@ export function deriveParserDiagnosticDecomposition(
   fullSourceText: string,
 ): GeneratedSupportDiagnosticDecomposition | undefined {
   const normalized = text.trim();
+  const returnDonCostWrapperDiagnostic =
+    deriveReturnDonCostWrapperDiagnosticDecomposition(
+      normalized,
+      fullSourceText,
+    );
+  if (returnDonCostWrapperDiagnostic !== undefined) {
+    return returnDonCostWrapperDiagnostic;
+  }
+
   if (!isWholeSourceOrLine(normalized, fullSourceText)) {
     return undefined;
   }
