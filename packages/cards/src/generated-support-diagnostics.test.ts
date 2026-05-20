@@ -470,6 +470,189 @@ describe("generated support diagnostics", () => {
     );
   });
 
+  it("reports two-line continuous composition diagnostics without losing On K.O. draw evidence", () => {
+    const continuousLine =
+      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].";
+    const sourceText = `${continuousLine}\n[On K.O.] Draw 1 card.`;
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-021D-SYNTHETIC-COMPOSITION" as CardId,
+          sourceText,
+          sourceTextHash: "sha256:card-021d-synthetic-composition",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+    const blocker = report.blockers.find(
+      (candidate) => candidate.cardId === "CARD-021D-SYNTHETIC-COMPOSITION",
+    );
+
+    expect(report.supportedCardIds).toEqual([]);
+    expect(report.unsupportedCardIds).toEqual([
+      "CARD-021D-SYNTHETIC-COMPOSITION",
+    ]);
+    expect(report.statusByCardId["CARD-021D-SYNTHETIC-COMPOSITION"]).toEqual({
+      blockerCodes: ["unparsed-span"],
+      componentEvidenceIds: ["on-ko-draw"],
+      missingCapabilityIds: [],
+      parseStatus: "partial",
+      parserRuleIds: ["exact:on-ko:draw-n:self"],
+      status: "unsupported",
+    });
+    expect(report.unparsedSpans).toEqual([
+      {
+        cardId: "CARD-021D-SYNTHETIC-COMPOSITION",
+        end: continuousLine.length,
+        start: 0,
+        text: continuousLine,
+      },
+    ]);
+    expect(blocker).toMatchObject({
+      code: "unparsed-span",
+      layer: "parser",
+      span: { text: continuousLine },
+    });
+    expect(blocker?.decomposition).toMatchObject({
+      recognizedActionCandidates: [
+        "this Character cannot be removed from the field by your opponent's effects",
+        "gains [Blocker]",
+      ],
+      recognizedSyntaxFragments: [
+        "if-conditional-wrapper",
+        "condition-components:v1",
+        "conditional-body-conjunction:and",
+        "protection-components:v1",
+        "protection:opponent-effect-field-removal",
+        "keyword-grant-components:v1",
+      ],
+      unsupportedSyntaxFragments: [
+        "conditional-continuous-composition:schema-runtime-bridge-missing",
+      ],
+    });
+    expect(blocker?.decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "condition:trashCount:self:gte:7",
+          kind: "condition",
+          text: "you have 7 or more cards in your trash",
+        }),
+        expect.objectContaining({
+          id: "protection:source-kind:effects",
+          kind: "predicate",
+          text: "effects",
+        }),
+        expect.objectContaining({
+          id: "keyword-grant:keyword:blocker",
+          kind: "keyword",
+          text: "[Blocker]",
+        }),
+      ]),
+    );
+
+    const certificate =
+      report.proofCertificatesByCardId["CARD-021D-SYNTHETIC-COMPOSITION"];
+    expect(certificate).toMatchObject({
+      componentEvidenceIds: ["on-ko-draw"],
+      finalPlayableDecision: "no",
+      parserRuleIds: ["exact:on-ko:draw-n:self"],
+    });
+    expect(certificate?.chain).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ layer: "source-hash", status: "passed" }),
+        expect.objectContaining({ layer: "behavior-hash", status: "missing" }),
+        expect.objectContaining({
+          layer: "parse-completeness",
+          status: "failed",
+        }),
+        expect.objectContaining({
+          layer: "parser-rule-certification",
+          status: "passed",
+        }),
+        expect.objectContaining({
+          layer: "generated-dsl-schema",
+          status: "unavailable",
+        }),
+        expect.objectContaining({
+          layer: "support-metadata",
+          status: "missing",
+        }),
+        expect.objectContaining({ layer: "review-state", status: "missing" }),
+        expect.objectContaining({ layer: "tested-state", status: "missing" }),
+        expect.objectContaining({
+          layer: "final-playable-decision",
+          status: "failed",
+        }),
+      ]),
+    );
+  });
+
+  it("keeps standalone On K.O. draw generated support unchanged", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-021D-SYNTHETIC-ON-KO-DRAW" as CardId,
+          sourceText: "[On K.O.] Draw 1 card.",
+          sourceTextHash: "sha256:card-021d-synthetic-on-ko-draw",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.supportedCardIds).toEqual(["CARD-021D-SYNTHETIC-ON-KO-DRAW"]);
+    expect(report.statusByCardId["CARD-021D-SYNTHETIC-ON-KO-DRAW"]).toEqual({
+      blockerCodes: [],
+      componentEvidenceIds: ["on-ko-draw"],
+      missingCapabilityIds: [],
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-ko:draw-n:self"],
+      status: "supported",
+    });
+  });
+
+  it("fails CARD-021D synthetic composition source-integrity gates before parser promotion", () => {
+    const sourceText =
+      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-021D-SYNTHETIC-STALE-SOURCE" as CardId,
+          expectedSourceTextHash: "sha256:card-021d-reviewed-source",
+          sourceText,
+          sourceTextHash: "sha256:card-021d-changed-source",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.statusByCardId["CARD-021D-SYNTHETIC-STALE-SOURCE"]).toEqual({
+      blockerCodes: ["stale-hash"],
+      componentEvidenceIds: [],
+      missingCapabilityIds: [],
+      parseStatus: "staleHash",
+      parserRuleIds: [],
+      status: "unsupported",
+    });
+    expect(
+      report.proofCertificatesByCardId["CARD-021D-SYNTHETIC-STALE-SOURCE"]
+        ?.chain,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ layer: "source-hash", status: "failed" }),
+        expect.objectContaining({
+          layer: "final-playable-decision",
+          status: "failed",
+        }),
+      ]),
+    );
+  });
+
   it("keeps representative CARD-020C arbitrary-text probe samples decomposed and fail-closed", () => {
     const index = buildGeneratedSupportIndex({
       cards: [

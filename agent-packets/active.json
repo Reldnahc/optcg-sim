@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-021C.md",
-      "storyId": "CARD-021C",
-      "storyPath": "stories/approved/CARD-021C-opponent-effect-field-removal-protection-text-components.yaml",
-      "storySha256": "c5764c5da57c60173b68692b3e5c26bfdd2ff307abb5c805f2584319543ee24e"
+      "packetPath": "agent-packets/CARD-021D.md",
+      "storyId": "CARD-021D",
+      "storyPath": "stories/approved/CARD-021D-continuous-condition-composition-diagnostics.yaml",
+      "storySha256": "cbef5b554c5ff66f88f4f42ef72f263bac175ccab60e86a5879247d47c1ed5bf"
     }
   ],
   "version": 1

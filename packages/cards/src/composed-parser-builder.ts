@@ -20,6 +20,7 @@ import {
   deriveConditionalDiagnosticDecomposition,
   deriveProtectionBodyDiagnosticDecomposition,
 } from "./conditional-parser-components.js";
+import { deriveConditionalContinuousCompositionDiagnosticDecomposition } from "./conditional-continuous-composition-diagnostics.js";
 import { listComponentEvidenceIdsForParserRuleIds } from "./generated-support-types.js";
 
 export type SupportedTriggerWrapperParse = {
@@ -1007,15 +1008,28 @@ export function deriveParserDiagnosticDecomposition(
   fullSourceText: string,
 ): GeneratedSupportDiagnosticDecomposition | undefined {
   const normalized = text.trim();
-  if (normalized !== fullSourceText.trim()) {
+  if (!isWholeSourceOrLine(normalized, fullSourceText)) {
     return undefined;
   }
 
   return (
+    deriveConditionalContinuousCompositionDiagnosticDecomposition(normalized) ??
     deriveConditionalDiagnosticDecomposition(normalized) ??
     deriveProtectionBodyDiagnosticDecomposition(normalized) ??
     deriveBottomDeckDiagnosticDecomposition(normalized)
   );
+}
+
+function isWholeSourceOrLine(text: string, fullSourceText: string): boolean {
+  const normalizedFullSourceText = fullSourceText.trim();
+  if (text === normalizedFullSourceText) {
+    return true;
+  }
+
+  return normalizedFullSourceText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .includes(text);
 }
 
 function deriveBottomDeckDiagnosticDecomposition(
