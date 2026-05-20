@@ -238,7 +238,7 @@ describe("SUP-001E DON field-count condition card components", () => {
     expect(hasRuntimeCapability("condition:fieldCount:private")).toBe(false);
   });
 
-  it("keeps DON field-count conditional draw recognition fail-closed until generated support promotion", () => {
+  it("composes DON field-count conditions with supported conditional draw bodies", () => {
     const sourceText =
       "[On Play] If you have 6 or less DON!! cards on your field, draw 1 card.";
     const index = buildGeneratedSupportIndex({
@@ -254,26 +254,27 @@ describe("SUP-001E DON field-count condition card components", () => {
     });
     const report = buildGeneratedSupportReport(index);
 
-    expect(index.effectDefinitions).toEqual({});
-    expect(report.supportedCardIds).toEqual([]);
-    expect(report.unsupportedCardIds).toEqual(["SUP-001E-CONDITIONAL-DRAW"]);
+    expect(Object.keys(index.effectDefinitions)).toEqual([
+      "sup-001e-conditional-draw.generated-support",
+    ]);
+    expect(report.supportedCardIds).toEqual(["SUP-001E-CONDITIONAL-DRAW"]);
+    expect(report.unsupportedCardIds).toEqual([]);
     expect(report.statusByCardId["SUP-001E-CONDITIONAL-DRAW"]).toMatchObject({
-      componentEvidenceIds: ["condition-field-count-don-public"],
-      parserRuleIds: ["condition-component:field-count-don-public"],
-      status: "unsupported",
+      componentEvidenceIds: ["on-play-draw"],
+      parserRuleIds: ["exact:on-play:draw-n:self"],
+      status: "supported",
     });
     expect(
       report.proofCertificatesByCardId["SUP-001E-CONDITIONAL-DRAW"]
         ?.requiredRuntimeCapabilityIds,
-    ).toEqual(["condition:fieldCount:don:public"]);
-    expect(report.blockers).toEqual(
+    ).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          cardId: "SUP-001E-CONDITIONAL-DRAW",
-          code: "unparsed-span",
-        }),
+        "condition:fieldCount:don:public",
+        "effect:draw:self:count:positive-safe-integer",
+        "trigger:onPlay",
       ]),
     );
+    expect(report.blockers).toEqual([]);
   });
 
   it("reports DON field-count condition diagnostics while unsupported bodies remain unplayable", () => {

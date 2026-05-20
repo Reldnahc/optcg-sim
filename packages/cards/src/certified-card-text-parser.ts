@@ -1,6 +1,5 @@
 import type {
   CardId,
-  Condition,
   Effect,
   EffectBlock,
   SelectedTargetsRequest,
@@ -33,7 +32,6 @@ import {
 import {
   buildConditionalContinuousCompositionClauseFromSource,
   conditionalContinuousTrashCountParserRuleId,
-  hasPublicDonFieldCountCondition,
   parseConditionalWrapper,
 } from "./conditional-generated-support-composer.js";
 import { parseOnPlayReturnDonDrawClause } from "./don-minus-draw-components.js";
@@ -377,19 +375,6 @@ function parseConditionalCardLineEffectClause(
   if (base.effectBlock.condition !== undefined) {
     return undefined;
   }
-  if (
-    isExactPublicDonFieldCountCondition(conditional.condition) &&
-    base.parserRuleId !== "exact:when-attacking:modify-power:choose:this-turn"
-  ) {
-    return undefined;
-  }
-  if (
-    base.parserRuleId ===
-      "exact:when-attacking:modify-power:choose:this-turn" &&
-    !isExactPublicDonFieldCountCondition(conditional.condition)
-  ) {
-    return undefined;
-  }
 
   const parserRuleId =
     base.parserRuleId === "exact:when-attacking:modify-power:choose:this-turn"
@@ -399,7 +384,6 @@ function parseConditionalCardLineEffectClause(
     parserRuleId ===
     "exact:when-attacking:conditional:modify-power:choose:this-turn"
       ? ([
-          "condition-component:field-count-don-public",
           "exact:when-attacking:conditional:modify-power:choose:this-turn",
         ] as const)
       : base.parserRuleIds;
@@ -1079,11 +1063,4 @@ function resolveImplementationStatus(clauses: readonly CertifiedClause[]) {
     )
     ? "vanilla-confirmed"
     : "implemented-dsl";
-}
-
-function isExactPublicDonFieldCountCondition(condition: Condition): boolean {
-  return (
-    condition.type === "fieldCount" &&
-    hasPublicDonFieldCountCondition(condition)
-  );
 }

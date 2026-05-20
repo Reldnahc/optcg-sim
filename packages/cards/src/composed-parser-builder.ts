@@ -565,12 +565,17 @@ export function parseContinuousModifierInstructionBody(
   const match =
     /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) gets? ([+\-−]\d+) power during (this turn|this battle)\.$/.exec(
       sourceText,
+    ) ??
+    /^(Give up to 1 of your opponent's Characters) ([+\-−]\d+) power during (this turn)\.$/.exec(
+      sourceText,
     );
   if (match === null) {
     return undefined;
   }
 
-  const target = parsePublicFieldTargetSubject(match[1] ?? "");
+  const target = parsePublicFieldTargetSubject(
+    (match[1] ?? "").replace(/^Give up to 1/, "Up to 1"),
+  );
   const value = parseSignedSafeInteger(match[2] ?? "");
   const duration = parseDuration(match[3] ?? "");
   if (target === undefined || value === undefined || duration === undefined) {

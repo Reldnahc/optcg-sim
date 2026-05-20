@@ -61,6 +61,29 @@ describe("SUP-001F conditional opponent power modifier card components", () => {
       sourceText:
         "[When Attacking] If your opponent has 2 or more DON!! cards on their field, up to 1 of your opponent's Characters gets -2000 power during this turn.",
     },
+    {
+      expectedCondition: {
+        op: "gte",
+        player: "self",
+        type: "trashCount",
+        value: 10,
+      },
+      expectedPower: -2000,
+      sourceText:
+        "[When Attacking] If you have 10 or more cards in your trash, give up to 1 of your opponent's Characters −2000 power during this turn.",
+    },
+    {
+      expectedCondition: {
+        conditions: [
+          { op: "gte", player: "self", type: "leaderColorCount", value: 2 },
+          { op: "gte", player: "self", type: "trashCount", value: 10 },
+        ],
+        type: "and",
+      },
+      expectedPower: -1000,
+      sourceText:
+        "[When Attacking] If your Leader is multicolored and you have 10 or more cards in your trash, give up to 1 of your opponent's Characters -1000 power during this turn.",
+    },
   ] as const)(
     "parses supported conditional When Attacking modifier path (%s)",
     ({
@@ -83,7 +106,6 @@ describe("SUP-001F conditional opponent power modifier card components", () => {
       }
 
       expect(parsed.parserRuleIds).toEqual([
-        "condition-component:field-count-don-public",
         "exact:when-attacking:conditional:modify-power:choose:this-turn",
       ]);
       expect(parsed.effectDefinition.effects).toEqual([
@@ -141,11 +163,9 @@ describe("SUP-001F conditional opponent power modifier card components", () => {
     expect(report.supportedCardIds).toEqual(["SUP-001F-EVIDENCE"]);
     expect(report.statusByCardId["SUP-001F-EVIDENCE"]).toMatchObject({
       componentEvidenceIds: [
-        "condition-field-count-don-public",
         "when-attacking-conditional-modify-power-choose-this-turn",
       ],
       parserRuleIds: [
-        "condition-component:field-count-don-public",
         "exact:when-attacking:conditional:modify-power:choose:this-turn",
       ],
       status: "supported",
@@ -215,44 +235,12 @@ describe("SUP-001F conditional opponent power modifier card components", () => {
       effectDefinitionsVersion: "effects-v1",
       rulesVersion: "rules-v1",
       sourceText:
-        "[When Attacking] If this Character has 1 or more DON!! cards attached, up to 1 of your opponent's Characters gets -1000 power during this turn.",
+        "[When Attacking] If you and your opponent have 10 or more cards in your trash, up to 1 of your opponent's Characters gets -1000 power during this turn.",
       sourceTextHash: "sha256:sup-001f-bad-condition",
     });
 
     expect(parsed.status).toBe("partial");
   });
-
-  it.each([
-    "[When Attacking] If your Leader is multicolored and you have 6 or less DON!! cards on your field, up to 1 of your opponent's Characters gets -1000 power during this turn.",
-    "[When Attacking] If your Leader is multicolored or you have 6 or less DON!! cards on your field, up to 1 of your opponent's Characters gets -1000 power during this turn.",
-    "[When Attacking] If you have 6 or less DON!! cards on your field and your opponent has 2 or more DON!! cards on their field, up to 1 of your opponent's Characters gets -1000 power during this turn.",
-  ])(
-    "fails closed when condition is not exactly one public DON field-count predicate (%s)",
-    (sourceText) => {
-      const parsed = parseCertifiedCardText({
-        cardId: "SUP-001F-CONDITION-BOUNDARY" as CardId,
-        effectDefinitionsVersion: "effects-v1",
-        rulesVersion: "rules-v1",
-        sourceText,
-        sourceTextHash: "sha256:sup-001f-condition-boundary",
-      });
-
-      expect(parsed.status).toBe("partial");
-
-      const index = buildGeneratedSupportIndex({
-        cards: [
-          {
-            ...baseInput,
-            cardId: "SUP-001F-CONDITION-BOUNDARY" as CardId,
-            sourceText,
-            sourceTextHash: "sha256:sup-001f-condition-boundary",
-          },
-        ],
-        validateEffectDefinition,
-      });
-      expect(index.entries[0]?.status).toBe("unsupported");
-    },
-  );
 
   it("fails closed when runtime capability evidence is missing", () => {
     const matrixWithoutModifyPowerChoose = {
@@ -349,7 +337,6 @@ describe("SUP-001F conditional opponent power modifier card components", () => {
     expect(text).toContain(
       "when-attacking-conditional-modify-power-choose-this-turn",
     );
-    expect(text).toContain("condition-field-count-don-public");
     expect(text).toContain("modifyPower:choose:thisTurn");
     expect(text).toContain("modifyPower:choose:thisTurn:zeroChoiceBranch");
     expect(text).toContain("condition:fieldCount:don:public");

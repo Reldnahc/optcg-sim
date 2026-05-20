@@ -22,7 +22,6 @@ export const sup001fConditionalModifyPowerComponentEvidenceInventoryEntry = {
     "exact:when-attacking:conditional:modify-power:choose:this-turn",
   runtimeCapabilityIds: [
     "category:auto",
-    "condition:fieldCount:don:public",
     "modifyPower:choose:thisTurn",
     "modifyPower:choose:thisTurn:zeroChoiceBranch",
     "sourcePresencePolicy:mustRemainInSameZone",
