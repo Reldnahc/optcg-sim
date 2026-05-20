@@ -214,6 +214,15 @@ const isSupportedDonFieldCountFilter = (
   ) {
     return false;
   }
+  const stateValue = filter.state as unknown;
+  if (
+    stateValue !== undefined &&
+    stateValue !== "active" &&
+    stateValue !== "rested" &&
+    stateValue !== "attached"
+  ) {
+    return false;
+  }
   return true;
 };
 
