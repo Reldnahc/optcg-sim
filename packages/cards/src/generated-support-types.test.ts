@@ -233,6 +233,7 @@ describe("generated support parser result contracts", () => {
       .sort();
     expect(parserRuleIds).toEqual([
       "component:cost:return-don:self:count-exact",
+      "condition-component:field-count-don-public",
       "exact:condition:self-attached-don-count",
       "exact:condition:your-turn",
       "exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character",

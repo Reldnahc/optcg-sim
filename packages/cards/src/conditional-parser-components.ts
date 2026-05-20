@@ -51,6 +51,15 @@ export type ParsedConditionComponent =
     }
   | {
       readonly op: "eq" | "gte" | "lte";
+      readonly filter: {
+        readonly categories: readonly ["don"];
+      };
+      readonly player: "self" | "opponent";
+      readonly type: "fieldCount";
+      readonly value: number;
+    }
+  | {
+      readonly op: "eq" | "gte" | "lte";
       readonly player: "self" | "opponent";
       readonly type: "trashCount";
       readonly value: number;
@@ -180,6 +189,15 @@ function parseConditionExpressionAtOffset(
       span,
       text: normalized,
       type: "supported",
+    };
+  }
+
+  if (/^you and your opponent\b/i.test(normalized)) {
+    return {
+      id: `condition:unsupported:${String(absoluteStart)}-${String(absoluteEnd)}`,
+      span,
+      text: normalized,
+      type: "unsupported-fragment",
     };
   }
 
@@ -624,7 +642,7 @@ function parseConditionConnectorCandidates(
     if (
       left.length === 0 ||
       right.length === 0 ||
-      /^(more|less)\b/i.test(right)
+      /^(fewer|less|more)\b/i.test(right)
     ) {
       continue;
     }
@@ -723,6 +741,42 @@ function parseConditionComponent(
       op: comparatorText === "more" ? "gte" : "lte",
       player: playerText === "you" ? "self" : "opponent",
       type: zoneText === "life cards" ? "lifeCount" : "handCount",
+      value,
+    };
+  }
+
+  const fieldCountMatch =
+    /^(you|your opponent) (?:have|has) (\d+)(?: or (more|less))? DON!! cards on (your|their) field$/i.exec(
+      sourceText,
+    );
+  if (fieldCountMatch !== null) {
+    const playerText = fieldCountMatch[1]?.toLowerCase();
+    const value = parseExactPositiveSafeInteger(fieldCountMatch[2] ?? "");
+    const comparatorText = fieldCountMatch[3]?.toLowerCase();
+    const fieldOwnerText = fieldCountMatch[4]?.toLowerCase();
+    if (
+      value === undefined ||
+      (playerText !== "you" && playerText !== "your opponent") ||
+      (fieldOwnerText !== "your" && fieldOwnerText !== "their") ||
+      (comparatorText !== undefined &&
+        comparatorText !== "more" &&
+        comparatorText !== "less") ||
+      (playerText === "you" && fieldOwnerText !== "your") ||
+      (playerText === "your opponent" && fieldOwnerText !== "their")
+    ) {
+      return undefined;
+    }
+
+    return {
+      filter: { categories: ["don"] },
+      op:
+        comparatorText === "more"
+          ? "gte"
+          : comparatorText === "less"
+            ? "lte"
+            : "eq",
+      player: playerText === "you" ? "self" : "opponent",
+      type: "fieldCount",
       value,
     };
   }
@@ -1007,8 +1061,11 @@ function toConditionComponentId(component: ParsedConditionComponent): string {
       return `condition:leaderAttribute:${component.filter.attributesAny[0]}`;
     case "handCount":
     case "lifeCount":
+    case "fieldCount":
     case "trashCount":
-      return `condition:${component.type}:${component.player}:${component.op}:${String(component.value)}`;
+      return component.type === "fieldCount"
+        ? `condition:fieldCount:don:${component.player}:${component.op}:${String(component.value)}`
+        : `condition:${component.type}:${component.player}:${component.op}:${String(component.value)}`;
   }
 }
 

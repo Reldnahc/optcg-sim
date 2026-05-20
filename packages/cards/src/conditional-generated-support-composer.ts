@@ -1,4 +1,4 @@
-import type { CardId, Effect, EffectBlock } from "@optcg/types";
+import type { CardId, Condition, Effect, EffectBlock } from "@optcg/types";
 
 import {
   deriveConditionalConditionDiagnostics,
@@ -134,6 +134,48 @@ export function buildConditionalContinuousCompositionClauseFromSource(
   return parsed === undefined
     ? undefined
     : buildConditionalContinuousCompositionClause(cardId, parsed);
+}
+
+export function hasPublicDonFieldCountCondition(condition: Condition): boolean {
+  switch (condition.type) {
+    case "fieldCount":
+      return isPublicDonFieldCountCondition(condition);
+    case "and":
+    case "or":
+      return condition.conditions.some((child) =>
+        hasPublicDonFieldCountCondition(child),
+      );
+    case "not":
+      return hasPublicDonFieldCountCondition(condition.condition);
+    case "attackTarget":
+    case "attachedDonCount":
+    case "cardState":
+    case "custom":
+    case "donCount":
+    case "eventPayload":
+    case "handCount":
+    case "hasCardInZone":
+    case "leaderColorCount":
+    case "lifeCount":
+    case "opponentTurn":
+    case "sourceStillInZone":
+    case "trashCount":
+    case "yourTurn":
+      return false;
+  }
+}
+
+function isPublicDonFieldCountCondition(
+  condition: Extract<Condition, { type: "fieldCount" }>,
+): boolean {
+  const filter = condition.filter;
+  return (
+    (condition.player === "self" || condition.player === "opponent") &&
+    filter !== undefined &&
+    Object.keys(filter).length === 1 &&
+    filter.categories?.length === 1 &&
+    filter.categories[0] === "don"
+  );
 }
 
 function isSupportedConditionalContinuousTrashCountCondition(
@@ -275,6 +317,14 @@ function toDslConditionComponent(
         player: component.player,
         type: "hasCardInZone",
         zone: component.zone,
+      };
+    case "fieldCount":
+      return {
+        filter: { categories: ["don"] },
+        op: component.op,
+        player: component.player,
+        type: "fieldCount",
+        value: component.value,
       };
     case "handCount":
     case "lifeCount":

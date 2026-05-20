@@ -32,6 +32,7 @@ import {
 import {
   buildConditionalContinuousCompositionClauseFromSource,
   conditionalContinuousTrashCountParserRuleId,
+  hasPublicDonFieldCountCondition,
   parseConditionalWrapper,
 } from "./conditional-generated-support-composer.js";
 import { parseOnPlayReturnDonDrawClause } from "./don-minus-draw-components.js";
@@ -44,6 +45,12 @@ import {
   getCompleteParserRuleIds,
 } from "./parser-rule-id-components.js";
 import { parseReturnDonCostWrapperResidueClause } from "./return-don-cost-wrapper-components.js";
+import {
+  parseStandaloneBlockerClause,
+  parseStandaloneBlockerResidueClause,
+  parseStandaloneEngineKeywordClause,
+  parseStandaloneEngineKeywordResidueClause,
+} from "./standalone-keyword-parser.js";
 
 export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self";
 export const whenAttackingDrawNParserRuleId =
@@ -366,6 +373,9 @@ function parseConditionalCardLineEffectClause(
     return undefined;
   }
   if (base.effectBlock.condition !== undefined) {
+    return undefined;
+  }
+  if (hasPublicDonFieldCountCondition(conditional.condition)) {
     return undefined;
   }
 
@@ -830,56 +840,6 @@ function parseDrawThenTrashClauseWithPrefix({
   });
 }
 
-const blockerReminderText =
-  "(After your opponent declares an attack, you may rest this card to make it the new target of the attack.)";
-const standaloneBlockerSourceText = "[Blocker]";
-const standaloneBlockerWithReminderSourceText = `${standaloneBlockerSourceText} ${blockerReminderText}`;
-const standaloneEngineKeywordDefinitions = [
-  [
-    "exact:keyword:rush:standalone",
-    "[Rush]",
-    "(This card can attack on the turn in which it is played.)",
-  ],
-  [
-    "exact:keyword:rush-character:standalone",
-    "[Rush: Character]",
-    "(This card can attack Characters on the turn in which it is played.)",
-  ],
-  [
-    "exact:keyword:double-attack:standalone",
-    "[Double Attack]",
-    "(This card deals 2 damage.)",
-  ],
-  [
-    "exact:keyword:banish:standalone",
-    "[Banish]",
-    "(When this card deals damage, the target card is trashed without activating its Trigger.)",
-  ],
-] as const;
-
-function parseStandaloneBlockerClause(sourceText: string) {
-  return sourceText === standaloneBlockerSourceText ||
-    sourceText === standaloneBlockerWithReminderSourceText
-    ? createStandaloneKeywordClause("exact:keyword:blocker:standalone")
-    : undefined;
-}
-
-function createStandaloneKeywordClause(parserRuleId: string): CertifiedClause {
-  return { implementationStatus: "vanilla-confirmed", parserRuleId };
-}
-
-function parseStandaloneEngineKeywordClause(sourceText: string) {
-  const definition = standaloneEngineKeywordDefinitions.find(
-    (candidate) =>
-      sourceText === candidate[1] ||
-      sourceText === `${candidate[1]} ${candidate[2]}`,
-  );
-
-  return definition === undefined
-    ? undefined
-    : createStandaloneKeywordClause(definition[0]);
-}
-
 function parseTriggeredDrawResidueClause(
   options: TriggeredDrawClauseOptions,
 ): ParsedResidueClause | undefined {
@@ -929,45 +889,6 @@ function parseDrawThenTrashResidueClauseWithPrefix({
     }),
     prefix: parsed.prefix,
   };
-}
-
-function parseStandaloneBlockerResidueClause(sourceText: string) {
-  const reminderPrefix = `${standaloneBlockerWithReminderSourceText} `;
-  const sourcePrefix = `${standaloneBlockerSourceText} `;
-  const prefix = sourceText.startsWith(reminderPrefix)
-    ? reminderPrefix
-    : sourceText.startsWith(sourcePrefix)
-      ? sourcePrefix
-      : undefined;
-  if (prefix === undefined) {
-    return undefined;
-  }
-
-  return {
-    clause: createStandaloneKeywordClause("exact:keyword:blocker:standalone"),
-    prefix,
-  };
-}
-
-function parseStandaloneEngineKeywordResidueClause(sourceText: string) {
-  for (const definition of standaloneEngineKeywordDefinitions) {
-    const sourcePrefix = `${definition[1]} `;
-    const reminderPrefix = `${definition[1]} ${definition[2]} `;
-    const prefix = sourceText.startsWith(reminderPrefix)
-      ? reminderPrefix
-      : sourceText.startsWith(sourcePrefix)
-        ? sourcePrefix
-        : undefined;
-
-    if (prefix !== undefined) {
-      return {
-        clause: createStandaloneKeywordClause(definition[0]),
-        prefix,
-      };
-    }
-  }
-
-  return undefined;
 }
 
 function parseDrawThenTrashCounts(sourceText: string, prefix: DrawTrashPrefix) {

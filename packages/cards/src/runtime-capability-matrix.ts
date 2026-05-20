@@ -282,6 +282,15 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
     },
     {
       description:
+        "Public DON field-count conditions over self or opponent field-visible DON are executable by current runtime.",
+      id: "condition:fieldCount:don:public",
+      kind: "condition",
+      sinceStory: "SUP-001B",
+      supported: true,
+      supportedParserRuleIds: [],
+    },
+    {
+      description:
         "Boolean AND condition connectors are executable by runtime.",
       id: "condition-connector:and",
       kind: "condition",
@@ -817,7 +826,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       ],
     },
   ],
-  generatedAtStory: "CARD-014G",
+  generatedAtStory: "SUP-001E",
   id: "generated-support-runtime-capabilities:v1",
 } as const satisfies RuntimeCapabilityMatrix;
 

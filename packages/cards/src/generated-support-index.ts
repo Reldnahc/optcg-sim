@@ -554,6 +554,13 @@ function addConditionCapabilityIds(
       }
       ids.add("condition:unsupported-shape");
       return;
+    case "fieldCount":
+      if (isPublicDonFieldCountCondition(condition)) {
+        ids.add("condition:fieldCount:don:public");
+        return;
+      }
+      ids.add("condition:unsupported-shape");
+      return;
     case "and":
       ids.add("condition-connector:and");
       for (const child of condition.conditions) {
@@ -570,7 +577,6 @@ function addConditionCapabilityIds(
     case "custom":
     case "donCount":
     case "opponentTurn":
-    case "fieldCount":
     case "attackTarget":
     case "cardState":
     case "sourceStillInZone":
@@ -578,6 +584,19 @@ function addConditionCapabilityIds(
       ids.add("condition:unsupported-shape");
       return;
   }
+}
+
+function isPublicDonFieldCountCondition(
+  condition: Extract<Condition, { type: "fieldCount" }>,
+): boolean {
+  const filter = condition.filter;
+  return (
+    (condition.player === "self" || condition.player === "opponent") &&
+    filter !== undefined &&
+    Object.keys(filter).length === 1 &&
+    filter.categories?.length === 1 &&
+    filter.categories[0] === "don"
+  );
 }
 
 function attachParserDiagnosticDecomposition(

@@ -223,6 +223,13 @@ const parserRuleBaseGates = {
   sourceIntegrity: ["source-text-hash-current", "behavior-hash-current"],
 } as const;
 
+const componentEvidenceOnlyGates = {
+  generatedSupportMetadata: [],
+  runtimeCapability: ["runtime-capability-matrix-v1"],
+  schema: [],
+  sourceIntegrity: [],
+} as const;
+
 export const generatedSupportComponentEvidenceInventory = [
   {
     components: [
@@ -421,6 +428,13 @@ export const generatedSupportComponentEvidenceInventory = [
       "trigger:onPlay",
     ],
     shapeId: "on-play-condition-self-attached-don-count-draw",
+  },
+  {
+    components: ["condition", "runtime-capability-gate"],
+    gates: componentEvidenceOnlyGates,
+    parserRuleId: "condition-component:field-count-don-public",
+    runtimeCapabilityIds: ["condition:fieldCount:don:public"],
+    shapeId: "condition-field-count-don-public",
   },
   {
     components: [
