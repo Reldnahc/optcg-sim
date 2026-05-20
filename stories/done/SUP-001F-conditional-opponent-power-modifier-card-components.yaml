@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Compose When Attacking conditional wrappers, public DON field-count
   conditions, up-to-one opponent Character targeting, and this-turn power

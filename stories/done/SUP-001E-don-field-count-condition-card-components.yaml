@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add cards-layer parser and diagnostic components for public DON field-count
   conditions such as `If you have 6 or less DON!! cards on your field`.

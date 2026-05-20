@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add cards-layer parser and diagnostic components for reusable DON-minus cost
   wrappers such as `DON!! -1:` and `DON!! −1:` so later generated-support

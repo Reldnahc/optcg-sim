@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Evaluate the SUP-001A public DON field-count condition in engine runtime so
   generated support can later gate effects on text such as `you have 6 or less

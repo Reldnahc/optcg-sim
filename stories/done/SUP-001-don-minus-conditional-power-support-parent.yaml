@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the contract, engine, and cards-layer work needed to support a
   reusable two-line generated-support shape containing a DON-minus On Play draw

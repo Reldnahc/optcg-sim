@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Complete the SUP-001 card-layer chain by promoting fully recognized DON-minus
   On Play draw and conditional When Attacking opponent-Character power modifier
