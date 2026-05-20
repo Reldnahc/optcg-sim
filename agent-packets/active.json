@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-001C.md",
-      "storyId": "SUP-001C",
-      "storyPath": "stories/approved/SUP-001C-don-minus-cost-wrapper-card-components.yaml",
-      "storySha256": "b5e9b40c77989a0f829aa8da120734f1e4246c83693254e34952494a68608c98"
+      "packetPath": "agent-packets/SUP-001D.md",
+      "storyId": "SUP-001D",
+      "storyPath": "stories/approved/SUP-001D-don-minus-draw-generated-support.yaml",
+      "storySha256": "08d8a2f7c56dde25a3cb5bc173b73edd735360ad838a444a3879decbb51111bb"
     }
   ],
   "version": 1
