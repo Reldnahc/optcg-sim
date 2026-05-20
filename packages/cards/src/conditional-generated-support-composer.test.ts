@@ -48,6 +48,28 @@ describe("conditional generated support composer", () => {
     });
   });
 
+  it("builds block-level trashCount condition for self/opponent trash comparators", () => {
+    const selfTrash = parseConditionalWrapper(
+      "[On Play] If you have 2 or more cards in your trash, draw 1 card.",
+    );
+    const opponentTrash = parseConditionalWrapper(
+      "[On Play] If your opponent has 3 cards in their trash, draw 1 card.",
+    );
+
+    expect(selfTrash?.condition).toEqual({
+      op: "gte",
+      player: "self",
+      type: "trashCount",
+      value: 2,
+    });
+    expect(opponentTrash?.condition).toEqual({
+      op: "eq",
+      player: "opponent",
+      type: "trashCount",
+      value: 3,
+    });
+  });
+
   it("fails closed on unsupported condition fragment", () => {
     expect(
       parseConditionalWrapper(

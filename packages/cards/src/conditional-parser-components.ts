@@ -40,6 +40,12 @@ export type ParsedConditionComponent =
       readonly player: "self" | "opponent";
       readonly type: "handCount" | "lifeCount";
       readonly value: number;
+    }
+  | {
+      readonly op: "eq" | "gte" | "lte";
+      readonly player: "self" | "opponent";
+      readonly type: "trashCount";
+      readonly value: number;
     };
 
 export type ConditionExpressionParse =
@@ -297,31 +303,66 @@ function parseConditionComponent(
     /^(you|your opponent) (?:have|has) (\d+) or (more|less) (cards in your hand|cards in their hand|Life cards)$/i.exec(
       sourceText,
     );
-  if (countMatch === null) {
+  if (countMatch !== null) {
+    const playerText = countMatch[1]?.toLowerCase();
+    const value = parseExactPositiveSafeInteger(countMatch[2] ?? "");
+    const comparatorText = countMatch[3]?.toLowerCase();
+    const zoneText = countMatch[4]?.toLowerCase();
+    if (
+      value === undefined ||
+      (playerText !== "you" && playerText !== "your opponent") ||
+      (comparatorText !== "more" && comparatorText !== "less") ||
+      (zoneText !== "cards in your hand" &&
+        zoneText !== "cards in their hand" &&
+        zoneText !== "life cards") ||
+      (playerText === "you" && zoneText === "cards in their hand") ||
+      (playerText === "your opponent" && zoneText === "cards in your hand")
+    ) {
+      return undefined;
+    }
+
+    return {
+      op: comparatorText === "more" ? "gte" : "lte",
+      player: playerText === "you" ? "self" : "opponent",
+      type: zoneText === "life cards" ? "lifeCount" : "handCount",
+      value,
+    };
+  }
+
+  const trashCountMatch =
+    /^(you|your opponent) (?:have|has) (\d+)(?: or (more|less))? cards in (your|their) trash$/i.exec(
+      sourceText,
+    );
+  if (trashCountMatch === null) {
     return undefined;
   }
 
-  const playerText = countMatch[1]?.toLowerCase();
-  const value = parseExactPositiveSafeInteger(countMatch[2] ?? "");
-  const comparatorText = countMatch[3]?.toLowerCase();
-  const zoneText = countMatch[4]?.toLowerCase();
+  const playerText = trashCountMatch[1]?.toLowerCase();
+  const value = parseExactPositiveSafeInteger(trashCountMatch[2] ?? "");
+  const comparatorText = trashCountMatch[3]?.toLowerCase();
+  const ownerText = trashCountMatch[4]?.toLowerCase();
   if (
     value === undefined ||
     (playerText !== "you" && playerText !== "your opponent") ||
-    (comparatorText !== "more" && comparatorText !== "less") ||
-    (zoneText !== "cards in your hand" &&
-      zoneText !== "cards in their hand" &&
-      zoneText !== "life cards") ||
-    (playerText === "you" && zoneText === "cards in their hand") ||
-    (playerText === "your opponent" && zoneText === "cards in your hand")
+    (ownerText !== "your" && ownerText !== "their") ||
+    (comparatorText !== undefined &&
+      comparatorText !== "more" &&
+      comparatorText !== "less") ||
+    (playerText === "you" && ownerText !== "your") ||
+    (playerText === "your opponent" && ownerText !== "their")
   ) {
     return undefined;
   }
 
   return {
-    op: comparatorText === "more" ? "gte" : "lte",
+    op:
+      comparatorText === "more"
+        ? "gte"
+        : comparatorText === "less"
+          ? "lte"
+          : "eq",
     player: playerText === "you" ? "self" : "opponent",
-    type: zoneText === "life cards" ? "lifeCount" : "handCount",
+    type: "trashCount",
     value,
   };
 }
@@ -498,6 +539,7 @@ function toConditionComponentId(component: ParsedConditionComponent): string {
       return `condition:leaderAttribute:${component.filter.attributesAny[0]}`;
     case "handCount":
     case "lifeCount":
+    case "trashCount":
       return `condition:${component.type}:${component.player}:${component.op}:${String(component.value)}`;
   }
 }

@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-021A.md",
+      "storyId": "CARD-021A",
+      "storyPath": "stories/approved/CARD-021A-trash-count-condition-parser-support.yaml",
+      "storySha256": "be0cfa73c9cb9ae75093e9e7aca301f920d257a9f80d9784ebd6d8c0ff753bba"
+    }
+  ],
   "version": 1
 }

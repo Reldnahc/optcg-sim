@@ -107,6 +107,7 @@ function toDslConditionComponent(
       };
     case "handCount":
     case "lifeCount":
+    case "trashCount":
       return {
         op: component.op,
         player: component.player,

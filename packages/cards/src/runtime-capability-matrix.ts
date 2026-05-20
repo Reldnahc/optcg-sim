@@ -229,6 +229,14 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [],
     },
     {
+      description: "Trash-count conditions are executable by current runtime.",
+      id: "condition:trashCount",
+      kind: "condition",
+      sinceStory: "ENG-059A",
+      supported: true,
+      supportedParserRuleIds: [],
+    },
+    {
       description:
         "Boolean AND condition connectors are executable by runtime.",
       id: "condition-connector:and",
@@ -804,6 +812,7 @@ export const requiredGeneratedSupportCapabilityIds = [
   "condition:hasCardInZone",
   "condition:handCount",
   "condition:lifeCount",
+  "condition:trashCount",
   "condition-connector:and",
   "condition-connector:or",
   "condition:yourTurn",

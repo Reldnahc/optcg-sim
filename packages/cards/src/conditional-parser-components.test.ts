@@ -175,6 +175,73 @@ describe("conditional parser components", () => {
       type: "supported",
     });
     expect(
+      parseConditionExpression("you have 2 or more cards in your trash"),
+    ).toMatchObject({
+      component: { op: "gte", player: "self", type: "trashCount", value: 2 },
+      id: "condition:trashCount:self:gte:2",
+      text: "you have 2 or more cards in your trash",
+      type: "supported",
+    });
+    expect(
+      parseConditionExpression("you have 6 or less cards in your trash"),
+    ).toMatchObject({
+      component: { op: "lte", player: "self", type: "trashCount", value: 6 },
+      id: "condition:trashCount:self:lte:6",
+      text: "you have 6 or less cards in your trash",
+      type: "supported",
+    });
+    expect(
+      parseConditionExpression(
+        "your opponent has 5 or more cards in their trash",
+      ),
+    ).toMatchObject({
+      component: {
+        op: "gte",
+        player: "opponent",
+        type: "trashCount",
+        value: 5,
+      },
+      id: "condition:trashCount:opponent:gte:5",
+      text: "your opponent has 5 or more cards in their trash",
+      type: "supported",
+    });
+    expect(
+      parseConditionExpression(
+        "your opponent has 7 or less cards in their trash",
+      ),
+    ).toMatchObject({
+      component: {
+        op: "lte",
+        player: "opponent",
+        type: "trashCount",
+        value: 7,
+      },
+      id: "condition:trashCount:opponent:lte:7",
+      text: "your opponent has 7 or less cards in their trash",
+      type: "supported",
+    });
+    expect(
+      parseConditionExpression("you have 4 cards in your trash"),
+    ).toMatchObject({
+      component: { op: "eq", player: "self", type: "trashCount", value: 4 },
+      id: "condition:trashCount:self:eq:4",
+      text: "you have 4 cards in your trash",
+      type: "supported",
+    });
+    expect(
+      parseConditionExpression("your opponent has 9 cards in their trash"),
+    ).toMatchObject({
+      component: {
+        op: "eq",
+        player: "opponent",
+        type: "trashCount",
+        value: 9,
+      },
+      id: "condition:trashCount:opponent:eq:9",
+      text: "your opponent has 9 cards in their trash",
+      type: "supported",
+    });
+    expect(
       parseConditionExpression("you have 5 or more cards in your hand or less"),
     ).toMatchObject({
       id: "condition:unsupported:0-45",
@@ -194,6 +261,60 @@ describe("conditional parser components", () => {
     expect(unsupportedCost.type).toBe("unsupported-fragment");
     expect(unsupportedCost.text).toBe("DON!! -1 your Leader is multicolored");
     expect(unsupportedCost.id).toMatch(/^condition:unsupported:0-\d+$/);
+    expect(
+      parseConditionExpression("you have one or more cards in your trash"),
+    ).toMatchObject({
+      text: "you have one or more cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 0 or more cards in your trash"),
+    ).toMatchObject({
+      text: "you have 0 or more cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have -1 cards in your trash"),
+    ).toMatchObject({
+      text: "you have -1 cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 1.5 cards in your trash"),
+    ).toMatchObject({
+      text: "you have 1.5 cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 01 cards in your trash"),
+    ).toMatchObject({
+      text: "you have 01 cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 9007199254740992 cards in your trash"),
+    ).toMatchObject({
+      text: "you have 9007199254740992 cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 2 red cards in your trash"),
+    ).toMatchObject({
+      text: "you have 2 red cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 2 cards in your deck"),
+    ).toMatchObject({
+      text: "you have 2 cards in your deck",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("your opponent has 2 cards in your trash"),
+    ).toMatchObject({
+      text: "your opponent has 2 cards in your trash",
+      type: "unsupported-fragment",
+    });
   });
 
   it("keeps supported child conditions recognized when connector expression is unsupported", () => {

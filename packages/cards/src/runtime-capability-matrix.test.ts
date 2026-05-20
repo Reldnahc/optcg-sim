@@ -12,6 +12,7 @@ describe("generated support runtime capability matrix", () => {
   const card014APositiveCapabilityIds = [
     "category:auto",
     "condition:selfAttachedDonCount",
+    "condition:trashCount",
     "condition:yourTurn",
     "drawUpTo:self:chooseQuantity",
     "effect:draw:self:count:positive-safe-integer",
@@ -517,6 +518,21 @@ describe("generated support runtime capability matrix", () => {
     );
     expect(hasRuntimeCapability("effect:ko:targeted")).toBe(false);
     expect(hasRuntimeCapability("trigger:activateMain")).toBe(false);
+  });
+
+  it("exposes public trash-count condition capability from ENG-059A", () => {
+    const capability =
+      generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+        (candidate) => candidate.id === "condition:trashCount",
+      );
+
+    expect(capability).toMatchObject({
+      id: "condition:trashCount",
+      kind: "condition",
+      sinceStory: "ENG-059A",
+      supported: true,
+    });
+    expect(hasRuntimeCapability("condition:trashCount")).toBe(true);
   });
 
   it("exposes every exact CARD-014A positive capability id without dropping existing records", () => {
