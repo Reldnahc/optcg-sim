@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Compose the CARD-021 condition, keyword-grant, and protection text components
   with existing line-separated On K.O. draw evidence in synthetic parser/probe

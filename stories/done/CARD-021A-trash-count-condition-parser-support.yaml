@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Add reusable cards-side parser, component evidence, and runtime-capability
   linkage for public trash-count condition phrases so generated support can

@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Complete the CARD-021 card-layer chain by promoting fully recognized
   conditional continuous condition, keyword-grant, and field-removal protection

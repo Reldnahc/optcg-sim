@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate cards-layer parser, generated-support evidence, and probe/report
   diagnostics for reusable public trash-count conditions, conditional keyword

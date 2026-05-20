@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CARD-021E.md",
-      "storyId": "CARD-021E",
-      "storyPath": "stories/approved/CARD-021E-conditional-continuous-generated-support-promotion.yaml",
-      "storySha256": "d90ca447967f9e362196655fdcf2f97a1ed45dad83be2829e5f6050878bf5fcb"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
