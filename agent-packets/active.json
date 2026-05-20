@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SUP-001A.md",
+      "storyId": "SUP-001A",
+      "storyPath": "stories/approved/SUP-001A-don-field-count-condition-contract-authorability.yaml",
+      "storySha256": "2c7c5ff8d9de07cd3f1ca2d15471d740e816ddc5eeb07a245e9254e53a444c78"
+    }
+  ],
   "version": 1
 }
