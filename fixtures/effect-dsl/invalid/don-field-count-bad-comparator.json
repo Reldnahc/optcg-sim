@@ -1,0 +1,25 @@
+{
+  "cardId": "SUP-001A-INVALID-BAD-COMPARATOR",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "sup-001a:bad-comparator",
+      "category": "permanent",
+      "trigger": { "type": "permanent" },
+      "condition": {
+        "type": "fieldCount",
+        "player": "self",
+        "filter": { "categories": ["don"] },
+        "op": "equals",
+        "value": 6
+      },
+      "effect": { "type": "draw", "count": 1, "player": "self" }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:sup-001a-invalid-bad-comparator",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

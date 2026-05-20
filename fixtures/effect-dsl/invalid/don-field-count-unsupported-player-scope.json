@@ -1,0 +1,25 @@
+{
+  "cardId": "SUP-001A-INVALID-UNSUPPORTED-PLAYER-SCOPE",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "sup-001a:unsupported-player-scope",
+      "category": "permanent",
+      "trigger": { "type": "permanent" },
+      "condition": {
+        "type": "fieldCount",
+        "player": "turnPlayer",
+        "filter": { "categories": ["don"] },
+        "op": "lte",
+        "value": 6
+      },
+      "effect": { "type": "draw", "count": 1, "player": "self" }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:sup-001a-invalid-unsupported-player-scope",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}
