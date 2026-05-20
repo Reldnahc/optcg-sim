@@ -222,6 +222,38 @@ describe("SUP-001F conditional opponent power modifier card components", () => {
     expect(parsed.status).toBe("partial");
   });
 
+  it.each([
+    "[When Attacking] If your Leader is multicolored and you have 6 or less DON!! cards on your field, up to 1 of your opponent's Characters gets -1000 power during this turn.",
+    "[When Attacking] If your Leader is multicolored or you have 6 or less DON!! cards on your field, up to 1 of your opponent's Characters gets -1000 power during this turn.",
+    "[When Attacking] If you have 6 or less DON!! cards on your field and your opponent has 2 or more DON!! cards on their field, up to 1 of your opponent's Characters gets -1000 power during this turn.",
+  ])(
+    "fails closed when condition is not exactly one public DON field-count predicate (%s)",
+    (sourceText) => {
+      const parsed = parseCertifiedCardText({
+        cardId: "SUP-001F-CONDITION-BOUNDARY" as CardId,
+        effectDefinitionsVersion: "effects-v1",
+        rulesVersion: "rules-v1",
+        sourceText,
+        sourceTextHash: "sha256:sup-001f-condition-boundary",
+      });
+
+      expect(parsed.status).toBe("partial");
+
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "SUP-001F-CONDITION-BOUNDARY" as CardId,
+            sourceText,
+            sourceTextHash: "sha256:sup-001f-condition-boundary",
+          },
+        ],
+        validateEffectDefinition,
+      });
+      expect(index.entries[0]?.status).toBe("unsupported");
+    },
+  );
+
   it("fails closed when runtime capability evidence is missing", () => {
     const matrixWithoutModifyPowerChoose = {
       ...generatedSupportRuntimeCapabilityMatrix,

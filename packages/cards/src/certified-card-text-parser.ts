@@ -1,5 +1,6 @@
 import type {
   CardId,
+  Condition,
   Effect,
   EffectBlock,
   SelectedTargetsRequest,
@@ -377,7 +378,7 @@ function parseConditionalCardLineEffectClause(
     return undefined;
   }
   if (
-    hasPublicDonFieldCountCondition(conditional.condition) &&
+    isExactPublicDonFieldCountCondition(conditional.condition) &&
     base.parserRuleId !== "exact:when-attacking:modify-power:choose:this-turn"
   ) {
     return undefined;
@@ -385,7 +386,7 @@ function parseConditionalCardLineEffectClause(
   if (
     base.parserRuleId ===
       "exact:when-attacking:modify-power:choose:this-turn" &&
-    !hasPublicDonFieldCountCondition(conditional.condition)
+    !isExactPublicDonFieldCountCondition(conditional.condition)
   ) {
     return undefined;
   }
@@ -1078,4 +1079,11 @@ function resolveImplementationStatus(clauses: readonly CertifiedClause[]) {
     )
     ? "vanilla-confirmed"
     : "implemented-dsl";
+}
+
+function isExactPublicDonFieldCountCondition(condition: Condition): boolean {
+  return (
+    condition.type === "fieldCount" &&
+    hasPublicDonFieldCountCondition(condition)
+  );
 }
