@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-001A -->
 <!-- agent-packet:story-path stories/approved/SUP-001A-don-field-count-condition-contract-authorability.yaml -->
-<!-- agent-packet:story-sha256 2c7c5ff8d9de07cd3f1ca2d15471d740e816ddc5eeb07a245e9254e53a444c78 -->
+<!-- agent-packet:story-sha256 6059527640bb94e2dfbd666c4970e85dd55898ce43f113effabaa6b267cccf43 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -477,6 +477,7 @@ Own only shared Effect DSL contract, schema fixture, and spec-authorability proo
 
 <!-- prettier-ignore -->
 - specs/05-effect-dsl-reference.md
+- specs/section-index.json
 - contracts/canonical-types.ts
 - contracts/effect-dsl.schema.json
 - contracts/types/effects.ts

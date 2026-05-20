@@ -24,6 +24,7 @@ story_boundary: >
   source hashes, behavior hashes, overlays, or support manifests.
 allowed_touch_points:
   - specs/05-effect-dsl-reference.md
+  - specs/section-index.json
   - contracts/canonical-types.ts
   - contracts/effect-dsl.schema.json
   - contracts/types/effects.ts
