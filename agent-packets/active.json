@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/TYP-012B.md",
+      "storyId": "TYP-012B",
+      "storyPath": "stories/approved/TYP-012B-conditional-continuous-protection-keyword-dsl-authorability.yaml",
+      "storySha256": "e03de7043918dad8eeddc6d8ab3235f0a0b93554afd2c9bc267d6b29753f65be"
+    }
+  ],
   "version": 1
 }

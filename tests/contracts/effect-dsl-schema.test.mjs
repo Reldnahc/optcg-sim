@@ -26,6 +26,7 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/valid/leader-type-attribute-has-card-in-zone.json",
     "fixtures/effect-dsl/valid/on-play-draw-1.json",
     "fixtures/effect-dsl/valid/optional-return-don-cost-sequence.json",
+    "fixtures/effect-dsl/valid/permanent-trash-count-keyword-protection-sequence.json",
     "fixtures/effect-dsl/valid/return-don-cost.json",
     "fixtures/effect-dsl/valid/schema-authorability-only-composed-unsupported.json",
     "fixtures/effect-dsl/valid/temporary-modify-power-until-start-next-turn.json",
@@ -37,6 +38,9 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/duration-until-start-next-turn-missing-player.json",
     "fixtures/effect-dsl/invalid/duration-while-condition-true-unsupported.json",
     "fixtures/effect-dsl/invalid/draw-up-to-negative-count.json",
+    "fixtures/effect-dsl/invalid/give-keyword-missing-duration.json",
+    "fixtures/effect-dsl/invalid/give-protection-invalid-controller-owned-exclusion.json",
+    "fixtures/effect-dsl/invalid/give-protection-unsupported-family.json",
     "fixtures/effect-dsl/invalid/field-object-hand-zone-reference.json",
     "fixtures/effect-dsl/invalid/field-object-hidden-reference.json",
     "fixtures/effect-dsl/invalid/field-object-selected-target-producer-must-be-select-targets.json",
@@ -59,12 +63,14 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/play-selected-missing-hand-selection-producer.json",
     "fixtures/effect-dsl/invalid/play-selected-mismatched-hand-selection-producer.json",
     "fixtures/effect-dsl/invalid/play-selected-top-level-effect.json",
+    "fixtures/effect-dsl/invalid/permanent-condition-unsupported-shape.json",
     "fixtures/effect-dsl/invalid/replacement-category-effect-block.json",
     "fixtures/effect-dsl/invalid/restriction-cannot-attack-missing-duration.json",
     "fixtures/effect-dsl/invalid/restriction-selection-target-hand-reference.json",
     "fixtures/effect-dsl/invalid/restriction-selection-target-non-hand-reference.json",
     "fixtures/effect-dsl/invalid/restriction-selection-target-missing-selection.json",
     "fixtures/effect-dsl/invalid/return-don-cost-missing-count.json",
+    "fixtures/effect-dsl/invalid/trash-count-condition-negative-value.json",
     "fixtures/effect-dsl/invalid/select-cards-ambiguous-chooser-player.json",
     "fixtures/effect-dsl/invalid/select-cards-unsupported-visibility.json",
     "fixtures/effect-dsl/invalid/select-cards-unsupported-zone.json",
@@ -104,6 +110,21 @@ test("schema-valid composed fixtures stay at contract authorability layer only",
   const fixturePath = path.join(
     repoRoot,
     "fixtures/effect-dsl/valid/schema-authorability-only-composed-unsupported.json",
+  );
+  const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
+
+  assert.equal(fixture.implementationStatus, "unsupported");
+  assert.equal(fixture.metadata.generatedBy, undefined);
+  assert.equal(fixture.metadata.reviewedBy, undefined);
+  assert.equal(fixture.metadata.reviewedAt, undefined);
+  assert.equal(fixture.metadata.sourceCardVersion, undefined);
+  assert.equal(fixture.metadata.supportStatus, undefined);
+});
+
+test("TYP-012B schema-valid permanent protection fixture remains authorability-only", async () => {
+  const fixturePath = path.join(
+    repoRoot,
+    "fixtures/effect-dsl/valid/permanent-trash-count-keyword-protection-sequence.json",
   );
   const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
 
