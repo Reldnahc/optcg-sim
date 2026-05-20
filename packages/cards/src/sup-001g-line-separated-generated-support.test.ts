@@ -128,6 +128,63 @@ describe("SUP-001G line-separated generated support promotion", () => {
     );
   });
 
+  it.each([
+    {
+      costCount: 2,
+      drawCount: 2,
+      threshold: 3,
+      powerDelta: -2000,
+    },
+    {
+      costCount: 4,
+      drawCount: 3,
+      threshold: 9,
+      powerDelta: -4000,
+    },
+  ])(
+    "uses the same generated-support path when primitive values change (%s)",
+    ({ costCount, drawCount, powerDelta, threshold }) => {
+      const sourceText = [
+        `[On Play] DON!! -${String(costCount)}: Draw ${String(drawCount)} cards.`,
+        `[When Attacking] If you have ${String(threshold)} or less DON!! cards on your field, give up to 1 of your opponent's Characters ${String(powerDelta)} power during this turn.`,
+      ].join("\n");
+
+      const parsed = parseCertifiedCardText({
+        cardId: "SUP-001G-MATRIX" as CardId,
+        effectDefinitionsVersion: "effects-v1",
+        rulesVersion: "rules-v1",
+        sourceText,
+        sourceTextHash: `sha256:sup-001g-matrix-${String(costCount)}`,
+      });
+
+      expect(parsed.status).toBe("complete");
+      if (parsed.status !== "complete") {
+        throw new Error("Expected SUP-001G matrix parse to be complete.");
+      }
+      expect(parsed.parserRuleIds).toEqual([
+        "component:cost:return-don:self:count-exact",
+        "exact:on-play:draw-n:self",
+        "exact:on-play:return-don-draw-n:self",
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
+        "line-separated-effect-blocks:v1",
+      ]);
+      expect(parsed.effectDefinition.effects[0]).toMatchObject({
+        cost: { count: costCount },
+        effect: { count: drawCount, type: "draw" },
+      });
+      expect(parsed.effectDefinition.effects[1]).toMatchObject({
+        condition: {
+          filter: { categories: ["don"] },
+          op: "lte",
+          player: "self",
+          type: "fieldCount",
+          value: threshold,
+        },
+        effect: { type: "modifyPower", value: powerDelta },
+      });
+    },
+  );
+
   it("keeps line-separated generated support fail-closed when any line is unsupported", () => {
     const sourceText = [
       "[On Play] DON!! -1: Draw 1 card.",

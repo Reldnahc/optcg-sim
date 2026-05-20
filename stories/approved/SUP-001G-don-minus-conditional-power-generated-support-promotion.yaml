@@ -54,6 +54,8 @@ dependencies:
 scope:
   - promote only fully supported line-separated parses whose DON-minus cost, On Play draw body, DON field-count condition, When Attacking wrapper, up-to-one opponent Character target, and this-turn power modifier components are all recognized by reusable SUP-001 primitives
   - compose line-separated generated support for representative text such as `[On Play] DON!! -1: Draw 1 card.` and `[When Attacking] If you have 6 or less DON!! cards on your field, give up to 1 of your opponent's Characters -1000 power during this turn.`
+  - "implement the scaling shape as reusable primitive composition, not as a sentence template: `[On Play]` + return-DON cost wrapper + draw body must compose independently from `[When Attacking]` + supported condition expression + up-to-one opponent Character target + this-turn power modifier body"
+  - prove the same generated-support path works when independent primitive values change, including at least cost count, draw count, DON threshold, and power delta; changing these values must not require a new parser rule, card branch, full-line branch, or exact-text branch
   - preserve each line as an independent supported EffectBlock inside one generated EffectDefinition
   - require parser-rule certification, component evidence, schema validation, runtime capability evidence, support metadata, review state, tested state, source integrity, and behavior hash gates for generated support
   - prove ASCII minus and Unicode minus handling through synthetic tests without making production code depend on exact full printed sample text
@@ -65,6 +67,7 @@ non_scope:
   - shared contracts/schema/type changes
   - real card IDs, real-card fixture capture, source hash updates, behavior hash updates, overlays, support manifest edits, or cards-produced manifest regeneration
   - production branches for exact full card text, exact full effect lines, one real card, one external card list, or sample-specific sentence templates
+  - hardcoded branches keyed to the sample cost count, draw count, DON threshold, power delta, line order string, card id, real-card source text, or adjacent-card discovery list
   - support for unsupported DON zones, unsupported private conditions, unsupported target shapes, unsupported durations, unsupported power/cost modifiers, or broad natural-language inference
 card_source_integrity:
   - this story does not name or target any real card and must not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or cards-produced manifests
@@ -81,6 +84,8 @@ acceptance_criteria:
   - the generated EffectDefinition contains both effect blocks without losing cost, condition, trigger, source presence, target, power modifier, parser evidence, or capability evidence
   - parser-rule certification, component evidence IDs, runtime capability IDs, schema validation, support metadata, review metadata, tested state, source integrity, and behavior hash gates all report as passed for the synthetic complete case
   - the same parser/composer path supports at least one non-sample threshold or non-sample power value without a value-specific or card-specific branch
+  - the same parser/composer path supports a matrix of non-sample primitive values that changes cost count, draw count, DON threshold, and power delta independently while preserving the same parser-rule family, component evidence family, and runtime capability family
+  - parser tests assert the reusable AST/effect shape, not just `Playable: yes`, so regressions that hardcode the representative sentence fail even if that one sample still passes
   - malformed cost, unsupported condition, unsupported target, unsupported power value, unsupported duration, missing schema bridge, missing runtime capability, stale source hash, stale behavior hash, missing metadata, missing review, and missing tested-state cases remain non-playable with narrow diagnostics
   - existing generated support for draw, return-DON play-selected, CARD-014 power modifiers, CARD-020 diagnostics, and CARD-021 line-separated composition remains compatible
   - no production code or tests depend on a real card ID, exact full printed card text, human-held adjacent-card list, or one-off full-sentence implementation branch
@@ -89,6 +94,7 @@ required_tests:
   - synthetic generated-support-index test proving complete support for both lines when all gates pass
   - synthetic support-probe/report certificate test proving every gate reports passed for the complete case
   - synthetic test proving at least one non-sample threshold or non-sample power value uses the same generated-support path
+  - synthetic matrix test proving independent primitive variation for cost count, draw count, DON threshold, and power delta reaches the same generated-support path without adding new parser-rule IDs or sample-specific component evidence IDs
   - tests proving ASCII and Unicode minus variants reach the same structured support path
   - negative tests for malformed cost, unsupported condition, unsupported target, unsupported power value, unsupported duration, missing schema bridge, missing runtime capability, stale source hash, stale behavior hash, missing metadata, missing review, and missing tested-state gates
   - regression tests proving existing draw, return-DON, CARD-014 modifyPower, CARD-020 diagnostics, and CARD-021 generated-support behavior remains compatible
