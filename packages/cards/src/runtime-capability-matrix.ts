@@ -516,7 +516,6 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
-        returnDonCostWrapperParserRuleId,
       ],
     },
     {
@@ -541,6 +540,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        returnDonCostWrapperParserRuleId,
       ],
     },
     {

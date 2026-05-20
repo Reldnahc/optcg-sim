@@ -139,6 +139,25 @@ export function deriveReturnDonCostWrapperDiagnosticDecomposition(
       };
     }
 
+    const nonDonReturnCost = parseNonDonReturnCostWording(bodyText);
+    if (nonDonReturnCost !== undefined && text === normalizedLine) {
+      return {
+        recognizedActionCandidates: [],
+        recognizedSyntaxFragments: [
+          `trigger-wrapper:${toTriggerSyntaxId(trigger)}`,
+        ],
+        recognizedTriggerCandidates: [trigger.trim()],
+        reason:
+          "Return-DON cost wording was recognized, but only the DON!! -N: wrapper is certified; generated support remains fail-closed.",
+        traceComponents: [
+          { kind: "trigger", status: "recognized", text: trigger.trim() },
+          { kind: "cost", status: "unsupported", text: nonDonReturnCost },
+        ],
+        unsupportedConditionFragments: [],
+        unsupportedSyntaxFragments: ["return-don-cost-wrapper:non-don-wording"],
+      };
+    }
+
     const malformedCost = parseMalformedReturnDonCostWrapper(bodyText);
     if (malformedCost === undefined || text !== normalizedLine) {
       continue;
@@ -192,6 +211,10 @@ function parseMalformedReturnDonCostWrapper(
   return parseReturnDonCostWrapper(sourceText) === undefined
     ? match[1]
     : undefined;
+}
+
+function parseNonDonReturnCostWording(sourceText: string): string | undefined {
+  return /^(Return\s+\d+\s+DON!!:)/.exec(sourceText.trim())?.[1];
 }
 
 function toTriggerSyntaxId(trigger: SupportedTriggerPrefix): string {

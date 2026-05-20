@@ -12,6 +12,7 @@ import {
 } from "./generated-support-index.js";
 import { buildGeneratedSupportReport } from "./generated-support-report.js";
 import { isCompleteGeneratedSupportParseResult } from "./generated-support-types.js";
+import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 import {
   returnDonCostWrapperComponentEvidenceId,
   returnDonCostWrapperParserRuleId,
@@ -96,6 +97,24 @@ describe("SUP-001C DON-minus cost wrapper card components", () => {
     });
   });
 
+  it("certifies the reusable wrapper parser rule only on return-DON cost capabilities", () => {
+    expect(
+      capabilityParserRuleIds("payCost:returnDon:self:count-exact"),
+    ).toContain(returnDonCostWrapperParserRuleId);
+    expect(
+      capabilityParserRuleIds("returnDon:cost:self:count-exact"),
+    ).toContain(returnDonCostWrapperParserRuleId);
+    expect(
+      capabilityParserRuleIds("playSelected:hand:character:max1"),
+    ).not.toContain(returnDonCostWrapperParserRuleId);
+    expect(
+      capabilityParserRuleIds("playSelected:hand:character:max1:ignoreCost"),
+    ).not.toContain(returnDonCostWrapperParserRuleId);
+    expect(
+      capabilityParserRuleIds("selectCards:hand:self:character:max1"),
+    ).not.toContain(returnDonCostWrapperParserRuleId);
+  });
+
   it("prints support-probe diagnostics for recognized wrappers without making unsupported bodies playable", async () => {
     const output: string[] = [];
 
@@ -127,6 +146,33 @@ describe("SUP-001C DON-minus cost wrapper card components", () => {
     expect(text).toContain("recognized cost candidate: DON!! \u22123:");
     expect(text).toContain(
       "unsupported action blocker: Rest up to 1 DON!! card.",
+    );
+    expect(text).toContain("- final playable decision: no");
+  });
+
+  it("prints narrow diagnostics for non-DON return cost wording without making it playable", async () => {
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId,
+      getCard: () =>
+        Promise.resolve(
+          syntheticCardDetail("[On Play] Return 1 DON!!: Draw 1 card."),
+        ),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("unsupported cost blocker: Return 1 DON!!:");
+    expect(text).toContain(
+      "unsupported syntax blocker: return-don-cost-wrapper:non-don-wording",
     );
     expect(text).toContain("- final playable decision: no");
   });
@@ -193,6 +239,14 @@ describe("SUP-001C DON-minus cost wrapper card components", () => {
     }
   });
 });
+
+function capabilityParserRuleIds(capabilityId: string): readonly string[] {
+  return (
+    generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+      (capability) => capability.id === capabilityId,
+    )?.supportedParserRuleIds ?? []
+  );
+}
 
 function baseCard(sourceText: string) {
   return {
