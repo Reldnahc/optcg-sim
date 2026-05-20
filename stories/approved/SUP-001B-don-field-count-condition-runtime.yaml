@@ -1,0 +1,76 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-001B
+epic_id: SUP-001
+title: DON field-count condition runtime
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Evaluate the SUP-001A public DON field-count condition in engine runtime so
+  generated support can later gate effects on text such as `you have 6 or less
+  DON!! cards on your field`.
+story_boundary: >
+  Own only engine runtime condition evaluation and proof tests for public DON
+  field-count conditions. Do not add shared contract/schema changes, card
+  parser/generated-support behavior, runtime capability matrix entries in
+  packages/cards, support manifests, source hashes, behavior hashes, overlays,
+  or real-card fixtures.
+allowed_touch_points:
+  - packages/engine-core/src/**
+  - tests/engine/**
+  - stories/generated/SUP-001*.yaml
+  - stories/approved/SUP-001*.yaml
+  - agent-packets/SUP-001B.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s005
+  - 02-engine-mechanics.s036
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s011
+  - 06-visibility-security.s004
+  - 11-testing-quality.s004
+dependencies:
+  - SUP-001A
+scope:
+  - evaluate self and opponent public DON field-count conditions using authoritative game state
+  - count the player's field-visible DON in cost area plus DON attached to that player's Leader or Characters
+  - exclude DON deck, hidden zones, trashed/non-field cards, and opponent-owned DON not controlled by the counted player
+  - support `eq`, `gte`, and `lte` comparators through the same condition-evaluation path
+  - preserve deterministic replay/state-hash behavior and avoid leaking hidden information
+  - add engine proof tests for conditions gating a When Attacking effect without relying on a real card ID
+non_scope:
+  - shared contract/schema/type authorability
+  - cards parser rules, generated-support component evidence, runtime capability matrix entries, support reports, or support probes
+  - new return-DON cost payment behavior, draw behavior, target selection behavior, or power modifier behavior
+  - real-card fixtures, overlays, source hashes, behavior hashes, support manifests, or cards-produced manifests
+acceptance_criteria:
+  - runtime condition evaluation returns true/false for self and opponent DON field-count conditions over cost-area plus attached DON
+  - conditions correctly respond when DON moves between cost area, attached state, and off-field zones
+  - comparator behavior is generic over `eq`, `gte`, and `lte`, not hardcoded to exactly `6 or less`
+  - event behavior is explicit: condition-true branches emit the expected effect events, while condition-false branches emit no body-resolution events beyond normal attack/timing events
+  - hidden information and deterministic state hash behavior are unchanged
+  - no production engine code checks real card IDs, printed text, or sample-specific story identifiers
+required_tests:
+  - story-review for SUP-001B before approval handoff
+  - engine condition-evaluation tests for self/opponent DON field-count `eq`, `gte`, and `lte`
+  - test proving cost-area plus attached DON are counted and DON deck/off-board zones are excluded
+  - test proving a synthetic When Attacking effect is gated by the condition
+  - event-order test covering both condition-passing body resolution and condition-failing no-resolution branches
+  - hidden-information/state-hash regression where relevant
+  - run `corepack pnpm exec tsc -p packages/engine-core/tsconfig.json --noEmit`
+  - run focused engine tests for condition evaluation
+  - run `corepack pnpm run test:hidden-info`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the SUP-001B packet before implementation
+  - do not activate SUP-001B until SUP-001A has merged
+  - stay within allowed touch points
+  - do not add cards parser/generated-support behavior or shared contract/schema authority
+  - fail closed on hidden-information, replay, source-presence, or condition ambiguity
+ambiguity_policy: fail_and_escalate

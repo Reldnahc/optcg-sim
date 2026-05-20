@@ -291,19 +291,23 @@ function buildGeneratedSupportIndexEntry(
   });
 
   if (!isCompleteGeneratedSupportParseResult(parseResult)) {
+    const blockers = attachParserDiagnosticDecomposition(
+      parseResult.blockers,
+      card.sourceText,
+    );
+    const diagnosticParserRuleIds = collectDiagnosticParserRuleIds(blockers);
+    const parsedRuleIds =
+      "parsedRuleIds" in parseResult ? parseResult.parsedRuleIds : [];
+    const parserRuleIds = [
+      ...new Set([...parsedRuleIds, ...diagnosticParserRuleIds]),
+    ];
     return unsupportedEntry({
-      blockers: attachParserDiagnosticDecomposition(
-        parseResult.blockers,
-        card.sourceText,
-      ),
+      blockers,
       card,
       componentEvidenceIds:
-        "parsedComponentEvidenceIds" in parseResult
-          ? parseResult.parsedComponentEvidenceIds
-          : [],
+        listComponentEvidenceIdsForParserRuleIds(parserRuleIds),
       parseStatus: parseResult.status,
-      parserRuleIds:
-        "parsedRuleIds" in parseResult ? parseResult.parsedRuleIds : [],
+      parserRuleIds,
     });
   }
 
@@ -554,6 +558,13 @@ function addConditionCapabilityIds(
       }
       ids.add("condition:unsupported-shape");
       return;
+    case "fieldCount":
+      if (isPublicDonFieldCountCondition(condition)) {
+        ids.add("condition:fieldCount:don:public");
+        return;
+      }
+      ids.add("condition:unsupported-shape");
+      return;
     case "and":
       ids.add("condition-connector:and");
       for (const child of condition.conditions) {
@@ -570,7 +581,6 @@ function addConditionCapabilityIds(
     case "custom":
     case "donCount":
     case "opponentTurn":
-    case "fieldCount":
     case "attackTarget":
     case "cardState":
     case "sourceStillInZone":
@@ -578,6 +588,19 @@ function addConditionCapabilityIds(
       ids.add("condition:unsupported-shape");
       return;
   }
+}
+
+function isPublicDonFieldCountCondition(
+  condition: Extract<Condition, { type: "fieldCount" }>,
+): boolean {
+  const filter = condition.filter;
+  return (
+    (condition.player === "self" || condition.player === "opponent") &&
+    filter !== undefined &&
+    Object.keys(filter).length === 1 &&
+    filter.categories?.length === 1 &&
+    filter.categories[0] === "don"
+  );
 }
 
 function attachParserDiagnosticDecomposition(
@@ -998,4 +1021,24 @@ function toMissingRuntimeCapabilityBlocker(
 
 function toGeneratedEffectDefinitionId(cardId: CardId): string {
   return `${String(cardId).toLowerCase()}.generated-support`;
+}
+
+function collectDiagnosticParserRuleIds(
+  blockers: readonly GeneratedSupportBlocker[],
+): readonly string[] {
+  const ids = new Set<string>();
+  for (const blocker of blockers) {
+    for (const component of blocker.decomposition?.traceComponents ?? []) {
+      const componentId = component.id;
+      if (
+        component.kind === "condition" &&
+        component.status !== "unsupported" &&
+        componentId !== undefined &&
+        componentId.startsWith("condition:fieldCount:don:")
+      ) {
+        ids.add("condition-component:field-count-don-public");
+      }
+    }
+  }
+  return [...ids].sort();
 }

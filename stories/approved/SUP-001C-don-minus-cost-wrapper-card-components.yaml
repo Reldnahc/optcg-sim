@@ -1,0 +1,79 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-001C
+epic_id: SUP-001
+title: DON-minus cost wrapper card components
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Add cards-layer parser and diagnostic components for reusable DON-minus cost
+  wrappers such as `DON!! -1:` and `DON!! −1:` so later generated-support
+  stories can compose the cost with supported effect bodies.
+story_boundary: >
+  Own only cards-layer parsing, diagnostics, component evidence, and
+  fail-closed support reporting for DON-minus cost wrappers. Do not add engine
+  runtime behavior, shared contract/schema authority, real-card fixtures,
+  source hash changes, behavior hash changes, overlays, support manifests, or
+  full generated-support promotion for the target two-line shape.
+allowed_touch_points:
+  - packages/cards/src/**
+  - stories/generated/SUP-001*.yaml
+  - stories/approved/SUP-001*.yaml
+  - agent-packets/SUP-001C.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s036
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s012
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-020D
+  - ENG-055F
+scope:
+  - parse `DON!! -N:` and `DON!! −N:` as a reusable return-DON cost wrapper component
+  - support positive safe-integer counts generically, not only `1`
+  - expose parser-rule evidence and runtime capability requirements for return-DON cost representation without binding to a specific effect body
+  - preserve diagnostics for malformed counts, missing colon separators, unsupported optionality, and non-DON cost wording
+  - keep generated support fail-closed unless the wrapped body is independently supported by a later child
+non_scope:
+  - engine return-DON cost payment behavior
+  - shared contract/schema changes
+  - generated-support promotion for `[On Play] DON!! -1: Draw 1 card.`
+  - real-card fixtures, source hashes, behavior hashes, overlays, support manifests, or cards-produced manifests
+  - exact full-card or full-effect text branches
+card_source_integrity:
+  - this story uses only synthetic parser/probe inputs, does not enable or change any real-card gameplay support, and must not edit real-card fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or cards-produced manifests
+engine_capability_preflight:
+  - "parsed shape is a reusable `DON!! -N:` / `DON!! −N:` return-DON activation-cost wrapper around an independently parsed body"
+  - "supported runtime capabilities: `returnDon:cost:self:count-exact` and `payCost:returnDon:self:count-exact` from ENG-055F"
+  - "missing runtime capabilities: none for recognizing the cost wrapper itself"
+  - body execution is external to this child; generated support must remain unsupported if the wrapped body is unsupported or if return-DON capability evidence is missing
+acceptance_criteria:
+  - parser diagnostics recognize ASCII and Unicode minus DON-minus cost wrappers with the same structured count data
+  - malformed counts such as zero, leading-zero, decimal, word-number, missing-colon, and unsafe integer remain unsupported with narrow diagnostics
+  - the component path is reusable and not tied to draw, play-selected, one real card, or one full sentence
+  - capability-linkage evidence reports the required return-DON runtime capability IDs without treating an unsupported wrapped body as playable
+  - existing return-DON play-selected generated-support behavior remains compatible
+required_tests:
+  - story-review for SUP-001C before approval handoff
+  - parser/component tests for ASCII and Unicode minus wrappers
+  - negative parser tests for malformed counts and missing separators
+  - runtime capability matrix or support-report test proving the cost wrapper emits exact return-DON capability requirements
+  - support-probe/report diagnostic tests proving wrapper recognition does not make unsupported bodies playable
+  - regression tests for existing return-DON play-selected generated support
+  - production-code search or lint-style assertion proving no real-card ID or exact full-effect branch
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the SUP-001C packet before implementation
+  - stay within allowed touch points
+  - do not add engine runtime behavior or shared contract/schema authority
+  - fail closed if the wrapper cannot be decomposed independently from the wrapped body
+ambiguity_policy: fail_and_escalate

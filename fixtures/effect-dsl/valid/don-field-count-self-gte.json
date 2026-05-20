@@ -1,0 +1,26 @@
+{
+  "cardId": "SUP-001A-VALID-SELF-GTE",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "sup-001a:self-gte",
+      "category": "permanent",
+      "trigger": { "type": "permanent" },
+      "condition": {
+        "type": "fieldCount",
+        "player": "self",
+        "filter": { "categories": ["don"], "state": "active" },
+        "op": "gte",
+        "value": 1
+      },
+      "effect": { "type": "draw", "count": 1, "player": "self" }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:sup-001a-valid-self-gte",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true,
+    "notes": "Schema-authorability-only fixture for public DON field-count condition."
+  }
+}

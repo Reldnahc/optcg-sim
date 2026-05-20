@@ -1,0 +1,26 @@
+{
+  "cardId": "SUP-001A-VALID-OPPONENT-EQ",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "sup-001a:opponent-eq",
+      "category": "permanent",
+      "trigger": { "type": "permanent" },
+      "condition": {
+        "type": "fieldCount",
+        "player": "opponent",
+        "filter": { "categories": ["don"], "state": "attached" },
+        "op": "eq",
+        "value": 2
+      },
+      "effect": { "type": "draw", "count": 1, "player": "self" }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:sup-001a-valid-opponent-eq",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true,
+    "notes": "Schema-authorability-only fixture for public DON field-count condition."
+  }
+}

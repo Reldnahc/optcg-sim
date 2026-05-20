@@ -1,0 +1,84 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-001D
+epic_id: SUP-001
+title: DON-minus draw generated support
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Compose the reusable DON-minus cost wrapper with existing On Play draw
+  generated-support primitives so synthetic text such as `[On Play] DON!! -1:
+  Draw 1 card.` can become supported only through the full generated-support
+  gate chain.
+story_boundary: >
+  Own only cards-layer composition, parser-rule evidence, runtime capability
+  gating, support-probe/report output, and synthetic tests for DON-minus draw.
+  Do not add engine runtime behavior, shared contract/schema authority,
+  real-card fixtures, source hashes, behavior hashes, overlays, support
+  manifests, or support for the conditional When Attacking power line.
+allowed_touch_points:
+  - packages/cards/src/**
+  - stories/generated/SUP-001*.yaml
+  - stories/approved/SUP-001*.yaml
+  - agent-packets/SUP-001D.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s036
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s012
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - SUP-001C
+  - ENG-012F
+  - CARD-009A
+  - ENG-055F
+scope:
+  - compose `[On Play]` trigger, DON-minus cost wrapper, and `Draw N card(s)` body into a schema-valid auto EffectBlock
+  - support positive safe-integer DON counts and draw counts generically where existing draw primitives allow them
+  - require source presence, return-DON cost, draw, parser certification, component evidence, runtime capability evidence, support metadata, review state, and tested state gates
+  - preserve fail-closed diagnostics for malformed cost, unsupported draw count, unsupported wrapper, stale hashes, missing metadata, missing review, missing tested-state, and missing runtime capability
+  - prove the path with synthetic inputs only
+non_scope:
+  - engine runtime behavior for return-DON or draw
+  - shared contract/schema changes
+  - conditional When Attacking power modifier support
+  - real-card fixtures, source hashes, behavior hashes, overlays, support manifests, or cards-produced manifests
+  - exact full-card text branches or one real card
+card_source_integrity:
+  - this story does not name or target any real card, does not enable or change any real-card gameplay support, uses synthetic inputs as the only source authority, and must not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or cards-produced manifests
+engine_capability_preflight:
+  - "parsed shape is `[On Play]` auto block with activation cost `returnDon` paid by self/source controller and body effect `draw` for self with positive safe-integer count"
+  - "supported runtime capabilities: `payCost:returnDon:self:count-exact` and `returnDon:cost:self:count-exact` from ENG-055F; `effect:draw:self:count:positive-safe-integer` and `exact:on-play:draw-n:self` support from ENG-012F/CARD-009A"
+  - "missing runtime capabilities: none for the DON-minus On Play draw synthetic shape after SUP-001C has landed"
+  - generated support must remain unsupported if either cost or draw runtime capability evidence is missing
+acceptance_criteria:
+  - synthetic DON-minus On Play draw text produces complete generated support when all gates pass
+  - generated EffectDefinition contains a costed On Play draw block with stable effect identity and correct source presence policy
+  - parser-rule IDs, component evidence IDs, runtime capability IDs, schema validation, metadata, review, and tested-state gates report passed for the complete synthetic case
+  - stale sourceTextHash, stale behaviorHash, and missing runtime-capability evidence all keep the synthetic case non-playable
+  - malformed cost and unsupported body variants remain non-playable with narrow diagnostics
+  - existing On Play draw and return-DON play-selected generated-support behavior remains compatible
+required_tests:
+  - story-review for SUP-001D before approval handoff
+  - synthetic generated-support-index test for DON-minus On Play draw support
+  - support-probe/report certificate test proving every gate reports passed for the complete synthetic case
+  - negative tests for malformed cost, unsupported draw body, missing runtime capability, stale source hash, stale behavior hash, missing metadata, missing review, and missing tested-state gates
+  - regression tests for existing draw and return-DON generated-support paths
+  - production-code search or lint-style assertion proving no real-card ID branch, exact full-card branch, exact full-effect branch, or sample-specific sentence template
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the SUP-001D packet before implementation
+  - do not activate SUP-001D until SUP-001C has merged
+  - stay within allowed touch points
+  - do not add engine runtime behavior or shared contract/schema authority
+ambiguity_policy: fail_and_escalate

@@ -22,6 +22,12 @@ import {
 } from "./conditional-parser-components.js";
 import { deriveConditionalContinuousCompositionDiagnosticDecomposition } from "./conditional-continuous-composition-diagnostics.js";
 import { listComponentEvidenceIdsForParserRuleIds } from "./generated-support-types.js";
+import {
+  deriveReturnDonCostWrapperDiagnosticDecomposition,
+  parseReturnDonCostWrapper,
+} from "./return-don-cost-wrapper-components.js";
+
+export { parseReturnDonCostWrapper } from "./return-don-cost-wrapper-components.js";
 
 export type SupportedTriggerWrapperParse = {
   readonly bodyText: string;
@@ -43,6 +49,7 @@ export type ReusableComposedParserClause = {
   readonly effectBlock?: EffectBlock;
   readonly implementationStatus?: "implemented-dsl" | "vanilla-confirmed";
   readonly parserRuleId: string;
+  readonly parserRuleIds?: readonly string[];
 };
 
 export type ReusableComposedParserResidueClause<TClause> = {
@@ -481,16 +488,16 @@ export function parseConditionedDrawInstructionBody(
 export function parseReturnDonPlaySelectedFromHandInstructionBody(
   sourceText: string,
 ): ReturnDonPlaySelectedFromHandParse | undefined {
-  const match =
-    /^DON!! -(\d+): Select up to 1 Character card from your hand and play it\.$/.exec(
-      sourceText,
-    );
-  if (match === null) {
+  const wrapper = parseReturnDonCostWrapper(sourceText);
+  if (
+    wrapper === undefined ||
+    wrapper.bodyText !==
+      "Select up to 1 Character card from your hand and play it."
+  ) {
     return undefined;
   }
 
-  const returnDonCount = parseExactPositiveSafeInteger(match[1] ?? "");
-  return returnDonCount === undefined ? undefined : { returnDonCount };
+  return { returnDonCount: wrapper.count };
 }
 
 export function parseSelectOpponentCharacterInstructionBody(
@@ -556,14 +563,19 @@ export function parseContinuousModifierInstructionBody(
   sourceText: string,
 ): ContinuousModifierInstructionParse | undefined {
   const match =
-    /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) gets? ([+-]\d+) power during (this turn|this battle)\.$/.exec(
+    /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) gets? ([+\-−]\d+) power during (this turn|this battle)\.$/.exec(
+      sourceText,
+    ) ??
+    /^(Give up to 1 of your opponent's Characters) ([+\-−]\d+) power during (this turn)\.$/.exec(
       sourceText,
     );
   if (match === null) {
     return undefined;
   }
 
-  const target = parsePublicFieldTargetSubject(match[1] ?? "");
+  const target = parsePublicFieldTargetSubject(
+    (match[1] ?? "").replace(/^Give up to 1/, "Up to 1"),
+  );
   const value = parseSignedSafeInteger(match[2] ?? "");
   const duration = parseDuration(match[3] ?? "");
   if (target === undefined || value === undefined || duration === undefined) {
@@ -626,11 +638,14 @@ function parseDuration(
 }
 
 function parseSignedSafeInteger(sourceText: string): number | undefined {
-  if (!/^[+-]\d+$/.test(sourceText)) {
+  if (!/^[+\-−]\d+$/.test(sourceText)) {
     return undefined;
   }
 
-  const value = Number.parseInt(sourceText, 10);
+  const normalized = sourceText.startsWith("−")
+    ? `-${sourceText.slice(1)}`
+    : sourceText;
+  const value = Number.parseInt(normalized, 10);
   return Number.isSafeInteger(value) ? value : undefined;
 }
 
@@ -1008,6 +1023,15 @@ export function deriveParserDiagnosticDecomposition(
   fullSourceText: string,
 ): GeneratedSupportDiagnosticDecomposition | undefined {
   const normalized = text.trim();
+  const returnDonCostWrapperDiagnostic =
+    deriveReturnDonCostWrapperDiagnosticDecomposition(
+      normalized,
+      fullSourceText,
+    );
+  if (returnDonCostWrapperDiagnostic !== undefined) {
+    return returnDonCostWrapperDiagnostic;
+  }
+
   if (!isWholeSourceOrLine(normalized, fullSourceText)) {
     return undefined;
   }

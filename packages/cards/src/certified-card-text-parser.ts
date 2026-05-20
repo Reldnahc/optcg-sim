@@ -31,13 +31,26 @@ import {
 } from "./composed-parser-builder.js";
 import {
   buildConditionalContinuousCompositionClauseFromSource,
-  conditionalContinuousTrashCountParserRuleId,
+  conditionalContinuousCompositionParserRuleId,
   parseConditionalWrapper,
 } from "./conditional-generated-support-composer.js";
+import { parseOnPlayReturnDonDrawClause } from "./don-minus-draw-components.js";
 import type {
   GeneratedSupportParserResult,
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-types.js";
+import {
+  getClauseParserRuleIds,
+  getCompleteParserRuleIds,
+} from "./parser-rule-id-components.js";
+import { isCertifiedLineSeparatedEffectBlockComposition } from "./line-separated-composition.js";
+import { parseReturnDonCostWrapperResidueClause } from "./return-don-cost-wrapper-components.js";
+import {
+  parseStandaloneBlockerClause,
+  parseStandaloneBlockerResidueClause,
+  parseStandaloneEngineKeywordClause,
+  parseStandaloneEngineKeywordResidueClause,
+} from "./standalone-keyword-parser.js";
 
 export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self";
 export const whenAttackingDrawNParserRuleId =
@@ -53,7 +66,6 @@ export interface CertifiedCardTextParserInput {
   sourceText: string;
   sourceTextHash: string;
 }
-
 interface CertifiedLineParse {
   readonly clause?: CertifiedClause;
   readonly unparsedSpan?: GeneratedSupportUnparsedSpan;
@@ -63,6 +75,7 @@ interface CertifiedClause {
   readonly effectBlock?: EffectBlock;
   readonly implementationStatus?: "implemented-dsl" | "vanilla-confirmed";
   readonly parserRuleId: string;
+  readonly parserRuleIds?: readonly string[];
 }
 
 interface ParsedResidueClause {
@@ -148,15 +161,15 @@ export function parseCertifiedCardText(
     return buildPartialParseResult({
       cardId: input.cardId,
       message: "Unsupported card text remains after certified parsing.",
-      parsedRuleIds: parsedClauses.map((clause) => clause.parserRuleId),
+      parsedRuleIds: parsedClauses.flatMap(getClauseParserRuleIds),
       sourceText: input.sourceText,
       sourceTextHash: input.sourceTextHash,
       unparsedSpans,
     });
   }
 
-  const parserRuleIds = parsedClauses.map((clause) => clause.parserRuleId);
-  if (parserRuleIds.includes(conditionalContinuousTrashCountParserRuleId)) {
+  const parserRuleIds = parsedClauses.flatMap(getClauseParserRuleIds);
+  if (parserRuleIds.includes(conditionalContinuousCompositionParserRuleId)) {
     return completeParse(input, parsedClauses);
   }
 
@@ -227,6 +240,7 @@ function parseFirstCardLineResidueClause(
 ): ParsedResidueClause | undefined {
   return (
     parseReusableCard016AResidueClause(cardId, line) ??
+    parseReturnDonCostWrapperResidueClause(line) ??
     parseCard014gResidueClause(cardId, line) ??
     parseTriggeredDrawResidueClause({
       cardId,
@@ -327,6 +341,7 @@ function parseNonConditionalCardLineEffectClause(
 ): CertifiedClause | undefined {
   return (
     parseReusableCard016AClause(cardId, sourceText) ??
+    parseOnPlayReturnDonDrawClause(cardId, sourceText) ??
     parseTriggerDrawClause(cardId, sourceText) ??
     parseTriggerDrawUpToClause(cardId, sourceText) ??
     parseOnKODrawClause(cardId, sourceText) ??
@@ -335,6 +350,7 @@ function parseNonConditionalCardLineEffectClause(
     parseOnPlayDrawClause(cardId, sourceText) ??
     parseOnPlayDrawUpToClause(cardId, sourceText) ??
     parseOnPlayDrawThenTrashClause(cardId, sourceText) ??
+    parseWhenAttackingModifyPowerChooseThisTurnClause(cardId, sourceText) ??
     parseWhenAttackingDrawClause(cardId, sourceText) ??
     parseWhenAttackingDrawThenTrashClause(cardId, sourceText) ??
     parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, sourceText)
@@ -360,12 +376,26 @@ function parseConditionalCardLineEffectClause(
     return undefined;
   }
 
+  const parserRuleId =
+    base.parserRuleId === "exact:when-attacking:modify-power:choose:this-turn"
+      ? "exact:when-attacking:conditional:modify-power:choose:this-turn"
+      : base.parserRuleId;
+  const parserRuleIds =
+    parserRuleId ===
+    "exact:when-attacking:conditional:modify-power:choose:this-turn"
+      ? ([
+          "exact:when-attacking:conditional:modify-power:choose:this-turn",
+        ] as const)
+      : base.parserRuleIds;
+
   return {
     ...base,
     effectBlock: {
       ...base.effectBlock,
       condition: conditional.condition,
     },
+    parserRuleId,
+    ...(parserRuleIds === undefined ? {} : { parserRuleIds }),
   };
 }
 
@@ -382,20 +412,31 @@ function parseSupportedComposition(
   sourceText: string,
 ): readonly CertifiedClause[] | undefined {
   const lines = sourceText.split("\n");
-  if (lines.length !== 2) {
+  if (lines.length < 2) {
     return undefined;
   }
 
-  const onPlayClause = parseOnPlayDrawClause(cardId, lines[0] ?? "");
-  const whenAttackingClause = parseWhenAttackingDrawClause(
-    cardId,
-    lines[1] ?? "",
+  const clauses: CertifiedClause[] = [];
+  for (const line of lines) {
+    const clause =
+      parseCardLineEffectClause(cardId, line) ??
+      parseStandaloneBlockerClause(line) ??
+      parseStandaloneEngineKeywordClause(line);
+    if (clause === undefined) {
+      return undefined;
+    }
+    clauses.push(clause);
+  }
+
+  return isCertifiedLineSeparatedComposition(clauses) ? clauses : undefined;
+}
+
+function isCertifiedLineSeparatedComposition(
+  clauses: readonly CertifiedClause[],
+): boolean {
+  return isCertifiedLineSeparatedEffectBlockComposition(
+    clauses.map((clause) => clause.effectBlock),
   );
-  if (onPlayClause === undefined || whenAttackingClause === undefined) {
-    return undefined;
-  }
-
-  return [onPlayClause, whenAttackingClause];
 }
 
 function parseReusableCard016AClause(
@@ -692,6 +733,46 @@ function parseWhenAttackingDrawClause(
   });
 }
 
+function parseWhenAttackingModifyPowerChooseThisTurnClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper === undefined || wrapper.prefix !== "[When Attacking] ") {
+    return undefined;
+  }
+
+  const modifier = parseContinuousModifierInstructionBody(wrapper.bodyText);
+  if (
+    modifier === undefined ||
+    modifier.target !== "opponentCharactersChoose" ||
+    modifier.duration !== "thisTurn"
+  ) {
+    return undefined;
+  }
+
+  return {
+    effectBlock: {
+      category: "auto",
+      effect: {
+        duration: { type: "thisTurn" },
+        target: {
+          request: opponentCharacterChooseTargetRequest(),
+          type: "choose",
+        },
+        type: "modifyPower",
+        value: modifier.value,
+      },
+      id: toEffectId(
+        `${String(cardId)}:exact:when-attacking:modify-power:choose:this-turn`,
+      ),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "whenAttacking" },
+    },
+    parserRuleId: "exact:when-attacking:modify-power:choose:this-turn",
+  };
+}
+
 function parseTriggerDrawClause(
   cardId: CardId,
   sourceText: string,
@@ -821,56 +902,6 @@ function parseDrawThenTrashClauseWithPrefix({
   });
 }
 
-const blockerReminderText =
-  "(After your opponent declares an attack, you may rest this card to make it the new target of the attack.)";
-const standaloneBlockerSourceText = "[Blocker]";
-const standaloneBlockerWithReminderSourceText = `${standaloneBlockerSourceText} ${blockerReminderText}`;
-const standaloneEngineKeywordDefinitions = [
-  [
-    "exact:keyword:rush:standalone",
-    "[Rush]",
-    "(This card can attack on the turn in which it is played.)",
-  ],
-  [
-    "exact:keyword:rush-character:standalone",
-    "[Rush: Character]",
-    "(This card can attack Characters on the turn in which it is played.)",
-  ],
-  [
-    "exact:keyword:double-attack:standalone",
-    "[Double Attack]",
-    "(This card deals 2 damage.)",
-  ],
-  [
-    "exact:keyword:banish:standalone",
-    "[Banish]",
-    "(When this card deals damage, the target card is trashed without activating its Trigger.)",
-  ],
-] as const;
-
-function parseStandaloneBlockerClause(sourceText: string) {
-  return sourceText === standaloneBlockerSourceText ||
-    sourceText === standaloneBlockerWithReminderSourceText
-    ? createStandaloneKeywordClause("exact:keyword:blocker:standalone")
-    : undefined;
-}
-
-function createStandaloneKeywordClause(parserRuleId: string): CertifiedClause {
-  return { implementationStatus: "vanilla-confirmed", parserRuleId };
-}
-
-function parseStandaloneEngineKeywordClause(sourceText: string) {
-  const definition = standaloneEngineKeywordDefinitions.find(
-    (candidate) =>
-      sourceText === candidate[1] ||
-      sourceText === `${candidate[1]} ${candidate[2]}`,
-  );
-
-  return definition === undefined
-    ? undefined
-    : createStandaloneKeywordClause(definition[0]);
-}
-
 function parseTriggeredDrawResidueClause(
   options: TriggeredDrawClauseOptions,
 ): ParsedResidueClause | undefined {
@@ -920,45 +951,6 @@ function parseDrawThenTrashResidueClauseWithPrefix({
     }),
     prefix: parsed.prefix,
   };
-}
-
-function parseStandaloneBlockerResidueClause(sourceText: string) {
-  const reminderPrefix = `${standaloneBlockerWithReminderSourceText} `;
-  const sourcePrefix = `${standaloneBlockerSourceText} `;
-  const prefix = sourceText.startsWith(reminderPrefix)
-    ? reminderPrefix
-    : sourceText.startsWith(sourcePrefix)
-      ? sourcePrefix
-      : undefined;
-  if (prefix === undefined) {
-    return undefined;
-  }
-
-  return {
-    clause: createStandaloneKeywordClause("exact:keyword:blocker:standalone"),
-    prefix,
-  };
-}
-
-function parseStandaloneEngineKeywordResidueClause(sourceText: string) {
-  for (const definition of standaloneEngineKeywordDefinitions) {
-    const sourcePrefix = `${definition[1]} `;
-    const reminderPrefix = `${definition[1]} ${definition[2]} `;
-    const prefix = sourceText.startsWith(reminderPrefix)
-      ? reminderPrefix
-      : sourceText.startsWith(sourcePrefix)
-        ? sourcePrefix
-        : undefined;
-
-    if (prefix !== undefined) {
-      return {
-        clause: createStandaloneKeywordClause(definition[0]),
-        prefix,
-      };
-    }
-  }
-
-  return undefined;
 }
 
 function parseDrawThenTrashCounts(sourceText: string, prefix: DrawTrashPrefix) {
@@ -1073,13 +1065,6 @@ function createDrawThenTrashClauseWithCounts({
     },
     parserRuleId,
   };
-}
-
-function getCompleteParserRuleIds(clauses: readonly CertifiedClause[]) {
-  const ruleIds = clauses.map((clause) => clause.parserRuleId);
-  return clauses.length > 1
-    ? [...ruleIds, "line-separated-effect-blocks:v1"]
-    : ruleIds;
 }
 
 function resolveImplementationStatus(clauses: readonly CertifiedClause[]) {

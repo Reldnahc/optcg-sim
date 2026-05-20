@@ -1,4 +1,7 @@
 import { generatedSupportComponentEvidenceInventory } from "./generated-support-types.js";
+import { returnDonCostWrapperParserRuleId } from "./return-don-cost-wrapper-components.js";
+
+const onPlayReturnDonDrawNParserRuleId = "exact:on-play:return-don-draw-n:self";
 
 export type RuntimeCapabilityKind =
   | "category"
@@ -42,8 +45,8 @@ export interface RuntimeCapabilityParserRuleInventoryEntry {
   coverage: RuntimeCapabilityParserRuleCoverage;
 }
 
-const conditionalContinuousTrashCountParserRuleId =
-  "exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character";
+const conditionalContinuousCompositionParserRuleId =
+  "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character";
 
 const conditionalContinuousRuntimeCapabilitySpecs = [
   [
@@ -187,12 +190,14 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:condition:your-turn",
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        onPlayReturnDonDrawNParserRuleId,
         "card014a:on-play:select-target-modify-power",
         "exact:on-play:select-1-opponent-character-target",
         "exact:on-play:select-1-opponent-character-then-ko-that-character",
         "exact:on-play:modify-power:self:this-turn",
         "exact:on-play:modify-power:self:this-battle",
         "exact:on-play:modify-power:choose:this-turn",
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
         "exact:on-play:modify-power:all:this-turn",
         "exact:on-play:cannot-attack:self:this-turn",
         "exact:on-play:cannot-attack:choose:this-turn",
@@ -209,7 +214,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         kind,
         sinceStory,
         supported: true,
-        supportedParserRuleIds: [conditionalContinuousTrashCountParserRuleId],
+        supportedParserRuleIds: [conditionalContinuousCompositionParserRuleId],
       }),
     ),
     {
@@ -278,6 +283,15 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
     },
     {
       description:
+        "Public DON field-count conditions over self or opponent field-visible DON are executable by current runtime.",
+      id: "condition:fieldCount:don:public",
+      kind: "condition",
+      sinceStory: "SUP-001B",
+      supported: true,
+      supportedParserRuleIds: [],
+    },
+    {
+      description:
         "Boolean AND condition connectors are executable by runtime.",
       id: "condition-connector:and",
       kind: "condition",
@@ -333,6 +347,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:trigger:draw-n:self",
         "exact:condition:self-attached-don-count",
         "exact:condition:your-turn",
+        onPlayReturnDonDrawNParserRuleId,
         "card014a:sequence:draw-trashFromHand",
         "card014a:sequence:trashFromHand-draw",
       ],
@@ -448,6 +463,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "card014a:modifier:power-choose-this-turn",
         "card014a:on-play:select-target-modify-power",
         "exact:on-play:modify-power:choose:this-turn",
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
       ],
     },
     {
@@ -457,7 +473,10 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       kind: "modifier",
       sinceStory: "ENG-057A",
       supported: true,
-      supportedParserRuleIds: ["exact:on-play:modify-power:choose:this-turn"],
+      supportedParserRuleIds: [
+        "exact:on-play:modify-power:choose:this-turn",
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
+      ],
     },
     {
       description:
@@ -502,6 +521,8 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        onPlayReturnDonDrawNParserRuleId,
+        returnDonCostWrapperParserRuleId,
       ],
     },
     {
@@ -538,6 +559,8 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        onPlayReturnDonDrawNParserRuleId,
+        returnDonCostWrapperParserRuleId,
       ],
     },
     {
@@ -649,12 +672,14 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:condition:your-turn",
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        onPlayReturnDonDrawNParserRuleId,
         "card014a:on-play:select-target-modify-power",
         "exact:on-play:select-1-opponent-character-target",
         "exact:on-play:select-1-opponent-character-then-ko-that-character",
         "exact:on-play:modify-power:self:this-turn",
         "exact:on-play:modify-power:self:this-battle",
         "exact:on-play:modify-power:choose:this-turn",
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
         "exact:on-play:modify-power:all:this-turn",
         "exact:on-play:cannot-attack:self:this-turn",
         "exact:on-play:cannot-attack:choose:this-turn",
@@ -744,12 +769,14 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:condition:your-turn",
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        onPlayReturnDonDrawNParserRuleId,
         "card014a:on-play:select-target-modify-power",
         "exact:on-play:select-1-opponent-character-target",
         "exact:on-play:select-1-opponent-character-then-ko-that-character",
         "exact:on-play:modify-power:self:this-turn",
         "exact:on-play:modify-power:self:this-battle",
         "exact:on-play:modify-power:choose:this-turn",
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
         "exact:on-play:modify-power:all:this-turn",
         "exact:on-play:cannot-attack:self:this-turn",
         "exact:on-play:cannot-attack:choose:this-turn",
@@ -806,7 +833,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       ],
     },
   ],
-  generatedAtStory: "CARD-014G",
+  generatedAtStory: "SUP-001E",
   id: "generated-support-runtime-capabilities:v1",
 } as const satisfies RuntimeCapabilityMatrix;
 
@@ -927,7 +954,7 @@ function classifyParserRuleKind(parserRuleId: string): string {
   ) {
     return "draw-up-to";
   }
-  if (parserRuleId === conditionalContinuousTrashCountParserRuleId) {
+  if (parserRuleId === conditionalContinuousCompositionParserRuleId) {
     return "sequence";
   }
   if (
@@ -945,9 +972,13 @@ function classifyParserRuleKind(parserRuleId: string): string {
   }
   if (
     parserRuleId.includes("return-don") ||
+    parserRuleId === onPlayReturnDonDrawNParserRuleId ||
+    parserRuleId === returnDonCostWrapperParserRuleId ||
     parserRuleId === "card014a:on-play:return-don-play-selected-character"
   ) {
-    return "cost-hand-selection-play-selected";
+    return parserRuleId === onPlayReturnDonDrawNParserRuleId
+      ? "costed-draw"
+      : "cost-hand-selection-play-selected";
   }
   if (
     parserRuleId.includes("select-1-opponent-character") ||

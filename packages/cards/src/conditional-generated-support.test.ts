@@ -192,61 +192,102 @@ describe("conditional generated support diagnostics", () => {
     expect(text).not.toContain("draw 1 cards");
   });
 
-  it("supports trash-count conditional continuous composition with line-separated On K.O. draw", () => {
-    const sourceText = [
-      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Rush].",
-      "[On K.O.] Draw 1 card.",
-    ].join("\n");
-    const index = buildGeneratedSupportIndex({
-      cards: [
-        {
-          ...baseInput,
-          cardId: "CARD-021E-SYNTHETIC" as CardId,
-          sourceText,
-          sourceTextHash: "sha256:card-021e-synthetic",
-        },
-      ],
-      validateEffectDefinition,
-    });
+  it.each([
+    {
+      expectedCondition: {
+        op: "gte",
+        player: "self",
+        type: "trashCount",
+        value: 7,
+      },
+      expectedRuntimeCapabilityId: "condition:trashCount",
+      sourceText:
+        "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Rush].",
+    },
+    {
+      expectedCondition: {
+        op: "gte",
+        player: "self",
+        type: "leaderColorCount",
+        value: 2,
+      },
+      expectedRuntimeCapabilityId: "condition:leaderColorCount",
+      sourceText:
+        "If your Leader is multicolored, this Character cannot be removed from the field by your opponent's effects and gains [Rush].",
+    },
+    {
+      expectedCondition: {
+        filter: { categories: ["don"] },
+        op: "lte",
+        player: "self",
+        type: "fieldCount",
+        value: 6,
+      },
+      expectedRuntimeCapabilityId: "condition:fieldCount:don:public",
+      sourceText:
+        "If you have 6 or less DON!! cards on your field, this Character cannot be removed from the field by your opponent's effects and gains [Rush].",
+    },
+  ])(
+    "supports conditional continuous composition with a supported condition expression ($expectedRuntimeCapabilityId)",
+    ({ expectedCondition, expectedRuntimeCapabilityId, sourceText }) => {
+      const fullSourceText = [sourceText, "[On K.O.] Draw 1 card."].join("\n");
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "CARD-021E-SYNTHETIC" as CardId,
+            sourceText: fullSourceText,
+            sourceTextHash: "sha256:card-021e-synthetic",
+          },
+        ],
+        validateEffectDefinition,
+      });
+      const report = buildGeneratedSupportReport(index);
 
-    const entry = index.entries[0];
-    expect(entry).toMatchObject({
-      blockers: [],
-      cardId: "CARD-021E-SYNTHETIC",
-      parseStatus: "complete",
-      parserRuleIds: [
-        "exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character",
-        "exact:on-ko:draw-n:self",
-        "line-separated-effect-blocks:v1",
-      ],
-      status: "supported",
-    });
+      const entry = index.entries[0];
+      expect(entry).toMatchObject({
+        blockers: [],
+        cardId: "CARD-021E-SYNTHETIC",
+        parseStatus: "complete",
+        parserRuleIds: [
+          "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character",
+          "exact:on-ko:draw-n:self",
+          "line-separated-effect-blocks:v1",
+        ],
+        status: "supported",
+      });
 
-    const effectDefinition = entry?.effectDefinition;
-    expect(effectDefinition).toBeDefined();
-    if (effectDefinition === undefined) {
-      throw new Error("Expected generated effect definition for CARD-021E.");
-    }
-    expect(effectDefinition.effects).toHaveLength(2);
-    const permanent = effectDefinition.effects[0];
-    const onKo = effectDefinition.effects[1];
-    expect(permanent).toMatchObject({
-      category: "permanent",
-      effect: { type: "sequence" },
-      trigger: { type: "permanent" },
-    });
-    const permanentEffects = (
-      permanent?.effect.type === "sequence" ? permanent.effect.effects : []
-    ).map((segment) => segment.effect.type);
-    expect(permanentEffects).toEqual(
-      expect.arrayContaining(["giveKeyword", "giveProtection"]),
-    );
-    expect(onKo).toMatchObject({
-      effect: { count: 1, player: "self", type: "draw" },
-      sourcePresencePolicy: "resolveFromDestinationZone",
-      trigger: { type: "onKO" },
-    });
-  });
+      const effectDefinition = entry?.effectDefinition;
+      expect(effectDefinition).toBeDefined();
+      if (effectDefinition === undefined) {
+        throw new Error("Expected generated effect definition for CARD-021E.");
+      }
+      expect(effectDefinition.effects).toHaveLength(2);
+      const permanent = effectDefinition.effects[0];
+      const onKo = effectDefinition.effects[1];
+      expect(permanent).toMatchObject({
+        category: "permanent",
+        condition: expectedCondition,
+        effect: { type: "sequence" },
+        trigger: { type: "permanent" },
+      });
+      expect(
+        report.proofCertificatesByCardId["CARD-021E-SYNTHETIC"]
+          ?.requiredRuntimeCapabilityIds,
+      ).toEqual(expect.arrayContaining([expectedRuntimeCapabilityId]));
+      const permanentEffects = (
+        permanent?.effect.type === "sequence" ? permanent.effect.effects : []
+      ).map((segment) => segment.effect.type);
+      expect(permanentEffects).toEqual(
+        expect.arrayContaining(["giveKeyword", "giveProtection"]),
+      );
+      expect(onKo).toMatchObject({
+        effect: { count: 1, player: "self", type: "draw" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        trigger: { type: "onKO" },
+      });
+    },
+  );
 
   it("prints a complete proof certificate for supported conditional continuous composition", async () => {
     const detail = await loadOp03044Fixture();
@@ -280,11 +321,11 @@ describe("conditional generated support diagnostics", () => {
     expect(text).toContain("- behavior hash status: passed");
     expect(text).toContain("- parse completeness: passed");
     expect(text).toContain(
-      "- parser-rule certification/evidence: passed (exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character, exact:on-ko:draw-n:self, line-separated-effect-blocks:v1)",
+      "- parser-rule certification/evidence: passed (exact:conditional-continuous:condition:keyword-grant-and-protection:self-character, exact:on-ko:draw-n:self, line-separated-effect-blocks:v1)",
     );
     expect(text).toContain("- generated DSL schema: passed");
     expect(text).toContain(
-      "- component evidence IDs: passed (conditional-continuous-trash-count-keyword-grant-and-protection, line-separated-effect-blocks-composition, on-ko-draw)",
+      "- component evidence IDs: passed (conditional-continuous-condition-keyword-grant-and-protection, line-separated-effect-blocks-composition, on-ko-draw)",
     );
     expect(text).toContain("- required runtime capability IDs: passed");
     expect(text).toContain("- missing runtime capability IDs: passed (none)");
@@ -296,16 +337,16 @@ describe("conditional generated support diagnostics", () => {
     expect(text).toContain("Blockers: none");
   });
 
-  it("keeps non-trash conditional continuous composition fail-closed", () => {
+  it("keeps unsupported conditional continuous conditions fail-closed", () => {
     const sourceText =
-      "If your Leader is multicolored, this Character cannot be removed from the field by your opponent's effects and gains [Rush].";
+      "If you and your opponent have 10 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Rush].";
     const index = buildGeneratedSupportIndex({
       cards: [
         {
           ...baseInput,
-          cardId: "CARD-021E-NON-TRASH-CONDITION" as CardId,
+          cardId: "CARD-021E-UNSUPPORTED-CONDITION" as CardId,
           sourceText,
-          sourceTextHash: "sha256:card-021e-non-trash-condition",
+          sourceTextHash: "sha256:card-021e-unsupported-condition",
         },
       ],
       validateEffectDefinition,
@@ -313,7 +354,7 @@ describe("conditional generated support diagnostics", () => {
 
     expect(index.entries[0]).toMatchObject({
       blockers: [expect.objectContaining({ code: "unparsed-span" })],
-      cardId: "CARD-021E-NON-TRASH-CONDITION",
+      cardId: "CARD-021E-UNSUPPORTED-CONDITION",
       parseStatus: "partial",
       parserRuleIds: [],
       status: "unsupported",

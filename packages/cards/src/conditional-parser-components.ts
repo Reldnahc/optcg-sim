@@ -3,6 +3,7 @@ import type {
   GeneratedSupportDiagnosticTraceComponent,
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-types.js";
+import { toConditionConnectorId } from "./conditional-parser-id-helpers.js";
 
 export {
   deriveProtectionBodyDiagnosticDecomposition,
@@ -47,6 +48,15 @@ export type ParsedConditionComponent =
       readonly op: "gte" | "lte";
       readonly player: "self" | "opponent";
       readonly type: "handCount" | "lifeCount";
+      readonly value: number;
+    }
+  | {
+      readonly op: "eq" | "gte" | "lte";
+      readonly filter: {
+        readonly categories: readonly ["don"];
+      };
+      readonly player: "self" | "opponent";
+      readonly type: "fieldCount";
       readonly value: number;
     }
   | {
@@ -183,6 +193,15 @@ function parseConditionExpressionAtOffset(
     };
   }
 
+  if (/^you and your opponent\b/i.test(normalized)) {
+    return {
+      id: `condition:unsupported:${String(absoluteStart)}-${String(absoluteEnd)}`,
+      span,
+      text: normalized,
+      type: "unsupported-fragment",
+    };
+  }
+
   const connectors = parseConditionConnectorCandidates(
     normalized,
     absoluteStart,
@@ -207,7 +226,7 @@ function parseConditionExpressionAtOffset(
           start: connector.connectorStart,
           text: connector.connector,
         },
-        id: toConnectorId(connector),
+        id: toConditionConnectorId(connector),
         left,
         right,
         span,
@@ -234,7 +253,7 @@ function parseConditionExpressionAtOffset(
       start: fallback.connectorStart,
       text: fallback.connector,
     },
-    id: toConnectorId(fallback),
+    id: toConditionConnectorId(fallback),
     left: parseConditionExpressionAtOffset(fallback.left, fallback.leftStart),
     right: parseConditionExpressionAtOffset(
       fallback.right,
@@ -624,7 +643,7 @@ function parseConditionConnectorCandidates(
     if (
       left.length === 0 ||
       right.length === 0 ||
-      /^(more|less)\b/i.test(right)
+      /^(fewer|less|more)\b/i.test(right)
     ) {
       continue;
     }
@@ -727,6 +746,44 @@ function parseConditionComponent(
     };
   }
 
+  const fieldCountMatch =
+    /^(you|your opponent) (?:have|has) (\d+)(?: or (more|less))? DON!! cards on (your|their) field$/i.exec(
+      sourceText,
+    );
+  if (fieldCountMatch !== null) {
+    const playerText = fieldCountMatch[1]?.toLowerCase();
+    const valueText = fieldCountMatch[2] ?? "";
+    const value =
+      valueText === "0" ? 0 : parseExactPositiveSafeInteger(valueText);
+    const comparatorText = fieldCountMatch[3]?.toLowerCase();
+    const fieldOwnerText = fieldCountMatch[4]?.toLowerCase();
+    if (
+      value === undefined ||
+      (playerText !== "you" && playerText !== "your opponent") ||
+      (fieldOwnerText !== "your" && fieldOwnerText !== "their") ||
+      (comparatorText !== undefined &&
+        comparatorText !== "more" &&
+        comparatorText !== "less") ||
+      (playerText === "you" && fieldOwnerText !== "your") ||
+      (playerText === "your opponent" && fieldOwnerText !== "their")
+    ) {
+      return undefined;
+    }
+
+    return {
+      filter: { categories: ["don"] },
+      op:
+        comparatorText === "more"
+          ? "gte"
+          : comparatorText === "less"
+            ? "lte"
+            : "eq",
+      player: playerText === "you" ? "self" : "opponent",
+      type: "fieldCount",
+      value,
+    };
+  }
+
   const trashCountMatch =
     /^(you|your opponent) (?:have|has) (\d+)(?: or (more|less))? cards in (your|their) trash$/i.exec(
       sourceText,
@@ -774,7 +831,6 @@ function parseExactPositiveSafeInteger(countText: string): number | undefined {
   if (countText !== String(count)) {
     return undefined;
   }
-
   return count;
 }
 
@@ -1007,11 +1063,10 @@ function toConditionComponentId(component: ParsedConditionComponent): string {
       return `condition:leaderAttribute:${component.filter.attributesAny[0]}`;
     case "handCount":
     case "lifeCount":
+    case "fieldCount":
     case "trashCount":
-      return `condition:${component.type}:${component.player}:${component.op}:${String(component.value)}`;
+      return component.type === "fieldCount"
+        ? `condition:fieldCount:don:${component.player}:${component.op}:${String(component.value)}`
+        : `condition:${component.type}:${component.player}:${component.op}:${String(component.value)}`;
   }
-}
-
-function toConnectorId(candidate: ConnectorCandidate): string {
-  return `condition-connector:${candidate.connector}:${String(candidate.connectorStart)}-${String(candidate.connectorEnd)}`;
 }

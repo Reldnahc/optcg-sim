@@ -1,0 +1,28 @@
+{
+  "cardId": "SUP-001A-INVALID-CUSTOM-SHORTCUT",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "sup-001a:custom-shortcut",
+      "category": "permanent",
+      "trigger": { "type": "permanent" },
+      "condition": {
+        "type": "fieldCount",
+        "player": "self",
+        "filter": {
+          "categories": ["don"],
+          "custom": "you have 6 or less DON!! cards on your field"
+        },
+        "op": "lte",
+        "value": 6
+      },
+      "effect": { "type": "draw", "count": 1, "player": "self" }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:sup-001a-invalid-custom-shortcut",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

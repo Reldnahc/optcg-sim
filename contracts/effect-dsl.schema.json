@@ -754,6 +754,39 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["type", "player", "op", "value"],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "filter": {
+                    "type": "object",
+                    "properties": {
+                      "categories": {
+                        "type": "array",
+                        "contains": { "const": "don" }
+                      }
+                    },
+                    "required": ["categories"]
+                  }
+                },
+                "required": ["filter"]
+              },
+              "then": {
+                "properties": {
+                  "player": {
+                    "type": "string",
+                    "enum": ["self", "opponent"]
+                  },
+                  "filter": {
+                    "type": "object",
+                    "properties": {
+                      "custom": false
+                    }
+                  }
+                }
+              }
+            }
+          ],
           "properties": {
             "type": { "const": "fieldCount" },
             "player": { "$ref": "#/$defs/playerRef" },

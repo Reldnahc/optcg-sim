@@ -232,9 +232,11 @@ describe("generated support parser result contracts", () => {
       .map((entry) => entry.parserRuleId)
       .sort();
     expect(parserRuleIds).toEqual([
+      "component:cost:return-don:self:count-exact",
+      "condition-component:field-count-don-public",
       "exact:condition:self-attached-don-count",
       "exact:condition:your-turn",
-      "exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character",
+      "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character",
       "exact:keyword:banish:standalone",
       "exact:keyword:blocker:standalone",
       "exact:keyword:double-attack:standalone",
@@ -256,12 +258,14 @@ describe("generated support parser result contracts", () => {
       "exact:on-play:modify-power:self:this-battle",
       "exact:on-play:modify-power:self:this-turn",
       "exact:on-play:optional-effect:draw-1:self",
+      "exact:on-play:return-don-draw-n:self",
       "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
       "exact:on-play:select-1-opponent-character-target",
       "exact:on-play:select-1-opponent-character-then-ko-that-character",
       "exact:on-play:trash-2-from-hand:draw-1:self",
       "exact:trigger:draw-n:self",
       "exact:trigger:draw-up-to-n:self",
+      "exact:when-attacking:conditional:modify-power:choose:this-turn",
       "exact:when-attacking:draw-n:self",
       "exact:when-attacking:draw-n:trash-m:hand:self",
       "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",

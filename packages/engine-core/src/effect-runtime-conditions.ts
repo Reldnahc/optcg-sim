@@ -193,6 +193,87 @@ const isSupportedLeaderZoneFilter = (
   return hasTypes || hasAttributes;
 };
 
+const isSupportedDonFieldCountFilter = (
+  filter: CardFilter | undefined,
+): filter is Required<Pick<CardFilter, "categories">> & {
+  state?: "active" | "rested" | "attached";
+} => {
+  if (filter === undefined) {
+    return false;
+  }
+  const keys = Object.keys(filter) as (keyof CardFilter)[];
+  for (const key of keys) {
+    if (key !== "categories" && key !== "state") {
+      return false;
+    }
+  }
+  if (
+    !Array.isArray(filter.categories) ||
+    filter.categories.length !== 1 ||
+    filter.categories[0] !== "don"
+  ) {
+    return false;
+  }
+  const stateValue = filter.state as unknown;
+  if (
+    stateValue !== undefined &&
+    stateValue !== "active" &&
+    stateValue !== "rested" &&
+    stateValue !== "attached"
+  ) {
+    return false;
+  }
+  return true;
+};
+
+const countPublicDonOnField = (
+  state: GameState,
+  playerId: PlayerId,
+  stateFilter: CardFilter["state"] | undefined,
+): number => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return 0;
+  }
+  const attachedIds = new Set([
+    ...player.leader.attachedDon,
+    ...player.characters.flatMap((card) => card.attachedDon),
+  ]);
+  const fieldDonById = new Map<string, CardInstance>();
+  for (const card of player.costArea) {
+    if (card.owner !== playerId || card.controller !== playerId) {
+      continue;
+    }
+    fieldDonById.set(card.instanceId, card);
+  }
+  switch (stateFilter) {
+    case undefined:
+      return fieldDonById.size;
+    case "active":
+    case "rested": {
+      let count = 0;
+      for (const card of fieldDonById.values()) {
+        if (attachedIds.has(card.instanceId)) {
+          continue;
+        }
+        if (card.state === stateFilter) {
+          count += 1;
+        }
+      }
+      return count;
+    }
+    case "attached": {
+      let count = 0;
+      for (const attachedId of attachedIds) {
+        if (fieldDonById.has(attachedId)) {
+          count += 1;
+        }
+      }
+      return count;
+    }
+  }
+};
+
 const evaluateLeaderColorCount = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -319,6 +400,20 @@ const evaluateCondition = (
         condition.op,
         (playerId) => state.players[playerId]?.trash.length ?? 0,
       );
+    case "fieldCount": {
+      if (!isSupportedDonFieldCountFilter(condition.filter)) {
+        return { supported: false };
+      }
+      const stateFilter = condition.filter.state;
+      return evaluateCountCondition(
+        state,
+        entry,
+        condition.player,
+        condition.value,
+        condition.op,
+        (playerId) => countPublicDonOnField(state, playerId, stateFilter),
+      );
+    }
     case "hasCardInZone":
       return evaluateHasCardInZone(state, entry, condition);
     case "and": {
@@ -354,7 +449,6 @@ const evaluateCondition = (
     case "attackTarget":
     case "donCount":
     case "opponentTurn":
-    case "fieldCount":
     case "cardState":
     case "sourceStillInZone":
     case "eventPayload":

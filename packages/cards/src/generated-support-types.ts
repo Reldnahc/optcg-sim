@@ -1,8 +1,16 @@
 import type { CardId, EffectDefinition } from "@optcg/types";
+import { donMinusDrawComponentEvidenceInventoryEntry } from "./don-minus-draw-evidence.js";
+import { fieldCountDonConditionComponentEvidenceInventoryEntry } from "./field-count-don-condition-evidence.js";
+import { sup001fConditionalModifyPowerComponentEvidenceInventoryEntry } from "./sup-001f-conditional-modify-power-evidence.js";
 import type {
   GeneratedSupportDiagnosticDecomposition,
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-diagnostic-types.js";
+import {
+  returnDonCostWrapperComponentEvidenceId,
+  returnDonCostWrapperParserRuleId,
+  returnDonCostWrapperRuntimeCapabilityIds,
+} from "./return-don-cost-wrapper-components.js";
 
 export type {
   GeneratedSupportDiagnosticDecomposition,
@@ -416,6 +424,7 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     shapeId: "on-play-condition-self-attached-don-count-draw",
   },
+  fieldCountDonConditionComponentEvidenceInventoryEntry,
   {
     components: [
       "wrapper",
@@ -446,6 +455,14 @@ export const generatedSupportComponentEvidenceInventory = [
       "trigger:onPlay",
     ],
     shapeId: "on-play-return-don-then-play-selected-character",
+  },
+  donMinusDrawComponentEvidenceInventoryEntry,
+  {
+    components: ["cost", ...parserRuleBaseComponents],
+    gates: parserRuleBaseGates,
+    parserRuleId: returnDonCostWrapperParserRuleId,
+    runtimeCapabilityIds: returnDonCostWrapperRuntimeCapabilityIds,
+    shapeId: returnDonCostWrapperComponentEvidenceId,
   },
   {
     components: [
@@ -554,6 +571,7 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     shapeId: "on-play-modify-power-choose-this-turn",
   },
+  sup001fConditionalModifyPowerComponentEvidenceInventoryEntry,
   {
     components: [
       "wrapper",
@@ -845,7 +863,7 @@ export const generatedSupportComponentEvidenceInventory = [
       schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
     },
     parserRuleId:
-      "exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character",
+      "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character",
     runtimeCapabilityIds: [
       "category:permanent",
       "trigger:permanent",
@@ -854,7 +872,7 @@ export const generatedSupportComponentEvidenceInventory = [
       "effect:giveProtection:fieldRemoval:thisCard:permanent",
       "sourcePresencePolicy:mustRemainInSameZone",
     ],
-    shapeId: "conditional-continuous-trash-count-keyword-grant-and-protection",
+    shapeId: "conditional-continuous-condition-keyword-grant-and-protection",
   },
   {
     components: ["sequence", ...parserRuleBaseComponents],

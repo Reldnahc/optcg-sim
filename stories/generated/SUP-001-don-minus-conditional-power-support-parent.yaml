@@ -1,0 +1,156 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-001
+epic_id: SUP-001
+title: DON-minus conditional power support parent
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Coordinate the contract, engine, and cards-layer work needed to support a
+  reusable two-line generated-support shape containing a DON-minus On Play draw
+  and a conditional When Attacking opponent-Character power modifier. This
+  parent exists to keep the full support chain visible from the start, while
+  each executable child remains scoped to one domain.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  SUP-001A through SUP-001G one at a time after distinct parent and child
+  story-review evidence exists. This parent coordinates contract
+  authorability, engine runtime capability, and cards-layer parser/generated
+  support promotion, but no child may mix contracts, engine runtime behavior,
+  and cards generated-support implementation in one patch.
+allowed_touch_points:
+  - stories/generated/SUP-001*.yaml
+  - stories/approved/SUP-001*.yaml
+  - agent-packets/SUP-001*.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 02-engine-mechanics.s025
+  - 02-engine-mechanics.s027
+  - 02-engine-mechanics.s029
+  - 02-engine-mechanics.s036
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-014A
+  - CARD-014G
+  - CARD-019B
+  - CARD-009A
+  - CARD-020D
+  - CARD-021E
+  - ENG-012F
+  - ENG-055F
+  - ENG-057A
+  - ENG-058B
+child_stories:
+  - id: SUP-001A
+    title: DON field-count condition contract fixture authority
+    concern: Pin existing fieldCount plus CardFilter authorability for public DON-on-field count conditions without adding a new condition primitive, runtime behavior, or card parser behavior.
+    depends_on: []
+  - id: SUP-001B
+    title: DON field-count condition runtime
+    concern: Evaluate public DON-on-field count conditions in engine runtime using reusable public state primitives.
+    depends_on: [SUP-001A]
+  - id: SUP-001C
+    title: DON-minus cost wrapper card components
+    concern: Parse and diagnose reusable DON-minus cost wrappers such as `DON!! -1:` and `DON!! −1:` without binding to one effect body.
+    depends_on: [CARD-020D, ENG-055F]
+  - id: SUP-001D
+    title: DON-minus draw generated support
+    concern: Compose a DON-minus On Play cost wrapper with existing draw generated-support primitives.
+    depends_on: [SUP-001C, ENG-012F, CARD-009A]
+  - id: SUP-001E
+    title: DON field-count condition card components
+    concern: Parse and diagnose reusable `If you have N or less DON!! cards on your field` condition primitives.
+    depends_on: [SUP-001A, SUP-001B, CARD-020D]
+  - id: SUP-001F
+    title: Conditional opponent power modifier card components
+    concern: Compose When Attacking conditional wrappers, opponent Character up-to-one target selection, and this-turn power modification.
+    depends_on: [SUP-001B, SUP-001E, CARD-014G, CARD-019B, ENG-057A, ENG-058B]
+  - id: SUP-001G
+    title: DON-minus conditional power generated-support promotion
+    concern: Promote only fully gated DON-minus draw plus conditional opponent power modifier parses into generated support while preserving fail-closed diagnostics and avoiding real-card or sample-specific branches.
+    depends_on: [SUP-001D, SUP-001F]
+scope:
+  - keep the full support chain in one parent story so the final generated-support promotion child is visible before implementation starts
+  - decompose the printed source into reusable primitives rather than exact full-card text or exact full-effect sentence branches
+  - cover the `DON!! -N:` / `DON!! −N:` cost wrapper as an authorable cost prefix independent of draw or play-selected bodies
+  - cover the public condition primitive shape `If you have` + `N or less` + `DON!! cards` + `on your field`
+  - define `DON!! cards on your field` as public DON controlled by the player in field-visible gameplay zones, including cost-area DON and attached DON, excluding DON deck and non-field/off-board zones
+  - reuse existing draw, When Attacking timing, up-to-one opponent Character target selection, and this-turn power modifier primitives wherever they already exist
+  - support negative power values such as `-1000` and Unicode minus `−1000` as the same numeric modifier data where the parser safely recognizes the primitive
+  - promote complete generated support only after parser certification, schema validation, runtime capability evidence, support metadata, review state, tested state, source integrity, and behavior hash gates pass
+  - keep any real card identity, real-card fixture, human-held adjacent-card list, source hash, behavior hash, overlay, or support manifest outside story authority
+non_scope:
+  - direct parent implementation
+  - a single child that changes contracts, engine runtime, and cards generated support together
+  - real card IDs, real-card fixture capture, real-card source hash updates, real-card behavior hash updates, overlays, support manifest edits, or cards-produced manifest regeneration
+  - production branches for exact full card text, exact full effect lines, one real card, one external card list, or sample-specific sentence templates
+  - new draw behavior, new return-DON cost payment behavior, new target-selection behavior, or new power-modifier runtime behavior except where a child explicitly identifies a missing reusable runtime capability
+  - DON deck/private-zone counting, hidden-information predicates, arbitrary zone-count query language, or broad natural-language inference
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - SUP-001 is not implemented directly
+  - SUP-001A through SUP-001G are independently reviewable child stories
+  - parent and every child story-review artifact exists with distinct assignment identity and distinct durable artifact identity before approval handoff, packet generation, activation, implementation handoff, or PR handoff
+  - the contract child authorizes any missing DSL shape before engine or cards children consume it
+  - the engine child proves any missing runtime capability before cards generated-support promotion cites it
+  - cards children can recognize the two printed lines through reusable components without exact full-card or full-effect hardcoding
+  - complete generated support remains unsupported unless the full generated-support chain passes, including parser certification, schema validation, runtime capability evidence, engine proof/test evidence, metadata, review, tested state, source integrity, and behavior hash evidence
+  - no implementation or test depends on real card IDs, the human-held adjacent-card list, exact full printed text, or one-off full-effect sentence branches
+  - existing generated-support behavior for CARD-014, CARD-020, and CARD-021 remains compatible
+  - parent PR cleanup metadata lists SUP-001A through SUP-001G and binds the non-packetized SUP-001 parent closeout after merge to main
+card_source_integrity:
+  - parent does not implement directly and does not name or target any real card
+  - children must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence
+  - real cards and any human-held adjacent-card list are deliberately excluded from story authority; matching real cards may be discovered by generated-support probing only through the reviewed generic parser/support gates, not through card-specific branches
+engine_capability_preflight:
+  - parent does not implement directly and delegates executable capability proof to SUP-001A through SUP-001G
+  - "parsed effect shape is two independent line-separated blocks: `[On Play] DON!! -N: Draw M card(s).` and `[When Attacking] If <player> has N-or-less DON!! cards on their field, give up to one opponent Character -P power during this turn.`"
+  - "supported prerequisites named by the parent include existing fieldCount DSL authority, ENG-012F/CARD-009A draw support, ENG-055F return-DON cost support, ENG-057A zero-choice choose-target support, ENG-058B conditional queued wrapper reachability, CARD-014G modifyPower composition, CARD-019B conditional generated-support composition, CARD-020D diagnostics, and CARD-021E line-separated composition"
+  - "missing prerequisites are represented by SUP-001A through SUP-001G until each child lands; no parent implementation may treat them as already complete"
+required_tests:
+  - story-review for SUP-001 parent before approval handoff
+  - story-review for SUP-001A before approval handoff
+  - story-review for SUP-001B before approval handoff
+  - story-review for SUP-001C before approval handoff
+  - story-review for SUP-001D before approval handoff
+  - story-review for SUP-001E before approval handoff
+  - story-review for SUP-001F before approval handoff
+  - story-review for SUP-001G before approval handoff
+  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - story-specific tests from SUP-001A through SUP-001G
+  - per-child reviewed commit evidence, AI review record, revision response, and verification evidence for SUP-001A through SUP-001G before parent PR handoff
+  - role packet extraction output before each implementation handoff and before each code-review handoff
+  - final parent PR full-story integration review covering all child commits, packet history, cleanup metadata, CI, verification, and unresolved comments before human-review handoff
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run packets:verify`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - use the parent/substory workflow
+  - do not activate or implement SUP-001 directly
+  - generate and activate one SUP-001 child packet at a time
+  - do not complete child packets until the parent branch lands on main
+  - keep SUP-001A through SUP-001G work on one parent integration branch with reviewed child commits
+  - do not open child PRs to main; use one final parent PR to main
+  - parent PR cleanup metadata must list SUP-001A through SUP-001G and bind the non-packetized SUP-001 parent closeout
+  - run role packet extraction before implementation and code-review handoffs
+  - fail closed on any parser, schema, runtime capability, source integrity, metadata, review, test, or wording ambiguity that could accidentally mark unsupported text playable
+ambiguity_policy: fail_and_escalate

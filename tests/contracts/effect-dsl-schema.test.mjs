@@ -20,6 +20,9 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/valid/condition-optionality-composition.json",
     "fixtures/effect-dsl/valid/draw-then-trash-sequence.json",
     "fixtures/effect-dsl/valid/draw-up-to.json",
+    "fixtures/effect-dsl/valid/don-field-count-self-lte.json",
+    "fixtures/effect-dsl/valid/don-field-count-opponent-eq.json",
+    "fixtures/effect-dsl/valid/don-field-count-self-gte.json",
     "fixtures/effect-dsl/valid/field-object-selected-target-continuous-binding.json",
     "fixtures/effect-dsl/valid/hand-select-play-selected.json",
     "fixtures/effect-dsl/valid/leader-color-count-condition.json",
@@ -38,6 +41,10 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/duration-until-start-next-turn-missing-player.json",
     "fixtures/effect-dsl/invalid/duration-while-condition-true-unsupported.json",
     "fixtures/effect-dsl/invalid/draw-up-to-negative-count.json",
+    "fixtures/effect-dsl/invalid/don-field-count-bad-comparator.json",
+    "fixtures/effect-dsl/invalid/don-field-count-negative-value.json",
+    "fixtures/effect-dsl/invalid/don-field-count-unsupported-player-scope.json",
+    "fixtures/effect-dsl/invalid/don-field-count-custom-shortcut.json",
     "fixtures/effect-dsl/invalid/give-keyword-missing-duration.json",
     "fixtures/effect-dsl/invalid/give-protection-invalid-controller-owned-exclusion.json",
     "fixtures/effect-dsl/invalid/give-protection-unsupported-family.json",
@@ -134,6 +141,39 @@ test("TYP-012B schema-valid permanent protection fixture remains authorability-o
   assert.equal(fixture.metadata.reviewedAt, undefined);
   assert.equal(fixture.metadata.sourceCardVersion, undefined);
   assert.equal(fixture.metadata.supportStatus, undefined);
+});
+
+test("SUP-001A DON fieldCount fixtures remain schema-authorability-only", async () => {
+  const fixturePaths = [
+    "fixtures/effect-dsl/valid/don-field-count-self-lte.json",
+    "fixtures/effect-dsl/valid/don-field-count-opponent-eq.json",
+    "fixtures/effect-dsl/valid/don-field-count-self-gte.json",
+  ];
+
+  for (const relativePath of fixturePaths) {
+    const fixture = JSON.parse(
+      await readFile(path.join(repoRoot, relativePath), "utf8"),
+    );
+    assert.equal(fixture.implementationStatus, "unsupported");
+    assert.equal(fixture.metadata.generatedBy, undefined);
+    assert.equal(fixture.metadata.reviewedBy, undefined);
+    assert.equal(fixture.metadata.reviewedAt, undefined);
+    assert.equal(fixture.metadata.sourceCardVersion, undefined);
+    assert.equal(fixture.metadata.supportStatus, undefined);
+  }
+});
+
+test("SUP-001A keeps DON field count on existing fieldCount condition", async () => {
+  const schemaPath = path.join(repoRoot, "contracts/effect-dsl.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+  const conditionVariants = schema.$defs.condition.oneOf;
+  const conditionTypes = conditionVariants
+    .map((variant) => variant?.properties?.type?.const)
+    .filter((value) => typeof value === "string");
+
+  assert.ok(conditionTypes.includes("fieldCount"));
+  assert.ok(!conditionTypes.includes("donFieldCount"));
+  assert.ok(!conditionTypes.includes("donOnFieldCount"));
 });
 
 test("contracts:validate-effects passes on committed fixtures", () => {

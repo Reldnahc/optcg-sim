@@ -174,6 +174,14 @@ form and does not authorize private-zone metadata queries.
 
 Condition, duration, and restriction primitives outside the schema-supported fixture subset remain planned layers. They are contract-defined by this reference, but they are not fixture-authorable until the schema coverage policy lists them as supported.
 
+For public DON-on-field count authorability, use existing `fieldCount` with a
+DON filter (`filter.categories` containing `"don"`), canonical comparator, and
+non-negative threshold. In this DON filter form, schema fixtures support
+`player: "self"` and `player: "opponent"` only, and reject free-text shortcuts.
+This is contract/schema authorability evidence only and does not by itself imply
+runtime executable support, parser certification, generated support, or card
+playability.
+
 ## Costs
 
 <!-- SECTION_REF: 05-effect-dsl-reference.s007 -->
@@ -1018,6 +1026,10 @@ Schema-supported fixture subset:
 - condition: yourTurn
 - condition: attachedDonCount
 - condition: fieldCount
+- condition: fieldCount DON filter authorability uses existing `fieldCount` +
+  `CardFilter` (`categories` containing `don`) with `player` limited to `self`
+  or `opponent`; this remains schema-authorability-only evidence and is not
+  runtime/playability support
 - condition: trashCount (public `player` + `op` + non-negative safe-integer `value`; optional public filter)
 - cost: restDon
 - cost: returnDon

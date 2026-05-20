@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SUP-001G.md",
+      "storyId": "SUP-001G",
+      "storyPath": "stories/approved/SUP-001G-don-minus-conditional-power-generated-support-promotion.yaml",
+      "storySha256": "4e0eb14fdc5fb1219ad1b0ee8399833cf26105081d41747f4c10776605d64aa1"
+    }
+  ],
   "version": 1
 }
