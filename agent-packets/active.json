@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-001E.md",
-      "storyId": "SUP-001E",
-      "storyPath": "stories/approved/SUP-001E-don-field-count-condition-card-components.yaml",
-      "storySha256": "4fef449b6b273a1e7f9f279029bb558149e198359aabc0db4c25d13d980a9cdb"
+      "packetPath": "agent-packets/SUP-001F.md",
+      "storyId": "SUP-001F",
+      "storyPath": "stories/approved/SUP-001F-conditional-opponent-power-modifier-card-components.yaml",
+      "storySha256": "6fb98442cefc75f842fffbd9a74a39eeb4ffbe971943d5c25ebc0c273ee8c104"
     }
   ],
   "version": 1
