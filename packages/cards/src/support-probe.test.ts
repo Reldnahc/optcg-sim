@@ -154,6 +154,61 @@ describe("support probe", () => {
     ).toContain("[layer: unsupported-layer]");
   });
 
+  it("formats conditional keyword-grant trace components as recognition-only diagnostics", () => {
+    const text = formatSupportProbeBlocker({
+      code: "unparsed-span",
+      decomposition: {
+        recognizedActionCandidates: ["this Character gains [Rush]"],
+        recognizedSyntaxFragments: [
+          "if-conditional-wrapper",
+          "condition-components:v1",
+          "keyword-grant-components:v1",
+        ],
+        recognizedTriggerCandidates: [],
+        reason:
+          "Conditional keyword-grant components were recognized, but generated support remains fail-closed.",
+        traceComponents: [
+          {
+            id: "keyword-grant:target:self-character",
+            kind: "target",
+            status: "supported",
+            text: "this Character",
+          },
+          {
+            id: "keyword-grant:verb:gains",
+            kind: "verb",
+            status: "supported",
+            text: "gains",
+          },
+          {
+            id: "keyword-grant:keyword:rush",
+            kind: "keyword",
+            status: "supported",
+            text: "[Rush]",
+          },
+        ],
+        unsupportedConditionFragments: [],
+        unsupportedSyntaxFragments: [
+          "conditional-keyword-grant:schema-runtime-bridge-missing",
+        ],
+      },
+      message: "Unsupported card text remains after certified parsing.",
+    });
+
+    expect(text).toContain(
+      "diagnostic recognition only; remains unsupported for generated support",
+    );
+    expect(text).toContain(
+      "recognized supported-action candidate: this Character gains [Rush]",
+    );
+    expect(text).toContain("recognized target candidate: this Character");
+    expect(text).toContain("recognized verb candidate: gains");
+    expect(text).toContain("recognized keyword candidate: [Rush]");
+    expect(text).toContain(
+      "unsupported syntax blocker: conditional-keyword-grant:schema-runtime-bridge-missing",
+    );
+  });
+
   it("formats deepest successful layer for schema/runtime blockers and omits it for parser/stale blockers", () => {
     expect(
       formatSupportProbeBlocker({

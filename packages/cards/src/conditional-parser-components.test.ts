@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  deriveProtectionBodyDiagnostics,
+  deriveConditionalKeywordGrantDiagnostics,
   deriveConditionalConditionDiagnostics,
   parseConditionExpression,
+  parseKeywordGrantBody,
+  parseProtectionBody,
 } from "./conditional-parser-components.js";
 
 describe("conditional parser components", () => {
@@ -175,6 +179,73 @@ describe("conditional parser components", () => {
       type: "supported",
     });
     expect(
+      parseConditionExpression("you have 2 or more cards in your trash"),
+    ).toMatchObject({
+      component: { op: "gte", player: "self", type: "trashCount", value: 2 },
+      id: "condition:trashCount:self:gte:2",
+      text: "you have 2 or more cards in your trash",
+      type: "supported",
+    });
+    expect(
+      parseConditionExpression("you have 6 or less cards in your trash"),
+    ).toMatchObject({
+      component: { op: "lte", player: "self", type: "trashCount", value: 6 },
+      id: "condition:trashCount:self:lte:6",
+      text: "you have 6 or less cards in your trash",
+      type: "supported",
+    });
+    expect(
+      parseConditionExpression(
+        "your opponent has 5 or more cards in their trash",
+      ),
+    ).toMatchObject({
+      component: {
+        op: "gte",
+        player: "opponent",
+        type: "trashCount",
+        value: 5,
+      },
+      id: "condition:trashCount:opponent:gte:5",
+      text: "your opponent has 5 or more cards in their trash",
+      type: "supported",
+    });
+    expect(
+      parseConditionExpression(
+        "your opponent has 7 or less cards in their trash",
+      ),
+    ).toMatchObject({
+      component: {
+        op: "lte",
+        player: "opponent",
+        type: "trashCount",
+        value: 7,
+      },
+      id: "condition:trashCount:opponent:lte:7",
+      text: "your opponent has 7 or less cards in their trash",
+      type: "supported",
+    });
+    expect(
+      parseConditionExpression("you have 4 cards in your trash"),
+    ).toMatchObject({
+      component: { op: "eq", player: "self", type: "trashCount", value: 4 },
+      id: "condition:trashCount:self:eq:4",
+      text: "you have 4 cards in your trash",
+      type: "supported",
+    });
+    expect(
+      parseConditionExpression("your opponent has 9 cards in their trash"),
+    ).toMatchObject({
+      component: {
+        op: "eq",
+        player: "opponent",
+        type: "trashCount",
+        value: 9,
+      },
+      id: "condition:trashCount:opponent:eq:9",
+      text: "your opponent has 9 cards in their trash",
+      type: "supported",
+    });
+    expect(
       parseConditionExpression("you have 5 or more cards in your hand or less"),
     ).toMatchObject({
       id: "condition:unsupported:0-45",
@@ -194,6 +265,60 @@ describe("conditional parser components", () => {
     expect(unsupportedCost.type).toBe("unsupported-fragment");
     expect(unsupportedCost.text).toBe("DON!! -1 your Leader is multicolored");
     expect(unsupportedCost.id).toMatch(/^condition:unsupported:0-\d+$/);
+    expect(
+      parseConditionExpression("you have one or more cards in your trash"),
+    ).toMatchObject({
+      text: "you have one or more cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 0 or more cards in your trash"),
+    ).toMatchObject({
+      text: "you have 0 or more cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have -1 cards in your trash"),
+    ).toMatchObject({
+      text: "you have -1 cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 1.5 cards in your trash"),
+    ).toMatchObject({
+      text: "you have 1.5 cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 01 cards in your trash"),
+    ).toMatchObject({
+      text: "you have 01 cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 9007199254740992 cards in your trash"),
+    ).toMatchObject({
+      text: "you have 9007199254740992 cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 2 red cards in your trash"),
+    ).toMatchObject({
+      text: "you have 2 red cards in your trash",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("you have 2 cards in your deck"),
+    ).toMatchObject({
+      text: "you have 2 cards in your deck",
+      type: "unsupported-fragment",
+    });
+    expect(
+      parseConditionExpression("your opponent has 2 cards in your trash"),
+    ).toMatchObject({
+      text: "your opponent has 2 cards in your trash",
+      type: "unsupported-fragment",
+    });
   });
 
   it("keeps supported child conditions recognized when connector expression is unsupported", () => {
@@ -315,5 +440,314 @@ describe("conditional parser components", () => {
     expect(diagnostics.unsupportedSyntaxFragments).toEqual([
       "condition-boundary:ambiguous-mixed-connectors",
     ]);
+  });
+
+  it("parses self keyword-grant target, verb, and keyword components with narrow spans", () => {
+    expect(parseKeywordGrantBody("this Character gains [Blocker]")).toEqual({
+      id: "keyword-grant:self-character:gains:blocker",
+      keyword: {
+        component: { keyword: "blocker", type: "keywordToken" },
+        id: "keyword-grant:keyword:blocker",
+        span: { end: 30, start: 21, text: "[Blocker]" },
+        text: "[Blocker]",
+      },
+      span: { end: 30, start: 0, text: "this Character gains [Blocker]" },
+      target: {
+        component: { category: "character", type: "self" },
+        id: "keyword-grant:target:self-character",
+        span: { end: 14, start: 0, text: "this Character" },
+        text: "this Character",
+      },
+      text: "this Character gains [Blocker]",
+      type: "supported",
+      verb: {
+        component: { type: "gains" },
+        id: "keyword-grant:verb:gains",
+        span: { end: 20, start: 15, text: "gains" },
+        text: "gains",
+      },
+    });
+  });
+
+  it.each([
+    { keyword: "banish", printed: "[Banish]" },
+    { keyword: "rush", printed: "[Rush]" },
+    { keyword: "rushCharacter", printed: "[Rush: Character]" },
+    { keyword: "doubleAttack", printed: "[Double Attack]" },
+  ] as const)(
+    "parses allowlisted keyword grant token $printed through the shared path",
+    ({ keyword, printed }) => {
+      const parsed = parseKeywordGrantBody(`this Character gains ${printed}`);
+
+      expect(parsed).toMatchObject({
+        id: `keyword-grant:self-character:gains:${keyword}`,
+        keyword: {
+          component: { keyword, type: "keywordToken" },
+          id: `keyword-grant:keyword:${keyword}`,
+          text: printed,
+        },
+        target: { id: "keyword-grant:target:self-character" },
+        type: "supported",
+        verb: { id: "keyword-grant:verb:gains" },
+      });
+    },
+  );
+
+  it("parses allowlisted keyword grant values generically without exact sentence branches", () => {
+    expect(
+      parseKeywordGrantBody("  this Character   gains   [Rush]  "),
+    ).toMatchObject({
+      id: "keyword-grant:self-character:gains:rush",
+      keyword: {
+        component: { keyword: "rush", type: "keywordToken" },
+        text: "[Rush]",
+      },
+      text: "this Character   gains   [Rush]",
+      type: "supported",
+    });
+    expect(
+      parseKeywordGrantBody("this Character gains [Double Attack]"),
+    ).toMatchObject({
+      id: "keyword-grant:self-character:gains:doubleAttack",
+      keyword: {
+        component: { keyword: "doubleAttack", type: "keywordToken" },
+        text: "[Double Attack]",
+      },
+      type: "supported",
+    });
+  });
+
+  it.each([
+    {
+      expectedId: "keyword-grant:unsupported-keyword:21-28",
+      sourceText: "this Character gains [Guard]",
+    },
+    {
+      expectedId: "keyword-grant:unsupported-target:0-11",
+      sourceText: "your Leader gains [Blocker]",
+    },
+    {
+      expectedId: "keyword-grant:unsupported-verb:15-19",
+      sourceText: "this Character gets [Blocker]",
+    },
+    {
+      expectedId: "keyword-grant:missing-keyword:20-20",
+      sourceText: "this Character gains",
+    },
+    {
+      expectedId: "keyword-grant:unsupported-residue:31-45",
+      sourceText: "this Character gains [Blocker] until end turn",
+    },
+  ])(
+    "fails closed for unsupported keyword-grant body $sourceText",
+    ({ expectedId, sourceText }) => {
+      expect(parseKeywordGrantBody(sourceText)).toMatchObject({
+        id: expectedId,
+        text: sourceText.trim(),
+        type: "unsupported-fragment",
+      });
+    },
+  );
+
+  it("derives keyword-grant diagnostics without requiring card IDs or full-card text", () => {
+    const diagnostics = deriveConditionalKeywordGrantDiagnostics(
+      "this Character gains [Banish]",
+    );
+
+    expect(diagnostics).toEqual({
+      hasSupportedKeywordGrantComponents: true,
+      isFullySupportedKeywordGrantBody: true,
+      traceComponents: [
+        {
+          id: "keyword-grant:target:self-character",
+          kind: "target",
+          span: { end: 14, start: 0, text: "this Character" },
+          status: "supported",
+          text: "this Character",
+        },
+        {
+          id: "keyword-grant:verb:gains",
+          kind: "verb",
+          span: { end: 20, start: 15, text: "gains" },
+          status: "supported",
+          text: "gains",
+        },
+        {
+          id: "keyword-grant:keyword:banish",
+          kind: "keyword",
+          span: { end: 29, start: 21, text: "[Banish]" },
+          status: "supported",
+          text: "[Banish]",
+        },
+      ],
+      unsupportedSyntaxFragments: [],
+    });
+  });
+
+  it("parses opponent-effect field-removal protection components with narrow spans", () => {
+    expect(
+      parseProtectionBody(
+        "this Character cannot be removed from the field by your opponent's effects",
+      ),
+    ).toEqual({
+      fieldZone: {
+        component: { from: "field", type: "fieldZone" },
+        id: "protection:field-zone:field",
+        span: { end: 47, start: 33, text: "from the field" },
+        text: "from the field",
+      },
+      id: "protection:self-character:cannot-be-removed:field:opponent-effects",
+      protectedObject: {
+        component: { category: "character", type: "self" },
+        id: "protection:protected-object:self-character",
+        span: { end: 14, start: 0, text: "this Character" },
+        text: "this Character",
+      },
+      removalProcess: {
+        component: { process: "fieldRemoval", type: "preventedProcess" },
+        id: "protection:removal-process:field-removal",
+        span: { end: 32, start: 15, text: "cannot be removed" },
+        text: "cannot be removed",
+      },
+      sourceController: {
+        component: { controller: "opponent", type: "sourceController" },
+        id: "protection:source-controller:opponent",
+        span: { end: 64, start: 51, text: "your opponent" },
+        text: "your opponent",
+      },
+      sourceKind: {
+        component: { kind: "effects", type: "sourceKind" },
+        id: "protection:source-kind:effects",
+        span: { end: 74, start: 67, text: "effects" },
+        text: "effects",
+      },
+      span: {
+        end: 74,
+        start: 0,
+        text: "this Character cannot be removed from the field by your opponent's effects",
+      },
+      text: "this Character cannot be removed from the field by your opponent's effects",
+      type: "supported",
+    });
+  });
+
+  it.each([
+    "This Character cannot be removed from the field by your opponent's effect",
+    "  this Character   cannot be removed   from the field   by your opponent's effects  ",
+  ])(
+    "parses protection components through reusable phrases instead of an exact sentence branch: %s",
+    (sourceText) => {
+      const parsed = parseProtectionBody(sourceText);
+
+      expect(parsed).toMatchObject({
+        fieldZone: { id: "protection:field-zone:field" },
+        protectedObject: { id: "protection:protected-object:self-character" },
+        removalProcess: { id: "protection:removal-process:field-removal" },
+        sourceController: { id: "protection:source-controller:opponent" },
+        sourceKind: { id: "protection:source-kind:effects" },
+        type: "supported",
+      });
+    },
+  );
+
+  it.each([
+    {
+      expectedId: "protection:unsupported-protected-object:0-11",
+      sourceText:
+        "your Leader cannot be removed from the field by your opponent's effects",
+    },
+    {
+      expectedId: "protection:unsupported-removal-process:15-31",
+      sourceText:
+        "this Character cannot be K.O.'d from the field by your opponent's effects",
+    },
+    {
+      expectedId: "protection:unsupported-removal-process:15-32",
+      sourceText:
+        "this Character cannot be trashed from the field by your opponent's effects",
+    },
+    {
+      expectedId: "protection:unsupported-field-zone:33-42",
+      sourceText:
+        "this Character cannot be removed from play by your opponent's effects",
+    },
+    {
+      expectedId: "protection:unsupported-source-controller:51-55",
+      sourceText:
+        "this Character cannot be removed from the field by your effects",
+    },
+    {
+      expectedId: "protection:unsupported-source-kind:67-72",
+      sourceText:
+        "this Character cannot be removed from the field by your opponent's costs",
+    },
+    {
+      expectedId: "protection:unsupported-residue:75-89",
+      sourceText:
+        "this Character cannot be removed from the field by your opponent's effects this turn only",
+    },
+    {
+      expectedId: "protection:unsupported-source-controller:48-64",
+      sourceText:
+        "this Character cannot be removed from the field during this turn",
+    },
+  ])(
+    "fails closed with narrow unsupported protection component diagnostics for $sourceText",
+    ({ expectedId, sourceText }) => {
+      expect(parseProtectionBody(sourceText)).toMatchObject({
+        id: expectedId,
+        text: sourceText.trim(),
+        type: "unsupported-fragment",
+      });
+    },
+  );
+
+  it("derives protection diagnostics without requiring card IDs or full-card text", () => {
+    const diagnostics = deriveProtectionBodyDiagnostics(
+      "this Character cannot be removed from the field by your opponent's effects",
+    );
+
+    expect(diagnostics).toEqual({
+      hasSupportedProtectionComponents: true,
+      isFullySupportedProtectionBody: true,
+      traceComponents: [
+        {
+          id: "protection:protected-object:self-character",
+          kind: "target",
+          span: { end: 14, start: 0, text: "this Character" },
+          status: "supported",
+          text: "this Character",
+        },
+        {
+          id: "protection:removal-process:field-removal",
+          kind: "action",
+          span: { end: 32, start: 15, text: "cannot be removed" },
+          status: "supported",
+          text: "cannot be removed",
+        },
+        {
+          id: "protection:field-zone:field",
+          kind: "destination",
+          span: { end: 47, start: 33, text: "from the field" },
+          status: "supported",
+          text: "from the field",
+        },
+        {
+          id: "protection:source-controller:opponent",
+          kind: "predicate",
+          span: { end: 64, start: 51, text: "your opponent" },
+          status: "supported",
+          text: "your opponent",
+        },
+        {
+          id: "protection:source-kind:effects",
+          kind: "predicate",
+          span: { end: 74, start: 67, text: "effects" },
+          status: "supported",
+          text: "effects",
+        },
+      ],
+      unsupportedSyntaxFragments: [],
+    });
   });
 });

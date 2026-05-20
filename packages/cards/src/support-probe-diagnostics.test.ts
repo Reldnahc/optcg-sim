@@ -91,10 +91,12 @@ describe("support probe diagnostics", () => {
         "If your Leader has the {Sky Island} type, this Character gains [Rush].",
       expected: [
         "Playable: no",
-        "recognized condition candidate: If",
+        "recognized wrapper candidate: If",
         "recognized condition candidate: your Leader has the {Sky Island} type",
         "recognized target candidate: this Character",
-        "recognized action candidate: gains",
+        "recognized verb candidate: gains",
+        "recognized keyword candidate: [Rush]",
+        "unsupported syntax blocker: conditional-keyword-grant:schema-runtime-bridge-missing",
       ],
     },
   ])(
@@ -184,10 +186,43 @@ describe("support probe diagnostics", () => {
       effect:
         "If your Leader has the {Revolutionary Army} type, this Character gains [Banish].",
       expected: [
-        "recognized condition candidate: If",
+        "recognized wrapper candidate: If",
         "recognized condition candidate: your Leader has the {Revolutionary Army} type",
         "recognized target candidate: this Character",
-        "recognized action candidate: gains",
+        "recognized verb candidate: gains",
+        "recognized keyword candidate: [Banish]",
+        "unsupported syntax blocker: conditional-keyword-grant:schema-runtime-bridge-missing",
+      ],
+      playable: "Playable: no",
+    },
+    {
+      cardId: "CARD-021C-VAR-PROTECTION",
+      effect:
+        "This Character cannot be removed from the field by your opponent's effect",
+      expected: [
+        "recognized syntax fragment: protection-components:v1",
+        "recognized syntax fragment: protection:opponent-effect-field-removal",
+        "recognized target candidate: This Character",
+        "recognized action candidate: cannot be removed",
+        "recognized destination candidate: from the field",
+        "recognized predicate candidate: your opponent",
+        "recognized predicate candidate: effect",
+        "unsupported syntax blocker: protection:schema-runtime-bridge-missing",
+      ],
+      playable: "Playable: no",
+    },
+    {
+      cardId: "CARD-021C-VAR-PROTECTION-UNSUPPORTED",
+      effect:
+        "this Character cannot be removed from the field by your opponent's costs",
+      expected: [
+        "recognized syntax fragment: protection-components:v1",
+        "recognized target candidate: this Character",
+        "recognized action candidate: cannot be removed",
+        "recognized destination candidate: from the field",
+        "recognized predicate candidate: your opponent",
+        "unsupported predicate blocker: costs",
+        "unsupported syntax blocker: protection-fragment:unsupported",
       ],
       playable: "Playable: no",
     },
@@ -202,6 +237,44 @@ describe("support probe diagnostics", () => {
       }
     },
   );
+
+  it("prints CARD-021D synthetic composition diagnostics alongside existing On K.O. draw evidence", async () => {
+    const effect =
+      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Guard].\n[On K.O.] Draw 1 card.";
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: "CARD-021D-SYNTHETIC-PROBE" as CardId,
+      getCard: () =>
+        Promise.resolve(
+          syntheticCardDetail("CARD-021D-SYNTHETIC-PROBE", effect),
+        ),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: no");
+    expect(text).toContain("- component evidence IDs: passed (on-ko-draw)");
+    expect(text).toContain("- final playable decision: no");
+    expect(text).toContain(
+      "recognized syntax fragment: conditional-body-conjunction:and",
+    );
+    expect(text).toContain(
+      "recognized condition candidate: you have 7 or more cards in your trash",
+    );
+    expect(text).toContain("recognized action candidate: cannot be removed");
+    expect(text).toContain("unsupported keyword blocker: gains");
+    expect(text).toContain("unsupported action blocker: gains [Guard]");
+    expect(text).toContain(
+      "unsupported syntax blocker: keyword-grant-fragment:unsupported",
+    );
+  });
 });
 
 async function probeText(cardId: string, effect: string): Promise<string> {
@@ -237,4 +310,35 @@ async function loadFixture(
   );
 
   return JSON.parse(source) as PoneglyphCardDetail;
+}
+
+function syntheticCardDetail(
+  cardId: string,
+  effect: string,
+): PoneglyphCardDetail {
+  return {
+    attribute: ["Special"],
+    available_languages: ["en"],
+    block: null,
+    card_number: cardId,
+    card_type: "Character",
+    color: ["Red"],
+    cost: 3,
+    counter: 1000,
+    effect,
+    language: "en",
+    legality: {},
+    life: null,
+    name: cardId,
+    official_faq: [],
+    power: 5000,
+    rarity: null,
+    released: true,
+    released_at: null,
+    set: "SYNTHETIC",
+    set_name: "Synthetic CARD-021D Tests",
+    trigger: null,
+    types: ["Synthetic"],
+    variants: [],
+  };
 }

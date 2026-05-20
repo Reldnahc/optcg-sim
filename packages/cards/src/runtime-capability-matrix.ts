@@ -42,6 +42,36 @@ export interface RuntimeCapabilityParserRuleInventoryEntry {
   coverage: RuntimeCapabilityParserRuleCoverage;
 }
 
+const conditionalContinuousTrashCountParserRuleId =
+  "exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character";
+
+const conditionalContinuousRuntimeCapabilitySpecs = [
+  [
+    "category:permanent",
+    "category",
+    "ENG-059F",
+    "Permanent effect blocks are executable by current runtime.",
+  ],
+  [
+    "effect:giveKeyword:self:permanent:allowlisted",
+    "effect",
+    "ENG-059B",
+    "Allowlisted keywords can be granted to the source Character with permanent duration.",
+  ],
+  [
+    "effect:giveProtection:fieldRemoval:thisCard:permanent",
+    "effect",
+    "ENG-059E",
+    "Opponent-controlled field-removal protection can be granted to the source Character with permanent duration.",
+  ],
+  [
+    "trigger:permanent",
+    "trigger",
+    "ENG-059F",
+    "Permanent trigger timing is executable by current runtime.",
+  ],
+] as const;
+
 const generatedSupportRuntimeCapabilityMatrixBase = {
   capabilities: [
     {
@@ -172,6 +202,16 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:on-play:cannot-block:all:this-turn",
       ],
     },
+    ...conditionalContinuousRuntimeCapabilitySpecs.map(
+      ([id, kind, sinceStory, description]) => ({
+        description,
+        id,
+        kind,
+        sinceStory,
+        supported: true,
+        supportedParserRuleIds: [conditionalContinuousTrashCountParserRuleId],
+      }),
+    ),
     {
       description:
         "Certified parser output may compose separate line-separated clauses as independent EffectBlocks.",
@@ -225,6 +265,14 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       id: "condition:lifeCount",
       kind: "condition",
       sinceStory: "ENG-058A",
+      supported: true,
+      supportedParserRuleIds: [],
+    },
+    {
+      description: "Trash-count conditions are executable by current runtime.",
+      id: "condition:trashCount",
+      kind: "condition",
+      sinceStory: "ENG-059A",
       supported: true,
       supportedParserRuleIds: [],
     },
@@ -788,64 +836,10 @@ export const generatedSupportRuntimeCapabilityMatrix = {
     ),
 } as const satisfies RuntimeCapabilityMatrix;
 
-export const requiredGeneratedSupportCapabilityIds = [
-  "cannotAttack:all:thisTurn",
-  "cannotAttack:choose:thisTurn",
-  "cannotAttack:choose:thisTurn:zeroChoiceBranch",
-  "cannotAttack:self:thisTurn",
-  "cannotBlock:all:thisTurn",
-  "cannotBlock:choose:thisTurn",
-  "cannotBlock:choose:thisTurn:zeroChoiceBranch",
-  "cannotBlock:self:thisTurn",
-  "category:auto",
-  "composition:line-separated-effect-blocks:v1",
-  "condition:selfAttachedDonCount",
-  "condition:leaderColorCount",
-  "condition:hasCardInZone",
-  "condition:handCount",
-  "condition:lifeCount",
-  "condition-connector:and",
-  "condition-connector:or",
-  "condition:yourTurn",
-  "drawUpTo:self:chooseQuantity",
-  "effect:draw:self:count:positive-safe-integer",
-  "effect:ko:saved-field-object:characterArea:public",
-  "effect:sequence:ordered",
-  "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
-  "keyword:banish:printed",
-  "keyword:blocker:printed",
-  "keyword:doubleAttack:printed",
-  "keyword:rush:printed",
-  "keyword:rushCharacter:printed",
-  "modifyPower:all:thisTurn",
-  "modifyPower:choose:thisTurn",
-  "modifyPower:choose:thisTurn:zeroChoiceBranch",
-  "modifyPower:self:thisBattle",
-  "modifyPower:self:thisTurn",
-  "optionalEffectBlock:onPlay:draw-1:self",
-  "payCost:returnDon:self:count-exact",
-  "playSelected:hand:character:max1",
-  "playSelected:hand:character:max1:ignoreCost",
-  "returnDon:cost:self:count-exact",
-  "savedFieldObject:consumer:generic",
-  "savedSelectedTargets:producer",
-  "selectCards:hand:self:character:max1",
-  "selectTargets:field:public:character:max1",
-  "sequence:draw:trashFromHand",
-  "sequence:genericFrames",
-  "sequence:trashFromHand:draw",
-  "sourcePresencePolicy:mustRemainInSameZone",
-  "sourcePresencePolicy:noSourceRequired",
-  "sourcePresencePolicy:none-for-keyword",
-  "sourcePresencePolicy:resolveFromDestinationZone",
-  "sourcePresencePolicy:resolveFromLastKnownInformation",
-  "trashFromHand:segment0:self:self:count-exact",
-  "trigger:onKO",
-  "trigger:onPlay",
-  "trigger:trigger",
-  "trigger:whenAttacking",
-  "trigger:whenAttacking:oncePerTurn",
-].sort() as readonly string[];
+export const requiredGeneratedSupportCapabilityIds =
+  generatedSupportRuntimeCapabilityMatrix.capabilities
+    .map((capability) => capability.id)
+    .sort();
 
 export function listSupportedRuntimeCapabilityIds(
   matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
@@ -915,19 +909,26 @@ function classifyParserRuleKind(parserRuleId: string): string {
     return "keyword";
   }
   if (
-    parserRuleId === "exact:on-play:draw-n:self" ||
-    parserRuleId === "exact:when-attacking:draw-n:self" ||
-    parserRuleId === "exact:on-ko:draw-n:self" ||
-    parserRuleId === "exact:trigger:draw-n:self"
+    [
+      "exact:on-play:draw-n:self",
+      "exact:when-attacking:draw-n:self",
+      "exact:on-ko:draw-n:self",
+      "exact:trigger:draw-n:self",
+    ].includes(parserRuleId)
   ) {
     return "triggered-draw";
   }
   if (
-    parserRuleId === "exact:on-play:draw-up-to-n:self" ||
-    parserRuleId === "exact:on-ko:draw-up-to-n:self" ||
-    parserRuleId === "exact:trigger:draw-up-to-n:self"
+    [
+      "exact:on-play:draw-up-to-n:self",
+      "exact:on-ko:draw-up-to-n:self",
+      "exact:trigger:draw-up-to-n:self",
+    ].includes(parserRuleId)
   ) {
     return "draw-up-to";
+  }
+  if (parserRuleId === conditionalContinuousTrashCountParserRuleId) {
+    return "sequence";
   }
   if (
     parserRuleId.includes(":draw-n:trash-m:hand:self") ||

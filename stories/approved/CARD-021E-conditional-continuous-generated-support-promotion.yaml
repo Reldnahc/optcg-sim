@@ -1,0 +1,155 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-021E
+epic_id: CARD-021
+title: Conditional continuous generated-support promotion
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Complete the CARD-021 card-layer chain by promoting fully recognized
+  conditional continuous condition, keyword-grant, and field-removal protection
+  components into certified generated support after the required TYP and ENG
+  prerequisites exist. This story is the card-layer bridge that turns the
+  reusable parser components into a schema-valid, capability-gated generated
+  EffectDefinition without hardcoding any real card.
+story_boundary: >
+  Own only cards-layer generated-support composition, parser-rule evidence,
+  runtime-capability gating, support-probe/report output, and synthetic proof
+  tests for the conditional continuous composition shape. Do not add engine
+  runtime behavior, shared contract/schema authority, real-card fixtures,
+  source hash changes, behavior hash changes, overlays, support manifest edits,
+  cards-produced manifest regeneration, or card-specific branches.
+allowed_touch_points:
+  - packages/cards/src/conditional-generated-support-composer.ts
+  - packages/cards/src/conditional-generated-support-composer.test.ts
+  - packages/cards/src/conditional-continuous-composition-diagnostics.ts
+  - packages/cards/src/conditional-continuous-composition-diagnostics.test.ts
+  - packages/cards/src/conditional-parser-components.ts
+  - packages/cards/src/conditional-parser-components.test.ts
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/*support*.test.ts
+  - packages/cards/src/*diagnostic*.ts
+  - packages/cards/src/*diagnostic*.test.ts
+  - stories/generated/CARD-021*.yaml
+  - stories/approved/CARD-021*.yaml
+  - agent-packets/CARD-021E.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s013
+  - 04-effect-runtime.s014
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s016
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-020D
+  - CARD-021A
+  - CARD-021B
+  - CARD-021C
+  - CARD-021D
+  - TYP-012A
+  - TYP-012B
+  - ENG-056B
+  - ENG-059A
+  - ENG-059B
+  - ENG-059C
+  - ENG-059D
+  - ENG-059E
+  - ENG-059F
+scope:
+  - promote only fully supported conditional continuous composition parses whose condition, body conjunction, keyword-grant component, and field-removal protection component are all recognized by reusable CARD-021 primitives
+  - generate a schema-valid EffectDefinition for the composed continuous line using the TYP-012B authorable DSL shape
+  - preserve existing line-separated `[On K.O.] Draw 1 card.` generated support as an independent effect block in the same generated EffectDefinition when present
+  - emit parser-rule IDs, component evidence IDs, schema-gate evidence, runtime capability IDs, and support metadata for the complete conditional continuous composition only when every required gate passes
+  - update runtime capability matrix evidence in packages/cards only for the runtime behavior proven by ENG-059F and the existing On K.O. draw behavior proven by ENG-056B
+  - support the protection-plus-keyword body conjunction in either unambiguous order when both sides are complete, including the CARD-021D shared self-Character subject inference for targetless right-side keyword grants
+  - remain generic over the CARD-021B allowlisted keyword tokens and prove at least one non-Blocker keyword uses the same generated-support path
+  - preserve fail-closed partial diagnostics when any condition, keyword, protection, schema, runtime capability, metadata, review, tested-state, source-integrity, or line composition gate is missing
+  - keep the human-held adjacent-card list completely outside story text, tests, source-integrity evidence, implementation logic, and support proof
+non_scope:
+  - engine runtime behavior or permanent DSL materialization
+  - shared TYP/contracts/schema changes
+  - real card IDs, real-card fixture capture, source hash updates, behavior hash updates, overlays, support manifest edits, or cards-produced manifest regeneration
+  - using a human-held adjacent-card list as story evidence, test input, implementation target, parser branch input, source-integrity input, or support proof
+  - exact full-card text branches, exact full-effect sentence branches, one real card, one external card list, or sample-specific sentence templates
+  - adding support for unsupported keywords, unsupported protection wording, unsupported private conditions, unsupported field-removal processes, unsupported body conjunctions, or broad natural-language inference
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+card_source_integrity:
+  - this story does not name or target any real card and must not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or cards-produced manifests
+  - source integrity is exercised only through synthetic generated-support inputs and existing hash gates; real-card promotion requires a separate fixture/source-integrity story or an existing reviewed source-integrity path
+  - post-merge manual probing of real cards may be done as external discovery, but it must not be cited as implementation authority for this story
+engine_capability_preflight:
+  - parsed effect shape is a permanent conditional continuous block with a public trash-count condition, a self Character keyword-grant modifier, and a self Character opponent-effect field-removal protection modifier, plus an independent line-separated On K.O. draw auto block when that second line is present
+  - supported parser/card-layer prerequisites are CARD-021A for public trash-count condition components, CARD-021B for allowlisted keyword-grant components, CARD-021C for opponent-effect field-removal protection components, and CARD-021D for unambiguous conditional continuous composition diagnostics
+  - supported type/schema prerequisites are TYP-012A for field-removal protection authorability and TYP-012B for the conditional continuous keyword/protection DSL composition shape
+  - supported runtime prerequisites are ENG-059A for trash-count condition evaluation, ENG-059B for conditional continuous keyword grants, ENG-059C and ENG-059E for conditional opponent-effect field-removal protection, ENG-059D for synthetic composition proof, ENG-059F for implemented-DSL permanent continuous modifier materialization, and ENG-056B for existing On K.O. draw resolution authority
+  - missing reusable type/runtime prerequisites for this story are none; generated support must still remain unsupported if any required parser certification, schema validation, runtime capability evidence, source integrity, behavior hash, support metadata, review state, tested state, or line composition gate is absent
+acceptance_criteria:
+  - a synthetic two-line source text combining a supported conditional continuous line and `[On K.O.] Draw 1 card.` produces complete generated support when all gates pass
+  - the generated EffectDefinition contains both the continuous composition block and the existing On K.O. draw block without losing source presence policy or parser evidence
+  - parser-rule certification, component evidence IDs, runtime capability evidence, schema validation, support metadata, review metadata, tested state, source integrity, and behavior hash gates all report as passed for the synthetic complete case
+  - the same parser/composer path supports at least one non-Blocker allowlisted keyword without a keyword-specific or card-specific branch
+  - unsupported keywords, unsupported protection wording, unsupported conditions, ambiguous conjunctions, missing schema bridge, missing runtime capability, stale source hash, stale behavior hash, missing metadata, missing review, and missing tested-state cases remain non-playable with narrow diagnostics
+  - existing standalone On K.O. draw generated support and CARD-008 through CARD-020 generated-support behavior remain compatible
+  - no production code or tests depend on a real card ID, exact full printed card text, the human-held adjacent-card list, or a one-off full-sentence template
+required_tests:
+  - story-review for CARD-021E before approval handoff
+  - synthetic generated-support-index test proving complete support for condition plus protection plus keyword grant plus existing On K.O. draw when all gates pass
+  - synthetic support-probe/report certificate test proving every gate reports passed for the complete case
+  - synthetic test proving a non-Blocker allowlisted keyword uses the same generated-support path
+  - negative tests for unsupported keyword, unsupported protection wording, unsupported condition, ambiguous body conjunction, target inference boundary, schema failure, runtime capability failure, stale source hash, stale behavior hash, missing metadata, missing review, and missing tested-state gates
+  - regression test proving standalone existing `[On K.O.] Draw 1 card.` generated support remains unchanged
+  - regression tests proving CARD-021D recognized diagnostic output remains stable for partial/unsupported cases
+  - production-code search or lint-style assertion proving no real-card ID branch, full-card text branch, external-card-list branch, or sample-specific sentence template exists in production cards code outside test/story text
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-021E packet before implementation
+  - do not activate or hand off CARD-021E until TYP-012B, ENG-059F, and CARD-021D have landed as reviewed commit evidence
+  - stay within allowed touch points
+  - do not add engine runtime behavior or shared contract/schema authority
+  - do not edit real-card fixtures, overlays, source hashes, behavior hashes, support manifests, or cards-produced manifests
+  - fail closed on any parser, schema, runtime capability, source integrity, metadata, review, test, or wording ambiguity that could accidentally mark unsupported text playable
+ambiguity_policy: fail_and_escalate

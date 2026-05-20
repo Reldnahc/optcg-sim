@@ -618,4 +618,316 @@ describe("composed parser builder scaffold", () => {
       },
     );
   });
+
+  it("derives conditional keyword-grant decomposition while staying fail-closed for generated support", () => {
+    const sourceText =
+      "If your Leader is multicolored, this Character gains [Rush].";
+
+    expect(deriveParserDiagnosticDecomposition(sourceText, sourceText)).toEqual(
+      {
+        recognizedActionCandidates: ["this Character gains [Rush]"],
+        recognizedSyntaxFragments: [
+          "if-conditional-wrapper",
+          "condition-components:v1",
+          "keyword-grant-components:v1",
+        ],
+        recognizedTriggerCandidates: [],
+        reason:
+          "Conditional keyword-grant components were recognized, but generated support remains fail-closed until schema/runtime bridge evidence represents this continuous component.",
+        traceComponents: [
+          { kind: "wrapper", status: "recognized", text: "If" },
+          {
+            id: "condition:leaderColorCount:self:gte:2",
+            kind: "condition",
+            span: {
+              end: 27,
+              start: 0,
+              text: "your Leader is multicolored",
+            },
+            status: "supported",
+            text: "your Leader is multicolored",
+          },
+          {
+            id: "keyword-grant:target:self-character",
+            kind: "target",
+            span: { end: 46, start: 32, text: "this Character" },
+            status: "supported",
+            text: "this Character",
+          },
+          {
+            id: "keyword-grant:verb:gains",
+            kind: "verb",
+            span: { end: 52, start: 47, text: "gains" },
+            status: "supported",
+            text: "gains",
+          },
+          {
+            id: "keyword-grant:keyword:rush",
+            kind: "keyword",
+            span: { end: 59, start: 53, text: "[Rush]" },
+            status: "supported",
+            text: "[Rush]",
+          },
+        ],
+        unsupportedConditionFragments: [],
+        unsupportedSyntaxFragments: [
+          "conditional-keyword-grant:schema-runtime-bridge-missing",
+        ],
+      },
+    );
+  });
+
+  it("derives opponent-effect field-removal protection decomposition while staying fail-closed for generated support", () => {
+    const sourceText =
+      "this Character cannot be removed from the field by your opponent's effects";
+
+    expect(deriveParserDiagnosticDecomposition(sourceText, sourceText)).toEqual(
+      {
+        recognizedActionCandidates: [
+          "this Character cannot be removed from the field by your opponent's effects",
+        ],
+        recognizedSyntaxFragments: [
+          "protection-components:v1",
+          "protection:opponent-effect-field-removal",
+        ],
+        recognizedTriggerCandidates: [],
+        reason:
+          "Opponent-effect field-removal protection components were recognized, but generated support remains fail-closed until schema/runtime bridge evidence represents this continuous protection component.",
+        traceComponents: [
+          {
+            id: "protection:protected-object:self-character",
+            kind: "target",
+            span: { end: 14, start: 0, text: "this Character" },
+            status: "supported",
+            text: "this Character",
+          },
+          {
+            id: "protection:removal-process:field-removal",
+            kind: "action",
+            span: { end: 32, start: 15, text: "cannot be removed" },
+            status: "supported",
+            text: "cannot be removed",
+          },
+          {
+            id: "protection:field-zone:field",
+            kind: "destination",
+            span: { end: 47, start: 33, text: "from the field" },
+            status: "supported",
+            text: "from the field",
+          },
+          {
+            id: "protection:source-controller:opponent",
+            kind: "predicate",
+            span: { end: 64, start: 51, text: "your opponent" },
+            status: "supported",
+            text: "your opponent",
+          },
+          {
+            id: "protection:source-kind:effects",
+            kind: "predicate",
+            span: { end: 74, start: 67, text: "effects" },
+            status: "supported",
+            text: "effects",
+          },
+        ],
+        unsupportedConditionFragments: [],
+        unsupportedSyntaxFragments: [
+          "protection:schema-runtime-bridge-missing",
+        ],
+      },
+    );
+  });
+
+  it("derives one conditional continuous line with trash-count, protection, and keyword-grant component diagnostics", () => {
+    const sourceText =
+      "If you have 2 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and this Character gains [Rush].";
+
+    const decomposition = deriveParserDiagnosticDecomposition(
+      sourceText,
+      sourceText,
+    );
+
+    expect(decomposition).toMatchObject({
+      recognizedActionCandidates: [
+        "this Character cannot be removed from the field by your opponent's effects",
+        "this Character gains [Rush]",
+      ],
+      recognizedSyntaxFragments: [
+        "if-conditional-wrapper",
+        "condition-components:v1",
+        "conditional-body-conjunction:and",
+        "protection-components:v1",
+        "protection:opponent-effect-field-removal",
+        "keyword-grant-components:v1",
+      ],
+      recognizedTriggerCandidates: [],
+      unsupportedConditionFragments: [],
+      unsupportedSyntaxFragments: [
+        "conditional-continuous-composition:schema-runtime-bridge-missing",
+      ],
+    });
+    expect(decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "condition:trashCount:self:gte:2",
+          kind: "condition",
+          span: {
+            end: 41,
+            start: 3,
+            text: "you have 2 or more cards in your trash",
+          },
+          status: "supported",
+          text: "you have 2 or more cards in your trash",
+        }),
+        expect.objectContaining({
+          id: "conditional-body-connector:and",
+          kind: "condition-connector",
+          status: "supported",
+          text: "and",
+        }),
+        expect.objectContaining({
+          id: "protection:removal-process:field-removal",
+          kind: "action",
+          status: "supported",
+          text: "cannot be removed",
+        }),
+        expect.objectContaining({
+          id: "keyword-grant:keyword:rush",
+          kind: "keyword",
+          status: "supported",
+          text: "[Rush]",
+        }),
+      ]),
+    );
+  });
+
+  it("derives conditional trash-count keyword-grant diagnostics for non-Blocker allowlisted keywords", () => {
+    const sourceText =
+      "If your opponent has 5 or less cards in their trash, this Character gains [Banish].";
+    const decomposition = deriveParserDiagnosticDecomposition(
+      sourceText,
+      sourceText,
+    );
+
+    expect(decomposition?.recognizedActionCandidates).toEqual([
+      "this Character gains [Banish]",
+    ]);
+    expect(decomposition?.recognizedSyntaxFragments).toEqual([
+      "if-conditional-wrapper",
+      "condition-components:v1",
+      "keyword-grant-components:v1",
+    ]);
+    expect(decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "condition:trashCount:opponent:lte:5",
+          kind: "condition",
+          status: "supported",
+        }),
+        expect.objectContaining({
+          id: "keyword-grant:keyword:banish",
+          kind: "keyword",
+          status: "supported",
+          text: "[Banish]",
+        }),
+      ]),
+    );
+    expect(decomposition?.unsupportedSyntaxFragments).toEqual([
+      "conditional-keyword-grant:schema-runtime-bridge-missing",
+    ]);
+  });
+
+  it("derives shared-subject keyword grants after protection conjunctions", () => {
+    const sourceText =
+      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].";
+
+    const decomposition = deriveParserDiagnosticDecomposition(
+      sourceText,
+      sourceText,
+    );
+
+    expect(decomposition).toMatchObject({
+      recognizedActionCandidates: [
+        "this Character cannot be removed from the field by your opponent's effects",
+        "gains [Blocker]",
+      ],
+      recognizedSyntaxFragments: [
+        "if-conditional-wrapper",
+        "condition-components:v1",
+        "conditional-body-conjunction:and",
+        "protection-components:v1",
+        "protection:opponent-effect-field-removal",
+        "keyword-grant-components:v1",
+      ],
+      unsupportedSyntaxFragments: [
+        "conditional-continuous-composition:schema-runtime-bridge-missing",
+      ],
+    });
+    expect(decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "condition:trashCount:self:gte:7",
+          kind: "condition",
+          status: "supported",
+          text: "you have 7 or more cards in your trash",
+        }),
+        expect.objectContaining({
+          id: "keyword-grant:verb:gains",
+          kind: "action",
+          span: { end: 127, start: 122, text: "gains" },
+          status: "supported",
+          text: "gains",
+        }),
+        expect.objectContaining({
+          id: "keyword-grant:keyword:blocker",
+          kind: "keyword",
+          span: { end: 137, start: 128, text: "[Blocker]" },
+          status: "supported",
+          text: "[Blocker]",
+        }),
+      ]),
+    );
+  });
+
+  it("keeps shared-subject composition fail-closed for unsupported keyword tokens", () => {
+    const sourceText =
+      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Triple Attack].";
+
+    const decomposition = deriveParserDiagnosticDecomposition(
+      sourceText,
+      sourceText,
+    );
+
+    expect(decomposition).toMatchObject({
+      recognizedActionCandidates: [
+        "this Character cannot be removed from the field by your opponent's effects",
+      ],
+      recognizedSyntaxFragments: [
+        "if-conditional-wrapper",
+        "condition-components:v1",
+        "conditional-body-conjunction:and",
+        "protection-components:v1",
+        "protection:opponent-effect-field-removal",
+      ],
+    });
+    expect(decomposition?.recognizedSyntaxFragments).not.toContain(
+      "keyword-grant-components:v1",
+    );
+    expect(decomposition?.unsupportedSyntaxFragments).toEqual(
+      expect.arrayContaining([
+        "keyword-grant-fragment:unsupported",
+        "conditional-continuous-composition:unsupported-body-fragment",
+      ]),
+    );
+    expect(decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "conditional-body:unsupported-right",
+          kind: "action",
+          status: "unsupported",
+          text: "gains [Triple Attack]",
+        }),
+      ]),
+    );
+  });
 });

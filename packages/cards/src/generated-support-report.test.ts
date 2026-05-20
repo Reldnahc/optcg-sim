@@ -939,6 +939,46 @@ describe("generated support report", () => {
     });
   });
 
+  it("reports schema-layer blockers for trash-count conditional blocks before runtime-capability checks", () => {
+    const matrixWithoutTrashCount = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) => capability.id !== "condition:trashCount",
+      ),
+    };
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "CARD-021A-REPORT-TRASH-SCHEMA-BLOCKED" as CardId,
+          sourceText:
+            "[On Play] If you have 2 or more cards in your trash, draw 1 card.",
+          sourceTextHash: "sha256:card-021a-report-trash-missing",
+        },
+      ],
+      runtimeCapabilityMatrix: matrixWithoutTrashCount,
+      validateEffectDefinition: () => ({
+        errors: [
+          "/effects/0/condition/type must be equal to one of the allowed values",
+        ],
+        valid: false,
+      }),
+    });
+
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.blockers).toHaveLength(1);
+    expect(report.blockers[0]).toMatchObject({
+      cardId: "CARD-021A-REPORT-TRASH-SCHEMA-BLOCKED",
+      code: "invalid-dsl-schema",
+      deepestSuccessfulLayer: "parser",
+      layer: "schema",
+      message: "Generated DSL failed effect DSL schema validation.",
+    });
+    expect(report.blockers[0]?.component).toContain("/effects/0/condition");
+    expect(report.missingRuntimeCapabilityIds).toEqual([]);
+  });
+
   it("includes CARD-013B keyword parser rules in supported report evidence", () => {
     const index = buildGeneratedSupportIndex({
       cards: [

@@ -544,6 +544,16 @@ function addConditionCapabilityIds(
     case "lifeCount":
       ids.add("condition:lifeCount");
       return;
+    case "trashCount":
+      if (
+        (condition.player === "self" || condition.player === "opponent") &&
+        condition.filter === undefined
+      ) {
+        ids.add("condition:trashCount");
+        return;
+      }
+      ids.add("condition:unsupported-shape");
+      return;
     case "and":
       ids.add("condition-connector:and");
       for (const child of condition.conditions) {
@@ -561,7 +571,6 @@ function addConditionCapabilityIds(
     case "donCount":
     case "opponentTurn":
     case "fieldCount":
-    case "trashCount":
     case "attackTarget":
     case "cardState":
     case "sourceStillInZone":
