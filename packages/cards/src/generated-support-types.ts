@@ -1,4 +1,5 @@
 import type { CardId, EffectDefinition } from "@optcg/types";
+import { donMinusDrawComponentEvidenceInventoryEntry } from "./don-minus-draw-evidence.js";
 import type {
   GeneratedSupportDiagnosticDecomposition,
   GeneratedSupportUnparsedSpan,
@@ -452,6 +453,7 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     shapeId: "on-play-return-don-then-play-selected-character",
   },
+  donMinusDrawComponentEvidenceInventoryEntry,
   {
     components: ["cost", ...parserRuleBaseComponents],
     gates: parserRuleBaseGates,

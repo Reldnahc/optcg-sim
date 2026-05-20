@@ -1,6 +1,8 @@
 import { generatedSupportComponentEvidenceInventory } from "./generated-support-types.js";
 import { returnDonCostWrapperParserRuleId } from "./return-don-cost-wrapper-components.js";
 
+const onPlayReturnDonDrawNParserRuleId = "exact:on-play:return-don-draw-n:self";
+
 export type RuntimeCapabilityKind =
   | "category"
   | "composition"
@@ -188,6 +190,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:condition:your-turn",
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        onPlayReturnDonDrawNParserRuleId,
         "card014a:on-play:select-target-modify-power",
         "exact:on-play:select-1-opponent-character-target",
         "exact:on-play:select-1-opponent-character-then-ko-that-character",
@@ -334,6 +337,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:trigger:draw-n:self",
         "exact:condition:self-attached-don-count",
         "exact:condition:your-turn",
+        onPlayReturnDonDrawNParserRuleId,
         "card014a:sequence:draw-trashFromHand",
         "card014a:sequence:trashFromHand-draw",
       ],
@@ -503,6 +507,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        onPlayReturnDonDrawNParserRuleId,
         returnDonCostWrapperParserRuleId,
       ],
     },
@@ -540,6 +545,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        onPlayReturnDonDrawNParserRuleId,
         returnDonCostWrapperParserRuleId,
       ],
     },
@@ -652,6 +658,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:condition:your-turn",
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        onPlayReturnDonDrawNParserRuleId,
         "card014a:on-play:select-target-modify-power",
         "exact:on-play:select-1-opponent-character-target",
         "exact:on-play:select-1-opponent-character-then-ko-that-character",
@@ -747,6 +754,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:condition:your-turn",
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+        onPlayReturnDonDrawNParserRuleId,
         "card014a:on-play:select-target-modify-power",
         "exact:on-play:select-1-opponent-character-target",
         "exact:on-play:select-1-opponent-character-then-ko-that-character",
@@ -948,10 +956,13 @@ function classifyParserRuleKind(parserRuleId: string): string {
   }
   if (
     parserRuleId.includes("return-don") ||
+    parserRuleId === onPlayReturnDonDrawNParserRuleId ||
     parserRuleId === returnDonCostWrapperParserRuleId ||
     parserRuleId === "card014a:on-play:return-don-play-selected-character"
   ) {
-    return "cost-hand-selection-play-selected";
+    return parserRuleId === onPlayReturnDonDrawNParserRuleId
+      ? "costed-draw"
+      : "cost-hand-selection-play-selected";
   }
   if (
     parserRuleId.includes("select-1-opponent-character") ||

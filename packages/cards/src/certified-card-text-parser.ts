@@ -34,10 +34,15 @@ import {
   conditionalContinuousTrashCountParserRuleId,
   parseConditionalWrapper,
 } from "./conditional-generated-support-composer.js";
+import { parseOnPlayReturnDonDrawClause } from "./don-minus-draw-components.js";
 import type {
   GeneratedSupportParserResult,
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-types.js";
+import {
+  getClauseParserRuleIds,
+  getCompleteParserRuleIds,
+} from "./parser-rule-id-components.js";
 import { parseReturnDonCostWrapperResidueClause } from "./return-don-cost-wrapper-components.js";
 
 export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self";
@@ -64,6 +69,7 @@ interface CertifiedClause {
   readonly effectBlock?: EffectBlock;
   readonly implementationStatus?: "implemented-dsl" | "vanilla-confirmed";
   readonly parserRuleId: string;
+  readonly parserRuleIds?: readonly string[];
 }
 
 interface ParsedResidueClause {
@@ -149,14 +155,14 @@ export function parseCertifiedCardText(
     return buildPartialParseResult({
       cardId: input.cardId,
       message: "Unsupported card text remains after certified parsing.",
-      parsedRuleIds: parsedClauses.map((clause) => clause.parserRuleId),
+      parsedRuleIds: parsedClauses.flatMap(getClauseParserRuleIds),
       sourceText: input.sourceText,
       sourceTextHash: input.sourceTextHash,
       unparsedSpans,
     });
   }
 
-  const parserRuleIds = parsedClauses.map((clause) => clause.parserRuleId);
+  const parserRuleIds = parsedClauses.flatMap(getClauseParserRuleIds);
   if (parserRuleIds.includes(conditionalContinuousTrashCountParserRuleId)) {
     return completeParse(input, parsedClauses);
   }
@@ -329,6 +335,7 @@ function parseNonConditionalCardLineEffectClause(
 ): CertifiedClause | undefined {
   return (
     parseReusableCard016AClause(cardId, sourceText) ??
+    parseOnPlayReturnDonDrawClause(cardId, sourceText) ??
     parseTriggerDrawClause(cardId, sourceText) ??
     parseTriggerDrawUpToClause(cardId, sourceText) ??
     parseOnKODrawClause(cardId, sourceText) ??
@@ -1075,13 +1082,6 @@ function createDrawThenTrashClauseWithCounts({
     },
     parserRuleId,
   };
-}
-
-function getCompleteParserRuleIds(clauses: readonly CertifiedClause[]) {
-  const ruleIds = clauses.map((clause) => clause.parserRuleId);
-  return clauses.length > 1
-    ? [...ruleIds, "line-separated-effect-blocks:v1"]
-    : ruleIds;
 }
 
 function resolveImplementationStatus(clauses: readonly CertifiedClause[]) {

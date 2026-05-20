@@ -49,6 +49,7 @@ export type ReusableComposedParserClause = {
   readonly effectBlock?: EffectBlock;
   readonly implementationStatus?: "implemented-dsl" | "vanilla-confirmed";
   readonly parserRuleId: string;
+  readonly parserRuleIds?: readonly string[];
 };
 
 export type ReusableComposedParserResidueClause<TClause> = {

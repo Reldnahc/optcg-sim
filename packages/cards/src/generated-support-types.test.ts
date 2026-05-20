@@ -257,6 +257,7 @@ describe("generated support parser result contracts", () => {
       "exact:on-play:modify-power:self:this-battle",
       "exact:on-play:modify-power:self:this-turn",
       "exact:on-play:optional-effect:draw-1:self",
+      "exact:on-play:return-don-draw-n:self",
       "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
       "exact:on-play:select-1-opponent-character-target",
       "exact:on-play:select-1-opponent-character-then-ko-that-character",
