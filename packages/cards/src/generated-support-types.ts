@@ -1,5 +1,7 @@
 import type { CardId, EffectDefinition } from "@optcg/types";
 import { donMinusDrawComponentEvidenceInventoryEntry } from "./don-minus-draw-evidence.js";
+import { fieldCountDonConditionComponentEvidenceInventoryEntry } from "./field-count-don-condition-evidence.js";
+import { sup001fConditionalModifyPowerComponentEvidenceInventoryEntry } from "./sup-001f-conditional-modify-power-evidence.js";
 import type {
   GeneratedSupportDiagnosticDecomposition,
   GeneratedSupportUnparsedSpan,
@@ -223,13 +225,6 @@ const parserRuleBaseGates = {
   sourceIntegrity: ["source-text-hash-current", "behavior-hash-current"],
 } as const;
 
-const componentEvidenceOnlyGates = {
-  generatedSupportMetadata: [],
-  runtimeCapability: ["runtime-capability-matrix-v1"],
-  schema: [],
-  sourceIntegrity: [],
-} as const;
-
 export const generatedSupportComponentEvidenceInventory = [
   {
     components: [
@@ -429,13 +424,7 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     shapeId: "on-play-condition-self-attached-don-count-draw",
   },
-  {
-    components: ["condition", "runtime-capability-gate"],
-    gates: componentEvidenceOnlyGates,
-    parserRuleId: "condition-component:field-count-don-public",
-    runtimeCapabilityIds: ["condition:fieldCount:don:public"],
-    shapeId: "condition-field-count-don-public",
-  },
+  fieldCountDonConditionComponentEvidenceInventoryEntry,
   {
     components: [
       "wrapper",
@@ -582,6 +571,7 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     shapeId: "on-play-modify-power-choose-this-turn",
   },
+  sup001fConditionalModifyPowerComponentEvidenceInventoryEntry,
   {
     components: [
       "wrapper",

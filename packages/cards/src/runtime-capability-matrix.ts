@@ -197,6 +197,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:on-play:modify-power:self:this-turn",
         "exact:on-play:modify-power:self:this-battle",
         "exact:on-play:modify-power:choose:this-turn",
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
         "exact:on-play:modify-power:all:this-turn",
         "exact:on-play:cannot-attack:self:this-turn",
         "exact:on-play:cannot-attack:choose:this-turn",
@@ -462,6 +463,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "card014a:modifier:power-choose-this-turn",
         "card014a:on-play:select-target-modify-power",
         "exact:on-play:modify-power:choose:this-turn",
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
       ],
     },
     {
@@ -471,7 +473,10 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       kind: "modifier",
       sinceStory: "ENG-057A",
       supported: true,
-      supportedParserRuleIds: ["exact:on-play:modify-power:choose:this-turn"],
+      supportedParserRuleIds: [
+        "exact:on-play:modify-power:choose:this-turn",
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
+      ],
     },
     {
       description:
@@ -674,6 +679,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:on-play:modify-power:self:this-turn",
         "exact:on-play:modify-power:self:this-battle",
         "exact:on-play:modify-power:choose:this-turn",
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
         "exact:on-play:modify-power:all:this-turn",
         "exact:on-play:cannot-attack:self:this-turn",
         "exact:on-play:cannot-attack:choose:this-turn",
@@ -770,6 +776,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:on-play:modify-power:self:this-turn",
         "exact:on-play:modify-power:self:this-battle",
         "exact:on-play:modify-power:choose:this-turn",
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
         "exact:on-play:modify-power:all:this-turn",
         "exact:on-play:cannot-attack:self:this-turn",
         "exact:on-play:cannot-attack:choose:this-turn",

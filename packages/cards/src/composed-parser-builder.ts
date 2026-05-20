@@ -563,7 +563,7 @@ export function parseContinuousModifierInstructionBody(
   sourceText: string,
 ): ContinuousModifierInstructionParse | undefined {
   const match =
-    /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) gets? ([+-]\d+) power during (this turn|this battle)\.$/.exec(
+    /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) gets? ([+\-−]\d+) power during (this turn|this battle)\.$/.exec(
       sourceText,
     );
   if (match === null) {
@@ -633,11 +633,14 @@ function parseDuration(
 }
 
 function parseSignedSafeInteger(sourceText: string): number | undefined {
-  if (!/^[+-]\d+$/.test(sourceText)) {
+  if (!/^[+\-−]\d+$/.test(sourceText)) {
     return undefined;
   }
 
-  const value = Number.parseInt(sourceText, 10);
+  const normalized = sourceText.startsWith("−")
+    ? `-${sourceText.slice(1)}`
+    : sourceText;
+  const value = Number.parseInt(normalized, 10);
   return Number.isSafeInteger(value) ? value : undefined;
 }
 

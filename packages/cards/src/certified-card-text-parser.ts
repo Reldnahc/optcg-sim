@@ -351,6 +351,7 @@ function parseNonConditionalCardLineEffectClause(
     parseOnPlayDrawClause(cardId, sourceText) ??
     parseOnPlayDrawUpToClause(cardId, sourceText) ??
     parseOnPlayDrawThenTrashClause(cardId, sourceText) ??
+    parseWhenAttackingModifyPowerChooseThisTurnClause(cardId, sourceText) ??
     parseWhenAttackingDrawClause(cardId, sourceText) ??
     parseWhenAttackingDrawThenTrashClause(cardId, sourceText) ??
     parseWhenAttackingOncePerTurnDrawThenTrashClause(cardId, sourceText)
@@ -375,9 +376,32 @@ function parseConditionalCardLineEffectClause(
   if (base.effectBlock.condition !== undefined) {
     return undefined;
   }
-  if (hasPublicDonFieldCountCondition(conditional.condition)) {
+  if (
+    hasPublicDonFieldCountCondition(conditional.condition) &&
+    base.parserRuleId !== "exact:when-attacking:modify-power:choose:this-turn"
+  ) {
     return undefined;
   }
+  if (
+    base.parserRuleId ===
+      "exact:when-attacking:modify-power:choose:this-turn" &&
+    !hasPublicDonFieldCountCondition(conditional.condition)
+  ) {
+    return undefined;
+  }
+
+  const parserRuleId =
+    base.parserRuleId === "exact:when-attacking:modify-power:choose:this-turn"
+      ? "exact:when-attacking:conditional:modify-power:choose:this-turn"
+      : base.parserRuleId;
+  const parserRuleIds =
+    parserRuleId ===
+    "exact:when-attacking:conditional:modify-power:choose:this-turn"
+      ? ([
+          "condition-component:field-count-don-public",
+          "exact:when-attacking:conditional:modify-power:choose:this-turn",
+        ] as const)
+      : base.parserRuleIds;
 
   return {
     ...base,
@@ -385,6 +409,8 @@ function parseConditionalCardLineEffectClause(
       ...base.effectBlock,
       condition: conditional.condition,
     },
+    parserRuleId,
+    ...(parserRuleIds === undefined ? {} : { parserRuleIds }),
   };
 }
 
@@ -709,6 +735,46 @@ function parseWhenAttackingDrawClause(
     sourceText,
     trigger: { type: "whenAttacking" },
   });
+}
+
+function parseWhenAttackingModifyPowerChooseThisTurnClause(
+  cardId: CardId,
+  sourceText: string,
+): CertifiedClause | undefined {
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper === undefined || wrapper.prefix !== "[When Attacking] ") {
+    return undefined;
+  }
+
+  const modifier = parseContinuousModifierInstructionBody(wrapper.bodyText);
+  if (
+    modifier === undefined ||
+    modifier.target !== "opponentCharactersChoose" ||
+    modifier.duration !== "thisTurn"
+  ) {
+    return undefined;
+  }
+
+  return {
+    effectBlock: {
+      category: "auto",
+      effect: {
+        duration: { type: "thisTurn" },
+        target: {
+          request: opponentCharacterChooseTargetRequest(),
+          type: "choose",
+        },
+        type: "modifyPower",
+        value: modifier.value,
+      },
+      id: toEffectId(
+        `${String(cardId)}:exact:when-attacking:modify-power:choose:this-turn`,
+      ),
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "whenAttacking" },
+    },
+    parserRuleId: "exact:when-attacking:modify-power:choose:this-turn",
+  };
 }
 
 function parseTriggerDrawClause(

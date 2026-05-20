@@ -265,6 +265,7 @@ describe("generated support parser result contracts", () => {
       "exact:on-play:trash-2-from-hand:draw-1:self",
       "exact:trigger:draw-n:self",
       "exact:trigger:draw-up-to-n:self",
+      "exact:when-attacking:conditional:modify-power:choose:this-turn",
       "exact:when-attacking:draw-n:self",
       "exact:when-attacking:draw-n:trash-m:hand:self",
       "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
