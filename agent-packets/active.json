@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-001D.md",
-      "storyId": "SUP-001D",
-      "storyPath": "stories/approved/SUP-001D-don-minus-draw-generated-support.yaml",
-      "storySha256": "08d8a2f7c56dde25a3cb5bc173b73edd735360ad838a444a3879decbb51111bb"
+      "packetPath": "agent-packets/SUP-001E.md",
+      "storyId": "SUP-001E",
+      "storyPath": "stories/approved/SUP-001E-don-field-count-condition-card-components.yaml",
+      "storySha256": "4fef449b6b273a1e7f9f279029bb558149e198359aabc0db4c25d13d980a9cdb"
     }
   ],
   "version": 1
