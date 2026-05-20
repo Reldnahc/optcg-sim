@@ -1,0 +1,78 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-001E
+epic_id: SUP-001
+title: DON field-count condition card components
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Add cards-layer parser and diagnostic components for public DON field-count
+  conditions such as `If you have 6 or less DON!! cards on your field`.
+story_boundary: >
+  Own only cards-layer parser/component diagnostics and runtime-capability
+  evidence for public DON field-count condition text. Do not add engine runtime
+  behavior, shared contract/schema authority, generated-support promotion for
+  full effects, real-card fixtures, source hashes, behavior hashes, overlays,
+  or support manifests.
+allowed_touch_points:
+  - packages/cards/src/**
+  - stories/generated/SUP-001*.yaml
+  - stories/approved/SUP-001*.yaml
+  - agent-packets/SUP-001E.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s036
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s006
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 11-testing-quality.s020
+dependencies:
+  - SUP-001A
+  - SUP-001B
+  - CARD-020D
+scope:
+  - parse primitive condition components `If you have`, numeric comparator phrase, `DON!! cards`, and `on your field`
+  - support self and opponent public DON field-count conditions where wording safely identifies the counted player
+  - support `N or less`, `N or more`, and exact-count phrasing if existing condition parser patterns can do so without broad inference
+  - emit condition capability evidence only for the reviewed SUP-001A/SUP-001B structured condition shape
+  - preserve fail-closed diagnostics for private/hidden DON zones, ambiguous controller wording, malformed numbers, unsupported comparators, and mixed condition connectors
+non_scope:
+  - engine runtime evaluation
+  - shared contract/schema changes
+  - full generated-support promotion
+  - broad natural-language condition inference or arbitrary DON zone counts
+  - real-card fixtures, source hashes, behavior hashes, overlays, support manifests, or cards-produced manifests
+card_source_integrity:
+  - this story uses synthetic parser/probe inputs only, does not enable or change any real-card gameplay support, and must not edit real-card fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or other source integrity evidence
+engine_capability_preflight:
+  - "parsed condition shape is `If <player> have/has <N> or less/more/exact DON!! cards on <that player's> field` mapped to the reviewed SUP-001A `fieldCount` plus CardFilter condition shape"
+  - "supported runtime capabilities: public DON field-count condition evaluation from SUP-001B once that child lands"
+  - "missing runtime capabilities: SUP-001B until merged; no cards-layer implementation may mark the condition playable without SUP-001B evidence"
+  - this story must remain unsupported if SUP-001B runtime capability evidence is absent
+acceptance_criteria:
+  - parser components produce structured condition data for self and opponent public DON field-count comparator phrases
+  - supported conditions emit component evidence and runtime capability requirements without promoting an unsupported body
+  - malformed or ambiguous condition text remains unsupported with narrow diagnostics
+  - parser code is reusable and not tied to exactly `6 or less`
+required_tests:
+  - story-review for SUP-001E before approval handoff
+  - parser/component tests for self/opponent DON field-count `lte`, `gte`, and exact forms where supported
+  - multi-threshold parser proof covering at least two values so the implementation cannot hardcode `6 or less`
+  - support-probe/report diagnostic tests for unsupported bodies under supported DON field-count conditions
+  - negative tests for malformed numbers, hidden/private wording, ambiguous controller wording, and mixed connectors
+  - runtime capability matrix test for the new condition capability evidence
+  - production-code search or lint-style assertion proving no exact full-card, full-effect, real-card, or sample-specific sentence branch
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the SUP-001E packet before implementation
+  - do not activate SUP-001E until SUP-001A and SUP-001B have merged
+  - stay within allowed touch points
+  - do not add engine runtime behavior or shared contract/schema authority
+ambiguity_policy: fail_and_escalate

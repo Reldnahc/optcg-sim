@@ -1,0 +1,83 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-001A
+epic_id: SUP-001
+title: DON field-count condition contract fixture authority
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: generated
+summary: >
+  Pin the existing Effect DSL `fieldCount` plus `CardFilter` contract/schema
+  authority for public DON-on-field count conditions so downstream engine and
+  cards stories can represent text such as `you have 6 or less DON!! cards on
+  your field` without adding a DON-specific condition primitive or
+  card-specific condition strings.
+story_boundary: >
+  Own only shared Effect DSL contract, schema fixture, and spec-authorability
+  proof for public DON field-count conditions using the existing `fieldCount`
+  plus `CardFilter` shape. Do not add a new condition primitive. Do not
+  implement engine runtime evaluation, cards parser support, runtime capability
+  matrix entries, generated-support records, support probes, real-card fixtures,
+  source hashes, behavior hashes, overlays, or support manifests.
+allowed_touch_points:
+  - specs/05-effect-dsl-reference.md
+  - contracts/canonical-types.ts
+  - contracts/effect-dsl.schema.json
+  - contracts/types/effects.ts
+  - tests/contracts/**
+  - fixtures/effect-dsl/**
+  - stories/generated/SUP-001*.yaml
+  - stories/approved/SUP-001*.yaml
+  - agent-packets/SUP-001A.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s036
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s004
+dependencies: []
+scope:
+  - prove the existing `fieldCount` condition plus `CardFilter` can author a structured public condition for counting a player's DON!! cards on their field
+  - support `player`, numeric comparator `op`, non-negative numeric `value`, and a DON-card field filter through the existing condition/filter schema
+  - define the condition scope narrowly as field-visible DON controlled by that player, including cost-area DON and attached DON, excluding DON deck, hidden zones, and off-board zones
+  - forbid adding a DON-specific condition primitive, free-text condition field, or one-off schema branch
+  - use structured condition data rather than printed text, card IDs, full-sentence templates, or custom condition strings
+  - add positive and negative schema/type fixtures for self and opponent DON field-count conditions
+  - document that this is authorability only and does not imply engine runtime capability, parser certification, generated support, or card playability
+non_scope:
+  - engine runtime evaluation
+  - runtime capability matrix updates
+  - cards parser/generated-support behavior
+  - real-card fixtures, source hashes, behavior hashes, overlays, support manifests, or cards-produced manifests
+  - DON deck counts, private-zone predicates, arbitrary zone-count conditions, or hidden-information queries
+acceptance_criteria:
+  - Effect DSL schema fixtures prove self and opponent public DON field-count conditions can be represented with `fieldCount`, CardFilter-based DON field scope, and `eq`, `gte`, and `lte` comparators
+  - malformed comparator values, negative count thresholds, hidden/private zone scopes, and free-text/custom condition shortcuts reject through schema/type tests
+  - tests prove no new DON-specific condition primitive or custom condition-string escape hatch is introduced
+  - documentation names the supported scope and explicitly excludes DON deck/private/off-board counts
+  - tests or fixtures prove schema-valid DSL remains authorability-only and does not claim runtime support or card playability
+required_tests:
+  - story-review for SUP-001A before approval handoff
+  - positive schema fixture for a public DON field-count condition
+  - positive contract/schema tests for self/opponent DON field-count conditions
+  - negative schema fixtures for malformed comparator, negative value, unsupported scope, and custom/free-text shortcuts
+  - regression asserting the schema uses existing `fieldCount` plus `CardFilter` authority rather than a new DON-specific condition primitive
+  - run `corepack pnpm run contracts:validate-effects`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - generate and activate the SUP-001A packet before implementation
+  - stay within allowed touch points
+  - do not add engine runtime behavior or cards generated-support behavior
+  - do not add a new DON-specific condition primitive when existing `fieldCount` plus `CardFilter` authority is sufficient
+  - fail closed if the condition cannot be represented as structured public DSL data
+ambiguity_policy: fail_and_escalate

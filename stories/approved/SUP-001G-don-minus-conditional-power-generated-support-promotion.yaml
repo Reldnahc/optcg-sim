@@ -1,0 +1,107 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-001G
+epic_id: SUP-001
+title: DON-minus conditional power generated-support promotion
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Complete the SUP-001 card-layer chain by promoting fully recognized DON-minus
+  On Play draw and conditional When Attacking opponent-Character power modifier
+  components into certified generated support after required contract, parser,
+  and runtime prerequisites exist. This story is the card-layer bridge that
+  turns reusable parser components into a schema-valid, capability-gated
+  generated EffectDefinition without hardcoding any real card.
+story_boundary: >
+  Own only cards-layer generated-support composition, parser-rule evidence,
+  runtime-capability gating, support-probe/report output, and synthetic proof
+  tests for the full two-line composition shape. Do not add engine runtime
+  behavior, shared contract/schema authority, real-card fixtures, source hash
+  changes, behavior hash changes, overlays, support manifest edits,
+  cards-produced manifest regeneration, or card-specific branches.
+allowed_touch_points:
+  - packages/cards/src/**
+  - stories/generated/SUP-001*.yaml
+  - stories/approved/SUP-001*.yaml
+  - agent-packets/SUP-001G.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 02-engine-mechanics.s027
+  - 02-engine-mechanics.s029
+  - 02-engine-mechanics.s036
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - SUP-001D
+  - SUP-001F
+scope:
+  - promote only fully supported line-separated parses whose DON-minus cost, On Play draw body, DON field-count condition, When Attacking wrapper, up-to-one opponent Character target, and this-turn power modifier components are all recognized by reusable SUP-001 primitives
+  - compose line-separated generated support for representative text such as `[On Play] DON!! -1: Draw 1 card.` and `[When Attacking] If you have 6 or less DON!! cards on your field, give up to 1 of your opponent's Characters -1000 power during this turn.`
+  - preserve each line as an independent supported EffectBlock inside one generated EffectDefinition
+  - require parser-rule certification, component evidence, schema validation, runtime capability evidence, support metadata, review state, tested state, source integrity, and behavior hash gates for generated support
+  - prove ASCII minus and Unicode minus handling through synthetic tests without making production code depend on exact full printed sample text
+  - keep generated support fail-closed when either line is unsupported or when line-separated composition cannot bind both supported blocks
+  - preserve fail-closed partial diagnostics when any cost, body, condition, target, power modifier, duration, schema, runtime capability, metadata, review, tested-state, source-integrity, behavior-hash, or line composition gate is missing
+  - keep real cards and any adjacent-card list outside story text, tests, implementation logic, and support proof authority
+non_scope:
+  - engine runtime behavior
+  - shared contracts/schema/type changes
+  - real card IDs, real-card fixture capture, source hash updates, behavior hash updates, overlays, support manifest edits, or cards-produced manifest regeneration
+  - production branches for exact full card text, exact full effect lines, one real card, one external card list, or sample-specific sentence templates
+  - support for unsupported DON zones, unsupported private conditions, unsupported target shapes, unsupported durations, unsupported power/cost modifiers, or broad natural-language inference
+card_source_integrity:
+  - this story does not name or target any real card and must not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or cards-produced manifests
+  - source integrity is exercised only through synthetic generated-support inputs and existing hash gates; real-card fixture or manifest promotion requires a separate fixture/source-integrity story or an existing reviewed source-integrity path
+  - post-merge manual probing of real cards may be done as external discovery, but it must not be cited as implementation authority for this story
+engine_capability_preflight:
+  - "parsed effect shape is two independent line-separated blocks: `[On Play] DON!! -N: Draw M card(s).` plus `[When Attacking] If <player> has N-or-less DON!! cards on their field, give up to one opponent Character -P power during this turn.`"
+  - "prerequisite components assumed: SUP-001D cards-layer evidence for DON-minus On Play draw composition and SUP-001F cards-layer evidence for conditional When Attacking up-to-one opponent Character power modifier composition"
+  - "supported runtime capabilities after prerequisites land: public DON field-count condition evaluation from SUP-001B; return-DON cost payment from ENG-055F; draw self positive safe integer from ENG-012F/CARD-009A; conditional queued wrapper reachability from ENG-058B/CARD-019B; When Attacking timing; up-to-one public target choice; `modifyPower:choose:thisTurn` from CARD-014G; zero-choice resolution from ENG-057A"
+  - "missing runtime capabilities: none after SUP-001D and SUP-001F have merged as reviewed evidence"
+  - generated support must remain unsupported if any required parser certification, schema validation, runtime capability evidence, source integrity, behavior hash, support metadata, review state, tested state, or line composition gate is absent
+acceptance_criteria:
+  - a synthetic two-line source text combining DON-minus On Play draw and conditional When Attacking opponent power modifier produces complete generated support when all gates pass
+  - the generated EffectDefinition contains both effect blocks without losing cost, condition, trigger, source presence, target, power modifier, parser evidence, or capability evidence
+  - parser-rule certification, component evidence IDs, runtime capability IDs, schema validation, support metadata, review metadata, tested state, source integrity, and behavior hash gates all report as passed for the synthetic complete case
+  - the same parser/composer path supports at least one non-sample threshold or non-sample power value without a value-specific or card-specific branch
+  - malformed cost, unsupported condition, unsupported target, unsupported power value, unsupported duration, missing schema bridge, missing runtime capability, stale source hash, stale behavior hash, missing metadata, missing review, and missing tested-state cases remain non-playable with narrow diagnostics
+  - existing generated support for draw, return-DON play-selected, CARD-014 power modifiers, CARD-020 diagnostics, and CARD-021 line-separated composition remains compatible
+  - no production code or tests depend on a real card ID, exact full printed card text, human-held adjacent-card list, or one-off full-sentence implementation branch
+required_tests:
+  - story-review for SUP-001G before approval handoff
+  - synthetic generated-support-index test proving complete support for both lines when all gates pass
+  - synthetic support-probe/report certificate test proving every gate reports passed for the complete case
+  - synthetic test proving at least one non-sample threshold or non-sample power value uses the same generated-support path
+  - tests proving ASCII and Unicode minus variants reach the same structured support path
+  - negative tests for malformed cost, unsupported condition, unsupported target, unsupported power value, unsupported duration, missing schema bridge, missing runtime capability, stale source hash, stale behavior hash, missing metadata, missing review, and missing tested-state gates
+  - regression tests proving existing draw, return-DON, CARD-014 modifyPower, CARD-020 diagnostics, and CARD-021 generated-support behavior remains compatible
+  - production-code search or lint-style assertion proving no real-card ID branch, full-card text branch, external-card-list branch, or sample-specific sentence template exists in production cards code outside test/story text
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the SUP-001G packet before implementation
+  - do not activate SUP-001G until SUP-001D and SUP-001F have merged as reviewed evidence
+  - stay within allowed touch points
+  - do not add engine runtime behavior or shared contract/schema authority
+  - do not edit real-card fixtures, overlays, source hashes, behavior hashes, support manifests, or cards-produced manifests
+  - fail closed on any parser, schema, runtime capability, source integrity, metadata, review, test, or wording ambiguity that could accidentally mark unsupported text playable
+ambiguity_policy: fail_and_escalate
