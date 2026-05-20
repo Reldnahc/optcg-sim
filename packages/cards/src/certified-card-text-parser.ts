@@ -31,7 +31,7 @@ import {
 } from "./composed-parser-builder.js";
 import {
   buildConditionalContinuousCompositionClauseFromSource,
-  conditionalContinuousTrashCountParserRuleId,
+  conditionalContinuousCompositionParserRuleId,
   parseConditionalWrapper,
 } from "./conditional-generated-support-composer.js";
 import { parseOnPlayReturnDonDrawClause } from "./don-minus-draw-components.js";
@@ -169,7 +169,7 @@ export function parseCertifiedCardText(
   }
 
   const parserRuleIds = parsedClauses.flatMap(getClauseParserRuleIds);
-  if (parserRuleIds.includes(conditionalContinuousTrashCountParserRuleId)) {
+  if (parserRuleIds.includes(conditionalContinuousCompositionParserRuleId)) {
     return completeParse(input, parsedClauses);
   }
 

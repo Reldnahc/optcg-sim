@@ -863,7 +863,7 @@ export const generatedSupportComponentEvidenceInventory = [
       schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
     },
     parserRuleId:
-      "exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character",
+      "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character",
     runtimeCapabilityIds: [
       "category:permanent",
       "trigger:permanent",
@@ -872,7 +872,7 @@ export const generatedSupportComponentEvidenceInventory = [
       "effect:giveProtection:fieldRemoval:thisCard:permanent",
       "sourcePresencePolicy:mustRemainInSameZone",
     ],
-    shapeId: "conditional-continuous-trash-count-keyword-grant-and-protection",
+    shapeId: "conditional-continuous-condition-keyword-grant-and-protection",
   },
   {
     components: ["sequence", ...parserRuleBaseComponents],

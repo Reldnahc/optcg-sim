@@ -25,8 +25,8 @@ export type ConditionalContinuousCompositionParse = {
   readonly effects: readonly [Effect, Effect];
 };
 
-export const conditionalContinuousTrashCountParserRuleId =
-  "exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character";
+export const conditionalContinuousCompositionParserRuleId =
+  "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character";
 
 export function parseConditionalWrapper(
   sourceText: string,
@@ -84,10 +84,6 @@ export function parseConditionalContinuousComposition(
   if (condition === undefined) {
     return undefined;
   }
-  if (!isSupportedConditionalContinuousTrashCountCondition(condition)) {
-    return undefined;
-  }
-
   const split = splitBodyConjunction(conditional.bodyText.replace(/\.$/, ""));
   if (split === undefined) {
     return undefined;
@@ -122,7 +118,7 @@ export function buildConditionalContinuousCompositionClause(
       sourcePresencePolicy: "mustRemainInSameZone",
       trigger: { type: "permanent" },
     },
-    parserRuleId: conditionalContinuousTrashCountParserRuleId,
+    parserRuleId: conditionalContinuousCompositionParserRuleId,
   };
 }
 
@@ -175,19 +171,6 @@ function isPublicDonFieldCountCondition(
     Object.keys(filter).length === 1 &&
     filter.categories?.length === 1 &&
     filter.categories[0] === "don"
-  );
-}
-
-function isSupportedConditionalContinuousTrashCountCondition(
-  condition: NonNullable<EffectBlock["condition"]>,
-): condition is Extract<
-  NonNullable<EffectBlock["condition"]>,
-  { type: "trashCount" }
-> {
-  return (
-    condition.type === "trashCount" &&
-    condition.filter === undefined &&
-    (condition.player === "self" || condition.player === "opponent")
   );
 }
 

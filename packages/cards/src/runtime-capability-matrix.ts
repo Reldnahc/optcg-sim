@@ -45,8 +45,8 @@ export interface RuntimeCapabilityParserRuleInventoryEntry {
   coverage: RuntimeCapabilityParserRuleCoverage;
 }
 
-const conditionalContinuousTrashCountParserRuleId =
-  "exact:conditional-continuous:trash-count:keyword-grant-and-protection:self-character";
+const conditionalContinuousCompositionParserRuleId =
+  "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character";
 
 const conditionalContinuousRuntimeCapabilitySpecs = [
   [
@@ -214,7 +214,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         kind,
         sinceStory,
         supported: true,
-        supportedParserRuleIds: [conditionalContinuousTrashCountParserRuleId],
+        supportedParserRuleIds: [conditionalContinuousCompositionParserRuleId],
       }),
     ),
     {
@@ -954,7 +954,7 @@ function classifyParserRuleKind(parserRuleId: string): string {
   ) {
     return "draw-up-to";
   }
-  if (parserRuleId === conditionalContinuousTrashCountParserRuleId) {
+  if (parserRuleId === conditionalContinuousCompositionParserRuleId) {
     return "sequence";
   }
   if (
