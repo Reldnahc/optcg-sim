@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-001A.md",
-      "storyId": "SUP-001A",
-      "storyPath": "stories/approved/SUP-001A-don-field-count-condition-contract-authorability.yaml",
-      "storySha256": "6059527640bb94e2dfbd666c4970e85dd55898ce43f113effabaa6b267cccf43"
+      "packetPath": "agent-packets/SUP-001B.md",
+      "storyId": "SUP-001B",
+      "storyPath": "stories/approved/SUP-001B-don-field-count-condition-runtime.yaml",
+      "storySha256": "f06e9e3f97218673d185cec0fd97d1f43a6a84dde379caff571dade688563098"
     }
   ],
   "version": 1
