@@ -79,6 +79,7 @@ import type {
   EffectContext as PackageEffectContext,
   EffectDefinition as PackageEffectDefinition,
   EffectDefinitionMetadata as PackageEffectDefinitionMetadata,
+  EffectDslFieldRemovalProtection as PackageEffectDslFieldRemovalProtection,
   EffectExecutionFrame as PackageEffectExecutionFrame,
   EffectExecutionContext as PackageEffectExecutionContext,
   EffectExecutionPendingDecisionContinuation as PackageEffectExecutionPendingDecisionContinuation,
@@ -259,6 +260,7 @@ test("TYP-001H every manifest-covered canonical export has exactly one valid own
     "TYP-009B",
     "TYP-010",
     "TYP-012A",
+    "TYP-012B",
   ]);
   for (const owner of Object.values(EXPORT_OWNERSHIP_MANIFEST)) {
     expect(validOwners.has(owner)).toBe(true);
@@ -417,6 +419,7 @@ test("TYP-001H manifest-covered exports resolve through package-name type import
     PackagePlaySelectedEffect,
     PackagePlayHandSelectedEffect,
     PackagePayCostEffect,
+    PackageEffectDslFieldRemovalProtection,
     PackageReplacementTrigger,
     PackageEffectOption,
     PackageSequencedEffect,

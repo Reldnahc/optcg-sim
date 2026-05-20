@@ -1,0 +1,39 @@
+{
+  "cardId": "TYP-012B-BAD-004",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "TYP-012B-BAD-004:permanent-1",
+      "category": "permanent",
+      "trigger": { "type": "permanent" },
+      "effect": {
+        "type": "giveProtection",
+        "target": { "type": "self" },
+        "protection": {
+          "process": "fieldRemoval",
+          "fieldRemoval": {
+            "processFamily": "fieldRemoval",
+            "classification": "moveFromFieldToTrash",
+            "sourceKind": "cardEffect",
+            "sourceControllerRelation": "opponentControlled",
+            "targetScope": "thisCard",
+            "exclusions": {
+              "battleKO": "excluded",
+              "ruleProcessTrash": "excluded",
+              "controllerCost": "excluded",
+              "controllerOwnedEffect": "allow",
+              "ambiguousCustomRemoval": "excluded"
+            }
+          }
+        },
+        "duration": { "type": "permanent" }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-012b-bad-004",
+    "rulesVersion": "2026-05-19",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

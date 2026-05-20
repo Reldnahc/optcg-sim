@@ -736,7 +736,10 @@ test("fails closed when implemented-dsl combat body has effect definition metada
   };
   state.cardManifest = manifest;
 
-  assert.throws(() => computeView(state), /unsupported.*effect definition/i);
+  assert.throws(
+    () => computeView(state),
+    /unsupported.*(effect definition|materialization)/i,
+  );
 });
 
 test("fails closed when implemented-dsl combat body has support effect definition metadata without registry entry", () => {

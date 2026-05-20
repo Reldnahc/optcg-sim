@@ -85,6 +85,37 @@ const fieldRemovalProtection = (
   },
 });
 
+const permanentDslProtectionDefinition = (
+  cardId: CardId,
+): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: toEffectId("permanent:dsl:field-removal-protection"),
+      category: "permanent",
+      trigger: { type: "permanent" },
+      condition: { type: "trashCount", player: "self", op: "gte", value: 1 },
+      effect: {
+        type: "giveProtection",
+        target: { type: "self" },
+        protection: fieldRemovalProtection() as Extract<
+          Effect,
+          { type: "giveProtection" }
+        >["protection"],
+        duration: { type: "permanent" },
+      },
+    },
+  ],
+  metadata: {
+    sourceTextHash: "source-hash",
+    rulesVersion: "r1",
+    effectDefinitionsVersion: "fixture",
+    tested: true,
+    reviewer: "reviewer",
+  },
+});
+
 const setupFieldRemovalProtectionState = () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1");
@@ -519,6 +550,80 @@ test("true self trashCount condition prevents opponent effect field removal befo
     false,
   );
   assert.deepEqual(state, before);
+});
+
+test("reviewed permanent DSL protection prevents opponent effect field removal at threshold", () => {
+  const { state, entry, target, targetRef } =
+    setupFieldRemovalProtectionState();
+  moveP2HandCardToTrash(state);
+  state.cardManifest.cards[target.cardId] = {
+    ...must(state.cardManifest.cards[target.cardId], "target card"),
+    support: {
+      cardId: target.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:permanent:dsl:protection",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    "def:permanent:dsl:protection": permanentDslProtectionDefinition(
+      target.cardId,
+    ),
+  };
+
+  const result = executeSelectedTargetEffectPrimitive(
+    state,
+    entry,
+    koChooseEffect(),
+    [targetRef],
+  );
+  const nextP2 = must(result.state.players[p2], "next p2");
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.events, []);
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === target.instanceId),
+    true,
+  );
+});
+
+test("reviewed permanent DSL protection does not prevent below threshold", () => {
+  const { state, entry, target, targetRef } =
+    setupFieldRemovalProtectionState();
+  state.cardManifest.cards[target.cardId] = {
+    ...must(state.cardManifest.cards[target.cardId], "target card"),
+    support: {
+      cardId: target.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:permanent:dsl:protection",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    "def:permanent:dsl:protection": permanentDslProtectionDefinition(
+      target.cardId,
+    ),
+  };
+
+  const result = executeSelectedTargetEffectPrimitive(
+    state,
+    entry,
+    koChooseEffect(),
+    [targetRef],
+  );
+  const nextP2 = must(result.state.players[p2], "next p2");
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === target.instanceId),
+    false,
+  );
 });
 
 test("inactive whileSourceOnField source-dependent protection disappears instead of blocking unrelated field removal", () => {

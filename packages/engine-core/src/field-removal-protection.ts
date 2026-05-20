@@ -9,6 +9,13 @@ import type {
 } from "@optcg/types";
 
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import { deriveImplementedDslPermanentContinuousEffects } from "./effect-runtime-continuous.js";
+import { isSupportedFieldRemovalProtection } from "./field-removal-protection-shape.js";
+export {
+  hasOnlyFieldRemovalProtections,
+  isSupportedFieldRemovalProtection,
+  malformedFieldRemovalProtectionMessage,
+} from "./field-removal-protection-shape.js";
 
 export type FieldRemovalProtectionFailureReason =
   | "missing-source-controller"
@@ -41,38 +48,6 @@ type FieldRemovalProtectionEffect = ContinuousEffectRecord & {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-export const isSupportedFieldRemovalProtection = (
-  protection: Protection,
-): protection is Extract<Protection, { process: "fieldRemoval" }> => {
-  if (protection.process !== "fieldRemoval") return false;
-  const metadata = protection.fieldRemoval as unknown;
-  if (!isRecord(metadata)) return false;
-  const exclusions = metadata["exclusions"];
-  if (!isRecord(exclusions)) return false;
-  return (
-    metadata["processFamily"] === "fieldRemoval" &&
-    metadata["classification"] === "moveFromFieldToTrash" &&
-    metadata["sourceKind"] === "cardEffect" &&
-    metadata["sourceControllerRelation"] === "opponentControlled" &&
-    metadata["targetScope"] === "thisCard" &&
-    exclusions["battleKO"] === "excluded" &&
-    exclusions["ruleProcessTrash"] === "excluded" &&
-    exclusions["controllerCost"] === "excluded" &&
-    exclusions["controllerOwnedEffect"] === "excluded" &&
-    exclusions["ambiguousCustomRemoval"] === "failClosed"
-  );
-};
-
-export const hasOnlyFieldRemovalProtections = (
-  protections: readonly Protection[],
-): boolean =>
-  protections.every((protection) => protection.process === "fieldRemoval");
-
-export const malformedFieldRemovalProtectionMessage = (
-  effect: ContinuousEffectRecord,
-): string =>
-  `Unsupported continuous effect ${effect.id}: malformed field-removal protection metadata.`;
 
 export const isFieldRemovalProtectionModifier = (
   effect: ContinuousEffectRecord,
@@ -185,7 +160,11 @@ export const fieldRemovalProtectionsForCard = (
   | { ok: true; protections: Protection[] }
   | { ok: false; reason: FieldRemovalProtectionFailureReason } => {
   const protections: Protection[] = [];
-  for (const effect of state.continuousEffects) {
+  const effects = [
+    ...state.continuousEffects,
+    ...deriveImplementedDslPermanentContinuousEffects(state),
+  ];
+  for (const effect of effects) {
     if (!isFieldRemovalProtectionModifier(effect)) continue;
     if (!isSupportedFieldRemovalProtectionModifier(effect)) {
       return { ok: false, reason: "malformed-field-removal-protection" };

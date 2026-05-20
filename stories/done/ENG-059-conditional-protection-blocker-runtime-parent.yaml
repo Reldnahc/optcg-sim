@@ -10,19 +10,20 @@ primary_concern: rules
 priority: high
 status: done
 summary: >
-  Coordinate reusable engine runtime primitives for public trash-count
-  conditions, conditional continuous keyword grants, effect-origin field
-  removal protection, and triggered On K.O. composition so the runtime can be
-  proved from reusable primitive parts without hardcoding any full card text,
-  card ID, parser rule, or external card list.
+  Reopen the conditional protection runtime line for the missing
+  implemented-DSL materialization bridge needed after the reusable condition,
+  keyword, protection, and composition primitives have landed. This parent
+  coordinates only the engine story that consumes reviewed permanent Effect DSL
+  definitions and derives existing continuous keyword/protection modifiers.
 story_boundary: >
-  Parent planning story only. Do not implement this parent directly. Implement
-  ENG-059A through ENG-059D one at a time only after separate ENG-059 parent
-  and child story-review artifacts exist. This parent owns engine-only runtime
-  capability work. Production engine code must express reusable condition,
-  continuous modifier, removal-protection, and trigger-composition primitives
-  that can support any card with the same mechanics. The story set must work
-  from phrase-level primitive shapes, not from one full-card solution.
+  Reopened parent planning story only. Do not implement this parent directly.
+  ENG-059A through ENG-059E remain completed prerequisites from the earlier
+  closeout. Implement ENG-059F as the only executable child in this reopened
+  pass after distinct reopened-parent and child story-review artifacts exist.
+  This parent owns engine-only runtime capability work and must not add shared
+  contract/schema, card parser, generated-support, runtime capability matrix,
+  real-card fixture, overlay, source hash, behavior hash, server, client, or UI
+  work.
 allowed_touch_points:
   - stories/generated/ENG-059*.yaml
   - stories/approved/ENG-059*.yaml
@@ -46,6 +47,7 @@ spec_refs:
   - 11-testing-quality.s004
   - 11-testing-quality.s008
 dependencies:
+  - TYP-012B
   - TYP-012A
   - ENG-014A
   - ENG-014B
@@ -56,73 +58,62 @@ dependencies:
   - ENG-045
   - ENG-056
   - ENG-058
+  - ENG-059A
+  - ENG-059B
+  - ENG-059C
+  - ENG-059D
+  - ENG-059E
 # prettier-ignore
 child_stories:
-  - id: ENG-059A
-    title: Public trash-count condition runtime
-    concern: Add reusable engine condition evaluation for public trash-count predicates and comparators while preserving hidden-information, fail-closed, and deterministic runtime behavior.
-    depends_on: [ENG-058A]
-  - id: ENG-059B
-    title: Conditional continuous keyword grants
-    concern: Add a reusable continuous modifier path for conditionally granting the allowlisted supported public combat keywords through the same computed-view path without mutating canonical card state.
-    depends_on: [ENG-014A,ENG-014B,ENG-014C,ENG-014D,ENG-014E,ENG-044,ENG-059A]
-  - id: ENG-059C
-    title: Effect-origin field removal protection
-    concern: Add a reusable engine protection layer that classifies field removal by process and source controller so opponent-effect removal can be prevented without blocking battle K.O., rule-process trash, costs, or own effects.
-    depends_on: [TYP-012A, ENG-045, ENG-059A]
-  - id: ENG-059E
-    title: Conditional field-removal protection modifiers
-    concern: Add reusable condition evaluation for field-removal protection continuous modifiers so supported public predicates can gate opponent-effect removal protection without card-specific branches.
-    depends_on: [ENG-059A, ENG-059C]
-  - id: ENG-059D
-    title: Synthetic conditional protection composition proof
-    concern: Prove the ENG-059 primitives compose in a synthetic engine fixture built from the decomposed effect parts with no parser, generated-support, real-card fixture, or production card-ID special case.
-    depends_on: [ENG-056B, ENG-059A, ENG-059B, ENG-059C, ENG-059E]
+  - id: ENG-059F
+    title: Implemented-DSL continuous modifier materialization
+    concern: Consume reviewed implemented-DSL permanent continuous definitions and derive existing keyword-grant and field-removal protection modifiers without card-specific branches.
+    depends_on: [TYP-012B, ENG-059A, ENG-059B, ENG-059C, ENG-059E]
 scope:
-  - coordinate ENG-059A through ENG-059E as reusable engine-only child stories
-  - require every production behavior to be expressed as a general runtime primitive, not a card-ID branch or full-text template
-  - decompose the conditional predicate into primitive shapes such as "If you have", "7 or more", "cards in your trash", and public zone "trash"; the implementation may represent this as a reusable self trash-count `gte 7` condition
-  - decompose the keyword grant into primitive shapes such as target "this Character", grant verb "gains", and a supported public keyword such as "[Blocker]"; the implementation must represent this as a reusable conditional continuous keyword grant, not a Blocker-only branch
-  - decompose the protection text into primitive shapes such as protected object "this Character", removal process "removed from the field", source controller "opponent", and source kind "effects"; the implementation must represent this as reusable field-removal protection metadata
-  - reuse existing triggered primitive shapes for "[On K.O.]", "Draw", and "1 card" rather than reimplementing On K.O. draw behavior
-  - prove the primitive parts compose with existing On K.O. draw support in a synthetic engine fixture after conditional protection modifiers are supported
-  - preserve deterministic events, replay behavior, state hashes, hidden information, source presence, and fail-closed unsupported behavior
-  - provide runtime capability truth for later CARD/parser work without changing card parser or generated support in this parent
+  - record that ENG-059 has reopened because the primitive engine paths landed before the implemented-DSL bridge that materializes reviewed permanent Effect DSL definitions into those paths
+  - coordinate one engine-only child story for implemented-DSL permanent continuous materialization
+  - preserve the historical fact that ENG-059A through ENG-059E remain completed prerequisites and are not reimplemented or repacketized by this reopened pass
+  - require production behavior to consume reusable Effect DSL primitives and existing runtime modifier paths, not card IDs, full-card text, exact sentence branches, or external-card-list knowledge
+  - keep downstream CARD/parser/generated-support promotion separate so later stories can cite runtime capability evidence without hiding card-layer work here
+  - preserve deterministic events, replay behavior, state hashes, hidden information, source presence, stale-source handling, and fail-closed unsupported behavior
 non_scope:
   - direct parent implementation
+  - changes to completed ENG-059A through ENG-059E behavior except as cited prerequisite authority
+  - shared contracts/schema/type changes
   - production references to any real card ID or external card list
   - full-card text matching or production branches for one printed effect
-  - packages/cards changes, parser certification, generated-support component evidence, support reports, support probes, real-card fixtures, overlays, source hashes, or behavior hashes
+  - packages/cards changes, runtime capability matrix changes, parser certification, generated-support component evidence, support reports, support probes, real-card fixtures, overlays, source hashes, behavior hashes, or cards-produced manifests
   - making any real card playable
   - parser diagnostic wording cleanup
-  - broad continuous-effect layering beyond supported keyword grants needed by the child stories
-  - protection against battle K.O., rule-process trash, controller costs, controller-owned effects, or unsupported/ambiguous removal processes
+  - new continuous-effect families beyond keyword grants and TYP-012A field-removal protection grants
+  - protection against battle K.O., rule-process trash, controller costs, controller-owned effects, or unsupported/ambiguous removal processes beyond the existing field-removal protection runtime shape
   - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
 acceptance_criteria:
   - ENG-059 is not implemented directly
-  - ENG-059A through ENG-059E are independently reviewable child stories
-  - each child stays engine-only and does not import @optcg/cards
+  - ENG-059 is visibly no longer done while this reopened pass is active
+  - ENG-059F is the only executable child story in this reopened parent pass
+  - ENG-059A through ENG-059E remain recorded as completed prerequisites and are not reimplemented or repacketized by this reopened pass
+  - ENG-059 has one distinct reopened-parent story-review assignment and durable artifact before approval handoff
+  - ENG-059F has one distinct child-story review assignment and durable artifact before approval handoff
+  - the reconstructed reopened parent/child review-status matrix records distinct assignment and artifact identities for both rows before approval handoff, packet generation, activation, implementation handoff, or PR handoff
+  - the child stays engine-only and does not import @optcg/cards
   - no production engine code checks a real card ID, the full effect text as one string, or any external-card-list identifier
-  - public trash-count conditions, conditional keyword grants, and opponent-effect field-removal protection are reusable by other cards with the same mechanics
-  - ENG-059C consumes TYP-012A field-removal protection contracts instead of widening protection types inside engine runtime work
+  - reviewed implemented-DSL permanent continuous definitions can be consumed only through reusable condition, keyword, and field-removal protection primitives
   - similar cards can benefit later only because they use the same runtime primitives, not because their full text or IDs were known during implementation
-  - later CARD/parser work may add partial or complete generated-support evidence for cards with matching primitives, but ENG-059 itself does not add parser or generated-support behavior
+  - later CARD/parser work may add partial or complete generated-support evidence for cards with matching primitives, but this reopened ENG-059 pass does not add parser or generated-support behavior
   - unsupported or ambiguous condition, modifier, protection, process, source-policy, hidden-info, replay, or ordering cases continue to fail closed
 required_tests:
-  - story-review for ENG-059 parent before approval handoff
-  - story-review for ENG-059A before approval handoff
-  - story-review for ENG-059B before approval handoff
-  - story-review for ENG-059C before approval handoff
-  - story-review for ENG-059D before approval handoff
-  - story-review for ENG-059E before approval handoff
-  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - story-review for reopened ENG-059 parent before approval handoff
+  - story-review for ENG-059F before approval handoff
+  - reconstruct a reopened parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
   - run `corepack pnpm run stories:validate`
 repo_rules:
   - use the parent/substory workflow
+  - do not activate or implement ENG-059 directly
+  - ENG-059F is the only worker-ready activation target in this reopened parent set
   - keep one active child packet at a time
-  - activate ENG-059A first; do not activate ENG-059B or ENG-059C until ENG-059A has landed as reviewed commit evidence on the parent branch
-  - do not activate ENG-059D until ENG-059A, ENG-059B, ENG-059C, and ENG-059E have landed as reviewed commit evidence on the parent branch
+  - do not activate or hand off ENG-059F until TYP-012B is merged and ENG-059A through ENG-059E have landed as reviewed evidence
   - do not complete child packets until the parent branch lands on main
-  - do not open child PRs to main; use one final parent PR after all children are reviewed on the parent branch
+  - do not open child PRs to main; use one final reopened-parent PR after the child is reviewed on the parent branch
   - fail closed on hidden-information, event-order, replay, source-presence, protection, or condition ambiguity
 ambiguity_policy: fail_and_escalate

@@ -1018,6 +1018,7 @@ Schema-supported fixture subset:
 - condition: yourTurn
 - condition: attachedDonCount
 - condition: fieldCount
+- condition: trashCount (public `player` + `op` + non-negative safe-integer `value`; optional public filter)
 - cost: restDon
 - cost: returnDon
 - cost: restSelf
@@ -1042,6 +1043,8 @@ Schema-supported fixture subset:
 - effect: sequence
 - effect: cannotAttack
 - effect: cannotBlock
+- effect: giveKeyword
+- effect: giveProtection (structured `Protection` metadata only; includes TYP-012A field-removal metadata shape)
 - effect: custom
 - card filters: cardIds, names, nameContains, nameNot, categories, colorsAny,
   colorsAll, typesAny, typesAll, attributesAny, attributesAll, cost, power,
@@ -1054,7 +1057,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - condition: opponentTurn
 - condition: lifeCount
 - condition: handCount
-- condition: trashCount
 - condition: hasCardInZone
 - condition: attackTarget
 - condition: cardState
@@ -1087,7 +1089,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - effect: setBaseCost
 - effect: rest
 - effect: activate
-- effect: giveKeyword
 - effect: removeKeyword
 - effect: addDon
 - effect: attachDon

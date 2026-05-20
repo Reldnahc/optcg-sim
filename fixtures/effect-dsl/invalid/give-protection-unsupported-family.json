@@ -1,0 +1,25 @@
+{
+  "cardId": "TYP-012B-BAD-003",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "TYP-012B-BAD-003:permanent-1",
+      "category": "permanent",
+      "trigger": { "type": "permanent" },
+      "effect": {
+        "type": "giveProtection",
+        "target": { "type": "self" },
+        "protection": {
+          "process": "damage"
+        },
+        "duration": { "type": "permanent" }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-typ-012b-bad-003",
+    "rulesVersion": "2026-05-19",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

@@ -431,6 +431,28 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["type", "target", "keyword", "duration"],
+          "properties": {
+            "type": { "const": "giveKeyword" },
+            "target": { "$ref": "#/$defs/target" },
+            "keyword": { "$ref": "#/$defs/keyword" },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target", "protection", "duration"],
+          "properties": {
+            "type": { "const": "giveProtection" },
+            "target": { "$ref": "#/$defs/target" },
+            "protection": { "$ref": "#/$defs/effectDslFieldRemovalProtection" },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["type", "effects"],
           "properties": {
             "type": { "const": "sequence" },
@@ -756,6 +778,22 @@
           "additionalProperties": false,
           "required": ["type", "player", "op", "value"],
           "properties": {
+            "type": { "const": "trashCount" },
+            "player": { "$ref": "#/$defs/playerRef" },
+            "filter": { "$ref": "#/$defs/cardFilter" },
+            "op": { "$ref": "#/$defs/comparator" },
+            "value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player", "op", "value"],
+          "properties": {
             "type": { "const": "leaderColorCount" },
             "player": { "$ref": "#/$defs/playerRef" },
             "op": { "$ref": "#/$defs/comparator" },
@@ -868,6 +906,94 @@
           }
         }
       ]
+    },
+    "protectionExclusionPolicy": {
+      "type": "string",
+      "enum": ["excluded", "failClosed"]
+    },
+    "protectionFieldRemovalClassification": {
+      "type": "string",
+      "enum": [
+        "moveFromFieldToTrash",
+        "moveFromFieldToHand",
+        "moveFromFieldToDeck",
+        "moveFromFieldToLife",
+        "moveFromFieldToOtherZone"
+      ]
+    },
+    "protectionFieldRemovalExclusions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "battleKO",
+        "ruleProcessTrash",
+        "controllerCost",
+        "controllerOwnedEffect",
+        "ambiguousCustomRemoval"
+      ],
+      "properties": {
+        "battleKO": { "$ref": "#/$defs/protectionExclusionPolicy" },
+        "ruleProcessTrash": { "$ref": "#/$defs/protectionExclusionPolicy" },
+        "controllerCost": { "$ref": "#/$defs/protectionExclusionPolicy" },
+        "controllerOwnedEffect": {
+          "$ref": "#/$defs/protectionExclusionPolicy"
+        },
+        "ambiguousCustomRemoval": {
+          "$ref": "#/$defs/protectionExclusionPolicy"
+        }
+      }
+    },
+    "protectionFieldRemovalMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "processFamily",
+        "classification",
+        "sourceKind",
+        "sourceControllerRelation",
+        "targetScope",
+        "exclusions"
+      ],
+      "properties": {
+        "processFamily": { "const": "fieldRemoval" },
+        "classification": {
+          "$ref": "#/$defs/protectionFieldRemovalClassification"
+        },
+        "sourceKind": {
+          "type": "string",
+          "enum": ["cardEffect", "ruleProcess", "battle", "cost", "custom"]
+        },
+        "sourceControllerRelation": {
+          "type": "string",
+          "enum": [
+            "opponentControlled",
+            "selfControlled",
+            "eitherController",
+            "unknownController"
+          ]
+        },
+        "targetScope": {
+          "type": "string",
+          "enum": [
+            "thisCard",
+            "controllerFieldCharacter",
+            "controllerField",
+            "anyFieldCard"
+          ]
+        },
+        "exclusions": { "$ref": "#/$defs/protectionFieldRemovalExclusions" }
+      }
+    },
+    "effectDslFieldRemovalProtection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["process", "fieldRemoval"],
+      "properties": {
+        "process": { "const": "fieldRemoval" },
+        "fieldRemoval": {
+          "$ref": "#/$defs/protectionFieldRemovalMetadata"
+        }
+      }
     },
     "playerRef": {
       "type": "string",

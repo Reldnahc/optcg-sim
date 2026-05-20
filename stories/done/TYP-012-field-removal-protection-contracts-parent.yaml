@@ -10,13 +10,16 @@ primary_concern: contract
 priority: high
 status: done
 summary: >
-  Coordinate contract/type authority for reusable field-removal protection
-  metadata before engine runtime implements opponent-effect removal immunity.
+  Reopen the field-removal protection contract line for the missing Effect DSL
+  authorability needed before downstream engine and card-support stories can
+  consume conditional continuous protection and keyword grants.
 story_boundary: >
-  Parent planning story only. Do not implement this parent directly. Implement
-  TYP-012A as the executable child after distinct parent and child story-review
-  artifacts exist. This parent must not add engine runtime behavior, parser
-  support, generated-support records, or real-card fixtures.
+  Reopened parent planning story only. Do not implement this parent directly.
+  TYP-012A remains a completed prerequisite from the earlier closeout. Implement
+  TYP-012B as the only executable child in this reopened pass after distinct
+  reopened-parent and child story-review artifacts exist. This parent must not
+  add engine runtime behavior, parser support, generated-support records, or
+  real-card fixtures.
 allowed_touch_points:
   - stories/generated/TYP-012*.yaml
   - stories/approved/TYP-012*.yaml
@@ -30,44 +33,53 @@ spec_refs:
   - 04-effect-runtime.s011
   - 04-effect-runtime.s013
   - 04-effect-runtime.s014
+  - 04-effect-runtime.s015
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s006
   - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s013
   - 05-effect-dsl-reference.s016
   - 24-story-schema.s025
   - 11-testing-quality.s004
   - 11-testing-quality.s008
 dependencies:
   - TYP-001F
+  - TYP-012A
 child_stories:
-  - id: TYP-012A
-    title: Field-removal protection contract shape
-    concern: Extend canonical type contracts so protection metadata can express field-removal process classification, effect source kind, source controller relation, and explicit exclusions without engine runtime behavior.
-    depends_on: [TYP-001F]
+  - id: TYP-012B
+    title: Conditional continuous protection and keyword DSL authorability
+    concern: Extend shared Effect DSL contract and schema authority so downstream stories can author reusable trash-count gated continuous keyword and field-removal protection grants without card-specific branches.
+    depends_on: [TYP-012A]
 scope:
-  - coordinate one contracts-only child story for field-removal protection shape authority
-  - keep the contract reusable for engine work such as ENG-059C
-  - require the shape to distinguish protected field-removal processes from battle K.O., rule-process trash, costs, controller-owned effects, and ambiguous custom handlers
+  - record that TYP-012 has reopened because completed TYP-012A authorized protection metadata but did not authorize the composed Effect DSL authoring shape needed by downstream stories
+  - coordinate one contracts-only child story for conditional continuous Effect DSL authorability over public trash-count conditions, keyword grants, and structured field-removal protection grants
+  - keep the reopened contract work reusable for engine materialization and card generated-support promotion stories without requiring another shared contract change for this composition shape
+  - preserve the historical fact that TYP-012A remains completed and is a prerequisite, not work to redo in this reopened pass
 non_scope:
   - direct parent implementation
+  - changes to the completed TYP-012A contract shape except as cited prerequisite authority
   - engine runtime behavior
   - parser support, generated-support evidence, support reports, support probes, real-card fixtures, source hashes, behavior hashes, or runtime capability matrix updates
   - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
 acceptance_criteria:
-  - TYP-012A is the only executable child story
-  - TYP-012 has one distinct parent-story review assignment and durable artifact before approval handoff
-  - TYP-012A has one distinct child-story review assignment and durable artifact before approval handoff
-  - the reconstructed parent/child review-status matrix records distinct assignment and artifact identities for both rows before approval handoff, packet generation, activation, implementation handoff, or PR handoff
-  - the child defines contract-owned axes for field-removal process classification, source kind, source-controller relation, protected object scope, and explicit exclusions or fail-closed unsupported cases
+  - TYP-012 is visibly no longer done while this reopened pass is active
+  - TYP-012B is the only executable child story in this reopened parent pass
+  - TYP-012A remains recorded as a completed prerequisite and is not reimplemented or repacketized by this reopened pass
+  - TYP-012 has one distinct reopened-parent story-review assignment and durable artifact before approval handoff
+  - TYP-012B has one distinct child-story review assignment and durable artifact before approval handoff
+  - the reconstructed reopened parent/child review-status matrix records distinct assignment and artifact identities for both rows before approval handoff, packet generation, activation, implementation handoff, or PR handoff
+  - the child owns only contract/schema authorability for the reusable conditional continuous composition shape needed by downstream ENG and CARD stories
   - no engine runtime behavior is implemented by this story set
 required_tests:
-  - story-review for TYP-012 parent before approval handoff
-  - story-review for TYP-012A before approval handoff
-  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - story-review for reopened TYP-012 parent before approval handoff
+  - story-review for TYP-012B before approval handoff
+  - reconstruct a reopened parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
   - run `corepack pnpm run stories:validate`
 repo_rules:
   - do not activate or implement TYP-012 directly
-  - TYP-012A is the only worker-ready activation target in this parent set
-  - use the parent/substory workflow even though this set has exactly one child
+  - TYP-012B is the only worker-ready activation target in this reopened parent set
+  - use the parent/substory workflow even though this reopened set has exactly one active child
   - keep one active child packet at a time
   - do not complete the child packet until the parent branch lands on main
-  - do not open child PRs to main; use one final parent PR after the child is reviewed on the parent branch
+  - do not open child PRs to main; use one final reopened-parent PR after the child is reviewed on the parent branch
 ambiguity_policy: fail_and_escalate
