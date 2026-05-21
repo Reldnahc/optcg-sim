@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-003B.md",
-      "storyId": "SUP-003B",
-      "storyPath": "stories/approved/SUP-003B-activate-main-once-per-turn-runtime.yaml",
-      "storySha256": "d2335fb12fb36c3c7883023fa9146c81d279396561ef5f8afeab8f5ab88540e5"
+      "packetPath": "agent-packets/SUP-003C.md",
+      "storyId": "SUP-003C",
+      "storyPath": "stories/approved/SUP-003C-optional-choose-one-trash-cost-runtime.yaml",
+      "storySha256": "26f9d92221b316398efad630b315d161f385261a3ea06cc595425843769bb71f"
     }
   ],
   "version": 1
