@@ -1,5 +1,6 @@
 import type {
   CardId,
+  EffectDefinition,
   DecisionId,
   EffectId,
   EffectQueueEntry,
@@ -10,6 +11,7 @@ import type {
 } from "@optcg/types";
 
 import { createActiveState, must, p1 } from "./action-test-fixtures.js";
+import { resolvedCard } from "./action-test-fixtures.js";
 
 export const toCardId = (value: string): CardId => value as CardId;
 export const toDecisionId = (value: string): DecisionId => value as DecisionId;
@@ -85,4 +87,56 @@ export const makeMainPhaseLegalActionState = () => {
     zone: { zone: "hand", playerId: p1, slot: "hand", index },
   }));
   return state;
+};
+
+export const installActivateMainDrawDefinition = (params: {
+  state: ReturnType<typeof createActiveState>;
+  sourceCardId: CardId;
+  category: "leader" | "character" | "stage";
+  definitionId: string;
+  effectId: EffectId;
+  oncePerTurn?: boolean;
+}): EffectDefinition => {
+  const definition: EffectDefinition = {
+    cardId: params.sourceCardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: params.effectId,
+        category: "activate",
+        trigger: { type: "activateMain" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        ...(params.oncePerTurn === true ? { oncePerTurn: true } : {}),
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+    metadata: {
+      sourceTextHash: `${params.definitionId}:source`,
+      rulesVersion: `${params.definitionId}:rules`,
+      effectDefinitionsVersion: "0.1.0",
+      tested: true,
+      reviewer: "qa-reviewer",
+    },
+  };
+  params.state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  params.state.cardManifest.effectDefinitions = {
+    ...params.state.cardManifest.effectDefinitions,
+    [params.definitionId]: definition,
+  };
+  params.state.cardManifest.cards[params.sourceCardId] = resolvedCard({
+    cardId: params.sourceCardId,
+    category: params.category,
+    ...(params.category === "leader" ? { power: 5000 } : {}),
+    ...(params.category === "character" ? { cost: 2, power: 3000 } : {}),
+    ...(params.category === "stage" ? { cost: 1 } : {}),
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: params.definitionId,
+      sourceTextHash: definition.metadata.sourceTextHash,
+      rulesVersion: definition.metadata.rulesVersion,
+      cardDataVersion: params.state.cardManifest.cardDataVersion,
+    },
+  });
+  return definition;
 };

@@ -72,6 +72,10 @@ import {
   applyEndMainPhase,
   getTurnLegalActions,
 } from "./turn-actions.js";
+import {
+  applyActivateMainAction,
+  getActivateMainLegalActions,
+} from "./effect-runtime-activation-main.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -765,6 +769,7 @@ export const getLegalActions = (
   actions.push(...getAttachDonLegalActions(state, playerId));
   actions.push(...getPlayCardLegalActions(state, playerId));
   actions.push(...getDeclareAttackLegalActions(state, playerId));
+  actions.push(...getActivateMainLegalActions(state, playerId));
   return actions;
 };
 
@@ -961,6 +966,9 @@ export const applyAction = (state: GameState, action: Action): EngineResult => {
   }
   if (action.type === "declareAttack") {
     return applyDeclareAttack(state, action);
+  }
+  if (action.type === "activateEffect") {
+    return applyActivateMainAction(state, action);
   }
   return illegalAction(state, `Unsupported action type: ${action.type}`);
 };

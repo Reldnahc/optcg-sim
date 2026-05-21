@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-003B -->
 <!-- agent-packet:story-path stories/approved/SUP-003B-activate-main-once-per-turn-runtime.yaml -->
-<!-- agent-packet:story-sha256 6d260abc81b7e3b0f409cd481020fcd45678507e2a2fc61deff2a42e200e8678 -->
+<!-- agent-packet:story-sha256 bc5ea27794f9848b692e4cba88a0d6ac29a3d73edfc8eba8ed4953a32c30f8c7 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -802,6 +802,7 @@ Engine runtime story only. Do not add card parser/generated-support behavior, re
 - support source cards in leader, character, or stage zones when the source zone and category are otherwise legal and visible to the controller
 - validate submitted `activateEffect` actions against current source, effect id, controller, phase, match status, battle status, pending decisions, pending runtime work, and source support status
 - queue and resolve the selected Activate Main effect block through existing runtime paths rather than card-specific branches
+- allow the existing queue result resolver to recognize the scoped Activate Main no-choice draw runtime shape without adding cards-layer support or exact printed-text branches
 - enforce `[Once Per Turn]` using existing once-per-turn key semantics without consuming use for illegal actions, stale actions, unmet activation conditions, declined optional activation, or failed activation-time costs
 - preserve existing playCard, declareAttack, attachDon, blocker, counter, trigger, and optional activation behavior
 - produce engine test evidence for Activate Main timing that later cards-layer runtime capability records can cite; do not edit the cards runtime capability matrix in this engine story
@@ -828,6 +829,7 @@ Engine runtime story only. Do not add card parser/generated-support behavior, re
 - packages/engine-core/src/actions-fail-closed.test.ts
 - packages/engine-core/src/action-dispatcher-test-support.ts
 - packages/engine-core/src/effect-runtime.ts
+- packages/engine-core/src/effect-runtime-queue-results.ts
 - packages/engine-core/src/effect-runtime-activation-main.ts
 - packages/engine-core/src/effect-runtime-activation-main.test.ts
 - packages/engine-core/src/effect-runtime-once-per-turn.test.ts
@@ -895,6 +897,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - legal actions and PlayerView filtering do not leak hidden state or unsupported runtime work
 - malformed, stale, wrong-player, wrong-source, wrong-effect, wrong-phase, and pending-work actions fail closed without mutation
 - no engine code imports `@optcg/cards` or checks real card IDs or exact printed text
+- queue result changes are limited to recognizing scoped Activate Main runtime shapes already validated by `effect-runtime-activation-main.ts`
 
 ## Post-Approval Role Sections
 
