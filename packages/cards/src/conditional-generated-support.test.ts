@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -35,7 +35,295 @@ async function loadOp03044Fixture(): Promise<PoneglyphCardDetail> {
   return JSON.parse(source) as PoneglyphCardDetail;
 }
 
+async function readProductionCardSources(): Promise<string> {
+  const sourceDir = path.dirname(fileURLToPath(import.meta.url));
+  const sourceFiles = await listProductionSourceFiles(sourceDir);
+  const contents = await Promise.all(
+    sourceFiles.map((entry) => readFile(entry, "utf8")),
+  );
+
+  return contents.join("\n");
+}
+
+async function listProductionSourceFiles(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nestedFiles = await Promise.all(
+    entries.map(async (entry) => {
+      const entryPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        return listProductionSourceFiles(entryPath);
+      }
+
+      if (
+        entry.isFile() &&
+        entry.name.endsWith(".ts") &&
+        !entry.name.endsWith(".test.ts") &&
+        !entry.name.endsWith(".d.ts")
+      ) {
+        return [entryPath];
+      }
+
+      return [];
+    }),
+  );
+
+  return nestedFiles.flat();
+}
+
+function syntheticCardDetail(
+  cardId: string,
+  effect: string,
+): PoneglyphCardDetail {
+  return {
+    attribute: ["Special"],
+    available_languages: ["en"],
+    block: null,
+    card_number: cardId,
+    card_type: "Character",
+    color: ["Blue"],
+    cost: 3,
+    counter: 1000,
+    effect,
+    language: "en",
+    legality: {},
+    life: null,
+    name: cardId,
+    official_faq: [],
+    power: 5000,
+    rarity: null,
+    released: true,
+    released_at: null,
+    set: "SYNTHETIC",
+    set_name: "Synthetic CARD-022A Tests",
+    trigger: null,
+    types: ["Synthetic"],
+    variants: [],
+  };
+}
+
 describe("conditional generated support diagnostics", () => {
+  it.each([
+    {
+      cardId: "CARD-022A-MATRIX-LESS-7-DRAW-1",
+      expectedCondition: {
+        conditions: [
+          { op: "gte", player: "self", type: "leaderColorCount", value: 2 },
+          { op: "lte", player: "self", type: "handCount", value: 7 },
+        ],
+        type: "and",
+      },
+      expectedComponentEvidenceId: "on-play-draw",
+      expectedDrawCount: 1,
+      expectedParserRuleId: "exact:on-play:draw-n:self",
+      expectedTriggerCapabilityId: "trigger:onPlay",
+      expectedTriggerType: "onPlay",
+      sourceText:
+        "[On Play] If your Leader is multicolored and you have 7 or less cards in your hand, draw 1 card.",
+    },
+    {
+      cardId: "CARD-022A-MATRIX-LESS-3-DRAW-3",
+      expectedCondition: {
+        conditions: [
+          { op: "gte", player: "self", type: "leaderColorCount", value: 2 },
+          { op: "lte", player: "self", type: "handCount", value: 3 },
+        ],
+        type: "and",
+      },
+      expectedComponentEvidenceId: "on-play-draw",
+      expectedDrawCount: 3,
+      expectedParserRuleId: "exact:on-play:draw-n:self",
+      expectedTriggerCapabilityId: "trigger:onPlay",
+      expectedTriggerType: "onPlay",
+      sourceText:
+        "[On Play] If your Leader is multicolored and you have 3 or less cards in your hand, draw 3 cards.",
+    },
+    {
+      cardId: "CARD-022A-MATRIX-MORE-6-DRAW-2",
+      expectedCondition: {
+        conditions: [
+          { op: "gte", player: "self", type: "leaderColorCount", value: 2 },
+          { op: "gte", player: "self", type: "handCount", value: 6 },
+        ],
+        type: "and",
+      },
+      expectedComponentEvidenceId: "on-play-draw",
+      expectedDrawCount: 2,
+      expectedParserRuleId: "exact:on-play:draw-n:self",
+      expectedTriggerCapabilityId: "trigger:onPlay",
+      expectedTriggerType: "onPlay",
+      sourceText:
+        "[On Play] If your Leader is multicolored and you have 6 or more cards in your hand, draw 2 cards.",
+    },
+    {
+      cardId: "CARD-022A-MATRIX-ATTACKING-LESS-4-DRAW-2",
+      expectedCondition: {
+        conditions: [
+          { op: "gte", player: "self", type: "leaderColorCount", value: 2 },
+          { op: "lte", player: "self", type: "handCount", value: 4 },
+        ],
+        type: "and",
+      },
+      expectedComponentEvidenceId: "when-attacking-draw",
+      expectedDrawCount: 2,
+      expectedParserRuleId: "exact:when-attacking:draw-n:self",
+      expectedTriggerCapabilityId: "trigger:whenAttacking",
+      expectedTriggerType: "whenAttacking",
+      sourceText:
+        "[When Attacking] If your Leader is multicolored and you have 4 or less cards in your hand, draw 2 cards.",
+    },
+  ])(
+    "supports primitive-composed conditional draw matrix row $cardId",
+    ({
+      cardId,
+      expectedCondition,
+      expectedComponentEvidenceId,
+      expectedDrawCount,
+      expectedParserRuleId,
+      expectedTriggerCapabilityId,
+      expectedTriggerType,
+      sourceText,
+    }) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: toCardId(cardId),
+            sourceText,
+            sourceTextHash: `sha256:${cardId.toLowerCase()}`,
+          },
+        ],
+        validateEffectDefinition,
+      });
+      const entry = index.entries[0];
+
+      expect(entry).toMatchObject({
+        blockers: [],
+        cardId,
+        missingCapabilityIds: [],
+        parseStatus: "complete",
+        parserRuleIds: [expectedParserRuleId],
+        status: "supported",
+      });
+      expect(entry?.effectDefinition?.effects[0]).toMatchObject({
+        category: "auto",
+        condition: expectedCondition,
+        effect: {
+          count: expectedDrawCount,
+          player: "self",
+          type: "draw",
+        },
+        trigger: { type: expectedTriggerType },
+      });
+      expect(entry?.capabilityEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            capabilityId: "condition:leaderColorCount",
+            component: "condition-expression",
+          }),
+          expect.objectContaining({
+            capabilityId: "condition:handCount",
+            component: "condition-expression",
+          }),
+          expect.objectContaining({
+            capabilityId: "condition-connector:and",
+            component: "condition-expression",
+          }),
+          expect.objectContaining({
+            capabilityId: "effect:draw:self:count:positive-safe-integer",
+            component: expectedComponentEvidenceId,
+            parserRuleId: expectedParserRuleId,
+          }),
+          expect.objectContaining({
+            capabilityId: "sourcePresencePolicy:mustRemainInSameZone",
+            component: expectedComponentEvidenceId,
+            parserRuleId: expectedParserRuleId,
+          }),
+          expect.objectContaining({
+            capabilityId: expectedTriggerCapabilityId,
+            component: expectedComponentEvidenceId,
+            parserRuleId: expectedParserRuleId,
+          }),
+        ]),
+      );
+      expect(entry?.componentEvidenceIds).toEqual([
+        expectedComponentEvidenceId,
+      ]);
+    },
+  );
+
+  it("reports a non-representative conditional draw row as playable with complete proof evidence", () => {
+    const sourceText =
+      "[On Play] If your Leader is multicolored and you have 7 or less cards in your hand, draw 1 card.";
+    const cardId = "CARD-022A-REPORT-NON-REPRESENTATIVE";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: toCardId(cardId),
+          sourceText,
+          sourceTextHash: "sha256:card-022a-report-non-representative",
+        },
+      ],
+      validateEffectDefinition,
+    });
+    const report = buildGeneratedSupportReport(index);
+
+    expect(report.supportedCardIds).toEqual([cardId]);
+    expect(report.unsupportedCardIds).toEqual([]);
+    expect(report.statusByCardId[cardId]).toMatchObject({
+      blockerCodes: [],
+      missingCapabilityIds: [],
+      parseStatus: "complete",
+      parserRuleIds: ["exact:on-play:draw-n:self"],
+      status: "supported",
+    });
+    expect(
+      report.proofCertificatesByCardId[cardId]?.requiredRuntimeCapabilityIds,
+    ).toEqual(
+      expect.arrayContaining([
+        "condition:leaderColorCount",
+        "condition:handCount",
+        "condition-connector:and",
+        "effect:draw:self:count:positive-safe-integer",
+        "trigger:onPlay",
+      ]),
+    );
+  });
+
+  it("prints non-representative conditional draw probes as playable with no blockers", async () => {
+    const effect =
+      "[On Play] If your Leader is multicolored and you have 7 or less cards in your hand, draw 1 card.";
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("CARD-022A-PROBE-NON-REPRESENTATIVE"),
+      getCard: () =>
+        Promise.resolve(
+          syntheticCardDetail("CARD-022A-PROBE-NON-REPRESENTATIVE", effect),
+        ),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: yes");
+    expect(text).toContain("Blockers: none");
+    expect(text).toContain("- missing runtime capability IDs: passed (none)");
+  });
+
+  it("does not implement representative conditional draw support as an exact production text branch", async () => {
+    const representative =
+      "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.";
+    const sources = await readProductionCardSources();
+
+    expect(sources).not.toContain(representative);
+  });
+
   it("marks supported conditional composition as playable when runtime gates are present", () => {
     const sourceText =
       "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand, draw 2 cards.";

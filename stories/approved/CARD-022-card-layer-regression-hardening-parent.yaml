@@ -1,0 +1,141 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-022
+epic_id: CARD-022
+title: Card-layer regression hardening parent
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Raise older card-layer generated-support areas to the regression standard set
+  by SUP-001G. First, harden the already-correct conditional draw path with
+  top-level primitive-variation tests. Then, replace the older CARD-014G
+  story-named exact-template production parser with reusable primitive parsing
+  and matching anti-hardcode tests.
+story_boundary: >
+  Coordinate only CARD-022A and CARD-022B. Do not directly implement parser,
+  generated-support, runtime, schema, fixture, manifest, source-integrity, or
+  card-promotion changes in the parent story.
+allowed_touch_points:
+  - stories/generated/CARD-022*.yaml
+  - stories/approved/CARD-022*.yaml
+  - agent-packets/CARD-022*.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-008A
+  - CARD-014A
+  - CARD-014G
+  - CARD-019B
+  - ENG-055I
+  - ENG-055J
+  - ENG-057A
+  - ENG-058A
+  - ENG-058B
+  - TYP-007E
+  - TYP-009B
+  - TYP-010
+  - TYP-011A
+# prettier-ignore
+child_stories:
+  - id: CARD-022A
+    title: Conditional draw generated-support test matrix
+    concern: Add SUP-001G-style matrix tests proving the existing multicolor-Leader plus hand-count conditional draw path is primitive-composed rather than sample-text hardcoded.
+    depends_on: [TYP-011A, ENG-058A, ENG-058B, CARD-019B]
+  - id: CARD-022B
+    title: CARD-014G primitive parser replacement
+    concern: Replace the story-named exact-template `card014g-composed-parser.ts` production map with reusable primitive parsing for the existing CARD-014G-supported target, modifier, restriction, selected-target, and saved-target shapes.
+    depends_on: [CARD-008A, CARD-014A, CARD-014G, CARD-022A, ENG-055I, ENG-055J, ENG-057A, TYP-007E, TYP-009B, TYP-010]
+scope:
+  - keep CARD-022 as a parent/substory chain with no direct parent implementation
+  - use CARD-022A to add test coverage for a weak but structurally correct conditional draw support path
+  - use CARD-022B to fix the older exact-template production shape in `packages/cards/src/card014g-composed-parser.ts`
+  - preserve existing generated-support behavior and support gates while changing tests and parser internals to prove reusable primitive composition
+  - require tests that fail on exact full-text branches, sample-specific numeric values, story-named parser ownership, or card-specific support shortcuts
+  - keep all real-card source integrity and playable card promotion outside this story chain
+non_scope:
+  - direct parent implementation
+  - engine runtime behavior
+  - shared contracts/schema/type changes
+  - new gameplay capability beyond existing CARD-014G, CARD-019B, ENG-058A, and SUP-001-proven behavior
+  - real card IDs, real-card fixture capture, source hash updates, behavior hash updates, overlays, support manifest edits, or cards-produced manifest regeneration
+  - broad natural-language inference or support for wording families not already authorized by child story boundaries
+card_source_integrity:
+  - not applicable for direct parent implementation because this parent does not enable or change gameplay support for any real card
+  - children must use synthetic test inputs only and must not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence
+  - real cards and any human-held adjacent-card list are deliberately excluded from story authority; post-merge manual probing may be done outside the story but must not be cited as implementation evidence
+engine_capability_preflight:
+  - no new engine capability is introduced by this parent
+  - CARD-022A parsed effect shape is a supported trigger wrapper containing `If your Leader is multicolored and you have <N> or less/more cards in your hand, draw <M> card(s).`
+  - CARD-022A supported capability group is `condition:leaderColorCount`, `condition:handCount`, `condition-connector:and`, `effect:draw:self:count:positive-safe-integer`, conditional queued trigger reachability from ENG-058B, and the already-supported trigger wrapper capability for each matrix row
+  - CARD-022A missing capability group is none for the matrix rows authorized by CARD-022A
+  - CARD-022B parsed effect shapes are On Play wrappers over currently supported CARD-014G bodies for exact opponent Character selection, saved selected Character K.O., public field power modification, and public field attack/block restrictions
+  - CARD-022B supported capability group is `category:auto`, `trigger:onPlay`, `sourcePresencePolicy:mustRemainInSameZone`, `sequence:genericFrames`, `selectTargets:field:public:character:max1`, `savedSelectedTargets:producer`, `savedFieldObject:consumer:generic`, `effect:ko:saved-field-object:characterArea:public`, `modifyPower:self:thisTurn`, `modifyPower:self:thisBattle`, `modifyPower:all:thisTurn`, `modifyPower:choose:thisTurn`, `modifyPower:choose:thisTurn:zeroChoiceBranch`, `cannotAttack:self:thisTurn`, `cannotAttack:all:thisTurn`, `cannotAttack:choose:thisTurn`, `cannotAttack:choose:thisTurn:zeroChoiceBranch`, `cannotBlock:self:thisTurn`, `cannotBlock:all:thisTurn`, `cannotBlock:choose:thisTurn`, and `cannotBlock:choose:thisTurn:zeroChoiceBranch`
+  - CARD-008A provides inherited baseline generated-support capability authority for `category:auto`, `trigger:onPlay`, and `sourcePresencePolicy:mustRemainInSameZone`
+  - CARD-014A provides selectedTargets runtime capability matrix authority; TYP-010 provides selectedTargets producer contract authority
+  - CARD-014A provides inherited generic sequence frame capability authority for `sequence:genericFrames`
+  - CARD-014A provides saved field-object consumer runtime capability matrix authority for `savedFieldObject:consumer:generic`
+  - ENG-055I provides saved field-object K.O. runtime authority for `effect:ko:saved-field-object:characterArea:public`; TYP-009B provides saved field-object reference consumer contract authority
+  - ENG-055J and TYP-007E provide duration modifier/restriction runtime and schema authority for supported self/all target rows
+  - ENG-057A provides zero-choice branch runtime authority for choose/up-to-1 modifyPower, cannotAttack, and cannotBlock rows
+  - CARD-022B missing capability group is none for the matrix rows authorized by CARD-022B
+  - if either child discovers a missing runtime or schema capability, stop and split the prerequisite story instead of expanding implementation
+acceptance_criteria:
+  - CARD-022 is not implemented directly
+  - CARD-022A and CARD-022B are independently reviewable child stories
+  - parent and every child story-review artifact exists with distinct assignment identity and distinct durable artifact identity before approval handoff, packet generation, activation, implementation handoff, or PR handoff
+  - CARD-022A hardens conditional draw generated-support tests without changing production behavior
+  - CARD-022B removes the story-named exact-template production parser shape and replaces it with reusable primitive parsing while preserving existing supported behavior
+  - no child uses real-card source integrity, a human-held adjacent-card list, exact full-card text, exact full-effect sentence branches, or sample-specific numeric branches as implementation authority
+  - parent PR cleanup metadata lists CARD-022A and CARD-022B and binds the non-packetized CARD-022 parent closeout after merge to main
+required_tests:
+  - story-review for CARD-022 parent before approval handoff
+  - story-review for CARD-022A before approval handoff
+  - story-review for CARD-022B before approval handoff
+  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - story-specific tests from CARD-022A and CARD-022B
+  - per-child reviewed commit evidence, AI review record, revision response, and verification evidence for CARD-022A and CARD-022B before parent PR handoff
+  - role packet extraction output before each implementation handoff and before each code-review handoff
+  - final parent PR full-story integration review covering all child commits, packet history, cleanup metadata, CI, verification, and unresolved comments before human-review handoff
+  - run cleanup metadata handoff preflight against the actual current parent PR body or selected durable handoff comment, fetched issue comments, fetched changed files, fetched PR head branch, allowed cleanup branches when parent cleanup lists non-head branches, fetched status checks, and reviewed PR evidence before reviewer or human-review handoff
+  - confirm the remote `cleanup-metadata-guard` check is present and passing before reviewer or human-review handoff
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - use the parent/substory workflow
+  - generate and activate one child packet at a time
+  - do not implement the parent directly
+  - implement CARD-022A before CARD-022B so the weak conditional draw test gap is closed before the CARD-014G parser replacement
+  - do not complete child packets until the parent branch lands on main
+  - keep CARD-022A and CARD-022B work on one parent integration branch with reviewed child commits
+  - do not open child PRs to main; use one final parent PR to main
+  - parent PR cleanup metadata must list CARD-022A and CARD-022B and bind the non-packetized CARD-022 parent closeout
+  - run role packet extraction before implementation and code-review handoffs
+  - run cleanup metadata handoff preflight against the actual current parent PR body or selected durable handoff comment, fetched issue comments, fetched changed files, fetched PR head branch, allowed cleanup branches when parent cleanup lists non-head branches, fetched status checks, and reviewed PR evidence; confirm passing remote `cleanup-metadata-guard` before reviewer and human-review handoff
+  - keep child scopes separate; CARD-022A is test-hardening for conditional draw and CARD-022B is production parser replacement for CARD-014G
+  - fail closed when a child would require broadening parser grammar, runtime capability, real-card source integrity, or support manifest authority
+ambiguity_policy: fail_and_escalate

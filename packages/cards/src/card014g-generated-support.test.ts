@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AnySchema } from "ajv";
@@ -265,6 +265,79 @@ describe("CARD-014G generated composed support", () => {
     {
       expectedEffect: {
         duration: { type: "thisTurn" },
+        target: {
+          request: {
+            allowFewerIfUnavailable: true,
+            chooser: "self",
+            filter: { categories: ["character"] },
+            max: 1,
+            min: 0,
+            player: "opponent",
+            timing: "onResolution",
+            visibility: "public",
+            zone: "characterArea",
+          },
+          type: "choose",
+        },
+        type: "modifyPower",
+        value: -3000,
+      },
+      expectedParserRuleId: "exact:on-play:modify-power:choose:this-turn",
+      sourceText:
+        "[On Play] Up to 1 of your opponent's Characters gets -3000 power during this turn.",
+    },
+    {
+      expectedEffect: {
+        duration: { type: "thisBattle" },
+        target: { type: "self" },
+        type: "modifyPower",
+        value: 2000,
+      },
+      expectedParserRuleId: "exact:on-play:modify-power:self:this-battle",
+      sourceText:
+        "[On Play] This Character gets +2000 power during this battle.",
+    },
+    {
+      expectedEffect: {
+        duration: { type: "thisTurn" },
+        target: {
+          filter: { categories: ["character"] },
+          player: "opponent",
+          type: "all",
+          zone: "characterArea",
+        },
+        type: "modifyPower",
+        value: -1000,
+      },
+      expectedParserRuleId: "exact:on-play:modify-power:all:this-turn",
+      sourceText:
+        "[On Play] All of your opponent's Characters get -1000 power during this turn.",
+    },
+  ])(
+    "parses supported CARD-014G modifyPower primitives with non-sample value $sourceText",
+    ({ expectedEffect, expectedParserRuleId, sourceText }) => {
+      const result = parse(sourceText);
+
+      expect(result.status).toBe("complete");
+      if (!isCompleteGeneratedSupportParseResult(result)) {
+        throw new Error("Expected complete parse.");
+      }
+
+      expect(result.parserRuleIds).toEqual([expectedParserRuleId]);
+      expect(result.effectDefinition.effects[0]).toMatchObject({
+        category: "auto",
+        effect: expectedEffect,
+        id: toEffectId(`CARD-014G-SYNTHETIC:${expectedParserRuleId}`),
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      });
+    },
+  );
+
+  it.each([
+    {
+      expectedEffect: {
+        duration: { type: "thisTurn" },
         target: { type: "self" },
         type: "cannotAttack",
       },
@@ -392,6 +465,10 @@ describe("CARD-014G generated composed support", () => {
     "[On Play] This Character cannot become active during your next Refresh Phase.",
     "[On Play] Up to 2 of your opponent's Characters gets -2000 power during this turn.",
     "[On Play] Up to one of your opponent's Characters gets -2000 power during this turn.",
+    "[On Play] Give up to 1 of your opponent's Characters -2000 power during this turn.",
+    "[On Play] This Character get +1000 power during this turn.",
+    "[On Play] All of your opponent's Characters gets -1000 power during this turn.",
+    "[On Play] Up to 1 of your opponent's Characters get -2000 power during this turn.",
   ])("fails closed on unsupported CARD-014G wording (%s)", (sourceText) => {
     const result = parse(sourceText);
 
@@ -568,4 +645,58 @@ describe("CARD-014G generated composed support", () => {
       ]),
     );
   });
+
+  it("does not keep CARD-014G support in exact full-sentence production templates", () => {
+    const productionSource = readProductionCardSources();
+
+    expect(productionSource).not.toContain("card014gTemplatesByText");
+    expect(productionSource).not.toContain(
+      "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
+    );
+    expect(productionSource).not.toContain(
+      "[On Play] Select 1 of your opponent's Characters. Then, K.O. that Character.",
+    );
+  });
+
+  it("does not leave a CARD-014G-named production parser module except as a compatibility re-export", () => {
+    const legacyPath = path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "card014g-composed-parser.ts",
+    );
+    if (!existsSync(legacyPath)) {
+      return;
+    }
+
+    const source = readFileSync(legacyPath, "utf8").trim();
+    expect(source).not.toContain("card014gTemplatesByText");
+    expect(source).not.toContain("interface Card014gTemplate");
+    expect(source).not.toContain("[On Play]");
+  });
 });
+
+function readProductionCardSources(): string {
+  const sourceDir = path.dirname(fileURLToPath(import.meta.url));
+  const sourceFiles = listProductionSourceFiles(sourceDir);
+
+  return sourceFiles.map((entry) => readFileSync(entry, "utf8")).join("\n");
+}
+
+function listProductionSourceFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      return listProductionSourceFiles(entryPath);
+    }
+
+    if (
+      entry.isFile() &&
+      entry.name.endsWith(".ts") &&
+      !entry.name.endsWith(".test.ts") &&
+      !entry.name.endsWith(".d.ts")
+    ) {
+      return [entryPath];
+    }
+
+    return [];
+  });
+}

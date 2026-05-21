@@ -7,6 +7,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  isOnPlayFieldEffectModifierWording,
   parseCard014gClause,
   parseCard014gResidueClause,
 } from "./card014g-composed-parser.js";
@@ -532,7 +533,9 @@ function parseCard016AContinuousClause(
     return undefined;
   }
 
-  const modifier = parseContinuousModifierInstructionBody(wrapper.bodyText);
+  const modifier = isOnPlayFieldEffectModifierWording(wrapper.bodyText)
+    ? parseContinuousModifierInstructionBody(wrapper.bodyText)
+    : undefined;
   if (modifier !== undefined) {
     const target = toCard016ATarget(modifier.target);
     if (target === undefined) {
