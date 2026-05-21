@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Raise older card-layer generated-support areas to the regression standard set
   by SUP-001G. First, harden the already-correct conditional draw path with

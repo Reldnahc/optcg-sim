@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Replace the older story-named `card014g-composed-parser.ts` exact-template
   production parser with reusable primitive parsing for the same CARD-014G

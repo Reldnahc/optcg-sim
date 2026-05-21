@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Raise the existing conditional draw generated-support tests to the same
   regression standard as SUP-001G. The current implementation decomposes Leader
