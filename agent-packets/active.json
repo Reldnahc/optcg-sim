@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SUP-003A.md",
+      "storyId": "SUP-003A",
+      "storyPath": "stories/approved/SUP-003A-optional-choose-one-trash-cost-contract-authorability.yaml",
+      "storySha256": "a70587e4bec2af1f5aa503699ccb3edda6bf0bc24df9e3bcce02bdd67b72059d"
+    }
+  ],
   "version": 1
 }
