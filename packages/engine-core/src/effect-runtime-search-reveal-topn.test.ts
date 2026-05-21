@@ -20,7 +20,16 @@ import {
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
-import { queueDrawForP1 } from "./effect-runtime-queue-processing-test-support.js";
+import type { EffectQueueEntry } from "./effect-runtime-queue-processing-test-support.js";
+import {
+  processEffectRuntime,
+  queueDrawForP1,
+  reviewedOnPlayDrawDefinition,
+  toCardId,
+  toEffectId,
+  toQueueEntryId,
+  toSourceSnapshot,
+} from "./effect-runtime-queue-processing-test-support.js";
 
 type SearchEffect = Extract<Effect, { type: "search" }>;
 
@@ -266,5 +275,232 @@ test("malformed duplicate and accepted remainder ordering are deterministic", ()
   assert.equal(
     resolved.events.map((event) => event.type).join(","),
     "decisionResolved,effectResolved",
+  );
+});
+
+test("lookCount one with bothPlayers and remainder policy reveals selected card publicly without order decision", () => {
+  const state = createActiveState();
+  setDeck(state, ["topn-one-public-hit"]);
+  const opened = openSearch(
+    state,
+    search({
+      lookCount: 1,
+      revealTo: "bothPlayers",
+      filter: { categories: ["character"] },
+    }),
+  );
+  const select = selectDecision(opened);
+  const chosen = must(select.candidates[0], "chosen").card;
+
+  const selected = applyAction(opened, choose(select.id, [chosen]));
+  assert.equal(selected.errors, undefined);
+  assert.deepEqual(
+    selected.events.map((event) => event.type),
+    ["decisionResolved", "cardMoved", "cardRevealed", "effectResolved"],
+  );
+  assert.equal(selected.state.pendingDecision, undefined);
+  assert.equal(must(selected.state.players[p1], "p1").deck.length, 0);
+  assert.equal(
+    must(selected.state.players[p1], "p1").hand.at(-1)?.instanceId,
+    chosen.instanceId,
+  );
+  const publicReveal = selected.events.find(
+    (event) =>
+      event.type === "cardRevealed" && event.visibility.type === "public",
+  );
+  assert.notEqual(publicReveal, undefined);
+});
+
+test("chooser-only lookCount one with decline keeps selected identity private and resolves without ordering", () => {
+  const state = createActiveState();
+  setDeck(state, ["topn-one-private-only"]);
+  const opened = openSearch(
+    state,
+    search({
+      lookCount: 1,
+      revealTo: "chooserOnly",
+      filter: {},
+    }),
+  );
+  const select = selectDecision(opened);
+  const declined = applyAction(opened, choose(select.id, []));
+  assert.equal(declined.errors, undefined);
+  assert.deepEqual(
+    declined.events.map((event) => event.type),
+    ["decisionResolved", "effectResolved"],
+  );
+  assert.equal(declined.state.pendingDecision, undefined);
+  assert.equal(
+    JSON.stringify(filterStateForPlayer(declined.state, p2)).includes(
+      "topn-one-private-only",
+    ),
+    false,
+  );
+});
+
+test("public selected reveal does not depend on selectCards prompt text", () => {
+  const state = createActiveState();
+  setDeck(state, ["topn-prompt-independent"]);
+  const opened = openSearch(
+    state,
+    search({
+      lookCount: 1,
+      revealTo: "bothPlayers",
+      filter: {},
+    }),
+  );
+  const decision = must(opened.pendingDecision, "pending");
+  if (decision.type !== "selectCards") {
+    assert.fail("expected selectCards decision");
+  }
+  decision.prompt = "Mutated prompt text";
+  const chosen = must(decision.candidates[0], "chosen").card;
+
+  const selected = applyAction(opened, choose(decision.id, [chosen]));
+  assert.equal(selected.errors, undefined);
+  const publicRevealCount = selected.events.filter(
+    (event) =>
+      event.type === "cardRevealed" && event.visibility.type === "public",
+  ).length;
+  assert.equal(publicRevealCount, 1);
+});
+
+test("lookCount one no-match with bottom remainder policy resolves without order decision", () => {
+  const state = createActiveState();
+  setDeck(state, ["topn-one-nomatch-event"]);
+  const entry = queueDrawForP1();
+  state.effectQueue = [entry];
+  const result = createSupportedSearchRevealChoiceDecision(
+    state,
+    entry,
+    search({
+      lookCount: 1,
+      revealTo: "bothPlayers",
+      filter: { categories: ["stage"] },
+    }),
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.kind, "noEligibleCandidate");
+  const opened = result.state;
+  assert.equal(opened.pendingDecision, undefined);
+  assert.equal(
+    JSON.stringify(filterStateForPlayer(opened, p2)).includes(
+      "topn-one-nomatch-event",
+    ),
+    false,
+  );
+  const resolved = applyAction(opened, { type: "concede", playerId: p1 });
+  assert.equal(resolved.errors, undefined);
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    ["gameEnded"],
+  );
+});
+
+test("queued lookCount one no-match with bottom remainder resolves exactly once without order decision", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const topDeck = must(p1State.deck[0], "top deck");
+  topDeck.cardId = toCardId("queue-search-no-match-event");
+  state.cardManifest.cards[topDeck.cardId] = {
+    ...resolvedCard({
+      cardId: topDeck.cardId,
+      category: "event",
+    }),
+  };
+  const source = p1State.leader;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-queue-topone-no-match",
+      rulesVersion: "queue-topone-no-match-rules",
+      sourceTextHash: "queue-topone-no-match-source",
+    },
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    source.cardId,
+    supportCard.support,
+  );
+  const searchEffectId = toEffectId("queue-topone-no-match-effect");
+  state.cardManifest.cards[source.cardId] = supportCard;
+  state.cardManifest.effectDefinitionsVersion =
+    baseDefinition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-queue-topone-no-match": {
+      ...baseDefinition,
+      effects: [
+        {
+          ...must(baseDefinition.effects[0], "base effect"),
+          id: searchEffectId,
+          condition: { type: "yourTurn" },
+          effect: {
+            type: "search",
+            request: {
+              zone: "deck",
+              player: "self",
+              lookCount: 1,
+              filter: { categories: ["stage"] },
+              min: 0,
+              max: 1,
+              destination: "hand",
+              revealTo: "bothPlayers",
+              remainingCards: {
+                destination: "deck",
+                position: "bottom",
+                order: "ownerChoice",
+              },
+              shuffleAfter: false,
+            },
+          },
+          sourcePresencePolicy: "mustRemainInSameZone",
+        },
+      ],
+    },
+  };
+  state.turn.turnPlayerId = p1;
+  const queueEntry: EffectQueueEntry = {
+    ...queueDrawForP1(),
+    id: toQueueEntryId("queue-entry-topone-no-match"),
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    sourceSnapshot: toSourceSnapshot(source, p1, p1),
+    effectBlockId: searchEffectId,
+    sourcePresencePolicy: "mustRemainInSameZone",
+  };
+  state.effectQueue = [queueEntry];
+  const beforeSeq = state.seq;
+  const beforeJournalLength = state.eventJournal.length;
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(result.state.effectQueue, []);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["cardRevealed", "effectResolved"],
+  );
+  assert.equal(
+    result.events.filter((event) => event.type === "effectResolved").length,
+    1,
+  );
+  assert.equal(result.state.seq, beforeSeq + 2);
+  assert.equal(result.state.eventJournal.length, beforeJournalLength + 2);
+  assert.equal(
+    result.state.eventJournal.filter((event) => event.type === "effectResolved")
+      .length,
+    1,
+  );
+  assert.equal(
+    JSON.stringify(filterStateForPlayer(result.state, p2)).includes(
+      String(topDeck.cardId),
+    ),
+    false,
   );
 });

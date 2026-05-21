@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-002D -->
 <!-- agent-packet:story-path stories/approved/SUP-002D-top-n-filtered-search-remainder-runtime.yaml -->
-<!-- agent-packet:story-sha256 7c72c3c971960b06597993806d73950f9321615ba55ffd9fa8dc5a46f10c0d85 -->
+<!-- agent-packet:story-sha256 43d5c92e3cc9ae19af5d0b686bdec0dec78cef639af4435c907e731e002dc1a3 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -589,7 +589,7 @@ Schema-supported fixture subset:
   `zone: "deck"`, `player: "self"`, positive integer `lookCount`,
   `destination: "hand"`, `min: 0`, `max: 1`,
   `remainingCards.destination: "deck"`, `remainingCards.position: "bottom"`,
-  `remainingCards.order: "ownerChoice"`, and no `shuffleAfter`. The
+  `remainingCards.order: "ownerChoice"`, and `shuffleAfter: false`. The
   schema-supported variants are public reveal to `bothPlayers` with a nonempty
   filter limited to `categories`, `colorsAny`, `typesAny`, and `nameNot`, or
   non-reveal any-card search to `chooserOnly` with an empty filter object. This
@@ -941,6 +941,7 @@ Engine runtime story only. Do not add card parser/generated-support behavior, re
 - agent-packets/active.json
 - packages/engine-core/src/effect-runtime-search-reveal.ts
 - packages/engine-core/src/effect-runtime-search-reveal-topn.test.ts
+- packages/engine-core/src/search-reveal-transient-set.test.ts
 - packages/engine-core/src/effect-runtime-condition-search-reveal.test.ts
 - packages/engine-core/src/actions-pending-decision.test.ts
 - packages/engine-core/src/actions.ts

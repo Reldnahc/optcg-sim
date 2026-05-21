@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-002G.md",
-      "storyId": "SUP-002G",
-      "storyPath": "stories/approved/SUP-002G-top-n-filtered-search-card-components.yaml",
-      "storySha256": "3c253cf68b2810395a09ea335160b36b1c2710f5a9f92fd04d5f18cc66103fc2"
+      "packetPath": "agent-packets/SUP-002D.md",
+      "storyId": "SUP-002D",
+      "storyPath": "stories/approved/SUP-002D-top-n-filtered-search-remainder-runtime.yaml",
+      "storySha256": "43d5c92e3cc9ae19af5d0b686bdec0dec78cef639af4435c907e731e002dc1a3"
     }
   ],
   "version": 1

@@ -25,6 +25,7 @@ allowed_touch_points:
   - agent-packets/active.json
   - packages/engine-core/src/effect-runtime-search-reveal.ts
   - packages/engine-core/src/effect-runtime-search-reveal-topn.test.ts
+  - packages/engine-core/src/search-reveal-transient-set.test.ts
   - packages/engine-core/src/effect-runtime-condition-search-reveal.test.ts
   - packages/engine-core/src/actions-pending-decision.test.ts
   - packages/engine-core/src/actions.ts

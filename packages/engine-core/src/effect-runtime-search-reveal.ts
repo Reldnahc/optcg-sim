@@ -197,9 +197,6 @@ const validateSupportedSearchEffect = (
   ) {
     return { ok: false, reason: "unsupported-visibility" };
   }
-  if (request.lookCount === 1 && request.revealTo !== "chooserOnly") {
-    return { ok: false, reason: "unsupported-visibility" };
-  }
   if (request.shuffleAfter !== false) {
     return { ok: false, reason: "unsupported-shuffle" };
   }
@@ -208,9 +205,6 @@ const validateSupportedSearchEffect = (
     request.remainingCards === undefined &&
     !isLegacyTopOneSearch(effect)
   ) {
-    return { ok: false, reason: "unsupported-remaining-cards-policy" };
-  }
-  if (request.lookCount === 1 && request.remainingCards !== undefined) {
     return { ok: false, reason: "unsupported-remaining-cards-policy" };
   }
   if (request.lookCount > 1 && !hasSupportedRemainingCardsPolicy(request)) {
@@ -383,7 +377,8 @@ const isExpectedSearchRevealDecisionEnvelope = (
     decision.request.max === 1 &&
     decision.request.allowFewerIfUnavailable &&
     decision.request.chooser === "self" &&
-    decision.request.visibility === "privateToChooser" &&
+    (decision.request.visibility === "privateToChooser" ||
+      decision.request.visibility === "public") &&
     isSupportedSearchCardFilter(filter) &&
     decision.visibility.type === "private" &&
     decision.visibility.playerId === decision.playerId
@@ -550,6 +545,22 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
   );
 
   if (candidates.length === 0) {
+    if (cards.length <= 1) {
+      for (const event of events) {
+        event.causedBy = causedBy;
+      }
+      const nextState: GameState = {
+        ...state,
+        seq: toStateSeq(state.seq + 1),
+        eventJournal: [...state.eventJournal, ...events],
+      };
+      return {
+        events,
+        kind: "noEligibleCandidate",
+        ok: true,
+        state: nextState,
+      };
+    }
     const pendingDecision = createSearchRevealOrderCardsDecision(
       String(entry.id),
       entry.effectBlockId,
@@ -618,7 +629,10 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
       min: 0,
       max: 1,
       allowFewerIfUnavailable: true,
-      visibility: "privateToChooser",
+      visibility:
+        effect.request.revealTo === "bothPlayers"
+          ? "public"
+          : "privateToChooser",
     },
     candidates: cards
       .map((card) => ({
@@ -842,7 +856,10 @@ export const applySupportedSearchRevealChoiceResponse = (
     if (selectedRevealVisibility.type !== "private") {
       return fail("Search reveal record visibility is unsupported.");
     }
-    if (decision.request.visibility !== "privateToChooser") {
+    if (
+      decision.request.visibility !== "privateToChooser" &&
+      decision.request.visibility !== "public"
+    ) {
       return fail("Search reveal request visibility is unsupported.");
     }
     appendEvent(
@@ -884,8 +901,7 @@ export const applySupportedSearchRevealChoiceResponse = (
     .slice(0, remainingLookedCards.length)
     .map((card) => toCardRefForPlayer(card, decision.playerId));
   const publicSelectedReveal =
-    selectedCard !== undefined &&
-    decision.prompt === "Choose a revealed card to reveal, or decline.";
+    selectedCard !== undefined && decision.request.visibility === "public";
   if (
     movedCard !== undefined &&
     publicSelectedReveal &&
