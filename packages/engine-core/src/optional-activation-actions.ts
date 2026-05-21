@@ -1,5 +1,6 @@
 import type {
   Action,
+  CardInstance,
   CardRef,
   EngineError,
   EngineEvent,
@@ -11,7 +12,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import { zonesEqual } from "./action-state.js";
+import { reindexZoneCards, zonesEqual } from "./action-state.js";
 import {
   processEffectRuntimeAfterOptionalActivationAccept,
   processEffectRuntimeAfterOptionalActivationDecline,
@@ -72,6 +73,16 @@ const orderedRemainingChoiceGroupIdsAfterDecline = (
   return remaining.length > 1 ? remaining : undefined;
 };
 
+const toTrashCard = (
+  card: CardInstance,
+  playerId: PlayerId,
+  index: number,
+): CardInstance => ({
+  ...card,
+  attachedDon: [],
+  zone: { zone: "trash", playerId, slot: "trash", index },
+});
+
 export const applyOptionalActivationDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -99,7 +110,9 @@ export const applyOptionalActivationDecisionResponse = (
     const player = state.players[decision.playerId];
     if (
       player === undefined ||
-      (decision.cost.type !== "restDon" && decision.cost.type !== "returnDon")
+      (decision.cost.type !== "restDon" &&
+        decision.cost.type !== "returnDon" &&
+        decision.cost.type !== "trashFromHand")
     ) {
       return toEngineResult(
         state,
@@ -119,81 +132,197 @@ export const applyOptionalActivationDecisionResponse = (
           invalidDecision("Payment option mismatch."),
         );
       }
-      const selected = action.response.selectedDonInstanceIds;
-      if (selected === undefined || selected.length !== decision.cost.count) {
-        return toEngineResult(
-          state,
-          [],
-          invalidDecision("Payment DON!! selection count mismatch."),
-        );
-      }
-      if (new Set(selected).size !== selected.length) {
-        return toEngineResult(
-          state,
-          [],
-          invalidDecision("Payment DON!! selection contains duplicates."),
-        );
-      }
-      if (decision.cost.type === "restDon") {
-        const costAreaById = new Map(
-          player.costArea.map((card) => [card.instanceId, card]),
-        );
-        for (const donId of selected) {
-          const don = costAreaById.get(donId);
-          if (don === undefined || don.state !== "active") {
-            return toEngineResult(
-              state,
-              [],
-              invalidDecision("Payment DON!! selection is invalid."),
-            );
+      let costPaidPayload:
+        | {
+            playerId: PlayerId;
+            optionId: "restDon" | "returnDon";
+            selectedDonInstanceIds: NonNullable<
+              typeof action.response.selectedDonInstanceIds
+            >;
           }
-        }
-        const restedSet = new Set(selected);
-        nextPlayer = {
-          ...player,
-          costArea: player.costArea.map((card) =>
-            restedSet.has(card.instanceId)
-              ? { ...card, state: "rested" as const }
-              : card,
-          ),
-        };
-      } else {
-        const eligibleIds = new Set(getReturnDonEligibleInstanceIds(player));
-        for (const donId of selected) {
-          if (!eligibleIds.has(donId)) {
-            return toEngineResult(
-              state,
-              [],
-              invalidDecision("Payment DON!! selection is invalid."),
-            );
-          }
-        }
-        const returned = applyReturnDonPayment({
-          player,
-          playerId: decision.playerId,
-          selectedDonIds: selected,
-        });
-        if (returned === null) {
+        | {
+            playerId: PlayerId;
+            optionId: "trashFromHand";
+            selectedCardInstanceIds: NonNullable<
+              typeof action.response.selectedCardInstanceIds
+            >;
+          };
+      if (decision.cost.type === "trashFromHand") {
+        if (action.response.selectedDonInstanceIds !== undefined) {
           return toEngineResult(
             state,
             [],
-            invalidDecision("Payment DON!! selection is invalid."),
+            invalidDecision("Payment card selection must not include DON!!."),
           );
         }
-        nextPlayer = returned;
-      }
-      paidCost = true;
-      appendEvent(
-        state,
-        events,
-        "costPaid",
-        {
+        const selected = action.response.selectedCardInstanceIds;
+        if (selected === undefined || selected.length !== decision.cost.count) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment card selection count mismatch."),
+          );
+        }
+        if (new Set(selected).size !== selected.length) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment card selection contains duplicates."),
+          );
+        }
+        const selectedCards: CardInstance[] = [];
+        for (const selectedId of selected) {
+          const card = player.hand.find(
+            (candidate) => candidate.instanceId === selectedId,
+          );
+          if (card === undefined) {
+            return toEngineResult(
+              state,
+              [],
+              invalidDecision("Payment card selection is invalid."),
+            );
+          }
+          selectedCards.push(card);
+        }
+        const selectedSet = new Set(selected);
+        const trashedCards = selectedCards.map((card, index) =>
+          toTrashCard(card, decision.playerId, index),
+        );
+        nextPlayer = {
+          ...player,
+          hand: reindexZoneCards(
+            player.hand.filter((card) => !selectedSet.has(card.instanceId)),
+            "hand",
+            decision.playerId,
+            "hand",
+          ),
+          trash: reindexZoneCards(
+            [...trashedCards, ...player.trash],
+            "trash",
+            decision.playerId,
+            "trash",
+          ),
+        };
+        for (const selectedCard of selectedCards) {
+          appendEvent(
+            state,
+            events,
+            "cardMoved",
+            {
+              from: "hand",
+              to: "trash",
+              playerId: decision.playerId,
+              reason: "trashFromHand",
+            },
+            { type: "public" },
+          );
+          const moved = events[events.length - 1];
+          if (moved !== undefined) {
+            moved.causedBy = { type: "decision", decisionId: decision.id };
+          }
+          appendEvent(
+            state,
+            events,
+            "cardTrashed",
+            {
+              playerId: decision.playerId,
+              instanceId: selectedCard.instanceId,
+              cardId: selectedCard.cardId,
+              reason: "trashFromHand",
+            },
+            { type: "public" },
+          );
+          const trashed = events[events.length - 1];
+          if (trashed !== undefined) {
+            trashed.causedBy = { type: "decision", decisionId: decision.id };
+          }
+        }
+        costPaidPayload = {
+          playerId: decision.playerId,
+          optionId: decision.cost.type,
+          selectedCardInstanceIds: selected,
+        };
+      } else {
+        if (action.response.selectedCardInstanceIds !== undefined) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment DON!! selection must not include cards."),
+          );
+        }
+        const selected = action.response.selectedDonInstanceIds;
+        if (selected === undefined || selected.length !== decision.cost.count) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment DON!! selection count mismatch."),
+          );
+        }
+        if (new Set(selected).size !== selected.length) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment DON!! selection contains duplicates."),
+          );
+        }
+        if (decision.cost.type === "restDon") {
+          const costAreaById = new Map(
+            player.costArea.map((card) => [card.instanceId, card]),
+          );
+          for (const donId of selected) {
+            const don = costAreaById.get(donId);
+            if (don === undefined || don.state !== "active") {
+              return toEngineResult(
+                state,
+                [],
+                invalidDecision("Payment DON!! selection is invalid."),
+              );
+            }
+          }
+          const restedSet = new Set(selected);
+          nextPlayer = {
+            ...player,
+            costArea: player.costArea.map((card) =>
+              restedSet.has(card.instanceId)
+                ? { ...card, state: "rested" as const }
+                : card,
+            ),
+          };
+        } else {
+          const eligibleIds = new Set(getReturnDonEligibleInstanceIds(player));
+          for (const donId of selected) {
+            if (!eligibleIds.has(donId)) {
+              return toEngineResult(
+                state,
+                [],
+                invalidDecision("Payment DON!! selection is invalid."),
+              );
+            }
+          }
+          const returned = applyReturnDonPayment({
+            player,
+            playerId: decision.playerId,
+            selectedDonIds: selected,
+          });
+          if (returned === null) {
+            return toEngineResult(
+              state,
+              [],
+              invalidDecision("Payment DON!! selection is invalid."),
+            );
+          }
+          nextPlayer = returned;
+        }
+        costPaidPayload = {
           playerId: decision.playerId,
           optionId: decision.cost.type,
           selectedDonInstanceIds: selected,
-        },
-        { type: "public" },
-      );
+        };
+      }
+      paidCost = true;
+      appendEvent(state, events, "costPaid", costPaidPayload, {
+        type: "public",
+      });
       const paid = events[events.length - 1];
       if (paid !== undefined) {
         paid.causedBy = { type: "decision", decisionId: decision.id };

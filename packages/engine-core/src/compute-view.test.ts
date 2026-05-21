@@ -35,6 +35,7 @@ const resolvedCard = (params: {
   category: "leader" | "character" | "don";
   power?: number;
   printedKeywords?: ResolvedCard["printedKeywords"];
+  types?: string[];
 }): ResolvedCard => {
   const base = {
     cardId: params.cardId,
@@ -46,7 +47,7 @@ const resolvedCard = (params: {
     released: true,
     colors: ["red"],
     attributes: [],
-    types: [],
+    types: params.types ?? [],
     printedKeywords: params.printedKeywords ?? [],
     variants: [],
     legality: {},
@@ -84,6 +85,7 @@ const createManifest = (): MatchCardManifest => {
       cardId: toCardId("char-vanilla"),
       category: "character",
       power: 3000,
+      types: ["Test Pirates"],
     }),
     [toCardId("char-rush")]: resolvedCard({
       cardId: toCardId("char-rush"),
@@ -329,6 +331,48 @@ test("applies permanent self +1000 powerAdd continuous modifier only to source c
   assert.deepEqual(state.eventJournal, eventJournalBefore);
 });
 
+test("basePowerSet changes computed base before powerAdd without mutating manifest power", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
+  const target = must(p1State.characters[0], "target character");
+  const manifestBefore = structuredClone(
+    must(state.cardManifest.cards[target.cardId], "target manifest"),
+  );
+  state.continuousEffects = [
+    continuousPowerEffectRecord(state, {
+      id: "base-power-set",
+      modifier: {
+        layer: "basePowerSet",
+        target: {
+          type: "all",
+          zone: "characterArea",
+          player: "self",
+          filter: { categories: ["character"], typesAny: ["Test Pirates"] },
+        },
+        operation: { type: "setBasePower", value: 5000 },
+      },
+      duration: { type: "whileSourceOnField" },
+    }),
+    continuousPowerEffectRecord(state, {
+      id: "power-add-after-base-set",
+      source: target,
+      modifier: {
+        layer: "powerAdd",
+        target: { type: "self" },
+        operation: { type: "addPower", value: 2000 },
+      },
+      duration: { type: "thisTurn" },
+    }),
+  ];
+
+  const view = computeView(state);
+
+  assert.equal(view.cards[target.instanceId]?.basePower, 5000);
+  assert.equal(view.cards[target.instanceId]?.currentPower, 7000);
+  assert.deepEqual(state.cardManifest.cards[target.cardId], manifestBefore);
+});
+
 test("applies whileSourceOnField self +1000 powerAdd modifier while leader or character source remains live", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
@@ -390,18 +434,6 @@ const unsupportedContinuousEffectCases: Array<{
     state: ReturnType<typeof createState>,
   ) => ContinuousEffectRecord;
 }> = [
-  {
-    label: "base power set modifier",
-    createEffect: (state) =>
-      continuousPowerEffectRecord(state, {
-        id: "unsupported-base-power-set",
-        modifier: {
-          layer: "basePowerSet",
-          target: { type: "self" },
-          operation: { type: "setBasePower", value: 9000 },
-        },
-      }),
-  },
   {
     label: "base cost set modifier",
     createEffect: (state) =>

@@ -1,0 +1,41 @@
+{
+  "cardId": "SUP-002I-001",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-002I-001:on-play-search-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "search",
+        "request": {
+          "zone": "deck",
+          "player": "self",
+          "lookCount": 5,
+          "filter": {
+            "categories": ["character"],
+            "colorsAny": ["red", "green"],
+            "typesAny": ["Straw Hat Crew"],
+            "nameNot": ["Monkey.D.Luffy"]
+          },
+          "min": 0,
+          "max": 1,
+          "destination": "hand",
+          "revealTo": "bothPlayers",
+          "remainingCards": {
+            "destination": "deck",
+            "position": "bottom",
+            "order": "ownerChoice"
+          },
+          "shuffleAfter": false
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-002i-001",
+    "rulesVersion": "v6",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

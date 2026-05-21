@@ -280,6 +280,10 @@ test("canonical optional cost contracts stay distinct from optional activation",
   );
   assert.match(
     canonicalTypes,
+    /export type OptionalCost\s*=\s*[\s\S]*type:\s*"trashFromHand";[\s\S]*count:\s*number;[\s\S]*filter\?:\s*CardFilter;[\s\S]*chooser:\s*PlayerRef;[\s\S]*optional:\s*true/m,
+  );
+  assert.match(
+    canonicalTypes,
     /export interface PayCostEffect\s*{[\s\S]*?\btype:\s*"payCost";[\s\S]*?\bcost:\s*OptionalCost;[\s\S]*?}/m,
   );
   assert.match(

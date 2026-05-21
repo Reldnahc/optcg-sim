@@ -11,6 +11,7 @@ import { resolveConditionalContinuousCompositionParserRuleId } from "./condition
 import {
   parseIfWrapper,
   parseOncePerTurnWrapper,
+  parseExactPositiveSafeInteger,
   parseSupportedTriggerWrapper,
   toEffectId,
 } from "./composed-parser-builder.js";
@@ -24,6 +25,26 @@ export type ConditionalWrapperParse = {
 export type ConditionalContinuousCompositionParse = {
   readonly condition: NonNullable<EffectBlock["condition"]>;
   readonly effects: readonly [Effect, ...Effect[]];
+};
+
+type ConditionalContinuousIfParse = {
+  readonly bodyText: string;
+  readonly conditionText: string;
+  readonly includesYourTurnPrefix: boolean;
+};
+
+export type BasePowerSetterVerbPrefixParse = {
+  readonly bodyText: string;
+  readonly prefix: "set the base power of ";
+};
+
+export type AllYourTypedCharactersBasePowerTargetParse = {
+  readonly typeName: string;
+  readonly valueText: string;
+};
+
+export type BasePowerValueParse = {
+  readonly value: number;
 };
 
 export function parseConditionalWrapper(
@@ -65,7 +86,7 @@ export function parseConditionalWrapper(
 export function parseConditionalContinuousComposition(
   sourceText: string,
 ): ConditionalContinuousCompositionParse | undefined {
-  const conditional = parseIfWrapper(sourceText);
+  const conditional = parseConditionalContinuousIf(sourceText);
   if (conditional === undefined) {
     return undefined;
   }
@@ -76,16 +97,26 @@ export function parseConditionalContinuousComposition(
   if (conditionDiagnostics.hasAmbiguousMixedConnectors) {
     return undefined;
   }
-  const condition = toDslCondition(
+  const parsedCondition = toDslCondition(
     parseConditionExpression(conditional.conditionText),
   );
-  if (condition === undefined) {
+  if (parsedCondition === undefined) {
     return undefined;
   }
+  const condition = conditional.includesYourTurnPrefix
+    ? withYourTurnCondition(parsedCondition)
+    : parsedCondition;
   const bodyParts = splitBodyConjunctionParts(
     conditional.bodyText.replace(/\.$/, ""),
   );
   if (bodyParts === undefined) {
+    return undefined;
+  }
+  if (
+    conditional.includesYourTurnPrefix &&
+    (bodyParts.length !== 1 ||
+      parseBasePowerSetterBody(bodyParts[0]) === undefined)
+  ) {
     return undefined;
   }
 
@@ -101,6 +132,17 @@ export function parseConditionalContinuousComposition(
 
     parsedEffects.push(parsedPart.effect);
     canInferSharedSelfCharacterTarget = parsedPart.explicitSelfCharacterTarget;
+  }
+  const hasBasePower = parsedEffects.some(
+    (effect) => effect.type === "setBasePower",
+  );
+  if (
+    hasBasePower &&
+    (!conditional.includesYourTurnPrefix ||
+      !isSelfTrashCountGteCondition(parsedCondition) ||
+      parsedEffects.length !== 1)
+  ) {
+    return undefined;
   }
 
   return {
@@ -216,10 +258,43 @@ function splitBodyConjunctionParts(
   return parts as [string, ...string[]];
 }
 
+function parseConditionalContinuousIf(
+  sourceText: string,
+): ConditionalContinuousIfParse | undefined {
+  const yourTurnPrefix = "[Your Turn] ";
+  if (sourceText.startsWith(yourTurnPrefix)) {
+    const conditional = parseIfWrapper(sourceText.slice(yourTurnPrefix.length));
+    return conditional === undefined
+      ? undefined
+      : {
+          bodyText: conditional.bodyText,
+          conditionText: conditional.conditionText,
+          includesYourTurnPrefix: true,
+        };
+  }
+
+  const conditional = parseIfWrapper(sourceText);
+  return conditional === undefined
+    ? undefined
+    : {
+        bodyText: conditional.bodyText,
+        conditionText: conditional.conditionText,
+        includesYourTurnPrefix: false,
+      };
+}
+
 function parseContinuousBodyPart(
   bodyText: string,
   options?: { inferSharedSelfCharacterTarget: boolean },
 ): { effect: Effect; explicitSelfCharacterTarget: boolean } | undefined {
+  const basePower = parseBasePowerSetterBody(bodyText);
+  if (basePower !== undefined) {
+    return {
+      effect: buildTypedCharactersBasePowerSetterEffect(basePower),
+      explicitSelfCharacterTarget: false,
+    };
+  }
+
   const protection = parseProtectionBody(bodyText);
   if (protection.type === "supported") {
     return {
@@ -271,6 +346,92 @@ function parseContinuousBodyPart(
   }
 
   return undefined;
+}
+
+function parseBasePowerSetterBody(
+  bodyText: string,
+): { readonly typeName: string; readonly value: number } | undefined {
+  const verb = parseBasePowerSetterVerbPrefix(bodyText.trim());
+  if (verb === undefined) return undefined;
+
+  const target = parseAllYourTypedCharactersBasePowerTarget(verb.bodyText);
+  if (target === undefined) return undefined;
+
+  const value = parseBasePowerValue(target.valueText);
+  return value === undefined
+    ? undefined
+    : { typeName: target.typeName, value: value.value };
+}
+
+export function parseBasePowerSetterVerbPrefix(
+  sourceText: string,
+): BasePowerSetterVerbPrefixParse | undefined {
+  const prefix = "set the base power of ";
+  return sourceText.startsWith(prefix) && sourceText.length > prefix.length
+    ? { bodyText: sourceText.slice(prefix.length), prefix }
+    : undefined;
+}
+
+export function parseAllYourTypedCharactersBasePowerTarget(
+  sourceText: string,
+): AllYourTypedCharactersBasePowerTargetParse | undefined {
+  const match = /^all of your \{([^{}]+)\} type Characters to (.+)$/i.exec(
+    sourceText.trim(),
+  );
+  const typeName = match?.[1]?.trim() ?? "";
+  const valueText = match?.[2]?.trim() ?? "";
+  return typeName.length === 0 || valueText.length === 0
+    ? undefined
+    : { typeName, valueText };
+}
+
+export function parseBasePowerValue(
+  sourceText: string,
+): BasePowerValueParse | undefined {
+  const value = parseExactPositiveSafeInteger(sourceText);
+  return value === undefined ? undefined : { value };
+}
+
+export function buildTypedCharactersBasePowerSetterEffect({
+  typeName,
+  value,
+}: {
+  readonly typeName: string;
+  readonly value: number;
+}): Extract<Effect, { type: "setBasePower" }> {
+  return {
+    duration: { type: "permanent" },
+    target: {
+      filter: {
+        typesAny: [typeName],
+      },
+      player: "self",
+      type: "all",
+      zone: "characterArea",
+    },
+    type: "setBasePower",
+    value,
+  };
+}
+
+function withYourTurnCondition(
+  condition: NonNullable<EffectBlock["condition"]>,
+): NonNullable<EffectBlock["condition"]> {
+  return {
+    conditions: [{ type: "yourTurn" }, condition],
+    type: "and",
+  };
+}
+
+function isSelfTrashCountGteCondition(
+  condition: NonNullable<EffectBlock["condition"]>,
+): boolean {
+  return (
+    condition.type === "trashCount" &&
+    condition.player === "self" &&
+    condition.op === "gte" &&
+    condition.filter === undefined
+  );
 }
 
 function toDslCondition(

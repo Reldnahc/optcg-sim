@@ -1,0 +1,42 @@
+{
+  "cardId": "SUP-002A-001",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-002A-001:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "id": "optional-trash-from-hand",
+            "connector": "always",
+            "saveResultAs": "paidHandTrash",
+            "effect": {
+              "type": "payCost",
+              "cost": {
+                "type": "trashFromHand",
+                "count": 1,
+                "chooser": "self",
+                "filter": { "categories": ["character"] },
+                "optional": true
+              }
+            }
+          },
+          {
+            "connector": "ifYouDo",
+            "effect": { "type": "draw", "count": 1, "player": "self" }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-002a-001",
+    "rulesVersion": "2026-05-21",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true,
+    "notes": "Schema authorability only; optional hand-trash cost is not runtime support."
+  }
+}

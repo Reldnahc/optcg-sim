@@ -1,5 +1,6 @@
 import type {
   DecisionId,
+  EffectQueueEntry,
   EngineError,
   EngineEvent,
   EngineEventId,
@@ -65,6 +66,39 @@ export const appendEvent = (
   visibility: EngineEvent["visibility"] = { type: "public" },
 ): void => {
   events.push(createEvent(state, events.length + 1, type, payload, visibility));
+};
+
+export const appendEffectResolvedEvent = (
+  state: GameState,
+  events: EngineEvent[],
+  queuedEntry: EffectQueueEntry,
+): void => {
+  appendEvent(
+    state,
+    events,
+    "effectResolved",
+    {
+      queueEntryId: queuedEntry.id,
+      timingWindowId: queuedEntry.timingWindowId,
+      generation: queuedEntry.generation,
+      effectBlockId: queuedEntry.effectBlockId,
+      ...(queuedEntry.triggerEventId === undefined
+        ? {}
+        : { triggerEventId: queuedEntry.triggerEventId }),
+      sourcePresencePolicy: queuedEntry.sourcePresencePolicy,
+      orderingGroup: queuedEntry.orderingGroup,
+      status: "resolved" as const,
+    },
+    { type: "public" },
+  );
+  const resolved = events[events.length - 1];
+  if (resolved !== undefined) {
+    resolved.causedBy = {
+      type: "effect",
+      queueEntryId: queuedEntry.id,
+      effectId: queuedEntry.effectBlockId,
+    };
+  }
 };
 
 export const rebaseEvents = (

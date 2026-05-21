@@ -8,7 +8,11 @@ import {
   type GeneratedSupportIndexInput,
   type RuntimeCapabilityEvidence,
 } from "./generated-support-index.js";
-import type { GeneratedSupportBlocker } from "./generated-support-types.js";
+import {
+  generatedSupportComponentEvidenceInventory,
+  type GeneratedSupportBlocker,
+  type GeneratedSupportComponentEvidenceInventoryEntry,
+} from "./generated-support-types.js";
 import type { NormalizedPoneglyphCard } from "./normalization.js";
 import type { RuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 
@@ -85,6 +89,9 @@ export function evaluateGeneratedSupportPlayability(
 
   const indexInput: GeneratedSupportIndexInput = {
     cards: [cardInput],
+    parserCertificationEvidence: {
+      currentCertificationIds: listCurrentParserCertificationIds(),
+    },
     validateEffectDefinition: input.validateEffectDefinition,
   };
   if (input.runtimeCapabilityMatrix !== undefined) {
@@ -130,4 +137,16 @@ function toSourceText(card: NormalizedPoneglyphCard): string {
 
 function normalizeText(value: string): string {
   return value.replace(/\r\n/g, "\n").trim();
+}
+
+function listCurrentParserCertificationIds(): readonly string[] {
+  const ids = new Set<string>();
+  const entries: readonly GeneratedSupportComponentEvidenceInventoryEntry[] =
+    generatedSupportComponentEvidenceInventory;
+  for (const entry of entries) {
+    for (const id of entry.parserCertificationIds ?? []) {
+      ids.add(id);
+    }
+  }
+  return [...ids].sort();
 }

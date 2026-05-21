@@ -1,0 +1,36 @@
+{
+  "cardId": "SUP-002I-BAD-DESTINATION",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-002I-BAD-DESTINATION:on-play-search-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "search",
+        "request": {
+          "zone": "deck",
+          "player": "self",
+          "lookCount": 5,
+          "filter": {},
+          "min": 0,
+          "max": 1,
+          "destination": "trash",
+          "revealTo": "chooserOnly",
+          "remainingCards": {
+            "destination": "deck",
+            "position": "bottom",
+            "order": "ownerChoice"
+          },
+          "shuffleAfter": false
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-002i-bad-destination",
+    "rulesVersion": "v6",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

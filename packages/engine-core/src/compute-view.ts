@@ -46,6 +46,10 @@ const supportedContinuousKeywordGrants = new Set<Keyword>([
   "rushCharacter",
   "doubleAttack",
 ]);
+const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
+  "categories",
+  "typesAny",
+]);
 
 const isLeaderOrCharacter = (
   card: CardInstance,
@@ -71,6 +75,47 @@ const isSupportedContinuousPowerModifier = (
       effect.modifier.operation.type === "restriction" &&
       (effect.modifier.operation.restriction === "cannotAttack" ||
         effect.modifier.operation.restriction === "cannotBlock")));
+
+const isNonEmptyStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every((entry) => typeof entry === "string");
+
+const isSupportedBasePowerSetFilter = (
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) return false;
+  if (
+    !Object.keys(filter).every((key) =>
+      supportedBasePowerSetFilterKeys.has(key as keyof CardFilter),
+    )
+  ) {
+    return false;
+  }
+  if (filter.categories !== undefined) {
+    if (
+      filter.categories.length === 0 ||
+      !filter.categories.every((category) => category === "character")
+    ) {
+      return false;
+    }
+  }
+  return isNonEmptyStringArray(filter.typesAny);
+};
+
+const isSupportedContinuousBasePowerSetModifier = (
+  effect: ContinuousEffectRecord,
+): boolean =>
+  (effect.duration.type === "permanent" ||
+    effect.duration.type === "whileSourceOnField") &&
+  effect.modifier.layer === "basePowerSet" &&
+  effect.modifier.operation.type === "setBasePower" &&
+  Number.isSafeInteger(effect.modifier.operation.value) &&
+  effect.modifier.operation.value > 0 &&
+  effect.modifier.target.type === "all" &&
+  effect.modifier.target.zone === "characterArea" &&
+  effect.modifier.target.player === "self" &&
+  isSupportedBasePowerSetFilter(effect.modifier.target.filter);
 
 const isSupportedContinuousKeywordModifier = (
   effect: ContinuousEffectRecord,
@@ -136,6 +181,11 @@ const continuousEffectConditionPasses = (
 const assertSupportedContinuousEffects = (state: GameState): void => {
   const effects = allContinuousEffects(state);
   for (const effect of effects) {
+    if (isSupportedContinuousBasePowerSetModifier(effect)) {
+      if (!durationIsActive(state, effect)) continue;
+      continuousEffectConditionPasses(state, effect);
+      continue;
+    }
     if (isSupportedContinuousPowerModifier(effect)) continue;
     if (isSupportedFieldRemovalProtectionModifier(effect)) continue;
     if (isFieldRemovalProtectionModifier(effect)) {
@@ -177,6 +227,12 @@ const cardMatchesAllFilter = (
   if (
     filter.categories !== undefined &&
     !filter.categories.includes(metadata.category)
+  ) {
+    return false;
+  }
+  if (
+    filter.typesAny !== undefined &&
+    !filter.typesAny.some((type) => metadata.types.includes(type))
   ) {
     return false;
   }
@@ -254,6 +310,29 @@ const continuousPowerBonusForCard = (
   }
 
   return powerBonus;
+};
+
+const continuousBasePowerForCard = (
+  state: GameState,
+  card: CardInstance,
+): number | undefined => {
+  let basePower: number | undefined;
+  const effects = allContinuousEffects(state);
+
+  for (const effect of effects) {
+    if (!durationIsActive(state, effect)) continue;
+    if (effect.modifier.layer !== "basePowerSet") continue;
+    if (effect.modifier.operation.type !== "setBasePower") continue;
+    if (!continuousEffectConditionPasses(state, effect)) continue;
+    if (!cardMatchesModifierTarget(state, card, effect)) continue;
+
+    basePower =
+      basePower === undefined
+        ? effect.modifier.operation.value
+        : Math.max(basePower, effect.modifier.operation.value);
+  }
+
+  return basePower;
 };
 
 const hasRestriction = (
@@ -490,7 +569,8 @@ const computeCardView = (
   card: CardInstance,
 ): ComputedCardView => {
   const metadata = resolveCombatMetadata(state, card);
-  const basePower = metadata.power;
+  const printedBasePower = metadata.power;
+  const basePower = continuousBasePowerForCard(state, card) ?? printedBasePower;
   const donBonus =
     card.controller === state.turn.turnPlayerId
       ? card.attachedDon.length * 1000

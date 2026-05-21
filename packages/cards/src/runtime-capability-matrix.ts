@@ -4,14 +4,16 @@ import {
   isConditionalContinuousCompositionParserRuleId,
   listParserRuleIdsForConditionalContinuousRuntimeCapabilityId,
 } from "./conditional-continuous-composition-evidence.js";
+import * as optionalKo from "./optional-trash-cost-ko-evidence.js";
 import { returnDonCostWrapperParserRuleId } from "./return-don-cost-wrapper-components.js";
-
+import { topNSearchRuntimeCapabilityRecords } from "./top-n-search-evidence.js";
 const onPlayReturnDonDrawNParserRuleId = "exact:on-play:return-don-draw-n:self";
 
 export type RuntimeCapabilityKind =
   | "category"
   | "composition"
   | "condition"
+  | "continuous"
   | "cost"
   | "decision"
   | "effect"
@@ -50,31 +52,27 @@ export interface RuntimeCapabilityParserRuleInventoryEntry {
 }
 
 const conditionalContinuousRuntimeCapabilitySpecs = [
-  [
-    "category:permanent",
-    "category",
-    "ENG-059F",
-    "Permanent effect blocks are executable by current runtime.",
-  ],
-  [
-    "effect:giveKeyword:self:permanent:allowlisted",
-    "effect",
-    "ENG-059B",
-    "Allowlisted keywords can be granted to the source Character with permanent duration.",
-  ],
+  ["category:permanent", "category", "ENG-059F"],
+  ["effect:giveKeyword:self:permanent:allowlisted", "effect", "ENG-059B"],
   [
     "effect:giveProtection:fieldRemoval:thisCard:permanent",
     "effect",
     "ENG-059E",
-    "Opponent-controlled field-removal protection can be granted to the source Character with permanent duration.",
   ],
+  ["trigger:permanent", "trigger", "ENG-059F"],
+  ["condition:trashCount:self:gte", "condition", "SUP-002C"],
+  ["target:all:self:characterArea:character:typesAny", "target", "SUP-002C"],
+  ["effect:setBasePower:self:typed-characters:permanent", "effect", "SUP-002C"],
   [
-    "trigger:permanent",
-    "trigger",
-    "ENG-059F",
-    "Permanent trigger timing is executable by current runtime.",
+    "continuous:source-liveness:must-remain-in-same-zone",
+    "continuous",
+    "SUP-002C",
   ],
-] as const;
+] as const satisfies readonly (readonly [
+  string,
+  RuntimeCapabilityKind,
+  string,
+])[];
 
 const generatedSupportRuntimeCapabilityMatrixBase = {
   capabilities: [
@@ -209,8 +207,8 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       ],
     },
     ...conditionalContinuousRuntimeCapabilitySpecs.map(
-      ([id, kind, sinceStory, description]) => ({
-        description,
+      ([id, kind, sinceStory]) => ({
+        description: `Runtime supports ${id}.`,
         id,
         kind,
         sinceStory,
@@ -400,6 +398,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "card014a:sequence:trashFromHand-draw",
       ],
     },
+    ...topNSearchRuntimeCapabilityRecords,
     {
       description:
         "Printed Banish keyword behavior is executable by current runtime.",
@@ -516,6 +515,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supported: true,
       supportedParserRuleIds: ["exact:on-play:optional-effect:draw-1:self"],
     },
+    ...optionalKo.optionalTrashCostKoRuntimeCapabilityRecords,
     {
       description:
         "Return-DON!! costs can be paid atomically by the source controller.",
@@ -887,9 +887,7 @@ export function hasRuntimeCapability(
   capabilityId: string,
   matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
 ): boolean {
-  return matrix.capabilities.some(
-    (capability) => capability.id === capabilityId && capability.supported,
-  );
+  return listSupportedRuntimeCapabilityIds(matrix).includes(capabilityId);
 }
 
 export function listRuntimeCapabilityParserRuleInventory(
@@ -961,7 +959,9 @@ function classifyParserRuleKind(parserRuleId: string): string {
     return "draw-up-to";
   }
   if (isConditionalContinuousCompositionParserRuleId(parserRuleId)) {
-    return "sequence";
+    return parserRuleId.includes(":base-power:")
+      ? "continuous-modifier"
+      : "sequence";
   }
   if (
     parserRuleId.includes(":draw-n:trash-m:hand:self") ||
@@ -970,6 +970,7 @@ function classifyParserRuleKind(parserRuleId: string): string {
   ) {
     return "sequence";
   }
+  if (parserRuleId.includes(":top-n-search:")) return "deck-search";
   if (parserRuleId.startsWith("exact:condition:")) {
     return "condition";
   }
@@ -988,7 +989,8 @@ function classifyParserRuleKind(parserRuleId: string): string {
   }
   if (
     parserRuleId.includes("select-1-opponent-character") ||
-    parserRuleId === "card014a:on-play:select-target-modify-power"
+    parserRuleId === "card014a:on-play:select-target-modify-power" ||
+    parserRuleId === optionalKo.optionalTrashCostKoParserRuleId
   ) {
     return "field-target-saved-reference";
   }

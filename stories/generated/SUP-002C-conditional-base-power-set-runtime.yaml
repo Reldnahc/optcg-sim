@@ -1,0 +1,87 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-002C
+epic_id: SUP-002
+title: Conditional base-power setter runtime
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Add reusable engine runtime support for conditional continuous `setBasePower`
+  effects that apply to all matching self Characters while the source and public
+  condition remain valid.
+story_boundary: >
+  Engine runtime story only. Do not add card parser/generated-support behavior,
+  real-card fixtures, support reports, source hashes, behavior hashes, or shared
+  contract/schema changes.
+allowed_touch_points:
+  - stories/generated/SUP-002C-conditional-base-power-set-runtime.yaml
+  - stories/approved/SUP-002C-conditional-base-power-set-runtime.yaml
+  - agent-packets/SUP-002C.md
+  - agent-packets/active.json
+  - packages/engine-core/src/effect-runtime-continuous.ts
+  - packages/engine-core/src/compute-view.ts
+  - packages/engine-core/src/compute-view.test.ts
+  - packages/engine-core/src/effect-runtime-continuous.test.ts
+  - packages/engine-core/src/effect-runtime-conditions.ts
+  - packages/engine-core/src/effect-runtime-trash-count-condition.test.ts
+spec_refs:
+  - 02-engine-mechanics.s025
+  - 02-engine-mechanics.s027
+  - 02-engine-mechanics.s032
+  - 02-engine-mechanics.s036
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s020
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s013
+  - 04-effect-runtime.s014
+  - 04-effect-runtime.s015
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s016
+  - 11-testing-quality.s004
+dependencies:
+  - SUP-002H
+  - ENG-059A
+  - ENG-059F
+scope:
+  - materialize reviewed permanent continuous Effect DSL definitions whose body is `setBasePower`
+  - support public trash-count conditions already implemented by ENG-059A, including self trash-count greater-than-or-equal thresholds
+  - support all-target continuous matching for self characterArea Characters with reusable `categories` and `typesAny` filters
+  - apply a base-power set layer in computeView without overwriting printed/base manifest data
+  - ensure the modifier disappears when the source leaves the required zone or the condition stops being true
+  - define layer interaction with existing power-add modifiers through current computeView conventions and explicit tests
+non_scope:
+  - card parser, generated support, runtime capability matrix, support reports, overlays, fixtures, card IDs, source hashes, or behavior hashes
+  - shared contract/schema changes; `setBasePower` and `typesAny` already exist in the Effect DSL
+  - opponent/all-player base-power setters, color/name filters for continuous target matching, cost/power target filters beyond existing supported continuous filters, or broad targeting language
+  - base-cost setters, set-to-zero power effects, battle-only duration, this-turn duration, or arbitrary replacement/modifier layers
+  - server, client, UI, database, API, or live card-data work
+acceptance_criteria:
+  - supported conditional continuous `setBasePower` definitions create reusable continuous modifiers without exact text or card-specific branches
+  - all matching self Characters with the requested type receive the computed base-power value
+  - nonmatching types, opponent Characters, and non-Character cards do not receive the modifier
+  - modifier presence updates when trash count crosses the threshold and when the source leaves the field
+  - computeView applies base-power set deterministically with existing power modifiers
+  - unsupported filters, targets, durations, conditions, and effect bodies continue to fail closed
+required_tests:
+  - engine test for trash-count gte condition applying setBasePower to all matching self typed Characters
+  - engine test varying threshold, type, and target value to prove no exact sample branch
+  - engine test proving the modifier disappears when condition becomes false and when source presence fails
+  - computeView test for basePowerSet interaction with existing powerAdd layers
+  - fail-closed tests for unsupported filter keys and unsupported target/duration shapes
+  - "`corepack pnpm --filter @optcg/engine-core test`"
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run packets:verify`"
+repo_rules:
+  - implement only SUP-002C while its packet is active
+  - do not activate or implement SUP-002C until SUP-002H has landed as reviewed contract/schema evidence on the active parent integration branch
+  - keep continuous runtime generic over threshold, type name, and base-power value
+  - stop and split if new shared contract fields are required
+ambiguity_policy: fail_and_escalate

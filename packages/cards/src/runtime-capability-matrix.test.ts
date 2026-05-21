@@ -642,4 +642,55 @@ describe("generated support runtime capability matrix", () => {
       "exact:conditional-continuous:condition:body-part-composition:self-character:direct:protection",
     );
   });
+
+  it("tracks SUP-002C conditional base-power setter runtime capability evidence", () => {
+    const parserRuleId =
+      "exact:conditional-continuous:condition:base-power:self-character-type:direct";
+    const requiredCapabilities = [
+      {
+        capabilityId: "category:permanent",
+        sinceStory: "ENG-059F",
+      },
+      {
+        capabilityId: "condition:trashCount:self:gte",
+        sinceStory: "SUP-002C",
+      },
+      {
+        capabilityId: "continuous:source-liveness:must-remain-in-same-zone",
+        sinceStory: "SUP-002C",
+      },
+      {
+        capabilityId: "effect:setBasePower:self:typed-characters:permanent",
+        sinceStory: "SUP-002C",
+      },
+      {
+        capabilityId: "sourcePresencePolicy:mustRemainInSameZone",
+        sinceStory: "CARD-008A",
+      },
+      {
+        capabilityId: "target:all:self:characterArea:character:typesAny",
+        sinceStory: "SUP-002C",
+      },
+      {
+        capabilityId: "trigger:permanent",
+        sinceStory: "ENG-059F",
+      },
+    ];
+
+    for (const { capabilityId, sinceStory } of requiredCapabilities) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability).toMatchObject({
+        sinceStory,
+        supported: true,
+      });
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+      expect(capability?.supportedComponentIds).toContain(
+        "conditional-continuous-condition-base-power-self-character-type",
+      );
+    }
+  });
 });

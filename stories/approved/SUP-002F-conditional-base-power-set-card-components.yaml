@@ -1,0 +1,125 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-002F
+epic_id: SUP-002
+title: Conditional base-power setter card components
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Parse and promote reusable cards-layer support for conditional continuous
+  base-power setters targeting all of your Characters with a named type.
+story_boundary: >
+  Cards-layer story only. Runtime prerequisites must already be implemented by
+  SUP-002C. Do not add new engine runtime behavior, shared contract/schema
+  changes, real-card fixture promotion, source hashes, behavior hashes, overlays,
+  or card-specific branches.
+allowed_touch_points:
+  - stories/generated/SUP-002F-conditional-base-power-set-card-components.yaml
+  - stories/approved/SUP-002F-conditional-base-power-set-card-components.yaml
+  - agent-packets/SUP-002F.md
+  - agent-packets/active.json
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/conditional-continuous-composition-diagnostics.ts
+  - packages/cards/src/conditional-continuous-composition-diagnostics.test.ts
+  - packages/cards/src/conditional-continuous-composition-evidence.ts
+  - packages/cards/src/conditional-parser-components.ts
+  - packages/cards/src/conditional-parser-components.test.ts
+  - packages/cards/src/conditional-generated-support-composer.ts
+  - packages/cards/src/conditional-generated-support.test.ts
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator-parser-certification.test.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s002
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s010
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s016
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s025
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+  - 11-testing-quality.s021
+dependencies:
+  - SUP-002H
+  - SUP-002C
+  - CARD-021A
+  - CARD-023A
+scope:
+  - "define parser primitives separately before composing them: `[Your Turn]` continuous timing wrapper, `If` condition wrapper, public condition predicate, base-power setter verb, all-your-typed-Characters target, type filter, and base-power value"
+  - parse `[Your Turn] If <public condition>, set the base power of all of your {TYPE} type Characters to N.`
+  - reuse existing condition parser primitives for trash-count greater-than-or-equal thresholds
+  - emit reusable continuous `setBasePower` Effect DSL with all-target self characterArea and type filter
+  - vary threshold, type name, and power value in tests to prevent exact sentence matching
+  - add runtime capability matrix evidence that cites SUP-002C capability groups
+non_scope:
+  - engine runtime behavior or shared contract/schema changes
+  - real-card fixture capture, source hash updates, behavior hash updates, overlays, supported-card manifests, or cards-produced manifests
+  - exact card IDs, exact full-card text, external card lists, or one-off full-effect branches
+  - opponent/all-player targets, color/name filters for continuous target matching, base-cost setters, this-turn base-power setters, or comma-list body composition
+card_source_integrity:
+  - this story does not enable or change support for a named real card
+  - source integrity is not applicable because implementation evidence uses synthetic representative texts only
+  - do not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence
+engine_capability_preflight:
+  - parsed effect shape is permanent conditional continuous `setBasePower` with a public trash-count condition and all matching self typed Characters
+  - supported contract/schema group is provided by SUP-002H after that story lands
+  - supported runtime capability group is provided by SUP-002C after that story lands, with exact required IDs `category:permanent`, `trigger:permanent`, `sourcePresencePolicy:mustRemainInSameZone`, `condition:trashCount:self:gte`, `target:all:self:characterArea:character:typesAny`, `effect:setBasePower:self:typed-characters:permanent`, and `continuous:source-liveness:must-remain-in-same-zone`
+  - missing runtime capability group is none for scoped synthetic rows only after SUP-002C capability IDs exist in the runtime capability matrix; if conditional base-power runtime evidence is absent, this story is blocked
+acceptance_criteria:
+  - parser/generator support is generic over condition threshold, type name, and base-power value
+  - parser/generator implementation must compose the condition wrapper, condition predicate, target filter, and base-power setter body as separate primitives; a full-sentence regex that only varies threshold/type/value fails this story
+  - generated-support tests that assert `status: supported` must validate the produced Effect DSL with the real schema validator, and schema failures such as extra filter fields fail the story
+  - generated-support promotion requires current parser-rule certification evidence for the condition wrapper, condition predicate, target filter, base-power setter body, and their composition; absent or stale certification evidence must fail closed even when DSL schema validation and runtime capability checks pass
+  - the production/default generated-support path must supply that current parser-rule certification evidence; this story fails if only lower-level tests with manually injected certification evidence pass while `evaluateGeneratedSupportPlayability` or support-probe reports missing parser certification for the same conditional base-power shape
+  - generated support fails closed when condition or base-power body is only partially parsed
+  - runtime capability evidence is required before final playable/generated-support decision can pass
+  - no production code checks exact full effect text, card IDs, or the representative sample as a whole string
+required_tests:
+  - cards parser/generated-support test for conditional all-your-type base-power setter
+  - real-schema generated-support regression for the representative conditional base-power line
+  - support-evaluator or support-probe regression for the representative conditional base-power line proving the production/default path has no missing parser-certification blockers
+  - test proving the generated `setBasePower` target filter contains only schema-authorized fields for this scoped shape
+  - fail-closed generated-support test when parser-rule certification evidence is absent or stale for any required condition, target-filter, base-power setter, or composition component
+  - test varying threshold, type name, and base-power value
+  - fail-closed tests for unsupported target wording and unsupported condition/body fragments
+  - runtime capability matrix test for SUP-002C capability evidence
+  - regression test that SUP-001F conditional opponent power modifier still parses independently
+  - "`corepack pnpm --filter @optcg/cards test`"
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run packets:verify`"
+repo_rules:
+  - implement only SUP-002F while its packet is active
+  - do not activate or implement SUP-002F until SUP-002H contract/schema evidence and SUP-002C runtime capability evidence have landed as reviewed prerequisite evidence on the active parent integration branch
+  - stop and split if implementation requires new engine runtime behavior
+ambiguity_policy: fail_and_escalate

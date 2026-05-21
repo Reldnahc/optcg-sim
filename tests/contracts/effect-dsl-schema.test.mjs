@@ -29,9 +29,14 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/valid/leader-type-attribute-has-card-in-zone.json",
     "fixtures/effect-dsl/valid/on-play-draw-1.json",
     "fixtures/effect-dsl/valid/optional-return-don-cost-sequence.json",
+    "fixtures/effect-dsl/valid/optional-trash-from-hand-cost-sequence.json",
     "fixtures/effect-dsl/valid/permanent-trash-count-keyword-protection-sequence.json",
     "fixtures/effect-dsl/valid/return-don-cost.json",
     "fixtures/effect-dsl/valid/schema-authorability-only-composed-unsupported.json",
+    "fixtures/effect-dsl/valid/scoped-set-base-power-permanent.json",
+    "fixtures/effect-dsl/valid/scoped-set-base-power-permanent-no-filter.json",
+    "fixtures/effect-dsl/valid/scoped-top-n-search-chooser-only-any-card.json",
+    "fixtures/effect-dsl/valid/scoped-top-n-search-public-filtered.json",
     "fixtures/effect-dsl/valid/temporary-modify-power-until-start-next-turn.json",
     "fixtures/effect-dsl/valid/trash-from-hand-effect.json",
     "fixtures/effect-dsl/invalid/condition-empty-and-list.json",
@@ -65,6 +70,10 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/optional-cost-segment-uses-effect-optionality.json",
     "fixtures/effect-dsl/invalid/optional-cost-segment-without-optional-cost.json",
     "fixtures/effect-dsl/invalid/optional-cost-top-level-pay-cost-effect.json",
+    "fixtures/effect-dsl/invalid/optional-trash-from-hand-cost-missing-chooser.json",
+    "fixtures/effect-dsl/invalid/optional-trash-from-hand-cost-missing-optional.json",
+    "fixtures/effect-dsl/invalid/optional-trash-from-hand-cost-optional-false.json",
+    "fixtures/effect-dsl/invalid/optional-trash-from-hand-cost-zero-count.json",
     "fixtures/effect-dsl/invalid/play-selected-arbitrary-reference.json",
     "fixtures/effect-dsl/invalid/play-selected-before-hand-selection-producer.json",
     "fixtures/effect-dsl/invalid/play-selected-missing-hand-selection-producer.json",
@@ -81,6 +90,26 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/select-cards-ambiguous-chooser-player.json",
     "fixtures/effect-dsl/invalid/select-cards-unsupported-visibility.json",
     "fixtures/effect-dsl/invalid/select-cards-unsupported-zone.json",
+    "fixtures/effect-dsl/invalid/set-base-power-malformed-target.json",
+    "fixtures/effect-dsl/invalid/set-base-power-fractional-value.json",
+    "fixtures/effect-dsl/invalid/set-base-power-non-character-target.json",
+    "fixtures/effect-dsl/invalid/set-base-power-nonnumeric-value.json",
+    "fixtures/effect-dsl/invalid/set-base-power-unsupported-duration-while-condition-true.json",
+    "fixtures/effect-dsl/invalid/set-base-power-unsupported-filter-composition.json",
+    "fixtures/effect-dsl/invalid/top-n-search-chooser-only-nonempty-filter.json",
+    "fixtures/effect-dsl/invalid/top-n-search-look-count-zero.json",
+    "fixtures/effect-dsl/invalid/top-n-search-public-empty-filter.json",
+    "fixtures/effect-dsl/invalid/top-n-search-remainder-destination-trash.json",
+    "fixtures/effect-dsl/invalid/top-n-search-remainder-order-random.json",
+    "fixtures/effect-dsl/invalid/top-n-search-remainder-position-top.json",
+    "fixtures/effect-dsl/invalid/top-n-search-reveal-owner-only.json",
+    "fixtures/effect-dsl/invalid/top-n-search-shuffle-after.json",
+    "fixtures/effect-dsl/invalid/top-n-search-shuffle-after-missing.json",
+    "fixtures/effect-dsl/invalid/top-n-search-unsupported-destination-trash.json",
+    "fixtures/effect-dsl/invalid/top-n-search-unsupported-filter-cost.json",
+    "fixtures/effect-dsl/invalid/top-n-search-unsupported-max-two.json",
+    "fixtures/effect-dsl/invalid/top-n-search-unsupported-player-opponent.json",
+    "fixtures/effect-dsl/invalid/top-n-search-unsupported-zone-trash.json",
     "fixtures/effect-dsl/invalid/trash-from-hand-extra-property.json",
     "fixtures/effect-dsl/invalid/trash-from-hand-invalid-player.json",
     "fixtures/effect-dsl/invalid/trash-from-hand-missing-chooser.json",
@@ -92,6 +121,101 @@ test("effect DSL validation assets exist", async () => {
   for (const relativePath of requiredPaths) {
     await access(path.join(repoRoot, relativePath));
   }
+});
+
+test("SUP-002I scoped top-N search fixtures remain schema-authorability-only", async () => {
+  const fixturePaths = [
+    "fixtures/effect-dsl/valid/scoped-top-n-search-public-filtered.json",
+    "fixtures/effect-dsl/valid/scoped-top-n-search-chooser-only-any-card.json",
+  ];
+
+  for (const relativePath of fixturePaths) {
+    const fixture = JSON.parse(
+      await readFile(path.join(repoRoot, relativePath), "utf8"),
+    );
+    assert.equal(fixture.implementationStatus, "unsupported");
+    assert.equal(fixture.metadata.generatedBy, undefined);
+    assert.equal(fixture.metadata.reviewedBy, undefined);
+    assert.equal(fixture.metadata.reviewedAt, undefined);
+    assert.equal(fixture.metadata.sourceCardVersion, undefined);
+    assert.equal(fixture.metadata.supportStatus, undefined);
+  }
+});
+
+test("SUP-002I schema authorizes only scoped top-N deck search request variants", async () => {
+  const schemaPath = path.join(repoRoot, "contracts/effect-dsl.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+  const searchEffect = schema.$defs.effect.oneOf.find(
+    (variant) => variant?.properties?.type?.const === "search",
+  );
+
+  assert.ok(searchEffect);
+  assert.deepEqual(searchEffect.required, ["type", "request"]);
+  assert.equal(
+    searchEffect.properties.request.$ref,
+    "#/$defs/scopedTopNSearchRequest",
+  );
+
+  const request = schema.$defs.scopedTopNSearchRequest;
+  assert.deepEqual(
+    request.oneOf.map((variant) => variant.properties.revealTo),
+    [{ const: "bothPlayers" }, { const: "chooserOnly" }],
+  );
+
+  for (const variant of request.oneOf) {
+    assert.equal(variant.additionalProperties, false);
+    assert.deepEqual(variant.required, [
+      "zone",
+      "player",
+      "lookCount",
+      "filter",
+      "min",
+      "max",
+      "destination",
+      "revealTo",
+      "remainingCards",
+      "shuffleAfter",
+    ]);
+    assert.deepEqual(variant.properties.zone, { const: "deck" });
+    assert.deepEqual(variant.properties.player, { const: "self" });
+    assert.deepEqual(variant.properties.lookCount, {
+      type: "integer",
+      minimum: 1,
+    });
+    assert.deepEqual(variant.properties.min, { const: 0 });
+    assert.deepEqual(variant.properties.max, { const: 1 });
+    assert.deepEqual(variant.properties.destination, { const: "hand" });
+    assert.equal(
+      variant.properties.remainingCards.$ref,
+      "#/$defs/scopedTopNSearchRemainingCards",
+    );
+    assert.deepEqual(variant.properties.shuffleAfter, { const: false });
+  }
+
+  assert.deepEqual(schema.$defs.scopedTopNSearchRemainingCards, {
+    type: "object",
+    additionalProperties: false,
+    required: ["destination", "position", "order"],
+    properties: {
+      destination: { const: "deck" },
+      position: { const: "bottom" },
+      order: { const: "ownerChoice" },
+    },
+  });
+  assert.equal(
+    schema.$defs.scopedTopNSearchPublicFilter.additionalProperties,
+    false,
+  );
+  assert.equal(schema.$defs.scopedTopNSearchPublicFilter.minProperties, 1);
+  assert.deepEqual(
+    Object.keys(schema.$defs.scopedTopNSearchPublicFilter.properties),
+    ["categories", "colorsAny", "typesAny", "nameNot"],
+  );
+  assert.deepEqual(schema.$defs.scopedTopNSearchChooserOnlyFilter, {
+    type: "object",
+    additionalProperties: false,
+    maxProperties: 0,
+  });
 });
 
 test("effect block policy enums match canonical contract names", async () => {
@@ -126,6 +250,61 @@ test("schema-valid composed fixtures stay at contract authorability layer only",
   assert.equal(fixture.metadata.reviewedAt, undefined);
   assert.equal(fixture.metadata.sourceCardVersion, undefined);
   assert.equal(fixture.metadata.supportStatus, undefined);
+});
+
+test("SUP-002H scoped setBasePower fixtures remain schema-authorability-only", async () => {
+  const fixturePaths = [
+    "fixtures/effect-dsl/valid/scoped-set-base-power-permanent.json",
+    "fixtures/effect-dsl/valid/scoped-set-base-power-permanent-no-filter.json",
+  ];
+
+  for (const relativePath of fixturePaths) {
+    const fixture = JSON.parse(
+      await readFile(path.join(repoRoot, relativePath), "utf8"),
+    );
+    assert.equal(fixture.implementationStatus, "unsupported");
+    assert.equal(fixture.metadata.generatedBy, undefined);
+    assert.equal(fixture.metadata.reviewedBy, undefined);
+    assert.equal(fixture.metadata.reviewedAt, undefined);
+    assert.equal(fixture.metadata.sourceCardVersion, undefined);
+    assert.equal(fixture.metadata.supportStatus, undefined);
+  }
+});
+
+test("SUP-002H setBasePower schema authorizes only all self character targets with optional typesAny", async () => {
+  const schemaPath = path.join(repoRoot, "contracts/effect-dsl.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+  const setBasePowerEffect = schema.$defs.effect.oneOf.find(
+    (variant) => variant?.properties?.type?.const === "setBasePower",
+  );
+
+  assert.ok(setBasePowerEffect);
+  assert.deepEqual(setBasePowerEffect.required, [
+    "type",
+    "target",
+    "value",
+    "duration",
+  ]);
+  assert.equal(setBasePowerEffect.properties.value.type, "integer");
+  assert.deepEqual(setBasePowerEffect.properties.duration, {
+    const: { type: "permanent" },
+  });
+
+  const targetRef = setBasePowerEffect.properties.target.$ref;
+  assert.equal(targetRef, "#/$defs/scopedSetBasePowerTarget");
+
+  const targetSchema = schema.$defs.scopedSetBasePowerTarget;
+  const targetProperties = targetSchema.properties;
+  assert.deepEqual(targetProperties.type, { const: "all" });
+  assert.deepEqual(targetProperties.zone, { const: "characterArea" });
+  assert.deepEqual(targetProperties.player, { const: "self" });
+
+  assert.deepEqual(targetProperties.filter, {
+    $ref: "#/$defs/scopedSetBasePowerFilter",
+  });
+  const filter = schema.$defs.scopedSetBasePowerFilter;
+  assert.deepEqual(filter.required, ["typesAny"]);
+  assert.deepEqual(Object.keys(filter.properties), ["typesAny"]);
 });
 
 test("TYP-012B schema-valid permanent protection fixture remains authorability-only", async () => {
@@ -174,6 +353,28 @@ test("SUP-001A keeps DON field count on existing fieldCount condition", async ()
   assert.ok(conditionTypes.includes("fieldCount"));
   assert.ok(!conditionTypes.includes("donFieldCount"));
   assert.ok(!conditionTypes.includes("donOnFieldCount"));
+});
+
+test("SUP-002A authorizes optional trashFromHand only as an OptionalCost", async () => {
+  const schemaPath = path.join(repoRoot, "contracts/effect-dsl.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+  const optionalCostTypes = schema.$defs.optionalCost.oneOf
+    .map((variant) => variant?.properties?.type?.const)
+    .filter((value) => typeof value === "string");
+  const nonOptionalCostTypes = schema.$defs.cost.oneOf
+    .map((variant) => variant?.properties?.type?.const)
+    .filter((value) => typeof value === "string");
+  const optionalHandTrashCost = schema.$defs.optionalCost.oneOf.find(
+    (variant) => variant?.properties?.type?.const === "trashFromHand",
+  );
+
+  assert.ok(optionalCostTypes.includes("trashFromHand"));
+  assert.ok(!nonOptionalCostTypes.includes("trashFromHand"));
+  assert.equal(optionalHandTrashCost?.required.includes("chooser"), true);
+  assert.equal(optionalHandTrashCost?.properties?.count?.minimum, 1);
+  assert.deepEqual(optionalHandTrashCost?.properties?.optional, {
+    const: true,
+  });
 });
 
 test("contracts:validate-effects passes on committed fixtures", () => {

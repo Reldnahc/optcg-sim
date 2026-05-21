@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { Action } from "@optcg/types";
+import type { Action, CardRef, Effect, PlayerId } from "@optcg/types";
 
 import { createInitialState } from "./initial-state.js";
 import { startMulliganFlow } from "./mulligan.js";
@@ -20,6 +20,7 @@ import {
   queueDrawForP1,
   queueingState,
 } from "./effect-runtime-queue-processing-test-support.js";
+import { createSupportedSearchRevealChoiceDecision } from "./effect-runtime-search-reveal.js";
 import {
   setupFullCharacterPlayState,
   setupMainPlayState,
@@ -31,6 +32,109 @@ import {
 } from "./action-dispatcher-test-support.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 
+type SearchEffect = Extract<Effect, { type: "search" }>;
+
+const searchRequest = (
+  overrides: Partial<SearchEffect["request"]> = {},
+): SearchEffect => ({
+  type: "search",
+  request: {
+    zone: "deck",
+    player: "self",
+    lookCount: 5,
+    filter: { categories: ["character"], colorsAny: ["green"] },
+    min: 0,
+    max: 1,
+    destination: "hand",
+    revealTo: "chooserOnly",
+    remainingCards: {
+      destination: "deck",
+      position: "bottom",
+      order: "ownerChoice",
+    },
+    shuffleAfter: false,
+    ...overrides,
+  },
+});
+
+const openSearchState = (
+  state: ReturnType<typeof createActiveState>,
+  effect: SearchEffect,
+) => {
+  const entry = queueDrawForP1();
+  state.effectQueue = [entry];
+  const opened = createSupportedSearchRevealChoiceDecision(
+    state,
+    entry,
+    effect,
+  );
+  if (!opened.ok || opened.kind !== "decisionCreated") {
+    assert.fail("expected search decision");
+  }
+  return opened.state;
+};
+
+const setDeck = (
+  state: ReturnType<typeof createActiveState>,
+  ids: readonly string[],
+) => {
+  const player = must(state.players[p1], "p1");
+  while (player.deck.length < ids.length) {
+    const base = must(player.deck.at(-1), "deck card");
+    player.deck.push({
+      ...base,
+      instanceId:
+        `${String(base.instanceId)}:${String(player.deck.length)}` as typeof base.instanceId,
+      zone: { ...base.zone, index: player.deck.length },
+    });
+  }
+  player.deck = player.deck.map((card, index) => {
+    const id = ids[index];
+    if (id === undefined) return card;
+    const cardId = id as typeof card.cardId;
+    state.cardManifest.cards[cardId] = {
+      ...resolvedCard({
+        cardId,
+        category: id.includes("event") ? "event" : "character",
+      }),
+      colors: [id.includes("blue") ? "blue" : "green"],
+      types: [id.includes("type") ? "Navy" : "Pirate"],
+      name: id.includes("excluded") ? "Excluded" : id,
+    };
+    return { ...card, cardId };
+  });
+  return player.deck.slice(0, ids.length);
+};
+
+const cardsResponse = (
+  decisionId: NonNullable<
+    ReturnType<typeof createActiveState>["pendingDecision"]
+  >["id"],
+  cards: readonly CardRef[],
+  playerId?: PlayerId,
+): Extract<Action, { type: "respondToDecision" }> => ({
+  type: "respondToDecision",
+  decisionId,
+  ...(playerId === undefined ? {} : { playerId }),
+  response: { type: "cards", cards: [...cards] },
+});
+
+const orderResponse = (
+  decisionId: NonNullable<
+    ReturnType<typeof createActiveState>["pendingDecision"]
+  >["id"],
+  cards: readonly CardRef[],
+  playerId?: PlayerId,
+): Extract<Action, { type: "respondToDecision" }> => ({
+  type: "respondToDecision",
+  decisionId,
+  ...(playerId === undefined ? {} : { playerId }),
+  response: {
+    type: "orderedIds",
+    ids: cards.map((card) => String(card.instanceId)),
+  },
+});
+
 test("getLegalActions suppresses phase actions while a decision is pending", () => {
   const setup = createInitialState(createInput());
   const pending = startMulliganFlow(setup).state;
@@ -40,6 +144,89 @@ test("getLegalActions suppresses phase actions while a decision is pending", () 
   assert.deepEqual(getLegalActions(pending, p1), [
     { type: "concede", playerId: p1 },
   ]);
+});
+
+test("search selection and ordering reject malformed duplicate and wrong-player responses without mutation", () => {
+  const state = createActiveState();
+  must(state.players[p1], "p1").deck = must(state.players[p1], "p1").deck.slice(
+    0,
+    3,
+  );
+  setDeck(state, [
+    "sup-002d-invalid-a",
+    "sup-002d-invalid-b",
+    "sup-002d-invalid-c",
+  ]);
+  const opened = openSearchState(
+    state,
+    searchRequest({ lookCount: 3, filter: {} }),
+  );
+  const select = must(opened.pendingDecision, "select");
+  assert.equal(select.type, "selectCards");
+  const first = must(select.candidates[0], "first").card;
+  const second = must(select.candidates[1], "second").card;
+  for (const action of [
+    cardsResponse(select.id, [first, second]),
+    cardsResponse(select.id, [first], p2),
+    {
+      type: "respondToDecision",
+      decisionId: select.id,
+      response: { type: "orderedIds", ids: [] },
+    } as Action,
+  ]) {
+    const before = hashCanonicalStateValue(opened);
+    const result = applyAction(opened, action);
+    assert.equal(result.errors?.[0]?.type, "invalidDecisionResponse");
+    assert.deepEqual(result.events, []);
+    assert.equal(result.stateHash, before);
+  }
+  const selected = applyAction(opened, cardsResponse(select.id, [first]));
+  const order = must(selected.state.pendingDecision, "order");
+  assert.equal(order.type, "orderCards");
+  for (const action of [
+    orderResponse(order.id, order.cards, p2),
+    {
+      type: "respondToDecision",
+      decisionId: order.id,
+      response: { type: "orderedIds", ids: ["missing"] },
+    } as Action,
+    {
+      type: "respondToDecision",
+      decisionId: order.id,
+      response: {
+        type: "orderedIds",
+        ids: [
+          String(order.cards[0]?.instanceId),
+          String(order.cards[0]?.instanceId),
+        ],
+      },
+    } as Action,
+  ]) {
+    const before = hashCanonicalStateValue(selected.state);
+    const result = applyAction(selected.state, action);
+    assert.equal(result.errors?.[0]?.type, "invalidDecisionResponse");
+    assert.deepEqual(result.events, []);
+    assert.equal(result.stateHash, before);
+  }
+  const resolved = applyAction(
+    selected.state,
+    orderResponse(order.id, [...order.cards].reverse()),
+  );
+  assert.equal(resolved.errors, undefined);
+  assert.equal(
+    JSON.stringify(filterStateForPlayer(resolved.state, p2)).includes(
+      String(first.cardId),
+    ),
+    false,
+  );
+  assert.deepEqual(
+    must(resolved.state.players[p1], "p1").deck.map((card) => card.zone.index),
+    [0, 1],
+  );
+  assert.equal(
+    must(resolved.state.players[p1], "p1").hand.at(-1)?.instanceId,
+    first.instanceId,
+  );
 });
 
 test("getLegalActions keeps play-card payment and overflow responses unchanged when runtime queues are empty", () => {

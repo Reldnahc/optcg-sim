@@ -45,6 +45,10 @@ import {
   getCompleteParserRuleIds,
 } from "./parser-rule-id-components.js";
 import { isCertifiedLineSeparatedEffectBlockComposition } from "./line-separated-composition.js";
+import {
+  parseOnPlayOptionalTrashCostKoClause,
+  parseOptionalTrashCostKoResidueClause,
+} from "./optional-trash-cost-ko-components.js";
 import { parseReturnDonCostWrapperResidueClause } from "./return-don-cost-wrapper-components.js";
 import {
   parseStandaloneBlockerClause,
@@ -52,6 +56,7 @@ import {
   parseStandaloneEngineKeywordClause,
   parseStandaloneEngineKeywordResidueClause,
 } from "./standalone-keyword-parser.js";
+import * as topN from "./top-n-search-components.js";
 
 export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self";
 export const whenAttackingDrawNParserRuleId =
@@ -251,6 +256,7 @@ function parseFirstCardLineResidueClause(
 ): ParsedResidueClause | undefined {
   return (
     parseReusableCard016AResidueClause(cardId, line) ??
+    parseOptionalTrashCostKoResidueClause(cardId, line) ??
     parseReturnDonCostWrapperResidueClause(line) ??
     parseCard014gResidueClause(cardId, line) ??
     parseTriggeredDrawResidueClause({
@@ -352,6 +358,8 @@ function parseNonConditionalCardLineEffectClause(
 ): CertifiedClause | undefined {
   return (
     parseReusableCard016AClause(cardId, sourceText) ??
+    parseOnPlayOptionalTrashCostKoClause(cardId, sourceText) ??
+    topN.parseTopNSearchClause(cardId, sourceText) ??
     parseOnPlayReturnDonDrawClause(cardId, sourceText) ??
     parseTriggerDrawClause(cardId, sourceText) ??
     parseTriggerDrawUpToClause(cardId, sourceText) ??

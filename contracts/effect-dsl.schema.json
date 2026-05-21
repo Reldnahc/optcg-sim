@@ -150,6 +150,135 @@
         }
       ]
     },
+    "scopedSetBasePowerFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["typesAny"],
+      "properties": {
+        "typesAny": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        }
+      }
+    },
+    "scopedSetBasePowerTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "zone", "player"],
+      "properties": {
+        "type": { "const": "all" },
+        "zone": { "const": "characterArea" },
+        "player": { "const": "self" },
+        "filter": { "$ref": "#/$defs/scopedSetBasePowerFilter" }
+      }
+    },
+    "scopedTopNSearchPublicFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "categories": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/cardCategory" },
+          "minItems": 1
+        },
+        "colorsAny": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/color" },
+          "minItems": 1
+        },
+        "typesAny": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "nameNot": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        }
+      }
+    },
+    "scopedTopNSearchChooserOnlyFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 0
+    },
+    "scopedTopNSearchRemainingCards": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["destination", "position", "order"],
+      "properties": {
+        "destination": { "const": "deck" },
+        "position": { "const": "bottom" },
+        "order": { "const": "ownerChoice" }
+      }
+    },
+    "scopedTopNSearchRequest": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "zone",
+            "player",
+            "lookCount",
+            "filter",
+            "min",
+            "max",
+            "destination",
+            "revealTo",
+            "remainingCards",
+            "shuffleAfter"
+          ],
+          "properties": {
+            "zone": { "const": "deck" },
+            "player": { "const": "self" },
+            "lookCount": { "type": "integer", "minimum": 1 },
+            "filter": { "$ref": "#/$defs/scopedTopNSearchPublicFilter" },
+            "min": { "const": 0 },
+            "max": { "const": 1 },
+            "destination": { "const": "hand" },
+            "revealTo": { "const": "bothPlayers" },
+            "remainingCards": {
+              "$ref": "#/$defs/scopedTopNSearchRemainingCards"
+            },
+            "shuffleAfter": { "const": false }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "zone",
+            "player",
+            "lookCount",
+            "filter",
+            "min",
+            "max",
+            "destination",
+            "revealTo",
+            "remainingCards",
+            "shuffleAfter"
+          ],
+          "properties": {
+            "zone": { "const": "deck" },
+            "player": { "const": "self" },
+            "lookCount": { "type": "integer", "minimum": 1 },
+            "filter": { "$ref": "#/$defs/scopedTopNSearchChooserOnlyFilter" },
+            "min": { "const": 0 },
+            "max": { "const": 1 },
+            "destination": { "const": "hand" },
+            "revealTo": { "const": "chooserOnly" },
+            "remainingCards": {
+              "$ref": "#/$defs/scopedTopNSearchRemainingCards"
+            },
+            "shuffleAfter": { "const": false }
+          }
+        }
+      ]
+    },
     "cardSupportStatus": {
       "type": "string",
       "enum": [
@@ -253,6 +382,18 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["type", "count", "chooser", "optional"],
+          "properties": {
+            "type": { "const": "trashFromHand" },
+            "count": { "type": "integer", "minimum": 1 },
+            "filter": { "$ref": "#/$defs/cardFilter" },
+            "chooser": { "$ref": "#/$defs/playerRef" },
+            "optional": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["type", "costs", "optional"],
           "properties": {
             "type": { "const": "sequence" },
@@ -318,6 +459,15 @@
             "type": { "const": "draw" },
             "count": { "type": "integer", "minimum": 0 },
             "player": { "$ref": "#/$defs/playerRef" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "request"],
+          "properties": {
+            "type": { "const": "search" },
+            "request": { "$ref": "#/$defs/scopedTopNSearchRequest" }
           }
         },
         {
@@ -406,6 +556,17 @@
             "target": { "$ref": "#/$defs/target" },
             "value": { "type": "integer" },
             "duration": { "$ref": "#/$defs/duration" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target", "value", "duration"],
+          "properties": {
+            "type": { "const": "setBasePower" },
+            "target": { "$ref": "#/$defs/scopedSetBasePowerTarget" },
+            "value": { "type": "integer" },
+            "duration": { "const": { "type": "permanent" } }
           }
         },
         {

@@ -392,7 +392,11 @@ const continueNoDecisionSegments = (
         effect: PayCostEffect;
       };
       const cost = paySegment.effect.cost;
-      if (cost.type !== "restDon" && cost.type !== "returnDon") {
+      if (
+        cost.type !== "restDon" &&
+        cost.type !== "returnDon" &&
+        cost.type !== "trashFromHand"
+      ) {
         return { ok: false };
       }
       const currentPlayer = nextState.players[entry.controllerId];
@@ -400,10 +404,12 @@ const continueNoDecisionSegments = (
         currentPlayer === undefined
           ? 0
           : getReturnDonEligibleCount(currentPlayer);
+      const handEligibleCount = currentPlayer?.hand.length ?? 0;
       if (
         (cost.type === "restDon" &&
           activeDonCount(nextState, entry.controllerId) < cost.count) ||
-        (cost.type === "returnDon" && returnDonEligibleCount < cost.count)
+        (cost.type === "returnDon" && returnDonEligibleCount < cost.count) ||
+        (cost.type === "trashFromHand" && handEligibleCount < cost.count)
       ) {
         nextLedgers = {
           ...nextLedgers,

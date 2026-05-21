@@ -121,7 +121,10 @@ export const createOptionalActivationDecisionForSequenceSegment = (
 export const createPayCostDecisionForSequenceSegment = (
   state: GameState,
   entry: EffectQueueEntry,
-  cost: Extract<OptionalCost, { type: "restDon" | "returnDon" }>,
+  cost: Extract<
+    OptionalCost,
+    { type: "restDon" | "returnDon" | "trashFromHand" }
+  >,
   index: number,
 ): { events: EngineEvent[]; ok: true; state: GameState } => {
   const causedBy = decisionCauseForEntry(entry);
@@ -259,9 +262,30 @@ export const getSequencePayCostLegalActions = (
     decision.playerId !== playerId ||
     player === undefined ||
     !hasSequenceFrameForDecision(state, decision.id) ||
-    (decision.cost.type !== "restDon" && decision.cost.type !== "returnDon")
+    (decision.cost.type !== "restDon" &&
+      decision.cost.type !== "returnDon" &&
+      decision.cost.type !== "trashFromHand")
   ) {
     return [];
+  }
+  if (decision.cost.type === "trashFromHand") {
+    const selectableCardIds = player.hand.map((card) => card.instanceId);
+    return [
+      {
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: { type: "paymentDeclined" },
+      },
+      ...chooseCombos(selectableCardIds, decision.cost.count).map((combo) => ({
+        type: "respondToDecision" as const,
+        decisionId: decision.id,
+        response: {
+          type: "payment" as const,
+          optionId: decision.cost.type,
+          selectedCardInstanceIds: combo,
+        },
+      })),
+    ];
   }
   const candidateDonIds = player.costArea
     .filter((card) =>

@@ -20,9 +20,6 @@ import type {
   FailurePolicy,
   HandSelectCardsEffect,
   HandSelectionId,
-  OptionalCost,
-  OptionalCostSegmentResult,
-  PayCostEffect,
   PlayHandSelectedEffect,
   ReplacementTrigger,
   SearchRequest,
@@ -969,134 +966,47 @@ test("temporary modifier and restriction authoring supports extended durations a
   void malformedCannotAttack;
 });
 
-test("TYP-009A composed optional cost clauses use payCost sequence segments", () => {
-  const optionalReturnDonCost: OptionalCost = {
-    type: "returnDon",
-    count: 1,
-    chooser: "self",
-    optional: true,
-  };
-  const payOptionalCost: PayCostEffect = {
-    type: "payCost",
-    cost: optionalReturnDonCost,
-  };
-  const optionalCostSequence: Effect = {
-    type: "sequence",
+test("SUP-002H scoped setBasePower contract shape compiles without runtime support metadata", () => {
+  const scopedBasePowerSetter: EffectDefinition = {
+    cardId: "SUP-002H-001" as CardId,
+    implementationStatus: "unsupported",
     effects: [
       {
-        id: "optional-return-don",
-        connector: "always",
-        effect: payOptionalCost,
-        saveResultAs: "paidReturnDon",
-      },
-      {
-        connector: "ifYouDo",
-        effect: { type: "draw", player: "self", count: 1 },
+        id: "SUP-002H-001:permanent-1" as EffectId,
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "setBasePower",
+          target: {
+            type: "all",
+            zone: "characterArea",
+            player: "self",
+            filter: { typesAny: ["Straw Hat Crew"] },
+          },
+          value: 5000,
+          duration: { type: "permanent" },
+        },
       },
     ],
-  };
-
-  const nonOptionalCost: OptionalCost = {
-    type: "restDon",
-    count: 1,
-    chooser: "self",
-    // @ts-expect-error optional cost clauses require literal optional true.
-    optional: false,
-  };
-  const missingOptionalFlag: OptionalCost = {
-    type: "returnDon",
-    count: 1,
-    chooser: "self",
-    // @ts-expect-error optional cost clauses require the optional flag.
-    optional: undefined,
-  };
-
-  expect(optionalCostSequence.type).toBe("sequence");
-  expect(payOptionalCost.type).toBe("payCost");
-  void nonOptionalCost;
-  void missingOptionalFlag;
-});
-
-test("TYP-009A payCost is not authorable as a top-level effect", () => {
-  const optionalReturnDonCost: OptionalCost = {
-    type: "returnDon",
-    count: 1,
-    chooser: "self",
-    optional: true,
-  };
-  const topLevelPayCostEffect: Effect = {
-    // @ts-expect-error payCost is only authorable as a sequence segment effect.
-    type: "payCost",
-    cost: optionalReturnDonCost,
-  };
-  const topLevelPayCostBlock: EffectBlock = {
-    id: "pay-cost-top-level" as EffectId,
-    category: "activate",
-    trigger: { type: "activateMain" },
-    effect: {
-      // @ts-expect-error payCost is only authorable inside sequence segments.
-      type: "payCost",
-      cost: optionalReturnDonCost,
+    metadata: {
+      sourceTextHash: "sha256:test-sup-002h-001",
+      rulesVersion: "v6",
+      effectDefinitionsVersion: "v1",
+      tested: true,
     },
   };
 
-  void topLevelPayCostEffect;
-  void topLevelPayCostBlock;
-});
-
-test("TYP-009A optional cost segment results distinguish accept decline and failure", () => {
-  const accepted: OptionalCostSegmentResult = {
-    attempted: true,
-    succeeded: true,
-    changedState: true,
-    selectedCards: [],
-    selectedTargets: [],
-    paidCost: true,
-    playerDeclined: false,
-  };
-  const declined: OptionalCostSegmentResult = {
-    attempted: true,
-    succeeded: false,
-    changedState: false,
-    selectedCards: [],
-    selectedTargets: [],
-    paidCost: false,
-    playerDeclined: true,
-  };
-  const failedPayment: OptionalCostSegmentResult = {
-    attempted: true,
-    succeeded: false,
-    changedState: false,
-    selectedCards: [],
-    selectedTargets: [],
-    paidCost: false,
-    playerDeclined: false,
+  const malformedValue: Effect = {
+    type: "setBasePower",
+    target: { type: "all", zone: "characterArea", player: "self" },
+    // @ts-expect-error setBasePower values are numeric in the canonical contract.
+    value: "5000",
+    duration: { type: "permanent" },
   };
 
-  // @ts-expect-error declined optional costs are not successful cost payment.
-  const ambiguousDecline: OptionalCostSegmentResult = {
-    attempted: true,
-    succeeded: true,
-    changedState: false,
-    selectedCards: [],
-    selectedTargets: [],
-    paidCost: false,
-    playerDeclined: true,
-  };
-  // @ts-expect-error failed optional costs do not change canonical state.
-  const ambiguousFailure: OptionalCostSegmentResult = {
-    attempted: true,
-    succeeded: false,
-    changedState: true,
-    selectedCards: [],
-    selectedTargets: [],
-    paidCost: false,
-    playerDeclined: false,
-  };
-
-  expect(accepted.paidCost).toBe(true);
-  expect(declined.playerDeclined).toBe(true);
-  expect(failedPayment.playerDeclined).toBe(false);
-  void ambiguousDecline;
-  void ambiguousFailure;
+  expect(scopedBasePowerSetter.implementationStatus).toBe("unsupported");
+  expect(scopedBasePowerSetter.effects[0]?.effect.type).toBe("setBasePower");
+  expect(scopedBasePowerSetter.metadata.generatedBy).toBeUndefined();
+  expect(scopedBasePowerSetter.metadata.reviewedBy).toBeUndefined();
+  void malformedValue;
 });

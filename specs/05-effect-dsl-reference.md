@@ -215,6 +215,13 @@ type OptionalCost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
+  | {
+      type: "trashFromHand";
+      count: number;
+      filter?: CardFilter;
+      chooser: PlayerRef;
+      optional: true;
+    }
   | { type: "sequence"; costs: Cost[]; optional: true };
 ```
 
@@ -1034,6 +1041,10 @@ Schema-supported fixture subset:
 - cost: restDon
 - cost: returnDon
 - cost: restSelf
+- cost: optional trashFromHand through `{ type: "payCost"; cost: OptionalCost }`
+  sequence segments only; this is schema authorability for optional cost
+  clauses, not non-optional activation `Cost.trashFromHand` authorability and
+  not runtime/playability support
 - cost: sequence
 - target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
   triggerCard, all, choose, savedFieldObject
@@ -1048,6 +1059,22 @@ Schema-supported fixture subset:
 - effect: drawUpTo
 - effect: ko
 - effect: modifyPower
+- effect: setBasePower for scoped permanent continuous setters only:
+  `target.type: "all"`, `target.zone: "characterArea"`,
+  `target.player: "self"`, optional target `filter.typesAny`, numeric `value`,
+  and `duration: { type: "permanent" }`; this is schema-authorability-only
+  evidence and not runtime/playability support
+- effect: search for scoped top-N deck requests only:
+  `zone: "deck"`, `player: "self"`, positive integer `lookCount`,
+  `destination: "hand"`, `min: 0`, `max: 1`,
+  `remainingCards.destination: "deck"`, `remainingCards.position: "bottom"`,
+  `remainingCards.order: "ownerChoice"`, and `shuffleAfter: false`. The
+  schema-supported variants are public reveal to `bothPlayers` with a nonempty
+  filter limited to `categories`, `colorsAny`, `typesAny`, and `nameNot`, or
+  non-reveal any-card search to `chooserOnly` with an empty filter object. This
+  is schema-authorability-only evidence and not runtime executable support,
+  parser certification, generated support, support-report evidence, or card
+  promotion.
 - effect: payCost
 - effect: selectCards
 - effect: selectTargets
@@ -1075,14 +1102,13 @@ Planned/not fixture-authorable until schema coverage exists:
 - condition: sourceStillInZone
 - condition: eventPayload
 - condition: and, or, not, custom
-- cost: trashFromHand
+- cost: trashFromHand as non-optional `Cost.trashFromHand`
 - cost: trashSelf
 - cost: trashFromField
 - cost: discard
 - cost: chooseOne
 - cost: custom
 - duration: whileConditionTrue
-- effect: search
 - effect: lookAtTop
 - effect: revealFromZone
 - effect: revealTop
@@ -1096,7 +1122,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - effect: returnUnselectedToDeck
 - effect: trashFromHand
 - effect: setPowerToZero
-- effect: setBasePower
 - effect: modifyCost
 - effect: setBaseCost
 - effect: rest

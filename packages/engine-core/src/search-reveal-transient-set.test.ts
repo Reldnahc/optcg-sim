@@ -297,15 +297,7 @@ test("unsupported search reveal shapes fail closed without mutation or events", 
     supportedSearch({ min: 1 }),
     supportedSearch({ max: 2 }),
     supportedSearch({ destination: "trash" }),
-    supportedSearch({ revealTo: "bothPlayers" }),
     supportedSearch({ shuffleAfter: true }),
-    supportedSearch({
-      remainingCards: {
-        destination: "deck",
-        position: "bottom",
-        order: "ownerChoice",
-      },
-    }),
   ];
   for (const [index, effect] of unsupportedEffects.entries()) {
     const state = createActiveState();

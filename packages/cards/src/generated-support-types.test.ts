@@ -236,6 +236,7 @@ describe("generated support parser result contracts", () => {
       "condition-component:field-count-don-public",
       "exact:condition:self-attached-don-count",
       "exact:condition:your-turn",
+      "exact:conditional-continuous:condition:base-power:self-character-type:direct",
       "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
       "exact:conditional-continuous:condition:body-part-composition:self-character:direct:protection",
       "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:keyword-only",
@@ -262,10 +263,14 @@ describe("generated support parser result contracts", () => {
       "exact:on-play:modify-power:self:this-battle",
       "exact:on-play:modify-power:self:this-turn",
       "exact:on-play:optional-effect:draw-1:self",
+      "exact:on-play:optional-trash-n-from-hand:ko-up-to-1-opponent-character-base-cost-n-or-less",
       "exact:on-play:return-don-draw-n:self",
       "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+      "exact:on-play:return-don-top-n-search:any-card:hand:bottom-owner-choice:trash-hand",
       "exact:on-play:select-1-opponent-character-target",
       "exact:on-play:select-1-opponent-character-then-ko-that-character",
+      "exact:on-play:top-n-search:any-card:up-to-1:hand:bottom-owner-choice",
+      "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
       "exact:on-play:trash-2-from-hand:draw-1:self",
       "exact:trigger:draw-n:self",
       "exact:trigger:draw-up-to-n:self",
@@ -275,6 +280,54 @@ describe("generated support parser result contracts", () => {
       "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
       "line-separated-effect-blocks:v1",
     ]);
+  });
+
+  it("marks SUP-002G top-N search templates support-ready with runtime capability gates", () => {
+    const snapshots = [
+      buildGeneratedSupportComponentEvidenceSnapshot({
+        parserRuleId:
+          "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
+      }),
+      buildGeneratedSupportComponentEvidenceSnapshot({
+        parserRuleId:
+          "exact:on-play:top-n-search:any-card:up-to-1:hand:bottom-owner-choice",
+      }),
+      buildGeneratedSupportComponentEvidenceSnapshot({
+        parserRuleId:
+          "exact:on-play:return-don-top-n-search:any-card:hand:bottom-owner-choice:trash-hand",
+      }),
+    ];
+
+    expect(snapshots[0]).toMatchObject({
+      isSupportReady: true,
+      shapeId: "on-play-top-n-filtered-search",
+    });
+    expect(snapshots[0]?.runtimeCapabilityIds).toEqual(
+      expect.arrayContaining([
+        "effect:search:self:deck:lookCount-positive:max1:hand",
+        "searchRemainder:deck-bottom:ownerChoice",
+      ]),
+    );
+    expect(snapshots[1]).toMatchObject({
+      isSupportReady: true,
+      shapeId: "on-play-top-n-any-card-search",
+    });
+    expect(snapshots[1]?.runtimeCapabilityIds).toEqual(
+      expect.arrayContaining([
+        "searchFilter:any-card-empty",
+        "searchReveal:selected:chooserOnly",
+      ]),
+    );
+    expect(snapshots[2]).toMatchObject({
+      isSupportReady: true,
+      shapeId: "on-play-return-don-top-n-any-card-search-trash-from-hand",
+    });
+    expect(snapshots[2]?.runtimeCapabilityIds).toEqual(
+      expect.arrayContaining([
+        "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+        "sequence:genericFrames",
+      ]),
+    );
   });
 
   it("marks CARD-014G choose templates support-ready with zero-choice runtime capabilities", () => {
