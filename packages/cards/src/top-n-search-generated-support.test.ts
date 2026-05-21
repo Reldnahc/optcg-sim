@@ -14,6 +14,11 @@ import {
   generatedSupportRuntimeCapabilityMatrix,
   hasRuntimeCapability,
 } from "./runtime-capability-matrix.js";
+import {
+  returnDonTopNAnyCardSearchTrashParserCertificationIds,
+  topNFilteredSearchParserCertificationIds,
+  topNSearchParserCertificationIds,
+} from "./top-n-search-evidence.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -52,79 +57,113 @@ const baseCard = {
   rulesVersion: "rules-sup-002g",
   sourceTextHash: "sha256:sup-002g-source",
 };
+const parserCertificationEvidence = {
+  currentCertificationIds: topNSearchParserCertificationIds,
+};
 
 describe("SUP-002G top-N search generated support", () => {
-  it("supports filtered reveal search only with complete parser and SUP-002D runtime evidence", () => {
-    const sourceText =
-      "[On Play] Look at 4 cards from the top of your deck; reveal up to 1 yellow {East Blue} type card other than [Nami] and add it to your hand. Then, place the rest at the bottom of your deck in any order.";
-
-    const index = buildGeneratedSupportIndex({
-      cards: [{ ...baseCard, sourceText }],
-      validateEffectDefinition,
-    });
-
-    const entry = index.entries[0];
-    expect(entry).toMatchObject({
-      blockers: [],
-      missingCapabilityIds: [],
-      parseStatus: "complete",
-      parserRuleIds: [
-        "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
-      ],
-      status: "supported",
-      support: {
-        status: "implemented-dsl",
-        tested: true,
+  it.each([
+    {
+      cardId: "SUP-002G-FILTER-TYPE",
+      expectedFilter: { typesAny: ["Five Elders"] },
+      lookCount: 5,
+      sourceText:
+        "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    },
+    {
+      cardId: "SUP-002G-FILTER-COLOR-TYPE",
+      expectedFilter: { colorsAny: ["yellow"], typesAny: ["East Blue"] },
+      lookCount: 4,
+      sourceText:
+        "[On Play] Look at 4 cards from the top of your deck; reveal up to 1 yellow {East Blue} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    },
+    {
+      cardId: "SUP-002G-FILTER-TYPE-NAME",
+      expectedFilter: { nameNot: ["Nami"], typesAny: ["East Blue"] },
+      lookCount: 6,
+      sourceText:
+        "[On Play] Look at 6 cards from the top of your deck; reveal up to 1 {East Blue} type card other than [Nami] and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    },
+    {
+      cardId: "SUP-002G-FILTER-COLOR-TYPE-NAME",
+      expectedFilter: {
+        colorsAny: ["green"],
+        nameNot: ["Nami"],
+        typesAny: ["East Blue"],
       },
-    });
-    expect(entry?.capabilityEvidence).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          capabilityId: "effect:search:self:deck:lookCount-positive:max1:hand",
-          parserRuleId:
-            "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
-        }),
-        expect.objectContaining({
-          capabilityId: "searchFilter:categories-colorsAny-typesAny-nameNot",
-          parserRuleId:
-            "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
-        }),
-        expect.objectContaining({
-          capabilityId: "searchReveal:selected:bothPlayers",
-          parserRuleId:
-            "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
-        }),
-        expect.objectContaining({
-          capabilityId: "searchRemainder:deck-bottom:ownerChoice",
-          parserRuleId:
-            "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
-        }),
-      ]),
-    );
-    expect(entry?.effectDefinition?.effects[0]?.effect).toEqual({
-      request: {
-        destination: "hand",
-        filter: {
-          colorsAny: ["yellow"],
-          nameNot: ["Nami"],
-          typesAny: ["East Blue"],
+      lookCount: 7,
+      sourceText:
+        "[On Play] Look at 7 cards from the top of your deck; reveal up to 1 green {East Blue} type card other than [Nami] and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    },
+  ])(
+    "supports filtered reveal search matrix row $cardId with complete parser and SUP-002D runtime evidence",
+    ({ cardId, expectedFilter, lookCount, sourceText }) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [{ ...baseCard, cardId: cardId as CardId, sourceText }],
+        parserCertificationEvidence,
+        validateEffectDefinition,
+      });
+
+      const entry = index.entries[0];
+      expect(entry).toMatchObject({
+        blockers: [],
+        missingCapabilityIds: [],
+        parseStatus: "complete",
+        parserRuleIds: [
+          "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
+        ],
+        status: "supported",
+        support: {
+          status: "implemented-dsl",
+          tested: true,
         },
-        lookCount: 4,
-        max: 1,
-        min: 0,
-        player: "self",
-        remainingCards: {
-          destination: "deck",
-          order: "ownerChoice",
-          position: "bottom",
+      });
+      expect(entry?.capabilityEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            capabilityId:
+              "effect:search:self:deck:lookCount-positive:max1:hand",
+            parserRuleId:
+              "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
+          }),
+          expect.objectContaining({
+            capabilityId: "searchFilter:categories-colorsAny-typesAny-nameNot",
+            parserRuleId:
+              "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
+          }),
+          expect.objectContaining({
+            capabilityId: "searchReveal:selected:bothPlayers",
+            parserRuleId:
+              "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
+          }),
+          expect.objectContaining({
+            capabilityId: "searchRemainder:deck-bottom:ownerChoice",
+            parserRuleId:
+              "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
+          }),
+        ]),
+      );
+      expect(entry?.effectDefinition?.effects[0]?.effect).toEqual({
+        request: {
+          destination: "hand",
+          filter: expectedFilter,
+          lookCount,
+          max: 1,
+          min: 0,
+          player: "self",
+          remainingCards: {
+            destination: "deck",
+            order: "ownerChoice",
+            position: "bottom",
+          },
+          revealTo: "bothPlayers",
+          shuffleAfter: false,
+          zone: "deck",
         },
-        revealTo: "bothPlayers",
-        shuffleAfter: false,
-        zone: "deck",
-      },
-      type: "search",
-    });
-  });
+        type: "search",
+      });
+    },
+  );
 
   it("supports return-DON non-reveal any-card search and trailing hand trash through composed capability evidence", () => {
     const sourceText =
@@ -132,6 +171,7 @@ describe("SUP-002G top-N search generated support", () => {
 
     const index = buildGeneratedSupportIndex({
       cards: [{ ...baseCard, cardId: "SUP-002G-COSTED" as CardId, sourceText }],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -224,6 +264,7 @@ describe("SUP-002G top-N search generated support", () => {
         },
       ],
       runtimeCapabilityMatrix: matrixWithoutSearchCapability,
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -308,4 +349,95 @@ describe("SUP-002G top-N search generated support", () => {
       ]),
     );
   });
+
+  it("fails closed when top-N search parser certification evidence is omitted", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          sourceText:
+            "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    for (const certificationId of topNFilteredSearchParserCertificationIds) {
+      const blocker = index.entries[0]?.blockers.find((item) =>
+        item.message.includes(certificationId),
+      );
+      expect(blocker).toMatchObject({
+        code: "unsupported-primitive",
+        diagnosticLayer: "review",
+      });
+    }
+    expect(index.entries[0]).toMatchObject({
+      parseStatus: "complete",
+      status: "unsupported",
+    });
+  });
+
+  it("fails closed when costed any-card search parser certification evidence is omitted", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          sourceText:
+            "[On Play] DON!! -1: Look at 5 cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    for (const certificationId of returnDonTopNAnyCardSearchTrashParserCertificationIds) {
+      const blocker = index.entries[0]?.blockers.find((item) =>
+        item.message.includes(certificationId),
+      );
+      expect(blocker).toMatchObject({
+        code: "unsupported-primitive",
+        diagnosticLayer: "review",
+      });
+    }
+    expect(index.entries[0]).toMatchObject({
+      parseStatus: "complete",
+      status: "unsupported",
+    });
+  });
+
+  it.each(topNSearchParserCertificationIds)(
+    "fails closed when top-N search parser certification evidence is stale for %s",
+    (staleId) => {
+      const sourceText = topNFilteredSearchParserCertificationIds.includes(
+        staleId as (typeof topNFilteredSearchParserCertificationIds)[number],
+      )
+        ? "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order."
+        : "[On Play] DON!! -1: Look at 5 cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.";
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseCard,
+            sourceText,
+          },
+        ],
+        parserCertificationEvidence: {
+          currentCertificationIds: topNSearchParserCertificationIds,
+          staleCertificationIds: [staleId],
+        },
+        validateEffectDefinition,
+      });
+
+      const blocker = index.entries[0]?.blockers.find((item) =>
+        item.message.includes(staleId),
+      );
+      expect(blocker).toMatchObject({
+        code: "unsupported-primitive",
+        diagnosticLayer: "review",
+      });
+      expect(blocker?.message).toContain("Stale parser certification");
+      expect(index.entries[0]).toMatchObject({
+        parseStatus: "complete",
+        status: "unsupported",
+      });
+    },
+  );
 });

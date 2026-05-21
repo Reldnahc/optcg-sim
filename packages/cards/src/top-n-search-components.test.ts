@@ -3,6 +3,13 @@ import type { CardId, EffectId } from "@optcg/types";
 
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import { isCompleteGeneratedSupportParseResult } from "./generated-support-types.js";
+import {
+  parseTopNAnyCardAddToHandAndBottomRemainder,
+  parseTopNBottomRemainder,
+  parseTopNDeckLookPrefix,
+  parseTopNFilteredRevealSelection,
+  parseTopNSearchFilter,
+} from "./top-n-search-components.js";
 
 const cardId = "SUP-002G-PARSER" as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -17,6 +24,49 @@ const parse = (sourceText: string) =>
   });
 
 describe("SUP-002G top-N search parser components", () => {
+  it("parses top-N search primitive boundaries independently", () => {
+    expect(
+      parseTopNDeckLookPrefix(
+        "Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      ),
+    ).toEqual({
+      bodyText:
+        "reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      lookCount: 5,
+    });
+    expect(parseTopNSearchFilter("green {East Blue} type card")).toEqual({
+      filter: { colorsAny: ["green"], typesAny: ["East Blue"] },
+    });
+    expect(
+      parseTopNSearchFilter("{East Blue} type card other than [Nami]"),
+    ).toEqual({
+      filter: { nameNot: ["Nami"], typesAny: ["East Blue"] },
+    });
+    expect(
+      parseTopNFilteredRevealSelection(
+        "reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      ),
+    ).toEqual({
+      bodyText: "place the rest at the bottom of your deck in any order.",
+      filter: { typesAny: ["Five Elders"] },
+      revealTo: "bothPlayers",
+    });
+    expect(
+      parseTopNAnyCardAddToHandAndBottomRemainder(
+        "add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order.",
+      ),
+    ).toEqual({
+      bodyText: "place the rest at the bottom of your deck in any order.",
+    });
+    expect(
+      parseTopNBottomRemainder(
+        "place the rest at the bottom of your deck in any order.",
+      ),
+    ).toEqual({
+      bodyText: "place the rest at the bottom of your deck in any order.",
+    });
+  });
+
   it.each([{ lookCount: 3 }, { lookCount: 6 }])(
     "parses standalone top-N any-card chooser-only search with lookCount $lookCount",
     ({ lookCount }) => {
@@ -70,24 +120,44 @@ describe("SUP-002G top-N search parser components", () => {
 
   it.each([
     {
-      color: "red",
-      excludedName: "Monkey.D.Luffy",
+      expectedFilter: {
+        typesAny: ["Five Elders"],
+      },
       lookCount: 5,
-      typeName: "Straw Hat Crew",
+      searchPhrase: "{Five Elders} type card",
     },
     {
-      color: "blue",
-      excludedName: "Trafalgar Law",
+      expectedFilter: {
+        colorsAny: ["red"],
+        typesAny: ["Straw Hat Crew"],
+      },
       lookCount: 7,
-      typeName: "Heart Pirates",
+      searchPhrase: "red {Straw Hat Crew} type card",
+    },
+    {
+      expectedFilter: {
+        nameNot: ["Trafalgar Law"],
+        typesAny: ["Heart Pirates"],
+      },
+      lookCount: 4,
+      searchPhrase: "{Heart Pirates} type card other than [Trafalgar Law]",
+    },
+    {
+      expectedFilter: {
+        colorsAny: ["blue"],
+        nameNot: ["Trafalgar Law"],
+        typesAny: ["Heart Pirates"],
+      },
+      lookCount: 6,
+      searchPhrase: "blue {Heart Pirates} type card other than [Trafalgar Law]",
     },
   ])(
-    "parses filtered top-N reveal search with $color {$typeName} excluding $excludedName",
-    ({ color, excludedName, lookCount, typeName }) => {
+    "parses filtered top-N reveal search with $searchPhrase",
+    ({ expectedFilter, lookCount, searchPhrase }) => {
       const result = parse(
         `[On Play] Look at ${String(
           lookCount,
-        )} cards from the top of your deck; reveal up to 1 ${color} {${typeName}} type card other than [${excludedName}] and add it to your hand. Then, place the rest at the bottom of your deck in any order.`,
+        )} cards from the top of your deck; reveal up to 1 ${searchPhrase} and add it to your hand. Then, place the rest at the bottom of your deck in any order.`,
       );
 
       expect(result.status).toBe("complete");
@@ -104,11 +174,7 @@ describe("SUP-002G top-N search parser components", () => {
           effect: {
             request: {
               destination: "hand",
-              filter: {
-                colorsAny: [color],
-                nameNot: [excludedName],
-                typesAny: [typeName],
-              },
+              filter: expectedFilter,
               lookCount,
               max: 1,
               min: 0,

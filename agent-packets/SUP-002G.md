@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-002G -->
 <!-- agent-packet:story-path stories/approved/SUP-002G-top-n-filtered-search-card-components.yaml -->
-<!-- agent-packet:story-sha256 3c253cf68b2810395a09ea335160b36b1c2710f5a9f92fd04d5f18cc66103fc2 -->
+<!-- agent-packet:story-sha256 dbcfdc4512ba99129eeed42f0e5fd244a28e07809b3faaa022c9b74d9fa1c390 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -475,9 +475,11 @@ Cards-layer story only. Contract/schema prerequisites must already be implemente
 
 ## Scope
 
+- define parser primitives separately before composing them: `[On Play]` trigger wrapper, top-N deck look, reveal-vs-non-reveal selected-card visibility, up-to-one cardinality, optional color filter, optional `{TYPE}` type filter, optional `other than [Name]` exclusion, add-to-hand destination, bottom remainder owner-choice placement, DON-minus cost wrapper, and trailing hand-trash effect
 - parse `[On Play] Look at N cards from the top of your deck; reveal up to 1 <filter> card and add it to your hand. Then, place the rest at the bottom of your deck in any order.`
 - parse `[On Play] DON!! −N: Look at M cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash K card(s) from your hand.`
 - support composed filter primitives for color, named type in braces, and `other than [Name]` name exclusion
+- support valid filtered-search subsets by composing whichever filter primitives are present, including `{TYPE} type card`, `<COLOR> {TYPE} type card`, `{TYPE} type card other than [Name]`, and `<COLOR> {TYPE} type card other than [Name]`
 - support an unfiltered any-card search primitive for text that says `add up to 1 card to your hand` without a filter phrase
 - emit reusable SearchRequest data with self deck, lookCount, min zero, max one, hand destination, selected-card visibility from printed wording, and bottom remainder order
 - compose DON-minus cost, top-N non-reveal any-card search, bottom remainder ordering, and trailing hand-trash through existing reusable sequence/component families rather than exact full-line handling
@@ -509,6 +511,7 @@ Cards-layer story only. Contract/schema prerequisites must already be implemente
 - packages/cards/src/top-n-search-components.test.ts
 - packages/cards/src/top-n-search-evidence.ts
 - packages/cards/src/top-n-search-generated-support.test.ts
+- packages/cards/src/sup-002-generated-support-line-regression.test.ts
 - packages/cards/src/generated-support-index.ts
 - packages/cards/src/generated-support-index.test.ts
 - packages/cards/src/generated-support-report.test.ts
@@ -547,10 +550,15 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 ## Required Tests
 
-- cards parser/generated-support test for top-N composed-filter search with name exclusion and bottom remainder
-- test varying look count, color, type name, and excluded name
+- cards parser primitive-boundary tests for top-N deck look, reveal/non-reveal visibility, max-one cardinality, add-to-hand destination, and bottom remainder placement independent of any single full representative sentence
+- cards parser/generated-support matrix for filtered top-N search with bottom remainder covering type-only, color-plus-type, type-plus-name-exclusion, and color-plus-type-plus-name-exclusion
+- representative regression for `[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.`
+- test varying look count, color, type name, and excluded name without collapsing those filter primitives into one required sentence shape
+- real-schema generated-support regression for each supported top-N search matrix row
 - cards parser/generated-support test for `[On Play] DON!! −1: Look at 5 cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.` through reusable DON-minus, search, bottom remainder, and hand-trash composition
+- parser composition test proving the DON-minus wrapper, non-reveal any-card search, bottom remainder placement, and trailing hand-trash effect are separate reusable components and not one full-line branch
 - variant full-composition test changing DON-minus count, look count, and trash count without changing parser-rule family or adding full-line branches
+- fail-closed generated-support test when parser-rule certification evidence is absent or stale for any scoped primitive or composition component
 - fail-closed tests for unsupported remainder destinations, unsupported filter words, and missing reveal/add-to-hand body pieces
 - fail-closed tests for non-reveal search with unsupported destination, unsupported remainder placement, unsupported extra filter words, and unsupported trailing effect text
 - runtime capability matrix test for SUP-002D capability evidence
@@ -569,6 +577,11 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 ## Acceptance Criteria
 
 - parser/generator support is generic over look count, color, type name, and excluded card name while selection remains max one
+- parser/generator implementation must not require color, type, and name exclusion to appear together; filter primitives are optional and compose into CardFilter independently
+- a parser that accepts `<COLOR> {TYPE} type card other than [Name]` but rejects `{TYPE} type card` fails this story
+- generated-support tests that assert `status: supported` must validate the produced Effect DSL with the real schema validator
+- parser/generator implementation must expose or test primitive boundaries for trigger, top-N deck look, reveal/non-reveal visibility, cardinality, filter, add-to-hand destination, bottom remainder placement, DON-minus cost, and trailing hand-trash; full-line success plus value variation is not sufficient evidence
+- generated-support promotion requires current parser-rule certification evidence for each scoped primitive and for the filtered-search and DON-minus/search/trailing-trash compositions; absent or stale certification evidence must fail closed even when DSL schema validation and runtime capability checks pass
 - parser/generator support is generic over non-reveal any-card search look count, DON-minus count, and trailing trash count while selection remains max one
 - generated support fails closed when search window, filter, selection destination, or remainder placement is only partially parsed
 - generated support for non-reveal search does not infer public reveal from look/search/add-to-hand text and does not leak selected or unselected looked-card identity to the opponent

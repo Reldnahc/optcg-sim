@@ -19,11 +19,26 @@ export const topNAnyCardSearchParserRuleId =
 export const returnDonTopNAnyCardSearchTrashParserRuleId =
   "exact:on-play:return-don-top-n-search:any-card:hand:bottom-owner-choice:trash-hand";
 
-type FilteredSearchParse = {
-  readonly color: CardColor;
-  readonly excludedName: string;
+export type TopNDeckLookParse = {
+  readonly bodyText: string;
   readonly lookCount: number;
-  readonly typeName: string;
+};
+
+export type TopNSearchFilterParse = {
+  readonly filter: CardFilter;
+};
+
+export type TopNSearchBottomRemainderParse = {
+  readonly bodyText: string;
+};
+
+export type TopNFilteredSearchSelectionParse = TopNSearchFilterParse & {
+  readonly bodyText: string;
+  readonly revealTo: "bothPlayers";
+};
+
+type FilteredSearchParse = TopNSearchFilterParse & {
+  readonly lookCount: number;
 };
 
 type AnyCardSearchTrashParse = {
@@ -54,11 +69,7 @@ export function parseOnPlayTopNFilteredSearchClause(
     effectBlock: {
       category: "auto",
       effect: createSearchEffect({
-        filter: {
-          colorsAny: [parsed.color],
-          nameNot: [parsed.excludedName],
-          typesAny: [parsed.typeName],
-        },
+        filter: parsed.filter,
         lookCount: parsed.lookCount,
         revealTo: "bothPlayers",
       }),
@@ -188,28 +199,16 @@ export function parseOnPlayTopNAnyCardSearchClause(
 function parseTopNFilteredSearchBody(
   bodyText: string,
 ): FilteredSearchParse | undefined {
-  const match =
-    /^Look at (\d+) (card|cards) from the top of your deck; reveal up to 1 (red|green|blue|purple|black|yellow) \{([^{}]+)\} type card other than \[([^\]]+)\] and add it to your hand\. Then, place the rest at the bottom of your deck in any order\.$/.exec(
-      bodyText,
-    );
-  if (match === null) {
-    return undefined;
-  }
+  const look = parseTopNDeckLookPrefix(bodyText, "; ");
+  if (look === undefined) return undefined;
 
-  const lookCount = parsePositiveCardCount(match[1] ?? "", match[2]);
-  const color = parseCardColor(match[3] ?? "");
-  const typeName = match[4]?.trim() ?? "";
-  const excludedName = match[5]?.trim() ?? "";
-  if (
-    lookCount === undefined ||
-    color === undefined ||
-    typeName.length === 0 ||
-    excludedName.length === 0
-  ) {
-    return undefined;
-  }
+  const selection = parseTopNFilteredRevealSelection(look.bodyText);
+  if (selection === undefined) return undefined;
 
-  return { color, excludedName, lookCount, typeName };
+  const remainder = parseTopNBottomRemainder(selection.bodyText);
+  return remainder === undefined
+    ? undefined
+    : { filter: selection.filter, lookCount: look.lookCount };
 }
 
 function parseReturnDonTopNAnyCardSearchTrashBody(
@@ -244,20 +243,85 @@ function parseReturnDonTopNAnyCardSearchTrashBody(
 function parseTopNAnyCardSearchBody(
   bodyText: string,
 ): AnyCardSearchParse | undefined {
-  const match =
-    /^Look at (\d+) (card|cards) from the top of your deck and add up to 1 card to your hand\. Then, place the rest at the bottom of your deck in any order\.?$/.exec(
-      bodyText,
-    );
-  if (match === null) {
-    return undefined;
-  }
+  const look = parseTopNDeckLookPrefix(bodyText, " and ");
+  if (look === undefined) return undefined;
+
+  const remainder = parseTopNAnyCardAddToHandAndBottomRemainder(look.bodyText);
+  return remainder === undefined ? undefined : { lookCount: look.lookCount };
+}
+
+export function parseTopNDeckLookPrefix(
+  sourceText: string,
+  delimiter: "; " | " and " = "; ",
+): TopNDeckLookParse | undefined {
+  const match = new RegExp(
+    `^Look at (\\d+) (card|cards) from the top of your deck${escapeRegExp(
+      delimiter,
+    )}(.+)$`,
+  ).exec(sourceText);
+  if (match === null) return undefined;
 
   const lookCount = parsePositiveCardCount(match[1] ?? "", match[2]);
-  if (lookCount === undefined) {
-    return undefined;
-  }
+  const bodyText = match[3] ?? "";
+  return lookCount === undefined || bodyText.length === 0
+    ? undefined
+    : { bodyText, lookCount };
+}
 
-  return { lookCount };
+export function parseTopNFilteredRevealSelection(
+  sourceText: string,
+): TopNFilteredSearchSelectionParse | undefined {
+  const match =
+    /^reveal up to 1 (.+) and add it to your hand\. Then, (.+)$/.exec(
+      sourceText,
+    );
+  if (match === null) return undefined;
+
+  const filter = parseTopNSearchFilter(match[1] ?? "");
+  const bodyText = match[2] ?? "";
+  return filter === undefined || bodyText.length === 0
+    ? undefined
+    : { bodyText, filter: filter.filter, revealTo: "bothPlayers" };
+}
+
+export function parseTopNSearchFilter(
+  sourceText: string,
+): TopNSearchFilterParse | undefined {
+  const match =
+    /^(?:(red|green|blue|purple|black|yellow) )?\{([^{}]+)\} type card(?: other than \[([^\]]+)\])?$/.exec(
+      sourceText,
+    );
+  if (match === null) return undefined;
+
+  const color = match[1] === undefined ? undefined : parseCardColor(match[1]);
+  const typeName = match[2]?.trim() ?? "";
+  const excludedName = match[3]?.trim() ?? "";
+  if (color === undefined && match[1] !== undefined) return undefined;
+  if (typeName.length === 0) return undefined;
+
+  return {
+    filter: {
+      ...(color === undefined ? {} : { colorsAny: [color] }),
+      ...(excludedName.length === 0 ? {} : { nameNot: [excludedName] }),
+      typesAny: [typeName],
+    },
+  };
+}
+
+export function parseTopNBottomRemainder(
+  sourceText: string,
+): TopNSearchBottomRemainderParse | undefined {
+  const suffix = /^place the rest at the bottom of your deck in any order\.?$/;
+  return suffix.test(sourceText) ? { bodyText: sourceText } : undefined;
+}
+
+export function parseTopNAnyCardAddToHandAndBottomRemainder(
+  sourceText: string,
+): TopNSearchBottomRemainderParse | undefined {
+  const prefix = "add up to 1 card to your hand. Then, ";
+  return sourceText.startsWith(prefix)
+    ? parseTopNBottomRemainder(sourceText.slice(prefix.length))
+    : undefined;
 }
 
 function createSearchEffect({
@@ -318,4 +382,8 @@ function parseCardColor(sourceText: string): CardColor | undefined {
     default:
       return undefined;
   }
+}
+
+function escapeRegExp(sourceText: string): string {
+  return sourceText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-002F.md",
-      "storyId": "SUP-002F",
-      "storyPath": "stories/approved/SUP-002F-conditional-base-power-set-card-components.yaml",
-      "storySha256": "8dbb3e634eb542f7127537877839114848cc1fa661fa2e15a882dd5188a4d7c9"
+      "packetPath": "agent-packets/SUP-002G.md",
+      "storyId": "SUP-002G",
+      "storyPath": "stories/approved/SUP-002G-top-n-filtered-search-card-components.yaml",
+      "storySha256": "dbcfdc4512ba99129eeed42f0e5fd244a28e07809b3faaa022c9b74d9fa1c390"
     }
   ],
   "version": 1

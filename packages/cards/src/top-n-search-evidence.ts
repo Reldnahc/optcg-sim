@@ -12,6 +12,40 @@ export const topNSearchParserRuleIds = [
   returnDonTopNAnyCardSearchTrashParserRuleId,
 ] as const;
 
+export const topNFilteredSearchParserCertificationIds = [
+  "wrapper:on-play",
+  "search-window:top-n-self-deck",
+  "visibility:selected-card:reveal",
+  "cardinality:up-to-one",
+  "filter:optional-color-type-name-exclusion",
+  "destination:add-selected-to-hand",
+  "remainder:bottom-owner-choice",
+  "composition:filtered-top-n-search",
+] as const;
+
+export const topNAnyCardSearchParserCertificationIds = [
+  "wrapper:on-play",
+  "search-window:top-n-self-deck",
+  "visibility:selected-card:chooser-only",
+  "cardinality:up-to-one",
+  "filter:any-card-empty",
+  "destination:add-selected-to-hand",
+  "remainder:bottom-owner-choice",
+  "composition:any-card-top-n-search",
+] as const;
+
+export const returnDonTopNAnyCardSearchTrashParserCertificationIds = [
+  ...topNAnyCardSearchParserCertificationIds,
+  "cost:return-don:self:count-exact",
+  "effect:trash-from-hand:self:count-positive",
+  "composition:return-don-any-card-search-trash-hand",
+] as const;
+
+export const topNSearchParserCertificationIds = [
+  ...topNFilteredSearchParserCertificationIds,
+  ...returnDonTopNAnyCardSearchTrashParserCertificationIds,
+] as const;
+
 const topNSearchBaseComponents = [
   "wrapper",
   "body-action",
@@ -37,6 +71,7 @@ export const topNSearchComponentEvidenceInventoryEntries = [
     components: topNSearchBaseComponents,
     gates: topNSearchBaseGates,
     parserRuleId: topNFilteredSearchParserRuleId,
+    parserCertificationIds: topNFilteredSearchParserCertificationIds,
     runtimeCapabilityIds: [
       "category:auto",
       "trigger:onPlay",
@@ -53,6 +88,7 @@ export const topNSearchComponentEvidenceInventoryEntries = [
     components: topNSearchBaseComponents,
     gates: topNSearchBaseGates,
     parserRuleId: topNAnyCardSearchParserRuleId,
+    parserCertificationIds: topNAnyCardSearchParserCertificationIds,
     runtimeCapabilityIds: [
       "category:auto",
       "trigger:onPlay",
@@ -84,6 +120,8 @@ export const topNSearchComponentEvidenceInventoryEntries = [
       schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
     },
     parserRuleId: returnDonTopNAnyCardSearchTrashParserRuleId,
+    parserCertificationIds:
+      returnDonTopNAnyCardSearchTrashParserCertificationIds,
     runtimeCapabilityIds: [
       "category:auto",
       "trigger:onPlay",
