@@ -117,6 +117,8 @@ scope:
   - "cover top-N deck search through reusable primitives: look at N from top of deck, select up to 1 eligible card, move the selected card to hand, then place the rest on the bottom of deck in owner-choice order"
   - cover both explicit public-reveal filtered search and non-reveal unfiltered any-card search; public reveal must be driven by printed `reveal` text, and non-reveal add-to-hand search must not leak selected or unselected card identity to the opponent beyond public zone/count changes
   - cover composed card filters including color, type, and explicit name exclusion such as `other than [Name]`
+  - cards-layer parser work must name the primitive inventory first, then compose primitives; varying numbers or names inside one full-sentence regex is not acceptable evidence of scalability
+  - cards-layer filter parsing must prove valid subsets of larger supported phrases, so if color plus type plus name exclusion is supported, then type-only, color-plus-type, and type-plus-name-exclusion variants must be tested or explicitly marked out of scope before implementation
   - cover full-effect composition for `[On Play] DON!! −N:` plus top-N non-reveal any-card search plus trailing `trash N card(s) from your hand` through reusable primitives, not an exact full-line branch
   - keep the already-supported conditional opponent power modifier from SUP-001F as regression evidence only, not new implementation scope
   - promote complete generated support only after parser certification, schema validation, runtime capability evidence, support metadata, review state, tested state, source integrity, and behavior hash gates pass
@@ -136,6 +138,9 @@ acceptance_criteria:
   - contract/schema children land before engine or cards children consume optional hand-trash cost, base-power setter, or search request shapes
   - engine children prove reusable runtime capability before cards generated-support promotion cites those capabilities
   - cards children recognize representative lines through reusable parser components and capability gates without exact full-line or card-specific branches
+  - cards children must prove primitive composition by positive and negative matrix tests, not only by varying literals inside one representative sentence
+  - cards generated-support tests that claim playable/generated-support promotion must use the real Effect DSL schema validator; fake validators such as `() => ({ valid: true })` may be used only for parser-only tests and do not count as generated-support acceptance evidence
+  - each supported larger phrase implies its valid smaller phrase variants unless the story explicitly excludes them; a child story fails if a larger composed phrase parses but an in-scope subset fails because the parser glued primitives together
   - the full non-reveal search composition with DON-minus cost and trailing hand-trash is proven by reusable primitive composition and by varied-value tests; if composition fails, the blocker is recorded as a generic composition gap rather than worked around with an exact text branch
   - a line equivalent to `[When Attacking] If you have 10 or more cards in your trash, give up to 1 of your opponent's Characters -2000 power during this turn.` remains covered as a SUP-001F regression and is not reimplemented here
   - complete generated support remains unsupported unless the full generated-support chain passes, including parser certification, schema validation, runtime capability evidence, engine proof/test evidence, metadata, review, tested state, source integrity, and behavior hash evidence
