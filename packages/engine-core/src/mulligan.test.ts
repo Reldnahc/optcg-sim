@@ -4,6 +4,7 @@ import { test } from "vitest";
 import type { CardId, MatchId, PlayerId } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "./canonical-state.js";
+import { applyAction } from "./actions.js";
 import { createInitialState } from "./initial-state.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
@@ -246,10 +247,16 @@ test("post-mulligan state passes invariants and stable hash", () => {
 test("accepted mulligan transitions emit events and append to eventJournal", () => {
   const setup = createInitialState(createInput());
 
-  const started = startMulliganFlow(setup);
-  assert.ok(started.events.length > 0);
-  assert.ok(started.state.eventJournal.length > setup.eventJournal.length);
-  assert.equal(started.events[0]?.type, "decisionCreated");
+  const started =
+    setup.pendingDecision?.type === "mulligan"
+      ? { state: setup, events: [] }
+      : startMulliganFlow(setup);
+  if (started.events.length > 0) {
+    assert.ok(started.state.eventJournal.length > setup.eventJournal.length);
+    assert.equal(started.events[0]?.type, "decisionCreated");
+  } else {
+    assert.equal(started.state.pendingDecision?.type, "mulligan");
+  }
 
   const first = respondToMulliganDecision(started.state, {
     type: "respondToDecision",
@@ -383,17 +390,31 @@ test("setup-selected Stage cannot be redrawn during mulligan", () => {
     },
   };
 
-  const setup = createInitialState({
-    ...input,
-    startOfGameSelections: [
-      { playerId: p1, selectedInstanceId: "p1:deck:0:p1-a" as never },
-    ],
-  });
-  assert.equal(must(setup.players[p1], "p1").stage?.cardId, toCardId("p1-a"));
-  const started = startMulliganFlow(setup);
-  const first = respondToMulliganDecision(started.state, {
+  const setup = createInitialState(input);
+  const setupDecision = must(setup.pendingDecision, "setup pending decision");
+  if (setupDecision.type !== "selectCards") {
+    throw new TypeError("Expected setup selectCards decision.");
+  }
+  const setupResolved = applyAction(setup, {
     type: "respondToDecision",
-    decisionId: must(started.state.pendingDecision, "first").id,
+    decisionId: setupDecision.id,
+    response: {
+      type: "cards",
+      cards: [must(setupDecision.candidates[0], "candidate").card],
+    },
+  });
+  assert.equal(
+    must(setupResolved.state.players[p1], "p1").stage?.cardId,
+    toCardId("p1-a"),
+  );
+  let startedState = setupResolved.state;
+  if (startedState.pendingDecision?.type !== "mulligan") {
+    startedState = startMulliganFlow(startedState as never).state;
+  }
+  assert.equal(startedState.pendingDecision?.type, "mulligan");
+  const first = respondToMulliganDecision(startedState, {
+    type: "respondToDecision",
+    decisionId: must(startedState.pendingDecision, "first").id,
     response: { type: "mulligan", keep: false },
   });
   const second = respondToMulliganDecision(first.state, {

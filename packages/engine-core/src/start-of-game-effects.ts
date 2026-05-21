@@ -1,7 +1,8 @@
 import type {
+  Action,
   CardId,
-  CardInstance,
   CardRef,
+  DecisionId,
   Effect,
   EffectBlock,
   EngineError,
@@ -10,56 +11,59 @@ import type {
   MatchCardManifest,
   PlayerId,
   PlayerState,
-  RngState,
+  SearchRequest,
 } from "@optcg/types";
 
-import { appendEvent, toStateSeq } from "./action-results.js";
+import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
 import {
   cardMatchesSearchFilter,
   reindexZoneCards,
   toCardRef,
 } from "./action-state.js";
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
+import type { PreMulliganSetupGameState } from "./initial-state.js";
 
-type SearchEffect = Extract<Effect, { type: "search" }>;
-
-export interface StartOfGameSelectionInput {
-  playerId: PlayerId;
-  selectedInstanceId?: CardInstance["instanceId"];
-}
-
-export interface ApplyStartOfGameEffectsInput {
-  players: Record<PlayerId, PlayerState>;
-  manifest: MatchCardManifest;
-  selections?: readonly StartOfGameSelectionInput[];
-  rng: RngState;
-}
-
-type StartOfGameEffectPlan = {
+export type StartOfGameEffectPlan = {
   sourceCardId: CardId;
   sourcePlayerId: PlayerId;
-  search: SearchEffect["request"];
+  search: SearchRequest;
   triggerBlockId: EffectBlock["id"];
 };
 
-const stageSearchPlan = (effect: Effect): SearchEffect["request"] | null => {
+const setupDecisionSetPrefix = "set:setup-start-of-game:";
+
+const invalidDecision = (reason: string): readonly [EngineError] => [
+  { type: "invalidDecisionResponse", reason },
+];
+
+const setupRuntimeError = (
+  reason: string,
+): readonly [EngineError, ...EngineError[]] => [
+  {
+    type: "effectRuntimeError",
+    effectId: "setup:start-of-game",
+    details: { reason },
+  },
+];
+
+const stageSearchPlan = (effect: Effect): SearchRequest | null => {
   if (effect.type !== "sequence") {
     return null;
   }
-  const segments = effect.effects;
-  const search = segments.find((segment) => segment.effect.type === "search");
-  const play = segments.find(
-    (segment) => segment.effect.type === "playSelected",
-  );
+  if (effect.effects.length !== 2) {
+    return null;
+  }
+  const first = effect.effects[0];
+  const second = effect.effects[1];
   if (
-    search === undefined ||
-    play === undefined ||
-    search.effect.type !== "search" ||
-    play.effect.type !== "playSelected"
+    first === undefined ||
+    second === undefined ||
+    first.effect.type !== "search" ||
+    second.effect.type !== "playSelected"
   ) {
     return null;
   }
-  const request = search.effect.request;
+  const request = first.effect.request;
   if (
     request.zone !== "deck" ||
     request.player !== "self" ||
@@ -81,33 +85,59 @@ const stageSearchPlan = (effect: Effect): SearchEffect["request"] | null => {
   return request;
 };
 
-const collectStartOfGamePlans = (
+const findStageCandidates = (
+  player: PlayerState,
+  manifest: MatchCardManifest,
+  search: SearchRequest,
+): CardRef[] =>
+  player.deck
+    .filter((card) => {
+      const resolved = manifest.cards[card.cardId];
+      return (
+        resolved !== undefined &&
+        cardMatchesSearchFilter(resolved, search.filter)
+      );
+    })
+    .map((card) => toCardRef(card, player.playerId));
+
+const createSetupDecisionId = (playerId: PlayerId, index: number): DecisionId =>
+  toDecisionId(`decision:setup:start-of-game:${playerId}:${String(index)}`);
+
+export const collectStartOfGamePlans = (
   players: Record<PlayerId, PlayerState>,
   manifest: MatchCardManifest,
-): StartOfGameEffectPlan[] => {
+  playerOrder: readonly [PlayerId, PlayerId],
+): {
+  plans: StartOfGameEffectPlan[];
+  errors?: readonly [EngineError, ...EngineError[]];
+} => {
   const plans: StartOfGameEffectPlan[] = [];
-  for (const [playerId, player] of Object.entries(players) as [
-    PlayerId,
-    PlayerState,
-  ][]) {
+  for (const playerId of playerOrder) {
+    const player = players[playerId];
+    if (player === undefined) {
+      continue;
+    }
     const resolved = manifest.cards[player.leader.cardId];
     if (resolved === undefined) {
       continue;
     }
-    const definitionLookup = resolveImplementedDslEffectDefinition(
-      resolved,
-      manifest,
-    );
-    if (!definitionLookup.ok) {
+    if (resolved.support.status !== "implemented-dsl") {
       continue;
     }
-    for (const block of definitionLookup.definition.effects) {
+    const lookup = resolveImplementedDslEffectDefinition(resolved, manifest);
+    if (!lookup.ok) {
+      continue;
+    }
+    for (const block of lookup.definition.effects) {
       if (block.trigger.type !== "startOfGame") {
         continue;
       }
       const request = stageSearchPlan(block.effect);
       if (request === null) {
-        continue;
+        return {
+          plans: [],
+          errors: setupRuntimeError("unsupported start-of-game effect shape"),
+        };
       }
       plans.push({
         sourceCardId: player.leader.cardId,
@@ -117,260 +147,475 @@ const collectStartOfGamePlans = (
       });
     }
   }
-  return plans;
+  return { plans };
 };
 
-const invalidDecision = (reason: string): readonly [EngineError] => [
-  { type: "invalidDecisionResponse", reason },
-];
-
-const stageCandidateRefs = (
-  player: PlayerState,
-  manifest: MatchCardManifest,
-  search: SearchEffect["request"],
-): CardRef[] =>
-  player.deck
-    .filter((card) =>
-      cardMatchesSearchFilter(manifest.cards[card.cardId], search.filter),
-    )
-    .map((card) => toCardRef(card, player.playerId));
-
-export const applyStartOfGameEffects = (
-  input: ApplyStartOfGameEffectsInput,
-): {
-  events: EngineEvent[];
-  errors?: readonly [EngineError, ...EngineError[]];
-  players: Record<PlayerId, PlayerState>;
-  rng: RngState;
-} => {
-  const plans = collectStartOfGamePlans(input.players, input.manifest).sort(
-    (a, b) => a.sourcePlayerId.localeCompare(b.sourcePlayerId),
-  );
-  const plannedPlayers = new Set(plans.map((plan) => plan.sourcePlayerId));
-  const seenSelectionPlayers = new Set<PlayerId>();
-  for (const selection of input.selections ?? []) {
-    if (!plannedPlayers.has(selection.playerId)) {
-      return {
-        players: input.players,
-        rng: input.rng,
-        events: [],
-        errors: invalidDecision("start-of-game selection player is invalid"),
-      };
+const setupDecisionForPlan = (
+  state: PreMulliganSetupGameState,
+  plans: readonly StartOfGameEffectPlan[],
+  index: number,
+): NonNullable<GameState["pendingDecision"]> | undefined => {
+  for (let planIndex = index; planIndex < plans.length; planIndex += 1) {
+    const plan = plans[planIndex];
+    if (plan === undefined) {
+      break;
     }
-    if (seenSelectionPlayers.has(selection.playerId)) {
-      return {
-        players: input.players,
-        rng: input.rng,
-        events: [],
-        errors: invalidDecision("start-of-game duplicate selection for player"),
-      };
-    }
-    seenSelectionPlayers.add(selection.playerId);
-  }
-  const byPlayer = new Map(
-    (input.selections ?? []).map((selection) => [
-      selection.playerId,
-      selection.selectedInstanceId,
-    ]),
-  );
-  const nextPlayers: Record<PlayerId, PlayerState> = { ...input.players };
-  const stubState = {
-    seq: 0,
-    eventJournal: [],
-  } as unknown as GameState;
-  const events: EngineEvent[] = [];
-  for (const plan of plans) {
-    const player = nextPlayers[plan.sourcePlayerId];
+    const player = state.players[plan.sourcePlayerId];
     if (player === undefined) {
-      return {
-        players: input.players,
-        rng: input.rng,
-        events: [],
-        errors: invalidDecision("start-of-game player missing"),
-      };
+      return undefined;
     }
-    const candidates = stageCandidateRefs(player, input.manifest, plan.search);
-    const selectedId = byPlayer.get(plan.sourcePlayerId);
-    if (selectedId === undefined) {
-      appendEvent(
-        stubState,
-        events,
-        "decisionCreated",
-        {
-          decisionType: "selectCards",
-          playerId: plan.sourcePlayerId,
-          effectId: plan.triggerBlockId,
-        },
-        { type: "private", playerId: plan.sourcePlayerId },
-      );
-      appendEvent(
-        stubState,
-        events,
-        "decisionResolved",
-        {
-          decisionType: "selectCards",
-          selectedCount: 0,
-          playerId: plan.sourcePlayerId,
-          effectId: plan.triggerBlockId,
-        },
-        { type: "private", playerId: plan.sourcePlayerId },
-      );
+    const candidates = findStageCandidates(
+      player,
+      state.cardManifest,
+      plan.search,
+    );
+    if (candidates.length === 0) {
       continue;
     }
-    const selected = candidates.find(
-      (candidate) => candidate.instanceId === selectedId,
-    );
-    if (selected === undefined) {
-      return {
-        players: input.players,
-        rng: input.rng,
-        events: [],
-        errors: invalidDecision("start-of-game selected card is invalid"),
-      };
+    if (state.setupContinuation !== undefined) {
+      state.setupContinuation.nextStartOfGamePlanIndex = planIndex;
     }
-    const deckIndex = player.deck.findIndex(
-      (card) => card.instanceId === selected.instanceId,
-    );
-    if (deckIndex < 0) {
-      return {
-        players: input.players,
-        rng: input.rng,
-        events: [],
-        errors: invalidDecision("start-of-game selected card became stale"),
-      };
-    }
-    const selectedCard = player.deck[deckIndex];
-    if (selectedCard === undefined) {
-      return {
-        players: input.players,
-        rng: input.rng,
-        events: [],
-        errors: invalidDecision("start-of-game selected card missing"),
-      };
-    }
-    appendEvent(
-      stubState,
-      events,
-      "decisionCreated",
-      {
-        decisionType: "selectCards",
-        playerId: plan.sourcePlayerId,
-        effectId: plan.triggerBlockId,
+    return {
+      id: createSetupDecisionId(plan.sourcePlayerId, planIndex),
+      type: "selectCards",
+      playerId: plan.sourcePlayerId,
+      prompt: "Select up to 1 Stage card to play during setup.",
+      causedBy: { type: "ruleProcess", name: "setup:startOfGame" },
+      visibility: { type: "private", playerId: plan.sourcePlayerId },
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "self",
+        zone: "deck",
+        min: 0,
+        max: 1,
+        allowFewerIfUnavailable: true,
+        visibility: "privateToChooser",
+        filter: plan.search.filter,
+        set: `${setupDecisionSetPrefix}${String(planIndex)}` as never,
       },
-      { type: "private", playerId: plan.sourcePlayerId },
-    );
-
-    let nextPlayer: PlayerState = {
-      ...player,
-      trash: [...player.trash],
+      candidates: candidates.map((card) => ({
+        card,
+        visibility: { type: "private", playerId: plan.sourcePlayerId },
+      })),
     };
-    if (player.stage !== undefined) {
-      if (player.stage.attachedDon.length > 0) {
-        return {
-          players: input.players,
-          rng: input.rng,
-          events: [],
-          errors: invalidDecision("start-of-game stage replacement is unsafe"),
-        };
-      }
-      const trashed = {
-        ...player.stage,
-        zone: {
-          zone: "trash" as const,
-          playerId: player.playerId,
-          slot: "trash" as const,
-          index: 0,
-        },
+  }
+  if (state.setupContinuation !== undefined) {
+    state.setupContinuation.nextStartOfGamePlanIndex = plans.length;
+  }
+  return undefined;
+};
+
+export const createStartOfGameSetupDecision = (
+  state: PreMulliganSetupGameState,
+  plans: readonly StartOfGameEffectPlan[],
+  index: number,
+): {
+  pendingDecision?: NonNullable<GameState["pendingDecision"]>;
+  errors?: readonly [EngineError, ...EngineError[]];
+} => {
+  if (!Number.isInteger(index) || index < 0) {
+    return { errors: setupRuntimeError("setup plan index is invalid") };
+  }
+  const pendingDecision = setupDecisionForPlan(state, plans, index);
+  return pendingDecision === undefined ? {} : { pendingDecision };
+};
+
+const applyStageSelection = (
+  state: PreMulliganSetupGameState,
+  player: PlayerState,
+  selected: CardRef | undefined,
+  events: EngineEvent[],
+):
+  | { player: PlayerState }
+  | { error: readonly [EngineError, ...EngineError[]] } => {
+  if (selected === undefined) {
+    return { player };
+  }
+  const deckIndex = player.deck.findIndex(
+    (card) => card.instanceId === selected.instanceId,
+  );
+  if (deckIndex < 0) {
+    return {
+      error: invalidDecision("start-of-game selected card became stale"),
+    };
+  }
+  const selectedCard = player.deck[deckIndex];
+  if (selectedCard === undefined) {
+    return { error: invalidDecision("start-of-game selected card missing") };
+  }
+  let nextPlayer: PlayerState = {
+    ...player,
+    trash: [...player.trash],
+  };
+  if (player.stage !== undefined) {
+    if (player.stage.attachedDon.length > 0) {
+      return {
+        error: invalidDecision("start-of-game stage replacement is unsafe"),
       };
-      nextPlayer = {
-        ...nextPlayer,
-        trash: reindexZoneCards(
-          [trashed, ...nextPlayer.trash],
-          "trash",
-          player.playerId,
-          "trash",
-        ),
-      };
-      appendEvent(
-        stubState,
-        events,
-        "cardTrashed",
-        {
-          playerId: player.playerId,
-          instanceId: player.stage.instanceId,
-          cardId: player.stage.cardId,
-          reason: "ruleProcessStageReplacement",
-        },
-        { type: "public" },
-      );
     }
-    const nextDeck = reindexZoneCards(
-      nextPlayer.deck.filter((_, index) => index !== deckIndex),
-      "deck",
-      player.playerId,
-      "deck",
-    );
-    const nextStage: CardInstance = {
-      ...selectedCard,
-      attachedDon: [],
-      state: "active",
+    const movedStage = {
+      ...player.stage,
       zone: {
-        zone: "stageArea" as const,
+        zone: "trash" as const,
         playerId: player.playerId,
-        slot: "stage" as const,
+        slot: "trash" as const,
         index: 0,
       },
     };
-    nextPlayers[player.playerId] = {
-      ...nextPlayer,
-      deck: nextDeck,
-      stage: nextStage,
-    };
     appendEvent(
-      stubState,
-      events,
-      "decisionResolved",
-      {
-        decisionType: "selectCards",
-        selectedCount: 1,
-        playerId: player.playerId,
-        effectId: plan.triggerBlockId,
-      },
-      { type: "private", playerId: player.playerId },
-    );
-    appendEvent(
-      stubState,
+      state,
       events,
       "cardMoved",
       {
-        instanceId: selectedCard.instanceId,
-        cardId: selectedCard.cardId,
-        from: selectedCard.zone,
-        to: nextStage.zone,
-        reason: "startOfGamePlaySelectedStage",
+        instanceId: player.stage.instanceId,
+        cardId: player.stage.cardId,
+        from: player.stage.zone,
+        to: movedStage.zone,
+        reason: "ruleProcessStageReplacement",
       },
       { type: "public" },
     );
     appendEvent(
-      stubState,
+      state,
       events,
-      "cardPlayed",
+      "cardTrashed",
       {
         playerId: player.playerId,
-        instanceId: selectedCard.instanceId,
-        cardId: selectedCard.cardId,
-        category: "stage",
+        instanceId: player.stage.instanceId,
+        cardId: player.stage.cardId,
+        reason: "ruleProcessStageReplacement",
       },
       { type: "public" },
     );
+    nextPlayer = {
+      ...nextPlayer,
+      trash: reindexZoneCards(
+        [movedStage, ...nextPlayer.trash],
+        "trash",
+        player.playerId,
+        "trash",
+      ),
+    };
+  }
+
+  const nextDeck = reindexZoneCards(
+    nextPlayer.deck.filter((_, index) => index !== deckIndex),
+    "deck",
+    player.playerId,
+    "deck",
+  );
+  const nextStage = {
+    ...selectedCard,
+    attachedDon: [],
+    state: "active" as const,
+    zone: {
+      zone: "stageArea" as const,
+      playerId: player.playerId,
+      slot: "stage" as const,
+      index: 0,
+    },
+  };
+  appendEvent(
+    state,
+    events,
+    "cardMoved",
+    {
+      instanceId: selectedCard.instanceId,
+      cardId: selectedCard.cardId,
+      from: selectedCard.zone,
+      to: nextStage.zone,
+      reason: "startOfGamePlaySelectedStage",
+    },
+    { type: "public" },
+  );
+  appendEvent(
+    state,
+    events,
+    "cardPlayed",
+    {
+      playerId: player.playerId,
+      instanceId: selectedCard.instanceId,
+      cardId: selectedCard.cardId,
+      category: "stage",
+    },
+    { type: "public" },
+  );
+
+  return {
+    player: {
+      ...nextPlayer,
+      deck: nextDeck,
+      stage: nextStage,
+    },
+  };
+};
+
+export const isStartOfGameSetupDecision = (
+  decision: NonNullable<GameState["pendingDecision"]>,
+): decision is Extract<
+  NonNullable<GameState["pendingDecision"]>,
+  { type: "selectCards" }
+> =>
+  decision.type === "selectCards" &&
+  decision.request.set !== undefined &&
+  String(decision.request.set).startsWith(setupDecisionSetPrefix);
+
+export const applyStartOfGameSetupDecisionResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): null | {
+  events: EngineEvent[];
+  errors?: readonly [EngineError, ...EngineError[]];
+  state: PreMulliganSetupGameState;
+  shouldFinalizeSetup: boolean;
+} => {
+  const pending = state.pendingDecision;
+  if (pending === undefined || !isStartOfGameSetupDecision(pending)) {
+    return null;
+  }
+  const setupState = state as PreMulliganSetupGameState;
+  const continuation = setupState.setupContinuation;
+  if (continuation === undefined) {
+    return {
+      state: setupState,
+      events: [],
+      errors: invalidDecision("setup continuation missing"),
+      shouldFinalizeSetup: false,
+    };
+  }
+  if (
+    !Number.isInteger(continuation.nextStartOfGamePlanIndex) ||
+    continuation.nextStartOfGamePlanIndex < 0
+  ) {
+    return {
+      state: setupState,
+      events: [],
+      errors: invalidDecision("setup continuation index is invalid"),
+      shouldFinalizeSetup: false,
+    };
+  }
+  const plansResult = collectStartOfGamePlans(
+    setupState.players,
+    setupState.cardManifest,
+    continuation.playerOrder,
+  );
+  if (plansResult.errors !== undefined) {
+    return {
+      state: setupState,
+      events: [],
+      errors: plansResult.errors,
+      shouldFinalizeSetup: false,
+    };
+  }
+  const plans = plansResult.plans;
+  const currentPlan = plans[continuation.nextStartOfGamePlanIndex];
+  if (
+    currentPlan === undefined ||
+    currentPlan.sourcePlayerId !== pending.playerId
+  ) {
+    return {
+      state: setupState,
+      events: [],
+      errors: invalidDecision("setup decision is stale"),
+      shouldFinalizeSetup: false,
+    };
+  }
+  if (
+    pending.id !==
+    createSetupDecisionId(
+      pending.playerId,
+      continuation.nextStartOfGamePlanIndex,
+    )
+  ) {
+    return {
+      state: setupState,
+      events: [],
+      errors: invalidDecision("setup decision id does not match continuation"),
+      shouldFinalizeSetup: false,
+    };
+  }
+  if (action.response.type !== "cards") {
+    return {
+      state: setupState,
+      events: [],
+      errors: invalidDecision(
+        "Response type must be cards for setup selection",
+      ),
+      shouldFinalizeSetup: false,
+    };
+  }
+  const responseCards = action.response.cards;
+  if (!Array.isArray(responseCards) || responseCards.length > 1) {
+    return {
+      state: setupState,
+      events: [],
+      errors: invalidDecision("setup selection must choose up to one card"),
+      shouldFinalizeSetup: false,
+    };
+  }
+  const selected = responseCards[0];
+  const candidate =
+    selected === undefined
+      ? undefined
+      : pending.candidates.find(
+          (entry: { card: CardRef }) =>
+            entry.card.instanceId === selected.instanceId,
+        )?.card;
+  if (selected !== undefined && candidate === undefined) {
+    return {
+      state: setupState,
+      events: [],
+      errors: invalidDecision("start-of-game selected card is invalid"),
+      shouldFinalizeSetup: false,
+    };
+  }
+
+  const player = setupState.players[pending.playerId];
+  if (player === undefined) {
+    return {
+      state: setupState,
+      events: [],
+      errors: invalidDecision("setup decision player missing"),
+      shouldFinalizeSetup: false,
+    };
+  }
+
+  const events: EngineEvent[] = [];
+  appendEvent(
+    setupState,
+    events,
+    "decisionResolved",
+    {
+      decisionId: pending.id,
+      decisionType: pending.type,
+      playerId: pending.playerId,
+      responseType: "cards",
+      selectedCount: selected === undefined ? 0 : 1,
+    },
+    pending.visibility,
+  );
+  const selectedResult = applyStageSelection(
+    setupState,
+    player,
+    candidate,
+    events,
+  );
+  if ("error" in selectedResult) {
+    return {
+      state: setupState,
+      events: [],
+      errors: selectedResult.error,
+      shouldFinalizeSetup: false,
+    };
+  }
+
+  const nextState: PreMulliganSetupGameState = {
+    ...setupState,
+    seq: toStateSeq(setupState.seq + 1),
+    actionSeq: setupState.actionSeq + 1,
+    players: {
+      ...setupState.players,
+      [pending.playerId]: selectedResult.player,
+    },
+    eventJournal: [...setupState.eventJournal, ...events],
+  };
+  delete nextState.pendingDecision;
+  nextState.setupContinuation = {
+    ...continuation,
+    nextStartOfGamePlanIndex: continuation.nextStartOfGamePlanIndex + 1,
+  };
+
+  const nextPlansResult = collectStartOfGamePlans(
+    nextState.players,
+    nextState.cardManifest,
+    continuation.playerOrder,
+  );
+  if (nextPlansResult.errors !== undefined) {
+    return {
+      state: nextState,
+      events,
+      errors: nextPlansResult.errors,
+      shouldFinalizeSetup: false,
+    };
+  }
+
+  const nextDecisionResult = createStartOfGameSetupDecision(
+    nextState,
+    nextPlansResult.plans,
+    nextState.setupContinuation.nextStartOfGamePlanIndex,
+  );
+  if (nextDecisionResult.errors !== undefined) {
+    return {
+      state: nextState,
+      events,
+      errors: nextDecisionResult.errors,
+      shouldFinalizeSetup: false,
+    };
+  }
+  if (nextDecisionResult.pendingDecision !== undefined) {
+    nextState.pendingDecision = nextDecisionResult.pendingDecision;
+    appendEvent(
+      nextState,
+      events,
+      "decisionCreated",
+      {
+        decisionId: nextDecisionResult.pendingDecision.id,
+        decisionType: nextDecisionResult.pendingDecision.type,
+        playerId: nextDecisionResult.pendingDecision.playerId,
+      },
+      nextDecisionResult.pendingDecision.visibility,
+    );
+    nextState.eventJournal = [
+      ...nextState.eventJournal,
+      events[events.length - 1] as EngineEvent,
+    ];
+    return {
+      state: nextState,
+      events,
+      shouldFinalizeSetup: false,
+    };
+  }
+
+  return {
+    state: nextState,
+    events,
+    shouldFinalizeSetup: true,
+  };
+};
+
+export const applyStartOfGameSelection = (params: {
+  events: EngineEvent[];
+  plan: StartOfGameEffectPlan;
+  selectedCard: CardRef | undefined;
+  state: GameState;
+}): {
+  state: GameState;
+  errors?: readonly [EngineError, ...EngineError[]];
+} => {
+  const player = params.state.players[params.plan.sourcePlayerId];
+  if (player === undefined) {
+    return {
+      state: params.state,
+      errors: invalidDecision("setup decision player missing"),
+    };
+  }
+  const selectedResult = applyStageSelection(
+    params.state as PreMulliganSetupGameState,
+    player,
+    params.selectedCard,
+    params.events,
+  );
+  if ("error" in selectedResult) {
+    return { state: params.state, errors: selectedResult.error };
   }
   return {
-    players: nextPlayers,
-    rng: input.rng,
-    events: events.map((event, index) => ({
-      ...event,
-      seq: index + 1,
-      createdAtStateSeq: toStateSeq(0),
-    })),
+    state: {
+      ...params.state,
+      players: {
+        ...params.state.players,
+        [params.plan.sourcePlayerId]: selectedResult.player,
+      },
+    },
   };
 };

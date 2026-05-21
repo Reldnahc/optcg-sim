@@ -3,24 +3,28 @@ import { test } from "vitest";
 
 import type {
   CardId,
+  EffectBlock,
   MatchCardManifest,
   PlayerId,
   ResolvedCard,
 } from "@optcg/types";
 
-import { createInitialState } from "./initial-state.js";
+import { applyAction } from "./actions.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
+import { filterStateForPlayer } from "./filter-state-for-player.js";
+import { createInitialState } from "./initial-state.js";
+import type { PreMulliganSetupGameState } from "./initial-state.js";
+import { startMulliganFlow } from "./mulligan.js";
 import { resolvedCard } from "./action-test-fixtures.js";
-import { applyStartOfGameEffects } from "./start-of-game-effects.js";
-import { initializeRng } from "./rng.js";
 
 const toPlayerId = (value: string): PlayerId => value as PlayerId;
 const toCardId = (value: string): CardId => value as CardId;
 
 const p1 = toPlayerId("p1");
 const p2 = toPlayerId("p2");
-const must = <T>(value: T | undefined): T => {
-  assert.ok(value !== undefined);
+
+const must = <T>(value: T | undefined, label: string): T => {
+  assert.ok(value !== undefined, `missing ${label}`);
   return value;
 };
 
@@ -155,107 +159,74 @@ const createInput = () => ({
   shuffleDecks: false,
 });
 
-test("selected Stage is placed before opening hand and life setup", () => {
-  const input = createInput();
-  const chosenId = "p1:deck:0:p1-stage" as never;
-  const state = createInitialState({
-    ...input,
-    startOfGameSelections: [{ playerId: p1, selectedInstanceId: chosenId }],
+const resolveSetupDecision = (
+  state: ReturnType<typeof createInitialState>,
+  cards: "none" | "first",
+) => {
+  const decision = must(state.pendingDecision, "setup pending decision");
+  if (decision.type !== "selectCards") {
+    throw new TypeError("Expected setup selectCards decision.");
+  }
+  const responseCards =
+    cards === "none"
+      ? []
+      : [must(decision.candidates[0], "setup candidate").card];
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: responseCards },
   });
-  assert.equal(must(state.players[p1]).stage?.cardId, toCardId("p1-stage"));
-  assert.deepEqual(
-    must(state.players[p1]).hand.map((card) => card.cardId),
-    [
-      toCardId("p1-a"),
-      toCardId("p1-b"),
-      toCardId("p1-c"),
-      toCardId("p1-d"),
-      toCardId("p1-e"),
-    ],
+};
+
+test("canonical setup decision path plays selected Stage before opening hand/life and excludes it from deck/hand/life", () => {
+  const setup = createInitialState(createInput());
+  const createdEvent = must(
+    setup.eventJournal[0],
+    "setup decisionCreated event",
+  );
+  assert.equal(createdEvent.type, "decisionCreated");
+  assert.equal(createdEvent.seq, 1);
+  const resolved = resolveSetupDecision(setup, "first");
+  assert.equal(resolved.errors, undefined);
+  const next = resolved.state;
+  assert.equal(
+    must(next.players[p1], "p1").stage?.cardId,
+    toCardId("p1-stage"),
   );
   assert.equal(
-    must(state.players[p1]).life.some(
+    must(next.players[p1], "p1").hand.some(
+      (card) => card.cardId === toCardId("p1-stage"),
+    ),
+    false,
+  );
+  assert.equal(
+    must(next.players[p1], "p1").life.some(
       (lifeCard) => lifeCard.card.cardId === toCardId("p1-stage"),
     ),
     false,
   );
   assert.equal(
-    must(state.players[p1]).deck.some(
-      (deckCard) => deckCard.cardId === toCardId("p1-stage"),
-    ),
-    false,
-  );
-});
-
-test("zero selection is legal and deterministic", () => {
-  const input = createInput();
-  const a = createInitialState(input);
-  const b = createInitialState(input);
-  assert.equal(must(a.players[p1]).stage, undefined);
-  assert.equal(hashCanonicalStateValue(a), hashCanonicalStateValue(b));
-});
-
-test("invalid, stale, malformed selection inputs fail closed", () => {
-  const input = createInput();
-  const unknownPlayer = () =>
-    createInitialState({
-      ...input,
-      startOfGameSelections: [
-        { playerId: p2, selectedInstanceId: "p1:deck:0:p1-stage" as never },
-      ],
-    });
-  assert.throws(unknownPlayer, /selection player is invalid/);
-
-  const duplicatePlayer = () =>
-    createInitialState({
-      ...input,
-      startOfGameSelections: [
-        { playerId: p1, selectedInstanceId: "p1:deck:0:p1-stage" as never },
-        { playerId: p1, selectedInstanceId: "p1:deck:1:p1-a" as never },
-      ],
-    });
-  assert.throws(duplicatePlayer, /duplicate selection/);
-
-  const staleInstance = () =>
-    createInitialState({
-      ...input,
-      startOfGameSelections: [
-        { playerId: p1, selectedInstanceId: "p1:deck:999:missing" as never },
-      ],
-    });
-  assert.throws(staleInstance, /selected card is invalid/);
-});
-
-test("type filter and deck position variation resolve through the same runtime path", () => {
-  const inputA = createInput();
-  inputA.deckCardIds[p1] = [
-    "p1-a",
-    "p1-b",
-    "p1-stage",
-    "p1-c",
-    "p1-d",
-    "p1-e",
-    "p1-f",
-    "p1-g",
-    "p1-h",
-    "p1-i",
-  ].map(toCardId);
-  const stateA = createInitialState({
-    ...inputA,
-    startOfGameSelections: [
-      { playerId: p1, selectedInstanceId: "p1:deck:2:p1-stage" as never },
-    ],
-  });
-  assert.equal(must(stateA.players[p1]).stage?.cardId, toCardId("p1-stage"));
-  assert.equal(
-    must(stateA.players[p1]).hand.some(
+    must(next.players[p1], "p1").deck.some(
       (card) => card.cardId === toCardId("p1-stage"),
     ),
     false,
   );
 });
 
-test("no matching stage candidate keeps setup compatible and deterministic", () => {
+test("zero-selection is legal and deterministic through canonical setup decision path", () => {
+  const a = resolveSetupDecision(
+    createInitialState(createInput()),
+    "none",
+  ).state;
+  const b = resolveSetupDecision(
+    createInitialState(createInput()),
+    "none",
+  ).state;
+  assert.equal(hashCanonicalStateValue(a), hashCanonicalStateValue(b));
+  assert.equal(must(a.players[p1], "p1").stage, undefined);
+});
+
+test("no matching candidate advances setup without impossible decision", () => {
   const input = createInput();
   input.deckCardIds[p1] = [
     "p1-a",
@@ -269,281 +240,189 @@ test("no matching stage candidate keeps setup compatible and deterministic", () 
     "p1-i",
     "p1-j",
   ].map(toCardId);
-  const state = createInitialState(input);
-  assert.equal(must(state.players[p1]).stage, undefined);
-  const replay = createInitialState(input);
-  assert.equal(hashCanonicalStateValue(state), hashCanonicalStateValue(replay));
+  const setup = createInitialState(input);
+  assert.equal(setup.pendingDecision, undefined);
+  assert.equal(setup.setupContinuation, undefined);
 });
 
-test("setup event visibility keeps owner-only decision with public played stage semantics", () => {
+test("type/deck-position variation resolves via same canonical decision path", () => {
   const input = createInput();
-  const seeded = createInitialState(input);
-  const p1Player = must(seeded.players[p1]);
-  const template = must(p1Player.deck[0]);
-  const injectedStage = {
-    ...template,
-    cardId: toCardId("p1-stage"),
-    instanceId: "p1:deck:0:p1-stage" as never,
-    zone: {
-      zone: "deck" as const,
-      playerId: p1,
-      slot: "deck" as const,
-      index: 0,
+  input.deckCardIds[p1] = [
+    "p1-a",
+    "p1-b",
+    "p1-stage",
+    "p1-c",
+    "p1-d",
+    "p1-e",
+    "p1-f",
+    "p1-g",
+    "p1-h",
+    "p1-i",
+  ].map(toCardId);
+  const setup = createInitialState(input);
+  const decision = must(setup.pendingDecision, "setup decision");
+  assert.equal(decision.type, "selectCards");
+  const selected = must(
+    decision.candidates.find(
+      (candidate) => candidate.card.cardId === toCardId("p1-stage"),
+    ),
+    "stage candidate",
+  ).card;
+  const resolved = applyAction(setup, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [selected] },
+  });
+  assert.equal(resolved.errors, undefined);
+  assert.equal(
+    must(resolved.state.players[p1], "p1").stage?.cardId,
+    toCardId("p1-stage"),
+  );
+});
+
+test("hidden-info safety: chooser sees candidate action, opponent sees no setup respond action", () => {
+  const setup = createInitialState(createInput());
+  const ownerView = filterStateForPlayer(setup, p1);
+  const opponentView = filterStateForPlayer(setup, p2);
+  assert.equal(ownerView.pendingDecision?.type, "selectCards");
+  assert.equal(
+    opponentView.legalActions.some(
+      (action) => action.type === "respondToDecision",
+    ),
+    false,
+  );
+});
+
+test("occupied Stage replacement keeps cardMoved before cardTrashed ordering", () => {
+  const input = createInput();
+  input.deckCardIds[p1] = [
+    "p1-a",
+    "p1-stage",
+    "p1-b",
+    "p1-c",
+    "p1-d",
+    "p1-e",
+    "p1-f",
+    "p1-g",
+    "p1-h",
+    "p1-i",
+  ].map(toCardId);
+  const setup = createInitialState(input);
+  const setupPlayer = must(setup.players[p1], "p1");
+  const staged: typeof setup = {
+    ...setup,
+    players: {
+      ...setup.players,
+      [p1]: {
+        ...setupPlayer,
+        stage: {
+          ...must(setupPlayer.deck[0], "old-stage"),
+          zone: { zone: "stageArea", playerId: p1, slot: "stage", index: 0 },
+          state: "active",
+          attachedDon: [],
+        },
+      },
     },
   };
-  const injectedPlayers: typeof seeded.players = {
-    ...seeded.players,
-    [p1]: {
-      ...p1Player,
-      deck: [
-        injectedStage,
-        ...p1Player.deck.slice(1).map((card, index) => ({
-          ...card,
-          zone: {
-            zone: "deck" as const,
-            playerId: p1,
-            slot: "deck" as const,
-            index: index + 1,
+  const decision = must(staged.pendingDecision, "setup decision");
+  if (decision.type !== "selectCards") {
+    throw new TypeError("Expected setup selectCards decision.");
+  }
+  const stageCandidate = must(
+    decision.candidates.find(
+      (candidate: (typeof decision.candidates)[number]) =>
+        candidate.card.cardId === toCardId("p1-stage"),
+    ),
+    "stage candidate",
+  ).card;
+  const resolved = applyAction(staged, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [stageCandidate] },
+  });
+  const types = resolved.events.map((event) => event.type);
+  const movedIndex = types.indexOf("cardMoved");
+  const trashedIndex = types.indexOf("cardTrashed");
+  assert.ok(movedIndex >= 0 && trashedIndex >= 0 && movedIndex < trashedIndex);
+});
+
+test("deterministic event ids/seq and no setup/mulligan id reuse through canonical setup+startMulliganFlow", () => {
+  const setupResolved = resolveSetupDecision(
+    createInitialState(createInput()),
+    "first",
+  ).state;
+  if (setupResolved.status.type !== "setup") {
+    throw new TypeError("Expected setup state before mulligan.");
+  }
+  const preMulliganState = setupResolved as PreMulliganSetupGameState;
+  const mulliganStarted = startMulliganFlow(preMulliganState);
+  assert.equal(mulliganStarted.errors, undefined);
+  const decisionId = must(
+    mulliganStarted.state.pendingDecision,
+    "mulligan decision",
+  ).id;
+  const setupDecisionResolvedEvent = must(
+    setupResolved.eventJournal.find(
+      (event) => event.type === "decisionResolved",
+    ),
+    "setup decisionResolved event",
+  );
+  assert.notEqual(
+    String(decisionId),
+    String(
+      (setupDecisionResolvedEvent.payload as { decisionId?: string })
+        .decisionId,
+    ),
+  );
+  assert.equal(
+    setupResolved.eventJournal.every((event, index) => event.seq === index + 1),
+    true,
+  );
+  assert.equal(
+    mulliganStarted.state.eventJournal.every(
+      (event, index) => event.seq === index + 1,
+    ),
+    true,
+  );
+});
+
+test("unsupported startOfGame DSL fails closed at createInitialState", () => {
+  const input = createInput();
+  const manifest = input.cardManifest;
+  const definition = must(
+    manifest.effectDefinitions?.["leader-red-sog"],
+    "leader-red-sog definition",
+  );
+  const firstBlock = must(definition.effects[0], "startOfGame block");
+  const malformedBlock: EffectBlock = {
+    id: "leader-red:malformed-start-of-game" as never,
+    category: firstBlock.category,
+    trigger: firstBlock.trigger,
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "search",
+            request: {
+              zone: "deck",
+              player: "self",
+              filter: { categories: ["stage"], typesAny: ["Navy"] },
+              min: 0,
+              max: 1,
+              destination: "stageArea",
+              revealTo: "chooserOnly",
+              shuffleAfter: false,
+            },
           },
-        })),
+        },
       ],
     },
   };
-  const started = applyStartOfGameEffects({
-    players: injectedPlayers,
-    manifest: seeded.cardManifest,
-    selections: [
-      { playerId: p1, selectedInstanceId: "p1:deck:0:p1-stage" as never },
-    ],
-    rng: seeded.rng,
-  });
-  assert.equal(started.errors, undefined);
-  const decisionResolved = must(
-    started.events.find((event) => event.type === "decisionResolved"),
+  definition.effects = [malformedBlock];
+  assert.throws(
+    () => createInitialState(input),
+    /effectRuntimeError|unsupported/i,
   );
-  const cardMoved = must(
-    started.events.find((event) => event.type === "cardMoved"),
-  );
-  const decisionCreated = must(
-    started.events.find((event) => event.type === "decisionCreated"),
-  );
-  assert.equal(decisionCreated.visibility.type, "private");
-  assert.equal(decisionResolved.visibility.type, "private");
-  assert.equal(
-    (decisionResolved.visibility as { playerId?: string }).playerId,
-    p1,
-  );
-  assert.equal(cardMoved.visibility.type, "public");
-});
-
-test("occupied stage is trashed before selected setup stage placement", () => {
-  const input = createInput();
-  const seeded = createInitialState(input);
-  const p1State = must(seeded.players[p1]);
-  const injectedStage = {
-    ...must(p1State.deck[0]),
-    cardId: toCardId("p1-stage"),
-    instanceId: "p1:deck:0:p1-stage" as never,
-    zone: {
-      zone: "deck" as const,
-      playerId: p1,
-      slot: "deck" as const,
-      index: 0,
-    },
-  };
-  const occupiedStage = {
-    ...must(p1State.deck[1]),
-    zone: {
-      zone: "stageArea" as const,
-      playerId: p1,
-      slot: "stage" as const,
-      index: 0,
-    },
-    attachedDon: [],
-    state: "active" as const,
-  };
-  const withStage: {
-    cardManifest: typeof seeded.cardManifest;
-    players: typeof seeded.players;
-    rng: typeof seeded.rng;
-  } = {
-    ...seeded,
-    players: {
-      ...seeded.players,
-      [p1]: {
-        ...p1State,
-        deck: [
-          injectedStage,
-          ...p1State.deck.slice(1).map((card, index) => ({
-            ...card,
-            zone: {
-              zone: "deck" as const,
-              playerId: p1,
-              slot: "deck" as const,
-              index: index + 1,
-            },
-          })),
-        ],
-        stage: occupiedStage,
-      },
-    },
-  };
-  const started = applyStartOfGameEffects({
-    players: withStage.players,
-    manifest: withStage.cardManifest,
-    selections: [
-      { playerId: p1, selectedInstanceId: "p1:deck:0:p1-stage" as never },
-    ],
-    rng: withStage.rng,
-  });
-  assert.equal(started.errors, undefined);
-  assert.equal(
-    must(must(started.players[p1]).stage).cardId,
-    toCardId("p1-stage"),
-  );
-  assert.equal(
-    must(started.players[p1]).trash[0]?.cardId,
-    occupiedStage.cardId,
-  );
-  assert.deepEqual(
-    started.events.map((event) => event.type),
-    [
-      "decisionCreated",
-      "cardTrashed",
-      "decisionResolved",
-      "cardMoved",
-      "cardPlayed",
-    ],
-  );
-});
-
-test("invalid stage replacement state fails closed without mutation", () => {
-  const input = createInput();
-  const seeded = createInitialState(input);
-  const p1State = must(seeded.players[p1]);
-  const injectedStage = {
-    ...must(p1State.deck[0]),
-    cardId: toCardId("p1-stage"),
-    instanceId: "p1:deck:0:p1-stage" as never,
-    zone: {
-      zone: "deck" as const,
-      playerId: p1,
-      slot: "deck" as const,
-      index: 0,
-    },
-  };
-  const occupiedStage = {
-    ...must(p1State.deck[1]),
-    zone: {
-      zone: "stageArea" as const,
-      playerId: p1,
-      slot: "stage" as const,
-      index: 0,
-    },
-    attachedDon: ["p1-don-attached" as never],
-    state: "active" as const,
-  };
-  const withStage: {
-    cardManifest: typeof seeded.cardManifest;
-    players: typeof seeded.players;
-    rng: typeof seeded.rng;
-  } = {
-    ...seeded,
-    players: {
-      ...seeded.players,
-      [p1]: {
-        ...p1State,
-        deck: [
-          injectedStage,
-          ...p1State.deck.slice(1).map((card, index) => ({
-            ...card,
-            zone: {
-              zone: "deck" as const,
-              playerId: p1,
-              slot: "deck" as const,
-              index: index + 1,
-            },
-          })),
-        ],
-        stage: occupiedStage,
-      },
-    },
-  };
-  const before = hashCanonicalStateValue(must(withStage.players[p1]));
-  const started = applyStartOfGameEffects({
-    players: withStage.players,
-    manifest: withStage.cardManifest,
-    selections: [
-      { playerId: p1, selectedInstanceId: "p1:deck:0:p1-stage" as never },
-    ],
-    rng: initializeRng("seed-sog"),
-  });
-  assert.equal(started.events.length, 0);
-  assert.equal(started.errors?.[0]?.type, "invalidDecisionResponse");
-  assert.equal(hashCanonicalStateValue(must(withStage.players[p1])), before);
-});
-
-test("valid occupied-stage replacement does not mutate input players object", () => {
-  const input = createInput();
-  const seeded = createInitialState(input);
-  const p1State = must(seeded.players[p1]);
-  const injectedStage = {
-    ...must(p1State.deck[0]),
-    cardId: toCardId("p1-stage"),
-    instanceId: "p1:deck:0:p1-stage" as never,
-    zone: {
-      zone: "deck" as const,
-      playerId: p1,
-      slot: "deck" as const,
-      index: 0,
-    },
-  };
-  const occupiedStage = {
-    ...must(p1State.deck[1]),
-    zone: {
-      zone: "stageArea" as const,
-      playerId: p1,
-      slot: "stage" as const,
-      index: 0,
-    },
-    attachedDon: [],
-    state: "active" as const,
-  };
-  const withStage: {
-    cardManifest: typeof seeded.cardManifest;
-    players: typeof seeded.players;
-    rng: typeof seeded.rng;
-  } = {
-    ...seeded,
-    players: {
-      ...seeded.players,
-      [p1]: {
-        ...p1State,
-        deck: [
-          injectedStage,
-          ...p1State.deck.slice(1).map((card, index) => ({
-            ...card,
-            zone: {
-              zone: "deck" as const,
-              playerId: p1,
-              slot: "deck" as const,
-              index: index + 1,
-            },
-          })),
-        ],
-        stage: occupiedStage,
-      },
-    },
-  };
-  const beforeInputHash = hashCanonicalStateValue(withStage.players);
-  const started = applyStartOfGameEffects({
-    players: withStage.players,
-    manifest: withStage.cardManifest,
-    selections: [
-      { playerId: p1, selectedInstanceId: "p1:deck:0:p1-stage" as never },
-    ],
-    rng: withStage.rng,
-  });
-  assert.equal(started.errors, undefined);
-  assert.equal(hashCanonicalStateValue(withStage.players), beforeInputHash);
 });

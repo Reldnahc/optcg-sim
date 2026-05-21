@@ -14,13 +14,13 @@ import type {
 import { assertGameStateInvariants } from "./invariants.js";
 import { advanceRngUint32, initializeRng } from "./rng.js";
 import {
-  applyStartOfGameEffects,
-  type StartOfGameSelectionInput,
+  collectStartOfGamePlans,
+  createStartOfGameSetupDecision,
 } from "./start-of-game-effects.js";
+import { appendEvent } from "./action-results.js";
 
 const OPENING_HAND_SIZE = 5;
 const INITIAL_STATE_SEQ = 0 as StateSeq;
-const toStateSeq = (value: number): StateSeq => value as StateSeq;
 
 type SetupStatus = Extract<GameState["status"], { type: "setup" }>;
 
@@ -41,7 +41,7 @@ export interface CreateInitialStateInput {
   cardManifest: MatchCardManifest;
   rngSeed: number | bigint | string;
   shuffleDecks?: boolean;
-  startOfGameSelections?: readonly StartOfGameSelectionInput[];
+  startOfGameSelections?: readonly unknown[];
 }
 
 const createCard = (
@@ -207,12 +207,86 @@ const finalizePlayerSetup = (params: {
   };
 };
 
+export const finalizeSetupFromContinuation = (
+  state: PreMulliganSetupGameState,
+): PreMulliganSetupGameState => {
+  const continuation = state.setupContinuation;
+  if (continuation === undefined) {
+    throw new TypeError(
+      "Setup continuation is required for setup finalization.",
+    );
+  }
+  if (
+    !Number.isInteger(continuation.nextStartOfGamePlanIndex) ||
+    continuation.nextStartOfGamePlanIndex < 0
+  ) {
+    throw new TypeError(
+      "Setup continuation plan index must be a non-negative integer.",
+    );
+  }
+  const [firstPlayerId, secondPlayerId] = continuation.playerOrder;
+  if (
+    state.players[firstPlayerId] === undefined ||
+    state.players[secondPlayerId] === undefined
+  ) {
+    throw new TypeError(
+      "Setup continuation player order must match state players.",
+    );
+  }
+  const keys = Object.keys(continuation.leaderLifeCounts);
+  if (
+    keys.length !== 2 ||
+    !keys.includes(firstPlayerId) ||
+    !keys.includes(secondPlayerId)
+  ) {
+    throw new TypeError(
+      "Setup continuation leaderLifeCounts must match playerOrder players.",
+    );
+  }
+
+  let rng = state.rng;
+  const nextPlayers: Record<PlayerId, PlayerState> = { ...state.players };
+  for (const playerId of continuation.playerOrder) {
+    const lifeCount = requirePlayerValue(
+      continuation.leaderLifeCounts,
+      playerId,
+      "leaderLifeCounts",
+    );
+    if (!Number.isInteger(lifeCount) || lifeCount < 0) {
+      throw new TypeError(
+        `leaderLifeCounts for ${playerId} must be a non-negative integer.`,
+      );
+    }
+    const finalized = finalizePlayerSetup({
+      player: requirePlayerValue(nextPlayers, playerId, "players"),
+      lifeCount,
+      rng,
+      shuffleDecks: continuation.shuffleDecks,
+    });
+    nextPlayers[playerId] = finalized.player;
+    rng = finalized.rng;
+  }
+
+  const nextState: PreMulliganSetupGameState = {
+    ...state,
+    players: nextPlayers,
+    rng,
+  };
+  delete nextState.setupContinuation;
+  return nextState;
+};
+
 /**
  * Creates authoritative deterministic setup output before official mulligan.
  */
 export const createInitialState = (
   input: CreateInitialStateInput,
 ): PreMulliganSetupGameState => {
+  if (input.startOfGameSelections !== undefined) {
+    throw new TypeError(
+      "startOfGameSelections is deprecated; use canonical respondToDecision setup flow.",
+    );
+  }
   const cardManifestSnapshot = cloneMatchCardManifest(input.cardManifest);
   const [firstPlayerId, secondPlayerId] = input.playerOrder;
   if (firstPlayerId === secondPlayerId) {
@@ -361,42 +435,51 @@ export const createInitialState = (
     audit: [],
   };
 
-  const started = applyStartOfGameEffects(
-    input.startOfGameSelections === undefined
-      ? { players: state.players, manifest: state.cardManifest, rng }
-      : {
-          players: state.players,
-          manifest: state.cardManifest,
-          selections: input.startOfGameSelections,
-          rng,
-        },
+  state.setupContinuation = {
+    playerOrder: input.playerOrder,
+    firstPlayerId: input.firstPlayerId,
+    leaderLifeCounts: input.leaderLifeCounts,
+    shuffleDecks: input.shuffleDecks ?? false,
+    nextStartOfGamePlanIndex: 0,
+  };
+
+  const plansResult = collectStartOfGamePlans(
+    state.players,
+    state.cardManifest,
+    input.playerOrder,
   );
-  if (started.errors !== undefined) {
-    throw new TypeError(toEngineErrorReason(started.errors[0]));
+  if (plansResult.errors !== undefined) {
+    throw new TypeError(toEngineErrorReason(plansResult.errors[0]));
   }
-  state.players = started.players;
-  state.eventJournal = started.events.map((event, index) => ({
-    ...event,
-    seq: index + 1,
-    createdAtStateSeq: toStateSeq(state.seq),
-  }));
-
-  for (const playerId of input.playerOrder) {
-    const finalized = finalizePlayerSetup({
-      player: requirePlayerValue(state.players, playerId, "players"),
-      lifeCount: requirePlayerValue(
-        input.leaderLifeCounts,
-        playerId,
-        "leaderLifeCounts",
-      ),
-      rng,
-      shuffleDecks: input.shuffleDecks ?? false,
-    });
-    state.players[playerId] = finalized.player;
-    rng = finalized.rng;
+  const plans = plansResult.plans;
+  if (plans.length > 0) {
+    const decision = createStartOfGameSetupDecision(
+      state,
+      plans,
+      state.setupContinuation.nextStartOfGamePlanIndex,
+    );
+    if (decision.errors !== undefined) {
+      throw new TypeError(toEngineErrorReason(decision.errors[0]));
+    }
+    if (decision.pendingDecision !== undefined) {
+      state.pendingDecision = decision.pendingDecision;
+      appendEvent(
+        state,
+        state.eventJournal,
+        "decisionCreated",
+        {
+          decisionId: decision.pendingDecision.id,
+          decisionType: decision.pendingDecision.type,
+          playerId: decision.pendingDecision.playerId,
+        },
+        decision.pendingDecision.visibility,
+      );
+      return state;
+    }
   }
-  state.rng = rng;
 
-  assertGameStateInvariants(state);
-  return state;
+  const finalized = finalizeSetupFromContinuation(state);
+
+  assertGameStateInvariants(finalized);
+  return finalized;
 };

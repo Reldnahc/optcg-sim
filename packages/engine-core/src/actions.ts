@@ -76,6 +76,11 @@ import {
   applyActivateMainAction,
   getActivateMainLegalActions,
 } from "./effect-runtime-activation-main.js";
+import { finalizeSetupFromContinuation } from "./initial-state.js";
+import {
+  applyStartOfGameSetupDecisionResponse,
+  isStartOfGameSetupDecision,
+} from "./start-of-game-effects.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -408,6 +413,34 @@ const getChooseQuantityLegalActions = (
     });
   }
   return actions;
+};
+
+const getSetupStartOfGameLegalActions = (
+  state: GameState,
+  playerId: PlayerId,
+): LegalAction[] => {
+  const pending = state.pendingDecision;
+  if (
+    state.status.type !== "setup" ||
+    pending === undefined ||
+    !isStartOfGameSetupDecision(pending)
+  ) {
+    return [];
+  }
+  const decision = pending;
+  if (decision.playerId !== playerId) return [];
+  return [
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [] },
+    },
+    ...decision.candidates.map((candidate) => ({
+      type: "respondToDecision" as const,
+      decisionId: decision.id,
+      response: { type: "cards" as const, cards: [candidate.card] },
+    })),
+  ];
 };
 
 const hasCurrentChooseQuantityRuntimeContext = (
@@ -762,6 +795,7 @@ export const getLegalActions = (
     actions.push(...getSearchRevealDecisionLegalActions(state, playerId));
     actions.push(...getTrashFromHandDecisionLegalActions(state, playerId));
     actions.push(...getHandSelectionDecisionLegalActions(state, playerId));
+    actions.push(...getSetupStartOfGameLegalActions(state, playerId));
     return actions;
   }
 
@@ -913,6 +947,17 @@ const applyRespondToDecision = (
     if (handSelection !== null) {
       return handSelection;
     }
+  }
+  const setupStartOfGame = applyStartOfGameSetupDecisionResponse(state, action);
+  if (setupStartOfGame !== null) {
+    if (setupStartOfGame.errors !== undefined) {
+      return toEngineResult(state, [], setupStartOfGame.errors);
+    }
+    if (setupStartOfGame.shouldFinalizeSetup) {
+      const finalized = finalizeSetupFromContinuation(setupStartOfGame.state);
+      return toEngineResult(finalized, setupStartOfGame.events);
+    }
+    return toEngineResult(setupStartOfGame.state, setupStartOfGame.events);
   }
   const replacementResult = applyChooseReplacementDecisionResponse(
     state,
