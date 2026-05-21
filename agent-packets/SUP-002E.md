@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-002E -->
 <!-- agent-packet:story-path stories/approved/SUP-002E-optional-trash-cost-ko-card-components.yaml -->
-<!-- agent-packet:story-sha256 a7a776c07e86106b7f8b05e930343d959cc16dd408feb7cc4bd05c34a526743e -->
+<!-- agent-packet:story-sha256 61ca29c40348b4e192b8d9325950a60759114c5c2109f11b96af944031c8b053 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -726,6 +726,8 @@ Cards-layer story only. Contract/schema prerequisites must already be implemente
 - packages/cards/src/generated-support-types.test.ts
 - packages/cards/src/runtime-capability-matrix.ts
 - packages/cards/src/runtime-capability-matrix.test.ts
+- packages/cards/src/support-evaluator.ts
+- packages/cards/src/support-evaluator-parser-certification.test.ts
 - packages/cards/src/support-evaluator.test.ts
 - packages/cards/src/support-probe.test.ts
 
@@ -762,6 +764,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - cards parser residue/composition test proving the saved-target K.O. consumer and connector compose with a previously selected target without reparsing one full representative sentence
 - cards parser/generated-support test for optional hand-trash cost into filtered K.O.
 - real-schema generated-support regression for the representative optional-trash K.O. line
+- support-evaluator or support-probe regression for the representative optional-trash K.O. line proving the production/default path has no missing parser-certification blockers
 - fail-closed generated-support test when parser-rule certification evidence is absent or stale for any required optional-cost, target-filter, saved-target K.O., or composition component
 - test varying numeric count and base-cost threshold
 - fail-closed tests for unsupported optional cost body fragments and unsupported target filters
@@ -783,6 +786,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - parser/generator implementation must expose or test the optional-cost wrapper, target filter/base-cost predicate, and saved-target K.O. consumer independently; a single full-sentence regex that only proves the representative line fails this story even if count and threshold vary
 - generated-support tests that assert `status: supported` must validate the produced Effect DSL with the real schema validator
 - generated-support promotion requires current parser-rule certification evidence for the optional-cost wrapper, target filter/base-cost predicate, saved-target K.O. consumer, and their composition; absent or stale certification evidence must fail closed even when DSL schema validation and runtime capability checks pass
+- the production/default generated-support path must supply that current parser-rule certification evidence; this story fails if only lower-level tests with manually injected certification evidence pass while `evaluateGeneratedSupportPlayability` or support-probe reports missing parser certification for the same optional-trash K.O. shape
 - generated support fails closed when the optional cost or target/K.O. body is only partially parsed
 - runtime capability evidence is required before final playable/generated-support decision can pass
 - no production code checks exact full effect text, card IDs, or the representative sample as a whole string

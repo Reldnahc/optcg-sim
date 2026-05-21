@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-002G -->
 <!-- agent-packet:story-path stories/approved/SUP-002G-top-n-filtered-search-card-components.yaml -->
-<!-- agent-packet:story-sha256 dbcfdc4512ba99129eeed42f0e5fd244a28e07809b3faaa022c9b74d9fa1c390 -->
+<!-- agent-packet:story-sha256 755eb0634d5c3017d9b1699715ac80a0109ca7b49604367c56d577a4ec6c2c4f -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -519,6 +519,8 @@ Cards-layer story only. Contract/schema prerequisites must already be implemente
 - packages/cards/src/generated-support-types.test.ts
 - packages/cards/src/runtime-capability-matrix.ts
 - packages/cards/src/runtime-capability-matrix.test.ts
+- packages/cards/src/support-evaluator.ts
+- packages/cards/src/support-evaluator-parser-certification.test.ts
 - packages/cards/src/support-evaluator.test.ts
 - packages/cards/src/support-probe.test.ts
 
@@ -555,6 +557,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - representative regression for `[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.`
 - test varying look count, color, type name, and excluded name without collapsing those filter primitives into one required sentence shape
 - real-schema generated-support regression for each supported top-N search matrix row
+- support-evaluator or support-probe regression for representative filtered-search and DON-minus/search/trailing-trash lines proving the production/default path has no missing parser-certification blockers
 - cards parser/generated-support test for `[On Play] DON!! −1: Look at 5 cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.` through reusable DON-minus, search, bottom remainder, and hand-trash composition
 - parser composition test proving the DON-minus wrapper, non-reveal any-card search, bottom remainder placement, and trailing hand-trash effect are separate reusable components and not one full-line branch
 - variant full-composition test changing DON-minus count, look count, and trash count without changing parser-rule family or adding full-line branches
@@ -582,6 +585,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - generated-support tests that assert `status: supported` must validate the produced Effect DSL with the real schema validator
 - parser/generator implementation must expose or test primitive boundaries for trigger, top-N deck look, reveal/non-reveal visibility, cardinality, filter, add-to-hand destination, bottom remainder placement, DON-minus cost, and trailing hand-trash; full-line success plus value variation is not sufficient evidence
 - generated-support promotion requires current parser-rule certification evidence for each scoped primitive and for the filtered-search and DON-minus/search/trailing-trash compositions; absent or stale certification evidence must fail closed even when DSL schema validation and runtime capability checks pass
+- the production/default generated-support path must supply that current parser-rule certification evidence; this story fails if only lower-level tests with manually injected certification evidence pass while `evaluateGeneratedSupportPlayability` or support-probe reports missing parser certification for the same top-N search shapes
 - parser/generator support is generic over non-reveal any-card search look count, DON-minus count, and trailing trash count while selection remains max one
 - generated support fails closed when search window, filter, selection destination, or remainder placement is only partially parsed
 - generated support for non-reveal search does not infer public reveal from look/search/add-to-hand text and does not leak selected or unselected looked-card identity to the opponent

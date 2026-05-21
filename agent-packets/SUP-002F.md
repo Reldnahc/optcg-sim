@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-002F -->
 <!-- agent-packet:story-path stories/approved/SUP-002F-conditional-base-power-set-card-components.yaml -->
-<!-- agent-packet:story-sha256 8dbb3e634eb542f7127537877839114848cc1fa661fa2e15a882dd5188a4d7c9 -->
+<!-- agent-packet:story-sha256 38125e4f43367c443020a0e161dd9ccd36feb625025c785dbbcf144edb1dcc73 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -828,6 +828,8 @@ Cards-layer story only. Runtime prerequisites must already be implemented by SUP
 - packages/cards/src/generated-support-types.test.ts
 - packages/cards/src/runtime-capability-matrix.ts
 - packages/cards/src/runtime-capability-matrix.test.ts
+- packages/cards/src/support-evaluator.ts
+- packages/cards/src/support-evaluator-parser-certification.test.ts
 - packages/cards/src/support-evaluator.test.ts
 - packages/cards/src/support-probe.test.ts
 
@@ -861,6 +863,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 - cards parser/generated-support test for conditional all-your-type base-power setter
 - real-schema generated-support regression for the representative conditional base-power line
+- support-evaluator or support-probe regression for the representative conditional base-power line proving the production/default path has no missing parser-certification blockers
 - test proving the generated `setBasePower` target filter contains only schema-authorized fields for this scoped shape
 - fail-closed generated-support test when parser-rule certification evidence is absent or stale for any required condition, target-filter, base-power setter, or composition component
 - test varying threshold, type name, and base-power value
@@ -884,6 +887,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - parser/generator implementation must compose the condition wrapper, condition predicate, target filter, and base-power setter body as separate primitives; a full-sentence regex that only varies threshold/type/value fails this story
 - generated-support tests that assert `status: supported` must validate the produced Effect DSL with the real schema validator, and schema failures such as extra filter fields fail the story
 - generated-support promotion requires current parser-rule certification evidence for the condition wrapper, condition predicate, target filter, base-power setter body, and their composition; absent or stale certification evidence must fail closed even when DSL schema validation and runtime capability checks pass
+- the production/default generated-support path must supply that current parser-rule certification evidence; this story fails if only lower-level tests with manually injected certification evidence pass while `evaluateGeneratedSupportPlayability` or support-probe reports missing parser certification for the same conditional base-power shape
 - generated support fails closed when condition or base-power body is only partially parsed
 - runtime capability evidence is required before final playable/generated-support decision can pass
 - no production code checks exact full effect text, card IDs, or the representative sample as a whole string

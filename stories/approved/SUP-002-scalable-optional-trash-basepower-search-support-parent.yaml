@@ -140,6 +140,7 @@ acceptance_criteria:
   - cards children recognize representative lines through reusable parser components and capability gates without exact full-line or card-specific branches
   - cards children must prove primitive composition by positive and negative matrix tests, not only by varying literals inside one representative sentence
   - cards generated-support tests that claim playable/generated-support promotion must use the real Effect DSL schema validator; fake validators such as `() => ({ valid: true })` may be used only for parser-only tests and do not count as generated-support acceptance evidence
+  - cards children that add parser certification gates must prove the production/default generated-support path supplies current reviewed certification evidence; lower-level `buildGeneratedSupportIndex` tests with manually injected evidence are not sufficient if `evaluateGeneratedSupportPlayability` or support-probe still reports missing parser certification for the same scoped shape
   - each supported larger phrase implies its valid smaller phrase variants unless the story explicitly excludes them; a child story fails if a larger composed phrase parses but an in-scope subset fails because the parser glued primitives together
   - the full non-reveal search composition with DON-minus cost and trailing hand-trash is proven by reusable primitive composition and by varied-value tests; if composition fails, the blocker is recorded as a generic composition gap rather than worked around with an exact text branch
   - a line equivalent to `[When Attacking] If you have 10 or more cards in your trash, give up to 1 of your opponent's Characters -2000 power during this turn.` remains covered as a SUP-001F regression and is not reimplemented here
@@ -170,6 +171,7 @@ required_tests:
   - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
   - story-specific tests from SUP-002A through SUP-002I
   - per-child reviewed commit evidence, AI review record, revision response, and verification evidence for SUP-002A through SUP-002I before parent PR handoff
+  - for each cards-layer child with parser certification gates, run a support-evaluator or support-probe regression proving the supported representative shape reaches the same generated-support/playability decision through the production/default path without missing parser-certification blockers
   - role packet extraction output before each implementation handoff and before each code-review handoff
   - final parent PR full-story integration review covering all child commits, packet history, cleanup metadata, CI, verification, and unresolved comments before human-review handoff
   - run `corepack pnpm run stories:validate`
