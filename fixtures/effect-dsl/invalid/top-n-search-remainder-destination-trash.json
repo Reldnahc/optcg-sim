@@ -21,7 +21,8 @@
             "destination": "trash",
             "position": "bottom",
             "order": "ownerChoice"
-          }
+          },
+          "shuffleAfter": false
         }
       }
     }

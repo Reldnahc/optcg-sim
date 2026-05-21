@@ -285,6 +285,7 @@ test("Effect DSL spec pins authorability support ladder and planned-layer guardr
     "effect: search for scoped top-N deck requests only",
   );
   assertContainsWords(schemaSupportedSubset, "reveal to `bothPlayers`");
+  assertContainsWords(schemaSupportedSubset, "`shuffleAfter: false`");
   assertContainsWords(
     schemaSupportedSubset,
     "to `chooserOnly` with an empty filter object",

@@ -1,15 +1,15 @@
 {
-  "cardId": "SUP-002I-BAD-ZONE",
+  "cardId": "SUP-002I-BAD-SHUFFLE-MISSING",
   "implementationStatus": "unsupported",
   "effects": [
     {
-      "id": "SUP-002I-BAD-ZONE:on-play-search-1",
+      "id": "SUP-002I-BAD-SHUFFLE-MISSING:on-play-search-1",
       "category": "auto",
       "trigger": { "type": "onPlay" },
       "effect": {
         "type": "search",
         "request": {
-          "zone": "trash",
+          "zone": "deck",
           "player": "self",
           "lookCount": 5,
           "filter": {},
@@ -21,14 +21,13 @@
             "destination": "deck",
             "position": "bottom",
             "order": "ownerChoice"
-          },
-          "shuffleAfter": false
+          }
         }
       }
     }
   ],
   "metadata": {
-    "sourceTextHash": "sha256:test-sup-002i-bad-zone",
+    "sourceTextHash": "sha256:test-sup-002i-bad-shuffle-missing",
     "rulesVersion": "v6",
     "effectDefinitionsVersion": "0.1.0",
     "tested": true

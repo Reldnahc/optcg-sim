@@ -229,7 +229,8 @@
             "max",
             "destination",
             "revealTo",
-            "remainingCards"
+            "remainingCards",
+            "shuffleAfter"
           ],
           "properties": {
             "zone": { "const": "deck" },
@@ -242,7 +243,8 @@
             "revealTo": { "const": "bothPlayers" },
             "remainingCards": {
               "$ref": "#/$defs/scopedTopNSearchRemainingCards"
-            }
+            },
+            "shuffleAfter": { "const": false }
           }
         },
         {
@@ -257,7 +259,8 @@
             "max",
             "destination",
             "revealTo",
-            "remainingCards"
+            "remainingCards",
+            "shuffleAfter"
           ],
           "properties": {
             "zone": { "const": "deck" },
@@ -270,7 +273,8 @@
             "revealTo": { "const": "chooserOnly" },
             "remainingCards": {
               "$ref": "#/$defs/scopedTopNSearchRemainingCards"
-            }
+            },
+            "shuffleAfter": { "const": false }
           }
         }
       ]

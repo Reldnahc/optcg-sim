@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-002I -->
 <!-- agent-packet:story-path stories/approved/SUP-002I-top-n-search-request-contract-authorability.yaml -->
-<!-- agent-packet:story-sha256 0c85efa3621349c61b08ed9d26c4e3a6d2c2493f483eaaf33dc761ecff899f71 -->
+<!-- agent-packet:story-sha256 ac863181f2740bef4b5a42b5ab0e7db368407b8d391701387baab8a2bffe4ed3 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -402,7 +402,7 @@ Schema-supported fixture subset:
   `zone: "deck"`, `player: "self"`, positive integer `lookCount`,
   `destination: "hand"`, `min: 0`, `max: 1`,
   `remainingCards.destination: "deck"`, `remainingCards.position: "bottom"`,
-  `remainingCards.order: "ownerChoice"`, and no `shuffleAfter`. The
+  `remainingCards.order: "ownerChoice"`, and `shuffleAfter: false`. The
   schema-supported variants are public reveal to `bothPlayers` with a nonempty
   filter limited to `categories`, `colorsAny`, `typesAny`, and `nameNot`, or
   non-reveal any-card search to `chooserOnly` with an empty filter object. This
@@ -512,9 +512,9 @@ Contract/schema/type story only. Do not implement runtime search behavior, order
 ## Scope
 
 - move scoped `search` schema coverage from planned/not fixture-authorable to fixture-authorable for positive Effect DSL fixtures
-- prove a narrowed reusable SearchRequest shape with `zone: "deck"`, `player: "self"`, variable positive `lookCount`, `min: 0`, `max: 1`, hand destination, no shuffle, and bottom remainder owner-choice policy
+- prove a narrowed reusable SearchRequest shape with `zone: "deck"`, `player: "self"`, variable positive `lookCount`, `min: 0`, `max: 1`, hand destination, explicit `shuffleAfter: false` no-shuffle policy, and bottom remainder owner-choice policy
 - support two scoped search authorability variants: public-reveal filtered search with `revealTo: "bothPlayers"` and composed `categories`/`colorsAny`/`typesAny`/`nameNot` filters; non-reveal any-card search with `revealTo: "chooserOnly"` and an empty filter object
-- add negative fixtures for malformed look counts, unsupported zones, unsupported players, unsupported selection cardinality, out-of-scope CardFilter members, unsupported reveal visibility variants outside `bothPlayers` and `chooserOnly`, public-reveal empty-filter hybrids, chooser-only nonempty-filter hybrids, unsupported destinations, shuffle-after-search, and unsupported remainder policies
+- add negative fixtures for malformed look counts, unsupported zones, unsupported players, unsupported selection cardinality, out-of-scope CardFilter members, unsupported reveal visibility variants outside `bothPlayers` and `chooserOnly`, public-reveal empty-filter hybrids, chooser-only nonempty-filter hybrids, unsupported destinations, missing or true shuffle-after-search policy, and unsupported remainder policies
 - preserve the distinction between contract authorability and runtime executable support
 
 ## Out of Scope
@@ -583,7 +583,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 
 ## Acceptance Criteria
 
-- contract/schema fixtures prove only the scoped top-N search request subset is authorable: `zone = deck`, `player = self`, `destination = hand`, `min = 0`, `max = 1`, `remainingCards.destination = deck`, `remainingCards.position = bottom`, `remainingCards.order = ownerChoice`, and no shuffle
+- contract/schema fixtures prove only the scoped top-N search request subset is authorable: `zone = deck`, `player = self`, `destination = hand`, `min = 0`, `max = 1`, `shuffleAfter = false`, `remainingCards.destination = deck`, `remainingCards.position = bottom`, and `remainingCards.order = ownerChoice`
 - public-reveal filtered fixtures allow `revealTo = bothPlayers` only with a nonempty scoped filter using `categories`/`colorsAny`/`typesAny`/`nameNot` keys; `revealTo = bothPlayers` with an empty filter object is rejected
 - non-reveal any-card fixtures allow `revealTo = chooserOnly` only with an empty filter object, so selected-card identity is not treated as public reveal
 - specs and schema coverage no longer classify scoped top-N `search` as planned/not fixture-authorable for this story's shape

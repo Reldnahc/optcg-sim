@@ -1068,7 +1068,7 @@ Schema-supported fixture subset:
   `zone: "deck"`, `player: "self"`, positive integer `lookCount`,
   `destination: "hand"`, `min: 0`, `max: 1`,
   `remainingCards.destination: "deck"`, `remainingCards.position: "bottom"`,
-  `remainingCards.order: "ownerChoice"`, and no `shuffleAfter`. The
+  `remainingCards.order: "ownerChoice"`, and `shuffleAfter: false`. The
   schema-supported variants are public reveal to `bothPlayers` with a nonempty
   filter limited to `categories`, `colorsAny`, `typesAny`, and `nameNot`, or
   non-reveal any-card search to `chooserOnly` with an empty filter object. This

@@ -26,7 +26,8 @@
             "destination": "deck",
             "position": "bottom",
             "order": "ownerChoice"
-          }
+          },
+          "shuffleAfter": false
         }
       }
     }

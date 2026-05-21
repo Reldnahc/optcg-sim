@@ -104,6 +104,7 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/top-n-search-remainder-position-top.json",
     "fixtures/effect-dsl/invalid/top-n-search-reveal-owner-only.json",
     "fixtures/effect-dsl/invalid/top-n-search-shuffle-after.json",
+    "fixtures/effect-dsl/invalid/top-n-search-shuffle-after-missing.json",
     "fixtures/effect-dsl/invalid/top-n-search-unsupported-destination-trash.json",
     "fixtures/effect-dsl/invalid/top-n-search-unsupported-filter-cost.json",
     "fixtures/effect-dsl/invalid/top-n-search-unsupported-max-two.json",
@@ -173,6 +174,7 @@ test("SUP-002I schema authorizes only scoped top-N deck search request variants"
       "destination",
       "revealTo",
       "remainingCards",
+      "shuffleAfter",
     ]);
     assert.deepEqual(variant.properties.zone, { const: "deck" });
     assert.deepEqual(variant.properties.player, { const: "self" });
@@ -187,7 +189,7 @@ test("SUP-002I schema authorizes only scoped top-N deck search request variants"
       variant.properties.remainingCards.$ref,
       "#/$defs/scopedTopNSearchRemainingCards",
     );
-    assert.equal("shuffleAfter" in variant.properties, false);
+    assert.deepEqual(variant.properties.shuffleAfter, { const: false });
   }
 
   assert.deepEqual(schema.$defs.scopedTopNSearchRemainingCards, {
