@@ -155,7 +155,7 @@ export function listConditionalContinuousCompositionEvidenceFragments(): readonl
       "condition",
       ...(variant.isSequence ? (["sequence"] as const) : []),
       ...(variant.includesKeyword ? (["keyword"] as const) : []),
-      "restriction",
+      ...(variant.includesProtection ? (["restriction"] as const) : []),
       "source-presence-policy",
     ],
     parserRuleId: variant.parserRuleId,

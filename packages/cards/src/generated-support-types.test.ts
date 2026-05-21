@@ -568,4 +568,34 @@ describe("generated support parser result contracts", () => {
       ),
     ).toBe(false);
   });
+
+  it("keeps keyword-only conditional continuous evidence free of restriction components", () => {
+    const directKeywordEntry = generatedSupportComponentEvidenceInventory.find(
+      (entry) =>
+        entry.parserRuleId ===
+        "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
+    );
+    const sequenceKeywordOnlyEntry =
+      generatedSupportComponentEvidenceInventory.find(
+        (entry) =>
+          entry.parserRuleId ===
+          "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:keyword-only",
+      );
+    const directProtectionEntry =
+      generatedSupportComponentEvidenceInventory.find(
+        (entry) =>
+          entry.parserRuleId ===
+          "exact:conditional-continuous:condition:body-part-composition:self-character:direct:protection",
+      );
+    const sequenceMixedEntry = generatedSupportComponentEvidenceInventory.find(
+      (entry) =>
+        entry.parserRuleId ===
+        "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:mixed",
+    );
+
+    expect(directKeywordEntry?.components).not.toContain("restriction");
+    expect(sequenceKeywordOnlyEntry?.components).not.toContain("restriction");
+    expect(directProtectionEntry?.components).toContain("restriction");
+    expect(sequenceMixedEntry?.components).toContain("restriction");
+  });
 });

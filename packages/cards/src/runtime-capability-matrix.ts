@@ -1,5 +1,6 @@
 import { generatedSupportComponentEvidenceInventory } from "./generated-support-types.js";
 import {
+  allConditionalContinuousCompositionParserRuleIds,
   isConditionalContinuousCompositionParserRuleId,
   listParserRuleIdsForConditionalContinuousRuntimeCapabilityId,
 } from "./conditional-continuous-composition-evidence.js";
@@ -378,6 +379,9 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
         "card014a:sequence:draw-trashFromHand",
         "card014a:sequence:trashFromHand-draw",
+        ...listParserRuleIdsForConditionalContinuousRuntimeCapabilityId(
+          "effect:sequence:ordered",
+        ),
       ],
     },
     {
@@ -688,6 +692,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:on-play:cannot-block:self:this-turn",
         "exact:on-play:cannot-block:choose:this-turn",
         "exact:on-play:cannot-block:all:this-turn",
+        ...allConditionalContinuousCompositionParserRuleIds,
       ],
     },
     {
