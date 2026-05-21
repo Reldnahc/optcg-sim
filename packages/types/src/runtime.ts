@@ -111,6 +111,14 @@ export interface TurnState {
   step?: BattleStep;
 }
 
+export interface SetupContinuationState {
+  playerOrder: readonly [PlayerId, PlayerId];
+  firstPlayerId: PlayerId;
+  leaderLifeCounts: Record<PlayerId, number>;
+  shuffleDecks: boolean;
+  nextStartOfGamePlanIndex: number;
+}
+
 export interface AuditEntry {
   type: string;
   createdAt: string;

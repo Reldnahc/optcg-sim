@@ -19,6 +19,9 @@ import type {
   MulliganDecision,
   PlayerId,
   PlayerState,
+  PlayerView,
+  SpectatorView,
+  SetupContinuationState,
   StateHashInput,
   StateSeq,
 } from "./index.js";
@@ -305,4 +308,161 @@ test("TYP-001G rejects stale EngineResult and out-of-scope exports/behavior", ()
   expect(missingType<ReconstructReplayStateMissing>(null)).toBeNull();
   expect(missingType<BuildPublicViewMissing>(null)).toBeNull();
   expect(missingType<ExecuteCustomHandlerMissing>(null)).toBeNull();
+});
+
+test("SUP-003I game state accepts optional setup continuation and keeps view contracts private", () => {
+  const playerA = "player-a" as PlayerId;
+  const playerB = "player-b" as PlayerId;
+  const seq = 1 as StateSeq;
+  const event: EngineEvent = {
+    id: "event-1" as EngineEventId,
+    seq: 1,
+    type: "phaseStarted",
+    payload: {},
+    visibility: { type: "public" },
+    createdAtStateSeq: seq,
+  };
+  const leader: CardInstance = {
+    instanceId: "leader-1" as CardRef["instanceId"],
+    cardId: "OP01-001" as CardId,
+    owner: playerA,
+    controller: playerA,
+    zone: { zone: "leaderArea", playerId: playerA },
+    attachedDon: [],
+  };
+  const playerState: PlayerState = {
+    playerId: playerA,
+    deck: [],
+    donDeck: [],
+    hand: [],
+    trash: [],
+    leader,
+    characters: [],
+    costArea: [],
+    life: [],
+    hasMulliganed: false,
+    turnCount: 1,
+  };
+  const state: GameState = {
+    matchId: "match-1" as MatchId,
+    status: { type: "setup" },
+    version: {
+      specVersion: "v6",
+      rulesVersion: "rules-v1",
+      engineVersion: "engine-v1",
+      cardDataVersion: "cards-v1",
+      effectDefinitionsVersion: "effects-v1",
+      customHandlerVersion: "handlers-v1",
+      banlistVersion: "banlist-v1",
+    },
+    seq,
+    actionSeq: 1,
+    turn: {
+      globalTurn: 1,
+      playerTurnCounts: { [playerA]: 0, [playerB]: 0 },
+      turnPlayerId: playerA,
+      phase: "main",
+    },
+    cardManifest: {
+      manifestHash: "manifest-hash-1",
+      source: "manual-test",
+      cardDataVersion: "cards-v1",
+      effectDefinitionsVersion: "effects-v1",
+      customHandlerVersion: "handlers-v1",
+      banlistVersion: "banlist-v1",
+      createdAt: "2026-05-21T00:00:00.000Z",
+      cards: {},
+    },
+    players: {
+      [playerA]: playerState,
+      [playerB]: { ...playerState, playerId: playerB },
+    },
+    timers: {
+      players: {
+        [playerA]: { playerId: playerA, remainingMs: 120_000, isRunning: true },
+        [playerB]: {
+          playerId: playerB,
+          remainingMs: 120_000,
+          isRunning: false,
+        },
+      },
+    },
+    setupContinuation: {
+      playerOrder: [playerA, playerB],
+      firstPlayerId: playerA,
+      leaderLifeCounts: {
+        [playerA]: 5,
+        [playerB]: 5,
+      },
+      shuffleDecks: true,
+      nextStartOfGamePlanIndex: 1,
+    },
+    oncePerTurn: [],
+    effectQueue: [],
+    effectExecutionFrames: [],
+    deferredTriggers: [],
+    continuousEffects: [],
+    replacementState: [],
+    revealedCards: [],
+    rng: {
+      algorithm: "test-fixed",
+      internalState: "rng-state",
+      callCount: 0,
+    },
+    eventJournal: [event],
+    audit: [],
+  };
+
+  const stateWithoutSetup = { ...state };
+  delete stateWithoutSetup.setupContinuation;
+  const noSetupContinuationNeeded: GameState = stateWithoutSetup;
+
+  const missingPlayerOrder = {
+    firstPlayerId: playerA,
+    leaderLifeCounts: { [playerA]: 5, [playerB]: 5 },
+    shuffleDecks: true,
+    nextStartOfGamePlanIndex: 0,
+  };
+  // @ts-expect-error setup continuation requires playerOrder tuple.
+  state.setupContinuation = missingPlayerOrder;
+  state.setupContinuation = {
+    ...state.setupContinuation,
+    // @ts-expect-error playerOrder must be a two-player tuple.
+    playerOrder: [playerA],
+  };
+  const missingLeaderLifeCounts: SetupContinuationState = {
+    playerOrder: [playerA, playerB],
+    firstPlayerId: playerA,
+    // @ts-expect-error leaderLifeCounts is required.
+    leaderLifeCounts: undefined,
+    shuffleDecks: true,
+    nextStartOfGamePlanIndex: 0,
+  };
+  const nonBooleanShuffleMode: SetupContinuationState = {
+    playerOrder: [playerA, playerB],
+    firstPlayerId: playerA,
+    leaderLifeCounts: { [playerA]: 5, [playerB]: 5 },
+    // @ts-expect-error shuffleDecks must be boolean.
+    shuffleDecks: "yes",
+    nextStartOfGamePlanIndex: 0,
+  };
+  const nonNumberPlanIndex: SetupContinuationState = {
+    playerOrder: [playerA, playerB],
+    firstPlayerId: playerA,
+    leaderLifeCounts: { [playerA]: 5, [playerB]: 5 },
+    shuffleDecks: true,
+    // @ts-expect-error nextStartOfGamePlanIndex must be a number.
+    nextStartOfGamePlanIndex: "1",
+  };
+
+  // @ts-expect-error PlayerView must not expose setup continuation internals.
+  type PlayerViewLeak = PlayerView["setupContinuation"];
+  // @ts-expect-error SpectatorView must not expose setup continuation internals.
+  type SpectatorViewLeak = SpectatorView["setupContinuation"];
+  void (null as unknown as PlayerViewLeak);
+  void (null as unknown as SpectatorViewLeak);
+  void missingLeaderLifeCounts;
+  void nonBooleanShuffleMode;
+  void nonNumberPlanIndex;
+  expect(noSetupContinuationNeeded.setupContinuation).toBeUndefined();
 });

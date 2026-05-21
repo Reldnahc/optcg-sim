@@ -57,6 +57,7 @@ interface GameState {
   timers: TimerState;
   battle?: BattleState;
   pendingDecision?: PendingDecision;
+  setupContinuation?: SetupContinuationState;
   effectQueue: EffectQueueEntry[];
   effectExecutionFrames: EffectExecutionFrame[];
   deferredTriggers: DeferredTriggerBucket[];
@@ -67,9 +68,19 @@ interface GameState {
   eventJournal: EngineEvent[];
   audit: AuditEntry[];
 }
+
+interface SetupContinuationState {
+  playerOrder: readonly [PlayerId, PlayerId];
+  firstPlayerId: PlayerId;
+  leaderLifeCounts: Record<PlayerId, number>;
+  shuffleDecks: boolean;
+  nextStartOfGamePlanIndex: number;
+}
 ```
 
 `effectExecutionFrames` is serialized authoritative internal state for resumable effect resolution. Frame records are match-scoped runtime context, participate in canonical state serialization and authoritative state hashes, and are not a client-facing `PlayerView` or `SpectatorView` surface.
+
+`setupContinuation` is server-only authoritative setup context used to resume deterministic setup-time decision flow through canonical `PendingDecision` / `respondToDecision` routing. It is not part of public view contracts.
 
 Canonical live state also carries the authoritative per-player timer snapshot used for `PlayerView` and reconnect/state-sync payloads. Do not fabricate timer values in filtered views.
 

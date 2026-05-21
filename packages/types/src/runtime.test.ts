@@ -56,6 +56,7 @@ import type {
   SequenceSegmentResult,
   SequenceSegmentResultMap,
   StateSeq,
+  SetupContinuationState,
   TargetSpec,
   TimerState,
   TimingWindowId,
@@ -539,6 +540,26 @@ test("runtime contracts compile with sequence segment result and saved-reference
 
   expect(firstResult?.attempted).toBe(true);
   expect(openingSelection.kind).toBe("selectedCards");
+});
+
+test("SUP-003I setup continuation state is plain canonical-hashable data", () => {
+  const playerA = "player-a" as PlayerId;
+  const playerB = "player-b" as PlayerId;
+
+  const continuation: SetupContinuationState = {
+    playerOrder: [playerA, playerB],
+    firstPlayerId: playerA,
+    leaderLifeCounts: {
+      [playerA]: 5,
+      [playerB]: 4,
+    },
+    shuffleDecks: true,
+    nextStartOfGamePlanIndex: 0,
+  };
+
+  expect(continuation.playerOrder[0]).toBe(playerA);
+  expect(continuation.leaderLifeCounts[playerB]).toBe(4);
+  expect(continuation.shuffleDecks).toBe(true);
 });
 
 test("TYP-012A protection contract supports structured field-removal metadata", () => {

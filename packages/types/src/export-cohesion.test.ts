@@ -201,6 +201,7 @@ import type {
   SequencedEffect as PackageSequencedEffect,
   SimpleProtection as PackageSimpleProtection,
   SourcePresencePolicy as PackageSourcePresencePolicy,
+  SetupContinuationState as PackageSetupContinuationState,
   StateHashInput as PackageStateHashInput,
   StateSeq as PackageStateSeq,
   SpectatorEvent as PackageSpectatorEvent,
@@ -262,6 +263,7 @@ test("TYP-001H every manifest-covered canonical export has exactly one valid own
     "TYP-012A",
     "TYP-012B",
     "SUP-003A",
+    "SUP-003I",
   ]);
   for (const owner of Object.values(EXPORT_OWNERSHIP_MANIFEST)) {
     expect(validOwners.has(owner)).toBe(true);
@@ -341,6 +343,7 @@ test("TYP-001H manifest-covered exports resolve through package-name type import
     PackageMatchStatus,
     PackageBattleState,
     PackageTurnState,
+    PackageSetupContinuationState,
     PackageTargetCandidate,
     PackageCardSelectionCandidate,
     PackageAuditEntry,

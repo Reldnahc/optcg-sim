@@ -17,6 +17,7 @@ export const TYP_001_STORY_OWNERS = [
   "TYP-012A",
   "TYP-012B",
   "SUP-003A",
+  "SUP-003I",
 ] as const;
 
 export type Typ001StoryOwner = (typeof TYP_001_STORY_OWNERS)[number];
@@ -110,6 +111,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   MatchStatus: "TYP-001F",
   BattleState: "TYP-001F",
   TurnState: "TYP-001F",
+  SetupContinuationState: "SUP-003I",
   TargetCandidate: "TYP-001E",
   CardSelectionCandidate: "TYP-001E",
   AuditEntry: "TYP-001F",
