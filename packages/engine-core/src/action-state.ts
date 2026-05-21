@@ -1,9 +1,11 @@
 import type {
   CardInstance,
+  CardFilter,
   CardRef,
   GameState,
   PlayerId,
   PlayerState,
+  ResolvedCard,
 } from "@optcg/types";
 
 export type LocatedCombatCard = {
@@ -98,3 +100,51 @@ export const reindexZoneCards = (
     ...card,
     zone: { zone, playerId, slot, index },
   }));
+
+const supportedSearchFilterKeys = new Set([
+  "categories",
+  "colorsAny",
+  "typesAny",
+  "nameNot",
+]);
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+export const isSupportedSearchCardFilter = (filter: CardFilter): boolean => {
+  for (const key of Object.keys(filter)) {
+    if (!supportedSearchFilterKeys.has(key)) return false;
+  }
+  return (
+    (filter.categories === undefined || isStringArray(filter.categories)) &&
+    (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
+    (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
+    (filter.nameNot === undefined || isStringArray(filter.nameNot))
+  );
+};
+
+export const cardMatchesSearchFilter = (
+  card: ResolvedCard | undefined,
+  filter: CardFilter,
+): boolean => {
+  if (card === undefined) return false;
+  if (
+    filter.categories !== undefined &&
+    !filter.categories.includes(card.category)
+  ) {
+    return false;
+  }
+  if (
+    filter.colorsAny !== undefined &&
+    !filter.colorsAny.some((color) => card.colors.includes(color))
+  ) {
+    return false;
+  }
+  if (
+    filter.typesAny !== undefined &&
+    !filter.typesAny.some((type) => card.types.includes(type))
+  ) {
+    return false;
+  }
+  return !(filter.nameNot !== undefined && filter.nameNot.includes(card.name));
+};

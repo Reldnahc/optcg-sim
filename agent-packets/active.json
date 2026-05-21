@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-002C.md",
-      "storyId": "SUP-002C",
-      "storyPath": "stories/approved/SUP-002C-conditional-base-power-set-runtime.yaml",
-      "storySha256": "e99252e5429cd155ac7b4ddb7014e9d4317a294b63125acd4d2315fb3aa4015d"
+      "packetPath": "agent-packets/SUP-002D.md",
+      "storyId": "SUP-002D",
+      "storyPath": "stories/approved/SUP-002D-top-n-filtered-search-remainder-runtime.yaml",
+      "storySha256": "7c72c3c971960b06597993806d73950f9321615ba55ffd9fa8dc5a46f10c0d85"
     }
   ],
   "version": 1

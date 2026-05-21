@@ -8,16 +8,23 @@ import type {
   EngineEvent,
   EngineResult,
   GameState,
+  OrderCardsDecision,
   SelectCardsDecision,
 } from "@optcg/types";
 
 import {
+  appendEffectResolvedEvent,
   appendEvent,
   toDecisionId,
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { reindexZoneCards, zonesEqual } from "./action-state.js";
+import {
+  cardMatchesSearchFilter,
+  isSupportedSearchCardFilter,
+  reindexZoneCards,
+  zonesEqual,
+} from "./action-state.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
 
@@ -137,6 +144,19 @@ const isExactCharacterCategoryFilter = (
   );
 };
 
+const hasSupportedRemainingCardsPolicy = (
+  request: SearchEffect["request"],
+): boolean =>
+  request.remainingCards !== undefined &&
+  request.remainingCards.destination === "deck" &&
+  request.remainingCards.position === "bottom" &&
+  request.remainingCards.order === "ownerChoice";
+
+const isLegacyTopOneSearch = (effect: SearchEffect): boolean =>
+  effect.request.lookCount === 1 &&
+  effect.request.remainingCards === undefined &&
+  isExactCharacterCategoryFilter(effect.request.filter);
+
 const validateSupportedSearchEffect = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -155,10 +175,14 @@ const validateSupportedSearchEffect = (
   if (playerId === undefined || playerId !== entry.controllerId) {
     return { ok: false, reason: "unsupported-player-ref" };
   }
-  if (request.lookCount !== 1) {
+  if (
+    typeof request.lookCount !== "number" ||
+    !Number.isSafeInteger(request.lookCount) ||
+    request.lookCount < 1
+  ) {
     return { ok: false, reason: "unsupported-look-count" };
   }
-  if (!isExactCharacterCategoryFilter(request.filter)) {
+  if (!isSupportedSearchCardFilter(request.filter)) {
     return { ok: false, reason: "unsupported-filter" };
   }
   if (request.min !== 0 || request.max !== 1) {
@@ -167,13 +191,35 @@ const validateSupportedSearchEffect = (
   if (request.destination !== "hand") {
     return { ok: false, reason: "unsupported-destination" };
   }
-  if (request.revealTo !== "chooserOnly") {
+  if (
+    request.revealTo !== "chooserOnly" &&
+    request.revealTo !== "bothPlayers"
+  ) {
+    return { ok: false, reason: "unsupported-visibility" };
+  }
+  if (request.lookCount === 1 && request.revealTo !== "chooserOnly") {
     return { ok: false, reason: "unsupported-visibility" };
   }
   if (request.shuffleAfter !== false) {
     return { ok: false, reason: "unsupported-shuffle" };
   }
-  if (request.remainingCards !== undefined) {
+  if (
+    request.lookCount === 1 &&
+    request.remainingCards === undefined &&
+    !isLegacyTopOneSearch(effect)
+  ) {
+    return { ok: false, reason: "unsupported-remaining-cards-policy" };
+  }
+  if (request.lookCount === 1 && request.remainingCards !== undefined) {
+    return { ok: false, reason: "unsupported-remaining-cards-policy" };
+  }
+  if (request.lookCount > 1 && !hasSupportedRemainingCardsPolicy(request)) {
+    return { ok: false, reason: "unsupported-remaining-cards-policy" };
+  }
+  if (
+    request.remainingCards !== undefined &&
+    !hasSupportedRemainingCardsPolicy(request)
+  ) {
     return { ok: false, reason: "unsupported-remaining-cards-policy" };
   }
   return { ok: true, playerId };
@@ -190,8 +236,7 @@ export const createSupportedSearchRevealTransientSet = (
   }
 
   const player = state.players[supported.playerId];
-  const topDeck = player?.deck[0];
-  if (player === undefined || topDeck === undefined) {
+  if (player === undefined || player.deck.length === 0) {
     return {
       events: [],
       kind: "noEligibleCandidate",
@@ -200,8 +245,17 @@ export const createSupportedSearchRevealTransientSet = (
     };
   }
 
-  const resolved = state.cardManifest.cards[topDeck.cardId];
-  if (resolved?.category !== "character") {
+  const lookedCards = player.deck.slice(0, effect.request.lookCount);
+  const eligibleCards = lookedCards.filter((card) =>
+    cardMatchesSearchFilter(
+      state.cardManifest.cards[card.cardId],
+      effect.request.filter,
+    ),
+  );
+  if (
+    eligibleCards.length === 0 &&
+    (isLegacyTopOneSearch(effect) || lookedCards.length === 0)
+  ) {
     return {
       events: [],
       kind: "noEligibleCandidate",
@@ -212,17 +266,15 @@ export const createSupportedSearchRevealTransientSet = (
 
   const transientSet: EngineInternalTransientCardSet = {
     id: `set:search-reveal:${String(entry.id)}`,
-    cards: [
-      {
-        instanceId: topDeck.instanceId,
-        cardId: topDeck.cardId,
-        playerId: supported.playerId,
-        zone: topDeck.zone,
-      },
-    ],
+    cards: lookedCards.map((card) => ({
+      instanceId: card.instanceId,
+      cardId: card.cardId,
+      playerId: supported.playerId,
+      zone: card.zone,
+    })),
     origin: "topOfDeck",
-    ownerId: topDeck.owner,
-    controllerId: topDeck.controller,
+    ownerId: supported.playerId,
+    controllerId: supported.playerId,
     visibility: { type: "private", playerId: supported.playerId },
     cleanupPolicy: "returnToOrigin",
   };
@@ -242,6 +294,9 @@ const revealIdForEntry = (entry: EffectQueueEntry): string =>
 
 const decisionIdForEntry = (entry: EffectQueueEntry) =>
   toDecisionId(`decision:selectCards:search-reveal:${String(entry.id)}`);
+
+const orderDecisionIdForQueueEntryId = (queueEntryId: string) =>
+  toDecisionId(`decision:orderCards:search-reveal:${queueEntryId}`);
 
 const transientSetIdForEntry = (entry: EffectQueueEntry) =>
   `set:search-reveal:${String(entry.id)}`;
@@ -301,6 +356,13 @@ const revealIdForSetId = (setId: string): string | undefined => {
   return `reveal:search-reveal:${setId.slice(prefix.length)}`;
 };
 
+const queueEntryIdFromSearchRevealSetId = (
+  setId: string,
+): string | undefined => {
+  const prefix = "set:search-reveal:";
+  return setId.startsWith(prefix) ? setId.slice(prefix.length) : undefined;
+};
+
 const isExpectedSearchRevealDecisionEnvelope = (
   decision: SelectCardsDecision,
 ): boolean => {
@@ -314,7 +376,7 @@ const isExpectedSearchRevealDecisionEnvelope = (
     return false;
   }
   const queueEntryId = String(setId).slice("set:search-reveal:".length);
-  return (
+  if (
     decision.id ===
       toDecisionId(`decision:selectCards:search-reveal:${queueEntryId}`) &&
     decision.request.min === 0 &&
@@ -322,11 +384,17 @@ const isExpectedSearchRevealDecisionEnvelope = (
     decision.request.allowFewerIfUnavailable &&
     decision.request.chooser === "self" &&
     decision.request.visibility === "privateToChooser" &&
-    isExactCharacterCategoryFilter(filter) &&
+    isSupportedSearchCardFilter(filter) &&
     decision.visibility.type === "private" &&
-    decision.visibility.playerId === decision.playerId &&
-    decision.candidates.length === 1
-  );
+    decision.visibility.playerId === decision.playerId
+  ) {
+    return decision.candidates.every(
+      (candidate) =>
+        candidate.visibility.type === "private" &&
+        candidate.visibility.playerId === decision.playerId,
+    );
+  }
+  return false;
 };
 
 const toHandCard = (
@@ -338,6 +406,61 @@ const toHandCard = (
   zone: { zone: "hand", playerId, slot: "hand", index },
 });
 
+const toDeckCard = (
+  card: CardInstance,
+  playerId: CardInstance["controller"],
+  index: number,
+): CardInstance => ({
+  ...card,
+  zone: { zone: "deck", playerId, slot: "deck", index },
+});
+
+const createSearchRevealOrderCardsDecision = (
+  queueEntryId: string,
+  effectId: EffectQueueEntry["effectBlockId"],
+  playerId: EffectQueueEntry["controllerId"],
+  cards: readonly CardRef[],
+): OrderCardsDecision => ({
+  id: orderDecisionIdForQueueEntryId(queueEntryId),
+  type: "orderCards",
+  playerId,
+  prompt: "Order the remaining looked cards.",
+  causedBy: {
+    type: "effect",
+    queueEntryId: queueEntryId as EffectQueueEntry["id"],
+    effectId,
+  },
+  visibility: { type: "private", playerId },
+  cards: cards.map((card) => ({ ...card })),
+  destination: "deck",
+  defaultResponse: {
+    type: "orderedIds",
+    ids: cards.map((card) => String(card.instanceId)),
+  },
+});
+
+const toCardRefForPlayer = (
+  card: CardInstance,
+  playerId: CardInstance["controller"],
+): CardRef => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  playerId,
+  zone: card.zone,
+});
+
+const getQueuedEntryForSearchDecision = (
+  state: GameState,
+  causedBy: NonNullable<GameState["pendingDecision"]>["causedBy"],
+): EffectQueueEntry | undefined =>
+  causedBy.type === "effect"
+    ? state.effectQueue.find(
+        (entry) =>
+          entry.id === causedBy.queueEntryId &&
+          entry.effectBlockId === causedBy.effectId,
+      )
+    : undefined;
+
 const hasExpectedTransientSetShape = (
   state: GameState,
   playerId: EffectQueueEntry["controllerId"],
@@ -347,7 +470,7 @@ const hasExpectedTransientSetShape = (
   if (
     state.pendingDecision !== undefined ||
     transientSet.id !== transientSetIdForEntry(entry) ||
-    transientSet.cards.length !== 1 ||
+    transientSet.cards.length < 1 ||
     transientSet.origin !== "topOfDeck" ||
     transientSet.ownerId !== playerId ||
     transientSet.controllerId !== playerId ||
@@ -359,20 +482,21 @@ const hasExpectedTransientSetShape = (
   }
 
   const player = state.players[playerId];
-  const topDeck = player?.deck[0];
-  const card = transientSet.cards[0];
-  if (player === undefined || topDeck === undefined || card === undefined) {
+  if (player === undefined) {
     return false;
   }
-  const resolved = state.cardManifest.cards[card.cardId];
-  return (
-    card.instanceId === topDeck.instanceId &&
-    card.cardId === topDeck.cardId &&
-    card.playerId === playerId &&
-    card.zone !== undefined &&
-    zonesEqual(card.zone, topDeck.zone) &&
-    resolved?.category === "character"
-  );
+  const lookedDeckCards = player.deck.slice(0, transientSet.cards.length);
+  return transientSet.cards.every((card, index) => {
+    const deckCard = lookedDeckCards[index];
+    return (
+      deckCard !== undefined &&
+      card.instanceId === deckCard.instanceId &&
+      card.cardId === deckCard.cardId &&
+      card.playerId === playerId &&
+      card.zone !== undefined &&
+      zonesEqual(card.zone, deckCard.zone)
+    );
+  });
 };
 
 export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
@@ -403,31 +527,12 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
   } as const;
   const visibility = { type: "private", playerId: supported.playerId } as const;
   const cards = transientSet.cards.map((card) => ({ ...card }));
-  const pendingDecision: SelectCardsDecision = {
-    id: decisionIdForEntry(entry),
-    type: "selectCards",
-    playerId: supported.playerId,
-    prompt: "Choose a revealed card or decline.",
-    causedBy,
-    visibility,
-    request: {
-      timing: "onResolution",
-      chooser: "self",
-      set: transientSet.id as NonNullable<
-        SelectCardsDecision["request"]["set"]
-      >,
-      filter: effect.request.filter,
-      min: 0,
-      max: 1,
-      allowFewerIfUnavailable: true,
-      visibility: "privateToChooser",
-    },
-    candidates: cards.map((card) => ({
-      card,
-      visibility,
-    })),
-    defaultResponse: { type: "cards", cards: [] },
-  };
+  const candidates = cards.filter((card) =>
+    cardMatchesSearchFilter(
+      state.cardManifest.cards[card.cardId],
+      effect.request.filter,
+    ),
+  );
 
   const events: EngineEvent[] = [];
   const revealId = revealIdForEntry(entry);
@@ -443,6 +548,91 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
     },
     visibility,
   );
+
+  if (candidates.length === 0) {
+    const pendingDecision = createSearchRevealOrderCardsDecision(
+      String(entry.id),
+      entry.effectBlockId,
+      supported.playerId,
+      cards,
+    );
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: pendingDecision.id,
+        decisionType: pendingDecision.type,
+        playerId: pendingDecision.playerId,
+      },
+      visibility,
+    );
+    for (const event of events) {
+      event.causedBy = causedBy;
+    }
+    const nextSeq = toStateSeq(state.seq + 1);
+    const nextState: GameState = {
+      ...state,
+      seq: nextSeq,
+      pendingDecision,
+      revealedCards: [
+        ...state.revealedCards,
+        {
+          id: revealId,
+          cards,
+          visibility,
+          origin: "topOfDeck",
+          createdAtStateSeq: nextSeq,
+          cleanupPolicy: "returnToOrigin",
+        },
+      ],
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    return {
+      events,
+      kind: "decisionCreated",
+      ok: true,
+      state: nextState,
+      transientSet,
+      transientSetHash: hashCanonicalStateValue(transientSet),
+    };
+  }
+
+  const pendingDecision: SelectCardsDecision = {
+    id: decisionIdForEntry(entry),
+    type: "selectCards",
+    playerId: supported.playerId,
+    prompt:
+      effect.request.revealTo === "bothPlayers"
+        ? "Choose a revealed card to reveal, or decline."
+        : "Choose a revealed card or decline.",
+    causedBy,
+    visibility,
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      set: transientSet.id as NonNullable<
+        SelectCardsDecision["request"]["set"]
+      >,
+      filter: effect.request.filter,
+      min: 0,
+      max: 1,
+      allowFewerIfUnavailable: true,
+      visibility: "privateToChooser",
+    },
+    candidates: cards
+      .map((card) => ({
+        card,
+        visibility,
+      }))
+      .filter((candidate) =>
+        cardMatchesSearchFilter(
+          state.cardManifest.cards[candidate.card.cardId],
+          effect.request.filter,
+        ),
+      ),
+    defaultResponse: { type: "cards", cards: [] },
+  };
   appendEvent(
     state,
     events,
@@ -555,19 +745,16 @@ export const applySupportedSearchRevealChoiceResponse = (
     revealId === undefined
       ? undefined
       : state.revealedCards.find((record) => record.id === revealId);
-  const candidate = decision.candidates[0]?.card;
-  const revealCard = reveal?.cards[0];
   if (
     reveal === undefined ||
     reveal.origin !== "topOfDeck" ||
     reveal.cleanupPolicy !== "returnToOrigin" ||
     reveal.visibility.type !== "private" ||
     reveal.visibility.playerId !== decision.playerId ||
-    reveal.cards.length !== 1 ||
-    candidate === undefined ||
-    revealCard === undefined ||
-    !cardRefMatches(candidate, revealCard) ||
-    state.cardManifest.cards[candidate.cardId]?.category !== "character"
+    reveal.cards.length < decision.candidates.length ||
+    !decision.candidates.every((candidate) =>
+      reveal.cards.some((card) => cardRefMatches(candidate.card, card)),
+    )
   ) {
     return fail("Search reveal record is stale or unsupported.");
   }
@@ -575,27 +762,37 @@ export const applySupportedSearchRevealChoiceResponse = (
   const selectedCard = responseCards[0];
   if (
     selectedCard !== undefined &&
-    (!cardRefMatches(selectedCard, candidate) ||
-      state.cardManifest.cards[selectedCard.cardId]?.category !== "character")
+    (!decision.candidates.some((candidate) =>
+      cardRefMatches(selectedCard, candidate.card),
+    ) ||
+      !cardMatchesSearchFilter(
+        state.cardManifest.cards[selectedCard.cardId],
+        decision.request.filter ?? {},
+      ))
   ) {
-    return fail("Selected card must be an active Character candidate.");
+    return fail("Selected card must be an active search candidate.");
   }
 
   const player = state.players[decision.playerId];
-  const topDeck = player?.deck[0];
+  if (player === undefined) {
+    return fail("Search reveal player is missing.");
+  }
+  const lookedDeckCards = player.deck.slice(0, reveal.cards.length);
   if (
-    player === undefined ||
-    topDeck === undefined ||
-    candidate.zone === undefined ||
-    topDeck.instanceId !== candidate.instanceId ||
-    topDeck.cardId !== candidate.cardId ||
-    topDeck.owner !== decision.playerId ||
-    topDeck.controller !== decision.playerId ||
-    !zonesEqual(candidate.zone, topDeck.zone)
+    lookedDeckCards.length !== reveal.cards.length ||
+    !reveal.cards.every((card, index) => {
+      const deckCard = lookedDeckCards[index];
+      return (
+        deckCard !== undefined &&
+        card.instanceId === deckCard.instanceId &&
+        card.cardId === deckCard.cardId &&
+        card.playerId === decision.playerId &&
+        card.zone !== undefined &&
+        zonesEqual(card.zone, deckCard.zone)
+      );
+    })
   ) {
-    return fail(
-      "Search reveal candidate is no longer the active top deck card.",
-    );
+    return fail("Search reveal looked cards are stale or unsupported.");
   }
 
   const events: EngineEvent[] = [];
@@ -617,19 +814,45 @@ export const applySupportedSearchRevealChoiceResponse = (
     decisionResolved.causedBy = { type: "decision", decisionId: decision.id };
   }
 
+  const selectedDeckCard =
+    selectedCard === undefined
+      ? undefined
+      : lookedDeckCards.find(
+          (card) => card.instanceId === selectedCard.instanceId,
+        );
   const movedCard =
     selectedCard === undefined
       ? undefined
-      : toHandCard(topDeck, decision.playerId, player.hand.length);
-  if (movedCard !== undefined) {
+      : selectedDeckCard === undefined
+        ? undefined
+        : toHandCard(selectedDeckCard, decision.playerId, player.hand.length);
+  if (selectedCard !== undefined && movedCard === undefined) {
+    return fail("Selected card is no longer in the looked deck cards.");
+  }
+  if (movedCard !== undefined && selectedDeckCard !== undefined) {
+    if (decision.visibility.type !== "private") {
+      return fail("Search reveal decision visibility is unsupported.");
+    }
+    if (reveal.visibility.playerId !== decision.playerId) {
+      return fail("Search reveal record visibility is unsupported.");
+    }
+    const selectedRevealVisibility =
+      state.revealedCards.find((record) => record.id === reveal.id)
+        ?.visibility ?? decision.visibility;
+    if (selectedRevealVisibility.type !== "private") {
+      return fail("Search reveal record visibility is unsupported.");
+    }
+    if (decision.request.visibility !== "privateToChooser") {
+      return fail("Search reveal request visibility is unsupported.");
+    }
     appendEvent(
       state,
       events,
       "cardMoved",
       {
-        instanceId: topDeck.instanceId,
-        cardId: topDeck.cardId,
-        from: topDeck.zone,
+        instanceId: selectedDeckCard.instanceId,
+        cardId: selectedDeckCard.cardId,
+        from: selectedDeckCard.zone,
         to: movedCard.zone,
         reason: "searchRevealChoice",
         selectionSetId: decision.request.set,
@@ -642,66 +865,123 @@ export const applySupportedSearchRevealChoiceResponse = (
     }
   }
 
-  const causedBy = decision.causedBy;
-  const queuedEntry =
-    causedBy.type === "effect"
-      ? state.effectQueue.find(
-          (entry) =>
-            entry.id === causedBy.queueEntryId &&
-            entry.effectBlockId === causedBy.effectId,
-        )
-      : undefined;
-  if (queuedEntry !== undefined) {
+  const queueEntryId = queueEntryIdFromSearchRevealSetId(
+    String(decision.request.set),
+  );
+  const queuedEntry = getQueuedEntryForSearchDecision(state, decision.causedBy);
+  const selectedInstanceId = selectedCard?.instanceId;
+  const remainingLookedCards = lookedDeckCards
+    .filter((card) => card.instanceId !== selectedInstanceId)
+    .map((card, index) => toDeckCard(card, decision.playerId, index));
+  const tail = player.deck.slice(reveal.cards.length);
+  const deckWhileOrdering = reindexZoneCards(
+    [...remainingLookedCards, ...tail],
+    "deck",
+    decision.playerId,
+    "deck",
+  );
+  const remainderRefs = deckWhileOrdering
+    .slice(0, remainingLookedCards.length)
+    .map((card) => toCardRefForPlayer(card, decision.playerId));
+  const publicSelectedReveal =
+    selectedCard !== undefined &&
+    decision.prompt === "Choose a revealed card to reveal, or decline.";
+  if (
+    movedCard !== undefined &&
+    publicSelectedReveal &&
+    selectedDeckCard !== undefined
+  ) {
     appendEvent(
       state,
       events,
-      "effectResolved",
+      "cardRevealed",
       {
-        queueEntryId: queuedEntry.id,
-        timingWindowId: queuedEntry.timingWindowId,
-        generation: queuedEntry.generation,
-        effectBlockId: queuedEntry.effectBlockId,
-        ...(queuedEntry.triggerEventId !== undefined
-          ? { triggerEventId: queuedEntry.triggerEventId }
-          : {}),
-        sourcePresencePolicy: queuedEntry.sourcePresencePolicy,
-        orderingGroup: queuedEntry.orderingGroup,
-        status: "resolved" as const,
+        revealId: `reveal:search-reveal:selected:${queueEntryId ?? decision.id}`,
+        cards: [toCardRefForPlayer(selectedDeckCard, decision.playerId)],
+        origin: "topOfDeck",
       },
       { type: "public" },
     );
-    const effectResolved = events[events.length - 1];
-    if (effectResolved !== undefined) {
-      effectResolved.causedBy = {
-        type: "effect",
-        queueEntryId: queuedEntry.id,
-        effectId: queuedEntry.effectBlockId,
-      };
+    const selectedReveal = events[events.length - 1];
+    if (selectedReveal !== undefined) {
+      selectedReveal.causedBy = { type: "decision", decisionId: decision.id };
     }
   }
 
-  const nextPlayers =
-    movedCard === undefined
-      ? state.players
-      : {
-          ...state.players,
-          [decision.playerId]: {
-            ...player,
-            deck: reindexZoneCards(
-              player.deck.slice(1),
-              "deck",
-              decision.playerId,
-              "deck",
-            ),
-            hand: [...player.hand, movedCard],
-          },
-        };
+  if (remainderRefs.length > 1 && queueEntryId !== undefined) {
+    const orderDecision = createSearchRevealOrderCardsDecision(
+      queueEntryId,
+      decision.causedBy.type === "effect"
+        ? decision.causedBy.effectId
+        : (String(decision.id) as EffectQueueEntry["effectBlockId"]),
+      decision.playerId,
+      remainderRefs,
+    );
+    appendEvent(
+      state,
+      events,
+      "decisionCreated",
+      {
+        decisionId: orderDecision.id,
+        decisionType: orderDecision.type,
+        playerId: orderDecision.playerId,
+      },
+      decision.visibility,
+    );
+    const orderCreated = events[events.length - 1];
+    if (orderCreated !== undefined) {
+      orderCreated.causedBy = { type: "decision", decisionId: decision.id };
+    }
+    const nextState: GameState = {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      actionSeq: state.actionSeq + 1,
+      players: {
+        ...state.players,
+        [decision.playerId]: {
+          ...player,
+          deck: deckWhileOrdering,
+          hand:
+            movedCard === undefined ? player.hand : [...player.hand, movedCard],
+        },
+      },
+      pendingDecision: orderDecision,
+      revealedCards: [
+        ...state.revealedCards.filter((record) => record.id !== reveal.id),
+        {
+          ...reveal,
+          cards: remainderRefs,
+          createdAtStateSeq: toStateSeq(state.seq + 1),
+        },
+      ],
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    return toEngineResult(nextState, events);
+  }
+
+  const finalDeck = reindexZoneCards(
+    [...tail, ...remainingLookedCards],
+    "deck",
+    decision.playerId,
+    "deck",
+  );
+  if (queuedEntry !== undefined) {
+    appendEffectResolvedEvent(state, events, queuedEntry);
+  }
 
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
-    players: nextPlayers,
+    players: {
+      ...state.players,
+      [decision.playerId]: {
+        ...player,
+        deck: finalDeck,
+        hand:
+          movedCard === undefined ? player.hand : [...player.hand, movedCard],
+      },
+    },
     effectQueue:
       queuedEntry === undefined
         ? state.effectQueue
