@@ -1,0 +1,189 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-003
+epic_id: SUP-003
+title: Leader start-game and Activate Main support parent
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Coordinate the contract, engine, and cards-layer work needed for reusable
+  leader support families: certified non-runtime deck-construction rule
+  parsing, start-of-game setup effects that play a typed Stage from deck, and
+  Activate Main once-per-turn effects with optional choose-one trash costs that
+  gate draw.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  SUP-003A through SUP-003H one at a time after distinct parent and child
+  story-review evidence exists. Contract authorability must land before engine
+  runtime behavior that consumes it, and engine runtime behavior must land
+  before cards-layer parser/generated-support promotion cites it.
+allowed_touch_points:
+  - stories/generated/SUP-003*.yaml
+  - stories/approved/SUP-003*.yaml
+  - agent-packets/SUP-003*.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 02-engine-mechanics.s008
+  - 02-engine-mechanics.s024
+  - 02-engine-mechanics.s025
+  - 02-engine-mechanics.s042
+  - 02-engine-mechanics.s044
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s012
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s014
+  - 05-effect-dsl-reference.s029
+  - 06-visibility-security.s004
+  - 06-visibility-security.s005
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s004
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-009A
+  - CARD-014A
+  - CARD-020D
+  - ENG-005A
+  - ENG-005B
+  - ENG-055B
+  - SUP-002A
+  - SUP-002B
+  - SUP-002D
+  - SUP-002G
+# prettier-ignore
+child_stories:
+  - id: SUP-003A
+    title: Optional choose-one trash cost contract authorability
+    concern: Authorize optional choose-one cost clauses whose alternatives can include typed field trash and unfiltered hand trash without changing runtime behavior or cards generated support.
+    depends_on: []
+  - id: SUP-003B
+    title: Activate Main once-per-turn runtime
+    concern: Expose and apply reusable Activate Main effect blocks during the main phase, including once-per-turn commitment semantics, without card IDs or printed-text checks.
+    depends_on: []
+  - id: SUP-003C
+    title: Optional choose-one trash cost runtime
+    concern: Execute optional pay-cost sequence segments with choose-one alternatives for typed self Character field trash or unfiltered hand trash, then resume dependent ifYouDo effects.
+    depends_on: [SUP-003A]
+  - id: SUP-003D
+    title: Start-of-game typed Stage play runtime
+    concern: Execute setup-time start-of-game effects that select up to 1 typed Stage card from self deck and play it before opening draw and Life setup.
+    depends_on: [SUP-002D]
+  - id: SUP-003E
+    title: External deck-rule parser evidence
+    concern: Parse parameterized leader deck-construction restriction text as certified non-runtime evidence with no engine primitive or EffectBlock.
+    depends_on: []
+  - id: SUP-003F
+    title: Activate Main choose-one cost card components
+    concern: Parse and promote reusable Activate Main Once Per Turn optional choose-one trash-cost-to-draw support.
+    depends_on: [SUP-003A, SUP-003B, SUP-003C]
+  - id: SUP-003G
+    title: Start-of-game typed Stage play card components
+    concern: Parse and promote reusable start-of-game play-up-to-1 typed Stage from deck support, consuming setup runtime capability evidence.
+    depends_on: [SUP-003D]
+  - id: SUP-003H
+    title: Leader support composition card proof
+    concern: Prove certified non-runtime deck-rule evidence, start-of-game setup support, and Activate Main support compose across representative leader text without exact full-card branches.
+    depends_on: [SUP-003E, SUP-003F, SUP-003G]
+scope:
+  - keep the full support chain in one parent story so prerequisite contract and engine work is visible before cards-layer work starts
+  - decompose representative leader text into reusable primitives rather than exact full-card text, exact full-effect sentence branches, card IDs, or a human-held adjacent-card list
+  - cover the parameterized external deck-construction rule primitive `Under the rules of this game, you cannot include <category plural> with a cost of N or more in your deck`
+  - treat external deck-construction rule parsing as certified non-runtime evidence with no EffectBlock, no generated DSL schema requirement, and no engine runtime capability ID
+  - do not implement deck validation semantics in this parent; the validator may consume the parsed non-runtime primitive in a later story
+  - cover start-of-game setup timing for effects that can modify deck contents before opening draw, mulligan, and Life setup
+  - cover `play up to 1 {TYPE} type Stage card from your deck` through reusable selection, type/category filter, play-from-deck, and setup-order primitives
+  - cover `[Activate: Main] [Once Per Turn]` as a reusable activation wrapper over implemented-dsl effect blocks, not as a one-off card line
+  - cover optional choose-one cost clauses shaped like `You may trash A or B:` using a reusable pay-cost decision with multiple payment options and optional decline semantics
+  - cover the field-trash alternative as `trash N of your {TYPE} type Characters` using reusable public field selection and CardFilter primitives
+  - cover the hand-trash alternative as `trash N card(s) from your hand` using existing hidden-info hand payment protections where possible
+  - cover draw after paid optional cost through reusable `ifYouDo` sequence continuation and existing draw capability evidence
+  - cards-layer parser work must name the primitive inventory first, then compose primitives; varying literals inside one full-sentence regex is not acceptable evidence of scalability
+  - each supported larger phrase implies its valid smaller primitive variants unless the story explicitly excludes them before implementation
+  - promote complete generated support only after parser certification, schema validation where applicable, runtime capability evidence, support metadata, review state, tested state, source integrity, and behavior hash gates pass
+non_scope:
+  - direct parent implementation
+  - a single child that changes contracts, engine runtime, and cards generated support together
+  - deck validation enforcement for leader-scoped construction restrictions
+  - real card IDs, real-card fixture capture, real-card source hash updates, real-card behavior hash updates, overlays, support manifest edits, or cards-produced manifest regeneration
+  - production branches for exact full card text, exact full effect lines, one external card list, one real card, or sample-specific sentence templates
+  - broad natural-language parsing for arbitrary deck-building rules, arbitrary start-of-game effects, comma-separated alternative costs, or unsupported setup searches
+  - generic event/counter activation, Activate Main costs outside scoped optional choose-one trash costs, or optional cost alternatives outside scoped field-trash/hand-trash payment
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - SUP-003 is not implemented directly
+  - SUP-003A through SUP-003H are independently reviewable child stories
+  - parent and every child story-review artifact exists with distinct assignment identity and distinct durable artifact identity before approval handoff, packet generation, activation, implementation handoff, or PR handoff
+  - contract/schema children land before engine or cards children consume optional choose-one, optional field-trash, or multi-option pay-cost shapes
+  - engine children prove reusable runtime capability before cards generated-support promotion cites those capabilities
+  - cards children recognize representative clauses through reusable parser components and capability gates without exact full-line or card-specific branches
+  - cards children must prove primitive composition by positive and negative matrix tests, not only by varying literals inside one representative sentence
+  - the external deck rule is never reported as unparsed text and is never treated as runtime-executable engine work
+  - a generated-support proof can distinguish certified non-runtime clauses from runtime clauses that require engine capability evidence
+  - complete generated support remains unsupported unless the full generated-support chain passes, including parser certification, schema validation where applicable, runtime capability evidence, engine proof/test evidence, metadata, review, tested state, source integrity, and behavior hash evidence
+  - cards children that claim generated-support promotion must validate produced Effect DSL with the real schema validator; fake validators or manually injected parser-certification/runtime-evidence shortcuts do not count as approval evidence
+  - lower-level parser, component, or generated-index tests are not sufficient when the production/default support-evaluator or support-probe path would still report missing parser-certification, schema, or runtime-capability blockers
+  - existing generated-support behavior for SUP-001, SUP-002, CARD-014, CARD-021, CARD-022, and CARD-023 remains compatible
+  - no implementation or test depends on real card IDs, a human-held adjacent-card list, exact full printed text, or one-off full-effect sentence branches
+  - parent PR cleanup metadata lists SUP-003A through SUP-003H and binds the non-packetized SUP-003 parent closeout after merge to main
+card_source_integrity:
+  - parent does not implement directly and does not name or target any real card
+  - children must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence unless a later approved CARD story explicitly owns real-card promotion
+  - representative lines are parser/runtime examples only; matching real cards may be discovered by generated-support probing only through reviewed generic support gates
+engine_capability_preflight:
+  - parent does not implement directly and delegates capability proof to SUP-003A through SUP-003H
+  - supported prerequisite groups include CARD-009A draw execution, ENG-055B/CARD-014A generic sequence frames, SUP-002A/SUP-002B optional hand-trash cost behavior, SUP-002D/SUP-002G top-N search and selected-card movement/remainder support, and ENG-005A/ENG-005B Stage play plus Stage replacement baseline behavior where applicable
+  - missing prerequisite groups are represented by SUP-003A through SUP-003D until each child lands: optional choose-one cost contract authorability, optional field-trash cost authorability, Activate Main legal action/runtime, optional choose-one pay-cost runtime, typed field-trash payment runtime, start-of-game setup timing, and typed Stage play-from-deck setup runtime
+  - cards-layer children must cite engine capabilities by reusable capability IDs and must fail closed when a required runtime capability is absent
+required_tests:
+  - story-review for SUP-003 parent before approval handoff
+  - story-review for SUP-003A before approval handoff
+  - story-review for SUP-003B before approval handoff
+  - story-review for SUP-003C before approval handoff
+  - story-review for SUP-003D before approval handoff
+  - story-review for SUP-003E before approval handoff
+  - story-review for SUP-003F before approval handoff
+  - story-review for SUP-003G before approval handoff
+  - story-review for SUP-003H before approval handoff
+  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - story-specific tests from SUP-003A through SUP-003H
+  - per-child reviewed commit evidence, AI review record, revision response, and verification evidence for SUP-003A through SUP-003H before parent PR handoff
+  - for each cards-layer child with parser certification gates, run a support-evaluator or support-probe regression proving the supported representative shape reaches the same generated-support/playability decision through the production/default path without missing parser-certification blockers
+  - role packet extraction output before each implementation handoff and before each code-review handoff
+  - final parent PR full-story integration review covering all child commits, packet history, cleanup metadata, CI, verification, and unresolved comments before human-review handoff
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run packets:verify`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - use the parent/substory workflow
+  - do not activate or implement SUP-003 directly
+  - generate and activate one SUP-003 child packet at a time
+  - implement SUP-003A before SUP-003C, SUP-003F, or SUP-003H
+  - implement SUP-003B and SUP-003C before SUP-003F
+  - implement SUP-003D before SUP-003G
+  - implement SUP-003E, SUP-003F, and SUP-003G before SUP-003H
+  - do not complete child packets until the parent branch lands on main
+  - keep SUP-003A through SUP-003H work on one parent integration branch with reviewed child commits
+  - do not open child PRs to main; use one final parent PR to main
+  - parent PR cleanup metadata must list SUP-003A through SUP-003H and bind the non-packetized SUP-003 parent closeout
+  - run role packet extraction before implementation and code-review handoffs
+  - fail closed on any parser, schema, runtime capability, source integrity, metadata, review, test, or wording ambiguity that could accidentally mark unsupported text playable
+ambiguity_policy: fail_and_escalate

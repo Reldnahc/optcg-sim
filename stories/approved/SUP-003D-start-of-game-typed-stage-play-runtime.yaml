@@ -1,0 +1,102 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-003D
+epic_id: SUP-003
+title: Start-of-game typed Stage play runtime
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Execute setup-time start-of-game effects that let a player select up to 1
+  typed Stage card from their deck and play the selected card before opening
+  hand, mulligan, and Life setup.
+story_boundary: >
+  Engine runtime story only. Do not add card parser/generated-support behavior,
+  real-card fixture evidence, support manifests, source hashes, behavior hashes,
+  or contract/schema changes.
+allowed_touch_points:
+  - stories/generated/SUP-003D-start-of-game-typed-stage-play-runtime.yaml
+  - stories/approved/SUP-003D-start-of-game-typed-stage-play-runtime.yaml
+  - agent-packets/SUP-003D.md
+  - agent-packets/active.json
+  - packages/engine-core/src/initial-state.ts
+  - packages/engine-core/src/initial-state.test.ts
+  - packages/engine-core/src/mulligan.ts
+  - packages/engine-core/src/mulligan.test.ts
+  - packages/engine-core/src/start-of-game-effects.ts
+  - packages/engine-core/src/start-of-game-effects.test.ts
+  - packages/engine-core/src/effect-runtime.ts
+  - packages/engine-core/src/effect-runtime-play-selected.ts
+  - packages/engine-core/src/search-reveal-transient-set.test.ts
+  - packages/engine-core/src/filter-state-for-player.ts
+  - packages/engine-core/src/filter-state-for-player.test.ts
+spec_refs:
+  - 02-engine-mechanics.s008
+  - 02-engine-mechanics.s009
+  - 02-engine-mechanics.s044
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s012
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s014
+  - 06-visibility-security.s004
+  - 06-visibility-security.s005
+  - 11-testing-quality.s004
+dependencies:
+  - SUP-002D
+scope:
+  - support setup-time effect blocks with trigger `startOfGame` that select up to 1 card from the source controller's deck using scoped Stage category/type filters
+  - support playing at most one selected Stage card from deck into the source controller's stage area without paying cost
+  - execute the scoped start-of-game effect before final shuffle, opening draw, mulligan decisions, and Life setup as required by `02-engine-mechanics.s008`
+  - preserve deterministic RNG, deck order, zone indexing, event ordering, and state hashes across setup
+  - create hidden-info-safe owner decisions when a choice is required and allow selecting zero cards for `up to 1`
+  - ensure selected Stage cards become public in stage area and unselected deck card identities remain hidden from the opponent
+  - if the player already controls a Stage during setup, trash the existing Stage before placing the selected Stage using the ENG-005B Stage replacement ordering and fail closed if that replacement path cannot be represented safely
+  - produce engine test evidence for setup timing and hidden-information behavior that later cards-layer runtime capability records can cite; do not edit the cards runtime capability matrix in this engine story
+non_scope:
+  - shared contract/schema changes
+  - card parser, generated-support, runtime capability matrix edits in cards package, support reports, fixtures, overlays, card IDs, source hashes, or behavior hashes
+  - deck validation or leader-scoped construction restrictions
+  - start-of-game effects that search trash, hand, life, DON deck, opponent deck, or arbitrary zones
+  - start-of-game effects that reveal, add to hand, trash, shuffle after search, play Characters, play Events, select more than one Stage, or play multiple unrelated categories
+  - broad setup queue ordering among multiple simultaneous start-of-game effects beyond deterministic owner/turn-order behavior needed for the scoped tests
+  - server, client, UI, database, API, or live card-data work
+acceptance_criteria:
+  - scoped start-of-game effects run before opening draw, mulligan, and Life setup
+  - selecting a matching Stage removes it from deck and places it in the player's stage area before final shuffle/opening draw
+  - selecting zero cards is legal for up-to cardinality and leaves deck/stage unchanged except for recorded decision resolution
+  - setup decisions expose candidates only to the choosing player and do not leak unselected deck identity to the opponent
+  - tests vary type name and deck position to prove no exact branch; selection count remains capped at up to one because Stage Area is a single-slot zone
+  - deck order, zone indexing, RNG advancement, event sequence, and final state hash are deterministic
+  - insufficient matching cards, no matching cards, malformed responses, wrong-player responses, stale decisions, and destination conflicts fail closed or resolve as specified without hidden-info leaks
+  - no engine code imports `@optcg/cards` or checks real card IDs or exact printed text
+required_tests:
+  - engine setup test proving a start-of-game typed Stage can be selected from deck and played before opening hand and Life setup
+  - engine setup test proving selected Stage is excluded from final shuffled deck and cannot appear in opening hand or Life
+  - engine setup/mulligan regression proving the setup flow now matches `02-engine-mechanics.s008` ordering without redrawing the played Stage during mulligan
+  - engine setup test proving zero selection is legal and deterministic
+  - engine hidden-information/view test for owner-only deck candidates and public played Stage
+  - engine test varying type filter and deck position without changing runtime path
+  - engine test for no matching Stage and insufficient candidates
+  - engine malformed/stale/wrong-player response tests for setup selection
+  - engine test proving an occupied Stage is trashed before the selected setup Stage is placed, and invalid replacement state fails closed without mutation
+  - deterministic event-order and state-hash tests for selected and declined setup branches
+  - regression test proving normal setup without start-of-game effects remains compatible
+  - "`corepack pnpm --filter @optcg/engine-core test`"
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run packets:verify`"
+repo_rules:
+  - implement only SUP-003D while its packet is active
+  - do not activate or implement SUP-003D until SUP-002D search runtime evidence has landed on main or the active parent integration branch
+  - keep engine-core free of cards package imports and live card-data adapters
+  - stop and split if setup-time start-of-game effects require new shared contract fields
+ambiguity_policy: fail_and_escalate

@@ -1,0 +1,100 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-003E
+epic_id: SUP-003
+title: External deck-rule parser evidence
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Parse parameterized leader deck-construction restriction text as certified
+  non-runtime evidence so generated support can distinguish external pre-match
+  rules from unparsed gameplay text.
+story_boundary: >
+  Cards-layer story only. Do not add engine runtime behavior, shared
+  contract/schema changes, deck validation enforcement, real-card fixture
+  promotion, source hashes, behavior hashes, overlays, or card-specific
+  branches.
+allowed_touch_points:
+  - stories/generated/SUP-003E-external-deck-rule-parser-evidence.yaml
+  - stories/approved/SUP-003E-external-deck-rule-parser-evidence.yaml
+  - agent-packets/SUP-003E.md
+  - agent-packets/active.json
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator-parser-certification.test.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+spec_refs:
+  - 01-system-architecture.s023
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies: []
+scope:
+  - parse `Under the rules of this game, you cannot include <category plural> with a cost of N or more in your deck` as a reusable external deck-construction rule primitive
+  - parameterize card category, cost comparator `gte`, cost value, and deck scope rather than matching one exact sentence
+  - emit parser certification evidence and support-report evidence that the clause is recognized as non-runtime external validation scope
+  - produce no EffectBlock, no generated Effect DSL, no runtime capability requirement, and no engine primitive for the external deck rule clause
+  - ensure generated support treats the clause as parsed and intentionally non-runtime rather than as an unsupported ignored span
+  - allow later deck validation stories to consume the parsed primitive without changing the parser boundary
+non_scope:
+  - deck validation enforcement
+  - engine runtime behavior
+  - shared contract/schema changes
+  - real-card fixture capture, source hash updates, behavior hash updates, overlays, supported-card manifests, or cards-produced manifests
+  - arbitrary deck-building rules beyond category plus cost greater-than-or-equal restriction
+  - color identity exceptions, type restrictions, name restrictions, max-copy overrides, leaderLocked overlay semantics, or format banlist behavior
+  - exact card IDs, exact full-card text, external card lists, or one-off full-effect branches
+card_source_integrity:
+  - this story does not enable or change support for a named real card
+  - source integrity is not applicable because implementation evidence uses synthetic representative texts only
+  - do not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence
+engine_capability_preflight:
+  - parsed deck-rule clauses are explicitly non-runtime and require no engine capability IDs
+  - missing runtime capability group is none because the scoped clause produces no EffectBlock and no engine-executed primitive
+  - if generated support cannot distinguish certified non-runtime clauses from runtime clauses, this story is blocked and must split that support-report/evaluator gap
+acceptance_criteria:
+  - parser/generator support is generic over category plural and numeric cost threshold for the scoped phrase
+  - parser certification evidence identifies the clause as an external deck-construction rule with no runtime primitive
+  - generated-support reports show the clause as parsed non-runtime evidence, not as unparsed text, unsupported ignored text, or runtime-supported DSL
+  - support evaluator/reporting may classify the clause as recognized non-runtime parser evidence without requiring runtime capability, schema validation, or engine proof for that clause; final public-mode card support and playability still remain fail-closed until normal metadata, review, tested-state, source-integrity, and behavior-hash requirements are satisfied by the full support chain
+  - complete card playability still fails closed if other runtime clauses are unsupported
+  - no production code checks exact full text, card IDs, or one representative sentence as a whole string
+required_tests:
+  - cards parser primitive-boundary test for category, cost comparator, threshold, and deck scope
+  - parser matrix accepting Events cost 2 or more and Events cost 3 or more without changing parser rule family
+  - parser matrix accepting at least one additional supported category plural or explicitly failing closed with a documented category whitelist
+  - generated-support test proving the clause produces no EffectBlock and no runtime capability IDs
+  - support-evaluator/support-probe regression proving the production/default path reports certified non-runtime deck-rule evidence and no unparsed-span blocker for the scoped clause
+  - fail-closed tests for unsupported comparators, missing cost threshold, unsupported destination, and unsupported freeform deck-rule text
+  - runtime capability matrix test proving no engine capability is added for the non-runtime deck-rule primitive
+  - "`corepack pnpm --filter @optcg/cards test`"
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run packets:verify`"
+repo_rules:
+  - implement only SUP-003E while its packet is active
+  - do not activate or implement SUP-003E as deck validation work
+  - stop and split if the generated-support evaluator cannot represent certified non-runtime parser evidence without weakening runtime gates
+ambiguity_policy: fail_and_escalate
