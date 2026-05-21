@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id CARD-022A -->
 <!-- agent-packet:story-path stories/approved/CARD-022A-conditional-draw-generated-support-test-matrix.yaml -->
-<!-- agent-packet:story-sha256 52f179b904d4293836b34fe7db51d1d4609b5f3be433f7365fc261456f538c5a -->
+<!-- agent-packet:story-sha256 0953c1729f1a52964833ae4e566a76951780ac88886c885b2dcce3073996d513 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
