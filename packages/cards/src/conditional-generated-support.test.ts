@@ -1,12 +1,26 @@
+import { readFileSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { Ajv2020 } from "ajv/dist/2020.js";
+import type { AnySchema } from "ajv";
 import { describe, expect, it } from "vitest";
-import type { CardId, PoneglyphCardDetail } from "@optcg/types";
+import type {
+  CardId,
+  EffectDefinition,
+  PoneglyphCardDetail,
+} from "@optcg/types";
 
 import { buildGeneratedSupportIndex } from "./generated-support-index.js";
 import { buildGeneratedSupportReport } from "./generated-support-report.js";
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
+import {
+  buildTypedCharactersBasePowerSetterEffect,
+  parseAllYourTypedCharactersBasePowerTarget,
+  parseBasePowerSetterVerbPrefix,
+  parseBasePowerValue,
+} from "./conditional-generated-support-composer.js";
+import { conditionalContinuousCompositionBasePowerParserCertificationIds } from "./conditional-continuous-composition-evidence.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 import { runSupportProbe } from "./support-probe.js";
 
@@ -18,12 +32,30 @@ const baseInput = {
 };
 
 const validateEffectDefinition = () => ({ valid: true }) as const;
+const sup002fParserCertificationEvidence = {
+  currentCertificationIds:
+    conditionalContinuousCompositionBasePowerParserCertificationIds,
+};
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
   "..",
   "..",
 );
+const effectDslSchema = JSON.parse(
+  readFileSync(path.join(repoRoot, "contracts/effect-dsl.schema.json"), "utf8"),
+) as AnySchema;
+const ajv = new Ajv2020({ allErrors: true, strict: true });
+const validateSchema = ajv.compile(effectDslSchema);
+const validateEffectDefinitionAgainstSchema = (definition: EffectDefinition) =>
+  validateSchema(definition)
+    ? ({ valid: true } as const)
+    : ({
+        errors: (validateSchema.errors ?? []).map((error) =>
+          `${error.instancePath || "/"} ${error.message ?? ""}`.trim(),
+        ),
+        valid: false,
+      } as const);
 
 function toCardId(value: string): CardId {
   return value as CardId;
@@ -104,6 +136,44 @@ function syntheticCardDetail(
 }
 
 describe("conditional generated support diagnostics", () => {
+  it("parses conditional base-power body through reusable primitives", () => {
+    const verb = parseBasePowerSetterVerbPrefix(
+      "set the base power of all of your {Five Elders} type Characters to 7000",
+    );
+    expect(verb).toEqual({
+      bodyText: "all of your {Five Elders} type Characters to 7000",
+      prefix: "set the base power of ",
+    });
+
+    const target = parseAllYourTypedCharactersBasePowerTarget(
+      "all of your {Five Elders} type Characters to 7000",
+    );
+    expect(target).toEqual({
+      typeName: "Five Elders",
+      valueText: "7000",
+    });
+
+    expect(parseBasePowerValue("7000")).toEqual({ value: 7000 });
+    expect(
+      buildTypedCharactersBasePowerSetterEffect({
+        typeName: "Five Elders",
+        value: 7000,
+      }),
+    ).toEqual({
+      duration: { type: "permanent" },
+      target: {
+        filter: {
+          typesAny: ["Five Elders"],
+        },
+        player: "self",
+        type: "all",
+        zone: "characterArea",
+      },
+      type: "setBasePower",
+      value: 7000,
+    });
+  });
+
   it.each([
     {
       cardId: "CARD-022A-MATRIX-LESS-7-DRAW-1",
@@ -194,7 +264,7 @@ describe("conditional generated support diagnostics", () => {
             sourceTextHash: `sha256:${cardId.toLowerCase()}`,
           },
         ],
-        validateEffectDefinition,
+        validateEffectDefinition: validateEffectDefinitionAgainstSchema,
       });
       const entry = index.entries[0];
 
@@ -377,7 +447,7 @@ describe("conditional generated support diagnostics", () => {
             sourceTextHash: `sha256:${cardId.toLowerCase()}`,
           },
         ],
-        validateEffectDefinition,
+        validateEffectDefinition: validateEffectDefinitionAgainstSchema,
       });
       const report = buildGeneratedSupportReport(index);
 
@@ -530,7 +600,8 @@ describe("conditional generated support diagnostics", () => {
             sourceTextHash: "sha256:card-021e-synthetic",
           },
         ],
-        validateEffectDefinition,
+        parserCertificationEvidence: sup002fParserCertificationEvidence,
+        validateEffectDefinition: validateEffectDefinitionAgainstSchema,
       });
       const report = buildGeneratedSupportReport(index);
 
@@ -662,7 +733,8 @@ describe("conditional generated support diagnostics", () => {
             sourceTextHash: `sha256:${cardId.toLowerCase()}`,
           },
         ],
-        validateEffectDefinition,
+        parserCertificationEvidence: sup002fParserCertificationEvidence,
+        validateEffectDefinition: validateEffectDefinitionAgainstSchema,
       });
       const report = buildGeneratedSupportReport(index);
       const entry = index.entries[0];
@@ -699,7 +771,6 @@ describe("conditional generated support diagnostics", () => {
             duration: { type: "permanent" },
             target: {
               filter: {
-                categories: ["character"],
                 typesAny: [expectedTypeName],
               },
               player: "self",
@@ -733,6 +804,76 @@ describe("conditional generated support diagnostics", () => {
     },
   );
 
+  it("fails closed for conditional base-power support when parser certification evidence is omitted", () => {
+    const cardId = "SUP-002F-OMITTED-CERTIFICATION";
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: cardId as CardId,
+          sourceText:
+            "[Your Turn] If you have 4 or more cards in your trash, set the base power of all of your {Heart Pirates} type Characters to 7000.",
+          sourceTextHash: `sha256:${cardId.toLowerCase()}`,
+        },
+      ],
+      validateEffectDefinition: validateEffectDefinitionAgainstSchema,
+    });
+
+    for (const certificationId of conditionalContinuousCompositionBasePowerParserCertificationIds) {
+      const blocker = index.entries[0]?.blockers.find((item) =>
+        item.message.includes(certificationId),
+      );
+      expect(blocker).toMatchObject({
+        code: "unsupported-primitive",
+        diagnosticLayer: "review",
+      });
+      expect(blocker?.message).toContain("Missing parser certification");
+    }
+    expect(index.entries[0]).toMatchObject({
+      parseStatus: "complete",
+      status: "unsupported",
+    });
+    expect(index.effectDefinitions).toEqual({});
+  });
+
+  it.each(conditionalContinuousCompositionBasePowerParserCertificationIds)(
+    "fails closed for conditional base-power support when parser certification evidence is stale for %s",
+    (staleId) => {
+      const cardId = "SUP-002F-STALE-CERTIFICATION";
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: cardId as CardId,
+            sourceText:
+              "[Your Turn] If you have 4 or more cards in your trash, set the base power of all of your {Heart Pirates} type Characters to 7000.",
+            sourceTextHash: `sha256:${cardId.toLowerCase()}`,
+          },
+        ],
+        parserCertificationEvidence: {
+          currentCertificationIds:
+            conditionalContinuousCompositionBasePowerParserCertificationIds,
+          staleCertificationIds: [staleId],
+        },
+        validateEffectDefinition: validateEffectDefinitionAgainstSchema,
+      });
+
+      const blocker = index.entries[0]?.blockers.find((item) =>
+        item.message.includes(staleId),
+      );
+      expect(blocker).toMatchObject({
+        code: "unsupported-primitive",
+        diagnosticLayer: "review",
+      });
+      expect(blocker?.message).toContain("Stale parser certification");
+      expect(index.entries[0]).toMatchObject({
+        parseStatus: "complete",
+        status: "unsupported",
+      });
+      expect(index.effectDefinitions).toEqual({});
+    },
+  );
+
   it.each([
     "[Your Turn] If you have 4 or more cards in your trash, set the base power of all of your {Navy} type Leaders to 3000.",
     "[Your Turn] If you and your opponent have 4 or more cards in your trash, set the base power of all of your {Navy} type Characters to 3000.",
@@ -752,6 +893,7 @@ describe("conditional generated support diagnostics", () => {
             sourceTextHash: "sha256:sup-002f-unsupported-fragment",
           },
         ],
+        parserCertificationEvidence: sup002fParserCertificationEvidence,
         validateEffectDefinition,
       });
 
@@ -813,6 +955,7 @@ describe("conditional generated support diagnostics", () => {
         },
       ],
       runtimeCapabilityMatrix: matrixWithoutBasePower,
+      parserCertificationEvidence: sup002fParserCertificationEvidence,
       validateEffectDefinition,
     });
 

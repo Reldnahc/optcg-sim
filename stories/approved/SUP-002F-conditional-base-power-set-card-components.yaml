@@ -27,6 +27,8 @@ allowed_touch_points:
   - packages/cards/src/conditional-continuous-composition-diagnostics.ts
   - packages/cards/src/conditional-continuous-composition-diagnostics.test.ts
   - packages/cards/src/conditional-continuous-composition-evidence.ts
+  - packages/cards/src/conditional-parser-components.ts
+  - packages/cards/src/conditional-parser-components.test.ts
   - packages/cards/src/conditional-generated-support-composer.ts
   - packages/cards/src/conditional-generated-support.test.ts
   - packages/cards/src/composed-parser-builder.ts
@@ -46,11 +48,16 @@ spec_refs:
   - 04-effect-runtime.s005
   - 04-effect-runtime.s007
   - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s002
   - 05-effect-dsl-reference.s003
   - 05-effect-dsl-reference.s004
   - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s010
   - 05-effect-dsl-reference.s012
   - 05-effect-dsl-reference.s016
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s025
   - 09-card-data-and-support-policy.s010
   - 09-card-data-and-support-policy.s011
   - 09-card-data-and-support-policy.s012
@@ -60,12 +67,14 @@ spec_refs:
   - 09-card-data-and-support-policy.s018
   - 09-card-data-and-support-policy.s024
   - 11-testing-quality.s020
+  - 11-testing-quality.s021
 dependencies:
   - SUP-002H
   - SUP-002C
   - CARD-021A
   - CARD-023A
 scope:
+  - "define parser primitives separately before composing them: `[Your Turn]` continuous timing wrapper, `If` condition wrapper, public condition predicate, base-power setter verb, all-your-typed-Characters target, type filter, and base-power value"
   - parse `[Your Turn] If <public condition>, set the base power of all of your {TYPE} type Characters to N.`
   - reuse existing condition parser primitives for trash-count greater-than-or-equal thresholds
   - emit reusable continuous `setBasePower` Effect DSL with all-target self characterArea and type filter
@@ -87,11 +96,17 @@ engine_capability_preflight:
   - missing runtime capability group is none for scoped synthetic rows only after SUP-002C capability IDs exist in the runtime capability matrix; if conditional base-power runtime evidence is absent, this story is blocked
 acceptance_criteria:
   - parser/generator support is generic over condition threshold, type name, and base-power value
+  - parser/generator implementation must compose the condition wrapper, condition predicate, target filter, and base-power setter body as separate primitives; a full-sentence regex that only varies threshold/type/value fails this story
+  - generated-support tests that assert `status: supported` must validate the produced Effect DSL with the real schema validator, and schema failures such as extra filter fields fail the story
+  - generated-support promotion requires current parser-rule certification evidence for the condition wrapper, condition predicate, target filter, base-power setter body, and their composition; absent or stale certification evidence must fail closed even when DSL schema validation and runtime capability checks pass
   - generated support fails closed when condition or base-power body is only partially parsed
   - runtime capability evidence is required before final playable/generated-support decision can pass
   - no production code checks exact full effect text, card IDs, or the representative sample as a whole string
 required_tests:
   - cards parser/generated-support test for conditional all-your-type base-power setter
+  - real-schema generated-support regression for the representative conditional base-power line
+  - test proving the generated `setBasePower` target filter contains only schema-authorized fields for this scoped shape
+  - fail-closed generated-support test when parser-rule certification evidence is absent or stale for any required condition, target-filter, base-power setter, or composition component
   - test varying threshold, type name, and base-power value
   - fail-closed tests for unsupported target wording and unsupported condition/body fragments
   - runtime capability matrix test for SUP-002C capability evidence

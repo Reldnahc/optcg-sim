@@ -13,6 +13,7 @@ export type ConditionalContinuousCompositionEvidenceFragment = {
   readonly parserRuleId: ConditionalContinuousParserRuleId;
   readonly shapeId: ConditionalContinuousShapeId;
   readonly components: readonly string[];
+  readonly parserCertificationIds?: readonly string[];
   readonly runtimeCapabilityIds: readonly string[];
   readonly requiresSequencedEffectSchema: boolean;
 };
@@ -95,6 +96,15 @@ export const conditionalContinuousCompositionSequenceMixedParserRuleId =
   conditionalContinuousCompositionVariants[4].parserRuleId;
 export const conditionalContinuousCompositionBasePowerParserRuleId =
   conditionalContinuousCompositionVariants[5].parserRuleId;
+
+export const conditionalContinuousCompositionBasePowerParserCertificationIds = [
+  "wrapper:your-turn-continuous-if",
+  "condition:trash-count:self:gte",
+  "body:base-power-setter",
+  "target:all-your-typed-characters",
+  "value:base-power:positive-safe-integer",
+  "composition:conditional-base-power-self-typed-character",
+] as const;
 
 export const allConditionalContinuousCompositionParserRuleIds =
   conditionalContinuousCompositionVariants.map(
@@ -193,6 +203,12 @@ export function listConditionalContinuousCompositionEvidenceFragments(): readonl
       "source-presence-policy",
     ],
     parserRuleId: variant.parserRuleId,
+    ...(variant.includesBasePower
+      ? {
+          parserCertificationIds:
+            conditionalContinuousCompositionBasePowerParserCertificationIds,
+        }
+      : {}),
     requiresSequencedEffectSchema: variant.isSequence,
     runtimeCapabilityIds: [
       "category:permanent",

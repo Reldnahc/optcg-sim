@@ -33,6 +33,20 @@ type ConditionalContinuousIfParse = {
   readonly includesYourTurnPrefix: boolean;
 };
 
+export type BasePowerSetterVerbPrefixParse = {
+  readonly bodyText: string;
+  readonly prefix: "set the base power of ";
+};
+
+export type AllYourTypedCharactersBasePowerTargetParse = {
+  readonly typeName: string;
+  readonly valueText: string;
+};
+
+export type BasePowerValueParse = {
+  readonly value: number;
+};
+
 export function parseConditionalWrapper(
   sourceText: string,
 ): ConditionalWrapperParse | undefined {
@@ -276,20 +290,7 @@ function parseContinuousBodyPart(
   const basePower = parseBasePowerSetterBody(bodyText);
   if (basePower !== undefined) {
     return {
-      effect: {
-        duration: { type: "permanent" },
-        target: {
-          filter: {
-            categories: ["character"],
-            typesAny: [basePower.typeName],
-          },
-          player: "self",
-          type: "all",
-          zone: "characterArea",
-        },
-        type: "setBasePower",
-        value: basePower.value,
-      },
+      effect: buildTypedCharactersBasePowerSetterEffect(basePower),
       explicitSelfCharacterTarget: false,
     };
   }
@@ -350,19 +351,67 @@ function parseContinuousBodyPart(
 function parseBasePowerSetterBody(
   bodyText: string,
 ): { readonly typeName: string; readonly value: number } | undefined {
-  const match =
-    /^set the base power of all of your \{([^{}]+)\} type Characters to (\d+)$/i.exec(
-      bodyText.trim(),
-    );
-  if (match === null) {
-    return undefined;
-  }
+  const verb = parseBasePowerSetterVerbPrefix(bodyText.trim());
+  if (verb === undefined) return undefined;
 
-  const typeName = match[1]?.trim() ?? "";
-  const value = parseExactPositiveSafeInteger(match[2] ?? "");
-  return typeName.length === 0 || value === undefined
+  const target = parseAllYourTypedCharactersBasePowerTarget(verb.bodyText);
+  if (target === undefined) return undefined;
+
+  const value = parseBasePowerValue(target.valueText);
+  return value === undefined
     ? undefined
-    : { typeName, value };
+    : { typeName: target.typeName, value: value.value };
+}
+
+export function parseBasePowerSetterVerbPrefix(
+  sourceText: string,
+): BasePowerSetterVerbPrefixParse | undefined {
+  const prefix = "set the base power of ";
+  return sourceText.startsWith(prefix) && sourceText.length > prefix.length
+    ? { bodyText: sourceText.slice(prefix.length), prefix }
+    : undefined;
+}
+
+export function parseAllYourTypedCharactersBasePowerTarget(
+  sourceText: string,
+): AllYourTypedCharactersBasePowerTargetParse | undefined {
+  const match = /^all of your \{([^{}]+)\} type Characters to (.+)$/i.exec(
+    sourceText.trim(),
+  );
+  const typeName = match?.[1]?.trim() ?? "";
+  const valueText = match?.[2]?.trim() ?? "";
+  return typeName.length === 0 || valueText.length === 0
+    ? undefined
+    : { typeName, valueText };
+}
+
+export function parseBasePowerValue(
+  sourceText: string,
+): BasePowerValueParse | undefined {
+  const value = parseExactPositiveSafeInteger(sourceText);
+  return value === undefined ? undefined : { value };
+}
+
+export function buildTypedCharactersBasePowerSetterEffect({
+  typeName,
+  value,
+}: {
+  readonly typeName: string;
+  readonly value: number;
+}): Extract<Effect, { type: "setBasePower" }> {
+  return {
+    duration: { type: "permanent" },
+    target: {
+      filter: {
+        typesAny: [typeName],
+      },
+      player: "self",
+      type: "all",
+      zone: "characterArea",
+    },
+    type: "setBasePower",
+    value,
+  };
 }
 
 function withYourTurnCondition(

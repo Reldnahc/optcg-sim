@@ -877,6 +877,9 @@ export const generatedSupportComponentEvidenceInventory = [
       ] as readonly GeneratedSupportComponentEvidenceCategory[],
       gates: buildParserRuleGates(fragment.requiresSequencedEffectSchema),
       parserRuleId: fragment.parserRuleId,
+      ...(fragment.parserCertificationIds === undefined
+        ? {}
+        : { parserCertificationIds: fragment.parserCertificationIds }),
       runtimeCapabilityIds: fragment.runtimeCapabilityIds,
       shapeId: fragment.shapeId,
     }),

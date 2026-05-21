@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-002F -->
 <!-- agent-packet:story-path stories/approved/SUP-002F-conditional-base-power-set-card-components.yaml -->
-<!-- agent-packet:story-sha256 2faa83c02c76835f8bca57fac70ff53d3e420d4e91df03a5365991129c911ea9 -->
+<!-- agent-packet:story-sha256 8dbb3e634eb542f7127537877839114848cc1fa661fa2e15a882dd5188a4d7c9 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -27,11 +27,16 @@ Parse and promote reusable cards-layer support for conditional continuous base-p
 - 04-effect-runtime.s005 (Card implementation support)
 - 04-effect-runtime.s007 (Source presence policy)
 - 04-effect-runtime.s011 (Conditions and costs)
+- 05-effect-dsl-reference.s002 (Purpose)
 - 05-effect-dsl-reference.s003 (Top-level definition)
 - 05-effect-dsl-reference.s004 (Effect block)
 - 05-effect-dsl-reference.s006 (Conditions)
+- 05-effect-dsl-reference.s009 (Card filters)
+- 05-effect-dsl-reference.s010 (Deprecated filter aliases)
 - 05-effect-dsl-reference.s012 (Effects)
 - 05-effect-dsl-reference.s016 (Replacement triggers)
+- 05-effect-dsl-reference.s022 (Poneglyph text-to-DSL pipeline)
+- 05-effect-dsl-reference.s025 (Richer filters)
 - 09-card-data-and-support-policy.s010 (Card implementation record)
 - 09-card-data-and-support-policy.s011 (Support policy by mode)
 - 09-card-data-and-support-policy.s012 (Deck validation)
@@ -41,6 +46,7 @@ Parse and promote reusable cards-layer support for conditional continuous base-p
 - 09-card-data-and-support-policy.s018 (Effect coverage report)
 - 09-card-data-and-support-policy.s024 (Source hash and behavior hash)
 - 11-testing-quality.s020 (Poneglyph/card-data tests)
+- 11-testing-quality.s021 (v6 contract validation)
 - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
 - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
 - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
@@ -186,6 +192,14 @@ interface OncePerTurnRecord {
 }
 ```
 
+### 05-effect-dsl-reference.s002 (Purpose)
+
+The effect DSL is a serializable card-effect definition language. It should cover most cards through composable primitives and route unusual cards to tested custom handlers.
+
+**v6 contract:** [`contracts/effect-dsl.schema.json`](contracts/effect-dsl.schema.json) is the canonical validation schema for JSON fixtures, and [`contracts/canonical-types.ts`](contracts/canonical-types.ts) is the canonical TypeScript contract. Markdown snippets below are explanatory.
+
+Definitions live in the repo for Phase 1 so they can be reviewed, diffed, tested, and versioned.
+
 ### 05-effect-dsl-reference.s003 (Top-level definition)
 
 ```ts
@@ -297,6 +311,55 @@ non-negative threshold. In this DON filter form, schema fixtures support
 This is contract/schema authorability evidence only and does not by itself imply
 runtime executable support, parser certification, generated support, or card
 playability.
+
+### 05-effect-dsl-reference.s009 (Card filters)
+
+```ts
+interface CardFilter {
+  cardIds?: CardId[];
+  names?: string[];
+  nameContains?: string;
+  nameNot?: string[];
+  categories?: CardCategory[];
+  colorsAny?: Color[];
+  colorsAll?: Color[];
+  typesAny?: string[];
+  typesAll?: string[];
+  attributesAny?: Attribute[];
+  attributesAll?: Attribute[];
+  cost?: { op: Comparator; value: number } | { min?: number; max?: number };
+  power?: { op: Comparator; value: number } | { min?: number; max?: number };
+  counter?: { op: Comparator; value: number } | { min?: number; max?: number };
+  hasKeywords?: Keyword[];
+  lacksKeywords?: Keyword[];
+  state?: "active" | "rested" | "attached";
+  owner?: PlayerRef;
+  controller?: PlayerRef;
+  excludeSelf?: boolean;
+  custom?: string;
+}
+```
+
+### 05-effect-dsl-reference.s010 (Deprecated filter aliases)
+
+The following earlier aliases are not canonical and should not appear in committed DSL fixtures:
+
+| Deprecated                                | Canonical                          |
+| ----------------------------------------- | ---------------------------------- |
+| `cardId`                                  | `cardIds`                          |
+| `cardName`                                | `names`                            |
+| `cardNameContains`                        | `nameContains`                     |
+| `cardNameNot`                             | `nameNot`                          |
+| `category`                                | `categories`                       |
+| `color`, `colorIncludes`                  | `colorsAny` or `colorsAll`         |
+| `type`, `typeIncludes`, `typeIncludesAny` | `typesAny` or `typesAll`           |
+| `attribute`                               | `attributesAny` or `attributesAll` |
+| `costOp` + `costValue`                    | `cost: { op, value }`              |
+| `powerOp` + `powerValue`                  | `power: { op, value }`             |
+| `hasKeyword`                              | `hasKeywords`                      |
+| `lacksKeyword`                            | `lacksKeywords`                    |
+
+A migration adapter may accept these aliases while importing old examples, but CI should reject them in canonical effect-definition fixtures.
 
 ### 05-effect-dsl-reference.s012 (Effects)
 
@@ -452,6 +515,58 @@ type ReplacementTrigger =
   | { type: "wouldMoveZone"; from?: Zone; to?: Zone; target: Target }
   | { type: "custom"; event: string };
 ```
+
+### 05-effect-dsl-reference.s022 (Poneglyph text-to-DSL pipeline)
+
+The effect-system plan supports three authoring paths:
+
+1. Manual DSL definitions written by developers.
+2. Custom TypeScript handlers for cards that cannot be expressed in DSL.
+3. Generated DSL from Poneglyph printed card text when certified parser rules produce a complete parse and runtime capability checks pass.
+
+Support ladder:
+
+1. `contract-defined`: a primitive or behavior is described by the Markdown spec or canonical TypeScript contract.
+2. `schema-authorable`: `contracts/effect-dsl.schema.json` can validate JSON fixtures for that primitive.
+3. `runtime-executable`: the current runtime capability matrix proves the engine can execute the primitive, including decisions, visibility, replay, failure policy, and pause/resume behavior.
+4. `parser-certified`: reviewed parser rules produce a complete parse for the relevant printed text shape.
+5. `generated-support playable`: a generated support record may enable normal play only when the parse is complete and every parsed component has current runtime capability evidence.
+
+Schema authorability alone is insufficient for generated-support playable status. Generated support requires runtime capability evidence and complete parser support; schema validation only proves a JSON shape can be authored.
+
+Generated definitions must never be deployed blindly. A new parser rule, ambiguous parse class, custom handler binding, or wording/ruling ambiguity requires review before it can certify support. Once a parser rule is certified, matching complete-parse cards may be generated without a manual per-card allowlist or manual card-to-mechanic map for that common template.
+
+A complete parse covers all gameplay-relevant printed text, trigger text, keyword text, costs, conditions, timing windows, target or selection requirements, visibility requirements, replacement or optionality semantics, and ruling/errata inputs that affect behavior. Multiple parsed effects compose into one generated `EffectDefinition`. Partial parse output may be reported for coverage progress, but it must not make the card playable in normal modes.
+
+Bandai or Poneglyph wording drift must invalidate the affected parse/hash evidence or downgrade support until parser and support evidence are updated. If any parsed component is unparsed, ambiguous, stale, unsupported, or missing runtime capability evidence, the generated definition fails closed instead of partially enabling the card.
+
+```ts
+interface EffectDefinitionMetadata {
+  cardId: CardId; // Poneglyph base card ID
+  source: "poneglyph";
+  sourceTextHash: string;
+  generatedBy?: "manual" | "rule-parser" | "llm-assisted";
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+```
+
+### 05-effect-dsl-reference.s025 (Richer filters)
+
+Use the canonical filter fields defined above and in `contracts/effect-dsl.schema.json`:
+
+```ts
+interface CardFilter {
+  nameNot?: string[];
+  colorsAny?: Color[];
+  colorsAll?: Color[];
+  typesAny?: string[];
+  typesAll?: string[];
+  cost?: { op: Comparator; value: number } | { min?: number; max?: number };
+}
+```
+
+`nameNot` is necessary for text like `other than [Rebecca]`. `typesAny`/`typesAll` are necessary for text like `{The Seven Warlords of the Sea} type`.
 
 ### 09-card-data-and-support-policy.s010 (Card implementation record)
 
@@ -641,6 +756,21 @@ CD-011 certified parser-rule fixtures auto-support matching complete-parse commo
 
 These tests prevent the card-data layer from becoming an implicit rules authority.
 
+### 11-testing-quality.s021 (v6 contract validation)
+
+Add these checks to CI before broad card implementation:
+
+```bash
+tsc -p contracts/tsconfig.json
+# validate each card effect fixture against contracts/effect-dsl.schema.json
+# run a SQL parser/linter against contracts/database-schema-v6.sql
+# validate approved story files against contracts/story.schema.json
+```
+
+The fixture validator must reject deprecated DSL aliases such as `costOp`, `costValue`, `typeIncludes`, `cardNameNot`, and `colorIncludes` in committed canonical definitions. A migration script may accept them only when converting legacy examples.
+
+Every rules-timing algorithm tightened in the v4, v5, and v6 spec passes must have at least one named test in `18-acceptance-tests.md` when code behavior is affected.
+
 ### 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
 
 Use `pnpm`; the root workspace must provide `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`, and `pnpm verify` is the canonical local pre-push command.
@@ -659,6 +789,7 @@ Cards-layer story only. Runtime prerequisites must already be implemented by SUP
 
 ## Scope
 
+- define parser primitives separately before composing them: `[Your Turn]` continuous timing wrapper, `If` condition wrapper, public condition predicate, base-power setter verb, all-your-typed-Characters target, type filter, and base-power value
 - parse `[Your Turn] If <public condition>, set the base power of all of your {TYPE} type Characters to N.`
 - reuse existing condition parser primitives for trash-count greater-than-or-equal thresholds
 - emit reusable continuous `setBasePower` Effect DSL with all-target self characterArea and type filter
@@ -684,6 +815,8 @@ Cards-layer story only. Runtime prerequisites must already be implemented by SUP
 - packages/cards/src/conditional-continuous-composition-diagnostics.ts
 - packages/cards/src/conditional-continuous-composition-diagnostics.test.ts
 - packages/cards/src/conditional-continuous-composition-evidence.ts
+- packages/cards/src/conditional-parser-components.ts
+- packages/cards/src/conditional-parser-components.test.ts
 - packages/cards/src/conditional-generated-support-composer.ts
 - packages/cards/src/conditional-generated-support.test.ts
 - packages/cards/src/composed-parser-builder.ts
@@ -727,6 +860,9 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 ## Required Tests
 
 - cards parser/generated-support test for conditional all-your-type base-power setter
+- real-schema generated-support regression for the representative conditional base-power line
+- test proving the generated `setBasePower` target filter contains only schema-authorized fields for this scoped shape
+- fail-closed generated-support test when parser-rule certification evidence is absent or stale for any required condition, target-filter, base-power setter, or composition component
 - test varying threshold, type name, and base-power value
 - fail-closed tests for unsupported target wording and unsupported condition/body fragments
 - runtime capability matrix test for SUP-002C capability evidence
@@ -745,6 +881,9 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 ## Acceptance Criteria
 
 - parser/generator support is generic over condition threshold, type name, and base-power value
+- parser/generator implementation must compose the condition wrapper, condition predicate, target filter, and base-power setter body as separate primitives; a full-sentence regex that only varies threshold/type/value fails this story
+- generated-support tests that assert `status: supported` must validate the produced Effect DSL with the real schema validator, and schema failures such as extra filter fields fail the story
+- generated-support promotion requires current parser-rule certification evidence for the condition wrapper, condition predicate, target filter, base-power setter body, and their composition; absent or stale certification evidence must fail closed even when DSL schema validation and runtime capability checks pass
 - generated support fails closed when condition or base-power body is only partially parsed
 - runtime capability evidence is required before final playable/generated-support decision can pass
 - no production code checks exact full effect text, card IDs, or the representative sample as a whole string

@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-002E.md",
-      "storyId": "SUP-002E",
-      "storyPath": "stories/approved/SUP-002E-optional-trash-cost-ko-card-components.yaml",
-      "storySha256": "a7a776c07e86106b7f8b05e930343d959cc16dd408feb7cc4bd05c34a526743e"
+      "packetPath": "agent-packets/SUP-002F.md",
+      "storyId": "SUP-002F",
+      "storyPath": "stories/approved/SUP-002F-conditional-base-power-set-card-components.yaml",
+      "storySha256": "8dbb3e634eb542f7127537877839114848cc1fa661fa2e15a882dd5188a4d7c9"
     }
   ],
   "version": 1
