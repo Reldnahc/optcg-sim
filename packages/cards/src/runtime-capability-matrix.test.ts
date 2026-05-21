@@ -586,4 +586,24 @@ describe("generated support runtime capability matrix", () => {
     expect(hasRuntimeCapability("replacement:damage")).toBe(false);
     expect(hasRuntimeCapability("refreshLock:don")).toBe(false);
   });
+
+  it("tracks generalized conditional continuous parser-rule coverage", () => {
+    const requiredCapabilities = [
+      "category:permanent",
+      "effect:giveKeyword:self:permanent:allowlisted",
+      "effect:giveProtection:fieldRemoval:thisCard:permanent",
+      "trigger:permanent",
+    ];
+    const parserRuleId =
+      "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:mixed";
+
+    for (const capabilityId of requiredCapabilities) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+    }
+  });
 });

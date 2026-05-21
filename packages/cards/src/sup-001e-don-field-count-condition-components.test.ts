@@ -277,7 +277,7 @@ describe("SUP-001E DON field-count condition card components", () => {
     expect(report.blockers).toEqual([]);
   });
 
-  it("reports DON field-count condition diagnostics while unsupported bodies remain unplayable", () => {
+  it("supports DON field-count condition with single keyword-grant body when all gates pass", () => {
     const sourceText =
       "If you have 6 or less DON!! cards on your field, this Character gains [Rush].";
     const index = buildGeneratedSupportIndex({
@@ -292,42 +292,35 @@ describe("SUP-001E DON field-count condition card components", () => {
       validateEffectDefinition,
     });
     const report = buildGeneratedSupportReport(index);
-    const blocker = report.blockers.find(
-      (candidate) => candidate.cardId === "SUP-001E-UNSUPPORTED-BODY",
-    );
 
-    expect(report.supportedCardIds).toEqual([]);
-    expect(report.unsupportedCardIds).toEqual(["SUP-001E-UNSUPPORTED-BODY"]);
+    expect(report.supportedCardIds).toEqual(["SUP-001E-UNSUPPORTED-BODY"]);
+    expect(report.unsupportedCardIds).toEqual([]);
     expect(report.statusByCardId["SUP-001E-UNSUPPORTED-BODY"]).toMatchObject({
-      componentEvidenceIds: ["condition-field-count-don-public"],
-      parserRuleIds: ["condition-component:field-count-don-public"],
-      status: "unsupported",
+      componentEvidenceIds: [
+        "conditional-continuous-condition-body-part-composition-direct-keyword",
+      ],
+      parserRuleIds: [
+        "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
+      ],
+      status: "supported",
     });
     expect(
       report.proofCertificatesByCardId["SUP-001E-UNSUPPORTED-BODY"]
         ?.requiredRuntimeCapabilityIds,
-    ).toEqual(["condition:fieldCount:don:public"]);
-    expect(blocker?.decomposition?.traceComponents).toEqual(
+    ).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          id: "condition:fieldCount:don:self:lte:6",
-          kind: "condition",
-          status: "supported",
-          text: "you have 6 or less DON!! cards on your field",
-        }),
-        expect.objectContaining({
-          kind: "keyword",
-          status: "supported",
-          text: "[Rush]",
-        }),
+        "condition:fieldCount:don:public",
+        "effect:giveKeyword:self:permanent:allowlisted",
+        "trigger:permanent",
       ]),
     );
-    expect(blocker?.decomposition?.unsupportedSyntaxFragments).toContain(
-      "conditional-keyword-grant:schema-runtime-bridge-missing",
-    );
+    expect(
+      report.proofCertificatesByCardId["SUP-001E-UNSUPPORTED-BODY"]
+        ?.requiredRuntimeCapabilityIds,
+    ).not.toContain("effect:giveProtection:fieldRemoval:thisCard:permanent");
   });
 
-  it("prints support-probe diagnostics for DON field-count conditions without making unsupported bodies playable", async () => {
+  it("prints support-probe diagnostics for DON field-count conditions with playable single keyword body support", async () => {
     const output: string[] = [];
 
     const exitCode = await runSupportProbe({
@@ -349,14 +342,13 @@ describe("SUP-001E DON field-count condition card components", () => {
 
     const text = output.join("");
     expect(exitCode).toBe(0);
-    expect(text).toContain("Playable: no");
+    expect(text).toContain("Playable: yes");
+    expect(text).toContain("Blockers: none");
     expect(text).toContain(
-      "recognized condition candidate: your opponent has 8 or more DON!! cards on their field",
+      "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
     );
-    expect(text).toContain("recognized target candidate: this Character");
-    expect(text).toContain("recognized keyword candidate: [Banish]");
     expect(text).toContain(
-      "unsupported syntax blocker: conditional-keyword-grant:schema-runtime-bridge-missing",
+      "conditional-continuous-condition-body-part-composition-direct-keyword",
     );
   });
 

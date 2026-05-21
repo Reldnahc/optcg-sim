@@ -2,6 +2,7 @@ import type { CardId, EffectDefinition } from "@optcg/types";
 import { donMinusDrawComponentEvidenceInventoryEntry } from "./don-minus-draw-evidence.js";
 import { fieldCountDonConditionComponentEvidenceInventoryEntry } from "./field-count-don-condition-evidence.js";
 import { sup001fConditionalModifyPowerComponentEvidenceInventoryEntry } from "./sup-001f-conditional-modify-power-evidence.js";
+import { listConditionalContinuousCompositionEvidenceFragments } from "./conditional-continuous-composition-evidence.js";
 import type {
   GeneratedSupportDiagnosticDecomposition,
   GeneratedSupportUnparsedSpan,
@@ -91,46 +92,47 @@ export interface GeneratedSupportBlocker {
   span?: GeneratedSupportUnparsedSpan;
 }
 
-interface GeneratedSupportParserResultBase {
+type GeneratedSupportParserResultBase = {
   cardId: CardId;
   sourceText: string;
   sourceTextHash: string;
-}
+};
 
-export interface CompleteGeneratedSupportParseResult extends GeneratedSupportParserResultBase {
-  status: "complete";
-  effectDefinition: EffectDefinition;
-  componentEvidenceIds: readonly string[];
-  parserRuleIds: readonly string[];
-}
+export type CompleteGeneratedSupportParseResult =
+  GeneratedSupportParserResultBase & {
+    status: "complete";
+    effectDefinition: EffectDefinition;
+    componentEvidenceIds: readonly string[];
+    parserRuleIds: readonly string[];
+  };
 
-export interface PartialGeneratedSupportParseResult extends GeneratedSupportParserResultBase {
-  status: "partial";
+export type PartialGeneratedSupportParseResult =
+  GeneratedSupportParserResultBase & {
+    status: "partial";
+    blockers: readonly GeneratedSupportBlocker[];
+    parsedComponentEvidenceIds: readonly string[];
+    parsedRuleIds: readonly string[];
+    unparsedSpans: readonly GeneratedSupportUnparsedSpan[];
+  };
+
+type BlockedGeneratedSupportParseResult<
+  TStatus extends
+    | "unsupportedPrimitive"
+    | "ambiguousWording"
+    | "staleHash"
+    | "customHandlerRequired",
+> = GeneratedSupportParserResultBase & {
+  status: TStatus;
   blockers: readonly GeneratedSupportBlocker[];
-  parsedComponentEvidenceIds: readonly string[];
-  parsedRuleIds: readonly string[];
-  unparsedSpans: readonly GeneratedSupportUnparsedSpan[];
-}
-
-export interface UnsupportedPrimitiveGeneratedSupportParseResult extends GeneratedSupportParserResultBase {
-  status: "unsupportedPrimitive";
-  blockers: readonly GeneratedSupportBlocker[];
-}
-
-export interface AmbiguousWordingGeneratedSupportParseResult extends GeneratedSupportParserResultBase {
-  status: "ambiguousWording";
-  blockers: readonly GeneratedSupportBlocker[];
-}
-
-export interface StaleHashGeneratedSupportParseResult extends GeneratedSupportParserResultBase {
-  status: "staleHash";
-  blockers: readonly GeneratedSupportBlocker[];
-}
-
-export interface CustomHandlerRequiredGeneratedSupportParseResult extends GeneratedSupportParserResultBase {
-  status: "customHandlerRequired";
-  blockers: readonly GeneratedSupportBlocker[];
-}
+};
+export type UnsupportedPrimitiveGeneratedSupportParseResult =
+  BlockedGeneratedSupportParseResult<"unsupportedPrimitive">;
+export type AmbiguousWordingGeneratedSupportParseResult =
+  BlockedGeneratedSupportParseResult<"ambiguousWording">;
+export type StaleHashGeneratedSupportParseResult =
+  BlockedGeneratedSupportParseResult<"staleHash">;
+export type CustomHandlerRequiredGeneratedSupportParseResult =
+  BlockedGeneratedSupportParseResult<"customHandlerRequired">;
 
 export type GeneratedSupportParserResult =
   | CompleteGeneratedSupportParseResult
@@ -178,12 +180,10 @@ export const generatedSupportSchemaGateIds = [
 export const generatedSupportRuntimeCapabilityGateIds = [
   "runtime-capability-matrix-v1",
 ] as const;
-
 export const generatedSupportSourceIntegrityGateIds = [
   "source-text-hash-current",
   "behavior-hash-current",
 ] as const;
-
 export const generatedSupportMetadataGateIds = [
   "generated-support-metadata-required",
 ] as const;
@@ -224,6 +224,17 @@ const parserRuleBaseGates = {
   schema: ["effect-definition-schema-v1"],
   sourceIntegrity: ["source-text-hash-current", "behavior-hash-current"],
 } as const;
+
+function buildParserRuleGates(
+  requiresSequencedEffectSchema: boolean,
+): GeneratedSupportComponentEvidenceInventoryEntry["gates"] {
+  return requiresSequencedEffectSchema
+    ? {
+        ...parserRuleBaseGates,
+        schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
+      }
+    : parserRuleBaseGates;
+}
 
 export const generatedSupportComponentEvidenceInventory = [
   {
@@ -849,37 +860,21 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     shapeId: "keyword-banish",
   },
-  {
-    components: [
-      "condition",
-      "sequence",
-      "keyword",
-      "restriction",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
-    gates: {
-      ...parserRuleBaseGates,
-      schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
-    },
-    parserRuleId:
-      "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character",
-    runtimeCapabilityIds: [
-      "category:permanent",
-      "trigger:permanent",
-      "effect:sequence:ordered",
-      "effect:giveKeyword:self:permanent:allowlisted",
-      "effect:giveProtection:fieldRemoval:thisCard:permanent",
-      "sourcePresencePolicy:mustRemainInSameZone",
-    ],
-    shapeId: "conditional-continuous-condition-keyword-grant-and-protection",
-  },
+  ...listConditionalContinuousCompositionEvidenceFragments().map(
+    (fragment): GeneratedSupportComponentEvidenceInventoryEntry => ({
+      components: [
+        ...fragment.components,
+        ...parserRuleBaseComponents,
+      ] as readonly GeneratedSupportComponentEvidenceCategory[],
+      gates: buildParserRuleGates(fragment.requiresSequencedEffectSchema),
+      parserRuleId: fragment.parserRuleId,
+      runtimeCapabilityIds: fragment.runtimeCapabilityIds,
+      shapeId: fragment.shapeId,
+    }),
+  ),
   {
     components: ["sequence", ...parserRuleBaseComponents],
-    gates: {
-      ...parserRuleBaseGates,
-      schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
-    },
+    gates: buildParserRuleGates(true),
     parserRuleId: "line-separated-effect-blocks:v1",
     runtimeCapabilityIds: ["composition:line-separated-effect-blocks:v1"],
     shapeId: "line-separated-effect-blocks-composition",

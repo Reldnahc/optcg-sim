@@ -538,7 +538,7 @@ describe("conditional generated support diagnostics", () => {
         cardId: "CARD-021E-SYNTHETIC",
         parseStatus: "complete",
         parserRuleIds: [
-          "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character",
+          "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:mixed",
           "exact:on-ko:draw-n:self",
           "line-separated-effect-blocks:v1",
         ],
@@ -609,11 +609,11 @@ describe("conditional generated support diagnostics", () => {
     expect(text).toContain("- behavior hash status: passed");
     expect(text).toContain("- parse completeness: passed");
     expect(text).toContain(
-      "- parser-rule certification/evidence: passed (exact:conditional-continuous:condition:keyword-grant-and-protection:self-character, exact:on-ko:draw-n:self, line-separated-effect-blocks:v1)",
+      "- parser-rule certification/evidence: passed (exact:conditional-continuous:condition:body-part-composition:self-character:sequence:mixed, exact:on-ko:draw-n:self, line-separated-effect-blocks:v1)",
     );
     expect(text).toContain("- generated DSL schema: passed");
     expect(text).toContain(
-      "- component evidence IDs: passed (conditional-continuous-condition-keyword-grant-and-protection, line-separated-effect-blocks-composition, on-ko-draw)",
+      "- component evidence IDs: passed (conditional-continuous-condition-body-part-composition-sequence-mixed, line-separated-effect-blocks-composition, on-ko-draw)",
     );
     expect(text).toContain("- required runtime capability IDs: passed");
     expect(text).toContain("- missing runtime capability IDs: passed (none)");

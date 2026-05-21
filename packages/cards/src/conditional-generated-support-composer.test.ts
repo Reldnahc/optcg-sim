@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { CardId } from "@optcg/types";
 
-import { parseConditionalWrapper } from "./conditional-generated-support-composer.js";
+import {
+  buildConditionalContinuousCompositionClauseFromSource,
+  parseConditionalContinuousComposition,
+  parseConditionalWrapper,
+} from "./conditional-generated-support-composer.js";
 
 describe("conditional generated support composer", () => {
   it.each([
@@ -84,5 +89,69 @@ describe("conditional generated support composer", () => {
         "[On Play] If your Leader is multicolored and you have 5 or less cards in your hand or your opponent has 1 or more Life cards, draw 1 card.",
       ),
     ).toBeUndefined();
+  });
+
+  it("parses single-body conditional continuous protection", () => {
+    const parsed = parseConditionalContinuousComposition(
+      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects.",
+    );
+
+    expect(parsed?.effects).toHaveLength(1);
+    expect(parsed?.effects[0]).toMatchObject({
+      type: "giveProtection",
+    });
+  });
+
+  it("parses single-body conditional continuous keyword grant", () => {
+    const parsed = parseConditionalContinuousComposition(
+      "If your Leader is multicolored, this Character gains [Rush].",
+    );
+
+    expect(parsed?.effects).toHaveLength(1);
+    expect(parsed?.effects[0]).toMatchObject({
+      keyword: "rush",
+      type: "giveKeyword",
+    });
+  });
+
+  it("parses repeated and-separated body parts in order", () => {
+    const parsed = parseConditionalContinuousComposition(
+      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Rush] and this Character gains [Banish].",
+    );
+
+    expect(parsed?.effects).toHaveLength(3);
+    expect(parsed?.effects.map((effect) => effect.type)).toEqual([
+      "giveProtection",
+      "giveKeyword",
+      "giveKeyword",
+    ]);
+  });
+
+  it.each([
+    "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects, and gains [Rush].",
+    "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects, gains [Rush], and this Character gains [Banish].",
+    "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects; gains [Rush].",
+    "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects, and gains [Rush]; this Character gains [Banish].",
+  ])(
+    "fails closed on unsupported punctuation list grammar (%s)",
+    (sourceText) => {
+      expect(parseConditionalContinuousComposition(sourceText)).toBeUndefined();
+    },
+  );
+
+  it("emits direct effect for one body part and sequence for multiple body parts", () => {
+    const single = buildConditionalContinuousCompositionClauseFromSource(
+      "CARD-023A-SINGLE" as CardId,
+      "If your Leader is multicolored, this Character gains [Rush].",
+    );
+    const multi = buildConditionalContinuousCompositionClauseFromSource(
+      "CARD-023A-MULTI" as CardId,
+      "If your Leader is multicolored, this Character gains [Rush] and this Character cannot be removed from the field by your opponent's effects.",
+    );
+
+    expect(single?.effectBlock.effect.type).toBe("giveKeyword");
+    expect(multi?.effectBlock.effect).toMatchObject({
+      type: "sequence",
+    });
   });
 });

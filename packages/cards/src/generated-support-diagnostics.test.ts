@@ -201,55 +201,17 @@ describe("generated support diagnostics", () => {
       (candidate) => candidate.cardId === "CARD-021B-KEYWORD-GRANT-DIAGNOSTIC",
     );
 
-    expect(report.supportedCardIds).toEqual([]);
-    expect(report.unsupportedCardIds).toEqual([
+    expect(report.supportedCardIds).toContain(
       "CARD-021B-KEYWORD-GRANT-DIAGNOSTIC",
-    ]);
-    expect(report.statusByCardId["CARD-021B-KEYWORD-GRANT-DIAGNOSTIC"]).toEqual(
-      {
-        blockerCodes: ["unparsed-span"],
-        componentEvidenceIds: [],
-        missingCapabilityIds: [],
-        parseStatus: "partial",
-        parserRuleIds: [],
-        status: "unsupported",
-      },
     );
-    expect(blocker).toMatchObject({
-      code: "unparsed-span",
-      layer: "parser",
-      span: { text: sourceText },
+    expect(
+      report.statusByCardId["CARD-021B-KEYWORD-GRANT-DIAGNOSTIC"],
+    ).toMatchObject({
+      blockerCodes: [],
+      parseStatus: "complete",
+      status: "supported",
     });
-    expect(blocker?.decomposition).toMatchObject({
-      recognizedActionCandidates: ["this Character gains [Double Attack]"],
-      recognizedSyntaxFragments: [
-        "if-conditional-wrapper",
-        "condition-components:v1",
-        "keyword-grant-components:v1",
-      ],
-      unsupportedSyntaxFragments: [
-        "conditional-keyword-grant:schema-runtime-bridge-missing",
-      ],
-    });
-    expect(blocker?.decomposition?.traceComponents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "keyword-grant:target:self-character",
-          kind: "target",
-          text: "this Character",
-        }),
-        expect.objectContaining({
-          id: "keyword-grant:verb:gains",
-          kind: "verb",
-          text: "gains",
-        }),
-        expect.objectContaining({
-          id: "keyword-grant:keyword:doubleAttack",
-          kind: "keyword",
-          text: "[Double Attack]",
-        }),
-      ]),
-    );
+    expect(blocker).toBeUndefined();
   });
 
   it("reports narrow unsupported keyword-grant components instead of dropping body diagnostics", () => {
@@ -279,12 +241,16 @@ describe("generated support diagnostics", () => {
       span: { text: sourceText },
     });
     expect(blocker?.decomposition).toMatchObject({
-      recognizedActionCandidates: ["this Character gains [Guard]"],
+      recognizedActionCandidates: [],
       recognizedSyntaxFragments: [
         "if-conditional-wrapper",
         "condition-components:v1",
+        "conditional-body-parts:ordered",
       ],
-      unsupportedSyntaxFragments: ["keyword-grant-fragment:unsupported"],
+      unsupportedSyntaxFragments: [
+        "keyword-grant-fragment:unsupported",
+        "conditional-continuous-composition:unsupported-body-fragment",
+      ],
     });
     expect(blocker?.decomposition?.traceComponents).toEqual(
       expect.arrayContaining([
@@ -522,6 +488,7 @@ describe("generated support diagnostics", () => {
       recognizedSyntaxFragments: [
         "if-conditional-wrapper",
         "condition-components:v1",
+        "conditional-body-parts:ordered",
         "conditional-body-conjunction:and",
         "protection-components:v1",
         "protection:opponent-effect-field-removal",
@@ -709,7 +676,6 @@ describe("generated support diagnostics", () => {
         "CARD-020C-SLASH-KO",
         "CARD-020C-BOTTOM-DECK",
         "CARD-020C-ACTIVATE-MAIN",
-        "CARD-020C-UNWRAPPED-CONTINUOUS",
       ]),
     );
 

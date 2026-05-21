@@ -1,0 +1,128 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-023
+epic_id: CARD-023
+title: Conditional continuous body arity parent
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Coordinate the cards-layer fix for conditional continuous composition arity.
+  The current CARD-021E implementation hardcodes the composed continuous body as
+  exactly two left/right effects. This parent keeps the work in the standard
+  parent/substory workflow and delegates implementation to CARD-023A.
+story_boundary: >
+  Coordinate only CARD-023A. Do not directly implement parser,
+  generated-support, diagnostic, runtime-capability metadata, fixture, manifest,
+  source-integrity, or real-card promotion changes in the parent story.
+allowed_touch_points:
+  - stories/generated/CARD-023*.yaml
+  - stories/approved/CARD-023*.yaml
+  - agent-packets/CARD-023*.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s013
+  - 04-effect-runtime.s014
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s016
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s022
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-021A
+  - CARD-021B
+  - CARD-021C
+  - CARD-021D
+  - CARD-021E
+  - TYP-012A
+  - TYP-012B
+  - ENG-059A
+  - ENG-059B
+  - ENG-059C
+  - ENG-059D
+  - ENG-059E
+  - ENG-059F
+# prettier-ignore
+child_stories:
+  - id: CARD-023A
+    title: Conditional continuous body-part composition
+    concern: Replace the exact two-effect left/right conditional continuous composer and mirrored diagnostics with a reusable one-or-more ordered body-part model for already-supported continuous primitives.
+    depends_on: [CARD-021A, CARD-021B, CARD-021C, CARD-021D, CARD-021E, TYP-012A, TYP-012B, ENG-059A, ENG-059B, ENG-059C, ENG-059D, ENG-059E, ENG-059F]
+scope:
+  - keep CARD-023 as a parent/substory chain with no direct parent implementation
+  - use CARD-023A to generalize conditional continuous body composition from exactly two body effects to one-or-more ordered supported body parts
+  - preserve existing CARD-021E generated support while adding coverage for single-body and repeated-`and` body compositions
+  - keep real-card promotion, fixtures, manifests, source hashes, and behavior hashes outside this story chain
+non_scope:
+  - direct parent implementation
+  - engine runtime behavior
+  - shared contracts/schema/type changes
+  - new continuous primitive families
+  - comma-list, Oxford-comma, semicolon, mixed punctuation, or broad natural-language list parsing
+  - real card IDs, real-card fixture capture, source hash updates, behavior hash updates, overlays, support manifest edits, cards-produced manifest regeneration, or card promotion
+  - changing unrelated exact ordered action templates such as draw-then-trash, trash-then-draw, select-then-K.O., or return-DON-then-play-selected-character
+card_source_integrity:
+  - not applicable for direct parent implementation because this parent does not enable or change gameplay support for any real card
+  - CARD-023A must use synthetic test inputs only and must not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence
+  - post-merge manual probing of real cards may be done outside the story but must not be cited as implementation evidence
+engine_capability_preflight:
+  - no new engine capability is introduced by this parent
+  - CARD-023A parsed effect shape is a permanent conditional continuous block with a supported public condition and one or more already-supported continuous body effects
+  - CARD-023A supported capability group remains `category:permanent`, `trigger:permanent`, `effect:giveKeyword:self:permanent:allowlisted`, `effect:giveProtection:fieldRemoval:thisCard:permanent`, `sourcePresencePolicy:mustRemainInSameZone`, and ordered sequence capability only when more than one body effect is emitted
+  - CARD-023A missing capability group is none for already-supported continuous primitive rows; if new body primitives, new grammar separators, or new runtime effects are required, stop and split a prerequisite story
+acceptance_criteria:
+  - CARD-023 is not implemented directly
+  - CARD-023A is independently reviewable as the implementation substory
+  - parent and child story-review artifacts exist with distinct assignment identity and distinct durable artifact identity before approval handoff, packet generation, activation, implementation handoff, or PR handoff
+  - CARD-023A removes the exact two-body conditional continuous tuple dependency and replaces it with reusable ordered body-part composition
+  - CARD-023A keeps existing two-body CARD-021E behavior compatible while supporting one-body and repeated clean `and` body shapes for already-supported primitives
+  - no child uses real-card source integrity, a human-held adjacent-card list, exact full-card text, exact full-effect sentence branches, or sample-specific sentence templates as implementation authority
+  - parent PR cleanup metadata lists CARD-023A and binds the non-packetized CARD-023 parent closeout after merge to main
+required_tests:
+  - story-review for CARD-023 parent before approval handoff
+  - story-review for CARD-023A before approval handoff
+  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - story-specific tests from CARD-023A
+  - reviewed commit evidence, AI review record, revision response, and verification evidence for CARD-023A before parent PR handoff
+  - role packet extraction output before each implementation handoff and before each code-review handoff
+  - final parent PR full-story integration review covering the child commit, packet history, cleanup metadata, CI, verification, and unresolved comments before human-review handoff
+  - run cleanup metadata handoff preflight against the actual current parent PR body or selected durable handoff comment, fetched issue comments, fetched changed files, fetched PR head branch, fetched status checks, and reviewed PR evidence before reviewer or human-review handoff
+  - confirm the remote `cleanup-metadata-guard` check is present and passing before reviewer or human-review handoff
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - use the parent/substory workflow
+  - generate and activate the CARD-023A packet before implementation
+  - do not implement the parent directly
+  - do not complete child packets until the parent branch lands on main
+  - keep CARD-023A work on one parent integration branch with reviewed child commit evidence
+  - do not open child PRs to main; use one final parent PR to main
+  - parent PR cleanup metadata must list CARD-023A and bind the non-packetized CARD-023 parent closeout
+  - run role packet extraction before implementation and code-review handoffs
+  - fail closed when CARD-023A would require broadening parser grammar, runtime capability, real-card source integrity, or support manifest authority
+ambiguity_policy: fail_and_escalate

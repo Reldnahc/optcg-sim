@@ -18,61 +18,39 @@ export function deriveConditionalContinuousCompositionDiagnosticDecomposition(
     return undefined;
   }
 
-  const split = parseConditionalBodyConjunction(conditional.bodyText);
+  const split = parseConditionalBodyConjunctionParts(conditional.bodyText);
   if (split === undefined) {
     return undefined;
   }
 
-  const leftProtection = toBodyDiagnosticSide({
-    kind: "protection",
-    side: "left",
-    start: conditional.bodyTextStart + split.leftStart,
-    text: split.left,
-  });
-  const rightKeywordGrant = toBodyDiagnosticSide({
-    inferSharedSelfCharacterTarget:
-      leftProtection?.isFullySupported === true &&
-      looksLikeTargetlessKeywordGrantDiagnosticBody(split.right),
-    kind: "keywordGrant",
-    side: "right",
-    start: conditional.bodyTextStart + split.rightStart,
-    text: split.right,
-  });
-  const leftKeywordGrant = toBodyDiagnosticSide({
-    kind: "keywordGrant",
-    side: "left",
-    start: conditional.bodyTextStart + split.leftStart,
-    text: split.left,
-  });
-  const rightProtection = toBodyDiagnosticSide({
-    kind: "protection",
-    side: "right",
-    start: conditional.bodyTextStart + split.rightStart,
-    text: split.right,
-  });
-
-  const orderedSides =
-    leftProtection !== undefined && rightKeywordGrant !== undefined
-      ? [leftProtection, rightKeywordGrant]
-      : leftKeywordGrant !== undefined && rightProtection !== undefined
-        ? [leftKeywordGrant, rightProtection]
-        : undefined;
-  if (orderedSides === undefined) {
-    return undefined;
+  const bodyParts: ConditionalBodyDiagnosticSide[] = [];
+  let canInferSharedSelfCharacterTarget = false;
+  for (const [index, part] of split.parts.entries()) {
+    const parsedPart = toBodyDiagnosticSide({
+      inferSharedSelfCharacterTarget:
+        canInferSharedSelfCharacterTarget &&
+        looksLikeTargetlessKeywordGrantDiagnosticBody(part.text),
+      index,
+      start: conditional.bodyTextStart + part.start,
+      text: part.text,
+    });
+    if (parsedPart === undefined) {
+      return undefined;
+    }
+    bodyParts.push(parsedPart);
+    canInferSharedSelfCharacterTarget = parsedPart.explicitSelfCharacterTarget;
   }
 
   const conditionDiagnostics = deriveConditionalConditionDiagnostics(
     conditional.conditionText,
   );
-  const bodyFullySupported = orderedSides.every(
-    (side) => side.isFullySupported,
-  );
+  const bodyFullySupported = bodyParts.every((side) => side.isFullySupported);
   const conditionFullySupported =
     conditionDiagnostics.isFullySupportedConditionExpression;
   const allComponentsSupported = conditionFullySupported && bodyFullySupported;
 
   return {
-    recognizedActionCandidates: orderedSides
+    recognizedActionCandidates: bodyParts
       .filter((side) => side.hasSupportedComponents)
       .map((side) => side.text),
     recognizedSyntaxFragments: [
@@ -80,8 +58,11 @@ export function deriveConditionalContinuousCompositionDiagnosticDecomposition(
       ...(conditionDiagnostics.hasSupportedConditionComponents
         ? ["condition-components:v1"]
         : []),
-      "conditional-body-conjunction:and",
-      ...orderedSides.flatMap((side) => side.recognizedSyntaxFragments),
+      "conditional-body-parts:ordered",
+      ...(split.connectors.length > 0
+        ? ["conditional-body-conjunction:and"]
+        : []),
+      ...bodyParts.flatMap((side) => side.recognizedSyntaxFragments),
     ],
     recognizedTriggerCandidates: [],
     reason: allComponentsSupported
@@ -93,18 +74,20 @@ export function deriveConditionalContinuousCompositionDiagnosticDecomposition(
         conditionDiagnostics.traceComponents,
         conditional.conditionTextStart,
       ),
-      {
-        id: "conditional-body-connector:and",
-        kind: "condition-connector",
+      ...split.connectors.map((connector, index) => ({
+        id: `conditional-body-connector:and:${String(index)}`,
+        kind: "condition-connector" as const,
         span: {
-          end: conditional.bodyTextStart + split.connectorEnd,
-          start: conditional.bodyTextStart + split.connectorStart,
+          end: conditional.bodyTextStart + connector.end,
+          start: conditional.bodyTextStart + connector.start,
           text: "and",
         },
-        status: bodyFullySupported ? "supported" : "unsupported",
+        status: bodyFullySupported
+          ? ("supported" as const)
+          : ("unsupported" as const),
         text: "and",
-      },
-      ...orderedSides.flatMap((side) => side.traceComponents),
+      })),
+      ...bodyParts.flatMap((side) => side.traceComponents),
     ],
     unsupportedConditionFragments:
       conditionDiagnostics.unsupportedConditionFragments,
@@ -112,8 +95,8 @@ export function deriveConditionalContinuousCompositionDiagnosticDecomposition(
       ? ["conditional-continuous-composition:schema-runtime-bridge-missing"]
       : [
           ...conditionDiagnostics.unsupportedSyntaxFragments,
-          ...orderedSides.flatMap((side) => side.unsupportedSyntaxFragments),
-          ...orderedSides
+          ...bodyParts.flatMap((side) => side.unsupportedSyntaxFragments),
+          ...bodyParts
             .filter((side) => !side.isFullySupported)
             .map(
               () =>
@@ -124,6 +107,7 @@ export function deriveConditionalContinuousCompositionDiagnosticDecomposition(
 }
 
 type ConditionalBodyDiagnosticSide = {
+  readonly explicitSelfCharacterTarget: boolean;
   readonly hasSupportedComponents: boolean;
   readonly isFullySupported: boolean;
   readonly recognizedSyntaxFragments: readonly string[];
@@ -134,59 +118,58 @@ type ConditionalBodyDiagnosticSide = {
 
 function toBodyDiagnosticSide({
   inferSharedSelfCharacterTarget = false,
-  kind,
-  side,
+  index,
   start,
   text,
 }: {
   readonly inferSharedSelfCharacterTarget?: boolean;
-  readonly kind: "keywordGrant" | "protection";
-  readonly side: "left" | "right";
+  readonly index: number;
   readonly start: number;
   readonly text: string;
 }): ConditionalBodyDiagnosticSide | undefined {
-  if (kind === "protection") {
-    const diagnostics = deriveProtectionBodyDiagnostics(text);
-    if (
-      !diagnostics.hasSupportedProtectionComponents &&
-      !looksLikeProtectionDiagnosticBody(text)
-    ) {
-      return undefined;
-    }
-
+  const protectionDiagnostics = deriveProtectionBodyDiagnostics(text);
+  if (
+    looksLikeProtectionDiagnosticBody(text) ||
+    protectionDiagnostics.isFullySupportedProtectionBody
+  ) {
     return {
-      hasSupportedComponents: diagnostics.hasSupportedProtectionComponents,
-      isFullySupported: diagnostics.isFullySupportedProtectionBody,
+      explicitSelfCharacterTarget:
+        protectionDiagnostics.hasSupportedProtectionComponents,
+      hasSupportedComponents:
+        protectionDiagnostics.hasSupportedProtectionComponents,
+      isFullySupported: protectionDiagnostics.isFullySupportedProtectionBody,
       recognizedSyntaxFragments: [
-        ...(diagnostics.hasSupportedProtectionComponents
+        ...(protectionDiagnostics.hasSupportedProtectionComponents
           ? ["protection-components:v1"]
           : []),
-        ...(diagnostics.isFullySupportedProtectionBody
+        ...(protectionDiagnostics.isFullySupportedProtectionBody
           ? ["protection:opponent-effect-field-removal"]
           : []),
       ],
       text,
       traceComponents: [
         ...offsetDiagnosticTraceComponentSpans(
-          diagnostics.traceComponents,
+          protectionDiagnostics.traceComponents,
           start,
         ),
-        ...toUnsupportedBodyTraceComponents({
-          isFullySupported: diagnostics.isFullySupportedProtectionBody,
-          side,
+        ...toBodyPartTraceComponent({
+          index,
+          isFullySupported:
+            protectionDiagnostics.isFullySupportedProtectionBody,
           start,
           text,
         }),
       ],
-      unsupportedSyntaxFragments: diagnostics.isFullySupportedProtectionBody
-        ? []
-        : diagnostics.unsupportedSyntaxFragments,
+      unsupportedSyntaxFragments:
+        protectionDiagnostics.isFullySupportedProtectionBody
+          ? []
+          : protectionDiagnostics.unsupportedSyntaxFragments,
     };
   }
 
   if (inferSharedSelfCharacterTarget) {
     const sharedTargetSide = toSharedSelfCharacterKeywordGrantSide({
-      side,
+      index,
       start,
       text,
     });
@@ -204,6 +187,7 @@ function toBodyDiagnosticSide({
   }
 
   return {
+    explicitSelfCharacterTarget: diagnostics.hasSupportedKeywordGrantComponents,
     hasSupportedComponents: diagnostics.hasSupportedKeywordGrantComponents,
     isFullySupported: diagnostics.isFullySupportedKeywordGrantBody,
     recognizedSyntaxFragments: diagnostics.hasSupportedKeywordGrantComponents
@@ -215,9 +199,9 @@ function toBodyDiagnosticSide({
         diagnostics.traceComponents,
         start,
       ),
-      ...toUnsupportedBodyTraceComponents({
+      ...toBodyPartTraceComponent({
+        index,
         isFullySupported: diagnostics.isFullySupportedKeywordGrantBody,
-        side,
         start,
         text,
       }),
@@ -229,11 +213,11 @@ function toBodyDiagnosticSide({
 }
 
 function toSharedSelfCharacterKeywordGrantSide({
-  side,
+  index,
   start,
   text,
 }: {
-  readonly side: "left" | "right";
+  readonly index: number;
   readonly start: number;
   readonly text: string;
 }): ConditionalBodyDiagnosticSide | undefined {
@@ -254,6 +238,7 @@ function toSharedSelfCharacterKeywordGrantSide({
   });
 
   return {
+    explicitSelfCharacterTarget: true,
     hasSupportedComponents: true,
     isFullySupported: true,
     recognizedSyntaxFragments: ["keyword-grant-components:v1"],
@@ -279,9 +264,9 @@ function toSharedSelfCharacterKeywordGrantSide({
         status: "supported",
         text: parsed.keyword.text,
       },
-      ...toUnsupportedBodyTraceComponents({
+      ...toBodyPartTraceComponent({
+        index,
         isFullySupported: true,
-        side,
         start,
         text,
       }),
@@ -290,31 +275,27 @@ function toSharedSelfCharacterKeywordGrantSide({
   };
 }
 
-function toUnsupportedBodyTraceComponents({
+function toBodyPartTraceComponent({
+  index,
   isFullySupported,
-  side,
   start,
   text,
 }: {
+  readonly index: number;
   readonly isFullySupported: boolean;
-  readonly side: "left" | "right";
   readonly start: number;
   readonly text: string;
 }): readonly GeneratedSupportDiagnosticTraceComponent[] {
-  if (isFullySupported) {
-    return [];
-  }
-
   return [
     {
-      id: `conditional-body:unsupported-${side}`,
+      id: `conditional-body-part:${String(index)}`,
       kind: "action",
       span: {
         end: start + text.length,
         start,
         text,
       },
-      status: "unsupported",
+      status: isFullySupported ? "supported" : "unsupported",
       text,
     },
   ];
@@ -385,40 +366,37 @@ function parseContinuousCompositionIfWrapper(sourceText: string):
   };
 }
 
-function parseConditionalBodyConjunction(bodyText: string):
+function parseConditionalBodyConjunctionParts(bodyText: string):
   | {
-      readonly connectorEnd: number;
-      readonly connectorStart: number;
-      readonly left: string;
-      readonly leftStart: number;
-      readonly right: string;
-      readonly rightStart: number;
+      readonly connectors: readonly { end: number; start: number }[];
+      readonly parts: readonly { start: number; text: string }[];
     }
   | undefined {
+  if (/[;,]/.test(bodyText)) {
+    return undefined;
+  }
+
   const matches = [...bodyText.matchAll(/\s+and\s+/gi)];
-  if (matches.length !== 1) {
+  const parts: { start: number; text: string }[] = [];
+  const connectors: { end: number; start: number }[] = [];
+  let cursor = 0;
+  for (const match of matches) {
+    const connectorStart = match.index + 1;
+    const connectorEnd = connectorStart + "and".length;
+    const partText = bodyText.slice(cursor, connectorStart).trim();
+    if (partText.length === 0) {
+      return undefined;
+    }
+    const partStart = bodyText.indexOf(partText, cursor);
+    parts.push({ start: partStart, text: partText });
+    connectors.push({ end: connectorEnd, start: connectorStart });
+    cursor = connectorEnd;
+  }
+  const lastPart = bodyText.slice(cursor).trim();
+  if (lastPart.length === 0) {
     return undefined;
   }
-
-  const match = matches[0];
-  if (match === undefined) {
-    return undefined;
-  }
-
-  const connectorStart = match.index + 1;
-  const connectorEnd = connectorStart + "and".length;
-  const left = bodyText.slice(0, connectorStart).trim();
-  const right = bodyText.slice(connectorEnd).trim();
-  if (left.length === 0 || right.length === 0) {
-    return undefined;
-  }
-
-  return {
-    connectorEnd,
-    connectorStart,
-    left,
-    leftStart: bodyText.indexOf(left),
-    right,
-    rightStart: bodyText.lastIndexOf(right),
-  };
+  const lastPartStart = bodyText.indexOf(lastPart, cursor);
+  parts.push({ start: lastPartStart, text: lastPart });
+  return { connectors, parts };
 }

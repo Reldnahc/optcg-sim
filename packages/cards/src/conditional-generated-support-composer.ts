@@ -7,6 +7,7 @@ import {
   parseProtectionBody,
   type ParsedConditionComponent,
 } from "./conditional-parser-components.js";
+import { resolveConditionalContinuousCompositionParserRuleId } from "./conditional-continuous-composition-evidence.js";
 import {
   parseIfWrapper,
   parseOncePerTurnWrapper,
@@ -22,11 +23,8 @@ export type ConditionalWrapperParse = {
 
 export type ConditionalContinuousCompositionParse = {
   readonly condition: NonNullable<EffectBlock["condition"]>;
-  readonly effects: readonly [Effect, Effect];
+  readonly effects: readonly [Effect, ...Effect[]];
 };
-
-export const conditionalContinuousCompositionParserRuleId =
-  "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character";
 
 export function parseConditionalWrapper(
   sourceText: string,
@@ -84,41 +82,61 @@ export function parseConditionalContinuousComposition(
   if (condition === undefined) {
     return undefined;
   }
-  const split = splitBodyConjunction(conditional.bodyText.replace(/\.$/, ""));
-  if (split === undefined) {
-    return undefined;
-  }
-  const left = parseContinuousBodyPart(split.left);
-  const right = parseContinuousBodyPart(split.right, {
-    inferSharedSelfCharacterTarget: left?.kind === "protection",
-  });
-  if (left === undefined || right === undefined || left.kind === right.kind) {
+  const bodyParts = splitBodyConjunctionParts(
+    conditional.bodyText.replace(/\.$/, ""),
+  );
+  if (bodyParts === undefined) {
     return undefined;
   }
 
-  return { condition, effects: [left.effect, right.effect] };
+  const parsedEffects: Effect[] = [];
+  let canInferSharedSelfCharacterTarget = false;
+  for (const part of bodyParts) {
+    const parsedPart = parseContinuousBodyPart(part, {
+      inferSharedSelfCharacterTarget: canInferSharedSelfCharacterTarget,
+    });
+    if (parsedPart === undefined) {
+      return undefined;
+    }
+
+    parsedEffects.push(parsedPart.effect);
+    canInferSharedSelfCharacterTarget = parsedPart.explicitSelfCharacterTarget;
+  }
+
+  return {
+    condition,
+    effects: parsedEffects as [Effect, ...Effect[]],
+  };
 }
 
 export function buildConditionalContinuousCompositionClause(
   cardId: CardId,
   parsed: ConditionalContinuousCompositionParse,
 ): { effectBlock: EffectBlock; parserRuleId: string } {
+  const effect: Effect =
+    parsed.effects.length === 1
+      ? parsed.effects[0]
+      : {
+          effects: parsed.effects.map((segmentEffect, index) => ({
+            connector: "always" as const,
+            effect: segmentEffect,
+            id: `part-${String(index + 1)}`,
+          })),
+          type: "sequence",
+        };
+
   return {
     effectBlock: {
       category: "permanent",
       condition: parsed.condition,
-      effect: {
-        effects: [
-          { connector: "always", effect: parsed.effects[0], id: "grant-1" },
-          { connector: "always", effect: parsed.effects[1], id: "grant-2" },
-        ],
-        type: "sequence",
-      },
+      effect,
       id: toEffectId(`${String(cardId)}:permanent-conditional-continuous-v1`),
       sourcePresencePolicy: "mustRemainInSameZone",
       trigger: { type: "permanent" },
     },
-    parserRuleId: conditionalContinuousCompositionParserRuleId,
+    parserRuleId: resolveConditionalContinuousCompositionParserRuleId(
+      parsed.effects,
+    ),
   };
 }
 
@@ -174,31 +192,34 @@ function isPublicDonFieldCountCondition(
   );
 }
 
-function splitBodyConjunction(
+function splitBodyConjunctionParts(
   bodyText: string,
-): { left: string; right: string } | undefined {
+): readonly [string, ...string[]] | undefined {
+  if (/[;,]/.test(bodyText)) {
+    return undefined;
+  }
+
   const matches = [...bodyText.matchAll(/\s+and\s+/gi)];
-  if (matches.length !== 1) {
+  if (matches.length === 0) {
+    const single = bodyText.trim();
+    return single.length === 0 ? undefined : [single];
+  }
+
+  const parts = bodyText
+    .split(/\s+and\s+/i)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  if (parts.length < 2 || parts.length !== matches.length + 1) {
     return undefined;
   }
-  const match = matches[0];
-  if (match === undefined) {
-    return undefined;
-  }
-  const connectorStart = match.index + 1;
-  const connectorEnd = connectorStart + "and".length;
-  const left = bodyText.slice(0, connectorStart).trim();
-  const right = bodyText.slice(connectorEnd).trim();
-  if (left.length === 0 || right.length === 0) {
-    return undefined;
-  }
-  return { left, right };
+
+  return parts as [string, ...string[]];
 }
 
 function parseContinuousBodyPart(
   bodyText: string,
   options?: { inferSharedSelfCharacterTarget: boolean },
-): { effect: Effect; kind: "keyword-grant" | "protection" } | undefined {
+): { effect: Effect; explicitSelfCharacterTarget: boolean } | undefined {
   const protection = parseProtectionBody(bodyText);
   if (protection.type === "supported") {
     return {
@@ -224,10 +245,13 @@ function parseContinuousBodyPart(
         target: { type: "self" },
         type: "giveProtection",
       },
-      kind: "protection",
+      explicitSelfCharacterTarget: true,
     };
   }
 
+  const hasExplicitSelfCharacterPrefix = /^this Character\s+/i.test(
+    bodyText.trim(),
+  );
   const keywordText =
     options?.inferSharedSelfCharacterTarget === true &&
     /^(gains|gets)\s+\[[^\]]+\]/i.test(bodyText.trim())
@@ -242,7 +266,8 @@ function parseContinuousBodyPart(
         target: { type: "self" },
         type: "giveKeyword",
       },
-      kind: "keyword-grant",
+      explicitSelfCharacterTarget:
+        hasExplicitSelfCharacterPrefix || keywordText !== bodyText,
     };
   }
 

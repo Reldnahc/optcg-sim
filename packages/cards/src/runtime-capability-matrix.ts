@@ -1,4 +1,8 @@
 import { generatedSupportComponentEvidenceInventory } from "./generated-support-types.js";
+import {
+  isConditionalContinuousCompositionParserRuleId,
+  listParserRuleIdsForConditionalContinuousRuntimeCapabilityId,
+} from "./conditional-continuous-composition-evidence.js";
 import { returnDonCostWrapperParserRuleId } from "./return-don-cost-wrapper-components.js";
 
 const onPlayReturnDonDrawNParserRuleId = "exact:on-play:return-don-draw-n:self";
@@ -26,7 +30,6 @@ export interface RuntimeCapabilityRecord {
   supportedParserRuleIds: readonly string[];
   sinceStory: string;
 }
-
 export interface RuntimeCapabilityMatrix {
   id: string;
   generatedAtStory: string;
@@ -44,9 +47,6 @@ export interface RuntimeCapabilityParserRuleInventoryEntry {
   parserRuleKind: string;
   coverage: RuntimeCapabilityParserRuleCoverage;
 }
-
-const conditionalContinuousCompositionParserRuleId =
-  "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character";
 
 const conditionalContinuousRuntimeCapabilitySpecs = [
   [
@@ -214,7 +214,8 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         kind,
         sinceStory,
         supported: true,
-        supportedParserRuleIds: [conditionalContinuousCompositionParserRuleId],
+        supportedParserRuleIds:
+          listParserRuleIdsForConditionalContinuousRuntimeCapabilityId(id),
       }),
     ),
     {
@@ -954,7 +955,7 @@ function classifyParserRuleKind(parserRuleId: string): string {
   ) {
     return "draw-up-to";
   }
-  if (parserRuleId === conditionalContinuousCompositionParserRuleId) {
+  if (isConditionalContinuousCompositionParserRuleId(parserRuleId)) {
     return "sequence";
   }
   if (

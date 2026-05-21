@@ -236,7 +236,11 @@ describe("generated support parser result contracts", () => {
       "condition-component:field-count-don-public",
       "exact:condition:self-attached-don-count",
       "exact:condition:your-turn",
-      "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character",
+      "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
+      "exact:conditional-continuous:condition:body-part-composition:self-character:direct:protection",
+      "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:keyword-only",
+      "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:mixed",
+      "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:protection-only",
       "exact:keyword:banish:standalone",
       "exact:keyword:blocker:standalone",
       "exact:keyword:double-attack:standalone",
@@ -540,5 +544,28 @@ describe("generated support parser result contracts", () => {
       expect(components).not.toContain("wrapper");
       expect(components).not.toContain("body-action");
     }
+  });
+
+  it("generalizes conditional continuous parser rule and shape naming", () => {
+    const conditionalEntry = generatedSupportComponentEvidenceInventory.find(
+      (entry) =>
+        entry.parserRuleId ===
+        "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
+    );
+
+    expect(conditionalEntry).toBeDefined();
+    expect(conditionalEntry?.shapeId).toBe(
+      "conditional-continuous-condition-body-part-composition-direct-keyword",
+    );
+    expect(conditionalEntry?.components).toEqual(
+      expect.arrayContaining(["condition", "source-presence-policy"]),
+    );
+    expect(
+      generatedSupportComponentEvidenceInventory.some(
+        (entry) =>
+          entry.parserRuleId ===
+          "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character",
+      ),
+    ).toBe(false);
   });
 });
