@@ -26,6 +26,10 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
   "cost",
   "power",
 ]);
+const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
+  "categories",
+  "typesAny",
+]);
 
 const isSupportedDuration = (duration: Duration): boolean => {
   if (
@@ -74,6 +78,33 @@ const isSupportedAllFilter = (filter: CardFilter | undefined): boolean =>
   ) &&
     hasSupportedNumericFilter(filter.cost) &&
     hasSupportedNumericFilter(filter.power));
+
+const isNonEmptyStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every((entry) => typeof entry === "string");
+
+const isSupportedBasePowerSetFilter = (
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) return false;
+  if (
+    !Object.keys(filter).every((key) =>
+      supportedBasePowerSetFilterKeys.has(key as keyof CardFilter),
+    )
+  ) {
+    return false;
+  }
+  if (filter.categories !== undefined) {
+    if (
+      filter.categories.length === 0 ||
+      !filter.categories.every((category) => category === "character")
+    ) {
+      return false;
+    }
+  }
+  return isNonEmptyStringArray(filter.typesAny);
+};
 
 const isSupportedTarget = (target: Target): boolean => {
   if (target.type === "self") return true;
@@ -328,6 +359,33 @@ const effectToDerivedModifier = (
       layer: "keywordAdd",
       target: { type: "self" },
       operation: { type: "addKeyword", keyword: effect.keyword },
+    };
+  }
+  if (effect.type === "setBasePower") {
+    if (
+      effect.target.type !== "all" ||
+      effect.target.zone !== "characterArea" ||
+      effect.target.player !== "self" ||
+      !isSupportedBasePowerSetFilter(effect.target.filter)
+    ) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported base-power target"),
+      );
+    }
+    if (effect.duration.type !== "permanent") {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported base-power duration"),
+      );
+    }
+    if (!Number.isSafeInteger(effect.value) || effect.value <= 0) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported base-power value"),
+      );
+    }
+    return {
+      layer: "basePowerSet",
+      target: effect.target,
+      operation: { type: "setBasePower", value: effect.value },
     };
   }
   if (effect.type !== "giveProtection") {

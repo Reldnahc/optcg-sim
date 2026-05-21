@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-002B.md",
-      "storyId": "SUP-002B",
-      "storyPath": "stories/approved/SUP-002B-optional-hand-trash-cost-filtered-ko-runtime.yaml",
-      "storySha256": "986f4c3dfab1f445e1a1e00ae67e68e9662cc69c97fd426f309c136bbd6071ca"
+      "packetPath": "agent-packets/SUP-002C.md",
+      "storyId": "SUP-002C",
+      "storyPath": "stories/approved/SUP-002C-conditional-base-power-set-runtime.yaml",
+      "storySha256": "e99252e5429cd155ac7b4ddb7014e9d4317a294b63125acd4d2315fb3aa4015d"
     }
   ],
   "version": 1
