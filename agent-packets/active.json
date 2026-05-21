@@ -4,7 +4,7 @@
       "packetPath": "agent-packets/SUP-003B.md",
       "storyId": "SUP-003B",
       "storyPath": "stories/approved/SUP-003B-activate-main-once-per-turn-runtime.yaml",
-      "storySha256": "bc5ea27794f9848b692e4cba88a0d6ac29a3d73edfc8eba8ed4953a32c30f8c7"
+      "storySha256": "d2335fb12fb36c3c7883023fa9146c81d279396561ef5f8afeab8f5ab88540e5"
     }
   ],
   "version": 1

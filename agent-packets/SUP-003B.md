@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-003B -->
 <!-- agent-packet:story-path stories/approved/SUP-003B-activate-main-once-per-turn-runtime.yaml -->
-<!-- agent-packet:story-sha256 bc5ea27794f9848b692e4cba88a0d6ac29a3d73edfc8eba8ed4953a32c30f8c7 -->
+<!-- agent-packet:story-sha256 d2335fb12fb36c3c7883023fa9146c81d279396561ef5f8afeab8f5ab88540e5 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -868,9 +868,10 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 ## Required Tests
 
 - engine test exposing Activate Main legal action for a supported leader effect during main phase
-- engine tests exposing and applying Activate Main effects from leader, character, and stage sources, or explicit fail-closed tests documenting any narrower supported source subset before implementation
+- engine tests exposing and applying Activate Main effects from leader, character, and stage sources
 - engine test applying Activate Main draw effect through generic runtime
-- engine test suppressing Activate Main outside main phase, during battle, during pending decision, and during pending runtime work
+- engine tests suppressing legal Activate Main exposure and rejecting forged submitted `activateEffect` actions without mutation outside main phase, during battle, during pending decision, and during pending runtime work
+- engine test rejecting submitted `activateEffect` actions without mutation when the match status is not active
 - engine test rejecting forged source/effect/player/action combinations without mutation
 - once-per-turn test proving legal commitment consumes use and same-turn repeat is rejected
 - once-per-turn test proving illegal or uncommitted attempts do not consume use

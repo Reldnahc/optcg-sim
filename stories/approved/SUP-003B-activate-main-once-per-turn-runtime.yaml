@@ -85,9 +85,10 @@ acceptance_criteria:
   - queue result changes are limited to recognizing scoped Activate Main runtime shapes already validated by `effect-runtime-activation-main.ts`
 required_tests:
   - engine test exposing Activate Main legal action for a supported leader effect during main phase
-  - engine tests exposing and applying Activate Main effects from leader, character, and stage sources, or explicit fail-closed tests documenting any narrower supported source subset before implementation
+  - engine tests exposing and applying Activate Main effects from leader, character, and stage sources
   - engine test applying Activate Main draw effect through generic runtime
-  - engine test suppressing Activate Main outside main phase, during battle, during pending decision, and during pending runtime work
+  - engine tests suppressing legal Activate Main exposure and rejecting forged submitted `activateEffect` actions without mutation outside main phase, during battle, during pending decision, and during pending runtime work
+  - engine test rejecting submitted `activateEffect` actions without mutation when the match status is not active
   - engine test rejecting forged source/effect/player/action combinations without mutation
   - once-per-turn test proving legal commitment consumes use and same-turn repeat is rejected
   - once-per-turn test proving illegal or uncommitted attempts do not consume use

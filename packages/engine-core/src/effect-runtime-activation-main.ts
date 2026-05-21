@@ -12,7 +12,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, illegalAction, toStateSeq } from "./action-results.js";
-import { zonesEqual } from "./action-state.js";
+import { isMatchActive, zonesEqual } from "./action-state.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import {
   processEffectRuntime,
@@ -244,6 +244,12 @@ export const applyActivateMainAction = (
   state: GameState,
   action: Extract<Action, { type: "activateEffect" }>,
 ): EngineResult => {
+  if (!isMatchActive(state)) {
+    return illegalAction(
+      state,
+      "activateEffect is only legal while match is active.",
+    );
+  }
   if (
     state.turn.phase !== "main" ||
     state.battle !== undefined ||
