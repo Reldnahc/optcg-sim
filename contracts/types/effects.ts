@@ -127,6 +127,13 @@ export type OptionalCost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
+  | {
+      type: "trashFromHand";
+      count: number;
+      filter?: CardFilter;
+      chooser: PlayerRef;
+      optional: true;
+    }
   | { type: "sequence"; costs: Cost[]; optional: true };
 
 export type ExactCardinality<N extends number = number> = {

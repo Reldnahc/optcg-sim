@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SUP-002A.md",
+      "storyId": "SUP-002A",
+      "storyPath": "stories/approved/SUP-002A-optional-hand-trash-cost-contract-authorability.yaml",
+      "storySha256": "049c6fcfbefac66f47d3291ff38ae6d57cacd3657d91ab0fd4748313068e5efe"
+    }
+  ],
   "version": 1
 }

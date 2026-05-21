@@ -215,6 +215,13 @@ type OptionalCost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
+  | {
+      type: "trashFromHand";
+      count: number;
+      filter?: CardFilter;
+      chooser: PlayerRef;
+      optional: true;
+    }
   | { type: "sequence"; costs: Cost[]; optional: true };
 ```
 
@@ -1034,6 +1041,10 @@ Schema-supported fixture subset:
 - cost: restDon
 - cost: returnDon
 - cost: restSelf
+- cost: optional trashFromHand through `{ type: "payCost"; cost: OptionalCost }`
+  sequence segments only; this is schema authorability for optional cost
+  clauses, not non-optional activation `Cost.trashFromHand` authorability and
+  not runtime/playability support
 - cost: sequence
 - target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
   triggerCard, all, choose, savedFieldObject
@@ -1075,7 +1086,7 @@ Planned/not fixture-authorable until schema coverage exists:
 - condition: sourceStillInZone
 - condition: eventPayload
 - condition: and, or, not, custom
-- cost: trashFromHand
+- cost: trashFromHand as non-optional `Cost.trashFromHand`
 - cost: trashSelf
 - cost: trashFromField
 - cost: discard

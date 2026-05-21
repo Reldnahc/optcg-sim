@@ -253,6 +253,18 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["type", "count", "chooser", "optional"],
+          "properties": {
+            "type": { "const": "trashFromHand" },
+            "count": { "type": "integer", "minimum": 1 },
+            "filter": { "$ref": "#/$defs/cardFilter" },
+            "chooser": { "$ref": "#/$defs/playerRef" },
+            "optional": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["type", "costs", "optional"],
           "properties": {
             "type": { "const": "sequence" },

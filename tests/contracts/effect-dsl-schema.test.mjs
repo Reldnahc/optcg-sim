@@ -29,6 +29,7 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/valid/leader-type-attribute-has-card-in-zone.json",
     "fixtures/effect-dsl/valid/on-play-draw-1.json",
     "fixtures/effect-dsl/valid/optional-return-don-cost-sequence.json",
+    "fixtures/effect-dsl/valid/optional-trash-from-hand-cost-sequence.json",
     "fixtures/effect-dsl/valid/permanent-trash-count-keyword-protection-sequence.json",
     "fixtures/effect-dsl/valid/return-don-cost.json",
     "fixtures/effect-dsl/valid/schema-authorability-only-composed-unsupported.json",
@@ -65,6 +66,10 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/optional-cost-segment-uses-effect-optionality.json",
     "fixtures/effect-dsl/invalid/optional-cost-segment-without-optional-cost.json",
     "fixtures/effect-dsl/invalid/optional-cost-top-level-pay-cost-effect.json",
+    "fixtures/effect-dsl/invalid/optional-trash-from-hand-cost-missing-chooser.json",
+    "fixtures/effect-dsl/invalid/optional-trash-from-hand-cost-missing-optional.json",
+    "fixtures/effect-dsl/invalid/optional-trash-from-hand-cost-optional-false.json",
+    "fixtures/effect-dsl/invalid/optional-trash-from-hand-cost-zero-count.json",
     "fixtures/effect-dsl/invalid/play-selected-arbitrary-reference.json",
     "fixtures/effect-dsl/invalid/play-selected-before-hand-selection-producer.json",
     "fixtures/effect-dsl/invalid/play-selected-missing-hand-selection-producer.json",
@@ -174,6 +179,28 @@ test("SUP-001A keeps DON field count on existing fieldCount condition", async ()
   assert.ok(conditionTypes.includes("fieldCount"));
   assert.ok(!conditionTypes.includes("donFieldCount"));
   assert.ok(!conditionTypes.includes("donOnFieldCount"));
+});
+
+test("SUP-002A authorizes optional trashFromHand only as an OptionalCost", async () => {
+  const schemaPath = path.join(repoRoot, "contracts/effect-dsl.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+  const optionalCostTypes = schema.$defs.optionalCost.oneOf
+    .map((variant) => variant?.properties?.type?.const)
+    .filter((value) => typeof value === "string");
+  const nonOptionalCostTypes = schema.$defs.cost.oneOf
+    .map((variant) => variant?.properties?.type?.const)
+    .filter((value) => typeof value === "string");
+  const optionalHandTrashCost = schema.$defs.optionalCost.oneOf.find(
+    (variant) => variant?.properties?.type?.const === "trashFromHand",
+  );
+
+  assert.ok(optionalCostTypes.includes("trashFromHand"));
+  assert.ok(!nonOptionalCostTypes.includes("trashFromHand"));
+  assert.equal(optionalHandTrashCost?.required.includes("chooser"), true);
+  assert.equal(optionalHandTrashCost?.properties?.count?.minimum, 1);
+  assert.deepEqual(optionalHandTrashCost?.properties?.optional, {
+    const: true,
+  });
 });
 
 test("contracts:validate-effects passes on committed fixtures", () => {

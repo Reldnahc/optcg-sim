@@ -1,0 +1,34 @@
+{
+  "cardId": "SUP-002A-903",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-002A-903:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "connector": "always",
+            "effect": {
+              "type": "payCost",
+              "cost": {
+                "type": "trashFromHand",
+                "count": 0,
+                "chooser": "self",
+                "optional": true
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-002a-903",
+    "rulesVersion": "2026-05-21",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

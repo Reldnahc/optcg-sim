@@ -1,0 +1,72 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-002H
+epic_id: SUP-002
+title: Base-power setter contract authorability
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Make the existing `setBasePower` Effect DSL shape fixture-authorable for the
+  scoped continuous base-power setter family before engine runtime or cards
+  generated-support work consumes it.
+story_boundary: >
+  Contract/schema/type story only. Do not implement runtime materialization,
+  computed-view behavior, parser support, generated support, runtime capability
+  metadata, support reports, real-card fixture evidence, or card promotion.
+allowed_touch_points:
+  - stories/generated/SUP-002H-base-power-setter-contract-authorability.yaml
+  - stories/approved/SUP-002H-base-power-setter-contract-authorability.yaml
+  - agent-packets/SUP-002H.md
+  - agent-packets/active.json
+  - specs/05-effect-dsl-reference.md
+  - contracts/types/effects.ts
+  - packages/types/src/effects.ts
+  - packages/types/src/effects.test.ts
+  - packages/types/src/export-ownership.manifest.ts
+  - packages/types/src/export-cohesion.test.ts
+  - contracts/effect-dsl.schema.json
+  - fixtures/effect-dsl/**
+  - tests/contracts/**
+spec_refs:
+  - 01-system-architecture.s023
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s029
+  - 11-testing-quality.s020
+dependencies: []
+scope:
+  - move scoped `setBasePower` schema coverage from planned/not fixture-authorable to fixture-authorable for positive Effect DSL fixtures
+  - 'prove a reusable Effect DSL shape with `type: "setBasePower"`, all-target self characterArea target, optional `typesAny` filter, numeric value, and the already-authorable permanent continuous envelope used by downstream conditional continuous blocks'
+  - keep block-level public condition reuse separate from duration authorability; this story does not authorize `whileConditionTrue`
+  - add negative fixtures for malformed targets, nonnumeric values, unsupported duration shapes including `whileConditionTrue`, and unsupported filter composition
+  - preserve the distinction between contract authorability and runtime executable support
+non_scope:
+  - engine runtime materialization or computeView behavior
+  - cards parser, generated support, runtime capability matrix, support reports, overlays, fixture capture, source hashes, behavior hashes, or card promotion
+  - new effect families beyond scoped `setBasePower`
+  - opponent/all-player targets, base-cost setters, modifyCost, setPowerToZero, or arbitrary duration expansion
+acceptance_criteria:
+  - contract/schema fixtures prove scoped `setBasePower` authorability and fail-closed malformed rows
+  - specs and schema coverage no longer classify scoped `setBasePower` as planned/not fixture-authorable for this story's shape
+  - no production code treats contract authorability as runtime support
+required_tests:
+  - "`corepack pnpm --filter @optcg/types test`"
+  - "`corepack pnpm run contracts:validate-effects`"
+  - "`corepack pnpm run test:contracts`"
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run packets:verify`"
+repo_rules:
+  - implement only SUP-002H while its packet is active
+  - do not touch engine or cards packages except type/schema test fallout required by contract tests
+  - fail closed if scoped `setBasePower` cannot be made fixture-authorable without broadening unrelated Effect DSL shapes
+ambiguity_policy: fail_and_escalate

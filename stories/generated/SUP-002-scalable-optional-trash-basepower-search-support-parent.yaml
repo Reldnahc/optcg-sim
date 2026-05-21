@@ -1,0 +1,184 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-002
+epic_id: SUP-002
+title: Optional trash cost, base-power, and scalable search support parent
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Coordinate the contract, engine, and cards-layer work needed for three
+  reusable support families: optional hand-trash costs that gate targeted K.O.,
+  conditional continuous base-power setters, and top-N deck search with composed
+  filters or unfiltered any-card selection plus bottom-of-deck remainder
+  ordering. This parent keeps the full support chain visible while each child
+  stays in one concern.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  SUP-002A through SUP-002I one at a time after distinct parent and child
+  story-review evidence exists. Contract authorability must land before engine
+  runtime behavior that consumes it, and engine runtime behavior must land
+  before cards-layer parser/generated-support promotion cites it.
+allowed_touch_points:
+  - stories/generated/SUP-002*.yaml
+  - stories/approved/SUP-002*.yaml
+  - agent-packets/SUP-002*.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 02-engine-mechanics.s025
+  - 02-engine-mechanics.s027
+  - 02-engine-mechanics.s029
+  - 02-engine-mechanics.s036
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s012
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s014
+  - 05-effect-dsl-reference.s016
+  - 05-effect-dsl-reference.s022
+  - 06-visibility-security.s004
+  - 06-visibility-security.s005
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s004
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-014G
+  - CARD-020D
+  - CARD-021A
+  - CARD-023A
+  - CARD-014A
+  - ENG-057A
+  - ENG-055F
+  - ENG-059A
+  - ENG-059F
+  - SUP-001C
+# prettier-ignore
+child_stories:
+  - id: SUP-002A
+    title: Optional hand-trash cost contract authorability
+    concern: Authorize optional `trashFromHand` as a reusable optional cost segment without changing runtime behavior or cards generated support.
+    depends_on: []
+  - id: SUP-002H
+    title: Base-power setter contract authorability
+    concern: Make `setBasePower` fixture-authorable in the Effect DSL schema so engine and cards work can cite contract/schema evidence.
+    depends_on: []
+  - id: SUP-002I
+    title: Top-N search request contract authorability
+    concern: Make scoped `search` request shapes fixture-authorable for top-N deck search with composed filters, unfiltered non-reveal any-card search, selected-card visibility, and bottom remainder policy.
+    depends_on: []
+  - id: SUP-002B
+    title: Optional hand-trash cost into filtered K.O. runtime
+    concern: Execute optional hand-trash cost payment, decline, and if-paid continuation into filtered target selection and saved-target K.O. without exact text branches.
+    depends_on: [SUP-002A, ENG-055F, ENG-057A]
+  - id: SUP-002C
+    title: Conditional base-power setter runtime
+    concern: Materialize conditional continuous `setBasePower` effects for all matching self Characters by reusable condition and filter primitives.
+    depends_on: [SUP-002H, ENG-059A, ENG-059F]
+  - id: SUP-002D
+    title: Top-N search remainder runtime
+    concern: Expand search runtime to top-N deck look, filtered public-reveal search, unfiltered non-reveal any-card search, selected-card-to-hand, and bottom remainder ordering.
+    depends_on: [SUP-002I]
+  - id: SUP-002E
+    title: Optional trash cost K.O. card components
+    concern: Parse and promote reusable optional hand-trash cost plus base-cost-filtered opponent Character K.O. support.
+    depends_on: [SUP-002A, SUP-002B, CARD-014G, CARD-020D]
+  - id: SUP-002F
+    title: Conditional base-power setter card components
+    concern: Parse and promote reusable conditional `set the base power of all of your {type} type Characters to N` support.
+    depends_on: [SUP-002H, SUP-002C, CARD-021A, CARD-023A]
+  - id: SUP-002G
+    title: Top-N search card components
+    concern: Parse and promote reusable top-N search with color/type/name-exclusion filters, unfiltered non-reveal any-card search, bottom remainder handling, and full composition with existing DON-minus and hand-trash components.
+    depends_on: [SUP-002I, SUP-002D, CARD-014A, CARD-020D, SUP-001C]
+scope:
+  - keep the full support chain in one parent story so prerequisite TYP and ENG work is visible before cards-layer work starts
+  - decompose representative printed text into reusable primitives rather than exact full-card text, exact full-effect sentence branches, card IDs, or a human-held adjacent-card list
+  - cover the primitive shape `You may trash N card(s) from your hand:` as an optional cost segment that gates later `ifYouDo` effects
+  - cover targeted K.O. after optional cost through reusable select-target and saved-target K.O. sequence segments, including opponent Character filters with a base-cost maximum
+  - cover the public condition primitive from ENG-059A, including `If you have N or more cards in your trash`
+  - cover conditional continuous base-power setting for all of your Characters matching reusable type filters
+  - "cover top-N deck search through reusable primitives: look at N from top of deck, select up to 1 eligible card, move the selected card to hand, then place the rest on the bottom of deck in owner-choice order"
+  - cover both explicit public-reveal filtered search and non-reveal unfiltered any-card search; public reveal must be driven by printed `reveal` text, and non-reveal add-to-hand search must not leak selected or unselected card identity to the opponent beyond public zone/count changes
+  - cover composed card filters including color, type, and explicit name exclusion such as `other than [Name]`
+  - cover full-effect composition for `[On Play] DON!! −N:` plus top-N non-reveal any-card search plus trailing `trash N card(s) from your hand` through reusable primitives, not an exact full-line branch
+  - keep the already-supported conditional opponent power modifier from SUP-001F as regression evidence only, not new implementation scope
+  - promote complete generated support only after parser certification, schema validation, runtime capability evidence, support metadata, review state, tested state, source integrity, and behavior hash gates pass
+non_scope:
+  - direct parent implementation
+  - a single child that changes contracts, engine runtime, and cards generated support together
+  - real card IDs, real-card fixture capture, real-card source hash updates, real-card behavior hash updates, overlays, support manifest edits, or cards-produced manifest regeneration
+  - production branches for exact full card text, exact full effect lines, one external card list, one real card, or sample-specific sentence templates
+  - making unrelated search families playable, including search-and-play, trash-rest searches, Stage searches from hand, life searches, trash searches, or shuffle-after-search behavior
+  - broad natural-language parsing for comma-separated lists, multi-result search destinations, arbitrary target filters, hidden-information predicates, or uncited gameplay assumptions
+  - new combat rules, battle K.O. behavior, base-cost modification semantics beyond current manifest/base values, or controller-cost removal protection behavior
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - SUP-002 is not implemented directly
+  - SUP-002A through SUP-002I are independently reviewable child stories
+  - parent and every child story-review artifact exists with distinct assignment identity and distinct durable artifact identity before approval handoff, packet generation, activation, implementation handoff, or PR handoff
+  - contract/schema children land before engine or cards children consume optional hand-trash cost, base-power setter, or search request shapes
+  - engine children prove reusable runtime capability before cards generated-support promotion cites those capabilities
+  - cards children recognize representative lines through reusable parser components and capability gates without exact full-line or card-specific branches
+  - the full non-reveal search composition with DON-minus cost and trailing hand-trash is proven by reusable primitive composition and by varied-value tests; if composition fails, the blocker is recorded as a generic composition gap rather than worked around with an exact text branch
+  - a line equivalent to `[When Attacking] If you have 10 or more cards in your trash, give up to 1 of your opponent's Characters -2000 power during this turn.` remains covered as a SUP-001F regression and is not reimplemented here
+  - complete generated support remains unsupported unless the full generated-support chain passes, including parser certification, schema validation, runtime capability evidence, engine proof/test evidence, metadata, review, tested state, source integrity, and behavior hash evidence
+  - existing generated-support behavior for CARD-014, CARD-021, CARD-022, CARD-023, and SUP-001 remains compatible
+  - no implementation or test depends on real card IDs, a human-held adjacent-card list, exact full printed text, or one-off full-effect sentence branches
+  - parent PR cleanup metadata lists SUP-002A through SUP-002I and binds the non-packetized SUP-002 parent closeout after merge to main
+card_source_integrity:
+  - parent does not implement directly and does not name or target any real card
+  - children must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence unless a later approved CARD story explicitly owns real-card promotion
+  - representative lines are parser/runtime examples only; matching real cards may be discovered by generated-support probing only through reviewed generic support gates
+engine_capability_preflight:
+  - parent does not implement directly and delegates capability proof to SUP-002A through SUP-002I
+  - supported prerequisite groups include existing draw/trashFromHand effect execution, existing ENG-059A trash-count condition support, existing conditional queued wrapper reachability, existing target-selection cost max filtering outside sequence gates, existing target K.O. primitives, and existing SUP-001F conditional opponent power modifier support
+  - "missing prerequisite groups are represented by SUP-002A, SUP-002H, SUP-002I, and SUP-002B through SUP-002D until each child lands: optional `trashFromHand` cost contract, `setBasePower` schema fixture-authorability, scoped `search` request schema fixture-authorability, optional hand-trash cost runtime, filtered select-target sequence continuation into K.O., continuous `setBasePower` materialization, all-target type-filter continuous matching, top-N search, composed search filters, unfiltered any-card search, selected-card public reveal and non-reveal semantics, and bottom remainder ordering"
+  - cards-layer children must cite these engine capabilities by reusable capability IDs and must fail closed when a required runtime capability is absent
+required_tests:
+  - story-review for SUP-002 parent before approval handoff
+  - story-review for SUP-002A before approval handoff
+  - story-review for SUP-002H before approval handoff
+  - story-review for SUP-002I before approval handoff
+  - story-review for SUP-002B before approval handoff
+  - story-review for SUP-002C before approval handoff
+  - story-review for SUP-002D before approval handoff
+  - story-review for SUP-002E before approval handoff
+  - story-review for SUP-002F before approval handoff
+  - story-review for SUP-002G before approval handoff
+  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - story-specific tests from SUP-002A through SUP-002I
+  - per-child reviewed commit evidence, AI review record, revision response, and verification evidence for SUP-002A through SUP-002I before parent PR handoff
+  - role packet extraction output before each implementation handoff and before each code-review handoff
+  - final parent PR full-story integration review covering all child commits, packet history, cleanup metadata, CI, verification, and unresolved comments before human-review handoff
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run packets:verify`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - use the parent/substory workflow
+  - do not activate or implement SUP-002 directly
+  - generate and activate one SUP-002 child packet at a time
+  - implement SUP-002A, SUP-002H, SUP-002I, and SUP-002B through SUP-002D before SUP-002E through SUP-002G
+  - do not complete child packets until the parent branch lands on main
+  - keep SUP-002A through SUP-002I work on one parent integration branch with reviewed child commits
+  - do not open child PRs to main; use one final parent PR to main
+  - parent PR cleanup metadata must list SUP-002A through SUP-002I and bind the non-packetized SUP-002 parent closeout
+  - run role packet extraction before implementation and code-review handoffs
+  - fail closed on any parser, schema, runtime capability, source integrity, metadata, review, test, or wording ambiguity that could accidentally mark unsupported text playable
+ambiguity_policy: fail_and_escalate

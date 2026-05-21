@@ -1,0 +1,117 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-002G
+epic_id: SUP-002
+title: Top-N search card components
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Parse and promote reusable cards-layer support for top-N deck searches with
+  composed color/type/name-exclusion filters or unfiltered any-card selection,
+  add-to-hand selection, reveal semantics, and bottom-of-deck remainder
+  placement.
+story_boundary: >
+  Cards-layer story only. Contract/schema prerequisites must already be
+  implemented by SUP-002I and runtime prerequisites must already be implemented
+  by SUP-002D. Do not add new engine runtime behavior, shared contract/schema
+  changes, real-card fixture promotion, source hashes, behavior hashes, overlays,
+  or card-specific branches.
+allowed_touch_points:
+  - stories/generated/SUP-002G-top-n-filtered-search-card-components.yaml
+  - stories/approved/SUP-002G-top-n-filtered-search-card-components.yaml
+  - agent-packets/SUP-002G.md
+  - agent-packets/active.json
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s014
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - SUP-001C
+  - SUP-002I
+  - SUP-002D
+  - CARD-014A
+  - CARD-020D
+scope:
+  - parse `[On Play] Look at N cards from the top of your deck; reveal up to 1 <filter> card and add it to your hand. Then, place the rest at the bottom of your deck in any order.`
+  - "parse `[On Play] DON!! −N: Look at M cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash K card(s) from your hand.`"
+  - support composed filter primitives for color, named type in braces, and `other than [Name]` name exclusion
+  - support an unfiltered any-card search primitive for text that says `add up to 1 card to your hand` without a filter phrase
+  - emit reusable SearchRequest data with self deck, lookCount, min zero, max one, hand destination, selected-card visibility from printed wording, and bottom remainder order
+  - compose DON-minus cost, top-N non-reveal any-card search, bottom remainder ordering, and trailing hand-trash through existing reusable sequence/component families rather than exact full-line handling
+  - vary look count, DON-minus count, trailing trash count, color, type name, and excluded card name in tests to prevent exact sentence matching
+  - add runtime capability matrix evidence that cites SUP-002D capability groups
+non_scope:
+  - engine runtime behavior or shared contract/schema changes
+  - real-card fixture capture, source hash updates, behavior hash updates, overlays, supported-card manifests, or cards-produced manifests
+  - exact card IDs, exact full-card text, external card lists, or one-off full-effect branches
+  - search-and-play, search from trash/life, shuffle-after-search, trash remainder, top remainder, multi-destination search, arbitrary filter grammar, or unsupported search timing families
+  - new DON-minus cost runtime behavior; this story may only consume existing reusable DON-minus cost wrapper and runtime capability evidence
+  - new hand-trash runtime behavior; this story may only consume existing reusable hand-trash effect/cost and generic sequence capability evidence
+  - "exact branches for `[On Play] DON!! −1: Look at 5 cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.` or any representative line as a whole string"
+card_source_integrity:
+  - this story does not enable or change support for a named real card
+  - source integrity is not applicable because implementation evidence uses synthetic representative texts only
+  - do not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence
+engine_capability_preflight:
+  - parsed effect shapes are top-N self-deck search with composed color/type/nameNot filter plus public selected-card reveal, and top-N self-deck search with empty any-card filter plus chooser-only selected-card visibility; both move up to one selected card to hand and place the remainder on bottom in owner-choice order
+  - full composition shape is `[On Play] DON!! −N:` return-DON cost wrapper, followed by non-reveal top-N any-card search, bottom remainder ordering, then `trash K card(s) from your hand`
+  - supported contract/schema group is provided by SUP-002I after that story lands
+  - supported runtime capability group is provided by SUP-002D after that story lands, with exact required IDs `category:auto`, `trigger:onPlay`, `sourcePresencePolicy:mustRemainInSameZone`, `effect:search:self:deck:lookCount-positive:max1:hand`, `searchFilter:categories-colorsAny-typesAny-nameNot`, `searchFilter:any-card-empty`, `searchReveal:selected:bothPlayers`, `searchReveal:selected:chooserOnly`, `searchHiddenInfo:unselected-candidates-private`, and `searchRemainder:deck-bottom:ownerChoice`
+  - full composition additionally consumes existing capability IDs `sequence:genericFrames`, `payCost:returnDon:self:count-exact`, `returnDon:cost:self:count-exact`, and `effect:trashFromHand:self:count:positive-safe-integer:owner-chooses`
+  - missing runtime capability group is none for scoped synthetic rows only after SUP-002D capability IDs exist in the runtime capability matrix; if top-N filtered search runtime evidence is absent, this story is blocked
+acceptance_criteria:
+  - parser/generator support is generic over look count, color, type name, and excluded card name while selection remains max one
+  - parser/generator support is generic over non-reveal any-card search look count, DON-minus count, and trailing trash count while selection remains max one
+  - generated support fails closed when search window, filter, selection destination, or remainder placement is only partially parsed
+  - generated support for non-reveal search does not infer public reveal from look/search/add-to-hand text and does not leak selected or unselected looked-card identity to the opponent
+  - the full DON-minus/search/trailing-trash representative line is supported only by composing reusable primitive parser outputs and existing capability gates; if implementation cannot compose those components without new runtime or contract work, stop and split that generic composition gap instead of hardcoding the line
+  - runtime capability evidence is required before final playable/generated-support decision can pass
+  - no production code checks exact full effect text, card IDs, or the representative sample as a whole string
+required_tests:
+  - cards parser/generated-support test for top-N composed-filter search with name exclusion and bottom remainder
+  - test varying look count, color, type name, and excluded name
+  - "cards parser/generated-support test for `[On Play] DON!! −1: Look at 5 cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.` through reusable DON-minus, search, bottom remainder, and hand-trash composition"
+  - variant full-composition test changing DON-minus count, look count, and trash count without changing parser-rule family or adding full-line branches
+  - fail-closed tests for unsupported remainder destinations, unsupported filter words, and missing reveal/add-to-hand body pieces
+  - fail-closed tests for non-reveal search with unsupported destination, unsupported remainder placement, unsupported extra filter words, and unsupported trailing effect text
+  - runtime capability matrix test for SUP-002D capability evidence
+  - regression test for any existing search-reveal generated-support rows
+  - "`corepack pnpm --filter @optcg/cards test`"
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run packets:verify`"
+repo_rules:
+  - implement only SUP-002G while its packet is active
+  - do not activate or implement SUP-002G until SUP-002I contract/schema evidence and SUP-002D runtime capability evidence have landed as reviewed prerequisite evidence on the active parent integration branch
+  - stop and split if implementation requires new engine runtime behavior
+ambiguity_policy: fail_and_escalate
