@@ -532,7 +532,9 @@ function parseCard016AContinuousClause(
     return undefined;
   }
 
-  const modifier = parseContinuousModifierInstructionBody(wrapper.bodyText);
+  const modifier = isOnPlayContinuousModifierWording(wrapper.bodyText)
+    ? parseContinuousModifierInstructionBody(wrapper.bodyText)
+    : undefined;
   if (modifier !== undefined) {
     const target = toCard016ATarget(modifier.target);
     if (target === undefined) {
@@ -583,6 +585,12 @@ function parseCard016AContinuousClause(
     effectIdSuffix: `exact:on-play:${restrictionId}:${targetId}:this-turn`,
     parserRuleId: `exact:on-play:${restrictionId}:${targetId}:this-turn`,
   });
+}
+
+function isOnPlayContinuousModifierWording(bodyText: string) {
+  return /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) gets? [+\-−]\d+ power during (this turn|this battle)\.$/.test(
+    bodyText,
+  );
 }
 
 function createCard016AAutoClause({

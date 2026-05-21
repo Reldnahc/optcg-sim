@@ -76,7 +76,7 @@ function parseOnPlayFieldEffectBody(
     return createSelectOpponentCharacterClause(cardId);
   }
 
-  const modifier = parseContinuousModifierInstructionBody(bodyText);
+  const modifier = parseCard014gModifierInstructionBody(bodyText);
   if (modifier !== undefined) {
     return createModifyPowerClause(
       cardId,
@@ -97,6 +97,22 @@ function parseOnPlayFieldEffectBody(
   }
 
   return undefined;
+}
+
+function parseCard014gModifierInstructionBody(
+  bodyText: string,
+): ReturnType<typeof parseContinuousModifierInstructionBody> {
+  if (!isCard014gModifierWording(bodyText)) {
+    return undefined;
+  }
+
+  return parseContinuousModifierInstructionBody(bodyText);
+}
+
+function isCard014gModifierWording(bodyText: string) {
+  return /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) gets? [+\-−]\d+ power during (this turn|this battle)\.$/.test(
+    bodyText,
+  );
 }
 
 function createSelectOpponentCharacterClause(

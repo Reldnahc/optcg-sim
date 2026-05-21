@@ -465,6 +465,7 @@ describe("CARD-014G generated composed support", () => {
     "[On Play] This Character cannot become active during your next Refresh Phase.",
     "[On Play] Up to 2 of your opponent's Characters gets -2000 power during this turn.",
     "[On Play] Up to one of your opponent's Characters gets -2000 power during this turn.",
+    "[On Play] Give up to 1 of your opponent's Characters -2000 power during this turn.",
   ])("fails closed on unsupported CARD-014G wording (%s)", (sourceText) => {
     const result = parse(sourceText);
 
