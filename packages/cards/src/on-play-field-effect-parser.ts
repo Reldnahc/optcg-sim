@@ -102,17 +102,19 @@ function parseOnPlayFieldEffectBody(
 function parseCard014gModifierInstructionBody(
   bodyText: string,
 ): ReturnType<typeof parseContinuousModifierInstructionBody> {
-  if (!isCard014gModifierWording(bodyText)) {
+  if (!isOnPlayFieldEffectModifierWording(bodyText)) {
     return undefined;
   }
 
   return parseContinuousModifierInstructionBody(bodyText);
 }
 
-function isCard014gModifierWording(bodyText: string) {
-  return /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) gets? [+\-−]\d+ power during (this turn|this battle)\.$/.test(
-    bodyText,
-  );
+export function isOnPlayFieldEffectModifierWording(bodyText: string) {
+  return [
+    /^This Character gets [+\-\u2212]\d+ power during (this turn|this battle)\.$/,
+    /^All of your opponent's Characters get [+\-\u2212]\d+ power during (this turn|this battle)\.$/,
+    /^Up to 1 of your opponent's Characters gets [+\-\u2212]\d+ power during (this turn|this battle)\.$/,
+  ].some((pattern) => pattern.test(bodyText));
 }
 
 function createSelectOpponentCharacterClause(

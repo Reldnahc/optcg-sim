@@ -7,6 +7,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  isOnPlayFieldEffectModifierWording,
   parseCard014gClause,
   parseCard014gResidueClause,
 } from "./card014g-composed-parser.js";
@@ -532,7 +533,7 @@ function parseCard016AContinuousClause(
     return undefined;
   }
 
-  const modifier = isOnPlayContinuousModifierWording(wrapper.bodyText)
+  const modifier = isOnPlayFieldEffectModifierWording(wrapper.bodyText)
     ? parseContinuousModifierInstructionBody(wrapper.bodyText)
     : undefined;
   if (modifier !== undefined) {
@@ -585,12 +586,6 @@ function parseCard016AContinuousClause(
     effectIdSuffix: `exact:on-play:${restrictionId}:${targetId}:this-turn`,
     parserRuleId: `exact:on-play:${restrictionId}:${targetId}:this-turn`,
   });
-}
-
-function isOnPlayContinuousModifierWording(bodyText: string) {
-  return /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) gets? [+\-−]\d+ power during (this turn|this battle)\.$/.test(
-    bodyText,
-  );
 }
 
 function createCard016AAutoClause({

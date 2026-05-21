@@ -112,6 +112,7 @@ describe("conditional generated support diagnostics", () => {
         ],
         type: "and",
       },
+      expectedComponentEvidenceId: "on-play-draw",
       expectedDrawCount: 1,
       expectedParserRuleId: "exact:on-play:draw-n:self",
       expectedTriggerCapabilityId: "trigger:onPlay",
@@ -128,6 +129,7 @@ describe("conditional generated support diagnostics", () => {
         ],
         type: "and",
       },
+      expectedComponentEvidenceId: "on-play-draw",
       expectedDrawCount: 3,
       expectedParserRuleId: "exact:on-play:draw-n:self",
       expectedTriggerCapabilityId: "trigger:onPlay",
@@ -144,6 +146,7 @@ describe("conditional generated support diagnostics", () => {
         ],
         type: "and",
       },
+      expectedComponentEvidenceId: "on-play-draw",
       expectedDrawCount: 2,
       expectedParserRuleId: "exact:on-play:draw-n:self",
       expectedTriggerCapabilityId: "trigger:onPlay",
@@ -160,6 +163,7 @@ describe("conditional generated support diagnostics", () => {
         ],
         type: "and",
       },
+      expectedComponentEvidenceId: "when-attacking-draw",
       expectedDrawCount: 2,
       expectedParserRuleId: "exact:when-attacking:draw-n:self",
       expectedTriggerCapabilityId: "trigger:whenAttacking",
@@ -172,6 +176,7 @@ describe("conditional generated support diagnostics", () => {
     ({
       cardId,
       expectedCondition,
+      expectedComponentEvidenceId,
       expectedDrawCount,
       expectedParserRuleId,
       expectedTriggerCapabilityId,
@@ -225,15 +230,24 @@ describe("conditional generated support diagnostics", () => {
           }),
           expect.objectContaining({
             capabilityId: "effect:draw:self:count:positive-safe-integer",
+            component: expectedComponentEvidenceId,
+            parserRuleId: expectedParserRuleId,
+          }),
+          expect.objectContaining({
+            capabilityId: "sourcePresencePolicy:mustRemainInSameZone",
+            component: expectedComponentEvidenceId,
             parserRuleId: expectedParserRuleId,
           }),
           expect.objectContaining({
             capabilityId: expectedTriggerCapabilityId,
+            component: expectedComponentEvidenceId,
             parserRuleId: expectedParserRuleId,
           }),
         ]),
       );
-      expect(entry?.componentEvidenceIds).toHaveLength(1);
+      expect(entry?.componentEvidenceIds).toEqual([
+        expectedComponentEvidenceId,
+      ]);
     },
   );
 
