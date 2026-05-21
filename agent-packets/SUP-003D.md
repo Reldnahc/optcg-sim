@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-003D -->
 <!-- agent-packet:story-path stories/approved/SUP-003D-start-of-game-typed-stage-play-runtime.yaml -->
-<!-- agent-packet:story-sha256 9868671ed21fe043693a863b2c54317c9eb1b6450d4fe9273abdc489db72d42e -->
+<!-- agent-packet:story-sha256 cbaa913e928389ce072ef3e090ffbefc4b26c1582057aa98c994a94a30924df0 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -717,6 +717,8 @@ Engine runtime story only. Do not add card parser/generated-support behavior, re
 - execute the scoped start-of-game effect before final shuffle, opening draw, mulligan decisions, and Life setup as required by `02-engine-mechanics.s008`
 - preserve deterministic RNG, deck order, zone indexing, event ordering, and state hashes across setup
 - create hidden-info-safe owner decisions when a choice is required and allow selecting zero cards for `up to 1`
+- route setup-time Stage selection through the canonical `PendingDecision` / `respondToDecision` action path; do not accept raw setup selection IDs through `createInitialState` or any other out-of-band setup input
+- store cross-action setup resumption data for this flow only in the SUP-003I typed raw `GameState` setup continuation field; do not use `audit`, prompts, decision IDs, transient effect frames, or unrelated runtime fields as fallback storage
 - ensure selected Stage cards become public in stage area and unselected deck card identities remain hidden from the opponent
 - if the player already controls a Stage during setup, trash the existing Stage before placing the selected Stage using the ENG-005B Stage replacement ordering and fail closed if that replacement path cannot be represented safely
 - produce engine test evidence for setup timing and hidden-information behavior that later cards-layer runtime capability records can cite; do not edit the cards runtime capability matrix in this engine story
@@ -744,6 +746,8 @@ Engine runtime story only. Do not add card parser/generated-support behavior, re
 - packages/engine-core/src/mulligan.test.ts
 - packages/engine-core/src/start-of-game-effects.ts
 - packages/engine-core/src/start-of-game-effects.test.ts
+- packages/engine-core/src/actions.ts
+- packages/engine-core/src/actions-pending-decision.test.ts
 - packages/engine-core/src/effect-runtime.ts
 - packages/engine-core/src/effect-runtime-play-selected.ts
 - packages/engine-core/src/search-reveal-transient-set.test.ts
@@ -755,6 +759,8 @@ Engine runtime story only. Do not add card parser/generated-support behavior, re
 - implement only SUP-003D while its packet is active
 - do not activate or implement SUP-003D until SUP-002D search runtime evidence has landed on main or the active parent integration branch
 - keep engine-core free of cards package imports and live card-data adapters
+- keep `actions.ts` changes narrowly limited to setup-time start-of-game `selectCards` decision routing and legal-action exposure; do not broaden unrelated active-phase decision handling
+- consume SUP-003I setup continuation state for cross-action setup resumption instead of storing setup continuation data in `audit`, prompts, decision IDs, or unrelated runtime fields
 - stop and split if setup-time start-of-game effects require new shared contract fields
 - use `pnpm`; the canonical local verification commands are `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`
 - TypeScript stays strict; avoid `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions without explicit justification
@@ -786,6 +792,9 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - engine setup/mulligan regression proving the setup flow now matches `02-engine-mechanics.s008` ordering without redrawing the played Stage during mulligan
 - engine setup test proving zero selection is legal and deterministic
 - engine hidden-information/view test for owner-only deck candidates and public played Stage
+- engine action-routing test proving setup begins with a canonical setup-time Stage `selectCards` pending decision, the choice uses `respondToDecision`, legal actions expose only the active decision to the choosing player while status is `setup`, and stale, wrong-player, or malformed setup responses fail closed
+- engine setup-continuation test proving setup pauses with canonical `PendingDecision`, valid `respondToDecision` resumes from the SUP-003I typed continuation field and clears it when appropriate, and invalid/stale/wrong-player responses fail closed without player mutation or fallback storage in audit/prompts/decision IDs/unrelated runtime fields
+- engine regression test proving the previous raw `startOfGameSelections` / `selectedInstanceId` setup bypass is removed or rejected and cannot mutate setup state or advance the start-of-game effect outside the active decision path
 - engine test varying type filter and deck position without changing runtime path
 - engine test for no matching Stage and insufficient candidates
 - engine malformed/stale/wrong-player response tests for setup selection
@@ -809,6 +818,9 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - selecting a matching Stage removes it from deck and places it in the player's stage area before final shuffle/opening draw
 - selecting zero cards is legal for up-to cardinality and leaves deck/stage unchanged except for recorded decision resolution
 - setup decisions expose candidates only to the choosing player and do not leak unselected deck identity to the opponent
+- start-of-game Stage choices are answered through `respondToDecision`, legal actions expose only the active decision to the choosing player during setup, and stale/wrong-player/malformed responses fail closed without mutating setup state
+- deprecated raw setup-selection inputs are removed or fail closed; `createInitialState` and engine-local setup helpers must not accept raw selected card IDs for start-of-game Stage choice, and setup can advance only through the active `PendingDecision` answered by `respondToDecision`
+- valid setup `respondToDecision` resumes official setup only from the SUP-003I typed continuation field, clears that continuation when setup no longer needs it, and invalid/stale/wrong-player responses leave continuation state and players unchanged
 - tests vary type name and deck position to prove no exact branch; selection count remains capped at up to one because Stage Area is a single-slot zone
 - deck order, zone indexing, RNG advancement, event sequence, and final state hash are deterministic
 - insufficient matching cards, no matching cards, malformed responses, wrong-player responses, stale decisions, and destination conflicts fail closed or resolve as specified without hidden-info leaks

@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-003I.md",
-      "storyId": "SUP-003I",
-      "storyPath": "stories/approved/SUP-003I-setup-continuation-state-contract.yaml",
-      "storySha256": "728188cb501b04a6fff62b63574d94294d4a73b80fa5583f79fb2688befc564e"
+      "packetPath": "agent-packets/SUP-003D.md",
+      "storyId": "SUP-003D",
+      "storyPath": "stories/approved/SUP-003D-start-of-game-typed-stage-play-runtime.yaml",
+      "storySha256": "cbaa913e928389ce072ef3e090ffbefc4b26c1582057aa98c994a94a30924df0"
     }
   ],
   "version": 1
