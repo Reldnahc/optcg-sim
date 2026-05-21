@@ -30,7 +30,9 @@ allowed_touch_points:
   - packages/engine-core/src/effect-runtime-sequence-saved-field-object.ts
   - packages/engine-core/src/effect-runtime-sequence-saved-field-object.test.ts
   - packages/engine-core/src/effect-runtime-cost-hand-selection.test.ts
+  - packages/engine-core/src/effect-runtime-optional-hand-trash-cost.test.ts
   - packages/engine-core/src/effect-runtime-sequence-frames.test.ts
+  - packages/engine-core/src/optional-activation-actions.ts
   - packages/engine-core/src/target-selection.ts
   - packages/engine-core/src/target-selection-actions.ts
   - packages/engine-core/src/target-selection-actions.test.ts
@@ -78,7 +80,7 @@ acceptance_criteria:
   - optional hand-trash cost payment and decline both resolve deterministically through the sequence frame model
   - "`ifYouDo` effects after optional hand-trash cost run only when the hand-trash cost was paid"
   - filtered select-target sequence segments can choose up to one opponent Character with cost less than or equal to a variable threshold
-  - runtime capability evidence for the filtered target selector uses exact ID `selectTargets:field:public:character:max1:cost-max` so cards-layer support can distinguish generic Character selection from cost-filtered Character selection
+  - runtime shape is generic enough for the later cards-layer capability evidence ID `selectTargets:field:public:character:max1:cost-max` so cards-layer support can distinguish generic Character selection from cost-filtered Character selection; this engine story does not edit the cards runtime-capability matrix
   - saved-target K.O. consumes only the selected target reference and does not reselect or hardcode the printed sentence
   - legal actions and player views do not reveal private hand candidates to the opponent
   - malformed, duplicate, wrong-player, stale, wrong-count, and insufficient-card responses fail closed without mutation

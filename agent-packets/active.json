@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-002I.md",
-      "storyId": "SUP-002I",
-      "storyPath": "stories/approved/SUP-002I-top-n-search-request-contract-authorability.yaml",
-      "storySha256": "0c85efa3621349c61b08ed9d26c4e3a6d2c2493f483eaaf33dc761ecff899f71"
+      "packetPath": "agent-packets/SUP-002B.md",
+      "storyId": "SUP-002B",
+      "storyPath": "stories/approved/SUP-002B-optional-hand-trash-cost-filtered-ko-runtime.yaml",
+      "storySha256": "986f4c3dfab1f445e1a1e00ae67e68e9662cc69c97fd426f309c136bbd6071ca"
     }
   ],
   "version": 1

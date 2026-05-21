@@ -75,8 +75,11 @@ const isSupportedPayCostSegment = (
   effect: SequenceSegmentEffect,
 ): effect is PayCostEffect =>
   effect.type === "payCost" &&
-  (effect.cost.type === "restDon" || effect.cost.type === "returnDon") &&
+  (effect.cost.type === "restDon" ||
+    effect.cost.type === "returnDon" ||
+    effect.cost.type === "trashFromHand") &&
   (effect.cost.chooser === undefined || effect.cost.chooser === "self") &&
+  (effect.cost.type !== "trashFromHand" || effect.cost.filter === undefined) &&
   Number.isInteger(effect.cost.count) &&
   effect.cost.count > 0;
 
@@ -162,12 +165,24 @@ export const isSupportedSequenceBlock = (
           request.chooser !== "self" ||
           request.zone !== "characterArea" ||
           request.player !== "opponent" ||
-          request.filter !== undefined ||
           !Number.isInteger(request.min) ||
           !Number.isInteger(request.max) ||
           request.min < 0 ||
           request.min > request.max ||
-          request.allowFewerIfUnavailable
+          request.max > 1 ||
+          request.allowFewerIfUnavailable ||
+          (request.filter !== undefined &&
+            (request.filter.categories === undefined ||
+              request.filter.categories.length !== 1 ||
+              request.filter.categories[0] !== "character" ||
+              request.filter.cost === undefined ||
+              "op" in request.filter.cost ||
+              request.filter.cost.min !== undefined ||
+              request.filter.cost.max === undefined ||
+              !Number.isFinite(request.filter.cost.max) ||
+              Object.keys(request.filter).some(
+                (key) => key !== "categories" && key !== "cost",
+              )))
         ) {
           return false;
         }
