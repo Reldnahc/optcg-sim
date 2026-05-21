@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import type {
   CardId,
+  CardRef,
   EffectBlock,
   MatchCardManifest,
   PlayerId,
@@ -284,7 +285,33 @@ test("hidden-info safety: chooser sees candidate action, opponent sees no setup 
   const setup = createInitialState(createInput());
   const ownerView = filterStateForPlayer(setup, p1);
   const opponentView = filterStateForPlayer(setup, p2);
+  const setupDecision = must(setup.pendingDecision, "setup decision");
+  if (setupDecision.type !== "selectCards") {
+    throw new TypeError("Expected setup selectCards decision.");
+  }
+  const setupCandidate = must(
+    setupDecision.candidates[0],
+    "setup candidate",
+  ).card;
   assert.equal(ownerView.pendingDecision?.type, "selectCards");
+  assert.equal(
+    ownerView.revealedCards.some((record) =>
+      record.cards.some(
+        (card) =>
+          card.instanceId === setupCandidate.instanceId &&
+          card.cardId === setupCandidate.cardId,
+      ),
+    ),
+    true,
+  );
+  assert.equal(
+    opponentView.revealedCards.some((record) =>
+      record.cards.some(
+        (card) => card.instanceId === setupCandidate.instanceId,
+      ),
+    ),
+    false,
+  );
   assert.equal(
     opponentView.legalActions.some(
       (action) => action.type === "respondToDecision",
@@ -425,4 +452,154 @@ test("unsupported startOfGame DSL fails closed at createInitialState", () => {
     () => createInitialState(input),
     /effectRuntimeError|unsupported/i,
   );
+});
+
+test("implemented-dsl leader missing effect definition fails closed at setup", () => {
+  const input = createInput();
+  delete input.cardManifest.effectDefinitions?.["leader-red-sog"];
+  assert.throws(() => createInitialState(input), /effectRuntimeError|missing/i);
+});
+
+test("multi-step setup decisions keep contiguous seq and unique decision ids", () => {
+  const input = createInput();
+  input.cardManifest.cards[toCardId("leader-blue")] = {
+    ...resolvedCard({
+      cardId: toCardId("leader-blue"),
+      category: "leader",
+    }),
+    support: {
+      status: "implemented-dsl",
+      cardId: toCardId("leader-blue"),
+      effectDefinitionId: "leader-blue-sog",
+      tested: true,
+      rulesVersion: "r1",
+      sourceTextHash: "leader-blue-sog",
+      behaviorHash: "leader-blue-sog",
+      cardDataVersion: "fixture",
+    },
+  };
+  input.cardManifest.cards[toCardId("p2-stage")] = {
+    ...resolvedCard({
+      cardId: toCardId("p2-stage"),
+      category: "stage",
+    }),
+    types: ["Navy"],
+  };
+  const effectDefinitions = must(
+    input.cardManifest.effectDefinitions,
+    "effect definitions",
+  );
+  effectDefinitions["leader-blue-sog"] = {
+    cardId: toCardId("leader-blue"),
+    implementationStatus: "implemented-dsl",
+    metadata: {
+      sourceTextHash: "leader-blue-sog",
+      rulesVersion: "r1",
+      effectDefinitionsVersion: "fixture",
+      tested: true,
+      reviewedBy: "test",
+      reviewedAt: "2026-05-21T00:00:00.000Z",
+    },
+    effects: [
+      {
+        id: "leader-blue:start-of-game-stage" as never,
+        category: "auto",
+        trigger: { type: "startOfGame" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "search",
+                request: {
+                  zone: "deck",
+                  player: "self",
+                  filter: { categories: ["stage"], typesAny: ["Navy"] },
+                  min: 0,
+                  max: 1,
+                  destination: "stageArea",
+                  revealTo: "chooserOnly",
+                  shuffleAfter: false,
+                },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "playSelected",
+                selection: "selected:start-of-game" as never,
+                ignoreCost: true,
+              },
+            },
+          ],
+        },
+      },
+    ],
+  };
+  input.deckCardIds[p2] = [
+    "p2-stage",
+    "p2-a",
+    "p2-b",
+    "p2-c",
+    "p2-d",
+    "p2-e",
+    "p2-f",
+    "p2-g",
+    "p2-h",
+    "p2-i",
+  ].map(toCardId);
+
+  const setup = createInitialState(input);
+  const firstDecision = must(setup.pendingDecision, "first decision");
+  if (firstDecision.type !== "selectCards") {
+    throw new TypeError("Expected first setup selectCards decision.");
+  }
+  const firstDecisionId = firstDecision.id;
+  const first = applyAction(setup, {
+    type: "respondToDecision",
+    decisionId: firstDecisionId,
+    response: {
+      type: "cards",
+      cards: [must(firstDecision.candidates[0], "first candidate").card],
+    },
+  });
+
+  assert.equal(first.errors, undefined);
+  const secondDecisionId = must(
+    first.state.pendingDecision,
+    "second decision",
+  ).id;
+  assert.notEqual(String(firstDecisionId), String(secondDecisionId));
+  assert.equal(
+    first.events.every(
+      (event, index) => event.seq === setup.eventJournal.length + index + 1,
+    ),
+    true,
+  );
+  assert.equal(
+    first.state.eventJournal.every((event, index) => event.seq === index + 1),
+    true,
+  );
+});
+
+test("setup selection rejects malformed card ref payloads that only spoof instanceId", () => {
+  const setup = createInitialState(createInput());
+  const decision = must(setup.pendingDecision, "setup decision");
+  if (decision.type !== "selectCards") {
+    throw new TypeError("Expected setup selectCards decision.");
+  }
+  const candidate = must(decision.candidates[0], "candidate").card;
+  const malformed = {
+    instanceId: candidate.instanceId,
+  } as unknown as CardRef;
+  const before = hashCanonicalStateValue(setup);
+  const result = applyAction(setup, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "cards", cards: [malformed] },
+  });
+  assert.equal(result.errors?.[0]?.type, "invalidDecisionResponse");
+  assert.deepEqual(result.events, []);
+  assert.equal(result.stateHash, before);
 });

@@ -19,6 +19,7 @@ import {
   cardMatchesSearchFilter,
   reindexZoneCards,
   toCardRef,
+  zonesEqual,
 } from "./action-state.js";
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
 import type { PreMulliganSetupGameState } from "./initial-state.js";
@@ -126,7 +127,7 @@ export const collectStartOfGamePlans = (
     }
     const lookup = resolveImplementedDslEffectDefinition(resolved, manifest);
     if (!lookup.ok) {
-      continue;
+      return { plans: [], errors: [lookup.error] };
     }
     for (const block of lookup.definition.effects) {
       if (block.trigger.type !== "startOfGame") {
@@ -460,7 +461,13 @@ export const applyStartOfGameSetupDecisionResponse = (
       ? undefined
       : pending.candidates.find(
           (entry: { card: CardRef }) =>
-            entry.card.instanceId === selected.instanceId,
+            entry.card.instanceId === selected.instanceId &&
+            entry.card.cardId === selected.cardId &&
+            entry.card.playerId === selected.playerId &&
+            ((entry.card.zone === undefined && selected.zone === undefined) ||
+              (entry.card.zone !== undefined &&
+                selected.zone !== undefined &&
+                zonesEqual(entry.card.zone, selected.zone))),
         )?.card;
   if (selected !== undefined && candidate === undefined) {
     return {
@@ -518,7 +525,7 @@ export const applyStartOfGameSetupDecisionResponse = (
       ...setupState.players,
       [pending.playerId]: selectedResult.player,
     },
-    eventJournal: [...setupState.eventJournal, ...events],
+    eventJournal: [...setupState.eventJournal],
   };
   delete nextState.pendingDecision;
   nextState.setupContinuation = {
@@ -566,10 +573,7 @@ export const applyStartOfGameSetupDecisionResponse = (
       },
       nextDecisionResult.pendingDecision.visibility,
     );
-    nextState.eventJournal = [
-      ...nextState.eventJournal,
-      events[events.length - 1] as EngineEvent,
-    ];
+    nextState.eventJournal = [...nextState.eventJournal, ...events];
     return {
       state: nextState,
       events,
@@ -577,45 +581,10 @@ export const applyStartOfGameSetupDecisionResponse = (
     };
   }
 
+  nextState.eventJournal = [...nextState.eventJournal, ...events];
   return {
     state: nextState,
     events,
     shouldFinalizeSetup: true,
-  };
-};
-
-export const applyStartOfGameSelection = (params: {
-  events: EngineEvent[];
-  plan: StartOfGameEffectPlan;
-  selectedCard: CardRef | undefined;
-  state: GameState;
-}): {
-  state: GameState;
-  errors?: readonly [EngineError, ...EngineError[]];
-} => {
-  const player = params.state.players[params.plan.sourcePlayerId];
-  if (player === undefined) {
-    return {
-      state: params.state,
-      errors: invalidDecision("setup decision player missing"),
-    };
-  }
-  const selectedResult = applyStageSelection(
-    params.state as PreMulliganSetupGameState,
-    player,
-    params.selectedCard,
-    params.events,
-  );
-  if ("error" in selectedResult) {
-    return { state: params.state, errors: selectedResult.error };
-  }
-  return {
-    state: {
-      ...params.state,
-      players: {
-        ...params.state.players,
-        [params.plan.sourcePlayerId]: selectedResult.player,
-      },
-    },
   };
 };
