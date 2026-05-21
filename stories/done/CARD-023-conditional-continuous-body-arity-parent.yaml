@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the cards-layer fix for conditional continuous composition arity.
   The current CARD-021E implementation hardcodes the composed continuous body as

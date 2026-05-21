@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Replace the CARD-021E conditional continuous composer and mirrored diagnostic
   path's exact two-body left/right assumption with a reusable one-or-more body

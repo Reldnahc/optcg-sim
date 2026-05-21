@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CARD-023A.md",
-      "storyId": "CARD-023A",
-      "storyPath": "stories/approved/CARD-023A-conditional-continuous-body-part-composition.yaml",
-      "storySha256": "95ff1cf2b3111e723a01c798d12406e0716aeebf5b564b503dbb51ed52f35c27"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }
