@@ -1,6 +1,7 @@
 import type { CardId, EffectDefinition } from "@optcg/types";
 import { donMinusDrawComponentEvidenceInventoryEntry } from "./don-minus-draw-evidence.js";
 import { fieldCountDonConditionComponentEvidenceInventoryEntry } from "./field-count-don-condition-evidence.js";
+import { optionalTrashCostKoComponentEvidenceInventoryEntry } from "./optional-trash-cost-ko-evidence.js";
 import { sup001fConditionalModifyPowerComponentEvidenceInventoryEntry } from "./sup-001f-conditional-modify-power-evidence.js";
 import { listConditionalContinuousCompositionEvidenceFragments } from "./conditional-continuous-composition-evidence.js";
 import type {
@@ -523,6 +524,7 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     shapeId: "on-play-select-opponent-character-then-ko",
   },
+  optionalTrashCostKoComponentEvidenceInventoryEntry,
   {
     components: [
       "wrapper",

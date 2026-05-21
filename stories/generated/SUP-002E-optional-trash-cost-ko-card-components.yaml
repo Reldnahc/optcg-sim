@@ -27,6 +27,10 @@ allowed_touch_points:
   - packages/cards/src/certified-card-text-parser.test.ts
   - packages/cards/src/composed-parser-builder.ts
   - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/optional-trash-cost-ko-components.ts
+  - packages/cards/src/optional-trash-cost-ko-components.test.ts
+  - packages/cards/src/optional-trash-cost-ko-evidence.ts
+  - packages/cards/src/optional-trash-cost-ko-generated-support.test.ts
   - packages/cards/src/generated-support-index.ts
   - packages/cards/src/generated-support-index.test.ts
   - packages/cards/src/generated-support-report.test.ts

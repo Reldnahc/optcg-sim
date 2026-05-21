@@ -4,6 +4,7 @@ import {
   isConditionalContinuousCompositionParserRuleId,
   listParserRuleIdsForConditionalContinuousRuntimeCapabilityId,
 } from "./conditional-continuous-composition-evidence.js";
+import * as optionalKo from "./optional-trash-cost-ko-evidence.js";
 import { returnDonCostWrapperParserRuleId } from "./return-don-cost-wrapper-components.js";
 
 const onPlayReturnDonDrawNParserRuleId = "exact:on-play:return-don-draw-n:self";
@@ -516,6 +517,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supported: true,
       supportedParserRuleIds: ["exact:on-play:optional-effect:draw-1:self"],
     },
+    ...optionalKo.optionalTrashCostKoRuntimeCapabilityRecords,
     {
       description:
         "Return-DON!! costs can be paid atomically by the source controller.",
@@ -988,7 +990,8 @@ function classifyParserRuleKind(parserRuleId: string): string {
   }
   if (
     parserRuleId.includes("select-1-opponent-character") ||
-    parserRuleId === "card014a:on-play:select-target-modify-power"
+    parserRuleId === "card014a:on-play:select-target-modify-power" ||
+    parserRuleId === optionalKo.optionalTrashCostKoParserRuleId
   ) {
     return "field-target-saved-reference";
   }
