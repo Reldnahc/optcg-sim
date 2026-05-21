@@ -219,6 +219,270 @@ test("returned setup output is type-level documented as pre-mulligan setup statu
   assert.equal(state.status.type, "setup");
 });
 
+test("selected setup stage branch is deterministic and excludes stage from opening hand/life/deck", () => {
+  const input = createInput();
+  const manifest = input.cardManifest as {
+    cards: Record<CardId, unknown>;
+    effectDefinitions?: Record<string, unknown>;
+  };
+  manifest.cards[toCardId("leader-red")] = {
+    cardId: toCardId("leader-red"),
+    language: "en",
+    name: "Leader Red",
+    category: "leader",
+    set: "TEST",
+    setName: "Test",
+    released: true,
+    colors: ["red"],
+    attributes: [],
+    types: ["Leader"],
+    printedKeywords: [],
+    variants: [],
+    legality: {},
+    officialFaq: [],
+    errata: [],
+    sourceTextHash: "leader-red-sog",
+    behaviorHash: "leader-red-sog",
+    support: {
+      status: "implemented-dsl",
+      cardId: toCardId("leader-red"),
+      effectDefinitionId: "leader-red-sog",
+      tested: true,
+      rulesVersion: "r1",
+      sourceTextHash: "leader-red-sog",
+      behaviorHash: "leader-red-sog",
+      cardDataVersion: "fixture",
+    },
+  };
+  manifest.cards[toCardId("p1-a")] = {
+    cardId: toCardId("p1-a"),
+    language: "en",
+    name: "Setup Stage",
+    category: "stage",
+    set: "TEST",
+    setName: "Test",
+    released: true,
+    colors: ["red"],
+    attributes: [],
+    types: ["Navy"],
+    printedKeywords: [],
+    variants: [],
+    legality: {},
+    officialFaq: [],
+    errata: [],
+    sourceTextHash: "p1-a-source",
+    behaviorHash: "p1-a-behavior",
+    support: {
+      status: "vanilla-confirmed",
+      cardId: toCardId("p1-a"),
+      tested: true,
+      rulesVersion: "r1",
+      sourceTextHash: "p1-a-source",
+      behaviorHash: "p1-a-behavior",
+      cardDataVersion: "fixture",
+    },
+  };
+  manifest.effectDefinitions = {
+    "leader-red-sog": {
+      cardId: toCardId("leader-red"),
+      implementationStatus: "implemented-dsl",
+      metadata: {
+        sourceTextHash: "leader-red-sog",
+        rulesVersion: "r1",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+        reviewedBy: "test",
+        reviewedAt: "2026-05-21T00:00:00.000Z",
+      },
+      effects: [
+        {
+          id: "leader-red:start-of-game-stage" as never,
+          category: "auto",
+          trigger: { type: "startOfGame" },
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: {
+                  type: "search",
+                  request: {
+                    zone: "deck",
+                    player: "self",
+                    filter: { categories: ["stage"], typesAny: ["Navy"] },
+                    min: 0,
+                    max: 1,
+                    destination: "stageArea",
+                    revealTo: "chooserOnly",
+                    shuffleAfter: false,
+                  },
+                },
+              },
+              {
+                connector: "always",
+                effect: {
+                  type: "playSelected",
+                  selection: "selected:start-of-game" as never,
+                  ignoreCost: true,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+  const selected = createInitialState({
+    ...input,
+    startOfGameSelections: [
+      { playerId: p1, selectedInstanceId: "p1:deck:0:p1-a" as never },
+    ],
+  });
+  const replay = createInitialState({
+    ...input,
+    startOfGameSelections: [
+      { playerId: p1, selectedInstanceId: "p1:deck:0:p1-a" as never },
+    ],
+  });
+  assert.equal(
+    hashCanonicalStateValue(selected),
+    hashCanonicalStateValue(replay),
+  );
+  assert.equal(
+    must(selected.players[p1], "p1").stage?.cardId,
+    toCardId("p1-a"),
+  );
+  assert.equal(
+    must(selected.players[p1], "p1").hand.some(
+      (card) => card.cardId === toCardId("p1-a"),
+    ),
+    false,
+  );
+  assert.equal(
+    must(selected.players[p1], "p1").life.some(
+      (lifeCard) => lifeCard.card.cardId === toCardId("p1-a"),
+    ),
+    false,
+  );
+  assert.equal(
+    must(selected.players[p1], "p1").deck.some(
+      (card) => card.cardId === toCardId("p1-a"),
+    ),
+    false,
+  );
+  assert.deepEqual(
+    selected.eventJournal.map((event) => event.type),
+    ["decisionCreated", "decisionResolved", "cardMoved", "cardPlayed"],
+  );
+  assert.equal(
+    selected.eventJournal.every((event, index) => event.seq === index + 1),
+    true,
+  );
+});
+
+test("zero-selection setup branch records deterministic private decision events", () => {
+  const input = createInput();
+  const manifest = input.cardManifest as {
+    cards: Record<CardId, unknown>;
+    effectDefinitions?: Record<string, unknown>;
+  };
+  manifest.cards[toCardId("leader-red")] = {
+    cardId: toCardId("leader-red"),
+    language: "en",
+    name: "Leader Red",
+    category: "leader",
+    set: "TEST",
+    setName: "Test",
+    released: true,
+    colors: ["red"],
+    attributes: [],
+    types: ["Leader"],
+    printedKeywords: [],
+    variants: [],
+    legality: {},
+    officialFaq: [],
+    errata: [],
+    sourceTextHash: "leader-red-sog",
+    behaviorHash: "leader-red-sog",
+    support: {
+      status: "implemented-dsl",
+      cardId: toCardId("leader-red"),
+      effectDefinitionId: "leader-red-sog",
+      tested: true,
+      rulesVersion: "r1",
+      sourceTextHash: "leader-red-sog",
+      behaviorHash: "leader-red-sog",
+      cardDataVersion: "fixture",
+    },
+  };
+  manifest.effectDefinitions = {
+    "leader-red-sog": {
+      cardId: toCardId("leader-red"),
+      implementationStatus: "implemented-dsl",
+      metadata: {
+        sourceTextHash: "leader-red-sog",
+        rulesVersion: "r1",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+        reviewedBy: "test",
+        reviewedAt: "2026-05-21T00:00:00.000Z",
+      },
+      effects: [
+        {
+          id: "leader-red:start-of-game-stage" as never,
+          category: "auto",
+          trigger: { type: "startOfGame" },
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: {
+                  type: "search",
+                  request: {
+                    zone: "deck",
+                    player: "self",
+                    filter: { categories: ["stage"], typesAny: ["Navy"] },
+                    min: 0,
+                    max: 1,
+                    destination: "stageArea",
+                    revealTo: "chooserOnly",
+                    shuffleAfter: false,
+                  },
+                },
+              },
+              {
+                connector: "always",
+                effect: {
+                  type: "playSelected",
+                  selection: "selected:start-of-game" as never,
+                  ignoreCost: true,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+
+  const a = createInitialState(input);
+  const b = createInitialState(input);
+  assert.equal(hashCanonicalStateValue(a), hashCanonicalStateValue(b));
+  assert.deepEqual(
+    a.eventJournal.map((event) => event.type),
+    ["decisionCreated", "decisionResolved"],
+  );
+  assert.equal(
+    a.eventJournal.every((event, index) => event.seq === index + 1),
+    true,
+  );
+  assert.equal(
+    a.eventJournal.every((event) => event.visibility.type === "private"),
+    true,
+  );
+});
+
 test("fails closed for invalid leaderLifeCounts input", () => {
   const missing = createInput();
   const missingInput = {

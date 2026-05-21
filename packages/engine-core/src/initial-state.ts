@@ -1,6 +1,7 @@
 import type {
   CardId,
   CardInstance,
+  EngineError,
   GameState,
   MatchCardManifest,
   MatchId,
@@ -12,9 +13,14 @@ import type {
 
 import { assertGameStateInvariants } from "./invariants.js";
 import { advanceRngUint32, initializeRng } from "./rng.js";
+import {
+  applyStartOfGameEffects,
+  type StartOfGameSelectionInput,
+} from "./start-of-game-effects.js";
 
 const OPENING_HAND_SIZE = 5;
 const INITIAL_STATE_SEQ = 0 as StateSeq;
+const toStateSeq = (value: number): StateSeq => value as StateSeq;
 
 type SetupStatus = Extract<GameState["status"], { type: "setup" }>;
 
@@ -35,6 +41,7 @@ export interface CreateInitialStateInput {
   cardManifest: MatchCardManifest;
   rngSeed: number | bigint | string;
   shuffleDecks?: boolean;
+  startOfGameSelections?: readonly StartOfGameSelectionInput[];
 }
 
 const createCard = (
@@ -72,6 +79,11 @@ const requirePlayerValue = <T>(
   }
   return value;
 };
+
+const toEngineErrorReason = (error: EngineError): string =>
+  "reason" in error && typeof error.reason === "string"
+    ? error.reason
+    : error.type;
 
 const shuffleCardsDeterministic = (
   cards: CardInstance[],
@@ -142,36 +154,54 @@ const createPlayerState = (params: {
     ),
   );
 
-  const shuffledDeck = params.shuffleDecks
-    ? shuffleCardsDeterministic(seededDeck, params.rng)
-    : { cards: seededDeck, rng: params.rng };
-
-  const openingHand = shuffledDeck.cards
-    .slice(0, OPENING_HAND_SIZE)
-    .map((card, index) => withIndexedZone(card, "hand", "hand", index));
-  const afterHandDeck = shuffledDeck.cards.slice(OPENING_HAND_SIZE);
-  const lifeSetup = setupLifeFromDeck(
-    params.playerId,
-    afterHandDeck,
-    params.leaderLifeCount,
-  );
-  const finalDeck = lifeSetup.deck.map((card, index) =>
+  const initialDeck = seededDeck.map((card, index) =>
     withIndexedZone(card, "deck", "deck", index),
   );
 
   return {
     playerState: {
       playerId: params.playerId,
-      deck: finalDeck,
+      deck: initialDeck,
       donDeck: seededDonDeck,
-      hand: openingHand,
+      hand: [],
       trash: [],
       leader,
       characters: [],
       costArea: [],
-      life: lifeSetup.life,
+      life: [],
       hasMulliganed: false,
       turnCount: params.turnCount,
+    },
+    rng: params.rng,
+  };
+};
+
+const finalizePlayerSetup = (params: {
+  player: PlayerState;
+  lifeCount: number;
+  rng: RngState;
+  shuffleDecks: boolean;
+}): { player: PlayerState; rng: RngState } => {
+  const shuffledDeck = params.shuffleDecks
+    ? shuffleCardsDeterministic(params.player.deck, params.rng)
+    : { cards: params.player.deck, rng: params.rng };
+  const openingHand = shuffledDeck.cards
+    .slice(0, OPENING_HAND_SIZE)
+    .map((card, index) => withIndexedZone(card, "hand", "hand", index));
+  const afterHandDeck = shuffledDeck.cards.slice(OPENING_HAND_SIZE);
+  const lifeSetup = setupLifeFromDeck(
+    params.player.playerId,
+    afterHandDeck,
+    params.lifeCount,
+  );
+  return {
+    player: {
+      ...params.player,
+      hand: openingHand,
+      life: lifeSetup.life,
+      deck: lifeSetup.deck.map((card, index) =>
+        withIndexedZone(card, "deck", "deck", index),
+      ),
     },
     rng: shuffledDeck.rng,
   };
@@ -330,6 +360,42 @@ export const createInitialState = (
     eventJournal: [],
     audit: [],
   };
+
+  const started = applyStartOfGameEffects(
+    input.startOfGameSelections === undefined
+      ? { players: state.players, manifest: state.cardManifest, rng }
+      : {
+          players: state.players,
+          manifest: state.cardManifest,
+          selections: input.startOfGameSelections,
+          rng,
+        },
+  );
+  if (started.errors !== undefined) {
+    throw new TypeError(toEngineErrorReason(started.errors[0]));
+  }
+  state.players = started.players;
+  state.eventJournal = started.events.map((event, index) => ({
+    ...event,
+    seq: index + 1,
+    createdAtStateSeq: toStateSeq(state.seq),
+  }));
+
+  for (const playerId of input.playerOrder) {
+    const finalized = finalizePlayerSetup({
+      player: requirePlayerValue(state.players, playerId, "players"),
+      lifeCount: requirePlayerValue(
+        input.leaderLifeCounts,
+        playerId,
+        "leaderLifeCounts",
+      ),
+      rng,
+      shuffleDecks: input.shuffleDecks ?? false,
+    });
+    state.players[playerId] = finalized.player;
+    rng = finalized.rng;
+  }
+  state.rng = rng;
 
   assertGameStateInvariants(state);
   return state;
