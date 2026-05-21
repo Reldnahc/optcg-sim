@@ -79,18 +79,30 @@ const isSupportedPayCostSegment = (
   }
   const cost = effect.cost;
   if (cost.type === "chooseOne") {
+    const hasSupportedFieldFilter = (
+      filter: unknown,
+    ): filter is {
+      categories: ["character"];
+      typesAny: [string, ...string[]];
+    } =>
+      typeof filter === "object" &&
+      filter !== null &&
+      Array.isArray((filter as { categories?: unknown }).categories) &&
+      (filter as { categories: unknown[] }).categories.length === 1 &&
+      (filter as { categories: unknown[] }).categories[0] === "character" &&
+      Array.isArray((filter as { typesAny?: unknown }).typesAny) &&
+      (filter as { typesAny: unknown[] }).typesAny.length > 0 &&
+      (filter as { typesAny: unknown[] }).typesAny.every(
+        (typeName) => typeof typeName === "string",
+      );
     return cost.options.every((option) => {
       if (option.type === "trashFromHand") {
-        return (
-          Number.isInteger(option.count) &&
-          option.count > 0 &&
-          option.filter === undefined
-        );
+        return Number.isInteger(option.count) && option.count > 0;
       }
       return (
         Number.isInteger(option.count) &&
         option.count > 0 &&
-        option.filter.typesAny.length > 0
+        hasSupportedFieldFilter(option.filter)
       );
     });
   }

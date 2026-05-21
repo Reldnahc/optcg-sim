@@ -151,11 +151,35 @@ const setupState = (typeName = "Straw Hat Crew") => {
   return { fieldCostCard, handCostCard, state };
 };
 
+const chooseOneOptionId = (
+  decision: Extract<
+    NonNullable<GameState["pendingDecision"]>,
+    { type: "payCost" }
+  >,
+  params: { type: "trashFromHand" | "trashFromField"; count?: number },
+): string =>
+  must(
+    decision.paymentOptions.find(
+      (option) =>
+        option.type === params.type &&
+        (params.count === undefined || option.count === params.count),
+    ),
+    "payment option",
+  ).id;
+
+const asPayCostDecision = (
+  decision: NonNullable<GameState["pendingDecision"]>,
+): Extract<NonNullable<GameState["pendingDecision"]>, { type: "payCost" }> => {
+  assert.equal(decision.type, "payCost");
+  return decision;
+};
+
 test("optional choose-one cost supports field payment and dependent draw", () => {
   const { fieldCostCard, state } = setupState();
   const paused = processEffectRuntime(state);
-  const decision = must(paused.state.pendingDecision, "decision");
-  assert.equal(decision.type, "payCost");
+  const decision = asPayCostDecision(
+    must(paused.state.pendingDecision, "decision"),
+  );
   assert.deepEqual(
     new Set(decision.paymentOptions.map((option) => option.type)),
     new Set(["trashFromField", "trashFromHand"]),
@@ -172,11 +196,13 @@ test("optional choose-one cost supports field payment and dependent draw", () =>
     (action): action is Extract<Action, { type: "respondToDecision" }> =>
       action.type === "respondToDecision",
   );
+  const fieldOptionId = chooseOneOptionId(decision, { type: "trashFromField" });
+  const handOptionId = chooseOneOptionId(decision, { type: "trashFromHand" });
   assert.equal(
     chooserActions.some(
       (action) =>
         action.response.type === "payment" &&
-        action.response.optionId === "trashFromField",
+        action.response.optionId === fieldOptionId,
     ),
     true,
   );
@@ -184,7 +210,7 @@ test("optional choose-one cost supports field payment and dependent draw", () =>
     chooserActions.some(
       (action) =>
         action.response.type === "payment" &&
-        action.response.optionId === "trashFromHand",
+        action.response.optionId === handOptionId,
     ),
     true,
   );
@@ -194,7 +220,7 @@ test("optional choose-one cost supports field payment and dependent draw", () =>
     decisionId: decision.id,
     response: {
       type: "payment",
-      optionId: "trashFromField",
+      optionId: fieldOptionId,
       selectedCardInstanceIds: [fieldCostCard.instanceId],
     },
   });
@@ -222,13 +248,16 @@ test("optional choose-one cost supports field payment and dependent draw", () =>
 test("optional choose-one cost supports hand payment and decline; neither-payable skips decision", () => {
   const base = setupState("Navy");
   const paused = processEffectRuntime(base.state);
-  const decision = must(paused.state.pendingDecision, "decision");
+  const decision = asPayCostDecision(
+    must(paused.state.pendingDecision, "decision"),
+  );
+  const handOptionId = chooseOneOptionId(decision, { type: "trashFromHand" });
   const handPaid = applyAction(paused.state, {
     type: "respondToDecision",
     decisionId: decision.id,
     response: {
       type: "payment",
-      optionId: "trashFromHand",
+      optionId: handOptionId,
       selectedCardInstanceIds: [base.handCostCard.instanceId],
     },
   });
@@ -274,7 +303,13 @@ test("optional choose-one cost fails closed on malformed or wrong option respons
   ): EngineResult => {
     const { fieldCostCard, handCostCard, state } = setupState("Fish-Man");
     const paused = processEffectRuntime(state);
-    const decision = must(paused.state.pendingDecision, "decision");
+    const decision = asPayCostDecision(
+      must(paused.state.pendingDecision, "decision"),
+    );
+    const fieldOptionId = chooseOneOptionId(decision, {
+      type: "trashFromField",
+    });
+    const handOptionId = chooseOneOptionId(decision, { type: "trashFromHand" });
     if (mode === "decline") {
       return applyAction(paused.state, {
         type: "respondToDecision",
@@ -288,7 +323,7 @@ test("optional choose-one cost fails closed on malformed or wrong option respons
         decisionId: decision.id,
         response: {
           type: "payment",
-          optionId: "trashFromField",
+          optionId: fieldOptionId,
           selectedCardInstanceIds: [],
         },
       });
@@ -311,12 +346,12 @@ test("optional choose-one cost fails closed on malformed or wrong option respons
         mode === "field"
           ? {
               type: "payment",
-              optionId: "trashFromField",
+              optionId: fieldOptionId,
               selectedCardInstanceIds: [fieldCostCard.instanceId],
             }
           : {
               type: "payment",
-              optionId: "trashFromHand",
+              optionId: handOptionId,
               selectedCardInstanceIds: [handCostCard.instanceId],
             },
     });
@@ -339,4 +374,257 @@ test("optional choose-one cost fails closed on malformed or wrong option respons
     assert.deepEqual(first.events, second.events);
     assert.equal(first.stateHash, second.stateHash);
   }
+});
+
+test("field trash cost returns attached DON as rested with deterministic replay-only events and no KO", () => {
+  const { fieldCostCard, state } = setupState();
+  const p1State = must(state.players[p1], "p1");
+  const donA = {
+    ...must(p1State.donDeck[0], "don a"),
+    zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 } as const,
+  };
+  const donB = {
+    ...must(p1State.donDeck[1], "don b"),
+    zone: { zone: "costArea", playerId: p1, slot: "cost", index: 1 } as const,
+  };
+  p1State.costArea = [donA, donB, ...p1State.costArea];
+  p1State.donDeck = p1State.donDeck.filter(
+    (card) =>
+      card.instanceId !== donA.instanceId &&
+      card.instanceId !== donB.instanceId,
+  );
+  const updatedField = {
+    ...fieldCostCard,
+    attachedDon: [donA.instanceId, donB.instanceId],
+  };
+  p1State.characters = p1State.characters.map((card) =>
+    card.instanceId === fieldCostCard.instanceId ? updatedField : card,
+  );
+
+  const paused = processEffectRuntime(state);
+  const decision = asPayCostDecision(
+    must(paused.state.pendingDecision, "decision"),
+  );
+  const fieldOptionId = chooseOneOptionId(decision, { type: "trashFromField" });
+  const first = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: fieldOptionId,
+      selectedCardInstanceIds: [fieldCostCard.instanceId],
+    },
+  });
+  const second = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: fieldOptionId,
+      selectedCardInstanceIds: [fieldCostCard.instanceId],
+    },
+  });
+
+  assert.equal(first.errors, undefined);
+  assert.equal(
+    first.events.some((event) => event.type === "cardKOd"),
+    false,
+  );
+  assert.equal(
+    first.events.filter((event) => event.type === "donReturned").length,
+    2,
+  );
+  assert.equal(
+    first.events
+      .filter((event) => event.type === "donReturned")
+      .every((event) => event.visibility.type === "replayOnly"),
+    true,
+  );
+  assert.equal(
+    first.events.some(
+      (event) =>
+        event.type === "cardMoved" &&
+        (event.payload as { reason?: string }).reason === "trashFromField",
+    ),
+    true,
+  );
+  assert.equal(
+    must(first.state.players[p1], "after p1")
+      .costArea.filter((card) =>
+        [donA.instanceId, donB.instanceId].includes(card.instanceId),
+      )
+      .every((card) => card.state === "rested"),
+    true,
+  );
+  assert.deepEqual(first.events, second.events);
+  assert.equal(first.stateHash, second.stateHash);
+});
+
+test("unsupported choose-one field-trash alternative fails closed without degrading to hand option", () => {
+  const malformedSequence: Extract<Effect, { type: "sequence" }> = {
+    type: "sequence",
+    effects: [
+      {
+        id: "optional-choose-one-cost",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "chooseOne",
+            optional: true,
+            options: [
+              {
+                type: "trashFromField",
+                chooser: "self",
+                optional: true,
+                count: 1,
+                filter: { categories: ["character"], typesAny: ["Navy"] },
+              },
+              {
+                type: "trashFromField",
+                chooser: "self",
+                optional: true,
+                count: 1,
+                filter: {
+                  categories: ["character"],
+                  typesAny: [] as unknown as [string, ...string[]],
+                },
+              },
+              {
+                type: "trashFromHand",
+                chooser: "self",
+                optional: true,
+                count: 1,
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: "if-you-do-draw",
+        connector: "ifYouDo",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    ],
+  };
+  const { state } = setupState("Navy");
+  setupDefinition(
+    state,
+    must(state.players[p1], "p1").characters[0] as CardInstance,
+    malformedSequence,
+  );
+  const run = processEffectRuntime(state);
+
+  assert.equal(run.state.pendingDecision, undefined);
+  assert.equal(
+    run.events.some((event) => event.type === "decisionCreated"),
+    false,
+  );
+  assert.equal(
+    run.events.some((event) => event.type === "costPaid"),
+    false,
+  );
+  assert.equal(
+    run.events.some((event) => event.type === "cardDrawn"),
+    false,
+  );
+});
+
+test("choose-one same-family alternatives use distinct stable option ids and preserve selected alternative identity", () => {
+  const sameFamilySequence: Extract<Effect, { type: "sequence" }> = {
+    type: "sequence",
+    effects: [
+      {
+        id: "optional-choose-one-cost",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "chooseOne",
+            optional: true,
+            options: [
+              {
+                type: "trashFromHand",
+                chooser: "self",
+                optional: true,
+                count: 1,
+              },
+              {
+                type: "trashFromHand",
+                chooser: "self",
+                optional: true,
+                count: 2,
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: "if-you-do-draw",
+        connector: "ifYouDo",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    ],
+  };
+  const { state } = setupState("Navy");
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.characters[0], "source");
+  setupDefinition(state, source, sameFamilySequence);
+  const paused = processEffectRuntime(state);
+  const decision = asPayCostDecision(
+    must(paused.state.pendingDecision, "decision"),
+  );
+
+  const handOneId = chooseOneOptionId(decision, {
+    type: "trashFromHand",
+    count: 1,
+  });
+  const handTwoId = chooseOneOptionId(decision, {
+    type: "trashFromHand",
+    count: 2,
+  });
+  assert.notEqual(handOneId, handTwoId);
+
+  const legal = getLegalActions(paused.state, p1).filter(
+    (
+      action,
+    ): action is Extract<Action, { type: "respondToDecision" }> & {
+      response: Extract<
+        Extract<Action, { type: "respondToDecision" }>["response"],
+        { type: "payment" }
+      >;
+    } =>
+      action.type === "respondToDecision" && action.response.type === "payment",
+  );
+  assert.equal(
+    legal.some((action) => action.response.optionId === handOneId),
+    true,
+  );
+  assert.equal(
+    legal.some((action) => action.response.optionId === handTwoId),
+    true,
+  );
+
+  const selected = [must(p1State.hand[0], "h1"), must(p1State.hand[1], "h2")];
+  const paid = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: handTwoId,
+      selectedCardInstanceIds: selected.map((card) => card.instanceId),
+    },
+  });
+  assert.equal(paid.errors, undefined);
+  const costPaid = must(
+    paid.events.find((event) => event.type === "costPaid"),
+    "costPaid",
+  );
+  assert.deepEqual(
+    (costPaid.payload as { selectedCardInstanceIds?: string[] })
+      .selectedCardInstanceIds,
+    selected.map((card) => card.instanceId),
+  );
 });

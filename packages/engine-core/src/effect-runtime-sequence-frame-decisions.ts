@@ -277,6 +277,23 @@ const fieldCardMatchesFilter = (
   return filter.typesAny.some((cardType) => metadata.types.includes(cardType));
 };
 
+const chooseOneOptionId = (
+  option: { type: "trashFromHand" | "trashFromField" },
+  index: number,
+): string => `${option.type}:${String(index)}`;
+
+const isSupportedChooseOneOption = (
+  option: Extract<OptionalCost, { type: "chooseOne" }>["options"][number],
+): boolean => {
+  if (!Number.isInteger(option.count) || option.count <= 0) {
+    return false;
+  }
+  if (option.type === "trashFromHand") {
+    return true;
+  }
+  return supportsScopedFieldTrashFilter(option.filter);
+};
+
 export const getSequencePayCostLegalActions = (
   state: GameState,
   playerId: EffectQueueEntry["controllerId"],
@@ -419,20 +436,23 @@ export const getSequenceOptionalPayCostOptions = (
     return paymentOptions;
   }
 
-  for (const option of cost.options) {
+  for (const [index, option] of cost.options.entries()) {
+    if (!isSupportedChooseOneOption(option)) {
+      return [];
+    }
     if (option.type === "trashFromHand") {
       if (handEligibleCount < option.count) {
         continue;
       }
       paymentOptions.push({
-        id: "trashFromHand",
+        id: chooseOneOptionId(option, index),
         type: "trashFromHand",
         count: option.count,
       });
       continue;
     }
     if (!supportsScopedFieldTrashFilter(option.filter)) {
-      continue;
+      return [];
     }
     const fieldFilter = option.filter;
     const fieldMatchCount =
@@ -443,7 +463,7 @@ export const getSequenceOptionalPayCostOptions = (
       continue;
     }
     paymentOptions.push({
-      id: "trashFromField",
+      id: chooseOneOptionId(option, index),
       type: "trashFromField",
       count: option.count,
       filter: fieldFilter,

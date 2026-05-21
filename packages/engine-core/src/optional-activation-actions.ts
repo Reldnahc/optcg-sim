@@ -240,6 +240,11 @@ export const applyOptionalActivationDecisionResponse = (
           selectedCards.push(card);
         }
         const selectedSet = new Set(selected);
+        const returnedDonIds =
+          selectedOption.type === "trashFromField"
+            ? selectedCards.flatMap((card) => card.attachedDon)
+            : [];
+        const returnedDonIdSet = new Set(returnedDonIds);
         const trashedCards = selectedCards.map((card, index) =>
           toTrashCard(card, decision.playerId, index),
         );
@@ -267,6 +272,14 @@ export const applyOptionalActivationDecisionResponse = (
                   "character",
                 )
               : player.characters,
+          costArea:
+            selectedOption.type === "trashFromField"
+              ? player.costArea.map((card) =>
+                  returnedDonIdSet.has(card.instanceId)
+                    ? { ...card, state: "rested" as const }
+                    : card,
+                )
+              : player.costArea,
           trash: reindexZoneCards(
             [...trashedCards, ...player.trash],
             "trash",
@@ -315,6 +328,28 @@ export const applyOptionalActivationDecisionResponse = (
           const trashed = events[events.length - 1];
           if (trashed !== undefined) {
             trashed.causedBy = { type: "decision", decisionId: decision.id };
+          }
+          if (selectedOption.type === "trashFromField") {
+            for (const donId of selectedCard.attachedDon) {
+              appendEvent(
+                state,
+                events,
+                "donReturned",
+                {
+                  playerId: decision.playerId,
+                  donInstanceId: donId,
+                  state: "rested",
+                },
+                { type: "replayOnly" },
+              );
+              const returnedDon = events[events.length - 1];
+              if (returnedDon !== undefined) {
+                returnedDon.causedBy = {
+                  type: "decision",
+                  decisionId: decision.id,
+                };
+              }
+            }
           }
         }
         costPaidPayload = {
