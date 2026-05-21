@@ -586,4 +586,60 @@ describe("generated support runtime capability matrix", () => {
     expect(hasRuntimeCapability("replacement:damage")).toBe(false);
     expect(hasRuntimeCapability("refreshLock:don")).toBe(false);
   });
+
+  it("tracks generalized conditional continuous parser-rule coverage", () => {
+    const requiredCapabilities = [
+      "category:permanent",
+      "effect:giveKeyword:self:permanent:allowlisted",
+      "effect:giveProtection:fieldRemoval:thisCard:permanent",
+      "trigger:permanent",
+    ];
+    const parserRuleId =
+      "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:mixed";
+
+    for (const capabilityId of requiredCapabilities) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+    }
+  });
+
+  it("links conditional continuous parser-rule variants to source-presence and sequence capabilities accurately", () => {
+    const sourcePresenceCapability =
+      generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+        (candidate) =>
+          candidate.id === "sourcePresencePolicy:mustRemainInSameZone",
+      );
+    const sequenceCapability =
+      generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+        (candidate) => candidate.id === "effect:sequence:ordered",
+      );
+
+    expect(sourcePresenceCapability?.supportedParserRuleIds).toEqual(
+      expect.arrayContaining([
+        "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
+        "exact:conditional-continuous:condition:body-part-composition:self-character:direct:protection",
+        "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:keyword-only",
+        "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:protection-only",
+        "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:mixed",
+      ]),
+    );
+
+    expect(sequenceCapability?.supportedParserRuleIds).toEqual(
+      expect.arrayContaining([
+        "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:keyword-only",
+        "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:protection-only",
+        "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:mixed",
+      ]),
+    );
+    expect(sequenceCapability?.supportedParserRuleIds).not.toContain(
+      "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
+    );
+    expect(sequenceCapability?.supportedParserRuleIds).not.toContain(
+      "exact:conditional-continuous:condition:body-part-composition:self-character:direct:protection",
+    );
+  });
 });

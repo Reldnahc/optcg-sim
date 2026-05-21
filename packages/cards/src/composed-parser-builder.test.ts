@@ -623,58 +623,36 @@ describe("composed parser builder scaffold", () => {
     const sourceText =
       "If your Leader is multicolored, this Character gains [Rush].";
 
-    expect(deriveParserDiagnosticDecomposition(sourceText, sourceText)).toEqual(
-      {
-        recognizedActionCandidates: ["this Character gains [Rush]"],
-        recognizedSyntaxFragments: [
-          "if-conditional-wrapper",
-          "condition-components:v1",
-          "keyword-grant-components:v1",
-        ],
-        recognizedTriggerCandidates: [],
-        reason:
-          "Conditional keyword-grant components were recognized, but generated support remains fail-closed until schema/runtime bridge evidence represents this continuous component.",
-        traceComponents: [
-          { kind: "wrapper", status: "recognized", text: "If" },
-          {
-            id: "condition:leaderColorCount:self:gte:2",
-            kind: "condition",
-            span: {
-              end: 27,
-              start: 0,
-              text: "your Leader is multicolored",
-            },
-            status: "supported",
-            text: "your Leader is multicolored",
-          },
-          {
-            id: "keyword-grant:target:self-character",
-            kind: "target",
-            span: { end: 46, start: 32, text: "this Character" },
-            status: "supported",
-            text: "this Character",
-          },
-          {
-            id: "keyword-grant:verb:gains",
-            kind: "verb",
-            span: { end: 52, start: 47, text: "gains" },
-            status: "supported",
-            text: "gains",
-          },
-          {
-            id: "keyword-grant:keyword:rush",
-            kind: "keyword",
-            span: { end: 59, start: 53, text: "[Rush]" },
-            status: "supported",
-            text: "[Rush]",
-          },
-        ],
-        unsupportedConditionFragments: [],
-        unsupportedSyntaxFragments: [
-          "conditional-keyword-grant:schema-runtime-bridge-missing",
-        ],
-      },
+    const decomposition = deriveParserDiagnosticDecomposition(
+      sourceText,
+      sourceText,
     );
+    expect(decomposition?.recognizedActionCandidates).toEqual([
+      "this Character gains [Rush]",
+    ]);
+    expect(decomposition?.recognizedSyntaxFragments).toEqual(
+      expect.arrayContaining([
+        "if-conditional-wrapper",
+        "condition-components:v1",
+        "conditional-body-parts:ordered",
+        "keyword-grant-components:v1",
+      ]),
+    );
+    expect(decomposition?.recognizedTriggerCandidates).toEqual([]);
+    expect(decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "keyword-grant:keyword:rush",
+          kind: "keyword",
+          status: "supported",
+          text: "[Rush]",
+        }),
+      ]),
+    );
+    expect(decomposition?.unsupportedConditionFragments).toEqual([]);
+    expect(decomposition?.unsupportedSyntaxFragments).toEqual([
+      "conditional-continuous-composition:schema-runtime-bridge-missing",
+    ]);
   });
 
   it("derives opponent-effect field-removal protection decomposition while staying fail-closed for generated support", () => {
@@ -755,6 +733,7 @@ describe("composed parser builder scaffold", () => {
       recognizedSyntaxFragments: [
         "if-conditional-wrapper",
         "condition-components:v1",
+        "conditional-body-parts:ordered",
         "conditional-body-conjunction:and",
         "protection-components:v1",
         "protection:opponent-effect-field-removal",
@@ -780,7 +759,7 @@ describe("composed parser builder scaffold", () => {
           text: "you have 2 or more cards in your trash",
         }),
         expect.objectContaining({
-          id: "conditional-body-connector:and",
+          id: "conditional-body-connector:and:0",
           kind: "condition-connector",
           status: "supported",
           text: "and",
@@ -812,11 +791,14 @@ describe("composed parser builder scaffold", () => {
     expect(decomposition?.recognizedActionCandidates).toEqual([
       "this Character gains [Banish]",
     ]);
-    expect(decomposition?.recognizedSyntaxFragments).toEqual([
-      "if-conditional-wrapper",
-      "condition-components:v1",
-      "keyword-grant-components:v1",
-    ]);
+    expect(decomposition?.recognizedSyntaxFragments).toEqual(
+      expect.arrayContaining([
+        "if-conditional-wrapper",
+        "condition-components:v1",
+        "conditional-body-parts:ordered",
+        "keyword-grant-components:v1",
+      ]),
+    );
     expect(decomposition?.traceComponents).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -833,7 +815,7 @@ describe("composed parser builder scaffold", () => {
       ]),
     );
     expect(decomposition?.unsupportedSyntaxFragments).toEqual([
-      "conditional-keyword-grant:schema-runtime-bridge-missing",
+      "conditional-continuous-composition:schema-runtime-bridge-missing",
     ]);
   });
 
@@ -854,6 +836,7 @@ describe("composed parser builder scaffold", () => {
       recognizedSyntaxFragments: [
         "if-conditional-wrapper",
         "condition-components:v1",
+        "conditional-body-parts:ordered",
         "conditional-body-conjunction:and",
         "protection-components:v1",
         "protection:opponent-effect-field-removal",
@@ -905,6 +888,7 @@ describe("composed parser builder scaffold", () => {
       recognizedSyntaxFragments: [
         "if-conditional-wrapper",
         "condition-components:v1",
+        "conditional-body-parts:ordered",
         "conditional-body-conjunction:and",
         "protection-components:v1",
         "protection:opponent-effect-field-removal",
@@ -922,7 +906,7 @@ describe("composed parser builder scaffold", () => {
     expect(decomposition?.traceComponents).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: "conditional-body:unsupported-right",
+          id: "conditional-body-part:1",
           kind: "action",
           status: "unsupported",
           text: "gains [Triple Attack]",

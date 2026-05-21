@@ -1,4 +1,9 @@
 import { generatedSupportComponentEvidenceInventory } from "./generated-support-types.js";
+import {
+  allConditionalContinuousCompositionParserRuleIds,
+  isConditionalContinuousCompositionParserRuleId,
+  listParserRuleIdsForConditionalContinuousRuntimeCapabilityId,
+} from "./conditional-continuous-composition-evidence.js";
 import { returnDonCostWrapperParserRuleId } from "./return-don-cost-wrapper-components.js";
 
 const onPlayReturnDonDrawNParserRuleId = "exact:on-play:return-don-draw-n:self";
@@ -26,7 +31,6 @@ export interface RuntimeCapabilityRecord {
   supportedParserRuleIds: readonly string[];
   sinceStory: string;
 }
-
 export interface RuntimeCapabilityMatrix {
   id: string;
   generatedAtStory: string;
@@ -44,9 +48,6 @@ export interface RuntimeCapabilityParserRuleInventoryEntry {
   parserRuleKind: string;
   coverage: RuntimeCapabilityParserRuleCoverage;
 }
-
-const conditionalContinuousCompositionParserRuleId =
-  "exact:conditional-continuous:condition:keyword-grant-and-protection:self-character";
 
 const conditionalContinuousRuntimeCapabilitySpecs = [
   [
@@ -214,7 +215,8 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         kind,
         sinceStory,
         supported: true,
-        supportedParserRuleIds: [conditionalContinuousCompositionParserRuleId],
+        supportedParserRuleIds:
+          listParserRuleIdsForConditionalContinuousRuntimeCapabilityId(id),
       }),
     ),
     {
@@ -377,6 +379,9 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
         "card014a:sequence:draw-trashFromHand",
         "card014a:sequence:trashFromHand-draw",
+        ...listParserRuleIdsForConditionalContinuousRuntimeCapabilityId(
+          "effect:sequence:ordered",
+        ),
       ],
     },
     {
@@ -687,6 +692,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:on-play:cannot-block:self:this-turn",
         "exact:on-play:cannot-block:choose:this-turn",
         "exact:on-play:cannot-block:all:this-turn",
+        ...allConditionalContinuousCompositionParserRuleIds,
       ],
     },
     {
@@ -954,7 +960,7 @@ function classifyParserRuleKind(parserRuleId: string): string {
   ) {
     return "draw-up-to";
   }
-  if (parserRuleId === conditionalContinuousCompositionParserRuleId) {
+  if (isConditionalContinuousCompositionParserRuleId(parserRuleId)) {
     return "sequence";
   }
   if (

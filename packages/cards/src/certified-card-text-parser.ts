@@ -32,9 +32,9 @@ import {
 } from "./composed-parser-builder.js";
 import {
   buildConditionalContinuousCompositionClauseFromSource,
-  conditionalContinuousCompositionParserRuleId,
   parseConditionalWrapper,
 } from "./conditional-generated-support-composer.js";
+import { isConditionalContinuousCompositionParserRuleId } from "./conditional-continuous-composition-evidence.js";
 import { parseOnPlayReturnDonDrawClause } from "./don-minus-draw-components.js";
 import type {
   GeneratedSupportParserResult,
@@ -170,7 +170,11 @@ export function parseCertifiedCardText(
   }
 
   const parserRuleIds = parsedClauses.flatMap(getClauseParserRuleIds);
-  if (parserRuleIds.includes(conditionalContinuousCompositionParserRuleId)) {
+  if (
+    parserRuleIds.some((parserRuleId) =>
+      isConditionalContinuousCompositionParserRuleId(parserRuleId),
+    )
+  ) {
     return completeParse(input, parsedClauses);
   }
 
@@ -192,7 +196,13 @@ function completeParse(
       effects: parsedClauses.flatMap((clause) =>
         clause.effectBlock === undefined ? [] : [clause.effectBlock],
       ),
-      implementationStatus: resolveImplementationStatus(parsedClauses),
+      implementationStatus:
+        parsedClauses.length > 0 &&
+        parsedClauses.every(
+          (clause) => clause.implementationStatus === "vanilla-confirmed",
+        )
+          ? "vanilla-confirmed"
+          : "implemented-dsl",
       metadata: {
         effectDefinitionsVersion: input.effectDefinitionsVersion,
         generatedBy: "rule-parser",
@@ -1068,13 +1078,4 @@ function createDrawThenTrashClauseWithCounts({
     },
     parserRuleId,
   };
-}
-
-function resolveImplementationStatus(clauses: readonly CertifiedClause[]) {
-  return clauses.length > 0 &&
-    clauses.every(
-      (clause) => clause.implementationStatus === "vanilla-confirmed",
-    )
-    ? "vanilla-confirmed"
-    : "implemented-dsl";
 }

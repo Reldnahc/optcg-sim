@@ -90,13 +90,10 @@ describe("support probe diagnostics", () => {
       effect:
         "If your Leader has the {Sky Island} type, this Character gains [Rush].",
       expected: [
-        "Playable: no",
-        "recognized wrapper candidate: If",
-        "recognized condition candidate: your Leader has the {Sky Island} type",
-        "recognized target candidate: this Character",
-        "recognized verb candidate: gains",
-        "recognized keyword candidate: [Rush]",
-        "unsupported syntax blocker: conditional-keyword-grant:schema-runtime-bridge-missing",
+        "Playable: yes",
+        "Blockers: none",
+        "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
+        "conditional-continuous-condition-body-part-composition-direct-keyword",
       ],
     },
   ])(
@@ -186,14 +183,11 @@ describe("support probe diagnostics", () => {
       effect:
         "If your Leader has the {Revolutionary Army} type, this Character gains [Banish].",
       expected: [
-        "recognized wrapper candidate: If",
-        "recognized condition candidate: your Leader has the {Revolutionary Army} type",
-        "recognized target candidate: this Character",
-        "recognized verb candidate: gains",
-        "recognized keyword candidate: [Banish]",
-        "unsupported syntax blocker: conditional-keyword-grant:schema-runtime-bridge-missing",
+        "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
+        "conditional-continuous-condition-body-part-composition-direct-keyword",
+        "Blockers: none",
       ],
-      playable: "Playable: no",
+      playable: "Playable: yes",
     },
     {
       cardId: "CARD-021C-VAR-PROTECTION",
