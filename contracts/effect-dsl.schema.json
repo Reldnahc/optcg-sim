@@ -279,6 +279,53 @@
         }
       ]
     },
+    "scopedOptionalFieldTrashCostFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["categories", "typesAny"],
+      "properties": {
+        "categories": {
+          "type": "array",
+          "prefixItems": [{ "const": "character" }],
+          "items": false,
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "typesAny": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        }
+      }
+    },
+    "scopedOptionalChooseOneTrashCostAlternative": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "count", "chooser", "optional"],
+          "properties": {
+            "type": { "const": "trashFromHand" },
+            "count": { "type": "integer", "minimum": 1 },
+            "filter": { "$ref": "#/$defs/cardFilter" },
+            "chooser": { "$ref": "#/$defs/playerRef" },
+            "optional": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "count", "chooser", "filter", "optional"],
+          "properties": {
+            "type": { "const": "trashFromField" },
+            "count": { "type": "integer", "minimum": 1 },
+            "chooser": { "const": "self" },
+            "filter": { "$ref": "#/$defs/scopedOptionalFieldTrashCostFilter" },
+            "optional": { "const": true }
+          }
+        }
+      ]
+    },
     "cardSupportStatus": {
       "type": "string",
       "enum": [
@@ -400,6 +447,22 @@
             "costs": {
               "type": "array",
               "items": { "$ref": "#/$defs/cost" },
+              "minItems": 1
+            },
+            "optional": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "options", "optional"],
+          "properties": {
+            "type": { "const": "chooseOne" },
+            "options": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/scopedOptionalChooseOneTrashCostAlternative"
+              },
               "minItems": 1
             },
             "optional": { "const": true }

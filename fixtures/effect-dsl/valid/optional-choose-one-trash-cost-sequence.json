@@ -1,0 +1,57 @@
+{
+  "cardId": "SUP-003A-001",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-003A-001:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "id": "optional-choose-one-trash",
+            "connector": "always",
+            "saveResultAs": "paidTrashChoice",
+            "effect": {
+              "type": "payCost",
+              "cost": {
+                "type": "chooseOne",
+                "optional": true,
+                "options": [
+                  {
+                    "type": "trashFromHand",
+                    "count": 1,
+                    "chooser": "self",
+                    "optional": true
+                  },
+                  {
+                    "type": "trashFromField",
+                    "count": 1,
+                    "chooser": "self",
+                    "filter": {
+                      "categories": ["character"],
+                      "typesAny": ["Straw Hat Crew"]
+                    },
+                    "optional": true
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "connector": "ifYouDo",
+            "effect": { "type": "draw", "count": 1, "player": "self" }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-003a-001",
+    "rulesVersion": "2026-05-21",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true,
+    "notes": "Schema authorability only; optional choose-one trash cost is not runtime support."
+  }
+}

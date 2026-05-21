@@ -307,33 +307,62 @@ type Cost =
       chooser: PlayerRef;
     }
   | { type: "trashSelf" }
-  | {
-      type: "trashFromField";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-    }
   | { type: "discard"; count: number; filter?: CardFilter; chooser: PlayerRef }
   | { type: "sequence"; costs: Cost[] }
-  | { type: "chooseOne"; options: Cost[] }
   | { type: "custom"; action: string };
+
+type OptionalTrashFromHandCost = {
+  type: "trashFromHand";
+  count: number;
+  filter?: CardFilter;
+  chooser: PlayerRef;
+  optional: true;
+};
+
+type ScopedOptionalFieldTrashCostFilter = {
+  categories: ["character"];
+  typesAny: [string, ...string[]];
+};
+
+type ScopedOptionalFieldTrashCost = {
+  type: "trashFromField";
+  count: number;
+  filter: ScopedOptionalFieldTrashCostFilter;
+  chooser: "self";
+  optional: true;
+};
+
+type OptionalChooseOneTrashCostAlternative =
+  | OptionalTrashFromHandCost
+  | ScopedOptionalFieldTrashCost;
+
+type OptionalChooseOneTrashCost = {
+  type: "chooseOne";
+  options: [
+    OptionalChooseOneTrashCostAlternative,
+    ...OptionalChooseOneTrashCostAlternative[],
+  ];
+  optional: true;
+};
 
 type OptionalCost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
-  | {
-      type: "trashFromHand";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-      optional: true;
-    }
+  | OptionalTrashFromHandCost
+  | OptionalChooseOneTrashCost
   | { type: "sequence"; costs: Cost[]; optional: true };
 ```
 
 If paying a cost requires choosing cards or DON!!, the runtime creates a `PayCostDecision`.
-Cost primitives outside the schema-supported fixture subset remain planned layers. Optional cost behavior must remain separate from optional activation and optional effect clauses as defined by `04-effect-runtime.s011`.
+Cost primitives outside the schema-supported fixture subset remain planned layers.
+Scoped optional choose-one trash costs are authorable only through
+`{ type: "payCost"; cost: OptionalCost }` sequence segments and only for the
+listed optional trash alternatives. This schema/type authorability does not make
+broad `Cost.chooseOne`, non-optional `Cost.trashFromField`, parser support,
+runtime payment behavior, generated support, or playability available. Optional
+cost behavior must remain separate from optional activation and optional effect
+clauses as defined by `04-effect-runtime.s011`.
 
 ### 05-effect-dsl-reference.s012 (Effects)
 
@@ -526,6 +555,14 @@ Schema-supported fixture subset:
   sequence segments only; this is schema authorability for optional cost
   clauses, not non-optional activation `Cost.trashFromHand` authorability and
   not runtime/playability support
+- cost: scoped optional choose-one trash cost through
+  `{ type: "payCost"; cost: OptionalCost }` sequence segments only. Options are
+  limited to the reusable optional `trashFromHand` alternative and scoped
+  optional self Character-field `trashFromField` alternatives with positive
+  `count`, `chooser: "self"`, `optional: true`, and a filter limited to
+  `categories: ["character"]` plus nonempty `typesAny`. This is schema
+  authorability only and is not runtime payment behavior, parser certification,
+  generated support, support-report evidence, or card promotion.
 - cost: sequence
 - target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
   triggerCard, all, choose, savedFieldObject
@@ -585,9 +622,9 @@ Planned/not fixture-authorable until schema coverage exists:
 - condition: and, or, not, custom
 - cost: trashFromHand as non-optional `Cost.trashFromHand`
 - cost: trashSelf
-- cost: trashFromField
+- cost: trashFromField as broad or non-optional `Cost.trashFromField`
 - cost: discard
-- cost: chooseOne
+- cost: chooseOne as broad or standalone non-optional `Cost.chooseOne`
 - cost: custom
 - duration: whileConditionTrue
 - effect: lookAtTop

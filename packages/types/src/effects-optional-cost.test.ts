@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
 import type {
+  Cost,
   Effect,
   EffectBlock,
   EffectId,
@@ -93,6 +94,257 @@ test("SUP-002A optional hand-trash costs are payCost sequence segment costs", ()
   expect(optionalTrashFromHandCost.count).toBe(1);
   void nonOptionalTrashCost;
   void missingChooser;
+});
+
+test("SUP-003A optional choose-one trash costs are payCost sequence segment costs", () => {
+  const optionalChooseOneTrashCost: OptionalCost = {
+    type: "chooseOne",
+    optional: true,
+    options: [
+      {
+        type: "trashFromHand",
+        count: 1,
+        chooser: "self",
+        optional: true,
+      },
+      {
+        type: "trashFromField",
+        count: 1,
+        chooser: "self",
+        filter: { categories: ["character"], typesAny: ["Straw Hat Crew"] },
+        optional: true,
+      },
+    ],
+  };
+  const optionalChooseOneSegment: SequencedEffect = {
+    id: "optional-choose-one-trash",
+    connector: "always",
+    saveResultAs: "paidTrashChoice",
+    effect: {
+      type: "payCost",
+      cost: optionalChooseOneTrashCost,
+    },
+  };
+
+  expect(optionalChooseOneSegment.effect.type).toBe("payCost");
+  expect(optionalChooseOneTrashCost.options).toHaveLength(2);
+});
+
+test("SUP-003A optional choose-one trash costs reject malformed alternatives", () => {
+  const missingAlternativeOptionalFlag: OptionalCost = {
+    type: "chooseOne",
+    optional: true,
+    options: [
+      {
+        type: "trashFromField",
+        count: 1,
+        chooser: "self",
+        filter: { categories: ["character"], typesAny: ["Straw Hat Crew"] },
+        // @ts-expect-error choose-one field-trash alternatives require literal optional true.
+        optional: undefined,
+      },
+      {
+        type: "trashFromHand",
+        count: 1,
+        chooser: "self",
+        optional: true,
+      },
+    ],
+  };
+  const missingChooser: OptionalCost = {
+    type: "chooseOne",
+    optional: true,
+    options: [
+      // @ts-expect-error field-trash alternatives require an explicit chooser.
+      {
+        type: "trashFromField",
+        count: 1,
+        filter: { categories: ["character"], typesAny: ["Straw Hat Crew"] },
+        optional: true,
+      },
+      {
+        type: "trashFromHand",
+        count: 1,
+        chooser: "self",
+        optional: true,
+      },
+    ],
+  };
+  const unsupportedAlternativeFamily: OptionalCost = {
+    type: "chooseOne",
+    optional: true,
+    options: [
+      {
+        // @ts-expect-error optional choose-one trash costs only support trash alternatives.
+        type: "returnDon",
+        count: 1,
+        chooser: "self",
+        optional: true,
+      },
+      {
+        type: "trashFromHand",
+        count: 1,
+        chooser: "self",
+        optional: true,
+      },
+    ],
+  };
+  const emptyAlternatives: OptionalCost = {
+    type: "chooseOne",
+    optional: true,
+    // @ts-expect-error optional choose-one trash costs require at least one alternative.
+    options: [],
+  };
+
+  void missingAlternativeOptionalFlag;
+  void missingChooser;
+  void unsupportedAlternativeFamily;
+  void emptyAlternatives;
+});
+
+test("SUP-003A optional choose-one field-trash alternatives stay scoped", () => {
+  const opponentFieldTrash: OptionalCost = {
+    type: "chooseOne",
+    optional: true,
+    options: [
+      // @ts-expect-error field-trash alternatives are scoped to self costs.
+      {
+        type: "trashFromField",
+        count: 1,
+        chooser: "opponent",
+        filter: { categories: ["character"], typesAny: ["Straw Hat Crew"] },
+        optional: true,
+      },
+    ],
+  };
+  const nonCharacterCategory: OptionalCost = {
+    type: "chooseOne",
+    optional: true,
+    options: [
+      // @ts-expect-error field-trash alternatives are limited to Characters.
+      {
+        type: "trashFromField",
+        count: 1,
+        chooser: "self",
+        filter: {
+          categories: ["stage"],
+          typesAny: ["Straw Hat Crew"],
+        },
+        optional: true,
+      },
+    ],
+  };
+  const missingTypesAny: OptionalCost = {
+    type: "chooseOne",
+    optional: true,
+    options: [
+      // @ts-expect-error field-trash alternatives require a typed Character filter.
+      {
+        type: "trashFromField",
+        count: 1,
+        chooser: "self",
+        filter: { categories: ["character"] },
+        optional: true,
+      },
+    ],
+  };
+  const arbitraryFilter: OptionalCost = {
+    type: "chooseOne",
+    optional: true,
+    options: [
+      {
+        type: "trashFromField",
+        count: 1,
+        chooser: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Straw Hat Crew"],
+          // @ts-expect-error field-trash alternatives do not allow arbitrary filters.
+          colorsAny: ["red"],
+        },
+        optional: true,
+      },
+    ],
+  };
+  const unsupportedFieldZone: OptionalCost = {
+    type: "chooseOne",
+    optional: true,
+    options: [
+      {
+        type: "trashFromField",
+        count: 1,
+        chooser: "self",
+        filter: { categories: ["character"], typesAny: ["Straw Hat Crew"] },
+        optional: true,
+        // @ts-expect-error field-trash alternatives do not authorize explicit field zones.
+        zone: "stageArea",
+      },
+    ],
+  };
+
+  void opponentFieldTrash;
+  void nonCharacterCategory;
+  void missingTypesAny;
+  void arbitraryFilter;
+  void unsupportedFieldZone;
+});
+
+test("SUP-003A choose-one cost authorability stays payCost optional-cost scoped", () => {
+  const standaloneChooseOne: Cost = {
+    type: "chooseOne",
+    options: [
+      { type: "trashFromHand", count: 1, chooser: "self", optional: true },
+    ],
+    // @ts-expect-error broad standalone Cost.chooseOne remains planned.
+    optional: undefined,
+  };
+  const standaloneFieldTrash: Cost = {
+    // @ts-expect-error standalone non-optional Cost.trashFromField remains planned.
+    type: "trashFromField",
+    count: 1,
+    chooser: "self",
+    filter: { categories: ["character"], typesAny: ["Straw Hat Crew"] },
+  };
+  const optionalChooseOneTrashCost: OptionalCost = {
+    type: "chooseOne",
+    optional: true,
+    options: [
+      {
+        type: "trashFromHand",
+        count: 1,
+        chooser: "self",
+        optional: true,
+      },
+      {
+        type: "trashFromField",
+        count: 1,
+        chooser: "self",
+        filter: { categories: ["character"], typesAny: ["Straw Hat Crew"] },
+        optional: true,
+      },
+    ],
+  };
+  const topLevelChooseOnePayCost: Effect = {
+    // @ts-expect-error choose-one payCost remains scoped to sequence segments.
+    type: "payCost",
+    cost: optionalChooseOneTrashCost,
+  };
+  const optionalActivationIsNotOptionalCost: EffectBlock = {
+    id: "optional-activation" as EffectId,
+    category: "activate",
+    trigger: { type: "activateMain" },
+    optional: true,
+    effect: {
+      type: "draw",
+      count: 1,
+      player: "self",
+    },
+  };
+
+  expect(optionalActivationIsNotOptionalCost.optional).toBe(true);
+  void standaloneChooseOne;
+  void standaloneFieldTrash;
+  void topLevelChooseOnePayCost;
 });
 
 test("TYP-009A payCost is not authorable as a top-level effect", () => {

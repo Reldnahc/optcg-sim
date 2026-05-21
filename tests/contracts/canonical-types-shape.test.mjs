@@ -280,7 +280,15 @@ test("canonical optional cost contracts stay distinct from optional activation",
   );
   assert.match(
     canonicalTypes,
-    /export type OptionalCost\s*=\s*[\s\S]*type:\s*"trashFromHand";[\s\S]*count:\s*number;[\s\S]*filter\?:\s*CardFilter;[\s\S]*chooser:\s*PlayerRef;[\s\S]*optional:\s*true/m,
+    /export type OptionalTrashFromHandCost\s*=\s*{[\s\S]*type:\s*"trashFromHand";[\s\S]*count:\s*number;[\s\S]*filter\?:\s*CardFilter;[\s\S]*chooser:\s*PlayerRef;[\s\S]*optional:\s*true;[\s\S]*};/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type OptionalChooseOneTrashCost\s*=\s*{[\s\S]*type:\s*"chooseOne";[\s\S]*options:\s*\[[\s\S]*OptionalChooseOneTrashCostAlternative,[\s\S]*\.\.\.OptionalChooseOneTrashCostAlternative\[\],[\s\S]*\];[\s\S]*optional:\s*true;[\s\S]*};/m,
+  );
+  assert.match(
+    canonicalTypes,
+    /export type ScopedOptionalFieldTrashCost\s*=\s*{[\s\S]*type:\s*"trashFromField";[\s\S]*count:\s*number;[\s\S]*filter:\s*ScopedOptionalFieldTrashCostFilter;[\s\S]*chooser:\s*"self";[\s\S]*optional:\s*true;[\s\S]*};/m,
   );
   assert.match(
     canonicalTypes,

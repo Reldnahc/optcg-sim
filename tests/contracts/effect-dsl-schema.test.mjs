@@ -29,6 +29,7 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/valid/leader-type-attribute-has-card-in-zone.json",
     "fixtures/effect-dsl/valid/on-play-draw-1.json",
     "fixtures/effect-dsl/valid/optional-return-don-cost-sequence.json",
+    "fixtures/effect-dsl/valid/optional-choose-one-trash-cost-sequence.json",
     "fixtures/effect-dsl/valid/optional-trash-from-hand-cost-sequence.json",
     "fixtures/effect-dsl/valid/permanent-trash-count-keyword-protection-sequence.json",
     "fixtures/effect-dsl/valid/return-don-cost.json",
@@ -70,6 +71,15 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/optional-cost-segment-uses-effect-optionality.json",
     "fixtures/effect-dsl/invalid/optional-cost-segment-without-optional-cost.json",
     "fixtures/effect-dsl/invalid/optional-cost-top-level-pay-cost-effect.json",
+    "fixtures/effect-dsl/invalid/optional-choose-one-trash-cost-empty-options.json",
+    "fixtures/effect-dsl/invalid/optional-choose-one-trash-cost-field-arbitrary-filter.json",
+    "fixtures/effect-dsl/invalid/optional-choose-one-trash-cost-field-extra-zone.json",
+    "fixtures/effect-dsl/invalid/optional-choose-one-trash-cost-field-missing-types-any.json",
+    "fixtures/effect-dsl/invalid/optional-choose-one-trash-cost-field-non-character.json",
+    "fixtures/effect-dsl/invalid/optional-choose-one-trash-cost-field-opponent.json",
+    "fixtures/effect-dsl/invalid/optional-choose-one-trash-cost-missing-optional.json",
+    "fixtures/effect-dsl/invalid/optional-choose-one-trash-cost-top-level-pay-cost.json",
+    "fixtures/effect-dsl/invalid/optional-choose-one-trash-cost-unsupported-alternative.json",
     "fixtures/effect-dsl/invalid/optional-trash-from-hand-cost-missing-chooser.json",
     "fixtures/effect-dsl/invalid/optional-trash-from-hand-cost-missing-optional.json",
     "fixtures/effect-dsl/invalid/optional-trash-from-hand-cost-optional-false.json",
@@ -90,6 +100,8 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/select-cards-ambiguous-chooser-player.json",
     "fixtures/effect-dsl/invalid/select-cards-unsupported-visibility.json",
     "fixtures/effect-dsl/invalid/select-cards-unsupported-zone.json",
+    "fixtures/effect-dsl/invalid/standalone-choose-one-cost.json",
+    "fixtures/effect-dsl/invalid/standalone-trash-from-field-cost.json",
     "fixtures/effect-dsl/invalid/set-base-power-malformed-target.json",
     "fixtures/effect-dsl/invalid/set-base-power-fractional-value.json",
     "fixtures/effect-dsl/invalid/set-base-power-non-character-target.json",
@@ -374,6 +386,76 @@ test("SUP-002A authorizes optional trashFromHand only as an OptionalCost", async
   assert.equal(optionalHandTrashCost?.properties?.count?.minimum, 1);
   assert.deepEqual(optionalHandTrashCost?.properties?.optional, {
     const: true,
+  });
+});
+
+test("SUP-003A authorizes scoped optional choose-one trash costs only as an OptionalCost", async () => {
+  const schemaPath = path.join(repoRoot, "contracts/effect-dsl.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+  const optionalCostTypes = schema.$defs.optionalCost.oneOf
+    .map((variant) => variant?.properties?.type?.const)
+    .filter((value) => typeof value === "string");
+  const nonOptionalCostTypes = schema.$defs.cost.oneOf
+    .map((variant) => variant?.properties?.type?.const)
+    .filter((value) => typeof value === "string");
+  const optionalChooseOneCost = schema.$defs.optionalCost.oneOf.find(
+    (variant) => variant?.properties?.type?.const === "chooseOne",
+  );
+
+  assert.ok(optionalCostTypes.includes("chooseOne"));
+  assert.ok(!nonOptionalCostTypes.includes("chooseOne"));
+  assert.ok(!nonOptionalCostTypes.includes("trashFromField"));
+  assert.deepEqual(optionalChooseOneCost?.required, [
+    "type",
+    "options",
+    "optional",
+  ]);
+  assert.deepEqual(optionalChooseOneCost?.properties?.optional, {
+    const: true,
+  });
+  assert.equal(optionalChooseOneCost?.properties?.options?.minItems, 1);
+  assert.equal(
+    optionalChooseOneCost?.properties?.options?.items?.$ref,
+    "#/$defs/scopedOptionalChooseOneTrashCostAlternative",
+  );
+
+  const fieldTrash =
+    schema.$defs.scopedOptionalChooseOneTrashCostAlternative.oneOf.find(
+      (variant) => variant?.properties?.type?.const === "trashFromField",
+    );
+  assert.ok(fieldTrash);
+  assert.deepEqual(fieldTrash.required, [
+    "type",
+    "count",
+    "chooser",
+    "filter",
+    "optional",
+  ]);
+  assert.equal(fieldTrash.properties.count.minimum, 1);
+  assert.deepEqual(fieldTrash.properties.chooser, { const: "self" });
+  assert.deepEqual(fieldTrash.properties.optional, { const: true });
+  assert.equal(
+    fieldTrash.properties.filter.$ref,
+    "#/$defs/scopedOptionalFieldTrashCostFilter",
+  );
+  assert.deepEqual(schema.$defs.scopedOptionalFieldTrashCostFilter, {
+    type: "object",
+    additionalProperties: false,
+    required: ["categories", "typesAny"],
+    properties: {
+      categories: {
+        type: "array",
+        prefixItems: [{ const: "character" }],
+        items: false,
+        minItems: 1,
+        maxItems: 1,
+      },
+      typesAny: {
+        type: "array",
+        items: { type: "string", minLength: 1 },
+        minItems: 1,
+      },
+    },
   });
 });
 
