@@ -9,8 +9,11 @@ import {
   toCardId,
   toDecisionId,
   toEffectId,
+  toQueueEntryId,
+  toTimingWindowId,
 } from "./action-dispatcher-test-support.js";
 import { addExtraDeckCard, must, p1, p2 } from "./action-test-fixtures.js";
+import { processEffectRuntime } from "./effect-runtime.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 import { hashCanonicalStateValue } from "./effect-runtime-queue-processing-test-support.js";
 
@@ -241,6 +244,185 @@ test("once-per-turn activate main consumes on legal use, rejects same-turn repea
     effectId,
   });
   assert.equal(third.errors, undefined);
+});
+
+test("illegal and uncommitted activate main attempts do not consume once-per-turn use", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-once-illegal-uncommitted");
+  installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-once-illegal-uncommitted",
+    effectId,
+    oncePerTurn: true,
+    optional: true,
+  });
+
+  const wrongPhase = structuredClone(state);
+  wrongPhase.turn.phase = "draw";
+  const illegal = applyAction(wrongPhase, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  assert.equal(illegal.errors?.[0]?.type, "illegalAction");
+  assert.deepEqual(illegal.state.oncePerTurn, []);
+
+  const optionalPrompt = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  assert.equal(optionalPrompt.errors, undefined);
+  assert.deepEqual(optionalPrompt.state.oncePerTurn, []);
+  const decision = must(
+    optionalPrompt.state.pendingDecision,
+    "optional decision",
+  );
+  const declined = applyAction(optionalPrompt.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice: "decline" },
+  });
+  assert.equal(declined.errors, undefined);
+  assert.deepEqual(declined.state.oncePerTurn, []);
+});
+
+test("activate main optional acceptance consumes once-per-turn on legal commitment", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-optional-consume");
+  installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-optional-consume",
+    effectId,
+    oncePerTurn: true,
+    optional: true,
+  });
+
+  const optionalPrompt = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+  assert.equal(optionalPrompt.errors, undefined);
+  assert.deepEqual(optionalPrompt.state.oncePerTurn, []);
+  const decision = must(
+    optionalPrompt.state.pendingDecision,
+    "optional decision",
+  );
+  const accepted = applyAction(optionalPrompt.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+  assert.equal(accepted.errors, undefined);
+  assert.equal(accepted.state.oncePerTurn.length, 1);
+  assert.equal(accepted.state.oncePerTurn[0]?.effectId, effectId);
+});
+
+test("activate main queue entry snapshot uses live card and resolved metadata", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-live-snapshot");
+  installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-live-snapshot",
+    effectId,
+    optional: true,
+  });
+  const resolved = must(
+    state.cardManifest.cards[leader.cardId],
+    "resolved card",
+  );
+  resolved.colors = ["blue"];
+  resolved.printedKeywords = ["blocker"];
+
+  const prompted = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+
+  assert.equal(prompted.errors, undefined);
+  const queuedEntry = must(prompted.state.effectQueue[0], "queued entry");
+  assert.deepEqual(queuedEntry.sourceSnapshot.colors, ["blue"]);
+  assert.deepEqual(queuedEntry.sourceSnapshot.keywords, ["blocker"]);
+  assert.equal(queuedEntry.sourceSnapshot.ownerId, leader.owner);
+  assert.equal(queuedEntry.sourceSnapshot.controllerId, leader.controller);
+});
+
+test("fabricated activate main queue shape fails closed unless scoped validation marker is present", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-fabricated-queue");
+  installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-fabricated-queue",
+    effectId,
+  });
+
+  const forgedEntry = {
+    ...queuedEffect("activate-main-fabricated"),
+    id: toQueueEntryId("queue-entry:activate-main:forged"),
+    timingWindowId: toTimingWindowId("timing-window:activate-main:forged"),
+    generation: 0,
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    sourceSnapshot: {
+      ...queuedEffect("activate-main-fabricated").sourceSnapshot,
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      ownerId: leader.owner,
+      controllerId: leader.controller,
+      zone: leader.zone,
+      category: "leader" as const,
+    },
+    effectBlockId: effectId,
+    sourcePresencePolicy: "mustRemainInSameZone" as const,
+    causedBy: { type: "ruleProcess", name: "not-activate-main" } as const,
+  };
+  state.effectQueue = [forgedEntry];
+
+  const result = processEffectRuntime(state);
+  assert.ok(result.errors !== undefined);
+  assert.deepEqual(result.state, state);
 });
 
 test("activate main wrong-phase and forged effect attempts fail closed without mutation", () => {

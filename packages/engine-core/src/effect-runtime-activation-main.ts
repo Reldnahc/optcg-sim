@@ -1,5 +1,6 @@
 import type {
   Action,
+  CardInstance,
   CardRef,
   Effect,
   EffectDefinition,
@@ -9,6 +10,7 @@ import type {
   GameState,
   LegalAction,
   PlayerId,
+  ResolvedCard,
 } from "@optcg/types";
 
 import { appendEvent, illegalAction, toStateSeq } from "./action-results.js";
@@ -18,6 +20,7 @@ import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
+import { toSnapshot } from "./effect-runtime-trigger-source-lookup.js";
 import { isOncePerTurnUsed, toOncePerTurnKey } from "./once-per-turn.js";
 
 const isFieldZoneForActivateMain = (
@@ -26,6 +29,19 @@ const isFieldZoneForActivateMain = (
   zone?.zone === "leaderArea" ||
   zone?.zone === "characterArea" ||
   zone?.zone === "stageArea";
+
+export const isScopedActivateMainQueueEntry = (
+  entry: EffectQueueEntry,
+): boolean =>
+  entry.causedBy.type === "ruleProcess" &&
+  entry.causedBy.name === "effectRuntime:activateMain" &&
+  String(entry.id).startsWith("queue-entry:activate-main:") &&
+  String(entry.timingWindowId).startsWith("timing-window:activate-main:") &&
+  entry.generation === 0 &&
+  entry.triggerEventId === undefined &&
+  entry.sourcePresencePolicy === "mustRemainInSameZone" &&
+  isFieldZoneForActivateMain(entry.source.zone) &&
+  isFieldZoneForActivateMain(entry.sourceSnapshot.zone);
 
 type ActivateMainSource = CardRef & { zone: NonNullable<CardRef["zone"]> };
 
@@ -64,7 +80,10 @@ const findLiveCardBySource = (
   state: GameState,
   source: CardRef,
 ):
-  | { controllerId: PlayerId; zone: NonNullable<CardRef["zone"]> }
+  | {
+      card: CardInstance;
+      resolved: ResolvedCard;
+    }
   | undefined => {
   if (!isFieldZoneForActivateMain(source.zone)) {
     return undefined;
@@ -87,13 +106,23 @@ const findLiveCardBySource = (
   if (card === undefined) {
     return undefined;
   }
-  return { controllerId: card.controller, zone: card.zone };
+  const resolved = state.cardManifest.cards[card.cardId];
+  if (resolved === undefined) {
+    return undefined;
+  }
+  return { card, resolved };
 };
 
 const createActivateMainQueueEntry = (params: {
   state: GameState;
-  source: ActivateMainSource;
-  controllerId: PlayerId;
+  source: {
+    instanceId: CardRef["instanceId"];
+    cardId: CardRef["cardId"];
+    playerId: PlayerId;
+    zone: NonNullable<CardRef["zone"]>;
+    controllerId: PlayerId;
+  };
+  sourceSnapshot: EffectQueueEntry["sourceSnapshot"];
   effectId: EffectDefinition["effects"][number]["id"];
 }): EffectQueueEntry => ({
   id: `queue-entry:activate-main:${String(params.state.actionSeq + 1)}:${String(params.source.instanceId)}:${String(params.effectId)}` as EffectQueueEntry["id"],
@@ -101,31 +130,17 @@ const createActivateMainQueueEntry = (params: {
   timingWindowId:
     `timing-window:activate-main:${String(params.state.seq + 1)}` as EffectQueueEntry["timingWindowId"],
   generation: 0,
-  controllerId: params.controllerId,
+  controllerId: params.source.controllerId,
   source: {
     instanceId: params.source.instanceId,
     cardId: params.source.cardId,
     playerId: params.source.playerId,
     zone: params.source.zone,
   },
-  sourceSnapshot: {
-    instanceId: params.source.instanceId,
-    cardId: params.source.cardId,
-    ownerId: params.source.playerId,
-    controllerId: params.controllerId,
-    zone: params.source.zone,
-    category:
-      params.source.zone.zone === "leaderArea"
-        ? "leader"
-        : params.source.zone.zone === "stageArea"
-          ? "stage"
-          : "character",
-    colors: ["red"],
-    keywords: [],
-  },
+  sourceSnapshot: params.sourceSnapshot,
   effectBlockId: params.effectId,
   orderingGroup:
-    params.controllerId === params.state.turn.turnPlayerId
+    params.source.controllerId === params.state.turn.turnPlayerId
       ? "turnPlayer"
       : "nonTurnPlayer",
   createdAtEventSeq: params.state.eventJournal.length + 1,
@@ -204,12 +219,22 @@ export const getActivateMainLegalActions = (
       ...source,
       zone: source.zone,
     };
+    const live = findLiveCardBySource(state, sourceWithZone);
+    if (live === undefined || live.card.controller !== playerId) {
+      continue;
+    }
     const supported = findSupportedActivateMainEffects(state, source);
     for (const effect of supported) {
       const queueEntry = createActivateMainQueueEntry({
         state,
-        source: sourceWithZone,
-        controllerId: playerId,
+        source: {
+          instanceId: live.card.instanceId,
+          cardId: live.card.cardId,
+          playerId,
+          zone: live.card.zone,
+          controllerId: live.card.controller,
+        },
+        sourceSnapshot: toSnapshot(live.card, live.resolved),
         effectId: effect.id,
       });
       const condition = evaluateQueuedEffectCondition(
@@ -261,7 +286,7 @@ export const applyActivateMainAction = (
     );
   }
   const live = findLiveCardBySource(state, action.source);
-  if (live === undefined || live.controllerId !== action.source.playerId) {
+  if (live === undefined || live.card.controller !== action.source.playerId) {
     return illegalAction(
       state,
       "activateEffect source is stale or not controller-owned.",
@@ -292,8 +317,14 @@ export const applyActivateMainAction = (
   }
   const entry = createActivateMainQueueEntry({
     state,
-    source: { ...action.source, zone: live.zone },
-    controllerId: live.controllerId,
+    source: {
+      instanceId: live.card.instanceId,
+      cardId: live.card.cardId,
+      playerId: action.source.playerId,
+      zone: live.card.zone,
+      controllerId: live.card.controller,
+    },
+    sourceSnapshot: toSnapshot(live.card, live.resolved),
     effectId: effect.id,
   });
   const condition = evaluateQueuedEffectCondition(
@@ -332,9 +363,6 @@ export const applyActivateMainAction = (
     eventJournal: [...state.eventJournal, ...queuedEvents],
   };
   const resolved = processEffectRuntime(queuedState);
-  if (resolved.errors !== undefined) {
-    return illegalAction(state, "activateEffect resolution failed closed.");
-  }
   return {
     ...resolved,
     events: [...queuedEvents, ...resolved.events],

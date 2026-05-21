@@ -96,6 +96,7 @@ export const installActivateMainDrawDefinition = (params: {
   definitionId: string;
   effectId: EffectId;
   oncePerTurn?: boolean;
+  optional?: boolean;
 }): EffectDefinition => {
   const definition: EffectDefinition = {
     cardId: params.sourceCardId,
@@ -106,6 +107,7 @@ export const installActivateMainDrawDefinition = (params: {
         category: "activate",
         trigger: { type: "activateMain" },
         sourcePresencePolicy: "mustRemainInSameZone",
+        ...(params.optional === true ? { optional: true } : {}),
         ...(params.oncePerTurn === true ? { oncePerTurn: true } : {}),
         effect: { type: "draw", player: "self", count: 1 },
       },
