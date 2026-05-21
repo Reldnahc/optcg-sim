@@ -1,5 +1,6 @@
 import type {
   Action,
+  CardFilter,
   CardInstance,
   CardRef,
   EngineError,
@@ -83,6 +84,29 @@ const toTrashCard = (
   zone: { zone: "trash", playerId, slot: "trash", index },
 });
 
+const supportsScopedFieldTrashFilter = (
+  filter: CardFilter | undefined,
+): filter is { categories: ["character"]; typesAny: [string, ...string[]] } =>
+  filter !== undefined &&
+  Array.isArray(filter.categories) &&
+  filter.categories.length === 1 &&
+  filter.categories[0] === "character" &&
+  Array.isArray(filter.typesAny) &&
+  filter.typesAny.length > 0 &&
+  filter.typesAny.every((value) => typeof value === "string");
+
+const fieldCardMatchesFilter = (
+  state: GameState,
+  cardId: CardInstance["cardId"],
+  filter: { categories: ["character"]; typesAny: [string, ...string[]] },
+): boolean => {
+  const metadata = state.cardManifest.cards[cardId];
+  if (metadata === undefined || metadata.category !== "character") {
+    return false;
+  }
+  return filter.typesAny.some((cardType) => metadata.types.includes(cardType));
+};
+
 export const applyOptionalActivationDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -112,7 +136,8 @@ export const applyOptionalActivationDecisionResponse = (
       player === undefined ||
       (decision.cost.type !== "restDon" &&
         decision.cost.type !== "returnDon" &&
-        decision.cost.type !== "trashFromHand")
+        decision.cost.type !== "trashFromHand" &&
+        decision.cost.type !== "chooseOne")
     ) {
       return toEngineResult(
         state,
@@ -125,7 +150,11 @@ export const applyOptionalActivationDecisionResponse = (
     let paidCost = false;
     let nextPlayer = player;
     if (action.response.type === "payment") {
-      if (action.response.optionId !== decision.cost.type) {
+      const paymentResponse = action.response;
+      const selectedOption = decision.paymentOptions.find(
+        (option) => option.id === paymentResponse.optionId,
+      );
+      if (selectedOption === undefined) {
         return toEngineResult(
           state,
           [],
@@ -142,21 +171,27 @@ export const applyOptionalActivationDecisionResponse = (
           }
         | {
             playerId: PlayerId;
-            optionId: "trashFromHand";
+            optionId: "trashFromHand" | "trashFromField";
             selectedCardInstanceIds: NonNullable<
               typeof action.response.selectedCardInstanceIds
             >;
           };
-      if (decision.cost.type === "trashFromHand") {
-        if (action.response.selectedDonInstanceIds !== undefined) {
+      if (
+        selectedOption.type === "trashFromHand" ||
+        selectedOption.type === "trashFromField"
+      ) {
+        if (paymentResponse.selectedDonInstanceIds !== undefined) {
           return toEngineResult(
             state,
             [],
             invalidDecision("Payment card selection must not include DON!!."),
           );
         }
-        const selected = action.response.selectedCardInstanceIds;
-        if (selected === undefined || selected.length !== decision.cost.count) {
+        const selected = paymentResponse.selectedCardInstanceIds;
+        if (
+          selected === undefined ||
+          selected.length !== selectedOption.count
+        ) {
           return toEngineResult(
             state,
             [],
@@ -172,10 +207,30 @@ export const applyOptionalActivationDecisionResponse = (
         }
         const selectedCards: CardInstance[] = [];
         for (const selectedId of selected) {
-          const card = player.hand.find(
-            (candidate) => candidate.instanceId === selectedId,
-          );
+          const card =
+            selectedOption.type === "trashFromHand"
+              ? player.hand.find(
+                  (candidate) => candidate.instanceId === selectedId,
+                )
+              : player.characters.find(
+                  (candidate) => candidate.instanceId === selectedId,
+                );
           if (card === undefined) {
+            return toEngineResult(
+              state,
+              [],
+              invalidDecision("Payment card selection is invalid."),
+            );
+          }
+          if (
+            selectedOption.type === "trashFromField" &&
+            (!supportsScopedFieldTrashFilter(selectedOption.filter) ||
+              !fieldCardMatchesFilter(
+                state,
+                card.cardId,
+                selectedOption.filter,
+              ))
+          ) {
             return toEngineResult(
               state,
               [],
@@ -190,12 +245,28 @@ export const applyOptionalActivationDecisionResponse = (
         );
         nextPlayer = {
           ...player,
-          hand: reindexZoneCards(
-            player.hand.filter((card) => !selectedSet.has(card.instanceId)),
-            "hand",
-            decision.playerId,
-            "hand",
-          ),
+          hand:
+            selectedOption.type === "trashFromHand"
+              ? reindexZoneCards(
+                  player.hand.filter(
+                    (card) => !selectedSet.has(card.instanceId),
+                  ),
+                  "hand",
+                  decision.playerId,
+                  "hand",
+                )
+              : player.hand,
+          characters:
+            selectedOption.type === "trashFromField"
+              ? reindexZoneCards(
+                  player.characters.filter(
+                    (card) => !selectedSet.has(card.instanceId),
+                  ),
+                  "characterArea",
+                  decision.playerId,
+                  "character",
+                )
+              : player.characters,
           trash: reindexZoneCards(
             [...trashedCards, ...player.trash],
             "trash",
@@ -209,10 +280,16 @@ export const applyOptionalActivationDecisionResponse = (
             events,
             "cardMoved",
             {
-              from: "hand",
+              from:
+                selectedOption.type === "trashFromHand"
+                  ? "hand"
+                  : "characterArea",
               to: "trash",
               playerId: decision.playerId,
-              reason: "trashFromHand",
+              reason:
+                selectedOption.type === "trashFromHand"
+                  ? "trashFromHand"
+                  : "trashFromField",
             },
             { type: "public" },
           );
@@ -228,7 +305,10 @@ export const applyOptionalActivationDecisionResponse = (
               playerId: decision.playerId,
               instanceId: selectedCard.instanceId,
               cardId: selectedCard.cardId,
-              reason: "trashFromHand",
+              reason:
+                selectedOption.type === "trashFromHand"
+                  ? "trashFromHand"
+                  : "trashFromField",
             },
             { type: "public" },
           );
@@ -239,19 +319,32 @@ export const applyOptionalActivationDecisionResponse = (
         }
         costPaidPayload = {
           playerId: decision.playerId,
-          optionId: decision.cost.type,
+          optionId: selectedOption.type,
           selectedCardInstanceIds: selected,
         };
       } else {
-        if (action.response.selectedCardInstanceIds !== undefined) {
+        if (
+          selectedOption.type !== "restDon" &&
+          selectedOption.type !== "returnDon"
+        ) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment option mismatch."),
+          );
+        }
+        if (paymentResponse.selectedCardInstanceIds !== undefined) {
           return toEngineResult(
             state,
             [],
             invalidDecision("Payment DON!! selection must not include cards."),
           );
         }
-        const selected = action.response.selectedDonInstanceIds;
-        if (selected === undefined || selected.length !== decision.cost.count) {
+        const selected = paymentResponse.selectedDonInstanceIds;
+        if (
+          selected === undefined ||
+          selected.length !== selectedOption.count
+        ) {
           return toEngineResult(
             state,
             [],
@@ -265,7 +358,7 @@ export const applyOptionalActivationDecisionResponse = (
             invalidDecision("Payment DON!! selection contains duplicates."),
           );
         }
-        if (decision.cost.type === "restDon") {
+        if (selectedOption.type === "restDon") {
           const costAreaById = new Map(
             player.costArea.map((card) => [card.instanceId, card]),
           );
@@ -315,7 +408,7 @@ export const applyOptionalActivationDecisionResponse = (
         }
         costPaidPayload = {
           playerId: decision.playerId,
-          optionId: decision.cost.type,
+          optionId: selectedOption.type,
           selectedDonInstanceIds: selected,
         };
       }

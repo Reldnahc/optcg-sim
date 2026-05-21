@@ -73,15 +73,37 @@ const isSupportedTrashFromHandSegment = (
 
 const isSupportedPayCostSegment = (
   effect: SequenceSegmentEffect,
-): effect is PayCostEffect =>
-  effect.type === "payCost" &&
-  (effect.cost.type === "restDon" ||
-    effect.cost.type === "returnDon" ||
-    effect.cost.type === "trashFromHand") &&
-  (effect.cost.chooser === undefined || effect.cost.chooser === "self") &&
-  (effect.cost.type !== "trashFromHand" || effect.cost.filter === undefined) &&
-  Number.isInteger(effect.cost.count) &&
-  effect.cost.count > 0;
+): effect is PayCostEffect => {
+  if (effect.type !== "payCost") {
+    return false;
+  }
+  const cost = effect.cost;
+  if (cost.type === "chooseOne") {
+    return cost.options.every((option) => {
+      if (option.type === "trashFromHand") {
+        return (
+          Number.isInteger(option.count) &&
+          option.count > 0 &&
+          option.filter === undefined
+        );
+      }
+      return (
+        Number.isInteger(option.count) &&
+        option.count > 0 &&
+        option.filter.typesAny.length > 0
+      );
+    });
+  }
+  return (
+    (cost.type === "restDon" ||
+      cost.type === "returnDon" ||
+      cost.type === "trashFromHand") &&
+    (cost.chooser === undefined || cost.chooser === "self") &&
+    (cost.type !== "trashFromHand" || cost.filter === undefined) &&
+    Number.isInteger(cost.count) &&
+    cost.count > 0
+  );
+};
 
 const isSupportedSavedFieldObjectKoTarget = (
   target: Target,

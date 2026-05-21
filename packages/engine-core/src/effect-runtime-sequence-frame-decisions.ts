@@ -1,4 +1,6 @@
 import type {
+  CardFilter,
+  CardInstance,
   ChooseQuantityDecision,
   ChooseOptionalActivationDecision,
   EffectExecutionFrame,
@@ -11,7 +13,11 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
-import { getReturnDonEligibleInstanceIds } from "./effect-runtime-return-don.js";
+import {
+  getReturnDonEligibleCount,
+  getReturnDonEligibleInstanceIds,
+} from "./effect-runtime-return-don.js";
+import { activeDonCount } from "./effect-runtime-sequence-segments.js";
 
 const decisionCauseForEntry = (entry: EffectQueueEntry) =>
   ({
@@ -121,10 +127,8 @@ export const createOptionalActivationDecisionForSequenceSegment = (
 export const createPayCostDecisionForSequenceSegment = (
   state: GameState,
   entry: EffectQueueEntry,
-  cost: Extract<
-    OptionalCost,
-    { type: "restDon" | "returnDon" | "trashFromHand" }
-  >,
+  cost: OptionalCost,
+  paymentOptions: OptionalPayCostDecision["paymentOptions"],
   index: number,
 ): { events: EngineEvent[]; ok: true; state: GameState } => {
   const causedBy = decisionCauseForEntry(entry);
@@ -140,7 +144,7 @@ export const createPayCostDecisionForSequenceSegment = (
     visibility,
     defaultResponse: { type: "paymentDeclined" },
     cost,
-    paymentOptions: [{ id: cost.type, type: cost.type, count: cost.count }],
+    paymentOptions,
   };
   const events: EngineEvent[] = [];
   appendEvent(
@@ -250,6 +254,29 @@ const chooseCombos = <T>(values: readonly T[], count: number): T[][] => {
   return results;
 };
 
+const supportsScopedFieldTrashFilter = (
+  filter: CardFilter | undefined,
+): filter is { categories: ["character"]; typesAny: [string, ...string[]] } =>
+  filter !== undefined &&
+  Array.isArray(filter.categories) &&
+  filter.categories.length === 1 &&
+  filter.categories[0] === "character" &&
+  Array.isArray(filter.typesAny) &&
+  filter.typesAny.length > 0 &&
+  filter.typesAny.every((value) => typeof value === "string");
+
+const fieldCardMatchesFilter = (
+  state: GameState,
+  cardId: CardInstance["cardId"],
+  filter: { categories: ["character"]; typesAny: [string, ...string[]] },
+): boolean => {
+  const metadata = state.cardManifest.cards[cardId];
+  if (metadata === undefined || metadata.category !== "character") {
+    return false;
+  }
+  return filter.typesAny.some((cardType) => metadata.types.includes(cardType));
+};
+
 export const getSequencePayCostLegalActions = (
   state: GameState,
   playerId: EffectQueueEntry["controllerId"],
@@ -261,57 +288,166 @@ export const getSequencePayCostLegalActions = (
     decision.type !== "payCost" ||
     decision.playerId !== playerId ||
     player === undefined ||
-    !hasSequenceFrameForDecision(state, decision.id) ||
-    (decision.cost.type !== "restDon" &&
-      decision.cost.type !== "returnDon" &&
-      decision.cost.type !== "trashFromHand")
+    !hasSequenceFrameForDecision(state, decision.id)
   ) {
     return [];
   }
-  if (decision.cost.type === "trashFromHand") {
-    const selectableCardIds = player.hand.map((card) => card.instanceId);
-    return [
-      {
-        type: "respondToDecision",
-        decisionId: decision.id,
-        response: { type: "paymentDeclined" },
-      },
-      ...chooseCombos(selectableCardIds, decision.cost.count).map((combo) => ({
-        type: "respondToDecision" as const,
-        decisionId: decision.id,
-        response: {
-          type: "payment" as const,
-          optionId: decision.cost.type,
-          selectedCardInstanceIds: combo,
-        },
-      })),
-    ];
+
+  const legalPayments: LegalAction[] = [];
+  for (const option of decision.paymentOptions) {
+    if (option.type === "trashFromHand") {
+      const selectableCardIds = player.hand.map((card) => card.instanceId);
+      legalPayments.push(
+        ...chooseCombos(selectableCardIds, option.count).map((combo) => ({
+          type: "respondToDecision" as const,
+          decisionId: decision.id,
+          response: {
+            type: "payment" as const,
+            optionId: option.id,
+            selectedCardInstanceIds: combo,
+          },
+        })),
+      );
+      continue;
+    }
+    if (option.type === "trashFromField") {
+      if (!supportsScopedFieldTrashFilter(option.filter)) {
+        continue;
+      }
+      const fieldFilter = option.filter;
+      const selectableCardIds = player.characters
+        .filter((card) =>
+          fieldCardMatchesFilter(state, card.cardId, fieldFilter),
+        )
+        .map((card) => card.instanceId);
+      legalPayments.push(
+        ...chooseCombos(selectableCardIds, option.count).map((combo) => ({
+          type: "respondToDecision" as const,
+          decisionId: decision.id,
+          response: {
+            type: "payment" as const,
+            optionId: option.id,
+            selectedCardInstanceIds: combo,
+          },
+        })),
+      );
+      continue;
+    }
+    if (option.type === "restDon" || option.type === "returnDon") {
+      const selectableDonIds =
+        option.type === "returnDon"
+          ? getReturnDonEligibleInstanceIds(player)
+          : player.costArea
+              .filter((card) => card.state === "active")
+              .map((card) => card.instanceId);
+      legalPayments.push(
+        ...chooseCombos(selectableDonIds, option.count).map((combo) => ({
+          type: "respondToDecision" as const,
+          decisionId: decision.id,
+          response: {
+            type: "payment" as const,
+            optionId: option.id,
+            selectedDonInstanceIds: combo,
+          },
+        })),
+      );
+    }
   }
-  const candidateDonIds = player.costArea
-    .filter((card) =>
-      decision.cost.type === "restDon" ? card.state === "active" : false,
-    )
-    .map((card) => card.instanceId);
-  const returnDonIds =
-    decision.cost.type === "returnDon"
-      ? getReturnDonEligibleInstanceIds(player)
-      : [];
-  const selectableDonIds =
-    decision.cost.type === "returnDon" ? returnDonIds : candidateDonIds;
+
   return [
     {
       type: "respondToDecision",
       decisionId: decision.id,
       response: { type: "paymentDeclined" },
     },
-    ...chooseCombos(selectableDonIds, decision.cost.count).map((combo) => ({
-      type: "respondToDecision" as const,
-      decisionId: decision.id,
-      response: {
-        type: "payment" as const,
-        optionId: decision.cost.type,
-        selectedDonInstanceIds: combo,
-      },
-    })),
+    ...legalPayments,
   ];
+};
+
+export const getSequenceOptionalPayCostOptions = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  cost: OptionalCost,
+): Array<
+  Extract<
+    OptionalPayCostDecision["paymentOptions"][number],
+    { type: "restDon" | "returnDon" | "trashFromHand" | "trashFromField" }
+  >
+> => {
+  const paymentOptions: Array<
+    Extract<
+      OptionalPayCostDecision["paymentOptions"][number],
+      { type: "restDon" | "returnDon" | "trashFromHand" | "trashFromField" }
+    >
+  > = [];
+  const currentPlayer = state.players[entry.controllerId];
+  const returnDonEligibleCount =
+    currentPlayer === undefined ? 0 : getReturnDonEligibleCount(currentPlayer);
+  const handEligibleCount = currentPlayer?.hand.length ?? 0;
+
+  if (cost.type === "restDon") {
+    if (activeDonCount(state, entry.controllerId) >= cost.count) {
+      paymentOptions.push({
+        id: "restDon",
+        type: "restDon",
+        count: cost.count,
+      });
+    }
+    return paymentOptions;
+  }
+  if (cost.type === "returnDon") {
+    if (returnDonEligibleCount >= cost.count) {
+      paymentOptions.push({
+        id: "returnDon",
+        type: "returnDon",
+        count: cost.count,
+      });
+    }
+    return paymentOptions;
+  }
+  if (cost.type === "trashFromHand") {
+    if (handEligibleCount >= cost.count) {
+      paymentOptions.push({
+        id: "trashFromHand",
+        type: "trashFromHand",
+        count: cost.count,
+      });
+    }
+    return paymentOptions;
+  }
+  if (cost.type !== "chooseOne") {
+    return paymentOptions;
+  }
+
+  for (const option of cost.options) {
+    if (option.type === "trashFromHand") {
+      if (handEligibleCount < option.count) {
+        continue;
+      }
+      paymentOptions.push({
+        id: "trashFromHand",
+        type: "trashFromHand",
+        count: option.count,
+      });
+      continue;
+    }
+    if (!supportsScopedFieldTrashFilter(option.filter)) {
+      continue;
+    }
+    const fieldFilter = option.filter;
+    const fieldMatchCount =
+      currentPlayer?.characters.filter((card) =>
+        fieldCardMatchesFilter(state, card.cardId, fieldFilter),
+      ).length ?? 0;
+    if (fieldMatchCount < option.count) {
+      continue;
+    }
+    paymentOptions.push({
+      id: "trashFromField",
+      type: "trashFromField",
+      count: option.count,
+      filter: fieldFilter,
+    });
+  }
+  return paymentOptions;
 };
