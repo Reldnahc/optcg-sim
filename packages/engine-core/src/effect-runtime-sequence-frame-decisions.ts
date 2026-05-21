@@ -7,7 +7,7 @@ import type {
   GameState,
   LegalAction,
   OptionalCost,
-  PayCostDecision,
+  OptionalPayCostDecision,
 } from "@optcg/types";
 
 import { appendEvent, toDecisionId, toStateSeq } from "./action-results.js";
@@ -129,7 +129,7 @@ export const createPayCostDecisionForSequenceSegment = (
 ): { events: EngineEvent[]; ok: true; state: GameState } => {
   const causedBy = decisionCauseForEntry(entry);
   const visibility = { type: "private", playerId: entry.controllerId } as const;
-  const pendingDecision: PayCostDecision = {
+  const pendingDecision: OptionalPayCostDecision = {
     id: toDecisionId(
       `decision:payCost:sequence:${String(entry.id)}:${String(index)}`,
     ),

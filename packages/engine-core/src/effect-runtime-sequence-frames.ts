@@ -8,6 +8,7 @@ import type {
   EngineError,
   EngineEvent,
   GameState,
+  OptionalPayCostDecision,
   PayCostDecision,
   SelectTargetsDecision,
   SelectCardsDecision,
@@ -884,7 +885,7 @@ export const resumeSequenceFrameAfterOptionalActivation = (
 
 export const resumeSequenceFrameAfterOptionalCost = (
   state: GameState,
-  decision: PayCostDecision,
+  decision: PayCostDecision | OptionalPayCostDecision,
   paidCost: boolean,
   createTrashDecision: CreateTrashFromHandSequenceDecision,
 ): SequenceFrameResumeResult => {

@@ -2,12 +2,17 @@ import { expect, test } from "vitest";
 
 import type {
   Cost,
+  DecisionId,
   Effect,
   EffectBlock,
   EffectId,
   OptionalCost,
   OptionalCostSegmentResult,
+  OptionalPayCostDecision,
   PayCostEffect,
+  PayCostDecision,
+  PendingDecision,
+  PlayerId,
   SequencedEffect,
 } from "./index.js";
 
@@ -291,12 +296,12 @@ test("SUP-003A optional choose-one field-trash alternatives stay scoped", () => 
 
 test("SUP-003A choose-one cost authorability stays payCost optional-cost scoped", () => {
   const standaloneChooseOne: Cost = {
+    // @ts-expect-error broad standalone Cost.chooseOne remains planned.
     type: "chooseOne",
     options: [
       { type: "trashFromHand", count: 1, chooser: "self", optional: true },
     ],
-    // @ts-expect-error broad standalone Cost.chooseOne remains planned.
-    optional: undefined,
+    optional: true,
   };
   const standaloneFieldTrash: Cost = {
     // @ts-expect-error standalone non-optional Cost.trashFromField remains planned.
@@ -329,6 +334,42 @@ test("SUP-003A choose-one cost authorability stays payCost optional-cost scoped"
     type: "payCost",
     cost: optionalChooseOneTrashCost,
   };
+  const optionalChooseOnePayCostDecision: OptionalPayCostDecision = {
+    id: "optional-choose-one-decision" as DecisionId,
+    type: "payCost",
+    playerId: "player-1" as PlayerId,
+    prompt: "You may trash 1 Character or 1 card from hand",
+    causedBy: { type: "ruleProcess", name: "test" },
+    visibility: { type: "public" },
+    cost: optionalChooseOneTrashCost,
+    paymentOptions: [],
+  };
+  const broadPayCostDecision: PayCostDecision = {
+    id: "broad-pay-cost-decision" as DecisionId,
+    type: "payCost",
+    playerId: "player-1" as PlayerId,
+    prompt: "Pay a broad cost",
+    causedBy: { type: "ruleProcess", name: "test" },
+    visibility: { type: "public" },
+    // @ts-expect-error broad PayCostDecision cost lane must not accept OptionalCost chooseOne.
+    cost: optionalChooseOneTrashCost,
+    paymentOptions: [],
+  };
+  const pendingOptionalPayCostDecision: PendingDecision =
+    optionalChooseOnePayCostDecision;
+  const sequenceWithChooseOneCost: Cost = {
+    type: "sequence",
+    costs: [
+      {
+        // @ts-expect-error choose-one costs remain unsupported in Cost.sequence lanes.
+        type: "chooseOne",
+        options: [
+          { type: "trashFromHand", count: 1, chooser: "self", optional: true },
+        ],
+        optional: true,
+      },
+    ],
+  };
   const optionalActivationIsNotOptionalCost: EffectBlock = {
     id: "optional-activation" as EffectId,
     category: "activate",
@@ -345,6 +386,9 @@ test("SUP-003A choose-one cost authorability stays payCost optional-cost scoped"
   void standaloneChooseOne;
   void standaloneFieldTrash;
   void topLevelChooseOnePayCost;
+  void broadPayCostDecision;
+  void pendingOptionalPayCostDecision;
+  void sequenceWithChooseOneCost;
 });
 
 test("TYP-009A payCost is not authorable as a top-level effect", () => {

@@ -103,8 +103,10 @@ export interface PayCostDecision extends BaseDecision {
   paymentOptions: PaymentOption[];
 }
 
-export interface OptionalPayCostDecision extends PayCostDecision {
+export interface OptionalPayCostDecision extends BaseDecision {
+  type: "payCost";
   cost: OptionalCost;
+  paymentOptions: PaymentOption[];
   defaultResponse?: PaymentDeclinedResponse;
 }
 
@@ -176,6 +178,7 @@ export type PendingDecision =
   | ChooseTriggerOrderDecision
   | ChooseOptionalActivationDecision
   | PayCostDecision
+  | OptionalPayCostDecision
   | SelectTargetsDecision
   | SelectCardsDecision
   | ChooseEffectOptionDecision

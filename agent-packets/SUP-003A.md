@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-003A -->
 <!-- agent-packet:story-path stories/approved/SUP-003A-optional-choose-one-trash-cost-contract-authorability.yaml -->
-<!-- agent-packet:story-sha256 a70587e4bec2af1f5aa503699ccb3edda6bf0bc24df9e3bcce02bdd67b72059d -->
+<!-- agent-packet:story-sha256 beda5a8771878e19e52aa9054a3d449e71d08b52dd4813112f4fa88487f84626 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -36,6 +36,8 @@ Authorize optional choose-one cost segments in the shared Effect DSL so engine s
 - 23-repo-tooling-and-enforcement.s005 (Workspace structure and task naming)
 - 23-repo-tooling-and-enforcement.s006 (TypeScript enforcement)
 - 23-repo-tooling-and-enforcement.s016 (CI merge gates)
+- 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+- 15-implementation-kickoff.s012 (Guardrails)
 
 ## Relevant Spec Excerpts
 
@@ -694,6 +696,14 @@ Implementation packages stay in strict TypeScript mode, and broad escape hatches
 
 Lint, formatting, and merge-gate verification are mandatory, and CI must fail when checked-in generated artifacts or snapshots are stale.
 
+### 23-repo-tooling-and-enforcement.s008 (Boundary enforcement)
+
+Boundary enforcement is mechanical: `@optcg/engine-core` cannot import React, browser code, WebSocket transport, Redis, Postgres, or live HTTP clients.
+
+### 15-implementation-kickoff.s012 (Guardrails)
+
+Kickoff guardrails require the engine to stay free of Redis, Postgres, WebSocket, React, and Poneglyph HTTP code; once hidden state exists, the client must use `view-engine` instead of `engine-core`, and effect resolution consumes resolved manifests rather than live HTTP calls.
+
 ## Story Boundary
 
 Contract/schema/type story only. Do not implement runtime payment behavior, parser support, generated support, runtime capability metadata, support reports, real-card fixture evidence, or card promotion.
@@ -706,6 +716,8 @@ Contract/schema/type story only. Do not implement runtime payment behavior, pars
 - authorize optional `trashFromField` alternatives only for self character-area costs shaped as positive count, chooser self, `optional: true`, and a CardFilter limited to `categories: ["character"]` plus `typesAny`
 - keep the new authorability limited to a `payCost`-scoped `OptionalCost` variant; standalone `Cost.chooseOne`, standalone non-optional `Cost.trashFromField`, and choose-one placements outside optional payCost sequence segments remain rejected
 - preserve the distinction between optional cost decline, optional effect activation, and optional effect clauses
+- keep `OptionalPayCostDecision` as a typed optional pay-cost decision boundary without requiring every `OptionalCost` variant to also be authorable as broad `Cost`
+- allow engine-core type-annotation fallout only where existing optional sequence decision factory/resume helpers already create or consume optional pay-cost decisions; do not change runtime behavior
 - preserve existing non-optional `Cost.trashFromField` and broad `Cost.chooseOne` planned status outside the scoped optional-cost authorability this story adds
 - prove the scoped shape can represent `trash N of your {TYPE} type Characters` as a filtered field-trash cost alternative and `trash N card(s) from your hand` as an unfiltered hand-trash alternative
 - add positive and negative schema fixtures proving optional choose-one trash cost authorability and fail-closed rejection of malformed alternatives
@@ -729,7 +741,9 @@ Contract/schema/type story only. Do not implement runtime payment behavior, pars
 - specs/05-effect-dsl-reference.md
 - specs/section-index.json
 - contracts/types/effects.ts
+- contracts/types/decisions.ts
 - packages/types/src/effects.ts
+- packages/types/src/decisions.ts
 - packages/types/src/effects.test.ts
 - packages/types/src/effects-optional-cost.test.ts
 - packages/types/src/export-ownership.manifest.ts
@@ -737,15 +751,20 @@ Contract/schema/type story only. Do not implement runtime payment behavior, pars
 - contracts/effect-dsl.schema.json
 - fixtures/effect-dsl/**
 - tests/contracts/**
+- packages/engine-core/src/effect-runtime-sequence-frame-decisions.ts
+- packages/engine-core/src/effect-runtime-sequence-frames.ts
 
 ## Constraints
 
 - implement only SUP-003A while its packet is active
-- do not touch engine or cards packages except type import fallout required by contract tests
+- do not touch cards packages
+- do not touch engine-core except type-annotation fallout for existing optional pay-cost sequence decision helpers listed in allowed_touch_points
 - fail closed if optional choose-one trash costs cannot be expressed without blurring optional cost and optional effect semantics
 - use `pnpm`; the canonical local verification commands are `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`
 - TypeScript stays strict; avoid `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions without explicit justification
 - ESLint with type-aware rules and Prettier formatting are required; CI and local verification must fail when checked-in generated artifacts are stale
+- `@optcg/engine-core` must stay free of React, browser code, WebSocket transport, Redis, Postgres, and live HTTP clients
+- The engine must not import Redis, Postgres, WebSocket, React, or Poneglyph HTTP code; once hidden state exists, the client must use `view-engine` instead of `engine-core`, and effect resolution must consume resolved manifests rather than live HTTP calls
 
 ### Code Standard
 
@@ -769,6 +788,8 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - type test for optional choose-one cost containing typed field-trash and hand-trash alternatives inside a payCost sequence segment
 - type test rejecting missing `optional: true`, missing chooser, empty alternatives, and unsupported alternative cost families
 - type and schema tests proving standalone `Cost.chooseOne`, standalone non-optional `Cost.trashFromField`, and choose-one placements outside optional payCost sequence segments remain rejected
+- type/compile test proving optional pay-cost decisions can carry `OptionalCost` without making scoped choose-one alternatives assignable to broad `Cost`
+- root typecheck proving existing engine optional-cost helpers compile against the distinct optional pay-cost decision type without runtime behavior changes
 - type and schema tests rejecting optional field-trash alternatives for opponent field, non-Character categories, missing `typesAny`, arbitrary filters, and unsupported field zones
 - schema fixture test accepting scoped optional choose-one trash cost
 - schema fixture tests rejecting malformed optional choose-one trash costs
@@ -794,6 +815,8 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - schema/type tests prove representative optional choose-one trash cost authorability without runtime execution
 - contract fixture validation proves positive and negative schema rows for optional choose-one trash costs
 - no production code treats optional choose-one cost authorability as runtime support
+- optional pay-cost decision typing remains compatible with `OptionalCost` without broadening top-level or nested `Cost` authorability
+- engine-core fallout, if any, is limited to type annotations for existing optional pay-cost decision creation/resume helpers and introduces no new runtime branch
 
 ## Post-Approval Role Sections
 

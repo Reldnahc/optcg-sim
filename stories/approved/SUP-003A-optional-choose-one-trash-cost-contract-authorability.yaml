@@ -25,7 +25,9 @@ allowed_touch_points:
   - specs/05-effect-dsl-reference.md
   - specs/section-index.json
   - contracts/types/effects.ts
+  - contracts/types/decisions.ts
   - packages/types/src/effects.ts
+  - packages/types/src/decisions.ts
   - packages/types/src/effects.test.ts
   - packages/types/src/effects-optional-cost.test.ts
   - packages/types/src/export-ownership.manifest.ts
@@ -33,6 +35,8 @@ allowed_touch_points:
   - contracts/effect-dsl.schema.json
   - fixtures/effect-dsl/**
   - tests/contracts/**
+  - packages/engine-core/src/effect-runtime-sequence-frame-decisions.ts
+  - packages/engine-core/src/effect-runtime-sequence-frames.ts
 spec_refs:
   - 01-system-architecture.s023
   - 03-game-state-events-decisions.s012
@@ -54,6 +58,8 @@ scope:
   - 'authorize optional `trashFromField` alternatives only for self character-area costs shaped as positive count, chooser self, `optional: true`, and a CardFilter limited to `categories: ["character"]` plus `typesAny`'
   - keep the new authorability limited to a `payCost`-scoped `OptionalCost` variant; standalone `Cost.chooseOne`, standalone non-optional `Cost.trashFromField`, and choose-one placements outside optional payCost sequence segments remain rejected
   - preserve the distinction between optional cost decline, optional effect activation, and optional effect clauses
+  - keep `OptionalPayCostDecision` as a typed optional pay-cost decision boundary without requiring every `OptionalCost` variant to also be authorable as broad `Cost`
+  - allow engine-core type-annotation fallout only where existing optional sequence decision factory/resume helpers already create or consume optional pay-cost decisions; do not change runtime behavior
   - preserve existing non-optional `Cost.trashFromField` and broad `Cost.chooseOne` planned status outside the scoped optional-cost authorability this story adds
   - prove the scoped shape can represent `trash N of your {TYPE} type Characters` as a filtered field-trash cost alternative and `trash N card(s) from your hand` as an unfiltered hand-trash alternative
   - add positive and negative schema fixtures proving optional choose-one trash cost authorability and fail-closed rejection of malformed alternatives
@@ -72,10 +78,14 @@ acceptance_criteria:
   - schema/type tests prove representative optional choose-one trash cost authorability without runtime execution
   - contract fixture validation proves positive and negative schema rows for optional choose-one trash costs
   - no production code treats optional choose-one cost authorability as runtime support
+  - optional pay-cost decision typing remains compatible with `OptionalCost` without broadening top-level or nested `Cost` authorability
+  - engine-core fallout, if any, is limited to type annotations for existing optional pay-cost decision creation/resume helpers and introduces no new runtime branch
 required_tests:
   - type test for optional choose-one cost containing typed field-trash and hand-trash alternatives inside a payCost sequence segment
   - type test rejecting missing `optional: true`, missing chooser, empty alternatives, and unsupported alternative cost families
   - type and schema tests proving standalone `Cost.chooseOne`, standalone non-optional `Cost.trashFromField`, and choose-one placements outside optional payCost sequence segments remain rejected
+  - type/compile test proving optional pay-cost decisions can carry `OptionalCost` without making scoped choose-one alternatives assignable to broad `Cost`
+  - root typecheck proving existing engine optional-cost helpers compile against the distinct optional pay-cost decision type without runtime behavior changes
   - type and schema tests rejecting optional field-trash alternatives for opponent field, non-Character categories, missing `typesAny`, arbitrary filters, and unsupported field zones
   - schema fixture test accepting scoped optional choose-one trash cost
   - schema fixture tests rejecting malformed optional choose-one trash costs
@@ -86,6 +96,7 @@ required_tests:
   - "`corepack pnpm run packets:verify`"
 repo_rules:
   - implement only SUP-003A while its packet is active
-  - do not touch engine or cards packages except type import fallout required by contract tests
+  - do not touch cards packages
+  - do not touch engine-core except type-annotation fallout for existing optional pay-cost sequence decision helpers listed in allowed_touch_points
   - fail closed if optional choose-one trash costs cannot be expressed without blurring optional cost and optional effect semantics
 ambiguity_policy: fail_and_escalate

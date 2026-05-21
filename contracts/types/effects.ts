@@ -114,7 +114,6 @@ export type Cost =
       chooser: PlayerRef;
     }
   | { type: "sequence"; costs: Cost[]; optional?: boolean }
-  | OptionalChooseOneTrashCost
   | { type: "custom"; action: string };
 
 export type OptionalTrashFromHandCost = {

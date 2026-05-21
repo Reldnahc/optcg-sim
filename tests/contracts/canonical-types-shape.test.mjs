@@ -300,7 +300,7 @@ test("canonical optional cost contracts stay distinct from optional activation",
   );
   assert.match(
     canonicalTypes,
-    /export interface OptionalPayCostDecision\s+extends\s+PayCostDecision\s*{[\s\S]*?\bcost:\s*OptionalCost;[\s\S]*?\bdefaultResponse\?:\s*PaymentDeclinedResponse;[\s\S]*?}/m,
+    /export interface OptionalPayCostDecision\s+extends\s+BaseDecision\s*{[\s\S]*?\btype:\s*"payCost";[\s\S]*?\bcost:\s*OptionalCost;[\s\S]*?\bpaymentOptions:\s*PaymentOption\[];[\s\S]*?\bdefaultResponse\?:\s*PaymentDeclinedResponse;[\s\S]*?}/m,
   );
   assert.match(
     canonicalTypes,
