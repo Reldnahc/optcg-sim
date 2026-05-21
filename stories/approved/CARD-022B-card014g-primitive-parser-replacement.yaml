@@ -1,0 +1,148 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-022B
+epic_id: CARD-022
+title: CARD-014G primitive parser replacement
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Replace the older story-named `card014g-composed-parser.ts` exact-template
+  production parser with reusable primitive parsing for the same CARD-014G
+  supported behavior. The existing file maps exact full On Play sentences to
+  generated DSL and fixed values; this story raises that production path to the
+  same scalable component-composition standard as SUP-001G.
+story_boundary: >
+  Own only the cards-layer CARD-014G parser replacement, parser-rule evidence,
+  generated-support tests, diagnostics, and local test helpers needed to
+  preserve existing CARD-014G-supported behavior through reusable primitives.
+  Do not add engine runtime behavior, shared schema/type authority, real-card
+  fixtures, source hash changes, behavior hash changes, overlays, support
+  manifest edits, cards-produced manifest regeneration, or new card promotion.
+allowed_touch_points:
+  - packages/cards/src/card014g-composed-parser.ts
+  - packages/cards/src/on-play-field-effect-parser.ts
+  - packages/cards/src/card014g-generated-support.test.ts
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/*diagnostic*.ts
+  - packages/cards/src/*diagnostic*.test.ts
+  - stories/generated/CARD-022-card-layer-regression-hardening-parent.yaml
+  - stories/generated/CARD-022B-card014g-primitive-parser-replacement.yaml
+  - stories/approved/CARD-022-card-layer-regression-hardening-parent.yaml
+  - stories/approved/CARD-022B-card014g-primitive-parser-replacement.yaml
+  - agent-packets/CARD-022B.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-008A
+  - CARD-014A
+  - CARD-014G
+  - CARD-022A
+  - ENG-055I
+  - ENG-055J
+  - ENG-057A
+  - TYP-007E
+  - TYP-009B
+  - TYP-010
+scope:
+  - remove the production exact full-sentence map in `packages/cards/src/card014g-composed-parser.ts`
+  - replace story-named exact-template parsing with reusable primitive parsing for the currently supported CARD-014G source shapes
+  - parse On Play wrapper independently from target primitive, action primitive, duration primitive, saved-target reference, and numeric modifier value
+  - preserve support for selecting exactly 1 opponent Character and saving it as a selected target
+  - preserve support for consuming the saved selected opponent Character with `Then, K.O. that Character.`
+  - preserve support for self, all-opponent-Characters, and up-to-one opponent Character targets where currently supported
+  - preserve support for existing `modifyPower`, `cannotAttack`, and `cannotBlock` effects with current duration boundaries
+  - support numeric power values through parsed signed integers instead of fixed `+1000` or `-2000` production branches where the existing DSL/runtime capability already supports that value family
+  - preserve fail-closed behavior for unsupported cardinalities, unsupported targets, unsupported saved-reference wording, unsupported durations, unsupported actions, unsupported modifiers, unsupported sequence shapes, and unsupported optionality
+  - rename or retire the story-named production module if appropriate so production code is organized by parser primitives rather than by old story ID
+  - add tests proving no production branch keys off exact full CARD-014G sample sentences or fixed sample numeric values
+non_scope:
+  - engine runtime behavior
+  - shared contracts/schema/type changes
+  - new target zones, new selected-target cardinalities, new saved-reference families, new actions, new durations, new restriction families, or new modifier families not already authorized by CARD-014G and current runtime capability evidence
+  - real card IDs, real-card fixture capture, source hash updates, behavior hash updates, overlays, support manifest edits, or cards-produced manifest regeneration
+  - broad natural-language inference or support for arbitrary On Play text
+  - changing support for unrelated parser families such as conditional draw, DON-minus draw, conditional continuous protection, or line-separated composition except where imports need to follow a renamed CARD-014G module
+card_source_integrity:
+  - not applicable to real-card source integrity because this story replaces a synthetic CARD-014G parser path and does not enable or change gameplay support for any real card
+  - new proof and matrix tests must construct synthetic normalized card inputs directly and must not load fixture-backed real-card shells, then overwrite fields, as evidence for this story
+  - existing legacy fixture-backed tests may remain, but new CARD-022B evidence must not depend on them
+  - this story must not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence
+engine_capability_preflight:
+  - parsed shapes under test are On Play wrappers over currently supported CARD-014G bodies only
+  - supported body shapes include `Select 1 of your opponent's Characters. Then, K.O. that Character.`
+  - supported body shapes include `This Character cannot attack during this turn`, `This Character cannot block during this turn`, and matching all-opponent or up-to-1 opponent Character restriction targets where already supported
+  - supported body shapes include self, all-opponent-Characters, and up-to-1 opponent Character `gets <signed integer> power during this turn/this battle` modifier targets where already supported
+  - supported capability group includes `category:auto`, `trigger:onPlay`, `sourcePresencePolicy:mustRemainInSameZone`, `sequence:genericFrames`, `selectTargets:field:public:character:max1`, `savedSelectedTargets:producer`, `savedFieldObject:consumer:generic`, `effect:ko:saved-field-object:characterArea:public`, `modifyPower:self:thisTurn`, `modifyPower:self:thisBattle`, `modifyPower:all:thisTurn`, `modifyPower:choose:thisTurn`, `modifyPower:choose:thisTurn:zeroChoiceBranch`, `cannotAttack:self:thisTurn`, `cannotAttack:all:thisTurn`, `cannotAttack:choose:thisTurn`, `cannotAttack:choose:thisTurn:zeroChoiceBranch`, `cannotBlock:self:thisTurn`, `cannotBlock:all:thisTurn`, `cannotBlock:choose:thisTurn`, and `cannotBlock:choose:thisTurn:zeroChoiceBranch`
+  - CARD-008A provides inherited baseline generated-support capability authority for `category:auto`, `trigger:onPlay`, and `sourcePresencePolicy:mustRemainInSameZone`
+  - CARD-014A provides selectedTargets runtime capability matrix authority; TYP-010 provides selectedTargets producer contract authority
+  - CARD-014A provides inherited generic sequence frame capability authority for `sequence:genericFrames`
+  - CARD-014A provides saved field-object consumer runtime capability matrix authority for `savedFieldObject:consumer:generic`
+  - ENG-055I provides saved field-object K.O. runtime authority for `effect:ko:saved-field-object:characterArea:public`; TYP-009B provides saved field-object reference consumer contract authority
+  - ENG-055J and TYP-007E provide duration modifier/restriction runtime and schema authority for supported self/all target rows
+  - ENG-057A provides zero-choice branch runtime authority for choose/up-to-1 modifyPower, cannotAttack, and cannotBlock rows
+  - missing capability group is none for the matrix rows in this story
+  - no new engine runtime capability is authorized by this story; if a primitive parser row requires behavior absent from the supported capability group, that row must remain unsupported or be split into a prerequisite ENG/TYP story
+acceptance_criteria:
+  - existing CARD-014G supported sample rows still parse complete and remain generated-support playable when all current gates pass
+  - equivalent non-sample matrix rows prove the same parser/composer path works when numeric power values change
+  - parser tests assert structured generated DSL for target, action, duration, saved-target binding, and numeric modifier output rather than only parser-rule IDs or `Playable: yes`
+  - generated-support tests assert parser-rule evidence, component evidence, runtime capability IDs, support metadata, review state, tested state, source integrity, and behavior hash gates remain intact
+  - production source no longer contains a story-named exact full-sentence template map for CARD-014G support
+  - production source no longer contains exact full-text branches for the CARD-014G representative sentences outside test/story/fixture text
+  - production source no longer fixes `+1000` or `-2000` as the only parsed CARD-014G power modifier values when the grammar otherwise matches a supported modifier shape
+  - existing fail-closed unsupported CARD-014G near-miss tests remain fail-closed with narrow diagnostics
+  - existing generated support for unrelated draw, conditional draw, DON-minus draw, CARD-020 diagnostics, CARD-021 composition, and SUP-001G line-separated composition remains compatible
+required_tests:
+  - story-review for CARD-022B before approval handoff
+  - RED test proving a non-sample supported CARD-014G power modifier value currently fails or cannot be proven through the reusable path before implementation
+  - parser matrix tests for supported CARD-014G primitive composition across target family, action family, duration, saved-target sequence, and numeric power value variation
+  - generated-support-index or support-evaluator tests proving current CARD-014G supported shapes remain playable with complete runtime capability evidence
+  - proof/report tests asserting required runtime capability IDs remain complete for selectedTargets, saved-field-object K.O., modifyPower, cannotAttack, cannotBlock, zero-choice choose-target, and duration evidence as applicable
+  - negative tests for unsupported cardinality, unsupported target, unsupported saved-reference wording, unsupported action, unsupported duration, unsupported optionality, and unsupported sequence residue
+  - preserve and name the longest-supported-prefix-before-residue regression for CARD-014G sequence parsing
+  - production-code search or equivalent test proving no exact full-text CARD-014G representative sentence map remains in production cards code
+  - production-code search or equivalent test proving no production parser module is named after CARD-014G after the replacement unless it is only a compatibility re-export with no exact templates
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-022B packet before implementation
+  - stay within allowed_touch_points
+  - start with failing tests that expose exact-template or fixed-value behavior before changing production parser code
+  - do not expand CARD-014G support beyond existing authorized runtime/schema capability families
+  - preserve existing fail-closed behavior for unsupported text
+  - fail closed when wording cannot be decomposed into named reusable primitives
+ambiguity_policy: fail_and_escalate

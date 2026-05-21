@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-022B.md",
+      "storyId": "CARD-022B",
+      "storyPath": "stories/approved/CARD-022B-card014g-primitive-parser-replacement.yaml",
+      "storySha256": "247799ed35736c61fadca91e901779977fd3e1d1250c1a04fd9b0a406e5dbea3"
+    }
+  ],
   "version": 1
 }
