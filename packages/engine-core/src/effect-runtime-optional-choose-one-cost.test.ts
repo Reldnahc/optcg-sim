@@ -531,6 +531,71 @@ test("unsupported choose-one field-trash alternative fails closed without degrad
   );
 });
 
+test("unsupported choose-one hand-trash alternative fails closed without degrading to unfiltered hand option", () => {
+  const malformedSequence: Extract<Effect, { type: "sequence" }> = {
+    type: "sequence",
+    effects: [
+      {
+        id: "optional-choose-one-cost",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "chooseOne",
+            optional: true,
+            options: [
+              {
+                type: "trashFromHand",
+                chooser: "self",
+                optional: true,
+                count: 1,
+                filter: { categories: ["character"] } as unknown as {
+                  categories: ["character"];
+                  typesAny: [string, ...string[]];
+                },
+              },
+              {
+                type: "trashFromField",
+                chooser: "self",
+                optional: true,
+                count: 1,
+                filter: { categories: ["character"], typesAny: ["Navy"] },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: "if-you-do-draw",
+        connector: "ifYouDo",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    ],
+  };
+  const { state } = setupState("Navy");
+  setupDefinition(
+    state,
+    must(state.players[p1], "p1").characters[0] as CardInstance,
+    malformedSequence,
+  );
+  const run = processEffectRuntime(state);
+
+  assert.equal(run.state.pendingDecision, undefined);
+  assert.equal(
+    run.events.some((event) => event.type === "decisionCreated"),
+    false,
+  );
+  assert.equal(
+    run.events.some((event) => event.type === "costPaid"),
+    false,
+  );
+  assert.equal(
+    run.events.some((event) => event.type === "cardDrawn"),
+    false,
+  );
+});
+
 test("choose-one same-family alternatives use distinct stable option ids and preserve selected alternative identity", () => {
   const sameFamilySequence: Extract<Effect, { type: "sequence" }> = {
     type: "sequence",

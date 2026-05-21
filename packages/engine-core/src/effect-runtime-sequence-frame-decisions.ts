@@ -285,11 +285,17 @@ const chooseOneOptionId = (
 const isSupportedChooseOneOption = (
   option: Extract<OptionalCost, { type: "chooseOne" }>["options"][number],
 ): boolean => {
-  if (!Number.isInteger(option.count) || option.count <= 0) {
+  const optionRecord = option as Record<string, unknown>;
+  const hasSupportedBaseShape =
+    optionRecord["chooser"] === "self" &&
+    optionRecord["optional"] === true &&
+    Number.isInteger(optionRecord["count"]) &&
+    (optionRecord["count"] as number) > 0;
+  if (!hasSupportedBaseShape) {
     return false;
   }
   if (option.type === "trashFromHand") {
-    return true;
+    return !("filter" in option);
   }
   return supportsScopedFieldTrashFilter(option.filter);
 };

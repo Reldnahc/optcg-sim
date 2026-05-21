@@ -79,6 +79,23 @@ const isSupportedPayCostSegment = (
   }
   const cost = effect.cost;
   if (cost.type === "chooseOne") {
+    const hasSupportedSelfOptionalPositiveCount = (option: unknown): boolean =>
+      typeof option === "object" &&
+      option !== null &&
+      (option as Record<string, unknown>)["chooser"] === "self" &&
+      (option as Record<string, unknown>)["optional"] === true &&
+      Number.isInteger((option as Record<string, unknown>)["count"]) &&
+      ((option as Record<string, unknown>)["count"] as number) > 0;
+    const hasSupportedSelfOptionalUnfilteredHand = (
+      option: unknown,
+    ): boolean => {
+      if (!hasSupportedSelfOptionalPositiveCount(option)) {
+        return false;
+      }
+      return (
+        typeof option === "object" && option !== null && !("filter" in option)
+      );
+    };
     const hasSupportedFieldFilter = (
       filter: unknown,
     ): filter is {
@@ -97,11 +114,10 @@ const isSupportedPayCostSegment = (
       );
     return cost.options.every((option) => {
       if (option.type === "trashFromHand") {
-        return Number.isInteger(option.count) && option.count > 0;
+        return hasSupportedSelfOptionalUnfilteredHand(option);
       }
       return (
-        Number.isInteger(option.count) &&
-        option.count > 0 &&
+        hasSupportedSelfOptionalPositiveCount(option) &&
         hasSupportedFieldFilter(option.filter)
       );
     });
