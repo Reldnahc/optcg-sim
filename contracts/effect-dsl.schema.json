@@ -150,6 +150,29 @@
         }
       ]
     },
+    "scopedSetBasePowerFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["typesAny"],
+      "properties": {
+        "typesAny": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        }
+      }
+    },
+    "scopedSetBasePowerTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "zone", "player"],
+      "properties": {
+        "type": { "const": "all" },
+        "zone": { "const": "characterArea" },
+        "player": { "const": "self" },
+        "filter": { "$ref": "#/$defs/scopedSetBasePowerFilter" }
+      }
+    },
     "cardSupportStatus": {
       "type": "string",
       "enum": [
@@ -418,6 +441,17 @@
             "target": { "$ref": "#/$defs/target" },
             "value": { "type": "integer" },
             "duration": { "$ref": "#/$defs/duration" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target", "value", "duration"],
+          "properties": {
+            "type": { "const": "setBasePower" },
+            "target": { "$ref": "#/$defs/scopedSetBasePowerTarget" },
+            "value": { "type": "integer" },
+            "duration": { "const": { "type": "permanent" } }
           }
         },
         {

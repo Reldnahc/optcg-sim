@@ -1059,6 +1059,11 @@ Schema-supported fixture subset:
 - effect: drawUpTo
 - effect: ko
 - effect: modifyPower
+- effect: setBasePower for scoped permanent continuous setters only:
+  `target.type: "all"`, `target.zone: "characterArea"`,
+  `target.player: "self"`, optional target `filter.typesAny`, numeric `value`,
+  and `duration: { type: "permanent" }`; this is schema-authorability-only
+  evidence and not runtime/playability support
 - effect: payCost
 - effect: selectCards
 - effect: selectTargets
@@ -1107,7 +1112,6 @@ Planned/not fixture-authorable until schema coverage exists:
 - effect: returnUnselectedToDeck
 - effect: trashFromHand
 - effect: setPowerToZero
-- effect: setBasePower
 - effect: modifyCost
 - effect: setBaseCost
 - effect: rest

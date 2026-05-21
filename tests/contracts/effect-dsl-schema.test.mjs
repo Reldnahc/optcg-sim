@@ -33,6 +33,8 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/valid/permanent-trash-count-keyword-protection-sequence.json",
     "fixtures/effect-dsl/valid/return-don-cost.json",
     "fixtures/effect-dsl/valid/schema-authorability-only-composed-unsupported.json",
+    "fixtures/effect-dsl/valid/scoped-set-base-power-permanent.json",
+    "fixtures/effect-dsl/valid/scoped-set-base-power-permanent-no-filter.json",
     "fixtures/effect-dsl/valid/temporary-modify-power-until-start-next-turn.json",
     "fixtures/effect-dsl/valid/trash-from-hand-effect.json",
     "fixtures/effect-dsl/invalid/condition-empty-and-list.json",
@@ -86,6 +88,12 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/select-cards-ambiguous-chooser-player.json",
     "fixtures/effect-dsl/invalid/select-cards-unsupported-visibility.json",
     "fixtures/effect-dsl/invalid/select-cards-unsupported-zone.json",
+    "fixtures/effect-dsl/invalid/set-base-power-malformed-target.json",
+    "fixtures/effect-dsl/invalid/set-base-power-fractional-value.json",
+    "fixtures/effect-dsl/invalid/set-base-power-non-character-target.json",
+    "fixtures/effect-dsl/invalid/set-base-power-nonnumeric-value.json",
+    "fixtures/effect-dsl/invalid/set-base-power-unsupported-duration-while-condition-true.json",
+    "fixtures/effect-dsl/invalid/set-base-power-unsupported-filter-composition.json",
     "fixtures/effect-dsl/invalid/trash-from-hand-extra-property.json",
     "fixtures/effect-dsl/invalid/trash-from-hand-invalid-player.json",
     "fixtures/effect-dsl/invalid/trash-from-hand-missing-chooser.json",
@@ -131,6 +139,61 @@ test("schema-valid composed fixtures stay at contract authorability layer only",
   assert.equal(fixture.metadata.reviewedAt, undefined);
   assert.equal(fixture.metadata.sourceCardVersion, undefined);
   assert.equal(fixture.metadata.supportStatus, undefined);
+});
+
+test("SUP-002H scoped setBasePower fixtures remain schema-authorability-only", async () => {
+  const fixturePaths = [
+    "fixtures/effect-dsl/valid/scoped-set-base-power-permanent.json",
+    "fixtures/effect-dsl/valid/scoped-set-base-power-permanent-no-filter.json",
+  ];
+
+  for (const relativePath of fixturePaths) {
+    const fixture = JSON.parse(
+      await readFile(path.join(repoRoot, relativePath), "utf8"),
+    );
+    assert.equal(fixture.implementationStatus, "unsupported");
+    assert.equal(fixture.metadata.generatedBy, undefined);
+    assert.equal(fixture.metadata.reviewedBy, undefined);
+    assert.equal(fixture.metadata.reviewedAt, undefined);
+    assert.equal(fixture.metadata.sourceCardVersion, undefined);
+    assert.equal(fixture.metadata.supportStatus, undefined);
+  }
+});
+
+test("SUP-002H setBasePower schema authorizes only all self character targets with optional typesAny", async () => {
+  const schemaPath = path.join(repoRoot, "contracts/effect-dsl.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+  const setBasePowerEffect = schema.$defs.effect.oneOf.find(
+    (variant) => variant?.properties?.type?.const === "setBasePower",
+  );
+
+  assert.ok(setBasePowerEffect);
+  assert.deepEqual(setBasePowerEffect.required, [
+    "type",
+    "target",
+    "value",
+    "duration",
+  ]);
+  assert.equal(setBasePowerEffect.properties.value.type, "integer");
+  assert.deepEqual(setBasePowerEffect.properties.duration, {
+    const: { type: "permanent" },
+  });
+
+  const targetRef = setBasePowerEffect.properties.target.$ref;
+  assert.equal(targetRef, "#/$defs/scopedSetBasePowerTarget");
+
+  const targetSchema = schema.$defs.scopedSetBasePowerTarget;
+  const targetProperties = targetSchema.properties;
+  assert.deepEqual(targetProperties.type, { const: "all" });
+  assert.deepEqual(targetProperties.zone, { const: "characterArea" });
+  assert.deepEqual(targetProperties.player, { const: "self" });
+
+  assert.deepEqual(targetProperties.filter, {
+    $ref: "#/$defs/scopedSetBasePowerFilter",
+  });
+  const filter = schema.$defs.scopedSetBasePowerFilter;
+  assert.deepEqual(filter.required, ["typesAny"]);
+  assert.deepEqual(Object.keys(filter.properties), ["typesAny"]);
 });
 
 test("TYP-012B schema-valid permanent protection fixture remains authorability-only", async () => {

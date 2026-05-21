@@ -965,3 +965,48 @@ test("temporary modifier and restriction authoring supports extended durations a
   void malformedUntilStartDuration;
   void malformedCannotAttack;
 });
+
+test("SUP-002H scoped setBasePower contract shape compiles without runtime support metadata", () => {
+  const scopedBasePowerSetter: EffectDefinition = {
+    cardId: "SUP-002H-001" as CardId,
+    implementationStatus: "unsupported",
+    effects: [
+      {
+        id: "SUP-002H-001:permanent-1" as EffectId,
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "setBasePower",
+          target: {
+            type: "all",
+            zone: "characterArea",
+            player: "self",
+            filter: { typesAny: ["Straw Hat Crew"] },
+          },
+          value: 5000,
+          duration: { type: "permanent" },
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: "sha256:test-sup-002h-001",
+      rulesVersion: "v6",
+      effectDefinitionsVersion: "v1",
+      tested: true,
+    },
+  };
+
+  const malformedValue: Effect = {
+    type: "setBasePower",
+    target: { type: "all", zone: "characterArea", player: "self" },
+    // @ts-expect-error setBasePower values are numeric in the canonical contract.
+    value: "5000",
+    duration: { type: "permanent" },
+  };
+
+  expect(scopedBasePowerSetter.implementationStatus).toBe("unsupported");
+  expect(scopedBasePowerSetter.effects[0]?.effect.type).toBe("setBasePower");
+  expect(scopedBasePowerSetter.metadata.generatedBy).toBeUndefined();
+  expect(scopedBasePowerSetter.metadata.reviewedBy).toBeUndefined();
+  void malformedValue;
+});

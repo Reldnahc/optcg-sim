@@ -1,0 +1,31 @@
+{
+  "cardId": "SUP-002H-904",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-002H-904:permanent-1",
+      "category": "permanent",
+      "trigger": { "type": "permanent" },
+      "effect": {
+        "type": "setBasePower",
+        "target": {
+          "type": "all",
+          "zone": "characterArea",
+          "player": "self",
+          "filter": {
+            "typesAny": ["Straw Hat Crew"],
+            "categories": ["character"]
+          }
+        },
+        "value": 5000,
+        "duration": { "type": "permanent" }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-002h-904",
+    "rulesVersion": "2026-01-16",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}
