@@ -266,8 +266,7 @@ function parseContinuousBodyPart(
         target: { type: "self" },
         type: "giveKeyword",
       },
-      explicitSelfCharacterTarget:
-        hasExplicitSelfCharacterPrefix || keywordText !== bodyText,
+      explicitSelfCharacterTarget: hasExplicitSelfCharacterPrefix,
     };
   }
 

@@ -127,6 +127,14 @@ describe("conditional generated support composer", () => {
     ]);
   });
 
+  it("fails closed when shared self target inference would need to chain through an inferred body", () => {
+    expect(
+      parseConditionalContinuousComposition(
+        "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Rush] and gains [Banish].",
+      ),
+    ).toBeUndefined();
+  });
+
   it.each([
     "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects, and gains [Rush].",
     "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects, gains [Rush], and this Character gains [Banish].",

@@ -179,6 +179,9 @@ function toBodyDiagnosticSide({
   }
 
   const diagnostics = deriveConditionalKeywordGrantDiagnostics(text);
+  const hasExplicitSelfCharacterPrefix = /^this Character\s+/i.test(
+    text.trim(),
+  );
   if (
     !diagnostics.hasSupportedKeywordGrantComponents &&
     !looksLikeKeywordGrantDiagnosticBody(text)
@@ -187,7 +190,9 @@ function toBodyDiagnosticSide({
   }
 
   return {
-    explicitSelfCharacterTarget: diagnostics.hasSupportedKeywordGrantComponents,
+    explicitSelfCharacterTarget:
+      hasExplicitSelfCharacterPrefix &&
+      diagnostics.hasSupportedKeywordGrantComponents,
     hasSupportedComponents: diagnostics.hasSupportedKeywordGrantComponents,
     isFullySupported: diagnostics.isFullySupportedKeywordGrantBody,
     recognizedSyntaxFragments: diagnostics.hasSupportedKeywordGrantComponents
@@ -238,7 +243,7 @@ function toSharedSelfCharacterKeywordGrantSide({
   });
 
   return {
-    explicitSelfCharacterTarget: true,
+    explicitSelfCharacterTarget: false,
     hasSupportedComponents: true,
     isFullySupported: true,
     recognizedSyntaxFragments: ["keyword-grant-components:v1"],

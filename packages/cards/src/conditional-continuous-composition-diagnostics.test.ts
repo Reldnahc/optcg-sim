@@ -42,6 +42,27 @@ describe("conditional continuous composition diagnostics", () => {
     );
   });
 
+  it("does not mark chained targetless keyword body parts as supported", () => {
+    const decomposition =
+      deriveConditionalContinuousCompositionDiagnosticDecomposition(
+        "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Rush] and gains [Banish].",
+      );
+
+    expect(decomposition?.traceComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "conditional-body-part:2",
+          status: "unsupported",
+        }),
+      ]),
+    );
+    expect(decomposition?.unsupportedSyntaxFragments).toEqual(
+      expect.arrayContaining([
+        "conditional-continuous-composition:unsupported-body-fragment",
+      ]),
+    );
+  });
+
   it("fails closed for unsupported punctuation body lists", () => {
     expect(
       deriveConditionalContinuousCompositionDiagnosticDecomposition(
