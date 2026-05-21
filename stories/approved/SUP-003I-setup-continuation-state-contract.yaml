@@ -1,0 +1,85 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-003I
+epic_id: SUP-003
+title: Setup continuation state contract
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Add a typed, engine-internal setup continuation state surface to raw
+  `GameState` so setup-time decisions can be answered through canonical
+  `PendingDecision` / `respondToDecision` routing and then resume deterministic
+  setup finalization.
+story_boundary: >
+  Contract/schema/type story only. Do not implement start-of-game effect
+  runtime behavior, parser/generated-support behavior, card support metadata,
+  support reports, real-card fixture evidence, or card promotion.
+allowed_touch_points:
+  - stories/approved/SUP-003I-setup-continuation-state-contract.yaml
+  - stories/approved/SUP-003-leader-start-game-activate-main-support-parent.yaml
+  - stories/approved/SUP-003D-start-of-game-typed-stage-play-runtime.yaml
+  - agent-packets/SUP-003I.md
+  - agent-packets/active.json
+  - specs/03-game-state-events-decisions.md
+  - specs/section-index.json
+  - contracts/types/runtime.ts
+  - contracts/types/game-state.ts
+  - packages/types/src/runtime.ts
+  - packages/types/src/game-state.ts
+  - packages/types/src/runtime.test.ts
+  - packages/types/src/game-state.test.ts
+  - packages/types/src/export-ownership.manifest.ts
+  - packages/types/src/export-cohesion.test.ts
+spec_refs:
+  - 02-engine-mechanics.s008
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 06-visibility-security.s004
+  - 11-testing-quality.s004
+  - 23-repo-tooling-and-enforcement.s006
+dependencies: []
+scope:
+  - add a typed raw `GameState` setup continuation field for deterministic setup-only runtime continuation data needed after `createInitialState` returns a setup `PendingDecision`
+  - model the continuation as engine-internal authoritative state, not a player-view or client-action payload
+  - include enough typed data for later engine runtime to resume official setup after setup-time decisions, including player order, first player, leader life counts, shuffle mode, and the next start-of-game plan position
+  - keep the continuation limited to match setup before active play; runtime stories must clear it before or when setup reaches normal mulligan/active flow
+  - ensure the continuation is canonical-hashable and replay-deterministic as part of raw `GameState`
+  - ensure PlayerView and SpectatorView continue to omit setup continuation internals and private setup candidate details
+  - document in the spec that setup decisions still use canonical `PendingDecision` / `respondToDecision`; this story only adds the typed continuation state required to resume setup safely
+non_scope:
+  - implementing start-of-game effect runtime, Stage play from deck, setup decision creation, setup decision response handling, legal action generation, or setup finalization behavior
+  - parser, generated-support, runtime capability matrix, support reports, overlays, fixture capture, source hashes, behavior hashes, or card promotion
+  - deck validation or leader-scoped construction restrictions
+  - server, client, UI, database, API, live card-data, or Poneglyph work
+acceptance_criteria:
+  - shared types expose a focused setup continuation state that can carry setup-only resume data without using `audit`, prompts, decision IDs, or other unrelated fields as hidden storage
+  - "`GameState` can hold the setup continuation only as raw authoritative engine state and the field remains absent from PlayerView and SpectatorView public contracts"
+  - the continuation type is deterministic, JSON/canonical-hash friendly, and does not contain functions, class instances, symbols, maps, sets, or hidden object references
+  - the type shape is generic to setup continuation and does not mention real card IDs, printed text, one card, one leader, or one exact effect line
+  - existing GameState examples and tests compile with the new optional field absent
+  - type tests prove a valid setup continuation with two-player order, leader life counts, shuffle mode, and next start-of-game plan index is assignable
+  - type tests reject malformed continuation shapes that TypeScript can reliably prove, such as missing player order, malformed two-player tuple shape, missing leader life-count record, non-boolean shuffle mode, or non-number plan index
+  - runtime validation of integer plan indices, non-negative life counts, and exact player-key correspondence belongs to the later engine runtime story that consumes the typed continuation; this contract story must not fake those checks with weak type assertions
+  - visibility tests or type assertions prove public views do not include setup continuation internals
+required_tests:
+  - type/runtime test proving `GameState` accepts a canonical-hashable setup continuation record with player order, first player, leader life counts, shuffle mode, and next start-of-game plan index
+  - type/compile test proving existing `GameState` fixtures remain valid without setup continuation
+  - negative type tests for malformed setup continuation fields where TypeScript can enforce the contract, excluding integer refinement and exact record-key validation that require runtime checks
+  - view contract/export cohesion test proving PlayerView and SpectatorView do not expose setup continuation internals
+  - "`corepack pnpm --filter @optcg/types test`"
+  - "`corepack pnpm run contracts:compile`"
+  - "`corepack pnpm run types:sync:check`"
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run packets:verify`"
+repo_rules:
+  - implement only SUP-003I while its packet is active
+  - do not touch engine runtime behavior except unavoidable type fixture fallout in listed type tests
+  - do not touch cards packages
+  - do not use `audit`, prompts, decision IDs, or public view fields as setup continuation storage
+  - fail closed if setup continuation cannot be represented without leaking hidden setup internals into public views
+ambiguity_policy: fail_and_escalate

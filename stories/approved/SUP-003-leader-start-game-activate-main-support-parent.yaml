@@ -17,7 +17,7 @@ summary: >
   gate draw.
 story_boundary: >
   Parent planning story only. Do not implement this parent directly. Implement
-  SUP-003A through SUP-003H one at a time after distinct parent and child
+  SUP-003A through SUP-003I one at a time after distinct parent and child
   story-review evidence exists. Contract authorability must land before engine
   runtime behavior that consumes it, and engine runtime behavior must land
   before cards-layer parser/generated-support promotion cites it.
@@ -86,7 +86,7 @@ child_stories:
   - id: SUP-003D
     title: Start-of-game typed Stage play runtime
     concern: Execute setup-time start-of-game effects that select up to 1 typed Stage card from self deck and play it before opening draw and Life setup.
-    depends_on: [SUP-002D]
+    depends_on: [SUP-002D, SUP-003I]
   - id: SUP-003E
     title: External deck-rule parser evidence
     concern: Parse parameterized leader deck-construction restriction text as certified non-runtime evidence with no engine primitive or EffectBlock.
@@ -103,6 +103,10 @@ child_stories:
     title: Leader support composition card proof
     concern: Prove certified non-runtime deck-rule evidence, start-of-game setup support, and Activate Main support compose across representative leader text without exact full-card branches.
     depends_on: [SUP-003E, SUP-003F, SUP-003G]
+  - id: SUP-003I
+    title: Setup continuation state contract
+    concern: Add focused raw GameState setup continuation state so setup-time start-of-game decisions can use canonical PendingDecision/respondToDecision and resume deterministic setup finalization without out-of-band selected IDs.
+    depends_on: []
 scope:
   - keep the full support chain in one parent story so prerequisite contract and engine work is visible before cards-layer work starts
   - decompose representative leader text into reusable primitives rather than exact full-card text, exact full-effect sentence branches, card IDs, or a human-held adjacent-card list
@@ -130,7 +134,7 @@ non_scope:
   - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
 acceptance_criteria:
   - SUP-003 is not implemented directly
-  - SUP-003A through SUP-003H are independently reviewable child stories
+  - SUP-003A through SUP-003I are independently reviewable child stories
   - parent and every child story-review artifact exists with distinct assignment identity and distinct durable artifact identity before approval handoff, packet generation, activation, implementation handoff, or PR handoff
   - contract/schema children land before engine or cards children consume optional choose-one, optional field-trash, or multi-option pay-cost shapes
   - engine children prove reusable runtime capability before cards generated-support promotion cites those capabilities
@@ -143,15 +147,15 @@ acceptance_criteria:
   - lower-level parser, component, or generated-index tests are not sufficient when the production/default support-evaluator or support-probe path would still report missing parser-certification, schema, or runtime-capability blockers
   - existing generated-support behavior for SUP-001, SUP-002, CARD-014, CARD-021, CARD-022, and CARD-023 remains compatible
   - no implementation or test depends on real card IDs, a human-held adjacent-card list, exact full printed text, or one-off full-effect sentence branches
-  - parent PR cleanup metadata lists SUP-003A through SUP-003H and binds the non-packetized SUP-003 parent closeout after merge to main
+  - parent PR cleanup metadata lists SUP-003A through SUP-003I and binds the non-packetized SUP-003 parent closeout after merge to main
 card_source_integrity:
   - parent does not implement directly and does not name or target any real card
   - children must not edit source fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence unless a later approved CARD story explicitly owns real-card promotion
   - representative lines are parser/runtime examples only; matching real cards may be discovered by generated-support probing only through reviewed generic support gates
 engine_capability_preflight:
-  - parent does not implement directly and delegates capability proof to SUP-003A through SUP-003H
+  - parent does not implement directly and delegates capability proof to SUP-003A through SUP-003I
   - supported prerequisite groups include CARD-009A draw execution, ENG-055B/CARD-014A generic sequence frames, SUP-002A/SUP-002B optional hand-trash cost behavior, SUP-002D/SUP-002G top-N search and selected-card movement/remainder support, and ENG-005A/ENG-005B Stage play plus Stage replacement baseline behavior where applicable
-  - missing prerequisite groups are represented by SUP-003A through SUP-003D until each child lands: optional choose-one cost contract authorability, optional field-trash cost authorability, Activate Main legal action/runtime, optional choose-one pay-cost runtime, typed field-trash payment runtime, start-of-game setup timing, and typed Stage play-from-deck setup runtime
+  - missing prerequisite groups are represented by SUP-003A through SUP-003D and SUP-003I until each child lands: optional choose-one cost contract authorability, optional field-trash cost authorability, Activate Main legal action/runtime, optional choose-one pay-cost runtime, typed field-trash payment runtime, setup continuation state, start-of-game setup timing, and typed Stage play-from-deck setup runtime
   - cards-layer children must cite engine capabilities by reusable capability IDs and must fail closed when a required runtime capability is absent
 required_tests:
   - story-review for SUP-003 parent before approval handoff
@@ -163,9 +167,10 @@ required_tests:
   - story-review for SUP-003F before approval handoff
   - story-review for SUP-003G before approval handoff
   - story-review for SUP-003H before approval handoff
+  - story-review for SUP-003I before approval handoff
   - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
-  - story-specific tests from SUP-003A through SUP-003H
-  - per-child reviewed commit evidence, AI review record, revision response, and verification evidence for SUP-003A through SUP-003H before parent PR handoff
+  - story-specific tests from SUP-003A through SUP-003I
+  - per-child reviewed commit evidence, AI review record, revision response, and verification evidence for SUP-003A through SUP-003I before parent PR handoff
   - for each cards-layer child with parser certification gates, run a support-evaluator or support-probe regression proving the supported representative shape reaches the same generated-support/playability decision through the production/default path without missing parser-certification blockers
   - role packet extraction output before each implementation handoff and before each code-review handoff
   - final parent PR full-story integration review covering all child commits, packet history, cleanup metadata, CI, verification, and unresolved comments before human-review handoff
@@ -178,12 +183,13 @@ repo_rules:
   - generate and activate one SUP-003 child packet at a time
   - implement SUP-003A before SUP-003C, SUP-003F, or SUP-003H
   - implement SUP-003B and SUP-003C before SUP-003F
+  - implement SUP-003I before SUP-003D
   - implement SUP-003D before SUP-003G
   - implement SUP-003E, SUP-003F, and SUP-003G before SUP-003H
   - do not complete child packets until the parent branch lands on main
-  - keep SUP-003A through SUP-003H work on one parent integration branch with reviewed child commits
+  - keep SUP-003A through SUP-003I work on one parent integration branch with reviewed child commits
   - do not open child PRs to main; use one final parent PR to main
-  - parent PR cleanup metadata must list SUP-003A through SUP-003H and bind the non-packetized SUP-003 parent closeout
+  - parent PR cleanup metadata must list SUP-003A through SUP-003I and bind the non-packetized SUP-003 parent closeout
   - run role packet extraction before implementation and code-review handoffs
   - fail closed on any parser, schema, runtime capability, source integrity, metadata, review, test, or wording ambiguity that could accidentally mark unsupported text playable
 ambiguity_policy: fail_and_escalate
