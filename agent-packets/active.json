@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-003C.md",
-      "storyId": "SUP-003C",
-      "storyPath": "stories/approved/SUP-003C-optional-choose-one-trash-cost-runtime.yaml",
-      "storySha256": "26f9d92221b316398efad630b315d161f385261a3ea06cc595425843769bb71f"
+      "packetPath": "agent-packets/SUP-003D.md",
+      "storyId": "SUP-003D",
+      "storyPath": "stories/approved/SUP-003D-start-of-game-typed-stage-play-runtime.yaml",
+      "storySha256": "9868671ed21fe043693a863b2c54317c9eb1b6450d4fe9273abdc489db72d42e"
     }
   ],
   "version": 1
