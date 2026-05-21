@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate the contract, engine, and cards-layer work needed for three
   reusable support families: optional hand-trash costs that gate targeted K.O.,

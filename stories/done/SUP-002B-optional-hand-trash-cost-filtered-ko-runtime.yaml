@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Execute reusable sequence effects where an optional hand-trash cost gates a
   later filtered target selection and saved-target K.O. continuation.

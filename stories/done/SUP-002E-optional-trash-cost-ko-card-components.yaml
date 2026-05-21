@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Parse and promote reusable cards-layer support for optional hand-trash costs
   that gate opponent Character K.O. by base-cost threshold.

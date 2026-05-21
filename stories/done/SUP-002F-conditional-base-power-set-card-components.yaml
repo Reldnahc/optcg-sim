@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Parse and promote reusable cards-layer support for conditional continuous
   base-power setters targeting all of your Characters with a named type.

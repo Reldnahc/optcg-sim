@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Expand reusable search runtime from the current top-one character-only shape
   to top-N deck search with composed filters or unfiltered any-card selection,

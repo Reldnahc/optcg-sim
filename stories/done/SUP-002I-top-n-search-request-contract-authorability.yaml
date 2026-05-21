@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Make the scoped top-N deck `search` request shape fixture-authorable before
   engine search runtime or cards generated-support work consumes it.
