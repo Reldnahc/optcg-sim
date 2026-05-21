@@ -47,6 +47,28 @@ const setupRuntimeError = (
   },
 ];
 
+const isCardRefLike = (value: unknown): value is CardRef => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate["instanceId"] !== "string" ||
+    typeof candidate["cardId"] !== "string" ||
+    typeof candidate["playerId"] !== "string"
+  ) {
+    return false;
+  }
+  if (
+    "zone" in candidate &&
+    candidate["zone"] !== undefined &&
+    (typeof candidate["zone"] !== "object" || candidate["zone"] === null)
+  ) {
+    return false;
+  }
+  return true;
+};
+
 const stageSearchPlan = (effect: Effect): SearchRequest | null => {
   if (effect.type !== "sequence") {
     return null;
@@ -456,6 +478,14 @@ export const applyStartOfGameSetupDecisionResponse = (
     };
   }
   const selected = responseCards[0];
+  if (selected !== undefined && !isCardRefLike(selected)) {
+    return {
+      state: setupState,
+      events: [],
+      errors: invalidDecision("start-of-game selected card is invalid"),
+      shouldFinalizeSetup: false,
+    };
+  }
   const candidate =
     selected === undefined
       ? undefined
@@ -563,7 +593,7 @@ export const applyStartOfGameSetupDecisionResponse = (
   if (nextDecisionResult.pendingDecision !== undefined) {
     nextState.pendingDecision = nextDecisionResult.pendingDecision;
     appendEvent(
-      nextState,
+      setupState,
       events,
       "decisionCreated",
       {

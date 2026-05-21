@@ -581,6 +581,12 @@ test("multi-step setup decisions keep contiguous seq and unique decision ids", (
     first.state.eventJournal.every((event, index) => event.seq === index + 1),
     true,
   );
+  assert.equal(
+    first.events.every(
+      (event) => Number(event.createdAtStateSeq) === Number(setup.seq) + 1,
+    ),
+    true,
+  );
 });
 
 test("setup selection rejects malformed card ref payloads that only spoof instanceId", () => {
@@ -602,4 +608,35 @@ test("setup selection rejects malformed card ref payloads that only spoof instan
   assert.equal(result.errors?.[0]?.type, "invalidDecisionResponse");
   assert.deepEqual(result.events, []);
   assert.equal(result.stateHash, before);
+});
+
+test("setup selection rejects malformed cards payload entries like null and zone null", () => {
+  const setup = createInitialState(createInput());
+  const decision = must(setup.pendingDecision, "setup decision");
+  if (decision.type !== "selectCards") {
+    throw new TypeError("Expected setup selectCards decision.");
+  }
+  const invalidResponses = [
+    { type: "cards" as const, cards: [null] as unknown[] },
+    {
+      type: "cards" as const,
+      cards: [
+        {
+          ...must(decision.candidates[0], "candidate").card,
+          zone: null,
+        },
+      ],
+    },
+  ];
+  for (const response of invalidResponses) {
+    const before = hashCanonicalStateValue(setup);
+    const result = applyAction(setup, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: response as unknown as { type: "cards"; cards: CardRef[] },
+    });
+    assert.equal(result.errors?.[0]?.type, "invalidDecisionResponse");
+    assert.deepEqual(result.events, []);
+    assert.equal(result.stateHash, before);
+  }
 });
