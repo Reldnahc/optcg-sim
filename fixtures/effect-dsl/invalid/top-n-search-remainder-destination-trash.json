@@ -1,0 +1,35 @@
+{
+  "cardId": "SUP-002I-BAD-REMAINDER-DESTINATION",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-002I-BAD-REMAINDER-DESTINATION:on-play-search-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "search",
+        "request": {
+          "zone": "deck",
+          "player": "self",
+          "lookCount": 5,
+          "filter": {},
+          "min": 0,
+          "max": 1,
+          "destination": "hand",
+          "revealTo": "chooserOnly",
+          "remainingCards": {
+            "destination": "trash",
+            "position": "bottom",
+            "order": "ownerChoice"
+          }
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-002i-bad-remainder-destination",
+    "rulesVersion": "v6",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

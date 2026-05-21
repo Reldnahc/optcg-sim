@@ -1,0 +1,35 @@
+{
+  "cardId": "SUP-002I-BAD-PLAYER",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-002I-BAD-PLAYER:on-play-search-1",
+      "category": "auto",
+      "trigger": { "type": "onPlay" },
+      "effect": {
+        "type": "search",
+        "request": {
+          "zone": "deck",
+          "player": "opponent",
+          "lookCount": 5,
+          "filter": {},
+          "min": 0,
+          "max": 1,
+          "destination": "hand",
+          "revealTo": "chooserOnly",
+          "remainingCards": {
+            "destination": "deck",
+            "position": "bottom",
+            "order": "ownerChoice"
+          }
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-002i-bad-player",
+    "rulesVersion": "v6",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

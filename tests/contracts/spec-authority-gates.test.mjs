@@ -207,6 +207,7 @@ test("Effect DSL policy classifies schema-supported and planned primitives", asy
     "effect: draw",
     "effect: ko",
     "effect: modifyPower",
+    "effect: search",
     "effect: sequence",
     "effect: custom",
   ]) {
@@ -215,7 +216,6 @@ test("Effect DSL policy classifies schema-supported and planned primitives", asy
 
   for (const plannedPrimitive of [
     "effect: drawUpTo",
-    "effect: search",
     "effect: revealTop",
     "effect: playSelected",
     "effect: replacement",
@@ -272,12 +272,23 @@ test("Effect DSL spec pins authorability support ladder and planned-layer guardr
     "effect: drawUpTo",
     "effect: playSelected",
     "effect: cannotAttack",
+    "effect: search",
     "duration: untilEndOfTurn",
     "condition: fieldCount",
     "cost: returnDon",
   ]) {
     assertContainsWords(schemaSupportedSubset, fixtureAuthorablePrimitive);
   }
+
+  assertContainsWords(
+    schemaSupportedSubset,
+    "effect: search for scoped top-N deck requests only",
+  );
+  assertContainsWords(schemaSupportedSubset, "reveal to `bothPlayers`");
+  assertContainsWords(
+    schemaSupportedSubset,
+    "to `chooserOnly` with an empty filter object",
+  );
 
   for (const plannedPrimitive of ["effect: choice", "effect: conditional"]) {
     assertContainsWords(schemaPolicy, plannedPrimitive);
@@ -286,9 +297,14 @@ test("Effect DSL spec pins authorability support ladder and planned-layer guardr
   for (const notYetFixtureAuthorable of [
     "effect: choice",
     "effect: conditional",
+    "- effect: search\n",
   ]) {
     assert.doesNotMatch(
-      schemaSupportedSubset,
+      notYetFixtureAuthorable === "- effect: search\n"
+        ? schemaPolicy.slice(
+            schemaPolicy.indexOf("Planned/not fixture-authorable"),
+          )
+        : schemaSupportedSubset,
       new RegExp(notYetFixtureAuthorable),
     );
   }
