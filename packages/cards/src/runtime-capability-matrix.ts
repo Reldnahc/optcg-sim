@@ -6,7 +6,7 @@ import {
 } from "./conditional-continuous-composition-evidence.js";
 import * as optionalKo from "./optional-trash-cost-ko-evidence.js";
 import { returnDonCostWrapperParserRuleId } from "./return-don-cost-wrapper-components.js";
-
+import { topNSearchRuntimeCapabilityRecords } from "./top-n-search-evidence.js";
 const onPlayReturnDonDrawNParserRuleId = "exact:on-play:return-don-draw-n:self";
 
 export type RuntimeCapabilityKind =
@@ -398,6 +398,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "card014a:sequence:trashFromHand-draw",
       ],
     },
+    ...topNSearchRuntimeCapabilityRecords,
     {
       description:
         "Printed Banish keyword behavior is executable by current runtime.",
@@ -886,9 +887,7 @@ export function hasRuntimeCapability(
   capabilityId: string,
   matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
 ): boolean {
-  return matrix.capabilities.some(
-    (capability) => capability.id === capabilityId && capability.supported,
-  );
+  return listSupportedRuntimeCapabilityIds(matrix).includes(capabilityId);
 }
 
 export function listRuntimeCapabilityParserRuleInventory(
@@ -971,6 +970,7 @@ function classifyParserRuleKind(parserRuleId: string): string {
   ) {
     return "sequence";
   }
+  if (parserRuleId.includes(":top-n-search:")) return "deck-search";
   if (parserRuleId.startsWith("exact:condition:")) {
     return "condition";
   }

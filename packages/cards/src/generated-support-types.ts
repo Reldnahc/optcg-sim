@@ -3,6 +3,7 @@ import { donMinusDrawComponentEvidenceInventoryEntry } from "./don-minus-draw-ev
 import { fieldCountDonConditionComponentEvidenceInventoryEntry } from "./field-count-don-condition-evidence.js";
 import { optionalTrashCostKoComponentEvidenceInventoryEntry } from "./optional-trash-cost-ko-evidence.js";
 import { sup001fConditionalModifyPowerComponentEvidenceInventoryEntry } from "./sup-001f-conditional-modify-power-evidence.js";
+import { topNSearchComponentEvidenceInventoryEntries } from "./top-n-search-evidence.js";
 import { listConditionalContinuousCompositionEvidenceFragments } from "./conditional-continuous-composition-evidence.js";
 import type {
   GeneratedSupportDiagnosticDecomposition,
@@ -525,6 +526,7 @@ export const generatedSupportComponentEvidenceInventory = [
     shapeId: "on-play-select-opponent-character-then-ko",
   },
   optionalTrashCostKoComponentEvidenceInventoryEntry,
+  ...topNSearchComponentEvidenceInventoryEntries,
   {
     components: [
       "wrapper",

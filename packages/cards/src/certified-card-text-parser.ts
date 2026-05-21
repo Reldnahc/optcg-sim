@@ -56,6 +56,7 @@ import {
   parseStandaloneEngineKeywordClause,
   parseStandaloneEngineKeywordResidueClause,
 } from "./standalone-keyword-parser.js";
+import * as topN from "./top-n-search-components.js";
 
 export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self";
 export const whenAttackingDrawNParserRuleId =
@@ -358,6 +359,7 @@ function parseNonConditionalCardLineEffectClause(
   return (
     parseReusableCard016AClause(cardId, sourceText) ??
     parseOnPlayOptionalTrashCostKoClause(cardId, sourceText) ??
+    topN.parseTopNSearchClause(cardId, sourceText) ??
     parseOnPlayReturnDonDrawClause(cardId, sourceText) ??
     parseTriggerDrawClause(cardId, sourceText) ??
     parseTriggerDrawUpToClause(cardId, sourceText) ??
