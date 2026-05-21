@@ -13,6 +13,7 @@ import {
 import { isCompleteGeneratedSupportParseResult } from "./generated-support-types.js";
 import {
   optionalTrashCostKoComponentEvidenceId,
+  optionalTrashCostKoParserCertificationIds,
   optionalTrashCostKoParserRuleId,
 } from "./optional-trash-cost-ko-evidence.js";
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
@@ -41,7 +42,7 @@ const validateEffectDefinition = (
         valid: false,
       };
 
-const cardId = "CARD-008B-001" as CardId;
+const cardId = "SYNTHETIC-SUP-002E-PARSE" as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
 const baseCard = {
   behaviorHash: "sha256:behavior",
@@ -90,7 +91,7 @@ describe("optional trash cost K.O. generated support", () => {
       expect(effectBlock).toMatchObject({
         category: "auto",
         id: toEffectId(
-          `CARD-008B-001:auto-on-play-optional-trash-${String(trashCount)}-from-hand-ko-base-cost-${String(baseCostMax)}-or-less`,
+          `SYNTHETIC-SUP-002E-PARSE:auto-on-play-optional-trash-${String(trashCount)}-from-hand-ko-base-cost-${String(baseCostMax)}-or-less`,
         ),
         sourcePresencePolicy: "mustRemainInSameZone",
         trigger: { type: "onPlay" },
@@ -186,6 +187,9 @@ describe("optional trash cost K.O. generated support", () => {
             "[On Play] You may trash 2 cards from your hand: K.O. up to 1 of your opponent's Characters with a base cost of 5 or less.",
         },
       ],
+      parserCertificationEvidence: {
+        currentCertificationIds: optionalTrashCostKoParserCertificationIds,
+      },
       validateEffectDefinition,
     });
 
@@ -243,6 +247,9 @@ describe("optional trash cost K.O. generated support", () => {
               "payCost:trashFromHand:self:count-exact:optional",
           ),
       },
+      parserCertificationEvidence: {
+        currentCertificationIds: optionalTrashCostKoParserCertificationIds,
+      },
       validateEffectDefinition,
     });
 
@@ -255,6 +262,105 @@ describe("optional trash cost K.O. generated support", () => {
         },
       ],
       missingCapabilityIds: ["payCost:trashFromHand:self:count-exact:optional"],
+      parseStatus: "complete",
+      parserRuleIds: [optionalTrashCostKoParserRuleId],
+      status: "unsupported",
+    });
+    expect(index.effectDefinitions).toEqual({});
+  });
+
+  it("keeps optional hand-trash filtered K.O. unsupported when parser certification evidence is omitted", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          cardId: "CARD-SUP-002E-OMITTED-CERTIFICATION" as CardId,
+          sourceText:
+            "[On Play] You may trash 1 card from your hand: K.O. up to 1 of your opponent's Characters with a base cost of 4 or less.",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    const blocker = index.entries[0]?.blockers.find(
+      (item) => item.component === optionalTrashCostKoComponentEvidenceId,
+    );
+    expect(blocker).toMatchObject({
+      code: "unsupported-primitive",
+      diagnosticLayer: "review",
+    });
+    expect(blocker?.message).toContain("Missing parser certification");
+    expect(index.entries[0]).toMatchObject({
+      parseStatus: "complete",
+      parserRuleIds: [optionalTrashCostKoParserRuleId],
+      status: "unsupported",
+    });
+    expect(index.effectDefinitions).toEqual({});
+  });
+
+  it("keeps optional hand-trash filtered K.O. unsupported when parser certification evidence is absent", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          cardId: "CARD-SUP-002E-MISSING-CERTIFICATION" as CardId,
+          sourceText:
+            "[On Play] You may trash 1 card from your hand: K.O. up to 1 of your opponent's Characters with a base cost of 4 or less.",
+        },
+      ],
+      parserCertificationEvidence: { currentCertificationIds: [] },
+      validateEffectDefinition,
+    });
+
+    const blocker = index.entries[0]?.blockers.find(
+      (item) => item.component === optionalTrashCostKoComponentEvidenceId,
+    );
+    expect(blocker).toMatchObject({
+      code: "unsupported-primitive",
+      diagnosticLayer: "review",
+    });
+    expect(blocker?.message).toContain("Missing parser certification");
+    expect(index.entries[0]).toMatchObject({
+      parseStatus: "complete",
+      parserRuleIds: [optionalTrashCostKoParserRuleId],
+      status: "unsupported",
+    });
+    expect(index.effectDefinitions).toEqual({});
+  });
+
+  it("keeps optional hand-trash filtered K.O. unsupported when parser certification evidence is stale", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseCard,
+          cardId: "CARD-SUP-002E-STALE-CERTIFICATION" as CardId,
+          sourceText:
+            "[On Play] You may trash 1 card from your hand: K.O. up to 1 of your opponent's Characters with a base cost of 4 or less.",
+        },
+      ],
+      parserCertificationEvidence: {
+        currentCertificationIds: [
+          "optional-cost-wrapper:on-play-trash-from-hand",
+          "target-filter:opponent-character-base-cost-max",
+          "saved-target-ko-consumer:opponent-character",
+          "composition:on-play-optional-trash-ko-sequence",
+        ],
+        staleCertificationIds: [
+          "composition:on-play-optional-trash-ko-sequence",
+        ],
+      },
+      validateEffectDefinition,
+    });
+
+    const blocker = index.entries[0]?.blockers.find(
+      (item) => item.component === optionalTrashCostKoComponentEvidenceId,
+    );
+    expect(blocker).toMatchObject({
+      code: "unsupported-primitive",
+      diagnosticLayer: "review",
+    });
+    expect(blocker?.message).toContain("Stale parser certification");
+    expect(index.entries[0]).toMatchObject({
       parseStatus: "complete",
       parserRuleIds: [optionalTrashCostKoParserRuleId],
       status: "unsupported",

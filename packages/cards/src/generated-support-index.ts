@@ -15,11 +15,13 @@ import {
 } from "./generic-card-text-diagnostic-scanner.js";
 import {
   type GeneratedSupportDiagnosticDecomposition,
+  evaluateParserCertificationBlockers,
   findGeneratedSupportComponentEvidenceByShapeId,
   isCompleteGeneratedSupportParseResult,
   listRequiredRuntimeCapabilityIdsForComponentEvidenceId,
   listComponentEvidenceIdsForParserRuleIds,
   type GeneratedSupportBlocker,
+  type GeneratedSupportParserCertificationEvidence,
   type GeneratedSupportParserResultStatus,
 } from "./generated-support-types.js";
 import {
@@ -46,6 +48,7 @@ export type EffectDefinitionValidationResult =
 
 export interface GeneratedSupportIndexInput {
   cards: readonly GeneratedSupportCardTextInput[];
+  parserCertificationEvidence?: GeneratedSupportParserCertificationEvidence;
   runtimeCapabilityMatrix?: RuntimeCapabilityMatrix;
   validateEffectDefinition: (
     definition: EffectDefinition,
@@ -84,7 +87,7 @@ export interface RuntimeCapabilityEvidence {
   parserRuleId?: string;
 }
 
-export interface RuntimeCapabilityCoverageResult {
+interface RuntimeCapabilityCoverageResult {
   blockers: readonly GeneratedSupportBlocker[];
   evidence: readonly RuntimeCapabilityEvidence[];
   missing: readonly RuntimeCapabilityEvidence[];
@@ -369,6 +372,22 @@ function buildGeneratedSupportIndexEntry(
         generatedSupportRuntimeCapabilityMatrix,
       componentEvidenceIds: parseResult.componentEvidenceIds,
     });
+  const parserCertificationBlockers = evaluateParserCertificationBlockers(
+    parseResult.componentEvidenceIds,
+    input.parserCertificationEvidence,
+  );
+  if (parserCertificationBlockers.length > 0) {
+    return unsupportedEntry({
+      blockers: parserCertificationBlockers.map((blocker) => ({
+        ...blocker,
+        schemaValidated: true,
+      })),
+      card,
+      componentEvidenceIds: parseResult.componentEvidenceIds,
+      parseStatus: parseResult.status,
+      parserRuleIds: parseResult.parserRuleIds,
+    });
+  }
   const existingCapabilityIds = new Set(
     capabilityCoverage.evidence.map((item) => item.capabilityId),
   );

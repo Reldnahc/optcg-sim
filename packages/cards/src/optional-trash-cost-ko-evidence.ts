@@ -18,6 +18,13 @@ export const optionalTrashCostKoRuntimeCapabilityIds = [
   "trigger:onPlay",
 ] as const;
 
+export const optionalTrashCostKoParserCertificationIds = [
+  "optional-cost-wrapper:on-play-trash-from-hand",
+  "target-filter:opponent-character-base-cost-max",
+  "saved-target-ko-consumer:opponent-character",
+  "composition:on-play-optional-trash-ko-sequence",
+] as const;
+
 export const optionalTrashCostKoComponentEvidenceInventoryEntry = {
   components: [
     "wrapper",
@@ -40,6 +47,7 @@ export const optionalTrashCostKoComponentEvidenceInventoryEntry = {
     sourceIntegrity: ["source-text-hash-current", "behavior-hash-current"],
   },
   parserRuleId: optionalTrashCostKoParserRuleId,
+  parserCertificationIds: optionalTrashCostKoParserCertificationIds,
   runtimeCapabilityIds: optionalTrashCostKoRuntimeCapabilityIds,
   shapeId: optionalTrashCostKoComponentEvidenceId,
 } as const satisfies GeneratedSupportComponentEvidenceInventoryEntry;

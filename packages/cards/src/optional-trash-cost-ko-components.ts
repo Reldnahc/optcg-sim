@@ -1,4 +1,9 @@
-import type { CardId, SelectedTargetsRequest, Target } from "@optcg/types";
+import type {
+  CardId,
+  Effect,
+  SelectedTargetsRequest,
+  Target,
+} from "@optcg/types";
 
 import {
   buildSequenceEffect,
@@ -25,6 +30,25 @@ export type OptionalTrashFromHandCostKoBodyParse = {
   readonly target: "opponentCharactersChoose";
 };
 
+export type OptionalTrashKoVerbPrefixParse = {
+  readonly bodyText: string;
+  readonly prefix: "K.O. ";
+};
+
+export type OptionalTrashKoTargetPrefixParse = {
+  readonly cardinality: { readonly max: 1; readonly min: 0 };
+  readonly predicateText: string;
+  readonly target: "opponentCharactersChoose";
+};
+
+export type OptionalTrashKoBaseCostMaximumPredicateParse = {
+  readonly baseCostMax: number;
+};
+
+export type OptionalTrashCostKoSavedTargetConsumerParse = {
+  readonly savedReferenceConsumer: "koSelectedCharacter";
+};
+
 export function parseOptionalTrashFromHandCostWrapper(
   sourceText: string,
 ): OptionalTrashFromHandCostWrapperParse | undefined {
@@ -43,25 +67,109 @@ export function parseOptionalTrashFromHandCostWrapper(
 export function parseOptionalTrashFromHandCostKoBody(
   sourceText: string,
 ): OptionalTrashFromHandCostKoBodyParse | undefined {
-  const match =
-    /^K\.O\. (up to \d+) of (your opponent's Characters) with a base cost of (\d+) or less\.$/.exec(
-      sourceText,
-    );
+  const verb = parseOptionalTrashKoVerbPrefix(sourceText);
+  if (verb === undefined) return undefined;
+
+  const target = parseOptionalTrashKoTargetPrefix(verb.bodyText);
+  if (target === undefined) return undefined;
+
+  const predicate = parseOptionalTrashKoBaseCostMaximumPredicate(
+    target.predicateText,
+  );
+  if (predicate === undefined) return undefined;
+
+  const consumer = buildOptionalTrashCostKoSavedTargetConsumer();
+
+  return {
+    baseCostMax: predicate.baseCostMax,
+    cardinality: target.cardinality,
+    savedReferenceConsumer: consumer.savedReferenceConsumer,
+    target: target.target,
+  };
+}
+
+export function parseOptionalTrashKoVerbPrefix(
+  sourceText: string,
+): OptionalTrashKoVerbPrefixParse | undefined {
+  const prefix = "K.O. ";
+  return sourceText.startsWith(prefix) && sourceText.length > prefix.length
+    ? { bodyText: sourceText.slice(prefix.length), prefix }
+    : undefined;
+}
+
+export function parseOptionalTrashKoTargetPrefix(
+  sourceText: string,
+): OptionalTrashKoTargetPrefixParse | undefined {
+  const match = /^(up to \d+) of your opponent's Characters (.+)$/.exec(
+    sourceText,
+  );
   if (match === null) return undefined;
 
   const cardinality = parseUpToCardinality(match[1] ?? "");
-  const target = match[2] === "your opponent's Characters";
-  const baseCostMax = parseExactPositiveSafeInteger(match[3] ?? "");
-  if (cardinality?.max !== 1 || !target || baseCostMax === undefined) {
-    return undefined;
-  }
+  const predicateText = match[2] ?? "";
+  return cardinality?.max === 1 && predicateText.length > 0
+    ? {
+        cardinality: { max: 1, min: 0 },
+        predicateText,
+        target: "opponentCharactersChoose",
+      }
+    : undefined;
+}
 
-  return {
-    baseCostMax,
-    cardinality: { max: 1, min: 0 },
-    savedReferenceConsumer: "koSelectedCharacter",
-    target: "opponentCharactersChoose",
-  };
+export function parseOptionalTrashKoBaseCostMaximumPredicate(
+  sourceText: string,
+): OptionalTrashKoBaseCostMaximumPredicateParse | undefined {
+  const match = /^with a base cost of (\d+) or less\.$/.exec(sourceText);
+  if (match === null) return undefined;
+
+  const baseCostMax = parseExactPositiveSafeInteger(match[1] ?? "");
+  return baseCostMax === undefined ? undefined : { baseCostMax };
+}
+
+export function buildOptionalTrashCostKoSavedTargetConsumer(): OptionalTrashCostKoSavedTargetConsumerParse {
+  return { savedReferenceConsumer: "koSelectedCharacter" };
+}
+
+export function buildOptionalTrashCostKoSequenceEffect({
+  baseCostMax,
+  trashCount,
+}: {
+  baseCostMax: number;
+  trashCount: number;
+}): Extract<Effect, { type: "sequence" }> {
+  return buildSequenceEffect([
+    {
+      connector: "always",
+      effect: {
+        cost: {
+          chooser: "self",
+          count: trashCount,
+          optional: true,
+          type: "trashFromHand",
+        },
+        type: "payCost",
+      },
+      id: "optionalTrashFromHandCost",
+      saveResultAs: "paidOptionalTrashFromHandCost",
+    },
+    {
+      connector: "ifYouDo",
+      effect: {
+        request: opponentCharacterBaseCostSelectedTargetsRequest(baseCostMax),
+        type: "selectTargets",
+      },
+      id: "selectOpponentCharacterByBaseCost",
+      saveResultAs: "selectedTarget",
+    },
+    {
+      connector: "ifPreviousSucceeded",
+      effect: {
+        target: savedOpponentCharacterTargetByBaseCost(),
+        type: "ko",
+      },
+      id: "koSelectedTarget",
+    },
+  ]);
 }
 
 export function parseOnPlayOptionalTrashCostKoClause(
@@ -110,40 +218,10 @@ function createOptionalTrashCostKoClause({
   return {
     effectBlock: {
       category: "auto",
-      effect: buildSequenceEffect([
-        {
-          connector: "always",
-          effect: {
-            cost: {
-              chooser: "self",
-              count: trashCount,
-              optional: true,
-              type: "trashFromHand",
-            },
-            type: "payCost",
-          },
-          id: "optionalTrashFromHandCost",
-          saveResultAs: "paidOptionalTrashFromHandCost",
-        },
-        {
-          connector: "ifYouDo",
-          effect: {
-            request:
-              opponentCharacterBaseCostSelectedTargetsRequest(baseCostMax),
-            type: "selectTargets",
-          },
-          id: "selectOpponentCharacterByBaseCost",
-          saveResultAs: "selectedTarget",
-        },
-        {
-          connector: "ifPreviousSucceeded",
-          effect: {
-            target: savedOpponentCharacterTargetByBaseCost(),
-            type: "ko",
-          },
-          id: "koSelectedTarget",
-        },
-      ]),
+      effect: buildOptionalTrashCostKoSequenceEffect({
+        baseCostMax,
+        trashCount,
+      }),
       id: toEffectId(
         `${String(cardId)}:auto-on-play-optional-trash-${String(trashCount)}-from-hand-ko-base-cost-${String(baseCostMax)}-or-less`,
       ),

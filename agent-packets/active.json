@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-002D.md",
-      "storyId": "SUP-002D",
-      "storyPath": "stories/approved/SUP-002D-top-n-filtered-search-remainder-runtime.yaml",
-      "storySha256": "43d5c92e3cc9ae19af5d0b686bdec0dec78cef639af4435c907e731e002dc1a3"
+      "packetPath": "agent-packets/SUP-002E.md",
+      "storyId": "SUP-002E",
+      "storyPath": "stories/approved/SUP-002E-optional-trash-cost-ko-card-components.yaml",
+      "storySha256": "a7a776c07e86106b7f8b05e930343d959cc16dd408feb7cc4bd05c34a526743e"
     }
   ],
   "version": 1

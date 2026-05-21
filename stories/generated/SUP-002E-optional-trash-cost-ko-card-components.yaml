@@ -66,6 +66,7 @@ dependencies:
   - CARD-014G
   - CARD-020D
 scope:
+  - "define parser primitives separately before composing them: `[On Play]` trigger wrapper, optional hand-trash cost wrapper, K.O. verb, up-to-one opponent Character target, base-cost maximum predicate, saved-target K.O. consumer, and sequence connectors"
   - parse `[On Play]` timing with `You may trash N card(s) from your hand:` as an optional cost wrapper
   - compose the optional cost wrapper with target selection and K.O. body primitives
   - parse `K.O. up to 1 of your opponent's Characters with a base cost of N or less` into reusable target filter and K.O. sequence data
@@ -88,12 +89,19 @@ engine_capability_preflight:
   - missing runtime capability group is none for the scoped synthetic rows only after SUP-002B capability IDs exist in the runtime capability matrix; if optional hand-trash payment, filtered target selection, or saved-target K.O. evidence is absent, this story is blocked
 acceptance_criteria:
   - parser/generator support is generic over hand-trash count and base-cost threshold while target maximum remains one
+  - parser/generator implementation must expose or test the optional-cost wrapper, target filter/base-cost predicate, and saved-target K.O. consumer independently; a single full-sentence regex that only proves the representative line fails this story even if count and threshold vary
+  - generated-support tests that assert `status: supported` must validate the produced Effect DSL with the real schema validator
+  - generated-support promotion requires current parser-rule certification evidence for the optional-cost wrapper, target filter/base-cost predicate, saved-target K.O. consumer, and their composition; absent or stale certification evidence must fail closed even when DSL schema validation and runtime capability checks pass
   - generated support fails closed when the optional cost or target/K.O. body is only partially parsed
   - runtime capability evidence is required before final playable/generated-support decision can pass
   - no production code checks exact full effect text, card IDs, or the representative sample as a whole string
 required_tests:
   - cards parser test for optional hand-trash cost wrapper alone as a reusable component
+  - cards parser residue/composition test proving the opponent Character target and base-cost maximum predicate are not inseparable from the optional-cost wrapper
+  - cards parser residue/composition test proving the saved-target K.O. consumer and connector compose with a previously selected target without reparsing one full representative sentence
   - cards parser/generated-support test for optional hand-trash cost into filtered K.O.
+  - real-schema generated-support regression for the representative optional-trash K.O. line
+  - fail-closed generated-support test when parser-rule certification evidence is absent or stale for any required optional-cost, target-filter, saved-target K.O., or composition component
   - test varying numeric count and base-cost threshold
   - fail-closed tests for unsupported optional cost body fragments and unsupported target filters
   - runtime capability matrix test for SUP-002B capability evidence

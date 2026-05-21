@@ -203,6 +203,7 @@ export interface GeneratedSupportComponentEvidenceInventoryEntry {
   parserRuleId: string;
   shapeId: string;
   components: readonly GeneratedSupportComponentEvidenceCategory[];
+  parserCertificationIds?: readonly string[];
   runtimeCapabilityIds: readonly string[];
   missingRuntimeCapabilityIds?: readonly string[];
   gates: {
@@ -213,11 +214,58 @@ export interface GeneratedSupportComponentEvidenceInventoryEntry {
   };
 }
 
+export interface GeneratedSupportParserCertificationEvidence {
+  currentCertificationIds: readonly string[];
+  staleCertificationIds?: readonly string[];
+}
+
+export function evaluateParserCertificationBlockers(
+  componentEvidenceIds: readonly string[],
+  evidence: GeneratedSupportParserCertificationEvidence | undefined,
+): readonly GeneratedSupportBlocker[] {
+  const current = new Set(evidence?.currentCertificationIds ?? []);
+  const stale = new Set(evidence?.staleCertificationIds ?? []);
+  return componentEvidenceIds.flatMap((component) =>
+    (
+      findGeneratedSupportComponentEvidenceByShapeId(component)
+        ?.parserCertificationIds ?? []
+    ).flatMap((id) => {
+      const isStale = stale.has(id);
+      return isStale || !current.has(id)
+        ? [
+            {
+              code: "unsupported-primitive",
+              component,
+              diagnosticLayer: "review",
+              message: `${isStale ? "Stale" : "Missing"} parser certification ${id} for component ${component}.`,
+            },
+          ]
+        : [];
+    }),
+  );
+}
+
 const parserRuleBaseComponents = [
   "schema-gate",
   "runtime-capability-gate",
   "source-integrity-gate",
   "generated-support-metadata-gate",
+] as const satisfies readonly GeneratedSupportComponentEvidenceCategory[];
+
+const drawSelfComponents = [
+  "wrapper",
+  "body-action",
+  "source-presence-policy",
+  ...parserRuleBaseComponents,
+] as const satisfies readonly GeneratedSupportComponentEvidenceCategory[];
+
+const drawThenTrashFromHandComponents = [
+  "wrapper",
+  "sequence",
+  "body-action",
+  "chooser",
+  "source-presence-policy",
+  ...parserRuleBaseComponents,
 ] as const satisfies readonly GeneratedSupportComponentEvidenceCategory[];
 
 const parserRuleBaseGates = {
@@ -240,12 +288,7 @@ function buildParserRuleGates(
 
 export const generatedSupportComponentEvidenceInventory = [
   {
-    components: [
-      "wrapper",
-      "body-action",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
+    components: drawSelfComponents,
     gates: parserRuleBaseGates,
     parserRuleId: "exact:on-play:draw-n:self",
     runtimeCapabilityIds: [
@@ -257,12 +300,7 @@ export const generatedSupportComponentEvidenceInventory = [
     shapeId: "on-play-draw",
   },
   {
-    components: [
-      "wrapper",
-      "body-action",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
+    components: drawSelfComponents,
     gates: parserRuleBaseGates,
     parserRuleId: "exact:when-attacking:draw-n:self",
     runtimeCapabilityIds: [
@@ -274,14 +312,7 @@ export const generatedSupportComponentEvidenceInventory = [
     shapeId: "when-attacking-draw",
   },
   {
-    components: [
-      "wrapper",
-      "sequence",
-      "body-action",
-      "chooser",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
+    components: drawThenTrashFromHandComponents,
     gates: parserRuleBaseGates,
     parserRuleId: "exact:on-play:draw-n:trash-m:hand:self",
     runtimeCapabilityIds: [
@@ -295,14 +326,7 @@ export const generatedSupportComponentEvidenceInventory = [
     shapeId: "on-play-draw-then-trash-from-hand",
   },
   {
-    components: [
-      "wrapper",
-      "sequence",
-      "body-action",
-      "chooser",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
+    components: drawThenTrashFromHandComponents,
     gates: parserRuleBaseGates,
     parserRuleId: "exact:when-attacking:draw-n:trash-m:hand:self",
     runtimeCapabilityIds: [
@@ -316,14 +340,7 @@ export const generatedSupportComponentEvidenceInventory = [
     shapeId: "when-attacking-draw-then-trash-from-hand",
   },
   {
-    components: [
-      "wrapper",
-      "sequence",
-      "body-action",
-      "chooser",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
+    components: drawThenTrashFromHandComponents,
     gates: parserRuleBaseGates,
     parserRuleId: "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
     runtimeCapabilityIds: [
@@ -337,14 +354,7 @@ export const generatedSupportComponentEvidenceInventory = [
     shapeId: "when-attacking-once-per-turn-draw-then-trash-from-hand",
   },
   {
-    components: [
-      "wrapper",
-      "sequence",
-      "body-action",
-      "chooser",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
+    components: drawThenTrashFromHandComponents,
     gates: {
       ...parserRuleBaseGates,
       schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
@@ -382,12 +392,7 @@ export const generatedSupportComponentEvidenceInventory = [
     shapeId: "on-play-draw-up-to",
   },
   {
-    components: [
-      "wrapper",
-      "body-action",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
+    components: drawSelfComponents,
     gates: parserRuleBaseGates,
     parserRuleId: "exact:on-play:optional-effect:draw-1:self",
     runtimeCapabilityIds: [
