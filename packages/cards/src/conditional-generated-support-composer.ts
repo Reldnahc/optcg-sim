@@ -11,6 +11,7 @@ import { resolveConditionalContinuousCompositionParserRuleId } from "./condition
 import {
   parseIfWrapper,
   parseOncePerTurnWrapper,
+  parseExactPositiveSafeInteger,
   parseSupportedTriggerWrapper,
   toEffectId,
 } from "./composed-parser-builder.js";
@@ -24,6 +25,12 @@ export type ConditionalWrapperParse = {
 export type ConditionalContinuousCompositionParse = {
   readonly condition: NonNullable<EffectBlock["condition"]>;
   readonly effects: readonly [Effect, ...Effect[]];
+};
+
+type ConditionalContinuousIfParse = {
+  readonly bodyText: string;
+  readonly conditionText: string;
+  readonly includesYourTurnPrefix: boolean;
 };
 
 export function parseConditionalWrapper(
@@ -65,7 +72,7 @@ export function parseConditionalWrapper(
 export function parseConditionalContinuousComposition(
   sourceText: string,
 ): ConditionalContinuousCompositionParse | undefined {
-  const conditional = parseIfWrapper(sourceText);
+  const conditional = parseConditionalContinuousIf(sourceText);
   if (conditional === undefined) {
     return undefined;
   }
@@ -76,16 +83,26 @@ export function parseConditionalContinuousComposition(
   if (conditionDiagnostics.hasAmbiguousMixedConnectors) {
     return undefined;
   }
-  const condition = toDslCondition(
+  const parsedCondition = toDslCondition(
     parseConditionExpression(conditional.conditionText),
   );
-  if (condition === undefined) {
+  if (parsedCondition === undefined) {
     return undefined;
   }
+  const condition = conditional.includesYourTurnPrefix
+    ? withYourTurnCondition(parsedCondition)
+    : parsedCondition;
   const bodyParts = splitBodyConjunctionParts(
     conditional.bodyText.replace(/\.$/, ""),
   );
   if (bodyParts === undefined) {
+    return undefined;
+  }
+  if (
+    conditional.includesYourTurnPrefix &&
+    (bodyParts.length !== 1 ||
+      parseBasePowerSetterBody(bodyParts[0]) === undefined)
+  ) {
     return undefined;
   }
 
@@ -101,6 +118,17 @@ export function parseConditionalContinuousComposition(
 
     parsedEffects.push(parsedPart.effect);
     canInferSharedSelfCharacterTarget = parsedPart.explicitSelfCharacterTarget;
+  }
+  const hasBasePower = parsedEffects.some(
+    (effect) => effect.type === "setBasePower",
+  );
+  if (
+    hasBasePower &&
+    (!conditional.includesYourTurnPrefix ||
+      !isSelfTrashCountGteCondition(parsedCondition) ||
+      parsedEffects.length !== 1)
+  ) {
+    return undefined;
   }
 
   return {
@@ -216,10 +244,56 @@ function splitBodyConjunctionParts(
   return parts as [string, ...string[]];
 }
 
+function parseConditionalContinuousIf(
+  sourceText: string,
+): ConditionalContinuousIfParse | undefined {
+  const yourTurnPrefix = "[Your Turn] ";
+  if (sourceText.startsWith(yourTurnPrefix)) {
+    const conditional = parseIfWrapper(sourceText.slice(yourTurnPrefix.length));
+    return conditional === undefined
+      ? undefined
+      : {
+          bodyText: conditional.bodyText,
+          conditionText: conditional.conditionText,
+          includesYourTurnPrefix: true,
+        };
+  }
+
+  const conditional = parseIfWrapper(sourceText);
+  return conditional === undefined
+    ? undefined
+    : {
+        bodyText: conditional.bodyText,
+        conditionText: conditional.conditionText,
+        includesYourTurnPrefix: false,
+      };
+}
+
 function parseContinuousBodyPart(
   bodyText: string,
   options?: { inferSharedSelfCharacterTarget: boolean },
 ): { effect: Effect; explicitSelfCharacterTarget: boolean } | undefined {
+  const basePower = parseBasePowerSetterBody(bodyText);
+  if (basePower !== undefined) {
+    return {
+      effect: {
+        duration: { type: "permanent" },
+        target: {
+          filter: {
+            categories: ["character"],
+            typesAny: [basePower.typeName],
+          },
+          player: "self",
+          type: "all",
+          zone: "characterArea",
+        },
+        type: "setBasePower",
+        value: basePower.value,
+      },
+      explicitSelfCharacterTarget: false,
+    };
+  }
+
   const protection = parseProtectionBody(bodyText);
   if (protection.type === "supported") {
     return {
@@ -271,6 +345,44 @@ function parseContinuousBodyPart(
   }
 
   return undefined;
+}
+
+function parseBasePowerSetterBody(
+  bodyText: string,
+): { readonly typeName: string; readonly value: number } | undefined {
+  const match =
+    /^set the base power of all of your \{([^{}]+)\} type Characters to (\d+)$/i.exec(
+      bodyText.trim(),
+    );
+  if (match === null) {
+    return undefined;
+  }
+
+  const typeName = match[1]?.trim() ?? "";
+  const value = parseExactPositiveSafeInteger(match[2] ?? "");
+  return typeName.length === 0 || value === undefined
+    ? undefined
+    : { typeName, value };
+}
+
+function withYourTurnCondition(
+  condition: NonNullable<EffectBlock["condition"]>,
+): NonNullable<EffectBlock["condition"]> {
+  return {
+    conditions: [{ type: "yourTurn" }, condition],
+    type: "and",
+  };
+}
+
+function isSelfTrashCountGteCondition(
+  condition: NonNullable<EffectBlock["condition"]>,
+): boolean {
+  return (
+    condition.type === "trashCount" &&
+    condition.player === "self" &&
+    condition.op === "gte" &&
+    condition.filter === undefined
+  );
 }
 
 function toDslCondition(

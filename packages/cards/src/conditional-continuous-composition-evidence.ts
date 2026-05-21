@@ -1,6 +1,7 @@
 import type { Effect } from "@optcg/types";
 
 export type ConditionalContinuousCompositionVariant = {
+  readonly includesBasePower: boolean;
   readonly includesKeyword: boolean;
   readonly includesProtection: boolean;
   readonly isSequence: boolean;
@@ -18,6 +19,7 @@ export type ConditionalContinuousCompositionEvidenceFragment = {
 
 export const conditionalContinuousCompositionVariants = [
   {
+    includesBasePower: false,
     includesKeyword: true,
     includesProtection: false,
     isSequence: false,
@@ -27,6 +29,7 @@ export const conditionalContinuousCompositionVariants = [
       "conditional-continuous-condition-body-part-composition-direct-keyword",
   },
   {
+    includesBasePower: false,
     includesKeyword: false,
     includesProtection: true,
     isSequence: false,
@@ -36,6 +39,7 @@ export const conditionalContinuousCompositionVariants = [
       "conditional-continuous-condition-body-part-composition-direct-protection",
   },
   {
+    includesBasePower: false,
     includesKeyword: true,
     includesProtection: false,
     isSequence: true,
@@ -44,6 +48,7 @@ export const conditionalContinuousCompositionVariants = [
     shapeId: "conditional-continuous-condition-body-part-composition-sequence",
   },
   {
+    includesBasePower: false,
     includesKeyword: false,
     includesProtection: true,
     isSequence: true,
@@ -53,6 +58,7 @@ export const conditionalContinuousCompositionVariants = [
       "conditional-continuous-condition-body-part-composition-sequence-protection-only",
   },
   {
+    includesBasePower: false,
     includesKeyword: true,
     includesProtection: true,
     isSequence: true,
@@ -60,6 +66,15 @@ export const conditionalContinuousCompositionVariants = [
       "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:mixed",
     shapeId:
       "conditional-continuous-condition-body-part-composition-sequence-mixed",
+  },
+  {
+    includesBasePower: true,
+    includesKeyword: false,
+    includesProtection: false,
+    isSequence: false,
+    parserRuleId:
+      "exact:conditional-continuous:condition:base-power:self-character-type:direct",
+    shapeId: "conditional-continuous-condition-base-power-self-character-type",
   },
 ] as const satisfies readonly ConditionalContinuousCompositionVariant[];
 
@@ -78,6 +93,8 @@ export const conditionalContinuousCompositionSequenceProtectionOnlyParserRuleId 
   conditionalContinuousCompositionVariants[3].parserRuleId;
 export const conditionalContinuousCompositionSequenceMixedParserRuleId =
   conditionalContinuousCompositionVariants[4].parserRuleId;
+export const conditionalContinuousCompositionBasePowerParserRuleId =
+  conditionalContinuousCompositionVariants[5].parserRuleId;
 
 export const allConditionalContinuousCompositionParserRuleIds =
   conditionalContinuousCompositionVariants.map(
@@ -96,9 +113,13 @@ export function isConditionalContinuousCompositionParserRuleId(
 
 export type ConditionalContinuousRuntimeCapabilityId =
   | "category:permanent"
+  | "condition:trashCount:self:gte"
+  | "continuous:source-liveness:must-remain-in-same-zone"
   | "effect:giveKeyword:self:permanent:allowlisted"
   | "effect:giveProtection:fieldRemoval:thisCard:permanent"
   | "effect:sequence:ordered"
+  | "effect:setBasePower:self:typed-characters:permanent"
+  | "target:all:self:characterArea:character:typesAny"
   | "trigger:permanent";
 
 export function listRuntimeCapabilityIdsForConditionalContinuousVariant(
@@ -112,6 +133,14 @@ export function listRuntimeCapabilityIdsForConditionalContinuousVariant(
       : []),
     ...(variant.includesProtection
       ? (["effect:giveProtection:fieldRemoval:thisCard:permanent"] as const)
+      : []),
+    ...(variant.includesBasePower
+      ? ([
+          "condition:trashCount:self:gte",
+          "continuous:source-liveness:must-remain-in-same-zone",
+          "effect:setBasePower:self:typed-characters:permanent",
+          "target:all:self:characterArea:character:typesAny",
+        ] as const)
       : []),
     "trigger:permanent",
   ];
@@ -136,9 +165,11 @@ export function resolveConditionalContinuousCompositionParserRuleId(
   const hasProtection = effects.some(
     (effect) => effect.type === "giveProtection",
   );
+  const hasBasePower = effects.some((effect) => effect.type === "setBasePower");
   const isSequence = effects.length > 1;
   const match = conditionalContinuousCompositionVariants.find(
     (variant) =>
+      variant.includesBasePower === hasBasePower &&
       variant.includesKeyword === hasKeyword &&
       variant.includesProtection === hasProtection &&
       variant.isSequence === isSequence,
@@ -156,6 +187,9 @@ export function listConditionalContinuousCompositionEvidenceFragments(): readonl
       ...(variant.isSequence ? (["sequence"] as const) : []),
       ...(variant.includesKeyword ? (["keyword"] as const) : []),
       ...(variant.includesProtection ? (["restriction"] as const) : []),
+      ...(variant.includesBasePower
+        ? (["modifier", "duration", "target"] as const)
+        : []),
       "source-presence-policy",
     ],
     parserRuleId: variant.parserRuleId,
@@ -168,6 +202,14 @@ export function listConditionalContinuousCompositionEvidenceFragments(): readonl
         : []),
       ...(variant.includesProtection
         ? (["effect:giveProtection:fieldRemoval:thisCard:permanent"] as const)
+        : []),
+      ...(variant.includesBasePower
+        ? ([
+            "condition:trashCount:self:gte",
+            "continuous:source-liveness:must-remain-in-same-zone",
+            "effect:setBasePower:self:typed-characters:permanent",
+            "target:all:self:characterArea:character:typesAny",
+          ] as const)
         : []),
       "trigger:permanent",
       "sourcePresencePolicy:mustRemainInSameZone",

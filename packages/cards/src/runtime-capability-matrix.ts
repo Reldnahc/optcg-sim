@@ -13,6 +13,7 @@ export type RuntimeCapabilityKind =
   | "category"
   | "composition"
   | "condition"
+  | "continuous"
   | "cost"
   | "decision"
   | "effect"
@@ -51,31 +52,27 @@ export interface RuntimeCapabilityParserRuleInventoryEntry {
 }
 
 const conditionalContinuousRuntimeCapabilitySpecs = [
-  [
-    "category:permanent",
-    "category",
-    "ENG-059F",
-    "Permanent effect blocks are executable by current runtime.",
-  ],
-  [
-    "effect:giveKeyword:self:permanent:allowlisted",
-    "effect",
-    "ENG-059B",
-    "Allowlisted keywords can be granted to the source Character with permanent duration.",
-  ],
+  ["category:permanent", "category", "ENG-059F"],
+  ["effect:giveKeyword:self:permanent:allowlisted", "effect", "ENG-059B"],
   [
     "effect:giveProtection:fieldRemoval:thisCard:permanent",
     "effect",
     "ENG-059E",
-    "Opponent-controlled field-removal protection can be granted to the source Character with permanent duration.",
   ],
+  ["trigger:permanent", "trigger", "ENG-059F"],
+  ["condition:trashCount:self:gte", "condition", "SUP-002C"],
+  ["target:all:self:characterArea:character:typesAny", "target", "SUP-002C"],
+  ["effect:setBasePower:self:typed-characters:permanent", "effect", "SUP-002C"],
   [
-    "trigger:permanent",
-    "trigger",
-    "ENG-059F",
-    "Permanent trigger timing is executable by current runtime.",
+    "continuous:source-liveness:must-remain-in-same-zone",
+    "continuous",
+    "SUP-002C",
   ],
-] as const;
+] as const satisfies readonly (readonly [
+  string,
+  RuntimeCapabilityKind,
+  string,
+])[];
 
 const generatedSupportRuntimeCapabilityMatrixBase = {
   capabilities: [
@@ -210,8 +207,8 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       ],
     },
     ...conditionalContinuousRuntimeCapabilitySpecs.map(
-      ([id, kind, sinceStory, description]) => ({
-        description,
+      ([id, kind, sinceStory]) => ({
+        description: `Runtime supports ${id}.`,
         id,
         kind,
         sinceStory,
@@ -963,7 +960,9 @@ function classifyParserRuleKind(parserRuleId: string): string {
     return "draw-up-to";
   }
   if (isConditionalContinuousCompositionParserRuleId(parserRuleId)) {
-    return "sequence";
+    return parserRuleId.includes(":base-power:")
+      ? "continuous-modifier"
+      : "sequence";
   }
   if (
     parserRuleId.includes(":draw-n:trash-m:hand:self") ||

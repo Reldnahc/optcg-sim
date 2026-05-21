@@ -6,6 +6,8 @@ import type { CardId, PoneglyphCardDetail } from "@optcg/types";
 
 import { buildGeneratedSupportIndex } from "./generated-support-index.js";
 import { buildGeneratedSupportReport } from "./generated-support-report.js";
+import { parseCertifiedCardText } from "./certified-card-text-parser.js";
+import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 import { runSupportProbe } from "./support-probe.js";
 
 const baseInput = {
@@ -623,6 +625,244 @@ describe("conditional generated support diagnostics", () => {
     expect(text).toContain("- tested-state gate: passed");
     expect(text).toContain("- final playable decision: yes");
     expect(text).toContain("Blockers: none");
+  });
+
+  it.each([
+    {
+      cardId: "SUP-002F-TRASH-4-HEART-7000",
+      expectedBasePower: 7000,
+      expectedThreshold: 4,
+      expectedTypeName: "Heart Pirates",
+      sourceText:
+        "[Your Turn] If you have 4 or more cards in your trash, set the base power of all of your {Heart Pirates} type Characters to 7000.",
+    },
+    {
+      cardId: "SUP-002F-TRASH-9-NAVY-3000",
+      expectedBasePower: 3000,
+      expectedThreshold: 9,
+      expectedTypeName: "Navy",
+      sourceText:
+        "[Your Turn] If you have 9 or more cards in your trash, set the base power of all of your {Navy} type Characters to 3000.",
+    },
+  ])(
+    "supports conditional base-power setter generically over threshold, type, and value ($cardId)",
+    ({
+      cardId,
+      expectedBasePower,
+      expectedThreshold,
+      expectedTypeName,
+      sourceText,
+    }) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: cardId as CardId,
+            sourceText,
+            sourceTextHash: `sha256:${cardId.toLowerCase()}`,
+          },
+        ],
+        validateEffectDefinition,
+      });
+      const report = buildGeneratedSupportReport(index);
+      const entry = index.entries[0];
+
+      expect(entry).toMatchObject({
+        blockers: [],
+        cardId,
+        componentEvidenceIds: [
+          "conditional-continuous-condition-base-power-self-character-type",
+        ],
+        missingCapabilityIds: [],
+        parseStatus: "complete",
+        parserRuleIds: [
+          "exact:conditional-continuous:condition:base-power:self-character-type:direct",
+        ],
+        status: "supported",
+      });
+      expect(entry?.effectDefinition?.effects).toEqual([
+        {
+          category: "permanent",
+          condition: {
+            conditions: [
+              { type: "yourTurn" },
+              {
+                op: "gte",
+                player: "self",
+                type: "trashCount",
+                value: expectedThreshold,
+              },
+            ],
+            type: "and",
+          },
+          effect: {
+            duration: { type: "permanent" },
+            target: {
+              filter: {
+                categories: ["character"],
+                typesAny: [expectedTypeName],
+              },
+              player: "self",
+              type: "all",
+              zone: "characterArea",
+            },
+            type: "setBasePower",
+            value: expectedBasePower,
+          },
+          id: `${cardId}:permanent-conditional-continuous-v1`,
+          sourcePresencePolicy: "mustRemainInSameZone",
+          trigger: { type: "permanent" },
+        },
+      ]);
+      expect(
+        report.proofCertificatesByCardId[cardId]?.requiredRuntimeCapabilityIds,
+      ).toEqual(
+        expect.arrayContaining([
+          "category:permanent",
+          "condition:trashCount:self:gte",
+          "continuous:source-liveness:must-remain-in-same-zone",
+          "effect:setBasePower:self:typed-characters:permanent",
+          "sourcePresencePolicy:mustRemainInSameZone",
+          "target:all:self:characterArea:character:typesAny",
+          "trigger:permanent",
+        ]),
+      );
+      expect(
+        report.proofCertificatesByCardId[cardId]?.missingRuntimeCapabilityIds,
+      ).toEqual([]);
+    },
+  );
+
+  it.each([
+    "[Your Turn] If you have 4 or more cards in your trash, set the base power of all of your {Navy} type Leaders to 3000.",
+    "[Your Turn] If you and your opponent have 4 or more cards in your trash, set the base power of all of your {Navy} type Characters to 3000.",
+    "[Your Turn] If you have 4 or less cards in your trash, set the base power of all of your {Navy} type Characters to 3000.",
+    "[Your Turn] If you have 4 or more cards in your trash, set the printed power of all of your {Navy} type Characters to 3000.",
+    "If you have 4 or more cards in your trash, set the base power of all of your {Navy} type Characters to 3000.",
+    "[Your Turn] If you have 4 or more cards in your trash, set the base power of all of your {Navy} type Characters to 3000 and draw 1 card.",
+  ])(
+    "fails closed for unsupported conditional base-power setter fragments (%s)",
+    (sourceText) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "SUP-002F-UNSUPPORTED-FRAGMENT" as CardId,
+            sourceText,
+            sourceTextHash: "sha256:sup-002f-unsupported-fragment",
+          },
+        ],
+        validateEffectDefinition,
+      });
+
+      expect(index.entries[0]).toMatchObject({
+        blockers: [expect.objectContaining({ code: "unparsed-span" })],
+        parseStatus: "partial",
+        status: "unsupported",
+      });
+      expect(index.effectDefinitions).toEqual({});
+    },
+  );
+
+  it.each([
+    "[Your Turn] If you have 7 or more cards in your trash, this Character gains [Rush].",
+    "[Your Turn] If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Rush].",
+  ])(
+    "fails closed for non-base-power Your Turn continuous text (%s)",
+    (sourceText) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "SUP-002F-YOUR-TURN-NON-BASE-POWER" as CardId,
+            sourceText,
+            sourceTextHash: "sha256:sup-002f-your-turn-non-base-power",
+          },
+        ],
+        validateEffectDefinition,
+      });
+
+      expect(index.entries[0]).toMatchObject({
+        blockers: [expect.objectContaining({ code: "unparsed-span" })],
+        parseStatus: "partial",
+        status: "unsupported",
+      });
+      expect(index.effectDefinitions).toEqual({});
+    },
+  );
+
+  it("fails closed when SUP-002C base-power runtime capability evidence is missing", () => {
+    const sourceText =
+      "[Your Turn] If you have 4 or more cards in your trash, set the base power of all of your {Heart Pirates} type Characters to 7000.";
+    const matrixWithoutBasePower = {
+      ...generatedSupportRuntimeCapabilityMatrix,
+      capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.id !==
+            "effect:setBasePower:self:typed-characters:permanent" &&
+          capability.id !== "target:all:self:characterArea:character:typesAny",
+      ),
+    };
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          ...baseInput,
+          cardId: "SUP-002F-MISSING-CAPABILITY" as CardId,
+          sourceText,
+          sourceTextHash: "sha256:sup-002f-missing-capability",
+        },
+      ],
+      runtimeCapabilityMatrix: matrixWithoutBasePower,
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      parseStatus: "complete",
+      status: "unsupported",
+    });
+    expect(index.entries[0]?.missingCapabilityIds).toEqual(
+      expect.arrayContaining([
+        "effect:setBasePower:self:typed-characters:permanent",
+        "target:all:self:characterArea:character:typesAny",
+      ]),
+    );
+  });
+
+  it("keeps SUP-001F conditional opponent power modifier parsing independent of permanent base-power setters", () => {
+    const parsed = parseCertifiedCardText({
+      cardId: "SUP-002F-SUP-001F-REGRESSION" as CardId,
+      effectDefinitionsVersion: "effects-v1",
+      rulesVersion: "rules-v1",
+      sourceText:
+        "[When Attacking] If you have 8 or more cards in your trash, give up to 1 of your opponent's Characters -3000 power during this turn.",
+      sourceTextHash: "sha256:sup-002f-sup-001f-regression",
+    });
+
+    expect(parsed.status).toBe("complete");
+    expect(parsed).toMatchObject({
+      effectDefinition: {
+        effects: [
+          {
+            category: "auto",
+            condition: {
+              op: "gte",
+              player: "self",
+              type: "trashCount",
+              value: 8,
+            },
+            effect: {
+              duration: { type: "thisTurn" },
+              type: "modifyPower",
+              value: -3000,
+            },
+            trigger: { type: "whenAttacking" },
+          },
+        ],
+      },
+      parserRuleIds: [
+        "exact:when-attacking:conditional:modify-power:choose:this-turn",
+      ],
+    });
   });
 
   it("keeps unsupported conditional continuous conditions fail-closed", () => {

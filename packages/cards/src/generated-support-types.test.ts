@@ -236,6 +236,7 @@ describe("generated support parser result contracts", () => {
       "condition-component:field-count-don-public",
       "exact:condition:self-attached-don-count",
       "exact:condition:your-turn",
+      "exact:conditional-continuous:condition:base-power:self-character-type:direct",
       "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
       "exact:conditional-continuous:condition:body-part-composition:self-character:direct:protection",
       "exact:conditional-continuous:condition:body-part-composition:self-character:sequence:keyword-only",
