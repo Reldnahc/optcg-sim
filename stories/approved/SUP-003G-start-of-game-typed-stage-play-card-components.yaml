@@ -66,6 +66,7 @@ spec_refs:
   - 11-testing-quality.s020
 dependencies:
   - SUP-003D
+  - SUP-003J
 scope:
   - "define parser primitives separately before composing them: start-of-game timing phrase, play verb, up-to-one cardinality, typed Stage filter, self deck source, no-cost play semantics, and setup source-presence policy"
   - parse `at the start of the game, play up to 1 {TYPE} type Stage card from your deck`
@@ -85,6 +86,7 @@ card_source_integrity:
   - do not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence
 engine_capability_preflight:
   - parsed effect shape is start-of-game setup effect selecting up to 1 self deck Stage card with a type filter and playing the selected card into stage area
+  - supported contract/schema authorability for setup search to Stage Area plus matching `playSelected` is provided by SUP-003J after that story lands
   - supported runtime capability group is provided by SUP-003D after that story lands, with exact required IDs `trigger:startOfGame`, `startOfGame:setup-before-opening-draw`, `selectCards:deck:self:stage:typesAny:max1`, `playSelected:deck:stage:max1:ignoreCost`, `setupHiddenInfo:deck-candidates:chooserOnly`, `setupStagePlay:stageArea:replace-existing`, and `sourcePresencePolicy:mustRemainInSameZone`
   - missing runtime capability group is none for scoped synthetic rows only after SUP-003D capability IDs exist in the runtime capability matrix; if capability evidence is absent, this story is blocked
 acceptance_criteria:
@@ -111,6 +113,6 @@ required_tests:
   - "`corepack pnpm run packets:verify`"
 repo_rules:
   - implement only SUP-003G while its packet is active
-  - do not activate or implement SUP-003G until SUP-003D has landed as reviewed prerequisite evidence on the active parent integration branch
+  - do not activate or implement SUP-003G until SUP-003D and SUP-003J have landed as reviewed prerequisite evidence on the active parent integration branch
   - stop and split if implementation requires new engine runtime behavior or shared contract/schema work
 ambiguity_policy: fail_and_escalate
