@@ -239,7 +239,8 @@ function normalizeAttributes(attributes: string[] | null): Attribute[] {
       normalized === "strike" ||
       normalized === "ranged" ||
       normalized === "special" ||
-      normalized === "wisdom"
+      normalized === "wisdom" ||
+      normalized === "?"
     ) {
       return normalized;
     }
