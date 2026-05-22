@@ -36,6 +36,7 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/valid/schema-authorability-only-composed-unsupported.json",
     "fixtures/effect-dsl/valid/scoped-set-base-power-permanent.json",
     "fixtures/effect-dsl/valid/scoped-set-base-power-permanent-no-filter.json",
+    "fixtures/effect-dsl/valid/start-of-game-stage-search-play-selected.json",
     "fixtures/effect-dsl/valid/scoped-top-n-search-chooser-only-any-card.json",
     "fixtures/effect-dsl/valid/scoped-top-n-search-public-filtered.json",
     "fixtures/effect-dsl/valid/temporary-modify-power-until-start-next-turn.json",
@@ -108,6 +109,9 @@ test("effect DSL validation assets exist", async () => {
     "fixtures/effect-dsl/invalid/set-base-power-nonnumeric-value.json",
     "fixtures/effect-dsl/invalid/set-base-power-unsupported-duration-while-condition-true.json",
     "fixtures/effect-dsl/invalid/set-base-power-unsupported-filter-composition.json",
+    "fixtures/effect-dsl/invalid/start-of-game-stage-play-selected-mismatched-selection.json",
+    "fixtures/effect-dsl/invalid/start-of-game-stage-search-non-stage-filter.json",
+    "fixtures/effect-dsl/invalid/start-of-game-stage-search-wrong-destination.json",
     "fixtures/effect-dsl/invalid/top-n-search-chooser-only-nonempty-filter.json",
     "fixtures/effect-dsl/invalid/top-n-search-look-count-zero.json",
     "fixtures/effect-dsl/invalid/top-n-search-public-empty-filter.json",
@@ -169,12 +173,15 @@ test("SUP-002I schema authorizes only scoped top-N deck search request variants"
   );
 
   const request = schema.$defs.scopedTopNSearchRequest;
+  const handDestinationVariants = request.oneOf.filter(
+    (variant) => variant.properties.destination?.const === "hand",
+  );
   assert.deepEqual(
-    request.oneOf.map((variant) => variant.properties.revealTo),
+    handDestinationVariants.map((variant) => variant.properties.revealTo),
     [{ const: "bothPlayers" }, { const: "chooserOnly" }],
   );
 
-  for (const variant of request.oneOf) {
+  for (const variant of handDestinationVariants) {
     assert.equal(variant.additionalProperties, false);
     assert.deepEqual(variant.required, [
       "zone",
@@ -227,6 +234,77 @@ test("SUP-002I schema authorizes only scoped top-N deck search request variants"
     type: "object",
     additionalProperties: false,
     maxProperties: 0,
+  });
+});
+
+test("SUP-003J schema authorizes only scoped start-of-game stage search request and selected:start-of-game playSelected", async () => {
+  const schemaPath = path.join(repoRoot, "contracts/effect-dsl.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+  const request = schema.$defs.scopedTopNSearchRequest;
+
+  const startOfGameVariant = request.oneOf.find(
+    (variant) => variant?.properties?.destination?.const === "stageArea",
+  );
+  assert.ok(startOfGameVariant);
+  assert.deepEqual(startOfGameVariant.required, [
+    "zone",
+    "player",
+    "filter",
+    "min",
+    "max",
+    "destination",
+    "revealTo",
+    "shuffleAfter",
+  ]);
+  assert.deepEqual(startOfGameVariant.properties.zone, { const: "deck" });
+  assert.deepEqual(startOfGameVariant.properties.player, { const: "self" });
+  assert.deepEqual(startOfGameVariant.properties.min, { const: 0 });
+  assert.deepEqual(startOfGameVariant.properties.max, { const: 1 });
+  assert.deepEqual(startOfGameVariant.properties.destination, {
+    const: "stageArea",
+  });
+  assert.deepEqual(startOfGameVariant.properties.revealTo, {
+    const: "chooserOnly",
+  });
+  assert.deepEqual(startOfGameVariant.properties.shuffleAfter, {
+    const: false,
+  });
+  assert.equal(startOfGameVariant.properties.lookCount, undefined);
+  assert.equal(startOfGameVariant.properties.remainingCards, undefined);
+  assert.equal(
+    startOfGameVariant.properties.filter.$ref,
+    "#/$defs/scopedStartOfGameStageSearchFilter",
+  );
+
+  assert.deepEqual(schema.$defs.scopedStartOfGameStageSearchFilter, {
+    type: "object",
+    additionalProperties: false,
+    required: ["categories", "typesAny"],
+    properties: {
+      categories: {
+        type: "array",
+        prefixItems: [{ const: "stage" }],
+        items: false,
+        minItems: 1,
+        maxItems: 1,
+      },
+      typesAny: {
+        type: "array",
+        items: { type: "string", minLength: 1 },
+        minItems: 1,
+      },
+    },
+  });
+
+  const playSelected = schema.$defs.effect.oneOf.find(
+    (variant) => variant?.properties?.type?.const === "playSelected",
+  );
+  assert.ok(playSelected);
+  assert.deepEqual(playSelected.properties.selection, {
+    anyOf: [
+      { $ref: "#/$defs/handSelectionId" },
+      { const: "selected:start-of-game" },
+    ],
   });
 });
 

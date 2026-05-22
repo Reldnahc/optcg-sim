@@ -62,6 +62,57 @@ function isJsonObject(value: JsonValue | undefined): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isAllowedStartOfGameStageSearchProducer(effect: JsonObject): boolean {
+  if (effect["type"] !== "search") {
+    return false;
+  }
+
+  const request = effect["request"];
+  if (!isJsonObject(request)) {
+    return false;
+  }
+
+  if (
+    request["zone"] !== "deck" ||
+    request["player"] !== "self" ||
+    request["min"] !== 0 ||
+    request["max"] !== 1 ||
+    request["destination"] !== "stageArea" ||
+    request["revealTo"] !== "chooserOnly" ||
+    request["shuffleAfter"] !== false ||
+    Object.hasOwn(request, "lookCount") ||
+    Object.hasOwn(request, "remainingCards")
+  ) {
+    return false;
+  }
+
+  const filter = request["filter"];
+  if (!isJsonObject(filter)) {
+    return false;
+  }
+
+  const filterKeys = Object.keys(filter);
+  if (filterKeys.length !== 2) {
+    return false;
+  }
+
+  const categories = filter["categories"];
+  const typesAny = filter["typesAny"];
+  if (
+    !Array.isArray(categories) ||
+    categories.length !== 1 ||
+    categories[0] !== "stage" ||
+    !Array.isArray(typesAny) ||
+    typesAny.length < 1
+  ) {
+    return false;
+  }
+
+  return typesAny.every(
+    (entry) => typeof entry === "string" && entry.trim().length > 0,
+  );
+}
+
 function validateSemanticEffectDslGuards(value: JsonValue): string[] {
   if (!isJsonObject(value)) {
     return [];
@@ -108,6 +159,7 @@ function validateEffectSemantics(
   }
 
   const producedHandSelections = new Set<string>();
+  let producedStartOfGameStageSelection = false;
   const selectedTargetProducersBySaveResultAs = new Map<string, Set<string>>();
   const failures: string[] = [];
 
@@ -127,10 +179,23 @@ function validateEffectSemantics(
       const selection = segmentEffect["selection"];
       if (
         typeof selection !== "string" ||
-        !producedHandSelections.has(selection)
+        ((!producedHandSelections.has(selection) ||
+          selection === "selected:start-of-game") &&
+          !(
+            selection === "selected:start-of-game" &&
+            producedStartOfGameStageSelection
+          ))
       ) {
         failures.push(
-          `${segmentPath}/effect playSelected must reference a prior selectCards saveAs in the same sequence`,
+          `${segmentPath}/effect playSelected must reference a prior selectCards saveAs or supported start-of-game stage search producer in the same sequence`,
+        );
+      }
+      if (
+        selection === "selected:start-of-game" &&
+        segmentEffect["ignoreCost"] !== true
+      ) {
+        failures.push(
+          `${segmentPath}/effect playSelected using selected:start-of-game must set ignoreCost: true`,
         );
       }
     }
@@ -171,6 +236,9 @@ function validateEffectSemantics(
       typeof segmentEffect["saveAs"] === "string"
     ) {
       producedHandSelections.add(segmentEffect["saveAs"]);
+    }
+    if (isAllowedStartOfGameStageSearchProducer(segmentEffect)) {
+      producedStartOfGameStageSelection = true;
     }
 
     if (

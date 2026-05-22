@@ -479,7 +479,9 @@ These are not UI concepts. They are deterministic effect-runtime concepts. They 
 
 `selectTargets` is the non-mutating selectedTargets producer contract for same-frame saved field-object references. When a later segment consumes `{ family: "selectedTargets", saveResultAs, ... }`, the producer segment must be `selectTargets` with segment `saveResultAs`; mutating target effects do not act as standalone selectedTargets producer authority.
 
-`playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist. Generated support may not treat a parsed play-from-selection instruction as playable unless the parser covers the complete selection/play/return flow and the runtime capability matrix covers the resulting decision, hidden-information, forced-trash, and zone-movement behavior.
+`playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist.
+
+Current schema exception: fixture authorability is now scoped to saved hand selections plus one non-hand exception: `selection: "selected:start-of-game"` produced by the same sequence's scoped start-of-game Stage search request (`zone: "deck"`, `player: "self"`, no `lookCount`, `filter.categories: ["stage"]` with nonempty `typesAny`, `min: 0`, `max: 1`, `destination: "stageArea"`, `revealTo: "chooserOnly"`, `shuffleAfter: false`). Generated support may not treat a parsed play-from-selection instruction as playable unless the parser covers the complete selection/play/return flow and the runtime capability matrix covers the resulting decision, hidden-information, forced-trash, and zone-movement behavior.
 
 `playSelected` may consume only an authorized saved hand selection produced by the same supported effect execution frame. At playSelected resolution time, the selected card must still be in that player's hand and must still be legal to play under the current rules and the playSelected options. A stale, non-hand, no-longer-legal, or unsupported saved-reference family fails closed.
 
@@ -494,6 +496,8 @@ Effects that say "play" without requiring cost payment should use:
 ```ts
 { type: 'playSelected', selection: '...', enterRested: true, ignoreCost: true }
 ```
+
+For the scoped start-of-game Stage exception, the only authorized consumer shape is `{ type: "playSelected", selection: "selected:start-of-game", ignoreCost: true }` in the same sequence as the scoped producer search request in `05-effect-dsl-reference.s026`.
 
 The play still obeys rule-processing constraints such as character-area capacity and stage replacement. If the character area is full, the engine must create the forced-trash decision before completing the play.
 
@@ -583,10 +587,24 @@ Schema-supported fixture subset:
   is schema-authorability-only evidence and not runtime executable support,
   parser certification, generated support, support-report evidence, or card
   promotion.
+- effect: search for one scoped start-of-game Stage setup request only:
+  `zone: "deck"`, `player: "self"`, no `lookCount`,
+  `filter.categories: ["stage"]` with nonempty `typesAny`, `min: 0`, `max: 1`,
+  `destination: "stageArea"`, `revealTo: "chooserOnly"`, and
+  `shuffleAfter: false`; this is schema-authorability-only evidence and not
+  runtime executable support, parser certification, generated support,
+  support-report evidence, or card promotion.
 - effect: payCost
 - effect: selectCards
 - effect: selectTargets
 - effect: playSelected
+- effect: playSelected for existing same-sequence hand-selection producers, plus
+  the only non-hand saved-selection exception
+  `selection: "selected:start-of-game"` when consumed in the same sequence
+  with `ignoreCost: true` after the scoped start-of-game Stage setup search
+  producer above; this remains schema-authorability-only evidence and not
+  runtime executable support, parser certification, generated support,
+  support-report evidence, or card promotion.
 - effect: sequence
 - effect: cannotAttack
 - effect: cannotBlock
