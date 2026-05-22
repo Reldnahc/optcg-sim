@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SPEC-010A.md",
+      "storyId": "SPEC-010A",
+      "storyPath": "stories/approved/SPEC-010A-entry-point-terminology-wrapper-authority.yaml",
+      "storySha256": "48018308c5391130aa2d81b8c8400609c17f4e8537e4243e96a6d80bd1bcf858"
+    }
+  ],
   "version": 1
 }

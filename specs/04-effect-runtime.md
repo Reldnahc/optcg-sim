@@ -44,6 +44,8 @@ Section Ref: `04-effect-runtime.s003`
 | Permanent   | Contributes continuous modifiers to computed view.         |
 | Replacement | Intercepts replaceable processes before atomic mutation.   |
 
+wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics. wrapper semantics are distinct from reusable effect body primitive semantics.
+
 ## Stable effect identity
 
 <!-- SECTION_REF: 04-effect-runtime.s004 -->
@@ -146,6 +148,8 @@ Recommended defaults:
 | `[Trigger]` from life         | `resolveFromLastKnownInformation` or `noSourceRequired` while in no zone                              |
 | Event `[Main]` / `[Counter]`  | `resolveFromDestinationZone` after event is trashed                                                   |
 | Global rule-created effect    | `noSourceRequired`                                                                                    |
+
+wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics. wrapper semantics are distinct from reusable effect body primitive semantics.
 
 ## Trigger detection from events
 
@@ -272,6 +276,8 @@ Before resolving an effect block:
 4. If activation requires cost, create a `PayCostDecision` when choices are required.
 5. Pay cost atomically and emit `costPaid` events.
 6. Mark once-per-turn usage only after legal commitment: activation conditions passed, required activation-time targets selected, costs paid, and optional activation accepted. Declined optional effects and failed costs do not consume use; legally committed effects that later fizzle do consume use.
+
+wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics. wrapper semantics are distinct from reusable effect body primitive semantics.
 
 Optionality has three distinct meanings:
 

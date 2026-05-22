@@ -354,6 +354,8 @@ Partial support reporting is allowed and encouraged for progress tracking. It ma
 
 Generated support fails closed. If any component is unparsed, ambiguous, stale, unsupported, missing capability evidence, missing parser certification, or affected by Bandai/Poneglyph wording drift, the card is rejected for normal play until parser/support evidence is updated. New parser rules, ambiguous parse classes, custom handlers, and wording or ruling ambiguity require review before they can certify support.
 
+This section is a terminology-only clarification and does not define generated-support evidence factorization rules; support-evidence factorization remains in SPEC-010B.
+
 ## Card addition flow - assisted Phase 3
 
 <!-- SECTION_REF: 09-card-data-and-support-policy.s017 -->
