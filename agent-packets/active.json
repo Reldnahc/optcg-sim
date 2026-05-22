@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-003G.md",
-      "storyId": "SUP-003G",
-      "storyPath": "stories/approved/SUP-003G-start-of-game-typed-stage-play-card-components.yaml",
-      "storySha256": "6069c7ea76408cb0472b7ede3cc587dbaacb5460f02f51c9d28561d3d99ca034"
+      "packetPath": "agent-packets/SUP-003H.md",
+      "storyId": "SUP-003H",
+      "storyPath": "stories/approved/SUP-003H-leader-support-composition-card-proof.yaml",
+      "storySha256": "7661a5c4c38f5bb3ee37c77a0cc212010820f409cdac4b4511e9b814784ddf6d"
     }
   ],
   "version": 1
