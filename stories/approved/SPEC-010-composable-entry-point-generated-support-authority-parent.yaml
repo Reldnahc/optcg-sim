@@ -1,0 +1,122 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SPEC-010
+epic_id: SPEC-010
+title: Composable entry-point generated support authority parent
+type: specification
+area: docs
+primary_concern: docs
+priority: high
+status: approved
+summary: >
+  Coordinate specification and workflow authority updates that make generated
+  card support explicitly modular across entry points, parser primitives,
+  reusable runtime capabilities, and generated-support evidence.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  the SPEC-010 child stories one at a time. Keep this series limited to
+  specification/workflow wording, generated spec metadata, and narrow authority
+  tests that prevent exact wrapper-body or full-line support shapes from
+  satisfying generated-support evidence.
+allowed_touch_points:
+  - specs/00-project-overview.md
+  - specs/02-engine-mechanics.md
+  - specs/04-effect-runtime.md
+  - specs/05-effect-dsl-reference.md
+  - specs/09-card-data-and-support-policy.md
+  - specs/11-testing-quality.md
+  - specs/14-glossary.md
+  - specs/25-story-template.md
+  - specs/source-coverage-matrix.md
+  - specs/section-index.json
+  - specs/spec-manifest.json
+  - specs/SPEC_VERSION.md
+  - docs/code-standard.md
+  - docs/workflow/story-execution.md
+  - tests/contracts/spec-authority-gates.test.mjs
+  - stories/generated/SPEC-010-composable-entry-point-generated-support-authority-parent.yaml
+  - stories/generated/SPEC-010A-entry-point-terminology-wrapper-authority.yaml
+  - stories/generated/SPEC-010B-generated-support-capability-factorization-authority.yaml
+  - stories/generated/SPEC-010C-generated-support-testing-story-template-alignment.yaml
+  - stories/approved/SPEC-010-composable-entry-point-generated-support-authority-parent.yaml
+  - stories/approved/SPEC-010A-entry-point-terminology-wrapper-authority.yaml
+  - stories/approved/SPEC-010B-generated-support-capability-factorization-authority.yaml
+  - stories/approved/SPEC-010C-generated-support-testing-story-template-alignment.yaml
+  - agent-packets/SPEC-010.md
+  - agent-packets/active.json
+spec_refs:
+  - 24-story-schema.s016
+  - 24-story-schema.s025
+  - 24-story-schema.s026
+  - 24-story-schema.s031
+  - 24-story-schema.s032
+  - 00-project-overview.s014
+  - 02-engine-mechanics.s024
+  - 02-engine-mechanics.s025
+  - 04-effect-runtime.s003
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s004
+  - 11-testing-quality.s005
+  - 11-testing-quality.s020
+  - 14-glossary.s008
+  - 14-glossary.s016
+  - 25-story-template.s014
+dependencies:
+  - SPEC-008
+child_stories:
+  - id: SPEC-010A
+    title: Entry-point terminology and wrapper authority
+    concern: Clarify that DSL trigger values include entry-point selectors, separate keyword/body behavior from activation markers, and define wrapper adapter responsibilities.
+    depends_on: []
+  - id: SPEC-010B
+    title: Generated-support capability factorization authority
+    concern: Require parser certification and runtime capability evidence to expose primitive boundaries rather than exact wrapper-body, full-line, or full-card support shapes.
+    depends_on: [SPEC-010A]
+  - id: SPEC-010C
+    title: Generated-support testing and story-template alignment
+    concern: Align generated-support testing, card preflight, and story-template wording with composable primitive evidence and representative synthetic examples.
+    depends_on: [SPEC-010A, SPEC-010B]
+scope:
+  - define the SPEC-010 child stories for modular generated-support authority
+  - remove or clarify spec wording that conflates effect body keywords with entry points, activation windows, and markers
+  - require generated-support evidence to factor wrapper or entry-point adapters separately from reusable effect body primitives
+  - require explicit synthetic spec examples that prove one reusable body can compose under multiple supported entry points without full-line hardcoding
+  - align testing and story-template language so future CARD stories must decompose parsed text into primitive evidence before generated support can become playable
+non_scope:
+  - direct parent implementation
+  - TypeScript contract changes, effect DSL schema changes, engine runtime behavior, parser behavior, generated-support metadata, real-card fixtures, or support reports
+  - approval or implementation of downstream TYP, ENG, CARD, or SUP story sets
+  - adding support for any new real card, card ID, or named card text
+  - weakening fail-closed generated-support policy
+acceptance_criteria:
+  - SPEC-010 is not implemented directly
+  - SPEC-010A, SPEC-010B, and SPEC-010C are independently reviewable child stories
+  - the resulting spec/workflow wording makes primitive-boundary decomposition mandatory for generated-support evidence
+  - the resulting spec/workflow wording disallows full-card, full-line, exact wrapper-body, and sample-shaped parser/runtime evidence as a substitute for primitive evidence
+  - the resulting spec/workflow wording includes explicit synthetic examples of modular entry-point plus body composition and explicit negative examples for non-modular support evidence
+  - no runtime, schema, parser, or card-support behavior is changed by this SPEC series
+required_tests:
+  - run one distinct parent-story review artifact for SPEC-010
+  - run one distinct child-story review artifact for SPEC-010A
+  - run one distinct child-story review artifact for SPEC-010B
+  - run one distinct child-story review artifact for SPEC-010C
+  - every story-review row must have a distinct review assignment ID and distinct durable artifact ID; one reviewer run or batch matrix cannot satisfy multiple rows
+  - run `corepack pnpm run stories:validate`
+repo_rules:
+  - use the parent/substory workflow
+  - activate only one approved SPEC-010 child packet at a time
+  - do not implement runtime, schema, parser, generated-support, or card behavior in this SPEC series
+  - update spec metadata whenever spec sections change
+ambiguity_policy: fail_and_escalate
