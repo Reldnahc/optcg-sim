@@ -20,6 +20,11 @@ function assertContainsWords(text, phrase) {
   assert.match(text, new RegExp(pattern));
 }
 
+function assertContainsAll(text, phrases) {
+  for (const phrase of phrases) assertContainsWords(text, phrase);
+}
+const R = readText;
+
 function assertMandatoryCodeStandardLink(text) {
   assert.match(
     text,
@@ -446,8 +451,8 @@ test("specs define generated card support from complete parse and runtime capabi
   const roadmap = await readText("specs/12-roadmap.md");
   const examples = await readText("specs/20-card-implementation-examples.md");
 
-  const cardSupport = extractSection(
-    overview,
+  const osec = (start, end) => extractSection(overview, start, end);
+  const cardSupport = osec(
     "00-project-overview.s014",
     "00-project-overview.s015",
   );
@@ -950,19 +955,27 @@ test("workflow authority pins layered parent story sets for composed effect and 
 });
 
 test("SPEC-010A terminology authority separates entry-point wrappers from body primitives", async () => {
-  const [engineSpec, runtimeSpec, dslSpec, cardPolicySpec, glossarySpec] =
-    await Promise.all([
-      readText("specs/02-engine-mechanics.md"),
-      readText("specs/04-effect-runtime.md"),
-      readText("specs/05-effect-dsl-reference.md"),
-      readText("specs/09-card-data-and-support-policy.md"),
-      readText("specs/14-glossary.md"),
-    ]);
+  const [engineSpec, runtimeSpec, dslSpec, glossarySpec] = await Promise.all([
+    R("specs/02-engine-mechanics.md"),
+    R("specs/04-effect-runtime.md"),
+    R("specs/05-effect-dsl-reference.md"),
+    R("specs/14-glossary.md"),
+  ]);
   const section = (source, start, end) => extractSection(source, start, end);
+  const terminologyTerms = [
+    "Entry-point selectors are wrapper semantics, not effect body primitives",
+    "The current DSL field name `trigger` includes entry-point selector values",
+    "must not be read as only queued triggered-effect timing",
+  ];
+  const deferralTerms = [
+    "terminology-only clarification",
+    "does not define generated-support evidence factorization rules",
+    "support-evidence factorization remains in SPEC-010B",
+  ];
   // prettier-ignore
   const checks = [
-    [section(dslSpec, "05-effect-dsl-reference.s004", "05-effect-dsl-reference.s005"), ["Entry-point selectors are wrapper semantics, not effect body primitives", "The current DSL field name `trigger` includes entry-point selector values", "must not be read as only queued triggered-effect timing"]],
-    [section(dslSpec, "05-effect-dsl-reference.s005", "05-effect-dsl-reference.s006"), ["Entry-point selectors are wrapper semantics, not effect body primitives", "The current DSL field name `trigger` includes entry-point selector values", "must not be read as only queued triggered-effect timing"]],
+    [section(dslSpec, "05-effect-dsl-reference.s004", "05-effect-dsl-reference.s005"), terminologyTerms],
+    [section(dslSpec, "05-effect-dsl-reference.s005", "05-effect-dsl-reference.s006"), terminologyTerms],
     [section(engineSpec, "02-engine-mechanics.s025", "02-engine-mechanics.s026"), ["[Activate: Main], [Main], [Counter], and [Once Per Turn] are entry-point or marker wrappers, not keyword body primitives", "[Blocker], [Banish], [Rush], [Rush: Character], and [Double Attack] remain keyword body behavior"]],
     [section(engineSpec, "02-engine-mechanics.s024", "02-engine-mechanics.s025"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
     [section(runtimeSpec, "04-effect-runtime.s003", "04-effect-runtime.s004"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
@@ -970,48 +983,66 @@ test("SPEC-010A terminology authority separates entry-point wrappers from body p
     [section(runtimeSpec, "04-effect-runtime.s011", "04-effect-runtime.s012"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
     [section(glossarySpec, "14-glossary.s008", "14-glossary.s009"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
     [section(dslSpec, "05-effect-dsl-reference.s012", "05-effect-dsl-reference.s013"), ["Synthetic terminology example:", "wrapper:", "category:", "source-presence policy:", "markers:", "body primitive:"]],
-    [section(dslSpec, "05-effect-dsl-reference.s022", "05-effect-dsl-reference.s023"), ["terminology-only clarification", "does not define generated-support evidence factorization rules", "support-evidence factorization remains in SPEC-010B"]],
-    [section(cardPolicySpec, "09-card-data-and-support-policy.s016", "09-card-data-and-support-policy.s017"), ["terminology-only clarification", "does not define generated-support evidence factorization rules", "support-evidence factorization remains in SPEC-010B"]],
+    [section(dslSpec, "05-effect-dsl-reference.s022", "05-effect-dsl-reference.s023"), deferralTerms],
   ];
-  for (const [text, terms] of checks) {
+  for (const [text, terms] of checks)
     for (const term of terms) assertContainsWords(text, term);
-  }
+});
+
+test("SPEC-010B authority requires modular generated-support evidence factorization", async () => {
+  const [overviewSpec, runtimeSpec, dslSpec, cardPolicySpec, testingSpec] =
+    await Promise.all([
+      R("specs/00-project-overview.md"),
+      R("specs/04-effect-runtime.md"),
+      R("specs/05-effect-dsl-reference.md"),
+      R("specs/09-card-data-and-support-policy.md"),
+      R("specs/11-testing-quality.md"),
+    ]);
+  const section = (source, start, end) => extractSection(source, start, end);
+  // prettier-ignore
+  const checks = [
+    [section(overviewSpec, "00-project-overview.s014", "00-project-overview.s015"), ["Generated support evidence must be primitive-boundary evidence", "Full-card or full-effect-line branches are insufficient generated support evidence", "sample-shaped parser evidence is insufficient generated support evidence"]],
+    [section(runtimeSpec, "04-effect-runtime.s005", "04-effect-runtime.s006"), ["Parser certification evidence must expose stable primitive boundaries for wrapper or entry point, markers, conditions, costs, body effects, targets, filters, cardinality, durations, visibility, source-presence policy, and composition when present", "Runtime capability evidence must prove reusable runtime behavior for the same primitive boundaries plus decision or response semantics when present", "Composition evidence may be required for supported combined shapes, but composition evidence cannot replace missing wrapper, body, cost, target, condition, duration, source policy, decision, or visibility evidence"]],
+    [section(runtimeSpec, "04-effect-runtime.s016", "04-effect-runtime.s017"), ["Exact wrapper-body allowlists are insufficient generated-support evidence unless they also expose required primitive-boundary evidence", "A supported effect body under one entry point does not authorize support under another entry point", "support under another entry point requires separate entry-point adapter evidence plus body or composition evidence"]],
+    [extractSectionToEnd(dslSpec, "05-effect-dsl-reference.s029"), ["Synthetic positive modular example:", "Synthetic negative exact wrapper-body example:", "These synthetic examples must not name real cards or card IDs"]],
+    [section(cardPolicySpec, "09-card-data-and-support-policy.s016", "09-card-data-and-support-policy.s017"), ["Generated-support evidence factorization is primitive-boundary authority, not exact wrapper-body or sample-shaped authority", "Parser certification and runtime capability evidence must expose reusable boundaries for wrapper or entry point, markers, conditions, costs, body effects, targets, filters, cardinality, durations, visibility, source-presence policy, and composition when present", "Composition evidence may be required for supported combined shapes, but composition evidence cannot replace missing wrapper, body, cost, target, condition, duration, source policy, decision, or visibility evidence"]],
+    [section(testingSpec, "11-testing-quality.s004", "11-testing-quality.s005"), ["Authority tests must assert generated-support factorization wording per cited section", "Each required section is asserted independently", "one section cannot satisfy another section's required wording"]],
+  ];
+  for (const [text, terms] of checks)
+    for (const term of terms) assertContainsWords(text, term);
 });
 
 test("agent packet spec uses current assignable role names", async () => {
   const packetSpec = await readText("specs/26-agent-packet-template.md");
-  const introduction = extractSection(
-    packetSpec,
-    "26-agent-packet-template.s001",
-    "26-agent-packet-template.s002",
-  );
-  const reviewFooter = extractSectionToEnd(
-    packetSpec,
-    "26-agent-packet-template.s007",
-  );
-
-  assertContainsWords(
-    introduction,
-    "implementation, story-review, or code-review agent",
-  );
-  assertContainsWords(reviewFooter, "For story-review or code-review agents");
-  assert.doesNotMatch(introduction, /\bverification agents?\b/i);
-  assert.doesNotMatch(reviewFooter, /\bverification agents?\b/i);
+  const sec = (start, end) => extractSection(packetSpec, start, end);
+  const introduction = sec(
+      "26-agent-packet-template.s001",
+      "26-agent-packet-template.s002",
+    ),
+    reviewFooter = extractSectionToEnd(
+      packetSpec,
+      "26-agent-packet-template.s007",
+    );
+  for (const [text, term] of [
+    [introduction, "implementation, story-review, or code-review agent"],
+    [reviewFooter, "For story-review or code-review agents"],
+  ])
+    assertContainsWords(text, term);
+  for (const text of [introduction, reviewFooter])
+    assert.doesNotMatch(text, /\bverification agents?\b/i);
 });
 
 test("story workflow authority order defers implementation execution to Codex authority", async () => {
-  const workflowSpec = await readText(
-    "specs/27-spec-driven-story-generation-workflow.md",
-  );
-  const codexSpec = await readText("specs/32-codex-agent-integration.md");
-
-  const workflowSummary = extractSection(
-    workflowSpec,
+  const [workflowSpec, codexSpec] = await Promise.all([
+    R("specs/27-spec-driven-story-generation-workflow.md"),
+    R("specs/32-codex-agent-integration.md"),
+  ]);
+  const sec = (start, end) => extractSection(workflowSpec, start, end);
+  const workflowSummary = sec(
     "27-spec-driven-story-generation-workflow.s002",
     "27-spec-driven-story-generation-workflow.s003",
   );
-  const workflowAuthority = extractSection(
-    workflowSpec,
+  const workflowAuthority = sec(
     "27-spec-driven-story-generation-workflow.s003",
     "27-spec-driven-story-generation-workflow.s004",
   );
@@ -1020,19 +1051,15 @@ test("story workflow authority order defers implementation execution to Codex au
     "32-codex-agent-integration.s004",
     "32-codex-agent-integration.s005",
   );
-
   assertContainsWords(
     workflowSummary,
     "preserve the applicable authority order",
   );
-  assertContainsWords(
-    workflowAuthority,
+  for (const term of [
     "For story planning, packet construction, and generated reports before an execution handoff",
-  );
-  assertContainsWords(
-    workflowAuthority,
     "For Codex or implementation execution, use the execution authority order from `32-codex-agent-integration.s004` and `AGENTS.md`",
-  );
+  ])
+    assertContainsWords(workflowAuthority, term);
 
   for (const executionLayer of [
     "cited specification sections",
@@ -1042,57 +1069,30 @@ test("story workflow authority order defers implementation execution to Codex au
     "linked workflow procedure documents under `docs/workflow/`",
     "local code reality",
     "proposed patch",
-  ]) {
-    assertContainsWords(workflowAuthority, executionLayer);
-    assertContainsWords(codexAuthority, executionLayer);
-  }
+  ])
+    (assertContainsWords(workflowAuthority, executionLayer),
+      assertContainsWords(codexAuthority, executionLayer));
 
   assert.doesNotMatch(workflowAuthority, /For planning and execution:/);
 });
 
 test("root license and README scope MIT source publication to repository-owned material", async () => {
-  const license = await readText("LICENSE");
-  const readme = await readText("README.md");
+  const [license, readme] = await Promise.all([R("LICENSE"), R("README.md")]);
 
-  for (const requiredLicenseText of [
-    "MIT License",
-    "Copyright (c) 2026 Chandler Lee",
-    "Permission is hereby granted, free of charge, to any person obtaining a copy",
-    'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND',
-  ]) {
-    assertContainsWords(license, requiredLicenseText);
-  }
+  // prettier-ignore
+  assertContainsAll(license, ["MIT License", "Copyright (c) 2026 Chandler Lee", "Permission is hereby granted, free of charge, to any person obtaining a copy", 'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND']);
 
-  for (const requiredReadmeText of [
-    "## License",
-    "repository's own source code, specifications, documentation, tests, and tooling are licensed under the MIT License",
-    "[LICENSE](LICENSE)",
-    "does not grant rights to third-party card names, card text, images, trademarks, logos, or other third-party content",
-  ]) {
-    assertContainsWords(readme, requiredReadmeText);
-  }
+  // prettier-ignore
+  assertContainsAll(readme, ["## License", "repository's own source code, specifications, documentation, tests, and tooling are licensed under the MIT License", "[LICENSE](LICENSE)", "does not grant rights to third-party card names, card text, images, trademarks, logos, or other third-party content"]);
 });
 
 test("root disclaimer states unofficial third-party content ownership boundary", async () => {
-  const disclaimer = await readText("DISCLAIMER.md");
-  const readme = await readText("README.md");
-
-  for (const requiredDisclaimerText of [
-    "This project is unofficial",
-    "not affiliated with, endorsed by, sponsored by, or approved by any ONE PIECE or ONE PIECE Card Game rightsholder",
-    "does not own or claim rights to ONE PIECE, the ONE PIECE Card Game, related game assets, card names, card text, card images, artwork, characters, logos, trademarks, or other third-party content",
-    "Third-party names, images, text, and marks remain the property of their respective owners",
-  ]) {
-    assertContainsWords(disclaimer, requiredDisclaimerText);
-  }
-
-  for (const requiredReadmeText of [
-    "## Disclaimer",
-    "[DISCLAIMER.md](DISCLAIMER.md)",
-  ]) {
-    assertContainsWords(readme, requiredReadmeText);
-  }
-
-  assert.doesNotMatch(disclaimer, /set symbols/i);
+  // prettier-ignore
+  const [readme, disclaimer] = await Promise.all([R("README.md"), R("DISCLAIMER.md")]);
+  // prettier-ignore
+  assertContainsAll(readme, ["## Disclaimer", "[DISCLAIMER.md](DISCLAIMER.md)"]);
+  // prettier-ignore
+  assertContainsAll(disclaimer, ["This project is unofficial", "not affiliated with, endorsed by, sponsored by, or approved by any ONE PIECE or ONE PIECE Card Game rightsholder", "does not own or claim rights to ONE PIECE, the ONE PIECE Card Game, related game assets, card names, card text, card images, artwork, characters, logos, trademarks, or other third-party content", "Third-party names, images, text, and marks remain the property of their respective owners"]);
   assert.doesNotMatch(readme, /set symbols/i);
+  assert.doesNotMatch(disclaimer, /set symbols/i);
 });

@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SPEC-010A.md",
-      "storyId": "SPEC-010A",
-      "storyPath": "stories/approved/SPEC-010A-entry-point-terminology-wrapper-authority.yaml",
-      "storySha256": "48018308c5391130aa2d81b8c8400609c17f4e8537e4243e96a6d80bd1bcf858"
+      "packetPath": "agent-packets/SPEC-010B.md",
+      "storyId": "SPEC-010B",
+      "storyPath": "stories/approved/SPEC-010B-generated-support-capability-factorization-authority.yaml",
+      "storySha256": "7fea34ac00d719554005d65f9dac8ce3d24344090c76b642cf91179841b0bb63"
     }
   ],
   "version": 1

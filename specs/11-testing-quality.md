@@ -65,6 +65,8 @@ Every primitive has tests independent of specific cards:
 
 Primitive tests should assert events, state, decisions, and visibility where applicable.
 
+Authority tests must assert generated-support factorization wording per cited section. Each required section is asserted independently; one section cannot satisfy another section's required wording.
+
 ## Unit tests per card
 
 <!-- SECTION_REF: 11-testing-quality.s005 -->

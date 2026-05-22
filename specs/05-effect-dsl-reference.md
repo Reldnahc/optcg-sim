@@ -1056,6 +1056,20 @@ may move primitives into the schema-supported fixture subset only when they also
 add schema coverage and validation fixtures; generated playable support still
 requires complete parser support and runtime capability evidence.
 
+Synthetic positive modular example:
+
+- wrapper: `[On Play]` with entry-point adapter evidence
+- wrapper: `[When Attacking]` with separate entry-point adapter evidence
+- body primitive: shared `draw` + `chooseQuantity` composition evidence reused by both wrappers
+
+Synthetic negative exact wrapper-body example:
+
+- one parser branch that only certifies one exact full printed line for `[On Play] draw 1`
+- no primitive-boundary parser evidence for reusable wrapper, body, cost, target, visibility, or decision semantics
+- no separate entry-point adapter evidence for other wrappers
+
+These synthetic examples must not name real cards or card IDs.
+
 Schema-supported fixture subset:
 
 - trigger: onPlay
