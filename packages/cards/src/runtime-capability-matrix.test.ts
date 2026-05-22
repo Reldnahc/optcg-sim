@@ -243,12 +243,17 @@ describe("generated support runtime capability matrix", () => {
         generatedSupportRuntimeCapabilityMatrix.capabilities.find(
           (candidate) => candidate.id === capabilityId,
         );
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
       expect(capability?.supportedComponentIds).toContain(
         "start-of-game-play-up-to-one-typed-stage-from-deck",
       );
     }
-    expect(parserRuleId).toBe(
-      "exact:start-of-game:play-up-to-1-typed-stage-from-self-deck",
+    expect(listRuntimeCapabilityParserRuleInventory()).toContainEqual(
+      expect.objectContaining({
+        coverage: "reusable-parser-component",
+        parserRuleId,
+        parserRuleKind: "sequence",
+      }),
     );
   });
 

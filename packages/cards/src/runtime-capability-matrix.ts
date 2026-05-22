@@ -959,6 +959,7 @@ function classifyParserRuleKind(parserRuleId: string): string {
     parserRuleId.includes(
       ":optional-choose-one-trash-self-field-type-or-hand",
     ) ||
+    parserRuleId.includes(":start-of-game:play-up-to-1-typed-stage") ||
     parserRuleId === "exact:on-play:trash-2-from-hand:draw-1:self" ||
     parserRuleId.startsWith("card014a:sequence:")
   ) {

@@ -64,7 +64,7 @@ export const startOfGameStagePlayRuntimeCapabilityRecords =
         kind: toStartOfGameStagePlayCapabilityKind(id),
         sinceStory: "SUP-003D",
         supported: true,
-        supportedParserRuleIds: [],
+        supportedParserRuleIds: [startOfGameTypedStagePlayParserRuleId],
       }),
     )
     .filter(
