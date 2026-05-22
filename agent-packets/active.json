@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-003J.md",
-      "storyId": "SUP-003J",
-      "storyPath": "stories/approved/SUP-003J-start-of-game-stage-search-schema-authorability.yaml",
-      "storySha256": "c0afc7a1c301daae3b5573c66000fff7f214c741cdc87e2424b533ec99ca0dc8"
+      "packetPath": "agent-packets/SUP-003G.md",
+      "storyId": "SUP-003G",
+      "storyPath": "stories/approved/SUP-003G-start-of-game-typed-stage-play-card-components.yaml",
+      "storySha256": "6069c7ea76408cb0472b7ede3cc587dbaacb5460f02f51c9d28561d3d99ca034"
     }
   ],
   "version": 1

@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-003G -->
 <!-- agent-packet:story-path stories/approved/SUP-003G-start-of-game-typed-stage-play-card-components.yaml -->
-<!-- agent-packet:story-sha256 d6bb389dbdfc715028fdc93b4f2e6b0b0478bd5ed663be51c76c40060991bf4a -->
+<!-- agent-packet:story-sha256 6069c7ea76408cb0472b7ede3cc587dbaacb5460f02f51c9d28561d3d99ca034 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -627,7 +627,7 @@ Cards-layer story only. Runtime prerequisites must already be implemented by SUP
 ## Constraints
 
 - implement only SUP-003G while its packet is active
-- do not activate or implement SUP-003G until SUP-003D has landed as reviewed prerequisite evidence on the active parent integration branch
+- do not activate or implement SUP-003G until SUP-003D and SUP-003J have landed as reviewed prerequisite evidence on the active parent integration branch
 - stop and split if implementation requires new engine runtime behavior or shared contract/schema work
 - use `pnpm`; the canonical local verification commands are `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm coverage`, and `pnpm verify`
 - TypeScript stays strict; avoid `any`, non-null assertions (`!`), `@ts-ignore`, `@ts-nocheck`, and unchecked trust-boundary assertions without explicit justification
