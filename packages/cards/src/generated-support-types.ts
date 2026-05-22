@@ -1,9 +1,12 @@
 import type { CardId, EffectDefinition } from "@optcg/types";
 import { donMinusDrawComponentEvidenceInventoryEntry } from "./don-minus-draw-evidence.js";
+import type { ExternalDeckConstructionRuleEvidence } from "./external-deck-construction-rule.js";
 import { fieldCountDonConditionComponentEvidenceInventoryEntry } from "./field-count-don-condition-evidence.js";
 import { optionalTrashCostKoComponentEvidenceInventoryEntry } from "./optional-trash-cost-ko-evidence.js";
+import { activateMainChooseOneCostComponentEvidenceInventoryEntry } from "./activate-main-choose-one-cost-evidence.js";
 import { sup001fConditionalModifyPowerComponentEvidenceInventoryEntry } from "./sup-001f-conditional-modify-power-evidence.js";
 import { topNSearchComponentEvidenceInventoryEntries } from "./top-n-search-evidence.js";
+import { startOfGameStagePlayComponentEvidenceInventoryEntry } from "./start-of-game-stage-play-evidence.js";
 import { listConditionalContinuousCompositionEvidenceFragments } from "./conditional-continuous-composition-evidence.js";
 import type {
   GeneratedSupportDiagnosticDecomposition,
@@ -14,7 +17,7 @@ import {
   returnDonCostWrapperParserRuleId,
   returnDonCostWrapperRuntimeCapabilityIds,
 } from "./return-don-cost-wrapper-components.js";
-
+export type { ExternalDeckConstructionRuleEvidence } from "./external-deck-construction-rule.js";
 export type {
   GeneratedSupportDiagnosticDecomposition,
   GeneratedSupportDiagnosticTraceComponent,
@@ -22,7 +25,6 @@ export type {
   GeneratedSupportDiagnosticTraceComponentStatus,
   GeneratedSupportUnparsedSpan,
 } from "./generated-support-diagnostic-types.js";
-
 export const generatedSupportParserResultStatuses = [
   "complete",
   "partial",
@@ -31,10 +33,8 @@ export const generatedSupportParserResultStatuses = [
   "staleHash",
   "customHandlerRequired",
 ] as const;
-
 export type GeneratedSupportParserResultStatus =
   (typeof generatedSupportParserResultStatuses)[number];
-
 export type GeneratedSupportBlockerCode =
   | "missing-runtime-capability"
   | "unparsed-span"
@@ -43,7 +43,6 @@ export type GeneratedSupportBlockerCode =
   | "stale-hash"
   | "custom-handler-required"
   | "invalid-dsl-schema";
-
 export const generatedSupportDiagnosticLayers = [
   "parser",
   "schema",
@@ -68,10 +67,8 @@ export const generatedSupportDiagnosticLayers = [
   "unsupported-sequence-action-composition",
   "unsupported-layer",
 ] as const;
-
 export type GeneratedSupportDiagnosticLayer =
   (typeof generatedSupportDiagnosticLayers)[number];
-
 export type GeneratedSupportDeepestSuccessfulLayer =
   | "source-integrity"
   | "metadata"
@@ -79,7 +76,6 @@ export type GeneratedSupportDeepestSuccessfulLayer =
   | "schema"
   | "runtime-capability"
   | "support-status";
-
 export interface GeneratedSupportBlocker {
   code: GeneratedSupportBlockerCode;
   message: string;
@@ -93,21 +89,19 @@ export interface GeneratedSupportBlocker {
   receivedHash?: string;
   span?: GeneratedSupportUnparsedSpan;
 }
-
 type GeneratedSupportParserResultBase = {
   cardId: CardId;
   sourceText: string;
   sourceTextHash: string;
 };
-
 export type CompleteGeneratedSupportParseResult =
   GeneratedSupportParserResultBase & {
+    nonRuntimeEvidence?: readonly ExternalDeckConstructionRuleEvidence[];
     status: "complete";
     effectDefinition: EffectDefinition;
     componentEvidenceIds: readonly string[];
     parserRuleIds: readonly string[];
   };
-
 export type PartialGeneratedSupportParseResult =
   GeneratedSupportParserResultBase & {
     status: "partial";
@@ -116,7 +110,6 @@ export type PartialGeneratedSupportParseResult =
     parsedRuleIds: readonly string[];
     unparsedSpans: readonly GeneratedSupportUnparsedSpan[];
   };
-
 type BlockedGeneratedSupportParseResult<
   TStatus extends
     | "unsupportedPrimitive"
@@ -135,7 +128,6 @@ export type StaleHashGeneratedSupportParseResult =
   BlockedGeneratedSupportParseResult<"staleHash">;
 export type CustomHandlerRequiredGeneratedSupportParseResult =
   BlockedGeneratedSupportParseResult<"customHandlerRequired">;
-
 export type GeneratedSupportParserResult =
   | CompleteGeneratedSupportParseResult
   | PartialGeneratedSupportParseResult
@@ -143,13 +135,11 @@ export type GeneratedSupportParserResult =
   | AmbiguousWordingGeneratedSupportParseResult
   | StaleHashGeneratedSupportParseResult
   | CustomHandlerRequiredGeneratedSupportParseResult;
-
 export function isCompleteGeneratedSupportParseResult(
   result: GeneratedSupportParserResult,
 ): result is CompleteGeneratedSupportParseResult {
   return result.status === "complete";
 }
-
 export const generatedSupportComponentEvidenceCategories = [
   "wrapper",
   "body-action",
@@ -170,35 +160,20 @@ export const generatedSupportComponentEvidenceCategories = [
   "source-integrity-gate",
   "generated-support-metadata-gate",
 ] as const;
-
 export type GeneratedSupportComponentEvidenceCategory =
   (typeof generatedSupportComponentEvidenceCategories)[number];
-
-export const generatedSupportSchemaGateIds = [
-  "effect-definition-schema-v1",
-  "sequenced-effect-schema-v1",
-] as const;
-
-export const generatedSupportRuntimeCapabilityGateIds = [
-  "runtime-capability-matrix-v1",
-] as const;
-export const generatedSupportSourceIntegrityGateIds = [
-  "source-text-hash-current",
-  "behavior-hash-current",
-] as const;
-export const generatedSupportMetadataGateIds = [
-  "generated-support-metadata-required",
-] as const;
-
-type GeneratedSupportSchemaGateId =
-  (typeof generatedSupportSchemaGateIds)[number];
-type GeneratedSupportRuntimeCapabilityGateId =
-  (typeof generatedSupportRuntimeCapabilityGateIds)[number];
-type GeneratedSupportSourceIntegrityGateId =
-  (typeof generatedSupportSourceIntegrityGateIds)[number];
-type GeneratedSupportMetadataGateId =
-  (typeof generatedSupportMetadataGateIds)[number];
-
+const generatedSupportGateIds = {
+  metadata: ["generated-support-metadata-required"],
+  runtimeCapability: ["runtime-capability-matrix-v1"],
+  schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
+  sourceIntegrity: ["source-text-hash-current", "behavior-hash-current"],
+} as const;
+export const {
+  schema: generatedSupportSchemaGateIds,
+  runtimeCapability: generatedSupportRuntimeCapabilityGateIds,
+  sourceIntegrity: generatedSupportSourceIntegrityGateIds,
+  metadata: generatedSupportMetadataGateIds,
+} = generatedSupportGateIds;
 export interface GeneratedSupportComponentEvidenceInventoryEntry {
   parserRuleId: string;
   shapeId: string;
@@ -207,24 +182,22 @@ export interface GeneratedSupportComponentEvidenceInventoryEntry {
   runtimeCapabilityIds: readonly string[];
   missingRuntimeCapabilityIds?: readonly string[];
   gates: {
-    schema: readonly GeneratedSupportSchemaGateId[];
-    runtimeCapability: readonly GeneratedSupportRuntimeCapabilityGateId[];
-    sourceIntegrity: readonly GeneratedSupportSourceIntegrityGateId[];
-    generatedSupportMetadata: readonly GeneratedSupportMetadataGateId[];
+    schema: readonly (typeof generatedSupportSchemaGateIds)[number][];
+    runtimeCapability: readonly (typeof generatedSupportRuntimeCapabilityGateIds)[number][];
+    sourceIntegrity: readonly (typeof generatedSupportSourceIntegrityGateIds)[number][];
+    generatedSupportMetadata: readonly (typeof generatedSupportMetadataGateIds)[number][];
   };
 }
-
-export interface GeneratedSupportParserCertificationEvidence {
+export type GeneratedSupportParserCertificationEvidence = Readonly<{
   currentCertificationIds: readonly string[];
   staleCertificationIds?: readonly string[];
-}
-
+}>;
 export function evaluateParserCertificationBlockers(
   componentEvidenceIds: readonly string[],
   evidence: GeneratedSupportParserCertificationEvidence | undefined,
 ): readonly GeneratedSupportBlocker[] {
-  const current = new Set(evidence?.currentCertificationIds ?? []);
-  const stale = new Set(evidence?.staleCertificationIds ?? []);
+  const current = new Set(evidence?.currentCertificationIds ?? []),
+    stale = new Set(evidence?.staleCertificationIds ?? []);
   return componentEvidenceIds.flatMap((component) =>
     (
       findGeneratedSupportComponentEvidenceByShapeId(component)
@@ -258,7 +231,6 @@ const drawSelfComponents = [
   "source-presence-policy",
   ...parserRuleBaseComponents,
 ] as const satisfies readonly GeneratedSupportComponentEvidenceCategory[];
-
 const drawThenTrashFromHandComponents = [
   "wrapper",
   "sequence",
@@ -267,7 +239,6 @@ const drawThenTrashFromHandComponents = [
   "source-presence-policy",
   ...parserRuleBaseComponents,
 ] as const satisfies readonly GeneratedSupportComponentEvidenceCategory[];
-
 const parserRuleBaseGates = {
   generatedSupportMetadata: ["generated-support-metadata-required"],
   runtimeCapability: ["runtime-capability-matrix-v1"],
@@ -531,7 +502,9 @@ export const generatedSupportComponentEvidenceInventory = [
     shapeId: "on-play-select-opponent-character-then-ko",
   },
   optionalTrashCostKoComponentEvidenceInventoryEntry,
+  activateMainChooseOneCostComponentEvidenceInventoryEntry,
   ...topNSearchComponentEvidenceInventoryEntries,
+  startOfGameStagePlayComponentEvidenceInventoryEntry,
   {
     components: [
       "wrapper",

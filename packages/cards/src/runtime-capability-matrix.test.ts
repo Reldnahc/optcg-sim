@@ -7,6 +7,7 @@ import {
   listSupportedRuntimeCapabilityIds,
   requiredGeneratedSupportCapabilityIds,
 } from "./runtime-capability-matrix.js";
+import { startOfGameStagePlayRuntimeCapabilityIds } from "./start-of-game-stage-play-evidence.js";
 
 describe("generated support runtime capability matrix", () => {
   const card014APositiveCapabilityIds = [
@@ -105,6 +106,13 @@ describe("generated support runtime capability matrix", () => {
         "effect:draw:self:count:positive-safe-integer",
         "effect:sequence:ordered",
         "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+        "category:activate",
+        "trigger:activateMain",
+        "activateMain:source:leader-character-stage",
+        "activateMain:oncePerTurn:legal-commitment",
+        "payCost:chooseOne:optional:trashFromField-or-trashFromHand:self",
+        "payCost:trashFromField:self:characterArea:character:typesAny:count-exact:optional",
+        "payCost:trashFromHand:self:count-exact:optional",
         "keyword:banish:printed",
         "keyword:blocker:printed",
         "keyword:doubleAttack:printed",
@@ -206,6 +214,47 @@ describe("generated support runtime capability matrix", () => {
       expect.arrayContaining([
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
       ]),
+    );
+  });
+
+  it("certifies SUP-003G start-of-game typed Stage play runtime capability evidence", () => {
+    const parserRuleId =
+      "exact:start-of-game:play-up-to-1-typed-stage-from-self-deck";
+
+    expect(requiredGeneratedSupportCapabilityIds).toEqual(
+      expect.arrayContaining([...startOfGameStagePlayRuntimeCapabilityIds]),
+    );
+
+    for (const capabilityId of startOfGameStagePlayRuntimeCapabilityIds) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+    }
+
+    for (const capabilityId of [
+      "trigger:startOfGame",
+      "startOfGame:setup-before-opening-draw",
+      "selectCards:deck:self:stage:typesAny:max1",
+      "playSelected:deck:stage:max1:ignoreCost",
+      "setupHiddenInfo:deck-candidates:chooserOnly",
+      "setupStagePlay:stageArea:replace-existing",
+    ]) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+      expect(capability?.supportedComponentIds).toContain(
+        "start-of-game-play-up-to-one-typed-stage-from-deck",
+      );
+    }
+    expect(listRuntimeCapabilityParserRuleInventory()).toContainEqual(
+      expect.objectContaining({
+        coverage: "reusable-parser-component",
+        parserRuleId,
+        parserRuleKind: "sequence",
+      }),
     );
   });
 
@@ -522,7 +571,7 @@ describe("generated support runtime capability matrix", () => {
       requiredGeneratedSupportCapabilityIds,
     );
     expect(hasRuntimeCapability("effect:ko:targeted")).toBe(false);
-    expect(hasRuntimeCapability("trigger:activateMain")).toBe(false);
+    expect(hasRuntimeCapability("trigger:activateMain")).toBe(true);
   });
 
   it("exposes public trash-count condition capability from ENG-059A", () => {
@@ -692,5 +741,53 @@ describe("generated support runtime capability matrix", () => {
         "conditional-continuous-condition-base-power-self-character-type",
       );
     }
+  });
+
+  it("does not add runtime capabilities for external deck-construction parser evidence", () => {
+    const parserRuleId =
+      "exact:external-deck-rule:category-cost-gte-in-your-deck";
+    const capabilities =
+      generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          capability.supportedParserRuleIds.includes(parserRuleId),
+      );
+
+    expect(capabilities).toEqual([]);
+  });
+
+  it("tracks SUP-003F activate-main optional choose-one trash cost draw capability evidence", () => {
+    const parserRuleId =
+      "exact:activate-main:once-per-turn:optional-choose-one-trash-self-field-type-or-hand:draw-n:self";
+    const requiredCapabilities = [
+      "category:activate",
+      "trigger:activateMain",
+      "activateMain:source:leader-character-stage",
+      "activateMain:oncePerTurn:legal-commitment",
+      "payCost:chooseOne:optional:trashFromField-or-trashFromHand:self",
+      "payCost:trashFromField:self:characterArea:character:typesAny:count-exact:optional",
+      "payCost:trashFromHand:self:count-exact:optional",
+      "sequence:genericFrames",
+      "sourcePresencePolicy:mustRemainInSameZone",
+      "effect:draw:self:count:positive-safe-integer",
+    ];
+
+    for (const capabilityId of requiredCapabilities) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.supported).toBe(true);
+      expect(capability?.supportedComponentIds).toContain(
+        "activate-main-once-per-turn-optional-choose-one-trash-self-field-type-or-hand-then-draw",
+      );
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+    }
+
+    expect(
+      generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+        (candidate) => candidate.id === "category:activate",
+      )?.supportedParserRuleIds,
+    ).toContain(parserRuleId);
   });
 });

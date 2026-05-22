@@ -108,33 +108,57 @@ export type Cost =
     }
   | { type: "trashSelf" }
   | {
-      type: "trashFromField";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-    }
-  | {
       type: "discard";
       count: number;
       filter?: CardFilter;
       chooser: PlayerRef;
     }
   | { type: "sequence"; costs: Cost[]; optional?: boolean }
-  | { type: "chooseOne"; options: Cost[] }
   | { type: "custom"; action: string };
+
+export type OptionalTrashFromHandCost = {
+  type: "trashFromHand";
+  count: number;
+  filter?: CardFilter;
+  chooser: PlayerRef;
+  optional: true;
+};
+
+export type ScopedOptionalFieldTrashCostFilter = {
+  categories: ["character"];
+  typesAny: [string, ...string[]];
+};
+
+export type ScopedOptionalFieldTrashCost = {
+  type: "trashFromField";
+  count: number;
+  filter: ScopedOptionalFieldTrashCostFilter;
+  chooser: "self";
+  optional: true;
+};
+
+export type OptionalChooseOneTrashCostAlternative =
+  | OptionalTrashFromHandCost
+  | ScopedOptionalFieldTrashCost;
+
+export type OptionalChooseOneTrashCost = {
+  type: "chooseOne";
+  options: [
+    OptionalChooseOneTrashCostAlternative,
+    ...OptionalChooseOneTrashCostAlternative[],
+  ];
+  optional: true;
+};
 
 export type OptionalCost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
-  | {
-      type: "trashFromHand";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-      optional: true;
-    }
+  | OptionalTrashFromHandCost
+  | OptionalChooseOneTrashCost
   | { type: "sequence"; costs: Cost[]; optional: true };
+
+export type EffectBlockCost = Exclude<Cost, OptionalChooseOneTrashCost>;
 
 export type ExactCardinality<N extends number = number> = {
   mode: "exact";
@@ -625,7 +649,7 @@ export interface EffectBlock {
   trigger: Trigger;
   condition?: Condition;
   conditionTiming?: "activation" | "resolution" | "both";
-  cost?: Cost;
+  cost?: EffectBlockCost;
   optional?: boolean;
   oncePerTurn?: boolean;
   failurePolicy?: FailurePolicy;

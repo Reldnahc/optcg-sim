@@ -1,0 +1,33 @@
+{
+  "cardId": "SUP-003J-BAD-DESTINATION",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-003J-BAD-DESTINATION:start-of-game-setup-1",
+      "category": "auto",
+      "trigger": { "type": "startOfGame" },
+      "effect": {
+        "type": "search",
+        "request": {
+          "zone": "deck",
+          "player": "self",
+          "filter": {
+            "categories": ["stage"],
+            "typesAny": ["Dressrosa"]
+          },
+          "min": 0,
+          "max": 1,
+          "destination": "hand",
+          "revealTo": "chooserOnly",
+          "shuffleAfter": false
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-003j-bad-destination",
+    "rulesVersion": "v6",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

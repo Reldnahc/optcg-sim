@@ -43,6 +43,11 @@ import {
   isSupportedQueuedOptionalNoChoiceDrawEffect,
 } from "./effect-runtime-primitives.js";
 import {
+  isScopedActivateMainQueueEntry,
+  isSupportedActivateMainNoChoiceDrawEffect,
+  isSupportedOptionalActivateMainNoChoiceDrawEffect,
+} from "./effect-runtime-activation-main.js";
+import {
   createContinuousRecordsForResolvedEffect,
   isSupportedContinuousQueueEffect,
 } from "./effect-runtime-continuous.js";
@@ -160,7 +165,13 @@ export const createEffectRuntimeQueueResults = (
     const supportShape = { ...match };
     delete (supportShape as { condition?: unknown }).condition;
     delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
-    if (!isSupportedQueuedNoChoiceDrawEffect(supportShape)) {
+    if (
+      !isSupportedQueuedNoChoiceDrawEffect(supportShape) &&
+      !(
+        isSupportedActivateMainNoChoiceDrawEffect(supportShape) &&
+        isScopedActivateMainQueueEntry(entry)
+      )
+    ) {
       return undefined;
     }
     return supportShape.effect;
@@ -502,7 +513,12 @@ export const createEffectRuntimeQueueResults = (
         const optionalSupportShape = withoutConditionFields(queuedEffect);
         if (
           queuedEffect.sourcePresencePolicy !== selected.sourcePresencePolicy ||
-          !isSupportedQueuedOptionalNoChoiceDrawEffect(optionalSupportShape)
+          (!isSupportedQueuedOptionalNoChoiceDrawEffect(optionalSupportShape) &&
+            !(
+              isSupportedOptionalActivateMainNoChoiceDrawEffect(
+                optionalSupportShape,
+              ) && isScopedActivateMainQueueEntry(selected)
+            ))
         ) {
           return unsupportedEffectQueueResult(originalState);
         }

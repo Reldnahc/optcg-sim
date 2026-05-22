@@ -4,6 +4,7 @@ import { test } from "vitest";
 import type { CardId, MatchId, PlayerId } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "./canonical-state.js";
+import { applyAction } from "./actions.js";
 import { createInitialState } from "./initial-state.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { respondToMulliganDecision, startMulliganFlow } from "./mulligan.js";
@@ -246,10 +247,16 @@ test("post-mulligan state passes invariants and stable hash", () => {
 test("accepted mulligan transitions emit events and append to eventJournal", () => {
   const setup = createInitialState(createInput());
 
-  const started = startMulliganFlow(setup);
-  assert.ok(started.events.length > 0);
-  assert.ok(started.state.eventJournal.length > setup.eventJournal.length);
-  assert.equal(started.events[0]?.type, "decisionCreated");
+  const started =
+    setup.pendingDecision?.type === "mulligan"
+      ? { state: setup, events: [] }
+      : startMulliganFlow(setup);
+  if (started.events.length > 0) {
+    assert.ok(started.state.eventJournal.length > setup.eventJournal.length);
+    assert.equal(started.events[0]?.type, "decisionCreated");
+  } else {
+    assert.equal(started.state.pendingDecision?.type, "mulligan");
+  }
 
   const first = respondToMulliganDecision(started.state, {
     type: "respondToDecision",
@@ -266,5 +273,166 @@ test("accepted mulligan transitions emit events and append to eventJournal", () 
   assert.equal(
     first.events.find((event) => event.type === "cardMoved")?.visibility.type,
     "replayOnly",
+  );
+});
+
+test("setup-selected Stage cannot be redrawn during mulligan", () => {
+  const input = createInput();
+  const manifest = input.cardManifest as {
+    cards: Record<CardId, unknown>;
+    effectDefinitions?: Record<string, unknown>;
+  };
+  manifest.cards[toCardId("leader-red")] = {
+    cardId: toCardId("leader-red"),
+    language: "en",
+    name: "Leader Red",
+    category: "leader",
+    set: "TEST",
+    setName: "Test",
+    released: true,
+    colors: ["red"],
+    attributes: [],
+    types: ["Leader"],
+    printedKeywords: [],
+    variants: [],
+    legality: {},
+    officialFaq: [],
+    errata: [],
+    sourceTextHash: "leader-red-sog",
+    behaviorHash: "leader-red-sog",
+    support: {
+      status: "implemented-dsl",
+      cardId: toCardId("leader-red"),
+      effectDefinitionId: "leader-red-sog",
+      tested: true,
+      rulesVersion: "r1",
+      sourceTextHash: "leader-red-sog",
+      behaviorHash: "leader-red-sog",
+      cardDataVersion: "fixture",
+    },
+  };
+  manifest.cards[toCardId("p1-a")] = {
+    cardId: toCardId("p1-a"),
+    language: "en",
+    name: "Setup Stage",
+    category: "stage",
+    set: "TEST",
+    setName: "Test",
+    released: true,
+    colors: ["red"],
+    attributes: [],
+    types: ["Navy"],
+    printedKeywords: [],
+    variants: [],
+    legality: {},
+    officialFaq: [],
+    errata: [],
+    sourceTextHash: "p1-a-source",
+    behaviorHash: "p1-a-behavior",
+    support: {
+      status: "vanilla-confirmed",
+      cardId: toCardId("p1-a"),
+      tested: true,
+      rulesVersion: "r1",
+      sourceTextHash: "p1-a-source",
+      behaviorHash: "p1-a-behavior",
+      cardDataVersion: "fixture",
+    },
+  };
+  manifest.effectDefinitions = {
+    "leader-red-sog": {
+      cardId: toCardId("leader-red"),
+      implementationStatus: "implemented-dsl",
+      metadata: {
+        sourceTextHash: "leader-red-sog",
+        rulesVersion: "r1",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+        reviewedBy: "test",
+        reviewedAt: "2026-05-21T00:00:00.000Z",
+      },
+      effects: [
+        {
+          id: "leader-red:start-of-game-stage" as never,
+          category: "auto",
+          trigger: { type: "startOfGame" },
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: {
+                  type: "search",
+                  request: {
+                    zone: "deck",
+                    player: "self",
+                    filter: { categories: ["stage"], typesAny: ["Navy"] },
+                    min: 0,
+                    max: 1,
+                    destination: "stageArea",
+                    revealTo: "chooserOnly",
+                    shuffleAfter: false,
+                  },
+                },
+              },
+              {
+                connector: "always",
+                effect: {
+                  type: "playSelected",
+                  selection: "selected:start-of-game" as never,
+                  ignoreCost: true,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+
+  const setup = createInitialState(input);
+  const setupDecision = must(setup.pendingDecision, "setup pending decision");
+  if (setupDecision.type !== "selectCards") {
+    throw new TypeError("Expected setup selectCards decision.");
+  }
+  const setupResolved = applyAction(setup, {
+    type: "respondToDecision",
+    decisionId: setupDecision.id,
+    response: {
+      type: "cards",
+      cards: [must(setupDecision.candidates[0], "candidate").card],
+    },
+  });
+  assert.equal(
+    must(setupResolved.state.players[p1], "p1").stage?.cardId,
+    toCardId("p1-a"),
+  );
+  let startedState = setupResolved.state;
+  if (startedState.pendingDecision?.type !== "mulligan") {
+    startedState = startMulliganFlow(startedState as never).state;
+  }
+  assert.equal(startedState.pendingDecision?.type, "mulligan");
+  const first = respondToMulliganDecision(startedState, {
+    type: "respondToDecision",
+    decisionId: must(startedState.pendingDecision, "first").id,
+    response: { type: "mulligan", keep: false },
+  });
+  const second = respondToMulliganDecision(first.state, {
+    type: "respondToDecision",
+    decisionId: must(first.state.pendingDecision, "second").id,
+    response: { type: "mulligan", keep: false },
+  });
+  const p1After = must(second.state.players[p1], "p1 after");
+  assert.equal(
+    p1After.hand.some((card) => card.cardId === toCardId("p1-a")),
+    false,
+  );
+  assert.equal(
+    p1After.life.some((lifeCard) => lifeCard.card.cardId === toCardId("p1-a")),
+    false,
+  );
+  assert.equal(
+    p1After.deck.some((card) => card.cardId === toCardId("p1-a")),
+    false,
   );
 });

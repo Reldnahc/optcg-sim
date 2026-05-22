@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SUP-003B.md",
+      "storyId": "SUP-003B",
+      "storyPath": "stories/approved/SUP-003B-activate-main-once-per-turn-runtime.yaml",
+      "storySha256": "fe01390c5ea9a39697d9089cbe0c3e589b6eca53da11bdb347f2cbbe7a343704"
+    }
+  ],
   "version": 1
 }

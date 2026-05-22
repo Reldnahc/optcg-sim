@@ -1,0 +1,118 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-003G
+epic_id: SUP-003
+title: Start-of-game typed Stage play card components
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Parse and promote reusable cards-layer support for start-of-game effects that
+  play up to 1 typed Stage card from the player's deck.
+story_boundary: >
+  Cards-layer story only. Runtime prerequisites must already be implemented by
+  SUP-003D. Do not add new engine runtime behavior, shared contract/schema
+  changes, real-card fixture promotion, source hashes, behavior hashes, overlays,
+  or card-specific branches.
+allowed_touch_points:
+  - stories/generated/SUP-003G-start-of-game-typed-stage-play-card-components.yaml
+  - stories/approved/SUP-003G-start-of-game-typed-stage-play-card-components.yaml
+  - agent-packets/SUP-003G.md
+  - agent-packets/active.json
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/start-of-game-stage-play-components.ts
+  - packages/cards/src/start-of-game-stage-play-components.test.ts
+  - packages/cards/src/start-of-game-stage-play-evidence.ts
+  - packages/cards/src/start-of-game-stage-play-generated-support.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator-parser-certification.test.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-probe.test.ts
+spec_refs:
+  - 01-system-architecture.s023
+  - 02-engine-mechanics.s008
+  - 02-engine-mechanics.s044
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s010
+  - 05-effect-dsl-reference.s014
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - SUP-003D
+  - SUP-003J
+scope:
+  - "define parser primitives separately before composing them: start-of-game timing phrase, play verb, up-to-one cardinality, typed Stage filter, self deck source, no-cost play semantics, and setup source-presence policy"
+  - parse `at the start of the game, play up to 1 {TYPE} type Stage card from your deck`
+  - "emit reusable Effect DSL as trigger `startOfGame` with a setup-safe play-from-deck/select-and-play shape that consumes SUP-003D runtime capability evidence"
+  - compose CardFilter category Stage and `typesAny` primitives without hardcoding one type name
+  - vary type name in tests to prevent exact sentence matching; selection count remains capped at up to one because Stage Area is a single-slot zone
+  - add runtime capability matrix evidence that cites SUP-003D capability groups
+non_scope:
+  - engine runtime behavior or shared contract/schema changes
+  - deck validation or external deck-construction rule parsing; SUP-003E owns that
+  - real-card fixture capture, source hash updates, behavior hash updates, overlays, supported-card manifests, or cards-produced manifests
+  - exact card IDs, exact full-card text, external card lists, or one-off full-effect branches
+  - start-of-game searches that add to hand, reveal, trash, shuffle after search, search non-deck zones, play Characters or Events, or support arbitrary filters beyond typed Stage
+card_source_integrity:
+  - this story does not enable or change support for a named real card
+  - source integrity is not applicable because implementation evidence uses synthetic representative texts only
+  - do not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, cards-produced manifests, or manually reviewed source evidence
+engine_capability_preflight:
+  - parsed effect shape is start-of-game setup effect selecting up to 1 self deck Stage card with a type filter and playing the selected card into stage area
+  - supported contract/schema authorability for setup search to Stage Area plus matching `playSelected` is provided by SUP-003J after that story lands
+  - supported runtime capability group is provided by SUP-003D after that story lands, with exact required IDs `trigger:startOfGame`, `startOfGame:setup-before-opening-draw`, `selectCards:deck:self:stage:typesAny:max1`, `playSelected:deck:stage:max1:ignoreCost`, `setupHiddenInfo:deck-candidates:chooserOnly`, `setupStagePlay:stageArea:replace-existing`, and `sourcePresencePolicy:mustRemainInSameZone`
+  - missing runtime capability group is none for scoped synthetic rows only after SUP-003D capability IDs exist in the runtime capability matrix; if capability evidence is absent, this story is blocked
+acceptance_criteria:
+  - parser/generator support is generic over type name while preserving up-to-one cardinality
+  - parser/generator implementation must expose or test primitive boundaries for start timing, play verb, cardinality/count, typed Stage filter, deck source, and setup play semantics
+  - full-line success plus value variation is not sufficient evidence
+  - "generated-support tests that assert `status: supported` must validate the produced Effect DSL with the real schema validator"
+  - generated-support promotion requires current parser-rule certification evidence for each scoped primitive and for the composed start-of-game Stage play shape
+  - the production/default generated-support path must supply current parser-rule certification evidence
+  - generated support fails closed when start timing, category, type filter, source zone, or play body is only partially parsed
+  - no production code checks exact full effect text, card IDs, or one representative sample as a whole string
+required_tests:
+  - cards parser primitive-boundary tests for start-of-game timing independent of the play-from-deck body
+  - cards parser primitive-boundary tests for typed Stage filter and deck source independent of one full representative sentence
+  - cards parser primitive-boundary tests for play verb, up-to-one cardinality, no-cost play semantics, and setup source-presence policy
+  - cards parser/generated-support matrix varying type name while preserving up-to-one cardinality
+  - real-schema generated-support regression for each supported start-of-game matrix row
+  - support-evaluator or support-probe regression proving the production/default path has no missing parser-certification blockers for the scoped start-of-game shape
+  - fail-closed tests for unsupported source zones, unsupported categories, unsupported filter words, missing up-to count, missing deck source, and stale/missing certification evidence
+  - runtime capability matrix test for SUP-003D capability evidence
+  - regression test for existing SUP-002 search generated-support rows
+  - "`corepack pnpm --filter @optcg/cards test`"
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run packets:verify`"
+repo_rules:
+  - implement only SUP-003G while its packet is active
+  - do not activate or implement SUP-003G until SUP-003D and SUP-003J have landed as reviewed prerequisite evidence on the active parent integration branch
+  - stop and split if implementation requires new engine runtime behavior or shared contract/schema work
+ambiguity_policy: fail_and_escalate

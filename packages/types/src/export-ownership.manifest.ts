@@ -16,6 +16,8 @@ export const TYP_001_STORY_OWNERS = [
   "TYP-010",
   "TYP-012A",
   "TYP-012B",
+  "SUP-003A",
+  "SUP-003I",
 ] as const;
 
 export type Typ001StoryOwner = (typeof TYP_001_STORY_OWNERS)[number];
@@ -109,6 +111,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   MatchStatus: "TYP-001F",
   BattleState: "TYP-001F",
   TurnState: "TYP-001F",
+  SetupContinuationState: "SUP-003I",
   TargetCandidate: "TYP-001E",
   CardSelectionCandidate: "TYP-001E",
   AuditEntry: "TYP-001F",
@@ -141,7 +144,13 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   Trigger: "TYP-001D",
   Condition: "TYP-001D",
   Cost: "TYP-001D",
+  OptionalTrashFromHandCost: "SUP-003A",
+  ScopedOptionalFieldTrashCostFilter: "SUP-003A",
+  ScopedOptionalFieldTrashCost: "SUP-003A",
+  OptionalChooseOneTrashCostAlternative: "SUP-003A",
+  OptionalChooseOneTrashCost: "SUP-003A",
   OptionalCost: "TYP-009A",
+  EffectBlockCost: "SUP-003A",
   TargetRequest: "TYP-001D",
   SelectedTargetsRequest: "TYP-010",
   ExactCardinality: "TYP-007A",

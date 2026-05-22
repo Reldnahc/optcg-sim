@@ -200,33 +200,62 @@ type Cost =
       chooser: PlayerRef;
     }
   | { type: "trashSelf" }
-  | {
-      type: "trashFromField";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-    }
   | { type: "discard"; count: number; filter?: CardFilter; chooser: PlayerRef }
   | { type: "sequence"; costs: Cost[] }
-  | { type: "chooseOne"; options: Cost[] }
   | { type: "custom"; action: string };
+
+type OptionalTrashFromHandCost = {
+  type: "trashFromHand";
+  count: number;
+  filter?: CardFilter;
+  chooser: PlayerRef;
+  optional: true;
+};
+
+type ScopedOptionalFieldTrashCostFilter = {
+  categories: ["character"];
+  typesAny: [string, ...string[]];
+};
+
+type ScopedOptionalFieldTrashCost = {
+  type: "trashFromField";
+  count: number;
+  filter: ScopedOptionalFieldTrashCostFilter;
+  chooser: "self";
+  optional: true;
+};
+
+type OptionalChooseOneTrashCostAlternative =
+  | OptionalTrashFromHandCost
+  | ScopedOptionalFieldTrashCost;
+
+type OptionalChooseOneTrashCost = {
+  type: "chooseOne";
+  options: [
+    OptionalChooseOneTrashCostAlternative,
+    ...OptionalChooseOneTrashCostAlternative[],
+  ];
+  optional: true;
+};
 
 type OptionalCost =
   | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "returnDon"; count: number; chooser?: PlayerRef; optional: true }
   | { type: "restSelf"; optional: true }
-  | {
-      type: "trashFromHand";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-      optional: true;
-    }
+  | OptionalTrashFromHandCost
+  | OptionalChooseOneTrashCost
   | { type: "sequence"; costs: Cost[]; optional: true };
 ```
 
 If paying a cost requires choosing cards or DON!!, the runtime creates a `PayCostDecision`.
-Cost primitives outside the schema-supported fixture subset remain planned layers. Optional cost behavior must remain separate from optional activation and optional effect clauses as defined by `04-effect-runtime.s011`.
+Cost primitives outside the schema-supported fixture subset remain planned layers.
+Scoped optional choose-one trash costs are authorable only through
+`{ type: "payCost"; cost: OptionalCost }` sequence segments and only for the
+listed optional trash alternatives. This schema/type authorability does not make
+broad `Cost.chooseOne`, non-optional `Cost.trashFromField`, parser support,
+runtime payment behavior, generated support, or playability available. Optional
+cost behavior must remain separate from optional activation and optional effect
+clauses as defined by `04-effect-runtime.s011`.
 
 ## Targets
 
@@ -963,7 +992,9 @@ These are not UI concepts. They are deterministic effect-runtime concepts. They 
 
 `selectTargets` is the non-mutating selectedTargets producer contract for same-frame saved field-object references. When a later segment consumes `{ family: "selectedTargets", saveResultAs, ... }`, the producer segment must be `selectTargets` with segment `saveResultAs`; mutating target effects do not act as standalone selectedTargets producer authority.
 
-`playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist. Generated support may not treat a parsed play-from-selection instruction as playable unless the parser covers the complete selection/play/return flow and the runtime capability matrix covers the resulting decision, hidden-information, forced-trash, and zone-movement behavior.
+`playSelected` is planned/not fixture-authorable until schema coverage and runtime capability evidence exist.
+
+Current schema exception: fixture authorability is scoped to saved hand selections plus one non-hand exception in `trigger: { type: "startOfGame" }` effect blocks only: `selection: "selected:start-of-game"` produced by the same sequence's scoped start-of-game Stage search request (`zone: "deck"`, `player: "self"`, no `lookCount`, `filter.categories: ["stage"]` with nonempty `typesAny`, `min: 0`, `max: 1`, `destination: "stageArea"`, `revealTo: "chooserOnly"`, `shuffleAfter: false`). Generated support may not treat a parsed play-from-selection instruction as playable unless the parser covers the complete selection/play/return flow and the runtime capability matrix covers the resulting decision, hidden-information, forced-trash, and zone-movement behavior.
 
 `playSelected` may consume only an authorized saved hand selection produced by the same supported effect execution frame. At playSelected resolution time, the selected card must still be in that player's hand and must still be legal to play under the current rules and the playSelected options. A stale, non-hand, no-longer-legal, or unsupported saved-reference family fails closed.
 
@@ -982,6 +1013,8 @@ Effects that say "play" without requiring cost payment should use:
 ```ts
 { type: 'playSelected', selection: '...', enterRested: true, ignoreCost: true }
 ```
+
+For the scoped start-of-game Stage exception, the only authorized consumer shape is `{ type: "playSelected", selection: "selected:start-of-game", ignoreCost: true }` (no `enterRested`) in the same sequence as the scoped producer search request in `05-effect-dsl-reference.s026`, and only in `trigger: { type: "startOfGame" }` effect blocks.
 
 The play still obeys rule-processing constraints such as character-area capacity and stage replacement. If the character area is full, the engine must create the forced-trash decision before completing the play.
 
@@ -1045,6 +1078,14 @@ Schema-supported fixture subset:
   sequence segments only; this is schema authorability for optional cost
   clauses, not non-optional activation `Cost.trashFromHand` authorability and
   not runtime/playability support
+- cost: scoped optional choose-one trash cost through
+  `{ type: "payCost"; cost: OptionalCost }` sequence segments only. Options are
+  limited to the reusable optional `trashFromHand` alternative and scoped
+  optional self Character-field `trashFromField` alternatives with positive
+  `count`, `chooser: "self"`, `optional: true`, and a filter limited to
+  `categories: ["character"]` plus nonempty `typesAny`. This is schema
+  authorability only and is not runtime payment behavior, parser certification,
+  generated support, support-report evidence, or card promotion.
 - cost: sequence
 - target: self, myLeader, opponentLeader, attacker, attackTarget, blocker,
   triggerCard, all, choose, savedFieldObject
@@ -1075,10 +1116,25 @@ Schema-supported fixture subset:
   is schema-authorability-only evidence and not runtime executable support,
   parser certification, generated support, support-report evidence, or card
   promotion.
+- effect: search for one scoped start-of-game Stage setup request only:
+  `zone: "deck"`, `player: "self"`, no `lookCount`,
+  `filter.categories: ["stage"]` with nonempty `typesAny`, `min: 0`, `max: 1`,
+  `destination: "stageArea"`, `revealTo: "chooserOnly"`, and
+  `shuffleAfter: false`; this is schema-authorability-only evidence and not
+  runtime executable support, parser certification, generated support,
+  support-report evidence, or card promotion.
 - effect: payCost
 - effect: selectCards
 - effect: selectTargets
-- effect: playSelected
+- effect: playSelected for existing same-sequence hand-selection producers only,
+  plus
+  the only non-hand saved-selection exception
+  `selection: "selected:start-of-game"` when consumed in the same sequence
+  with exact shape `{ type: "playSelected", selection: "selected:start-of-game", ignoreCost: true }`
+  after the scoped start-of-game Stage setup search
+  producer above; this remains schema-authorability-only evidence and not
+  runtime executable support, parser certification, generated support,
+  support-report evidence, or card promotion.
 - effect: sequence
 - effect: cannotAttack
 - effect: cannotBlock
@@ -1104,9 +1160,9 @@ Planned/not fixture-authorable until schema coverage exists:
 - condition: and, or, not, custom
 - cost: trashFromHand as non-optional `Cost.trashFromHand`
 - cost: trashSelf
-- cost: trashFromField
+- cost: trashFromField as broad or non-optional `Cost.trashFromField`
 - cost: discard
-- cost: chooseOne
+- cost: chooseOne as broad or standalone non-optional `Cost.chooseOne`
 - cost: custom
 - duration: whileConditionTrue
 - effect: lookAtTop

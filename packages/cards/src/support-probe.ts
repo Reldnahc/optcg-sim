@@ -129,6 +129,9 @@ function toProofCertificateInput({
     parserRuleIds: evaluation.parserRuleIds,
     sourceTextHash: evaluation.sourceTextHash,
     status: evaluation.status,
+    ...(evaluation.nonRuntimeEvidence === undefined
+      ? {}
+      : { nonRuntimeEvidence: evaluation.nonRuntimeEvidence }),
   };
   if (evaluation.effectDefinition !== undefined) {
     input.effectDefinition = evaluation.effectDefinition;

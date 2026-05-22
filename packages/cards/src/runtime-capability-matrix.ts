@@ -4,11 +4,12 @@ import {
   isConditionalContinuousCompositionParserRuleId,
   listParserRuleIdsForConditionalContinuousRuntimeCapabilityId,
 } from "./conditional-continuous-composition-evidence.js";
+import * as activateMainChooseOneCost from "./activate-main-choose-one-cost-evidence.js";
 import * as optionalKo from "./optional-trash-cost-ko-evidence.js";
 import { returnDonCostWrapperParserRuleId } from "./return-don-cost-wrapper-components.js";
 import { topNSearchRuntimeCapabilityRecords } from "./top-n-search-evidence.js";
+import { startOfGameStagePlayRuntimeCapabilityRecords } from "./start-of-game-stage-play-evidence.js";
 const onPlayReturnDonDrawNParserRuleId = "exact:on-play:return-don-draw-n:self";
-
 export type RuntimeCapabilityKind =
   | "category"
   | "composition"
@@ -23,7 +24,6 @@ export type RuntimeCapabilityKind =
   | "sourcePresencePolicy"
   | "target"
   | "trigger";
-
 export interface RuntimeCapabilityRecord {
   id: string;
   kind: RuntimeCapabilityKind;
@@ -38,19 +38,47 @@ export interface RuntimeCapabilityMatrix {
   generatedAtStory: string;
   capabilities: readonly RuntimeCapabilityRecord[];
 }
-
 export type RuntimeCapabilityParserRuleCoverage =
   | "explicit-blocker"
   | "reusable-parser-component"
   | "runtime-capability-only"
   | "unclassified";
-
 export interface RuntimeCapabilityParserRuleInventoryEntry {
   parserRuleId: string;
   parserRuleKind: string;
   coverage: RuntimeCapabilityParserRuleCoverage;
 }
-
+type RuntimeCapabilitySpec = readonly [string, RuntimeCapabilityKind, string];
+const sameZoneParserRuleIds = [
+  "exact:on-play:draw-n:self",
+  "exact:when-attacking:draw-n:self",
+  "exact:on-play:draw-n:trash-m:hand:self",
+  "exact:on-play:trash-2-from-hand:draw-1:self",
+  "exact:when-attacking:draw-n:trash-m:hand:self",
+  "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
+  "exact:on-play:draw-up-to-n:self",
+  "exact:on-play:optional-effect:draw-1:self",
+  "exact:condition:self-attached-don-count",
+  "exact:condition:your-turn",
+  "card014a:on-play:return-don-play-selected-character",
+  "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
+  onPlayReturnDonDrawNParserRuleId,
+  "card014a:on-play:select-target-modify-power",
+  "exact:on-play:select-1-opponent-character-target",
+  "exact:on-play:select-1-opponent-character-then-ko-that-character",
+  "exact:on-play:modify-power:self:this-turn",
+  "exact:on-play:modify-power:self:this-battle",
+  "exact:on-play:modify-power:choose:this-turn",
+  "exact:when-attacking:conditional:modify-power:choose:this-turn",
+  "exact:on-play:modify-power:all:this-turn",
+  "exact:on-play:cannot-attack:self:this-turn",
+  "exact:on-play:cannot-attack:choose:this-turn",
+  "exact:on-play:cannot-attack:all:this-turn",
+  "exact:on-play:cannot-block:self:this-turn",
+  "exact:on-play:cannot-block:choose:this-turn",
+  "exact:on-play:cannot-block:all:this-turn",
+  "exact:start-of-game:play-up-to-1-typed-stage-from-self-deck",
+] as const;
 const conditionalContinuousRuntimeCapabilitySpecs = [
   ["category:permanent", "category", "ENG-059F"],
   ["effect:giveKeyword:self:permanent:allowlisted", "effect", "ENG-059B"],
@@ -68,11 +96,7 @@ const conditionalContinuousRuntimeCapabilitySpecs = [
     "continuous",
     "SUP-002C",
   ],
-] as const satisfies readonly (readonly [
-  string,
-  RuntimeCapabilityKind,
-  string,
-])[];
+] as const satisfies readonly RuntimeCapabilitySpec[];
 
 const generatedSupportRuntimeCapabilityMatrixBase = {
   capabilities: [
@@ -173,37 +197,11 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       sinceStory: "CARD-008A",
       supported: true,
       supportedParserRuleIds: [
-        "exact:on-play:draw-n:self",
-        "exact:when-attacking:draw-n:self",
-        "exact:on-play:draw-n:trash-m:hand:self",
-        "exact:on-play:trash-2-from-hand:draw-1:self",
-        "exact:when-attacking:draw-n:trash-m:hand:self",
-        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
-        "exact:on-play:draw-up-to-n:self",
+        ...sameZoneParserRuleIds,
         "exact:on-ko:draw-n:self",
         "exact:on-ko:draw-up-to-n:self",
         "exact:trigger:draw-n:self",
         "exact:trigger:draw-up-to-n:self",
-        "exact:on-play:optional-effect:draw-1:self",
-        "exact:condition:self-attached-don-count",
-        "exact:condition:your-turn",
-        "card014a:on-play:return-don-play-selected-character",
-        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
-        onPlayReturnDonDrawNParserRuleId,
-        "card014a:on-play:select-target-modify-power",
-        "exact:on-play:select-1-opponent-character-target",
-        "exact:on-play:select-1-opponent-character-then-ko-that-character",
-        "exact:on-play:modify-power:self:this-turn",
-        "exact:on-play:modify-power:self:this-battle",
-        "exact:on-play:modify-power:choose:this-turn",
-        "exact:when-attacking:conditional:modify-power:choose:this-turn",
-        "exact:on-play:modify-power:all:this-turn",
-        "exact:on-play:cannot-attack:self:this-turn",
-        "exact:on-play:cannot-attack:choose:this-turn",
-        "exact:on-play:cannot-attack:all:this-turn",
-        "exact:on-play:cannot-block:self:this-turn",
-        "exact:on-play:cannot-block:choose:this-turn",
-        "exact:on-play:cannot-block:all:this-turn",
       ],
     },
     ...conditionalContinuousRuntimeCapabilitySpecs.map(
@@ -399,6 +397,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       ],
     },
     ...topNSearchRuntimeCapabilityRecords,
+    ...startOfGameStagePlayRuntimeCapabilityRecords,
     {
       description:
         "Printed Banish keyword behavior is executable by current runtime.",
@@ -516,6 +515,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: ["exact:on-play:optional-effect:draw-1:self"],
     },
     ...optionalKo.optionalTrashCostKoRuntimeCapabilityRecords,
+    ...activateMainChooseOneCost.activateMainChooseOneCostRuntimeCapabilityRecords,
     {
       description:
         "Return-DON!! costs can be paid atomically by the source controller.",
@@ -665,33 +665,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       sinceStory: "CARD-008A",
       supported: true,
       supportedParserRuleIds: [
-        "exact:on-play:draw-n:self",
-        "exact:when-attacking:draw-n:self",
-        "exact:on-play:draw-n:trash-m:hand:self",
-        "exact:on-play:trash-2-from-hand:draw-1:self",
-        "exact:when-attacking:draw-n:trash-m:hand:self",
-        "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
-        "exact:on-play:draw-up-to-n:self",
-        "exact:on-play:optional-effect:draw-1:self",
-        "exact:condition:self-attached-don-count",
-        "exact:condition:your-turn",
-        "card014a:on-play:return-don-play-selected-character",
-        "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
-        onPlayReturnDonDrawNParserRuleId,
-        "card014a:on-play:select-target-modify-power",
-        "exact:on-play:select-1-opponent-character-target",
-        "exact:on-play:select-1-opponent-character-then-ko-that-character",
-        "exact:on-play:modify-power:self:this-turn",
-        "exact:on-play:modify-power:self:this-battle",
-        "exact:on-play:modify-power:choose:this-turn",
-        "exact:when-attacking:conditional:modify-power:choose:this-turn",
-        "exact:on-play:modify-power:all:this-turn",
-        "exact:on-play:cannot-attack:self:this-turn",
-        "exact:on-play:cannot-attack:choose:this-turn",
-        "exact:on-play:cannot-attack:all:this-turn",
-        "exact:on-play:cannot-block:self:this-turn",
-        "exact:on-play:cannot-block:choose:this-turn",
-        "exact:on-play:cannot-block:all:this-turn",
+        ...sameZoneParserRuleIds,
         ...allConditionalContinuousCompositionParserRuleIds,
       ],
     },
@@ -861,6 +835,10 @@ export const generatedSupportRuntimeCapabilityMatrix = {
   capabilities: generatedSupportRuntimeCapabilityMatrixBase.capabilities
     .map((capability) => ({
       ...capability,
+      supportedParserRuleIds:
+        activateMainChooseOneCost.withActivateMainChooseOneCostParserRuleId(
+          capability,
+        ),
       supportedComponentIds:
         runtimeCapabilityComponentIdsByCapabilityId.get(capability.id) ?? [],
     }))
@@ -868,18 +846,17 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
     ),
 } as const satisfies RuntimeCapabilityMatrix;
-
 export const requiredGeneratedSupportCapabilityIds =
   generatedSupportRuntimeCapabilityMatrix.capabilities
-    .map((capability) => capability.id)
+    .map(({ id }) => id)
     .sort();
 
 export function listSupportedRuntimeCapabilityIds(
   matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
 ): readonly string[] {
   return matrix.capabilities
-    .filter((capability) => capability.supported)
-    .map((capability) => capability.id)
+    .filter(({ supported }) => supported)
+    .map(({ id }) => id)
     .sort();
 }
 
@@ -889,7 +866,6 @@ export function hasRuntimeCapability(
 ): boolean {
   return listSupportedRuntimeCapabilityIds(matrix).includes(capabilityId);
 }
-
 export function listRuntimeCapabilityParserRuleInventory(
   matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
 ): readonly RuntimeCapabilityParserRuleInventoryEntry[] {
@@ -919,13 +895,9 @@ function classifyParserRuleCoverage(
   parserRuleId: string,
   parserRuleKind: string,
 ): RuntimeCapabilityParserRuleCoverage {
-  if (parserRuleId.includes(":unsupported:")) {
-    return "explicit-blocker";
-  }
-
-  if (parserRuleKind === "source-presence-policy") {
+  if (parserRuleId.includes(":unsupported:")) return "explicit-blocker";
+  if (parserRuleKind === "source-presence-policy")
     return "runtime-capability-only";
-  }
 
   return parserRuleKind === "unclassified"
     ? "unclassified"
@@ -933,12 +905,9 @@ function classifyParserRuleCoverage(
 }
 
 function classifyParserRuleKind(parserRuleId: string): string {
-  if (parserRuleId === "line-separated-effect-blocks:v1") {
+  if (parserRuleId === "line-separated-effect-blocks:v1")
     return "line-separated-composition";
-  }
-  if (parserRuleId.startsWith("exact:keyword:")) {
-    return "keyword";
-  }
+  if (parserRuleId.startsWith("exact:keyword:")) return "keyword";
   if (
     [
       "exact:on-play:draw-n:self",
@@ -965,18 +934,19 @@ function classifyParserRuleKind(parserRuleId: string): string {
   }
   if (
     parserRuleId.includes(":draw-n:trash-m:hand:self") ||
+    parserRuleId.includes(
+      ":optional-choose-one-trash-self-field-type-or-hand",
+    ) ||
+    parserRuleId.includes(":start-of-game:play-up-to-1-typed-stage") ||
     parserRuleId === "exact:on-play:trash-2-from-hand:draw-1:self" ||
     parserRuleId.startsWith("card014a:sequence:")
   ) {
     return "sequence";
   }
   if (parserRuleId.includes(":top-n-search:")) return "deck-search";
-  if (parserRuleId.startsWith("exact:condition:")) {
-    return "condition";
-  }
-  if (parserRuleId === "exact:on-play:optional-effect:draw-1:self") {
+  if (parserRuleId.startsWith("exact:condition:")) return "condition";
+  if (parserRuleId === "exact:on-play:optional-effect:draw-1:self")
     return "optional-effect";
-  }
   if (
     parserRuleId.includes("return-don") ||
     parserRuleId === onPlayReturnDonDrawNParserRuleId ||
@@ -1013,6 +983,5 @@ function classifyParserRuleKind(parserRuleId: string): string {
   ) {
     return "source-presence-policy";
   }
-
   return "unclassified";
 }

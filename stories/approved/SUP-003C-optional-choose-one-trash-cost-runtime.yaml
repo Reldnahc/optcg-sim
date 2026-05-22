@@ -1,0 +1,105 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-003C
+epic_id: SUP-003
+title: Optional choose-one trash cost runtime
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Execute optional pay-cost sequence segments whose cost offers a choose-one
+  payment between filtered self-field Character trash and unfiltered
+  trash-from-hand, then resume dependent ifYouDo effects.
+story_boundary: >
+  Engine runtime story only. Do not add card parser/generated-support behavior,
+  real-card fixture evidence, support manifests, source hashes, behavior hashes,
+  or contract changes beyond consuming SUP-003A.
+allowed_touch_points:
+  - stories/generated/SUP-003C-optional-choose-one-trash-cost-runtime.yaml
+  - stories/approved/SUP-003C-optional-choose-one-trash-cost-runtime.yaml
+  - agent-packets/SUP-003C.md
+  - agent-packets/active.json
+  - packages/engine-core/src/effect-runtime-sequence-support.ts
+  - packages/engine-core/src/effect-runtime-sequence-frame-decisions.ts
+  - packages/engine-core/src/effect-runtime-sequence-frames.ts
+  - packages/engine-core/src/effect-runtime-sequence-cost-payment.ts
+  - packages/engine-core/src/effect-runtime-optional-choose-one-cost.test.ts
+  - packages/engine-core/src/effect-runtime-optional-hand-trash-cost.test.ts
+  - packages/engine-core/src/optional-activation-actions.ts
+  - packages/engine-core/src/filter-state-for-player.ts
+  - packages/engine-core/src/filter-state-for-player.test.ts
+spec_refs:
+  - 02-engine-mechanics.s025
+  - 02-engine-mechanics.s027
+  - 02-engine-mechanics.s042
+  - 03-game-state-events-decisions.s005
+  - 03-game-state-events-decisions.s012
+  - 03-game-state-events-decisions.s017
+  - 03-game-state-events-decisions.s020
+  - 03-game-state-events-decisions.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s012
+  - 06-visibility-security.s004
+  - 06-visibility-security.s005
+  - 11-testing-quality.s004
+dependencies:
+  - SUP-002B
+  - SUP-003A
+scope:
+  - support optional `payCost` sequence segments whose cost is a scoped optional choose-one over `trashFromField` and `trashFromHand` alternatives
+  - create one private pay-cost decision with a decline response and one payment option per payable alternative when at least one legal payment path exists, without leaking hand candidates to the opponent
+  - when neither alternative is payable, apply optional-if-possible semantics: create no pay-cost decision, record the optional cost segment as not paid, and skip dependent `ifYouDo` segments without public payment events
+  - support filtered self Character field-trash alternatives using reusable CardFilter category and `typesAny` matching
+  - support unfiltered self hand-trash alternatives using existing hidden-info protections for hand payment
+  - generate legal payment responses for each valid chooser-visible field candidate combination and each valid private hand-card combination for the decision player only; opponent views may infer only board-public field state and must not receive private hand candidates
+  - on field-trash payment, move selected self Character cards from character area to trash with deterministic public cardMoved, cardTrashed, and costPaid events
+  - on hand-trash payment, preserve existing public trashed-card event behavior and hidden-info view protections
+  - on decline or failed payment, record `paidCost: false`, set player-declined or failed-payment evidence, and skip dependent `ifYouDo` segments
+  - preserve existing optional rest/return DON and optional hand-trash cost behavior
+  - produce engine test evidence that later cards-layer runtime capability records can cite; do not edit the cards runtime capability matrix in this engine story
+non_scope:
+  - shared contract/schema changes beyond consuming SUP-003A
+  - card parser, generated-support, runtime capability matrix edits in cards package, support reports, fixtures, overlays, card IDs, source hashes, or behavior hashes
+  - non-optional choose-one costs, nested choose-one costs, discard aliases, opponent-field costs, trashSelf, restSelf, or broad arbitrary cost families
+  - field-trash filters beyond self Characters with reusable category and type filters
+  - K.O. semantics for cost trash; paying this cost must trash the card and must not count as battle K.O.
+  - Activate Main legal action support; SUP-003B owns activation timing
+  - server, client, UI, database, API, or live card-data work
+acceptance_criteria:
+  - optional choose-one cost payment and decline both resolve deterministically through the sequence frame model
+  - "`ifYouDo` effects after optional choose-one cost run only when one alternative was paid"
+  - field-trash and hand-trash alternatives are represented as payment options, not as exact printed text branches
+  - field-trash alternative filters by variable type name and does not hardcode one type
+  - tests vary type name, field candidate count, hand candidate count, and selected alternative to prove no exact branch
+  - chooser views expose only the active pay-cost decision and legal responses allowed by the public/legal-action projection model; opponent views may see board-public field state but must not receive private hand candidates or chooser-only decision payloads
+  - malformed, duplicate, wrong-player, stale, wrong-count, wrong-option, insufficient-card, and cross-zone responses fail closed without mutation
+  - no engine code imports `@optcg/cards` or checks real card IDs or exact printed text
+required_tests:
+  - engine test for optional choose-one cost accepting typed field-trash and then running dependent draw
+  - engine test for optional choose-one cost accepting hand-trash and then running dependent draw
+  - engine test for optional choose-one cost decline recording paidCost false and skipping dependent draw
+  - engine test with only field option payable, only hand option payable, both payable, and neither payable
+  - engine test varying field type filter values without changing runtime path
+  - engine hidden-information/view test for private hand candidates, chooser-visible field payment options, and opponent-safe filtered decision projection
+  - engine event-order and state-hash tests for field payment, hand payment, decline, and malformed/failure branches
+  - engine regression proving existing optional rest DON, return DON, and hand-trash cost behavior remains compatible
+  - engine malformed/stale/forged response tests for each payment option family
+  - "`corepack pnpm --filter @optcg/engine-core test`"
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run packets:verify`"
+repo_rules:
+  - implement only SUP-003C while its packet is active
+  - do not activate or implement SUP-003C until SUP-003A has landed as reviewed prerequisite evidence on the active parent integration branch
+  - keep engine-core free of cards package imports and live card-data adapters
+  - stop and split if filtered field-trash payment requires new shared contract fields
+ambiguity_policy: fail_and_escalate

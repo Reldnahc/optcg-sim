@@ -1,0 +1,22 @@
+{
+  "cardId": "SUP-003A-910",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-003A-910:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "cost": {
+        "type": "chooseOne",
+        "options": [{ "type": "restDon", "count": 1 }]
+      },
+      "effect": { "type": "draw", "count": 1, "player": "self" }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-003a-910",
+    "rulesVersion": "2026-05-21",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

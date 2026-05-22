@@ -1,0 +1,45 @@
+{
+  "cardId": "SUP-003A-906",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-003A-906:activate-main-1",
+      "category": "activate",
+      "trigger": { "type": "activateMain" },
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "connector": "always",
+            "effect": {
+              "type": "payCost",
+              "cost": {
+                "type": "chooseOne",
+                "optional": true,
+                "options": [
+                  {
+                    "type": "trashFromField",
+                    "count": 1,
+                    "chooser": "self",
+                    "zone": "stageArea",
+                    "filter": {
+                      "categories": ["character"],
+                      "typesAny": ["Straw Hat Crew"]
+                    },
+                    "optional": true
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-003a-906",
+    "rulesVersion": "2026-05-21",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

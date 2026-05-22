@@ -68,6 +68,73 @@ describe("support probe proof certificate", () => {
       [...positions].sort((left, right) => left - right),
     );
   });
+
+  it("reports non-runtime-only deck-rule evidence with not-applicable component/runtime requirement layers", async () => {
+    const detail = await loadFixture("OP03-044.kaya.json");
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: "SUP-003E-NON-RUNTIME" as CardId,
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "SUP-003E-NON-RUNTIME",
+          effect:
+            "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck.",
+          name: "SUP-003E non-runtime only",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("- parse completeness: passed");
+    expect(text).toContain("- parser-rule certification/evidence: passed");
+    expect(text).toContain("- generated DSL schema: not-applicable");
+    expect(text).toContain("- component evidence IDs: not-applicable");
+    expect(text).toContain(
+      "- required runtime capability IDs: not-applicable (none)",
+    );
+    expect(text).toContain("- engine-proof/test-evidence: not-applicable");
+    expect(text).toContain("Playable: no");
+  });
+
+  it("preserves non-runtime evidence while keeping runtime proof layers for mixed deck-rule plus runtime text", async () => {
+    const detail = await loadFixture("OP03-044.kaya.json");
+    const output: string[] = [];
+
+    const exitCode = await runSupportProbe({
+      cardId: "SUP-003E-MIXED" as CardId,
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "SUP-003E-MIXED",
+          effect:
+            "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck.\n[On Play] Draw 1 card.",
+          name: "SUP-003E mixed non-runtime runtime",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: yes");
+    expect(text).toContain("- component evidence IDs: passed");
+    expect(text).toContain("- required runtime capability IDs: passed");
+    expect(text).toContain(
+      "exact:external-deck-rule:category-cost-gte-in-your-deck",
+    );
+  });
 });
 
 async function loadFixture(

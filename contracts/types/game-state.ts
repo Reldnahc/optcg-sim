@@ -43,6 +43,7 @@ import type {
   ReplacementProcessState,
   RevealRecord,
   RngState,
+  SetupContinuationState,
   TimerState,
   TransientCardSet,
   TurnState,
@@ -81,6 +82,7 @@ export interface GameState {
   timers: TimerState;
   battle?: BattleState;
   pendingDecision?: PendingDecision;
+  setupContinuation?: SetupContinuationState;
   oncePerTurn: OncePerTurnRecord[];
   effectQueue: EffectQueueEntry[];
   effectExecutionFrames: EffectExecutionFrame[];

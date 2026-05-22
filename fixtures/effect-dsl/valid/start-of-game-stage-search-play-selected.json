@@ -1,0 +1,49 @@
+{
+  "cardId": "SUP-003J-001",
+  "implementationStatus": "unsupported",
+  "effects": [
+    {
+      "id": "SUP-003J-001:start-of-game-setup-1",
+      "category": "auto",
+      "trigger": { "type": "startOfGame" },
+      "effect": {
+        "type": "sequence",
+        "effects": [
+          {
+            "connector": "always",
+            "effect": {
+              "type": "search",
+              "request": {
+                "zone": "deck",
+                "player": "self",
+                "filter": {
+                  "categories": ["stage"],
+                  "typesAny": ["Dressrosa"]
+                },
+                "min": 0,
+                "max": 1,
+                "destination": "stageArea",
+                "revealTo": "chooserOnly",
+                "shuffleAfter": false
+              }
+            }
+          },
+          {
+            "connector": "ifPreviousSucceeded",
+            "effect": {
+              "type": "playSelected",
+              "selection": "selected:start-of-game",
+              "ignoreCost": true
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "sourceTextHash": "sha256:test-sup-003j-001",
+    "rulesVersion": "v6",
+    "effectDefinitionsVersion": "0.1.0",
+    "tested": true
+  }
+}

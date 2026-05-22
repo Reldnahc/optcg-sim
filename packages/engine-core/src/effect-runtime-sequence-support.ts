@@ -73,15 +73,65 @@ const isSupportedTrashFromHandSegment = (
 
 const isSupportedPayCostSegment = (
   effect: SequenceSegmentEffect,
-): effect is PayCostEffect =>
-  effect.type === "payCost" &&
-  (effect.cost.type === "restDon" ||
-    effect.cost.type === "returnDon" ||
-    effect.cost.type === "trashFromHand") &&
-  (effect.cost.chooser === undefined || effect.cost.chooser === "self") &&
-  (effect.cost.type !== "trashFromHand" || effect.cost.filter === undefined) &&
-  Number.isInteger(effect.cost.count) &&
-  effect.cost.count > 0;
+): effect is PayCostEffect => {
+  if (effect.type !== "payCost") {
+    return false;
+  }
+  const cost = effect.cost;
+  if (cost.type === "chooseOne") {
+    const hasSupportedSelfOptionalPositiveCount = (option: unknown): boolean =>
+      typeof option === "object" &&
+      option !== null &&
+      (option as Record<string, unknown>)["chooser"] === "self" &&
+      (option as Record<string, unknown>)["optional"] === true &&
+      Number.isInteger((option as Record<string, unknown>)["count"]) &&
+      ((option as Record<string, unknown>)["count"] as number) > 0;
+    const hasSupportedSelfOptionalUnfilteredHand = (
+      option: unknown,
+    ): boolean => {
+      if (!hasSupportedSelfOptionalPositiveCount(option)) {
+        return false;
+      }
+      return (
+        typeof option === "object" && option !== null && !("filter" in option)
+      );
+    };
+    const hasSupportedFieldFilter = (
+      filter: unknown,
+    ): filter is {
+      categories: ["character"];
+      typesAny: [string, ...string[]];
+    } =>
+      typeof filter === "object" &&
+      filter !== null &&
+      Array.isArray((filter as { categories?: unknown }).categories) &&
+      (filter as { categories: unknown[] }).categories.length === 1 &&
+      (filter as { categories: unknown[] }).categories[0] === "character" &&
+      Array.isArray((filter as { typesAny?: unknown }).typesAny) &&
+      (filter as { typesAny: unknown[] }).typesAny.length > 0 &&
+      (filter as { typesAny: unknown[] }).typesAny.every(
+        (typeName) => typeof typeName === "string",
+      );
+    return cost.options.every((option) => {
+      if (option.type === "trashFromHand") {
+        return hasSupportedSelfOptionalUnfilteredHand(option);
+      }
+      return (
+        hasSupportedSelfOptionalPositiveCount(option) &&
+        hasSupportedFieldFilter(option.filter)
+      );
+    });
+  }
+  return (
+    (cost.type === "restDon" ||
+      cost.type === "returnDon" ||
+      cost.type === "trashFromHand") &&
+    (cost.chooser === undefined || cost.chooser === "self") &&
+    (cost.type !== "trashFromHand" || cost.filter === undefined) &&
+    Number.isInteger(cost.count) &&
+    cost.count > 0
+  );
+};
 
 const isSupportedSavedFieldObjectKoTarget = (
   target: Target,
@@ -97,13 +147,37 @@ const isSupportedKoSegment = (
 ): effect is KoEffect =>
   effect.type === "ko" && isSupportedSavedFieldObjectKoTarget(effect.target);
 
+const isActivateMainAreaZone = (
+  zone: EffectQueueEntry["source"]["zone"],
+): zone is NonNullable<EffectQueueEntry["source"]["zone"]> =>
+  zone?.zone === "leaderArea" ||
+  zone?.zone === "characterArea" ||
+  zone?.zone === "stageArea";
+
+const isScopedActivateMainSequenceEntry = (entry: EffectQueueEntry): boolean =>
+  entry.causedBy.type === "ruleProcess" &&
+  entry.causedBy.name === "effectRuntime:activateMain" &&
+  String(entry.id).startsWith("queue-entry:activate-main:") &&
+  String(entry.timingWindowId).startsWith("timing-window:activate-main:") &&
+  entry.generation === 0 &&
+  entry.triggerEventId === undefined &&
+  entry.sourcePresencePolicy === "mustRemainInSameZone" &&
+  isActivateMainAreaZone(entry.source.zone) &&
+  isActivateMainAreaZone(entry.sourceSnapshot.zone);
+
 export const isSupportedSequenceBlock = (
   entry: EffectQueueEntry,
   effectBlock: EffectDefinition["effects"][number] | undefined,
 ): effectBlock is SupportedSequenceBlock => {
+  const isSupportedCategoryForEntry =
+    effectBlock?.category === "auto" ||
+    (effectBlock?.category === "activate" &&
+      effectBlock.trigger.type === "activateMain" &&
+      isScopedActivateMainSequenceEntry(entry));
+
   if (
     effectBlock === undefined ||
-    effectBlock.category !== "auto" ||
+    !isSupportedCategoryForEntry ||
     effectBlock.optional === true ||
     effectBlock.cost !== undefined ||
     effectBlock.conditionTiming !== undefined ||

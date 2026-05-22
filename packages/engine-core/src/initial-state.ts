@@ -1,6 +1,7 @@
 import type {
   CardId,
   CardInstance,
+  EngineError,
   GameState,
   MatchCardManifest,
   MatchId,
@@ -12,6 +13,11 @@ import type {
 
 import { assertGameStateInvariants } from "./invariants.js";
 import { advanceRngUint32, initializeRng } from "./rng.js";
+import {
+  collectStartOfGamePlans,
+  createStartOfGameSetupDecision,
+} from "./start-of-game-effects.js";
+import { appendEvent } from "./action-results.js";
 
 const OPENING_HAND_SIZE = 5;
 const INITIAL_STATE_SEQ = 0 as StateSeq;
@@ -35,6 +41,7 @@ export interface CreateInitialStateInput {
   cardManifest: MatchCardManifest;
   rngSeed: number | bigint | string;
   shuffleDecks?: boolean;
+  startOfGameSelections?: readonly unknown[];
 }
 
 const createCard = (
@@ -72,6 +79,11 @@ const requirePlayerValue = <T>(
   }
   return value;
 };
+
+const toEngineErrorReason = (error: EngineError): string =>
+  "reason" in error && typeof error.reason === "string"
+    ? error.reason
+    : error.type;
 
 const shuffleCardsDeterministic = (
   cards: CardInstance[],
@@ -142,39 +154,126 @@ const createPlayerState = (params: {
     ),
   );
 
-  const shuffledDeck = params.shuffleDecks
-    ? shuffleCardsDeterministic(seededDeck, params.rng)
-    : { cards: seededDeck, rng: params.rng };
-
-  const openingHand = shuffledDeck.cards
-    .slice(0, OPENING_HAND_SIZE)
-    .map((card, index) => withIndexedZone(card, "hand", "hand", index));
-  const afterHandDeck = shuffledDeck.cards.slice(OPENING_HAND_SIZE);
-  const lifeSetup = setupLifeFromDeck(
-    params.playerId,
-    afterHandDeck,
-    params.leaderLifeCount,
-  );
-  const finalDeck = lifeSetup.deck.map((card, index) =>
+  const initialDeck = seededDeck.map((card, index) =>
     withIndexedZone(card, "deck", "deck", index),
   );
 
   return {
     playerState: {
       playerId: params.playerId,
-      deck: finalDeck,
+      deck: initialDeck,
       donDeck: seededDonDeck,
-      hand: openingHand,
+      hand: [],
       trash: [],
       leader,
       characters: [],
       costArea: [],
-      life: lifeSetup.life,
+      life: [],
       hasMulliganed: false,
       turnCount: params.turnCount,
     },
+    rng: params.rng,
+  };
+};
+
+const finalizePlayerSetup = (params: {
+  player: PlayerState;
+  lifeCount: number;
+  rng: RngState;
+  shuffleDecks: boolean;
+}): { player: PlayerState; rng: RngState } => {
+  const shuffledDeck = params.shuffleDecks
+    ? shuffleCardsDeterministic(params.player.deck, params.rng)
+    : { cards: params.player.deck, rng: params.rng };
+  const openingHand = shuffledDeck.cards
+    .slice(0, OPENING_HAND_SIZE)
+    .map((card, index) => withIndexedZone(card, "hand", "hand", index));
+  const afterHandDeck = shuffledDeck.cards.slice(OPENING_HAND_SIZE);
+  const lifeSetup = setupLifeFromDeck(
+    params.player.playerId,
+    afterHandDeck,
+    params.lifeCount,
+  );
+  return {
+    player: {
+      ...params.player,
+      hand: openingHand,
+      life: lifeSetup.life,
+      deck: lifeSetup.deck.map((card, index) =>
+        withIndexedZone(card, "deck", "deck", index),
+      ),
+    },
     rng: shuffledDeck.rng,
   };
+};
+
+export const finalizeSetupFromContinuation = (
+  state: PreMulliganSetupGameState,
+): PreMulliganSetupGameState => {
+  const continuation = state.setupContinuation;
+  if (continuation === undefined) {
+    throw new TypeError(
+      "Setup continuation is required for setup finalization.",
+    );
+  }
+  if (
+    !Number.isInteger(continuation.nextStartOfGamePlanIndex) ||
+    continuation.nextStartOfGamePlanIndex < 0
+  ) {
+    throw new TypeError(
+      "Setup continuation plan index must be a non-negative integer.",
+    );
+  }
+  const [firstPlayerId, secondPlayerId] = continuation.playerOrder;
+  if (
+    state.players[firstPlayerId] === undefined ||
+    state.players[secondPlayerId] === undefined
+  ) {
+    throw new TypeError(
+      "Setup continuation player order must match state players.",
+    );
+  }
+  const keys = Object.keys(continuation.leaderLifeCounts);
+  if (
+    keys.length !== 2 ||
+    !keys.includes(firstPlayerId) ||
+    !keys.includes(secondPlayerId)
+  ) {
+    throw new TypeError(
+      "Setup continuation leaderLifeCounts must match playerOrder players.",
+    );
+  }
+
+  let rng = state.rng;
+  const nextPlayers: Record<PlayerId, PlayerState> = { ...state.players };
+  for (const playerId of continuation.playerOrder) {
+    const lifeCount = requirePlayerValue(
+      continuation.leaderLifeCounts,
+      playerId,
+      "leaderLifeCounts",
+    );
+    if (!Number.isInteger(lifeCount) || lifeCount < 0) {
+      throw new TypeError(
+        `leaderLifeCounts for ${playerId} must be a non-negative integer.`,
+      );
+    }
+    const finalized = finalizePlayerSetup({
+      player: requirePlayerValue(nextPlayers, playerId, "players"),
+      lifeCount,
+      rng,
+      shuffleDecks: continuation.shuffleDecks,
+    });
+    nextPlayers[playerId] = finalized.player;
+    rng = finalized.rng;
+  }
+
+  const nextState: PreMulliganSetupGameState = {
+    ...state,
+    players: nextPlayers,
+    rng,
+  };
+  delete nextState.setupContinuation;
+  return nextState;
 };
 
 /**
@@ -183,6 +282,11 @@ const createPlayerState = (params: {
 export const createInitialState = (
   input: CreateInitialStateInput,
 ): PreMulliganSetupGameState => {
+  if (input.startOfGameSelections !== undefined) {
+    throw new TypeError(
+      "startOfGameSelections is deprecated; use canonical respondToDecision setup flow.",
+    );
+  }
   const cardManifestSnapshot = cloneMatchCardManifest(input.cardManifest);
   const [firstPlayerId, secondPlayerId] = input.playerOrder;
   if (firstPlayerId === secondPlayerId) {
@@ -331,6 +435,51 @@ export const createInitialState = (
     audit: [],
   };
 
-  assertGameStateInvariants(state);
-  return state;
+  state.setupContinuation = {
+    playerOrder: input.playerOrder,
+    firstPlayerId: input.firstPlayerId,
+    leaderLifeCounts: input.leaderLifeCounts,
+    shuffleDecks: input.shuffleDecks ?? false,
+    nextStartOfGamePlanIndex: 0,
+  };
+
+  const plansResult = collectStartOfGamePlans(
+    state.players,
+    state.cardManifest,
+    input.playerOrder,
+  );
+  if (plansResult.errors !== undefined) {
+    throw new TypeError(toEngineErrorReason(plansResult.errors[0]));
+  }
+  const plans = plansResult.plans;
+  if (plans.length > 0) {
+    const decision = createStartOfGameSetupDecision(
+      state,
+      plans,
+      state.setupContinuation.nextStartOfGamePlanIndex,
+    );
+    if (decision.errors !== undefined) {
+      throw new TypeError(toEngineErrorReason(decision.errors[0]));
+    }
+    if (decision.pendingDecision !== undefined) {
+      state.pendingDecision = decision.pendingDecision;
+      appendEvent(
+        state,
+        state.eventJournal,
+        "decisionCreated",
+        {
+          decisionId: decision.pendingDecision.id,
+          decisionType: decision.pendingDecision.type,
+          playerId: decision.pendingDecision.playerId,
+        },
+        decision.pendingDecision.visibility,
+      );
+      return state;
+    }
+  }
+
+  const finalized = finalizeSetupFromContinuation(state);
+
+  assertGameStateInvariants(finalized);
+  return finalized;
 };

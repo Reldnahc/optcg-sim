@@ -12,6 +12,7 @@ import {
   generatedSupportComponentEvidenceInventory,
   type GeneratedSupportBlocker,
   type GeneratedSupportComponentEvidenceInventoryEntry,
+  type GeneratedSupportParserCertificationEvidence,
 } from "./generated-support-types.js";
 import type { NormalizedPoneglyphCard } from "./normalization.js";
 import type { RuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
@@ -21,6 +22,7 @@ export interface EvaluateGeneratedSupportPlayabilityInput {
   cardDataVersion: string;
   effectDefinitionsVersion: string;
   expectedBehaviorHash?: string;
+  parserCertificationEvidence?: GeneratedSupportParserCertificationEvidence;
   expectedSourceTextHash?: string;
   rulesVersion: string;
   runtimeCapabilityMatrix?: RuntimeCapabilityMatrix;
@@ -36,6 +38,7 @@ export interface GeneratedSupportPlayabilityEvaluation {
   effectDefinition?: EffectDefinition;
   effectDefinitionId?: string;
   missingCapabilityIds: readonly string[];
+  nonRuntimeEvidence?: GeneratedSupportIndexEntry["nonRuntimeEvidence"];
   parseStatus: GeneratedSupportIndexEntry["parseStatus"];
   parserRuleIds: readonly string[];
   playable: boolean;
@@ -43,6 +46,9 @@ export interface GeneratedSupportPlayabilityEvaluation {
   status: GeneratedSupportIndexEntry["status"];
   support?: CardImplementationRecord;
 }
+const externalDeckRuleNonRuntimeParserCertificationIds = [
+  "non-runtime:external-deck-construction-rule",
+] as const;
 
 export function evaluateGeneratedSupportPlayability(
   input: EvaluateGeneratedSupportPlayabilityInput,
@@ -89,7 +95,7 @@ export function evaluateGeneratedSupportPlayability(
 
   const indexInput: GeneratedSupportIndexInput = {
     cards: [cardInput],
-    parserCertificationEvidence: {
+    parserCertificationEvidence: input.parserCertificationEvidence ?? {
       currentCertificationIds: listCurrentParserCertificationIds(),
     },
     validateEffectDefinition: input.validateEffectDefinition,
@@ -112,6 +118,9 @@ export function evaluateGeneratedSupportPlayability(
     capabilityEvidence: entry.capabilityEvidence,
     cardId: entry.cardId,
     missingCapabilityIds: entry.missingCapabilityIds,
+    ...(entry.nonRuntimeEvidence === undefined
+      ? {}
+      : { nonRuntimeEvidence: entry.nonRuntimeEvidence }),
     parseStatus: entry.parseStatus,
     parserRuleIds: entry.parserRuleIds,
     playable: entry.status === "supported",
@@ -143,6 +152,9 @@ function listCurrentParserCertificationIds(): readonly string[] {
   const ids = new Set<string>();
   const entries: readonly GeneratedSupportComponentEvidenceInventoryEntry[] =
     generatedSupportComponentEvidenceInventory;
+  for (const id of externalDeckRuleNonRuntimeParserCertificationIds) {
+    ids.add(id);
+  }
   for (const entry of entries) {
     for (const id of entry.parserCertificationIds ?? []) {
       ids.add(id);

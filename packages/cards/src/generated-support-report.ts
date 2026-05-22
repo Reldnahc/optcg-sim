@@ -95,6 +95,7 @@ export interface GeneratedSupportReportCardStatus {
   blockerCodes: readonly GeneratedSupportBlockerCode[];
   componentEvidenceIds: readonly string[];
   missingCapabilityIds: readonly string[];
+  nonRuntimeEvidence?: GeneratedSupportIndexEntry["nonRuntimeEvidence"];
   parseStatus: GeneratedSupportParserResultStatus;
   parserRuleIds: readonly string[];
   status: "supported" | "unsupported";
@@ -116,6 +117,7 @@ export interface GeneratedSupportProofCertificateInput {
   sourceTextHash: string;
   status: "supported" | "unsupported";
   behaviorHash?: string;
+  nonRuntimeEvidence?: GeneratedSupportIndexEntry["nonRuntimeEvidence"];
   support?: GeneratedSupportIndexEntry["support"];
 }
 
@@ -170,6 +172,9 @@ export function buildGeneratedSupportReport(
           ),
           componentEvidenceIds: sortedUnique(entry.componentEvidenceIds),
           missingCapabilityIds: sortedUnique(entry.missingCapabilityIds),
+          ...(entry.nonRuntimeEvidence === undefined
+            ? {}
+            : { nonRuntimeEvidence: entry.nonRuntimeEvidence }),
           parseStatus: entry.parseStatus,
           parserRuleIds: sortedUnique(entry.parserRuleIds),
           status: entry.status,
@@ -443,6 +448,18 @@ function buildGeneratedDslSchemaLayer(
       status: "not-applicable",
     };
   }
+  if (
+    entry.effectDefinition === undefined &&
+    entry.nonRuntimeEvidence !== undefined &&
+    entry.nonRuntimeEvidence.length > 0
+  ) {
+    return {
+      layer: "generated-dsl-schema",
+      message:
+        "Generated DSL schema is not applicable to certified non-runtime parser evidence.",
+      status: "not-applicable",
+    };
+  }
 
   return {
     layer: "generated-dsl-schema",
@@ -471,6 +488,17 @@ function buildComponentEvidenceLayer({
     return {
       layer: "component-evidence",
       message: "Component evidence is not applicable to vanilla support.",
+      status: "not-applicable",
+    };
+  }
+  if (
+    entry.nonRuntimeEvidence !== undefined &&
+    entry.nonRuntimeEvidence.length > 0
+  ) {
+    return {
+      layer: "component-evidence",
+      message:
+        "Component evidence is not applicable to certified non-runtime parser evidence.",
       status: "not-applicable",
     };
   }
@@ -504,6 +532,18 @@ function buildRequiredRuntimeCapabilitiesLayer({
       capabilityIds: [],
       layer: "required-runtime-capabilities",
       message: "Runtime capability IDs are not applicable to vanilla support.",
+      status: "not-applicable",
+    };
+  }
+  if (
+    entry.nonRuntimeEvidence !== undefined &&
+    entry.nonRuntimeEvidence.length > 0
+  ) {
+    return {
+      capabilityIds: [],
+      layer: "required-runtime-capabilities",
+      message:
+        "Runtime capability IDs are not applicable to certified non-runtime parser evidence.",
       status: "not-applicable",
     };
   }

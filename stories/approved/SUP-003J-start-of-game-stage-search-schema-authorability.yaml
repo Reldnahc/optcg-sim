@@ -1,0 +1,90 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SUP-003J
+epic_id: SUP-003
+title: Start-of-game Stage search schema authorability
+type: implementation
+area: contracts
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Authorize the narrow Effect DSL schema shape used by setup-time
+  start-of-game Stage play support: chooser-only self-deck Stage search to
+  Stage Area followed by same-sequence playSelected.
+story_boundary: >
+  Contract/schema story only. Do not implement engine runtime behavior, cards
+  parser/generated-support behavior, runtime capability matrix evidence,
+  support reports, overlays, real-card fixture evidence, source hashes, behavior
+  hashes, or card promotion.
+allowed_touch_points:
+  - stories/approved/SUP-003J-start-of-game-stage-search-schema-authorability.yaml
+  - stories/approved/SUP-003-leader-start-game-activate-main-support-parent.yaml
+  - stories/approved/SUP-003G-start-of-game-typed-stage-play-card-components.yaml
+  - agent-packets/SUP-003J.md
+  - agent-packets/active.json
+  - specs/05-effect-dsl-reference.md
+  - specs/section-index.json
+  - contracts/effect-dsl.schema.json
+  - fixtures/effect-dsl/valid/start-of-game-stage-search-play-selected.json
+  - fixtures/effect-dsl/invalid/start-of-game-stage-search-non-stage-filter.json
+  - fixtures/effect-dsl/invalid/start-of-game-stage-search-wrong-destination.json
+  - fixtures/effect-dsl/invalid/start-of-game-stage-play-selected-mismatched-selection.json
+  - tests/contracts/effect-dsl-schema.test.mjs
+  - tools/validate-effect-dsl-fixtures.ts
+spec_refs:
+  - 02-engine-mechanics.s008
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s010
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s014
+  - 05-effect-dsl-reference.s026
+  - 05-effect-dsl-reference.s027
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s004
+  - 23-repo-tooling-and-enforcement.s006
+dependencies:
+  - SUP-003I
+scope:
+  - 'authorize only the setup search request shape with `zone: "deck"`, `player: "self"`, no `lookCount`, Stage filter `categories: ["stage"]` plus nonempty `typesAny`, `min: 0`, `max: 1`, `destination: "stageArea"`, `revealTo: "chooserOnly"`, and `shuffleAfter: false`'
+  - "authorize only same-sequence `playSelected` consuming the setup search producer selection `selected:start-of-game` with `ignoreCost: true`"
+  - "revise `05-effect-dsl-reference.s026`/`s027` to define this as the only non-hand saved selection exception: a same-sequence setup search may produce only `selected:start-of-game` for setup Stage play, while ordinary `playSelected` remains limited to existing authorized hand-selection producers"
+  - "update fixture validation semantic guards so this scoped setup search producer is accepted for `playSelected`, while existing hand-selection producer restrictions remain intact for ordinary `playSelected`"
+  - add valid and invalid schema fixtures proving the scoped shape is authorable and adjacent shapes remain rejected
+  - document the schema-supported fixture subset entry as contract/schema authorability only, not runtime support, parser certification, generated support, or card playability
+non_scope:
+  - engine runtime implementation or setup decision behavior
+  - cards parser/generated-support implementation, runtime capability matrix evidence, support evaluator behavior, support reports, overlays, or card promotion
+  - deck validation or leader-scoped construction restrictions
+  - arbitrary start-of-game searches, adding searched cards to hand, reveal-to-both-player setup searches, non-deck setup searches, non-Stage categories, untyped Stage searches, multi-card Stage search, Characters, Events, or comma-separated filters
+  - real card IDs, real-card fixture capture, source hash updates, behavior hash updates, cards-produced manifests, or supported-card manifests
+acceptance_criteria:
+  - the Effect DSL schema accepts the exact setup start-of-game Stage search plus playSelected sequence shape required by SUP-003D and SUP-003G
+  - the schema requires canonical `CardFilter.categories` plus `typesAny` and rejects deprecated aliases or non-Stage categories for this setup shape
+  - the schema rejects wrong destination zones, missing or nonmatching setup selection references, unsupported visibility, unsupported source zones, unsupported max counts, and non-setup playSelected producers
+  - fixture validation semantic guards allow only this scoped setup search producer to satisfy `playSelected`; ordinary `playSelected` remains tied to its existing authorized producer families
+  - the spec text explicitly preserves the existing hand-selection-only restriction for ordinary `playSelected` and documents the setup `selected:start-of-game` search producer as a narrow exception
+  - valid fixtures remain authorability-only and do not claim generated support, review state, tested state, real-card support, runtime capability evidence, or card playability
+required_tests:
+  - schema test proving the scoped start-of-game Stage search request has the exact required fields and constants
+  - valid effect DSL fixture for start-of-game Stage search to Stage Area followed by matching playSelected
+  - invalid effect DSL fixtures for non-Stage filter, wrong destination, and mismatched playSelected selection
+  - fixture validator semantic-guard regression proving setup search can produce only `selected:start-of-game` for matching playSelected
+  - regression proving existing hand-selection playSelected fixtures and invalid playSelected fixtures keep their current behavior
+  - "`corepack pnpm run contracts:validate-effects`"
+  - "`corepack pnpm run test:contracts -- tests/contracts/effect-dsl-schema.test.mjs`"
+  - "`corepack pnpm run stories:validate`"
+  - "`corepack pnpm run packets:verify`"
+repo_rules:
+  - implement only SUP-003J while its packet is active
+  - do not activate or implement SUP-003G until SUP-003J has landed as reviewed prerequisite evidence on the active parent integration branch
+  - stop and split if authorizing this schema shape requires engine runtime, cards parser, generated-support, or real-card fixture work
+ambiguity_policy: fail_and_escalate

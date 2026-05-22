@@ -575,8 +575,8 @@ const dedupePublicLegalActions = (
 const toPublicRevealRecord = (
   state: GameState,
   playerId: PlayerId,
-): PublicRevealRecord[] =>
-  state.revealedCards
+): PublicRevealRecord[] => {
+  const runtimeRecords: PublicRevealRecord[] = state.revealedCards
     .filter(
       (record) =>
         record.visibility.type === "public" ||
@@ -592,6 +592,32 @@ const toPublicRevealRecord = (
       createdAtStateSeq: record.createdAtStateSeq,
       cleanupPolicy: record.cleanupPolicy,
     }));
+  const pending = state.pendingDecision;
+  const setupCandidateRecord: PublicRevealRecord[] =
+    pending !== undefined &&
+    pending.type === "selectCards" &&
+    pending.playerId === playerId &&
+    pending.request.set !== undefined &&
+    String(pending.request.set).startsWith("set:setup-start-of-game:")
+      ? [
+          {
+            id: `reveal:setup-start-of-game:${String(pending.id)}`,
+            cards: pending.candidates
+              .filter(
+                (candidate) =>
+                  candidate.visibility.type === "private" &&
+                  candidate.visibility.playerId === playerId,
+              )
+              .map((candidate) => candidate.card),
+            visibility: "privateToRecipient",
+            origin: "topOfDeck" as const,
+            createdAtStateSeq: state.seq,
+            cleanupPolicy: "none",
+          },
+        ]
+      : [];
+  return [...runtimeRecords, ...setupCandidateRecord];
+};
 
 export const filterStateForPlayer = (
   state: GameState,
