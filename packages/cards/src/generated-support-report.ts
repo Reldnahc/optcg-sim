@@ -448,6 +448,18 @@ function buildGeneratedDslSchemaLayer(
       status: "not-applicable",
     };
   }
+  if (
+    entry.effectDefinition === undefined &&
+    entry.nonRuntimeEvidence !== undefined &&
+    entry.nonRuntimeEvidence.length > 0
+  ) {
+    return {
+      layer: "generated-dsl-schema",
+      message:
+        "Generated DSL schema is not applicable to certified non-runtime parser evidence.",
+      status: "not-applicable",
+    };
+  }
 
   return {
     layer: "generated-dsl-schema",

@@ -95,6 +95,7 @@ describe("support probe proof certificate", () => {
     expect(exitCode).toBe(0);
     expect(text).toContain("- parse completeness: passed");
     expect(text).toContain("- parser-rule certification/evidence: passed");
+    expect(text).toContain("- generated DSL schema: not-applicable");
     expect(text).toContain("- component evidence IDs: not-applicable");
     expect(text).toContain(
       "- required runtime capability IDs: not-applicable (none)",
