@@ -165,4 +165,29 @@ describe("Poneglyph normalization", () => {
     expect(card.cardId).toBe("EB04-011");
     expect(card.printedKeywords).toEqual(["rushCharacter"]);
   });
+
+  it("normalizes question-mark attribute values from Poneglyph detail", async () => {
+    const fixture = await readJsonFixture(
+      "fixtures/poneglyph/cards/OP05-091.rebecca.json",
+    );
+    const card = normalizePoneglyphCardDetail({
+      ...(fixture as Record<string, unknown>),
+      attribute: ["?"],
+    });
+
+    expect(card.attributes).toEqual(["?"]);
+  });
+
+  it("fails closed for unsupported non-question-mark attributes", async () => {
+    const fixture = await readJsonFixture(
+      "fixtures/poneglyph/cards/OP05-091.rebecca.json",
+    );
+
+    expect(() =>
+      normalizePoneglyphCardDetail({
+        ...(fixture as Record<string, unknown>),
+        attribute: ["unknown-attribute"],
+      }),
+    ).toThrow("Unsupported Poneglyph attribute: unknown-attribute");
+  });
 });

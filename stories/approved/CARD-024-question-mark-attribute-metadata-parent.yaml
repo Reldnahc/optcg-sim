@@ -1,0 +1,59 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-024
+epic_id: CARD-024
+title: Question-mark attribute metadata parent
+type: implementation
+area: cards
+primary_concern: contract
+priority: high
+status: approved
+summary: >
+  Coordinate the minimal contract and cards normalization work needed to treat
+  the printed question-mark attribute as a canonical card attribute value.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  CARD-024A after distinct parent and child story-review evidence exists.
+allowed_touch_points:
+  - stories/generated/CARD-024*.yaml
+  - stories/approved/CARD-024*.yaml
+  - agent-packets/CARD-024*.md
+  - agent-packets/active.json
+spec_refs:
+  - 09-card-data-and-support-policy.s003
+  - 09-card-data-and-support-policy.s014
+  - 09-card-data-and-support-policy.s024
+  - 19-poneglyph-api-contract.s006
+  - 19-poneglyph-api-contract.s007
+  - 19-poneglyph-api-contract.s009
+  - 18-acceptance-tests.s011
+dependencies:
+  - CARD-001C
+child_stories:
+  - id: CARD-024A
+    title: Support printed question-mark attribute metadata
+    concern: Add the printed `?` attribute to canonical metadata contracts and Poneglyph normalization so support tooling can inspect cards that carry that attribute.
+    depends_on: []
+scope:
+  - add the printed question-mark attribute as a canonical `Attribute` value
+  - preserve existing multi-attribute array semantics
+  - treat Poneglyph raw attribute `?` as the canonical printed question-mark attribute, not as unknown or missing metadata
+  - keep the fix limited to metadata contracts, schema validation, normalization, and probe regression evidence
+non_scope:
+  - gameplay engine behavior
+  - card parser/generated-support primitive promotion
+  - support manifest, overlay, source hash, behavior hash, or card playable status changes
+  - deck validation behavior
+  - broad handling for arbitrary unrecognized Poneglyph attributes
+acceptance_criteria:
+  - CARD-024 is not implemented directly
+  - CARD-024A owns all implementation changes
+  - OP13-079 support probing no longer crashes on `Unsupported Poneglyph attribute: ?`
+required_tests:
+  - story validation
+  - packet verification
+repo_rules:
+  - implement only one child story at a time
+  - keep PR #392 untouched while this metadata fix is prepared from main
+ambiguity_policy: fail_and_escalate

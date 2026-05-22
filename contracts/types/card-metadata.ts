@@ -17,7 +17,13 @@ export type CardColor =
   | "purple"
   | "black"
   | "yellow";
-export type Attribute = "slash" | "strike" | "ranged" | "special" | "wisdom";
+export type Attribute =
+  | "slash"
+  | "strike"
+  | "ranged"
+  | "special"
+  | "wisdom"
+  | "?";
 export type Keyword =
   | "rush"
   | "rushCharacter"

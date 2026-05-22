@@ -310,3 +310,18 @@ test("implemented-dsl support can reference a reviewed On Play draw effect defin
   ];
   expect(linkedDefinition?.cardId).toBe(support.cardId);
 });
+
+test("attribute type accepts printed question-mark canonical value", () => {
+  const attribute: Attribute = "?";
+  const metadata: CardMetadata = {
+    cardId: "OP13-079" as CardId,
+    source: "poneglyph-fixture",
+    name: "Question Mark Attribute Card",
+    category: "character",
+    colors: ["blue"],
+    attributes: [attribute],
+    text: "",
+  };
+
+  expect(metadata.attributes).toEqual(["?"]);
+});

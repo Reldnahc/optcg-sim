@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { Ajv2020 } from "ajv/dist/2020.js";
+import type { AnySchema } from "ajv";
 import { describe, expect, it } from "vitest";
 import type { CardId, PoneglyphCardDetail } from "@optcg/types";
 
@@ -797,6 +800,52 @@ describe("support probe", () => {
 
     expect(exitCode).toBe(0);
     expect(after).toEqual(before);
+  });
+
+  it("accepts question-mark leader attribute filters in effect DSL schema", () => {
+    const schema = JSON.parse(
+      readFileSync(
+        path.join(repoRoot, "contracts/effect-dsl.schema.json"),
+        "utf8",
+      ),
+    ) as AnySchema;
+    const validate = new Ajv2020({ allErrors: true, strict: true }).compile(
+      schema,
+    );
+    const definition = {
+      cardId: "OP13-079",
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: "op13-079.leader-question-mark-attribute-check",
+          category: "activate",
+          trigger: { type: "activateMain" },
+          effect: {
+            type: "draw",
+            count: 1,
+            player: "self",
+          },
+          condition: {
+            type: "hasCardInZone",
+            zone: "leaderArea",
+            player: "self",
+            filter: {
+              categories: ["leader"],
+              attributesAny: ["?"],
+            },
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: "sha256:test",
+        rulesVersion: "generated-support-v1",
+        effectDefinitionsVersion: "generated-support-v1",
+        tested: true,
+      },
+    };
+
+    expect(validate(definition)).toBe(true);
+    expect(validate.errors).toBeNull();
   });
 });
 
