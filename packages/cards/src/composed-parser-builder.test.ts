@@ -204,6 +204,51 @@ describe("composed parser builder scaffold", () => {
     ]);
   });
 
+  it("composes external deck-rule plus start-of-game first sentence with Activate Main second line", () => {
+    const text =
+      "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck and at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck.\n[Activate: Main] [Once Per Turn] You may trash 1 of your {Celestial Dragons} type Characters or 1 card from your hand: Draw 1 card.";
+    const result = parseCertifiedCardText({
+      cardId,
+      effectDefinitionsVersion: "generated-support-parser-test",
+      rulesVersion: "rules-test",
+      sourceText: text,
+      sourceTextHash: "sha256:source",
+    });
+
+    expect(result.status).toBe("complete");
+    if (!isCompleteGeneratedSupportParseResult(result)) {
+      throw new Error("Expected complete parse.");
+    }
+    expect(result.parserRuleIds).toEqual([
+      "exact:external-deck-rule:category-cost-gte-in-your-deck",
+      "exact:start-of-game:play-up-to-1-typed-stage-from-self-deck",
+      "exact:activate-main:once-per-turn:optional-choose-one-trash-self-field-type-or-hand:draw-n:self",
+      "line-separated-effect-blocks:v1",
+    ]);
+  });
+
+  it("fails closed when the start-of-game part in the first-sentence composition is unsupported", () => {
+    const text =
+      "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck and at the start of the game, reveal up to 1 {Mary Geoise} type Stage card from your deck.\n[Activate: Main] [Once Per Turn] You may trash 1 of your {Celestial Dragons} type Characters or 1 card from your hand: Draw 1 card.";
+    const result = parseCertifiedCardText({
+      cardId,
+      effectDefinitionsVersion: "generated-support-parser-test",
+      rulesVersion: "rules-test",
+      sourceText: text,
+      sourceTextHash: "sha256:source",
+    });
+
+    expect(result.status).toBe("partial");
+    if (isCompleteGeneratedSupportParseResult(result)) {
+      throw new Error("Expected partial parse.");
+    }
+    expect(result.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "unparsed-span" }),
+      ]),
+    );
+  });
+
   it("parses reusable condition and hand-selection components", () => {
     expect(
       parseConditionedDrawInstructionBody("During your turn, draw 1 card."),

@@ -701,6 +701,44 @@ describe("support probe", () => {
     );
   });
 
+  it("prints supported multiline SUP-003H representative composition with deck-rule non-runtime evidence and runtime parser rules", async () => {
+    const detail = await loadOp03044Fixture();
+    const output: string[] = [];
+    const effectText =
+      "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck and at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck.\n[Activate: Main] [Once Per Turn] You may trash 1 of your {Celestial Dragons} type Characters or 1 card from your hand: Draw 1 card.";
+
+    const exitCode = await runSupportProbe({
+      cardId: toCardId("SUP-003H-PROBE-REPRESENTATIVE"),
+      getCard: () =>
+        Promise.resolve({
+          ...detail,
+          card_number: "SUP-003H-PROBE-REPRESENTATIVE",
+          effect: effectText,
+          name: "SUP-003H representative probe candidate",
+        }),
+      stdout: {
+        write(chunk: string | Uint8Array): boolean {
+          output.push(String(chunk));
+          return true;
+        },
+      },
+    });
+
+    const text = output.join("");
+    expect(exitCode).toBe(0);
+    expect(text).toContain("Playable: yes");
+    expect(text).toContain(
+      "exact:external-deck-rule:category-cost-gte-in-your-deck",
+    );
+    expect(text).toContain(
+      "exact:start-of-game:play-up-to-1-typed-stage-from-self-deck",
+    );
+    expect(text).toContain(
+      "exact:activate-main:once-per-turn:optional-choose-one-trash-self-field-type-or-hand:draw-n:self",
+    );
+    expect(text).toContain("line-separated-effect-blocks:v1");
+  });
+
   it("prints metadata layer for empty-effect metadata precondition blockers", async () => {
     const detail = await loadOp03044Fixture();
     const output: string[] = [];

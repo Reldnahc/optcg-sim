@@ -12,6 +12,7 @@ import {
   generatedSupportComponentEvidenceInventory,
   type GeneratedSupportBlocker,
   type GeneratedSupportComponentEvidenceInventoryEntry,
+  type GeneratedSupportParserCertificationEvidence,
 } from "./generated-support-types.js";
 import type { NormalizedPoneglyphCard } from "./normalization.js";
 import type { RuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
@@ -21,6 +22,7 @@ export interface EvaluateGeneratedSupportPlayabilityInput {
   cardDataVersion: string;
   effectDefinitionsVersion: string;
   expectedBehaviorHash?: string;
+  parserCertificationEvidence?: GeneratedSupportParserCertificationEvidence;
   expectedSourceTextHash?: string;
   rulesVersion: string;
   runtimeCapabilityMatrix?: RuntimeCapabilityMatrix;
@@ -44,6 +46,9 @@ export interface GeneratedSupportPlayabilityEvaluation {
   status: GeneratedSupportIndexEntry["status"];
   support?: CardImplementationRecord;
 }
+const externalDeckRuleNonRuntimeParserCertificationIds = [
+  "non-runtime:external-deck-construction-rule",
+] as const;
 
 export function evaluateGeneratedSupportPlayability(
   input: EvaluateGeneratedSupportPlayabilityInput,
@@ -90,7 +95,7 @@ export function evaluateGeneratedSupportPlayability(
 
   const indexInput: GeneratedSupportIndexInput = {
     cards: [cardInput],
-    parserCertificationEvidence: {
+    parserCertificationEvidence: input.parserCertificationEvidence ?? {
       currentCertificationIds: listCurrentParserCertificationIds(),
     },
     validateEffectDefinition: input.validateEffectDefinition,
@@ -106,6 +111,35 @@ export function evaluateGeneratedSupportPlayability(
         input.card.cardId,
       )}.`,
     );
+  }
+
+  const nonRuntimeParserCertificationBlockers =
+    evaluateNonRuntimeParserCertificationBlockers({
+      evidence: indexInput.parserCertificationEvidence,
+      parserRuleIds: entry.parserRuleIds,
+    });
+  if (nonRuntimeParserCertificationBlockers.length > 0) {
+    return {
+      blockers: [...entry.blockers, ...nonRuntimeParserCertificationBlockers],
+      capabilityEvidence: entry.capabilityEvidence,
+      cardId: entry.cardId,
+      ...(entry.effectDefinition === undefined
+        ? {}
+        : { effectDefinition: entry.effectDefinition }),
+      ...(entry.effectDefinitionId === undefined
+        ? {}
+        : { effectDefinitionId: entry.effectDefinitionId }),
+      missingCapabilityIds: entry.missingCapabilityIds,
+      ...(entry.nonRuntimeEvidence === undefined
+        ? {}
+        : { nonRuntimeEvidence: entry.nonRuntimeEvidence }),
+      parseStatus: entry.parseStatus,
+      parserRuleIds: entry.parserRuleIds,
+      playable: false,
+      sourceTextHash: entry.sourceTextHash,
+      status: "unsupported",
+      ...(entry.support === undefined ? {} : { support: entry.support }),
+    };
   }
 
   const result: GeneratedSupportPlayabilityEvaluation = {
@@ -147,10 +181,45 @@ function listCurrentParserCertificationIds(): readonly string[] {
   const ids = new Set<string>();
   const entries: readonly GeneratedSupportComponentEvidenceInventoryEntry[] =
     generatedSupportComponentEvidenceInventory;
+  for (const id of externalDeckRuleNonRuntimeParserCertificationIds) {
+    ids.add(id);
+  }
   for (const entry of entries) {
     for (const id of entry.parserCertificationIds ?? []) {
       ids.add(id);
     }
   }
   return [...ids].sort();
+}
+
+function evaluateNonRuntimeParserCertificationBlockers({
+  evidence,
+  parserRuleIds,
+}: {
+  evidence: GeneratedSupportParserCertificationEvidence | undefined;
+  parserRuleIds: readonly string[];
+}): readonly GeneratedSupportBlocker[] {
+  if (
+    !parserRuleIds.includes(
+      "exact:external-deck-rule:category-cost-gte-in-your-deck",
+    )
+  ) {
+    return [];
+  }
+
+  const current = new Set(evidence?.currentCertificationIds ?? []);
+  const stale = new Set(evidence?.staleCertificationIds ?? []);
+  return externalDeckRuleNonRuntimeParserCertificationIds.flatMap((id) => {
+    const isStale = stale.has(id);
+    return isStale || !current.has(id)
+      ? [
+          {
+            code: "unsupported-primitive",
+            component: "external-deck-rule-category-cost-gte-in-your-deck",
+            diagnosticLayer: "review",
+            message: `${isStale ? "Stale" : "Missing"} parser certification ${id} for component external-deck-rule-category-cost-gte-in-your-deck.`,
+          },
+        ]
+      : [];
+  });
 }
