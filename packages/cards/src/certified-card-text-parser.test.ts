@@ -604,6 +604,12 @@ describe("certified card text parser", () => {
     expect(result.status).not.toBe("complete");
   });
 
+  it("does not broaden line-separated composition to keyword plus runtime lines", () => {
+    const result = parse("[Blocker]\n[On Play] Draw 1 card.");
+
+    expect(result.status).not.toBe("complete");
+  });
+
   it.each([
     "[On Play] Draw 0 cards.",
     "[On Play] Draw -1 cards.",

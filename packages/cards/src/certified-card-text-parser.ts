@@ -444,9 +444,7 @@ function parseSupportedComposition(
     clauses.push(clause);
   }
 
-  return isCertifiedLineSeparatedEffectBlockComposition(
-    clauses.map((clause) => clause.effectBlock),
-  )
+  return isCertifiedLineSeparatedEffectBlockComposition(clauses)
     ? clauses
     : undefined;
 }
