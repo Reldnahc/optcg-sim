@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-003D.md",
-      "storyId": "SUP-003D",
-      "storyPath": "stories/approved/SUP-003D-start-of-game-typed-stage-play-runtime.yaml",
-      "storySha256": "cbaa913e928389ce072ef3e090ffbefc4b26c1582057aa98c994a94a30924df0"
+      "packetPath": "agent-packets/SUP-003E.md",
+      "storyId": "SUP-003E",
+      "storyPath": "stories/approved/SUP-003E-external-deck-rule-parser-evidence.yaml",
+      "storySha256": "aa1a035e5698f44bbb824b1ae415d8de5a603ec3008d2c7a72b39e834b18b8f6"
     }
   ],
   "version": 1
