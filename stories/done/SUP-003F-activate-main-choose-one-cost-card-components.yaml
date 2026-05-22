@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Parse and promote reusable cards-layer support for Activate Main Once Per
   Turn effects with optional choose-one trash costs that gate draw.

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Execute optional pay-cost sequence segments whose cost offers a choose-one
   payment between filtered self-field Character trash and unfiltered

@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Prove the SUP-003 cards-layer primitives compose across representative leader
   text without exact full-card branches: certified non-runtime deck rule,

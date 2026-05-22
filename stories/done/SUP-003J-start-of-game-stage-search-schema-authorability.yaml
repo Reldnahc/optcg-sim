@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Authorize the narrow Effect DSL schema shape used by setup-time
   start-of-game Stage play support: chooser-only self-deck Stage search to

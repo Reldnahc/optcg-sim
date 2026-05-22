@@ -8,7 +8,7 @@ type: implementation
 area: cards
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Parse and promote reusable cards-layer support for start-of-game effects that
   play up to 1 typed Stage card from the player's deck.

@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Execute setup-time start-of-game effects that let a player select up to 1
   typed Stage card from their deck and play the selected card before opening

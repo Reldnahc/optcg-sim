@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Add a typed, engine-internal setup continuation state surface to raw
   `GameState` so setup-time decisions can be answered through canonical

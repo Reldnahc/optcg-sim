@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Execute reusable implemented-dsl Activate Main effect blocks during the main
   phase, including legal action exposure, source validation, effect queueing,
