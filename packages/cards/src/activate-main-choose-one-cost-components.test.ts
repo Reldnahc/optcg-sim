@@ -5,6 +5,7 @@ import {
   buildActivateMainChooseOneTrashCostDrawSequenceEffect,
   parseActivateMainBodyDrawClause,
   parseActivateMainChooseOneTrashCostClause,
+  parseActivateMainChooseOneTrashCostResidueClause,
   parseActivateMainChooseOneTrashFieldCostAlternative,
   parseActivateMainChooseOneTrashFromHandCostAlternative,
   parseActivateMainCostBodySeparator,
@@ -12,6 +13,7 @@ import {
   parseActivateMainCostOptionalMarker,
   parseActivateMainWrapper,
 } from "./activate-main-choose-one-cost-components.js";
+import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 
 describe("activate main choose-one optional cost components", () => {
   it("parses wrapper, once-per-turn marker, optional marker, connector, separator, and draw body as separate primitives", () => {
@@ -120,6 +122,66 @@ describe("activate main choose-one optional cost components", () => {
         },
       ],
       type: "sequence",
+    });
+  });
+
+  it("builds stable effect ids that include type and count variants", () => {
+    const cardId = "SUP-003F-COMPONENTS" as CardId;
+    const left = parseActivateMainChooseOneTrashCostClause(
+      cardId,
+      "[Activate: Main] [Once Per Turn] You may trash 2 of your {Navy} type Characters or 1 card from your hand: Draw 3 cards.",
+    );
+    const right = parseActivateMainChooseOneTrashCostClause(
+      cardId,
+      "[Activate: Main] [Once Per Turn] You may trash 1 of your {Fish-Man} type Characters or 2 cards from your hand: Draw 3 cards.",
+    );
+
+    expect(left?.effectBlock?.id).toBe(
+      "SUP-003F-COMPONENTS:activate-main-once-per-turn-optional-choose-one-trash-self-field-2-navy-or-hand-1-then-draw-3",
+    );
+    expect(right?.effectBlock?.id).toBe(
+      "SUP-003F-COMPONENTS:activate-main-once-per-turn-optional-choose-one-trash-self-field-1-fish-man-or-hand-2-then-draw-3",
+    );
+  });
+
+  it("parses supported activate-main prefix and preserves unsupported residue", () => {
+    const sourceText =
+      "[Activate: Main] [Once Per Turn] You may trash 2 of your {Navy} type Characters or 1 card from your hand: Draw 3 cards. Then rest 1 DON!!.";
+    const residue = parseActivateMainChooseOneTrashCostResidueClause(
+      "SUP-003F-COMPONENTS" as CardId,
+      sourceText,
+    );
+
+    expect(residue?.prefix).toBe(
+      "[Activate: Main] [Once Per Turn] You may trash 2 of your {Navy} type Characters or 1 card from your hand: Draw 3 cards. ",
+    );
+    expect(residue?.clause.parserRuleId).toBe(
+      "exact:activate-main:once-per-turn:optional-choose-one-trash-self-field-type-or-hand:draw-n:self",
+    );
+  });
+
+  it("records activate-main residue through the production certified parser", () => {
+    const prefix =
+      "[Activate: Main] [Once Per Turn] You may trash 2 of your {Navy} type Characters or 1 card from your hand: Draw 3 cards. ";
+    const trailingText = "Then rest 1 DON!!.";
+    const sourceText = `${prefix}${trailingText}`;
+
+    const result = parseCertifiedCardText({
+      cardId: "SUP-003F-COMPONENTS" as CardId,
+      effectDefinitionsVersion: "generated-support-parser-test",
+      rulesVersion: "rules-test",
+      sourceText,
+      sourceTextHash: "sha256:source",
+    });
+
+    expect(result).toMatchObject({
+      parsedRuleIds: [
+        "exact:activate-main:once-per-turn:optional-choose-one-trash-self-field-type-or-hand:draw-n:self",
+      ],
+      status: "partial",
+      unparsedSpans: [
+        { end: sourceText.length, start: prefix.length, text: trailingText },
+      ],
     });
   });
 

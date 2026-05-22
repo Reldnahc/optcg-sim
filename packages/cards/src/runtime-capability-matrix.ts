@@ -859,6 +859,10 @@ export const generatedSupportRuntimeCapabilityMatrix = {
   capabilities: generatedSupportRuntimeCapabilityMatrixBase.capabilities
     .map((capability) => ({
       ...capability,
+      supportedParserRuleIds:
+        activateMainChooseOneCost.withActivateMainChooseOneCostParserRuleId(
+          capability,
+        ),
       supportedComponentIds:
         runtimeCapabilityComponentIdsByCapabilityId.get(capability.id) ?? [],
     }))
@@ -868,18 +872,23 @@ export const generatedSupportRuntimeCapabilityMatrix = {
 } as const satisfies RuntimeCapabilityMatrix;
 export const requiredGeneratedSupportCapabilityIds =
   generatedSupportRuntimeCapabilityMatrix.capabilities
-    .map((capability) => capability.id)
+    .map(({ id }) => id)
     .sort();
 
-export function listSupportedRuntimeCapabilityIds(): readonly string[] {
-  return generatedSupportRuntimeCapabilityMatrix.capabilities
-    .filter((capability) => capability.supported)
-    .map((capability) => capability.id)
+export function listSupportedRuntimeCapabilityIds(
+  matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
+): readonly string[] {
+  return matrix.capabilities
+    .filter(({ supported }) => supported)
+    .map(({ id }) => id)
     .sort();
 }
 
-export function hasRuntimeCapability(capabilityId: string): boolean {
-  return listSupportedRuntimeCapabilityIds().includes(capabilityId);
+export function hasRuntimeCapability(
+  capabilityId: string,
+  matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
+): boolean {
+  return listSupportedRuntimeCapabilityIds(matrix).includes(capabilityId);
 }
 export function listRuntimeCapabilityParserRuleInventory(
   matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
@@ -910,13 +919,9 @@ function classifyParserRuleCoverage(
   parserRuleId: string,
   parserRuleKind: string,
 ): RuntimeCapabilityParserRuleCoverage {
-  if (parserRuleId.includes(":unsupported:")) {
-    return "explicit-blocker";
-  }
-
-  if (parserRuleKind === "source-presence-policy") {
+  if (parserRuleId.includes(":unsupported:")) return "explicit-blocker";
+  if (parserRuleKind === "source-presence-policy")
     return "runtime-capability-only";
-  }
 
   return parserRuleKind === "unclassified"
     ? "unclassified"
@@ -924,12 +929,9 @@ function classifyParserRuleCoverage(
 }
 
 function classifyParserRuleKind(parserRuleId: string): string {
-  if (parserRuleId === "line-separated-effect-blocks:v1") {
+  if (parserRuleId === "line-separated-effect-blocks:v1")
     return "line-separated-composition";
-  }
-  if (parserRuleId.startsWith("exact:keyword:")) {
-    return "keyword";
-  }
+  if (parserRuleId.startsWith("exact:keyword:")) return "keyword";
   if (
     [
       "exact:on-play:draw-n:self",
@@ -965,12 +967,9 @@ function classifyParserRuleKind(parserRuleId: string): string {
     return "sequence";
   }
   if (parserRuleId.includes(":top-n-search:")) return "deck-search";
-  if (parserRuleId.startsWith("exact:condition:")) {
-    return "condition";
-  }
-  if (parserRuleId === "exact:on-play:optional-effect:draw-1:self") {
+  if (parserRuleId.startsWith("exact:condition:")) return "condition";
+  if (parserRuleId === "exact:on-play:optional-effect:draw-1:self")
     return "optional-effect";
-  }
   if (
     parserRuleId.includes("return-don") ||
     parserRuleId === onPlayReturnDonDrawNParserRuleId ||

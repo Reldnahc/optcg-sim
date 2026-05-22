@@ -114,3 +114,26 @@ export const activateMainChooseOneCostRuntimeCapabilityRecords = [
     supportedParserRuleIds: [activateMainChooseOneCostParserRuleId],
   },
 ] as const;
+
+type CapabilityParserRuleInput = {
+  readonly id: string;
+  readonly supportedParserRuleIds: readonly string[];
+};
+
+export function withActivateMainChooseOneCostParserRuleId(
+  capability: CapabilityParserRuleInput,
+): readonly string[] {
+  if (
+    !activateMainChooseOneCostRuntimeCapabilityIds.some(
+      (capabilityId) => capabilityId === capability.id,
+    )
+  ) {
+    return capability.supportedParserRuleIds;
+  }
+  return [
+    ...new Set([
+      ...capability.supportedParserRuleIds,
+      activateMainChooseOneCostParserRuleId,
+    ]),
+  ].sort();
+}

@@ -1,10 +1,12 @@
 import type { CardId, Effect, Trigger } from "@optcg/types";
 import {
   buildSequenceEffect,
+  findReusableComposedResiduePrefix,
   parseExactPositiveSafeInteger,
   parseOncePerTurnWrapper,
   toEffectId,
   type ReusableComposedParserClause,
+  type ReusableComposedParserResidueClause,
 } from "./composed-parser-builder.js";
 import { activateMainChooseOneCostParserRuleId } from "./activate-main-choose-one-cost-evidence.js";
 
@@ -250,12 +252,17 @@ export function parseActivateMainChooseOneTrashCostClause(
     return undefined;
   }
 
+  const stableTypeName = body.typeName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
   return {
     effectBlock: {
       category: "activate",
       effect: buildActivateMainChooseOneTrashCostDrawSequenceEffect(body),
       id: toEffectId(
-        `${String(cardId)}:activate-main-once-per-turn-optional-choose-one-trash-self-field-type-or-hand-then-draw-${String(body.drawCount)}`,
+        `${String(cardId)}:activate-main-once-per-turn-optional-choose-one-trash-self-field-${String(body.fieldTrashCount)}-${stableTypeName.length === 0 ? "type" : stableTypeName}-or-hand-${String(body.handTrashCount)}-then-draw-${String(body.drawCount)}`,
       ),
       oncePerTurn: true,
       sourcePresencePolicy: "mustRemainInSameZone",
@@ -263,4 +270,15 @@ export function parseActivateMainChooseOneTrashCostClause(
     },
     parserRuleId: activateMainChooseOneCostParserRuleId,
   };
+}
+
+export function parseActivateMainChooseOneTrashCostResidueClause(
+  cardId: CardId,
+  sourceText: string,
+):
+  | ReusableComposedParserResidueClause<ReusableComposedParserClause>
+  | undefined {
+  return findReusableComposedResiduePrefix(sourceText, (prefix) =>
+    parseActivateMainChooseOneTrashCostClause(cardId, prefix),
+  );
 }

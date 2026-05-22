@@ -53,7 +53,10 @@ import {
   parseOnPlayOptionalTrashCostKoClause,
   parseOptionalTrashCostKoResidueClause,
 } from "./optional-trash-cost-ko-components.js";
-import { parseActivateMainChooseOneTrashCostClause } from "./activate-main-choose-one-cost-components.js";
+import {
+  parseActivateMainChooseOneTrashCostClause,
+  parseActivateMainChooseOneTrashCostResidueClause,
+} from "./activate-main-choose-one-cost-components.js";
 import { parseReturnDonCostWrapperResidueClause } from "./return-don-cost-wrapper-components.js";
 import {
   parseStandaloneBlockerClause,
@@ -259,6 +262,7 @@ function parseFirstCardLineResidueClause(
 ): ParsedResidueClause | undefined {
   return (
     parseReusableCard016AResidueClause(cardId, line) ??
+    parseActivateMainChooseOneTrashCostResidueClause(cardId, line) ??
     parseOptionalTrashCostKoResidueClause(cardId, line) ??
     parseReturnDonCostWrapperResidueClause(line) ??
     parseCard014gResidueClause(cardId, line) ??

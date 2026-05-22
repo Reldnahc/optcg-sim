@@ -707,9 +707,7 @@ describe("generated support runtime capability matrix", () => {
     const capabilities =
       generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
         (capability) =>
-          (capability.supportedParserRuleIds as readonly string[]).includes(
-            parserRuleId,
-          ),
+          capability.supportedParserRuleIds.includes(parserRuleId),
       );
 
     expect(capabilities).toEqual([]);
@@ -741,6 +739,7 @@ describe("generated support runtime capability matrix", () => {
       expect(capability?.supportedComponentIds).toContain(
         "activate-main-once-per-turn-optional-choose-one-trash-self-field-type-or-hand-then-draw",
       );
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
     }
 
     expect(
