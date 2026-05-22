@@ -48,6 +48,10 @@ their presence. Flag a CARD implementation story before approval when:
   or deck validation,
 - source integrity relies on fake helper payloads as real-card support evidence,
 - engine capability preflight does not list the parsed effect shape,
+- engine capability preflight does not decompose parsed effect shape into wrapper
+  or entry point, markers, condition, cost, effect body, target, filter,
+  cardinality, duration, source-presence policy, decision/visibility needs, and
+  composition evidence when applicable,
 - engine capability preflight does not split required runtime capabilities into
   supported and missing groups,
 - missing reusable engine behavior is not represented as prerequisite ENG

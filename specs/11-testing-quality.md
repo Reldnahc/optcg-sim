@@ -65,6 +65,13 @@ Every primitive has tests independent of specific cards:
 
 Primitive tests should assert events, state, decisions, and visibility where applicable.
 
+For generated-support parser/certification stories, primitive-boundary parser tests
+must prove wrapper or entry-point handling, markers, conditions, costs, effect
+body behavior, targets or filters, cardinality, durations, source-presence
+policy, and decision/visibility behavior when applicable. Do not treat exact
+full-line matches, wrapper-body-only matches, or sample-shaped outputs as
+primitive-boundary proof.
+
 Authority tests must assert generated-support factorization wording per cited section. Each required section is asserted independently; one section cannot satisfy another section's required wording.
 
 ## Unit tests per card
@@ -91,6 +98,17 @@ Minimum assertions:
 - Effect resolves correctly.
 - Edge cases: no targets, insufficient cost, source moved, once-per-turn used.
 - Expected events are emitted.
+
+This per-card requirement applies to implemented non-vanilla cards and does not
+reintroduce a manual per-card allowlist requirement for complete-parse
+common-template generated support. Generated-support stories must still include
+representative synthetic proof tests for reusable primitive/composition support,
+runtime capability matrix coverage checks, generated-support decision/reporting
+path checks, at least one positive modular example, and at least one negative
+anti-shape regression proving non-modular exact full-line, wrapper-body-only, or
+sample-shaped paths are rejected. When a generated-support story claims
+cross-entry-point reuse, it must include at least one regression proving the
+supported reusable body works under more than one supported entry point.
 
 ## Custom handler tests
 

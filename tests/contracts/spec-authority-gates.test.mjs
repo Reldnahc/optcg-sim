@@ -961,29 +961,18 @@ test("SPEC-010A terminology authority separates entry-point wrappers from body p
     R("specs/05-effect-dsl-reference.md"),
     R("specs/14-glossary.md"),
   ]);
-  const section = (source, start, end) => extractSection(source, start, end);
-  const terminologyTerms = [
-    "Entry-point selectors are wrapper semantics, not effect body primitives",
-    "The current DSL field name `trigger` includes entry-point selector values",
-    "must not be read as only queued triggered-effect timing",
-  ];
-  const deferralTerms = [
-    "terminology-only clarification",
-    "does not define generated-support evidence factorization rules",
-    "support-evidence factorization remains in SPEC-010B",
-  ];
   // prettier-ignore
   const checks = [
-    [section(dslSpec, "05-effect-dsl-reference.s004", "05-effect-dsl-reference.s005"), terminologyTerms],
-    [section(dslSpec, "05-effect-dsl-reference.s005", "05-effect-dsl-reference.s006"), terminologyTerms],
-    [section(engineSpec, "02-engine-mechanics.s025", "02-engine-mechanics.s026"), ["[Activate: Main], [Main], [Counter], and [Once Per Turn] are entry-point or marker wrappers, not keyword body primitives", "[Blocker], [Banish], [Rush], [Rush: Character], and [Double Attack] remain keyword body behavior"]],
-    [section(engineSpec, "02-engine-mechanics.s024", "02-engine-mechanics.s025"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
-    [section(runtimeSpec, "04-effect-runtime.s003", "04-effect-runtime.s004"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
-    [section(runtimeSpec, "04-effect-runtime.s007", "04-effect-runtime.s008"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
-    [section(runtimeSpec, "04-effect-runtime.s011", "04-effect-runtime.s012"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
-    [section(glossarySpec, "14-glossary.s008", "14-glossary.s009"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
-    [section(dslSpec, "05-effect-dsl-reference.s012", "05-effect-dsl-reference.s013"), ["Synthetic terminology example:", "wrapper:", "category:", "source-presence policy:", "markers:", "body primitive:"]],
-    [section(dslSpec, "05-effect-dsl-reference.s022", "05-effect-dsl-reference.s023"), deferralTerms],
+    [extractSection(dslSpec, "05-effect-dsl-reference.s004", "05-effect-dsl-reference.s005"), ["Entry-point selectors are wrapper semantics, not effect body primitives", "The current DSL field name `trigger` includes entry-point selector values", "must not be read as only queued triggered-effect timing"]],
+    [extractSection(dslSpec, "05-effect-dsl-reference.s005", "05-effect-dsl-reference.s006"), ["Entry-point selectors are wrapper semantics, not effect body primitives", "The current DSL field name `trigger` includes entry-point selector values", "must not be read as only queued triggered-effect timing"]],
+    [extractSection(engineSpec, "02-engine-mechanics.s025", "02-engine-mechanics.s026"), ["[Activate: Main], [Main], [Counter], and [Once Per Turn] are entry-point or marker wrappers, not keyword body primitives", "[Blocker], [Banish], [Rush], [Rush: Character], and [Double Attack] remain keyword body behavior"]],
+    [extractSection(engineSpec, "02-engine-mechanics.s024", "02-engine-mechanics.s025"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
+    [extractSection(runtimeSpec, "04-effect-runtime.s003", "04-effect-runtime.s004"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
+    [extractSection(runtimeSpec, "04-effect-runtime.s007", "04-effect-runtime.s008"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
+    [extractSection(runtimeSpec, "04-effect-runtime.s011", "04-effect-runtime.s012"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
+    [extractSection(glossarySpec, "14-glossary.s008", "14-glossary.s009"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
+    [extractSection(dslSpec, "05-effect-dsl-reference.s012", "05-effect-dsl-reference.s013"), ["Synthetic terminology example:", "wrapper:", "category:", "source-presence policy:", "markers:", "body primitive:"]],
+    [extractSection(dslSpec, "05-effect-dsl-reference.s022", "05-effect-dsl-reference.s023"), ["terminology-only clarification", "does not define generated-support evidence factorization rules", "support-evidence factorization remains in SPEC-010B"]],
   ];
   for (const [text, terms] of checks)
     for (const term of terms) assertContainsWords(text, term);
@@ -998,6 +987,10 @@ test("SPEC-010B authority requires modular generated-support evidence factorizat
       R("specs/09-card-data-and-support-policy.md"),
       R("specs/11-testing-quality.md"),
     ]);
+  const templateSpec = await R("specs/25-story-template.md");
+  const codeStandard = await R("docs/code-standard.md");
+  const storyExecution = await R("docs/workflow/story-execution.md");
+  const reviewGate = await R("docs/workflow/review-gate.md");
   const section = (source, start, end) => extractSection(source, start, end);
   // prettier-ignore
   const checks = [
@@ -1006,7 +999,12 @@ test("SPEC-010B authority requires modular generated-support evidence factorizat
     [section(runtimeSpec, "04-effect-runtime.s016", "04-effect-runtime.s017"), ["Exact wrapper-body allowlists are insufficient generated-support evidence unless they also expose required primitive-boundary evidence", "A supported effect body under one entry point does not authorize support under another entry point", "support under another entry point requires separate entry-point adapter evidence plus body or composition evidence"]],
     [extractSectionToEnd(dslSpec, "05-effect-dsl-reference.s029"), ["Synthetic positive modular example:", "Synthetic negative exact wrapper-body example:", "These synthetic examples must not name real cards or card IDs"]],
     [section(cardPolicySpec, "09-card-data-and-support-policy.s016", "09-card-data-and-support-policy.s017"), ["Generated-support evidence factorization is primitive-boundary authority, not exact wrapper-body or sample-shaped authority", "Parser certification and runtime capability evidence must expose reusable boundaries for wrapper or entry point, markers, conditions, costs, body effects, targets, filters, cardinality, durations, visibility, source-presence policy, and composition when present", "Composition evidence may be required for supported combined shapes, but composition evidence cannot replace missing wrapper, body, cost, target, condition, duration, source policy, decision, or visibility evidence"]],
-    [section(testingSpec, "11-testing-quality.s004", "11-testing-quality.s005"), ["Authority tests must assert generated-support factorization wording per cited section", "Each required section is asserted independently", "one section cannot satisfy another section's required wording"]],
+    [section(testingSpec, "11-testing-quality.s004", "11-testing-quality.s005"), ["Authority tests must assert generated-support factorization wording per cited section", "Each required section is asserted independently", "one section cannot satisfy another section's required wording", "generated-support parser/certification stories", "Do not treat exact full-line matches, wrapper-body-only matches, or sample-shaped outputs as primitive-boundary proof"]],
+    [section(testingSpec, "11-testing-quality.s005", "11-testing-quality.s006"), ["does not reintroduce a manual per-card allowlist requirement", "representative synthetic proof tests", "runtime capability matrix coverage checks", "generated-support decision/reporting path checks", "at least one positive modular example", "at least one negative anti-shape regression", "When a generated-support story claims cross-entry-point reuse, it must include at least one regression proving the supported reusable body works under more than one supported entry point"]],
+    [section(templateSpec, "25-story-template.s014", "25-story-template.s010"), ["parsed effect shape decomposition", "wrapper or entry point, markers, condition, cost, effect body, target, filter, cardinality, duration, source-presence policy, decision/visibility needs, and composition evidence when applicable"]],
+    [codeStandard, ["Generated-support parser/certification stories must include primitive-boundary parser tests", "negative anti-shape regression against exact full-line, wrapper-body-only, or sample-shaped support paths"]],
+    [storyExecution, ["parsed effect shape decomposition", "wrapper or entry point, markers, condition, cost, effect body, target, filter, cardinality, duration, source-presence policy, decision/visibility needs, and composition evidence when applicable"]],
+    [reviewGate, ["engine capability preflight does not decompose parsed effect shape into wrapper or entry point, markers, condition, cost, effect body, target, filter, cardinality, duration, source-presence policy, decision/visibility needs, and composition evidence when applicable"]],
   ];
   for (const [text, terms] of checks)
     for (const term of terms) assertContainsWords(text, term);

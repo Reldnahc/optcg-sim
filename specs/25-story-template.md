@@ -150,9 +150,12 @@ matters.
 If the story does not enable or change real-card gameplay support, this field
 must say why source integrity is not applicable.
 
-Use `engine_capability_preflight` to record parsed effect shape, required
-runtime capabilities, which capabilities are already supported, which reusable
-capabilities are missing, and prerequisite ENG stories for missing behavior.
+Use `engine_capability_preflight` to record parsed effect shape decomposition
+across wrapper or entry point, markers, condition, cost, effect body, target,
+filter, cardinality, duration, source-presence policy, decision/visibility
+needs, and composition evidence when applicable; required runtime capabilities;
+which capabilities are already supported; which reusable capabilities are
+missing; and prerequisite ENG stories for missing behavior.
 Reusable engine gaps block CARD implementation until they are done or split into
 explicit prerequisite ENG stories.
 If the story is pure card-data infrastructure and does not implement or enable
@@ -167,7 +170,7 @@ card_source_integrity:
   - fixture assertions must pin card_type Character, color Blue, cost 4, power 6000, counter null, types Dressrosa and Beautiful Pirates, and exact effect text
   - cards-produced manifest must be regenerated when fixture or generated support evidence changes
 engine_capability_preflight:
-  - parsed effect shape is `[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.`
+  - parsed effect shape decomposition is wrapper `[When Attacking]`, marker `[Once Per Turn]`, condition none, cost none, body `draw 2 then trash 1 from hand`, target/filter/cardinality as required by `trash-from-hand` decision, duration none, source-presence policy applies, decision/visibility needs include chooser-only hand visibility and public draw/trash events, and composition evidence covers sequence continuation
   - required runtime capabilities are when-attacking trigger queueing, once-per-turn tracking, draw, trash-from-hand decision, sequence continuation, and source-presence policy
   - missing reusable runtime capabilities must be split into prerequisite ENG stories before CARD implementation starts
 ```

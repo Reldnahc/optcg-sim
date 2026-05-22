@@ -2672,7 +2672,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Unit tests per card",
       "heading_level": 2,
-      "marker_line": 63,
+      "marker_line": 70,
       "visible_line": "Section Ref: `11-testing-quality.s005`"
     },
     {
@@ -2681,7 +2681,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Custom handler tests",
       "heading_level": 2,
-      "marker_line": 88,
+      "marker_line": 106,
       "visible_line": "Section Ref: `11-testing-quality.s006`"
     },
     {
@@ -2690,7 +2690,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Interaction tests",
       "heading_level": 2,
-      "marker_line": 102,
+      "marker_line": 120,
       "visible_line": "Section Ref: `11-testing-quality.s007`"
     },
     {
@@ -2699,7 +2699,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Invariant tests",
       "heading_level": 2,
-      "marker_line": 123,
+      "marker_line": 141,
       "visible_line": "Section Ref: `11-testing-quality.s008`"
     },
     {
@@ -2708,7 +2708,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Fuzz tests",
       "heading_level": 2,
-      "marker_line": 144,
+      "marker_line": 162,
       "visible_line": "Section Ref: `11-testing-quality.s009`"
     },
     {
@@ -2717,7 +2717,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Golden replay tests",
       "heading_level": 2,
-      "marker_line": 169,
+      "marker_line": 187,
       "visible_line": "Section Ref: `11-testing-quality.s010`"
     },
     {
@@ -2726,7 +2726,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Hidden-information tests",
       "heading_level": 2,
-      "marker_line": 193,
+      "marker_line": 211,
       "visible_line": "Section Ref: `11-testing-quality.s011`"
     },
     {
@@ -2735,7 +2735,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Replay drift tests",
       "heading_level": 2,
-      "marker_line": 212,
+      "marker_line": 230,
       "visible_line": "Section Ref: `11-testing-quality.s012`"
     },
     {
@@ -2744,7 +2744,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Protocol tests",
       "heading_level": 2,
-      "marker_line": 225,
+      "marker_line": 243,
       "visible_line": "Section Ref: `11-testing-quality.s013`"
     },
     {
@@ -2753,7 +2753,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Database tests",
       "heading_level": 2,
-      "marker_line": 243,
+      "marker_line": 261,
       "visible_line": "Section Ref: `11-testing-quality.s014`"
     },
     {
@@ -2762,7 +2762,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Performance tests",
       "heading_level": 2,
-      "marker_line": 259,
+      "marker_line": 277,
       "visible_line": "Section Ref: `11-testing-quality.s015`"
     },
     {
@@ -2771,7 +2771,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Coverage gates",
       "heading_level": 2,
-      "marker_line": 274,
+      "marker_line": 292,
       "visible_line": "Section Ref: `11-testing-quality.s016`"
     },
     {
@@ -2780,7 +2780,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Manual playtest checklist",
       "heading_level": 2,
-      "marker_line": 289,
+      "marker_line": 307,
       "visible_line": "Section Ref: `11-testing-quality.s017`"
     },
     {
@@ -2789,7 +2789,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Bug policy",
       "heading_level": 2,
-      "marker_line": 308,
+      "marker_line": 326,
       "visible_line": "Section Ref: `11-testing-quality.s018`"
     },
     {
@@ -2798,7 +2798,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "CI stages",
       "heading_level": 2,
-      "marker_line": 322,
+      "marker_line": 340,
       "visible_line": "Section Ref: `11-testing-quality.s019`"
     },
     {
@@ -2807,7 +2807,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Poneglyph/card-data tests",
       "heading_level": 2,
-      "marker_line": 342,
+      "marker_line": 360,
       "visible_line": "Section Ref: `11-testing-quality.s020`"
     },
     {
@@ -2816,7 +2816,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "v6 contract validation",
       "heading_level": 2,
-      "marker_line": 366,
+      "marker_line": 384,
       "visible_line": "Section Ref: `11-testing-quality.s021`"
     },
     {
@@ -2825,7 +2825,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Required repo enforcement linkage",
       "heading_level": 2,
-      "marker_line": 385,
+      "marker_line": 403,
       "visible_line": "Section Ref: `11-testing-quality.s022`"
     },
     {
@@ -4895,7 +4895,7 @@
       "doc_path": "25-story-template.md",
       "heading": "Example approved story",
       "heading_level": 2,
-      "marker_line": 168,
+      "marker_line": 171,
       "visible_line": "Section Ref: `25-story-template.s010`"
     },
     {
@@ -4904,7 +4904,7 @@
       "doc_path": "25-story-template.md",
       "heading": "Boundary guidance",
       "heading_level": 2,
-      "marker_line": 223,
+      "marker_line": 226,
       "visible_line": "Section Ref: `25-story-template.s011`"
     },
     {
@@ -4913,7 +4913,7 @@
       "doc_path": "25-story-template.md",
       "heading": "Epic first, concern second",
       "heading_level": 3,
-      "marker_line": 229,
+      "marker_line": 232,
       "visible_line": "Section Ref: `25-story-template.s012`"
     },
     {
@@ -4922,7 +4922,7 @@
       "doc_path": "25-story-template.md",
       "heading": "Allowed touch points",
       "heading_level": 3,
-      "marker_line": 237,
+      "marker_line": 240,
       "visible_line": "Section Ref: `25-story-template.s013`"
     },
     {
