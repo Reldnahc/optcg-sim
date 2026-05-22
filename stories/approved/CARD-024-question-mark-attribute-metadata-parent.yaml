@@ -46,6 +46,14 @@ non_scope:
   - support manifest, overlay, source hash, behavior hash, or card playable status changes
   - deck validation behavior
   - broad handling for arbitrary unrecognized Poneglyph attributes
+card_source_integrity:
+  - this story does not enable or change generated support for a named real card
+  - OP13-079 is used only as live probe evidence for Poneglyph metadata normalization of the printed question-mark attribute
+  - source integrity is not applicable because this story must not edit fixtures, source hashes, behavior hashes, overlays, supported-card manifests, or cards-produced manifests
+engine_capability_preflight:
+  - this story adds no engine runtime behavior and requires no runtime capability IDs
+  - the question-mark attribute is metadata/schema authorability only and must not promote parser/generated-support behavior or playable status
+  - OP13-079 remaining unsupported after normalization is acceptable when parser certification, runtime evidence, support metadata, review state, or tested state gates are still missing
 acceptance_criteria:
   - CARD-024 is not implemented directly
   - CARD-024A owns all implementation changes

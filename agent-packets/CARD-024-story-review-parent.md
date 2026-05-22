@@ -1,6 +1,6 @@
 # CARD-024 Story Review - Parent
 
-Review assignment id: `story-review-CARD-024-parent-rereview-2026-05-22`
+Review assignment id: `story-review-CARD-024-parent-preflight-rereview-2026-05-22`
 
 Reviewed story: `stories/approved/CARD-024-question-mark-attribute-metadata-parent.yaml`
 
@@ -21,6 +21,13 @@ normalization in `09-card-data-and-support-policy.s014`, raw Poneglyph detail
 shape in `19-poneglyph-api-contract.s006`, normalized card shape in
 `19-poneglyph-api-contract.s007`, and array-based acceptance coverage in
 `18-acceptance-tests.s011`.
+
+The added `card_source_integrity` and `engine_capability_preflight` sections
+also remain approval-safe for this parent. They explicitly state that the story
+does not enable or change named-card gameplay support, uses `OP13-079` only as
+live metadata-normalization probe evidence, edits no fixtures/manifests/hashes,
+and introduces no runtime capability, parser/generated-support, or playable
+status promotion work.
 
 ## Findings
 
