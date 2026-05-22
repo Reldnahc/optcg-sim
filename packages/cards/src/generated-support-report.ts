@@ -95,6 +95,7 @@ export interface GeneratedSupportReportCardStatus {
   blockerCodes: readonly GeneratedSupportBlockerCode[];
   componentEvidenceIds: readonly string[];
   missingCapabilityIds: readonly string[];
+  nonRuntimeEvidence?: GeneratedSupportIndexEntry["nonRuntimeEvidence"];
   parseStatus: GeneratedSupportParserResultStatus;
   parserRuleIds: readonly string[];
   status: "supported" | "unsupported";
@@ -170,6 +171,9 @@ export function buildGeneratedSupportReport(
           ),
           componentEvidenceIds: sortedUnique(entry.componentEvidenceIds),
           missingCapabilityIds: sortedUnique(entry.missingCapabilityIds),
+          ...(entry.nonRuntimeEvidence === undefined
+            ? {}
+            : { nonRuntimeEvidence: entry.nonRuntimeEvidence }),
           parseStatus: entry.parseStatus,
           parserRuleIds: sortedUnique(entry.parserRuleIds),
           status: entry.status,

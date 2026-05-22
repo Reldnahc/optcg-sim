@@ -36,6 +36,7 @@ export interface GeneratedSupportPlayabilityEvaluation {
   effectDefinition?: EffectDefinition;
   effectDefinitionId?: string;
   missingCapabilityIds: readonly string[];
+  nonRuntimeEvidence?: GeneratedSupportIndexEntry["nonRuntimeEvidence"];
   parseStatus: GeneratedSupportIndexEntry["parseStatus"];
   parserRuleIds: readonly string[];
   playable: boolean;
@@ -112,6 +113,9 @@ export function evaluateGeneratedSupportPlayability(
     capabilityEvidence: entry.capabilityEvidence,
     cardId: entry.cardId,
     missingCapabilityIds: entry.missingCapabilityIds,
+    ...(entry.nonRuntimeEvidence === undefined
+      ? {}
+      : { nonRuntimeEvidence: entry.nonRuntimeEvidence }),
     parseStatus: entry.parseStatus,
     parserRuleIds: entry.parserRuleIds,
     playable: entry.status === "supported",

@@ -6,14 +6,16 @@ import type {
   EffectDefinition,
   Keyword,
 } from "@optcg/types";
-
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import { deriveParserDiagnosticDecomposition } from "./composed-parser-builder.js";
+import { isExternalDeckConstructionRuleParserRuleId } from "./external-deck-construction-rule.js";
 import {
   scanGenericCardTextDiagnostics,
   type GenericDiagnosticComponent,
 } from "./generic-card-text-diagnostic-scanner.js";
 import {
+  type ExternalDeckConstructionRuleEvidence,
+  type CompleteGeneratedSupportParseResult,
   type GeneratedSupportDiagnosticDecomposition,
   evaluateParserCertificationBlockers,
   findGeneratedSupportComponentEvidenceByShapeId,
@@ -28,7 +30,6 @@ import {
   generatedSupportRuntimeCapabilityMatrix,
   type RuntimeCapabilityMatrix,
 } from "./runtime-capability-matrix.js";
-
 export interface GeneratedSupportCardTextInput {
   behaviorHash: string;
   cardDataVersion: string;
@@ -68,6 +69,7 @@ export interface GeneratedSupportIndexEntry {
   effectDefinition?: EffectDefinition;
   effectDefinitionId?: string;
   missingCapabilityIds: readonly string[];
+  nonRuntimeEvidence?: readonly ExternalDeckConstructionRuleEvidence[];
   parseStatus: GeneratedSupportParserResultStatus;
   parserRuleIds: readonly string[];
   sourceTextHash: string;
@@ -265,7 +267,9 @@ function buildGeneratedSupportIndexEntry(
   }
 
   if (card.sourceText.length === 0) {
-    if (!hasEmptyEffectSupportMetadata(card)) {
+    if (
+      !(card.category === "character" && card.printedKeywords?.length === 0)
+    ) {
       return unsupportedMetadataEntry({
         card,
         componentEvidenceIds: [],
@@ -316,7 +320,10 @@ function buildGeneratedSupportIndexEntry(
 
   if (
     parseResult.parserRuleIds.includes("exact:keyword:blocker:standalone") &&
-    !hasBlockerKeywordSupportMetadata(card)
+    !(
+      card.category === "character" &&
+      card.printedKeywords?.includes("blocker") === true
+    )
   ) {
     return unsupportedMetadataEntry({
       card,
@@ -334,7 +341,11 @@ function buildGeneratedSupportIndexEntry(
   );
   if (
     keywordMetadataPrecondition !== undefined &&
-    !hasKeywordSupportMetadata(card, keywordMetadataPrecondition.keyword)
+    !(
+      card.category === "character" &&
+      card.printedKeywords?.includes(keywordMetadataPrecondition.keyword) ===
+        true
+    )
   ) {
     return unsupportedMetadataEntry({
       card,
@@ -345,7 +356,22 @@ function buildGeneratedSupportIndexEntry(
       parserRuleIds: parseResult.parserRuleIds,
     });
   }
-
+  if (
+    parseResult.parserRuleIds.some(isExternalDeckConstructionRuleParserRuleId)
+  ) {
+    return unsupportedMetadataEntry({
+      card,
+      component: "metadata:external-deck-construction-rule",
+      componentEvidenceIds: parseResult.componentEvidenceIds,
+      diagnosticLayer: "metadata",
+      message:
+        "Certified parser recognized external deck-construction rule evidence; generated support remains non-runtime and fail-closed.",
+      ...(parseResult.nonRuntimeEvidence === undefined
+        ? {}
+        : { nonRuntimeEvidence: parseResult.nonRuntimeEvidence }),
+      parserRuleIds: parseResult.parserRuleIds,
+    });
+  }
   const validation = input.validateEffectDefinition(
     parseResult.effectDefinition,
   );
@@ -745,41 +771,9 @@ function deriveGenericSyntaxFragments(
 function isTriggerLikeComponent(
   component: GenericDiagnosticComponent,
 ): boolean {
-  if (component.kind === "wrapper") {
-    return /^\[(on play|when attacking|on k\.o\.|trigger)\]$/i.test(
-      component.text,
-    );
-  }
-  if (component.kind === "trigger") {
-    return true;
-  }
-  return false;
-}
-
-function hasBlockerKeywordSupportMetadata(
-  card: GeneratedSupportCardTextInput,
-): boolean {
-  return card.category === "character" && hasPrintedKeyword(card, "blocker");
-}
-
-function hasKeywordSupportMetadata(
-  card: GeneratedSupportCardTextInput,
-  keyword: Keyword,
-): boolean {
-  return card.category === "character" && hasPrintedKeyword(card, keyword);
-}
-
-function hasEmptyEffectSupportMetadata(
-  card: GeneratedSupportCardTextInput,
-): boolean {
-  return card.category === "character" && card.printedKeywords?.length === 0;
-}
-
-function hasPrintedKeyword(
-  card: GeneratedSupportCardTextInput,
-  keyword: Keyword,
-): boolean {
-  return card.printedKeywords?.includes(keyword) === true;
+  return component.kind === "wrapper"
+    ? /^\[(on play|when attacking|on k\.o\.|trigger)\]$/i.test(component.text)
+    : component.kind === "trigger";
 }
 
 function getKeywordMetadataPrecondition(
@@ -845,6 +839,7 @@ function unsupportedMetadataEntry({
   component = "metadata:precondition",
   diagnosticLayer,
   message,
+  nonRuntimeEvidence,
   parserRuleIds,
 }: {
   card: GeneratedSupportCardTextInput;
@@ -852,22 +847,25 @@ function unsupportedMetadataEntry({
   component?: string;
   diagnosticLayer?: GeneratedSupportBlocker["diagnosticLayer"];
   message: string;
+  nonRuntimeEvidence?: CompleteGeneratedSupportParseResult["nonRuntimeEvidence"];
   parserRuleIds: readonly string[];
 }): GeneratedSupportIndexEntry {
-  const blocker: GeneratedSupportBlocker = {
-    code: "unsupported-primitive",
-    component,
-    message,
-  };
-  if (diagnosticLayer !== undefined) {
-    blocker.diagnosticLayer = diagnosticLayer;
-  }
+  const blocker: GeneratedSupportBlocker =
+    diagnosticLayer === undefined
+      ? { code: "unsupported-primitive", component, message }
+      : {
+          code: "unsupported-primitive",
+          component,
+          diagnosticLayer,
+          message,
+        };
 
   return unsupportedEntry({
     blockers: [blocker],
     card,
     componentEvidenceIds,
     parseStatus: "unsupportedPrimitive",
+    ...(nonRuntimeEvidence === undefined ? {} : { nonRuntimeEvidence }),
     parserRuleIds,
   });
 }
@@ -877,6 +875,7 @@ function unsupportedEntry({
   card,
   componentEvidenceIds,
   missingCapabilityIds = [],
+  nonRuntimeEvidence,
   parseStatus,
   parserRuleIds,
 }: {
@@ -884,6 +883,7 @@ function unsupportedEntry({
   card: GeneratedSupportCardTextInput;
   componentEvidenceIds: readonly string[];
   missingCapabilityIds?: readonly string[];
+  nonRuntimeEvidence?: CompleteGeneratedSupportParseResult["nonRuntimeEvidence"];
   parseStatus: GeneratedSupportParserResultStatus;
   parserRuleIds: readonly string[];
 }): GeneratedSupportIndexEntry {
@@ -893,6 +893,7 @@ function unsupportedEntry({
     cardId: card.cardId,
     componentEvidenceIds,
     missingCapabilityIds,
+    ...(nonRuntimeEvidence === undefined ? {} : { nonRuntimeEvidence }),
     parseStatus,
     parserRuleIds,
     sourceTextHash: card.sourceTextHash,

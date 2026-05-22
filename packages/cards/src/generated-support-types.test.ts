@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CardId, EffectDefinition, EffectId } from "@optcg/types";
+import { buildGeneratedSupportIndex } from "./generated-support-index.js";
+import { buildGeneratedSupportReport } from "./generated-support-report.js";
 
 import {
   buildGeneratedSupportComponentEvidenceSnapshot,
@@ -44,6 +46,7 @@ const effectDefinition: EffectDefinition = {
     tested: true,
   },
 };
+const validateEffectDefinition = () => ({ valid: true }) as const;
 
 describe("generated support parser result contracts", () => {
   it("enumerates every fail-closed parser outcome required by the spec", () => {
@@ -87,6 +90,74 @@ describe("generated support parser result contracts", () => {
 
     expect(isCompleteGeneratedSupportParseResult(complete)).toBe(true);
     expect(isCompleteGeneratedSupportParseResult(partial)).toBe(false);
+  });
+
+  it("preserves structured non-runtime external deck-rule evidence through index and report output", () => {
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          behaviorHash: "sha256:behavior",
+          cardDataVersion: "cards-v1",
+          cardId: "SUP-003E-INDEX" as CardId,
+          effectDefinitionsVersion: "effects-v1",
+          rulesVersion: "rules-v1",
+          sourceText:
+            "Under the rules of this game, you cannot include Events with a cost of 3 or more in your deck.",
+          sourceTextHash: "sha256:source",
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      blockers: [
+        {
+          code: "unsupported-primitive",
+          component: "metadata:external-deck-construction-rule",
+        },
+      ],
+      capabilityEvidence: [],
+      componentEvidenceIds: [],
+      missingCapabilityIds: [],
+      parseStatus: "unsupportedPrimitive",
+      parserRuleIds: [
+        "exact:external-deck-rule:category-cost-gte-in-your-deck",
+      ],
+      status: "unsupported",
+    });
+    expect(index.entries[0]?.nonRuntimeEvidence).toEqual([
+      {
+        categoryPlural: "Events",
+        comparator: "gte",
+        deckScope: "your-deck",
+        nonRuntimeClassification: "external-deck-construction-rule",
+        normalizedCategory: "event",
+        parserRuleId: "exact:external-deck-rule:category-cost-gte-in-your-deck",
+        threshold: 3,
+      },
+    ]);
+
+    const report = buildGeneratedSupportReport(index);
+    expect(report.statusByCardId["SUP-003E-INDEX"]).toMatchObject({
+      blockerCodes: ["unsupported-primitive"],
+      nonRuntimeEvidence: [
+        {
+          categoryPlural: "Events",
+          comparator: "gte",
+          deckScope: "your-deck",
+          nonRuntimeClassification: "external-deck-construction-rule",
+          normalizedCategory: "event",
+          parserRuleId:
+            "exact:external-deck-rule:category-cost-gte-in-your-deck",
+          threshold: 3,
+        },
+      ],
+      parseStatus: "unsupportedPrimitive",
+      parserRuleIds: [
+        "exact:external-deck-rule:category-cost-gte-in-your-deck",
+      ],
+      status: "unsupported",
+    });
   });
 
   it("records blocker evidence for unsupported primitive, ambiguity, stale hash, and custom handler outcomes", () => {

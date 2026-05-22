@@ -98,6 +98,60 @@ describe("support evaluator parser certification evidence", () => {
       expect(evaluation.parserRuleIds).toContain(expectedParserRuleId);
     },
   );
+
+  it("classifies external deck-construction text as parsed non-runtime evidence without unparsed-span blockers", () => {
+    const card = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "SUP-003E-EVAL",
+      effect:
+        "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck.",
+      name: "SUP-003E non-runtime external deck rule",
+    });
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: card.behaviorHash,
+      expectedSourceTextHash: card.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      nonRuntimeEvidence: [
+        {
+          categoryPlural: "Events",
+          comparator: "gte",
+          deckScope: "your-deck",
+          nonRuntimeClassification: "external-deck-construction-rule",
+          normalizedCategory: "event",
+          parserRuleId:
+            "exact:external-deck-rule:category-cost-gte-in-your-deck",
+          threshold: 2,
+        },
+      ],
+      parseStatus: "unsupportedPrimitive",
+      parserRuleIds: [
+        "exact:external-deck-rule:category-cost-gte-in-your-deck",
+      ],
+      playable: false,
+      status: "unsupported",
+    });
+    expect(evaluation.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "unsupported-primitive",
+          component: "metadata:external-deck-construction-rule",
+        }),
+      ]),
+    );
+    expect(evaluation.blockers).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "unparsed-span" }),
+      ]),
+    );
+  });
 });
 
 function loadOp03044Fixture(): PoneglyphCardDetail {

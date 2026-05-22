@@ -693,4 +693,18 @@ describe("generated support runtime capability matrix", () => {
       );
     }
   });
+
+  it("does not add runtime capabilities for external deck-construction parser evidence", () => {
+    const parserRuleId =
+      "exact:external-deck-rule:category-cost-gte-in-your-deck";
+    const capabilities =
+      generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
+        (capability) =>
+          (capability.supportedParserRuleIds as readonly string[]).includes(
+            parserRuleId,
+          ),
+      );
+
+    expect(capabilities).toEqual([]);
+  });
 });

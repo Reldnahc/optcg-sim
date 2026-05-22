@@ -5,7 +5,6 @@ import type {
   SelectedTargetsRequest,
   Target,
 } from "@optcg/types";
-
 import {
   isOnPlayFieldEffectModifierWording,
   parseCard014gClause,
@@ -36,6 +35,11 @@ import {
 } from "./conditional-generated-support-composer.js";
 import { isConditionalContinuousCompositionParserRuleId } from "./conditional-continuous-composition-evidence.js";
 import { parseOnPlayReturnDonDrawClause } from "./don-minus-draw-components.js";
+import {
+  type ExternalDeckConstructionRuleEvidence,
+  externalDeckConstructionRuleParserRuleId,
+  parseExternalDeckConstructionRuleClause,
+} from "./external-deck-construction-rule.js";
 import type {
   GeneratedSupportParserResult,
   GeneratedSupportUnparsedSpan,
@@ -57,13 +61,10 @@ import {
   parseStandaloneEngineKeywordResidueClause,
 } from "./standalone-keyword-parser.js";
 import * as topN from "./top-n-search-components.js";
-
-export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self";
-export const whenAttackingDrawNParserRuleId =
-  "exact:when-attacking:draw-n:self";
-export const lineSeparatedEffectBlocksCompositionId =
-  "line-separated-effect-blocks:v1";
-export const certifiedParserRuleReviewer = "certified-parser-rule:CARD-009B";
+export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self",
+  whenAttackingDrawNParserRuleId = "exact:when-attacking:draw-n:self",
+  lineSeparatedEffectBlocksCompositionId = "line-separated-effect-blocks:v1",
+  certifiedParserRuleReviewer = "certified-parser-rule:CARD-009B";
 
 export interface CertifiedCardTextParserInput {
   cardId: CardId;
@@ -72,6 +73,7 @@ export interface CertifiedCardTextParserInput {
   sourceText: string;
   sourceTextHash: string;
 }
+
 interface CertifiedLineParse {
   readonly clause?: CertifiedClause;
   readonly unparsedSpan?: GeneratedSupportUnparsedSpan;
@@ -80,6 +82,7 @@ interface CertifiedLineParse {
 interface CertifiedClause {
   readonly effectBlock?: EffectBlock;
   readonly implementationStatus?: "implemented-dsl" | "vanilla-confirmed";
+  readonly nonRuntimeEvidence?: ExternalDeckConstructionRuleEvidence;
   readonly parserRuleId: string;
   readonly parserRuleIds?: readonly string[];
 }
@@ -89,17 +92,11 @@ interface ParsedResidueClause {
   readonly prefix: string;
 }
 
-type DrawTrashPrefix =
-  | "[On Play] "
-  | "[On K.O.] "
-  | "[Trigger] "
-  | "[When Attacking] "
-  | "[When Attacking] [Once Per Turn] ";
 type DrawThenTrashClauseOptions = Readonly<{
   cardId: CardId;
   effectIdPrefix: string;
   parserRuleId: string;
-  prefix: DrawTrashPrefix;
+  prefix: string;
   sourceText: string;
   trigger: { oncePerTurn?: true; type: "onPlay" | "whenAttacking" };
 }>;
@@ -217,6 +214,11 @@ function completeParse(
         tested: true,
       },
     },
+    nonRuntimeEvidence: parsedClauses.flatMap((clause) =>
+      clause.nonRuntimeEvidence === undefined
+        ? []
+        : [clause.nonRuntimeEvidence],
+    ),
     parserRuleIds: getCompleteParserRuleIds(parsedClauses),
     sourceText: input.sourceText,
     sourceTextHash: input.sourceTextHash,
@@ -357,6 +359,7 @@ function parseNonConditionalCardLineEffectClause(
   sourceText: string,
 ): CertifiedClause | undefined {
   return (
+    parseExternalDeckConstructionRuleClause(sourceText) ??
     parseReusableCard016AClause(cardId, sourceText) ??
     parseOnPlayOptionalTrashCostKoClause(cardId, sourceText) ??
     topN.parseTopNSearchClause(cardId, sourceText) ??
@@ -386,9 +389,12 @@ function parseConditionalCardLineEffectClause(
   }
   const base = parseNonConditionalCardLineEffectClause(
     cardId,
-    `${conditional.prefix}${normalizeConditionalBodyText(conditional.bodyText)}`,
+    `${conditional.prefix}${conditional.bodyText.length === 0 ? conditional.bodyText : `${conditional.bodyText[0]?.toUpperCase() ?? ""}${conditional.bodyText.slice(1)}`}`,
   );
-  if (base?.effectBlock === undefined) {
+  if (
+    base?.effectBlock === undefined ||
+    base.parserRuleId === externalDeckConstructionRuleParserRuleId
+  ) {
     return undefined;
   }
   if (base.effectBlock.condition !== undefined) {
@@ -418,14 +424,6 @@ function parseConditionalCardLineEffectClause(
   };
 }
 
-function normalizeConditionalBodyText(bodyText: string): string {
-  if (bodyText.length === 0) {
-    return bodyText;
-  }
-
-  return `${bodyText[0]?.toUpperCase() ?? ""}${bodyText.slice(1)}`;
-}
-
 function parseSupportedComposition(
   cardId: CardId,
   sourceText: string,
@@ -434,7 +432,6 @@ function parseSupportedComposition(
   if (lines.length < 2) {
     return undefined;
   }
-
   const clauses: CertifiedClause[] = [];
   for (const line of lines) {
     const clause =
@@ -447,15 +444,11 @@ function parseSupportedComposition(
     clauses.push(clause);
   }
 
-  return isCertifiedLineSeparatedComposition(clauses) ? clauses : undefined;
-}
-
-function isCertifiedLineSeparatedComposition(
-  clauses: readonly CertifiedClause[],
-): boolean {
   return isCertifiedLineSeparatedEffectBlockComposition(
     clauses.map((clause) => clause.effectBlock),
-  );
+  )
+    ? clauses
+    : undefined;
 }
 
 function parseReusableCard016AClause(
@@ -974,7 +967,7 @@ function parseDrawThenTrashResidueClauseWithPrefix({
   };
 }
 
-function parseDrawThenTrashCounts(sourceText: string, prefix: DrawTrashPrefix) {
+function parseDrawThenTrashCounts(sourceText: string, prefix: string) {
   const wrapper = parseDrawThenTrashWrapper(sourceText, prefix);
   if (wrapper === undefined) {
     return undefined;
@@ -985,7 +978,7 @@ function parseDrawThenTrashCounts(sourceText: string, prefix: DrawTrashPrefix) {
 
 function parseDrawThenTrashCountsWithResidue(
   sourceText: string,
-  prefix: DrawTrashPrefix,
+  prefix: string,
 ) {
   const wrapper = parseDrawThenTrashWrapper(sourceText, prefix);
   if (wrapper === undefined) {
@@ -1010,7 +1003,7 @@ function parseDrawThenTrashCountsWithResidue(
 
 function parseDrawThenTrashWrapper(
   sourceText: string,
-  prefix: DrawTrashPrefix,
+  prefix: string,
 ): { bodyText: string; prefix: string } | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
   if (wrapper === undefined) {

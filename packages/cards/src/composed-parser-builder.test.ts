@@ -26,6 +26,7 @@ import {
   parseUpToCardinality,
 } from "./composed-parser-builder.js";
 import { isCompleteGeneratedSupportParseResult } from "./generated-support-types.js";
+import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 
 const cardId = "CARD-014B-001" as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -174,6 +175,33 @@ describe("composed parser builder scaffold", () => {
         "Trash 2 cards from your hand. Draw 1 card.",
       ),
     ).toEqual({ drawCount: 1, trashCount: 2 });
+  });
+
+  it("exposes structured external deck-rule primitive evidence via certified parser boundary", () => {
+    const result = parseCertifiedCardText({
+      cardId,
+      effectDefinitionsVersion: "generated-support-parser-test",
+      rulesVersion: "rules-test",
+      sourceText:
+        "Under the rules of this game, you cannot include Events with a cost of 3 or more in your deck.",
+      sourceTextHash: "sha256:source",
+    });
+
+    expect(result.status).toBe("complete");
+    if (!isCompleteGeneratedSupportParseResult(result)) {
+      throw new Error("Expected complete parse.");
+    }
+    expect(result.nonRuntimeEvidence).toEqual([
+      {
+        categoryPlural: "Events",
+        comparator: "gte",
+        deckScope: "your-deck",
+        nonRuntimeClassification: "external-deck-construction-rule",
+        normalizedCategory: "event",
+        parserRuleId: "exact:external-deck-rule:category-cost-gte-in-your-deck",
+        threshold: 3,
+      },
+    ]);
   });
 
   it("parses reusable condition and hand-selection components", () => {

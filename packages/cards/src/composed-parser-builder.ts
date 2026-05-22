@@ -15,7 +15,6 @@ import type {
   GeneratedSupportUnparsedSpan,
   PartialGeneratedSupportParseResult,
 } from "./generated-support-types.js";
-
 import {
   deriveConditionalDiagnosticDecomposition,
   deriveProtectionBodyDiagnosticDecomposition,
@@ -26,7 +25,6 @@ import {
   deriveReturnDonCostWrapperDiagnosticDecomposition,
   parseReturnDonCostWrapper,
 } from "./return-don-cost-wrapper-components.js";
-
 export { parseReturnDonCostWrapper } from "./return-don-cost-wrapper-components.js";
 
 export type SupportedTriggerWrapperParse = {
@@ -42,12 +40,14 @@ export type OncePerTurnWrapperParse = {
   readonly bodyText: string;
   readonly prefix: string;
 };
-
 export type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 
 export type ReusableComposedParserClause = {
   readonly effectBlock?: EffectBlock;
   readonly implementationStatus?: "implemented-dsl" | "vanilla-confirmed";
+  readonly nonRuntimeEvidence?: NonNullable<
+    CompleteGeneratedSupportParseResult["nonRuntimeEvidence"]
+  >[number];
   readonly parserRuleId: string;
   readonly parserRuleIds?: readonly string[];
 };
@@ -56,7 +56,6 @@ export type ReusableComposedParserResidueClause<TClause> = {
   readonly clause: TClause;
   readonly prefix: string;
 };
-
 export type IfWrapperParse = {
   readonly bodyText: string;
   readonly conditionText: string;
@@ -70,7 +69,6 @@ export type UpToCardinalityParse = {
   readonly min: 0;
   readonly text: string;
 };
-
 export type QuantityComparatorParse = {
   readonly field: "cost" | "power";
   readonly op: "gte" | "lte";
@@ -83,7 +81,6 @@ export type BooleanConnectorCandidate = {
   readonly left: string;
   readonly right: string;
 };
-
 export type DrawInstructionParse = {
   readonly count: number;
   readonly mode: "exact" | "upTo";
@@ -102,7 +99,6 @@ export type TriggeredDrawClauseOptions = {
     { type: "onKO" | "onPlay" | "trigger" | "whenAttacking" }
   >;
 };
-
 export type TrashFromHandInstructionParse = {
   readonly count: number;
 };
@@ -111,7 +107,6 @@ export type DrawThenTrashInstructionParse = {
   readonly drawCount: number;
   readonly trashCount: number;
 };
-
 export type TrashThenDrawInstructionParse = {
   readonly drawCount: number;
   readonly trashCount: number;
@@ -120,7 +115,6 @@ export type TrashThenDrawInstructionParse = {
 export type OptionalDrawInstructionParse = {
   readonly count: number;
 };
-
 export type ConditionedDrawInstructionParse =
   | {
       readonly condition: "yourTurn";
@@ -136,7 +130,6 @@ export type ConditionedDrawInstructionParse =
 export type ReturnDonPlaySelectedFromHandParse = {
   readonly returnDonCount: number;
 };
-
 export type SelectOpponentCharacterInstructionParse = {
   readonly cardinality: {
     readonly max: 1;
@@ -149,7 +142,6 @@ export type SelectOpponentCharacterThenKoInstructionParse =
   SelectOpponentCharacterInstructionParse & {
     readonly savedReferenceConsumer: "koThatCharacter";
   };
-
 export type PublicFieldTargetSubject =
   | "opponentCharactersAll"
   | "opponentCharactersChoose"
@@ -165,6 +157,7 @@ export type ContinuousRestrictionInstructionParse = {
   readonly restriction: "cannotAttack" | "cannotBlock";
   readonly target: PublicFieldTargetSubject;
 };
+
 export function parseSupportedTriggerWrapper(
   sourceText: string,
 ): SupportedTriggerWrapperParse | undefined {
@@ -939,12 +932,14 @@ export function buildResidueSpan({
 export function buildCompleteParseResult({
   cardId,
   effectDefinition,
+  nonRuntimeEvidence,
   parserRuleIds,
   sourceText,
   sourceTextHash,
 }: {
   readonly cardId: CardId;
   readonly effectDefinition: EffectDefinition;
+  readonly nonRuntimeEvidence?: CompleteGeneratedSupportParseResult["nonRuntimeEvidence"];
   readonly parserRuleIds: readonly string[];
   readonly sourceText: string;
   readonly sourceTextHash: string;
@@ -954,6 +949,7 @@ export function buildCompleteParseResult({
     componentEvidenceIds:
       listComponentEvidenceIdsForParserRuleIds(parserRuleIds),
     effectDefinition,
+    ...(nonRuntimeEvidence === undefined ? {} : { nonRuntimeEvidence }),
     parserRuleIds,
     sourceText,
     sourceTextHash,

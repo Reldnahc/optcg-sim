@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-003E -->
 <!-- agent-packet:story-path stories/approved/SUP-003E-external-deck-rule-parser-evidence.yaml -->
-<!-- agent-packet:story-sha256 aa1a035e5698f44bbb824b1ae415d8de5a603ec3008d2c7a72b39e834b18b8f6 -->
+<!-- agent-packet:story-sha256 2d7b6f2dbbc20735e3255eee933625863058905a7cdd038a1f1f1a5607d5cc96 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -312,6 +312,8 @@ Cards-layer story only. Do not add engine runtime behavior, shared contract/sche
 - packages/cards/src/certified-card-text-parser.test.ts
 - packages/cards/src/composed-parser-builder.ts
 - packages/cards/src/composed-parser-builder.test.ts
+- packages/cards/src/external-deck-construction-rule.ts
+- packages/cards/src/external-deck-construction-rule.test.ts
 - packages/cards/src/generated-support-index.ts
 - packages/cards/src/generated-support-index.test.ts
 - packages/cards/src/generated-support-report.ts
