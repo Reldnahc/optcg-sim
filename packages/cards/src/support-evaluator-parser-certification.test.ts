@@ -131,7 +131,7 @@ describe("support evaluator parser certification evidence", () => {
           threshold: 2,
         },
       ],
-      parseStatus: "unsupportedPrimitive",
+      parseStatus: "complete",
       parserRuleIds: [
         "exact:external-deck-rule:category-cost-gte-in-your-deck",
       ],
@@ -151,6 +151,50 @@ describe("support evaluator parser certification evidence", () => {
         expect.objectContaining({ code: "unparsed-span" }),
       ]),
     );
+  });
+
+  it("preserves external deck-rule non-runtime evidence when mixed with supported runtime lines", () => {
+    const card = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "SUP-003E-EVAL-MIXED",
+      effect:
+        "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck.\n[On Play] Draw 1 card.",
+      name: "SUP-003E mixed non-runtime and runtime evidence",
+    });
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: card.behaviorHash,
+      expectedSourceTextHash: card.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      blockers: [],
+      nonRuntimeEvidence: [
+        {
+          categoryPlural: "Events",
+          comparator: "gte",
+          deckScope: "your-deck",
+          nonRuntimeClassification: "external-deck-construction-rule",
+          normalizedCategory: "event",
+          parserRuleId:
+            "exact:external-deck-rule:category-cost-gte-in-your-deck",
+          threshold: 2,
+        },
+      ],
+      parseStatus: "complete",
+      parserRuleIds: [
+        "exact:external-deck-rule:category-cost-gte-in-your-deck",
+        "exact:on-play:draw-n:self",
+        "line-separated-effect-blocks:v1",
+      ],
+      playable: true,
+      status: "supported",
+    });
   });
 });
 

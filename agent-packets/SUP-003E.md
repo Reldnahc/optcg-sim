@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-003E -->
 <!-- agent-packet:story-path stories/approved/SUP-003E-external-deck-rule-parser-evidence.yaml -->
-<!-- agent-packet:story-sha256 2d7b6f2dbbc20735e3255eee933625863058905a7cdd038a1f1f1a5607d5cc96 -->
+<!-- agent-packet:story-sha256 fa1f98494d6586cbf419b4161f48a5ee7d39a1f53449e3421c0a75d6a55bf6dd -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -314,6 +314,7 @@ Cards-layer story only. Do not add engine runtime behavior, shared contract/sche
 - packages/cards/src/composed-parser-builder.test.ts
 - packages/cards/src/external-deck-construction-rule.ts
 - packages/cards/src/external-deck-construction-rule.test.ts
+- packages/cards/src/line-separated-composition.ts
 - packages/cards/src/generated-support-index.ts
 - packages/cards/src/generated-support-index.test.ts
 - packages/cards/src/generated-support-report.ts
@@ -324,6 +325,7 @@ Cards-layer story only. Do not add engine runtime behavior, shared contract/sche
 - packages/cards/src/support-evaluator-parser-certification.test.ts
 - packages/cards/src/support-evaluator.test.ts
 - packages/cards/src/support-probe.test.ts
+- packages/cards/src/support-probe-proof-certificate.test.ts
 - packages/cards/src/runtime-capability-matrix.ts
 - packages/cards/src/runtime-capability-matrix.test.ts
 

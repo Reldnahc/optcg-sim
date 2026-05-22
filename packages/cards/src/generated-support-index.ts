@@ -8,7 +8,7 @@ import type {
 } from "@optcg/types";
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import { deriveParserDiagnosticDecomposition } from "./composed-parser-builder.js";
-import { isExternalDeckConstructionRuleParserRuleId } from "./external-deck-construction-rule.js";
+import { hasOnlyExternalDeckConstructionRuleParserRuleIds as hasOnlyExternalDeckRuleIds } from "./external-deck-construction-rule.js";
 import {
   scanGenericCardTextDiagnostics,
   type GenericDiagnosticComponent,
@@ -356,9 +356,7 @@ function buildGeneratedSupportIndexEntry(
       parserRuleIds: parseResult.parserRuleIds,
     });
   }
-  if (
-    parseResult.parserRuleIds.some(isExternalDeckConstructionRuleParserRuleId)
-  ) {
+  if (hasOnlyExternalDeckRuleIds(parseResult.parserRuleIds)) {
     return unsupportedMetadataEntry({
       card,
       component: "metadata:external-deck-construction-rule",
@@ -366,9 +364,8 @@ function buildGeneratedSupportIndexEntry(
       diagnosticLayer: "metadata",
       message:
         "Certified parser recognized external deck-construction rule evidence; generated support remains non-runtime and fail-closed.",
-      ...(parseResult.nonRuntimeEvidence === undefined
-        ? {}
-        : { nonRuntimeEvidence: parseResult.nonRuntimeEvidence }),
+      nonRuntimeEvidence: parseResult.nonRuntimeEvidence,
+      parseStatus: "complete",
       parserRuleIds: parseResult.parserRuleIds,
     });
   }
@@ -499,6 +496,9 @@ function buildGeneratedSupportIndexEntry(
       status: "implemented-dsl",
       tested: true,
     },
+    ...(parseResult.nonRuntimeEvidence === undefined
+      ? {}
+      : { nonRuntimeEvidence: parseResult.nonRuntimeEvidence }),
   };
 }
 
@@ -840,6 +840,7 @@ function unsupportedMetadataEntry({
   diagnosticLayer,
   message,
   nonRuntimeEvidence,
+  parseStatus = "unsupportedPrimitive",
   parserRuleIds,
 }: {
   card: GeneratedSupportCardTextInput;
@@ -848,23 +849,21 @@ function unsupportedMetadataEntry({
   diagnosticLayer?: GeneratedSupportBlocker["diagnosticLayer"];
   message: string;
   nonRuntimeEvidence?: CompleteGeneratedSupportParseResult["nonRuntimeEvidence"];
+  parseStatus?: GeneratedSupportParserResultStatus;
   parserRuleIds: readonly string[];
 }): GeneratedSupportIndexEntry {
-  const blocker: GeneratedSupportBlocker =
-    diagnosticLayer === undefined
-      ? { code: "unsupported-primitive", component, message }
-      : {
-          code: "unsupported-primitive",
-          component,
-          diagnosticLayer,
-          message,
-        };
+  const blocker: GeneratedSupportBlocker = {
+    code: "unsupported-primitive",
+    component,
+    ...(diagnosticLayer === undefined ? {} : { diagnosticLayer }),
+    message,
+  };
 
   return unsupportedEntry({
     blockers: [blocker],
     card,
     componentEvidenceIds,
-    parseStatus: "unsupportedPrimitive",
+    parseStatus,
     ...(nonRuntimeEvidence === undefined ? {} : { nonRuntimeEvidence }),
     parserRuleIds,
   });
@@ -977,14 +976,12 @@ function compareCapabilityEvidence(
   if (capabilityOrder !== 0) {
     return capabilityOrder;
   }
-
   const parserRuleOrder = (left.parserRuleId ?? "").localeCompare(
     right.parserRuleId ?? "",
   );
   if (parserRuleOrder !== 0) {
     return parserRuleOrder;
   }
-
   return (left.component ?? left.parserRuleId ?? "").localeCompare(
     right.component ?? right.parserRuleId ?? "",
   );
@@ -1011,7 +1008,6 @@ function withParserRuleTrace({
       }),
     );
   }
-
   return capabilityEvidence
     .flatMap((evidence) => {
       const mappedParserRuleIds =

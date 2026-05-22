@@ -119,7 +119,7 @@ describe("generated support parser result contracts", () => {
       capabilityEvidence: [],
       componentEvidenceIds: [],
       missingCapabilityIds: [],
-      parseStatus: "unsupportedPrimitive",
+      parseStatus: "complete",
       parserRuleIds: [
         "exact:external-deck-rule:category-cost-gte-in-your-deck",
       ],
@@ -152,7 +152,7 @@ describe("generated support parser result contracts", () => {
           threshold: 3,
         },
       ],
-      parseStatus: "unsupportedPrimitive",
+      parseStatus: "complete",
       parserRuleIds: [
         "exact:external-deck-rule:category-cost-gte-in-your-deck",
       ],

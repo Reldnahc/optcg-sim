@@ -29,6 +29,7 @@ allowed_touch_points:
   - packages/cards/src/composed-parser-builder.test.ts
   - packages/cards/src/external-deck-construction-rule.ts
   - packages/cards/src/external-deck-construction-rule.test.ts
+  - packages/cards/src/line-separated-composition.ts
   - packages/cards/src/generated-support-index.ts
   - packages/cards/src/generated-support-index.test.ts
   - packages/cards/src/generated-support-report.ts
@@ -39,6 +40,7 @@ allowed_touch_points:
   - packages/cards/src/support-evaluator-parser-certification.test.ts
   - packages/cards/src/support-evaluator.test.ts
   - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/support-probe-proof-certificate.test.ts
   - packages/cards/src/runtime-capability-matrix.ts
   - packages/cards/src/runtime-capability-matrix.test.ts
 spec_refs:

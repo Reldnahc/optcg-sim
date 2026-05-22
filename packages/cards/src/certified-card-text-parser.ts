@@ -191,6 +191,10 @@ function completeParse(
   input: CertifiedCardTextParserInput,
   parsedClauses: readonly CertifiedClause[],
 ): GeneratedSupportParserResult {
+  const nonRuntimeEvidence = parsedClauses.flatMap((clause) =>
+    clause.nonRuntimeEvidence === undefined ? [] : [clause.nonRuntimeEvidence],
+  );
+
   return buildCompleteParseResult({
     cardId: input.cardId,
     effectDefinition: {
@@ -214,11 +218,7 @@ function completeParse(
         tested: true,
       },
     },
-    nonRuntimeEvidence: parsedClauses.flatMap((clause) =>
-      clause.nonRuntimeEvidence === undefined
-        ? []
-        : [clause.nonRuntimeEvidence],
-    ),
+    ...(nonRuntimeEvidence.length === 0 ? {} : { nonRuntimeEvidence }),
     parserRuleIds: getCompleteParserRuleIds(parsedClauses),
     sourceText: input.sourceText,
     sourceTextHash: input.sourceTextHash,

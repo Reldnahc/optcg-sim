@@ -53,7 +53,7 @@ export function parseExternalDeckConstructionRuleClause(
   const threshold = Number.parseInt(thresholdText, 10);
   if (
     !Number.isSafeInteger(threshold) ||
-    threshold <= 0 ||
+    threshold < 0 ||
     String(threshold) !== thresholdText
   ) {
     return undefined;
@@ -77,4 +77,13 @@ export function isExternalDeckConstructionRuleParserRuleId(
   parserRuleId: string,
 ): boolean {
   return parserRuleId === externalDeckConstructionRuleParserRuleId;
+}
+
+export function hasOnlyExternalDeckConstructionRuleParserRuleIds(
+  parserRuleIds: readonly string[],
+): boolean {
+  return (
+    parserRuleIds.length > 0 &&
+    parserRuleIds.every(isExternalDeckConstructionRuleParserRuleId)
+  );
 }

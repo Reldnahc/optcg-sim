@@ -46,6 +46,19 @@ describe("external deck construction rule", () => {
         threshold: 1,
       },
     },
+    {
+      sourceText:
+        "Under the rules of this game, you cannot include Events with a cost of 0 or more in your deck.",
+      expectedEvidence: {
+        categoryPlural: "Events",
+        comparator: "gte",
+        deckScope: "your-deck",
+        nonRuntimeClassification: "external-deck-construction-rule",
+        normalizedCategory: "event",
+        parserRuleId: "exact:external-deck-rule:category-cost-gte-in-your-deck",
+        threshold: 0,
+      },
+    },
   ])(
     "parses supported non-runtime deck-rule evidence for $sourceText",
     ({ expectedEvidence, sourceText }) => {

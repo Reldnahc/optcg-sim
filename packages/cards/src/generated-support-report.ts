@@ -117,6 +117,7 @@ export interface GeneratedSupportProofCertificateInput {
   sourceTextHash: string;
   status: "supported" | "unsupported";
   behaviorHash?: string;
+  nonRuntimeEvidence?: GeneratedSupportIndexEntry["nonRuntimeEvidence"];
   support?: GeneratedSupportIndexEntry["support"];
 }
 
@@ -478,6 +479,17 @@ function buildComponentEvidenceLayer({
       status: "not-applicable",
     };
   }
+  if (
+    entry.nonRuntimeEvidence !== undefined &&
+    entry.nonRuntimeEvidence.length > 0
+  ) {
+    return {
+      layer: "component-evidence",
+      message:
+        "Component evidence is not applicable to certified non-runtime parser evidence.",
+      status: "not-applicable",
+    };
+  }
 
   return {
     layer: "component-evidence",
@@ -508,6 +520,18 @@ function buildRequiredRuntimeCapabilitiesLayer({
       capabilityIds: [],
       layer: "required-runtime-capabilities",
       message: "Runtime capability IDs are not applicable to vanilla support.",
+      status: "not-applicable",
+    };
+  }
+  if (
+    entry.nonRuntimeEvidence !== undefined &&
+    entry.nonRuntimeEvidence.length > 0
+  ) {
+    return {
+      capabilityIds: [],
+      layer: "required-runtime-capabilities",
+      message:
+        "Runtime capability IDs are not applicable to certified non-runtime parser evidence.",
       status: "not-applicable",
     };
   }
