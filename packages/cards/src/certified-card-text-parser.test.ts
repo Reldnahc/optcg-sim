@@ -596,6 +596,14 @@ describe("certified card text parser", () => {
     ]);
   });
 
+  it("does not broaden line-separated composition to three runtime lines", () => {
+    const result = parse(
+      "[On Play] Draw 1 card.\n[When Attacking] Draw 2 cards.\n[On K.O.] Draw 1 card.",
+    );
+
+    expect(result.status).not.toBe("complete");
+  });
+
   it.each([
     "[On Play] Draw 0 cards.",
     "[On Play] Draw -1 cards.",
