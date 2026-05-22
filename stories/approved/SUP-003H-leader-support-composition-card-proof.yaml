@@ -28,9 +28,11 @@ allowed_touch_points:
   - packages/cards/src/certified-card-text-parser.test.ts
   - packages/cards/src/composed-parser-builder.ts
   - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/external-deck-construction-rule.ts
   - packages/cards/src/generated-support-index.ts
   - packages/cards/src/generated-support-index.test.ts
   - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-runtime-capability-coverage.ts
   - packages/cards/src/generated-support-types.ts
   - packages/cards/src/generated-support-types.test.ts
   - packages/cards/src/support-evaluator.ts

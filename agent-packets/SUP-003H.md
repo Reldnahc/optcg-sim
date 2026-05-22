@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-003H -->
 <!-- agent-packet:story-path stories/approved/SUP-003H-leader-support-composition-card-proof.yaml -->
-<!-- agent-packet:story-sha256 7661a5c4c38f5bb3ee37c77a0cc212010820f409cdac4b4511e9b814784ddf6d -->
+<!-- agent-packet:story-sha256 91e0b4a5a7a9113475b6d2abe67378ba01effabe3330f64e8c6b6146344d8ed8 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -534,9 +534,11 @@ Cards-layer composition and proof story only. SUP-003E, SUP-003F, and SUP-003G m
 - packages/cards/src/certified-card-text-parser.test.ts
 - packages/cards/src/composed-parser-builder.ts
 - packages/cards/src/composed-parser-builder.test.ts
+- packages/cards/src/external-deck-construction-rule.ts
 - packages/cards/src/generated-support-index.ts
 - packages/cards/src/generated-support-index.test.ts
 - packages/cards/src/generated-support-report.test.ts
+- packages/cards/src/generated-support-runtime-capability-coverage.ts
 - packages/cards/src/generated-support-types.ts
 - packages/cards/src/generated-support-types.test.ts
 - packages/cards/src/support-evaluator.ts

@@ -274,10 +274,40 @@ describe("support evaluator parser certification evidence", () => {
       validateEffectDefinition,
     });
 
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          behaviorHash: card.behaviorHash,
+          cardDataVersion: "2026-05-21",
+          cardId: card.cardId,
+          category: card.category,
+          effectDefinitionsVersion: "generated-support-v1",
+          printedKeywords: card.printedKeywords,
+          rulesVersion: "generated-support-v1",
+          sourceText: card.raw.effect ?? "",
+          sourceTextHash: card.sourceTextHash,
+        },
+      ],
+      parserCertificationEvidence: {
+        currentCertificationIds: [],
+      },
+      validateEffectDefinition,
+    });
+    expect(index.entries[0]).toMatchObject({
+      parseStatus: "complete",
+      status: "unsupported",
+    });
+    expect(index.entries[0]?.support).toBeUndefined();
+    expect(index.entries[0]?.effectDefinition).toBeUndefined();
+    expect(index.entries[0]?.effectDefinitionId).toBeUndefined();
+
     expect(evaluation).toMatchObject({
       parseStatus: "complete",
       status: "unsupported",
     });
+    expect(evaluation.support).toBeUndefined();
+    expect(evaluation.effectDefinition).toBeUndefined();
+    expect(evaluation.effectDefinitionId).toBeUndefined();
     const blockerMessages = evaluation.blockers
       .filter(
         (blocker) =>
@@ -290,6 +320,55 @@ describe("support evaluator parser certification evidence", () => {
       blockerMessages.some((message) =>
         message.includes(
           "Missing parser certification non-runtime:external-deck-construction-rule",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("fails closed at generated-support index level when deck-rule parser certification evidence is stale for SUP-003H composed multiline text", () => {
+    const card = createSup003HRepresentativeCard(
+      "SUP-003H-INDEX-STALE-DECK-RULE-CERT",
+    );
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          behaviorHash: card.behaviorHash,
+          cardDataVersion: "2026-05-21",
+          cardId: card.cardId,
+          category: card.category,
+          effectDefinitionsVersion: "generated-support-v1",
+          printedKeywords: card.printedKeywords,
+          rulesVersion: "generated-support-v1",
+          sourceText: card.raw.effect ?? "",
+          sourceTextHash: card.sourceTextHash,
+        },
+      ],
+      parserCertificationEvidence: {
+        currentCertificationIds: [],
+        staleCertificationIds: ["non-runtime:external-deck-construction-rule"],
+      },
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      parseStatus: "complete",
+      status: "unsupported",
+    });
+    expect(index.entries[0]?.support).toBeUndefined();
+    expect(index.entries[0]?.effectDefinition).toBeUndefined();
+    expect(index.entries[0]?.effectDefinitionId).toBeUndefined();
+    const blockerMessages = (index.entries[0]?.blockers ?? [])
+      .filter(
+        (blocker) =>
+          blocker.code === "unsupported-primitive" &&
+          blocker.component ===
+            "external-deck-rule-category-cost-gte-in-your-deck",
+      )
+      .map((blocker) => blocker.message);
+    expect(
+      blockerMessages.some((message) =>
+        message.includes(
+          "Stale parser certification non-runtime:external-deck-construction-rule",
         ),
       ),
     ).toBe(true);

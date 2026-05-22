@@ -1,5 +1,16 @@
+import type {
+  CompleteGeneratedSupportParseResult,
+  GeneratedSupportBlocker,
+  GeneratedSupportParserCertificationEvidence,
+} from "./generated-support-types.js";
+import { evaluateParserCertificationBlockers } from "./generated-support-types.js";
+
 export const externalDeckConstructionRuleParserRuleId =
   "exact:external-deck-rule:category-cost-gte-in-your-deck";
+const externalDeckConstructionRuleCertificationId =
+  "non-runtime:external-deck-construction-rule";
+const externalDeckConstructionRuleComponentId =
+  "external-deck-rule-category-cost-gte-in-your-deck";
 
 export interface ExternalDeckConstructionRuleEvidence {
   categoryPlural: string;
@@ -86,4 +97,52 @@ export function hasOnlyExternalDeckConstructionRuleParserRuleIds(
     parserRuleIds.length > 0 &&
     parserRuleIds.every(isExternalDeckConstructionRuleParserRuleId)
   );
+}
+
+export function evaluateExternalDeckRuleParserCertificationBlockers({
+  evidence,
+  nonRuntimeEvidence,
+  parserRuleIds,
+}: {
+  evidence: GeneratedSupportParserCertificationEvidence | undefined;
+  nonRuntimeEvidence: CompleteGeneratedSupportParseResult["nonRuntimeEvidence"];
+  parserRuleIds: readonly string[];
+}): readonly GeneratedSupportBlocker[] {
+  if (
+    evidence === undefined ||
+    !parserRuleIds.includes(externalDeckConstructionRuleParserRuleId) ||
+    (nonRuntimeEvidence ?? []).length === 0
+  ) {
+    return [];
+  }
+  const current = new Set(evidence.currentCertificationIds);
+  const stale = new Set(evidence.staleCertificationIds ?? []);
+  const isStale = stale.has(externalDeckConstructionRuleCertificationId);
+  return isStale || !current.has(externalDeckConstructionRuleCertificationId)
+    ? [
+        {
+          code: "unsupported-primitive",
+          component: externalDeckConstructionRuleComponentId,
+          diagnosticLayer: "review",
+          message: `${isStale ? "Stale" : "Missing"} parser certification ${externalDeckConstructionRuleCertificationId} for component ${externalDeckConstructionRuleComponentId}.`,
+        },
+      ]
+    : [];
+}
+
+export function evaluateParserCertificationBlockersForParseResult(
+  parseResult: CompleteGeneratedSupportParseResult,
+  evidence: GeneratedSupportParserCertificationEvidence | undefined,
+): readonly GeneratedSupportBlocker[] {
+  return [
+    ...evaluateParserCertificationBlockers(
+      parseResult.componentEvidenceIds,
+      evidence,
+    ),
+    ...evaluateExternalDeckRuleParserCertificationBlockers({
+      evidence,
+      nonRuntimeEvidence: parseResult.nonRuntimeEvidence,
+      parserRuleIds: parseResult.parserRuleIds,
+    }),
+  ];
 }

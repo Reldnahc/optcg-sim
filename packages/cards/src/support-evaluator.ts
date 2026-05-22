@@ -113,35 +113,6 @@ export function evaluateGeneratedSupportPlayability(
     );
   }
 
-  const nonRuntimeParserCertificationBlockers =
-    evaluateNonRuntimeParserCertificationBlockers({
-      evidence: indexInput.parserCertificationEvidence,
-      parserRuleIds: entry.parserRuleIds,
-    });
-  if (nonRuntimeParserCertificationBlockers.length > 0) {
-    return {
-      blockers: [...entry.blockers, ...nonRuntimeParserCertificationBlockers],
-      capabilityEvidence: entry.capabilityEvidence,
-      cardId: entry.cardId,
-      ...(entry.effectDefinition === undefined
-        ? {}
-        : { effectDefinition: entry.effectDefinition }),
-      ...(entry.effectDefinitionId === undefined
-        ? {}
-        : { effectDefinitionId: entry.effectDefinitionId }),
-      missingCapabilityIds: entry.missingCapabilityIds,
-      ...(entry.nonRuntimeEvidence === undefined
-        ? {}
-        : { nonRuntimeEvidence: entry.nonRuntimeEvidence }),
-      parseStatus: entry.parseStatus,
-      parserRuleIds: entry.parserRuleIds,
-      playable: false,
-      sourceTextHash: entry.sourceTextHash,
-      status: "unsupported",
-      ...(entry.support === undefined ? {} : { support: entry.support }),
-    };
-  }
-
   const result: GeneratedSupportPlayabilityEvaluation = {
     blockers: entry.blockers,
     capabilityEvidence: entry.capabilityEvidence,
@@ -190,36 +161,4 @@ function listCurrentParserCertificationIds(): readonly string[] {
     }
   }
   return [...ids].sort();
-}
-
-function evaluateNonRuntimeParserCertificationBlockers({
-  evidence,
-  parserRuleIds,
-}: {
-  evidence: GeneratedSupportParserCertificationEvidence | undefined;
-  parserRuleIds: readonly string[];
-}): readonly GeneratedSupportBlocker[] {
-  if (
-    !parserRuleIds.includes(
-      "exact:external-deck-rule:category-cost-gte-in-your-deck",
-    )
-  ) {
-    return [];
-  }
-
-  const current = new Set(evidence?.currentCertificationIds ?? []);
-  const stale = new Set(evidence?.staleCertificationIds ?? []);
-  return externalDeckRuleNonRuntimeParserCertificationIds.flatMap((id) => {
-    const isStale = stale.has(id);
-    return isStale || !current.has(id)
-      ? [
-          {
-            code: "unsupported-primitive",
-            component: "external-deck-rule-category-cost-gte-in-your-deck",
-            diagnosticLayer: "review",
-            message: `${isStale ? "Stale" : "Missing"} parser certification ${id} for component external-deck-rule-category-cost-gte-in-your-deck.`,
-          },
-        ]
-      : [];
-  });
 }
