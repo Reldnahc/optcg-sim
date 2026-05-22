@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-003F -->
 <!-- agent-packet:story-path stories/approved/SUP-003F-activate-main-choose-one-cost-card-components.yaml -->
-<!-- agent-packet:story-sha256 19a016a5b310f92105a65ab6262a2a1bb4df8af0a75ae330ed86c3e46cea70bb -->
+<!-- agent-packet:story-sha256 af30946c72fb835806f136b255cf794739343cc9ffa014179692f0ade650d88a -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -843,6 +843,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - full-line success plus value variation is not sufficient evidence
 - generated-support tests that assert `status: supported` must validate the produced Effect DSL with the real schema validator
 - generated-support promotion requires current parser-rule certification evidence for each scoped primitive and for the composed Activate Main cost/draw shape
+- generated-support parser certification must explicitly include durable primitive IDs for `[Activate: Main]`, `[Once Per Turn]`, `You may`, choose-one `or`, typed self Character field-trash alternative, unfiltered hand-trash alternative, colon cost/body separator, draw-N body, and the composed Activate Main optional choose-one trash cost into draw shape
 - the production/default generated-support path must supply current parser-rule certification evidence; lower-level tests with manually injected evidence are not sufficient if support-probe reports missing certification
 - generated support fails closed when any primitive is only partially parsed
 - no production code checks exact full effect text, card IDs, or one representative sample as a whole string

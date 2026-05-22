@@ -53,6 +53,7 @@ import {
   parseOnPlayOptionalTrashCostKoClause,
   parseOptionalTrashCostKoResidueClause,
 } from "./optional-trash-cost-ko-components.js";
+import { parseActivateMainChooseOneTrashCostClause } from "./activate-main-choose-one-cost-components.js";
 import { parseReturnDonCostWrapperResidueClause } from "./return-don-cost-wrapper-components.js";
 import {
   parseStandaloneBlockerClause,
@@ -359,6 +360,7 @@ function parseNonConditionalCardLineEffectClause(
   sourceText: string,
 ): CertifiedClause | undefined {
   return (
+    parseActivateMainChooseOneTrashCostClause(cardId, sourceText) ??
     parseExternalDeckConstructionRuleClause(sourceText) ??
     parseReusableCard016AClause(cardId, sourceText) ??
     parseOnPlayOptionalTrashCostKoClause(cardId, sourceText) ??

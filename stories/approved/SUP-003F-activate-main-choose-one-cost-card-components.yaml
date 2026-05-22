@@ -98,6 +98,7 @@ acceptance_criteria:
   - full-line success plus value variation is not sufficient evidence
   - "generated-support tests that assert `status: supported` must validate the produced Effect DSL with the real schema validator"
   - generated-support promotion requires current parser-rule certification evidence for each scoped primitive and for the composed Activate Main cost/draw shape
+  - generated-support parser certification must explicitly include durable primitive IDs for `[Activate: Main]`, `[Once Per Turn]`, `You may`, choose-one `or`, typed self Character field-trash alternative, unfiltered hand-trash alternative, colon cost/body separator, draw-N body, and the composed Activate Main optional choose-one trash cost into draw shape
   - the production/default generated-support path must supply current parser-rule certification evidence; lower-level tests with manually injected evidence are not sufficient if support-probe reports missing certification
   - generated support fails closed when any primitive is only partially parsed
   - no production code checks exact full effect text, card IDs, or one representative sample as a whole string

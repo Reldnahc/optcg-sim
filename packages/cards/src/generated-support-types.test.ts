@@ -305,6 +305,7 @@ describe("generated support parser result contracts", () => {
     expect(parserRuleIds).toEqual([
       "component:cost:return-don:self:count-exact",
       "condition-component:field-count-don-public",
+      "exact:activate-main:once-per-turn:optional-choose-one-trash-self-field-type-or-hand:draw-n:self",
       "exact:condition:self-attached-don-count",
       "exact:condition:your-turn",
       "exact:conditional-continuous:condition:base-power:self-character-type:direct",

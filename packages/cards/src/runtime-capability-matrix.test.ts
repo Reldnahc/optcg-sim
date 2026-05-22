@@ -105,6 +105,13 @@ describe("generated support runtime capability matrix", () => {
         "effect:draw:self:count:positive-safe-integer",
         "effect:sequence:ordered",
         "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+        "category:activate",
+        "trigger:activateMain",
+        "activateMain:source:leader-character-stage",
+        "activateMain:oncePerTurn:legal-commitment",
+        "payCost:chooseOne:optional:trashFromField-or-trashFromHand:self",
+        "payCost:trashFromField:self:characterArea:character:typesAny:count-exact:optional",
+        "payCost:trashFromHand:self:count-exact:optional",
         "keyword:banish:printed",
         "keyword:blocker:printed",
         "keyword:doubleAttack:printed",
@@ -522,7 +529,7 @@ describe("generated support runtime capability matrix", () => {
       requiredGeneratedSupportCapabilityIds,
     );
     expect(hasRuntimeCapability("effect:ko:targeted")).toBe(false);
-    expect(hasRuntimeCapability("trigger:activateMain")).toBe(false);
+    expect(hasRuntimeCapability("trigger:activateMain")).toBe(true);
   });
 
   it("exposes public trash-count condition capability from ENG-059A", () => {
@@ -706,5 +713,40 @@ describe("generated support runtime capability matrix", () => {
       );
 
     expect(capabilities).toEqual([]);
+  });
+
+  it("tracks SUP-003F activate-main optional choose-one trash cost draw capability evidence", () => {
+    const parserRuleId =
+      "exact:activate-main:once-per-turn:optional-choose-one-trash-self-field-type-or-hand:draw-n:self";
+    const requiredCapabilities = [
+      "category:activate",
+      "trigger:activateMain",
+      "activateMain:source:leader-character-stage",
+      "activateMain:oncePerTurn:legal-commitment",
+      "payCost:chooseOne:optional:trashFromField-or-trashFromHand:self",
+      "payCost:trashFromField:self:characterArea:character:typesAny:count-exact:optional",
+      "payCost:trashFromHand:self:count-exact:optional",
+      "sequence:genericFrames",
+      "sourcePresencePolicy:mustRemainInSameZone",
+      "effect:draw:self:count:positive-safe-integer",
+    ];
+
+    for (const capabilityId of requiredCapabilities) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+
+      expect(capability?.supported).toBe(true);
+      expect(capability?.supportedComponentIds).toContain(
+        "activate-main-once-per-turn-optional-choose-one-trash-self-field-type-or-hand-then-draw",
+      );
+    }
+
+    expect(
+      generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+        (candidate) => candidate.id === "category:activate",
+      )?.supportedParserRuleIds,
+    ).toContain(parserRuleId);
   });
 });

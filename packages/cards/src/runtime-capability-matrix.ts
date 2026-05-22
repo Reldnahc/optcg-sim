@@ -4,6 +4,7 @@ import {
   isConditionalContinuousCompositionParserRuleId,
   listParserRuleIdsForConditionalContinuousRuntimeCapabilityId,
 } from "./conditional-continuous-composition-evidence.js";
+import * as activateMainChooseOneCost from "./activate-main-choose-one-cost-evidence.js";
 import * as optionalKo from "./optional-trash-cost-ko-evidence.js";
 import { returnDonCostWrapperParserRuleId } from "./return-don-cost-wrapper-components.js";
 import { topNSearchRuntimeCapabilityRecords } from "./top-n-search-evidence.js";
@@ -23,7 +24,6 @@ export type RuntimeCapabilityKind =
   | "sourcePresencePolicy"
   | "target"
   | "trigger";
-
 export interface RuntimeCapabilityRecord {
   id: string;
   kind: RuntimeCapabilityKind;
@@ -38,19 +38,16 @@ export interface RuntimeCapabilityMatrix {
   generatedAtStory: string;
   capabilities: readonly RuntimeCapabilityRecord[];
 }
-
 export type RuntimeCapabilityParserRuleCoverage =
   | "explicit-blocker"
   | "reusable-parser-component"
   | "runtime-capability-only"
   | "unclassified";
-
 export interface RuntimeCapabilityParserRuleInventoryEntry {
   parserRuleId: string;
   parserRuleKind: string;
   coverage: RuntimeCapabilityParserRuleCoverage;
 }
-
 const conditionalContinuousRuntimeCapabilitySpecs = [
   ["category:permanent", "category", "ENG-059F"],
   ["effect:giveKeyword:self:permanent:allowlisted", "effect", "ENG-059B"],
@@ -516,6 +513,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: ["exact:on-play:optional-effect:draw-1:self"],
     },
     ...optionalKo.optionalTrashCostKoRuntimeCapabilityRecords,
+    ...activateMainChooseOneCost.activateMainChooseOneCostRuntimeCapabilityRecords,
     {
       description:
         "Return-DON!! costs can be paid atomically by the source controller.",
@@ -868,28 +866,21 @@ export const generatedSupportRuntimeCapabilityMatrix = {
       left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
     ),
 } as const satisfies RuntimeCapabilityMatrix;
-
 export const requiredGeneratedSupportCapabilityIds =
   generatedSupportRuntimeCapabilityMatrix.capabilities
     .map((capability) => capability.id)
     .sort();
 
-export function listSupportedRuntimeCapabilityIds(
-  matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
-): readonly string[] {
-  return matrix.capabilities
+export function listSupportedRuntimeCapabilityIds(): readonly string[] {
+  return generatedSupportRuntimeCapabilityMatrix.capabilities
     .filter((capability) => capability.supported)
     .map((capability) => capability.id)
     .sort();
 }
 
-export function hasRuntimeCapability(
-  capabilityId: string,
-  matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
-): boolean {
-  return listSupportedRuntimeCapabilityIds(matrix).includes(capabilityId);
+export function hasRuntimeCapability(capabilityId: string): boolean {
+  return listSupportedRuntimeCapabilityIds().includes(capabilityId);
 }
-
 export function listRuntimeCapabilityParserRuleInventory(
   matrix: RuntimeCapabilityMatrix = generatedSupportRuntimeCapabilityMatrix,
 ): readonly RuntimeCapabilityParserRuleInventoryEntry[] {
@@ -965,6 +956,9 @@ function classifyParserRuleKind(parserRuleId: string): string {
   }
   if (
     parserRuleId.includes(":draw-n:trash-m:hand:self") ||
+    parserRuleId.includes(
+      ":optional-choose-one-trash-self-field-type-or-hand",
+    ) ||
     parserRuleId === "exact:on-play:trash-2-from-hand:draw-1:self" ||
     parserRuleId.startsWith("card014a:sequence:")
   ) {
@@ -1013,6 +1007,5 @@ function classifyParserRuleKind(parserRuleId: string): string {
   ) {
     return "source-presence-policy";
   }
-
   return "unclassified";
 }

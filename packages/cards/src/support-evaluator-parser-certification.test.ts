@@ -6,7 +6,10 @@ import type { AnySchema } from "ajv";
 import { describe, expect, it } from "vitest";
 import type { EffectDefinition, PoneglyphCardDetail } from "@optcg/types";
 
-import type { EffectDefinitionValidationResult } from "./generated-support-index.js";
+import {
+  buildGeneratedSupportIndex,
+  type EffectDefinitionValidationResult,
+} from "./generated-support-index.js";
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import { evaluateGeneratedSupportPlayability } from "./support-evaluator.js";
 
@@ -37,6 +40,14 @@ const validateEffectDefinition = (
 
 describe("support evaluator parser certification evidence", () => {
   it.each([
+    {
+      cardNumber: "SUP-003F-EVAL-ACTIVATE-MAIN-CHOOSE-ONE",
+      effect:
+        "[Activate: Main] [Once Per Turn] You may trash 2 of your {Navy} type Characters or 1 card from your hand: Draw 3 cards.",
+      expectedParserRuleId:
+        "exact:activate-main:once-per-turn:optional-choose-one-trash-self-field-type-or-hand:draw-n:self",
+      name: "Activate Main Choose One Optional Trash Draw Candidate",
+    },
     {
       cardNumber: "SUP-002E-EVAL-OPTIONAL-TRASH-KO",
       effect:
@@ -98,6 +109,76 @@ describe("support evaluator parser certification evidence", () => {
       expect(evaluation.parserRuleIds).toContain(expectedParserRuleId);
     },
   );
+
+  it("requires activate-main colon/draw parser certification IDs for SUP-003F generated support while evaluator default path remains supported", () => {
+    const card = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "SUP-003F-EVAL-CERT-COLON-DRAW",
+      effect:
+        "[Activate: Main] [Once Per Turn] You may trash 2 of your {Navy} type Characters or 1 card from your hand: Draw 3 cards.",
+      name: "Activate Main Certification Colon Draw Candidate",
+    });
+
+    const staleIndex = buildGeneratedSupportIndex({
+      cards: [
+        {
+          behaviorHash: card.behaviorHash,
+          cardDataVersion: "2026-05-21",
+          cardId: card.cardId,
+          category: card.category,
+          effectDefinitionsVersion: "generated-support-v1",
+          printedKeywords: card.printedKeywords,
+          rulesVersion: "generated-support-v1",
+          sourceText: card.raw.effect ?? "",
+          sourceTextHash: card.sourceTextHash,
+        },
+      ],
+      parserCertificationEvidence: {
+        currentCertificationIds: [],
+        staleCertificationIds: [
+          "cost-body-separator:colon",
+          "body-action:draw-n",
+        ],
+      },
+      validateEffectDefinition,
+    });
+
+    expect(staleIndex.entries[0]).toMatchObject({
+      parseStatus: "complete",
+      status: "unsupported",
+    });
+    const staleMessages = (staleIndex.entries[0]?.blockers ?? [])
+      .filter((blocker) => blocker.code === "unsupported-primitive")
+      .map((blocker) => blocker.message);
+    expect(
+      staleMessages.some((message) =>
+        message.includes(
+          "Stale parser certification cost-body-separator:colon",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      staleMessages.some((message) =>
+        message.includes("Stale parser certification body-action:draw-n"),
+      ),
+    ).toBe(true);
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card,
+      cardDataVersion: "2026-05-21",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: card.behaviorHash,
+      expectedSourceTextHash: card.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+    expect(evaluation).toMatchObject({
+      blockers: [],
+      parseStatus: "complete",
+      playable: true,
+      status: "supported",
+    });
+  });
 
   it("classifies external deck-construction text as parsed non-runtime evidence without unparsed-span blockers", () => {
     const card = normalizePoneglyphCardDetail({
