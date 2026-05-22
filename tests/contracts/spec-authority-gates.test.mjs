@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -10,7 +9,6 @@ const repoRoot = path.resolve(
   "..",
   "..",
 );
-
 async function readText(relativePath) {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
@@ -952,115 +950,31 @@ test("workflow authority pins layered parent story sets for composed effect and 
 });
 
 test("SPEC-010A terminology authority separates entry-point wrappers from body primitives", async () => {
-  const engineSpec = await readText("specs/02-engine-mechanics.md");
-  const runtimeSpec = await readText("specs/04-effect-runtime.md");
-  const dslSpec = await readText("specs/05-effect-dsl-reference.md");
-  const cardPolicySpec = await readText(
-    "specs/09-card-data-and-support-policy.md",
-  );
-  const glossarySpec = await readText("specs/14-glossary.md");
-
-  const effectCategories = extractSection(
-    engineSpec,
-    "02-engine-mechanics.s024",
-    "02-engine-mechanics.s025",
-  );
-  const keywordBehavior = extractSection(
-    engineSpec,
-    "02-engine-mechanics.s025",
-    "02-engine-mechanics.s026",
-  );
-  const runtimeCategories = extractSection(
-    runtimeSpec,
-    "04-effect-runtime.s003",
-    "04-effect-runtime.s004",
-  );
-  const sourcePresence = extractSection(
-    runtimeSpec,
-    "04-effect-runtime.s007",
-    "04-effect-runtime.s008",
-  );
-  const conditionsAndCosts = extractSection(
-    runtimeSpec,
-    "04-effect-runtime.s011",
-    "04-effect-runtime.s012",
-  );
-  const effectBlock = extractSection(
-    dslSpec,
-    "05-effect-dsl-reference.s004",
-    "05-effect-dsl-reference.s005",
-  );
-  const triggers = extractSection(
-    dslSpec,
-    "05-effect-dsl-reference.s005",
-    "05-effect-dsl-reference.s006",
-  );
-  const effects = extractSection(
-    dslSpec,
-    "05-effect-dsl-reference.s012",
-    "05-effect-dsl-reference.s013",
-  );
-  const textToDsl = extractSection(
-    dslSpec,
-    "05-effect-dsl-reference.s022",
-    "05-effect-dsl-reference.s023",
-  );
-  const generatedSupport = extractSection(
-    cardPolicySpec,
-    "09-card-data-and-support-policy.s016",
-    "09-card-data-and-support-policy.s017",
-  );
-  const glossaryEffectBlock = extractSection(
-    glossarySpec,
-    "14-glossary.s008",
-    "14-glossary.s009",
-  );
-
-  for (const requiredText of [
-    "Entry-point selectors are wrapper semantics, not effect body primitives",
-    "The current DSL field name `trigger` includes entry-point selector values",
-    "must not be read as only queued triggered-effect timing",
-  ]) {
-    assertContainsWords(effectBlock, requiredText);
-    assertContainsWords(triggers, requiredText);
-  }
-
-  for (const requiredText of [
-    "[Activate: Main], [Main], [Counter], and [Once Per Turn] are entry-point or marker wrappers, not keyword body primitives",
-    "[Blocker], [Banish], [Rush], [Rush: Character], and [Double Attack] remain keyword body behavior",
-  ]) {
-    assertContainsWords(keywordBehavior, requiredText);
-  }
-
-  for (const requiredText of [
-    "wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics",
-    "wrapper semantics are distinct from reusable effect body primitive semantics",
-  ]) {
-    assertContainsWords(effectCategories, requiredText);
-    assertContainsWords(runtimeCategories, requiredText);
-    assertContainsWords(sourcePresence, requiredText);
-    assertContainsWords(conditionsAndCosts, requiredText);
-    assertContainsWords(glossaryEffectBlock, requiredText);
-  }
-
-  for (const requiredText of [
-    "Synthetic terminology example:",
-    "wrapper:",
-    "category:",
-    "source-presence policy:",
-    "markers:",
-    "body primitive:",
-  ]) {
-    assertContainsWords(effects, requiredText);
-  }
-
-  for (const requiredText of [
-    "terminology-only clarification",
-    "does not define generated-support evidence factorization rules",
-    "support-evidence factorization remains in SPEC-010B",
-  ]) {
-    assertContainsWords(textToDsl, requiredText);
-    assertContainsWords(generatedSupport, requiredText);
+  const [engineSpec, runtimeSpec, dslSpec, cardPolicySpec, glossarySpec] =
+    await Promise.all([
+      readText("specs/02-engine-mechanics.md"),
+      readText("specs/04-effect-runtime.md"),
+      readText("specs/05-effect-dsl-reference.md"),
+      readText("specs/09-card-data-and-support-policy.md"),
+      readText("specs/14-glossary.md"),
+    ]);
+  const section = (source, start, end) => extractSection(source, start, end);
+  // prettier-ignore
+  const checks = [
+    [section(dslSpec, "05-effect-dsl-reference.s004", "05-effect-dsl-reference.s005"), ["Entry-point selectors are wrapper semantics, not effect body primitives", "The current DSL field name `trigger` includes entry-point selector values", "must not be read as only queued triggered-effect timing"]],
+    [section(dslSpec, "05-effect-dsl-reference.s005", "05-effect-dsl-reference.s006"), ["Entry-point selectors are wrapper semantics, not effect body primitives", "The current DSL field name `trigger` includes entry-point selector values", "must not be read as only queued triggered-effect timing"]],
+    [section(engineSpec, "02-engine-mechanics.s025", "02-engine-mechanics.s026"), ["[Activate: Main], [Main], [Counter], and [Once Per Turn] are entry-point or marker wrappers, not keyword body primitives", "[Blocker], [Banish], [Rush], [Rush: Character], and [Double Attack] remain keyword body behavior"]],
+    [section(engineSpec, "02-engine-mechanics.s024", "02-engine-mechanics.s025"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
+    [section(runtimeSpec, "04-effect-runtime.s003", "04-effect-runtime.s004"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
+    [section(runtimeSpec, "04-effect-runtime.s007", "04-effect-runtime.s008"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
+    [section(runtimeSpec, "04-effect-runtime.s011", "04-effect-runtime.s012"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
+    [section(glossarySpec, "14-glossary.s008", "14-glossary.s009"), ["wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics", "wrapper semantics are distinct from reusable effect body primitive semantics"]],
+    [section(dslSpec, "05-effect-dsl-reference.s012", "05-effect-dsl-reference.s013"), ["Synthetic terminology example:", "wrapper:", "category:", "source-presence policy:", "markers:", "body primitive:"]],
+    [section(dslSpec, "05-effect-dsl-reference.s022", "05-effect-dsl-reference.s023"), ["terminology-only clarification", "does not define generated-support evidence factorization rules", "support-evidence factorization remains in SPEC-010B"]],
+    [section(cardPolicySpec, "09-card-data-and-support-policy.s016", "09-card-data-and-support-policy.s017"), ["terminology-only clarification", "does not define generated-support evidence factorization rules", "support-evidence factorization remains in SPEC-010B"]],
+  ];
+  for (const [text, terms] of checks) {
+    for (const term of terms) assertContainsWords(text, term);
   }
 });
 
