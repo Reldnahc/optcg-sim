@@ -6,6 +6,7 @@ import { optionalTrashCostKoComponentEvidenceInventoryEntry } from "./optional-t
 import { activateMainChooseOneCostComponentEvidenceInventoryEntry } from "./activate-main-choose-one-cost-evidence.js";
 import { sup001fConditionalModifyPowerComponentEvidenceInventoryEntry } from "./sup-001f-conditional-modify-power-evidence.js";
 import { topNSearchComponentEvidenceInventoryEntries } from "./top-n-search-evidence.js";
+import { startOfGameStagePlayComponentEvidenceInventoryEntry } from "./start-of-game-stage-play-evidence.js";
 import { listConditionalContinuousCompositionEvidenceFragments } from "./conditional-continuous-composition-evidence.js";
 import type {
   GeneratedSupportDiagnosticDecomposition,
@@ -520,6 +521,7 @@ export const generatedSupportComponentEvidenceInventory = [
   optionalTrashCostKoComponentEvidenceInventoryEntry,
   activateMainChooseOneCostComponentEvidenceInventoryEntry,
   ...topNSearchComponentEvidenceInventoryEntries,
+  startOfGameStagePlayComponentEvidenceInventoryEntry,
   {
     components: [
       "wrapper",

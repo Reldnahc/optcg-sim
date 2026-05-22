@@ -216,6 +216,42 @@ describe("generated support runtime capability matrix", () => {
     );
   });
 
+  it("certifies SUP-003G start-of-game typed Stage play runtime capability evidence", () => {
+    const parserRuleId =
+      "exact:start-of-game:play-up-to-1-typed-stage-from-self-deck";
+
+    expect(requiredGeneratedSupportCapabilityIds).toEqual(
+      expect.arrayContaining([
+        "trigger:startOfGame",
+        "startOfGame:setup-before-opening-draw",
+        "selectCards:deck:self:stage:typesAny:max1",
+        "playSelected:deck:stage:max1:ignoreCost",
+        "setupHiddenInfo:deck-candidates:chooserOnly",
+        "setupStagePlay:stageArea:replace-existing",
+      ]),
+    );
+
+    for (const capabilityId of [
+      "trigger:startOfGame",
+      "startOfGame:setup-before-opening-draw",
+      "selectCards:deck:self:stage:typesAny:max1",
+      "playSelected:deck:stage:max1:ignoreCost",
+      "setupHiddenInfo:deck-candidates:chooserOnly",
+      "setupStagePlay:stageArea:replace-existing",
+    ]) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+      expect(capability?.supportedComponentIds).toContain(
+        "start-of-game-play-up-to-one-typed-stage-from-deck",
+      );
+    }
+    expect(parserRuleId).toBe(
+      "exact:start-of-game:play-up-to-1-typed-stage-from-self-deck",
+    );
+  });
+
   it("certifies the exact CARD-014C reverse sequence parser rule with CARD-014A capability evidence", () => {
     const reverseParserRuleId = "exact:on-play:trash-2-from-hand:draw-1:self";
     const capabilityIds = [

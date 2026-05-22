@@ -8,8 +8,8 @@ import * as activateMainChooseOneCost from "./activate-main-choose-one-cost-evid
 import * as optionalKo from "./optional-trash-cost-ko-evidence.js";
 import { returnDonCostWrapperParserRuleId } from "./return-don-cost-wrapper-components.js";
 import { topNSearchRuntimeCapabilityRecords } from "./top-n-search-evidence.js";
+import { startOfGameStagePlayRuntimeCapabilityRecords } from "./start-of-game-stage-play-evidence.js";
 const onPlayReturnDonDrawNParserRuleId = "exact:on-play:return-don-draw-n:self";
-
 export type RuntimeCapabilityKind =
   | "category"
   | "composition"
@@ -48,6 +48,7 @@ export interface RuntimeCapabilityParserRuleInventoryEntry {
   parserRuleKind: string;
   coverage: RuntimeCapabilityParserRuleCoverage;
 }
+type RuntimeCapabilitySpec = readonly [string, RuntimeCapabilityKind, string];
 const conditionalContinuousRuntimeCapabilitySpecs = [
   ["category:permanent", "category", "ENG-059F"],
   ["effect:giveKeyword:self:permanent:allowlisted", "effect", "ENG-059B"],
@@ -65,11 +66,7 @@ const conditionalContinuousRuntimeCapabilitySpecs = [
     "continuous",
     "SUP-002C",
   ],
-] as const satisfies readonly (readonly [
-  string,
-  RuntimeCapabilityKind,
-  string,
-])[];
+] as const satisfies readonly RuntimeCapabilitySpec[];
 
 const generatedSupportRuntimeCapabilityMatrixBase = {
   capabilities: [
@@ -396,6 +393,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       ],
     },
     ...topNSearchRuntimeCapabilityRecords,
+    ...startOfGameStagePlayRuntimeCapabilityRecords,
     {
       description:
         "Printed Banish keyword behavior is executable by current runtime.",

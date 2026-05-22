@@ -80,6 +80,14 @@ describe("support evaluator parser certification evidence", () => {
         "exact:on-play:return-don-top-n-search:any-card:hand:bottom-owner-choice:trash-hand",
       name: "Return DON Search Trash Candidate",
     },
+    {
+      cardNumber: "SUP-003G-EVAL-START-STAGE",
+      effect:
+        "at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck.",
+      expectedParserRuleId:
+        "exact:start-of-game:play-up-to-1-typed-stage-from-self-deck",
+      name: "Start Of Game Stage Candidate",
+    },
   ])(
     "supplies current parser certification evidence for $cardNumber",
     ({ cardNumber, effect, expectedParserRuleId, name }) => {

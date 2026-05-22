@@ -65,11 +65,11 @@ import {
   parseStandaloneEngineKeywordResidueClause,
 } from "./standalone-keyword-parser.js";
 import * as topN from "./top-n-search-components.js";
+import { parseStartOfGameTypedStagePlayClause } from "./start-of-game-stage-play-components.js";
 export const onPlayDrawNParserRuleId = "exact:on-play:draw-n:self",
   whenAttackingDrawNParserRuleId = "exact:when-attacking:draw-n:self",
   lineSeparatedEffectBlocksCompositionId = "line-separated-effect-blocks:v1",
   certifiedParserRuleReviewer = "certified-parser-rule:CARD-009B";
-
 export interface CertifiedCardTextParserInput {
   cardId: CardId;
   effectDefinitionsVersion: string;
@@ -77,12 +77,10 @@ export interface CertifiedCardTextParserInput {
   sourceText: string;
   sourceTextHash: string;
 }
-
 interface CertifiedLineParse {
   readonly clause?: CertifiedClause;
   readonly unparsedSpan?: GeneratedSupportUnparsedSpan;
 }
-
 interface CertifiedClause {
   readonly effectBlock?: EffectBlock;
   readonly implementationStatus?: "implemented-dsl" | "vanilla-confirmed";
@@ -91,10 +89,7 @@ interface CertifiedClause {
   readonly parserRuleIds?: readonly string[];
 }
 
-interface ParsedResidueClause {
-  readonly clause: CertifiedClause;
-  readonly prefix: string;
-}
+type ParsedResidueClause = { clause: CertifiedClause; prefix: string };
 
 type DrawThenTrashClauseOptions = Readonly<{
   cardId: CardId;
@@ -368,6 +363,7 @@ function parseNonConditionalCardLineEffectClause(
     parseExternalDeckConstructionRuleClause(sourceText) ??
     parseReusableCard016AClause(cardId, sourceText) ??
     parseOnPlayOptionalTrashCostKoClause(cardId, sourceText) ??
+    parseStartOfGameTypedStagePlayClause(cardId, sourceText) ??
     topN.parseTopNSearchClause(cardId, sourceText) ??
     parseOnPlayReturnDonDrawClause(cardId, sourceText) ??
     parseTriggerDrawClause(cardId, sourceText) ??
