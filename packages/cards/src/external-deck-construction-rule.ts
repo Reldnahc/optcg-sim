@@ -108,15 +108,14 @@ export function evaluateExternalDeckRuleParserCertificationBlockers({
   nonRuntimeEvidence: CompleteGeneratedSupportParseResult["nonRuntimeEvidence"];
   parserRuleIds: readonly string[];
 }): readonly GeneratedSupportBlocker[] {
-  if (
-    evidence === undefined ||
-    !parserRuleIds.includes(externalDeckConstructionRuleParserRuleId) ||
-    (nonRuntimeEvidence ?? []).length === 0
-  ) {
+  const hasExternalDeckRule =
+    parserRuleIds.includes(externalDeckConstructionRuleParserRuleId) &&
+    (nonRuntimeEvidence ?? []).length > 0;
+  if (!hasExternalDeckRule) {
     return [];
   }
-  const current = new Set(evidence.currentCertificationIds);
-  const stale = new Set(evidence.staleCertificationIds ?? []);
+  const current = new Set(evidence?.currentCertificationIds ?? []);
+  const stale = new Set(evidence?.staleCertificationIds ?? []);
   const isStale = stale.has(externalDeckConstructionRuleCertificationId);
   return isStale || !current.has(externalDeckConstructionRuleCertificationId)
     ? [

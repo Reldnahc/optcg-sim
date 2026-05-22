@@ -374,6 +374,65 @@ describe("support evaluator parser certification evidence", () => {
     ).toBe(true);
   });
 
+  it("fails closed when deck-rule parser certification evidence is omitted for SUP-003H composed multiline text", () => {
+    const card = createSup003HRepresentativeCard(
+      "SUP-003H-INDEX-OMITTED-DECK-RULE-CERT",
+    );
+    const index = buildGeneratedSupportIndex({
+      cards: [
+        {
+          behaviorHash: card.behaviorHash,
+          cardDataVersion: "2026-05-21",
+          cardId: card.cardId,
+          category: card.category,
+          effectDefinitionsVersion: "generated-support-v1",
+          printedKeywords: card.printedKeywords,
+          rulesVersion: "generated-support-v1",
+          sourceText: card.raw.effect ?? "",
+          sourceTextHash: card.sourceTextHash,
+        },
+      ],
+      validateEffectDefinition,
+    });
+
+    expect(index.entries[0]).toMatchObject({
+      parseStatus: "complete",
+      status: "unsupported",
+    });
+    expect(index.entries[0]?.support).toBeUndefined();
+    expect(index.entries[0]?.effectDefinition).toBeUndefined();
+    expect(index.entries[0]?.effectDefinitionId).toBeUndefined();
+    const indexBlockerMessages = (index.entries[0]?.blockers ?? [])
+      .filter(
+        (blocker) =>
+          blocker.code === "unsupported-primitive" &&
+          blocker.component ===
+            "external-deck-rule-category-cost-gte-in-your-deck",
+      )
+      .map((blocker) => blocker.message);
+    expect(
+      indexBlockerMessages.some((message) =>
+        message.includes(
+          "Missing parser certification non-runtime:external-deck-construction-rule",
+        ),
+      ),
+    ).toBe(true);
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card,
+      cardDataVersion: "2026-05-21",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: card.behaviorHash,
+      expectedSourceTextHash: card.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+    expect(evaluation).toMatchObject({
+      parseStatus: "complete",
+      status: "supported",
+    });
+  });
+
   it.each([
     {
       cardNumber: "SUP-003F-EVAL-ACTIVATE-MAIN-CHOOSE-ONE",
