@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-003B -->
 <!-- agent-packet:story-path stories/approved/SUP-003B-activate-main-once-per-turn-runtime.yaml -->
-<!-- agent-packet:story-sha256 d2335fb12fb36c3c7883023fa9146c81d279396561ef5f8afeab8f5ab88540e5 -->
+<!-- agent-packet:story-sha256 fe01390c5ea9a39697d9089cbe0c3e589b6eca53da11bdb347f2cbbe7a343704 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -802,6 +802,7 @@ Engine runtime story only. Do not add card parser/generated-support behavior, re
 - support source cards in leader, character, or stage zones when the source zone and category are otherwise legal and visible to the controller
 - validate submitted `activateEffect` actions against current source, effect id, controller, phase, match status, battle status, pending decisions, pending runtime work, and source support status
 - queue and resolve the selected Activate Main effect block through existing runtime paths rather than card-specific branches
+- expose and accept Activate Main effect blocks whose body is a supported reusable runtime `sequence`, including sequence-internal pay-cost segments implemented by prerequisite runtime stories; this does not authorize top-level activation-time `effect.cost`
 - allow the existing queue result resolver to recognize the scoped Activate Main no-choice draw runtime shape without adding cards-layer support or exact printed-text branches
 - enforce `[Once Per Turn]` using existing once-per-turn key semantics without consuming use for illegal actions, stale actions, unmet activation conditions, declined optional activation, or failed activation-time costs
 - preserve existing playCard, declareAttack, attachDon, blocker, counter, trigger, and optional activation behavior
@@ -812,7 +813,7 @@ Engine runtime story only. Do not add card parser/generated-support behavior, re
 - shared contract/schema changes
 - card parser, generated-support, runtime capability matrix edits in cards package, support reports, fixtures, overlays, card IDs, source hashes, or behavior hashes
 - Event main/counter activation, non-main timing windows, broad custom handlers, or unsupported activation costs
-- optional choose-one cost payment runtime; SUP-003C owns that
+- optional choose-one cost payment runtime; SUP-003C owns that, while this story may route already-supported sequence bodies through the Activate Main entrypoint
 - start-of-game setup effects; SUP-003D owns that
 - server, client, UI, database, API, or live card-data work
 
@@ -833,6 +834,7 @@ Engine runtime story only. Do not add card parser/generated-support behavior, re
 - packages/engine-core/src/effect-runtime-activation-main.ts
 - packages/engine-core/src/effect-runtime-activation-main.test.ts
 - packages/engine-core/src/effect-runtime-once-per-turn.test.ts
+- packages/engine-core/src/effect-runtime-sequence-support.ts
 - packages/engine-core/src/once-per-turn.ts
 - packages/engine-core/src/filter-state-for-player.ts
 - packages/engine-core/src/filter-state-for-player.test.ts
@@ -870,6 +872,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - engine test exposing Activate Main legal action for a supported leader effect during main phase
 - engine tests exposing and applying Activate Main effects from leader, character, and stage sources
 - engine test applying Activate Main draw effect through generic runtime
+- engine integration regression exposing and applying an Activate Main `sequence` body with prerequisite-supported optional choose-one trash cost through `getLegalActions` and `applyAction`, not by pre-seeding the queue
 - engine tests suppressing legal Activate Main exposure and rejecting forged submitted `activateEffect` actions without mutation outside main phase, during battle, during pending decision, and during pending runtime work
 - engine test rejecting submitted `activateEffect` actions without mutation when the match status is not active
 - engine test rejecting forged source/effect/player/action combinations without mutation

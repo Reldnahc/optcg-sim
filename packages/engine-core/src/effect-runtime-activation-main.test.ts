@@ -112,6 +112,87 @@ test("applyAction accepts valid activate main action and resolves draw through r
   );
 });
 
+test("activate main supports sequence body with optional choose-one payCost and pauses on private payment decision", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const leader = p1State.leader;
+  const effectId = toEffectId("activate-main-sequence-pay-cost-1");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(leader.cardId),
+    category: "leader",
+    definitionId: "def-activate-main-sequence-pay-cost",
+    effectId,
+  });
+  const effectBlock = must(definition.effects[0], "activate main effect");
+  effectBlock.effect = {
+    type: "sequence",
+    effects: [
+      {
+        id: "activate-main-pay-cost",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "chooseOne",
+            optional: true,
+            options: [
+              {
+                type: "trashFromField",
+                chooser: "self",
+                optional: true,
+                count: 1,
+                filter: { categories: ["character"], typesAny: ["Navy"] },
+              },
+              {
+                type: "trashFromHand",
+                chooser: "self",
+                optional: true,
+                count: 1,
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: "activate-main-if-you-do-draw",
+        connector: "ifYouDo",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+  };
+
+  const legal = getLegalActions(state, p1);
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "activateEffect" &&
+        action.source.instanceId === leader.instanceId &&
+        action.effectId === effectId,
+    ),
+    true,
+  );
+
+  const result = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
+    },
+    effectId,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision?.type, "payCost");
+  assert.equal(
+    result.events.some((event) => event.type === "decisionCreated"),
+    true,
+  );
+});
+
 test("applyAction accepts activate main from character and stage sources", () => {
   const state = makeMainPhaseLegalActionState();
   const p1State = must(state.players[p1], "p1");

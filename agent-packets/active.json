@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-003H.md",
-      "storyId": "SUP-003H",
-      "storyPath": "stories/approved/SUP-003H-leader-support-composition-card-proof.yaml",
-      "storySha256": "91e0b4a5a7a9113475b6d2abe67378ba01effabe3330f64e8c6b6146344d8ed8"
+      "packetPath": "agent-packets/SUP-003B.md",
+      "storyId": "SUP-003B",
+      "storyPath": "stories/approved/SUP-003B-activate-main-once-per-turn-runtime.yaml",
+      "storySha256": "fe01390c5ea9a39697d9089cbe0c3e589b6eca53da11bdb347f2cbbe7a343704"
     }
   ],
   "version": 1

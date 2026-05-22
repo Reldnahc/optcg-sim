@@ -147,13 +147,37 @@ const isSupportedKoSegment = (
 ): effect is KoEffect =>
   effect.type === "ko" && isSupportedSavedFieldObjectKoTarget(effect.target);
 
+const isActivateMainAreaZone = (
+  zone: EffectQueueEntry["source"]["zone"],
+): zone is NonNullable<EffectQueueEntry["source"]["zone"]> =>
+  zone?.zone === "leaderArea" ||
+  zone?.zone === "characterArea" ||
+  zone?.zone === "stageArea";
+
+const isScopedActivateMainSequenceEntry = (entry: EffectQueueEntry): boolean =>
+  entry.causedBy.type === "ruleProcess" &&
+  entry.causedBy.name === "effectRuntime:activateMain" &&
+  String(entry.id).startsWith("queue-entry:activate-main:") &&
+  String(entry.timingWindowId).startsWith("timing-window:activate-main:") &&
+  entry.generation === 0 &&
+  entry.triggerEventId === undefined &&
+  entry.sourcePresencePolicy === "mustRemainInSameZone" &&
+  isActivateMainAreaZone(entry.source.zone) &&
+  isActivateMainAreaZone(entry.sourceSnapshot.zone);
+
 export const isSupportedSequenceBlock = (
   entry: EffectQueueEntry,
   effectBlock: EffectDefinition["effects"][number] | undefined,
 ): effectBlock is SupportedSequenceBlock => {
+  const isSupportedCategoryForEntry =
+    effectBlock?.category === "auto" ||
+    (effectBlock?.category === "activate" &&
+      effectBlock.trigger.type === "activateMain" &&
+      isScopedActivateMainSequenceEntry(entry));
+
   if (
     effectBlock === undefined ||
-    effectBlock.category !== "auto" ||
+    !isSupportedCategoryForEntry ||
     effectBlock.optional === true ||
     effectBlock.cost !== undefined ||
     effectBlock.conditionTiming !== undefined ||

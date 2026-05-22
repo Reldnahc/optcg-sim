@@ -20,6 +20,7 @@ import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
+import { isSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
 import { toSnapshot } from "./effect-runtime-trigger-source-lookup.js";
 import { isOncePerTurnUsed, toOncePerTurnKey } from "./once-per-turn.js";
 
@@ -151,7 +152,9 @@ const createActivateMainQueueEntry = (params: {
 
 const findSupportedActivateMainEffects = (
   state: GameState,
-  source: CardRef,
+  source: ActivateMainSource,
+  liveCard: CardInstance,
+  resolvedCard: ResolvedCard,
 ): EffectDefinition["effects"][number][] => {
   const resolved = state.cardManifest.cards[source.cardId];
   if (resolved === undefined || resolved.support.status !== "implemented-dsl") {
@@ -164,11 +167,25 @@ const findSupportedActivateMainEffects = (
   if (!lookup.ok) {
     return [];
   }
-  return lookup.definition.effects.filter(
-    (effect) =>
+  return lookup.definition.effects.filter((effect) => {
+    const sequenceSupportEntry = createActivateMainQueueEntry({
+      state,
+      source: {
+        instanceId: liveCard.instanceId,
+        cardId: liveCard.cardId,
+        playerId: source.playerId,
+        zone: liveCard.zone,
+        controllerId: liveCard.controller,
+      },
+      sourceSnapshot: toSnapshot(liveCard, resolvedCard),
+      effectId: effect.id,
+    });
+    return (
       isSupportedActivateMainNoChoiceDrawEffect(effect) ||
-      isSupportedOptionalActivateMainNoChoiceDrawEffect(effect),
-  );
+      isSupportedOptionalActivateMainNoChoiceDrawEffect(effect) ||
+      isSupportedSequenceBlock(sequenceSupportEntry, effect)
+    );
+  });
 };
 
 export const getActivateMainLegalActions = (
@@ -223,7 +240,12 @@ export const getActivateMainLegalActions = (
     if (live === undefined || live.card.controller !== playerId) {
       continue;
     }
-    const supported = findSupportedActivateMainEffects(state, source);
+    const supported = findSupportedActivateMainEffects(
+      state,
+      sourceWithZone,
+      live.card,
+      live.resolved,
+    );
     for (const effect of supported) {
       const queueEntry = createActivateMainQueueEntry({
         state,
@@ -294,7 +316,12 @@ export const applyActivateMainAction = (
   }
   const supportedEffects = findSupportedActivateMainEffects(
     state,
-    action.source,
+    {
+      ...action.source,
+      zone: live.card.zone,
+    },
+    live.card,
+    live.resolved,
   );
   const effect = supportedEffects.find(
     (candidate) => candidate.id === action.effectId,
