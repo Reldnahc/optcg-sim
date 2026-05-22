@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/SUP-003E.md",
-      "storyId": "SUP-003E",
-      "storyPath": "stories/approved/SUP-003E-external-deck-rule-parser-evidence.yaml",
-      "storySha256": "fa1f98494d6586cbf419b4161f48a5ee7d39a1f53449e3421c0a75d6a55bf6dd"
+      "packetPath": "agent-packets/SUP-003F.md",
+      "storyId": "SUP-003F",
+      "storyPath": "stories/approved/SUP-003F-activate-main-choose-one-cost-card-components.yaml",
+      "storySha256": "19a016a5b310f92105a65ab6262a2a1bb4df8af0a75ae330ed86c3e46cea70bb"
     }
   ],
   "version": 1
