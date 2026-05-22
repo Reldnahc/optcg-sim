@@ -1,11 +1,4 @@
 {
-  "activeStories": [
-    {
-      "packetPath": "agent-packets/CARD-024A.md",
-      "storyId": "CARD-024A",
-      "storyPath": "stories/approved/CARD-024A-question-mark-attribute-metadata.yaml",
-      "storySha256": "c0f733fd723a5255920dcd3c53de1c398ef6003ed8ff92998ef908031c0d1e80"
-    }
-  ],
+  "activeStories": [],
   "version": 1
 }

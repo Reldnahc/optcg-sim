@@ -8,7 +8,7 @@ type: implementation
 area: contracts
 primary_concern: contract
 priority: high
-status: approved
+status: done
 summary: >
   Add the printed question-mark attribute to canonical card metadata contracts
   and Poneglyph normalization so support tooling can inspect real cards whose
