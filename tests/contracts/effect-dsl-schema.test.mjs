@@ -4,6 +4,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
+import { Ajv2020 } from "ajv/dist/2020.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -297,15 +298,381 @@ test("SUP-003J schema authorizes only scoped start-of-game stage search request 
   });
 
   const playSelected = schema.$defs.effect.oneOf.find(
-    (variant) => variant?.properties?.type?.const === "playSelected",
+    (variant) =>
+      Array.isArray(variant?.oneOf) &&
+      variant.oneOf.some(
+        (playSelectedVariant) =>
+          playSelectedVariant?.properties?.type?.const === "playSelected",
+      ),
   );
   assert.ok(playSelected);
-  assert.deepEqual(playSelected.properties.selection, {
-    anyOf: [
-      { $ref: "#/$defs/handSelectionId" },
-      { const: "selected:start-of-game" },
-    ],
+  const [handSelectionVariant, startOfGameVariantPlaySelected] =
+    playSelected.oneOf;
+  assert.deepEqual(handSelectionVariant.required, ["type", "selection"]);
+  assert.deepEqual(handSelectionVariant.properties.selection, {
+    $ref: "#/$defs/handSelectionId",
   });
+  assert.deepEqual(startOfGameVariantPlaySelected.required, [
+    "type",
+    "selection",
+    "ignoreCost",
+  ]);
+  assert.deepEqual(startOfGameVariantPlaySelected.properties.selection, {
+    const: "selected:start-of-game",
+  });
+  assert.deepEqual(startOfGameVariantPlaySelected.properties.ignoreCost, {
+    const: true,
+  });
+});
+
+test("SUP-003J rejects scoped start-of-game stage search and selected:start-of-game under non-startOfGame trigger", async () => {
+  const schemaPath = path.join(repoRoot, "contracts/effect-dsl.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+  const ajv = new Ajv2020({ allErrors: true, strict: true });
+  const validate = ajv.compile(schema);
+  const { validateSemanticEffectDslGuards } =
+    await import("../../tools/validate-effect-dsl-fixtures.ts");
+
+  const fixture = {
+    cardId: "SUP-003J-NON-START",
+    implementationStatus: "unsupported",
+    effects: [
+      {
+        id: "SUP-003J-NON-START:auto-1",
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "search",
+                request: {
+                  zone: "deck",
+                  player: "self",
+                  filter: { categories: ["stage"], typesAny: ["foo"] },
+                  min: 0,
+                  max: 1,
+                  destination: "stageArea",
+                  revealTo: "chooserOnly",
+                  shuffleAfter: false,
+                },
+              },
+              connector: "always",
+            },
+            {
+              effect: {
+                type: "playSelected",
+                selection: "selected:start-of-game",
+                ignoreCost: true,
+              },
+              connector: "then",
+            },
+          ],
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: "sha256:sup003jnonstart",
+      rulesVersion: "2026-01-16",
+      effectDefinitionsVersion: "0.1.0",
+      tested: true,
+    },
+  };
+
+  assert.equal(validate(fixture), false);
+  const semanticFailures = validateSemanticEffectDslGuards(fixture);
+  assert.ok(Array.isArray(semanticFailures));
+});
+
+test("SUP-003J rejects non-startOfGame sequence with scoped start-of-game stage search alone", async () => {
+  const schemaPath = path.join(repoRoot, "contracts/effect-dsl.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+  const ajv = new Ajv2020({ allErrors: true, strict: true });
+  const validate = ajv.compile(schema);
+  const { validateSemanticEffectDslGuards } =
+    await import("../../tools/validate-effect-dsl-fixtures.ts");
+
+  const fixture = {
+    cardId: "SUP-003J-ONPLAY-SEARCH-ONLY",
+    implementationStatus: "unsupported",
+    effects: [
+      {
+        id: "SUP-003J-ONPLAY-SEARCH-ONLY:auto-1",
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "search",
+                request: {
+                  zone: "deck",
+                  player: "self",
+                  filter: { categories: ["stage"], typesAny: ["foo"] },
+                  min: 0,
+                  max: 1,
+                  destination: "stageArea",
+                  revealTo: "chooserOnly",
+                  shuffleAfter: false,
+                },
+              },
+              connector: "always",
+            },
+          ],
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: "sha256:sup003jonplaysearchonly",
+      rulesVersion: "2026-01-16",
+      effectDefinitionsVersion: "0.1.0",
+      tested: true,
+    },
+  };
+
+  assert.equal(validate(fixture), false);
+  const semanticFailures = validateSemanticEffectDslGuards(fixture);
+  assert.ok(Array.isArray(semanticFailures));
+});
+
+test("SUP-003J semantic guards require prior qualifying start-of-game search and exact selected:start-of-game playSelected shape", async () => {
+  const { validateSemanticEffectDslGuards } =
+    await import("../../tools/validate-effect-dsl-fixtures.ts");
+
+  const base = {
+    cardId: "SUP-003J-SEMANTIC",
+    implementationStatus: "unsupported",
+    metadata: {
+      sourceTextHash: "sha256:sup003jsemantic",
+      rulesVersion: "2026-01-16",
+      effectDefinitionsVersion: "0.1.0",
+      tested: true,
+    },
+  };
+
+  const missingProducer = {
+    ...base,
+    effects: [
+      {
+        id: "missing-producer",
+        category: "auto",
+        trigger: { type: "startOfGame" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "playSelected",
+                selection: "selected:start-of-game",
+                ignoreCost: true,
+              },
+              connector: "always",
+            },
+          ],
+        },
+      },
+    ],
+  };
+  assert.ok(validateSemanticEffectDslGuards(missingProducer).length > 0);
+
+  const producerAfterConsumer = {
+    ...base,
+    effects: [
+      {
+        id: "producer-after-consumer",
+        category: "auto",
+        trigger: { type: "startOfGame" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "playSelected",
+                selection: "selected:start-of-game",
+                ignoreCost: true,
+              },
+              connector: "always",
+            },
+            {
+              effect: {
+                type: "search",
+                request: {
+                  zone: "deck",
+                  player: "self",
+                  filter: { categories: ["stage"], typesAny: ["foo"] },
+                  min: 0,
+                  max: 1,
+                  destination: "stageArea",
+                  revealTo: "chooserOnly",
+                  shuffleAfter: false,
+                },
+              },
+              connector: "then",
+            },
+          ],
+        },
+      },
+    ],
+  };
+  assert.ok(validateSemanticEffectDslGuards(producerAfterConsumer).length > 0);
+
+  const missingIgnoreCost = {
+    ...base,
+    effects: [
+      {
+        id: "missing-ignore-cost",
+        category: "auto",
+        trigger: { type: "startOfGame" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "search",
+                request: {
+                  zone: "deck",
+                  player: "self",
+                  filter: { categories: ["stage"], typesAny: ["foo"] },
+                  min: 0,
+                  max: 1,
+                  destination: "stageArea",
+                  revealTo: "chooserOnly",
+                  shuffleAfter: false,
+                },
+              },
+              connector: "always",
+            },
+            {
+              effect: {
+                type: "playSelected",
+                selection: "selected:start-of-game",
+                ignoreCost: false,
+              },
+              connector: "then",
+            },
+          ],
+        },
+      },
+    ],
+  };
+  assert.ok(validateSemanticEffectDslGuards(missingIgnoreCost).length > 0);
+
+  const withEnterRested = {
+    ...base,
+    effects: [
+      {
+        id: "with-enter-rested",
+        category: "auto",
+        trigger: { type: "startOfGame" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "search",
+                request: {
+                  zone: "deck",
+                  player: "self",
+                  filter: { categories: ["stage"], typesAny: ["foo"] },
+                  min: 0,
+                  max: 1,
+                  destination: "stageArea",
+                  revealTo: "chooserOnly",
+                  shuffleAfter: false,
+                },
+              },
+              connector: "always",
+            },
+            {
+              effect: {
+                type: "playSelected",
+                selection: "selected:start-of-game",
+                ignoreCost: true,
+                enterRested: true,
+              },
+              connector: "then",
+            },
+          ],
+        },
+      },
+    ],
+  };
+  assert.ok(validateSemanticEffectDslGuards(withEnterRested).length > 0);
+});
+
+test("SUP-003J keeps existing handSelection playSelected behavior", async () => {
+  const { validateSemanticEffectDslGuards } =
+    await import("../../tools/validate-effect-dsl-fixtures.ts");
+
+  const validHandSelection = {
+    cardId: "SUP-003J-HAND-VALID",
+    implementationStatus: "unsupported",
+    effects: [
+      {
+        id: "valid-hand-selection",
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "selectCards",
+                zone: "hand",
+                player: "self",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: {},
+                saveAs: "handSelection:test",
+                visibility: "chooserOnly",
+              },
+              connector: "always",
+            },
+            {
+              effect: {
+                type: "playSelected",
+                selection: "handSelection:test",
+                enterRested: true,
+              },
+              connector: "then",
+            },
+          ],
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: "sha256:sup003jhandvalid",
+      rulesVersion: "2026-01-16",
+      effectDefinitionsVersion: "0.1.0",
+      tested: true,
+    },
+  };
+  assert.deepEqual(validateSemanticEffectDslGuards(validHandSelection), []);
+
+  const invalidHandSelection = {
+    ...validHandSelection,
+    effects: [
+      {
+        ...validHandSelection.effects[0],
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "playSelected",
+                selection: "handSelection:missing",
+              },
+              connector: "always",
+            },
+          ],
+        },
+      },
+    ],
+  };
+  assert.ok(validateSemanticEffectDslGuards(invalidHandSelection).length > 0);
 });
 
 test("effect block policy enums match canonical contract names", async () => {

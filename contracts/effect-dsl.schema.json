@@ -626,19 +626,27 @@
         },
         {
           "type": "object",
-          "additionalProperties": false,
-          "required": ["type", "selection"],
-          "properties": {
-            "type": { "const": "playSelected" },
-            "selection": {
-              "anyOf": [
-                { "$ref": "#/$defs/handSelectionId" },
-                { "const": "selected:start-of-game" }
-              ]
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "required": ["type", "selection"],
+              "properties": {
+                "type": { "const": "playSelected" },
+                "selection": { "$ref": "#/$defs/handSelectionId" },
+                "enterRested": { "type": "boolean" },
+                "ignoreCost": { "type": "boolean" }
+              }
             },
-            "enterRested": { "type": "boolean" },
-            "ignoreCost": { "type": "boolean" }
-          }
+            {
+              "additionalProperties": false,
+              "required": ["type", "selection", "ignoreCost"],
+              "properties": {
+                "type": { "const": "playSelected" },
+                "selection": { "const": "selected:start-of-game" },
+                "ignoreCost": { "const": true }
+              }
+            }
+          ]
         },
         {
           "type": "object",
@@ -746,9 +754,10 @@
                       "properties": {
                         "effect": {
                           "type": "object",
-                          "required": ["type"],
+                          "required": ["type", "selection"],
                           "properties": {
-                            "type": { "const": "playSelected" }
+                            "type": { "const": "playSelected" },
+                            "selection": { "$ref": "#/$defs/handSelectionId" }
                           }
                         }
                       }
@@ -765,48 +774,80 @@
                       "required": ["effect"],
                       "properties": {
                         "effect": {
-                          "anyOf": [
-                            {
+                          "type": "object",
+                          "required": ["type"],
+                          "properties": {
+                            "type": { "const": "selectCards" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "effects": {
+                    "type": "array",
+                    "contains": {
+                      "type": "object",
+                      "required": ["effect"],
+                      "properties": {
+                        "effect": {
+                          "type": "object",
+                          "required": ["type", "selection"],
+                          "properties": {
+                            "type": { "const": "playSelected" },
+                            "selection": { "const": "selected:start-of-game" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "effects": {
+                    "type": "array",
+                    "contains": {
+                      "type": "object",
+                      "required": ["effect"],
+                      "properties": {
+                        "effect": {
+                          "type": "object",
+                          "required": ["type", "request"],
+                          "properties": {
+                            "type": { "const": "search" },
+                            "request": {
                               "type": "object",
-                              "required": ["type"],
+                              "additionalProperties": false,
+                              "required": [
+                                "zone",
+                                "player",
+                                "filter",
+                                "min",
+                                "max",
+                                "destination",
+                                "revealTo",
+                                "shuffleAfter"
+                              ],
                               "properties": {
-                                "type": { "const": "selectCards" }
-                              }
-                            },
-                            {
-                              "type": "object",
-                              "required": ["type", "request"],
-                              "properties": {
-                                "type": { "const": "search" },
-                                "request": {
-                                  "type": "object",
-                                  "additionalProperties": false,
-                                  "required": [
-                                    "zone",
-                                    "player",
-                                    "filter",
-                                    "min",
-                                    "max",
-                                    "destination",
-                                    "revealTo",
-                                    "shuffleAfter"
-                                  ],
-                                  "properties": {
-                                    "zone": { "const": "deck" },
-                                    "player": { "const": "self" },
-                                    "filter": {
-                                      "$ref": "#/$defs/scopedStartOfGameStageSearchFilter"
-                                    },
-                                    "min": { "const": 0 },
-                                    "max": { "const": 1 },
-                                    "destination": { "const": "stageArea" },
-                                    "revealTo": { "const": "chooserOnly" },
-                                    "shuffleAfter": { "const": false }
-                                  }
-                                }
+                                "zone": { "const": "deck" },
+                                "player": { "const": "self" },
+                                "filter": {
+                                  "$ref": "#/$defs/scopedStartOfGameStageSearchFilter"
+                                },
+                                "min": { "const": 0 },
+                                "max": { "const": 1 },
+                                "destination": { "const": "stageArea" },
+                                "revealTo": { "const": "chooserOnly" },
+                                "shuffleAfter": { "const": false }
                               }
                             }
-                          ]
+                          }
                         }
                       }
                     }
@@ -909,6 +950,138 @@
                 "properties": {
                   "type": { "const": "playSelected" }
                 }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "properties": {
+                "trigger": {
+                  "type": "object",
+                  "required": ["type"],
+                  "properties": {
+                    "type": { "const": "startOfGame" }
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "effect": {
+                "type": "object",
+                "allOf": [
+                  {
+                    "not": {
+                      "properties": {
+                        "type": { "const": "search" },
+                        "request": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "zone",
+                            "player",
+                            "filter",
+                            "min",
+                            "max",
+                            "destination",
+                            "revealTo",
+                            "shuffleAfter"
+                          ],
+                          "properties": {
+                            "zone": { "const": "deck" },
+                            "player": { "const": "self" },
+                            "filter": {
+                              "$ref": "#/$defs/scopedStartOfGameStageSearchFilter"
+                            },
+                            "min": { "const": 0 },
+                            "max": { "const": 1 },
+                            "destination": { "const": "stageArea" },
+                            "revealTo": { "const": "chooserOnly" },
+                            "shuffleAfter": { "const": false }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "properties": {
+                        "type": { "const": "sequence" },
+                        "effects": {
+                          "type": "array",
+                          "contains": {
+                            "type": "object",
+                            "required": ["effect"],
+                            "properties": {
+                              "effect": {
+                                "type": "object",
+                                "required": ["type", "request"],
+                                "properties": {
+                                  "type": { "const": "search" },
+                                  "request": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "zone",
+                                      "player",
+                                      "filter",
+                                      "min",
+                                      "max",
+                                      "destination",
+                                      "revealTo",
+                                      "shuffleAfter"
+                                    ],
+                                    "properties": {
+                                      "zone": { "const": "deck" },
+                                      "player": { "const": "self" },
+                                      "filter": {
+                                        "$ref": "#/$defs/scopedStartOfGameStageSearchFilter"
+                                      },
+                                      "min": { "const": 0 },
+                                      "max": { "const": 1 },
+                                      "destination": { "const": "stageArea" },
+                                      "revealTo": { "const": "chooserOnly" },
+                                      "shuffleAfter": { "const": false }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "properties": {
+                        "type": { "const": "sequence" },
+                        "effects": {
+                          "type": "array",
+                          "contains": {
+                            "type": "object",
+                            "required": ["effect"],
+                            "properties": {
+                              "effect": {
+                                "type": "object",
+                                "required": ["type", "selection"],
+                                "properties": {
+                                  "type": { "const": "playSelected" },
+                                  "selection": {
+                                    "const": "selected:start-of-game"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
               }
             }
           }
