@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id SUP-003J -->
 <!-- agent-packet:story-path stories/approved/SUP-003J-start-of-game-stage-search-schema-authorability.yaml -->
-<!-- agent-packet:story-sha256 c0afc7a1c301daae3b5573c66000fff7f214c741cdc87e2424b533ec99ca0dc8 -->
+<!-- agent-packet:story-sha256 7c717d39aa715a6fb761adb050d5f8d694667a9e4d1cbec316ba66a8d07b5ba0 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -790,6 +790,7 @@ Contract/schema story only. Do not implement engine runtime behavior, cards pars
 - agent-packets/SUP-003J.md
 - agent-packets/active.json
 - specs/05-effect-dsl-reference.md
+- specs/section-index.json
 - contracts/effect-dsl.schema.json
 - fixtures/effect-dsl/valid/start-of-game-stage-search-play-selected.json
 - fixtures/effect-dsl/invalid/start-of-game-stage-search-non-stage-filter.json

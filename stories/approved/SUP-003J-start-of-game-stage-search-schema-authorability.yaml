@@ -25,6 +25,7 @@ allowed_touch_points:
   - agent-packets/SUP-003J.md
   - agent-packets/active.json
   - specs/05-effect-dsl-reference.md
+  - specs/section-index.json
   - contracts/effect-dsl.schema.json
   - fixtures/effect-dsl/valid/start-of-game-stage-search-play-selected.json
   - fixtures/effect-dsl/invalid/start-of-game-stage-search-non-stage-filter.json
