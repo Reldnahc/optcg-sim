@@ -7,6 +7,7 @@ import {
   listSupportedRuntimeCapabilityIds,
   requiredGeneratedSupportCapabilityIds,
 } from "./runtime-capability-matrix.js";
+import { startOfGameStagePlayRuntimeCapabilityIds } from "./start-of-game-stage-play-evidence.js";
 
 describe("generated support runtime capability matrix", () => {
   const card014APositiveCapabilityIds = [
@@ -221,15 +222,16 @@ describe("generated support runtime capability matrix", () => {
       "exact:start-of-game:play-up-to-1-typed-stage-from-self-deck";
 
     expect(requiredGeneratedSupportCapabilityIds).toEqual(
-      expect.arrayContaining([
-        "trigger:startOfGame",
-        "startOfGame:setup-before-opening-draw",
-        "selectCards:deck:self:stage:typesAny:max1",
-        "playSelected:deck:stage:max1:ignoreCost",
-        "setupHiddenInfo:deck-candidates:chooserOnly",
-        "setupStagePlay:stageArea:replace-existing",
-      ]),
+      expect.arrayContaining([...startOfGameStagePlayRuntimeCapabilityIds]),
     );
+
+    for (const capabilityId of startOfGameStagePlayRuntimeCapabilityIds) {
+      const capability =
+        generatedSupportRuntimeCapabilityMatrix.capabilities.find(
+          (candidate) => candidate.id === capabilityId,
+        );
+      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
+    }
 
     for (const capabilityId of [
       "trigger:startOfGame",
@@ -243,7 +245,6 @@ describe("generated support runtime capability matrix", () => {
         generatedSupportRuntimeCapabilityMatrix.capabilities.find(
           (candidate) => candidate.id === capabilityId,
         );
-      expect(capability?.supportedParserRuleIds).toContain(parserRuleId);
       expect(capability?.supportedComponentIds).toContain(
         "start-of-game-play-up-to-one-typed-stage-from-deck",
       );
