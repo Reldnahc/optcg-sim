@@ -1,0 +1,101 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: SPEC-010B
+epic_id: SPEC-010
+title: Generated-support capability factorization authority
+type: specification
+area: docs
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Tighten generated-support policy so parser certification and runtime
+  capability evidence must expose reusable primitive boundaries instead of
+  exact wrapper-body, full-line, full-card, or sample-shaped support evidence.
+story_boundary: >
+  Own only generated-support policy wording, explicit synthetic examples,
+  generated spec metadata, and authority tests for evidence factorization. Do
+  not change parser code, runtime capability records, generated-support
+  metadata, contracts, schema, engine behavior, or card support.
+allowed_touch_points:
+  - specs/00-project-overview.md
+  - specs/04-effect-runtime.md
+  - specs/05-effect-dsl-reference.md
+  - specs/09-card-data-and-support-policy.md
+  - specs/11-testing-quality.md
+  - specs/source-coverage-matrix.md
+  - specs/section-index.json
+  - specs/spec-manifest.json
+  - specs/SPEC_VERSION.md
+  - tests/contracts/spec-authority-gates.test.mjs
+  - stories/generated/SPEC-010B-generated-support-capability-factorization-authority.yaml
+  - stories/approved/SPEC-010B-generated-support-capability-factorization-authority.yaml
+  - agent-packets/SPEC-010B.md
+  - agent-packets/active.json
+spec_refs:
+  - 00-project-overview.s014
+  - 02-engine-mechanics.s024
+  - 03-game-state-events-decisions.s009
+  - 03-game-state-events-decisions.s017
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s010
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s015
+  - 05-effect-dsl-reference.s022
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s004
+  - 11-testing-quality.s020
+dependencies:
+  - SPEC-010A
+scope:
+  - define generated-support component evidence as primitive-boundary evidence, not exact printed-line evidence
+  - require parser certification evidence to expose stable primitive-boundary evidence for wrapper or entry point, markers, conditions, costs, body effects, targets, filters, cardinality, durations, visibility, source-presence policy, and composition when each is present
+  - require runtime capability evidence to prove reusable runtime behavior for those same primitive boundaries, decision or response semantics, and any necessary composition semantics
+  - state that composition evidence may be required for a supported combined shape, but composition evidence cannot replace missing wrapper, body, cost, target, condition, duration, source policy, decision, or visibility evidence
+  - state that exact full-card branches, exact full-effect-line branches, wrapper-body allowlists, and sample-shaped parser rules are insufficient generated-support evidence unless they also produce the required primitive evidence
+  - clarify that a supported effect body under one entry point does not automatically make it supported under every entry point; support requires both the entry-point adapter evidence and the body/composition evidence
+  - include explicit synthetic positive examples for one reusable body composed under multiple entry points and explicit negative examples for exact wrapper-body evidence that does not expose primitive boundaries
+  - add or update authority tests that pin capability factorization and negative-example wording
+  - update generated spec metadata
+non_scope:
+  - runtime capability matrix implementation changes
+  - parser implementation changes
+  - generated-support evaluator or support-probe behavior changes
+  - contract/schema changes
+  - real-card fixture capture, overlays, source hashes, behavior hashes, support metadata, or card promotion
+  - adding support for additional primitives, wrappers, entry points, or complete effect lines
+acceptance_criteria:
+  - generated-support specs explicitly require primitive-boundary parser certification evidence
+  - generated-support specs explicitly require primitive-boundary runtime capability evidence, including decision or response and visibility boundaries when present, plus necessary composition evidence
+  - generated-support specs explicitly reject exact full-card, full-line, wrapper-body-only, and sample-shaped evidence as sufficient for generated support
+  - generated-support specs explicitly define that composition evidence supplements but does not replace missing primitive evidence
+  - generated-support specs explicitly say support for an effect body under one entry point does not authorize support under another entry point without separate entry-point adapter evidence plus body or composition evidence
+  - synthetic positive and negative examples make the modular evidence shape unambiguous without naming real cards or card IDs
+  - authority tests pin the new factorization and negative-example wording
+required_tests:
+  - update `tests/contracts/spec-authority-gates.test.mjs` to require stable primitive-boundary parser evidence including visibility when present, primitive-boundary runtime capability evidence including decision or response semantics when present, composition evidence limits, and negative examples for non-modular support evidence
+  - update `tests/contracts/spec-authority-gates.test.mjs` to require cross-entry-point wording that body support under one entry point does not authorize another entry point without separate entry-point adapter evidence plus body or composition evidence
+  - run `corepack pnpm run specs:generate-metadata`
+  - run `corepack pnpm run specs:verify-metadata`
+  - run `corepack pnpm run test:contracts`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run verify`
+repo_rules:
+  - do not change runtime, schema, parser, generated-support, support-probe, or card behavior in this story
+  - preserve generated-support fail-closed policy for unparsed, ambiguous, stale, unsupported, or missing-capability components
+  - fail closed on generated-support evidence ambiguity
+ambiguity_policy: fail_and_escalate

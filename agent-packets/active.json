@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/SPEC-010C.md",
+      "storyId": "SPEC-010C",
+      "storyPath": "stories/approved/SPEC-010C-generated-support-testing-story-template-alignment.yaml",
+      "storySha256": "0a2a81bc0574a1f579ca7bd516c18af476de862610817144616834a95476a195"
+    }
+  ],
   "version": 1
 }

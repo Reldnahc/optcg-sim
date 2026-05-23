@@ -70,6 +70,8 @@ Section Ref: `14-glossary.s008`
 
 One distinct effect on a card, identified by a stable `effectId`.
 
+wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics. wrapper semantics are distinct from reusable effect body primitive semantics.
+
 ## EngineEvent
 
 <!-- SECTION_REF: 14-glossary.s009 -->

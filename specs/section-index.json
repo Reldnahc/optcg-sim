@@ -206,7 +206,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "Ship a narrow game first",
       "heading_level": 3,
-      "marker_line": 153,
+      "marker_line": 155,
       "visible_line": "Section Ref: `00-project-overview.s015`"
     },
     {
@@ -215,7 +215,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "Launch blockers",
       "heading_level": 2,
-      "marker_line": 161,
+      "marker_line": 163,
       "visible_line": "Section Ref: `00-project-overview.s016`"
     },
     {
@@ -224,7 +224,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "System actors",
       "heading_level": 2,
-      "marker_line": 177,
+      "marker_line": 179,
       "visible_line": "Section Ref: `00-project-overview.s017`"
     },
     {
@@ -233,7 +233,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "Match modes",
       "heading_level": 2,
-      "marker_line": 193,
+      "marker_line": 195,
       "visible_line": "Section Ref: `00-project-overview.s018`"
     },
     {
@@ -242,7 +242,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "Repository shape",
       "heading_level": 2,
-      "marker_line": 209,
+      "marker_line": 211,
       "visible_line": "Section Ref: `00-project-overview.s019`"
     },
     {
@@ -251,7 +251,7 @@
       "doc_path": "00-project-overview.md",
       "heading": "Source-data assumption",
       "heading_level": 2,
-      "marker_line": 239,
+      "marker_line": 241,
       "visible_line": "Section Ref: `00-project-overview.s020`"
     },
     {
@@ -701,7 +701,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Keyword behavior",
       "heading_level": 2,
-      "marker_line": 381,
+      "marker_line": 383,
       "visible_line": "Section Ref: `02-engine-mechanics.s025`"
     },
     {
@@ -710,7 +710,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Edge cases",
       "heading_level": 2,
-      "marker_line": 401,
+      "marker_line": 405,
       "visible_line": "Section Ref: `02-engine-mechanics.s026`"
     },
     {
@@ -719,7 +719,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Impossible actions",
       "heading_level": 3,
-      "marker_line": 407,
+      "marker_line": 411,
       "visible_line": "Section Ref: `02-engine-mechanics.s027`"
     },
     {
@@ -728,7 +728,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "If/then vs. then",
       "heading_level": 3,
-      "marker_line": 415,
+      "marker_line": 419,
       "visible_line": "Section Ref: `02-engine-mechanics.s028`"
     },
     {
@@ -737,7 +737,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Negative power",
       "heading_level": 3,
-      "marker_line": 426,
+      "marker_line": 430,
       "visible_line": "Section Ref: `02-engine-mechanics.s029`"
     },
     {
@@ -746,7 +746,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Negative cost",
       "heading_level": 3,
-      "marker_line": 434,
+      "marker_line": 438,
       "visible_line": "Section Ref: `02-engine-mechanics.s030`"
     },
     {
@@ -755,7 +755,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Rest vs. active conflict",
       "heading_level": 3,
-      "marker_line": 442,
+      "marker_line": 446,
       "visible_line": "Section Ref: `02-engine-mechanics.s031`"
     },
     {
@@ -764,7 +764,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Base power/cost setters",
       "heading_level": 3,
-      "marker_line": 450,
+      "marker_line": 454,
       "visible_line": "Section Ref: `02-engine-mechanics.s032`"
     },
     {
@@ -773,7 +773,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Infinite loops",
       "heading_level": 3,
-      "marker_line": 458,
+      "marker_line": 462,
       "visible_line": "Section Ref: `02-engine-mechanics.s033`"
     },
     {
@@ -782,7 +782,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Source-preserved rule details from the mechanical spec",
       "heading_level": 2,
-      "marker_line": 476,
+      "marker_line": 480,
       "visible_line": "Section Ref: `02-engine-mechanics.s034`"
     },
     {
@@ -791,7 +791,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Exact win/loss conditions",
       "heading_level": 3,
-      "marker_line": 484,
+      "marker_line": 488,
       "visible_line": "Section Ref: `02-engine-mechanics.s035`"
     },
     {
@@ -800,7 +800,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "DON!! card mechanics",
       "heading_level": 3,
-      "marker_line": 500,
+      "marker_line": 504,
       "visible_line": "Section Ref: `02-engine-mechanics.s036`"
     },
     {
@@ -809,7 +809,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "First-turn restrictions",
       "heading_level": 3,
-      "marker_line": 513,
+      "marker_line": 517,
       "visible_line": "Section Ref: `02-engine-mechanics.s037`"
     },
     {
@@ -818,7 +818,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Rule-process trashing is not effect trashing",
       "heading_level": 3,
-      "marker_line": 526,
+      "marker_line": 530,
       "visible_line": "Section Ref: `02-engine-mechanics.s038`"
     },
     {
@@ -827,7 +827,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Damage-processing deferral",
       "heading_level": 3,
-      "marker_line": 539,
+      "marker_line": 543,
       "visible_line": "Section Ref: `02-engine-mechanics.s039`"
     },
     {
@@ -836,7 +836,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Trigger card zone",
       "heading_level": 3,
-      "marker_line": 547,
+      "marker_line": 551,
       "visible_line": "Section Ref: `02-engine-mechanics.s040`"
     },
     {
@@ -845,7 +845,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Auto-effect timing details",
       "heading_level": 3,
-      "marker_line": 561,
+      "marker_line": 565,
       "visible_line": "Section Ref: `02-engine-mechanics.s041`"
     },
     {
@@ -854,7 +854,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Once-per-turn consumption",
       "heading_level": 3,
-      "marker_line": 573,
+      "marker_line": 577,
       "visible_line": "Section Ref: `02-engine-mechanics.s042`"
     },
     {
@@ -863,7 +863,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Replacement priority",
       "heading_level": 3,
-      "marker_line": 592,
+      "marker_line": 596,
       "visible_line": "Section Ref: `02-engine-mechanics.s043`"
     },
     {
@@ -872,7 +872,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Confirmed rulings carried forward",
       "heading_level": 3,
-      "marker_line": 606,
+      "marker_line": 610,
       "visible_line": "Section Ref: `02-engine-mechanics.s044`"
     },
     {
@@ -881,7 +881,7 @@
       "doc_path": "02-engine-mechanics.md",
       "heading": "Parenthetical explanatory notes",
       "heading_level": 3,
-      "marker_line": 619,
+      "marker_line": 623,
       "visible_line": "Section Ref: `02-engine-mechanics.s045`"
     },
     {
@@ -1133,7 +1133,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Stable effect identity",
       "heading_level": 2,
-      "marker_line": 40,
+      "marker_line": 42,
       "visible_line": "Section Ref: `04-effect-runtime.s004`"
     },
     {
@@ -1142,7 +1142,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Card implementation support",
       "heading_level": 2,
-      "marker_line": 65,
+      "marker_line": 67,
       "visible_line": "Section Ref: `04-effect-runtime.s005`"
     },
     {
@@ -1151,7 +1151,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Effect queue entry",
       "heading_level": 2,
-      "marker_line": 90,
+      "marker_line": 96,
       "visible_line": "Section Ref: `04-effect-runtime.s006`"
     },
     {
@@ -1160,7 +1160,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Source presence policy",
       "heading_level": 2,
-      "marker_line": 115,
+      "marker_line": 121,
       "visible_line": "Section Ref: `04-effect-runtime.s007`"
     },
     {
@@ -1169,7 +1169,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Trigger detection from events",
       "heading_level": 2,
-      "marker_line": 143,
+      "marker_line": 151,
       "visible_line": "Section Ref: `04-effect-runtime.s008`"
     },
     {
@@ -1178,7 +1178,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Queue ordering",
       "heading_level": 2,
-      "marker_line": 169,
+      "marker_line": 177,
       "visible_line": "Section Ref: `04-effect-runtime.s009`"
     },
     {
@@ -1187,7 +1187,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Queue processing",
       "heading_level": 2,
-      "marker_line": 197,
+      "marker_line": 205,
       "visible_line": "Section Ref: `04-effect-runtime.s010`"
     },
     {
@@ -1196,7 +1196,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Conditions and costs",
       "heading_level": 2,
-      "marker_line": 254,
+      "marker_line": 262,
       "visible_line": "Section Ref: `04-effect-runtime.s011`"
     },
     {
@@ -1205,7 +1205,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Player choices during effect resolution",
       "heading_level": 2,
-      "marker_line": 306,
+      "marker_line": 316,
       "visible_line": "Section Ref: `04-effect-runtime.s012`"
     },
     {
@@ -1214,7 +1214,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Replacement effects",
       "heading_level": 2,
-      "marker_line": 366,
+      "marker_line": 376,
       "visible_line": "Section Ref: `04-effect-runtime.s013`"
     },
     {
@@ -1223,7 +1223,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Continuous effects as computed view",
       "heading_level": 2,
-      "marker_line": 443,
+      "marker_line": 453,
       "visible_line": "Section Ref: `04-effect-runtime.s014`"
     },
     {
@@ -1232,7 +1232,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Duration expiration",
       "heading_level": 2,
-      "marker_line": 495,
+      "marker_line": 505,
       "visible_line": "Section Ref: `04-effect-runtime.s015`"
     },
     {
@@ -1241,7 +1241,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Failure policy",
       "heading_level": 2,
-      "marker_line": 511,
+      "marker_line": 521,
       "visible_line": "Section Ref: `04-effect-runtime.s016`"
     },
     {
@@ -1250,7 +1250,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Transient reveal and selection sets",
       "heading_level": 2,
-      "marker_line": 536,
+      "marker_line": 548,
       "visible_line": "Section Ref: `04-effect-runtime.s017`"
     },
     {
@@ -1259,7 +1259,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Custom handlers",
       "heading_level": 2,
-      "marker_line": 552,
+      "marker_line": 564,
       "visible_line": "Section Ref: `04-effect-runtime.s018`"
     },
     {
@@ -1268,7 +1268,7 @@
       "doc_path": "04-effect-runtime.md",
       "heading": "Effect logging",
       "heading_level": 2,
-      "marker_line": 580,
+      "marker_line": 592,
       "visible_line": "Section Ref: `04-effect-runtime.s019`"
     },
     {
@@ -1313,7 +1313,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Triggers",
       "heading_level": 2,
-      "marker_line": 70,
+      "marker_line": 72,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s005`"
     },
     {
@@ -1322,7 +1322,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Conditions",
       "heading_level": 2,
-      "marker_line": 100,
+      "marker_line": 104,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s006`"
     },
     {
@@ -1331,7 +1331,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Costs",
       "heading_level": 2,
-      "marker_line": 178,
+      "marker_line": 182,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s007`"
     },
     {
@@ -1340,7 +1340,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Targets",
       "heading_level": 2,
-      "marker_line": 253,
+      "marker_line": 257,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s008`"
     },
     {
@@ -1349,7 +1349,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Card filters",
       "heading_level": 2,
-      "marker_line": 286,
+      "marker_line": 290,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s009`"
     },
     {
@@ -1358,7 +1358,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Deprecated filter aliases",
       "heading_level": 3,
-      "marker_line": 318,
+      "marker_line": 322,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s010`"
     },
     {
@@ -1367,7 +1367,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Durations",
       "heading_level": 2,
-      "marker_line": 343,
+      "marker_line": 347,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s011`"
     },
     {
@@ -1376,7 +1376,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Effects",
       "heading_level": 2,
-      "marker_line": 367,
+      "marker_line": 371,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s012`"
     },
     {
@@ -1385,7 +1385,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Sequence connector semantics",
       "heading_level": 2,
-      "marker_line": 514,
+      "marker_line": 526,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s013`"
     },
     {
@@ -1394,7 +1394,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Search request",
       "heading_level": 2,
-      "marker_line": 584,
+      "marker_line": 596,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s014`"
     },
     {
@@ -1403,7 +1403,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Visibility",
       "heading_level": 2,
-      "marker_line": 609,
+      "marker_line": 621,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s015`"
     },
     {
@@ -1412,7 +1412,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Replacement triggers",
       "heading_level": 2,
-      "marker_line": 625,
+      "marker_line": 637,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s016`"
     },
     {
@@ -1421,7 +1421,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Type enums",
       "heading_level": 2,
-      "marker_line": 641,
+      "marker_line": 653,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s017`"
     },
     {
@@ -1430,7 +1430,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: vanilla confirmed card",
       "heading_level": 2,
-      "marker_line": 672,
+      "marker_line": 684,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s018`"
     },
     {
@@ -1439,7 +1439,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: On Play draw 1",
       "heading_level": 2,
-      "marker_line": 692,
+      "marker_line": 704,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s019`"
     },
     {
@@ -1448,7 +1448,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: Activate Main with cost and up-to target",
       "heading_level": 2,
-      "marker_line": 722,
+      "marker_line": 734,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s020`"
     },
     {
@@ -1457,7 +1457,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: permanent power buff",
       "heading_level": 2,
-      "marker_line": 776,
+      "marker_line": 788,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s021`"
     },
     {
@@ -1466,7 +1466,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Poneglyph text-to-DSL pipeline",
       "heading_level": 2,
-      "marker_line": 825,
+      "marker_line": 837,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s022`"
     },
     {
@@ -1475,7 +1475,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "v3 additions from real Poneglyph examples",
       "heading_level": 2,
-      "marker_line": 864,
+      "marker_line": 878,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s023`"
     },
     {
@@ -1484,7 +1484,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Source-attached DON!! condition",
       "heading_level": 3,
-      "marker_line": 872,
+      "marker_line": 886,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s024`"
     },
     {
@@ -1493,7 +1493,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Richer filters",
       "heading_level": 3,
-      "marker_line": 889,
+      "marker_line": 903,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s025`"
     },
     {
@@ -1502,7 +1502,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Transient reveal and selection primitives",
       "heading_level": 3,
-      "marker_line": 910,
+      "marker_line": 924,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s026`"
     },
     {
@@ -1511,7 +1511,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Effect-play options",
       "heading_level": 3,
-      "marker_line": 998,
+      "marker_line": 1012,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s027`"
     },
     {
@@ -1520,7 +1520,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example implementation docs",
       "heading_level": 2,
-      "marker_line": 1014,
+      "marker_line": 1028,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s028`"
     },
     {
@@ -1529,7 +1529,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Schema coverage policy",
       "heading_level": 2,
-      "marker_line": 1022,
+      "marker_line": 1036,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s029`"
     },
     {
@@ -2375,7 +2375,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Card addition flow - assisted Phase 3",
       "heading_level": 2,
-      "marker_line": 350,
+      "marker_line": 354,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s017`"
     },
     {
@@ -2384,7 +2384,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Effect coverage report",
       "heading_level": 2,
-      "marker_line": 366,
+      "marker_line": 370,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s018`"
     },
     {
@@ -2393,7 +2393,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Failure behavior",
       "heading_level": 2,
-      "marker_line": 400,
+      "marker_line": 404,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s019`"
     },
     {
@@ -2402,7 +2402,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Custom handler governance",
       "heading_level": 2,
-      "marker_line": 418,
+      "marker_line": 422,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s020`"
     },
     {
@@ -2411,7 +2411,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Banlist and simulator ban policy",
       "heading_level": 2,
-      "marker_line": 433,
+      "marker_line": 437,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s021`"
     },
     {
@@ -2420,7 +2420,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Security checklist",
       "heading_level": 2,
-      "marker_line": 459,
+      "marker_line": 463,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s022`"
     },
     {
@@ -2429,7 +2429,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Concrete Poneglyph API contract",
       "heading_level": 2,
-      "marker_line": 474,
+      "marker_line": 478,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s023`"
     },
     {
@@ -2438,7 +2438,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Source hash and behavior hash",
       "heading_level": 2,
-      "marker_line": 490,
+      "marker_line": 494,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s024`"
     },
     {
@@ -2447,7 +2447,7 @@
       "doc_path": "09-card-data-and-support-policy.md",
       "heading": "Poneglyph fixture-backed implementation tests",
       "heading_level": 2,
-      "marker_line": 515,
+      "marker_line": 519,
       "visible_line": "Section Ref: `09-card-data-and-support-policy.s025`"
     },
     {
@@ -2672,7 +2672,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Unit tests per card",
       "heading_level": 2,
-      "marker_line": 61,
+      "marker_line": 70,
       "visible_line": "Section Ref: `11-testing-quality.s005`"
     },
     {
@@ -2681,7 +2681,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Custom handler tests",
       "heading_level": 2,
-      "marker_line": 86,
+      "marker_line": 106,
       "visible_line": "Section Ref: `11-testing-quality.s006`"
     },
     {
@@ -2690,7 +2690,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Interaction tests",
       "heading_level": 2,
-      "marker_line": 100,
+      "marker_line": 120,
       "visible_line": "Section Ref: `11-testing-quality.s007`"
     },
     {
@@ -2699,7 +2699,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Invariant tests",
       "heading_level": 2,
-      "marker_line": 121,
+      "marker_line": 141,
       "visible_line": "Section Ref: `11-testing-quality.s008`"
     },
     {
@@ -2708,7 +2708,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Fuzz tests",
       "heading_level": 2,
-      "marker_line": 142,
+      "marker_line": 162,
       "visible_line": "Section Ref: `11-testing-quality.s009`"
     },
     {
@@ -2717,7 +2717,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Golden replay tests",
       "heading_level": 2,
-      "marker_line": 167,
+      "marker_line": 187,
       "visible_line": "Section Ref: `11-testing-quality.s010`"
     },
     {
@@ -2726,7 +2726,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Hidden-information tests",
       "heading_level": 2,
-      "marker_line": 191,
+      "marker_line": 211,
       "visible_line": "Section Ref: `11-testing-quality.s011`"
     },
     {
@@ -2735,7 +2735,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Replay drift tests",
       "heading_level": 2,
-      "marker_line": 210,
+      "marker_line": 230,
       "visible_line": "Section Ref: `11-testing-quality.s012`"
     },
     {
@@ -2744,7 +2744,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Protocol tests",
       "heading_level": 2,
-      "marker_line": 223,
+      "marker_line": 243,
       "visible_line": "Section Ref: `11-testing-quality.s013`"
     },
     {
@@ -2753,7 +2753,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Database tests",
       "heading_level": 2,
-      "marker_line": 241,
+      "marker_line": 261,
       "visible_line": "Section Ref: `11-testing-quality.s014`"
     },
     {
@@ -2762,7 +2762,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Performance tests",
       "heading_level": 2,
-      "marker_line": 257,
+      "marker_line": 277,
       "visible_line": "Section Ref: `11-testing-quality.s015`"
     },
     {
@@ -2771,7 +2771,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Coverage gates",
       "heading_level": 2,
-      "marker_line": 272,
+      "marker_line": 292,
       "visible_line": "Section Ref: `11-testing-quality.s016`"
     },
     {
@@ -2780,7 +2780,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Manual playtest checklist",
       "heading_level": 2,
-      "marker_line": 287,
+      "marker_line": 307,
       "visible_line": "Section Ref: `11-testing-quality.s017`"
     },
     {
@@ -2789,7 +2789,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Bug policy",
       "heading_level": 2,
-      "marker_line": 306,
+      "marker_line": 326,
       "visible_line": "Section Ref: `11-testing-quality.s018`"
     },
     {
@@ -2798,7 +2798,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "CI stages",
       "heading_level": 2,
-      "marker_line": 320,
+      "marker_line": 340,
       "visible_line": "Section Ref: `11-testing-quality.s019`"
     },
     {
@@ -2807,7 +2807,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Poneglyph/card-data tests",
       "heading_level": 2,
-      "marker_line": 340,
+      "marker_line": 360,
       "visible_line": "Section Ref: `11-testing-quality.s020`"
     },
     {
@@ -2816,7 +2816,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "v6 contract validation",
       "heading_level": 2,
-      "marker_line": 364,
+      "marker_line": 384,
       "visible_line": "Section Ref: `11-testing-quality.s021`"
     },
     {
@@ -2825,7 +2825,7 @@
       "doc_path": "11-testing-quality.md",
       "heading": "Required repo enforcement linkage",
       "heading_level": 2,
-      "marker_line": 383,
+      "marker_line": 403,
       "visible_line": "Section Ref: `11-testing-quality.s022`"
     },
     {
@@ -3212,7 +3212,7 @@
       "doc_path": "14-glossary.md",
       "heading": "EngineEvent",
       "heading_level": 2,
-      "marker_line": 66,
+      "marker_line": 68,
       "visible_line": "Section Ref: `14-glossary.s009`"
     },
     {
@@ -3221,7 +3221,7 @@
       "doc_path": "14-glossary.md",
       "heading": "Full state",
       "heading_level": 2,
-      "marker_line": 74,
+      "marker_line": 76,
       "visible_line": "Section Ref: `14-glossary.s010`"
     },
     {
@@ -3230,7 +3230,7 @@
       "doc_path": "14-glossary.md",
       "heading": "Hidden information",
       "heading_level": 2,
-      "marker_line": 82,
+      "marker_line": 84,
       "visible_line": "Section Ref: `14-glossary.s011`"
     },
     {
@@ -3239,7 +3239,7 @@
       "doc_path": "14-glossary.md",
       "heading": "PlayerView",
       "heading_level": 2,
-      "marker_line": 90,
+      "marker_line": 92,
       "visible_line": "Section Ref: `14-glossary.s012`"
     },
     {
@@ -3248,7 +3248,7 @@
       "doc_path": "14-glossary.md",
       "heading": "Replay drift",
       "heading_level": 2,
-      "marker_line": 98,
+      "marker_line": 100,
       "visible_line": "Section Ref: `14-glossary.s013`"
     },
     {
@@ -3257,7 +3257,7 @@
       "doc_path": "14-glossary.md",
       "heading": "Source presence policy",
       "heading_level": 2,
-      "marker_line": 106,
+      "marker_line": 108,
       "visible_line": "Section Ref: `14-glossary.s014`"
     },
     {
@@ -3266,7 +3266,7 @@
       "doc_path": "14-glossary.md",
       "heading": "StateSeq",
       "heading_level": 2,
-      "marker_line": 114,
+      "marker_line": 116,
       "visible_line": "Section Ref: `14-glossary.s015`"
     },
     {
@@ -3275,7 +3275,7 @@
       "doc_path": "14-glossary.md",
       "heading": "Support status",
       "heading_level": 2,
-      "marker_line": 122,
+      "marker_line": 124,
       "visible_line": "Section Ref: `14-glossary.s016`"
     },
     {
@@ -3284,7 +3284,7 @@
       "doc_path": "14-glossary.md",
       "heading": "View engine",
       "heading_level": 2,
-      "marker_line": 130,
+      "marker_line": 132,
       "visible_line": "Section Ref: `14-glossary.s017`"
     },
     {
@@ -3293,7 +3293,7 @@
       "doc_path": "14-glossary.md",
       "heading": "Poneglyph terms",
       "heading_level": 2,
-      "marker_line": 138,
+      "marker_line": 140,
       "visible_line": "Section Ref: `14-glossary.s018`"
     },
     {
@@ -3302,7 +3302,7 @@
       "doc_path": "14-glossary.md",
       "heading": "Loadout",
       "heading_level": 2,
-      "marker_line": 149,
+      "marker_line": 151,
       "visible_line": "Section Ref: `14-glossary.s019`"
     },
     {
@@ -3311,7 +3311,7 @@
       "doc_path": "14-glossary.md",
       "heading": "PendingDecision",
       "heading_level": 2,
-      "marker_line": 157,
+      "marker_line": 159,
       "visible_line": "Section Ref: `14-glossary.s020`"
     },
     {
@@ -3320,7 +3320,7 @@
       "doc_path": "14-glossary.md",
       "heading": "v5 additions",
       "heading_level": 2,
-      "marker_line": 165,
+      "marker_line": 167,
       "visible_line": "Section Ref: `14-glossary.s021`"
     },
     {
@@ -4895,7 +4895,7 @@
       "doc_path": "25-story-template.md",
       "heading": "Example approved story",
       "heading_level": 2,
-      "marker_line": 168,
+      "marker_line": 171,
       "visible_line": "Section Ref: `25-story-template.s010`"
     },
     {
@@ -4904,7 +4904,7 @@
       "doc_path": "25-story-template.md",
       "heading": "Boundary guidance",
       "heading_level": 2,
-      "marker_line": 223,
+      "marker_line": 226,
       "visible_line": "Section Ref: `25-story-template.s011`"
     },
     {
@@ -4913,7 +4913,7 @@
       "doc_path": "25-story-template.md",
       "heading": "Epic first, concern second",
       "heading_level": 3,
-      "marker_line": 229,
+      "marker_line": 232,
       "visible_line": "Section Ref: `25-story-template.s012`"
     },
     {
@@ -4922,7 +4922,7 @@
       "doc_path": "25-story-template.md",
       "heading": "Allowed touch points",
       "heading_level": 3,
-      "marker_line": 237,
+      "marker_line": 240,
       "visible_line": "Section Ref: `25-story-template.s013`"
     },
     {

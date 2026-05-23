@@ -157,6 +157,8 @@ A card is `vanilla-confirmed`, `implemented-dsl`, `implemented-custom`, `unsuppo
 
 Common card support does not require a manual per-card allowlist when a certified parser rule completely parses the card's gameplay-relevant text into supported keyword, DSL, or custom behavior and the runtime capability matrix confirms every parsed component is currently supported. Partial, ambiguous, stale, or capability-missing parses remain unsupported for normal play.
 
+Generated support evidence must be primitive-boundary evidence. Full-card or full-effect-line branches are insufficient generated support evidence, and sample-shaped parser evidence is insufficient generated support evidence unless those branches also expose reusable primitive-boundary parser and runtime capability evidence.
+
 ### Ship a narrow game first
 
 <!-- SECTION_REF: 00-project-overview.s015 -->

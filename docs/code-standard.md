@@ -181,6 +181,11 @@ Real-card fixture integration/card-data tests:
   state, edge cases, and expected events (`11-testing-quality.s005`).
 - Poneglyph schema handling or source-card adapter changes require card-data
   validation tests; do not silently absorb them into engine behavior stories.
+- Generated-support parser/certification stories must include primitive-boundary
+  parser tests, runtime capability matrix coverage checks, generated-support
+  decision/reporting-path checks, representative synthetic modular proof tests,
+  and at least one negative anti-shape regression against exact full-line,
+  wrapper-body-only, or sample-shaped support paths.
 
 All story work:
 

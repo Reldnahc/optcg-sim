@@ -58,6 +58,8 @@ interface EffectDefinitionMetadata {
 
 Section Ref: `05-effect-dsl-reference.s004`
 
+Entry-point selectors are wrapper semantics, not effect body primitives. The current DSL field name `trigger` includes entry-point selector values and must not be read as only queued triggered-effect timing.
+
 ```ts
 interface EffectBlock {
   id: string;
@@ -79,6 +81,8 @@ interface EffectBlock {
 <!-- SECTION_REF: 05-effect-dsl-reference.s005 -->
 
 Section Ref: `05-effect-dsl-reference.s005`
+
+Entry-point selectors are wrapper semantics, not effect body primitives. The current DSL field name `trigger` includes entry-point selector values and must not be read as only queued triggered-effect timing.
 
 ```ts
 type Trigger =
@@ -518,6 +522,14 @@ Event `seq` values for partial-deck drawUpTo resolution must remain strictly inc
 
 Duration and restriction effects such as `cannotAttack`, `cannotBlock`, `cannotBeAttacked`, `cannotBeBlockedBy`, `invalidateEffects`, and `protectFromKO` remain planned unless the schema coverage policy lists them as schema-supported and the runtime capability matrix proves the active engine can enforce the restriction for the full duration.
 
+Synthetic terminology example:
+
+- wrapper: `[Activate: Main]` activation wrapper
+- category: `activate`
+- source-presence policy: `mustRemainInSameZone`
+- markers: `[Once Per Turn]`
+- body primitive: `{ type: "ko", target: ... }`
+
 ## Sequence connector semantics
 
 <!-- SECTION_REF: 05-effect-dsl-reference.s013 -->
@@ -851,6 +863,8 @@ Support ladder:
 
 Schema authorability alone is insufficient for generated-support playable status. Generated support requires runtime capability evidence and complete parser support; schema validation only proves a JSON shape can be authored.
 
+This section is a terminology-only clarification and does not define generated-support evidence factorization rules; support-evidence factorization remains in SPEC-010B.
+
 Generated definitions must never be deployed blindly. A new parser rule, ambiguous parse class, custom handler binding, or wording/ruling ambiguity requires review before it can certify support. Once a parser rule is certified, matching complete-parse cards may be generated without a manual per-card allowlist or manual card-to-mechanic map for that common template.
 
 A complete parse covers all gameplay-relevant printed text, trigger text, keyword text, costs, conditions, timing windows, target or selection requirements, visibility requirements, replacement or optionality semantics, and ruling/errata inputs that affect behavior. Multiple parsed effects compose into one generated `EffectDefinition`. Partial parse output may be reported for coverage progress, but it must not make the card playable in normal modes.
@@ -1041,6 +1055,20 @@ parser-certified, or generated-support playable status. New TYP schema stories
 may move primitives into the schema-supported fixture subset only when they also
 add schema coverage and validation fixtures; generated playable support still
 requires complete parser support and runtime capability evidence.
+
+Synthetic positive modular example:
+
+- wrapper: `[On Play]` with entry-point adapter evidence
+- wrapper: `[When Attacking]` with separate entry-point adapter evidence
+- body primitive: shared `draw` + `chooseQuantity` composition evidence reused by both wrappers
+
+Synthetic negative exact wrapper-body example:
+
+- one parser branch that only certifies one exact full printed line for `[On Play] draw 1`
+- no primitive-boundary parser evidence for reusable wrapper, body, cost, target, visibility, or decision semantics
+- no separate entry-point adapter evidence for other wrappers
+
+These synthetic examples must not name real cards or card IDs.
 
 Schema-supported fixture subset:
 

@@ -385,6 +385,8 @@ Every effect is classified as one of:
 | Permanent   | Contributes modifiers/restrictions to computed view. |
 | Replacement | Intercepts a replaceable process before it occurs.   |
 
+wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics. wrapper semantics are distinct from reusable effect body primitive semantics.
+
 ## Keyword behavior
 
 <!-- SECTION_REF: 02-engine-mechanics.s025 -->
@@ -404,6 +406,8 @@ Section Ref: `02-engine-mechanics.s025`
 | Counter         | Event usable during opponent's Counter Step.                         |
 | Once Per Turn   | Tracked by stable effect ID and card instance per turn.              |
 | DON!! xX        | Condition is attached DON!! count greater than or equal to X.        |
+
+[Activate: Main], [Main], [Counter], and [Once Per Turn] are entry-point or marker wrappers, not keyword body primitives. [Blocker], [Banish], [Rush], [Rush: Character], and [Double Attack] remain keyword body behavior.
 
 ## Edge cases
 

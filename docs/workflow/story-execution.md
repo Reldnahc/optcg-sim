@@ -216,8 +216,11 @@ support evidence changes. If the story does not enable or change real-card
 gameplay support, the section must say so explicitly and explain why source
 integrity is not applicable.
 
-`engine_capability_preflight` records the parsed effect shape and compares it to
-current reusable runtime capabilities. It must list required runtime
+`engine_capability_preflight` records parsed effect shape decomposition and
+compares it to current reusable runtime capabilities. The decomposition must
+cover wrapper or entry point, markers, condition, cost, effect body, target,
+filter, cardinality, duration, source-presence policy, decision/visibility
+needs, and composition evidence when applicable. It must list required runtime
 capabilities, split them into supported and missing groups, and name prerequisite
 ENG stories for missing reusable behavior. A CARD implementation story is blocked
 until reusable engine gaps are already implemented or explicitly split into

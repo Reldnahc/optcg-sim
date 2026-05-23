@@ -44,6 +44,8 @@ Section Ref: `04-effect-runtime.s003`
 | Permanent   | Contributes continuous modifiers to computed view.         |
 | Replacement | Intercepts replaceable processes before atomic mutation.   |
 
+wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics. wrapper semantics are distinct from reusable effect body primitive semantics.
+
 ## Stable effect identity
 
 <!-- SECTION_REF: 04-effect-runtime.s004 -->
@@ -89,6 +91,10 @@ type CardSupportStatus =
 A missing effect definition for a non-vanilla card is an error in normal play. Only dev/sandbox modes may allow unsupported cards.
 
 For generated support, the runtime must expose or consume a capability matrix that describes which keyword bodies, DSL primitives, trigger timings, decision types, replacement processes, visibility modes, target shapes, costs, and custom handlers are currently executable. A generated card support record may be considered playable only when the card has a complete parse and every parsed component is covered by that current runtime capability matrix.
+
+Parser certification evidence must expose stable primitive boundaries for wrapper or entry point, markers, conditions, costs, body effects, targets, filters, cardinality, durations, visibility, source-presence policy, and composition when present. Runtime capability evidence must prove reusable runtime behavior for the same primitive boundaries plus decision or response semantics when present.
+
+Composition evidence may be required for supported combined shapes, but composition evidence cannot replace missing wrapper, body, cost, target, condition, duration, source policy, decision, or visibility evidence.
 
 Multiple parsed effects from one card compose into one generated `EffectDefinition` for that card. If any component is unparsed, ambiguous, stale, unsupported, or missing capability evidence, the entire generated support record fails closed for normal play instead of partially enabling the card.
 
@@ -146,6 +152,8 @@ Recommended defaults:
 | `[Trigger]` from life         | `resolveFromLastKnownInformation` or `noSourceRequired` while in no zone                              |
 | Event `[Main]` / `[Counter]`  | `resolveFromDestinationZone` after event is trashed                                                   |
 | Global rule-created effect    | `noSourceRequired`                                                                                    |
+
+wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics. wrapper semantics are distinct from reusable effect body primitive semantics.
 
 ## Trigger detection from events
 
@@ -272,6 +280,8 @@ Before resolving an effect block:
 4. If activation requires cost, create a `PayCostDecision` when choices are required.
 5. Pay cost atomically and emit `costPaid` events.
 6. Mark once-per-turn usage only after legal commitment: activation conditions passed, required activation-time targets selected, costs paid, and optional activation accepted. Declined optional effects and failed costs do not consume use; legally committed effects that later fizzle do consume use.
+
+wrapper or entry-point adapter responsibilities are timing window selection, legal-action exposure or queueing, source-presence policy selection, once-per-turn marker handling, and activation commitment semantics. wrapper semantics are distinct from reusable effect body primitive semantics.
 
 Optionality has three distinct meanings:
 
@@ -539,6 +549,8 @@ For composed execution, failure policy applies to the whole effect block and to 
 - `optionalIfPossible` offers the optional instruction only when at least one legal execution path exists; if none exists, the segment is not attempted and does not create a decision.
 
 Unsupported composed runtime shapes default to fail-closed rather than degrading to partial execution. Ambiguous connector dependency, saved-reference lifetime, optionality boundary, target visibility, pending-decision continuation, or replacement interaction must be treated as unsupported until the spec and capability matrix authorize it.
+
+Exact wrapper-body allowlists are insufficient generated-support evidence unless they also expose required primitive-boundary evidence. A supported effect body under one entry point does not authorize support under another entry point; support under another entry point requires separate entry-point adapter evidence plus body or composition evidence.
 
 ## Transient reveal and selection sets
 
