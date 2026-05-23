@@ -17,6 +17,7 @@ import {
   isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect,
   isSupportedOptionalNoChoiceWhenAttackingDrawEffect,
 } from "./effect-runtime-primitives.js";
+import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OnOpponentAttackTriggerQueueingFailureReason,
@@ -36,53 +37,6 @@ const withoutCondition = (
   return supportShape;
 };
 
-const isSupportedWhenAttackingDrawThenTrashSequenceEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "sequence" }>;
-} => {
-  if (
-    effect.sourcePresencePolicy !== "mustRemainInSameZone" ||
-    effect.trigger.type !== "whenAttacking" ||
-    effect.category !== "auto" ||
-    effect.optional === true ||
-    effect.cost !== undefined ||
-    effect.conditionTiming !== undefined ||
-    effect.failurePolicy !== undefined ||
-    effect.effect.type !== "sequence" ||
-    effect.effect.effects.length !== 2
-  ) {
-    return false;
-  }
-
-  const drawSegment = effect.effect.effects[0];
-  const trashSegment = effect.effect.effects[1];
-  if (
-    drawSegment === undefined ||
-    trashSegment === undefined ||
-    drawSegment.connector !== "always" ||
-    trashSegment.connector !== "then" ||
-    drawSegment.saveResultAs !== undefined ||
-    trashSegment.saveResultAs !== undefined ||
-    drawSegment.effect.type !== "draw" ||
-    trashSegment.effect.type !== "trashFromHand"
-  ) {
-    return false;
-  }
-
-  return (
-    Number.isInteger(drawSegment.effect.count) &&
-    drawSegment.effect.count > 0 &&
-    drawSegment.effect.player === "self" &&
-    Number.isInteger(trashSegment.effect.count) &&
-    trashSegment.effect.count > 0 &&
-    trashSegment.effect.player === "self" &&
-    trashSegment.effect.chooser === "self" &&
-    trashSegment.effect.filter === undefined
-  );
-};
-
 export const isSupportedWhenAttackingCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
@@ -93,7 +47,11 @@ export const isSupportedWhenAttackingCompatibleQueuedEffect = (
   isSupportedOptionalNoChoiceWhenAttackingDrawEffect(
     withoutCondition(effect),
   ) ||
-  isSupportedWhenAttackingDrawThenTrashSequenceEffect(effect);
+  isSupportedQueuedAutoSequenceForEntryPoint(
+    effect,
+    "whenAttacking",
+    "mustRemainInSameZone",
+  );
 
 export const isSupportedOnOpponentAttackCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],

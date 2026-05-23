@@ -34,6 +34,7 @@ import {
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 import { assertGameStateInvariants } from "./invariants.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
@@ -81,6 +82,20 @@ const isSupportedTriggerQueuedBody = (effect: Effect): boolean => {
       Number.isInteger(effect.count) &&
       effect.count >= 0 &&
       effect.player === "self"
+    );
+  }
+  if (effect.type === "sequence") {
+    const effectBlock: EffectBlock = {
+      id: "life-trigger:synthetic-effect" as EffectBlock["id"],
+      category: "auto",
+      trigger: { type: "trigger" },
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect,
+    };
+    return isSupportedQueuedAutoSequenceForEntryPoint(
+      effectBlock,
+      "trigger",
+      "resolveFromLastKnownInformation",
     );
   }
   return false;

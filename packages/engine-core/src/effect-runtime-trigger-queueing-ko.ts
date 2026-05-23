@@ -22,6 +22,7 @@ import {
   isSupportedNoChoiceOnKODrawEffect,
   isSupportedOptionalNoChoiceOnKODrawEffect,
 } from "./effect-runtime-primitives.js";
+import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 import type {
   BattleKOTriggerCandidate,
   DetectBattleKOTriggerCandidatesResult,
@@ -82,7 +83,13 @@ export const isSupportedOnKOCompatibleQueuedEffect = (
 } =>
   isSupportedNoChoiceOnKODrawEffect(withoutCondition(effect)) ||
   isSupportedOptionalNoChoiceOnKODrawEffect(withoutCondition(effect)) ||
-  isSupportedOnKODrawUpToEffect(effect);
+  isSupportedOnKODrawUpToEffect(effect) ||
+  (isSupportedOnKOQueuedBodyEnvelope(effect) &&
+    isSupportedQueuedAutoSequenceForEntryPoint(
+      effect,
+      "onKO",
+      effect.sourcePresencePolicy,
+    ));
 
 export const createKOTriggerQueueing = (
   dependencies: EffectRuntimeTriggerQueueingDependencies,

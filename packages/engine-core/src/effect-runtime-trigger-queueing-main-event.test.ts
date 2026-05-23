@@ -403,3 +403,47 @@ test("Main Event queueing fails closed when the trash source no longer matches t
   ]);
   assert.equal(result.state.effectQueue.length, 0);
 });
+
+test("Main Event reusable draw-then-trash sequence queues and reaches sequence decision flow", () => {
+  const { state } = setupMainEventQueueingState();
+  const definition = must(
+    state.cardManifest.effectDefinitions?.["def-main-event-draw"],
+    "main event definition",
+  );
+  const mainEffect = must(definition.effects[0], "main effect");
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-draw": {
+      ...definition,
+      effects: [
+        {
+          ...mainEffect,
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: { type: "draw", count: 1, player: "self" },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "trashFromHand",
+                  player: "self",
+                  chooser: "self",
+                  count: 1,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+
+  const queued = processEffectRuntime(state);
+  const paused = processEffectRuntime(queued.state);
+
+  assert.equal(queued.errors, undefined);
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
+});

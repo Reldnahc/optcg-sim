@@ -13,6 +13,7 @@ import {
   isSupportedNoChoiceOnPlayDrawEffect,
   isSupportedOptionalNoChoiceOnPlayDrawEffect,
 } from "./effect-runtime-primitives.js";
+import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OnPlayTriggerQueueingFailureReason,
@@ -56,7 +57,12 @@ const isSupportedOnPlayCompatibleQueuedEffect = (
 } =>
   isSupportedNoChoiceOnPlayDrawEffect(withoutCondition(effect)) ||
   isSupportedOptionalNoChoiceOnPlayDrawEffect(withoutCondition(effect)) ||
-  isSupportedOnPlayDrawUpToEffect(effect);
+  isSupportedOnPlayDrawUpToEffect(effect) ||
+  isSupportedQueuedAutoSequenceForEntryPoint(
+    effect,
+    "onPlay",
+    "mustRemainInSameZone",
+  );
 
 export const createOnPlayTriggerQueueing = (
   dependencies: Pick<

@@ -845,6 +845,47 @@ test("rejects multiple On K.O. effects before queueing", () => {
   assert.deepEqual(state, before);
 });
 
+test("On K.O. reusable draw-then-trash sequence queues and reaches sequence decision flow", () => {
+  const { state, definition, events } = koQueueingState();
+  const effect = must(definition.effects[0], "onKO effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: { type: "draw", count: 1, player: "self" },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "trashFromHand",
+                  player: "self",
+                  chooser: "self",
+                  count: 1,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+
+  const queued = queueBattleKOTriggers(state, state, [...events]);
+  assert.equal(queued.ok, true);
+  const paused = processEffectRuntime(queued.state);
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
+});
+
 test.each([
   {
     name: "untested support metadata",

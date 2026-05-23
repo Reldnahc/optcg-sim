@@ -371,3 +371,43 @@ test("conditioned optional When Attacking draw queues and routes through chooseO
   assert.equal(paused.state.pendingDecision?.type, "chooseOptionalActivation");
   assert.equal(paused.state.effectQueue.length, 1);
 });
+
+test("When Attacking reusable drawUpTo-then-trash sequence is supported through generic sequence path", () => {
+  const { state, definition } = attackQueueingState();
+  const effect = must(definition.effects[0], "whenAttacking effect");
+  state.cardManifest.effectDefinitions = {
+    "def-when-attacking": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: { type: "drawUpTo", count: 2, player: "self" },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "trashFromHand",
+                  player: "self",
+                  chooser: "self",
+                  count: 1,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+
+  const queued = processEffectRuntime(state);
+  const paused = processEffectRuntime(queued.state);
+
+  assert.equal(queued.errors, undefined);
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "chooseQuantity");
+});

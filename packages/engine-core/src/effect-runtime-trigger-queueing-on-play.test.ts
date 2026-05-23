@@ -338,3 +338,58 @@ test("event cardPlayed entries are ignored by On Play trigger queueing", () => {
   assert.deepEqual(result.state.effectQueue, before.effectQueue);
   assert.deepEqual(result.state.eventJournal, before.eventJournal);
 });
+
+test("On Play reusable draw-then-trash sequence queues and reaches sequence decision flow", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...definition,
+      effects: [
+        {
+          ...onPlayEffect,
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: { type: "draw", count: 1, player: "self" },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "trashFromHand",
+                  player: "self",
+                  chooser: "self",
+                  count: 1,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+    "def-on-play-sequence",
+  );
+
+  const queued = processEffectRuntime(state);
+  const paused = processEffectRuntime(queued.state);
+
+  assert.equal(queued.errors, undefined);
+  assert.equal(paused.errors, undefined);
+  assert.equal(
+    queued.events.some((event) => event.type === "effectQueued"),
+    true,
+  );
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
+});
