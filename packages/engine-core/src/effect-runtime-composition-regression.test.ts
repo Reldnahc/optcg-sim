@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
-import type { EffectDefinition } from "@optcg/types";
+import type { EffectDefinition, EngineEvent } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "./actions.js";
 import {
@@ -22,6 +22,7 @@ import {
 import {
   processDefenderOpponentAttackTiming,
   processEffectRuntime,
+  queueBattleKOTriggers,
 } from "./effect-runtime.js";
 import {
   attackQueueingState,
@@ -192,6 +193,84 @@ test("multi-effect trigger matrix keeps supported queueing across onPlay/whenAtt
     processEffectRuntime(mainEventState).state.effectQueue.length,
     1,
   );
+
+  const onKOState = setupAttackState();
+  onKOState.turn.turnPlayerId = p1;
+  const p2State = must(onKOState.players[p2], "p2");
+  const source = must(p2State.hand[0], "onKO source");
+  const sourceOnField = {
+    ...source,
+    zone: {
+      zone: "characterArea",
+      playerId: p2,
+      slot: "character",
+      index: 0,
+    } as const,
+    state: "active" as const,
+    attachedDon: [],
+    turnPlayed: onKOState.turn.globalTurn,
+  };
+  p2State.hand = p2State.hand.slice(1);
+  p2State.characters = [sourceOnField];
+  const koDefinition = effectDefinition(source.cardId, { type: "onKO" });
+  const onKOEffect = must(koDefinition.effects[0], "onKO effect");
+  onKOState.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-on-ko-matrix",
+    },
+  });
+  onKOState.cardManifest.effectDefinitions = {
+    "def-on-ko-matrix": {
+      ...koDefinition,
+      effects: [
+        { ...onKOEffect, sourcePresencePolicy: "resolveFromDestinationZone" },
+        {
+          ...onKOEffect,
+          id: "matrix:onKO:irrelevant" as typeof onKOEffect.id,
+          trigger: { type: "onPlay" },
+        },
+      ],
+    },
+  };
+  const trashed = {
+    ...sourceOnField,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 } as const,
+  };
+  p2State.characters = [];
+  p2State.trash = [trashed];
+  const koEvents: EngineEvent[] = [
+    {
+      id: "event:matrix:onko:1:cardKOd" as never,
+      seq: onKOState.eventJournal.length + 1,
+      type: "cardKOd",
+      payload: { playerId: p2, instanceId: sourceOnField.instanceId },
+      visibility: { type: "public" },
+      causedBy: { type: "ruleProcess", name: "battleResolution" },
+      createdAtStateSeq: onKOState.seq,
+    },
+    {
+      id: "event:matrix:onko:2:cardMoved" as never,
+      seq: onKOState.eventJournal.length + 2,
+      type: "cardMoved",
+      payload: {
+        instanceId: sourceOnField.instanceId,
+        cardId: sourceOnField.cardId,
+        from: sourceOnField.zone,
+        to: trashed.zone,
+        reason: "ko",
+      },
+      visibility: { type: "public" },
+      causedBy: { type: "ruleProcess", name: "battleResolution" },
+      createdAtStateSeq: onKOState.seq,
+    },
+  ];
+  const queuedKO = queueBattleKOTriggers(onKOState, onKOState, koEvents);
+  assert.equal(queuedKO.ok, true);
+  assert.equal(queuedKO.state.effectQueue.length, 1);
+  assert.equal(queuedKO.state.effectQueue[0]?.effectBlockId, onKOEffect.id);
 });
 
 test("cross-entry-point body matrix supports no-choice and sequence bodies only with adapter evidence", () => {
@@ -360,13 +439,93 @@ test("life-trigger and counter matrices preserve supported wrappers and fail clo
   );
 
   const counterState = setupAttackState();
+  const attacker = must(counterState.players[p1], "p1").leader;
+  const defender = must(counterState.players[p2], "p2").leader;
   const defenderHand = must(counterState.players[p2], "p2").hand;
   const counterCard = must(defenderHand[0], "counter card");
   installSupportedCounterEvent(counterState, counterCard, 1000);
-  const legal = getLegalActions(counterState, p2);
+  const opened = applyAction(counterState, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: defender.instanceId,
+      cardId: defender.cardId,
+      playerId: p2,
+    },
+  });
+  assert.equal(opened.errors, undefined);
+  const legal = getLegalActions(opened.state, p2);
   assert.equal(
-    legal.some((action) => action.type === "concede"),
+    legal.some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterCard.instanceId,
+    ),
     true,
+  );
+  const useCounter = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target: must(opened.state.battle, "opened battle").currentTarget,
+  });
+  assert.equal(useCounter.errors, undefined);
+  assert.equal(
+    useCounter.events.some((event) => event.type === "counterUsed"),
+    true,
+  );
+
+  const unsupportedState = setupAttackState();
+  const unsupportedAttacker = must(unsupportedState.players[p1], "p1").leader;
+  const unsupportedDefender = must(unsupportedState.players[p2], "p2").leader;
+  const unsupportedCard = must(
+    must(unsupportedState.players[p2], "p2").hand[0],
+    "unsupported counter card",
+  );
+  installSupportedCounterEvent(unsupportedState, unsupportedCard, 1000);
+  const effectDefinitionId = `${String(unsupportedCard.cardId)}:counter`;
+  const counterDef = must(
+    unsupportedState.cardManifest.effectDefinitions?.[effectDefinitionId],
+    "counter definition",
+  );
+  const counterEffect = must(counterDef.effects[0], "counter effect");
+  unsupportedState.cardManifest.effectDefinitions = {
+    ...unsupportedState.cardManifest.effectDefinitions,
+    [effectDefinitionId]: {
+      ...counterDef,
+      effects: [
+        counterEffect,
+        {
+          ...counterEffect,
+          id: `${String(counterEffect.id)}:duplicate` as typeof counterEffect.id,
+        },
+      ],
+    },
+  };
+  const unsupportedOpened = applyAction(unsupportedState, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: unsupportedAttacker.instanceId,
+      cardId: unsupportedAttacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: unsupportedDefender.instanceId,
+      cardId: unsupportedDefender.cardId,
+      playerId: p2,
+    },
+  });
+  const unsupportedError = must(
+    unsupportedOpened.errors?.[0],
+    "unsupported counter error",
+  );
+  assert.equal(unsupportedError.type, "illegalAction");
+  assert.equal(
+    unsupportedError.reason,
+    "Counter Events are unsupported in the Counter Step.",
   );
 });
 
@@ -413,6 +572,11 @@ test("runtime production source keeps anti-shape/card-specific authorization bra
   const sourceFiles = [
     "packages/engine-core/src/effect-runtime.ts",
     "packages/engine-core/src/effect-runtime-trigger-queueing.ts",
+    "packages/engine-core/src/effect-runtime-trigger-queueing-on-play.ts",
+    "packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts",
+    "packages/engine-core/src/effect-runtime-trigger-queueing-ko.ts",
+    "packages/engine-core/src/effect-runtime-trigger-queueing-main-event.ts",
+    "packages/engine-core/src/effect-runtime-sequence-support.ts",
     "packages/engine-core/src/play-card-support.ts",
     "packages/engine-core/src/life-trigger-actions.ts",
     "packages/engine-core/src/battle-counter-actions.ts",
