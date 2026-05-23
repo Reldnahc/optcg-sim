@@ -16,6 +16,7 @@ import {
   toGeneratedSupportManifestEvidence,
   type GeneratedSupportManifestEvidence,
 } from "./generated-support-index.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 import {
   buildMatchCardManifest,
   computeMatchCardManifestHash,
@@ -646,7 +647,7 @@ export async function buildFixtureOnlyRealCardDslMatchCardManifest(): Promise<Ma
     ),
   );
   const generatedSupportEvidence =
-    buildRealCardGeneratedSupportEvidence(normalizedFixtures);
+    await buildRealCardGeneratedSupportEvidence(normalizedFixtures);
   const cards = normalizedFixtures.map(({ fixtureId, normalized }) => {
     const merged = mergeSimulatorOverlay(
       normalized,
@@ -672,13 +673,18 @@ export async function buildFixtureOnlyRealCardDslMatchCardManifest(): Promise<Ma
   });
 }
 
-function buildRealCardGeneratedSupportEvidence(
+async function buildRealCardGeneratedSupportEvidence(
   fixtures: readonly NormalizedRealCardFixture[],
-): GeneratedSupportManifestEvidence {
+): Promise<GeneratedSupportManifestEvidence> {
+  const checkedInGeneratedSupportFixtures =
+    await loadCheckedInGeneratedSupportEffectDefinitions();
+  const generatedSupportFixtureCardIds = new Set(
+    checkedInGeneratedSupportFixtures.map((definition) => definition.cardId),
+  );
   const generatedSupportCandidates = fixtures
     .filter(
       (fixture) =>
-        !hasReviewedNonGeneratedFixtureSupport(fixture.fixtureId) &&
+        generatedSupportFixtureCardIds.has(fixture.normalized.cardId) &&
         fixture.normalized.effectText !== undefined,
     )
     .map(({ normalized }) => {
@@ -701,6 +707,9 @@ function buildRealCardGeneratedSupportEvidence(
     });
   const index = buildGeneratedSupportIndex({
     cards: generatedSupportCandidates,
+    parserCertificationEvidence: {
+      currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+    },
     validateEffectDefinition: () => ({ valid: true }),
   });
   const evidence = toGeneratedSupportManifestEvidence(index);
@@ -712,10 +721,10 @@ function buildRealCardGeneratedSupportEvidence(
   return evidence;
 }
 
-function hasReviewedNonGeneratedFixtureSupport(
-  fixtureId: RealCardFixtureId,
-): boolean {
-  return fixtureId === "EB01-023" || fixtureId === "OP04-014";
+async function loadCheckedInGeneratedSupportEffectDefinitions(): Promise<
+  readonly EffectDefinition[]
+> {
+  return [await loadCheckedInOp10045GeneratedSupportEffectDefinition()];
 }
 
 export async function loadFixtureOnlyRealCardDslMatchCardManifest(): Promise<MatchCardManifest> {

@@ -111,12 +111,13 @@ scope:
   - keep exact full-effect text, exact wrapper-body samples, story-named production parsers, real-card IDs, external card lists, card-to-mechanic maps, and sample-specific numeric branches out of support authority
   - allow exact printed text only in tests, fixtures, stories, diagnostics, and negative anti-shape examples, not as a production authorization route
   - use synthetic generated-support inputs for new acceptance evidence; real-card fixture tests may continue to exist but must not be the authority for this story
+  - existing real-card fixture regression callers may be updated only to derive their closed generated-support candidate set from already checked-in generated-support fixture records and to pass through current generic generated-support parser-certification evidence required by the migrated index contract; this must not add or change fixture files, fixture payloads, manifests, hashes, overlays, real-card promotion, or acceptance evidence
   - if migration discovers a missing engine runtime or schema capability, stop and split a prerequisite ENG or TYP story instead of adding runtime/schema behavior here
 non_scope:
   - direct parent implementation
   - engine runtime behavior
   - shared Effect DSL schema or contract changes
-  - real-card IDs, real-card fixture capture, source hash updates, behavior hash updates, overlays, support manifest edits, cards-produced manifest regeneration, or real-card promotion
+  - real-card IDs as implementation authority, real-card fixture capture, new generated-support fixture selection, fixture payload changes, source hash updates, behavior hash updates, overlays, support manifest edits, cards-produced manifest regeneration, or real-card promotion
   - new gameplay capability beyond currently supported generated-support behavior
   - broad natural-language inference for wording families not already covered by current support
   - server, client, UI, database, replay, WebSocket, Redis, or live Poneglyph behavior

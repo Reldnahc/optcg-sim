@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id CARD-025G -->
 <!-- agent-packet:story-path stories/approved/CARD-025G-generated-support-evaluator-proof-compatibility.yaml -->
-<!-- agent-packet:story-sha256 5aa40e2088c7aaafea83581d16da3f8215f8219105ae979f6a93889e3e6bd730 -->
+<!-- agent-packet:story-sha256 6d473836f307ca643393de2197af8d44190243de9a24703831bddf748fc4a43e -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -380,6 +380,7 @@ Own only cards-layer evaluator, probe, report, proof-certificate, and final comp
 - limit de-shaping to production authorization shapes already represented by the current CARD-025A inventory rows, or code directly required to route those rows to existing primitive evidence; do not introduce new primitive families, new capability IDs, or new parser certification families
 - if a current generated-support family already has generic runtime and parser-certification evidence but stale parser-rule or runtime-capability identifiers still encode a single sample count, update the cards-layer evidence identifier to the existing count-parameterized primitive boundary rather than retaining a sample-count branch; this is limited to renaming cards-layer support metadata for the same runtime primitive and does not authorize new engine behavior or unrelated parser families
 - update adjacent legacy generated-support unit test expectations when they assert the renamed cards-layer parser-rule or capability evidence identifiers; do not update real-card fixtures, representative fixture manifests, source hashes, behavior hashes, overlays, or external card-list behavior
+- update the existing real-card fixture regression manifest builder only to derive its closed generated-support candidate set from already checked-in generated-support fixture records and pass current generic parser-certification evidence into the migrated generated-support index contract; do not add or change fixture files, fixture payloads, manifests, hashes, overlays, generated manifest output, real-card promotion, or acceptance evidence
 - parameterize existing supported primitives when the runtime capability and parser certification evidence already support the primitive family, including wrapper tokens, target/cardinality text, saved-reference consumer text, keyword tokens, source-suffix text, and numeric count/value thresholds
 - prove no acceptance test depends on real card IDs, real-card fixture promotion, external card lists, or exact full printed text
 
@@ -387,7 +388,7 @@ Own only cards-layer evaluator, probe, report, proof-certificate, and final comp
 
 - new unrelated parser grammar or generated-support coverage outside the current supported generated-support families being de-shaped for CARD-025A debt closeout
 - engine runtime or shared schema changes
-- source hash, behavior hash, overlay, support manifest, cards-produced manifest, or real-card fixture changes
+- source hash, behavior hash, overlay, support manifest, cards-produced manifest, new generated-support fixture selection, fixture payload, generated manifest output, or real-card promotion changes
 - changing CLI card lookup semantics except report/proof text needed for primitive evidence
 
 ## Allowed Touch Points
@@ -428,6 +429,7 @@ Own only cards-layer evaluator, probe, report, proof-certificate, and final comp
 - packages/cards/src/generated-support-report-diagnostics.test.ts
 - packages/cards/src/generated-support-capability-coverage.test.ts
 - packages/cards/src/generated-support-component-identity.test.ts
+- packages/cards/src/real-card-fixtures.ts
 - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
 - stories/generated/CARD-025G-generated-support-evaluator-proof-compatibility.yaml
 - stories/approved/CARD-025-card-layer-spec010-migration-parent.yaml
