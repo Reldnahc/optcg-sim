@@ -388,7 +388,7 @@ test("negative adapter/body matrix fails closed for unsupported wrappers, unsupp
       effects: [
         {
           ...supportedBody,
-          trigger: { type: "activateMain" },
+          trigger: { type: "custom", event: "matrixUnsupportedAdapter" },
           sourcePresencePolicy: "mustRemainInSameZone",
         },
       ],
