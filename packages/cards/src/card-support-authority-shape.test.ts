@@ -15,12 +15,15 @@ type Finding = {
   file: string;
   line: string;
 };
-
-type DebtRow = {
+type NonAuthoritativeClassification =
+  | "syntax-recognition"
+  | "diagnostic-text"
+  | "trace-metadata";
+type NonAuthoritativeMatch = {
   category: ViolationCategory;
+  classification: NonAuthoritativeClassification;
   file: string;
-  line: string;
-  owningChild: string;
+  line: RegExp;
   reason: string;
 };
 
@@ -33,205 +36,15 @@ const repoRoot = path.resolve(
 
 const productionFiles = listSupportAuthorityProductionFiles();
 
-const migrationDebtInventory: readonly DebtRow[] = [
-  {
-    category: "exact-wrapper-body-gate",
-    file: "packages/cards/src/certified-card-text-parser.ts",
-    line: 'if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {',
-    owningChild: "CARD-025B",
-    reason:
-      "Exact wrapper prefix gate is shape-coupled authority rather than reusable trigger-boundary evidence.",
-  },
-  {
-    category: "exact-wrapper-body-gate",
-    file: "packages/cards/src/certified-card-text-parser.ts",
-    line: 'if (wrapper === undefined || wrapper.prefix !== "[When Attacking] ") {',
-    owningChild: "CARD-025B",
-    reason:
-      "Exact wrapper prefix gate is shape-coupled authority rather than reusable trigger-boundary evidence.",
-  },
-  {
-    category: "exact-wrapper-body-gate",
-    file: "packages/cards/src/certified-card-text-parser.ts",
-    line: 'if (wrapper.prefix !== "[When Attacking] ") {',
-    owningChild: "CARD-025B",
-    reason:
-      "Exact wrapper prefix gate is shape-coupled authority rather than reusable trigger-boundary evidence.",
-  },
-  {
-    category: "exact-wrapper-body-gate",
-    file: "packages/cards/src/composed-parser-builder.ts",
-    line: 'if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {',
-    owningChild: "CARD-025B",
-    reason:
-      "Exact wrapper prefix gate is shape-coupled authority rather than reusable trigger-boundary evidence.",
-  },
-  {
-    category: "exact-full-line-authorization",
-    file: "packages/cards/src/composed-parser-builder.ts",
-    line: 'return sourceText === "your opponent\'s Characters"',
-    owningChild: "CARD-025C",
-    reason:
-      "Exact full-line target authorization should be represented by reusable target primitive parsing.",
-  },
-  {
-    category: "exact-full-line-authorization",
-    file: "packages/cards/src/composed-parser-builder.ts",
-    line: 'return sourceText === "K.O. that Character." ? "koThatCharacter" : undefined;',
-    owningChild: "CARD-025C",
-    reason:
-      "Exact full-line saved-reference consumer authorization should be represented by reusable consumer primitives.",
-  },
-  {
-    category: "exact-full-line-authorization",
-    file: "packages/cards/src/start-of-game-stage-play-components.ts",
-    line: 'return sourceText === " from your deck" || sourceText === " from your deck."',
-    owningChild: "CARD-025C",
-    reason:
-      "Exact suffix authorization is full-line sample gating instead of reusable source-suffix primitive evidence.",
-  },
-  {
-    category: "exact-full-line-authorization",
-    file: "packages/cards/src/standalone-keyword-parser.ts",
-    line: "return sourceText === standaloneBlockerSourceText ||",
-    owningChild: "CARD-025C",
-    reason:
-      "Exact full-text authorization through one-level constant indirection is sample-shaped authority.",
-  },
-  {
-    category: "exact-full-line-authorization",
-    file: "packages/cards/src/standalone-keyword-parser.ts",
-    line: "sourceText === standaloneBlockerWithReminderSourceText",
-    owningChild: "CARD-025C",
-    reason:
-      "Exact full-text authorization through one-level constant indirection is sample-shaped authority.",
-  },
-  {
-    category: "exact-full-line-authorization",
-    file: "packages/cards/src/standalone-keyword-parser.ts",
-    line: "sourceText === candidate[1] ||",
-    owningChild: "CARD-025C",
-    reason:
-      "Exact full-text authorization through tuple-index indirection is sample-shaped authority.",
-  },
-  {
-    category: "exact-full-line-authorization",
-    file: "packages/cards/src/standalone-keyword-parser.ts",
-    line: "sourceText === `${candidate[1]} ${candidate[2]}`,",
-    owningChild: "CARD-025C",
-    reason:
-      "Exact full-text authorization through tuple-template indirection is sample-shaped authority.",
-  },
-  {
-    category: "sample-specific-numeric-authorization",
-    file: "packages/cards/src/composed-parser-builder.ts",
-    line: "return count === 1 ? { max: 1, min: 1 } : undefined;",
-    owningChild: "CARD-025D",
-    reason:
-      "Sample-specific numeric cardinality gate uses exact number authorization instead of numeric-family support.",
-  },
-  {
-    category: "sample-specific-numeric-authorization",
-    file: "packages/cards/src/composed-parser-builder.ts",
-    line: "if (optionalDraw !== undefined && optionalDraw.count === 1) {",
-    owningChild: "CARD-025D",
-    reason: "Sample-specific numeric gate authorizes only one draw count.",
-  },
-  {
-    category: "sample-specific-numeric-authorization",
-    file: "packages/cards/src/composed-parser-builder.ts",
-    line: "if (conditionedDraw === undefined || conditionedDraw.count !== 1) {",
-    owningChild: "CARD-025D",
-    reason:
-      "Sample-specific numeric gate authorizes only one conditioned draw count.",
-  },
-  {
-    category: "sample-specific-numeric-authorization",
-    file: "packages/cards/src/composed-parser-builder.ts",
-    line: "if (conditionedDraw.donCount !== 1) {",
-    owningChild: "CARD-025D",
-    reason:
-      "Sample-specific numeric gate authorizes only one DON threshold value.",
-  },
-  {
-    category: "sample-specific-numeric-authorization",
-    file: "packages/cards/src/composed-parser-builder.ts",
-    line: "parsed.trashCount !== 2 ||",
-    owningChild: "CARD-025D",
-    reason:
-      "Sample-specific numeric gate authorizes only one trash-count threshold.",
-  },
-  {
-    category: "sample-specific-numeric-authorization",
-    file: "packages/cards/src/composed-parser-builder.ts",
-    line: "parsed.drawCount !== 1",
-    owningChild: "CARD-025D",
-    reason:
-      "Sample-specific numeric gate authorizes only one draw-count threshold.",
-  },
-  {
-    category: "real-card-id-or-external-list-authorization",
-    file: "packages/cards/src/support-probe.ts",
-    line: 'cardId: cardId ?? ("OP03-044" as CardId),',
-    owningChild: "CARD-025E",
-    reason:
-      "Real card ID default in production path is inventory debt until probe defaults are de-shaped.",
-  },
+const migrationDebtInventory = [] as const;
+const closedOutNonAuthoritativeMatches: readonly NonAuthoritativeMatch[] = [
   {
     category: "story-named-parser-ownership",
+    classification: "trace-metadata",
     file: "packages/cards/src/certified-card-text-parser.ts",
-    line: 'export const certifiedParserRuleReviewer = "certified-parser-rule:CARD-009B";',
-    owningChild: "CARD-025F",
+    line: /certified-parser-rule:CARD-009B/,
     reason:
-      "Story-coded parser ownership label in production module is debt until ownership is primitive-domain based.",
-  },
-  {
-    category: "story-named-parser-ownership",
-    file: "packages/cards/src/conditional-parser-components.ts",
-    line: '? "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence."',
-    owningChild: "CARD-025F",
-    reason:
-      "Story-coded runtime boundary reference in production diagnostic text is tracked migration debt.",
-  },
-  {
-    category: "story-named-parser-ownership",
-    file: "packages/cards/src/conditional-parser-components.ts",
-    line: '? ["conditional-support:blocked-until-CARD-019B"]',
-    owningChild: "CARD-025F",
-    reason:
-      "Story-coded blocker tag in production module is tracked migration debt.",
-  },
-  {
-    category: "exact-wrapper-body-gate",
-    file: "packages/cards/src/don-minus-draw-components.ts",
-    line: 'if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {',
-    owningChild: "CARD-025B",
-    reason:
-      "Exact wrapper prefix gate is shape-coupled authority rather than reusable trigger-boundary evidence.",
-  },
-  {
-    category: "exact-wrapper-body-gate",
-    file: "packages/cards/src/on-play-field-effect-parser.ts",
-    line: 'if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {',
-    owningChild: "CARD-025B",
-    reason:
-      "Exact wrapper prefix gate is shape-coupled authority rather than reusable trigger-boundary evidence.",
-  },
-  {
-    category: "exact-wrapper-body-gate",
-    file: "packages/cards/src/optional-trash-cost-ko-components.ts",
-    line: 'if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {',
-    owningChild: "CARD-025B",
-    reason:
-      "Exact wrapper prefix gate is shape-coupled authority rather than reusable trigger-boundary evidence.",
-  },
-  {
-    category: "exact-wrapper-body-gate",
-    file: "packages/cards/src/top-n-search-components.ts",
-    line: 'if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {',
-    owningChild: "CARD-025B",
-    reason:
-      "Exact wrapper prefix gate is shape-coupled authority rather than reusable trigger-boundary evidence.",
+      "Reviewer label is trace metadata for certification provenance and is not consulted as support authorization authority.",
   },
 ] as const;
 
@@ -265,33 +78,37 @@ const detectors: ReadonlyArray<{
   {
     category: "sample-specific-numeric-authorization",
     regex:
-      /\b(count|drawCount|trashCount|donCount|value|returnDonCount)\s*(===|!==)\s*\d+\b|\bcount\s*===\s*1\s*\?\s*\{\s*max:\s*1,\s*min:\s*1\s*\}\s*:\s*undefined/,
+      /\b(count|drawCount|trashCount|donCount|value|returnDonCount)\s*(===|!==)\s*\d+\b/,
+  },
+  {
+    category: "exact-full-line-authorization",
+    regex:
+      /\/\^.*(your opponent's Characters|K\\\.O\\\.\s+that\s+Character|from your deck)\.\?\$\/[a-z]*/,
+  },
+  {
+    category: "sample-specific-numeric-authorization",
+    regex: /\bSUPPORTED_CARD_014F_[A-Z_]+\b/,
   },
 ];
 
 describe("CARD-025A support authority anti-shape inventory", () => {
   it("detects forbidden authority shapes in production files and fails on unlisted additions", () => {
     const findings = scanProductionFindings();
-    const findingKeys = new Set(findings.map(toFindingKey));
-    const debtKeys = new Set(migrationDebtInventory.map(toDebtKey));
-
-    const unlisted = findings.filter(
-      (finding) => !debtKeys.has(toFindingKey(finding)),
-    );
-    expect(unlisted).toEqual([]);
-
-    const staleDebtRows = migrationDebtInventory.filter(
-      (row) => !findingKeys.has(toDebtKey(row)),
-    );
-    expect(staleDebtRows).toEqual([]);
+    expect(findings).toEqual([]);
   });
 
-  it("keeps migration debt inventory test-only and structurally complete", () => {
-    for (const row of migrationDebtInventory) {
-      expect(row.category.length).toBeGreaterThan(0);
-      expect(row.file.startsWith("packages/cards/src/")).toBe(true);
-      expect(row.reason.length).toBeGreaterThan(0);
-      expect(/^CARD-025[B-G]$/.test(row.owningChild)).toBe(true);
+  it("keeps migration debt inventory closed out", () => {
+    expect(migrationDebtInventory).toEqual([]);
+  });
+
+  it("keeps non-authoritative allowances explicit and constrained", () => {
+    for (const allowance of closedOutNonAuthoritativeMatches) {
+      expect(allowance.reason.trim().length).toBeGreaterThan(0);
+      expect([
+        "syntax-recognition",
+        "diagnostic-text",
+        "trace-metadata",
+      ]).toContain(allowance.classification);
     }
   });
 
@@ -390,6 +207,18 @@ describe("CARD-025A support authority anti-shape inventory", () => {
         "if (runtimeClauses.length !== 2) {",
       ),
     ).toBe(false);
+    expect(
+      matchesCategory(
+        "exact-full-line-authorization",
+        "return /^ from your deck\\.?$/i.test(sourceText)",
+      ),
+    ).toBe(false);
+    expect(
+      matchesCategory(
+        "sample-specific-numeric-authorization",
+        "if (conditionedDraw.donCount !== SUPPORTED_CARD_014F_ATTACHED_DON_THRESHOLD) {",
+      ),
+    ).toBe(true);
   });
 });
 
@@ -424,6 +253,17 @@ function isAllowedLine(
   file: string,
   line: string,
 ): boolean {
+  if (
+    closedOutNonAuthoritativeMatches.some(
+      (allowance) =>
+        allowance.category === category &&
+        allowance.file === file &&
+        allowance.line.test(line),
+    )
+  ) {
+    return true;
+  }
+
   if (category === "sample-specific-numeric-authorization") {
     if (
       file.endsWith("line-separated-composition.ts") &&
@@ -484,10 +324,6 @@ function dedupeFindings(findings: readonly Finding[]): Finding[] {
 
 function toFindingKey(finding: Finding): string {
   return `${finding.category}|${finding.file}|${finding.line}`;
-}
-
-function toDebtKey(debt: DebtRow): string {
-  return `${debt.category}|${debt.file}|${debt.line}`;
 }
 
 function matchesCategory(category: ViolationCategory, line: string): boolean {

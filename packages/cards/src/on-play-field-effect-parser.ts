@@ -8,6 +8,7 @@ import type {
 
 import {
   buildSequenceEffect,
+  isSupportedTriggerType,
   parseContinuousModifierInstructionBody,
   parseContinuousRestrictionInstructionBody,
   parseSelectOpponentCharacterInstructionBody,
@@ -37,7 +38,7 @@ export function parseCard014gClause(
   sourceText: string,
 ): Card014gCertifiedClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+  if (!isSupportedTriggerType(wrapper, "onPlay")) {
     return undefined;
   }
 

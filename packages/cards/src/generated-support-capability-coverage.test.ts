@@ -36,7 +36,7 @@ describe("generated support capability coverage", () => {
           component: "on-play-draw-up-to",
         }),
         expect.objectContaining({
-          capabilityId: "optionalEffectBlock:onPlay:draw-1:self",
+          capabilityId: "optionalEffectBlock:onPlay:draw-n:self",
           component: "on-play-optional-draw",
         }),
         expect.objectContaining({

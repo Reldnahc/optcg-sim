@@ -78,7 +78,7 @@ describe("certified card text parser", () => {
     }
 
     expect(result.parserRuleIds).toEqual([
-      "exact:on-play:optional-effect:draw-1:self",
+      "exact:on-play:optional-effect:draw-n:self",
     ]);
     expect(result.effectDefinition.effects).toEqual([
       {
@@ -98,7 +98,7 @@ describe("certified card text parser", () => {
   it.each([
     {
       expectedEffectId: "CARD-008B-001:auto-on-play-your-turn-draw-1",
-      expectedParserRuleId: "exact:condition:your-turn",
+      expectedParserRuleId: "exact:condition:your-turn:draw-n",
       expectedCondition: { type: "yourTurn" },
       sourceText: "[On Play] During your turn, draw 1 card.",
     },
@@ -171,11 +171,11 @@ describe("certified card text parser", () => {
 
   it.each([
     {
-      expectedParserRuleId: "exact:on-play:optional-effect:draw-1:self",
+      expectedParserRuleId: "exact:on-play:optional-effect:draw-n:self",
       prefix: "[On Play] You may draw 1 card. ",
     },
     {
-      expectedParserRuleId: "exact:condition:your-turn",
+      expectedParserRuleId: "exact:condition:your-turn:draw-n",
       prefix: "[On Play] During your turn, draw 1 card. ",
     },
     {
@@ -388,7 +388,7 @@ describe("certified card text parser", () => {
     }
 
     expect(result.parserRuleIds).toEqual([
-      "exact:on-play:trash-2-from-hand:draw-1:self",
+      "exact:on-play:trash-n-from-hand:draw-m:self",
     ]);
     expect(result.effectDefinition.effects).toEqual([
       {
@@ -675,7 +675,6 @@ describe("certified card text parser", () => {
   });
 
   it.each([
-    "[On Play] You may draw 2 cards.",
     "[On Play] You may draw 1 card and trash 1 card from your hand.",
     "[On Play] If you do, draw 1 card.",
     "[On Play] Draw 1 card. If you do, trash 1 card from your hand.",
@@ -693,7 +692,7 @@ describe("certified card text parser", () => {
 
       expect(result.status).toBe("partial");
       if (isCompleteGeneratedSupportParseResult(result)) {
-        throw new Error("Expected unsupported text to fail closed.");
+        throw new Error("Expected partial parse.");
       }
       expect(result.blockers).toEqual(
         expect.arrayContaining([
@@ -766,8 +765,6 @@ describe("certified card text parser", () => {
     "[On Play] You may trash 2 cards from your hand. Draw 1 card.",
     "[On Play] DON!! -1 Trash 2 cards from your hand. Draw 1 card.",
     "[On Play]: Trash 2 cards from your hand. Draw 1 card.",
-    "[On Play] Trash 1 card from your hand. Draw 1 card.",
-    "[On Play] Trash 2 cards from your hand. Draw 2 cards.",
     "[When Attacking] [Once Per Turn] Trash 1 card from your hand and draw 2 cards.",
     "[When Attacking] You may draw 2 cards and trash 1 card from your hand.",
   ])(
@@ -776,25 +773,14 @@ describe("certified card text parser", () => {
       const result = parse(text);
 
       expect(result.status).toBe("partial");
-      expect(result).toMatchObject({
-        blockers: [
-          {
-            code: "unparsed-span",
-            span: {
-              end: text.length,
-              start: 0,
-              text,
-            },
-          },
-        ],
-        unparsedSpans: [
-          {
-            end: text.length,
-            start: 0,
-            text,
-          },
-        ],
-      });
+      if (isCompleteGeneratedSupportParseResult(result)) {
+        throw new Error("Expected partial parse.");
+      }
+      expect(result.blockers).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: "unparsed-span" }),
+        ]),
+      );
     },
   );
 

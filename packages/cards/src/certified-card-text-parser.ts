@@ -24,6 +24,7 @@ import {
   parseReusableCard016ABaseClause,
   parseSelectOpponentCharacterInstructionBody,
   parseSelectOpponentCharacterThenKoInstructionBody,
+  isSupportedTriggerType,
   parseSupportedTriggerWrapper,
   parseTriggeredDrawClause,
   toEffectId,
@@ -523,7 +524,7 @@ function parseCard016ASelectTargetsClause(
   sourceText: string,
 ): CertifiedClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+  if (!isSupportedTriggerType(wrapper, "onPlay")) {
     return undefined;
   }
   const selectOpponentCharacter = parseSelectOpponentCharacterInstructionBody(
@@ -583,7 +584,7 @@ function parseCard016AContinuousClause(
   sourceText: string,
 ): CertifiedClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+  if (!isSupportedTriggerType(wrapper, "onPlay")) {
     return undefined;
   }
   const modifier = isOnPlayFieldEffectModifierWording(wrapper.bodyText)
@@ -747,7 +748,7 @@ function parseWhenAttackingModifyPowerChooseThisTurnClause(
   sourceText: string,
 ): CertifiedClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[When Attacking] ") {
+  if (!isSupportedTriggerType(wrapper, "whenAttacking")) {
     return undefined;
   }
 
@@ -862,7 +863,18 @@ function parseTriggeredDrawResidueClause(
   options: TriggeredDrawClauseOptions,
 ): ParsedResidueClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(options.sourceText);
-  if (wrapper === undefined || wrapper.prefix !== options.prefix) {
+  if (wrapper === undefined) {
+    return undefined;
+  }
+  const expectedTriggerType =
+    options.trigger.type === "onPlay"
+      ? "onPlay"
+      : options.trigger.type === "whenAttacking"
+        ? "whenAttacking"
+        : options.trigger.type === "onKO"
+          ? "onKO"
+          : "trigger";
+  if (!isSupportedTriggerType(wrapper, expectedTriggerType)) {
     return undefined;
   }
 
@@ -950,7 +962,10 @@ function parseDrawThenTrashWrapper(
     return undefined;
   }
   if (prefix !== "[When Attacking] [Once Per Turn] ") {
-    if (wrapper.prefix !== prefix) {
+    const expectedTriggerType = prefix.includes("[On Play]")
+      ? "onPlay"
+      : "whenAttacking";
+    if (!isSupportedTriggerType(wrapper, expectedTriggerType)) {
       return undefined;
     }
 
@@ -959,7 +974,7 @@ function parseDrawThenTrashWrapper(
       prefix: wrapper.prefix,
     };
   }
-  if (wrapper.prefix !== "[When Attacking] ") {
+  if (!isSupportedTriggerType(wrapper, "whenAttacking")) {
     return undefined;
   }
 

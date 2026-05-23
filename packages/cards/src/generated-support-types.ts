@@ -451,7 +451,7 @@ export const generatedSupportComponentEvidenceInventory = [
       schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
     },
     parserCertificationIds: onPlayDrawThenTrashParserCertificationIds,
-    parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
+    parserRuleId: "exact:on-play:trash-n-from-hand:draw-m:self",
     runtimeCapabilityIds: [
       "category:auto",
       "sequence:trashFromHand:draw",
@@ -488,10 +488,10 @@ export const generatedSupportComponentEvidenceInventory = [
     components: drawSelfComponents,
     gates: parserRuleBaseGates,
     parserCertificationIds: onPlayOptionalDrawParserCertificationIds,
-    parserRuleId: "exact:on-play:optional-effect:draw-1:self",
+    parserRuleId: "exact:on-play:optional-effect:draw-n:self",
     runtimeCapabilityIds: [
       "category:auto",
-      "optionalEffectBlock:onPlay:draw-1:self",
+      "optionalEffectBlock:onPlay:draw-n:self",
       "effect:draw:self:count:positive-safe-integer",
       "sourcePresencePolicy:mustRemainInSameZone",
       "trigger:onPlay",
@@ -508,7 +508,7 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     gates: parserRuleBaseGates,
     parserCertificationIds: onPlayConditionDrawParserCertificationIds,
-    parserRuleId: "exact:condition:your-turn",
+    parserRuleId: "exact:condition:your-turn:draw-n",
     runtimeCapabilityIds: [
       "category:auto",
       "condition:yourTurn",

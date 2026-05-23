@@ -552,7 +552,7 @@ function deriveConditionalDrawDiagnosticDecomposition(
         : ["if-conditional-wrapper"],
     recognizedTriggerCandidates: [prefix.trim()],
     reason: conditionDiagnostics.isFullySupportedConditionExpression
-      ? "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence."
+      ? "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until conditional runtime capability evidence is represented."
       : "Conditional wrapper syntax was recognized, but one or more condition fragments remain unsupported; generated support remains fail-closed.",
     traceComponents: [
       { kind: "trigger", status: "recognized", text: prefix.trim() },
@@ -568,7 +568,7 @@ function deriveConditionalDrawDiagnosticDecomposition(
       conditionDiagnostics.unsupportedConditionFragments,
     unsupportedSyntaxFragments:
       conditionDiagnostics.isFullySupportedConditionExpression
-        ? ["conditional-support:blocked-until-CARD-019B"]
+        ? ["conditional-support:runtime-capability-evidence-missing"]
         : conditionDiagnostics.unsupportedSyntaxFragments,
   };
 }

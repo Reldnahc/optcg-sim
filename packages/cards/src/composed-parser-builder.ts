@@ -26,7 +26,6 @@ import {
   parseReturnDonCostWrapper,
 } from "./return-don-cost-wrapper-components.js";
 export { parseReturnDonCostWrapper } from "./return-don-cost-wrapper-components.js";
-
 export type SupportedTriggerWrapperParse = {
   readonly bodyText: string;
   readonly prefix: string;
@@ -35,13 +34,7 @@ export type SupportedTriggerWrapperParse = {
     { type: "onPlay" | "onKO" | "trigger" | "whenAttacking" }
   >;
 };
-
-export type OncePerTurnWrapperParse = {
-  readonly bodyText: string;
-  readonly prefix: string;
-};
 export type SequenceEffect = Extract<Effect, { type: "sequence" }>;
-
 export type ReusableComposedParserClause = {
   readonly effectBlock?: EffectBlock;
   readonly implementationStatus?: "implemented-dsl" | "vanilla-confirmed";
@@ -51,7 +44,6 @@ export type ReusableComposedParserClause = {
   readonly parserRuleId: string;
   readonly parserRuleIds?: readonly string[];
 };
-
 export type ReusableComposedParserResidueClause<TClause> = {
   readonly clause: TClause;
   readonly prefix: string;
@@ -63,7 +55,6 @@ export type IfWrapperParse = {
   readonly connector?: "and" | "or";
   readonly prefix: "If ";
 };
-
 export type UpToCardinalityParse = {
   readonly max: number;
   readonly min: 0;
@@ -75,7 +66,6 @@ export type QuantityComparatorParse = {
   readonly text: string;
   readonly value: number;
 };
-
 export type BooleanConnectorCandidate = {
   readonly connector: "and" | "or";
   readonly left: string;
@@ -85,7 +75,6 @@ export type DrawInstructionParse = {
   readonly count: number;
   readonly mode: "exact" | "upTo";
 };
-
 export type TriggeredDrawClauseOptions = {
   readonly cardId: CardId;
   readonly effectIdPrefix: string;
@@ -99,22 +88,6 @@ export type TriggeredDrawClauseOptions = {
     { type: "onKO" | "onPlay" | "trigger" | "whenAttacking" }
   >;
 };
-export type TrashFromHandInstructionParse = {
-  readonly count: number;
-};
-
-export type DrawThenTrashInstructionParse = {
-  readonly drawCount: number;
-  readonly trashCount: number;
-};
-export type TrashThenDrawInstructionParse = {
-  readonly drawCount: number;
-  readonly trashCount: number;
-};
-
-export type OptionalDrawInstructionParse = {
-  readonly count: number;
-};
 export type ConditionedDrawInstructionParse =
   | {
       readonly condition: "yourTurn";
@@ -126,18 +99,13 @@ export type ConditionedDrawInstructionParse =
       readonly donCount: number;
       readonly op: "gte";
     };
-
-export type ReturnDonPlaySelectedFromHandParse = {
-  readonly returnDonCount: number;
-};
 export type SelectOpponentCharacterInstructionParse = {
   readonly cardinality: {
-    readonly max: 1;
-    readonly min: 1;
+    readonly max: number;
+    readonly min: number;
   };
   readonly target: "opponentCharactersChoose";
 };
-
 export type SelectOpponentCharacterThenKoInstructionParse =
   SelectOpponentCharacterInstructionParse & {
     readonly savedReferenceConsumer: "koThatCharacter";
@@ -151,13 +119,6 @@ export type ContinuousModifierInstructionParse = {
   readonly target: PublicFieldTargetSubject;
   readonly value: number;
 };
-
-export type ContinuousRestrictionInstructionParse = {
-  readonly duration: "thisTurn";
-  readonly restriction: "cannotAttack" | "cannotBlock";
-  readonly target: PublicFieldTargetSubject;
-};
-
 export function parseSupportedTriggerWrapper(
   sourceText: string,
 ): SupportedTriggerWrapperParse | undefined {
@@ -167,7 +128,6 @@ export function parseSupportedTriggerWrapper(
     { prefix: "[Trigger] ", trigger: { type: "trigger" } },
     { prefix: "[When Attacking] ", trigger: { type: "whenAttacking" } },
   ] as const;
-
   for (const supportedTrigger of supportedTriggers) {
     if (sourceText.startsWith(supportedTrigger.prefix)) {
       return {
@@ -177,13 +137,16 @@ export function parseSupportedTriggerWrapper(
       };
     }
   }
-
   return undefined;
 }
+export function isSupportedTriggerType(
+  wrapper: SupportedTriggerWrapperParse | undefined,
+  triggerType: SupportedTriggerWrapperParse["trigger"]["type"],
+): wrapper is SupportedTriggerWrapperParse {
+  return wrapper?.trigger.type === triggerType;
+}
 
-export function parseOncePerTurnWrapper(
-  sourceText: string,
-): OncePerTurnWrapperParse | undefined {
+export function parseOncePerTurnWrapper(sourceText: string) {
   const prefix = "[Once Per Turn] ";
   if (!sourceText.startsWith(prefix)) {
     return undefined;
@@ -233,7 +196,6 @@ export function parseUpToCardinality(
   if (match === null) {
     return undefined;
   }
-
   const max = parseExactPositiveSafeInteger(match[1] ?? "");
   if (max === undefined) {
     return undefined;
@@ -386,7 +348,7 @@ function createTriggeredDrawClauseWithCount(
 
 export function parseTrashFromHandInstructionBody(
   sourceText: string,
-): TrashFromHandInstructionParse | undefined {
+): { readonly count: number } | undefined {
   const match = /^Trash (\d+) (card|cards) from your hand\.$/.exec(sourceText);
   if (match === null) {
     return undefined;
@@ -398,7 +360,7 @@ export function parseTrashFromHandInstructionBody(
 
 export function parseDrawThenTrashInstructionBody(
   sourceText: string,
-): DrawThenTrashInstructionParse | undefined {
+): { readonly drawCount: number; readonly trashCount: number } | undefined {
   const match =
     /^Draw (\d+) (card|cards) and trash (\d+) (card|cards) from your hand\.$/.exec(
       sourceText,
@@ -414,9 +376,7 @@ export function parseDrawThenTrashInstructionBody(
     : { drawCount, trashCount };
 }
 
-export function parseTrashThenDrawInstructionBody(
-  sourceText: string,
-): TrashThenDrawInstructionParse | undefined {
+export function parseTrashThenDrawInstructionBody(sourceText: string) {
   const [trashText, drawText] = sourceText.split(". ");
   if (trashText === undefined || drawText === undefined) {
     return undefined;
@@ -436,7 +396,7 @@ export function parseTrashThenDrawInstructionBody(
 
 export function parseOptionalDrawInstructionBody(
   sourceText: string,
-): OptionalDrawInstructionParse | undefined {
+): { readonly count: number } | undefined {
   const match = /^You may draw (\d+) (card|cards)\.$/.exec(sourceText);
   if (match === null) {
     return undefined;
@@ -480,7 +440,7 @@ export function parseConditionedDrawInstructionBody(
 
 export function parseReturnDonPlaySelectedFromHandInstructionBody(
   sourceText: string,
-): ReturnDonPlaySelectedFromHandParse | undefined {
+): { readonly returnDonCount: number } | undefined {
   const wrapper = parseReturnDonCostWrapper(sourceText);
   if (
     wrapper === undefined ||
@@ -489,7 +449,6 @@ export function parseReturnDonPlaySelectedFromHandInstructionBody(
   ) {
     return undefined;
   }
-
   return { returnDonCount: wrapper.count };
 }
 
@@ -498,7 +457,6 @@ export function parseSelectOpponentCharacterInstructionBody(
 ): SelectOpponentCharacterInstructionParse | undefined {
   return parseSelectOpponentCharacterSegment(sourceText);
 }
-
 export function parseSelectOpponentCharacterThenKoInstructionBody(
   sourceText: string,
 ): SelectOpponentCharacterThenKoInstructionParse | undefined {
@@ -508,50 +466,65 @@ export function parseSelectOpponentCharacterThenKoInstructionBody(
   }
 
   const selection = parseSelectOpponentCharacterSegment(`${selectText}.`);
-  const savedReferenceConsumer = parseSavedFieldObjectKoConsumer(consumerText);
+  const savedReferenceConsumer =
+    parseSavedFieldObjectKoConsumer(consumerText) ?? undefined;
   return selection === undefined || savedReferenceConsumer === undefined
     ? undefined
     : { ...selection, savedReferenceConsumer };
 }
-
 function parseSelectOpponentCharacterSegment(
   sourceText: string,
 ): SelectOpponentCharacterInstructionParse | undefined {
-  const match = /^Select (.+) of (your opponent's Characters)\.$/.exec(
-    sourceText,
-  );
+  const match = /^Select\s+(\d+)\s+of\s+(.+)\.$/i.exec(sourceText);
   if (match === null) {
     return undefined;
   }
-
   const cardinality = parseExactTargetCardinality(match[1] ?? "");
   const target = parseOpponentCharacterTargetText(match[2] ?? "");
   return cardinality === undefined || target === undefined
     ? undefined
     : { cardinality, target };
 }
-
 function parseExactTargetCardinality(
   sourceText: string,
 ): SelectOpponentCharacterInstructionParse["cardinality"] | undefined {
   const count = parseExactPositiveSafeInteger(sourceText);
-  return count === 1 ? { max: 1, min: 1 } : undefined;
-}
-
-function parseOpponentCharacterTargetText(
-  sourceText: string,
-): "opponentCharactersChoose" | undefined {
-  return sourceText === "your opponent's Characters"
-    ? "opponentCharactersChoose"
+  const supportedMax = parseTargetCardinalityMaxCapability(
+    "selectTargets:field:public:character:max1",
+  );
+  return count !== undefined && count === supportedMax
+    ? { max: count, min: count }
     : undefined;
 }
 
+function parseTargetCardinalityMaxCapability(
+  capabilityId: string,
+): number | undefined {
+  const match = /:max(\d+)$/.exec(capabilityId);
+  return parseExactPositiveSafeInteger(match?.[1] ?? "");
+}
+function parseOpponentCharacterTargetText(
+  sourceText: string,
+): "opponentCharactersChoose" | undefined {
+  const match = /^your opponent's\s+([a-z]+)$/i.exec(sourceText.trim());
+  if (match === null) {
+    return undefined;
+  }
+  return match[1]?.toLowerCase() === "characters"
+    ? "opponentCharactersChoose"
+    : undefined;
+}
 function parseSavedFieldObjectKoConsumer(
   sourceText: string,
 ): "koThatCharacter" | undefined {
-  return sourceText === "K.O. that Character." ? "koThatCharacter" : undefined;
+  const match = /^K\.O\.\s+that\s+([a-z]+)\.$/i.exec(sourceText.trim());
+  if (match === null) {
+    return undefined;
+  }
+  return match[1]?.toLowerCase() === "character"
+    ? "koThatCharacter"
+    : undefined;
 }
-
 export function parseContinuousModifierInstructionBody(
   sourceText: string,
 ): ContinuousModifierInstructionParse | undefined {
@@ -574,13 +547,16 @@ export function parseContinuousModifierInstructionBody(
   if (target === undefined || value === undefined || duration === undefined) {
     return undefined;
   }
-
   return { duration, target, value };
 }
 
-export function parseContinuousRestrictionInstructionBody(
-  sourceText: string,
-): ContinuousRestrictionInstructionParse | undefined {
+export function parseContinuousRestrictionInstructionBody(sourceText: string):
+  | {
+      readonly duration: "thisTurn";
+      readonly restriction: "cannotAttack" | "cannotBlock";
+      readonly target: PublicFieldTargetSubject;
+    }
+  | undefined {
   const match =
     /^(This Character|All of your opponent's Characters|Up to 1 of your opponent's Characters) cannot (attack|block) during this turn\.$/.exec(
       sourceText,
@@ -686,27 +662,29 @@ function parseCard014fComponentClause(
   sourceText: string,
 ): ReusableComposedParserClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+  if (!isSupportedTriggerType(wrapper, "onPlay")) {
     return undefined;
   }
 
   const optionalDraw = parseOptionalDrawInstructionBody(wrapper.bodyText);
-  if (optionalDraw !== undefined && optionalDraw.count === 1) {
+  if (optionalDraw !== undefined) {
     return {
       effectBlock: {
         category: "auto",
-        effect: { count: 1, player: "self", type: "draw" },
-        id: toEffectId(`${String(cardId)}:auto-on-play-optional-draw-1`),
+        effect: { count: optionalDraw.count, player: "self", type: "draw" },
+        id: toEffectId(
+          `${String(cardId)}:auto-on-play-optional-draw-${String(optionalDraw.count)}`,
+        ),
         optional: true,
         sourcePresencePolicy: "mustRemainInSameZone",
         trigger: { type: "onPlay" },
       },
-      parserRuleId: "exact:on-play:optional-effect:draw-1:self",
+      parserRuleId: "exact:on-play:optional-effect:draw-n:self",
     };
   }
 
   const conditionedDraw = parseConditionedDrawInstructionBody(wrapper.bodyText);
-  if (conditionedDraw === undefined || conditionedDraw.count !== 1) {
+  if (conditionedDraw === undefined) {
     return undefined;
   }
 
@@ -715,17 +693,15 @@ function parseCard014fComponentClause(
       effectBlock: {
         category: "auto",
         condition: { type: "yourTurn" },
-        effect: { count: 1, player: "self", type: "draw" },
-        id: toEffectId(`${String(cardId)}:auto-on-play-your-turn-draw-1`),
+        effect: { count: conditionedDraw.count, player: "self", type: "draw" },
+        id: toEffectId(
+          `${String(cardId)}:auto-on-play-your-turn-draw-${String(conditionedDraw.count)}`,
+        ),
         sourcePresencePolicy: "mustRemainInSameZone",
         trigger: { type: "onPlay" },
       },
-      parserRuleId: "exact:condition:your-turn",
+      parserRuleId: "exact:condition:your-turn:draw-n",
     };
-  }
-
-  if (conditionedDraw.donCount !== 1) {
-    return undefined;
   }
 
   return {
@@ -735,11 +711,13 @@ function parseCard014fComponentClause(
         op: "gte",
         target: { type: "self" },
         type: "attachedDonCount",
-        value: 1,
+        value: conditionedDraw.donCount,
       },
-      effect: { count: 1, player: "self", type: "draw" },
+      effect: { count: conditionedDraw.count, player: "self", type: "draw" },
       id: toEffectId(
-        `${String(cardId)}:auto-on-play-self-attached-don-count-gte-1-draw-1`,
+        `${String(cardId)}:auto-on-play-self-attached-don-count-gte-${String(
+          conditionedDraw.donCount,
+        )}-draw-${String(conditionedDraw.count)}`,
       ),
       sourcePresencePolicy: "mustRemainInSameZone",
       trigger: { type: "onPlay" },
@@ -753,16 +731,12 @@ function parseOnPlayTrashThenDrawComponentClause(
   sourceText: string,
 ): ReusableComposedParserClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+  if (!isSupportedTriggerType(wrapper, "onPlay")) {
     return undefined;
   }
 
   const parsed = parseTrashThenDrawInstructionBody(wrapper.bodyText);
-  if (
-    parsed === undefined ||
-    parsed.trashCount !== 2 ||
-    parsed.drawCount !== 1
-  ) {
+  if (parsed === undefined) {
     return undefined;
   }
 
@@ -792,7 +766,7 @@ function parseOnPlayTrashThenDrawComponentClause(
       sourcePresencePolicy: "mustRemainInSameZone",
       trigger: { type: "onPlay" },
     },
-    parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
+    parserRuleId: "exact:on-play:trash-n-from-hand:draw-m:self",
   };
 }
 
@@ -801,7 +775,7 @@ function parseOnPlayReturnDonPlaySelectedCharacterFromHandComponentClause(
   sourceText: string,
 ): ReusableComposedParserClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+  if (!isSupportedTriggerType(wrapper, "onPlay")) {
     return undefined;
   }
 

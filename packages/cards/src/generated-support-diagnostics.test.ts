@@ -106,7 +106,7 @@ describe("generated support diagnostics", () => {
           },
         },
       ],
-      parsedRuleIds: ["exact:on-play:trash-2-from-hand:draw-1:self"],
+      parsedRuleIds: ["exact:on-play:trash-n-from-hand:draw-m:self"],
       unparsedSpans: [
         {
           end: text.length,

@@ -766,50 +766,55 @@ describe("generated support index", () => {
     );
   });
 
-  it("supports exact synthetic On Play trash-then-draw text with segment-0 trash capability evidence", () => {
-    const index = buildGeneratedSupportIndex({
-      cards: [
-        {
-          ...baseCard,
-          cardId: "CARD-014C-SYNTHETIC" as CardId,
-          sourceText: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
-        },
-      ],
-      parserCertificationEvidence,
-      validateEffectDefinition,
-    });
+  it.each([
+    "[On Play] Trash 1 card from your hand. Draw 1 card.",
+    "[On Play] Trash 2 cards from your hand. Draw 1 card.",
+    "[On Play] Trash 2 cards from your hand. Draw 2 cards.",
+  ])(
+    "supports On Play trash-then-draw count variants with segment-0 trash capability evidence (%s)",
+    (sourceText) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseCard,
+            cardId: "CARD-014C-SYNTHETIC" as CardId,
+            sourceText,
+          },
+        ],
+        parserCertificationEvidence,
+        validateEffectDefinition,
+      });
 
-    expect(index.entries[0]).toMatchObject({
-      blockers: [],
-      cardId: "CARD-014C-SYNTHETIC",
-      parseStatus: "complete",
-      parserRuleIds: ["exact:on-play:trash-2-from-hand:draw-1:self"],
-      status: "supported",
-      support: {
+      expect(index.entries[0]).toMatchObject({
+        blockers: [],
         cardId: "CARD-014C-SYNTHETIC",
-        effectDefinitionId: "card-014c-synthetic.generated-support",
-        status: "implemented-dsl",
-        tested: true,
-      },
-    });
-    expect(index.entries[0]?.capabilityEvidence).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          capabilityId: "sequence:trashFromHand:draw",
-          parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
-        }),
-        expect.objectContaining({
-          capabilityId: "trashFromHand:segment0:self:self:count-exact",
-          parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
-        }),
-      ]),
-    );
-  });
+        parseStatus: "complete",
+        parserRuleIds: ["exact:on-play:trash-n-from-hand:draw-m:self"],
+        status: "supported",
+        support: {
+          cardId: "CARD-014C-SYNTHETIC",
+          effectDefinitionId: "card-014c-synthetic.generated-support",
+          status: "implemented-dsl",
+          tested: true,
+        },
+      });
+      expect(index.entries[0]?.capabilityEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            capabilityId: "sequence:trashFromHand:draw",
+            parserRuleId: "exact:on-play:trash-n-from-hand:draw-m:self",
+          }),
+          expect.objectContaining({
+            capabilityId: "trashFromHand:segment0:self:self:count-exact",
+            parserRuleId: "exact:on-play:trash-n-from-hand:draw-m:self",
+          }),
+        ]),
+      );
+    },
+  );
 
   it.each([
     "[On Play] Trash 1 card from your hand and draw 2 cards.",
-    "[On Play] Trash 1 card from your hand. Draw 1 card.",
-    "[On Play] Trash 2 cards from your hand. Draw 2 cards.",
     "[On Play] You may trash 2 cards from your hand. Draw 1 card.",
     "[On Play] DON!! -1 Trash 2 cards from your hand. Draw 1 card.",
     "[On Play]: Trash 2 cards from your hand. Draw 1 card.",
@@ -863,7 +868,7 @@ describe("generated support index", () => {
       ],
       missingCapabilityIds: ["trashFromHand:segment0:self:self:count-exact"],
       parseStatus: "complete",
-      parserRuleIds: ["exact:on-play:trash-2-from-hand:draw-1:self"],
+      parserRuleIds: ["exact:on-play:trash-n-from-hand:draw-m:self"],
       status: "unsupported",
     });
     expect(index.effectDefinitions).toEqual({});

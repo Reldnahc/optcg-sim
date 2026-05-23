@@ -56,13 +56,13 @@ describe("CARD-014F generated support", () => {
       expectedCapabilities: [
         "category:auto",
         "effect:draw:self:count:positive-safe-integer",
-        "optionalEffectBlock:onPlay:draw-1:self",
+        "optionalEffectBlock:onPlay:draw-n:self",
         "sourcePresencePolicy:mustRemainInSameZone",
         "trigger:onPlay",
       ],
       expectedComponent: "on-play-optional-draw",
       expectedEffectBlockFields: { optional: true },
-      expectedRuleId: "exact:on-play:optional-effect:draw-1:self",
+      expectedRuleId: "exact:on-play:optional-effect:draw-n:self",
       sourceText: "[On Play] You may draw 1 card.",
     },
     {
@@ -76,7 +76,7 @@ describe("CARD-014F generated support", () => {
       ],
       expectedComponent: "on-play-condition-your-turn-draw",
       expectedEffectBlockFields: { condition: { type: "yourTurn" } },
-      expectedRuleId: "exact:condition:your-turn",
+      expectedRuleId: "exact:condition:your-turn:draw-n",
       sourceText: "[On Play] During your turn, draw 1 card.",
     },
     {
@@ -148,12 +148,12 @@ describe("CARD-014F generated support", () => {
 
   it.each([
     [
-      "exact:on-play:optional-effect:draw-1:self",
-      "optionalEffectBlock:onPlay:draw-1:self",
+      "exact:on-play:optional-effect:draw-n:self",
+      "optionalEffectBlock:onPlay:draw-n:self",
       "[On Play] You may draw 1 card.",
     ],
     [
-      "exact:condition:your-turn",
+      "exact:condition:your-turn:draw-n",
       "condition:yourTurn",
       "[On Play] During your turn, draw 1 card.",
     ],
@@ -163,12 +163,12 @@ describe("CARD-014F generated support", () => {
       "[On Play] If this Character has 1 or more DON!! cards attached, draw 1 card.",
     ],
     [
-      "exact:on-play:optional-effect:draw-1:self",
+      "exact:on-play:optional-effect:draw-n:self",
       "category:auto",
       "[On Play] You may draw 1 card.",
     ],
     [
-      "exact:condition:your-turn",
+      "exact:condition:your-turn:draw-n",
       "effect:draw:self:count:positive-safe-integer",
       "[On Play] During your turn, draw 1 card.",
     ],
@@ -178,7 +178,7 @@ describe("CARD-014F generated support", () => {
       "[On Play] If this Character has 1 or more DON!! cards attached, draw 1 card.",
     ],
     [
-      "exact:on-play:optional-effect:draw-1:self",
+      "exact:on-play:optional-effect:draw-n:self",
       "sourcePresencePolicy:mustRemainInSameZone",
       "[On Play] You may draw 1 card.",
     ],
@@ -226,11 +226,11 @@ describe("CARD-014F generated support", () => {
 
   it.each([
     [
-      "exact:on-play:optional-effect:draw-1:self",
+      "exact:on-play:optional-effect:draw-n:self",
       "[On Play] You may draw 1 card. Then rest 1 DON!!.",
     ],
     [
-      "exact:condition:your-turn",
+      "exact:condition:your-turn:draw-n",
       "[On Play] During your turn, draw 1 card. Then rest 1 DON!!.",
     ],
     [

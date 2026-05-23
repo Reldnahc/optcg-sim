@@ -81,7 +81,7 @@ describe("support probe", () => {
     expect(
       formatSupportProbeBlocker({
         code: "unsupported-primitive",
-        component: "optionalEffectBlock:onPlay:draw-1:self",
+        component: "optionalEffectBlock:onPlay:draw-n:self",
         message: "Optionality category unsupported.",
       }),
     ).toContain("[layer: unsupported-optionality]");

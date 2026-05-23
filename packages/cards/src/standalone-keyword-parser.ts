@@ -33,19 +33,19 @@ const standaloneEngineKeywordDefinitions = [
 export function parseStandaloneBlockerClause(
   sourceText: string,
 ): ReusableComposedParserClause | undefined {
-  return sourceText === standaloneBlockerSourceText ||
-    sourceText === standaloneBlockerWithReminderSourceText
-    ? createStandaloneKeywordClause("exact:keyword:blocker:standalone")
-    : undefined;
+  return parseStandaloneKeywordClauseSource(
+    sourceText,
+    standaloneBlockerSourceText,
+    blockerReminderText,
+    "exact:keyword:blocker:standalone",
+  );
 }
 
 export function parseStandaloneEngineKeywordClause(
   sourceText: string,
 ): ReusableComposedParserClause | undefined {
-  const definition = standaloneEngineKeywordDefinitions.find(
-    (candidate) =>
-      sourceText === candidate[1] ||
-      sourceText === `${candidate[1]} ${candidate[2]}`,
+  const definition = standaloneEngineKeywordDefinitions.find((candidate) =>
+    isStandaloneKeywordSource(sourceText, candidate[1], candidate[2]),
   );
 
   return definition === undefined
@@ -104,4 +104,27 @@ function createStandaloneKeywordClause(
   parserRuleId: string,
 ): ReusableComposedParserClause {
   return { implementationStatus: "vanilla-confirmed", parserRuleId };
+}
+
+function parseStandaloneKeywordClauseSource(
+  sourceText: string,
+  keywordToken: string,
+  reminderText: string,
+  parserRuleId: string,
+): ReusableComposedParserClause | undefined {
+  return isStandaloneKeywordSource(sourceText, keywordToken, reminderText)
+    ? createStandaloneKeywordClause(parserRuleId)
+    : undefined;
+}
+
+function isStandaloneKeywordSource(
+  sourceText: string,
+  keywordToken: string,
+  reminderText: string,
+): boolean {
+  if (!sourceText.startsWith(keywordToken)) {
+    return false;
+  }
+  const residue = sourceText.slice(keywordToken.length).trim();
+  return residue.length === 0 || residue === reminderText;
 }

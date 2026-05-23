@@ -759,6 +759,69 @@ describe("support evaluator parser certification evidence", () => {
       status: "supported",
     });
   });
+
+  it("keeps attached-DON threshold and optional draw count parsing scalable", () => {
+    const optionalDrawTwo = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "CARD-014F-OPTIONAL-DRAW-TWO",
+      effect: "[On Play] You may draw 2 cards.",
+      name: "Optional Draw Two Unsupported Variation",
+    });
+    const attachedDonTwoDrawOne = normalizePoneglyphCardDetail({
+      ...loadOp03044Fixture(),
+      card_number: "CARD-014F-ATTACHED-DON-TWO",
+      effect:
+        "[On Play] If this Character has 2 or more DON!! cards attached, draw 1 card.",
+      name: "Attached Don Two Unsupported Variation",
+    });
+
+    const optionalEvaluation = evaluateGeneratedSupportPlayability({
+      card: optionalDrawTwo,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: optionalDrawTwo.behaviorHash,
+      expectedSourceTextHash: optionalDrawTwo.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+    const attachedDonEvaluation = evaluateGeneratedSupportPlayability({
+      card: attachedDonTwoDrawOne,
+      cardDataVersion: "2026-05-13",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: attachedDonTwoDrawOne.behaviorHash,
+      expectedSourceTextHash: attachedDonTwoDrawOne.sourceTextHash,
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(optionalEvaluation.playable).toBe(true);
+    expect(optionalEvaluation.parseStatus).toBe("complete");
+    expect(attachedDonEvaluation.parseStatus).toBe("complete");
+    expect(optionalEvaluation.status).toBe("supported");
+    expect(attachedDonEvaluation.status).toBe("supported");
+    expect(optionalEvaluation.capabilityEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          capabilityId: "optionalEffectBlock:onPlay:draw-n:self",
+        }),
+      ]),
+    );
+    expect(attachedDonEvaluation.capabilityEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          capabilityId: "condition:selfAttachedDonCount",
+        }),
+      ]),
+    );
+    expect(attachedDonEvaluation.missingCapabilityIds).not.toContain(
+      "condition:selfAttachedDonCount",
+    );
+    expect(attachedDonEvaluation.blockers).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "unparsed-span" }),
+      ]),
+    );
+  });
 });
 
 function loadOp03044Fixture(): PoneglyphCardDetail {

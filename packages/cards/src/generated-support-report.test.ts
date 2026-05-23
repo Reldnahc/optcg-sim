@@ -97,7 +97,7 @@ describe("generated support report", () => {
     expect(
       classifyGeneratedSupportBlockerLayer({
         code: "unsupported-primitive",
-        component: "optionalEffectBlock:onPlay:draw-1:self",
+        component: "optionalEffectBlock:onPlay:draw-n:self",
       }),
     ).toBe("unsupported-optionality");
     expect(
@@ -799,7 +799,7 @@ describe("generated support report", () => {
     expect(report.supportedCardIds).toEqual(["CARD-014C-SUPPORTED"]);
     expect(report.unsupportedCardIds).toEqual(["CARD-014C-MISSING-CAP"]);
     expect(report.parserRuleIdsUsed).toEqual([
-      "exact:on-play:trash-2-from-hand:draw-1:self",
+      "exact:on-play:trash-n-from-hand:draw-m:self",
     ]);
     expect(report.missingRuntimeCapabilityIds).toEqual([
       "trashFromHand:segment0:self:self:count-exact",
@@ -889,7 +889,7 @@ describe("generated support report", () => {
       ...generatedSupportRuntimeCapabilityMatrix,
       capabilities: generatedSupportRuntimeCapabilityMatrix.capabilities.filter(
         (capability) =>
-          capability.id !== "optionalEffectBlock:onPlay:draw-1:self",
+          capability.id !== "optionalEffectBlock:onPlay:draw-n:self",
       ),
     };
     const supportedIndex = buildGeneratedSupportIndex({
@@ -939,20 +939,20 @@ describe("generated support report", () => {
     ]);
     expect(report.parserRuleIdsUsed).toEqual([
       "exact:condition:self-attached-don-count",
-      "exact:condition:your-turn",
-      "exact:on-play:optional-effect:draw-1:self",
+      "exact:condition:your-turn:draw-n",
+      "exact:on-play:optional-effect:draw-n:self",
     ]);
     expect(report.missingRuntimeCapabilityIds).toEqual([
-      "optionalEffectBlock:onPlay:draw-1:self",
+      "optionalEffectBlock:onPlay:draw-n:self",
     ]);
     expect(
       report.statusByCardId["CARD-014F-OPTIONAL-MISSING-CAP"],
     ).toMatchObject({
       blockerCodes: ["missing-runtime-capability"],
       componentEvidenceIds: ["on-play-optional-draw"],
-      missingCapabilityIds: ["optionalEffectBlock:onPlay:draw-1:self"],
+      missingCapabilityIds: ["optionalEffectBlock:onPlay:draw-n:self"],
       parseStatus: "complete",
-      parserRuleIds: ["exact:on-play:optional-effect:draw-1:self"],
+      parserRuleIds: ["exact:on-play:optional-effect:draw-n:self"],
       status: "unsupported",
     });
   });

@@ -3,6 +3,7 @@ import type { CardColor, CardId, CardFilter, Effect } from "@optcg/types";
 import {
   buildSequenceEffect,
   parseExactPositiveSafeInteger,
+  isSupportedTriggerType,
   parseSupportedTriggerWrapper,
   toEffectId,
   type ReusableComposedParserClause,
@@ -56,7 +57,7 @@ export function parseOnPlayTopNFilteredSearchClause(
   sourceText: string,
 ): ReusableComposedParserClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+  if (!isSupportedTriggerType(wrapper, "onPlay")) {
     return undefined;
   }
 
@@ -90,7 +91,7 @@ export function parseOnPlayReturnDonTopNAnyCardSearchTrashClause(
   sourceText: string,
 ): ReusableComposedParserClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+  if (!isSupportedTriggerType(wrapper, "onPlay")) {
     return undefined;
   }
 
@@ -167,7 +168,7 @@ export function parseOnPlayTopNAnyCardSearchClause(
   sourceText: string,
 ): ReusableComposedParserClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+  if (!isSupportedTriggerType(wrapper, "onPlay")) {
     return undefined;
   }
 

@@ -320,7 +320,7 @@ describe("generated support parser result contracts", () => {
       "condition-component:field-count-don-public",
       "exact:activate-main:once-per-turn:optional-choose-one-trash-self-field-type-or-hand:draw-n:self",
       "exact:condition:self-attached-don-count",
-      "exact:condition:your-turn",
+      "exact:condition:your-turn:draw-n",
       "exact:conditional-continuous:condition:base-power:self-character-type:direct",
       "exact:conditional-continuous:condition:body-part-composition:self-character:direct:keyword",
       "exact:conditional-continuous:condition:body-part-composition:self-character:direct:protection",
@@ -347,7 +347,7 @@ describe("generated support parser result contracts", () => {
       "exact:on-play:modify-power:choose:this-turn",
       "exact:on-play:modify-power:self:this-battle",
       "exact:on-play:modify-power:self:this-turn",
-      "exact:on-play:optional-effect:draw-1:self",
+      "exact:on-play:optional-effect:draw-n:self",
       "exact:on-play:optional-trash-n-from-hand:ko-up-to-1-opponent-character-base-cost-n-or-less",
       "exact:on-play:return-don-draw-n:self",
       "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
@@ -356,7 +356,7 @@ describe("generated support parser result contracts", () => {
       "exact:on-play:select-1-opponent-character-then-ko-that-character",
       "exact:on-play:top-n-search:any-card:up-to-1:hand:bottom-owner-choice",
       "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
-      "exact:on-play:trash-2-from-hand:draw-1:self",
+      "exact:on-play:trash-n-from-hand:draw-m:self",
       "exact:start-of-game:play-up-to-1-typed-stage-from-self-deck",
       "exact:trigger:draw-n:self",
       "exact:trigger:draw-up-to-n:self",
@@ -453,7 +453,7 @@ describe("generated support parser result contracts", () => {
       ]),
     );
 
-    expect(byRule.get("exact:on-play:trash-2-from-hand:draw-1:self")).toEqual([
+    expect(byRule.get("exact:on-play:trash-n-from-hand:draw-m:self")).toEqual([
       "category:auto",
       "sequence:trashFromHand:draw",
       "effect:sequence:ordered",
@@ -693,7 +693,7 @@ describe("generated support parser result contracts", () => {
         "body-action": "exact:on-play:draw-n:self",
         cardinality: "exact:on-play:draw-up-to-n:self",
         chooser: "exact:on-play:draw-n:trash-m:hand:self",
-        condition: "exact:condition:your-turn",
+        condition: "exact:condition:your-turn:draw-n",
         cost: "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
         duration: "exact:on-play:modify-power:self:this-turn",
         "generated-support-metadata-gate": "exact:on-play:draw-n:self",

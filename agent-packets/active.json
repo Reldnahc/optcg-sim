@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-025F.md",
-      "storyId": "CARD-025F",
-      "storyPath": "stories/approved/CARD-025F-composition-parser-migration.yaml",
-      "storySha256": "ee12182e2fbb56cb7cce2d1847187c770094a9fdcc1e883a8404542b0481e178"
+      "packetPath": "agent-packets/CARD-025G.md",
+      "storyId": "CARD-025G",
+      "storyPath": "stories/approved/CARD-025G-generated-support-evaluator-proof-compatibility.yaml",
+      "storySha256": "5aa40e2088c7aaafea83581d16da3f8215f8219105ae979f6a93889e3e6bd730"
     }
   ],
   "version": 1

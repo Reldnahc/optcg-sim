@@ -23,13 +23,30 @@ story_boundary: >
 allowed_touch_points:
   - packages/cards/src/card-support-authority-migration-debt.test.ts
   - packages/cards/src/*authority*.test.ts
+  - packages/cards/src/card014f-support.test.ts
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/conditional-parser-components.ts
+  - packages/cards/src/don-minus-draw-components.ts
   - packages/cards/src/generated-support-index.ts
   - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-parser-certification-catalog.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/on-play-field-effect-parser.ts
+  - packages/cards/src/optional-trash-cost-ko-components.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/standalone-keyword-parser.ts
+  - packages/cards/src/start-of-game-stage-play-components.ts
   - packages/cards/src/support-evaluator.ts
   - packages/cards/src/support-evaluator.test.ts
   - packages/cards/src/support-evaluator-parser-certification.test.ts
   - packages/cards/src/support-probe.ts
   - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/top-n-search-components.ts
   - packages/cards/src/support-probe-proof-certificate.test.ts
   - packages/cards/src/support-probe-diagnostics.test.ts
   - packages/cards/src/generated-support-report.ts
@@ -67,9 +84,16 @@ scope:
   - add synthetic compatibility matrix coverage proving current supported generated-support families remain supported through primitive evidence
   - add negative compatibility coverage proving missing wrapper, body, condition, cost, target/filter, source-policy, runtime capability, or composition evidence fails closed
   - require the CARD-025A test-only migration debt inventory to be empty for production generated-support authorization paths after CARD-025G lands
+  - close out the original `migrationDebtInventory` in `packages/cards/src/card-support-authority-shape.test.ts`; do not satisfy this by adding a parallel empty inventory
+  - where CARD-025A detector rows still match production parser/component source, either remove the underlying forbidden authority shape or narrow the detector/allowance only when the source is proven to be syntax recognition, diagnostics, or non-authoritative trace text rather than support authorization
+  - de-shape existing parser authorization for current supported generated-support families by replacing exact wrapper-body, exact full-line, story-named, and sample-specific numeric gates with reusable primitive parsers and primitive evidence lookup; preserve the current supported families and do not add unrelated wording families
+  - limit de-shaping to production authorization shapes already represented by the current CARD-025A inventory rows, or code directly required to route those rows to existing primitive evidence; do not introduce new primitive families, new capability IDs, or new parser certification families
+  - if a current generated-support family already has generic runtime and parser-certification evidence but stale parser-rule or runtime-capability identifiers still encode a single sample count, update the cards-layer evidence identifier to the existing count-parameterized primitive boundary rather than retaining a sample-count branch; this is limited to renaming cards-layer support metadata for the same runtime primitive and does not authorize new engine behavior or unrelated parser families
+  - update adjacent legacy generated-support unit test expectations when they assert the renamed cards-layer parser-rule or capability evidence identifiers; do not update real-card fixtures, representative fixture manifests, source hashes, behavior hashes, overlays, or external card-list behavior
+  - parameterize existing supported primitives when the runtime capability and parser certification evidence already support the primitive family, including wrapper tokens, target/cardinality text, saved-reference consumer text, keyword tokens, source-suffix text, and numeric count/value thresholds
   - prove no acceptance test depends on real card IDs, real-card fixture promotion, external card lists, or exact full printed text
 non_scope:
-  - new parser grammar or generated-support coverage
+  - new unrelated parser grammar or generated-support coverage outside the current supported generated-support families being de-shaped for CARD-025A debt closeout
   - engine runtime or shared schema changes
   - source hash, behavior hash, overlay, support manifest, cards-produced manifest, or real-card fixture changes
   - changing CLI card lookup semantics except report/proof text needed for primitive evidence
@@ -97,7 +121,10 @@ required_tests:
   - generated-support report tests proving primitive evidence is visible for at least one representative row from each migrated concern
   - proof-certificate tests proving primitive evidence is visible for at least one representative row from each migrated concern
   - negative tests for missing wrapper, body, condition, cost, target/filter, source-policy, runtime capability, and composition primitive evidence
-  - migration debt inventory closeout test proving no production generated-support authorization debt remains from CARD-025A
+  - migration debt inventory closeout test proving the original CARD-025A `migrationDebtInventory` is empty and no production generated-support authorization debt remains from CARD-025A
+  - anti-regression tests or detector self-tests proving remaining exact wrapper tokens, parser syntax fragments, and diagnostic story references are not treated as support authorization authority
+  - synthetic variation tests proving de-shaped current-family parser support does not depend on exact full-line samples, story-coded parser ownership labels, or sample-specific numeric branches
+  - regression tests proving de-shaped parser authorization preserves existing supported generated-support outputs for the current supported families and still fails closed for unrelated wording families
   - anti-shape tests proving evaluator/proof/report code does not authorize support by exact full-line text, card IDs, external lists, parser-rule-only evidence, or full-definition-size gates
   - run `corepack pnpm run packets:verify`
   - run `corepack pnpm run stories:validate`

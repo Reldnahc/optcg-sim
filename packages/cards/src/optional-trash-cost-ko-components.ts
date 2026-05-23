@@ -8,6 +8,7 @@ import type {
 import {
   buildSequenceEffect,
   findReusableComposedResiduePrefix,
+  isSupportedTriggerType,
   parseExactPositiveSafeInteger,
   parseSupportedTriggerWrapper,
   parseUpToCardinality,
@@ -177,7 +178,7 @@ export function parseOnPlayOptionalTrashCostKoClause(
   sourceText: string,
 ): ReusableComposedParserClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+  if (!isSupportedTriggerType(wrapper, "onPlay")) {
     return undefined;
   }
 

@@ -591,7 +591,7 @@ describe("composed parser builder scaffold", () => {
         ],
         recognizedTriggerCandidates: ["[On Play]"],
         reason:
-          "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence.",
+          "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until conditional runtime capability evidence is represented.",
         traceComponents: [
           {
             kind: "trigger",
@@ -640,7 +640,7 @@ describe("composed parser builder scaffold", () => {
         ],
         unsupportedConditionFragments: [],
         unsupportedSyntaxFragments: [
-          "conditional-support:blocked-until-CARD-019B",
+          "conditional-support:runtime-capability-evidence-missing",
         ],
       },
     );
@@ -659,7 +659,7 @@ describe("composed parser builder scaffold", () => {
         ],
         recognizedTriggerCandidates: ["[On Play]"],
         reason:
-          "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until CARD-019B admits conditional runtime capability evidence.",
+          "Conditional wrapper and supported condition components were recognized, but conditional generated support remains fail-closed until conditional runtime capability evidence is represented.",
         traceComponents: [
           {
             kind: "trigger",
@@ -686,7 +686,7 @@ describe("composed parser builder scaffold", () => {
         ],
         unsupportedConditionFragments: [],
         unsupportedSyntaxFragments: [
-          "conditional-support:blocked-until-CARD-019B",
+          "conditional-support:runtime-capability-evidence-missing",
         ],
       },
     );

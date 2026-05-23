@@ -21,7 +21,7 @@ describe("generated support runtime capability matrix", () => {
     "modifyPower:choose:thisTurn",
     "modifyPower:self:thisBattle",
     "modifyPower:self:thisTurn",
-    "optionalEffectBlock:onPlay:draw-1:self",
+    "optionalEffectBlock:onPlay:draw-n:self",
     "payCost:returnDon:self:count-exact",
     "playSelected:hand:character:max1",
     "playSelected:hand:character:max1:ignoreCost",
@@ -259,7 +259,7 @@ describe("generated support runtime capability matrix", () => {
   });
 
   it("certifies the exact CARD-014C reverse sequence parser rule with CARD-014A capability evidence", () => {
-    const reverseParserRuleId = "exact:on-play:trash-2-from-hand:draw-1:self";
+    const reverseParserRuleId = "exact:on-play:trash-n-from-hand:draw-m:self";
     const capabilityIds = [
       "category:auto",
       "effect:draw:self:count:positive-safe-integer",
@@ -322,17 +322,17 @@ describe("generated support runtime capability matrix", () => {
 
   it.each([
     {
-      parserRuleId: "exact:on-play:optional-effect:draw-1:self",
+      parserRuleId: "exact:on-play:optional-effect:draw-n:self",
       requiredCapabilities: [
         "category:auto",
         "effect:draw:self:count:positive-safe-integer",
-        "optionalEffectBlock:onPlay:draw-1:self",
+        "optionalEffectBlock:onPlay:draw-n:self",
         "sourcePresencePolicy:mustRemainInSameZone",
         "trigger:onPlay",
       ],
     },
     {
-      parserRuleId: "exact:condition:your-turn",
+      parserRuleId: "exact:condition:your-turn:draw-n",
       requiredCapabilities: [
         "category:auto",
         "condition:yourTurn",

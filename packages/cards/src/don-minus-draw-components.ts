@@ -2,6 +2,7 @@ import type { CardId } from "@optcg/types";
 
 import {
   parseDrawInstructionBody,
+  isSupportedTriggerType,
   parseSupportedTriggerWrapper,
   toEffectId,
   type ReusableComposedParserClause,
@@ -21,7 +22,7 @@ export function parseOnPlayReturnDonDrawClause(
   sourceText: string,
 ): ReusableComposedParserClause | undefined {
   const wrapper = parseSupportedTriggerWrapper(sourceText);
-  if (wrapper === undefined || wrapper.prefix !== "[On Play] ") {
+  if (!isSupportedTriggerType(wrapper, "onPlay")) {
     return undefined;
   }
 

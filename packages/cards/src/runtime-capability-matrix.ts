@@ -53,13 +53,13 @@ const sameZoneParserRuleIds = [
   "exact:on-play:draw-n:self",
   "exact:when-attacking:draw-n:self",
   "exact:on-play:draw-n:trash-m:hand:self",
-  "exact:on-play:trash-2-from-hand:draw-1:self",
+  "exact:on-play:trash-n-from-hand:draw-m:self",
   "exact:when-attacking:draw-n:trash-m:hand:self",
   "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
   "exact:on-play:draw-up-to-n:self",
-  "exact:on-play:optional-effect:draw-1:self",
+  "exact:on-play:optional-effect:draw-n:self",
   "exact:condition:self-attached-don-count",
-  "exact:condition:your-turn",
+  "exact:condition:your-turn:draw-n",
   "card014a:on-play:return-don-play-selected-character",
   "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
   onPlayReturnDonDrawNParserRuleId,
@@ -311,7 +311,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       kind: "condition",
       sinceStory: "CARD-014A",
       supported: true,
-      supportedParserRuleIds: ["exact:condition:your-turn"],
+      supportedParserRuleIds: ["exact:condition:your-turn:draw-n"],
     },
     {
       description:
@@ -337,14 +337,14 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
         "exact:on-play:draw-n:self",
         "exact:when-attacking:draw-n:self",
         "exact:on-play:draw-n:trash-m:hand:self",
-        "exact:on-play:trash-2-from-hand:draw-1:self",
+        "exact:on-play:trash-n-from-hand:draw-m:self",
         "exact:when-attacking:draw-n:trash-m:hand:self",
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
-        "exact:on-play:optional-effect:draw-1:self",
+        "exact:on-play:optional-effect:draw-n:self",
         "exact:on-ko:draw-n:self",
         "exact:trigger:draw-n:self",
         "exact:condition:self-attached-don-count",
-        "exact:condition:your-turn",
+        "exact:condition:your-turn:draw-n",
         onPlayReturnDonDrawNParserRuleId,
         "card014a:sequence:draw-trashFromHand",
         "card014a:sequence:trashFromHand-draw",
@@ -370,7 +370,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supported: true,
       supportedParserRuleIds: [
         "exact:on-play:draw-n:trash-m:hand:self",
-        "exact:on-play:trash-2-from-hand:draw-1:self",
+        "exact:on-play:trash-n-from-hand:draw-m:self",
         "exact:when-attacking:draw-n:trash-m:hand:self",
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
         "card014a:sequence:draw-trashFromHand",
@@ -389,7 +389,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supported: true,
       supportedParserRuleIds: [
         "exact:on-play:draw-n:trash-m:hand:self",
-        "exact:on-play:trash-2-from-hand:draw-1:self",
+        "exact:on-play:trash-n-from-hand:draw-m:self",
         "exact:when-attacking:draw-n:trash-m:hand:self",
         "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
         "card014a:sequence:draw-trashFromHand",
@@ -507,12 +507,12 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
     },
     {
       description:
-        "Optional On Play effect blocks that draw one card for self are executable.",
-      id: "optionalEffectBlock:onPlay:draw-1:self",
+        "Optional On Play effect blocks that draw a positive safe-integer count for self are executable.",
+      id: "optionalEffectBlock:onPlay:draw-n:self",
       kind: "composition",
       sinceStory: "CARD-014A",
       supported: true,
-      supportedParserRuleIds: ["exact:on-play:optional-effect:draw-1:self"],
+      supportedParserRuleIds: ["exact:on-play:optional-effect:draw-n:self"],
     },
     ...optionalKo.optionalTrashCostKoRuntimeCapabilityRecords,
     ...activateMainChooseOneCost.activateMainChooseOneCostRuntimeCapabilityRecords,
@@ -637,7 +637,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [
         "card014a:sequence:draw-trashFromHand",
         "card014a:sequence:trashFromHand-draw",
-        "exact:on-play:trash-2-from-hand:draw-1:self",
+        "exact:on-play:trash-n-from-hand:draw-m:self",
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
         "card014a:on-play:select-target-modify-power",
@@ -654,7 +654,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:sequence:trashFromHand-draw",
-        "exact:on-play:trash-2-from-hand:draw-1:self",
+        "exact:on-play:trash-n-from-hand:draw-m:self",
       ],
     },
     {
@@ -730,7 +730,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supported: true,
       supportedParserRuleIds: [
         "card014a:sequence:trashFromHand-draw",
-        "exact:on-play:trash-2-from-hand:draw-1:self",
+        "exact:on-play:trash-n-from-hand:draw-m:self",
       ],
     },
     {
@@ -742,11 +742,11 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supportedParserRuleIds: [
         "exact:on-play:draw-n:self",
         "exact:on-play:draw-n:trash-m:hand:self",
-        "exact:on-play:trash-2-from-hand:draw-1:self",
+        "exact:on-play:trash-n-from-hand:draw-m:self",
         "exact:on-play:draw-up-to-n:self",
-        "exact:on-play:optional-effect:draw-1:self",
+        "exact:on-play:optional-effect:draw-n:self",
         "exact:condition:self-attached-don-count",
-        "exact:condition:your-turn",
+        "exact:condition:your-turn:draw-n",
         "card014a:on-play:return-don-play-selected-character",
         "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
         onPlayReturnDonDrawNParserRuleId,
@@ -938,14 +938,14 @@ function classifyParserRuleKind(parserRuleId: string): string {
       ":optional-choose-one-trash-self-field-type-or-hand",
     ) ||
     parserRuleId.includes(":start-of-game:play-up-to-1-typed-stage") ||
-    parserRuleId === "exact:on-play:trash-2-from-hand:draw-1:self" ||
+    parserRuleId === "exact:on-play:trash-n-from-hand:draw-m:self" ||
     parserRuleId.startsWith("card014a:sequence:")
   ) {
     return "sequence";
   }
   if (parserRuleId.includes(":top-n-search:")) return "deck-search";
   if (parserRuleId.startsWith("exact:condition:")) return "condition";
-  if (parserRuleId === "exact:on-play:optional-effect:draw-1:self")
+  if (parserRuleId === "exact:on-play:optional-effect:draw-n:self")
     return "optional-effect";
   if (
     parserRuleId.includes("return-don") ||

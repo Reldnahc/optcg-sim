@@ -374,6 +374,9 @@ export async function runSupportProbeCli(
       environment.stdout.write(usageText());
       return 0;
     }
+    if (parsed.cardId === undefined) {
+      throw new Error("Missing --card <id>.");
+    }
 
     const client = createPoneglyphClient({
       baseUrl: parsed.baseUrl,
@@ -402,7 +405,7 @@ export async function runSupportProbeCli(
 
 type ParsedProbeArgs = {
   baseUrl: string;
-  cardId: CardId;
+  cardId?: CardId;
   expectedBehaviorHash?: string;
   expectedSourceTextHash?: string;
   help: boolean;
@@ -466,9 +469,11 @@ function parseProbeArgs(argv: string[]): ParsedProbeArgs {
 
   const parsed: ParsedProbeArgs = {
     baseUrl,
-    cardId: cardId ?? ("OP03-044" as CardId),
     help,
   };
+  if (cardId !== undefined) {
+    parsed.cardId = cardId;
+  }
   if (expectedBehaviorHash !== undefined) {
     parsed.expectedBehaviorHash = expectedBehaviorHash;
   }
@@ -537,7 +542,7 @@ function getEffectDefinitionValidator(): ReturnType<Ajv2020["compile"]> {
 
 function usageText(): string {
   return [
-    "Usage: pnpm --filter @optcg/cards support:probe -- --card OP03-044",
+    "Usage: pnpm --filter @optcg/cards support:probe -- --card <id>",
     "",
     "Options:",
     "  --card <id>        Probe exactly one Poneglyph card ID.",

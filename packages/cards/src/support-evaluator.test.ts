@@ -365,7 +365,7 @@ describe("support evaluator", () => {
       blockers: [],
       cardId: "CARD-014C-SYNTHETIC",
       parseStatus: "complete",
-      parserRuleIds: ["exact:on-play:trash-2-from-hand:draw-1:self"],
+      parserRuleIds: ["exact:on-play:trash-n-from-hand:draw-m:self"],
       playable: true,
       status: "supported",
     });
@@ -373,7 +373,7 @@ describe("support evaluator", () => {
       expect.arrayContaining([
         expect.objectContaining({
           capabilityId: "trashFromHand:segment0:self:self:count-exact",
-          parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
+          parserRuleId: "exact:on-play:trash-n-from-hand:draw-m:self",
         }),
       ]),
     );
@@ -469,13 +469,13 @@ describe("support evaluator", () => {
 
   it.each([
     {
-      expectedCapabilityId: "optionalEffectBlock:onPlay:draw-1:self",
-      expectedRuleId: "exact:on-play:optional-effect:draw-1:self",
+      expectedCapabilityId: "optionalEffectBlock:onPlay:draw-n:self",
+      expectedRuleId: "exact:on-play:optional-effect:draw-n:self",
       sourceText: "[On Play] You may draw 1 card.",
     },
     {
       expectedCapabilityId: "condition:yourTurn",
-      expectedRuleId: "exact:condition:your-turn",
+      expectedRuleId: "exact:condition:your-turn:draw-n",
       sourceText: "[On Play] During your turn, draw 1 card.",
     },
     {

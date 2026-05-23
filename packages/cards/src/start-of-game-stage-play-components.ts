@@ -104,7 +104,12 @@ export function parseTypedStageFilter(
 export function parseSelfDeckSourceSuffix(
   sourceText: string,
 ): SelfDeckSourceParse | undefined {
-  return sourceText === " from your deck" || sourceText === " from your deck."
+  const match = /^ from your ([a-z]+)\.?$/i.exec(sourceText.trimEnd());
+  if (match === null) {
+    return undefined;
+  }
+
+  return match[1]?.toLowerCase() === "deck"
     ? { bodyText: "", sourceZone: "deck" }
     : undefined;
 }
