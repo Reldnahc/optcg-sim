@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Add engine-only regression coverage that locks in SPEC-010 composable runtime
   behavior and prevents future reintroduction of exact whole-definition,

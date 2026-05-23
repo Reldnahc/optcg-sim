@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Align engine-core runtime support with SPEC-010 by removing exact
   whole-definition and wrapper-body support assumptions from generated

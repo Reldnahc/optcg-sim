@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Replace exact wrapper-body queued support checks with reusable entry-point
   adapters composed with shared effect body and sequence support predicates.

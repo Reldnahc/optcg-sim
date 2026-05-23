@@ -8,7 +8,7 @@ type: implementation
 area: engine
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Remove engine-core assumptions that an implemented-DSL card definition must
   contain exactly one effect block before an entry point can queue, expose, or
