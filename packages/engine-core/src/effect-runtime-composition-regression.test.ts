@@ -38,6 +38,40 @@ const repoRoot = path.resolve(
   "../../..",
 );
 
+const fullDefinitionSizeAuthorizationPattern =
+  /\b(?:lookup\.)?definition\.effects\.length\s*(?:[!=]==?\s*1|[<>]=?\s*[12])/;
+
+test("source-shape pattern targets top-level full-definition-size authorization only", () => {
+  const rejected = [
+    "if (definition.effects.length === 1) return true;",
+    "if (definition.effects.length !== 1) return false;",
+    "if (lookup.definition.effects.length > 1) return false;",
+    "if (lookup.definition.effects.length < 2) return false;",
+    "if (definition.effects.length >= 2) return false;",
+  ];
+  for (const source of rejected) {
+    assert.equal(
+      fullDefinitionSizeAuthorizationPattern.test(source),
+      true,
+      `must catch full-definition-size authorization gate: ${source}`,
+    );
+  }
+
+  const allowed = [
+    "if (definition.effects.length === 0) return false;",
+    "return definition.effects.length > 0;",
+    "effectBlock.effect.effects.length === 0",
+    "for (let index = 0; index < effect.effects.length; index += 1)",
+  ];
+  for (const source of allowed) {
+    assert.equal(
+      fullDefinitionSizeAuthorizationPattern.test(source),
+      false,
+      `must allow non-authorization arity check: ${source}`,
+    );
+  }
+});
+
 const reusableSequenceBody: EffectDefinition["effects"][number]["effect"] = {
   type: "sequence",
   effects: [
@@ -686,7 +720,7 @@ test("runtime production source keeps anti-shape/card-specific authorization bra
     /equivalent card[- ]to[- ]mechanic[- ]map/i,
     /external card list/i,
     /printed text/i,
-    /effects\.length\s*===\s*1/,
+    fullDefinitionSizeAuthorizationPattern,
     /OP\d{2}-\d{3}/,
   ];
   for (const relative of sourceFiles) {
