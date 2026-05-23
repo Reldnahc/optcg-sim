@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Coordinate specification and workflow authority updates that make generated
   card support explicitly modular across entry points, parser primitives,

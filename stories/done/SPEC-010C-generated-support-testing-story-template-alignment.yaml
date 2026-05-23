@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: verification
 priority: high
-status: approved
+status: done
 summary: >
   Align testing, code-standard, workflow, and CARD story preflight wording with
   modular generated-support evidence so future stories cannot pass review with

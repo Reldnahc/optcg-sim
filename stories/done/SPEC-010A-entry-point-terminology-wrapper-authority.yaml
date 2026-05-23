@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: docs
 priority: high
-status: approved
+status: done
 summary: >
   Clarify effect-system terminology so wrappers, timing windows, activation
   markers, source-presence policy, and effect bodies remain separate concepts in

@@ -8,7 +8,7 @@ type: specification
 area: docs
 primary_concern: rules
 priority: high
-status: approved
+status: done
 summary: >
   Tighten generated-support policy so parser certification and runtime
   capability evidence must expose reusable primitive boundaries instead of
