@@ -158,22 +158,38 @@ const isSupportedBattleRuntimeEffect = (
   isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
   isSupportedNoChoiceOnKODrawEffect(effect);
 
-const hasOnlySupportedBattleRuntimeEffects = (
+const isBattleNeutralTrigger = (
+  trigger: EffectDefinition["effects"][number]["trigger"],
+): boolean =>
+  trigger.type === "onPlay" ||
+  trigger.type === "main" ||
+  trigger.type === "trigger" ||
+  trigger.type === "activateMain" ||
+  trigger.type === "startOfGame";
+
+const supportsBattleRuntimeMetadataSanitization = (
   definition: EffectDefinition | undefined,
 ): definition is EffectDefinition =>
   definition !== undefined &&
   definition.effects.length > 0 &&
-  definition.effects.every(isSupportedBattleRuntimeEffect);
+  definition.effects.some(isSupportedBattleRuntimeEffect) &&
+  definition.effects.every(
+    (effect) =>
+      isSupportedBattleRuntimeEffect(effect) ||
+      isBattleNeutralTrigger(effect.trigger),
+  );
 
 const hasSupportedBattleRuntimeDefinition = (
   manifest: MatchCardManifest,
   card: ResolvedCard | undefined,
 ): card is ResolvedCard => {
-  if (card === undefined) {
+  if (card === undefined || !Object.hasOwn(card, "support")) {
     return false;
   }
   const lookup = resolveImplementedDslEffectDefinition(card, manifest);
-  return lookup.ok && hasOnlySupportedBattleRuntimeEffects(lookup.definition);
+  return (
+    lookup.ok && supportsBattleRuntimeMetadataSanitization(lookup.definition)
+  );
 };
 
 const hasSupportedBattleRuntimeDefinitionForText = (
@@ -231,7 +247,7 @@ export const withSupportedBattleRuntimeMetadataHidden = (
     Object.entries(state.cardManifest.effectDefinitions ?? {}).filter(
       ([, definition]) =>
         !supportedCardIds.has(definition.cardId) ||
-        !hasOnlySupportedBattleRuntimeEffects(definition),
+        !supportsBattleRuntimeMetadataSanitization(definition),
     ),
   );
   const { effectDefinitions, ...manifestWithoutDefinitions } =

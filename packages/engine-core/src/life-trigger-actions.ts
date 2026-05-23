@@ -94,20 +94,23 @@ const hasUnsupportedShape = (effect: EffectBlock): boolean =>
   effect.optional !== undefined ||
   effect.oncePerTurn !== undefined;
 
-const isExactSupportedTriggerDefinition = (
+const selectSupportedTriggerEffect = (
   effects: readonly EffectBlock[],
-): boolean => {
-  if (effects.length !== 1) {
-    return false;
+): EffectBlock | undefined => {
+  const triggerEffects = effects.filter(
+    (effect) => effect.trigger.type === "trigger",
+  );
+  if (triggerEffects.length !== 1) {
+    return undefined;
   }
-  const effect = effects[0];
+  const effect = triggerEffects[0];
   if (effect === undefined) {
-    return false;
+    return undefined;
   }
   if (hasUnsupportedShape(effect)) {
-    return false;
+    return undefined;
   }
-  return isSupportedTriggerEffect(effect);
+  return isSupportedTriggerEffect(effect) ? effect : undefined;
 };
 
 const resolveSupportedLifeTriggerEffect = (
@@ -122,13 +125,10 @@ const resolveSupportedLifeTriggerEffect = (
     resolved,
     state.cardManifest,
   );
-  if (
-    !lookup.ok ||
-    !isExactSupportedTriggerDefinition(lookup.definition.effects)
-  ) {
+  if (!lookup.ok) {
     return undefined;
   }
-  const effect = lookup.definition.effects[0];
+  const effect = selectSupportedTriggerEffect(lookup.definition.effects);
   if (effect === undefined) {
     return undefined;
   }

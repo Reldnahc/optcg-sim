@@ -107,19 +107,21 @@ export const getSupportedPlayMetadata = (
     if (!lookup.ok) {
       return null;
     }
-    if (lookup.definition.effects.length !== 1) {
-      return null;
-    }
-    const effect = lookup.definition.effects[0];
-    if (effect === undefined) {
-      return null;
-    }
     if (resolved.category === "character") {
-      if (
-        !isSupportedNoChoiceOnPlayDrawEffect(effect) &&
-        !isSupportedOptionalNoChoiceOnPlayDrawEffect(effect) &&
-        !isSupportedOnPlayDrawUpToEffect(effect)
-      ) {
+      const onPlayEffects = lookup.definition.effects.filter(
+        (effect) => effect.trigger.type === "onPlay",
+      );
+      const matching = onPlayEffects.filter(
+        (effect) =>
+          isSupportedNoChoiceOnPlayDrawEffect(effect) ||
+          isSupportedOptionalNoChoiceOnPlayDrawEffect(effect) ||
+          isSupportedOnPlayDrawUpToEffect(effect),
+      );
+      if (matching.length !== onPlayEffects.length || matching.length !== 1) {
+        return null;
+      }
+      const effect = matching[0];
+      if (effect === undefined || effect.trigger.type !== "onPlay") {
         return null;
       }
       return {
@@ -128,12 +130,21 @@ export const getSupportedPlayMetadata = (
       };
     }
     if (resolved.category === "event") {
-      if (
-        !isSupportedNoChoiceMainEventDrawEffect(effect) &&
-        !isSupportedOptionalNoChoiceMainEventDrawEffect(effect) &&
-        !isSupportedMainEventDrawUpToEffect(effect) &&
-        !isSupportedMainEventTargetKoEffectAllowingOncePerTurn(effect)
-      ) {
+      const mainEffects = lookup.definition.effects.filter(
+        (effect) => effect.trigger.type === "main",
+      );
+      const matching = mainEffects.filter(
+        (effect) =>
+          isSupportedNoChoiceMainEventDrawEffect(effect) ||
+          isSupportedOptionalNoChoiceMainEventDrawEffect(effect) ||
+          isSupportedMainEventDrawUpToEffect(effect) ||
+          isSupportedMainEventTargetKoEffectAllowingOncePerTurn(effect),
+      );
+      if (matching.length !== mainEffects.length || matching.length !== 1) {
+        return null;
+      }
+      const effect = matching[0];
+      if (effect === undefined || effect.trigger.type !== "main") {
         return null;
       }
       return {

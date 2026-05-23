@@ -207,7 +207,7 @@ export const createAttackTriggerQueueing = (
       const matching = whenAttackingEffects.filter(
         isSupportedWhenAttackingCompatibleQueuedEffect,
       );
-      if (matching.length === 0) {
+      if (matching.length !== whenAttackingEffects.length) {
         return toEngineResult(
           state,
           [],
@@ -229,18 +229,6 @@ export const createAttackTriggerQueueing = (
           ],
         );
       }
-      if (lookup.definition.effects.length !== 1) {
-        return toEngineResult(
-          state,
-          [],
-          [
-            whenAttackingTriggerQueueingError(
-              "unsupported-when-attacking-definition",
-            ),
-          ],
-        );
-      }
-
       for (const effectBlock of matching) {
         const queueId =
           `queue-entry:${String(event.id)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
@@ -464,7 +452,7 @@ export const createAttackTriggerQueueing = (
             isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
             isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect(effect),
         );
-        if (matching.length === 0) {
+        if (matching.length !== onOpponentAttackEffects.length) {
           return toEngineResult(
             state,
             [],
@@ -486,18 +474,6 @@ export const createAttackTriggerQueueing = (
             ],
           );
         }
-        if (lookup.definition.effects.length !== 1) {
-          return toEngineResult(
-            state,
-            [],
-            [
-              onOpponentAttackTriggerQueueingError(
-                "unsupported-on-opponent-attack-definition",
-              ),
-            ],
-          );
-        }
-
         for (const effectBlock of matching) {
           const queueId =
             `queue-entry:${String(event.id)}:onOpponentAttack:${String(effectBlock.id)}` as EffectQueueEntry["id"];

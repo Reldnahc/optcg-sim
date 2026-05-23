@@ -12,12 +12,26 @@ const isAttackTimingTrigger = (
 ): boolean =>
   trigger.type === "whenAttacking" || trigger.type === "onOpponentAttack";
 
-const hasOnlyAttackTimingEffects = (
+const isCombatNeutralTrigger = (
+  trigger: EffectDefinition["effects"][number]["trigger"],
+): boolean =>
+  trigger.type === "onPlay" ||
+  trigger.type === "main" ||
+  trigger.type === "trigger" ||
+  trigger.type === "activateMain" ||
+  trigger.type === "startOfGame";
+
+const supportsAttackTimingMetadataSanitization = (
   definition: EffectDefinition | undefined,
 ): definition is EffectDefinition =>
   definition !== undefined &&
   definition.effects.length > 0 &&
-  definition.effects.every((effect) => isAttackTimingTrigger(effect.trigger));
+  definition.effects.some((effect) => isAttackTimingTrigger(effect.trigger)) &&
+  definition.effects.every(
+    (effect) =>
+      isAttackTimingTrigger(effect.trigger) ||
+      isCombatNeutralTrigger(effect.trigger),
+  );
 
 const definitionSupportsAttackTimingSanitization = (
   manifest: MatchCardManifest,
@@ -27,7 +41,7 @@ const definitionSupportsAttackTimingSanitization = (
   if (effectDefinitionId === undefined) {
     return false;
   }
-  return hasOnlyAttackTimingEffects(
+  return supportsAttackTimingMetadataSanitization(
     manifest.effectDefinitions?.[effectDefinitionId],
   );
 };
@@ -66,7 +80,7 @@ const sanitizedManifestForAttackTiming = (
     Object.entries(manifest.effectDefinitions ?? {}).filter(
       ([, definition]) =>
         !supportedCardIds.has(definition.cardId) ||
-        !hasOnlyAttackTimingEffects(definition),
+        !supportsAttackTimingMetadataSanitization(definition),
     ),
   );
 

@@ -148,6 +148,151 @@ test("conditioned When Attacking draw shape queues without fail-closed rejection
   assert.equal(result.state.effectQueue.length, 1);
 });
 
+test("queues supported When Attacking effect from a multi-effect definition with unrelated supported effects", () => {
+  const { state, definition } = attackQueueingState();
+  const whenAttackingEffect = must(
+    definition.effects[0],
+    "whenAttacking effect",
+  );
+  state.cardManifest.effectDefinitions = {
+    "def-when-attacking": {
+      ...definition,
+      effects: [
+        whenAttackingEffect,
+        {
+          ...whenAttackingEffect,
+          id: `${String(whenAttackingEffect.id)}:on-play` as typeof whenAttackingEffect.id,
+          trigger: { type: "onPlay" },
+        },
+      ],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  assert.equal(
+    result.state.effectQueue[0]?.effectBlockId,
+    whenAttackingEffect.id,
+  );
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectQueued"],
+  );
+});
+
+test("queues supported On Your Opponent's Attack effect from a multi-effect definition with unrelated supported effects", () => {
+  const { state, definition } = opponentAttackQueueingState();
+  const onOpponentAttackEffect = must(
+    definition.effects[0],
+    "onOpponentAttack effect",
+  );
+  state.cardManifest.effectDefinitions = {
+    "def-on-opponent-attack": {
+      ...definition,
+      effects: [
+        onOpponentAttackEffect,
+        {
+          ...onOpponentAttackEffect,
+          id: `${String(onOpponentAttackEffect.id)}:on-play` as typeof onOpponentAttackEffect.id,
+          trigger: { type: "onPlay" },
+        },
+      ],
+    },
+  };
+
+  const result = processDefenderOpponentAttackTiming(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  const queuedEvent = result.events.find(
+    (event) => event.type === "effectQueued",
+  );
+  const payload = queuedEvent?.payload as
+    | { effectBlockId?: unknown }
+    | undefined;
+  assert.equal(payload?.effectBlockId, onOpponentAttackEffect.id);
+});
+
+test("unsupported same-entrypoint When Attacking effect fails closed beside a supported When Attacking effect", () => {
+  const { state, definition } = attackQueueingState();
+  const whenAttackingEffect = must(
+    definition.effects[0],
+    "whenAttacking effect",
+  );
+  state.cardManifest.effectDefinitions = {
+    "def-when-attacking": {
+      ...definition,
+      effects: [
+        whenAttackingEffect,
+        {
+          ...whenAttackingEffect,
+          id: `${String(whenAttackingEffect.id)}:unsupported` as typeof whenAttackingEffect.id,
+          cost: { type: "restDon", count: 1 },
+        },
+        {
+          ...whenAttackingEffect,
+          id: `${String(whenAttackingEffect.id)}:on-play` as typeof whenAttackingEffect.id,
+          trigger: { type: "onPlay" },
+        },
+      ],
+    },
+  };
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "when-attacking-trigger-queueing",
+      details: { reason: "unsupported-when-attacking-definition" },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+});
+
+test("unsupported same-entrypoint On Your Opponent's Attack effect fails closed beside a supported On Your Opponent's Attack effect", () => {
+  const { state, definition } = opponentAttackQueueingState();
+  const onOpponentAttackEffect = must(
+    definition.effects[0],
+    "onOpponentAttack effect",
+  );
+  state.cardManifest.effectDefinitions = {
+    "def-on-opponent-attack": {
+      ...definition,
+      effects: [
+        onOpponentAttackEffect,
+        {
+          ...onOpponentAttackEffect,
+          id: `${String(onOpponentAttackEffect.id)}:unsupported` as typeof onOpponentAttackEffect.id,
+          cost: { type: "restDon", count: 1 },
+        },
+        {
+          ...onOpponentAttackEffect,
+          id: `${String(onOpponentAttackEffect.id)}:on-play` as typeof onOpponentAttackEffect.id,
+          trigger: { type: "onPlay" },
+        },
+      ],
+    },
+  };
+  const before = structuredClone(state);
+
+  const result = processDefenderOpponentAttackTiming(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "on-opponent-attack-trigger-queueing",
+      details: { reason: "unsupported-on-opponent-attack-definition" },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+});
+
 test("conditioned When Attacking draw-then-trash sequence reaches decision-pausing path", () => {
   const { state, definition } = attackQueueingState();
   const effect = must(definition.effects[0], "whenAttacking effect");

@@ -179,16 +179,10 @@ export const createKOTriggerQueueing = (
       if (onKOEffects.length === 0) {
         continue;
       }
-      if (onKOEffects.length !== 1) {
-        return {
-          ok: false,
-          error: onKOTriggerCandidateDetectionError("multiple-on-ko-effects"),
-        };
-      }
       const matching = onKOEffects.filter((effect) =>
         isSupportedOnKOCompatibleQueuedEffect(effect),
       );
-      if (matching.length === 0 || lookup.definition.effects.length !== 1) {
+      if (matching.length !== onKOEffects.length) {
         return {
           ok: false,
           error: onKOTriggerCandidateDetectionError(

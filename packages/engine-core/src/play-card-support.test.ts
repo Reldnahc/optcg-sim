@@ -4,9 +4,19 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
-import type { CardId, CardInstance, MatchCardManifest } from "@optcg/types";
+import type {
+  CardId,
+  CardInstance,
+  EffectDefinition,
+  MatchCardManifest,
+} from "@optcg/types";
 
-import { must, p1, resolvedCard } from "./action-test-fixtures.js";
+import {
+  must,
+  p1,
+  resolvedCard,
+  reviewedOnPlayDrawDefinition,
+} from "./action-test-fixtures.js";
 import { hasUnsupportedSupportGateText } from "./battle-support.js";
 import {
   canResolveDestinationConflict,
@@ -74,6 +84,92 @@ test("getSupportedPlayMetadata accepts supported vanilla Character, Stage, and e
     category: "event",
     printedCost: 1,
   });
+});
+
+test("getSupportedPlayMetadata accepts implemented-DSL Character with multiple supported effect blocks", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "implemented character");
+  const implemented = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+    cost: 3,
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-character-multi-effect",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    character.cardId,
+    implemented.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  state.cardManifest.cards[character.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-character-multi-effect": {
+      ...definition,
+      effects: [
+        onPlayEffect,
+        {
+          ...onPlayEffect,
+          id: `${String(onPlayEffect.id)}:when-attacking` as EffectDefinition["effects"][number]["id"],
+          trigger: { type: "whenAttacking" },
+        },
+      ],
+    },
+  };
+
+  assert.deepEqual(getSupportedPlayMetadata(state, character), {
+    category: "character",
+    printedCost: 3,
+  });
+});
+
+test("getSupportedPlayMetadata rejects implemented-DSL Character with an unsupported On Play block", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "implemented character");
+  const implemented = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+    cost: 3,
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-character-unsupported-on-play",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    character.cardId,
+    implemented.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  state.cardManifest.cards[character.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-character-unsupported-on-play": {
+      ...definition,
+      effects: [
+        onPlayEffect,
+        {
+          ...onPlayEffect,
+          id: `${String(onPlayEffect.id)}:unsupported` as EffectDefinition["effects"][number]["id"],
+          cost: { type: "restDon", count: 1 },
+        },
+        {
+          ...onPlayEffect,
+          id: `${String(onPlayEffect.id)}:when-attacking` as EffectDefinition["effects"][number]["id"],
+          trigger: { type: "whenAttacking" },
+        },
+      ],
+    },
+  };
+
+  assert.equal(getSupportedPlayMetadata(state, character), null);
 });
 
 test("getSupportedPlayMetadata rejects unsupported play metadata", () => {

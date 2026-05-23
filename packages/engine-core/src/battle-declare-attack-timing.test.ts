@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { PlayerId } from "@optcg/types";
+import type { EffectDefinition, PlayerId } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "./actions.js";
 import {
@@ -18,6 +18,7 @@ import {
 import {
   setupAttackState,
   withMultipleWhenAttackingDrawEffects,
+  withOnKODrawEffect,
   withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
 } from "./battle-actions-test-fixtures.js";
@@ -238,6 +239,85 @@ test("ENG-023A: attacker When Attacking no-choice effect resolves after attackDe
   for (const event of result.events) {
     assert.equal(event.createdAtStateSeq, result.state.seq);
   }
+});
+
+test("ENG-060A: attacker When Attacking metadata remains usable with an unrelated On Play block", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = p1State.leader;
+  const target = p2State.leader;
+  const definition = withWhenAttackingDrawEffect(state, attacker);
+  const effect = must(definition.effects[0], "When Attacking effect");
+  definition.effects = [
+    effect,
+    {
+      ...effect,
+      id: `${String(effect.id)}:on-play` as EffectDefinition["effects"][number]["id"],
+      trigger: { type: "onPlay" },
+    },
+  ];
+  ensureDeckHasAtLeast(state, p1, 2);
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.events.some((event) => event.type === "effectQueued"),
+    true,
+  );
+});
+
+test("ENG-060A: On K.O. battle metadata remains usable with an unrelated On Play block", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = p1State.leader;
+  const target = must(p2State.characters[0], "defender character");
+  const definition = withOnKODrawEffect(state, target);
+  const effect = must(definition.effects[0], "On K.O. effect");
+  definition.effects = [
+    effect,
+    {
+      ...effect,
+      id: `${String(effect.id)}:on-play` as EffectDefinition["effects"][number]["id"],
+      trigger: { type: "onPlay" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+    },
+  ];
+  ensureDeckHasAtLeast(state, p2, 2);
+
+  const result = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.events.some((event) => event.type === "effectQueued"),
+    true,
+  );
 });
 
 test("ENG-023A: attacker When Attacking resolves before defender block decision", () => {

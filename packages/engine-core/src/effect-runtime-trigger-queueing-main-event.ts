@@ -157,7 +157,7 @@ export const createMainEventTriggerQueueing = (
           isSupportedMainEventDrawUpToEffect(effect) ||
           isSupportedMainEventTargetKoEffectAllowingOncePerTurn(effect),
       );
-      if (matching.length === 0) {
+      if (matching.length !== mainEffects.length) {
         return toEngineResult(
           state,
           [],
@@ -171,14 +171,6 @@ export const createMainEventTriggerQueueing = (
           [mainEventTriggerQueueingError("multiple-main-event-effects")],
         );
       }
-      if (lookup.definition.effects.length !== 1) {
-        return toEngineResult(
-          state,
-          [],
-          [mainEventTriggerQueueingError("unsupported-main-event-definition")],
-        );
-      }
-
       for (const effectBlock of matching) {
         const orderingGroup =
           source.zone.playerId === state.turn.turnPlayerId

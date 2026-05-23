@@ -731,13 +731,15 @@ const getSupportedCounterEventPower = (
   }
   const definition =
     state.cardManifest.effectDefinitions?.[metadata.support.effectDefinitionId];
-  const effect = definition?.effects[0];
+  const counterEffects =
+    definition?.effects.filter((effect) => effect.trigger.type === "counter") ??
+    [];
+  const effect = counterEffects[0];
   if (
     definition?.implementationStatus !== "implemented-dsl" ||
-    definition.effects.length !== 1 ||
+    counterEffects.length !== 1 ||
     effect === undefined ||
     effect.category !== "auto" ||
-    effect.trigger.type !== "counter" ||
     effect.optional === true ||
     effect.oncePerTurn === true ||
     effect.condition !== undefined ||

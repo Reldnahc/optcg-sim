@@ -39,6 +39,183 @@ test("queues one supported no-choice On Play draw effect from an accepted cardPl
   assert.equal(result.state.eventJournal.at(-1)?.type, "effectQueued");
 });
 
+test("queues supported On Play effect from a multi-effect definition with unrelated supported effects", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...definition,
+      effects: [
+        onPlayEffect,
+        {
+          ...onPlayEffect,
+          id: `${String(onPlayEffect.id)}:when-attacking` as typeof onPlayEffect.id,
+          trigger: { type: "whenAttacking" },
+        },
+      ],
+    },
+    "def-on-play-plus-when-attacking",
+  );
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  assert.equal(result.state.effectQueue[0]?.effectBlockId, onPlayEffect.id);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectQueued"],
+  );
+});
+
+test("duplicate matching On Play effects still fail closed without mutation", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...definition,
+      effects: [
+        onPlayEffect,
+        {
+          ...onPlayEffect,
+          id: `${String(onPlayEffect.id)}:duplicate` as typeof onPlayEffect.id,
+        },
+        {
+          ...onPlayEffect,
+          id: `${String(onPlayEffect.id)}:when-attacking` as typeof onPlayEffect.id,
+          trigger: { type: "whenAttacking" },
+        },
+      ],
+    },
+    "def-duplicate-on-play",
+  );
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "on-play-trigger-queueing",
+      details: { reason: "multiple-on-play-effects" },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+});
+
+test("unsupported relevant On Play effect still fails closed with unrelated supported effects", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...definition,
+      effects: [
+        {
+          ...onPlayEffect,
+          cost: { type: "restDon", count: 1 },
+        },
+        {
+          ...onPlayEffect,
+          id: `${String(onPlayEffect.id)}:when-attacking` as typeof onPlayEffect.id,
+          trigger: { type: "whenAttacking" },
+        },
+      ],
+    },
+    "def-unsupported-on-play-plus-when-attacking",
+  );
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "on-play-trigger-queueing",
+      details: { reason: "unsupported-on-play-definition" },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+});
+
+test("unsupported same-entrypoint On Play effect fails closed beside a supported On Play effect", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...definition,
+      effects: [
+        onPlayEffect,
+        {
+          ...onPlayEffect,
+          id: `${String(onPlayEffect.id)}:unsupported` as typeof onPlayEffect.id,
+          cost: { type: "restDon", count: 1 },
+        },
+        {
+          ...onPlayEffect,
+          id: `${String(onPlayEffect.id)}:when-attacking` as typeof onPlayEffect.id,
+          trigger: { type: "whenAttacking" },
+        },
+      ],
+    },
+    "def-supported-and-unsupported-on-play",
+  );
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "on-play-trigger-queueing",
+      details: { reason: "unsupported-on-play-definition" },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+});
+
 test("effectQueued payload and queue metadata are deterministic across repeated runs", () => {
   const run = () => {
     const { state, played } = queueingState();

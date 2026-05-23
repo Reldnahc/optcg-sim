@@ -156,7 +156,7 @@ export const createOnPlayTriggerQueueing = (
       const matching = onPlayEffects.filter(
         isSupportedOnPlayCompatibleQueuedEffect,
       );
-      if (matching.length === 0) {
+      if (matching.length !== onPlayEffects.length) {
         return toEngineResult(
           state,
           [],
@@ -170,14 +170,6 @@ export const createOnPlayTriggerQueueing = (
           [onPlayTriggerQueueingError("multiple-on-play-effects")],
         );
       }
-      if (lookup.definition.effects.length !== 1) {
-        return toEngineResult(
-          state,
-          [],
-          [onPlayTriggerQueueingError("unsupported-on-play-definition")],
-        );
-      }
-
       for (const effectBlock of matching) {
         const orderingGroup =
           source.zone.playerId === state.turn.turnPlayerId
