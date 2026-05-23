@@ -222,6 +222,10 @@ test("getSupportedPlayMetadata accepts implemented-DSL Character On Play reusabl
     category: "character",
     printedCost: 3,
   });
+  assert.deepEqual(
+    getPlayableHandCards(state, p1).map((card) => card.instanceId),
+    [character.instanceId],
+  );
 });
 
 test("getSupportedPlayMetadata accepts implemented-DSL Event Main reusable sequence bodies", () => {
@@ -246,7 +250,7 @@ test("getSupportedPlayMetadata accepts implemented-DSL Event Main reusable seque
             .effects[0],
           "base effect",
         ),
-        id: "OP01-099:event-main-sequence-1" as EffectDefinition["effects"][number]["id"],
+        id: "synthetic:event-main-sequence-1" as EffectDefinition["effects"][number]["id"],
         trigger: { type: "main" as const },
         sourcePresencePolicy: "resolveFromDestinationZone",
         effect: {
@@ -284,6 +288,10 @@ test("getSupportedPlayMetadata accepts implemented-DSL Event Main reusable seque
     category: "event",
     printedCost: 2,
   });
+  assert.deepEqual(
+    getPlayableHandCards(state, p1).map((card) => card.instanceId),
+    [event.instanceId],
+  );
 });
 
 test("getSupportedPlayMetadata rejects unsupported reusable sequence legal-action shapes", () => {
@@ -425,7 +433,7 @@ test("getSupportedPlayMetadata rejects unsupported reusable sequence legal-actio
           },
           {
             ...baseEffect,
-            id: "OP01-015:auto-on-play-duplicate" as EffectDefinition["effects"][number]["id"],
+            id: "synthetic:auto-on-play-duplicate" as EffectDefinition["effects"][number]["id"],
             effect: { type: "draw", count: 1, player: "self" },
           },
         ],
