@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-060B -->
 <!-- agent-packet:story-path stories/approved/ENG-060B-reusable-queued-entry-point-body-adapters.yaml -->
-<!-- agent-packet:story-sha256 e409f64f9847aec2866790365658bea3bb1e59ba79ad7426f2eb93a8f68905b3 -->
+<!-- agent-packet:story-sha256 e6e80552268811a808458ca7f6e117b9c7f31e87866c7ced183ae726bd6d06d8 -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -492,12 +492,13 @@ Own engine-core support-shape architecture for queued implemented-DSL entry poin
 
 - introduce or refine shared engine helpers that classify supported queued effect blocks as entry-point adapter evidence plus reusable body or composition evidence
 - make entry-point adapters own wrapper semantics only: trigger matching, queue entry construction, legal-action exposure where applicable, source-presence policy, once-per-turn marker routing, and activation commitment semantics
-- make body support predicates own body semantics only: draw, drawUpTo, trashFromHand, target choice, continuous effects, search where already supported, and other already-supported primitives
+- make body support predicates own body semantics only for already executable queued bodies: draw, drawUpTo, trashFromHand, and reviewed target or saved-reference primitives already covered by shared sequence support; do not add or claim continuous/search queued runtime support in this story
 - make composition support predicates own sequence semantics only: supported connectors, segment order, saved references, decision continuation, and visibility requirements
 - route On Play queued support through the shared body/composition predicates instead of only exact draw or drawUpTo wrapper-body checks
 - route When Attacking queued support through shared body/composition predicates and remove the hardcoded exact draw-then-trash wrapper-body branch when equivalent generic sequence support exists
 - route On K.O. queued support through shared body/composition predicates where source-presence policy is supported
 - route Main Event queued support through shared body/composition predicates where destination-zone source policy is supported
+- route implemented-DSL play-card metadata for Character On Play and Event Main through the same reusable entry-point adapter plus body/composition predicates so legal-action exposure stays aligned with queue support
 - leave Activate Main on the existing reusable pattern or refactor it only enough to share the same helper without changing behavior
 - treat Life Trigger and Counter as scoped entry-point adapters: remove exact wrapper-body authority where reusable body support exists, but keep unsupported or ambiguous decision/reveal/payment behavior fail-closed
 - preserve runtime fail-closed behavior for unsupported body primitives, unsupported conditions, unsupported costs, unsupported sequence connectors, unsupported saved-result lifetimes, unsupported decision continuations, and unsupported visibility requirements
@@ -530,11 +531,13 @@ Own engine-core support-shape architecture for queued implemented-DSL entry poin
 - packages/engine-core/src/effect-runtime-activation-main.ts
 - packages/engine-core/src/life-trigger-actions.ts
 - packages/engine-core/src/battle-counter-actions.ts
+- packages/engine-core/src/play-card-support.ts
 - packages/engine-core/src/**/*sequence*.test.ts
 - packages/engine-core/src/**/*trigger*queueing*.test.ts
 - packages/engine-core/src/**/*queue-processing*.test.ts
 - packages/engine-core/src/**/*life-trigger*.test.ts
 - packages/engine-core/src/**/*counter*.test.ts
+- packages/engine-core/src/**/*play-card*.test.ts
 
 ## Constraints
 
@@ -576,6 +579,8 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - When Attacking sequence queue/resolution test proving the generic sequence path replaces the exact draw-then-trash branch
 - On K.O. reusable queued body or sequence test that preserves supported source-presence behavior
 - Main Event reusable queued body or sequence test that preserves destination-zone source-presence behavior
+- play-card metadata tests proving Character On Play and Event Main reusable sequence bodies become playable through generic adapter/body/composition support rather than exact wrapper-body helpers
+- play-card metadata negative tests proving unsupported sequence shape, unsupported source-presence policy, unsupported costs, and duplicate same-entrypoint effects fail closed without exposing legal play
 - negative anti-shape regression proving a new exact full-line or wrapper-body-only helper is insufficient when primitive body or composition evidence is missing
 - negative tests for unsupported sequence connectors, unsupported visibility/decision continuation, unsupported source-presence policy, and unsupported costs
 - regression tests proving existing Activate Main sequence behavior still passes
@@ -597,6 +602,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - queued entry-point support code is organized so wrapper or entry-point checks are visibly separate from reusable body and composition checks
 - no exact draw-then-trash wrapper-body branch remains as the only authority for a sequence that the shared sequence support can classify
 - On Play, When Attacking, On K.O., and Main Event adapters can each authorize a supported reusable sequence body when source-presence and timing semantics are valid for that entry point
+- play-card metadata and playable-hand exposure can authorize supported Character On Play and Event Main reusable sequence bodies only through the same adapter/body/composition evidence and fail closed for unsupported sequence, cost, condition, source-policy, or duplicate same-entrypoint shapes
 - supported body reuse under a new entry point requires that entry point adapter plus body or composition support; body support under one entry point alone does not authorize another entry point
 - unsupported connector, decision, visibility, cost, target, condition, or source-policy shapes fail closed without partial mutation
 - existing Activate Main behavior remains compatible and continues to use reusable sequence support

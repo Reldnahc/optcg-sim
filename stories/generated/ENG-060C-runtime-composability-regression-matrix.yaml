@@ -52,7 +52,7 @@ scope:
   - add tests proving body support under one entry point does not automatically authorize another entry point without adapter evidence
   - add tests proving full-definition size, full-line text, real-card ID branches, manual per-card allowlists, external card lists, and equivalent card-to-mechanic maps are not required for runtime support
   - add negative tests proving unsupported body, composition, source-presence, visibility, decision, and same-entry-point ambiguity cases remain fail-closed
-  - add or update production-code search assertions that detect real-card ID, exact printed text, or sample-shaped full-card branches in engine runtime support paths
+  - add or update production-code search assertions that detect real-card ID, exact printed text, exact full-line branches, sample-shaped full-card branches, manual per-card allowlists, external card lists, equivalent card-to-mechanic maps, and full-definition-size authorization branches in engine runtime support paths
   - document in test names or comments which SPEC-010 primitive-boundary obligation each regression protects
 non_scope:
   - production runtime behavior changes beyond minimal testability hooks if reviewers require them
@@ -74,8 +74,10 @@ required_tests:
   - cross-entry-point reusable body matrix proving at least one no-choice body and one sequence body work under more than one supported entry-point adapter
   - negative adapter matrix proving a body with no adapter evidence for an entry point remains unsupported
   - negative composition matrix proving unsupported connectors, saved-reference lifetimes, visibility needs, decision continuations, costs, or source policies fail closed
-  - anti-regression assertion proving covered engine runtime source contains no real-card ID branch, exact printed text branch, manual per-card allowlist, external card list, or equivalent card-to-mechanic-map branch
-  - anti-regression assertion or targeted tests proving support is not authorized solely by exact wrapper-body/full-line/sample-shaped helpers
+  - production-code anti-regression assertion proving covered engine runtime source contains no real-card ID branch, exact printed text branch, exact full-line branch, sample-shaped full-card branch, manual per-card allowlist, external card list, equivalent card-to-mechanic-map branch, or full-definition-size authorization branch
+  - targeted anti-regression tests proving support is not authorized solely by exact wrapper-body, full-line, or sample-shaped helpers without primitive adapter/body/composition evidence
+  - targeted negative body regression proving a supported wrapper with an unsupported body remains unsupported
+  - targeted same-entrypoint ambiguity/order regression proving duplicate or ambiguous same-entrypoint blocks fail closed rather than selecting a convenient supported block
   - run `corepack pnpm --filter @optcg/engine-core test`
   - run `corepack pnpm --filter @optcg/engine-core typecheck`
   - run `corepack pnpm run stories:validate`
