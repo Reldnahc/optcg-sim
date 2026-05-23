@@ -1,0 +1,110 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-025D
+epic_id: CARD-025
+title: Condition target and filter primitive migration
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Migrate current condition, target, filter, cardinality, and duration parser
+  support to reusable primitive evidence. Larger supported phrases must be
+  proven as compositions of smaller valid primitives rather than single
+  full-sentence or sample-value parser branches.
+story_boundary: >
+  Own only cards-layer condition, target, filter, cardinality, duration, and
+  diagnostic parser components for currently supported generated-support
+  implementations. Do not add new body effects, engine runtime behavior, shared
+  schema, real-card fixtures, manifests, source hashes, behavior hashes, or
+  overlays.
+allowed_touch_points:
+  - packages/cards/src/conditional-parser-components.ts
+  - packages/cards/src/conditional-parser-components.test.ts
+  - packages/cards/src/conditional-parser-id-helpers.ts
+  - packages/cards/src/conditional-generated-support-composer.ts
+  - packages/cards/src/conditional-generated-support-composer.test.ts
+  - packages/cards/src/conditional-generated-support.test.ts
+  - packages/cards/src/field-count-don-condition-evidence.ts
+  - packages/cards/src/sup-001e-don-field-count-condition-components.test.ts
+  - packages/cards/src/sup-001f-conditional-modify-power-evidence.ts
+  - packages/cards/src/sup-001f-conditional-opponent-power-modifier-components.test.ts
+  - packages/cards/src/optional-trash-cost-ko-components.ts
+  - packages/cards/src/optional-trash-cost-ko-components.test.ts
+  - packages/cards/src/optional-trash-cost-ko-evidence.ts
+  - packages/cards/src/top-n-search-components.ts
+  - packages/cards/src/top-n-search-components.test.ts
+  - packages/cards/src/top-n-search-evidence.ts
+  - packages/cards/src/protection-diagnostic-components.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/generated/CARD-025D-condition-target-filter-primitive-migration.yaml
+  - stories/approved/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/approved/CARD-025D-condition-target-filter-primitive-migration.yaml
+  - agent-packets/CARD-025D.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s012
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-025B
+scope:
+  - migrate current trash-count, hand-count, leader-color-count, DON-field-count, attached-DON, and turn-state condition support to primitive condition evidence where currently supported
+  - migrate condition comparators and numeric thresholds to parsed numeric primitives, not sample-specific branches
+  - migrate supported boolean condition connectors to explicit composition evidence
+  - migrate current target owner, zone, Character/Leader/Stage/card type, subtype, color, name exclusion, base-cost, cardinality, saved-target, and duration filters to primitive evidence where currently supported
+  - prove valid subsets of larger supported target/filter phrases work independently unless explicitly out of scope in the current implementation
+  - keep unsupported target/filter/duration wording fail-closed with narrow diagnostics
+non_scope:
+  - new condition families, new target zones, new filter families, or new durations not already supported by current generated-support behavior
+  - engine runtime or schema changes
+  - body effect migration owned by CARD-025E
+  - real-card fixture or manifest work
+card_source_integrity:
+  - not applicable because this story migrates parser/generated-support primitives using synthetic inputs and does not enable or change gameplay support for any real card
+  - new tests must not cite real card IDs or real fixtures as acceptance evidence
+engine_capability_preflight:
+  - no new runtime capability is introduced
+  - parsed primitive shapes decompose as condition evidence for supported trash-count, hand-count, leader-color-count, DON-field-count, attached-DON, and turn-state predicates; comparator and threshold evidence for supported numeric comparisons; target evidence for supported owner, zone, object-kind, and saved-target references; filter evidence for supported type, color, name exclusion, and base-cost filters; cardinality evidence for supported exact, up-to, and all target counts; and duration evidence for supported this-turn, this-battle, or continuous durations
+  - wrapper or entry-point, markers, costs, and source-presence policy evidence are delegated to CARD-025C and may only be consumed here as already-certified prerequisite evidence
+  - effect body/request evidence is delegated to CARD-025E and may only be consumed here as already-certified prerequisite evidence
+  - composition evidence is limited to condition connector composition and target/filter/cardinality/duration assembly for current supported shapes; broader line, sequence, conditional, and costed-body composition is delegated to CARD-025F
+  - decision/visibility needs are limited to current public target/filter visibility and search/filter visibility boundaries already represented by existing generated-support entries; hidden-information or chooser decision runtime behavior is not introduced here
+  - supported capability group includes existing condition, target/filter, cardinality, duration, public visibility, and saved-target runtime capability evidence already referenced by current generated-support entries
+  - missing capability group is none for current supported condition/target/filter rows
+acceptance_criteria:
+  - current supported conditions emit primitive condition, comparator, owner, zone, and threshold evidence
+  - current supported targets and filters emit primitive owner, zone, object-kind, type/color/name/base-cost, cardinality, saved-target, and duration evidence as applicable
+  - numeric condition thresholds and target filter values vary through parsed primitives, not sample-specific support branches
+  - generated-support tests fail closed when any required condition, target, filter, cardinality, or duration primitive evidence is absent
+  - anti-shape tests fail on exact full-condition or exact target-filter phrase authorization where reusable primitives should be used
+required_tests:
+  - story-review for CARD-025D before approval handoff
+  - parser primitive matrix tests for current supported condition families and numeric comparator variation
+  - parser primitive matrix tests for current supported target, filter, cardinality, saved-target, and duration families, including numeric variation for supported target/filter/cardinality values
+  - generated-support tests proving missing condition, target, filter, cardinality, or duration primitive evidence fails closed
+  - fail-closed tests for absent cardinality evidence and absent duration evidence on shapes that require those primitives
+  - anti-shape source scan or equivalent test proving no exact full-condition or full target-filter phrase authorizes current support
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-025D packet before implementation
+  - stay within allowed_touch_points
+  - do not add new runtime or schema capability
+  - fail closed when a currently supported phrase cannot be decomposed into reusable primitives without broadening scope
+ambiguity_policy: fail_and_escalate

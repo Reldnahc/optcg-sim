@@ -1,0 +1,177 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-025
+epic_id: CARD-025
+title: Card-layer SPEC-010 generated-support migration parent
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Migrate current cards-layer generated-support implementations to the SPEC-010
+  primitive-boundary authority model. Existing support must remain compatible,
+  but support authority must come from reusable wrapper, marker, cost,
+  condition, target, filter, body, source-policy, and composition evidence
+  rather than exact full-effect text, exact wrapper-body samples, story-named
+  production parsers, real card IDs, external card lists, or sample-shaped
+  allowlists.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  CARD-025A through CARD-025G one at a time after distinct parent and child
+  story-review evidence exists. This parent coordinates only the cards-layer
+  migration of current generated-support implementations; it does not add new
+  engine runtime capability, shared schema authority, real-card promotion, or
+  fixture/source-integrity work.
+allowed_touch_points:
+  - stories/generated/CARD-025*.yaml
+  - stories/approved/CARD-025*.yaml
+  - agent-packets/CARD-025*.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s004
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s003
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s015
+  - 05-effect-dsl-reference.s022
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s004
+  - 11-testing-quality.s020
+dependencies:
+  - SPEC-010
+  - ENG-060
+  - CARD-008
+  - CARD-009
+  - CARD-011
+  - CARD-014
+  - CARD-017
+  - CARD-019
+  - CARD-020
+  - CARD-021
+  - CARD-022
+  - CARD-023
+  - CARD-024
+  - SUP-001
+  - SUP-002
+  - SUP-003
+# prettier-ignore
+child_stories:
+  - id: CARD-025A
+    title: Card support authority anti-shape inventory
+    concern: Add cards-layer anti-regression scans and a test-only migration debt inventory so current forbidden authority shapes are visible, assigned to later children, and cannot expand while migration proceeds.
+    depends_on: [SPEC-010, ENG-060]
+  - id: CARD-025B
+    title: Primitive evidence inventory migration
+    concern: Migrate generated-support evidence inventory and parser-certification metadata away from exact parser-rule authority and toward reusable primitive-boundary evidence.
+    depends_on: [CARD-025A]
+  - id: CARD-025C
+    title: Entry-point marker and cost adapter migration
+    concern: Migrate current wrapper, timing marker, cost, source-policy, and external non-runtime adapter support to reusable entry-point evidence.
+    depends_on: [CARD-025B]
+  - id: CARD-025D
+    title: Condition target and filter primitive migration
+    concern: Migrate current condition, target, filter, cardinality, and duration parser components to reusable primitive evidence.
+    depends_on: [CARD-025B]
+  - id: CARD-025E
+    title: Body effect and request primitive migration
+    concern: Migrate current draw, trash, keyword, modifier, restriction, K.O., protection, base-power, stage-play, play-selected, and search body support to reusable primitive evidence.
+    depends_on: [CARD-025B, CARD-025C, CARD-025D]
+  - id: CARD-025F
+    title: Composition parser migration
+    concern: Migrate current sequence, conditional, line-separated, costed-body, and continuous composition paths to compose primitive evidence without exact full-line authorization.
+    depends_on: [CARD-025C, CARD-025D, CARD-025E]
+  - id: CARD-025G
+    title: Generated-support evaluator proof compatibility
+    concern: Align evaluator, support-probe, report, and compatibility matrix tests so current supported generated-support paths pass through SPEC-010 primitive evidence only.
+    depends_on: [CARD-025F]
+scope:
+  - migrate all current cards-layer generated-support implementations in `packages/cards` to SPEC-010 primitive-boundary support authority
+  - preserve existing supported behavior while changing the evidence path that authorizes support
+  - make parser certification expose primitive boundaries for entry-point wrappers, markers, costs, conditions, targets, filters, cardinality, durations, visibility, source-presence policies, body effects, and composition when present
+  - make generated-support decisions consume primitive evidence and fail closed when any required primitive evidence is missing or stale
+  - keep exact full-effect text, exact wrapper-body samples, story-named production parsers, real-card IDs, external card lists, card-to-mechanic maps, and sample-specific numeric branches out of support authority
+  - allow exact printed text only in tests, fixtures, stories, diagnostics, and negative anti-shape examples, not as a production authorization route
+  - use synthetic generated-support inputs for new acceptance evidence; real-card fixture tests may continue to exist but must not be the authority for this story
+  - if migration discovers a missing engine runtime or schema capability, stop and split a prerequisite ENG or TYP story instead of adding runtime/schema behavior here
+non_scope:
+  - direct parent implementation
+  - engine runtime behavior
+  - shared Effect DSL schema or contract changes
+  - real-card IDs, real-card fixture capture, source hash updates, behavior hash updates, overlays, support manifest edits, cards-produced manifest regeneration, or real-card promotion
+  - new gameplay capability beyond currently supported generated-support behavior
+  - broad natural-language inference for wording families not already covered by current support
+  - server, client, UI, database, replay, WebSocket, Redis, or live Poneglyph behavior
+card_source_integrity:
+  - not applicable to direct parent implementation because this parent does not enable or change gameplay support for any named real card
+  - children must use synthetic generated-support inputs for new acceptance evidence and must not cite real-card fixtures, card IDs, source hashes, behavior hashes, overlays, or a human-held adjacent-card list as implementation authority
+  - existing real-card fixture tests may remain as regression coverage only; they must not be added to satisfy CARD-025 acceptance criteria
+engine_capability_preflight:
+  - no new runtime capability is introduced by this parent
+  - current generated-support implementations must continue to cite existing runtime capability matrix evidence by reusable primitive capability IDs
+  - supported prerequisite groups are the runtime capabilities already covered by current generated-support entries, including draw, trash-from-hand, keywords, target selection, saved target K.O., power modification, restrictions, conditions, costs, search, base-power, start-of-game stage play, external deck construction non-runtime recognition, and existing composition capabilities where already implemented
+  - missing capability group is none for preserving current supported behavior
+  - if a child needs runtime behavior or schema authorability not already present, that child is blocked and the missing work must be split into a prerequisite ENG or TYP story
+acceptance_criteria:
+  - CARD-025 is not implemented directly
+  - CARD-025A through CARD-025G are independently reviewable child stories grouped by concern
+  - parent and every child story-review artifact exists with distinct assignment identity and distinct durable artifact identity before approval handoff, packet generation, activation, implementation handoff, or PR handoff
+  - current cards-layer generated-support implementations are migrated to primitive-boundary authority rather than kept beside a legacy exact-template authorization path
+  - the CARD-025A migration debt inventory is empty for production generated-support authorization paths by the end of CARD-025G, except for explicitly non-authoritative diagnostics, fixtures, tests, stories, or CLI help text
+  - existing supported generated-support behavior remains compatible after migration
+  - no child uses real-card source integrity, a human-held adjacent-card list, exact full-card text, exact full-effect sentence branches, story-specific production branches, or sample-specific numeric branches as implementation authority
+  - new acceptance tests prove primitive variation with synthetic inputs instead of real-card fixture promotion
+  - complete generated support remains unsupported unless parser certification, schema validation, runtime capability evidence, engine proof/test evidence, metadata, review, tested state, source integrity, and behavior hash gates pass as applicable
+  - parent PR cleanup metadata lists CARD-025A through CARD-025G and binds the non-packetized CARD-025 parent closeout after merge to main
+required_tests:
+  - story-review for CARD-025 parent before approval handoff
+  - story-review for CARD-025A before approval handoff
+  - story-review for CARD-025B before approval handoff
+  - story-review for CARD-025C before approval handoff
+  - story-review for CARD-025D before approval handoff
+  - story-review for CARD-025E before approval handoff
+  - story-review for CARD-025F before approval handoff
+  - story-review for CARD-025G before approval handoff
+  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - story-specific tests from CARD-025A through CARD-025G
+  - per-child reviewed commit evidence, AI review record, revision response, and verification evidence for CARD-025A through CARD-025G before parent PR handoff
+  - role packet extraction output before each implementation handoff and before each code-review handoff
+  - final parent PR full-story integration review covering all child commits, packet history, cleanup metadata, CI, verification, and unresolved comments before human-review handoff
+  - run cleanup metadata handoff preflight against the actual current parent PR body or selected durable handoff comment, fetched issue comments, fetched changed files, fetched PR head branch, allowed cleanup branches when parent cleanup lists non-head branches, fetched status checks, and reviewed PR evidence before reviewer or human-review handoff
+  - confirm the remote `cleanup-metadata-guard` check is present and passing before reviewer or human-review handoff
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - use the parent/substory workflow
+  - do not activate or implement CARD-025 directly
+  - generate and activate one CARD-025 child packet at a time
+  - implement CARD-025A first so anti-shape regression coverage guards the rest of the migration
+  - implement CARD-025B before C through G so later children share the same primitive evidence model
+  - do not complete child packets until the parent branch lands on main
+  - keep CARD-025A through CARD-025G work on one parent integration branch with reviewed child commits
+  - do not open child PRs to main; use one final parent PR to main
+  - parent PR cleanup metadata must list CARD-025A through CARD-025G and bind the non-packetized CARD-025 parent closeout
+  - run role packet extraction before implementation and code-review handoffs
+  - run cleanup metadata handoff preflight against the actual current parent PR body or selected durable handoff comment, fetched issue comments, fetched changed files, fetched PR head branch, allowed cleanup branches when parent cleanup lists non-head branches, fetched status checks, and reviewed PR evidence; confirm passing remote `cleanup-metadata-guard` before reviewer and human-review handoff
+  - fail closed on any parser, schema, runtime capability, source integrity, metadata, review, test, or wording ambiguity that could accidentally mark unsupported text playable
+ambiguity_policy: fail_and_escalate

@@ -1,0 +1,111 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-025G
+epic_id: CARD-025
+title: Generated-support evaluator proof compatibility
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: generated
+summary: >
+  Align generated-support evaluator, support-probe, reports, proof
+  certificates, and compatibility tests with the migrated primitive-boundary
+  card-layer authority. Current supported generated-support paths must still
+  pass, but reports must prove support through primitive evidence rather than
+  exact parser-rule, full-line, or card-specific authority.
+story_boundary: >
+  Own only cards-layer evaluator, probe, report, proof-certificate, and final
+  compatibility tests for the CARD-025 migration. Do not add new parser grammar,
+  engine runtime behavior, shared schema, real-card fixtures, manifests, source
+  hashes, behavior hashes, overlays, or real-card promotion.
+allowed_touch_points:
+  - packages/cards/src/card-support-authority-migration-debt.test.ts
+  - packages/cards/src/*authority*.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/support-evaluator-parser-certification.test.ts
+  - packages/cards/src/support-probe.ts
+  - packages/cards/src/support-probe.test.ts
+  - packages/cards/src/support-probe-proof-certificate.test.ts
+  - packages/cards/src/support-probe-diagnostics.test.ts
+  - packages/cards/src/generated-support-report.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generated-support-proof-certificate.test.ts
+  - packages/cards/src/generated-support-diagnostics.test.ts
+  - packages/cards/src/generated-support-report-diagnostics.test.ts
+  - packages/cards/src/generated-support-capability-coverage.test.ts
+  - packages/cards/src/generated-support-component-identity.test.ts
+  - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/generated/CARD-025G-generated-support-evaluator-proof-compatibility.yaml
+  - stories/approved/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/approved/CARD-025G-generated-support-evaluator-proof-compatibility.yaml
+  - agent-packets/CARD-025G.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 09-card-data-and-support-policy.s010
+  - 09-card-data-and-support-policy.s011
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s013
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-025F
+scope:
+  - make evaluator decisions require primitive parser certification evidence, primitive runtime capability evidence, and composition evidence for current supported generated-support paths
+  - make support-probe and generated-support reports display primitive evidence and missing primitive blockers clearly
+  - make proof-certificate output display primitive evidence and missing primitive blockers clearly
+  - preserve parser rule IDs as trace/debug output only when useful; proof authority must identify primitive evidence boundaries
+  - add synthetic compatibility matrix coverage proving current supported generated-support families remain supported through primitive evidence
+  - add negative compatibility coverage proving missing wrapper, body, condition, cost, target/filter, source-policy, runtime capability, or composition evidence fails closed
+  - require the CARD-025A test-only migration debt inventory to be empty for production generated-support authorization paths after CARD-025G lands
+  - prove no acceptance test depends on real card IDs, real-card fixture promotion, external card lists, or exact full printed text
+non_scope:
+  - new parser grammar or generated-support coverage
+  - engine runtime or shared schema changes
+  - source hash, behavior hash, overlay, support manifest, cards-produced manifest, or real-card fixture changes
+  - changing CLI card lookup semantics except report/proof text needed for primitive evidence
+card_source_integrity:
+  - not applicable because this story verifies migrated generated-support infrastructure with synthetic inputs and does not enable or change gameplay support for any named real card
+  - existing real-card probe tests may remain as regression coverage, but new CARD-025G acceptance evidence must not depend on them
+engine_capability_preflight:
+  - no new runtime capability is introduced
+  - verified generated-support shapes decompose across the migrated primitive families from CARD-025C, CARD-025D, CARD-025E, and CARD-025F: wrapper or entry-point, markers, costs, source-presence policy, conditions, targets, filters, cardinality, duration, visibility, body/request, decision, and composition evidence where present
+  - evaluator, support-probe, report, and proof-certificate surfaces must consume and display those primitive evidence boundaries without using parser-rule-only, full-line, card-ID, external-list, or full-definition-size support authority
+  - supported capability group includes existing runtime capability matrix entries reached by migrated current generated-support families, including wrapper/category, cost, condition, target/filter/cardinality/duration, body/request, visibility/decision, source-policy, and composition capabilities where present
+  - missing capability group is none for current supported generated-support compatibility rows
+acceptance_criteria:
+  - evaluator support decisions are primitive-boundary based after CARD-025 migration
+  - evaluator output, support-probe output, generated-support report output, and proof certificates identify primitive parser certification evidence, runtime capability evidence, and composition evidence
+  - current supported generated-support families remain compatible through synthetic matrix coverage
+  - missing primitive evidence produces narrow fail-closed blockers
+  - parser rule IDs no longer serve as the only support authority in evaluator/proof/report code
+  - CARD-025A migration debt inventory contains no remaining production generated-support authorization debt
+  - tests fail if support authority comes from exact full-line text, real card IDs, external card lists, or full-definition-size authorization
+required_tests:
+  - story-review for CARD-025G before approval handoff
+  - generated-support evaluator matrix test covering current supported migrated families with synthetic inputs
+  - support-probe tests proving primitive evidence is visible for at least one representative row from each migrated concern
+  - generated-support report tests proving primitive evidence is visible for at least one representative row from each migrated concern
+  - proof-certificate tests proving primitive evidence is visible for at least one representative row from each migrated concern
+  - negative tests for missing wrapper, body, condition, cost, target/filter, source-policy, runtime capability, and composition primitive evidence
+  - migration debt inventory closeout test proving no production generated-support authorization debt remains from CARD-025A
+  - anti-shape tests proving evaluator/proof/report code does not authorize support by exact full-line text, card IDs, external lists, parser-rule-only evidence, or full-definition-size gates
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-025G packet before implementation
+  - stay within allowed_touch_points
+  - do not add new parser, runtime, schema, fixture, or manifest behavior
+  - fail closed when a current support row cannot prove primitive evidence through the default production path
+ambiguity_policy: fail_and_escalate

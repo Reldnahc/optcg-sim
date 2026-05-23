@@ -1,0 +1,101 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-025A
+epic_id: CARD-025
+title: Card support authority anti-shape inventory
+type: implementation
+area: cards
+primary_concern: verification
+priority: high
+status: approved
+summary: >
+  Add cards-layer anti-regression coverage that makes forbidden generated-support
+  authority shapes visible before the CARD-025 migration changes production
+  behavior. Because this child runs before the migration children, it may keep a
+  test-only migration debt inventory for existing violations, but every debt row
+  must name the owning CARD-025 child and no new unauthorized violation may pass.
+  The scan must catch exact full-effect text, exact wrapper-body support gates,
+  story-named production parser ownership, card-specific support branches,
+  external card-list authorization, card-to-mechanic maps, and sample-specific
+  numeric authorization in production generated-support paths.
+story_boundary: >
+  Own only cards-layer test and local test-helper coverage for support-authority
+  source-shape inventory. Do not change production parser behavior, generated
+  support decisions, runtime capability mappings, real-card fixtures, source
+  hashes, behavior hashes, overlays, support manifests, or cards-produced
+  manifests.
+allowed_touch_points:
+  - packages/cards/src/*generated-support*.test.ts
+  - packages/cards/src/*support*.test.ts
+  - packages/cards/src/*parser*.test.ts
+  - packages/cards/src/*composition*.test.ts
+  - packages/cards/src/*diagnostic*.test.ts
+  - packages/cards/src/*authority*.test.ts
+  - packages/cards/src/test-*.ts
+  - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/generated/CARD-025A-card-support-authority-anti-shape-inventory.yaml
+  - stories/approved/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/approved/CARD-025A-card-support-authority-anti-shape-inventory.yaml
+  - agent-packets/CARD-025A.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - SPEC-010
+  - ENG-060
+scope:
+  - add production-source scans for forbidden cards-layer generated-support authority shapes
+  - scan current production cards support paths, including parser, evidence, capability, evaluator, support-probe, report, and composition modules
+  - create a test-only migration debt inventory for existing forbidden shapes discovered by the scan; the inventory must live in test code or test fixtures only, must not be imported by production code, and must not be used as support authority
+  - require every migration debt row to identify the forbidden shape, production file, reason it violates SPEC-010, and owning CARD-025 child expected to remove it
+  - detect exact full-line authorization branches in covered cards-layer production modules, not only exact full-effect text branches or wrapper-body samples
+  - forbid new exact full-effect text branches and exact wrapper-body support gates in production authorization paths unless they are already present in the migration debt inventory
+  - forbid new exact full-line authorization branches in production authorization paths unless they are already present in the migration debt inventory
+  - forbid new real card IDs, external card-list authorization, card-to-mechanic maps, and manually reviewed card allowlists in generated-support authorization paths unless they are already present in the migration debt inventory
+  - forbid new story-named production parser ownership where the story name is the support boundary instead of a reusable primitive domain unless already present in the migration debt inventory
+  - forbid new sample-specific numeric authorization branches such as only one threshold, power value, count, or look count when the parsed primitive family is numeric unless already present in the migration debt inventory
+  - allow legitimate exact strings in test files, fixtures, stories, diagnostics, CLI help text, and generic parser token regexes when they are not support authority
+  - add self-tests for the source-scan regexes so future edits cannot narrow the guards silently
+non_scope:
+  - production parser, evaluator, capability, report, or support-probe behavior changes
+  - renaming parser rule IDs or evidence IDs
+  - new generated-support support or removal of existing support
+  - real-card fixture or manifest work
+card_source_integrity:
+  - not applicable because this story is test-only and does not enable or change gameplay support for any real card
+  - tests must not load real-card fixtures as acceptance evidence for this story
+engine_capability_preflight:
+  - not applicable because this story adds no parser support and no runtime capability
+  - if a scan reveals missing runtime capability evidence, record it as a follow-up or blocker for later children rather than changing runtime behavior here
+acceptance_criteria:
+  - tests fail if production cards generated-support code adds exact full-effect text authorization not listed in the test-only migration debt inventory
+  - tests fail if production cards generated-support code adds exact full-line authorization not listed in the test-only migration debt inventory
+  - tests fail if production cards generated-support code adds exact wrapper-body authorization without primitive evidence not listed in the test-only migration debt inventory
+  - tests fail if production cards generated-support code adds real card IDs, external card lists, card-to-mechanic maps, or manual card allowlists for support authority not listed in the test-only migration debt inventory
+  - tests fail if production cards generated-support code uses story-named production parser modules as the support boundary after the relevant migration child retires that module shape or when the module is not listed in the migration debt inventory
+  - tests fail if production cards generated-support code authorizes sample-specific numeric values instead of parsing numeric primitives for supported numeric families, unless the existing row is listed in the migration debt inventory with an owning migration child
+  - migration debt inventory rows are test-only, cannot be imported by production code, and cannot be used to make generated support pass
+  - tests allow legitimate nested sequence arity validation, diagnostics, fixture text, and test-only examples
+required_tests:
+  - story-review for CARD-025A before approval handoff
+  - anti-shape source scan test covering production cards parser, evidence, capability, evaluator, probe, report, and composition modules, including exact full-line authorization branches
+  - test-only migration debt inventory test proving every existing debt row has a production path, violation category, and owning CARD-025 child
+  - test proving production code cannot import the migration debt inventory or use it in generated-support decisions
+  - regex self-test covering rejected and allowed examples for exact full-line, wrapper-body, card ID, external list, story-named module, and sample-numeric support authority
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-025A packet before implementation
+  - stay within allowed_touch_points
+  - do not change production behavior in this test-hardening child
+  - preserve narrow allow cases for tests, fixtures, diagnostics, and generic parser tokenization
+ambiguity_policy: fail_and_escalate

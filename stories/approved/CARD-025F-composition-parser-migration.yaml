@@ -1,0 +1,108 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-025F
+epic_id: CARD-025
+title: Composition parser migration
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Migrate current cards-layer composition paths to compose primitive evidence
+  from wrappers, costs, conditions, targets, bodies, and sequence boundaries.
+  Line-separated, conditional, sequence, costed-body, and continuous
+  compositions must not authorize support by exact full-line or exact
+  full-definition samples.
+story_boundary: >
+  Own only cards-layer composition parser/composer behavior and tests for
+  currently supported generated-support implementations. Do not add new wrapper,
+  condition, target, body, engine runtime, schema, real-card fixture, manifest,
+  source-hash, behavior-hash, or overlay behavior.
+allowed_touch_points:
+  - packages/cards/src/composed-parser-builder.ts
+  - packages/cards/src/composed-parser-builder.test.ts
+  - packages/cards/src/line-separated-composition.ts
+  - packages/cards/src/sup-001g-line-separated-generated-support.test.ts
+  - packages/cards/src/sup-002-generated-support-line-regression.test.ts
+  - packages/cards/src/conditional-generated-support-composer.ts
+  - packages/cards/src/conditional-generated-support-composer.test.ts
+  - packages/cards/src/conditional-continuous-composition-diagnostics.ts
+  - packages/cards/src/conditional-continuous-composition-diagnostics.test.ts
+  - packages/cards/src/conditional-continuous-composition-evidence.ts
+  - packages/cards/src/conditional-generated-support.test.ts
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/generated/CARD-025F-composition-parser-migration.yaml
+  - stories/approved/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/approved/CARD-025F-composition-parser-migration.yaml
+  - agent-packets/CARD-025F.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s009
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-025C
+  - CARD-025D
+  - CARD-025E
+scope:
+  - migrate current line-separated effect block composition to require primitive evidence for each line plus line-composition evidence
+  - migrate current sequence composition to require segment evidence and sequence-frame evidence rather than exact full sequence text
+  - migrate current conditional triggered and conditional continuous composition to require wrapper, condition, body, and composition evidence independently
+  - migrate current costed-body composition to require cost evidence, body evidence, and cost/body composition evidence independently
+  - composition evidence must supplement, not replace, required primitive evidence for wrapper, marker, cost, condition, body, target, filter, cardinality, duration, source-presence policy, decision, or visibility boundaries when those boundaries are present
+  - preserve legitimate local arity validation for sequence segments while forbidding full generated-support definition-size authorization
+  - preserve fail-closed behavior for unsupported composition residue, unsupported conjunctions, missing segment evidence, stale certification evidence, and unsupported mixed composition
+non_scope:
+  - new composition grammar such as comma-separated multi-clause lists not already supported
+  - new engine runtime behavior or shared schema
+  - real-card fixture or manifest work
+card_source_integrity:
+  - not applicable because this story migrates composition authority using synthetic inputs and does not enable or change gameplay support for any real card
+  - tests must not cite real card IDs or real fixtures as acceptance evidence
+engine_capability_preflight:
+  - no new runtime capability is introduced
+  - parsed composed shapes decompose as line-separated block composition evidence, sequence-frame composition evidence, conditional wrapper/body composition evidence, cost/body composition evidence, and continuous condition/body composition evidence where currently supported
+  - wrapper or entry-point, markers, costs, and source-presence policy evidence are prerequisite primitive evidence from CARD-025C and may not be replaced by composition evidence
+  - condition, target, filter, cardinality, duration, and visibility evidence are prerequisite primitive evidence from CARD-025D and may not be replaced by composition evidence
+  - body/request evidence is prerequisite primitive evidence from CARD-025E and may not be replaced by composition evidence
+  - decision/visibility needs must remain attached to the primitive or request that owns them; composition may carry them through but must not authorize them on its own
+  - supported capability group includes existing composition runtime capability evidence for line-separated blocks, supported sequence frames, supported conditional composition, supported costed body composition, supported continuous composition, and current full-definition composition gates already represented by primitive evidence
+  - missing capability group is none for current supported composition paths
+acceptance_criteria:
+  - current supported compositions are authorized by primitive segment evidence plus explicit composition evidence
+  - missing wrapper, marker, cost, condition, body, target, filter, cardinality, duration, source-presence policy, decision, visibility, or composition evidence fails closed even when a full source sentence resembles a supported sample
+  - tests fail if production code authorizes support from exact full-line text, exact full-definition samples, or top-level full-effect-definition size gates
+  - legitimate nested sequence/body arity validation remains allowed
+  - current supported generated-support behavior remains compatible through the migrated composition path
+required_tests:
+  - story-review for CARD-025F before approval handoff
+  - composition parser tests for line-separated, sequence, conditional, costed-body, and continuous composition evidence
+  - generated-support tests proving missing segment, missing primitive dependency, or missing composition evidence fails closed
+  - anti-shape tests proving no full-line, full-definition, or exact sequence sample authorizes current support
+  - regression tests proving legitimate sequence segment validation is still allowed
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-025F packet before implementation
+  - stay within allowed_touch_points
+  - do not add new runtime or schema capability
+  - fail closed when a composition cannot be proven by reusable primitive evidence
+ambiguity_policy: fail_and_escalate

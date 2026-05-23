@@ -1,0 +1,102 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-025B
+epic_id: CARD-025
+title: Primitive evidence inventory migration
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Migrate generated-support evidence inventory, parser certification metadata,
+  and runtime capability lookup from parser-rule-as-authority toward reusable
+  primitive-boundary evidence. Parser rule IDs may remain as trace/debug data
+  only where needed for compatibility, but they must not be the sole support
+  authority for current generated-support implementations.
+story_boundary: >
+  Own only generated-support evidence model, inventory lookup, certification
+  evaluation, runtime capability coverage lookup, and tests needed to make
+  primitive evidence the authority boundary. Do not change natural-language
+  parser coverage, engine runtime behavior, shared schema, real-card fixtures,
+  manifests, source hashes, behavior hashes, or overlays.
+allowed_touch_points:
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-types.test.ts
+  - packages/cards/src/generated-support-index.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/generated-support-runtime-capability-coverage.ts
+  - packages/cards/src/generated-support-capability-coverage.test.ts
+  - packages/cards/src/generated-support-component-identity.test.ts
+  - packages/cards/src/runtime-capability-matrix.ts
+  - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/support-evaluator-parser-certification.test.ts
+  - packages/cards/src/external-deck-construction-rule.ts
+  - packages/cards/src/external-deck-construction-rule.test.ts
+  - packages/cards/src/*evidence.ts
+  - packages/cards/src/*evidence.test.ts
+  - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/generated/CARD-025B-primitive-evidence-inventory-migration.yaml
+  - stories/approved/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/approved/CARD-025B-primitive-evidence-inventory-migration.yaml
+  - agent-packets/CARD-025B.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 09-card-data-and-support-policy.s024
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-025A
+scope:
+  - introduce or normalize primitive evidence IDs for current generated-support boundaries
+  - ensure evidence inventory can represent wrapper, marker, cost, condition, target, filter, cardinality, duration, visibility, source-policy, body, and composition evidence independently
+  - ensure runtime capability coverage can be evaluated from primitive evidence IDs without depending on exact parser rule IDs
+  - keep parser rule IDs available as trace/debug output where existing reports need them, but not as the only support authority
+  - make parser certification blockers report the missing primitive evidence boundary rather than only an exact parser-rule sample
+  - migrate existing generated-support inventory entries so each supported current implementation has primitive component evidence
+  - preserve existing supported generated-support decisions when later children feed equivalent primitive evidence
+non_scope:
+  - natural-language parser changes
+  - evaluator/probe/report final formatting changes outside evidence/certification data needed for this child
+  - engine runtime behavior
+  - shared schema changes
+  - real-card fixture or manifest work
+card_source_integrity:
+  - not applicable because this story changes generated-support evidence infrastructure and does not enable or change gameplay support for any real card
+  - tests must use synthetic evidence inputs, not real-card fixture promotion
+engine_capability_preflight:
+  - no new runtime capability is introduced
+  - supported capability group is the existing runtime capability matrix entries referenced by current generated-support evidence
+  - missing capability group is none for preserving current evidence coverage
+  - if any current supported parser rule lacks a reusable runtime capability equivalent, record it as a blocker for the relevant later child rather than adding runtime behavior here
+acceptance_criteria:
+  - primitive evidence IDs, not exact parser rule IDs, can drive runtime capability coverage for current generated-support entries
+  - parser certification blockers name missing primitive boundaries
+  - generated-support component evidence inventory no longer treats exact full-line parser rule IDs as the only authority for current supported implementations
+  - exact parser rule IDs remain permitted only as trace/debug compatibility data or while a later child has not yet migrated the corresponding parser emission
+  - tests fail if component evidence lookup falls back to whole parser-rule authorization with no primitive evidence
+required_tests:
+  - story-review for CARD-025B before approval handoff
+  - component evidence identity tests proving primitive IDs are present for current generated-support entries
+  - runtime capability coverage tests proving lookup by primitive evidence IDs
+  - parser certification blocker tests for missing wrapper/body/composition primitive evidence
+  - negative test proving a legacy exact parser rule without primitive evidence cannot authorize generated support
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-025B packet before implementation
+  - stay within allowed_touch_points
+  - do not broaden parser coverage in this child
+  - preserve compatibility data only where it is not support authority
+ambiguity_policy: fail_and_escalate

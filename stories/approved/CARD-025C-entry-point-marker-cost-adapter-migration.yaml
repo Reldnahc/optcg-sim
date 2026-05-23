@@ -1,0 +1,112 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-025C
+epic_id: CARD-025
+title: Entry-point marker and cost adapter migration
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Migrate current cards-layer entry-point, marker, cost, source-presence, and
+  non-runtime deck-rule recognition to reusable adapter evidence. Supported
+  bodies must compose with certified wrappers and costs through primitive
+  evidence rather than requiring exact wrapper-body sample parser rules.
+story_boundary: >
+  Own only cards-layer wrapper, timing marker, cost, source-policy, and external
+  non-runtime adapter parsing/evidence for currently supported generated-support
+  implementations. Do not add new body effects, engine runtime behavior, shared
+  schema, real-card fixtures, manifests, source hashes, behavior hashes, or
+  overlays.
+allowed_touch_points:
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/parser-rule-id-components.ts
+  - packages/cards/src/return-don-cost-wrapper-components.ts
+  - packages/cards/src/don-minus-cost-wrapper-card-components.test.ts
+  - packages/cards/src/don-minus-draw-components.ts
+  - packages/cards/src/don-minus-draw-evidence.ts
+  - packages/cards/src/don-minus-draw-generated-support.test.ts
+  - packages/cards/src/activate-main-choose-one-cost-components.ts
+  - packages/cards/src/activate-main-choose-one-cost-components.test.ts
+  - packages/cards/src/activate-main-choose-one-cost-evidence.ts
+  - packages/cards/src/activate-main-choose-one-cost-generated-support.test.ts
+  - packages/cards/src/start-of-game-stage-play-components.ts
+  - packages/cards/src/start-of-game-stage-play-components.test.ts
+  - packages/cards/src/start-of-game-stage-play-evidence.ts
+  - packages/cards/src/start-of-game-stage-play-generated-support.test.ts
+  - packages/cards/src/external-deck-construction-rule.ts
+  - packages/cards/src/external-deck-construction-rule.test.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/generated/CARD-025C-entry-point-marker-cost-adapter-migration.yaml
+  - stories/approved/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/approved/CARD-025C-entry-point-marker-cost-adapter-migration.yaml
+  - agent-packets/CARD-025C.md
+  - agent-packets/active.json
+spec_refs:
+  - 02-engine-mechanics.s025
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s012
+  - 09-card-data-and-support-policy.s012
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-025B
+scope:
+  - migrate supported wrappers such as On Play, When Attacking, Trigger, On K.O., Activate Main, Your Turn continuous, and Start of Game to entry-point adapter evidence where currently supported
+  - migrate current timing markers such as Once Per Turn and optional markers to independent marker evidence where currently supported
+  - migrate current DON-minus, return-DON, optional hand-trash, and choose-one trash cost recognition to independent cost evidence where currently supported
+  - migrate current source-presence policy evidence so it is attached to entry-point/body semantics rather than exact full-line IDs
+  - keep external deck-construction rule recognition as parser/metadata evidence with no runtime primitive, and do not let deck-construction limits block engine support decisions when the story explicitly treats them as non-runtime text
+  - prove at least one supported body primitive composes under multiple certified entry points without adding wrapper-body exact sample rules
+non_scope:
+  - new body primitive support
+  - standalone keyword body support; standalone keywords such as `[Blocker]`, `[Banish]`, `[Rush]`, and `[Double Attack]` remain body evidence owned by CARD-025E and must not mint entry-point adapter evidence here
+  - new runtime semantics for wrappers, costs, markers, or deck construction
+  - arbitrary Activate Main grammar beyond currently supported cost/body adapters
+  - real-card fixture or manifest work
+card_source_integrity:
+  - not applicable because this story migrates synthetic parser/generated-support adapter evidence and does not enable or change gameplay support for any real card
+  - new tests must use synthetic normalized card inputs and must not cite real card IDs
+engine_capability_preflight:
+  - no new runtime capability is introduced
+  - parsed adapter shapes decompose as wrapper or entry point evidence for supported On Play, When Attacking, Trigger, On K.O., Activate Main, Your Turn continuous, and Start of Game text; marker evidence for supported Once Per Turn and optional markers; cost evidence for supported DON-minus, return-DON, optional hand-trash, and choose-one trash costs; source-presence policy evidence where current support requires it; and composition evidence only for attaching adapter/cost evidence to separately certified body primitives
+  - condition, effect body, target, filter, cardinality, duration, and decision/visibility evidence are not owned by this child; they must be absent, delegated to CARD-025D or CARD-025E, or consumed only as already-certified prerequisite primitive evidence
+  - standalone keyword text is body evidence, not wrapper or entry-point adapter evidence; this child must fail closed if keyword text would mint wrapper adapter evidence
+  - supported runtime capability group includes existing wrapper/category capabilities, source-presence policies, once-per-turn marker capability where already implemented, return-DON and DON-minus cost capability where already implemented, optional trash cost capability where already implemented, and start-of-game stage-play wrapper reachability where already implemented
+  - non-runtime parser/metadata evidence group includes external deck-construction rule recognition; it must not be represented as an engine runtime capability or create runtime capability blockers
+  - missing capability group is none for currently supported wrapper/cost/marker adapters
+acceptance_criteria:
+  - wrapper and cost support authority is represented as adapter evidence independent from supported body evidence
+  - supported bodies do not require exact wrapper-body parser rules when the wrapper adapter and body primitive evidence are both present
+  - source-presence policy evidence is visible as a primitive boundary
+  - external deck-construction rule recognition remains non-runtime metadata/parser evidence and does not create engine runtime capability requirements
+  - tests fail if a supported wrapper/body combination is authorized only by one exact full-line sample
+required_tests:
+  - story-review for CARD-025C before approval handoff
+  - parser tests for wrapper, marker, cost, and source-policy primitive evidence
+  - generated-support tests proving wrapper adapter evidence plus existing body evidence authorizes support
+  - negative tests proving missing wrapper adapter evidence or missing cost evidence fails closed
+  - negative test proving standalone keyword text does not produce wrapper or entry-point adapter evidence
+  - anti-shape tests proving no exact wrapper-body sample branch authorizes current wrapper/cost support
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-025C packet before implementation
+  - stay within allowed_touch_points
+  - do not add engine runtime behavior or shared schema
+  - fail closed if a wrapper/cost adapter needs runtime capability not already present
+ambiguity_policy: fail_and_escalate

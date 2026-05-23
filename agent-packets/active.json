@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/CARD-025A.md",
+      "storyId": "CARD-025A",
+      "storyPath": "stories/approved/CARD-025A-card-support-authority-anti-shape-inventory.yaml",
+      "storySha256": "f0fb5e113e4acfb7ef962c85df48e76cc28e395822fc43473bd12e9c37dffa74"
+    }
+  ],
   "version": 1
 }

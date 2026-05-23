@@ -1,0 +1,118 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: CARD-025E
+epic_id: CARD-025
+title: Body effect and request primitive migration
+type: implementation
+area: cards
+primary_concern: rules
+priority: high
+status: approved
+summary: >
+  Migrate current cards-layer body effect and request support to reusable
+  primitive evidence. Draw, trash, keyword, field modifier, restriction, K.O.,
+  protection, base-power, stage-play, play-selected, and search bodies must be
+  authorized by body/action primitives plus their target/filter/count/duration
+  evidence, not by exact full-effect or exact wrapper-body samples.
+story_boundary: >
+  Own only body effect/request parser components and generated-support evidence
+  for currently supported cards-layer behavior. Do not add wrapper/cost adapter
+  support beyond CARD-025C, condition/target/filter support beyond CARD-025D,
+  engine runtime behavior, shared schema, real-card fixtures, manifests, source
+  hashes, behavior hashes, or overlays.
+allowed_touch_points:
+  - packages/cards/src/certified-card-text-parser.ts
+  - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/standalone-keyword-parser.ts
+  - packages/cards/src/card014f-support.test.ts
+  - packages/cards/src/card014g-composed-parser.ts
+  - packages/cards/src/card014g-generated-support.test.ts
+  - packages/cards/src/card018a-generated-support.test.ts
+  - packages/cards/src/on-play-field-effect-parser.ts
+  - packages/cards/src/draw-up-to-generated-support.test.ts
+  - packages/cards/src/return-don-play-selected-support.test.ts
+  - packages/cards/src/trash-count-generated-support.test.ts
+  - packages/cards/src/optional-trash-cost-ko-components.ts
+  - packages/cards/src/optional-trash-cost-ko-components.test.ts
+  - packages/cards/src/top-n-search-components.ts
+  - packages/cards/src/top-n-search-components.test.ts
+  - packages/cards/src/top-n-search-generated-support.test.ts
+  - packages/cards/src/start-of-game-stage-play-components.ts
+  - packages/cards/src/start-of-game-stage-play-generated-support.test.ts
+  - packages/cards/src/conditional-parser-components.ts
+  - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/support-evaluator.test.ts
+  - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/generated/CARD-025E-body-effect-request-primitive-migration.yaml
+  - stories/approved/CARD-025-card-layer-spec010-migration-parent.yaml
+  - stories/approved/CARD-025E-body-effect-request-primitive-migration.yaml
+  - agent-packets/CARD-025E.md
+  - agent-packets/active.json
+spec_refs:
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s011
+  - 04-effect-runtime.s012
+  - 05-effect-dsl-reference.s006
+  - 05-effect-dsl-reference.s007
+  - 05-effect-dsl-reference.s008
+  - 05-effect-dsl-reference.s011
+  - 05-effect-dsl-reference.s012
+  - 05-effect-dsl-reference.s013
+  - 05-effect-dsl-reference.s015
+  - 09-card-data-and-support-policy.s016
+  - 09-card-data-and-support-policy.s018
+  - 11-testing-quality.s020
+dependencies:
+  - CARD-025B
+  - CARD-025C
+  - CARD-025D
+scope:
+  - migrate current draw and draw-up-to bodies to body primitive evidence with parsed positive-safe-integer counts
+  - migrate current trash-from-hand bodies to action/source/count primitive evidence independent from the wrapper
+  - migrate current standalone and granted keyword bodies to keyword primitive evidence for all currently supported keywords
+  - migrate current modify-power, cannot-attack, cannot-block, K.O., protection, base-power setter, play-stage, play-selected, and search request bodies to body primitive evidence where currently supported
+  - migrate current search bodies so look count, reveal/non-reveal visibility, selected-to-hand destination, bottom remainder policy, and trailing hand-trash action are separate body/request primitives
+  - shared-file edits in condition/target/filter modules are limited to consuming already-proven CARD-025D primitives for body/request evidence wiring; they must not add condition, target, filter, cardinality, or duration semantics
+  - preserve fail-closed behavior for unsupported body actions, counts, destinations, visibility, target filters, and durations
+  - retire or demote story-named production body parser modules that authorize support by old story ID instead of body primitive domain
+non_scope:
+  - new body effect families not already supported
+  - wrapper/cost/condition/target/filter parser expansion outside dependencies
+  - engine runtime or shared schema changes
+  - real-card fixture or manifest work
+card_source_integrity:
+  - not applicable because this story migrates existing body support through synthetic generated-support inputs and does not enable or change gameplay support for any real card
+  - new acceptance tests must not cite real card IDs or real fixtures
+engine_capability_preflight:
+  - no new runtime capability is introduced
+  - parsed body/request shapes decompose as body/action evidence for current draw, draw-up-to, trash-from-hand, standalone keyword, keyword grant, modify-power, cannot-attack, cannot-block, K.O., protection, base-power setter, stage-play, play-selected, and search request bodies
+  - wrapper or entry-point, markers, costs, and source-presence policies are delegated to CARD-025C and may only be consumed here as already-certified prerequisite evidence
+  - condition, target, filter, cardinality, duration, public/hidden visibility selector boundaries, and saved-target references are delegated to CARD-025D and may only be consumed here as already-certified prerequisite evidence
+  - composition evidence for sequencing, line-separated text, conditional bodies, and costed bodies is delegated to CARD-025F; this child may require body/request primitives to expose the segment evidence consumed by those compositions
+  - decision/visibility needs for search bodies include existing selected-card reveal/non-reveal semantics, selected-to-hand destination, bottom remainder policy, and chooser decision boundaries already implemented by prerequisite runtime stories; this child must not add hidden-information or decision runtime behavior
+  - supported capability group includes existing runtime capability evidence for current draw, trash, keyword, modifier, restriction, K.O., protection, base-power, stage-play, play-selected, and search bodies, plus existing search visibility/destination/remainder capability IDs where already present
+  - missing capability group is none for preserving currently supported body behavior
+acceptance_criteria:
+  - current supported body effects emit reusable body/action/request evidence
+  - current supported numeric counts and values vary through parsed primitives, not fixed sample branches
+  - body support can be composed with certified wrappers from CARD-025C and targets/filters from CARD-025D without exact full-line authorization
+  - unsupported body variants remain fail-closed with narrow diagnostics
+  - tests fail if a current body support path is authorized only by exact full-effect text, exact wrapper-body text, story-named production parser ownership, or sample-specific numeric values
+required_tests:
+  - story-review for CARD-025E before approval handoff
+  - parser matrix tests for current supported body primitive families and numeric variation
+  - generated-support tests proving current body families use primitive evidence and runtime capability IDs
+  - negative tests for unsupported body action/count/destination/visibility/duration variants
+  - anti-shape tests proving no exact full-effect or story-named production body parser authorizes current support
+  - run `corepack pnpm run packets:verify`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm --filter @optcg/cards test`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - generate and activate the CARD-025E packet before implementation
+  - stay within allowed_touch_points
+  - do not add new runtime or schema capability
+  - fail closed when a body cannot be decomposed into current reusable primitive evidence
+ambiguity_policy: fail_and_escalate
