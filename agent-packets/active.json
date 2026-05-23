@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-060B.md",
-      "storyId": "ENG-060B",
-      "storyPath": "stories/approved/ENG-060B-reusable-queued-entry-point-body-adapters.yaml",
-      "storySha256": "e6e80552268811a808458ca7f6e117b9c7f31e87866c7ced183ae726bd6d06d8"
+      "packetPath": "agent-packets/ENG-060C.md",
+      "storyId": "ENG-060C",
+      "storyPath": "stories/approved/ENG-060C-runtime-composability-regression-matrix.yaml",
+      "storySha256": "666cb8eee5bd34447b13f0efb53768726ddd0e559d2260f7bbd8bb23fd75226b"
     }
   ],
   "version": 1
