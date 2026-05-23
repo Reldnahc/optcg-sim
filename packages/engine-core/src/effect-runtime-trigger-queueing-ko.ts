@@ -74,7 +74,7 @@ const isSupportedOnKODrawUpToEffect = (
   effect.effect.count >= 0 &&
   effect.effect.player === "self";
 
-const isSupportedOnKOCompatibleQueuedEffect = (
+export const isSupportedOnKOCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];

@@ -9,12 +9,13 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
+import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
+import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
 import {
-  isSupportedNoChoiceOnKODrawEffect,
-  isSupportedNoChoiceOnOpponentAttackDrawEffect,
-  isSupportedNoChoiceWhenAttackingDrawEffect,
-  resolveImplementedDslEffectDefinition,
-} from "./effect-runtime.js";
+  isSupportedOnOpponentAttackCompatibleQueuedEffect,
+  isSupportedWhenAttackingCompatibleQueuedEffect,
+} from "./effect-runtime-trigger-queueing-attack.js";
+import { isSupportedOnKOCompatibleQueuedEffect } from "./effect-runtime-trigger-queueing-ko.js";
 
 export const sameCardRef = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
@@ -154,9 +155,10 @@ const hasUnsupportedBattleEffectBody = (value: unknown): boolean => {
 const isSupportedBattleRuntimeEffect = (
   effect: EffectDefinition["effects"][number],
 ): boolean =>
-  isSupportedNoChoiceWhenAttackingDrawEffect(effect) ||
-  isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
-  isSupportedNoChoiceOnKODrawEffect(effect);
+  isSupportedQueuedEffectConditionShape(effect.condition) &&
+  (isSupportedWhenAttackingCompatibleQueuedEffect(effect) ||
+    isSupportedOnOpponentAttackCompatibleQueuedEffect(effect) ||
+    isSupportedOnKOCompatibleQueuedEffect(effect));
 
 const isBattleNeutralTrigger = (
   trigger: EffectDefinition["effects"][number]["trigger"],
@@ -305,11 +307,7 @@ export const hasUnsupportedBattleEffectMetadata = (
       continue;
     }
     for (const effect of definition.effects) {
-      if (
-        isSupportedNoChoiceWhenAttackingDrawEffect(effect) ||
-        isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
-        isSupportedNoChoiceOnKODrawEffect(effect)
-      ) {
+      if (isSupportedBattleRuntimeEffect(effect)) {
         continue;
       }
       if (
