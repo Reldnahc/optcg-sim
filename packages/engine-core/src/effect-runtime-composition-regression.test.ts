@@ -366,6 +366,54 @@ test("negative adapter/body matrix fails closed for unsupported wrappers, unsupp
   const ambiguousResult = processEffectRuntime(ambiguous.state);
   assert.deepEqual(ambiguousResult.events, []);
   assert.equal(ambiguousResult.errors?.[0]?.type, "effectRuntimeError");
+
+  const unsupportedAdapter = queueingState();
+  const unsupportedAdapterCard = resolvedCard({
+    cardId: unsupportedAdapter.played.cardId,
+    category: "character",
+  });
+  const unsupportedAdapterDef = reviewedOnPlayDrawDefinition(
+    unsupportedAdapter.played.cardId,
+    unsupportedAdapterCard.support,
+  );
+  const supportedBody = must(
+    unsupportedAdapterDef.effects[0],
+    "supported onPlay body",
+  );
+  setupOnPlayDefinition(
+    unsupportedAdapter.state,
+    unsupportedAdapter.played,
+    {
+      ...unsupportedAdapterDef,
+      effects: [
+        {
+          ...supportedBody,
+          trigger: { type: "activateMain" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+        },
+      ],
+    },
+    "def-unsupported-adapter",
+  );
+  unsupportedAdapter.state.cardManifest.cards[
+    unsupportedAdapter.played.cardId
+  ] = {
+    ...unsupportedAdapterCard,
+    support: {
+      ...unsupportedAdapterCard.support,
+      status: "implemented-dsl",
+      effectDefinitionId: "def-unsupported-adapter",
+    },
+  };
+  const beforeUnsupportedAdapter = structuredClone(unsupportedAdapter.state);
+  const unsupportedAdapterResult = processEffectRuntime(
+    unsupportedAdapter.state,
+  );
+  assert.deepEqual(unsupportedAdapterResult.events, []);
+  assert.deepEqual(
+    unsupportedAdapterResult.state.effectQueue,
+    beforeUnsupportedAdapter.effectQueue,
+  );
 });
 
 test("life-trigger and counter matrices preserve supported wrappers and fail closed on unsupported composition", () => {
@@ -477,6 +525,45 @@ test("life-trigger and counter matrices preserve supported wrappers and fail clo
     useCounter.events.some((event) => event.type === "counterUsed"),
     true,
   );
+  const counterDefId = `${String(counterCard.cardId)}:counter`;
+  const counterDef = must(
+    opened.state.cardManifest.effectDefinitions?.[counterDefId],
+    "counter definition",
+  );
+  const counterEffect = must(counterDef.effects[0], "counter effect");
+  opened.state.cardManifest.effectDefinitions = {
+    ...opened.state.cardManifest.effectDefinitions,
+    [counterDefId]: {
+      ...counterDef,
+      effects: [
+        counterEffect,
+        {
+          ...counterEffect,
+          id: `${String(counterEffect.id)}:irrelevant-main` as typeof counterEffect.id,
+          trigger: { type: "main" },
+        },
+      ],
+    },
+  };
+  const legalMultiEffect = getLegalActions(opened.state, p2);
+  assert.equal(
+    legalMultiEffect.some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterCard.instanceId,
+    ),
+    true,
+  );
+  const useCounterMultiEffect = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterCard.instanceId,
+    target: must(opened.state.battle, "opened battle").currentTarget,
+  });
+  assert.equal(useCounterMultiEffect.errors, undefined);
+  assert.equal(
+    useCounterMultiEffect.events.some((event) => event.type === "counterUsed"),
+    true,
+  );
 
   const unsupportedState = setupAttackState();
   const unsupportedAttacker = must(unsupportedState.players[p1], "p1").leader;
@@ -487,20 +574,23 @@ test("life-trigger and counter matrices preserve supported wrappers and fail clo
   );
   installSupportedCounterEvent(unsupportedState, unsupportedCard, 1000);
   const effectDefinitionId = `${String(unsupportedCard.cardId)}:counter`;
-  const counterDef = must(
+  const unsupportedCounterDef = must(
     unsupportedState.cardManifest.effectDefinitions?.[effectDefinitionId],
     "counter definition",
   );
-  const counterEffect = must(counterDef.effects[0], "counter effect");
+  const unsupportedCounterEffect = must(
+    unsupportedCounterDef.effects[0],
+    "counter effect",
+  );
   unsupportedState.cardManifest.effectDefinitions = {
     ...unsupportedState.cardManifest.effectDefinitions,
     [effectDefinitionId]: {
-      ...counterDef,
+      ...unsupportedCounterDef,
       effects: [
-        counterEffect,
+        unsupportedCounterEffect,
         {
-          ...counterEffect,
-          id: `${String(counterEffect.id)}:duplicate` as typeof counterEffect.id,
+          ...unsupportedCounterEffect,
+          id: `${String(unsupportedCounterEffect.id)}:duplicate` as typeof unsupportedCounterEffect.id,
         },
       ],
     },
@@ -548,7 +638,15 @@ test("activateMain adapter matrix supports reusable body only with activate-main
   state.cardManifest.effectDefinitions = {
     "def-activate-main-matrix": {
       ...definition,
-      effects: [{ ...effect, id: effectId, effect: reusableSequenceBody }],
+      effects: [
+        { ...effect, id: effectId, effect: reusableSequenceBody },
+        {
+          ...effect,
+          id: "matrix:activate-main:irrelevant" as typeof effect.id,
+          trigger: { type: "onPlay" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+        },
+      ],
     },
   };
   const legal = getLegalActions(state, p1).filter(
@@ -576,6 +674,7 @@ test("runtime production source keeps anti-shape/card-specific authorization bra
     "packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts",
     "packages/engine-core/src/effect-runtime-trigger-queueing-ko.ts",
     "packages/engine-core/src/effect-runtime-trigger-queueing-main-event.ts",
+    "packages/engine-core/src/effect-runtime-activation-main.ts",
     "packages/engine-core/src/effect-runtime-sequence-support.ts",
     "packages/engine-core/src/play-card-support.ts",
     "packages/engine-core/src/life-trigger-actions.ts",
