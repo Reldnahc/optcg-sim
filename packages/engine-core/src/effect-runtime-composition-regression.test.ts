@@ -39,12 +39,16 @@ const repoRoot = path.resolve(
 );
 
 const fullDefinitionSizeAuthorizationPattern =
-  /\b(?:lookup\.)?definition\.effects\.length\s*(?:[!=]==?\s*1|[<>]=?\s*[12])/;
+  /\b(?:lookup\.)?definition\.effects\.length\s*(?:[!=]==?\s*(?!0\b)\d+|[<>]=?\s*(?!0\b)\d+)/;
 
 test("source-shape pattern targets top-level full-definition-size authorization only", () => {
   const rejected = [
     "if (definition.effects.length === 1) return true;",
     "if (definition.effects.length !== 1) return false;",
+    "if (definition.effects.length === 2) return true;",
+    "if (definition.effects.length !== 2) return false;",
+    "if (lookup.definition.effects.length === 3) return true;",
+    "if (lookup.definition.effects.length !== 3) return false;",
     "if (lookup.definition.effects.length > 1) return false;",
     "if (lookup.definition.effects.length < 2) return false;",
     "if (definition.effects.length >= 2) return false;",
@@ -710,6 +714,9 @@ test("runtime production source keeps anti-shape/card-specific authorization bra
     "packages/engine-core/src/effect-runtime-trigger-queueing-main-event.ts",
     "packages/engine-core/src/effect-runtime-activation-main.ts",
     "packages/engine-core/src/effect-runtime-sequence-support.ts",
+    "packages/engine-core/src/attack-timing.ts",
+    "packages/engine-core/src/battle-actions.ts",
+    "packages/engine-core/src/battle-support.ts",
     "packages/engine-core/src/play-card-support.ts",
     "packages/engine-core/src/life-trigger-actions.ts",
     "packages/engine-core/src/battle-counter-actions.ts",
