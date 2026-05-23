@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-025C.md",
-      "storyId": "CARD-025C",
-      "storyPath": "stories/approved/CARD-025C-entry-point-marker-cost-adapter-migration.yaml",
-      "storySha256": "a478974c8744d387b8e645c93db1bd40d29c951e4480ae863cc03edffc51ee23"
+      "packetPath": "agent-packets/CARD-025D.md",
+      "storyId": "CARD-025D",
+      "storyPath": "stories/approved/CARD-025D-condition-target-filter-primitive-migration.yaml",
+      "storySha256": "a6f7af3fe00d8dad188c697e6faddb68f73c8dd7e2aec03f2ffed56cb622b3fb"
     }
   ],
   "version": 1

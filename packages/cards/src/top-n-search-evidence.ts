@@ -14,23 +14,31 @@ export const topNSearchParserRuleIds = [
 
 export const topNFilteredSearchParserCertificationIds = [
   "wrapper:on-play",
-  "search-window:top-n-self-deck",
-  "visibility:selected-card:reveal",
+  "target-owner:self",
+  "target-zone:deck",
+  "target-object-kind:card",
+  "search-window:top-n",
+  "visibility:selected-card:both-players",
   "cardinality:up-to-one",
-  "filter:optional-color-type-name-exclusion",
+  "filter:type",
+  "filter:optional-color",
+  "filter:optional-name-exclusion",
   "destination:add-selected-to-hand",
-  "remainder:bottom-owner-choice",
+  "ordering:remainder-bottom-owner-choice",
   "composition:filtered-top-n-search",
 ] as const;
 
 export const topNAnyCardSearchParserCertificationIds = [
   "wrapper:on-play",
-  "search-window:top-n-self-deck",
+  "target-owner:self",
+  "target-zone:deck",
+  "target-object-kind:card",
+  "search-window:top-n",
   "visibility:selected-card:chooser-only",
   "cardinality:up-to-one",
   "filter:any-card-empty",
   "destination:add-selected-to-hand",
-  "remainder:bottom-owner-choice",
+  "ordering:remainder-bottom-owner-choice",
   "composition:any-card-top-n-search",
 ] as const;
 

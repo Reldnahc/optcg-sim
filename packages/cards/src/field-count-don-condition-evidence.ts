@@ -6,6 +6,13 @@ export const fieldCountDonConditionComponentEvidenceInventoryEntry = {
     schema: [],
     sourceIntegrity: [],
   },
+  parserCertificationIds: [
+    "condition:predicate",
+    "condition:comparator-threshold",
+    "condition:owner:self-or-opponent",
+    "condition:zone:field",
+    "condition:filter:category-don",
+  ],
   parserRuleId: "condition-component:field-count-don-public",
   runtimeCapabilityIds: ["condition:fieldCount:don:public"],
   shapeId: "condition-field-count-don-public",

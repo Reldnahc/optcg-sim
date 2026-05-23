@@ -329,6 +329,8 @@ describe("optional trash cost K.O. generated support", () => {
   });
 
   it("keeps optional hand-trash filtered K.O. unsupported when parser certification evidence is stale", () => {
+    const staleCertificationId =
+      "composition:on-play-optional-trash-ko-sequence";
     const index = buildGeneratedSupportIndex({
       cards: [
         {
@@ -339,15 +341,8 @@ describe("optional trash cost K.O. generated support", () => {
         },
       ],
       parserCertificationEvidence: {
-        currentCertificationIds: [
-          "optional-cost-wrapper:on-play-trash-from-hand",
-          "target-filter:opponent-character-base-cost-max",
-          "saved-target-ko-consumer:opponent-character",
-          "composition:on-play-optional-trash-ko-sequence",
-        ],
-        staleCertificationIds: [
-          "composition:on-play-optional-trash-ko-sequence",
-        ],
+        currentCertificationIds: optionalTrashCostKoParserCertificationIds,
+        staleCertificationIds: [staleCertificationId],
       },
       validateEffectDefinition,
     });
@@ -359,6 +354,7 @@ describe("optional trash cost K.O. generated support", () => {
       code: "unsupported-primitive",
       diagnosticLayer: "review",
     });
+    expect(blocker?.message).toContain(staleCertificationId);
     expect(blocker?.message).toContain("Stale parser certification");
     expect(index.entries[0]).toMatchObject({
       parseStatus: "complete",

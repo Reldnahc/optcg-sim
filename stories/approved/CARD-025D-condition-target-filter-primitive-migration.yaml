@@ -34,12 +34,14 @@ allowed_touch_points:
   - packages/cards/src/optional-trash-cost-ko-components.ts
   - packages/cards/src/optional-trash-cost-ko-components.test.ts
   - packages/cards/src/optional-trash-cost-ko-evidence.ts
+  - packages/cards/src/optional-trash-cost-ko-generated-support.test.ts
   - packages/cards/src/top-n-search-components.ts
   - packages/cards/src/top-n-search-components.test.ts
   - packages/cards/src/top-n-search-evidence.ts
   - packages/cards/src/protection-diagnostic-components.ts
   - packages/cards/src/generated-support-types.ts
   - packages/cards/src/runtime-capability-matrix.test.ts
+  - packages/cards/src/sup-001g-line-separated-generated-support.test.ts
   - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
   - stories/generated/CARD-025D-condition-target-filter-primitive-migration.yaml
   - stories/approved/CARD-025-card-layer-spec010-migration-parent.yaml
@@ -66,6 +68,7 @@ scope:
   - migrate condition comparators and numeric thresholds to parsed numeric primitives, not sample-specific branches
   - migrate supported boolean condition connectors to explicit composition evidence
   - migrate current target owner, zone, Character/Leader/Stage/card type, subtype, color, name exclusion, base-cost, cardinality, saved-target, and duration filters to primitive evidence where currently supported
+  - update existing generated-support tests that directly provide parser-certification evidence for migrated condition, target, filter, cardinality, and duration primitives so they use the new primitive IDs rather than legacy bundled IDs
   - prove valid subsets of larger supported target/filter phrases work independently unless explicitly out of scope in the current implementation
   - keep unsupported target/filter/duration wording fail-closed with narrow diagnostics
 non_scope:
@@ -96,6 +99,7 @@ required_tests:
   - parser primitive matrix tests for current supported condition families and numeric comparator variation
   - parser primitive matrix tests for current supported target, filter, cardinality, saved-target, and duration families, including numeric variation for supported target/filter/cardinality values
   - generated-support tests proving missing condition, target, filter, cardinality, or duration primitive evidence fails closed
+  - existing generated-support tests that feed parser-certification evidence for migrated D primitives remain green by supplying primitive parser-certification IDs rather than compatibility aliases or bundled exact phrase IDs
   - fail-closed tests for absent cardinality evidence and absent duration evidence on shapes that require those primitives
   - anti-shape source scan or equivalent test proving no exact full-condition or full target-filter phrase authorizes current support
   - run `corepack pnpm run packets:verify`

@@ -20,7 +20,11 @@ export const optionalTrashCostKoRuntimeCapabilityIds = [
 
 export const optionalTrashCostKoParserCertificationIds = [
   "optional-cost-wrapper:on-play-trash-from-hand",
-  "target-filter:opponent-character-base-cost-max",
+  "target-owner:opponent",
+  "target-object-kind:character",
+  "target-zone:character-area",
+  "filter:base-cost-max",
+  "cardinality:up-to-one",
   "saved-target-ko-consumer:opponent-character",
   "composition:on-play-optional-trash-ko-sequence",
 ] as const;

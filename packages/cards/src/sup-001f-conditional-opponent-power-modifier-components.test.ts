@@ -8,6 +8,7 @@ import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import { buildGeneratedSupportIndex } from "./generated-support-index.js";
 import { buildGeneratedSupportReport } from "./generated-support-report.js";
 import {
+  findGeneratedSupportComponentEvidenceByShapeId,
   listAllGeneratedSupportParserCertificationIds,
   listRequiredRuntimeCapabilityIdsForComponentEvidenceId,
 } from "./generated-support-types.js";
@@ -36,6 +37,26 @@ const baseInput = {
 };
 
 describe("SUP-001F conditional opponent power modifier card components", () => {
+  it("uses primitive condition/target/cardinality/duration certifications for SUP-001F evidence", () => {
+    const certificationIds =
+      findGeneratedSupportComponentEvidenceByShapeId(
+        "when-attacking-conditional-modify-power-choose-this-turn",
+      )?.parserCertificationIds ?? [];
+
+    expect(certificationIds).toEqual(
+      expect.arrayContaining([
+        "condition:predicate",
+        "condition:comparator-threshold",
+        "target-owner:opponent",
+        "target-object-kind:character",
+        "target-zone:character-area",
+        "chooser:self",
+        "cardinality:up-to-n",
+        "duration:this-turn",
+      ]),
+    );
+  });
+
   it.each([
     {
       expectedConditionValue: 6,

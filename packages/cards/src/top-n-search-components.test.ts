@@ -4,6 +4,10 @@ import type { CardId, EffectId } from "@optcg/types";
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import { isCompleteGeneratedSupportParseResult } from "./generated-support-types.js";
 import {
+  topNAnyCardSearchParserCertificationIds,
+  topNFilteredSearchParserCertificationIds,
+} from "./top-n-search-evidence.js";
+import {
   parseTopNAnyCardAddToHandAndBottomRemainder,
   parseTopNBottomRemainder,
   parseTopNDeckLookPrefix,
@@ -24,6 +28,32 @@ const parse = (sourceText: string) =>
   });
 
 describe("SUP-002G top-N search parser components", () => {
+  it("keeps primitive target/filter evidence boundaries instead of full target-filter phrase authorization", () => {
+    expect(topNFilteredSearchParserCertificationIds).toEqual(
+      expect.arrayContaining([
+        "target-owner:self",
+        "target-zone:deck",
+        "target-object-kind:card",
+        "filter:type",
+        "filter:optional-color",
+        "filter:optional-name-exclusion",
+        "cardinality:up-to-one",
+      ]),
+    );
+    expect(topNFilteredSearchParserCertificationIds).not.toContain(
+      "filter:optional-color-type-name-exclusion",
+    );
+    expect(topNAnyCardSearchParserCertificationIds).toEqual(
+      expect.arrayContaining([
+        "target-owner:self",
+        "target-zone:deck",
+        "target-object-kind:card",
+        "filter:any-card-empty",
+        "cardinality:up-to-one",
+      ]),
+    );
+  });
+
   it("parses top-N search primitive boundaries independently", () => {
     expect(
       parseTopNDeckLookPrefix(

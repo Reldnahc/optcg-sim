@@ -9,8 +9,24 @@ import {
   parseOptionalTrashFromHandCostKoBody,
   parseOptionalTrashFromHandCostWrapper,
 } from "./optional-trash-cost-ko-components.js";
+import { optionalTrashCostKoParserCertificationIds } from "./optional-trash-cost-ko-evidence.js";
 
 describe("optional trash cost K.O. components", () => {
+  it("keeps target/filter/cardinality evidence split into primitives", () => {
+    expect(optionalTrashCostKoParserCertificationIds).toEqual(
+      expect.arrayContaining([
+        "target-owner:opponent",
+        "target-object-kind:character",
+        "target-zone:character-area",
+        "filter:base-cost-max",
+        "cardinality:up-to-one",
+      ]),
+    );
+    expect(optionalTrashCostKoParserCertificationIds).not.toContain(
+      "target-filter:opponent-character-base-cost-max",
+    );
+  });
+
   it("parses reusable optional hand-trash cost and base-cost K.O. components", () => {
     expect(
       parseOptionalTrashFromHandCostWrapper(
