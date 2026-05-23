@@ -21,7 +21,6 @@ import {
   computeMatchCardManifestHash,
   createManifestVersions,
 } from "./manifest.js";
-import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import { mergeSimulatorOverlay } from "./overlay.js";
 import { validatePoneglyphCardDetail } from "./poneglyph-schema.js";
@@ -679,7 +678,7 @@ function buildRealCardGeneratedSupportEvidence(
   const generatedSupportCandidates = fixtures
     .filter(
       (fixture) =>
-        hasReviewedGeneratedFixtureSupport(fixture.fixtureId) &&
+        !hasReviewedNonGeneratedFixtureSupport(fixture.fixtureId) &&
         fixture.normalized.effectText !== undefined,
     )
     .map(({ normalized }) => {
@@ -702,9 +701,6 @@ function buildRealCardGeneratedSupportEvidence(
     });
   const index = buildGeneratedSupportIndex({
     cards: generatedSupportCandidates,
-    parserCertificationEvidence: {
-      currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
-    },
     validateEffectDefinition: () => ({ valid: true }),
   });
   const evidence = toGeneratedSupportManifestEvidence(index);
@@ -716,10 +712,10 @@ function buildRealCardGeneratedSupportEvidence(
   return evidence;
 }
 
-function hasReviewedGeneratedFixtureSupport(
+function hasReviewedNonGeneratedFixtureSupport(
   fixtureId: RealCardFixtureId,
 ): boolean {
-  return fixtureId === "OP10-045";
+  return fixtureId === "EB01-023" || fixtureId === "OP04-014";
 }
 
 export async function loadFixtureOnlyRealCardDslMatchCardManifest(): Promise<MatchCardManifest> {
