@@ -34,6 +34,7 @@ import {
   onPlayReturnDonPlaySelectedParserCertificationIds,
   onPlaySelectTargetParserCertificationIds,
   onPlaySelectThenKoParserCertificationIds,
+  onPlayTrashFromHandParserCertificationIds,
   triggerDrawParserCertificationIds,
   triggerDrawUpToParserCertificationIds,
   whenAttackingDrawParserCertificationIds,
@@ -384,6 +385,24 @@ export const generatedSupportComponentEvidenceInventory = [
       "trigger:onPlay",
     ],
     shapeId: "on-play-draw",
+  },
+  {
+    components: [
+      "wrapper",
+      "body-action",
+      "source-presence-policy",
+      ...parserRuleBaseComponents,
+    ],
+    gates: parserRuleBaseGates,
+    parserCertificationIds: onPlayTrashFromHandParserCertificationIds,
+    parserRuleId: "exact:on-play:trash-n-from-hand:self",
+    runtimeCapabilityIds: [
+      "category:auto",
+      "effect:trashFromHand:self:count:positive-safe-integer:owner-chooses",
+      "sourcePresencePolicy:mustRemainInSameZone",
+      "trigger:onPlay",
+    ],
+    shapeId: "on-play-trash-from-hand",
   },
   {
     components: drawSelfComponents,

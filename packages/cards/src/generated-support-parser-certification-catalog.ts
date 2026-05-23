@@ -21,6 +21,12 @@ export const onPlayDrawThenTrashParserCertificationIds = [
   "composition:on-play-draw-then-trash",
 ] as const;
 
+export const onPlayTrashFromHandParserCertificationIds = [
+  "trigger-wrapper:on-play",
+  "body-action:trash-from-hand",
+  "source-presence-policy:must-remain-in-same-zone",
+] as const;
+
 export const whenAttackingDrawParserCertificationIds = [
   "trigger-wrapper:when-attacking",
   "body-action:draw-n",

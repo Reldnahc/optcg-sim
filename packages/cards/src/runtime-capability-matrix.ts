@@ -52,6 +52,7 @@ type RuntimeCapabilitySpec = readonly [string, RuntimeCapabilityKind, string];
 const sameZoneParserRuleIds = [
   "exact:on-play:draw-n:self",
   "exact:when-attacking:draw-n:self",
+  "exact:on-play:trash-n-from-hand:self",
   "exact:on-play:draw-n:trash-m:hand:self",
   "exact:on-play:trash-n-from-hand:draw-m:self",
   "exact:when-attacking:draw-n:trash-m:hand:self",
@@ -388,6 +389,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       sinceStory: "CARD-009B",
       supported: true,
       supportedParserRuleIds: [
+        "exact:on-play:trash-n-from-hand:self",
         "exact:on-play:draw-n:trash-m:hand:self",
         "exact:on-play:trash-n-from-hand:draw-m:self",
         "exact:when-attacking:draw-n:trash-m:hand:self",
@@ -741,6 +743,7 @@ const generatedSupportRuntimeCapabilityMatrixBase = {
       supported: true,
       supportedParserRuleIds: [
         "exact:on-play:draw-n:self",
+        "exact:on-play:trash-n-from-hand:self",
         "exact:on-play:draw-n:trash-m:hand:self",
         "exact:on-play:trash-n-from-hand:draw-m:self",
         "exact:on-play:draw-up-to-n:self",
@@ -917,6 +920,9 @@ function classifyParserRuleKind(parserRuleId: string): string {
     ].includes(parserRuleId)
   ) {
     return "triggered-draw";
+  }
+  if (parserRuleId === "exact:on-play:trash-n-from-hand:self") {
+    return "triggered-trash-from-hand";
   }
   if (
     [

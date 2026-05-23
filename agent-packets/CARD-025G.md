@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id CARD-025G -->
 <!-- agent-packet:story-path stories/approved/CARD-025G-generated-support-evaluator-proof-compatibility.yaml -->
-<!-- agent-packet:story-sha256 6d473836f307ca643393de2197af8d44190243de9a24703831bddf748fc4a43e -->
+<!-- agent-packet:story-sha256 a8d5d4fd77b4d14724a7aa4cddf66f1be0b0550d26c92c225f74a14568d3653b -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -382,6 +382,7 @@ Own only cards-layer evaluator, probe, report, proof-certificate, and final comp
 - update adjacent legacy generated-support unit test expectations when they assert the renamed cards-layer parser-rule or capability evidence identifiers; do not update real-card fixtures, representative fixture manifests, source hashes, behavior hashes, overlays, or external card-list behavior
 - update the existing real-card fixture regression manifest builder only to derive its closed generated-support candidate set from already checked-in generated-support fixture records and pass current generic parser-certification evidence into the migrated generated-support index contract; do not add or change fixture files, fixture payloads, manifests, hashes, overlays, generated manifest output, real-card promotion, or acceptance evidence
 - parameterize existing supported primitives when the runtime capability and parser certification evidence already support the primitive family, including wrapper tokens, target/cardinality text, saved-reference consumer text, keyword tokens, source-suffix text, and numeric count/value thresholds
+- supported standalone body primitives already used inside composed generated-support paths must also compose under supported trigger wrappers without requiring a second body action; this includes standalone trash-from-hand as wrapper evidence plus body evidence, not an exact full-card or card-specific branch
 - prove no acceptance test depends on real card IDs, real-card fixture promotion, external card lists, or exact full printed text
 
 ## Out of Scope
@@ -476,6 +477,7 @@ Follow [`docs/code-standard.md`](docs/code-standard.md). Non-negotiables:
 - anti-regression tests or detector self-tests proving remaining exact wrapper tokens, parser syntax fragments, and diagnostic story references are not treated as support authorization authority
 - synthetic variation tests proving de-shaped current-family parser support does not depend on exact full-line samples, story-coded parser ownership labels, or sample-specific numeric branches
 - regression tests proving de-shaped parser authorization preserves existing supported generated-support outputs for the current supported families and still fails closed for unrelated wording families
+- regression tests proving a supported standalone body primitive such as trash-from-hand parses under supported trigger wrappers without requiring an adjacent draw or other second action
 - anti-shape tests proving evaluator/proof/report code does not authorize support by exact full-line text, card IDs, external lists, parser-rule-only evidence, or full-definition-size gates
 - run `corepack pnpm run packets:verify`
 - run `corepack pnpm run stories:validate`

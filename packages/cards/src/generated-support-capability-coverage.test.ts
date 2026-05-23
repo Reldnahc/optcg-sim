@@ -1,12 +1,59 @@
 import { describe, expect, it } from "vitest";
+import type { CardId, EffectId } from "@optcg/types";
 
+import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import {
   evaluateRuntimeCapabilityCoverageForComponentEvidenceIds,
   evaluateRuntimeCapabilityCoverageForParserRuleIds,
 } from "./generated-support-index.js";
+import { isCompleteGeneratedSupportParseResult } from "./generated-support-types.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 
+const toEffectId = (value: string): EffectId => value as EffectId;
+
 describe("generated support capability coverage", () => {
+  it.each([
+    ["[On Play] Trash 1 card from your hand.", 1],
+    ["[On Play] Trash 2 cards from your hand.", 2],
+  ] as const)(
+    "composes standalone On Play trash-from-hand through wrapper plus body evidence (%s)",
+    (sourceText, count) => {
+      const result = parseCertifiedCardText({
+        cardId: "CARD-025G-STANDALONE-TRASH" as CardId,
+        effectDefinitionsVersion: "test-effects",
+        rulesVersion: "test-rules",
+        sourceTextHash: "test-source-hash",
+        sourceText,
+      });
+      expect(result.status).toBe("complete");
+      if (!isCompleteGeneratedSupportParseResult(result)) {
+        throw new Error("Expected complete parse.");
+      }
+      expect(result.componentEvidenceIds).toEqual(["on-play-trash-from-hand"]);
+      expect(result.effectDefinition.effects).toEqual([
+        {
+          category: "auto",
+          effect: {
+            chooser: "self",
+            count,
+            player: "self",
+            type: "trashFromHand",
+          },
+          id: toEffectId(
+            `CARD-025G-STANDALONE-TRASH:auto-on-play-trash-${String(count)}-from-hand`,
+          ),
+          sourcePresencePolicy: "mustRemainInSameZone",
+          trigger: { type: "onPlay" },
+        },
+      ]);
+      expect(
+        evaluateRuntimeCapabilityCoverageForComponentEvidenceIds({
+          componentEvidenceIds: result.componentEvidenceIds,
+        }).missingCapabilityIds,
+      ).toEqual([]);
+    },
+  );
+
   it("reports CARD-014A capability coverage for CARD-018A-enabled component evidence", () => {
     const coverage = evaluateRuntimeCapabilityCoverageForComponentEvidenceIds({
       componentEvidenceIds: [

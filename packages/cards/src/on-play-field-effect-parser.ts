@@ -14,6 +14,7 @@ import {
   parseSelectOpponentCharacterInstructionBody,
   parseSelectOpponentCharacterThenKoInstructionBody,
   parseSupportedTriggerWrapper,
+  parseTrashFromHandInstructionBody,
 } from "./composed-parser-builder.js";
 
 export interface Card014gCertifiedClause {
@@ -60,6 +61,37 @@ export function parseCard014gResidueClause(
   }
 
   return undefined;
+}
+
+export function parseOnPlayTrashFromHandClause(
+  cardId: CardId,
+  sourceText: string,
+): Card014gCertifiedClause | undefined {
+  const wrapper = parseSupportedTriggerWrapper(sourceText);
+  if (wrapper?.prefix !== "[On Play] ") {
+    return undefined;
+  }
+
+  const parsed = parseTrashFromHandInstructionBody(wrapper.bodyText);
+  return parsed === undefined
+    ? undefined
+    : {
+        effectBlock: {
+          category: "auto",
+          effect: {
+            chooser: "self",
+            count: parsed.count,
+            player: "self",
+            type: "trashFromHand",
+          },
+          id: toEffectId(
+            `${String(cardId)}:auto-on-play-trash-${String(parsed.count)}-from-hand`,
+          ),
+          sourcePresencePolicy: "mustRemainInSameZone",
+          trigger: { type: "onPlay" },
+        },
+        parserRuleId: "exact:on-play:trash-n-from-hand:self",
+      };
 }
 
 function parseOnPlayFieldEffectBody(

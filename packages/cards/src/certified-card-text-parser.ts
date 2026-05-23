@@ -10,6 +10,7 @@ import {
   parseCard014gClause,
   parseCard014gResidueClause,
 } from "./card014g-composed-parser.js";
+import { parseOnPlayTrashFromHandClause } from "./on-play-field-effect-parser.js";
 import {
   buildCompleteParseResult,
   buildPartialParseResult,
@@ -395,6 +396,7 @@ function parseNonConditionalCardLineEffectClause(
       prefix: "[On Play] ",
       trigger: { type: "onPlay" },
     }) ??
+    parseOnPlayTrashFromHandClause(cardId, sourceText) ??
     parseOnPlayDrawThenTrashClause(cardId, sourceText) ??
     parseWhenAttackingModifyPowerChooseThisTurnClause(cardId, sourceText) ??
     parseAutoDrawClause(cardId, sourceText, {

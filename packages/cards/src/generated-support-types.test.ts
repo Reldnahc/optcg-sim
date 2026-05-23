@@ -357,6 +357,7 @@ describe("generated support parser result contracts", () => {
       "exact:on-play:top-n-search:any-card:up-to-1:hand:bottom-owner-choice",
       "exact:on-play:top-n-search:filtered:reveal-up-to-1:hand:bottom-owner-choice",
       "exact:on-play:trash-n-from-hand:draw-m:self",
+      "exact:on-play:trash-n-from-hand:self",
       "exact:start-of-game:play-up-to-1-typed-stage-from-self-deck",
       "exact:trigger:draw-n:self",
       "exact:trigger:draw-up-to-n:self",
