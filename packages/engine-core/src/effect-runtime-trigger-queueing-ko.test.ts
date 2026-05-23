@@ -217,6 +217,36 @@ test("detects one supported On K.O. candidate from a battle K.O. event batch", (
   assert.deepEqual(state, before);
 });
 
+test("detects supported On K.O. candidate from a multi-effect definition with unrelated supported effects", () => {
+  const { state, source, definition, events } = koQueueingState();
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        onKOEffect,
+        {
+          ...onKOEffect,
+          id: `${String(onKOEffect.id)}:on-play` as typeof onKOEffect.id,
+          trigger: { type: "onPlay" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+        },
+      ],
+    },
+  };
+  const before = structuredClone(state);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.candidates.length, 1);
+  const candidate = must(result.candidates[0], "On K.O. candidate");
+  assert.equal(candidate.effectBlockId, onKOEffect.id);
+  assert.equal(candidate.source.instanceId, source.instanceId);
+  assert.deepEqual(state, before);
+});
+
 test("queues supported On K.O. candidates with deterministic queue metadata and public event", () => {
   const { state, source, trashedSource, definition, events } =
     koQueueingState();
@@ -813,6 +843,47 @@ test("rejects multiple On K.O. effects before queueing", () => {
     },
   });
   assert.deepEqual(state, before);
+});
+
+test("On K.O. reusable draw-then-trash sequence queues and reaches sequence decision flow", () => {
+  const { state, definition, events } = koQueueingState();
+  const effect = must(definition.effects[0], "onKO effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: { type: "draw", count: 1, player: "self" },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "trashFromHand",
+                  player: "self",
+                  chooser: "self",
+                  count: 1,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+
+  const queued = queueBattleKOTriggers(state, state, [...events]);
+  assert.equal(queued.ok, true);
+  const paused = processEffectRuntime(queued.state);
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
 });
 
 test.each([

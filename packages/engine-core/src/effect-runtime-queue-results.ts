@@ -22,7 +22,6 @@ import {
   toStateSeq,
 } from "./action-results.js";
 import type { EffectQueueGroup } from "./effect-queue-ordering.js";
-import { createSupportedDrawThenTrashSequenceDecision } from "./effect-runtime-draw-trash-sequence.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
 import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
 import {
@@ -558,19 +557,6 @@ export const createEffectRuntimeQueueResults = (
             errorCount: originalState.effectQueue.length,
           },
         );
-      }
-      const drawTrashSequence = createSupportedDrawThenTrashSequenceDecision(
-        nextState,
-        selected,
-        queuedEffect,
-      );
-      if (drawTrashSequence !== undefined) {
-        return drawTrashSequence.ok
-          ? toEngineResult(drawTrashSequence.state, [
-              ...allEvents,
-              ...drawTrashSequence.events,
-            ])
-          : unsupportedEffectQueueResult(originalState);
       }
       const sequenceFrame = createSupportedSequenceFrameDecision(
         nextState,

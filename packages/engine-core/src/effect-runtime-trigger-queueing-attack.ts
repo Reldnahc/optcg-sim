@@ -17,6 +17,7 @@ import {
   isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect,
   isSupportedOptionalNoChoiceWhenAttackingDrawEffect,
 } from "./effect-runtime-primitives.js";
+import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OnOpponentAttackTriggerQueueingFailureReason,
@@ -36,54 +37,7 @@ const withoutCondition = (
   return supportShape;
 };
 
-const isSupportedWhenAttackingDrawThenTrashSequenceEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Extract<Effect, { type: "sequence" }>;
-} => {
-  if (
-    effect.sourcePresencePolicy !== "mustRemainInSameZone" ||
-    effect.trigger.type !== "whenAttacking" ||
-    effect.category !== "auto" ||
-    effect.optional === true ||
-    effect.cost !== undefined ||
-    effect.conditionTiming !== undefined ||
-    effect.failurePolicy !== undefined ||
-    effect.effect.type !== "sequence" ||
-    effect.effect.effects.length !== 2
-  ) {
-    return false;
-  }
-
-  const drawSegment = effect.effect.effects[0];
-  const trashSegment = effect.effect.effects[1];
-  if (
-    drawSegment === undefined ||
-    trashSegment === undefined ||
-    drawSegment.connector !== "always" ||
-    trashSegment.connector !== "then" ||
-    drawSegment.saveResultAs !== undefined ||
-    trashSegment.saveResultAs !== undefined ||
-    drawSegment.effect.type !== "draw" ||
-    trashSegment.effect.type !== "trashFromHand"
-  ) {
-    return false;
-  }
-
-  return (
-    Number.isInteger(drawSegment.effect.count) &&
-    drawSegment.effect.count > 0 &&
-    drawSegment.effect.player === "self" &&
-    Number.isInteger(trashSegment.effect.count) &&
-    trashSegment.effect.count > 0 &&
-    trashSegment.effect.player === "self" &&
-    trashSegment.effect.chooser === "self" &&
-    trashSegment.effect.filter === undefined
-  );
-};
-
-const isSupportedWhenAttackingCompatibleQueuedEffect = (
+export const isSupportedWhenAttackingCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
@@ -93,7 +47,20 @@ const isSupportedWhenAttackingCompatibleQueuedEffect = (
   isSupportedOptionalNoChoiceWhenAttackingDrawEffect(
     withoutCondition(effect),
   ) ||
-  isSupportedWhenAttackingDrawThenTrashSequenceEffect(effect);
+  isSupportedQueuedAutoSequenceForEntryPoint(
+    effect,
+    "whenAttacking",
+    "mustRemainInSameZone",
+  );
+
+export const isSupportedOnOpponentAttackCompatibleQueuedEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Effect;
+} =>
+  isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
+  isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect(effect);
 
 export const createAttackTriggerQueueing = (
   dependencies: Pick<
@@ -207,7 +174,7 @@ export const createAttackTriggerQueueing = (
       const matching = whenAttackingEffects.filter(
         isSupportedWhenAttackingCompatibleQueuedEffect,
       );
-      if (matching.length === 0) {
+      if (matching.length !== whenAttackingEffects.length) {
         return toEngineResult(
           state,
           [],
@@ -229,18 +196,6 @@ export const createAttackTriggerQueueing = (
           ],
         );
       }
-      if (lookup.definition.effects.length !== 1) {
-        return toEngineResult(
-          state,
-          [],
-          [
-            whenAttackingTriggerQueueingError(
-              "unsupported-when-attacking-definition",
-            ),
-          ],
-        );
-      }
-
       for (const effectBlock of matching) {
         const queueId =
           `queue-entry:${String(event.id)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
@@ -460,11 +415,9 @@ export const createAttackTriggerQueueing = (
           continue;
         }
         const matching = onOpponentAttackEffects.filter(
-          (effect) =>
-            isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
-            isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect(effect),
+          isSupportedOnOpponentAttackCompatibleQueuedEffect,
         );
-        if (matching.length === 0) {
+        if (matching.length !== onOpponentAttackEffects.length) {
           return toEngineResult(
             state,
             [],
@@ -486,18 +439,6 @@ export const createAttackTriggerQueueing = (
             ],
           );
         }
-        if (lookup.definition.effects.length !== 1) {
-          return toEngineResult(
-            state,
-            [],
-            [
-              onOpponentAttackTriggerQueueingError(
-                "unsupported-on-opponent-attack-definition",
-              ),
-            ],
-          );
-        }
-
         for (const effectBlock of matching) {
           const queueId =
             `queue-entry:${String(event.id)}:onOpponentAttack:${String(effectBlock.id)}` as EffectQueueEntry["id"];

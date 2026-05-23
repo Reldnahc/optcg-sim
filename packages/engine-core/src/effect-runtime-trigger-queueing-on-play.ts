@@ -13,6 +13,7 @@ import {
   isSupportedNoChoiceOnPlayDrawEffect,
   isSupportedOptionalNoChoiceOnPlayDrawEffect,
 } from "./effect-runtime-primitives.js";
+import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OnPlayTriggerQueueingFailureReason,
@@ -56,7 +57,12 @@ const isSupportedOnPlayCompatibleQueuedEffect = (
 } =>
   isSupportedNoChoiceOnPlayDrawEffect(withoutCondition(effect)) ||
   isSupportedOptionalNoChoiceOnPlayDrawEffect(withoutCondition(effect)) ||
-  isSupportedOnPlayDrawUpToEffect(effect);
+  isSupportedOnPlayDrawUpToEffect(effect) ||
+  isSupportedQueuedAutoSequenceForEntryPoint(
+    effect,
+    "onPlay",
+    "mustRemainInSameZone",
+  );
 
 export const createOnPlayTriggerQueueing = (
   dependencies: Pick<
@@ -156,7 +162,7 @@ export const createOnPlayTriggerQueueing = (
       const matching = onPlayEffects.filter(
         isSupportedOnPlayCompatibleQueuedEffect,
       );
-      if (matching.length === 0) {
+      if (matching.length !== onPlayEffects.length) {
         return toEngineResult(
           state,
           [],
@@ -170,14 +176,6 @@ export const createOnPlayTriggerQueueing = (
           [onPlayTriggerQueueingError("multiple-on-play-effects")],
         );
       }
-      if (lookup.definition.effects.length !== 1) {
-        return toEngineResult(
-          state,
-          [],
-          [onPlayTriggerQueueingError("unsupported-on-play-definition")],
-        );
-      }
-
       for (const effectBlock of matching) {
         const orderingGroup =
           source.zone.playerId === state.turn.turnPlayerId

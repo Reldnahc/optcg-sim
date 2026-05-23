@@ -141,6 +141,82 @@ test("queues one supported no-choice Main Event draw effect from an Event cardPl
   );
 });
 
+test("queues supported Main Event effect from a multi-effect definition with unrelated supported effects", () => {
+  const { state, eventInTrash } = setupMainEventQueueingState();
+  const definition = must(
+    state.cardManifest.effectDefinitions?.["def-main-event-draw"],
+    "main event definition",
+  );
+  const mainEffect = must(definition.effects[0], "main effect");
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-draw": {
+      ...definition,
+      effects: [
+        mainEffect,
+        {
+          ...mainEffect,
+          id: `${String(mainEffect.id)}:on-play` as typeof mainEffect.id,
+          trigger: { type: "onPlay" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+        },
+      ],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  const entry = must(result.state.effectQueue[0], "queue entry");
+  assert.equal(entry.source.instanceId, eventInTrash.instanceId);
+  assert.equal(entry.effectBlockId, mainEffect.id);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectQueued"],
+  );
+});
+
+test("unsupported same-entrypoint Main Event effect fails closed beside a supported Main Event effect", () => {
+  const { state } = setupMainEventQueueingState();
+  const definition = must(
+    state.cardManifest.effectDefinitions?.["def-main-event-draw"],
+    "main event definition",
+  );
+  const mainEffect = must(definition.effects[0], "main effect");
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-draw": {
+      ...definition,
+      effects: [
+        mainEffect,
+        {
+          ...mainEffect,
+          id: `${String(mainEffect.id)}:unsupported` as typeof mainEffect.id,
+          cost: { type: "restDon", count: 1 },
+        },
+        {
+          ...mainEffect,
+          id: `${String(mainEffect.id)}:on-play` as typeof mainEffect.id,
+          trigger: { type: "onPlay" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+        },
+      ],
+    },
+  };
+  const before = structuredClone(state);
+
+  const result = processEffectRuntime(state);
+
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.errors, [
+    {
+      type: "effectRuntimeError",
+      effectId: "main-event-trigger-queueing",
+      details: { reason: "unsupported-main-event-definition" },
+    },
+  ]);
+  assert.deepEqual(result.state, before);
+});
+
 test("queues one supported reviewed target KO Main Event from an Event cardPlayed event in trash", () => {
   const { state, eventInTrash } = setupMainEventQueueingState();
   const implemented = resolvedCard({
@@ -326,4 +402,48 @@ test("Main Event queueing fails closed when the trash source no longer matches t
     },
   ]);
   assert.equal(result.state.effectQueue.length, 0);
+});
+
+test("Main Event reusable draw-then-trash sequence queues and reaches sequence decision flow", () => {
+  const { state } = setupMainEventQueueingState();
+  const definition = must(
+    state.cardManifest.effectDefinitions?.["def-main-event-draw"],
+    "main event definition",
+  );
+  const mainEffect = must(definition.effects[0], "main effect");
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-draw": {
+      ...definition,
+      effects: [
+        {
+          ...mainEffect,
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: { type: "draw", count: 1, player: "self" },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "trashFromHand",
+                  player: "self",
+                  chooser: "self",
+                  count: 1,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+
+  const queued = processEffectRuntime(state);
+  const paused = processEffectRuntime(queued.state);
+
+  assert.equal(queued.errors, undefined);
+  assert.equal(paused.errors, undefined);
+  assert.equal(paused.state.pendingDecision?.type, "selectCards");
 });

@@ -25,9 +25,15 @@ import {
   reifyCardRef,
   toCardRef,
 } from "./action-state.js";
-import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
+import {
+  withAllAttackTimingCombatMetadataHidden,
+  withAllSupportedAttackTimingCombatMetadataHidden,
+} from "./attack-timing.js";
 import { resolveSupportedVanillaBattle } from "./battle-resolution.js";
-import { expireBattleDurationStateForCleanup } from "./battle-support.js";
+import {
+  expireBattleDurationStateForCleanup,
+  withSupportedBattleRuntimeMetadataHidden,
+} from "./battle-support.js";
 import {
   applyBlockStepDecisionResponse,
   createBlockStepDeclineDecision,
@@ -227,7 +233,9 @@ export const getDeclareAttackLegalActions = (
   ) {
     return [];
   }
-  const legalActionState = withAllAttackTimingCombatMetadataHidden(state);
+  const legalActionState = withSupportedBattleRuntimeMetadataHidden(
+    withAllSupportedAttackTimingCombatMetadataHidden(state),
+  );
   try {
     const view = computeView(legalActionState);
     return collectDeclareAttackLegalActions(state, playerId, view, {
@@ -298,7 +306,9 @@ export const applyDeclareAttack = (
     );
   }
 
-  const combatMetadataState = withAllAttackTimingCombatMetadataHidden(state);
+  const combatMetadataState = withSupportedBattleRuntimeMetadataHidden(
+    withAllAttackTimingCombatMetadataHidden(state),
+  );
   let legalTargets: readonly CardInstance["instanceId"][];
   let attackerHasDoubleAttack = false;
   try {
@@ -442,7 +452,9 @@ export const applyDeclareAttack = (
   }
 
   const blockDecision = createBlockStepDeclineDecision(
-    withAllAttackTimingCombatMetadataHidden(attackTimingResult.state),
+    withSupportedBattleRuntimeMetadataHidden(
+      withAllAttackTimingCombatMetadataHidden(attackTimingResult.state),
+    ),
   );
   if (blockDecision !== null) {
     const blockEvents = [...attackTimingResult.events];
@@ -605,7 +617,9 @@ const withOriginalManifestResult = (
 };
 
 const hideCurrentAttackTimingCombatMetadata = (state: GameState): GameState =>
-  withAllAttackTimingCombatMetadataHidden(state);
+  withSupportedBattleRuntimeMetadataHidden(
+    withAllAttackTimingCombatMetadataHidden(state),
+  );
 
 const resolveSupportedBattleWithAttackTimingMetadata = (
   state: GameState,
@@ -686,7 +700,9 @@ export const continueAttackTimingBattleIfReady = (
   }
 
   const blockDecision = createBlockStepDeclineDecision(
-    withAllAttackTimingCombatMetadataHidden(state),
+    withSupportedBattleRuntimeMetadataHidden(
+      withAllAttackTimingCombatMetadataHidden(state),
+    ),
   );
   if (blockDecision !== null) {
     const events: EngineEvent[] = [];

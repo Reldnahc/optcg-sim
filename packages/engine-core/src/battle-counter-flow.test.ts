@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { EffectDefinition } from "@optcg/types";
+
 import { applyAction, getLegalActions } from "./actions.js";
 import { applyDeclareAttack } from "./battle-actions.js";
 type EngineInternalBattleState = NonNullable<
@@ -566,6 +568,51 @@ test("supported Counter Event appears in defender legal actions and resolves to 
   });
   assert.equal(used.stateHash, replay.stateHash);
   assert.deepEqual(used.events, replay.events);
+});
+
+test("supported Counter Event remains legal with unrelated non-counter effect blocks", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  installSupportedCounterEvent(state, counterEvent, 2000);
+  const definition = must(
+    state.cardManifest.effectDefinitions?.[
+      `${String(counterEvent.cardId)}:counter`
+    ],
+    "counter definition",
+  );
+  const counterEffect = must(definition.effects[0], "counter effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [`${String(counterEvent.cardId)}:counter`]: {
+      ...definition,
+      effects: [
+        counterEffect,
+        {
+          ...counterEffect,
+          id: `${String(counterEffect.id)}:main` as EffectDefinition["effects"][number]["id"],
+          trigger: { type: "main" },
+        },
+      ],
+    },
+  };
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterEvent.instanceId,
+    ),
+    true,
+  );
 });
 
 test("supported nonzero-cost Counter Event requires payCost then resolves with rested DON", () => {

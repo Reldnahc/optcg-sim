@@ -2,7 +2,6 @@ import type {
   Action,
   CardRef,
   CardInstance,
-  Effect,
   ConfirmLifeTriggerDecision,
   EffectBlock,
   EffectQueueEntry,
@@ -34,6 +33,7 @@ import {
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 import { assertGameStateInvariants } from "./invariants.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
@@ -65,10 +65,11 @@ const isSupportedTriggerEffect = (effect: EffectBlock): boolean => {
   if (effect.optional === false) return false;
   if (effect.oncePerTurn !== undefined && effect.oncePerTurn) return false;
   if (effect.oncePerTurn === false) return false;
-  return isSupportedTriggerQueuedBody(effect.effect);
+  return isSupportedTriggerQueuedBody(effect);
 };
 
-const isSupportedTriggerQueuedBody = (effect: Effect): boolean => {
+const isSupportedTriggerQueuedBody = (effectBlock: EffectBlock): boolean => {
+  const effect = effectBlock.effect;
   if (effect.type === "draw") {
     return (
       Number.isInteger(effect.count) &&
@@ -83,31 +84,45 @@ const isSupportedTriggerQueuedBody = (effect: Effect): boolean => {
       effect.player === "self"
     );
   }
+  if (effect.type === "sequence") {
+    if (effectBlock.sourcePresencePolicy === undefined) {
+      return false;
+    }
+    return isSupportedQueuedAutoSequenceForEntryPoint(
+      effectBlock,
+      "trigger",
+      effectBlock.sourcePresencePolicy,
+      { allowSavedReferences: false },
+    );
+  }
   return false;
 };
 
 const hasUnsupportedShape = (effect: EffectBlock): boolean =>
-  !isSupportedTriggerQueuedBody(effect.effect) ||
+  !isSupportedTriggerQueuedBody(effect) ||
   effect.cost !== undefined ||
   effect.conditionTiming !== undefined ||
   effect.failurePolicy !== undefined ||
   effect.optional !== undefined ||
   effect.oncePerTurn !== undefined;
 
-const isExactSupportedTriggerDefinition = (
+const selectSupportedTriggerEffect = (
   effects: readonly EffectBlock[],
-): boolean => {
-  if (effects.length !== 1) {
-    return false;
+): EffectBlock | undefined => {
+  const triggerEffects = effects.filter(
+    (effect) => effect.trigger.type === "trigger",
+  );
+  if (triggerEffects.length !== 1) {
+    return undefined;
   }
-  const effect = effects[0];
+  const effect = triggerEffects[0];
   if (effect === undefined) {
-    return false;
+    return undefined;
   }
   if (hasUnsupportedShape(effect)) {
-    return false;
+    return undefined;
   }
-  return isSupportedTriggerEffect(effect);
+  return isSupportedTriggerEffect(effect) ? effect : undefined;
 };
 
 const resolveSupportedLifeTriggerEffect = (
@@ -122,13 +137,10 @@ const resolveSupportedLifeTriggerEffect = (
     resolved,
     state.cardManifest,
   );
-  if (
-    !lookup.ok ||
-    !isExactSupportedTriggerDefinition(lookup.definition.effects)
-  ) {
+  if (!lookup.ok) {
     return undefined;
   }
-  const effect = lookup.definition.effects[0];
+  const effect = selectSupportedTriggerEffect(lookup.definition.effects);
   if (effect === undefined) {
     return undefined;
   }

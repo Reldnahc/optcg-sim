@@ -8,8 +8,6 @@ import type {
   Target,
 } from "@optcg/types";
 
-import { isSupportedSequenceHandSelectCardsEffect } from "./effect-runtime-hand-selection.js";
-
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 type DrawEffect = Extract<Effect, { type: "draw" }>;
@@ -36,6 +34,60 @@ export type SupportedSequenceBlock = EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: SequenceEffect & { effects: SupportedSequenceSegment[] };
 };
+
+export interface SequenceSupportOptions {
+  allowSavedReferences?: boolean;
+  requirePositiveDrawCount?: boolean;
+}
+
+const toSyntheticQueueEntry = (
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
+): EffectQueueEntry => ({
+  id: "queue-entry:sequence-support:synthetic" as EffectQueueEntry["id"],
+  state: "pending",
+  timingWindowId:
+    "timing-window:sequence-support:synthetic" as EffectQueueEntry["timingWindowId"],
+  generation: 0,
+  controllerId: "player-1" as EffectQueueEntry["controllerId"],
+  source: {
+    instanceId:
+      "instance:synthetic" as EffectQueueEntry["source"]["instanceId"],
+    cardId: "card:synthetic" as EffectQueueEntry["source"]["cardId"],
+    playerId: "player-1" as EffectQueueEntry["source"]["playerId"],
+    zone: {
+      zone: "characterArea",
+      playerId: "player-1" as EffectQueueEntry["source"]["playerId"],
+      slot: "character",
+      index: 0,
+    },
+  },
+  sourceSnapshot: {
+    instanceId:
+      "instance:synthetic" as EffectQueueEntry["sourceSnapshot"]["instanceId"],
+    cardId: "card:synthetic" as EffectQueueEntry["sourceSnapshot"]["cardId"],
+    ownerId: "player-1" as EffectQueueEntry["sourceSnapshot"]["ownerId"],
+    controllerId:
+      "player-1" as EffectQueueEntry["sourceSnapshot"]["controllerId"],
+    zone: {
+      zone: "characterArea",
+      playerId: "player-1" as EffectQueueEntry["source"]["playerId"],
+      slot: "character",
+      index: 0,
+    },
+    category: "character",
+    colors: [],
+    keywords: [],
+  },
+  effectBlockId: "effect:synthetic" as EffectQueueEntry["effectBlockId"],
+  orderingGroup: "turnPlayer",
+  createdAtEventSeq: 0,
+  queuedAtStateSeq: 0 as EffectQueueEntry["queuedAtStateSeq"],
+  sourcePresencePolicy,
+  causedBy: {
+    type: "ruleProcess",
+    name: "effectRuntime:sequenceSupportPreflight",
+  },
+});
 
 const isSupportedConnector = (
   connector: SequenceEffect["effects"][number]["connector"],
@@ -133,6 +185,37 @@ const isSupportedPayCostSegment = (
   );
 };
 
+const isExactCharacterCategoryFilter = (
+  filter: SelectCardsEffect["filter"] | undefined,
+): boolean => {
+  if (filter === undefined) {
+    return false;
+  }
+  const keys = Object.keys(filter).sort();
+  return (
+    keys.length === 1 &&
+    keys[0] === "categories" &&
+    filter.categories !== undefined &&
+    filter.categories.length === 1 &&
+    filter.categories[0] === "character"
+  );
+};
+
+const isSupportedSequenceHandSelectCardsSegment = (
+  effect: SequenceSegmentEffect,
+): effect is SelectCardsEffect =>
+  effect.type === "selectCards" &&
+  effect.zone === "hand" &&
+  effect.player === "self" &&
+  effect.chooser === "self" &&
+  effect.visibility === "chooserOnly" &&
+  String(effect.saveAs).startsWith("handSelection:") &&
+  isExactCharacterCategoryFilter(effect.filter) &&
+  Number.isInteger(effect.min) &&
+  Number.isInteger(effect.max) &&
+  effect.min >= 0 &&
+  effect.max >= effect.min;
+
 const isSupportedSavedFieldObjectKoTarget = (
   target: Target,
 ): target is Extract<Target, { type: "savedFieldObject" }> =>
@@ -168,7 +251,10 @@ const isScopedActivateMainSequenceEntry = (entry: EffectQueueEntry): boolean =>
 export const isSupportedSequenceBlock = (
   entry: EffectQueueEntry,
   effectBlock: EffectDefinition["effects"][number] | undefined,
+  options: SequenceSupportOptions = {},
 ): effectBlock is SupportedSequenceBlock => {
+  const allowSavedReferences = options.allowSavedReferences ?? true;
+  const requirePositiveDrawCount = options.requirePositiveDrawCount ?? false;
   const isSupportedCategoryForEntry =
     effectBlock?.category === "auto" ||
     (effectBlock?.category === "activate" &&
@@ -198,7 +284,17 @@ export const isSupportedSequenceBlock = (
       ) {
         return false;
       }
+      if (!allowSavedReferences && segment.saveResultAs !== undefined) {
+        return false;
+      }
       if (isSupportedDrawSegment(segment.effect)) {
+        if (
+          requirePositiveDrawCount &&
+          Number.isInteger(segment.effect.count) &&
+          segment.effect.count <= 0
+        ) {
+          return false;
+        }
         if (segment.optional === true) {
           hasPendingDecisionSegment = true;
         }
@@ -225,7 +321,7 @@ export const isSupportedSequenceBlock = (
         hasPendingDecisionSegment = true;
         return true;
       }
-      if (isSupportedSequenceHandSelectCardsEffect(segment.effect)) {
+      if (isSupportedSequenceHandSelectCardsSegment(segment.effect)) {
         if (index === 0) {
           return false;
         }
@@ -278,3 +374,21 @@ export const isSupportedSequenceBlock = (
   );
   return allSegmentsSupported && hasPendingDecisionSegment;
 };
+
+export const isSupportedQueuedAutoSequenceForEntryPoint = (
+  effect: EffectDefinition["effects"][number],
+  triggerType: "onPlay" | "whenAttacking" | "onKO" | "main" | "trigger",
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
+  options: SequenceSupportOptions = {},
+): effect is SupportedSequenceBlock =>
+  effect.category === "auto" &&
+  effect.trigger.type === triggerType &&
+  effect.sourcePresencePolicy === sourcePresencePolicy &&
+  isSupportedSequenceBlock(
+    toSyntheticQueueEntry(sourcePresencePolicy),
+    effect,
+    {
+      allowSavedReferences: options.allowSavedReferences ?? true,
+      requirePositiveDrawCount: options.requirePositiveDrawCount ?? true,
+    },
+  );
