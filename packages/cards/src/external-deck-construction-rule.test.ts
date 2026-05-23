@@ -214,6 +214,12 @@ describe("external deck construction rule", () => {
           sourceTextHash: "sha256:source-keyword",
         },
       ],
+      parserCertificationEvidence: {
+        currentCertificationIds: [
+          "keyword:rush:printed",
+          "source-presence-policy:none-for-keyword",
+        ],
+      },
       validateEffectDefinition: (definition: EffectDefinition) => {
         void definition;
         return { valid: true };

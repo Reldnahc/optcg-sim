@@ -1,4 +1,4 @@
-import type { Effect } from "@optcg/types";
+import type { Condition, Effect } from "@optcg/types";
 
 export type ConditionalContinuousCompositionVariant = {
   readonly includesBasePower: boolean;
@@ -96,6 +96,10 @@ export const conditionalContinuousCompositionSequenceMixedParserRuleId =
   conditionalContinuousCompositionVariants[4].parserRuleId;
 export const conditionalContinuousCompositionBasePowerParserRuleId =
   conditionalContinuousCompositionVariants[5].parserRuleId;
+export const conditionalContinuousCompositionNonBaseParserRuleIds =
+  conditionalContinuousCompositionVariants
+    .filter((variant) => !variant.includesBasePower)
+    .map((variant) => variant.parserRuleId);
 
 export const conditionalContinuousCompositionBasePowerParserCertificationIds = [
   "wrapper:your-turn-continuous-if",
@@ -105,6 +109,13 @@ export const conditionalContinuousCompositionBasePowerParserCertificationIds = [
   "value:base-power:positive-safe-integer",
   "composition:conditional-base-power-self-typed-character",
 ] as const;
+
+const conditionalContinuousCompositionNonBaseBodyParserCertificationIds = {
+  keyword: ["body:keyword-grant:self-character", "keyword:granted:allowlisted"],
+  protection: ["body:protection:opponent-effect-field-removal"],
+  sequence: ["composition:sequence:ordered-effects"],
+  sourcePresencePolicy: ["source-presence-policy:must-remain-in-same-zone"],
+} as const;
 
 export const allConditionalContinuousCompositionParserRuleIds =
   conditionalContinuousCompositionVariants.map(
@@ -203,12 +214,20 @@ export function listConditionalContinuousCompositionEvidenceFragments(): readonl
       "source-presence-policy",
     ],
     parserRuleId: variant.parserRuleId,
-    ...(variant.includesBasePower
-      ? {
-          parserCertificationIds:
-            conditionalContinuousCompositionBasePowerParserCertificationIds,
-        }
-      : {}),
+    parserCertificationIds: variant.includesBasePower
+      ? conditionalContinuousCompositionBasePowerParserCertificationIds
+      : [
+          ...(variant.includesKeyword
+            ? conditionalContinuousCompositionNonBaseBodyParserCertificationIds.keyword
+            : []),
+          ...(variant.includesProtection
+            ? conditionalContinuousCompositionNonBaseBodyParserCertificationIds.protection
+            : []),
+          ...(variant.isSequence
+            ? conditionalContinuousCompositionNonBaseBodyParserCertificationIds.sequence
+            : []),
+          ...conditionalContinuousCompositionNonBaseBodyParserCertificationIds.sourcePresencePolicy,
+        ],
     requiresSequencedEffectSchema: variant.isSequence,
     runtimeCapabilityIds: [
       "category:permanent",
@@ -232,4 +251,99 @@ export function listConditionalContinuousCompositionEvidenceFragments(): readonl
     ],
     shapeId: variant.shapeId,
   }));
+}
+
+type SupportedConditionPrimitiveCertificationId =
+  | "condition:leaderColorCount:self:gte:2"
+  | "condition:trashCount:self:gte:7"
+  | "condition:fieldCount:don:self:lte:6";
+
+export const conditionalContinuousNonBaseConditionParserCertificationIds = [
+  "condition:leaderColorCount:self:gte:2",
+  "condition:trashCount:self:gte:7",
+  "condition:fieldCount:don:self:lte:6",
+] as const satisfies readonly SupportedConditionPrimitiveCertificationId[];
+const conditionalContinuousNonBaseConditionParserCertificationIdSet =
+  new Set<string>(conditionalContinuousNonBaseConditionParserCertificationIds);
+
+export function listConditionalContinuousConditionPrimitiveCertificationIds(
+  condition: Condition | undefined,
+): readonly SupportedConditionPrimitiveCertificationId[] {
+  if (condition === undefined) {
+    return [];
+  }
+
+  const ids = new Set<SupportedConditionPrimitiveCertificationId>();
+  collectConditionPrimitiveCertificationIds(condition, ids);
+  return [...ids];
+}
+
+function collectConditionPrimitiveCertificationIds(
+  condition: Condition,
+  ids: Set<SupportedConditionPrimitiveCertificationId>,
+): void {
+  switch (condition.type) {
+    case "leaderColorCount":
+      if (condition.player === "self" && condition.op === "gte") {
+        const candidate =
+          `condition:leaderColorCount:self:${condition.op}:${String(condition.value)}` as const;
+        if (isSupportedConditionPrimitiveCertificationId(candidate)) {
+          ids.add(candidate);
+        }
+      }
+      return;
+    case "trashCount":
+      if (condition.player === "self") {
+        const candidate =
+          `condition:trashCount:self:${condition.op}:${String(condition.value)}` as const;
+        if (isSupportedConditionPrimitiveCertificationId(candidate)) {
+          ids.add(candidate);
+        }
+      }
+      return;
+    case "fieldCount":
+      if (
+        condition.player === "self" &&
+        (condition.op === "eq" ||
+          condition.op === "gte" ||
+          condition.op === "lte") &&
+        condition.filter?.categories?.length === 1 &&
+        condition.filter.categories[0] === "don"
+      ) {
+        const candidate =
+          `condition:fieldCount:don:self:${condition.op}:${String(condition.value)}` as const;
+        if (isSupportedConditionPrimitiveCertificationId(candidate)) {
+          ids.add(candidate);
+        }
+      }
+      return;
+    case "and":
+    case "or":
+      for (const child of condition.conditions) {
+        collectConditionPrimitiveCertificationIds(child, ids);
+      }
+      return;
+    case "not":
+      collectConditionPrimitiveCertificationIds(condition.condition, ids);
+      return;
+    case "yourTurn":
+    case "attachedDonCount":
+    case "attackTarget":
+    case "cardState":
+    case "custom":
+    case "donCount":
+    case "eventPayload":
+    case "handCount":
+    case "hasCardInZone":
+    case "lifeCount":
+    case "opponentTurn":
+    case "sourceStillInZone":
+      return;
+  }
+}
+
+function isSupportedConditionPrimitiveCertificationId(
+  id: string,
+): id is SupportedConditionPrimitiveCertificationId {
+  return conditionalContinuousNonBaseConditionParserCertificationIdSet.has(id);
 }

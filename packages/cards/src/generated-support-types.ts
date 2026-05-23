@@ -7,7 +7,10 @@ import { activateMainChooseOneCostComponentEvidenceInventoryEntry } from "./acti
 import { sup001fConditionalModifyPowerComponentEvidenceInventoryEntry } from "./sup-001f-conditional-modify-power-evidence.js";
 import { topNSearchComponentEvidenceInventoryEntries } from "./top-n-search-evidence.js";
 import { startOfGameStagePlayComponentEvidenceInventoryEntry } from "./start-of-game-stage-play-evidence.js";
-import { listConditionalContinuousCompositionEvidenceFragments } from "./conditional-continuous-composition-evidence.js";
+import {
+  conditionalContinuousNonBaseConditionParserCertificationIds,
+  listConditionalContinuousCompositionEvidenceFragments,
+} from "./conditional-continuous-composition-evidence.js";
 import type {
   GeneratedSupportDiagnosticDecomposition,
   GeneratedSupportUnparsedSpan,
@@ -269,6 +272,28 @@ const parserRuleBaseGates = {
   runtimeCapability: ["runtime-capability-matrix-v1"],
   schema: ["effect-definition-schema-v1"],
   sourceIntegrity: ["source-text-hash-current", "behavior-hash-current"],
+} as const;
+const standaloneKeywordParserCertificationIdsByParserRuleId = {
+  "exact:keyword:banish:standalone": [
+    "keyword:banish:printed",
+    "source-presence-policy:none-for-keyword",
+  ],
+  "exact:keyword:blocker:standalone": [
+    "keyword:blocker:printed",
+    "source-presence-policy:none-for-keyword",
+  ],
+  "exact:keyword:double-attack:standalone": [
+    "keyword:double-attack:printed",
+    "source-presence-policy:none-for-keyword",
+  ],
+  "exact:keyword:rush-character:standalone": [
+    "keyword:rush-character:printed",
+    "source-presence-policy:none-for-keyword",
+  ],
+  "exact:keyword:rush:standalone": [
+    "keyword:rush:printed",
+    "source-presence-policy:none-for-keyword",
+  ],
 } as const;
 
 function buildParserRuleGates(
@@ -647,6 +672,10 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     gates: parserRuleBaseGates,
     parserRuleId: "exact:keyword:blocker:standalone",
+    parserCertificationIds:
+      standaloneKeywordParserCertificationIdsByParserRuleId[
+        "exact:keyword:blocker:standalone"
+      ],
     runtimeCapabilityIds: [
       "keyword:blocker:printed",
       "sourcePresencePolicy:none-for-keyword",
@@ -661,6 +690,10 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     gates: parserRuleBaseGates,
     parserRuleId: "exact:keyword:rush:standalone",
+    parserCertificationIds:
+      standaloneKeywordParserCertificationIdsByParserRuleId[
+        "exact:keyword:rush:standalone"
+      ],
     runtimeCapabilityIds: [
       "keyword:rush:printed",
       "sourcePresencePolicy:none-for-keyword",
@@ -675,6 +708,10 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     gates: parserRuleBaseGates,
     parserRuleId: "exact:keyword:rush-character:standalone",
+    parserCertificationIds:
+      standaloneKeywordParserCertificationIdsByParserRuleId[
+        "exact:keyword:rush-character:standalone"
+      ],
     runtimeCapabilityIds: [
       "keyword:rushCharacter:printed",
       "sourcePresencePolicy:none-for-keyword",
@@ -689,6 +726,10 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     gates: parserRuleBaseGates,
     parserRuleId: "exact:keyword:double-attack:standalone",
+    parserCertificationIds:
+      standaloneKeywordParserCertificationIdsByParserRuleId[
+        "exact:keyword:double-attack:standalone"
+      ],
     runtimeCapabilityIds: [
       "keyword:doubleAttack:printed",
       "sourcePresencePolicy:none-for-keyword",
@@ -703,6 +744,10 @@ export const generatedSupportComponentEvidenceInventory = [
     ],
     gates: parserRuleBaseGates,
     parserRuleId: "exact:keyword:banish:standalone",
+    parserCertificationIds:
+      standaloneKeywordParserCertificationIdsByParserRuleId[
+        "exact:keyword:banish:standalone"
+      ],
     runtimeCapabilityIds: [
       "keyword:banish:printed",
       "sourcePresencePolicy:none-for-keyword",
@@ -880,5 +925,10 @@ export function buildGeneratedSupportComponentEvidenceSnapshot({
 export function listAllGeneratedSupportParserCertificationIds(): readonly string[] {
   const entries: readonly GeneratedSupportComponentEvidenceInventoryEntry[] =
     generatedSupportComponentEvidenceInventory;
-  return listAllGeneratedSupportParserCertificationIdsFromEntries(entries);
+  return [
+    ...new Set([
+      ...listAllGeneratedSupportParserCertificationIdsFromEntries(entries),
+      ...conditionalContinuousNonBaseConditionParserCertificationIds,
+    ]),
+  ];
 }

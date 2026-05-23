@@ -29,6 +29,11 @@ allowed_touch_points:
   - packages/cards/src/card014g-composed-parser.ts
   - packages/cards/src/card014g-generated-support.test.ts
   - packages/cards/src/card018a-generated-support.test.ts
+  - packages/cards/src/conditional-continuous-composition-evidence.ts
+  - packages/cards/src/conditional-continuous-parser-certification.test.ts
+  - packages/cards/src/conditional-generated-support.test.ts
+  - packages/cards/src/external-deck-construction-rule.ts
+  - packages/cards/src/external-deck-construction-rule.test.ts
   - packages/cards/src/on-play-field-effect-parser.ts
   - packages/cards/src/draw-up-to-generated-support.test.ts
   - packages/cards/src/return-don-play-selected-support.test.ts
@@ -43,7 +48,10 @@ allowed_touch_points:
   - packages/cards/src/conditional-parser-components.ts
   - packages/cards/src/generated-support-types.ts
   - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/support-evaluator.ts
+  - packages/cards/src/support-evaluator-default-parser-certification.test.ts
   - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/standalone-keyword-parser-certification.test.ts
   - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
   - stories/generated/CARD-025E-body-effect-request-primitive-migration.yaml
   - stories/approved/CARD-025-card-layer-spec010-migration-parent.yaml
@@ -72,6 +80,12 @@ scope:
   - migrate current draw and draw-up-to bodies to body primitive evidence with parsed positive-safe-integer counts
   - migrate current trash-from-hand bodies to action/source/count primitive evidence independent from the wrapper
   - migrate current standalone and granted keyword bodies to keyword primitive evidence for all currently supported keywords
+  - migrate current granted protection bodies in conditional continuous support to protection body primitive evidence where currently supported
+  - wire conditional continuous non-base body certification to the parsed condition primitive actually used by the parse result, consuming already-proven CARD-025D condition certification IDs without adding condition semantics
+  - keep generated-support evaluator default parser-certification inventory aligned with current reusable primitive certification IDs so proof/probe paths do not rely on omitted-cert defaults
+  - add a focused support-evaluator default parser-certification regression test file when existing evaluator tests would approach file-size enforcement
+  - add focused parser-certification tests for standalone keyword and conditional continuous body primitives when existing generated-support tests would exceed file-size enforcement
+  - update existing generated-support index tests that construct standalone keyword cards so they supply current keyword body primitive parser-certification evidence instead of relying on missing-cert defaults
   - migrate current modify-power, cannot-attack, cannot-block, K.O., protection, base-power setter, play-stage, play-selected, and search request bodies to body primitive evidence where currently supported
   - migrate current search bodies so look count, reveal/non-reveal visibility, selected-to-hand destination, bottom remainder policy, and trailing hand-trash action are separate body/request primitives
   - shared-file edits in condition/target/filter modules are limited to consuming already-proven CARD-025D primitives for body/request evidence wiring; they must not add condition, target, filter, cardinality, or duration semantics
@@ -104,6 +118,10 @@ required_tests:
   - story-review for CARD-025E before approval handoff
   - parser matrix tests for current supported body primitive families and numeric variation
   - generated-support tests proving current body families use primitive evidence and runtime capability IDs
+  - generated-support tests proving standalone keyword, granted keyword, and granted protection support fail closed when body primitive parser-certification evidence is absent or stale
+  - generated-support tests proving conditional continuous non-base body support fails closed only for the parsed condition primitive that is missing or stale, and remains supported when an unrelated condition primitive certification is stale
+  - support-evaluator tests proving a supported conditional continuous non-base body remains supported through default parser-certification evidence without explicit parser-certification input
+  - existing generated-support tests that construct supported standalone keyword cards remain green by supplying keyword body primitive parser-certification IDs explicitly
   - negative tests for unsupported body action/count/destination/visibility/duration variants
   - anti-shape tests proving no exact full-effect or story-named production body parser authorizes current support
   - run `corepack pnpm run packets:verify`

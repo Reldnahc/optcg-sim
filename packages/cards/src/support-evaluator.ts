@@ -14,6 +14,7 @@ import {
   type GeneratedSupportComponentEvidenceInventoryEntry,
   type GeneratedSupportParserCertificationEvidence,
 } from "./generated-support-types.js";
+import { conditionalContinuousNonBaseConditionParserCertificationIds } from "./conditional-continuous-composition-evidence.js";
 import type { NormalizedPoneglyphCard } from "./normalization.js";
 import type { RuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 
@@ -153,6 +154,9 @@ function listCurrentParserCertificationIds(): readonly string[] {
   const entries: readonly GeneratedSupportComponentEvidenceInventoryEntry[] =
     generatedSupportComponentEvidenceInventory;
   for (const id of externalDeckRuleNonRuntimeParserCertificationIds) {
+    ids.add(id);
+  }
+  for (const id of conditionalContinuousNonBaseConditionParserCertificationIds) {
     ids.add(id);
   }
   for (const entry of entries) {

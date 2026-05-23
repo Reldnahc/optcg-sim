@@ -3,6 +3,10 @@ import type {
   GeneratedSupportBlocker,
   GeneratedSupportParserCertificationEvidence,
 } from "./generated-support-types.js";
+import {
+  conditionalContinuousCompositionNonBaseParserRuleIds,
+  listConditionalContinuousConditionPrimitiveCertificationIds,
+} from "./conditional-continuous-composition-evidence.js";
 import { evaluateParserCertificationBlockers } from "./generated-support-types.js";
 
 export const externalDeckConstructionRuleParserRuleId =
@@ -143,5 +147,54 @@ export function evaluateParserCertificationBlockersForParseResult(
       nonRuntimeEvidence: parseResult.nonRuntimeEvidence,
       parserRuleIds: parseResult.parserRuleIds,
     }),
+    ...evaluateConditionalContinuousConditionParserCertificationBlockers({
+      evidence,
+      parseResult,
+    }),
   ];
+}
+
+function evaluateConditionalContinuousConditionParserCertificationBlockers({
+  evidence,
+  parseResult,
+}: {
+  evidence: GeneratedSupportParserCertificationEvidence | undefined;
+  parseResult: CompleteGeneratedSupportParseResult;
+}): readonly GeneratedSupportBlocker[] {
+  const nonBaseRuleIdSet = new Set<string>(
+    conditionalContinuousCompositionNonBaseParserRuleIds,
+  );
+  const hasNonBaseConditionalContinuousRule = parseResult.parserRuleIds.some(
+    (id) => nonBaseRuleIdSet.has(id),
+  );
+  if (!hasNonBaseConditionalContinuousRule) {
+    return [];
+  }
+
+  const current = new Set(evidence?.currentCertificationIds ?? []);
+  const stale = new Set(evidence?.staleCertificationIds ?? []);
+  const component =
+    parseResult.componentEvidenceIds.find((id) =>
+      id.startsWith("conditional-continuous-condition-body-part-composition-"),
+    ) ?? "conditional-continuous-condition-body-part-composition";
+  const conditionCertificationIds =
+    listConditionalContinuousConditionPrimitiveCertificationIds(
+      parseResult.effectDefinition.effects.find(
+        (effect) => effect.trigger.type === "permanent",
+      )?.condition,
+    );
+
+  return conditionCertificationIds.flatMap((id) => {
+    const isStale = stale.has(id);
+    return isStale || !current.has(id)
+      ? [
+          {
+            code: "unsupported-primitive",
+            component,
+            diagnosticLayer: "review",
+            message: `${isStale ? "Stale" : "Missing"} parser certification ${id} for component ${component} (primitive boundaries: condition).`,
+          },
+        ]
+      : [];
+  });
 }

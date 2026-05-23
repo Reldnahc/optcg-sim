@@ -20,7 +20,10 @@ import {
   parseBasePowerSetterVerbPrefix,
   parseBasePowerValue,
 } from "./conditional-generated-support-composer.js";
-import { conditionalContinuousCompositionBasePowerParserCertificationIds } from "./conditional-continuous-composition-evidence.js";
+import {
+  conditionalContinuousCompositionBasePowerParserCertificationIds,
+  conditionalContinuousNonBaseConditionParserCertificationIds,
+} from "./conditional-continuous-composition-evidence.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 import { runSupportProbe } from "./support-probe.js";
@@ -37,6 +40,7 @@ const sup002fParserCertificationEvidence = {
   currentCertificationIds: [
     ...listAllGeneratedSupportParserCertificationIds(),
     ...conditionalContinuousCompositionBasePowerParserCertificationIds,
+    ...conditionalContinuousNonBaseConditionParserCertificationIds,
   ],
 };
 const repoRoot = path.resolve(
