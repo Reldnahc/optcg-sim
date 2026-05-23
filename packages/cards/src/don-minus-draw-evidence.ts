@@ -1,3 +1,13 @@
+import type { GeneratedSupportComponentEvidenceInventoryEntry } from "./generated-support-types.js";
+
+export const donMinusDrawParserCertificationIds = [
+  "trigger-wrapper:on-play",
+  "cost-wrapper:return-don",
+  "body-action:draw-n",
+  "source-presence-policy:must-remain-in-same-zone",
+  "composition:on-play-return-don-then-draw",
+] as const;
+
 export const donMinusDrawComponentEvidenceInventoryEntry = {
   components: [
     "wrapper",
@@ -16,6 +26,7 @@ export const donMinusDrawComponentEvidenceInventoryEntry = {
     sourceIntegrity: ["source-text-hash-current", "behavior-hash-current"],
   },
   parserRuleId: "exact:on-play:return-don-draw-n:self",
+  parserCertificationIds: donMinusDrawParserCertificationIds,
   runtimeCapabilityIds: [
     "category:auto",
     "returnDon:cost:self:count-exact",
@@ -25,4 +36,4 @@ export const donMinusDrawComponentEvidenceInventoryEntry = {
     "trigger:onPlay",
   ],
   shapeId: "on-play-return-don-then-draw",
-} as const;
+} as const satisfies GeneratedSupportComponentEvidenceInventoryEntry;

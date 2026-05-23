@@ -4,6 +4,7 @@ import type { CardId } from "@optcg/types";
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import { buildGeneratedSupportIndex } from "./generated-support-index.js";
 import { buildGeneratedSupportReport } from "./generated-support-report.js";
+import { donMinusDrawParserCertificationIds } from "./don-minus-draw-evidence.js";
 
 const baseInput = {
   behaviorHash: "sha256:behavior",
@@ -15,6 +16,24 @@ const baseInput = {
 const validateEffectDefinition = () => ({ valid: true }) as const;
 
 describe("SUP-001G line-separated generated support promotion", () => {
+  const parserCertificationEvidence = {
+    currentCertificationIds: [...donMinusDrawParserCertificationIds],
+  } as const;
+  const conditionalWhenAttackingModifyPowerCertificationIds = [
+    "trigger-wrapper:when-attacking",
+    "condition:block-level",
+    "body-action:modify-power",
+    "duration:this-turn",
+    "source-presence-policy:must-remain-in-same-zone",
+    "composition:conditional-when-attacking-modify-power",
+  ] as const;
+  const lineSeparatedCertificationEvidence = {
+    currentCertificationIds: [
+      ...parserCertificationEvidence.currentCertificationIds,
+      ...conditionalWhenAttackingModifyPowerCertificationIds,
+    ],
+  } as const;
+
   it("composes DON-minus On Play draw with conditional When Attacking opponent power reduction", () => {
     const sourceText = [
       "[On Play] DON!! -1: Draw 1 card.",
@@ -95,6 +114,7 @@ describe("SUP-001G line-separated generated support promotion", () => {
             sourceTextHash: "sha256:sup-001g-synthetic",
           },
         ],
+        parserCertificationEvidence: lineSeparatedCertificationEvidence,
         validateEffectDefinition,
       }),
     );

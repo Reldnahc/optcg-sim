@@ -8,6 +8,7 @@ import {
 } from "./generated-support-index.js";
 import { buildGeneratedSupportReport } from "./generated-support-report.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 
 const baseInput = {
   behaviorHash: "sha256:behavior",
@@ -17,6 +18,9 @@ const baseInput = {
 };
 
 const validateEffectDefinition = () => ({ valid: true }) as const;
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 
 describe("generated support proof certificates", () => {
   it("emits structured proof certificate data with the support chain in order", () => {
@@ -30,6 +34,7 @@ describe("generated support proof certificates", () => {
             sourceTextHash: "sha256:card-020d-supported",
           },
         ],
+        parserCertificationEvidence,
         validateEffectDefinition,
       }),
     );
@@ -84,6 +89,7 @@ describe("generated support proof certificates", () => {
           },
         ],
         runtimeCapabilityMatrix: matrixWithoutDraw,
+        parserCertificationEvidence,
         validateEffectDefinition,
       }),
     );
@@ -316,6 +322,7 @@ function buildSupportedDrawIndex(cardId: CardId) {
         sourceTextHash: `sha256:${String(cardId).toLowerCase()}`,
       },
     ],
+    parserCertificationEvidence,
     validateEffectDefinition,
   });
 }

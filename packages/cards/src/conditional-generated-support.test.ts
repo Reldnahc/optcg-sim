@@ -22,6 +22,7 @@ import {
 } from "./conditional-generated-support-composer.js";
 import { conditionalContinuousCompositionBasePowerParserCertificationIds } from "./conditional-continuous-composition-evidence.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 import { runSupportProbe } from "./support-probe.js";
 
 const baseInput = {
@@ -33,8 +34,10 @@ const baseInput = {
 
 const validateEffectDefinition = () => ({ valid: true }) as const;
 const sup002fParserCertificationEvidence = {
-  currentCertificationIds:
-    conditionalContinuousCompositionBasePowerParserCertificationIds,
+  currentCertificationIds: [
+    ...listAllGeneratedSupportParserCertificationIds(),
+    ...conditionalContinuousCompositionBasePowerParserCertificationIds,
+  ],
 };
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -264,6 +267,7 @@ describe("conditional generated support diagnostics", () => {
             sourceTextHash: `sha256:${cardId.toLowerCase()}`,
           },
         ],
+        parserCertificationEvidence: sup002fParserCertificationEvidence,
         validateEffectDefinition: validateEffectDefinitionAgainstSchema,
       });
       const entry = index.entries[0];
@@ -336,6 +340,7 @@ describe("conditional generated support diagnostics", () => {
           sourceTextHash: "sha256:card-022a-report-non-representative",
         },
       ],
+      parserCertificationEvidence: sup002fParserCertificationEvidence,
       validateEffectDefinition,
     });
     const report = buildGeneratedSupportReport(index);
@@ -408,6 +413,7 @@ describe("conditional generated support diagnostics", () => {
           sourceTextHash: "sha256:card-015a-report-conditional",
         },
       ],
+      parserCertificationEvidence: sup002fParserCertificationEvidence,
       validateEffectDefinition,
     });
     const report = buildGeneratedSupportReport(index);
@@ -447,6 +453,7 @@ describe("conditional generated support diagnostics", () => {
             sourceTextHash: `sha256:${cardId.toLowerCase()}`,
           },
         ],
+        parserCertificationEvidence: sup002fParserCertificationEvidence,
         validateEffectDefinition: validateEffectDefinitionAgainstSchema,
       });
       const report = buildGeneratedSupportReport(index);
@@ -471,6 +478,7 @@ describe("conditional generated support diagnostics", () => {
           sourceTextHash: "sha256:card-019b-report-mixed-connectors",
         },
       ],
+      parserCertificationEvidence: sup002fParserCertificationEvidence,
       validateEffectDefinition,
     });
     const report = buildGeneratedSupportReport(index);
@@ -921,6 +929,7 @@ describe("conditional generated support diagnostics", () => {
             sourceTextHash: "sha256:sup-002f-your-turn-non-base-power",
           },
         ],
+        parserCertificationEvidence: sup002fParserCertificationEvidence,
         validateEffectDefinition,
       });
 
@@ -1020,6 +1029,7 @@ describe("conditional generated support diagnostics", () => {
           sourceTextHash: "sha256:card-021e-unsupported-condition",
         },
       ],
+      parserCertificationEvidence: sup002fParserCertificationEvidence,
       validateEffectDefinition,
     });
 

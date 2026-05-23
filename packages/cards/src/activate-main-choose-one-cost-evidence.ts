@@ -28,6 +28,7 @@ export const activateMainChooseOneCostParserCertificationIds = [
   "cost-alternative:trash-from-hand-unfiltered",
   "cost-body-separator:colon",
   "body-action:draw-n",
+  "source-presence-policy:must-remain-in-same-zone",
   "composition:activate-main-optional-choose-one-trash-cost-draw",
 ] as const;
 

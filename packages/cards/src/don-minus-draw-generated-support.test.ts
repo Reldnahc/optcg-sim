@@ -30,6 +30,7 @@ import {
 } from "./generated-support-types.js";
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
+import { donMinusDrawParserCertificationIds } from "./don-minus-draw-evidence.js";
 import {
   returnDonCostWrapperComponentEvidenceId,
   returnDonCostWrapperParserRuleId,
@@ -77,6 +78,9 @@ const validateEffectDefinition = (
 };
 
 describe("SUP-001D DON-minus draw generated support", () => {
+  const allDonMinusCertifications =
+    donMinusDrawParserCertificationIds as readonly string[];
+
   it("supports synthetic On Play DON-minus draw with generic DON and draw counts", () => {
     const index = buildGeneratedSupportIndex({
       cards: [
@@ -88,6 +92,9 @@ describe("SUP-001D DON-minus draw generated support", () => {
           sourceTextHash: "sha256:source-alt",
         },
       ],
+      parserCertificationEvidence: {
+        currentCertificationIds: allDonMinusCertifications,
+      },
       validateEffectDefinition,
     });
 
@@ -134,6 +141,9 @@ describe("SUP-001D DON-minus draw generated support", () => {
   it("reports complete support proof only when every component capability is present", () => {
     const supportedIndex = buildGeneratedSupportIndex({
       cards: [baseCard],
+      parserCertificationEvidence: {
+        currentCertificationIds: allDonMinusCertifications,
+      },
       validateEffectDefinition,
     });
     const missingCostCapabilityIndex = buildGeneratedSupportIndex({
@@ -143,6 +153,9 @@ describe("SUP-001D DON-minus draw generated support", () => {
           cardId: "SUP-001D-MISSING-CAPABILITY" as CardId,
         },
       ],
+      parserCertificationEvidence: {
+        currentCertificationIds: allDonMinusCertifications,
+      },
       runtimeCapabilityMatrix: withoutCapability(
         "returnDon:cost:self:count-exact",
       ),
@@ -208,6 +221,42 @@ describe("SUP-001D DON-minus draw generated support", () => {
       },
     ]);
   });
+
+  it.each(allDonMinusCertifications)(
+    "fails closed when DON-minus certification boundary is missing: %s",
+    (missingCertificationId) => {
+      const index = buildGeneratedSupportIndex({
+        cards: [baseCard],
+        parserCertificationEvidence: {
+          currentCertificationIds: allDonMinusCertifications.filter(
+            (id) => id !== missingCertificationId,
+          ),
+        },
+        validateEffectDefinition,
+      });
+
+      expect(index.entries[0]).toMatchObject({
+        parseStatus: "complete",
+        status: "unsupported",
+      });
+      expect(index.entries[0]?.blockers).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "unsupported-primitive",
+            component: donMinusDrawComponentEvidenceId,
+            diagnosticLayer: "review",
+          }),
+        ]),
+      );
+      expect(
+        index.entries[0]?.blockers.some((blocker) =>
+          blocker.message.includes(
+            `Missing parser certification ${missingCertificationId}`,
+          ),
+        ),
+      ).toBe(true);
+    },
+  );
 
   it("prints support-probe certificate evidence for complete DON-minus draw", async () => {
     const output: string[] = [];
@@ -478,6 +527,9 @@ function withoutCapability(capabilityId: string) {
 function requireSupportedEntry(): GeneratedSupportIndexEntry {
   const entry = buildGeneratedSupportIndex({
     cards: [baseCard],
+    parserCertificationEvidence: {
+      currentCertificationIds: donMinusDrawParserCertificationIds,
+    },
     validateEffectDefinition,
   }).entries[0];
   if (entry === undefined || entry.status !== "supported") {

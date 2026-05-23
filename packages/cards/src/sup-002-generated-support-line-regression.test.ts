@@ -13,6 +13,7 @@ import {
 import { conditionalContinuousCompositionBasePowerParserCertificationIds } from "./conditional-continuous-composition-evidence.js";
 import { optionalTrashCostKoParserCertificationIds } from "./optional-trash-cost-ko-evidence.js";
 import { topNSearchParserCertificationIds } from "./top-n-search-evidence.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -46,6 +47,7 @@ const cardInputBase = {
   sourceTextHash: "sha256:sup-002-line-regression-source",
 };
 const parserCertificationIds = [
+  ...listAllGeneratedSupportParserCertificationIds(),
   ...optionalTrashCostKoParserCertificationIds,
   ...conditionalContinuousCompositionBasePowerParserCertificationIds,
   ...topNSearchParserCertificationIds,

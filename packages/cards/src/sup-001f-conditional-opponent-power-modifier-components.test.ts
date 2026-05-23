@@ -7,7 +7,10 @@ import type { CardId, PoneglyphCardDetail } from "@optcg/types";
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import { buildGeneratedSupportIndex } from "./generated-support-index.js";
 import { buildGeneratedSupportReport } from "./generated-support-report.js";
-import { listRequiredRuntimeCapabilityIdsForComponentEvidenceId } from "./generated-support-types.js";
+import {
+  listAllGeneratedSupportParserCertificationIds,
+  listRequiredRuntimeCapabilityIdsForComponentEvidenceId,
+} from "./generated-support-types.js";
 import {
   generatedSupportRuntimeCapabilityMatrix,
   hasRuntimeCapability,
@@ -22,6 +25,9 @@ const repoRoot = path.resolve(
 );
 
 const validateEffectDefinition = () => ({ valid: true }) as const;
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 const baseInput = {
   behaviorHash: "sha256:behavior",
   cardDataVersion: "cards-v1",
@@ -156,6 +162,7 @@ describe("SUP-001F conditional opponent power modifier card components", () => {
           sourceTextHash: "sha256:sup-001f-evidence",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
     const report = buildGeneratedSupportReport(index);
@@ -262,6 +269,7 @@ describe("SUP-001F conditional opponent power modifier card components", () => {
         },
       ],
       runtimeCapabilityMatrix: matrixWithoutModifyPowerChoose,
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 

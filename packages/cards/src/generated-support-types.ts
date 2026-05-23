@@ -18,6 +18,25 @@ import {
   returnDonCostWrapperRuntimeCapabilityIds,
 } from "./return-don-cost-wrapper-components.js";
 import { listPrimitiveBoundaryLabels } from "./primitive-boundary-evidence.js";
+import {
+  buildOnPlayModifierAndRestrictionEntries,
+  listAllGeneratedSupportParserCertificationIdsFromEntries,
+  onKoDrawParserCertificationIds,
+  onKoDrawUpToParserCertificationIds,
+  onPlayConditionDrawParserCertificationIds,
+  onPlayDrawParserCertificationIds,
+  onPlayDrawThenTrashParserCertificationIds,
+  onPlayDrawUpToParserCertificationIds,
+  onPlayOptionalDrawParserCertificationIds,
+  onPlayReturnDonPlaySelectedParserCertificationIds,
+  onPlaySelectTargetParserCertificationIds,
+  onPlaySelectThenKoParserCertificationIds,
+  triggerDrawParserCertificationIds,
+  triggerDrawUpToParserCertificationIds,
+  whenAttackingDrawParserCertificationIds,
+  whenAttackingDrawThenTrashParserCertificationIds,
+  whenAttackingOncePerTurnDrawThenTrashParserCertificationIds,
+} from "./generated-support-parser-certification-catalog.js";
 export type { ExternalDeckConstructionRuleEvidence } from "./external-deck-construction-rule.js";
 export type {
   GeneratedSupportDiagnosticDecomposition,
@@ -267,6 +286,7 @@ export const generatedSupportComponentEvidenceInventory = [
   {
     components: drawSelfComponents,
     gates: parserRuleBaseGates,
+    parserCertificationIds: onPlayDrawParserCertificationIds,
     parserRuleId: "exact:on-play:draw-n:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -279,6 +299,7 @@ export const generatedSupportComponentEvidenceInventory = [
   {
     components: drawSelfComponents,
     gates: parserRuleBaseGates,
+    parserCertificationIds: whenAttackingDrawParserCertificationIds,
     parserRuleId: "exact:when-attacking:draw-n:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -291,6 +312,7 @@ export const generatedSupportComponentEvidenceInventory = [
   {
     components: drawThenTrashFromHandComponents,
     gates: parserRuleBaseGates,
+    parserCertificationIds: onPlayDrawThenTrashParserCertificationIds,
     parserRuleId: "exact:on-play:draw-n:trash-m:hand:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -305,6 +327,7 @@ export const generatedSupportComponentEvidenceInventory = [
   {
     components: drawThenTrashFromHandComponents,
     gates: parserRuleBaseGates,
+    parserCertificationIds: whenAttackingDrawThenTrashParserCertificationIds,
     parserRuleId: "exact:when-attacking:draw-n:trash-m:hand:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -319,6 +342,8 @@ export const generatedSupportComponentEvidenceInventory = [
   {
     components: drawThenTrashFromHandComponents,
     gates: parserRuleBaseGates,
+    parserCertificationIds:
+      whenAttackingOncePerTurnDrawThenTrashParserCertificationIds,
     parserRuleId: "exact:when-attacking:once-per-turn:draw-n:trash-m:hand:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -336,6 +361,7 @@ export const generatedSupportComponentEvidenceInventory = [
       ...parserRuleBaseGates,
       schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
     },
+    parserCertificationIds: onPlayDrawThenTrashParserCertificationIds,
     parserRuleId: "exact:on-play:trash-2-from-hand:draw-1:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -359,6 +385,7 @@ export const generatedSupportComponentEvidenceInventory = [
       ...parserRuleBaseComponents,
     ],
     gates: parserRuleBaseGates,
+    parserCertificationIds: onPlayDrawUpToParserCertificationIds,
     parserRuleId: "exact:on-play:draw-up-to-n:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -371,6 +398,7 @@ export const generatedSupportComponentEvidenceInventory = [
   {
     components: drawSelfComponents,
     gates: parserRuleBaseGates,
+    parserCertificationIds: onPlayOptionalDrawParserCertificationIds,
     parserRuleId: "exact:on-play:optional-effect:draw-1:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -390,6 +418,7 @@ export const generatedSupportComponentEvidenceInventory = [
       ...parserRuleBaseComponents,
     ],
     gates: parserRuleBaseGates,
+    parserCertificationIds: onPlayConditionDrawParserCertificationIds,
     parserRuleId: "exact:condition:your-turn",
     runtimeCapabilityIds: [
       "category:auto",
@@ -409,6 +438,7 @@ export const generatedSupportComponentEvidenceInventory = [
       ...parserRuleBaseComponents,
     ],
     gates: parserRuleBaseGates,
+    parserCertificationIds: onPlayConditionDrawParserCertificationIds,
     parserRuleId: "exact:condition:self-attached-don-count",
     runtimeCapabilityIds: [
       "category:auto",
@@ -436,6 +466,7 @@ export const generatedSupportComponentEvidenceInventory = [
       ...parserRuleBaseGates,
       schema: ["effect-definition-schema-v1", "sequenced-effect-schema-v1"],
     },
+    parserCertificationIds: onPlayReturnDonPlaySelectedParserCertificationIds,
     parserRuleId:
       "exact:on-play:return-don-select-up-to-1-character-from-hand-play-selected",
     runtimeCapabilityIds: [
@@ -470,6 +501,7 @@ export const generatedSupportComponentEvidenceInventory = [
       ...parserRuleBaseComponents,
     ],
     gates: parserRuleBaseGates,
+    parserCertificationIds: onPlaySelectTargetParserCertificationIds,
     parserRuleId: "exact:on-play:select-1-opponent-character-target",
     runtimeCapabilityIds: [
       "category:auto",
@@ -493,6 +525,7 @@ export const generatedSupportComponentEvidenceInventory = [
       ...parserRuleBaseComponents,
     ],
     gates: parserRuleBaseGates,
+    parserCertificationIds: onPlaySelectThenKoParserCertificationIds,
     parserRuleId:
       "exact:on-play:select-1-opponent-character-then-ko-that-character",
     runtimeCapabilityIds: [
@@ -511,183 +544,20 @@ export const generatedSupportComponentEvidenceInventory = [
   activateMainChooseOneCostComponentEvidenceInventoryEntry,
   ...topNSearchComponentEvidenceInventoryEntries,
   startOfGameStagePlayComponentEvidenceInventoryEntry,
+  ...buildOnPlayModifierAndRestrictionEntries({
+    parserRuleBaseComponents,
+    parserRuleBaseGates,
+  }),
   {
-    components: [
-      "wrapper",
-      "modifier",
-      "duration",
-      "target",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
+    ...sup001fConditionalModifyPowerComponentEvidenceInventoryEntry,
+    parserCertificationIds: [
+      "trigger-wrapper:when-attacking",
+      "condition:block-level",
+      "body-action:modify-power",
+      "duration:this-turn",
+      "source-presence-policy:must-remain-in-same-zone",
+      "composition:conditional-when-attacking-modify-power",
     ],
-    gates: parserRuleBaseGates,
-    parserRuleId: "exact:on-play:modify-power:self:this-turn",
-    runtimeCapabilityIds: [
-      "category:auto",
-      "modifyPower:self:thisTurn",
-      "sourcePresencePolicy:mustRemainInSameZone",
-      "trigger:onPlay",
-    ],
-    shapeId: "on-play-modify-power-self-this-turn",
-  },
-  {
-    components: [
-      "wrapper",
-      "modifier",
-      "duration",
-      "target",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
-    gates: parserRuleBaseGates,
-    parserRuleId: "exact:on-play:modify-power:self:this-battle",
-    runtimeCapabilityIds: [
-      "category:auto",
-      "modifyPower:self:thisBattle",
-      "sourcePresencePolicy:mustRemainInSameZone",
-      "trigger:onPlay",
-    ],
-    shapeId: "on-play-modify-power-self-this-battle",
-  },
-  {
-    components: [
-      "wrapper",
-      "modifier",
-      "duration",
-      "target",
-      "chooser",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
-    gates: parserRuleBaseGates,
-    parserRuleId: "exact:on-play:modify-power:choose:this-turn",
-    runtimeCapabilityIds: [
-      "category:auto",
-      "modifyPower:choose:thisTurn",
-      "modifyPower:choose:thisTurn:zeroChoiceBranch",
-      "sourcePresencePolicy:mustRemainInSameZone",
-      "trigger:onPlay",
-    ],
-    shapeId: "on-play-modify-power-choose-this-turn",
-  },
-  sup001fConditionalModifyPowerComponentEvidenceInventoryEntry,
-  {
-    components: [
-      "wrapper",
-      "modifier",
-      "duration",
-      "target",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
-    gates: parserRuleBaseGates,
-    parserRuleId: "exact:on-play:modify-power:all:this-turn",
-    runtimeCapabilityIds: [
-      "category:auto",
-      "modifyPower:all:thisTurn",
-      "sourcePresencePolicy:mustRemainInSameZone",
-      "trigger:onPlay",
-    ],
-    shapeId: "on-play-modify-power-all-this-turn",
-  },
-  {
-    components: [
-      "wrapper",
-      "restriction",
-      "duration",
-      "target",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
-    gates: parserRuleBaseGates,
-    parserRuleId: "exact:on-play:cannot-attack:self:this-turn",
-    runtimeCapabilityIds: [
-      "category:auto",
-      "cannotAttack:self:thisTurn",
-      "sourcePresencePolicy:mustRemainInSameZone",
-      "trigger:onPlay",
-    ],
-    shapeId: "on-play-cannot-attack-self-this-turn",
-  },
-  {
-    components: [
-      "wrapper",
-      "restriction",
-      "duration",
-      "target",
-      "chooser",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
-    gates: parserRuleBaseGates,
-    parserRuleId: "exact:on-play:cannot-attack:choose:this-turn",
-    runtimeCapabilityIds: [
-      "category:auto",
-      "cannotAttack:choose:thisTurn",
-      "cannotAttack:choose:thisTurn:zeroChoiceBranch",
-      "sourcePresencePolicy:mustRemainInSameZone",
-      "trigger:onPlay",
-    ],
-    shapeId: "on-play-cannot-attack-choose-this-turn",
-  },
-  {
-    components: [
-      "wrapper",
-      "restriction",
-      "duration",
-      "target",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
-    gates: parserRuleBaseGates,
-    parserRuleId: "exact:on-play:cannot-attack:all:this-turn",
-    runtimeCapabilityIds: [
-      "category:auto",
-      "cannotAttack:all:thisTurn",
-      "sourcePresencePolicy:mustRemainInSameZone",
-      "trigger:onPlay",
-    ],
-    shapeId: "on-play-cannot-attack-all-this-turn",
-  },
-  {
-    components: [
-      "wrapper",
-      "restriction",
-      "duration",
-      "target",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
-    gates: parserRuleBaseGates,
-    parserRuleId: "exact:on-play:cannot-block:self:this-turn",
-    runtimeCapabilityIds: [
-      "category:auto",
-      "cannotBlock:self:thisTurn",
-      "sourcePresencePolicy:mustRemainInSameZone",
-      "trigger:onPlay",
-    ],
-    shapeId: "on-play-cannot-block-self-this-turn",
-  },
-  {
-    components: [
-      "wrapper",
-      "restriction",
-      "duration",
-      "target",
-      "chooser",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
-    gates: parserRuleBaseGates,
-    parserRuleId: "exact:on-play:cannot-block:choose:this-turn",
-    runtimeCapabilityIds: [
-      "category:auto",
-      "cannotBlock:choose:thisTurn",
-      "cannotBlock:choose:thisTurn:zeroChoiceBranch",
-      "sourcePresencePolicy:mustRemainInSameZone",
-      "trigger:onPlay",
-    ],
-    shapeId: "on-play-cannot-block-choose-this-turn",
   },
   {
     components: [
@@ -697,6 +567,7 @@ export const generatedSupportComponentEvidenceInventory = [
       ...parserRuleBaseComponents,
     ],
     gates: parserRuleBaseGates,
+    parserCertificationIds: triggerDrawParserCertificationIds,
     parserRuleId: "exact:trigger:draw-n:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -715,6 +586,7 @@ export const generatedSupportComponentEvidenceInventory = [
       ...parserRuleBaseComponents,
     ],
     gates: parserRuleBaseGates,
+    parserCertificationIds: triggerDrawUpToParserCertificationIds,
     parserRuleId: "exact:trigger:draw-up-to-n:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -732,6 +604,7 @@ export const generatedSupportComponentEvidenceInventory = [
       ...parserRuleBaseComponents,
     ],
     gates: parserRuleBaseGates,
+    parserCertificationIds: onKoDrawParserCertificationIds,
     parserRuleId: "exact:on-ko:draw-n:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -750,6 +623,7 @@ export const generatedSupportComponentEvidenceInventory = [
       ...parserRuleBaseComponents,
     ],
     gates: parserRuleBaseGates,
+    parserCertificationIds: onKoDrawUpToParserCertificationIds,
     parserRuleId: "exact:on-ko:draw-up-to-n:self",
     runtimeCapabilityIds: [
       "category:auto",
@@ -758,25 +632,6 @@ export const generatedSupportComponentEvidenceInventory = [
       "trigger:onKO",
     ],
     shapeId: "on-ko-draw-up-to",
-  },
-  {
-    components: [
-      "wrapper",
-      "restriction",
-      "duration",
-      "target",
-      "source-presence-policy",
-      ...parserRuleBaseComponents,
-    ],
-    gates: parserRuleBaseGates,
-    parserRuleId: "exact:on-play:cannot-block:all:this-turn",
-    runtimeCapabilityIds: [
-      "category:auto",
-      "cannotBlock:all:thisTurn",
-      "sourcePresencePolicy:mustRemainInSameZone",
-      "trigger:onPlay",
-    ],
-    shapeId: "on-play-cannot-block-all-this-turn",
   },
   {
     components: [
@@ -1014,4 +869,10 @@ export function buildGeneratedSupportComponentEvidenceSnapshot({
     runtimeCapabilityIds: merged.runtimeCapabilityIds,
     shapeId: merged.shapeId,
   };
+}
+
+export function listAllGeneratedSupportParserCertificationIds(): readonly string[] {
+  const entries: readonly GeneratedSupportComponentEvidenceInventoryEntry[] =
+    generatedSupportComponentEvidenceInventory;
+  return listAllGeneratedSupportParserCertificationIdsFromEntries(entries);
 }

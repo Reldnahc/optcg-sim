@@ -15,7 +15,10 @@ import {
   hasRuntimeCapability,
 } from "./runtime-capability-matrix.js";
 import { runSupportProbe } from "./support-probe.js";
-import { listRequiredRuntimeCapabilityIdsForComponentEvidenceId } from "./generated-support-types.js";
+import {
+  listAllGeneratedSupportParserCertificationIds,
+  listRequiredRuntimeCapabilityIdsForComponentEvidenceId,
+} from "./generated-support-types.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -32,6 +35,9 @@ const baseInput = {
 };
 
 const validateEffectDefinition = () => ({ valid: true }) as const;
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 
 describe("SUP-001E DON field-count condition card components", () => {
   it.each([
@@ -250,6 +256,7 @@ describe("SUP-001E DON field-count condition card components", () => {
           sourceTextHash: "sha256:sup-001e-conditional-draw",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
     const report = buildGeneratedSupportReport(index);
@@ -289,6 +296,7 @@ describe("SUP-001E DON field-count condition card components", () => {
           sourceTextHash: "sha256:sup-001e-unsupported-body",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
     const report = buildGeneratedSupportReport(index);

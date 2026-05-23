@@ -11,6 +11,7 @@ import {
   type EffectDefinitionValidationResult,
 } from "./generated-support-index.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -50,6 +51,9 @@ const baseCard = {
   sourceText: "[On Play] Draw 1 card.",
   sourceTextHash: "sha256:source",
 };
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 
 describe("trash-count generated support", () => {
   it.each([
@@ -68,6 +72,7 @@ describe("trash-count generated support", () => {
     ({ cardId, sourceText }) => {
       const index = buildGeneratedSupportIndex({
         cards: [{ ...baseCard, cardId, sourceText }],
+        parserCertificationEvidence,
         validateEffectDefinition: () => ({ valid: true }),
       });
 
@@ -99,6 +104,7 @@ describe("trash-count generated support", () => {
             "[On Play] If you have 2 or more cards in your trash, draw 1 card.",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -136,6 +142,7 @@ describe("trash-count generated support", () => {
         },
       ],
       runtimeCapabilityMatrix: matrixWithoutTrashCount,
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 

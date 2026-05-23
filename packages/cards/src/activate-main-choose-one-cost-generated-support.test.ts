@@ -4,11 +4,17 @@ import { fileURLToPath } from "node:url";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import type { AnySchema } from "ajv";
 import { describe, expect, it } from "vitest";
-import type { EffectDefinition, PoneglyphCardDetail } from "@optcg/types";
+import type {
+  CardId,
+  EffectDefinition,
+  PoneglyphCardDetail,
+} from "@optcg/types";
 
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import type { EffectDefinitionValidationResult } from "./generated-support-index.js";
 import { evaluateGeneratedSupportPlayability } from "./support-evaluator.js";
+import { buildGeneratedSupportIndex } from "./generated-support-index.js";
+import { activateMainChooseOneCostParserCertificationIds } from "./activate-main-choose-one-cost-evidence.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -126,6 +132,65 @@ describe("activate main choose-one optional cost generated support", () => {
           },
         ],
       });
+    },
+  );
+
+  it.each([
+    "trigger-wrapper:activate-main",
+    "activate-main-wrapper:once-per-turn",
+    "optional-cost-marker:you-may",
+    "cost-connector:choose-one-or",
+    "cost-alternative:trash-from-field-self-character-type",
+    "cost-alternative:trash-from-hand-unfiltered",
+    "cost-body-separator:colon",
+    "body-action:draw-n",
+    "source-presence-policy:must-remain-in-same-zone",
+    "composition:activate-main-optional-choose-one-trash-cost-draw",
+  ] as const)(
+    "fails closed when activate-main primitive certification boundary is missing: %s",
+    (missingCertificationId) => {
+      const sourceText =
+        "[Activate: Main] [Once Per Turn] You may trash 2 of your {Navy} type Characters or 1 card from your hand: Draw 3 cards.";
+      const index = buildGeneratedSupportIndex({
+        cards: [
+          {
+            behaviorHash: "sha256:behavior",
+            cardDataVersion: "cards-v1",
+            cardId: "SUP-003F-AM-CERT" as CardId,
+            effectDefinitionsVersion: "effects-sup-003f",
+            rulesVersion: "rules-sup-003f",
+            sourceText,
+            sourceTextHash: "sha256:source",
+          },
+        ],
+        parserCertificationEvidence: {
+          currentCertificationIds:
+            activateMainChooseOneCostParserCertificationIds.filter(
+              (id) => id !== missingCertificationId,
+            ),
+        },
+        validateEffectDefinition,
+      });
+
+      expect(index.entries[0]).toMatchObject({
+        parseStatus: "complete",
+        status: "unsupported",
+      });
+      expect(index.entries[0]?.blockers).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "unsupported-primitive",
+            diagnosticLayer: "review",
+          }),
+        ]),
+      );
+      expect(
+        index.entries[0]?.blockers.some((blocker) =>
+          blocker.message.includes(
+            `Missing parser certification ${missingCertificationId}`,
+          ),
+        ),
+      ).toBe(true);
     },
   );
 });

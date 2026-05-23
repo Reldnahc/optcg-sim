@@ -12,7 +12,10 @@ import {
   type EffectDefinitionValidationResult,
 } from "./generated-support-index.js";
 import { buildGeneratedSupportReport } from "./generated-support-report.js";
-import { isCompleteGeneratedSupportParseResult } from "./generated-support-types.js";
+import {
+  isCompleteGeneratedSupportParseResult,
+  listAllGeneratedSupportParserCertificationIds,
+} from "./generated-support-types.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 
 const cardId = "CARD-018A-001" as CardId;
@@ -46,6 +49,9 @@ const validateEffectDefinition = (
     valid: false,
   };
 };
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 
 const parse = (sourceText: string) =>
   parseCertifiedCardText({
@@ -185,6 +191,7 @@ describe("CARD-018A generated support", () => {
     ({ cardId, expectedCapabilityId, expectedRuleId, sourceText }) => {
       const index = buildGeneratedSupportIndex({
         cards: [{ ...baseCard, cardId, sourceText }],
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
 
@@ -236,6 +243,7 @@ describe("CARD-018A generated support", () => {
       const index = buildGeneratedSupportIndex({
         cards: [{ ...baseCard, sourceText }],
         runtimeCapabilityMatrix,
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
       const report = buildGeneratedSupportReport(index);
@@ -277,6 +285,7 @@ describe("CARD-018A generated support", () => {
     ({ sourceText }) => {
       const index = buildGeneratedSupportIndex({
         cards: [{ ...baseCard, sourceText }],
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
       const report = buildGeneratedSupportReport(index);

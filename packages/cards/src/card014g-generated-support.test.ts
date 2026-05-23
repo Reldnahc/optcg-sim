@@ -11,7 +11,10 @@ import {
   buildGeneratedSupportIndex,
   type EffectDefinitionValidationResult,
 } from "./generated-support-index.js";
-import { isCompleteGeneratedSupportParseResult } from "./generated-support-types.js";
+import {
+  isCompleteGeneratedSupportParseResult,
+  listAllGeneratedSupportParserCertificationIds,
+} from "./generated-support-types.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 
 const repoRoot = path.resolve(
@@ -37,6 +40,9 @@ const baseCard = {
   sourceText: "[On Play] Select 1 of your opponent's Characters.",
   sourceTextHash: "sha256:source",
 };
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 
 const validateEffectDefinition = (
   definition: EffectDefinition,
@@ -508,6 +514,7 @@ describe("CARD-014G generated composed support", () => {
     }) => {
       const index = buildGeneratedSupportIndex({
         cards: [{ ...baseCard, sourceText }],
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
 
@@ -560,6 +567,7 @@ describe("CARD-014G generated composed support", () => {
     ({ expectedCapabilityId, expectedRuleId, sourceText }) => {
       const index = buildGeneratedSupportIndex({
         cards: [{ ...baseCard, sourceText }],
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
 
@@ -599,6 +607,7 @@ describe("CARD-014G generated composed support", () => {
         },
       ],
       runtimeCapabilityMatrix: matrixWithoutSelectTargets,
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -626,6 +635,7 @@ describe("CARD-014G generated composed support", () => {
             "[On Play] Up to 1 of your opponent's Characters gets -2000 power during this turn.",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 

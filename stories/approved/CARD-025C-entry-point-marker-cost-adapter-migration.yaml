@@ -23,12 +23,19 @@ story_boundary: >
 allowed_touch_points:
   - packages/cards/src/certified-card-text-parser.ts
   - packages/cards/src/certified-card-text-parser.test.ts
+  - packages/cards/src/card014f-support.test.ts
+  - packages/cards/src/card014g-generated-support.test.ts
+  - packages/cards/src/card018a-generated-support.test.ts
+  - packages/cards/src/conditional-generated-support.test.ts
+  - packages/cards/src/draw-up-to-generated-support.test.ts
   - packages/cards/src/parser-rule-id-components.ts
   - packages/cards/src/return-don-cost-wrapper-components.ts
+  - packages/cards/src/return-don-play-selected-support.test.ts
   - packages/cards/src/don-minus-cost-wrapper-card-components.test.ts
   - packages/cards/src/don-minus-draw-components.ts
   - packages/cards/src/don-minus-draw-evidence.ts
   - packages/cards/src/don-minus-draw-generated-support.test.ts
+  - packages/cards/src/sup-001g-line-separated-generated-support.test.ts
   - packages/cards/src/activate-main-choose-one-cost-components.ts
   - packages/cards/src/activate-main-choose-one-cost-components.test.ts
   - packages/cards/src/activate-main-choose-one-cost-evidence.ts
@@ -40,8 +47,20 @@ allowed_touch_points:
   - packages/cards/src/external-deck-construction-rule.ts
   - packages/cards/src/external-deck-construction-rule.test.ts
   - packages/cards/src/generated-support-types.ts
+  - packages/cards/src/generated-support-parser-certification-catalog.ts
+  - packages/cards/src/generated-support-component-identity.test.ts
+  - packages/cards/src/generated-support-diagnostics.test.ts
   - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/generated-support-proof-certificate.test.ts
+  - packages/cards/src/generated-support-report.test.ts
+  - packages/cards/src/generic-card-text-diagnostic-scanner.test.ts
+  - packages/cards/src/real-card-fixtures.ts
+  - packages/cards/src/real-card-fixtures.test.ts
+  - packages/cards/src/sup-001e-don-field-count-condition-components.test.ts
+  - packages/cards/src/sup-001f-conditional-opponent-power-modifier-components.test.ts
+  - packages/cards/src/sup-002-generated-support-line-regression.test.ts
   - packages/cards/src/support-evaluator.test.ts
+  - packages/cards/src/trash-count-generated-support.test.ts
   - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
   - stories/generated/CARD-025C-entry-point-marker-cost-adapter-migration.yaml
   - stories/approved/CARD-025-card-layer-spec010-migration-parent.yaml
@@ -67,7 +86,11 @@ scope:
   - migrate supported wrappers such as On Play, When Attacking, Trigger, On K.O., Activate Main, Your Turn continuous, and Start of Game to entry-point adapter evidence where currently supported
   - migrate current timing markers such as Once Per Turn and optional markers to independent marker evidence where currently supported
   - migrate current DON-minus, return-DON, optional hand-trash, and choose-one trash cost recognition to independent cost evidence where currently supported
+  - update existing synthetic line-separated generated-support regression tests only as needed to provide the primitive parser-certification evidence required after DON-minus and wrapper/cost evidence becomes enforced
   - migrate current source-presence policy evidence so it is attached to entry-point/body semantics rather than exact full-line IDs
+  - extract parser-certification boundary catalogs to focused cards-layer support modules when needed to preserve file-size enforcement without weakening evidence semantics
+  - update existing generated-support regression tests that directly build generated-support indexes for wrapper-bearing entries so they provide primitive parser-certification evidence instead of relying on missing-certification defaults
+  - update the existing real-card fixture evidence adapter only as needed to pass primitive parser-certification evidence into generated-support index construction; do not change fixture data, fixture authority, source hashes, behavior hashes, manifests, or real-card support semantics
   - keep external deck-construction rule recognition as parser/metadata evidence with no runtime primitive, and do not let deck-construction limits block engine support decisions when the story explicitly treats them as non-runtime text
   - prove at least one supported body primitive composes under multiple certified entry points without adding wrapper-body exact sample rules
 non_scope:
@@ -98,6 +121,8 @@ required_tests:
   - parser tests for wrapper, marker, cost, and source-policy primitive evidence
   - generated-support tests proving wrapper adapter evidence plus existing body evidence authorizes support
   - negative tests proving missing wrapper adapter evidence or missing cost evidence fails closed
+  - existing synthetic line-separated generated-support regression tests remain green by supplying primitive parser-certification evidence rather than relying on parser-rule or exact sample authority
+  - existing generated-support regression tests for migrated wrapper-bearing evidence remain green by supplying primitive parser-certification evidence rather than relying on parser-rule or exact sample authority
   - negative test proving standalone keyword text does not produce wrapper or entry-point adapter evidence
   - anti-shape tests proving no exact wrapper-body sample branch authorizes current wrapper/cost support
   - run `corepack pnpm run packets:verify`

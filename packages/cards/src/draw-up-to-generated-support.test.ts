@@ -15,6 +15,7 @@ import {
   type RuntimeCapabilityMatrix,
   type RuntimeCapabilityRecord,
 } from "./runtime-capability-matrix.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -54,11 +55,15 @@ const drawUpToCard = {
   sourceText: "[On Play] Draw up to 2 cards.",
   sourceTextHash: "sha256:draw-up-to-source",
 };
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 
 describe("draw-up-to generated support", () => {
   it("creates supported evidence for exact On Play draw-up-to card text", () => {
     const index = buildGeneratedSupportIndex({
       cards: [drawUpToCard],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -153,6 +158,7 @@ describe("draw-up-to generated support", () => {
       const index = buildGeneratedSupportIndex({
         cards: [drawUpToCard],
         runtimeCapabilityMatrix: matrix,
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
 

@@ -11,6 +11,7 @@ import {
 } from "./generated-support-report.js";
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 
 const baseInput = {
   behaviorHash: "sha256:behavior",
@@ -20,6 +21,9 @@ const baseInput = {
 };
 
 const validateEffectDefinition = () => ({ valid: true }) as const;
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -270,6 +274,7 @@ describe("generated support report", () => {
       ),
     };
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -309,6 +314,7 @@ describe("generated support report", () => {
     const normalized = normalizePoneglyphCardDetail(fixture);
 
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           behaviorHash: normalized.behaviorHash,
@@ -345,6 +351,7 @@ describe("generated support report", () => {
       ),
     };
     const missingCapabilityIndex = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -357,6 +364,7 @@ describe("generated support report", () => {
       validateEffectDefinition,
     });
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -591,6 +599,7 @@ describe("generated support report", () => {
 
   it("reports invalid draw-count blockers deterministically", () => {
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -634,6 +643,7 @@ describe("generated support report", () => {
 
   it("includes draw-then-trash parser rules in report evidence when supported", () => {
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -671,6 +681,7 @@ describe("generated support report", () => {
       ),
     };
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -712,6 +723,7 @@ describe("generated support report", () => {
 
   it("includes OP10-045 as supported with once-per-turn draw-then-trash parser rule evidence", () => {
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -754,6 +766,7 @@ describe("generated support report", () => {
       ),
     };
     const supportedIndex = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -765,6 +778,7 @@ describe("generated support report", () => {
       validateEffectDefinition,
     });
     const missingCapabilityIndex = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -818,6 +832,7 @@ describe("generated support report", () => {
           ),
       };
       const supportedIndex = buildGeneratedSupportIndex({
+        parserCertificationEvidence,
         cards: [
           {
             ...baseInput,
@@ -830,6 +845,7 @@ describe("generated support report", () => {
         validateEffectDefinition,
       });
       const missingCapabilityIndex = buildGeneratedSupportIndex({
+        parserCertificationEvidence,
         cards: [
           {
             ...baseInput,
@@ -877,6 +893,7 @@ describe("generated support report", () => {
       ),
     };
     const supportedIndex = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -895,6 +912,7 @@ describe("generated support report", () => {
       validateEffectDefinition,
     });
     const missingCapabilityIndex = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -947,6 +965,7 @@ describe("generated support report", () => {
       ),
     };
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -981,6 +1000,7 @@ describe("generated support report", () => {
 
   it("includes CARD-013B keyword parser rules in supported report evidence", () => {
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,

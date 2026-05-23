@@ -9,7 +9,11 @@ import {
 } from "./generated-support-index.js";
 import { buildGeneratedSupportReport } from "./generated-support-report.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
-import { generatedSupportComponentEvidenceInventory } from "./generated-support-types.js";
+import {
+  findGeneratedSupportComponentEvidenceByShapeId,
+  generatedSupportComponentEvidenceInventory,
+  type GeneratedSupportComponentEvidenceInventoryEntry,
+} from "./generated-support-types.js";
 
 const baseCard = {
   behaviorHash: "sha256:behavior",
@@ -21,9 +25,22 @@ const baseCard = {
   sourceTextHash: "sha256:source",
 };
 
+const parserCertificationEvidence = {
+  currentCertificationIds: Array.from(
+    new Set<string>(
+      generatedSupportComponentEvidenceInventory.flatMap(
+        (entry: GeneratedSupportComponentEvidenceInventoryEntry) =>
+          entry.parserCertificationIds ?? [],
+      ),
+    ),
+  ).sort(),
+} as const;
+const inventoryEntries: readonly GeneratedSupportComponentEvidenceInventoryEntry[] =
+  generatedSupportComponentEvidenceInventory;
+
 describe("generated support component identity migration", () => {
   it("requires primitive component evidence IDs for current generated-support inventory entries", () => {
-    const currentEntries = generatedSupportComponentEvidenceInventory.filter(
+    const currentEntries = inventoryEntries.filter(
       (entry) => entry.runtimeCapabilityIds.length > 0,
     );
     expect(currentEntries.length).toBeGreaterThan(0);
@@ -35,6 +52,78 @@ describe("generated support component identity migration", () => {
           entry.parserRuleId.length > 0,
       ),
     ).toBe(true);
+  });
+
+  it("requires parser certification boundaries for every wrapper-bearing inventory entry", () => {
+    const missing = inventoryEntries
+      .filter((entry) => entry.components.includes("wrapper"))
+      .filter(
+        (entry) =>
+          !Array.isArray(entry.parserCertificationIds) ||
+          entry.parserCertificationIds.length === 0,
+      )
+      .map((entry) => entry.parserRuleId);
+    expect(missing).toEqual([]);
+  });
+
+  it("keeps target/chooser/restriction and duration parser-certification boundaries distinct across wrapper variants", () => {
+    const byShapeId = (shapeId: string) =>
+      findGeneratedSupportComponentEvidenceByShapeId(shapeId)
+        ?.parserCertificationIds ?? [];
+    expect(byShapeId("on-play-modify-power-self-this-turn")).toEqual(
+      expect.arrayContaining(["target:self", "duration:this-turn"]),
+    );
+    expect(byShapeId("on-play-modify-power-self-this-battle")).toEqual(
+      expect.arrayContaining(["target:self", "duration:this-battle"]),
+    );
+    expect(byShapeId("on-play-modify-power-choose-this-turn")).toEqual(
+      expect.arrayContaining([
+        "target:select-opponent-character",
+        "chooser:self",
+        "cardinality:up-to-n",
+        "duration:this-turn",
+      ]),
+    );
+    expect(byShapeId("on-play-modify-power-all-this-turn")).toEqual(
+      expect.arrayContaining([
+        "target:all-opponent-characters",
+        "duration:this-turn",
+      ]),
+    );
+    expect(byShapeId("on-play-cannot-attack-self-this-turn")).toEqual(
+      expect.arrayContaining(["restriction:cannot-attack", "target:self"]),
+    );
+    expect(byShapeId("on-play-cannot-attack-choose-this-turn")).toEqual(
+      expect.arrayContaining([
+        "restriction:cannot-attack",
+        "target:select-opponent-character",
+        "chooser:self",
+        "cardinality:up-to-n",
+      ]),
+    );
+    expect(byShapeId("on-play-cannot-attack-all-this-turn")).toEqual(
+      expect.arrayContaining([
+        "restriction:cannot-attack",
+        "target:all-opponent-characters",
+      ]),
+    );
+    expect(byShapeId("on-play-cannot-block-self-this-turn")).toEqual(
+      expect.arrayContaining(["restriction:cannot-block", "target:self"]),
+    );
+    expect(byShapeId("on-play-cannot-block-choose-this-turn")).toEqual(
+      expect.arrayContaining([
+        "restriction:cannot-block",
+        "target:select-opponent-character",
+        "chooser:self",
+        "cardinality:up-to-n",
+      ]),
+    );
+    expect(byShapeId("on-play-cannot-block-all-this-turn")).toEqual(
+      expect.arrayContaining([
+        "restriction:cannot-block",
+        "target:all-opponent-characters",
+      ]),
+    );
   });
 
   it("exposes component evidence IDs on complete and partial parser results", () => {
@@ -66,7 +155,7 @@ describe("generated support component identity migration", () => {
   });
 
   it("uses inventory-backed shape IDs as runtime capability authority, not exact parser IDs", () => {
-    for (const entry of generatedSupportComponentEvidenceInventory.filter(
+    for (const entry of inventoryEntries.filter(
       (candidate) => !("missingRuntimeCapabilityIds" in candidate),
     )) {
       const coverage = evaluateRuntimeCapabilityCoverageForComponentEvidenceIds(
@@ -113,6 +202,7 @@ describe("generated support component identity migration", () => {
           sourceTextHash: "sha256:legacy-rule-only",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition: () => ({ valid: true }) as const,
     });
     expect(index.entries[0]).toMatchObject({
@@ -164,6 +254,7 @@ describe("generated support component identity migration", () => {
           sourceTextHash: "sha256:supported",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
     expect(supported.entries[0]).toMatchObject({
@@ -181,6 +272,7 @@ describe("generated support component identity migration", () => {
           sourceTextHash: "sha256:new",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
     expect(staleHash.entries[0]).toMatchObject({
@@ -199,6 +291,7 @@ describe("generated support component identity migration", () => {
           sourceTextHash: "sha256:fallback",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
     expect(wholeCardFallback.entries[0]).toMatchObject({

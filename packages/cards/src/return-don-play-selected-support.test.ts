@@ -11,6 +11,7 @@ import {
   type EffectDefinitionValidationResult,
 } from "./generated-support-index.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -50,11 +51,15 @@ const validateEffectDefinition = (
         valid: false,
       };
 };
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 
 describe("return-DON playSelected generated support", () => {
   it("supports exact synthetic text with cost, hand-selection, and playSelected evidence", () => {
     const index = buildGeneratedSupportIndex({
       cards: [baseCard],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -156,6 +161,7 @@ describe("return-DON playSelected generated support", () => {
             (capability) => capability.id !== capabilityId,
           ),
       },
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 

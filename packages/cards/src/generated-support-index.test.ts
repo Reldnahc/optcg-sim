@@ -19,6 +19,7 @@ import {
 import { buildMatchCardManifest, validateDecklist } from "./manifest.js";
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -48,6 +49,9 @@ const validateEffectDefinition = (
     valid: false,
   };
 };
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 
 const baseCard = {
   behaviorHash: "sha256:behavior",
@@ -82,6 +86,7 @@ describe("generated support index", () => {
           sourceTextHash: normalized.sourceTextHash,
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -119,6 +124,7 @@ describe("generated support index", () => {
           sourceText: "[Blocker]",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -160,6 +166,7 @@ describe("generated support index", () => {
           sourceText: "[Blocker]",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -190,6 +197,7 @@ describe("generated support index", () => {
           sourceText,
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -253,6 +261,7 @@ describe("generated support index", () => {
             sourceText,
           },
         ],
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
 
@@ -347,6 +356,7 @@ describe("generated support index", () => {
             sourceText,
           },
         ],
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
 
@@ -374,6 +384,7 @@ describe("generated support index", () => {
           sourceText: "",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -403,6 +414,7 @@ describe("generated support index", () => {
           sourceText: "",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -423,6 +435,7 @@ describe("generated support index", () => {
   it("creates supported evidence for exact complete-parse card text", () => {
     const index = buildGeneratedSupportIndex({
       cards: [baseCard],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -479,6 +492,7 @@ describe("generated support index", () => {
           sourceText: "[On Play] Draw 1 card. Then rest 1 DON!!.",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -507,6 +521,7 @@ describe("generated support index", () => {
     const index = buildGeneratedSupportIndex({
       cards: [baseCard],
       runtimeCapabilityMatrix: matrixWithoutDraw,
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -550,10 +565,12 @@ describe("generated support index", () => {
     };
     const first = buildGeneratedSupportIndex({
       cards: [later, baseCard],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
     const second = buildGeneratedSupportIndex({
       cards: [baseCard, later],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -567,6 +584,7 @@ describe("generated support index", () => {
   it("emits generated support evidence that existing deck validation can consume", () => {
     const index = buildGeneratedSupportIndex({
       cards: [baseCard],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
     const evidence = toGeneratedSupportManifestEvidence(index);
@@ -639,6 +657,7 @@ describe("generated support index", () => {
           sourceText: "[When Attacking] Draw 2 cards.",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -682,6 +701,7 @@ describe("generated support index", () => {
     ({ cardId, expectedRuleId, sourceText }) => {
       const index = buildGeneratedSupportIndex({
         cards: [{ ...baseCard, cardId, sourceText }],
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
 
@@ -705,6 +725,7 @@ describe("generated support index", () => {
             "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -754,6 +775,7 @@ describe("generated support index", () => {
           sourceText: "[On Play] Trash 2 cards from your hand. Draw 1 card.",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -798,6 +820,7 @@ describe("generated support index", () => {
     (sourceText) => {
       const index = buildGeneratedSupportIndex({
         cards: [{ ...baseCard, cardId: "CARD-009B-099" as CardId, sourceText }],
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
 
@@ -826,6 +849,7 @@ describe("generated support index", () => {
         },
       ],
       runtimeCapabilityMatrix: matrixWithoutSegment0Trash,
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -862,6 +886,7 @@ describe("generated support index", () => {
         },
       ],
       runtimeCapabilityMatrix: matrixWithoutSequence,
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -899,6 +924,7 @@ describe("generated support index", () => {
         },
       ],
       runtimeCapabilityMatrix: matrixWithoutRuleEvidence,
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 
@@ -919,6 +945,7 @@ describe("generated support index", () => {
           sourceText: "[On Play] Draw 0 cards.",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 

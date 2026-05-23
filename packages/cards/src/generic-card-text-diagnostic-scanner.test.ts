@@ -6,6 +6,11 @@ import {
   type GenericDiagnosticComponent,
 } from "./generic-card-text-diagnostic-scanner.js";
 import { buildGeneratedSupportIndex } from "./generated-support-index.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
+
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 
 function pick(
   components: readonly GenericDiagnosticComponent[],
@@ -265,6 +270,7 @@ describe("generic card text diagnostic scanner", () => {
           sourceTextHash: "sha256:unsupported",
         },
       ],
+      parserCertificationEvidence,
       validateEffectDefinition,
     });
 

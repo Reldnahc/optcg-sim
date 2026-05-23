@@ -11,6 +11,7 @@ import {
   type EffectDefinitionValidationResult,
 } from "./generated-support-index.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -44,6 +45,9 @@ const baseCard = {
   rulesVersion: "rules-v1",
   sourceTextHash: "sha256:source",
 };
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 
 describe("CARD-014F generated support", () => {
   it.each([
@@ -109,6 +113,7 @@ describe("CARD-014F generated support", () => {
     }) => {
       const index = buildGeneratedSupportIndex({
         cards: [{ ...baseCard, cardId, sourceText }],
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
       const effectBlock = index.entries[0]?.effectDefinition?.effects[0];
@@ -196,6 +201,7 @@ describe("CARD-014F generated support", () => {
           },
         ],
         runtimeCapabilityMatrix: matrixWithoutCapability,
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
 
@@ -242,6 +248,7 @@ describe("CARD-014F generated support", () => {
             sourceText,
           },
         ],
+        parserCertificationEvidence,
         validateEffectDefinition,
       });
 

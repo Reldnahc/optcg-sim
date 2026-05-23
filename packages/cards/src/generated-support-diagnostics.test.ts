@@ -4,6 +4,7 @@ import type { CardId } from "@optcg/types";
 import { parseCertifiedCardText } from "./certified-card-text-parser.js";
 import { buildGeneratedSupportIndex } from "./generated-support-index.js";
 import { buildGeneratedSupportReport } from "./generated-support-report.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 
 const baseInput = {
   behaviorHash: "sha256:behavior",
@@ -13,6 +14,9 @@ const baseInput = {
 };
 
 const validateEffectDefinition = () => ({ valid: true }) as const;
+const parserCertificationEvidence = {
+  currentCertificationIds: listAllGeneratedSupportParserCertificationIds(),
+} as const;
 
 const parseCertified = (sourceText: string) =>
   parseCertifiedCardText({
@@ -28,6 +32,7 @@ describe("generated support diagnostics", () => {
     const sourceText =
       "[On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck.";
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -116,6 +121,7 @@ describe("generated support diagnostics", () => {
     const sourceText =
       "[On Play] Place up to 1 of your opponent's Characters with 1000 power or less at the bottom of the owner's deck.";
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -154,6 +160,7 @@ describe("generated support diagnostics", () => {
 
   it("keeps invalid schema as schema-layer blocker and does not allow parser decomposition to override it", () => {
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -186,6 +193,7 @@ describe("generated support diagnostics", () => {
     const sourceText =
       "If your Leader is multicolored, this Character gains [Double Attack].";
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -218,6 +226,7 @@ describe("generated support diagnostics", () => {
     const sourceText =
       "If your Leader is multicolored, this Character gains [Guard].";
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -269,6 +278,7 @@ describe("generated support diagnostics", () => {
     const sourceText =
       "If your Leader is multicolored, reveal up to 1 [Zou] type card from your deck.";
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -297,6 +307,7 @@ describe("generated support diagnostics", () => {
     const sourceText =
       "this Character cannot be removed from the field by your opponent's effects";
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -372,6 +383,7 @@ describe("generated support diagnostics", () => {
     const sourceText =
       "this Character cannot be removed from play by your opponent's effects";
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -410,6 +422,7 @@ describe("generated support diagnostics", () => {
   it("does not classify unrelated cannot-be text as field-removal protection", () => {
     const sourceText = "This Character cannot be played this turn.";
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -441,6 +454,7 @@ describe("generated support diagnostics", () => {
       "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Guard].";
     const sourceText = `${continuousLine}\n[On K.O.] Draw 1 card.`;
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -557,6 +571,7 @@ describe("generated support diagnostics", () => {
 
   it("keeps standalone On K.O. draw generated support unchanged", () => {
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -584,6 +599,7 @@ describe("generated support diagnostics", () => {
     const sourceText =
       "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].";
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
@@ -621,6 +637,7 @@ describe("generated support diagnostics", () => {
 
   it("keeps representative CARD-020C arbitrary-text probe samples decomposed and fail-closed", () => {
     const index = buildGeneratedSupportIndex({
+      parserCertificationEvidence,
       cards: [
         {
           ...baseInput,
