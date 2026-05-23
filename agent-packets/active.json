@@ -1,4 +1,11 @@
 {
-  "activeStories": [],
+  "activeStories": [
+    {
+      "packetPath": "agent-packets/ENG-060A.md",
+      "storyId": "ENG-060A",
+      "storyPath": "stories/approved/ENG-060A-multi-effect-definition-entry-point-routing.yaml",
+      "storySha256": "c11b603599eddccaef4cbb7180d6cf7a25387ce024ea5165ba2b4e879b26759e"
+    }
+  ],
   "version": 1
 }

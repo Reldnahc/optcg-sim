@@ -1,0 +1,119 @@
+spec_version: v6
+spec_package_name: optcg-md-specs-v6
+story_schema_version: 1.0.0
+id: ENG-060
+epic_id: ENG-060
+title: Composable entry-point runtime alignment parent
+type: implementation
+area: engine
+primary_concern: rules
+priority: high
+status: generated
+summary: >
+  Align engine-core runtime support with SPEC-010 by removing exact
+  whole-definition and wrapper-body support assumptions from generated
+  implemented-DSL runtime paths before cards-layer generated support expands.
+story_boundary: >
+  Parent planning story only. Do not implement this parent directly. Implement
+  ENG-060A through ENG-060C one at a time after distinct parent and child
+  story-review evidence exists. This parent owns engine-only runtime alignment
+  with SPEC-010 and must not add cards parser, generated-support, runtime
+  capability matrix, real-card fixture, source hash, behavior hash, server,
+  client, or UI work.
+allowed_touch_points:
+  - stories/generated/ENG-060*.yaml
+  - stories/approved/ENG-060*.yaml
+  - agent-packets/ENG-060*.md
+  - agent-packets/active.json
+spec_refs:
+  - 01-system-architecture.s023
+  - 04-effect-runtime.s003
+  - 04-effect-runtime.s005
+  - 04-effect-runtime.s006
+  - 04-effect-runtime.s007
+  - 04-effect-runtime.s016
+  - 05-effect-dsl-reference.s004
+  - 05-effect-dsl-reference.s005
+  - 05-effect-dsl-reference.s029
+  - 09-card-data-and-support-policy.s016
+  - 11-testing-quality.s004
+  - 11-testing-quality.s005
+  - 24-story-schema.s025
+  - 25-story-template.s002
+dependencies:
+  - SPEC-010
+  - ENG-055
+  - ENG-056
+  - ENG-059
+  - SUP-003B
+# prettier-ignore
+child_stories:
+  - id: ENG-060A
+    title: Multi-effect definition entry-point routing
+    concern: Remove whole-definition single-effect rejection from engine entry-point routing while preserving same-entry-point ambiguity fail-closed behavior.
+    depends_on: []
+  - id: ENG-060B
+    title: Reusable queued entry-point body adapters
+    concern: Replace exact wrapper-body queued support checks with entry-point adapters composed with reusable body and sequence support predicates.
+    depends_on: [ENG-060A]
+  - id: ENG-060C
+    title: Runtime composability regression matrix
+    concern: Add engine-only regression coverage proving SPEC-010 runtime composition and anti-shape constraints remain enforced across entry points.
+    depends_on: [ENG-060A, ENG-060B]
+scope:
+  - coordinate engine-only work that makes generated implemented-DSL definitions with multiple supported effect blocks usable by the relevant runtime entry point
+  - make SPEC-010 compliance explicit before any cards-layer story consumes expanded runtime capability evidence
+  - require entry-point adapters to own timing, legal-action exposure or queueing, source-presence policy, once-per-turn marker handling, and activation commitment semantics
+  - require reusable body and composition predicates to own draw, drawUpTo, trashFromHand, search, target, continuous, sequence, decision, visibility, cardinality, and duration support where those bodies are already engine-supported
+  - remove the architectural assumption that one generated EffectDefinition may contain only one effect block
+  - remove exact wrapper-body support as approval evidence where reusable entry-point adapter plus body or composition support exists
+  - preserve fail-closed behavior for unsupported bodies, unsupported source policies, unsupported sequence connectors, unsupported decision continuations, unresolved same-entry-point ordering, hidden-information ambiguity, and replay ambiguity
+  - keep downstream cards-layer runtime capability matrix and parser promotion separate so later CARD stories can cite corrected engine behavior without hiding card work here
+non_scope:
+  - direct parent implementation
+  - card parser changes
+  - cards package runtime capability matrix changes
+  - generated-support index, support evaluator, support probe, support report, or proof-certificate changes
+  - real card IDs, real-card fixture capture, overlays, source hashes, behavior hashes, support manifests, or cards-produced manifests
+  - making any real card playable
+  - shared contract/schema changes; if a child discovers a contract or schema prerequisite, stop and split that prerequisite into a separate non-ENG-060 story before continuing
+  - new effect body primitives that are not already represented by engine runtime helpers
+  - broad ordering support for multiple matching same-entry-point effects from one source
+  - server, client, API, UI, database, replay UI, WebSocket, Redis, or live Poneglyph work
+acceptance_criteria:
+  - ENG-060 is not implemented directly
+  - ENG-060A through ENG-060C are independently reviewable child stories
+  - parent and every child story-review artifact exists with distinct assignment identity and distinct durable artifact identity before approval handoff, packet generation, activation, implementation handoff, or PR handoff
+  - engine runtime paths no longer reject a generated implemented-DSL definition solely because it contains more than one supported effect block
+  - runtime entry points select relevant supported effect blocks by entry point and effect id instead of checking whole-card text, real card IDs, or full definition size
+  - exact wrapper-body allowlists are not used as the only support authority when equivalent reusable adapter plus body or composition evidence exists
+  - exact full-line, sample-shaped, manual per-card allowlist, external-card-list, and card-to-mechanic-map authorization paths are not valid runtime support authority
+  - multiple matching effects in the same unresolved timing window remain fail-closed unless a child story explicitly adds deterministic ordering semantics
+  - cards-layer generated support remains unchanged by this ENG story set
+  - no production engine code imports `@optcg/cards` or checks real card IDs, exact printed text, or external card-list identifiers
+required_tests:
+  - story-review for ENG-060 parent before approval handoff
+  - story-review for ENG-060A before approval handoff
+  - story-review for ENG-060B before approval handoff
+  - story-review for ENG-060C before approval handoff
+  - reconstruct a parent/child story-review matrix with distinct assignment and artifact identities per row before approval or implementation handoff
+  - story-specific tests from ENG-060A through ENG-060C
+  - per-child reviewed commit evidence, AI review record, revision response, and verification evidence before parent PR handoff
+  - production-code search or lint-style assertion proving no real-card ID, exact printed text, exact full-line, sample-shaped, manual per-card allowlist, external-card-list, card-to-mechanic-map, or full-card branch was added in engine source
+  - run `corepack pnpm --filter @optcg/engine-core test`
+  - run `corepack pnpm --filter @optcg/engine-core typecheck`
+  - run `corepack pnpm run stories:validate`
+  - run `corepack pnpm run packets:verify`
+  - run full `corepack pnpm verify`
+repo_rules:
+  - use the parent/substory workflow
+  - do not activate or implement ENG-060 directly
+  - generate and activate one ENG-060 child packet at a time
+  - implement ENG-060A before ENG-060B or ENG-060C
+  - implement ENG-060B before ENG-060C
+  - do not complete child packets until the parent branch lands on main
+  - keep ENG-060A through ENG-060C work on one parent integration branch with reviewed child commits
+  - do not open child PRs to main; use one final parent PR to main
+  - parent PR cleanup metadata must list ENG-060A through ENG-060C and bind the non-packetized ENG-060 parent closeout
+  - fail closed on gameplay, timing, ordering, source-presence, hidden-information, decision, replay, or generated-support authority ambiguity
+ambiguity_policy: fail_and_escalate
