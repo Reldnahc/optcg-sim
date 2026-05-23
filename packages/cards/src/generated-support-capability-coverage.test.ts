@@ -171,4 +171,35 @@ describe("generated support capability coverage", () => {
       ],
     });
   });
+
+  it("treats parserRuleIds as trace-only and never as runtime capability authority", () => {
+    const parserOnlyCoverage =
+      evaluateRuntimeCapabilityCoverageForParserRuleIds({
+        parserRuleIds: ["exact:on-play:draw-up-to-n:self"],
+      });
+    expect(parserOnlyCoverage).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "parser-rule-mapping:exact:on-play:draw-up-to-n:self",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:draw-up-to-n:self",
+        },
+      ],
+      evidence: [],
+      missingCapabilityIds: [
+        "parser-rule-mapping:exact:on-play:draw-up-to-n:self",
+      ],
+    });
+
+    const componentCoverage =
+      evaluateRuntimeCapabilityCoverageForComponentEvidenceIds({
+        componentEvidenceIds: ["on-play-draw-up-to"],
+      });
+    expect(componentCoverage.missingCapabilityIds).toEqual([]);
+    expect(
+      componentCoverage.evidence.some(
+        (item) => item.capabilityId === "drawUpTo:self:chooseQuantity",
+      ),
+    ).toBe(true);
+  });
 });

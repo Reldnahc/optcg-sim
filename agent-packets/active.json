@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-025A.md",
-      "storyId": "CARD-025A",
-      "storyPath": "stories/approved/CARD-025A-card-support-authority-anti-shape-inventory.yaml",
-      "storySha256": "f0fb5e113e4acfb7ef962c85df48e76cc28e395822fc43473bd12e9c37dffa74"
+      "packetPath": "agent-packets/CARD-025B.md",
+      "storyId": "CARD-025B",
+      "storyPath": "stories/approved/CARD-025B-primitive-evidence-inventory-migration.yaml",
+      "storySha256": "849d1a844910d1f2caa32e20daa35aa7d58dccdca3874787437ddaa9ac398f4a"
     }
   ],
   "version": 1

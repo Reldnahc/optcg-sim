@@ -5,6 +5,7 @@ import { buildGeneratedSupportReport } from "./generated-support-report.js";
 
 import {
   buildGeneratedSupportComponentEvidenceSnapshot,
+  evaluateParserCertificationBlockers,
   findGeneratedSupportComponentEvidenceByParserRuleId,
   generatedSupportComponentEvidenceCategories,
   generatedSupportComponentEvidenceInventory,
@@ -47,6 +48,18 @@ const effectDefinition: EffectDefinition = {
   },
 };
 const validateEffectDefinition = () => ({ valid: true }) as const;
+
+function listPrimitiveBoundarySuffixLabels(message: string): readonly string[] {
+  const match = /\(primitive boundaries: ([^)]+)\)\.?$/.exec(message);
+  if (match?.[1] === undefined) {
+    return [];
+  }
+  return match[1]
+    .split(",")
+    .map((label) => label.trim())
+    .filter((label) => label.length > 0)
+    .sort();
+}
 
 describe("generated support parser result contracts", () => {
   it("enumerates every fail-closed parser outcome required by the spec", () => {
@@ -514,6 +527,106 @@ describe("generated support parser result contracts", () => {
     expect([...gateCatalog.metadata].sort()).toEqual(
       [...generatedSupportMetadataGateIds].sort(),
     );
+  });
+
+  it("reports exact primitive-boundary suffix labels for activate-main choose-one cost/draw evidence", () => {
+    const componentEvidenceId =
+      "activate-main-once-per-turn-optional-choose-one-trash-self-field-type-or-hand-then-draw";
+    const blocker = evaluateParserCertificationBlockers([componentEvidenceId], {
+      currentCertificationIds: [],
+    }).find((candidate) => candidate.component === componentEvidenceId);
+    expect(blocker).toBeDefined();
+    expect(listPrimitiveBoundarySuffixLabels(blocker?.message ?? "")).toEqual([
+      "body",
+      "cardinality",
+      "chooser",
+      "composition",
+      "cost",
+      "marker",
+      "source-presence-policy",
+      "target",
+      "wrapper",
+    ]);
+  });
+
+  it("reports exact primitive-boundary suffix labels for start-of-game typed-stage evidence", () => {
+    const componentEvidenceId =
+      "start-of-game-play-up-to-one-typed-stage-from-deck";
+    const blocker = evaluateParserCertificationBlockers([componentEvidenceId], {
+      currentCertificationIds: [],
+    }).find((candidate) => candidate.component === componentEvidenceId);
+    expect(blocker).toBeDefined();
+    expect(listPrimitiveBoundarySuffixLabels(blocker?.message ?? "")).toEqual([
+      "body",
+      "cardinality",
+      "chooser",
+      "composition",
+      "filter",
+      "saved-reference",
+      "source-presence-policy",
+      "target",
+      "wrapper",
+    ]);
+  });
+
+  it("derives primitive boundaries from conditional base-power parser certification families", () => {
+    const componentEvidenceId =
+      "conditional-continuous-condition-base-power-self-character-type";
+    const missingBlockers = evaluateParserCertificationBlockers(
+      [componentEvidenceId],
+      { currentCertificationIds: [] },
+    );
+
+    const missingBlocker = missingBlockers.find(
+      (candidate) => candidate.component === componentEvidenceId,
+    );
+    expect(missingBlocker).toBeDefined();
+    expect(
+      listPrimitiveBoundarySuffixLabels(missingBlocker?.message ?? ""),
+    ).toEqual([
+      "body",
+      "composition",
+      "condition",
+      "duration",
+      "modifier",
+      "source-presence-policy",
+      "target",
+      "value",
+      "wrapper",
+    ]);
+
+    const staleBlockers = evaluateParserCertificationBlockers(
+      [componentEvidenceId],
+      {
+        currentCertificationIds: [],
+        staleCertificationIds: [
+          "wrapper:your-turn-continuous-if",
+          "condition:trash-count:self:gte",
+          "body:base-power-setter",
+          "target:all-your-typed-characters",
+          "value:base-power:positive-safe-integer",
+          "composition:conditional-base-power-self-typed-character",
+        ],
+      },
+    );
+
+    const staleBlocker = staleBlockers.find(
+      (candidate) => candidate.component === componentEvidenceId,
+    );
+    expect(staleBlocker).toBeDefined();
+    expect(
+      listPrimitiveBoundarySuffixLabels(staleBlocker?.message ?? ""),
+    ).toEqual([
+      "body",
+      "composition",
+      "condition",
+      "duration",
+      "modifier",
+      "source-presence-policy",
+      "target",
+      "value",
+      "wrapper",
+    ]);
   });
 
   it("represents wrapper/body reuse without implying support when required gates are missing", () => {

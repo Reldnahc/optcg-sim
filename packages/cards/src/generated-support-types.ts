@@ -17,6 +17,7 @@ import {
   returnDonCostWrapperParserRuleId,
   returnDonCostWrapperRuntimeCapabilityIds,
 } from "./return-don-cost-wrapper-components.js";
+import { listPrimitiveBoundaryLabels } from "./primitive-boundary-evidence.js";
 export type { ExternalDeckConstructionRuleEvidence } from "./external-deck-construction-rule.js";
 export type {
   GeneratedSupportDiagnosticDecomposition,
@@ -198,11 +199,16 @@ export function evaluateParserCertificationBlockers(
 ): readonly GeneratedSupportBlocker[] {
   const current = new Set(evidence?.currentCertificationIds ?? []),
     stale = new Set(evidence?.staleCertificationIds ?? []);
-  return componentEvidenceIds.flatMap((component) =>
-    (
-      findGeneratedSupportComponentEvidenceByShapeId(component)
-        ?.parserCertificationIds ?? []
-    ).flatMap((id) => {
+  return componentEvidenceIds.flatMap((component) => {
+    const componentEvidenceEntry =
+      findGeneratedSupportComponentEvidenceByShapeId(component);
+    const parserCertificationIds =
+      componentEvidenceEntry?.parserCertificationIds ?? [];
+    const primitiveBoundaries = listPrimitiveBoundaryLabels({
+      components: componentEvidenceEntry?.components ?? [],
+      parserCertificationIds,
+    });
+    return parserCertificationIds.flatMap((id) => {
       const isStale = stale.has(id);
       return isStale || !current.has(id)
         ? [
@@ -210,12 +216,12 @@ export function evaluateParserCertificationBlockers(
               code: "unsupported-primitive",
               component,
               diagnosticLayer: "review",
-              message: `${isStale ? "Stale" : "Missing"} parser certification ${id} for component ${component}.`,
+              message: `${isStale ? "Stale" : "Missing"} parser certification ${id} for component ${component}${primitiveBoundaries.length === 0 ? "" : ` (primitive boundaries: ${primitiveBoundaries.join(", ")})`}.`,
             },
           ]
         : [];
-    }),
-  );
+    });
+  });
 }
 
 const parserRuleBaseComponents = [

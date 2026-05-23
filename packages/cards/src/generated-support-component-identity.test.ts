@@ -22,6 +22,21 @@ const baseCard = {
 };
 
 describe("generated support component identity migration", () => {
+  it("requires primitive component evidence IDs for current generated-support inventory entries", () => {
+    const currentEntries = generatedSupportComponentEvidenceInventory.filter(
+      (entry) => entry.runtimeCapabilityIds.length > 0,
+    );
+    expect(currentEntries.length).toBeGreaterThan(0);
+    expect(
+      currentEntries.every(
+        (entry) =>
+          entry.shapeId.length > 0 &&
+          !entry.shapeId.startsWith("exact:") &&
+          entry.parserRuleId.length > 0,
+      ),
+    ).toBe(true);
+  });
+
   it("exposes component evidence IDs on complete and partial parser results", () => {
     const complete = parseCertifiedCardText({
       cardId: "CARD-017C-PARSER-COMPLETE" as CardId,
@@ -105,6 +120,36 @@ describe("generated support component identity migration", () => {
       parserRuleIds: [],
       status: "unsupported",
     });
+  });
+
+  it("fails closed when only exact parser rule IDs are provided, even for known supported templates", () => {
+    const parserRuleCoverage =
+      evaluateRuntimeCapabilityCoverageForParserRuleIds({
+        parserRuleIds: ["exact:on-play:draw-n:self"],
+      });
+    expect(parserRuleCoverage).toMatchObject({
+      blockers: [
+        {
+          capabilityId: "parser-rule-mapping:exact:on-play:draw-n:self",
+          code: "missing-runtime-capability",
+          component: "exact:on-play:draw-n:self",
+        },
+      ],
+      evidence: [],
+      missingCapabilityIds: ["parser-rule-mapping:exact:on-play:draw-n:self"],
+    });
+
+    const primitiveCoverage =
+      evaluateRuntimeCapabilityCoverageForComponentEvidenceIds({
+        componentEvidenceIds: ["on-play-draw"],
+      });
+    expect(primitiveCoverage.missingCapabilityIds).toEqual([]);
+    expect(
+      primitiveCoverage.evidence.some(
+        (item) =>
+          item.capabilityId === "effect:draw:self:count:positive-safe-integer",
+      ),
+    ).toBe(true);
   });
 
   it("propagates component evidence IDs into index/report and avoids inventing IDs for stale-hash or whole-card fallback", () => {

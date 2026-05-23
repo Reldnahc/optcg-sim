@@ -29,33 +29,12 @@ export function evaluateRuntimeCapabilityCoverageForParserRuleIds({
   matrix?: RuntimeCapabilityMatrix;
   parserRuleIds: readonly string[];
 }): RuntimeCapabilityCoverageResult {
-  const componentEvidenceIds =
-    listComponentEvidenceIdsForParserRuleIds(parserRuleIds);
-  const unmappedParserRuleIds = parserRuleIds.filter(
-    (parserRuleId) =>
-      listComponentEvidenceIdsForParserRuleIds([parserRuleId]).length === 0,
-  );
-  const coverage = resolveCapabilityCoverage({
-    componentEvidenceIds,
-    matrix,
-  });
-  const evidence = withParserRuleTrace({
-    capabilityEvidence: coverage.evidence,
-    parserRuleIds,
-  });
-  const missing = [
-    ...withParserRuleTrace({
-      capabilityEvidence: coverage.missing,
-      parserRuleIds,
-    }),
-  ];
-  for (const parserRuleId of unmappedParserRuleIds) {
-    missing.push({
-      capabilityId: `parser-rule-mapping:${parserRuleId}`,
-      component: parserRuleId,
-      parserRuleId,
-    });
-  }
+  void matrix;
+  const missing = parserRuleIds.map((parserRuleId) => ({
+    capabilityId: `parser-rule-mapping:${parserRuleId}`,
+    component: parserRuleId,
+    parserRuleId,
+  }));
   const missingCapabilityIds = [
     ...new Set(missing.map((missingItem) => missingItem.capabilityId)),
   ].sort();
@@ -64,7 +43,7 @@ export function evaluateRuntimeCapabilityCoverageForParserRuleIds({
     blockers: missing.map((missingItem) =>
       toMissingRuntimeCapabilityBlocker(missingItem),
     ),
-    evidence,
+    evidence: [],
     missing: missing.sort(compareCapabilityEvidence),
     missingCapabilityIds,
   };

@@ -564,6 +564,14 @@ describe("support evaluator parser certification evidence", () => {
         message.includes("Stale parser certification body-action:draw-n"),
       ),
     ).toBe(true);
+    expect(
+      staleMessages.some(
+        (message) =>
+          message.includes("primitive boundaries:") &&
+          message.includes("wrapper") &&
+          message.includes("body"),
+      ),
+    ).toBe(true);
 
     const evaluation = evaluateGeneratedSupportPlayability({
       card,
