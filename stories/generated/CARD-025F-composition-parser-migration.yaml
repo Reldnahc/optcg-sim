@@ -36,6 +36,8 @@ allowed_touch_points:
   - packages/cards/src/certified-card-text-parser.test.ts
   - packages/cards/src/generated-support-types.ts
   - packages/cards/src/generated-support-index.test.ts
+  - packages/cards/src/external-deck-construction-rule.test.ts
+  - packages/cards/src/support-evaluator-parser-certification.test.ts
   - packages/cards/src/support-evaluator.test.ts
   - stories/generated/CARD-025-card-layer-spec010-migration-parent.yaml
   - stories/generated/CARD-025F-composition-parser-migration.yaml
@@ -67,6 +69,7 @@ scope:
   - migrate current costed-body composition to require cost evidence, body evidence, and cost/body composition evidence independently
   - composition evidence must supplement, not replace, required primitive evidence for wrapper, marker, cost, condition, body, target, filter, cardinality, duration, source-presence policy, decision, or visibility boundaries when those boundaries are present
   - preserve legitimate local arity validation for sequence segments while forbidding full generated-support definition-size authorization
+  - update existing explicit parser-certification tests for supported line-separated runtime composition so they provide line-composition certification evidence instead of relying on compatibility omissions
   - preserve fail-closed behavior for unsupported composition residue, unsupported conjunctions, missing segment evidence, stale certification evidence, and unsupported mixed composition
 non_scope:
   - new composition grammar such as comma-separated multi-clause lists not already supported
@@ -94,6 +97,7 @@ required_tests:
   - story-review for CARD-025F before approval handoff
   - composition parser tests for line-separated, sequence, conditional, costed-body, and continuous composition evidence
   - generated-support tests proving missing segment, missing primitive dependency, or missing composition evidence fails closed
+  - parser-certification tests proving supported multiline runtime compositions fail closed when line-separated composition certification is missing or stale, including a supported multiline path whose segment component IDs do not use trigger-prefix heuristics
   - anti-shape tests proving no full-line, full-definition, or exact sequence sample authorizes current support
   - regression tests proving legitimate sequence segment validation is still allowed
   - run `corepack pnpm run packets:verify`

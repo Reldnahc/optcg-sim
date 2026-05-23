@@ -37,6 +37,7 @@ describe("SUP-001G line-separated generated support promotion", () => {
     currentCertificationIds: [
       ...parserCertificationEvidence.currentCertificationIds,
       ...conditionalWhenAttackingModifyPowerCertificationIds,
+      "composition:line-separated-effect-blocks:v1",
     ],
   } as const;
 
@@ -225,5 +226,159 @@ describe("SUP-001G line-separated generated support promotion", () => {
     });
 
     expect(parsed.status).toBe("partial");
+  });
+
+  it("fails closed when line-separated composition certification is missing", () => {
+    const sourceText = [
+      "[On Play] DON!! -1: Draw 1 card.",
+      "[When Attacking] If you have 6 or less DON!! cards on your field, give up to 1 of your opponent's Characters -1000 power during this turn.",
+    ].join("\n");
+    const report = buildGeneratedSupportReport(
+      buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "SUP-001G-MISSING-LINE-COMPOSITION-CERT" as CardId,
+            sourceText,
+            sourceTextHash: "sha256:sup-001g-missing-line-composition-cert",
+          },
+        ],
+        parserCertificationEvidence: {
+          currentCertificationIds:
+            parserCertificationEvidence.currentCertificationIds,
+        },
+        validateEffectDefinition,
+      }),
+    );
+
+    expect(
+      report.statusByCardId["SUP-001G-MISSING-LINE-COMPOSITION-CERT"]?.status,
+    ).toBe("unsupported");
+    expect(report.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          cardId: "SUP-001G-MISSING-LINE-COMPOSITION-CERT",
+          code: "unsupported-primitive",
+          component: "line-separated-effect-blocks-composition",
+        }),
+      ]),
+    );
+  });
+
+  it("fails closed when segment primitive certification is missing even with line composition certification", () => {
+    const sourceText = [
+      "[On Play] DON!! -1: Draw 1 card.",
+      "[When Attacking] If you have 6 or less DON!! cards on your field, give up to 1 of your opponent's Characters -1000 power during this turn.",
+    ].join("\n");
+    const report = buildGeneratedSupportReport(
+      buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "SUP-001G-MISSING-SEGMENT-CERT" as CardId,
+            sourceText,
+            sourceTextHash: "sha256:sup-001g-missing-segment-cert",
+          },
+        ],
+        parserCertificationEvidence: {
+          currentCertificationIds: [
+            ...parserCertificationEvidence.currentCertificationIds,
+            "composition:line-separated-effect-blocks:v1",
+          ],
+        },
+        validateEffectDefinition,
+      }),
+    );
+
+    expect(report.statusByCardId["SUP-001G-MISSING-SEGMENT-CERT"]?.status).toBe(
+      "unsupported",
+    );
+    expect(report.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          cardId: "SUP-001G-MISSING-SEGMENT-CERT",
+          code: "unsupported-primitive",
+          component: "when-attacking-conditional-modify-power-choose-this-turn",
+        }),
+      ]),
+    );
+  });
+
+  it("fails closed when line-separated composition certification is stale", () => {
+    const sourceText = [
+      "[On Play] DON!! -1: Draw 1 card.",
+      "[When Attacking] If you have 6 or less DON!! cards on your field, give up to 1 of your opponent's Characters -1000 power during this turn.",
+    ].join("\n");
+    const report = buildGeneratedSupportReport(
+      buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "SUP-001G-STALE-LINE-COMPOSITION-CERT" as CardId,
+            sourceText,
+            sourceTextHash: "sha256:sup-001g-stale-line-composition-cert",
+          },
+        ],
+        parserCertificationEvidence: {
+          currentCertificationIds:
+            lineSeparatedCertificationEvidence.currentCertificationIds,
+          staleCertificationIds: [
+            "composition:line-separated-effect-blocks:v1",
+          ],
+        },
+        validateEffectDefinition,
+      }),
+    );
+
+    expect(
+      report.statusByCardId["SUP-001G-STALE-LINE-COMPOSITION-CERT"]?.status,
+    ).toBe("unsupported");
+    expect(report.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          cardId: "SUP-001G-STALE-LINE-COMPOSITION-CERT",
+          code: "unsupported-primitive",
+          component: "line-separated-effect-blocks-composition",
+        }),
+      ]),
+    );
+  });
+
+  it("fails closed when segment primitive certification is stale even with line composition certification", () => {
+    const sourceText = [
+      "[On Play] DON!! -1: Draw 1 card.",
+      "[When Attacking] If you have 6 or less DON!! cards on your field, give up to 1 of your opponent's Characters -1000 power during this turn.",
+    ].join("\n");
+    const report = buildGeneratedSupportReport(
+      buildGeneratedSupportIndex({
+        cards: [
+          {
+            ...baseInput,
+            cardId: "SUP-001G-STALE-SEGMENT-CERT" as CardId,
+            sourceText,
+            sourceTextHash: "sha256:sup-001g-stale-segment-cert",
+          },
+        ],
+        parserCertificationEvidence: {
+          currentCertificationIds:
+            lineSeparatedCertificationEvidence.currentCertificationIds,
+          staleCertificationIds: ["trigger-wrapper:when-attacking"],
+        },
+        validateEffectDefinition,
+      }),
+    );
+
+    expect(report.statusByCardId["SUP-001G-STALE-SEGMENT-CERT"]?.status).toBe(
+      "unsupported",
+    );
+    expect(report.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          cardId: "SUP-001G-STALE-SEGMENT-CERT",
+          code: "unsupported-primitive",
+          component: "when-attacking-conditional-modify-power-choose-this-turn",
+        }),
+      ]),
+    );
   });
 });

@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/CARD-025E.md",
-      "storyId": "CARD-025E",
-      "storyPath": "stories/approved/CARD-025E-body-effect-request-primitive-migration.yaml",
-      "storySha256": "4f253e84e24c182f16e2c1cc41d76fe72b418d4bfc25adc42d5e9a3e142e2591"
+      "packetPath": "agent-packets/CARD-025F.md",
+      "storyId": "CARD-025F",
+      "storyPath": "stories/approved/CARD-025F-composition-parser-migration.yaml",
+      "storySha256": "ee12182e2fbb56cb7cce2d1847187c770094a9fdcc1e883a8404542b0481e178"
     }
   ],
   "version": 1

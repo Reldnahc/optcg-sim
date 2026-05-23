@@ -221,6 +221,8 @@ export function evaluateParserCertificationBlockers(
 ): readonly GeneratedSupportBlocker[] {
   const current = new Set(evidence?.currentCertificationIds ?? []),
     stale = new Set(evidence?.staleCertificationIds ?? []);
+  const requireLineSeparatedCompositionCertification =
+    shouldRequireLineSeparatedCompositionCertification(componentEvidenceIds);
   return componentEvidenceIds.flatMap((component) => {
     const componentEvidenceEntry =
       findGeneratedSupportComponentEvidenceByShapeId(component);
@@ -231,6 +233,13 @@ export function evaluateParserCertificationBlockers(
       parserCertificationIds,
     });
     return parserCertificationIds.flatMap((id) => {
+      if (
+        id === "composition:line-separated-effect-blocks:v1" &&
+        component === "line-separated-effect-blocks-composition" &&
+        !requireLineSeparatedCompositionCertification
+      ) {
+        return [];
+      }
       const isStale = stale.has(id);
       return isStale || !current.has(id)
         ? [
@@ -244,6 +253,61 @@ export function evaluateParserCertificationBlockers(
         : [];
     });
   });
+}
+
+function shouldRequireLineSeparatedCompositionCertification(
+  componentEvidenceIds: readonly string[],
+): boolean {
+  if (
+    !componentEvidenceIds.includes("line-separated-effect-blocks-composition")
+  ) {
+    return false;
+  }
+
+  const runtimeTriggerCapabilityIds = new Set<string>();
+  componentEvidenceIds
+    .filter(
+      (componentEvidenceId) =>
+        componentEvidenceId !== "line-separated-effect-blocks-composition",
+    )
+    .forEach((componentEvidenceId) => {
+      const runtimeEffectBlockComponentEvidence =
+        findRuntimeEffectBlockComponentEvidence(componentEvidenceId);
+      if (runtimeEffectBlockComponentEvidence === undefined) {
+        return;
+      }
+
+      for (const capabilityId of runtimeEffectBlockComponentEvidence.runtimeCapabilityIds) {
+        if (capabilityId.startsWith("trigger:")) {
+          runtimeTriggerCapabilityIds.add(capabilityId);
+        }
+      }
+    });
+
+  return runtimeTriggerCapabilityIds.size >= 2;
+}
+
+const knownNonRuntimeComponentEvidenceIds = new Set([
+  "external-deck-rule-category-cost-gte-in-your-deck",
+]);
+
+function findRuntimeEffectBlockComponentEvidence(
+  componentEvidenceId: string,
+): GeneratedSupportComponentEvidenceInventoryEntry | undefined {
+  if (knownNonRuntimeComponentEvidenceIds.has(componentEvidenceId)) {
+    return undefined;
+  }
+
+  const entry =
+    findGeneratedSupportComponentEvidenceByShapeId(componentEvidenceId);
+  if (entry === undefined) {
+    return undefined;
+  }
+
+  return entry.runtimeCapabilityIds.length > 0 &&
+    entry.components.includes("wrapper")
+    ? entry
+    : undefined;
 }
 
 const parserRuleBaseComponents = [
@@ -772,6 +836,7 @@ export const generatedSupportComponentEvidenceInventory = [
   {
     components: ["sequence", ...parserRuleBaseComponents],
     gates: buildParserRuleGates(true),
+    parserCertificationIds: ["composition:line-separated-effect-blocks:v1"],
     parserRuleId: "line-separated-effect-blocks:v1",
     runtimeCapabilityIds: ["composition:line-separated-effect-blocks:v1"],
     shapeId: "line-separated-effect-blocks-composition",

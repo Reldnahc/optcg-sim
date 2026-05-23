@@ -10,6 +10,7 @@ import {
   buildGeneratedSupportIndex,
   type EffectDefinitionValidationResult,
 } from "./generated-support-index.js";
+import { listAllGeneratedSupportParserCertificationIds } from "./generated-support-types.js";
 import { normalizePoneglyphCardDetail } from "./normalization.js";
 import { generatedSupportRuntimeCapabilityMatrix } from "./runtime-capability-matrix.js";
 import { evaluateGeneratedSupportPlayability } from "./support-evaluator.js";
@@ -254,6 +255,77 @@ describe("support evaluator parser certification evidence", () => {
     );
     expect(evaluation.missingCapabilityIds).toContain(
       "payCost:chooseOne:optional:trashFromField-or-trashFromHand:self",
+    );
+  });
+
+  it("fails closed when line-separated composition certification is missing for SUP-003H composed multiline text", () => {
+    const card = createSup003HRepresentativeCard(
+      "SUP-003H-EVAL-MISSING-LINE-COMPOSITION-CERT",
+    );
+    const currentCertificationIds =
+      listAllGeneratedSupportParserCertificationIds().filter(
+        (id) => id !== "composition:line-separated-effect-blocks:v1",
+      );
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card,
+      cardDataVersion: "2026-05-21",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: card.behaviorHash,
+      expectedSourceTextHash: card.sourceTextHash,
+      parserCertificationEvidence: { currentCertificationIds },
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
+    expect(evaluation.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "unsupported-primitive",
+          component: "line-separated-effect-blocks-composition",
+        }),
+      ]),
+    );
+  });
+
+  it("fails closed when line-separated composition certification is stale for SUP-003H composed multiline text", () => {
+    const card = createSup003HRepresentativeCard(
+      "SUP-003H-EVAL-STALE-LINE-COMPOSITION-CERT",
+    );
+    const currentCertificationIds =
+      listAllGeneratedSupportParserCertificationIds();
+
+    const evaluation = evaluateGeneratedSupportPlayability({
+      card,
+      cardDataVersion: "2026-05-21",
+      effectDefinitionsVersion: "generated-support-v1",
+      expectedBehaviorHash: card.behaviorHash,
+      expectedSourceTextHash: card.sourceTextHash,
+      parserCertificationEvidence: {
+        currentCertificationIds,
+        staleCertificationIds: ["composition:line-separated-effect-blocks:v1"],
+      },
+      rulesVersion: "generated-support-v1",
+      validateEffectDefinition,
+    });
+
+    expect(evaluation).toMatchObject({
+      parseStatus: "complete",
+      playable: false,
+      status: "unsupported",
+    });
+    expect(evaluation.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "unsupported-primitive",
+          component: "line-separated-effect-blocks-composition",
+        }),
+      ]),
     );
   });
 
