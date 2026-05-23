@@ -83,7 +83,7 @@ const isSupportedWhenAttackingDrawThenTrashSequenceEffect = (
   );
 };
 
-const isSupportedWhenAttackingCompatibleQueuedEffect = (
+export const isSupportedWhenAttackingCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
@@ -94,6 +94,15 @@ const isSupportedWhenAttackingCompatibleQueuedEffect = (
     withoutCondition(effect),
   ) ||
   isSupportedWhenAttackingDrawThenTrashSequenceEffect(effect);
+
+export const isSupportedOnOpponentAttackCompatibleQueuedEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+  effect: Effect;
+} =>
+  isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
+  isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect(effect);
 
 export const createAttackTriggerQueueing = (
   dependencies: Pick<
@@ -448,9 +457,7 @@ export const createAttackTriggerQueueing = (
           continue;
         }
         const matching = onOpponentAttackEffects.filter(
-          (effect) =>
-            isSupportedNoChoiceOnOpponentAttackDrawEffect(effect) ||
-            isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect(effect),
+          isSupportedOnOpponentAttackCompatibleQueuedEffect,
         );
         if (matching.length !== onOpponentAttackEffects.length) {
           return toEngineResult(

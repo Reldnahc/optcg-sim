@@ -25,7 +25,10 @@ import {
   reifyCardRef,
   toCardRef,
 } from "./action-state.js";
-import { withAllAttackTimingCombatMetadataHidden } from "./attack-timing.js";
+import {
+  withAllAttackTimingCombatMetadataHidden,
+  withAllSupportedAttackTimingCombatMetadataHidden,
+} from "./attack-timing.js";
 import { resolveSupportedVanillaBattle } from "./battle-resolution.js";
 import {
   expireBattleDurationStateForCleanup,
@@ -231,7 +234,7 @@ export const getDeclareAttackLegalActions = (
     return [];
   }
   const legalActionState = withSupportedBattleRuntimeMetadataHidden(
-    withAllAttackTimingCombatMetadataHidden(state),
+    withAllSupportedAttackTimingCombatMetadataHidden(state),
   );
   try {
     const view = computeView(legalActionState);
