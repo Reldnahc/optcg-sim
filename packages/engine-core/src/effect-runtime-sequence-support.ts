@@ -35,6 +35,11 @@ export type SupportedSequenceBlock = EffectDefinition["effects"][number] & {
   effect: SequenceEffect & { effects: SupportedSequenceSegment[] };
 };
 
+export interface SequenceSupportOptions {
+  allowSavedReferences?: boolean;
+  requirePositiveDrawCount?: boolean;
+}
+
 const toSyntheticQueueEntry = (
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
 ): EffectQueueEntry => ({
@@ -246,7 +251,10 @@ const isScopedActivateMainSequenceEntry = (entry: EffectQueueEntry): boolean =>
 export const isSupportedSequenceBlock = (
   entry: EffectQueueEntry,
   effectBlock: EffectDefinition["effects"][number] | undefined,
+  options: SequenceSupportOptions = {},
 ): effectBlock is SupportedSequenceBlock => {
+  const allowSavedReferences = options.allowSavedReferences ?? true;
+  const requirePositiveDrawCount = options.requirePositiveDrawCount ?? false;
   const isSupportedCategoryForEntry =
     effectBlock?.category === "auto" ||
     (effectBlock?.category === "activate" &&
@@ -276,7 +284,17 @@ export const isSupportedSequenceBlock = (
       ) {
         return false;
       }
+      if (!allowSavedReferences && segment.saveResultAs !== undefined) {
+        return false;
+      }
       if (isSupportedDrawSegment(segment.effect)) {
+        if (
+          requirePositiveDrawCount &&
+          Number.isInteger(segment.effect.count) &&
+          segment.effect.count <= 0
+        ) {
+          return false;
+        }
         if (segment.optional === true) {
           hasPendingDecisionSegment = true;
         }
@@ -361,15 +379,16 @@ export const isSupportedQueuedAutoSequenceForEntryPoint = (
   effect: EffectDefinition["effects"][number],
   triggerType: "onPlay" | "whenAttacking" | "onKO" | "main" | "trigger",
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
+  options: SequenceSupportOptions = {},
 ): effect is SupportedSequenceBlock =>
   effect.category === "auto" &&
   effect.trigger.type === triggerType &&
   effect.sourcePresencePolicy === sourcePresencePolicy &&
-  effect.effect.type === "sequence" &&
-  effect.effect.effects.every(
-    (segment) =>
-      segment.saveResultAs === undefined &&
-      (segment.effect.type !== "draw" ||
-        (Number.isInteger(segment.effect.count) && segment.effect.count > 0)),
-  ) &&
-  isSupportedSequenceBlock(toSyntheticQueueEntry(sourcePresencePolicy), effect);
+  isSupportedSequenceBlock(
+    toSyntheticQueueEntry(sourcePresencePolicy),
+    effect,
+    {
+      allowSavedReferences: options.allowSavedReferences ?? true,
+      requirePositiveDrawCount: options.requirePositiveDrawCount ?? true,
+    },
+  );

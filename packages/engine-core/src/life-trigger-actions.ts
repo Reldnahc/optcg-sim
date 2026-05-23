@@ -2,7 +2,6 @@ import type {
   Action,
   CardRef,
   CardInstance,
-  Effect,
   ConfirmLifeTriggerDecision,
   EffectBlock,
   EffectQueueEntry,
@@ -66,10 +65,11 @@ const isSupportedTriggerEffect = (effect: EffectBlock): boolean => {
   if (effect.optional === false) return false;
   if (effect.oncePerTurn !== undefined && effect.oncePerTurn) return false;
   if (effect.oncePerTurn === false) return false;
-  return isSupportedTriggerQueuedBody(effect.effect);
+  return isSupportedTriggerQueuedBody(effect);
 };
 
-const isSupportedTriggerQueuedBody = (effect: Effect): boolean => {
+const isSupportedTriggerQueuedBody = (effectBlock: EffectBlock): boolean => {
+  const effect = effectBlock.effect;
   if (effect.type === "draw") {
     return (
       Number.isInteger(effect.count) &&
@@ -85,24 +85,21 @@ const isSupportedTriggerQueuedBody = (effect: Effect): boolean => {
     );
   }
   if (effect.type === "sequence") {
-    const effectBlock: EffectBlock = {
-      id: "life-trigger:synthetic-effect" as EffectBlock["id"],
-      category: "auto",
-      trigger: { type: "trigger" },
-      sourcePresencePolicy: "resolveFromLastKnownInformation",
-      effect,
-    };
+    if (effectBlock.sourcePresencePolicy === undefined) {
+      return false;
+    }
     return isSupportedQueuedAutoSequenceForEntryPoint(
       effectBlock,
       "trigger",
-      "resolveFromLastKnownInformation",
+      effectBlock.sourcePresencePolicy,
+      { allowSavedReferences: false },
     );
   }
   return false;
 };
 
 const hasUnsupportedShape = (effect: EffectBlock): boolean =>
-  !isSupportedTriggerQueuedBody(effect.effect) ||
+  !isSupportedTriggerQueuedBody(effect) ||
   effect.cost !== undefined ||
   effect.conditionTiming !== undefined ||
   effect.failurePolicy !== undefined ||

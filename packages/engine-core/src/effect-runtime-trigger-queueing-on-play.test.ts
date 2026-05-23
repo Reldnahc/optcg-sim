@@ -393,3 +393,78 @@ test("On Play reusable draw-then-trash sequence queues and reaches sequence deci
   );
   assert.equal(paused.state.pendingDecision?.type, "selectCards");
 });
+
+test("On Play reusable saved-reference sequence queues via shared sequence support", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...definition,
+      effects: [
+        {
+          ...onPlayEffect,
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                saveResultAs: "saved:target",
+                effect: {
+                  type: "selectTargets",
+                  request: {
+                    timing: "onResolution",
+                    chooser: "self",
+                    zone: "characterArea",
+                    player: "opponent",
+                    min: 0,
+                    max: 1,
+                    allowFewerIfUnavailable: false,
+                    visibility: "public",
+                    filter: {
+                      categories: ["character"],
+                      cost: { max: 3 },
+                    },
+                  },
+                },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "ko",
+                  target: {
+                    type: "savedFieldObject",
+                    binding: {
+                      family: "selectedTargets",
+                      saveResultAs: "saved:target",
+                    },
+                    player: "opponent",
+                    zone: "characterArea",
+                    visibility: "publicOnly",
+                    onFailure: "failClosed",
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+    "def-on-play-saved-reference-sequence",
+  );
+
+  const queued = processEffectRuntime(state);
+
+  assert.equal(queued.errors, undefined);
+  assert.equal(queued.state.effectQueue.length, 1);
+  assert.equal(queued.events[0]?.type, "effectQueued");
+});

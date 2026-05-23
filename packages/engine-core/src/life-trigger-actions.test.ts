@@ -32,6 +32,9 @@ import {
 const supportedLifeTriggerDefinition = (
   cardId: ReturnType<typeof toCardId>,
   effectBody: Effect = { type: "draw", count: 1, player: "self" },
+  sourcePresencePolicy:
+    | "resolveFromLastKnownInformation"
+    | "noSourceRequired" = "resolveFromLastKnownInformation",
 ): EffectDefinition => {
   const definition = effectDefinition(cardId, { type: "trigger" }, effectBody);
   const effect = must(definition.effects[0], "trigger effect");
@@ -43,7 +46,7 @@ const supportedLifeTriggerDefinition = (
     effects: [
       {
         ...effectWithoutFlags,
-        sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+        sourcePresencePolicy,
       },
     ],
   };
