@@ -34,6 +34,7 @@ allowed_touch_points:
   - packages/engine-core/src/attack-timing.ts
   - packages/engine-core/src/battle-support.ts
   - packages/engine-core/src/battle-actions.ts
+  - packages/engine-core/src/effect-runtime-conditions.ts
   - packages/engine-core/src/**/*trigger*queueing*.test.ts
   - packages/engine-core/src/**/*play-card*support*.test.ts
   - packages/engine-core/src/**/*life-trigger*.test.ts

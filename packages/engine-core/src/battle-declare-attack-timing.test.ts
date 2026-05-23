@@ -312,6 +312,38 @@ test("ENG-060A: unsupported mixed When Attacking metadata is not hidden for lega
   );
 });
 
+test("ENG-060A: unsupported mixed When Attacking condition is not hidden for legal attack exposure", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = p1State.leader;
+  const definition = withWhenAttackingDrawEffect(state, attacker);
+  const effect = must(definition.effects[0], "When Attacking effect");
+  definition.effects = [
+    {
+      ...effect,
+      condition: { type: "custom", check: "private-state" },
+    },
+    {
+      ...effect,
+      id: `${String(effect.id)}:on-play` as EffectDefinition["effects"][number]["id"],
+      trigger: { type: "onPlay" },
+    },
+  ];
+
+  const legal = getDeclareAttackLegalActions(state, p1);
+
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.attacker.instanceId === attacker.instanceId &&
+        action.target.instanceId === p2State.leader.instanceId,
+    ),
+    false,
+  );
+});
+
 test("ENG-060A: On K.O. battle metadata remains usable with an unrelated On Play block", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");

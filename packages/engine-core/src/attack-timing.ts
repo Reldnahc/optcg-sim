@@ -11,6 +11,7 @@ import {
   isSupportedOnOpponentAttackCompatibleQueuedEffect,
   isSupportedWhenAttackingCompatibleQueuedEffect,
 } from "./effect-runtime-trigger-queueing-attack.js";
+import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
 
 const isAttackTimingTrigger = (
   trigger: EffectDefinition["effects"][number]["trigger"],
@@ -51,10 +52,14 @@ const supportsStrictAttackTimingMetadataSanitization = (
     (effect) => effect.trigger.type === "onOpponentAttack",
   );
   const supportedWhenAttackingEffects = whenAttackingEffects.filter(
-    isSupportedWhenAttackingCompatibleQueuedEffect,
+    (effect) =>
+      isSupportedWhenAttackingCompatibleQueuedEffect(effect) &&
+      isSupportedQueuedEffectConditionShape(effect.condition),
   );
   const supportedOnOpponentAttackEffects = onOpponentAttackEffects.filter(
-    isSupportedOnOpponentAttackCompatibleQueuedEffect,
+    (effect) =>
+      isSupportedOnOpponentAttackCompatibleQueuedEffect(effect) &&
+      isSupportedQueuedEffectConditionShape(effect.condition),
   );
   return (
     supportsAttackTimingMetadataSanitization(definition) &&

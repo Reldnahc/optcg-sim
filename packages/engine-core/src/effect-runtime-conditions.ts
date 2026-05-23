@@ -458,6 +458,67 @@ const evaluateCondition = (
   }
 };
 
+export const isSupportedQueuedEffectConditionShape = (
+  condition: Condition | undefined,
+): boolean => {
+  if (condition === undefined) {
+    return true;
+  }
+  switch (condition.type) {
+    case "yourTurn":
+      return true;
+    case "attachedDonCount":
+      return (
+        condition.target.type === "self" &&
+        isNonNegativeSafeInteger(condition.value) &&
+        isComparator(condition.op)
+      );
+    case "leaderColorCount":
+    case "handCount":
+    case "lifeCount":
+      return (
+        isNonNegativeSafeInteger(condition.value) &&
+        isComparator(condition.op) &&
+        (condition.player === "self" || condition.player === "opponent")
+      );
+    case "trashCount":
+      return (
+        condition.filter === undefined &&
+        isNonNegativeSafeInteger(condition.value) &&
+        isComparator(condition.op) &&
+        (condition.player === "self" || condition.player === "opponent")
+      );
+    case "fieldCount":
+      return (
+        isSupportedDonFieldCountFilter(condition.filter) &&
+        isNonNegativeSafeInteger(condition.value) &&
+        isComparator(condition.op) &&
+        (condition.player === "self" || condition.player === "opponent")
+      );
+    case "hasCardInZone":
+      return (
+        condition.zone === "leaderArea" &&
+        isSupportedLeaderZoneFilter(condition.filter) &&
+        (condition.player === "self" || condition.player === "opponent")
+      );
+    case "and":
+    case "or":
+      return condition.conditions.every(isSupportedQueuedEffectConditionShape);
+    case "not":
+      return isSupportedQueuedEffectConditionShape(condition.condition);
+    case "custom":
+    case "attackTarget":
+    case "donCount":
+    case "opponentTurn":
+    case "cardState":
+    case "sourceStillInZone":
+    case "eventPayload":
+      return false;
+    default:
+      return false;
+  }
+};
+
 export const evaluateQueuedEffectCondition = (
   state: GameState,
   entry: EffectQueueEntry,
