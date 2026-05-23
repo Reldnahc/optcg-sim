@@ -1,10 +1,10 @@
 {
   "activeStories": [
     {
-      "packetPath": "agent-packets/ENG-060A.md",
-      "storyId": "ENG-060A",
-      "storyPath": "stories/approved/ENG-060A-multi-effect-definition-entry-point-routing.yaml",
-      "storySha256": "8ae8f56182c3a7d09135c62240b712bf431f27432675faa6355fa533b56ef332"
+      "packetPath": "agent-packets/ENG-060B.md",
+      "storyId": "ENG-060B",
+      "storyPath": "stories/approved/ENG-060B-reusable-queued-entry-point-body-adapters.yaml",
+      "storySha256": "e409f64f9847aec2866790365658bea3bb1e59ba79ad7426f2eb93a8f68905b3"
     }
   ],
   "version": 1
