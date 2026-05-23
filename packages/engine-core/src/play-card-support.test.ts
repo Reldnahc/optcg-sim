@@ -172,6 +172,269 @@ test("getSupportedPlayMetadata rejects implemented-DSL Character with an unsuppo
   assert.equal(getSupportedPlayMetadata(state, character), null);
 });
 
+test("getSupportedPlayMetadata accepts implemented-DSL Character On Play reusable sequence bodies", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "implemented character");
+  const implemented = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+    cost: 3,
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-character-on-play-sequence",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    character.cardId,
+    implemented.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  state.cardManifest.cards[character.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-character-on-play-sequence": {
+      ...definition,
+      effects: [
+        {
+          ...onPlayEffect,
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: { type: "draw", count: 1, player: "self" },
+              },
+              {
+                connector: "then",
+                effect: { type: "drawUpTo", count: 1, player: "self" },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+
+  assert.deepEqual(getSupportedPlayMetadata(state, character), {
+    category: "character",
+    printedCost: 3,
+  });
+});
+
+test("getSupportedPlayMetadata accepts implemented-DSL Event Main reusable sequence bodies", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const event = must(p1State.hand[0], "implemented event");
+  const implemented = resolvedCard({
+    cardId: event.cardId,
+    category: "event",
+    cost: 2,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-event-main-sequence",
+    },
+  });
+  const definition = {
+    ...reviewedOnPlayDrawDefinition(event.cardId, implemented.support),
+    effects: [
+      {
+        ...must(
+          reviewedOnPlayDrawDefinition(event.cardId, implemented.support)
+            .effects[0],
+          "base effect",
+        ),
+        id: "OP01-099:event-main-sequence-1" as EffectDefinition["effects"][number]["id"],
+        trigger: { type: "main" as const },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence" as const,
+          effects: [
+            {
+              connector: "always" as const,
+              effect: {
+                type: "draw" as const,
+                count: 1,
+                player: "self" as const,
+              },
+            },
+            {
+              connector: "then" as const,
+              effect: {
+                type: "drawUpTo" as const,
+                count: 1,
+                player: "self" as const,
+              },
+            },
+          ],
+        },
+      },
+    ],
+  } satisfies EffectDefinition;
+  state.cardManifest.cards[event.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-event-main-sequence": definition,
+  };
+
+  assert.deepEqual(getSupportedPlayMetadata(state, event), {
+    category: "event",
+    printedCost: 2,
+  });
+});
+
+test("getSupportedPlayMetadata rejects unsupported reusable sequence legal-action shapes", () => {
+  const makeOnPlayCharacterState = () => {
+    const state = setupMainPlayState();
+    const card = must(must(state.players[p1], "p1").hand[0], "character");
+    const implemented = resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      cost: 2,
+      power: 5000,
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: "def-character-on-play-sequence-negative",
+      },
+    });
+    const baseDefinition = reviewedOnPlayDrawDefinition(
+      card.cardId,
+      implemented.support,
+    );
+    const baseEffect = must(baseDefinition.effects[0], "base onPlay effect");
+    state.cardManifest.cards[card.cardId] = implemented;
+    state.cardManifest.effectDefinitionsVersion =
+      baseDefinition.metadata.effectDefinitionsVersion;
+    return { state, card, baseDefinition, baseEffect };
+  };
+
+  {
+    const { state, card, baseDefinition, baseEffect } =
+      makeOnPlayCharacterState();
+    state.cardManifest.effectDefinitions = {
+      "def-character-on-play-sequence-negative": {
+        ...baseDefinition,
+        effects: [
+          {
+            ...baseEffect,
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: { type: "draw", count: 1, player: "self" },
+                },
+                {
+                  connector: "ifPossible",
+                  effect: { type: "draw", count: 1, player: "self" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    assert.equal(getSupportedPlayMetadata(state, card), null);
+  }
+
+  {
+    const { state, card, baseDefinition, baseEffect } =
+      makeOnPlayCharacterState();
+    state.cardManifest.effectDefinitions = {
+      "def-character-on-play-sequence-negative": {
+        ...baseDefinition,
+        effects: [
+          {
+            ...baseEffect,
+            sourcePresencePolicy: "noSourceRequired",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: { type: "draw", count: 1, player: "self" },
+                },
+                {
+                  connector: "then",
+                  effect: { type: "drawUpTo", count: 1, player: "self" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    assert.equal(getSupportedPlayMetadata(state, card), null);
+  }
+
+  {
+    const { state, card, baseDefinition, baseEffect } =
+      makeOnPlayCharacterState();
+    state.cardManifest.effectDefinitions = {
+      "def-character-on-play-sequence-negative": {
+        ...baseDefinition,
+        effects: [
+          {
+            ...baseEffect,
+            cost: { type: "restDon", count: 1 },
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: { type: "draw", count: 1, player: "self" },
+                },
+                {
+                  connector: "then",
+                  effect: { type: "drawUpTo", count: 1, player: "self" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    assert.equal(getSupportedPlayMetadata(state, card), null);
+  }
+
+  {
+    const { state, card, baseDefinition, baseEffect } =
+      makeOnPlayCharacterState();
+    state.cardManifest.effectDefinitions = {
+      "def-character-on-play-sequence-negative": {
+        ...baseDefinition,
+        effects: [
+          {
+            ...baseEffect,
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: { type: "draw", count: 1, player: "self" },
+                },
+                {
+                  connector: "then",
+                  effect: { type: "drawUpTo", count: 1, player: "self" },
+                },
+              ],
+            },
+          },
+          {
+            ...baseEffect,
+            id: "OP01-015:auto-on-play-duplicate" as EffectDefinition["effects"][number]["id"],
+            effect: { type: "draw", count: 1, player: "self" },
+          },
+        ],
+      },
+    };
+    assert.equal(getSupportedPlayMetadata(state, card), null);
+  }
+});
+
 test("getSupportedPlayMetadata rejects unsupported play metadata", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");
