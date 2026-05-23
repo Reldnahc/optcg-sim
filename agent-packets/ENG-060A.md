@@ -1,6 +1,6 @@
 <!-- agent-packet:story-id ENG-060A -->
 <!-- agent-packet:story-path stories/approved/ENG-060A-multi-effect-definition-entry-point-routing.yaml -->
-<!-- agent-packet:story-sha256 c11b603599eddccaef4cbb7180d6cf7a25387ce024ea5165ba2b4e879b26759e -->
+<!-- agent-packet:story-sha256 eae33bdb3a900b1a26be1835cf575cd78d2d2f8b6b1c0aa662c1d412d773bbdb -->
 <!-- prettier-ignore-start -->
 
 # Story Packet
@@ -320,6 +320,7 @@ Own only engine runtime routing and legal-action exposure changes needed to sele
 - packages/engine-core/src/life-trigger-actions.ts
 - packages/engine-core/src/attack-timing.ts
 - packages/engine-core/src/battle-support.ts
+- packages/engine-core/src/battle-actions.ts
 - packages/engine-core/src/**/*trigger*queueing*.test.ts
 - packages/engine-core/src/**/*play-card*support*.test.ts
 - packages/engine-core/src/**/*life-trigger*.test.ts
