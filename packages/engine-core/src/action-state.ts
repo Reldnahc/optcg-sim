@@ -107,6 +107,14 @@ const supportedSearchFilterKeys = new Set([
   "typesAny",
   "nameNot",
 ]);
+const supportedHandSelectionFilterKeys = new Set([
+  ...supportedSearchFilterKeys,
+  "custom",
+]);
+
+const supportedHandSelectionCustomFilters = new Set([
+  "costLteSelfDonFieldCount",
+]);
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
@@ -123,7 +131,26 @@ export const isSupportedSearchCardFilter = (filter: CardFilter): boolean => {
   );
 };
 
-export const cardMatchesSearchFilter = (
+export const isSupportedHandSelectionCardFilter = (
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  for (const key of Object.keys(filter)) {
+    if (!supportedHandSelectionFilterKeys.has(key)) return false;
+  }
+  return (
+    (filter.categories === undefined || isStringArray(filter.categories)) &&
+    (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
+    (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
+    (filter.nameNot === undefined || isStringArray(filter.nameNot)) &&
+    (filter.custom === undefined ||
+      supportedHandSelectionCustomFilters.has(filter.custom))
+  );
+};
+
+const cardMatchesBaseFilter = (
   card: ResolvedCard | undefined,
   filter: CardFilter,
 ): boolean => {
@@ -147,4 +174,30 @@ export const cardMatchesSearchFilter = (
     return false;
   }
   return !(filter.nameNot !== undefined && filter.nameNot.includes(card.name));
+};
+
+export const cardMatchesSearchFilter = (
+  card: ResolvedCard | undefined,
+  filter: CardFilter,
+): boolean => cardMatchesBaseFilter(card, filter);
+
+export const cardMatchesHandSelectionFilter = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  const resolved = state.cardManifest.cards[card.cardId];
+  if (!cardMatchesBaseFilter(resolved, filter)) {
+    return false;
+  }
+  if (filter.custom === "costLteSelfDonFieldCount") {
+    const cost = resolved?.cost;
+    const donFieldCount = state.players[playerId]?.costArea.length ?? 0;
+    return cost !== undefined && cost <= donFieldCount;
+  }
+  return filter.custom === undefined;
 };

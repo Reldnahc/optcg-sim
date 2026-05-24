@@ -366,6 +366,32 @@ test("cards parser emits activate-main choose-one trash cost accepted by engine 
   );
 });
 
+test("cards parser emits activate-main rest cost and dynamic hand play accepted by engine sequence support", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[Activate: Main] You may rest this card and 3 of your DON!! cards: Play up to 1 black {Five Elders} type Character card with a cost equal to or less than the number of DON!! cards on your field from your hand.",
+    [
+      "entry:activateMain",
+      "composition:optionalCostedEffect",
+      "composition:costSequence",
+      "cost:restSelf",
+      "cost:restDon",
+      "instruction:playSelected",
+      "filter:color",
+      "filter:type",
+      "filter:category:character",
+      "filter:cost",
+      "valueSource:donFieldCount:self",
+    ],
+  );
+
+  assert.equal(effectBlock.category, "activate");
+  assert.equal(effectBlock.trigger.type, "activateMain");
+  assert.equal(
+    isSupportedSequenceBlock(activateMainSequenceEntry, effectBlock),
+    true,
+  );
+});
+
 test("cards parser emits start-of-game stage search and play-selected in engine setup shape", () => {
   const effectBlock = parseSupportedEffectBlock(
     "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck and at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck.",

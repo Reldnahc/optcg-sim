@@ -17,7 +17,12 @@ import {
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
-import { toCardRef, zonesEqual } from "./action-state.js";
+import {
+  cardMatchesHandSelectionFilter,
+  isSupportedHandSelectionCardFilter,
+  toCardRef,
+  zonesEqual,
+} from "./action-state.js";
 import { resumeSequenceFrameAfterHandSelection } from "./effect-runtime-sequence-frames.js";
 
 type HandSelectCardsEffect = Extract<Effect, { type: "selectCards" }>;
@@ -28,22 +33,6 @@ const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
 ];
 
-const isExactCharacterCategoryFilter = (
-  filter: HandSelectCardsEffect["filter"] | undefined,
-): boolean => {
-  if (filter === undefined) {
-    return false;
-  }
-  const keys = Object.keys(filter).sort();
-  return (
-    keys.length === 1 &&
-    keys[0] === "categories" &&
-    filter.categories !== undefined &&
-    filter.categories.length === 1 &&
-    filter.categories[0] === "character"
-  );
-};
-
 export const isSupportedSequenceHandSelectCardsEffect = (
   effect: Effect,
 ): effect is HandSelectCardsEffect =>
@@ -53,7 +42,7 @@ export const isSupportedSequenceHandSelectCardsEffect = (
   effect.chooser === "self" &&
   effect.visibility === "chooserOnly" &&
   String(effect.saveAs).startsWith("handSelection:") &&
-  isExactCharacterCategoryFilter(effect.filter) &&
+  isSupportedHandSelectionCardFilter(effect.filter) &&
   Number.isInteger(effect.min) &&
   Number.isInteger(effect.max) &&
   effect.min >= 0 &&
@@ -96,7 +85,7 @@ const isSupportedHandSelectCardsDecision = (
   decision.request.set === undefined &&
   !decision.request.allowFewerIfUnavailable &&
   decision.request.visibility === "privateToChooser" &&
-  isExactCharacterCategoryFilter(decision.request.filter) &&
+  isSupportedHandSelectionCardFilter(decision.request.filter) &&
   decision.visibility.type === "private" &&
   decision.visibility.playerId === decision.playerId;
 
@@ -134,8 +123,13 @@ const hasCurrentCandidateEnvelope = (
     return false;
   }
   const filteredHand = player.hand
-    .filter(
-      (card) => state.cardManifest.cards[card.cardId]?.category === "character",
+    .filter((card) =>
+      cardMatchesHandSelectionFilter(
+        state,
+        decision.playerId,
+        card,
+        decision.request.filter,
+      ),
     )
     .map((card) => toCardRef(card, decision.playerId));
   if (decision.candidates.length !== filteredHand.length) {
@@ -162,8 +156,13 @@ const findCurrentHandCards = (
     return null;
   }
   const candidateRefs = player.hand
-    .filter(
-      (card) => state.cardManifest.cards[card.cardId]?.category === "character",
+    .filter((card) =>
+      cardMatchesHandSelectionFilter(
+        state,
+        decision.playerId,
+        card,
+        decision.request.filter,
+      ),
     )
     .map((card) => toCardRef(card, decision.playerId));
   const selectedRefs: CardRef[] = [];
@@ -201,7 +200,7 @@ export const createSupportedHandSelectionChoiceDecision = (
     effect.player !== "self" ||
     effect.chooser !== "self" ||
     effect.visibility !== "chooserOnly" ||
-    !isExactCharacterCategoryFilter(effect.filter) ||
+    !isSupportedHandSelectionCardFilter(effect.filter) ||
     !String(effect.saveAs).startsWith("handSelection:")
   ) {
     return {
@@ -216,18 +215,6 @@ export const createSupportedHandSelectionChoiceDecision = (
     };
   }
   const resolvedFilter = effect.filter;
-  if (resolvedFilter === undefined) {
-    return {
-      error: {
-        type: "effectRuntimeError",
-        effectId: entry.effectBlockId,
-        details: { reason: "unsupported-hand-selection-shape" },
-      },
-      events: [],
-      ok: false,
-      state,
-    };
-  }
   if (
     !Number.isInteger(effect.min) ||
     !Number.isInteger(effect.max) ||
@@ -260,8 +247,13 @@ export const createSupportedHandSelectionChoiceDecision = (
   }
 
   const candidates = player.hand
-    .filter(
-      (card) => state.cardManifest.cards[card.cardId]?.category === "character",
+    .filter((card) =>
+      cardMatchesHandSelectionFilter(
+        state,
+        entry.controllerId,
+        card,
+        resolvedFilter,
+      ),
     )
     .map((card) => ({
       card: toCardRef(card, entry.controllerId),
@@ -308,7 +300,7 @@ export const createSupportedHandSelectionChoiceDecision = (
       max: effect.max,
       allowFewerIfUnavailable: false,
       visibility: "privateToChooser",
-      filter: resolvedFilter,
+      ...(resolvedFilter === undefined ? {} : { filter: resolvedFilter }),
     },
     candidates,
   };

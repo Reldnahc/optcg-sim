@@ -217,7 +217,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
       state: nextState,
       playerId: entry.controllerId,
       cardInstanceId: selected.instanceId,
-      enterRested: true,
+      enterRested: segment.effect.enterRested === true,
       ignoreCost: true,
       causedBy: {
         type: "effect",

@@ -12,7 +12,7 @@ import type {
 } from "@optcg/types";
 
 import { saveReference } from "./effect-runtime-sequence-segments.js";
-import { isSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
+import { toSupportedSequenceBlock } from "./effect-runtime-sequence-support.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 
@@ -90,8 +90,11 @@ export const resumeSequenceFrameAfterTrashFromHand = (params: {
       ok: false,
     };
   }
-  const effectBlock = params.findSequenceEffectBlock(params.state, entry);
-  if (!isSupportedSequenceBlock(entry, effectBlock)) {
+  const effectBlock = toSupportedSequenceBlock(
+    entry,
+    params.findSequenceEffectBlock(params.state, entry),
+  );
+  if (effectBlock === undefined) {
     return {
       error: params.sequenceRuntimeError(
         entry.effectBlockId,
@@ -182,8 +185,11 @@ export const resumeSequenceFrameAfterHandSelection = (params: {
       ok: false,
     };
   }
-  const effectBlock = params.findSequenceEffectBlock(params.state, entry);
-  if (!isSupportedSequenceBlock(entry, effectBlock)) {
+  const effectBlock = toSupportedSequenceBlock(
+    entry,
+    params.findSequenceEffectBlock(params.state, entry),
+  );
+  if (effectBlock === undefined) {
     return {
       error: params.sequenceRuntimeError(
         entry.effectBlockId,

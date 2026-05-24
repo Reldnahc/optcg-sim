@@ -10,6 +10,7 @@ import type {
   Target,
 } from "@optcg/types";
 
+import { isSupportedHandSelectionCardFilter } from "./action-state.js";
 import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
@@ -189,14 +190,6 @@ const toSyntheticQueueEntry = (
   },
 });
 
-const isSupportedConnector = (
-  connector: SequenceEffect["effects"][number]["connector"],
-): connector is "always" | "then" | "ifPreviousSucceeded" | "ifYouDo" =>
-  connector === "always" ||
-  connector === "then" ||
-  connector === "ifPreviousSucceeded" ||
-  connector === "ifYouDo";
-
 const isSupportedDrawSegment = (
   effect: SequenceSegmentEffect,
 ): effect is DrawEffect =>
@@ -293,22 +286,6 @@ const isSupportedPayCostSegment = (
   );
 };
 
-const isExactCharacterCategoryFilter = (
-  filter: SelectCardsEffect["filter"] | undefined,
-): boolean => {
-  if (filter === undefined) {
-    return false;
-  }
-  const keys = Object.keys(filter).sort();
-  return (
-    keys.length === 1 &&
-    keys[0] === "categories" &&
-    filter.categories !== undefined &&
-    filter.categories.length === 1 &&
-    filter.categories[0] === "character"
-  );
-};
-
 const isSupportedSequenceHandSelectCardsSegment = (
   effect: SequenceSegmentEffect,
 ): effect is SelectCardsEffect =>
@@ -318,7 +295,7 @@ const isSupportedSequenceHandSelectCardsSegment = (
   effect.chooser === "self" &&
   effect.visibility === "chooserOnly" &&
   String(effect.saveAs).startsWith("handSelection:") &&
-  isExactCharacterCategoryFilter(effect.filter) &&
+  isSupportedHandSelectionCardFilter(effect.filter) &&
   Number.isInteger(effect.min) &&
   Number.isInteger(effect.max) &&
   effect.min >= 0 &&
@@ -387,10 +364,7 @@ export const toSupportedSequenceBlock = (
   const supportState = { hasPendingDecisionSegment: false };
   const allSegmentsSupported = flattenedBlock.effect.effects.every(
     (segment, index) => {
-      if (
-        !isSupportedConnector(segment.connector) ||
-        (index === 0 && segment.connector !== "always")
-      ) {
+      if (index === 0 && segment.connector !== "always") {
         return false;
       }
       if (!allowSavedReferences && segment.saveResultAs !== undefined) {
@@ -474,8 +448,9 @@ export const toSupportedSequenceBlock = (
       }
       if (segment.effect.type === "playSelected") {
         return (
-          segment.effect.enterRested === true &&
           segment.effect.ignoreCost === true &&
+          (segment.effect.enterRested === undefined ||
+            typeof segment.effect.enterRested === "boolean") &&
           String(segment.effect.selection).startsWith("handSelection:")
         );
       }

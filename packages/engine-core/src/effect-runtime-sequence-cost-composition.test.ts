@@ -7,6 +7,7 @@ import type {
   EffectDefinition,
   EngineResult,
   GameState,
+  HandSelectionId,
 } from "@optcg/types";
 
 import {
@@ -17,6 +18,7 @@ import {
   processEffectRuntime,
   queueDrawForP1,
   resolvedCard,
+  toCardId,
   reviewedOnPlayDrawDefinition,
   toEffectId,
   toQueueEntryId,
@@ -74,20 +76,23 @@ const reindexHand = (
     zone: { zone: "hand", playerId, slot: "hand", index },
   }));
 
-const placeActiveDon = (state: GameState): void => {
+const placeActiveDon = (state: GameState, count = 1): void => {
   const player = must(state.players[p1], "player");
-  const don = must(player.donDeck[0], "don");
-  player.donDeck = player.donDeck.slice(1).map((card, index) => ({
+  const moved = player.donDeck.slice(0, count);
+  assert.equal(moved.length, count);
+  player.donDeck = player.donDeck.slice(count).map((card, index) => ({
     ...card,
     zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
   }));
   player.costArea = [
     ...player.costArea,
-    {
-      ...don,
-      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
-      state: "active",
-    },
+    ...moved.map(
+      (don, index): CardInstance => ({
+        ...don,
+        zone: { zone: "costArea", playerId: p1, slot: "cost", index },
+        state: "active",
+      }),
+    ),
   ];
 };
 
@@ -128,7 +133,9 @@ const setupSequenceDefinition = (
   return definition;
 };
 
-const sequenceQueueState = (): GameState => {
+const sequenceQueueState = (
+  effect: Effect = optionalCostSequenceThenPauseSequence(),
+): GameState => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;
   const p1State = must(state.players[p1], "p1");
@@ -156,11 +163,7 @@ const sequenceQueueState = (): GameState => {
       },
     },
   ];
-  const definition = setupSequenceDefinition(
-    state,
-    source,
-    optionalCostSequenceThenPauseSequence(),
-  );
+  const definition = setupSequenceDefinition(state, source, effect);
   state.effectQueue = [
     {
       ...queueDrawForP1(),
@@ -181,6 +184,62 @@ const sequenceQueueState = (): GameState => {
   ];
   return state;
 };
+
+const restSelfDonThenPlayFromHandSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-rest-self-and-don",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: {
+          type: "sequence",
+          optional: true,
+          costs: [
+            { type: "restSelf" },
+            { type: "restDon", count: 1, chooser: "self" },
+          ],
+        },
+      },
+      saveResultAs: "paidOptionalCost",
+    },
+    {
+      id: "select-five-elders",
+      connector: "ifYouDo",
+      effect: {
+        type: "selectCards",
+        zone: "hand",
+        player: "self",
+        chooser: "self",
+        visibility: "chooserOnly",
+        min: 0,
+        max: 1,
+        filter: {
+          categories: ["character"],
+          colorsAny: ["black"],
+          typesAny: ["Five Elders"],
+          custom: "costLteSelfDonFieldCount",
+        },
+        saveAs: "handSelection:five-elders" as HandSelectionId,
+      },
+      saveResultAs: "handSelection:five-elders",
+    },
+    {
+      id: "play-selected",
+      connector: "then",
+      effect: {
+        type: "playSelected",
+        selection: "handSelection:five-elders" as HandSelectionId,
+        ignoreCost: true,
+        enterRested: true,
+      },
+    },
+  ],
+});
 
 const payRestSelf = (state: GameState): EngineResult => {
   const decision = must(state.pendingDecision, "pending decision");
@@ -279,4 +338,86 @@ test("optional cost sequence rests source then DON before dependent effects", ()
     paidCost: false,
     playerDeclined: false,
   });
+});
+
+test("hand play sequence filters candidates by color, type, and dynamic DON-field cost", () => {
+  const state = sequenceQueueState(restSelfDonThenPlayFromHandSequence());
+  placeActiveDon(state, 3);
+  const player = must(state.players[p1], "p1");
+  const eligible = must(player.hand[0], "eligible hand card");
+  const wrongColor = must(player.hand[1], "wrong color hand card");
+  const tooExpensive = must(player.hand[2], "too expensive hand card");
+  eligible.cardId = toCardId("eligible-five-elders");
+  wrongColor.cardId = toCardId("wrong-color-five-elders");
+  tooExpensive.cardId = toCardId("too-expensive-five-elders");
+  state.cardManifest.cards[eligible.cardId] = {
+    ...resolvedCard({
+      cardId: eligible.cardId,
+      category: "character",
+      cost: 3,
+    }),
+    colors: ["black"],
+    types: ["Five Elders"],
+  };
+  state.cardManifest.cards[wrongColor.cardId] = {
+    ...resolvedCard({
+      cardId: wrongColor.cardId,
+      category: "character",
+      cost: 3,
+    }),
+    colors: ["red"],
+    types: ["Five Elders"],
+  };
+  state.cardManifest.cards[tooExpensive.cardId] = {
+    ...resolvedCard({
+      cardId: tooExpensive.cardId,
+      category: "character",
+      cost: 4,
+    }),
+    colors: ["black"],
+    types: ["Five Elders"],
+  };
+
+  const restSelfPaused = processEffectRuntime(state);
+  const restedSelf = payRestSelf(restSelfPaused.state);
+  const paidDon = payWithFirstActiveDon(restedSelf.state);
+  const selectionDecision = must(
+    paidDon.state.pendingDecision,
+    "hand selection decision",
+  );
+
+  assert.equal(selectionDecision.type, "selectCards");
+  assert.deepEqual(
+    selectionDecision.candidates.map((candidate) => candidate.card.instanceId),
+    [eligible.instanceId],
+  );
+
+  const selected = applyAction(paidDon.state, {
+    type: "respondToDecision",
+    decisionId: selectionDecision.id,
+    response: {
+      type: "cards",
+      cards: [must(selectionDecision.candidates[0], "candidate").card],
+    },
+  });
+  const afterP1 = must(selected.state.players[p1], "after p1");
+
+  assert.equal(selected.errors, undefined);
+  assert.equal(selected.state.pendingDecision, undefined);
+  assert.equal(
+    afterP1.hand.some((card) => card.instanceId === eligible.instanceId),
+    false,
+  );
+  assert.equal(
+    afterP1.characters.some((card) => card.instanceId === eligible.instanceId),
+    true,
+  );
+  assert.equal(
+    afterP1.hand.some((card) => card.instanceId === wrongColor.instanceId),
+    true,
+  );
+  assert.equal(
+    afterP1.hand.some((card) => card.instanceId === tooExpensive.instanceId),
+    true,
+  );
 });
