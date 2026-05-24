@@ -12,7 +12,10 @@ import {
   isSupportedContinuousQueueEffect,
 } from "../../packages/engine-core/src/effect-runtime-continuous.ts";
 import { isSupportedQueuedEffectConditionShape } from "../../packages/engine-core/src/effect-runtime-conditions.ts";
-import { isSupportedQueuedAutoSequenceForEntryPoint } from "../../packages/engine-core/src/effect-runtime-sequence-support.ts";
+import {
+  isSupportedQueuedAutoSequenceForEntryPoint,
+  isSupportedSequenceBlock,
+} from "../../packages/engine-core/src/effect-runtime-sequence-support.ts";
 import { createSupportedSearchRevealTransientSet } from "../../packages/engine-core/src/effect-runtime-search-reveal.ts";
 import { isSupportedWhenAttackingCompatibleQueuedEffect } from "../../packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts";
 import { isSupportedOnKOCompatibleQueuedEffect } from "../../packages/engine-core/src/effect-runtime-trigger-queueing-ko.ts";
@@ -35,6 +38,47 @@ const parseSupportedEffectBlock = (text, evidence = []) => {
     id: `cards-engine-contract:${text}`,
     ...parsed.block,
   };
+};
+
+const activateMainSequenceEntry = {
+  id: "queue-entry:activate-main:cards-engine-contract",
+  state: "pending",
+  timingWindowId: "timing-window:activate-main:cards-engine-contract",
+  generation: 0,
+  controllerId: "player-1",
+  source: {
+    instanceId: "instance:leader",
+    cardId: "card:leader",
+    playerId: "player-1",
+    zone: {
+      zone: "leaderArea",
+      playerId: "player-1",
+      slot: "leader",
+    },
+  },
+  sourceSnapshot: {
+    instanceId: "instance:leader",
+    cardId: "card:leader",
+    ownerId: "player-1",
+    controllerId: "player-1",
+    zone: {
+      zone: "leaderArea",
+      playerId: "player-1",
+      slot: "leader",
+    },
+    category: "leader",
+    colors: [],
+    keywords: [],
+  },
+  effectBlockId: "effect:activate-main",
+  orderingGroup: "turnPlayer",
+  createdAtEventSeq: 0,
+  queuedAtStateSeq: 0,
+  sourcePresencePolicy: "mustRemainInSameZone",
+  causedBy: {
+    type: "ruleProcess",
+    name: "effectRuntime:activateMain",
+  },
 };
 
 test("cards parser emits an On Play draw primitive block accepted by engine draw support", () => {
@@ -296,6 +340,66 @@ test("cards parser emits costed private search plus trash while current engine s
     ),
     false,
   );
+});
+
+test("cards parser emits activate-main choose-one trash cost accepted by engine sequence support", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[Activate: Main] [Once Per Turn] You may trash 1 of your {Celestial Dragons} type Characters or 1 card from your hand: Draw 1 card.",
+    [
+      "entry:activateMain",
+      "marker:oncePerTurn",
+      "composition:optionalCostedEffect",
+      "cost:chooseOne",
+      "cost:trashFromField",
+      "cost:trashFromHand",
+      "filter:type",
+      "filter:category:character",
+      "instruction:draw",
+    ],
+  );
+
+  assert.equal(effectBlock.category, "activate");
+  assert.equal(effectBlock.trigger.type, "activateMain");
+  assert.equal(
+    isSupportedSequenceBlock(activateMainSequenceEntry, effectBlock),
+    true,
+  );
+});
+
+test("cards parser emits start-of-game stage search and play-selected in engine setup shape", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck and at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck.",
+    [
+      "entry:startOfGame",
+      "deckRestriction:ignored",
+      "deckRestriction:eventCostGte",
+      "instruction:search",
+      "instruction:playSelected",
+      "filter:type",
+      "filter:category:stage",
+      "destination:stageArea",
+    ],
+  );
+
+  assert.equal(effectBlock.category, "auto");
+  assert.equal(effectBlock.trigger.type, "startOfGame");
+  assert.equal(effectBlock.sourcePresencePolicy, "noSourceRequired");
+  assert.equal(effectBlock.effect.type, "sequence");
+  assert.deepEqual(effectBlock.effect.effects[0]?.effect.request, {
+    zone: "deck",
+    player: "self",
+    filter: { categories: ["stage"], typesAny: ["Mary Geoise"] },
+    min: 0,
+    max: 1,
+    destination: "stageArea",
+    revealTo: "chooserOnly",
+    shuffleAfter: false,
+  });
+  assert.deepEqual(effectBlock.effect.effects[1]?.effect, {
+    type: "playSelected",
+    selection: "selected:start-of-game",
+    ignoreCost: true,
+  });
 });
 
 test("cards parser emits keyword-only permanent primitives accepted by engine materialization", () => {

@@ -1,4 +1,4 @@
-import type { Effect } from "@optcg/types";
+import type { Effect, EffectCategory, Trigger } from "@optcg/types";
 import { describe, expect, it } from "vitest";
 
 import { syntheticInstructionParser } from "../instructions/index.js";
@@ -7,7 +7,12 @@ import { syntheticInstructionSegmentParser } from "../segments/index.js";
 import { parseExpression } from "../expression-parser.js";
 import { parseSupportedEntryPoint } from "./supported.js";
 
-const supportedEntryPointCases = [
+const supportedEntryPointCases: readonly {
+  readonly text: string;
+  readonly trigger: Trigger;
+  readonly category?: EffectCategory;
+  readonly evidence: readonly string[];
+}[] = [
   {
     text: "[On Play]",
     trigger: { type: "onPlay" },
@@ -31,6 +36,7 @@ const supportedEntryPointCases = [
   {
     text: "[Activate: Main]",
     trigger: { type: "activateMain" },
+    category: "activate",
     evidence: ["entry:activateMain", "sourcePresence:mustRemain"],
   },
 ] as const;
@@ -38,9 +44,13 @@ const supportedEntryPointCases = [
 describe("supported entry-point parser", () => {
   it.each(supportedEntryPointCases)(
     "parses $text as an isolated entry point",
-    ({ text, trigger, evidence }) => {
+    ({ text, trigger, category, evidence }) => {
       expect(parseSupportedEntryPoint({ text })).toEqual({
-        node: { type: "entryPoint", trigger },
+        node: {
+          type: "entryPoint",
+          trigger,
+          ...(category === undefined ? {} : { category }),
+        },
         evidence,
         rest: "",
       });
@@ -49,7 +59,7 @@ describe("supported entry-point parser", () => {
 
   it.each(supportedEntryPointCases)(
     "integrates $text with expression orchestration without parsing the expression",
-    ({ text, trigger, evidence }) => {
+    ({ text, trigger, category, evidence }) => {
       const effect: Effect = { type: "custom", handler: "synthetic:A" };
 
       const result = parseEffectLine(`${text} A.`, {
@@ -73,7 +83,7 @@ describe("supported entry-point parser", () => {
 
       expect(result).toMatchObject({
         block: {
-          category: "auto",
+          category: category ?? "auto",
           trigger,
           effect,
         },

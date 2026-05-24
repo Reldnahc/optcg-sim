@@ -428,6 +428,130 @@ describe("card effect line parser", () => {
     );
   });
 
+  it("parses rules text plus start-of-game stage play as separate primitives", () => {
+    const result = parseCardEffectLine(
+      "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck and at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "startOfGame" },
+        sourcePresencePolicy: "noSourceRequired",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "search",
+                request: {
+                  zone: "deck",
+                  player: "self",
+                  filter: {
+                    categories: ["stage"],
+                    typesAny: ["Mary Geoise"],
+                  },
+                  min: 0,
+                  max: 1,
+                  destination: "stageArea",
+                  revealTo: "chooserOnly",
+                  shuffleAfter: false,
+                },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "playSelected",
+                selection: "selected:start-of-game",
+                ignoreCost: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "deckRestriction:ignored",
+        "deckRestriction:eventCostGte",
+        "entry:startOfGame",
+        "instruction:search",
+        "instruction:playSelected",
+        "filter:type",
+        "filter:category:stage",
+        "destination:stageArea",
+      ]),
+    );
+  });
+
+  it("parses Activate Main choose-one trash cost into draw compositionally", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] [Once Per Turn] You may trash 1 of your {Celestial Dragons} type Characters or 1 card from your hand: Draw 1 card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "activateMain" },
+        oncePerTurn: true,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "paidCost",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "chooseOne",
+                  optional: true,
+                  options: [
+                    {
+                      type: "trashFromField",
+                      chooser: "self",
+                      optional: true,
+                      count: 1,
+                      filter: {
+                        categories: ["character"],
+                        typesAny: ["Celestial Dragons"],
+                      },
+                    },
+                    {
+                      type: "trashFromHand",
+                      chooser: "self",
+                      optional: true,
+                      count: 1,
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: { type: "draw", count: 1, player: "self" },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activateMain",
+        "marker:oncePerTurn",
+        "composition:optionalCostedEffect",
+        "cost:chooseOne",
+        "cost:trashFromField",
+        "cost:trashFromHand",
+        "filter:type",
+        "filter:category:character",
+        "instruction:draw",
+      ]),
+    );
+  });
+
   it("fails closed for unknown entry points", () => {
     expect(parseCardEffectLine("[Unknown] Draw 1 card.")).toBeUndefined();
   });

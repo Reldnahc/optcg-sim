@@ -7,6 +7,7 @@ import {
 import {
   parseImplicitPermanentEntryPoint,
   parseRecognizedUnsupportedEntryPoint,
+  parseRulesStartOfGameEntryPoint,
   parseSupportedEntryPoint,
 } from "./entry-points/index.js";
 import { parseExpression } from "./expression-parser.js";
@@ -32,6 +33,8 @@ import {
   conditionalExpressionSegmentParser,
   costedEffectExpressionParser,
   instructionExpressionSegmentParser,
+  optionalCostedEffectExpressionParser,
+  playStageFromDeckExpressionParser,
   searchRevealExpressionParser,
   syntheticInstructionSegmentParser,
 } from "./segments/index.js";
@@ -93,6 +96,7 @@ export function parseCardEffectLineDetailed(
 
 const defaultRegistry = {
   entryPoints: [
+    parseRulesStartOfGameEntryPoint,
     parseSupportedEntryPoint,
     parseRecognizedUnsupportedEntryPoint,
     parseImplicitPermanentEntryPoint,
@@ -113,6 +117,11 @@ const defaultRegistry = {
       instructions: instructionParsers,
       expressions: [searchRevealExpressionParser, generalExpressionParser],
     }),
+    optionalCostedEffectExpressionParser({
+      instructions: instructionParsers,
+      expressions: [searchRevealExpressionParser, generalExpressionParser],
+    }),
+    playStageFromDeckExpressionParser,
     searchRevealExpressionParser,
     generalExpressionParser,
   ],

@@ -6,6 +6,7 @@ import {
   parseSearchSelectionVerb,
 } from "./reveal-to-hand.js";
 import { parseRestToBottomAnyOrder } from "./rest-bottom.js";
+import { parseStageTypeCardFilter } from "./stage-type-card-filter.js";
 import { parseTopDeckLook } from "./top-of-deck.js";
 import { parseTypeCardFilter } from "./type-card-filter.js";
 
@@ -43,6 +44,18 @@ describe("search reveal primitives", () => {
       filter: { typesAny: ["Five Elders"] },
       rest: " and add it to your hand.",
       evidence: ["filter:type"],
+    });
+  });
+
+  it("parses typed stage filters as type plus category primitives", () => {
+    expect(
+      parseStageTypeCardFilter({
+        text: "{Mary Geoise} type Stage card from your deck.",
+      }),
+    ).toEqual({
+      filter: { categories: ["stage"], typesAny: ["Mary Geoise"] },
+      rest: " from your deck.",
+      evidence: ["filter:type", "filter:category:stage"],
     });
   });
 

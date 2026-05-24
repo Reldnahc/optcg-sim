@@ -1,4 +1,4 @@
-import type { Trigger } from "@optcg/types";
+import type { EffectCategory, Trigger } from "@optcg/types";
 
 import type {
   EntryPointParseResult,
@@ -9,6 +9,7 @@ import type {
 interface SupportedEntryPoint {
   readonly text: string;
   readonly trigger: Trigger;
+  readonly category?: EffectCategory;
   readonly evidence: readonly PrimitiveEvidence[];
 }
 
@@ -36,6 +37,7 @@ const supportedEntryPoints: readonly SupportedEntryPoint[] = [
   {
     text: "[Activate: Main]",
     trigger: { type: "activateMain" },
+    category: "activate",
     evidence: ["entry:activateMain", "sourcePresence:mustRemain"],
   },
 ];
@@ -52,6 +54,9 @@ export function parseSupportedEntryPoint(
         node: {
           type: "entryPoint",
           trigger: entryPoint.trigger,
+          ...(entryPoint.category === undefined
+            ? {}
+            : { category: entryPoint.category }),
         },
         evidence: entryPoint.evidence,
         rest: input.text.slice(entryPoint.text.length).trimStart(),
