@@ -59,15 +59,24 @@ const isLeaderOrCharacter = (
 ): card is CardInstance & { zone: { zone: "leaderArea" | "characterArea" } } =>
   card.zone.zone === "leaderArea" || card.zone.zone === "characterArea";
 
+const isImplementedDslPermanentMaterialization = (
+  effect: ContinuousEffectRecord,
+): boolean =>
+  effect.createdBy.type === "ruleProcess" &&
+  effect.createdBy.name ===
+    "implemented-dsl-permanent-continuous-materialization";
+
 const isSupportedContinuousPowerModifier = (
   effect: ContinuousEffectRecord,
 ): boolean =>
   (effect.condition === undefined ||
-    isSupportedQueuedEffectConditionShape(effect.condition)) &&
+    (isImplementedDslPermanentMaterialization(effect) &&
+      isSupportedQueuedEffectConditionShape(effect.condition))) &&
   isSupportedDuration(effect.duration) &&
   ((effect.modifier.layer === "powerAdd" &&
     (effect.modifier.target.type === "self" ||
-      effect.modifier.target.type === "myLeader" ||
+      (effect.modifier.target.type === "myLeader" &&
+        isImplementedDslPermanentMaterialization(effect)) ||
       effect.modifier.target.type === "all" ||
       effect.modifier.target.type === "exactCard") &&
     effect.modifier.operation.type === "addPower" &&

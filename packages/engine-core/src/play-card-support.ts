@@ -8,7 +8,9 @@ import type {
 import {
   isSupportedMainEventTargetKoEffect,
   isSupportedNoChoiceMainEventDrawEffect,
+  isSupportedNoChoiceOnKODrawEffect,
   isSupportedNoChoiceOnPlayDrawEffect,
+  isSupportedNoChoiceWhenAttackingDrawEffect,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
 import {
@@ -98,6 +100,27 @@ const isSupportedEventMainEffect = (
     "resolveFromDestinationZone",
   );
 
+const isSupportedCharacterNonOnPlayEffect = (
+  effect: EffectDefinition["effects"][number],
+): boolean => {
+  if (effect.trigger.type === "whenAttacking") {
+    return (
+      isSupportedNoChoiceWhenAttackingDrawEffect(effect) ||
+      isSupportedQueuedAutoSequenceForEntryPoint(
+        effect,
+        "whenAttacking",
+        "mustRemainInSameZone",
+      )
+    );
+  }
+  if (effect.trigger.type === "onKO") {
+    return isSupportedNoChoiceOnKODrawEffect(effect, {
+      allowOncePerTurn: true,
+    });
+  }
+  return effect.trigger.type === "permanent";
+};
+
 const hasOnlySupportedRelevantEffects = (
   effects: readonly EffectDefinition["effects"][number][],
   predicate: (effect: EffectDefinition["effects"][number]) => boolean,
@@ -150,7 +173,10 @@ export const getSupportedPlayMetadata = (
           onPlayEffects,
           isSupportedCharacterOnPlayEffect,
           { requireAtLeastOne: false },
-        )
+        ) ||
+        !lookup.definition.effects
+          .filter((effect) => effect.trigger.type !== "onPlay")
+          .every(isSupportedCharacterNonOnPlayEffect)
       ) {
         return null;
       }

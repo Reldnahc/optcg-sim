@@ -72,6 +72,28 @@ const isSupportedSequenceBody = (
     block.sourcePresencePolicy,
   );
 
+const isSourceDependentContinuousEffect = (effect: Effect): boolean => {
+  if (
+    effect.type !== "modifyPower" &&
+    effect.type !== "cannotAttack" &&
+    effect.type !== "cannotBlock"
+  ) {
+    return false;
+  }
+  return (
+    effect.target.type === "self" ||
+    effect.target.type === "myLeader" ||
+    effect.duration.type === "whileSourceOnField"
+  );
+};
+
+const isSupportedContinuousBody = (
+  block: EffectBlock & { sourcePresencePolicy: SourcePresencePolicy },
+): boolean =>
+  isSupportedContinuousQueueEffect(block.effect) &&
+  (block.sourcePresencePolicy === "mustRemainInSameZone" ||
+    !isSourceDependentContinuousEffect(block.effect));
+
 const hasSupportedBlockEnvelope = (
   block: EffectBlock,
   adapter: AutoRuntimeEntryAdapter,
@@ -93,7 +115,7 @@ const isSupportedNonOptionalBody = (
   isSupportedDrawUpToBody(block.effect) ||
   isSupportedTrashFromHandBody(block.effect) ||
   isSupportedSearchBody(block) ||
-  isSupportedContinuousQueueEffect(block.effect) ||
+  isSupportedContinuousBody(block) ||
   isSupportedSequenceBody(block, adapter);
 
 const isSupportedOptionalBody = (
