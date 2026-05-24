@@ -108,7 +108,7 @@ test("cards parser emits conditional power reduction primitives accepted by engi
   assert.equal(isSupportedContinuousQueueEffect(effectBlock.effect.then), true);
 });
 
-test("cards parser emits conditional continuous protection and keyword primitives accepted by engine permanent materialization", () => {
+test("cards parser emits broad field-removal protection primitives while current engine materialization fails closed", () => {
   const effectBlock = parseSupportedEffectBlock(
     "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].",
     [
@@ -125,8 +125,15 @@ test("cards parser emits conditional continuous protection and keyword primitive
       "keyword:anySupported",
     ],
   );
+  const protectionSegment = effectBlock.effect.effects.find(
+    (segment) => segment.effect.type === "giveProtection",
+  );
   const definitionId = "cards-engine-contract:permanent";
 
+  assert.equal(
+    protectionSegment?.effect.protection.fieldRemoval.classification,
+    "moveFromFieldToOtherZone",
+  );
   assert.equal(
     hasCombatSafeImplementedDslDefinition(
       {
@@ -140,6 +147,6 @@ test("cards parser emits conditional continuous protection and keyword primitive
       },
       definitionId,
     ),
-    true,
+    false,
   );
 });

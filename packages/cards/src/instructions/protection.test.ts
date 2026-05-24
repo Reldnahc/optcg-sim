@@ -45,7 +45,7 @@ describe("continuous protection instruction parser", () => {
         protection: {
           process: "fieldRemoval",
           fieldRemoval: {
-            classification: "moveFromFieldToTrash",
+            classification: "moveFromFieldToOtherZone",
             sourceKind: "cardEffect",
             sourceControllerRelation: "opponentControlled",
           },

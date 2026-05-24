@@ -94,7 +94,7 @@ function fieldRemovalProtection(options: {
     process: "fieldRemoval",
     fieldRemoval: {
       processFamily: "fieldRemoval",
-      classification: "moveFromFieldToTrash",
+      classification: "moveFromFieldToOtherZone",
       sourceKind: options.sourceKind,
       sourceControllerRelation: options.sourceControllerRelation,
       targetScope: "thisCard",
