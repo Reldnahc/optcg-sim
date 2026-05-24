@@ -341,7 +341,7 @@ test("fieldCount fails closed for unsupported DON filter shapes", () => {
     {
       type: "fieldCount",
       player: "self",
-      filter: { categories: ["character"] },
+      filter: { categories: ["stage"] },
       op: "gte",
       value: 1,
     },

@@ -131,7 +131,16 @@ export const isSupportedContinuousQueueEffect = (
     return false;
   }
   if (!isSupportedDuration(effect.duration)) return false;
-  if (!isSupportedTarget(effect.target)) return false;
+  if (
+    effect.type === "modifyPower" &&
+    effect.target.type !== "myLeader" &&
+    !isSupportedTarget(effect.target)
+  ) {
+    return false;
+  }
+  if (effect.type !== "modifyPower" && !isSupportedTarget(effect.target)) {
+    return false;
+  }
   if (
     (effect.type === "cannotAttack" || effect.type === "cannotBlock") &&
     !supportedRestriction.has(effect.type)
@@ -242,6 +251,31 @@ export const createContinuousRecordsForResolvedEffect = (
       );
     }
     return records;
+  }
+  if (effect.target.type === "myLeader") {
+    const leader = state.players[entry.controllerId]?.leader;
+    if (leader === undefined) {
+      return null;
+    }
+    return [
+      createRecord(
+        state,
+        entry,
+        effect,
+        toExactCardTarget(
+          entry,
+          {
+            instanceId: leader.instanceId,
+            cardId: leader.cardId,
+            playerId: entry.controllerId,
+            zone: leader.zone,
+          },
+          state,
+          0,
+        ),
+        0,
+      ),
+    ];
   }
   return [createRecord(state, entry, effect, effect.target, 0)];
 };

@@ -226,6 +226,35 @@ const isSupportedDonFieldCountFilter = (
   return true;
 };
 
+const isSupportedCharacterFieldCountFilter = (
+  filter: CardFilter | undefined,
+): filter is Required<Pick<CardFilter, "categories">> & {
+  state?: "active" | "rested";
+} => {
+  if (filter === undefined) {
+    return false;
+  }
+  const keys = Object.keys(filter) as (keyof CardFilter)[];
+  for (const key of keys) {
+    if (key !== "categories" && key !== "state") {
+      return false;
+    }
+  }
+  if (
+    !Array.isArray(filter.categories) ||
+    filter.categories.length !== 1 ||
+    filter.categories[0] !== "character"
+  ) {
+    return false;
+  }
+  const stateValue = filter.state as unknown;
+  return (
+    stateValue === undefined ||
+    stateValue === "active" ||
+    stateValue === "rested"
+  );
+};
+
 const countPublicDonOnField = (
   state: GameState,
   playerId: PlayerId,
@@ -272,6 +301,24 @@ const countPublicDonOnField = (
       return count;
     }
   }
+};
+
+const countPublicCharactersOnField = (
+  state: GameState,
+  playerId: PlayerId,
+  stateFilter: CardFilter["state"] | undefined,
+): number => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return 0;
+  }
+  if (stateFilter === undefined) {
+    return player.characters.length;
+  }
+  if (stateFilter !== "active" && stateFilter !== "rested") {
+    return 0;
+  }
+  return player.characters.filter((card) => card.state === stateFilter).length;
 };
 
 const evaluateLeaderColorCount = (
@@ -401,18 +448,30 @@ const evaluateCondition = (
         (playerId) => state.players[playerId]?.trash.length ?? 0,
       );
     case "fieldCount": {
-      if (!isSupportedDonFieldCountFilter(condition.filter)) {
-        return { supported: false };
+      if (isSupportedDonFieldCountFilter(condition.filter)) {
+        const stateFilter = condition.filter.state;
+        return evaluateCountCondition(
+          state,
+          entry,
+          condition.player,
+          condition.value,
+          condition.op,
+          (playerId) => countPublicDonOnField(state, playerId, stateFilter),
+        );
       }
-      const stateFilter = condition.filter.state;
-      return evaluateCountCondition(
-        state,
-        entry,
-        condition.player,
-        condition.value,
-        condition.op,
-        (playerId) => countPublicDonOnField(state, playerId, stateFilter),
-      );
+      if (isSupportedCharacterFieldCountFilter(condition.filter)) {
+        const stateFilter = condition.filter.state;
+        return evaluateCountCondition(
+          state,
+          entry,
+          condition.player,
+          condition.value,
+          condition.op,
+          (playerId) =>
+            countPublicCharactersOnField(state, playerId, stateFilter),
+        );
+      }
+      return { supported: false };
     }
     case "hasCardInZone":
       return evaluateHasCardInZone(state, entry, condition);
@@ -490,7 +549,8 @@ export const isSupportedQueuedEffectConditionShape = (
       );
     case "fieldCount":
       return (
-        isSupportedDonFieldCountFilter(condition.filter) &&
+        (isSupportedDonFieldCountFilter(condition.filter) ||
+          isSupportedCharacterFieldCountFilter(condition.filter)) &&
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op) &&
         (condition.player === "self" || condition.player === "opponent")
