@@ -46,6 +46,7 @@ import {
   processEffectRuntime,
 } from "./effect-runtime.js";
 import { resumeSequenceFrameAfterPlaySelectedOverflow } from "./effect-runtime-sequence-frames.js";
+import { hasSequenceFrameForDecision } from "./effect-runtime-sequence-frame-decisions.js";
 import { executeUnreplacedSelectedTargetKoProcess } from "./effect-runtime-primitives.js";
 import {
   applyLifeTriggerDecisionResponse,
@@ -56,6 +57,10 @@ import {
   getOptionalActivationLegalActions,
 } from "./optional-activation-actions.js";
 import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
+import {
+  applySearchRevealSequenceChoiceResponse,
+  resumeSequenceAfterSearchRevealOrderResponse,
+} from "./search-reveal-sequence-actions.js";
 import {
   applySupportedTrashFromHandChoiceResponse,
   getTrashFromHandDecisionLegalActions,
@@ -348,7 +353,8 @@ const applySearchRevealOrderResponse = (
   if (resolved !== undefined) {
     resolved.causedBy = { type: "decision", decisionId: decision.id };
   }
-  if (queuedEntry !== undefined) {
+  const shouldResumeSequence = hasSequenceFrameForDecision(state, decision.id);
+  if (queuedEntry !== undefined && !shouldResumeSequence) {
     appendEffectResolvedEvent(state, events, queuedEntry);
   }
   const finalDeck = reindexZoneCards(
@@ -369,7 +375,7 @@ const applySearchRevealOrderResponse = (
       [decision.playerId]: { ...player, deck: finalDeck },
     },
     effectQueue:
-      queuedEntry === undefined
+      queuedEntry === undefined || shouldResumeSequence
         ? state.effectQueue
         : state.effectQueue.filter((entry) => entry.id !== queuedEntry.id),
     revealedCards: state.revealedCards.filter(
@@ -903,10 +909,24 @@ const applyRespondToDecision = (
     decision.request.set !== undefined &&
     String(decision.request.set).startsWith("set:search-reveal:")
   ) {
+    const sequenceSearchResult = applySearchRevealSequenceChoiceResponse(
+      state,
+      action,
+    );
+    if (sequenceSearchResult !== null) {
+      return sequenceSearchResult;
+    }
     return applySupportedSearchRevealChoiceResponse(state, action);
   }
   const searchRevealOrderResult = applySearchRevealOrderResponse(state, action);
   if (searchRevealOrderResult !== null) {
+    const sequenceOrderResult = resumeSequenceAfterSearchRevealOrderResponse(
+      state,
+      searchRevealOrderResult,
+    );
+    if (sequenceOrderResult !== null) {
+      return sequenceOrderResult;
+    }
     return searchRevealOrderResult;
   }
   if (isTrashFromHandSelectCardsDecision(decision)) {

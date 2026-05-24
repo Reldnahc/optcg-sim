@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type {
   CardRef,
   ChooseOptionalActivationDecision,
@@ -41,6 +42,11 @@ import {
 } from "./effect-runtime-sequence-select-targets.js";
 import { resumeSequenceFrameAfterChooseQuantity as resumeDrawUpToQuantitySequenceFrame } from "./effect-runtime-sequence-draw-upto.js";
 import {
+  applySearchRevealSequenceSegment,
+  resumeSequenceFrameAfterSearchRevealHelper,
+  retargetSequenceFrameAfterSearchRevealOrder,
+} from "./effect-runtime-sequence-search-reveal.js";
+import {
   applyDrawSegment,
   removeFrame,
   replaceQueueEntry,
@@ -68,6 +74,8 @@ type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
   segmentResults: EffectExecutionFrame["segmentResults"];
 };
+
+export { retargetSequenceFrameAfterSearchRevealOrder };
 
 type TrashDecisionResult =
   | {
@@ -375,6 +383,29 @@ const continueNoDecisionSegments = (
           frame,
         ),
       };
+    }
+    if (segment.effect.type === "search") {
+      const search = applySearchRevealSequenceSegment({
+        emptySegmentResult,
+        entry,
+        events,
+        index,
+        nextLedgers,
+        nextState,
+        segment: segment as SupportedSequenceSegment & {
+          effect: Extract<
+            SupportedSequenceSegment["effect"],
+            { type: "search" }
+          >;
+        },
+        segmentKey,
+      });
+      if (!search.ok || search.kind === "paused") {
+        return search;
+      }
+      nextState = search.state;
+      nextLedgers = search.ledgers;
+      continue;
     }
     const partialResult: SequenceSegmentResult = {
       ...emptySegmentResult(),
@@ -711,6 +742,36 @@ export const resumeSequenceFrameAfterSelectTargets = (
     state,
   });
 };
+
+export const resumeSequenceFrameAfterSearchReveal = (
+  state: GameState,
+  decisionId: SelectCardsDecision["id"],
+  selectedCards: readonly CardRef[],
+): SequenceFrameResumeResult =>
+  resumeSequenceFrameAfterSearchRevealHelper({
+    createUnsupportedTrashDecision,
+    decisionId,
+    emptySegmentResult,
+    findFrameQueueEntry,
+    findSequenceEffectBlock,
+    isSupportedSequenceBlock,
+    resumeSequenceFrameFromLedgers: (params) =>
+      resumeSequenceFrameFromLedgers(
+        params as {
+          createTrashDecision: CreateTrashFromHandSequenceDecision;
+          effectBlock: SupportedSequenceBlock;
+          entry: EffectQueueEntry;
+          finalizeCompleted: boolean;
+          frame: EffectExecutionFrame;
+          ledgers: SegmentLedgers;
+          state: GameState;
+        },
+      ),
+    segmentKey,
+    selectedCards,
+    sequenceRuntimeError,
+    state,
+  });
 
 export const resumeSequenceFrameAfterOptionalActivation = (
   state: GameState,

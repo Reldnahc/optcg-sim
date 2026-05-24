@@ -8,11 +8,14 @@ import type {
   Target,
 } from "@optcg/types";
 
+import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
+
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 type DrawEffect = Extract<Effect, { type: "draw" }>;
 type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
+type SearchEffect = Extract<Effect, { type: "search" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 type KoEffect = Extract<Effect, { type: "ko" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
@@ -23,6 +26,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | DrawEffect
     | DrawUpToEffect
     | TrashFromHandEffect
+    | SearchEffect
     | PayCostEffect
     | SelectCardsEffect
     | SelectTargetsEffect
@@ -122,6 +126,11 @@ const isSupportedTrashFromHandSegment = (
   effect.filter === undefined &&
   Number.isInteger(effect.count) &&
   effect.count > 0;
+
+const isSupportedSearchSegment = (
+  effect: SequenceSegmentEffect,
+): effect is SearchEffect =>
+  effect.type === "search" && isSupportedSearchRequestShape(effect.request);
 
 const isSupportedPayCostSegment = (
   effect: SequenceSegmentEffect,
@@ -311,6 +320,10 @@ export const isSupportedSequenceBlock = (
         if (index === 0) {
           return false;
         }
+        hasPendingDecisionSegment = true;
+        return true;
+      }
+      if (isSupportedSearchSegment(segment.effect)) {
         hasPendingDecisionSegment = true;
         return true;
       }
