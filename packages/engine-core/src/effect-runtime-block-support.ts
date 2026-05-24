@@ -1,0 +1,105 @@
+import type {
+  Effect,
+  EffectDefinition,
+  SourcePresencePolicy,
+  Trigger,
+} from "@optcg/types";
+
+import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
+import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
+import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
+import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
+import { isSupportedQueuedTrashFromHandEffect } from "./effect-runtime-trash-from-hand.js";
+
+type EffectBlock = EffectDefinition["effects"][number];
+
+export interface AutoRuntimeEntryAdapter {
+  readonly category: "auto";
+  readonly sourcePresencePolicies: readonly SourcePresencePolicy[];
+  readonly triggerType: Trigger["type"];
+}
+
+const isSupportedDrawBody = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "draw" }> =>
+  effect.type === "draw" &&
+  effect.player === "self" &&
+  Number.isInteger(effect.count) &&
+  effect.count >= 0;
+
+const isSupportedDrawUpToBody = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "drawUpTo" }> =>
+  effect.type === "drawUpTo" &&
+  effect.player === "self" &&
+  Number.isInteger(effect.count) &&
+  effect.count >= 0;
+
+const isSupportedSearchBody = (
+  block: EffectBlock,
+): block is EffectBlock & { effect: Extract<Effect, { type: "search" }> } =>
+  block.sourcePresencePolicy === "mustRemainInSameZone" &&
+  block.effect.type === "search" &&
+  isSupportedSearchRequestShape(block.effect.request);
+
+const isQueuedAutoSequenceTriggerType = (
+  triggerType: Trigger["type"],
+): triggerType is "onPlay" | "whenAttacking" | "onKO" | "main" | "trigger" =>
+  triggerType === "onPlay" ||
+  triggerType === "whenAttacking" ||
+  triggerType === "onKO" ||
+  triggerType === "main" ||
+  triggerType === "trigger";
+
+const isSupportedSequenceBody = (
+  block: EffectBlock,
+  adapter: AutoRuntimeEntryAdapter,
+): boolean =>
+  isQueuedAutoSequenceTriggerType(adapter.triggerType) &&
+  block.sourcePresencePolicy !== undefined &&
+  isSupportedQueuedAutoSequenceForEntryPoint(
+    block,
+    adapter.triggerType,
+    block.sourcePresencePolicy,
+  );
+
+const hasSupportedBlockEnvelope = (
+  block: EffectBlock,
+  adapter: AutoRuntimeEntryAdapter,
+): block is EffectBlock & { sourcePresencePolicy: SourcePresencePolicy } =>
+  block.category === adapter.category &&
+  block.trigger.type === adapter.triggerType &&
+  block.sourcePresencePolicy !== undefined &&
+  adapter.sourcePresencePolicies.includes(block.sourcePresencePolicy) &&
+  block.cost === undefined &&
+  block.conditionTiming === undefined &&
+  block.failurePolicy === undefined &&
+  isSupportedQueuedEffectConditionShape(block.condition);
+
+const isSupportedNonOptionalBody = (
+  block: EffectBlock & { sourcePresencePolicy: SourcePresencePolicy },
+  adapter: AutoRuntimeEntryAdapter,
+): boolean =>
+  isSupportedDrawBody(block.effect) ||
+  isSupportedDrawUpToBody(block.effect) ||
+  isSupportedQueuedTrashFromHandEffect(block) ||
+  isSupportedSearchBody(block) ||
+  isSupportedContinuousQueueEffect(block.effect) ||
+  isSupportedSequenceBody(block, adapter);
+
+const isSupportedOptionalBody = (
+  block: EffectBlock & { sourcePresencePolicy: SourcePresencePolicy },
+): boolean => isSupportedDrawBody(block.effect);
+
+export const isSupportedAutoRuntimeEffectBlock = (
+  block: EffectBlock,
+  adapter: AutoRuntimeEntryAdapter,
+): block is EffectBlock & { sourcePresencePolicy: SourcePresencePolicy } => {
+  if (!hasSupportedBlockEnvelope(block, adapter)) {
+    return false;
+  }
+  if (block.optional === true) {
+    return isSupportedOptionalBody(block);
+  }
+  return isSupportedNonOptionalBody(block, adapter);
+};
