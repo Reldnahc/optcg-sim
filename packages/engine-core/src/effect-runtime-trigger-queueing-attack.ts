@@ -11,13 +11,11 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import { isSupportedAutoRuntimeEffectBlock } from "./effect-runtime-block-support.js";
 import {
   isSupportedNoChoiceOnOpponentAttackDrawEffect,
-  isSupportedNoChoiceWhenAttackingDrawEffect,
   isSupportedOptionalNoChoiceOnOpponentAttackDrawEffect,
-  isSupportedOptionalNoChoiceWhenAttackingDrawEffect,
 } from "./effect-runtime-primitives.js";
-import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OnOpponentAttackTriggerQueueingFailureReason,
@@ -29,29 +27,16 @@ import {
   toSnapshot,
 } from "./effect-runtime-trigger-source-lookup.js";
 
-const withoutCondition = (
-  effect: EffectDefinition["effects"][number],
-): EffectDefinition["effects"][number] => {
-  const supportShape = { ...effect };
-  delete (supportShape as { condition?: unknown }).condition;
-  return supportShape;
-};
-
 export const isSupportedWhenAttackingCompatibleQueuedEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
+  effect: Parameters<typeof isSupportedAutoRuntimeEffectBlock>[0],
+): effect is Parameters<typeof isSupportedAutoRuntimeEffectBlock>[0] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: Effect;
 } =>
-  isSupportedNoChoiceWhenAttackingDrawEffect(withoutCondition(effect)) ||
-  isSupportedOptionalNoChoiceWhenAttackingDrawEffect(
-    withoutCondition(effect),
-  ) ||
-  isSupportedQueuedAutoSequenceForEntryPoint(
-    effect,
-    "whenAttacking",
-    "mustRemainInSameZone",
-  );
+  isSupportedAutoRuntimeEffectBlock(effect, {
+    category: "auto",
+    sourcePresencePolicies: ["mustRemainInSameZone"],
+    triggerType: "whenAttacking",
+  });
 
 export const isSupportedOnOpponentAttackCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],

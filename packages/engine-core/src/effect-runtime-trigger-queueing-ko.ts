@@ -17,12 +17,8 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import { zonesEqual } from "./action-state.js";
-import {
-  isSupportedEffectResolvedCustomDrawEffect,
-  isSupportedNoChoiceOnKODrawEffect,
-  isSupportedOptionalNoChoiceOnKODrawEffect,
-} from "./effect-runtime-primitives.js";
-import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
+import { isSupportedAutoRuntimeEffectBlock } from "./effect-runtime-block-support.js";
+import { isSupportedEffectResolvedCustomDrawEffect } from "./effect-runtime-primitives.js";
 import type {
   BattleKOTriggerCandidate,
   DetectBattleKOTriggerCandidatesResult,
@@ -38,58 +34,20 @@ import {
   zoneRefFromUnknown,
 } from "./effect-runtime-trigger-source-lookup.js";
 
-const withoutCondition = (
-  effect: EffectDefinition["effects"][number],
-): EffectDefinition["effects"][number] => {
-  const supportShape = { ...effect };
-  delete (supportShape as { condition?: unknown }).condition;
-  return supportShape;
-};
-
-const isSupportedOnKOSourcePresencePolicy = (
-  policy: EffectDefinition["effects"][number]["sourcePresencePolicy"],
-): policy is EffectQueueEntry["sourcePresencePolicy"] =>
-  policy === "resolveFromDestinationZone" ||
-  policy === "resolveFromLastKnownInformation";
-
-const isSupportedOnKOQueuedBodyEnvelope = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-} =>
-  effect.trigger.type === "onKO" &&
-  effect.category === "auto" &&
-  isSupportedOnKOSourcePresencePolicy(effect.sourcePresencePolicy) &&
-  effect.cost === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.failurePolicy === undefined;
-
-const isSupportedOnKODrawUpToEffect = (
-  effect: EffectDefinition["effects"][number],
-): boolean =>
-  isSupportedOnKOQueuedBodyEnvelope(effect) &&
-  effect.optional !== true &&
-  effect.oncePerTurn !== true &&
-  effect.effect.type === "drawUpTo" &&
-  Number.isInteger(effect.effect.count) &&
-  effect.effect.count >= 0 &&
-  effect.effect.player === "self";
-
 export const isSupportedOnKOCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   effect: Effect;
 } =>
-  isSupportedNoChoiceOnKODrawEffect(withoutCondition(effect)) ||
-  isSupportedOptionalNoChoiceOnKODrawEffect(withoutCondition(effect)) ||
-  isSupportedOnKODrawUpToEffect(effect) ||
-  (isSupportedOnKOQueuedBodyEnvelope(effect) &&
-    isSupportedQueuedAutoSequenceForEntryPoint(
-      effect,
-      "onKO",
-      effect.sourcePresencePolicy,
-    ));
+  isSupportedAutoRuntimeEffectBlock(effect, {
+    category: "auto",
+    sourcePresencePolicies: [
+      "resolveFromDestinationZone",
+      "resolveFromLastKnownInformation",
+    ],
+    triggerType: "onKO",
+  });
 
 export const createKOTriggerQueueing = (
   dependencies: EffectRuntimeTriggerQueueingDependencies,

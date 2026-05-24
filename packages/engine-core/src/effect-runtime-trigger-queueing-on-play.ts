@@ -1,5 +1,4 @@
 import type {
-  EffectDefinition,
   EffectQueueEntry,
   EngineError,
   EngineEvent,
@@ -9,11 +8,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
-import {
-  isSupportedNoChoiceOnPlayDrawEffect,
-  isSupportedOptionalNoChoiceOnPlayDrawEffect,
-} from "./effect-runtime-primitives.js";
-import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
+import { isSupportedAutoRuntimeEffectBlock } from "./effect-runtime-block-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OnPlayTriggerQueueingFailureReason,
@@ -22,47 +17,6 @@ import {
   findCardInstance,
   toSnapshot,
 } from "./effect-runtime-trigger-source-lookup.js";
-
-const withoutCondition = (
-  effect: EffectDefinition["effects"][number],
-): EffectDefinition["effects"][number] => {
-  const supportShape = { ...effect };
-  delete (supportShape as { condition?: unknown }).condition;
-  return supportShape;
-};
-
-const isSupportedOnPlayDrawUpToEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-  effect: { type: "drawUpTo"; count: number; player: "self" };
-} =>
-  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
-  effect.trigger.type === "onPlay" &&
-  effect.category === "auto" &&
-  effect.optional !== true &&
-  effect.oncePerTurn !== true &&
-  effect.cost === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.failurePolicy === undefined &&
-  effect.effect.type === "drawUpTo" &&
-  Number.isInteger(effect.effect.count) &&
-  effect.effect.count >= 0 &&
-  effect.effect.player === "self";
-
-const isSupportedOnPlayCompatibleQueuedEffect = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-} =>
-  isSupportedNoChoiceOnPlayDrawEffect(withoutCondition(effect)) ||
-  isSupportedOptionalNoChoiceOnPlayDrawEffect(withoutCondition(effect)) ||
-  isSupportedOnPlayDrawUpToEffect(effect) ||
-  isSupportedQueuedAutoSequenceForEntryPoint(
-    effect,
-    "onPlay",
-    "mustRemainInSameZone",
-  );
 
 export const createOnPlayTriggerQueueing = (
   dependencies: Pick<
@@ -159,8 +113,12 @@ export const createOnPlayTriggerQueueing = (
       if (onPlayEffects.length === 0) {
         continue;
       }
-      const matching = onPlayEffects.filter(
-        isSupportedOnPlayCompatibleQueuedEffect,
+      const matching = onPlayEffects.filter((effect) =>
+        isSupportedAutoRuntimeEffectBlock(effect, {
+          category: "auto",
+          sourcePresencePolicies: ["mustRemainInSameZone"],
+          triggerType: "onPlay",
+        }),
       );
       if (matching.length !== onPlayEffects.length) {
         return toEngineResult(

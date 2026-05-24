@@ -160,7 +160,7 @@ test("cards parser emits conditional power reduction primitives accepted by engi
   assert.equal(isSupportedContinuousQueueEffect(effectBlock.effect), true);
 });
 
-test("cards parser emits conditional power reduction while current engine attack queueing fails closed", () => {
+test("cards parser emits conditional power reduction accepted by engine attack queueing", () => {
   const effectBlock = parseSupportedEffectBlock(
     "[When Attacking] If you have 6 or less DON!! cards on your field, give up to 1 of your opponent's Characters −1000 power during this turn.",
     [
@@ -182,7 +182,7 @@ test("cards parser emits conditional power reduction while current engine attack
   assert.equal(isSupportedContinuousQueueEffect(effectBlock.effect), true);
   assert.equal(
     isSupportedWhenAttackingCompatibleQueuedEffect(effectBlock),
-    false,
+    true,
   );
 });
 
@@ -197,7 +197,7 @@ test("cards parser emits On K.O. draw accepted by engine On K.O. support", () =>
   assert.equal(isSupportedOnKOCompatibleQueuedEffect(effectBlock), true);
 });
 
-test("cards parser emits On K.O. trash-from-hand while current engine On K.O. support fails closed", () => {
+test("cards parser emits On K.O. trash-from-hand accepted by engine On K.O. support", () => {
   const effectBlock = parseSupportedEffectBlock(
     "[On K.O.] Trash 1 card from your hand.",
     [
@@ -208,7 +208,7 @@ test("cards parser emits On K.O. trash-from-hand while current engine On K.O. su
   );
 
   assert.equal(effectBlock.effect.type, "trashFromHand");
-  assert.equal(isSupportedOnKOCompatibleQueuedEffect(effectBlock), false);
+  assert.equal(isSupportedOnKOCompatibleQueuedEffect(effectBlock), true);
 });
 
 test("cards parser keeps recognized unsupported entry points out of engine support", () => {
@@ -260,7 +260,7 @@ test("cards parser emits planned field-effect primitives while current engine su
   assert.ok(conditionalSegment, "expected planned conditional segment");
   assert.equal(
     isSupportedQueuedEffectConditionShape(conditionalSegment.effect.if),
-    false,
+    true,
   );
   assert.equal(
     isSupportedQueuedAutoSequenceForEntryPoint(
