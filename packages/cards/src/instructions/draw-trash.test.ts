@@ -6,8 +6,11 @@ import { parseExpression } from "../expression-parser.js";
 import { parseOncePerTurnMarker } from "../markers/index.js";
 import { parseEffectLine } from "../orchestrator.js";
 import { syntheticInstructionSegmentParser } from "../segments/index.js";
-import { parseDrawInstruction } from "./draw.js";
-import { parseTrashFromHandInstruction } from "./trash-from-hand.js";
+import { drawPrimitive, parseDrawInstruction } from "./draw.js";
+import {
+  parseTrashFromHandInstruction,
+  trashFromHandPrimitive,
+} from "./trash-from-hand.js";
 
 const drawTrashInstructions = [
   parseDrawInstruction,
@@ -15,6 +18,25 @@ const drawTrashInstructions = [
 ] as const;
 
 describe("draw and trash-from-hand instruction parsers", () => {
+  it("defines draw and trash as primitive parents with match families", () => {
+    expect(drawPrimitive).toMatchObject({
+      primitiveId: "instruction:draw",
+      matches: [
+        {
+          id: "draw-n-cards",
+        },
+      ],
+    });
+    expect(trashFromHandPrimitive).toMatchObject({
+      primitiveId: "instruction:trashFromHand",
+      matches: [
+        {
+          id: "trash-n-cards-from-your-hand",
+        },
+      ],
+    });
+  });
+
   it.each([
     {
       text: "Draw 1 card.",

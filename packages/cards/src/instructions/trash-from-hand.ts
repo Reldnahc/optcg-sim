@@ -1,28 +1,34 @@
-import type { InstructionParser } from "../types.js";
+import {
+  parsePrimitivePattern,
+  type PrimitivePatternDefinition,
+} from "../primitive-patterns.js";
+import type { InstructionParseResult, InstructionParser } from "../types.js";
 
-const trashFromHandPattern =
-  /^trash (?<count>[1-9]\d*) cards? from your hand\.?$/i;
-
-export const parseTrashFromHandInstruction: InstructionParser = (input) => {
-  const match = trashFromHandPattern.exec(input.text);
-  const countText = match?.groups?.["count"];
-  if (countText === undefined) {
-    return undefined;
-  }
-
-  return {
-    effect: {
-      type: "trashFromHand",
-      count: Number.parseInt(countText, 10),
-      player: "self",
-      chooser: "self",
-    },
-    evidence: [
-      "instruction:trashFromHand",
-      "count:positiveInteger",
-      "player:self",
-      "chooser:self",
+export const trashFromHandPrimitive: PrimitivePatternDefinition<InstructionParseResult> =
+  {
+    primitiveId: "instruction:trashFromHand",
+    matches: [
+      {
+        id: "trash-n-cards-from-your-hand",
+        pattern: /^trash (?<count>[1-9]\d*) cards? from your hand\.?$/i,
+        build: (groups) => ({
+          effect: {
+            type: "trashFromHand",
+            count: Number.parseInt(groups["count"] ?? "", 10),
+            player: "self",
+            chooser: "self",
+          },
+          evidence: [
+            "instruction:trashFromHand",
+            "count:positiveInteger",
+            "player:self",
+            "chooser:self",
+          ],
+          rest: "",
+        }),
+      },
     ],
-    rest: "",
   };
-};
+
+export const parseTrashFromHandInstruction: InstructionParser = (input) =>
+  parsePrimitivePattern(input, trashFromHandPrimitive);
