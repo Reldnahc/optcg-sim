@@ -1,0 +1,92 @@
+import type { Effect } from "@optcg/types";
+import { describe, expect, it } from "vitest";
+
+import { syntheticInstructionParser } from "../instructions/index.js";
+import { parseEffectLine } from "../orchestrator.js";
+import { syntheticInstructionSegmentParser } from "../segments/index.js";
+import { parseExpression } from "../expression-parser.js";
+import { parseSupportedEntryPoint } from "./supported.js";
+
+const supportedEntryPointCases = [
+  {
+    text: "[On Play]",
+    trigger: { type: "onPlay" },
+    evidence: ["entry:onPlay", "sourcePresence:mustRemain"],
+  },
+  {
+    text: "[When Attacking]",
+    trigger: { type: "whenAttacking" },
+    evidence: ["entry:whenAttacking", "sourcePresence:mustRemain"],
+  },
+  {
+    text: "[On K.O.]",
+    trigger: { type: "onKO" },
+    evidence: ["entry:onKO", "sourcePresence:resolveFromDestination"],
+  },
+  {
+    text: "[Trigger]",
+    trigger: { type: "trigger" },
+    evidence: ["entry:lifeTrigger", "sourcePresence:noSourceRequired"],
+  },
+  {
+    text: "[Activate: Main]",
+    trigger: { type: "activateMain" },
+    evidence: ["entry:activateMain", "sourcePresence:mustRemain"],
+  },
+] as const;
+
+describe("supported entry-point parser", () => {
+  it.each(supportedEntryPointCases)(
+    "parses $text as an isolated entry point",
+    ({ text, trigger, evidence }) => {
+      expect(parseSupportedEntryPoint({ text })).toEqual({
+        node: { type: "entryPoint", trigger },
+        evidence,
+        rest: "",
+      });
+    },
+  );
+
+  it.each(supportedEntryPointCases)(
+    "integrates $text with expression orchestration without parsing the expression",
+    ({ text, trigger, evidence }) => {
+      const effect: Effect = { type: "custom", handler: "synthetic:A" };
+
+      const result = parseEffectLine(`${text} A.`, {
+        entryPoints: [parseSupportedEntryPoint],
+        expressions: [
+          (input) =>
+            parseExpression(input.text, {
+              connectors: [],
+              segments: [
+                syntheticInstructionSegmentParser([
+                  syntheticInstructionParser({
+                    text: "A.",
+                    effect,
+                    evidence: ["instruction:synthetic:A"],
+                  }),
+                ]),
+              ],
+            }),
+        ],
+      });
+
+      expect(result).toMatchObject({
+        block: {
+          category: "auto",
+          trigger,
+          effect,
+        },
+        evidence: [
+          ...evidence,
+          "instruction:synthetic:A",
+          "composition:entryExpression",
+        ],
+      });
+    },
+  );
+
+  it("fails closed for unknown entry-point labels", () => {
+    expect(parseSupportedEntryPoint({ text: "[Unknown]" })).toBeUndefined();
+  });
+});
