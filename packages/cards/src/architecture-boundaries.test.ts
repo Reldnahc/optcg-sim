@@ -81,7 +81,6 @@ describe("cards package architecture boundaries", () => {
         "/entry-points/",
         "/connectors/",
         "/conditions/",
-        "/targets/",
         "/durations/",
         "/references/",
       ],

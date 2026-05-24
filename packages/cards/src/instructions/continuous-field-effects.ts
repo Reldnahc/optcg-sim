@@ -32,52 +32,6 @@ interface ContinuousPrimitiveDefinition {
   readonly matches: readonly ContinuousPrimitiveMatch[];
 }
 
-export const opponentEffectFieldRemovalProtectionPrimitive: ContinuousPrimitiveDefinition =
-  {
-    primitiveId: "instruction:giveProtection",
-    matches: [
-      {
-        id: "this-character-cannot-be-removed-from-field-by-opponent-effects",
-        pattern:
-          /^(?:this Character )?cannot be removed from the field by your opponent's effects\.?$/i,
-        build: (_groups, context) => ({
-          effect: {
-            type: "giveProtection",
-            target: { type: "self" },
-            protection: {
-              process: "fieldRemoval",
-              fieldRemoval: {
-                processFamily: "fieldRemoval",
-                classification: "moveFromFieldToOtherZone",
-                sourceKind: "cardEffect",
-                sourceControllerRelation: "opponentControlled",
-                targetScope: "thisCard",
-                exclusions: {
-                  battleKO: "excluded",
-                  ruleProcessTrash: "excluded",
-                  controllerCost: "excluded",
-                  controllerOwnedEffect: "excluded",
-                  ambiguousCustomRemoval: "failClosed",
-                },
-              },
-            },
-            duration: {
-              type: "whileConditionTrue",
-              condition: context.condition,
-            },
-          },
-          evidence: [
-            "instruction:giveProtection",
-            "protection:opponentEffectFieldRemoval",
-            "target:thisCharacter",
-            "duration:whileConditionTrue",
-          ],
-          rest: "",
-        }),
-      },
-    ],
-  };
-
 export const thisCharacterKeywordGrantPrimitive: ContinuousPrimitiveDefinition =
   {
     primitiveId: "instruction:giveKeyword",
@@ -113,14 +67,6 @@ export const thisCharacterKeywordGrantPrimitive: ContinuousPrimitiveDefinition =
       },
     ],
   };
-
-export const parseOpponentEffectFieldRemovalProtectionInstruction: ContinuousInstructionParser =
-  (input, context) =>
-    parseContinuousPrimitivePattern(
-      input,
-      context,
-      opponentEffectFieldRemovalProtectionPrimitive,
-    );
 
 export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionParser =
   (input, context) =>

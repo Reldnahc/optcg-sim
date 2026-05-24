@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import type { ContinuousInstructionContext } from "./continuous-field-effects.js";
 import {
-  opponentEffectFieldRemovalProtectionPrimitive,
-  parseOpponentEffectFieldRemovalProtectionInstruction,
   parseThisCharacterKeywordGrantInstruction,
   thisCharacterKeywordGrantPrimitive,
 } from "./continuous-field-effects.js";
@@ -19,14 +17,6 @@ const context: ContinuousInstructionContext = {
 
 describe("continuous field-effect instruction parsers", () => {
   it("defines continuous bodies as primitive parents with match families", () => {
-    expect(opponentEffectFieldRemovalProtectionPrimitive).toMatchObject({
-      primitiveId: "instruction:giveProtection",
-      matches: [
-        {
-          id: "this-character-cannot-be-removed-from-field-by-opponent-effects",
-        },
-      ],
-    });
     expect(thisCharacterKeywordGrantPrimitive).toMatchObject({
       primitiveId: "instruction:giveKeyword",
       matches: [
@@ -34,33 +24,6 @@ describe("continuous field-effect instruction parsers", () => {
           id: "this-character-gains-supported-keyword",
         },
       ],
-    });
-  });
-
-  it("parses opponent effect field-removal protection with while-condition duration", () => {
-    expect(
-      parseOpponentEffectFieldRemovalProtectionInstruction(
-        {
-          text: "this Character cannot be removed from the field by your opponent's effects",
-        },
-        context,
-      ),
-    ).toMatchObject({
-      effect: {
-        type: "giveProtection",
-        target: { type: "self" },
-        duration: {
-          type: "whileConditionTrue",
-          condition: context.condition,
-        },
-      },
-      evidence: [
-        "instruction:giveProtection",
-        "protection:opponentEffectFieldRemoval",
-        "target:thisCharacter",
-        "duration:whileConditionTrue",
-      ],
-      rest: "",
     });
   });
 
@@ -98,22 +61,6 @@ describe("continuous field-effect instruction parsers", () => {
         "duration:whileConditionTrue",
       ],
       rest: "",
-    });
-  });
-
-  it("parses omitted subject protection after an ordered connector", () => {
-    expect(
-      parseOpponentEffectFieldRemovalProtectionInstruction(
-        {
-          text: "cannot be removed from the field by your opponent's effects.",
-        },
-        context,
-      ),
-    ).toMatchObject({
-      effect: {
-        type: "giveProtection",
-        target: { type: "self" },
-      },
     });
   });
 });

@@ -64,7 +64,11 @@ export type PrimitiveEvidence =
   | "duration:opponentNextRefreshPhase"
   | "duration:opponentNextEndPhase"
   | "modifier:positivePower"
-  | "protection:opponentEffectFieldRemoval";
+  | "protectionProcess:fieldRemoval"
+  | "protectionProcess:ko"
+  | "protectionSource:opponentEffects"
+  | "protectionSource:effects"
+  | "protectionSource:battle";
 
 export interface PrimitiveNode {
   readonly type: string;
