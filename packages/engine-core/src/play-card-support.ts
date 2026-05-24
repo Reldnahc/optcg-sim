@@ -98,6 +98,14 @@ const isSupportedEventMainEffect = (
     "resolveFromDestinationZone",
   );
 
+const hasOnlySupportedRelevantEffects = (
+  effects: readonly EffectDefinition["effects"][number][],
+  predicate: (effect: EffectDefinition["effects"][number]) => boolean,
+  options: { requireAtLeastOne: boolean },
+): boolean =>
+  (!options.requireAtLeastOne || effects.length > 0) &&
+  effects.every(predicate);
+
 export const canResolveDestinationConflict = (
   player: GameState["players"][PlayerId],
   category: SupportedPlayMetadata["category"],
@@ -137,12 +145,13 @@ export const getSupportedPlayMetadata = (
       const onPlayEffects = lookup.definition.effects.filter(
         (effect) => effect.trigger.type === "onPlay",
       );
-      const matching = onPlayEffects.filter(isSupportedCharacterOnPlayEffect);
-      if (matching.length !== onPlayEffects.length || matching.length !== 1) {
-        return null;
-      }
-      const effect = matching[0];
-      if (effect === undefined || effect.trigger.type !== "onPlay") {
+      if (
+        !hasOnlySupportedRelevantEffects(
+          onPlayEffects,
+          isSupportedCharacterOnPlayEffect,
+          { requireAtLeastOne: false },
+        )
+      ) {
         return null;
       }
       return {
@@ -154,12 +163,15 @@ export const getSupportedPlayMetadata = (
       const mainEffects = lookup.definition.effects.filter(
         (effect) => effect.trigger.type === "main",
       );
-      const matching = mainEffects.filter(isSupportedEventMainEffect);
-      if (matching.length !== mainEffects.length || matching.length !== 1) {
-        return null;
-      }
-      const effect = matching[0];
-      if (effect === undefined || effect.trigger.type !== "main") {
+      if (
+        !hasOnlySupportedRelevantEffects(
+          mainEffects,
+          isSupportedEventMainEffect,
+          {
+            requireAtLeastOne: true,
+          },
+        )
+      ) {
         return null;
       }
       return {

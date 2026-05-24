@@ -86,7 +86,7 @@ test("getSupportedPlayMetadata accepts supported vanilla Character, Stage, and e
   });
 });
 
-test("getSupportedPlayMetadata accepts implemented-DSL Character with multiple supported effect blocks", () => {
+test("getSupportedPlayMetadata accepts implemented-DSL Character with multiple supported relevant effect blocks", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");
   const character = must(p1State.hand[0], "implemented character");
@@ -117,6 +117,48 @@ test("getSupportedPlayMetadata accepts implemented-DSL Character with multiple s
           ...onPlayEffect,
           id: `${String(onPlayEffect.id)}:when-attacking` as EffectDefinition["effects"][number]["id"],
           trigger: { type: "whenAttacking" },
+        },
+      ],
+    },
+  };
+
+  assert.deepEqual(getSupportedPlayMetadata(state, character), {
+    category: "character",
+    printedCost: 3,
+  });
+});
+
+test("getSupportedPlayMetadata accepts implemented-DSL Character with multiple supported On Play blocks", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "implemented character");
+  const implemented = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+    cost: 3,
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-character-two-on-play-effects",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    character.cardId,
+    implemented.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  state.cardManifest.cards[character.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-character-two-on-play-effects": {
+      ...definition,
+      effects: [
+        onPlayEffect,
+        {
+          ...onPlayEffect,
+          id: `${String(onPlayEffect.id)}:draw-up-to` as EffectDefinition["effects"][number]["id"],
+          effect: { type: "drawUpTo", count: 1, player: "self" },
         },
       ],
     },
@@ -439,7 +481,10 @@ test("getSupportedPlayMetadata rejects unsupported reusable sequence legal-actio
         ],
       },
     };
-    assert.equal(getSupportedPlayMetadata(state, card), null);
+    assert.deepEqual(getSupportedPlayMetadata(state, card), {
+      category: "character",
+      printedCost: 2,
+    });
   }
 });
 
