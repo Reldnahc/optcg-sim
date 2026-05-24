@@ -1,8 +1,8 @@
 import type { CardFilter } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
+import { parseCardFilterPredicates } from "../filters/index.js";
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
-import { parseTypeCardFilter } from "./type-card-filter.js";
 
 export interface SearchSelectionVerbParseResult {
   readonly revealTo: "bothPlayers" | "chooserOnly";
@@ -70,7 +70,7 @@ export function parseSearchAnyCardFilter(
 export function parseSearchCardFilter(
   input: ParseInput,
 ): SearchFilterParseResult | undefined {
-  return parseTypeCardFilter(input) ?? parseSearchAnyCardFilter(input);
+  return parseCardFilterPredicates(input) ?? parseSearchAnyCardFilter(input);
 }
 
 export function parseSearchSelectionToHand(
@@ -92,7 +92,7 @@ export function parseSearchSelectionToHand(
   }
 
   const destinationMatch =
-    /^(?: and add it to your hand| to your hand)\.\s+(?<rest>.+)$/i.exec(
+    /^\s*(?:and add it to your hand|to your hand)\.\s+(?<rest>.+)$/i.exec(
       filter.rest,
     );
   const rest = destinationMatch?.groups?.["rest"];

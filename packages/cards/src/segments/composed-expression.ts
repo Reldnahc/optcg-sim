@@ -119,3 +119,49 @@ export function conditionalBlockExpressionParser(options: {
     return undefined;
   };
 }
+
+export function conditionalCostedBlockExpressionParser(options: {
+  readonly conditions: readonly ConditionParser[];
+  readonly expressions: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[];
+}): (input: ParseInput) => ExpressionParseResult | undefined {
+  return (input: ParseInput) => {
+    const match = /^if (?<condition>.+), (?<then>.+)$/i.exec(input.text);
+    const conditionText = match?.groups?.["condition"];
+    const thenText = match?.groups?.["then"];
+    if (conditionText === undefined || thenText === undefined) {
+      return undefined;
+    }
+
+    for (const conditionParser of options.conditions) {
+      const condition = conditionParser({ text: conditionText });
+      if (condition === undefined || condition.rest.length > 0) {
+        continue;
+      }
+
+      for (const expressionParser of options.expressions) {
+        const then = expressionParser({ text: thenText });
+        if (then === undefined || then.rest.length > 0) {
+          continue;
+        }
+
+        return {
+          effect: then.effect,
+          evidence: [
+            "expression:conditional",
+            "composition:conditionalCostedEffect",
+            ...condition.evidence,
+            ...then.evidence,
+          ],
+          rest: "",
+          blockPatch: {
+            condition: condition.condition,
+          },
+        };
+      }
+    }
+
+    return undefined;
+  };
+}

@@ -9,10 +9,12 @@ describe("opponent rested Characters condition parser", () => {
   it("defines the condition as a primitive parent with match families", () => {
     expect(opponentRestedCharactersConditionPrimitive).toMatchObject({
       primitiveId: "condition:opponentFieldCount",
-      matches: [
-        {
-          id: "opponent-has-n-or-more-rested-characters",
-        },
+      childPrimitiveIds: [
+        "player:opponent",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "filter:state:rested",
+        "filter:category:character",
       ],
     });
   });
@@ -38,6 +40,8 @@ describe("opponent rested Characters condition parser", () => {
         "condition:comparator:gte",
         "condition:threshold:positiveInteger",
         "player:opponent",
+        "filter:state:rested",
+        "filter:category:character",
       ],
       rest: "",
     });

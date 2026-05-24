@@ -1,5 +1,7 @@
 import type { OptionalCost } from "@optcg/types";
 
+import { parseExactCardinality } from "../cardinality/index.js";
+import { parseCardFilterPredicates } from "../filters/index.js";
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
 
 type ChooseOneTrashCost = Extract<OptionalCost, { type: "chooseOne" }>;
@@ -82,39 +84,9 @@ function splitCostAndBody(
 function parseTrashCostOption(
   text: string,
 ): TrashCostOptionParseResult | undefined {
-  const fieldMatch =
-    /^trash (?<count>[1-9]\d*) of your (?<type>\{[^}]+\}) type Characters$/i.exec(
-      text,
-    );
-  const fieldCountText = fieldMatch?.groups?.["count"];
-  const fieldTypeText = fieldMatch?.groups?.["type"];
-  if (fieldCountText !== undefined && fieldTypeText !== undefined) {
-    const typeName = /^\{(?<name>[^}]+)\}$/.exec(fieldTypeText)?.groups?.[
-      "name"
-    ];
-    if (typeName === undefined || typeName.trim().length === 0) {
-      return undefined;
-    }
-
-    return {
-      cost: {
-        type: "trashFromField",
-        count: Number.parseInt(fieldCountText, 10),
-        chooser: self,
-        optional: true,
-        filter: {
-          categories: ["character"],
-          typesAny: [typeName.trim()],
-        },
-      },
-      evidence: [
-        "cost:trashFromField",
-        "count:positiveInteger",
-        "chooser:self",
-        "filter:type",
-        "filter:category:character",
-      ],
-    };
+  const fieldOption = parseFieldTrashCostOption(text);
+  if (fieldOption !== undefined) {
+    return fieldOption;
   }
 
   const handMatch = /^trash (?<count>[1-9]\d*) cards? from your hand$/i.exec(
@@ -133,5 +105,57 @@ function parseTrashCostOption(
       optional: true,
     },
     evidence: ["cost:trashFromHand", "count:positiveInteger", "chooser:self"],
+  };
+}
+
+function parseFieldTrashCostOption(
+  text: string,
+): TrashCostOptionParseResult | undefined {
+  const actionMatch = /^trash\s+(?<rest>.+)$/i.exec(text);
+  const afterAction = actionMatch?.groups?.["rest"];
+  if (afterAction === undefined) {
+    return undefined;
+  }
+
+  const cardinality = parseExactCardinality({ text: afterAction });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const ownershipMatch = /^of your\s+(?<predicates>.+)$/i.exec(
+    cardinality.rest,
+  );
+  const predicateText = ownershipMatch?.groups?.["predicates"];
+  if (predicateText === undefined) {
+    return undefined;
+  }
+
+  const predicates = parseCardFilterPredicates({ text: predicateText });
+  if (
+    predicates === undefined ||
+    predicates.rest.length > 0 ||
+    predicates.filter.categories?.[0] !== "character" ||
+    predicates.filter.typesAny?.[0] === undefined
+  ) {
+    return undefined;
+  }
+
+  return {
+    cost: {
+      type: "trashFromField",
+      count: cardinality.count,
+      chooser: self,
+      optional: true,
+      filter: {
+        categories: ["character"],
+        typesAny: [predicates.filter.typesAny[0]],
+      },
+    },
+    evidence: [
+      "cost:trashFromField",
+      ...cardinality.evidence,
+      "chooser:self",
+      ...predicates.evidence,
+    ],
   };
 }

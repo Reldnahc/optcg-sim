@@ -1,6 +1,7 @@
 import { parseAndConnector, parseThenConnector } from "./connectors/index.js";
 import {
   parseDonFieldCountCondition,
+  parseLeaderNameCondition,
   parseOpponentRestedCharactersCondition,
   parseTrashCountCondition,
 } from "./conditions/index.js";
@@ -16,8 +17,10 @@ import {
   parseModifyPowerInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parsePreventThatCharacterRefreshInstruction,
+  parsePlayFromTrashInstruction,
   parseRestOpponentCharactersInstruction,
   parseThisCharacterKeywordGrantInstruction,
+  parseTrashAllYourCharactersInstruction,
   parseTrashFromHandInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
 } from "./instructions/index.js";
@@ -30,6 +33,7 @@ import {
 import {
   conditionalContinuousExpressionParser,
   conditionalBlockExpressionParser,
+  conditionalCostedBlockExpressionParser,
   conditionalExpressionSegmentParser,
   costedEffectExpressionParser,
   instructionExpressionSegmentParser,
@@ -47,6 +51,8 @@ import type {
 const instructionParsers = [
   parseDrawInstruction,
   parseTrashFromHandInstruction,
+  parseTrashAllYourCharactersInstruction,
+  parsePlayFromTrashInstruction,
   parseModifyPowerInstruction,
   parseRestOpponentCharactersInstruction,
   parsePreventThatCharacterRefreshInstruction,
@@ -57,6 +63,7 @@ const conditionParsers = [
   parseDonFieldCountCondition,
   parseOpponentRestedCharactersCondition,
   parseTrashCountCondition,
+  parseLeaderNameCondition,
 ] as const;
 
 const continuousInstructionParsers = [
@@ -103,6 +110,15 @@ const defaultRegistry = {
   ],
   markers: [parseOncePerTurnMarker],
   expressions: [
+    conditionalCostedBlockExpressionParser({
+      conditions: conditionParsers,
+      expressions: [
+        optionalCostedEffectExpressionParser({
+          instructions: instructionParsers,
+          expressions: [searchRevealExpressionParser, generalExpressionParser],
+        }),
+      ],
+    }),
     conditionalContinuousExpressionParser({
       conditions: conditionParsers,
       connectors: [parseAndConnector],

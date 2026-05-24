@@ -552,6 +552,128 @@ describe("card effect line parser", () => {
     );
   });
 
+  it("parses conditional Activate Main sequence-cost trash-and-play from trash compositionally", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] If your Leader is [Imu], you may rest 1 of your DON!! cards and trash 1 card from your hand: Trash all of your Characters and play up to 5 {Five Elders} type Character cards with 5000 power and different card names from your trash.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "activateMain" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        condition: {
+          type: "hasCardInZone",
+          zone: "leaderArea",
+          player: "self",
+          filter: { names: ["Imu"] },
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "paidCost",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "sequence",
+                  optional: true,
+                  costs: [
+                    {
+                      type: "restDon",
+                      count: 1,
+                      chooser: "self",
+                    },
+                    {
+                      type: "trashFromHand",
+                      count: 1,
+                      chooser: "self",
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "trash",
+                      target: {
+                        type: "all",
+                        zone: "characterArea",
+                        player: "self",
+                        filter: { categories: ["character"] },
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "sequence",
+                      effects: [
+                        {
+                          connector: "always",
+                          saveResultAs: "selected:trash-play",
+                          effect: {
+                            type: "selectCards",
+                            zone: "trash",
+                            player: "self",
+                            chooser: "self",
+                            min: 0,
+                            max: 5,
+                            filter: {
+                              categories: ["character"],
+                              typesAny: ["Five Elders"],
+                              power: { op: "eq", value: 5000 },
+                              custom: "differentNames",
+                            },
+                            saveAs: "selected:trash-play",
+                            visibility: "bothPlayers",
+                          },
+                        },
+                        {
+                          connector: "ifPossible",
+                          effect: {
+                            type: "playSelected",
+                            selection: "selected:trash-play",
+                            ignoreCost: true,
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activateMain",
+        "condition:leaderIdentity",
+        "composition:conditionalCostedEffect",
+        "cost:restDon",
+        "cost:trashFromHand",
+        "composition:costSequence",
+        "instruction:trash",
+        "cardinality:all",
+        "instruction:playSelected",
+        "filter:type",
+        "filter:category:character",
+        "filter:power",
+        "filter:differentNames",
+        "composition:selectThenPlay",
+      ]),
+    );
+  });
+
   it("fails closed for unknown entry points", () => {
     expect(parseCardEffectLine("[Unknown] Draw 1 card.")).toBeUndefined();
   });

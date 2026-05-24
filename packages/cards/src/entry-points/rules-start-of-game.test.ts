@@ -19,7 +19,10 @@ describe("rules start-of-game entry-point parser", () => {
         "sourcePresence:noSourceRequired",
         "deckRestriction:ignored",
         "deckRestriction:eventCostGte",
-        "count:positiveInteger",
+        "filter:category:event",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
       ],
       rest: "play up to 1 {Example} type Stage card from your deck.",
     });

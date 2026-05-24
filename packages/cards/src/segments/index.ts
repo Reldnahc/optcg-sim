@@ -4,6 +4,7 @@ export { optionalCostedEffectExpressionParser } from "./optional-costed-effect.j
 export { playStageFromDeckExpressionParser } from "./play-stage-from-deck.js";
 export { searchRevealExpressionParser } from "./search-reveal.js";
 export {
+  conditionalCostedBlockExpressionParser,
   conditionalBlockExpressionParser,
   conditionalExpressionSegmentParser,
   instructionExpressionSegmentParser,

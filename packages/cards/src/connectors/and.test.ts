@@ -19,6 +19,19 @@ describe("and connector parser", () => {
     expect(parseAndConnector({ text: "A." })).toBeUndefined();
   });
 
+  it("keeps different-card-name filter wording inside the same segment", () => {
+    expect(
+      parseAndConnector({
+        text: "Trash all of your Characters and play up to 5 {Five Elders} type Character cards with 5000 power and different card names from your trash.",
+      }),
+    ).toMatchObject({
+      segments: [
+        "Trash all of your Characters",
+        "play up to 5 {Five Elders} type Character cards with 5000 power and different card names from your trash.",
+      ],
+    });
+  });
+
   it("does not authorize support unless split segments parse independently", () => {
     expect(
       parseExpression("A and UNKNOWN.", {

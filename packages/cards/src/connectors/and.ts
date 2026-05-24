@@ -2,7 +2,7 @@ import type { ConnectorParser } from "../types.js";
 
 export const parseAndConnector: ConnectorParser = (input) => {
   const segments = input.text
-    .split(/\s+and\s+/i)
+    .split(/\s+and\s+(?!different card names\b)/i)
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0);
 

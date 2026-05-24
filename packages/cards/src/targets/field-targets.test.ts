@@ -25,7 +25,12 @@ describe("field target parsers", () => {
         text: "of your opponent's Characters −1000 power during this turn.",
       }),
     ).toEqual({
-      evidence: ["player:opponent", "target:opponentCharacters"],
+      filter: { categories: ["character"] },
+      evidence: [
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+      ],
       rest: "−1000 power during this turn.",
     });
   });

@@ -46,7 +46,10 @@ export const parseModifyPowerInstruction: InstructionParser = (input) => {
   return {
     effect: {
       type: "modifyPower",
-      target: chooseOpponentCharactersTarget(cardinality.cardinality.max),
+      target: chooseOpponentCharactersTarget(
+        cardinality.cardinality.max,
+        target.filter ?? { categories: ["character"] },
+      ),
       value: modifier.value,
       duration: duration.duration,
     },
@@ -62,7 +65,10 @@ export const parseModifyPowerInstruction: InstructionParser = (input) => {
   };
 };
 
-function chooseOpponentCharactersTarget(max: number): Target {
+function chooseOpponentCharactersTarget(
+  max: number,
+  filter: TargetFilter,
+): Target {
   return {
     type: "choose",
     request: {
@@ -74,7 +80,11 @@ function chooseOpponentCharactersTarget(max: number): Target {
       max,
       allowFewerIfUnavailable: true,
       visibility: "public",
-      filter: { categories: ["character"] },
+      filter,
     },
   };
 }
+
+type TargetFilter = NonNullable<
+  Extract<Target, { type: "choose" }>["request"]["filter"]
+>;

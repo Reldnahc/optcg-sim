@@ -25,7 +25,7 @@ export function playStageFromDeckExpressionParser(
     return undefined;
   }
 
-  const destinationMatch = /^ from your deck\.?$/i.exec(filter.rest);
+  const destinationMatch = /^\s*from your deck\.?$/i.exec(filter.rest);
   if (destinationMatch === null) {
     return undefined;
   }

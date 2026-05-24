@@ -34,6 +34,7 @@ describe("optional choose-one trash cost parser", () => {
       evidence: [
         "cost:chooseOne",
         "cost:trashFromField",
+        "cardinality:exact",
         "count:positiveInteger",
         "chooser:self",
         "filter:type",

@@ -47,6 +47,7 @@ describe("planned field-effect instruction parsers", () => {
         "chooser:self:upTo",
         "player:opponent",
         "target:opponentCharacters",
+        "filter:category:character",
       ],
       rest: "",
     });

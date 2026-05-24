@@ -1,6 +1,7 @@
 export { parseThisCharacterKeywordGrantInstruction } from "./continuous-field-effects.js";
 export { parseDrawInstruction } from "./draw.js";
 export { parseModifyPowerInstruction } from "./modify-power.js";
+export { parsePlayFromTrashInstruction } from "./play-from-trash.js";
 export {
   parsePreventThatCharacterRefreshInstruction,
   parseRestOpponentCharactersInstruction,
@@ -11,4 +12,5 @@ export {
   parseProtectionInstruction,
 } from "./protection.js";
 export { syntheticInstructionParser } from "./synthetic.js";
+export { parseTrashAllYourCharactersInstruction } from "./trash-all-characters.js";
 export { parseTrashFromHandInstruction } from "./trash-from-hand.js";

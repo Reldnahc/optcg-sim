@@ -1,40 +1,58 @@
-import {
-  parsePrimitivePattern,
-  type PrimitivePatternDefinition,
-} from "../primitive-patterns.js";
+import { parseCardFilterPredicates } from "../filters/index.js";
 import type { ConditionParseResult, ConditionParser } from "../types.js";
+import { parseLeadingCountComparison } from "./comparison.js";
 
-export const opponentRestedCharactersConditionPrimitive: PrimitivePatternDefinition<ConditionParseResult> =
-  {
-    primitiveId: "condition:opponentFieldCount",
-    matches: [
-      {
-        id: "opponent-has-n-or-more-rested-characters",
-        pattern:
-          /^your opponent has (?<count>[1-9]\d*) or more rested Characters?$/i,
-        build: (groups) => ({
-          condition: {
-            type: "fieldCount",
-            player: "opponent",
-            filter: {
-              categories: ["character"],
-              state: "rested",
-            },
-            op: "gte",
-            value: Number.parseInt(groups["count"] ?? "", 10),
-          },
-          evidence: [
-            "condition:opponentFieldCount",
-            "condition:comparator:gte",
-            "condition:threshold:positiveInteger",
-            "player:opponent",
-          ],
-          rest: "",
-        }),
-      },
-    ],
-  };
+export const opponentRestedCharactersConditionPrimitive = {
+  primitiveId: "condition:opponentFieldCount",
+  childPrimitiveIds: [
+    "player:opponent",
+    "condition:comparator:gte",
+    "condition:threshold:positiveInteger",
+    "filter:state:rested",
+    "filter:category:character",
+  ],
+} as const;
 
 export const parseOpponentRestedCharactersCondition: ConditionParser = (
   input,
-) => parsePrimitivePattern(input, opponentRestedCharactersConditionPrimitive);
+): ConditionParseResult | undefined => {
+  const subjectMatch = /^your opponent has\s+(?<comparison>.+)$/i.exec(
+    input.text,
+  );
+  const comparisonText = subjectMatch?.groups?.["comparison"];
+  if (comparisonText === undefined) {
+    return undefined;
+  }
+
+  const comparison = parseLeadingCountComparison({ text: comparisonText });
+  if (comparison === undefined) {
+    return undefined;
+  }
+
+  const predicates = parseCardFilterPredicates({ text: comparison.rest });
+  if (
+    predicates === undefined ||
+    predicates.rest.length > 0 ||
+    predicates.filter.categories?.[0] !== "character" ||
+    predicates.filter.state !== "rested"
+  ) {
+    return undefined;
+  }
+
+  return {
+    condition: {
+      type: "fieldCount",
+      player: "opponent",
+      filter: predicates.filter,
+      op: comparison.op,
+      value: comparison.value,
+    },
+    evidence: [
+      "condition:opponentFieldCount",
+      ...comparison.evidence,
+      "player:opponent",
+      ...predicates.evidence,
+    ],
+    rest: "",
+  };
+};

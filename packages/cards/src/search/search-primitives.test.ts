@@ -42,8 +42,32 @@ describe("search reveal primitives", () => {
       }),
     ).toEqual({
       filter: { typesAny: ["Five Elders"] },
-      rest: " and add it to your hand.",
+      rest: "and add it to your hand.",
       evidence: ["filter:type"],
+    });
+  });
+
+  it("parses typed-card filters through shared card-filter predicates", () => {
+    expect(
+      parseSearchSelectionToHand({
+        text: "reveal up to 1 green {East Blue} type card other than [Nami] and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      }),
+    ).toMatchObject({
+      filter: {
+        colorsAny: ["green"],
+        typesAny: ["East Blue"],
+        nameNot: ["Nami"],
+      },
+      revealTo: "bothPlayers",
+      evidence: [
+        "reveal:bothPlayers",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "filter:color",
+        "filter:type",
+        "filter:nameNot",
+        "destination:hand",
+      ],
     });
   });
 
@@ -54,7 +78,7 @@ describe("search reveal primitives", () => {
       }),
     ).toEqual({
       filter: { categories: ["stage"], typesAny: ["Mary Geoise"] },
-      rest: " from your deck.",
+      rest: "from your deck.",
       evidence: ["filter:type", "filter:category:stage"],
     });
   });
