@@ -13,7 +13,10 @@ import type {
 } from "@optcg/types";
 
 import { reifyCardRef } from "./action-state.js";
-import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import {
+  evaluateQueuedEffectCondition,
+  isSupportedQueuedEffectConditionShape,
+} from "./effect-runtime-conditions.js";
 import { isSupportedNoChoiceOnKODrawEffect } from "./effect-runtime-primitives.js";
 import {
   isSupportedFieldRemovalProtection,
@@ -45,7 +48,10 @@ const isSupportedDuration = (duration: Duration): boolean => {
     return whoseTurn === "current" || whoseTurn === "sourceController";
   }
   if (duration.type !== "untilStartOfNextTurn") {
-    return false;
+    return (
+      duration.type === "whileConditionTrue" &&
+      isSupportedQueuedEffectConditionShape(duration.condition)
+    );
   }
   return (
     duration.player === "self" ||
@@ -354,6 +360,7 @@ const createDerivedRecord = (
   source: CardRef,
   sourceSnapshot: EffectQueueEntry["sourceSnapshot"],
   condition: EffectDefinition["effects"][number]["condition"],
+  duration: Duration,
   blockId: EffectDefinition["effects"][number]["id"],
   modifier: ContinuousEffectRecord["modifier"],
   sequenceIndex: number,
@@ -364,7 +371,7 @@ const createDerivedRecord = (
   controller: source.playerId,
   modifier,
   ...(condition !== undefined ? { condition } : {}),
-  duration: { type: "whileSourceOnField" },
+  duration,
   createdBy: {
     type: "ruleProcess",
     name: "implemented-dsl-permanent-continuous-materialization",
@@ -375,6 +382,30 @@ const createDerivedRecord = (
 const effectToDerivedModifier = (
   effect: Effect,
 ): ContinuousEffectRecord["modifier"] | null => {
+  if (effect.type === "modifyPower") {
+    if (
+      effect.target.type !== "self" &&
+      effect.target.type !== "myLeader" &&
+      !(effect.target.type === "all" && isSupportedTarget(effect.target))
+    ) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported power target"),
+      );
+    }
+    if (!isSupportedDuration(effect.duration)) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported power duration"),
+      );
+    }
+    if (!Number.isSafeInteger(effect.value)) {
+      throw new TypeError(unsupportedDerivedMessage("unsupported power value"));
+    }
+    return {
+      layer: "powerAdd",
+      target: effect.target,
+      operation: { type: "addPower", value: effect.value },
+    };
+  }
   if (effect.type === "giveKeyword") {
     if (effect.target.type !== "self") {
       throw new TypeError(
@@ -579,6 +610,9 @@ export const deriveImplementedDslPermanentContinuousEffects = (
             source,
             sourceSnapshot,
             block.condition,
+            part.effect.type === "modifyPower"
+              ? part.effect.duration
+              : { type: "whileSourceOnField" },
             block.id,
             modifier,
             index,

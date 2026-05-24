@@ -757,7 +757,7 @@ test("unsupported duration thisAction fails closed for queued modifyPower", () =
   assert.deepEqual(result.state, before);
 });
 
-test("unsupported duration whileConditionTrue fails closed", () => {
+test("supported duration whileConditionTrue creates conditional queued modifyPower", () => {
   const { state } = targetSelectionQueueState();
   withQueuedEffect(state, {
     type: "modifyPower",
@@ -765,11 +765,16 @@ test("unsupported duration whileConditionTrue fails closed", () => {
     value: 1000,
     duration: { type: "whileConditionTrue", condition: { type: "yourTurn" } },
   });
-  const before = structuredClone(state);
   const result = processEffectRuntime(state);
-  assert.deepEqual(result.events, []);
-  assert.ok(result.errors !== undefined);
-  assert.deepEqual(result.state, before);
+  const continuous = must(
+    result.state.continuousEffects[0],
+    "continuous effect",
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(continuous.duration.type, "whileConditionTrue");
+  assert.deepEqual(continuous.condition, undefined);
 });
 
 test("unsupported turn-relative duration parameterization fails closed", () => {

@@ -250,6 +250,41 @@ const mixedPermanentAndOnKODrawDefinition = (
   ],
 });
 
+const permanentLeaderPowerDefinition = (cardId: CardId): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: "perm:leader-power" as never,
+      category: "permanent",
+      trigger: { type: "permanent" },
+      condition: { type: "trashCount", player: "self", op: "gte", value: 19 },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "modifyPower",
+        target: { type: "myLeader" },
+        value: 1000,
+        duration: {
+          type: "whileConditionTrue",
+          condition: {
+            type: "trashCount",
+            player: "self",
+            op: "gte",
+            value: 19,
+          },
+        },
+      },
+    },
+  ],
+  metadata: {
+    sourceTextHash: "source-hash",
+    rulesVersion: "r1",
+    effectDefinitionsVersion: "fixture",
+    tested: true,
+    reviewer: "reviewer",
+  },
+});
+
 test("reviewed permanent implemented-dsl keyword applies at threshold through computeView", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");
@@ -337,6 +372,40 @@ test("computeView accepts mixed implemented-dsl definition with permanent block 
   assert.equal(
     view.cards[source.instanceId]?.keywords.includes("blocker"),
     true,
+  );
+});
+
+test("reviewed permanent implemented-dsl leader power applies only while trash threshold is true", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  p1State.characters = [source];
+  state.cardManifest.cards[source.cardId] = {
+    ...must(state.cardManifest.cards[source.cardId], "source card"),
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:perm:leader-power",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    "def:perm:leader-power": permanentLeaderPowerDefinition(source.cardId),
+  };
+
+  addTrashMarkers(state, p1, 18);
+  const belowView = computeView(state);
+  addTrashMarkers(state, p1, 19);
+  const atThresholdView = computeView(state);
+
+  assert.equal(belowView.cards[p1State.leader.instanceId]?.currentPower, 5000);
+  assert.equal(
+    atThresholdView.cards[p1State.leader.instanceId]?.currentPower,
+    6000,
   );
 });
 

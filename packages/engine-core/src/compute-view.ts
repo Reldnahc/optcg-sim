@@ -13,7 +13,10 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import {
+  evaluateQueuedEffectCondition,
+  isSupportedQueuedEffectConditionShape,
+} from "./effect-runtime-conditions.js";
 import {
   deriveImplementedDslPermanentContinuousEffects,
   hasCombatSafeImplementedDslDefinition,
@@ -59,10 +62,12 @@ const isLeaderOrCharacter = (
 const isSupportedContinuousPowerModifier = (
   effect: ContinuousEffectRecord,
 ): boolean =>
-  effect.condition === undefined &&
+  (effect.condition === undefined ||
+    isSupportedQueuedEffectConditionShape(effect.condition)) &&
   isSupportedDuration(effect.duration) &&
   ((effect.modifier.layer === "powerAdd" &&
     (effect.modifier.target.type === "self" ||
+      effect.modifier.target.type === "myLeader" ||
       effect.modifier.target.type === "all" ||
       effect.modifier.target.type === "exactCard") &&
     effect.modifier.operation.type === "addPower" &&
@@ -136,7 +141,9 @@ const isSupportedDuration = (
   duration.type === "untilEndOfTurn" ||
   duration.type === "untilStartOfNextTurn" ||
   duration.type === "whileSourceOnField" ||
-  duration.type === "permanent";
+  duration.type === "permanent" ||
+  (duration.type === "whileConditionTrue" &&
+    isSupportedQueuedEffectConditionShape(duration.condition));
 
 const unsupportedContinuousEffectMessage = (
   effect: ContinuousEffectRecord,
@@ -166,27 +173,37 @@ const toConditionQueueEntry = (
 const continuousEffectConditionPasses = (
   state: GameState,
   effect: ContinuousEffectRecord,
+  checkedCondition = effect.condition,
 ): boolean => {
-  const condition = evaluateQueuedEffectCondition(
+  const result = evaluateQueuedEffectCondition(
     state,
     toConditionQueueEntry(effect),
-    effect.condition,
+    checkedCondition,
   );
-  if (!condition.supported) {
+  if (!result.supported) {
     throw new TypeError(unsupportedContinuousEffectMessage(effect));
   }
-  return condition.passed;
+  return result.passed;
 };
+
+const recordConditionPasses = (
+  state: GameState,
+  effect: ContinuousEffectRecord,
+): boolean => continuousEffectConditionPasses(state, effect, effect.condition);
 
 const assertSupportedContinuousEffects = (state: GameState): void => {
   const effects = allContinuousEffects(state);
   for (const effect of effects) {
     if (isSupportedContinuousBasePowerSetModifier(effect)) {
       if (!durationIsActive(state, effect)) continue;
-      continuousEffectConditionPasses(state, effect);
+      recordConditionPasses(state, effect);
       continue;
     }
-    if (isSupportedContinuousPowerModifier(effect)) continue;
+    if (isSupportedContinuousPowerModifier(effect)) {
+      if (!durationIsActive(state, effect)) continue;
+      recordConditionPasses(state, effect);
+      continue;
+    }
     if (isSupportedFieldRemovalProtectionModifier(effect)) continue;
     if (isFieldRemovalProtectionModifier(effect)) {
       throw new TypeError(malformedFieldRemovalProtectionMessage(effect));
@@ -269,6 +286,11 @@ const cardMatchesModifierTarget = (
   if (target.type === "self") {
     return cardMatchesRef(card, effect.source);
   }
+  if (target.type === "myLeader") {
+    return (
+      card.zone.zone === "leaderArea" && card.controller === effect.controller
+    );
+  }
   if (target.type === "exactCard") {
     const cardZone = card.zone.zone;
     const targetZone = target.card.zone?.zone;
@@ -289,6 +311,13 @@ const durationIsActive = (
   if (effect.duration.type === "whileSourceOnField") {
     return isCardRefLive(state, effect.source);
   }
+  if (effect.duration.type === "whileConditionTrue") {
+    return continuousEffectConditionPasses(
+      state,
+      effect,
+      effect.duration.condition,
+    );
+  }
   return true;
 };
 
@@ -301,7 +330,7 @@ const continuousPowerBonusForCard = (
 
   for (const effect of effects) {
     if (!durationIsActive(state, effect)) continue;
-    if (effect.condition !== undefined) continue;
+    if (!recordConditionPasses(state, effect)) continue;
     if (effect.modifier.layer !== "powerAdd") continue;
     if (effect.modifier.operation.type !== "addPower") continue;
     if (!cardMatchesModifierTarget(state, card, effect)) continue;

@@ -186,6 +186,40 @@ test("cards parser emits conditional power reduction accepted by engine attack q
   );
 });
 
+test("cards parser emits conditional leader power permanent accepted by engine materialization", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[Your Turn] If you have 19 or more cards in your trash, your Leader gains +1000 power.",
+    [
+      "entry:yourTurn",
+      "expression:conditionalContinuous",
+      "condition:trashCount",
+      "condition:comparator:gte",
+      "instruction:modifyPower",
+      "target:yourLeader",
+      "duration:whileConditionTrue",
+    ],
+  );
+  const definitionId = "cards-engine-contract:leader-power-permanent";
+
+  assert.equal(effectBlock.category, "permanent");
+  assert.equal(effectBlock.effect.type, "modifyPower");
+  assert.equal(
+    hasCombatSafeImplementedDslDefinition(
+      {
+        cardManifest: {
+          effectDefinitions: {
+            [definitionId]: {
+              effects: [effectBlock],
+            },
+          },
+        },
+      },
+      definitionId,
+    ),
+    true,
+  );
+});
+
 test("cards parser emits On K.O. draw accepted by engine On K.O. support", () => {
   const effectBlock = parseSupportedEffectBlock("[On K.O.] Draw 1 card.", [
     "entry:onKO",
