@@ -1,1 +1,4 @@
-export { parsePositivePowerModifier } from "./power.js";
+export {
+  parseNegativePowerModifier,
+  parsePositivePowerModifier,
+} from "./power.js";

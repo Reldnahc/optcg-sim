@@ -1,4 +1,5 @@
 export { conditionalContinuousExpressionParser } from "./conditional-continuous.js";
+export { costedEffectExpressionParser } from "./costed-effect.js";
 export {
   conditionalExpressionSegmentParser,
   instructionExpressionSegmentParser,

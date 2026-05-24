@@ -1,6 +1,9 @@
+import type { Duration } from "@optcg/types";
+
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
 
 export interface DurationParseResult {
+  readonly duration?: Duration;
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
 }
@@ -13,6 +16,11 @@ export const opponentNextRefreshPhaseDurationPrimitive = {
 export const opponentNextEndPhaseDurationPrimitive = {
   primitiveId: "duration:opponentNextEndPhase",
   matches: [{ id: "until-end-opponent-next-end-phase" }],
+} as const;
+
+export const thisTurnDurationPrimitive = {
+  primitiveId: "duration:thisTurn",
+  matches: [{ id: "during-this-turn" }],
 } as const;
 
 export function parseOpponentNextRefreshPhaseDuration(
@@ -39,6 +47,20 @@ export function parseOpponentNextEndPhaseDuration(
 
   return {
     evidence: ["duration:opponentNextEndPhase"],
+    rest: "",
+  };
+}
+
+export function parseThisTurnDuration(
+  input: ParseInput,
+): DurationParseResult | undefined {
+  if (!/^during this turn\.?$/i.test(input.text)) {
+    return undefined;
+  }
+
+  return {
+    duration: { type: "thisTurn" },
+    evidence: ["duration:thisTurn"],
     rest: "",
   };
 }

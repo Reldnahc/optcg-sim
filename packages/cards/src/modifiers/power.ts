@@ -11,6 +11,11 @@ export const positivePowerModifierPrimitive = {
   matches: [{ id: "plus-n-power" }],
 } as const;
 
+export const negativePowerModifierPrimitive = {
+  primitiveId: "modifier:negativePower",
+  matches: [{ id: "minus-n-power" }],
+} as const;
+
 export function parsePositivePowerModifier(
   input: ParseInput,
 ): PowerModifierParseResult | undefined {
@@ -26,6 +31,25 @@ export function parsePositivePowerModifier(
   return {
     value: Number.parseInt(valueText, 10),
     evidence: ["modifier:positivePower"],
+    rest: restText?.trim() ?? "",
+  };
+}
+
+export function parseNegativePowerModifier(
+  input: ParseInput,
+): PowerModifierParseResult | undefined {
+  const match = /^[−-](?<value>[1-9]\d*) power\b\s*(?<rest>.*)$/i.exec(
+    input.text,
+  );
+  const valueText = match?.groups?.["value"];
+  const restText = match?.groups?.["rest"];
+  if (valueText === undefined) {
+    return undefined;
+  }
+
+  return {
+    value: -Number.parseInt(valueText, 10),
+    evidence: ["modifier:negativePower"],
     rest: restText?.trim() ?? "",
   };
 }

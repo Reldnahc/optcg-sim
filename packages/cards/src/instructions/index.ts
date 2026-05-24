@@ -1,5 +1,6 @@
 export { parseThisCharacterKeywordGrantInstruction } from "./continuous-field-effects.js";
 export { parseDrawInstruction } from "./draw.js";
+export { parseModifyPowerInstruction } from "./modify-power.js";
 export {
   parsePreventThatCharacterRefreshInstruction,
   parseRestOpponentCharactersInstruction,

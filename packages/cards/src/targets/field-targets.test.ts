@@ -22,11 +22,11 @@ describe("field target parsers", () => {
   it("parses opponent Characters target", () => {
     expect(
       parseOpponentCharactersTarget({
-        text: "of your opponent's Characters",
+        text: "of your opponent's Characters −1000 power during this turn.",
       }),
     ).toEqual({
       evidence: ["player:opponent", "target:opponentCharacters"],
-      rest: "",
+      rest: "−1000 power during this turn.",
     });
   });
 

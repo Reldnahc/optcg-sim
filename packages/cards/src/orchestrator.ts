@@ -79,6 +79,9 @@ export function parseEffectLineDetailed(
         ...(expression.blockPatch?.condition === undefined
           ? {}
           : { condition: expression.blockPatch.condition }),
+        ...(expression.blockPatch?.cost === undefined
+          ? {}
+          : { cost: expression.blockPatch.cost }),
         sourcePresencePolicy: sourcePresencePolicy(entryPoint.evidence),
         ...markerParse.patch,
         effect: expression.effect,

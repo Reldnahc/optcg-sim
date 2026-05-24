@@ -255,6 +255,58 @@ describe("card effect line parser", () => {
     });
   });
 
+  it("parses return-DON cost into an On Play draw block", () => {
+    expect(parseCardEffectLine("[On Play] DON!! −1: Draw 1 card.")).toEqual({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        cost: { type: "returnDon", count: 1 },
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+      evidence: [
+        "entry:onPlay",
+        "sourcePresence:mustRemain",
+        "composition:costedEffect",
+        "cost:returnDon",
+        "count:positiveInteger",
+        "instruction:draw",
+        "count:positiveInteger",
+        "player:self",
+        "composition:entryExpression",
+      ],
+    });
+  });
+
+  it("parses conditional attack power reduction compositionally", () => {
+    expect(
+      parseCardEffectLine(
+        "[When Attacking] If you have 6 or less DON!! cards on your field, give up to 1 of your opponent's Characters −1000 power during this turn.",
+      ),
+    ).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "whenAttacking" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "conditional",
+          if: {
+            type: "fieldCount",
+            player: "self",
+            filter: { categories: ["don"] },
+            op: "lte",
+            value: 6,
+          },
+          then: {
+            type: "modifyPower",
+            value: -1000,
+            duration: { type: "thisTurn" },
+          },
+        },
+      },
+    });
+  });
+
   it("fails closed for unknown entry points", () => {
     expect(parseCardEffectLine("[Unknown] Draw 1 card.")).toBeUndefined();
   });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  negativePowerModifierPrimitive,
+  parseNegativePowerModifier,
   parsePositivePowerModifier,
   positivePowerModifierPrimitive,
 } from "./power.js";
@@ -10,6 +12,10 @@ describe("power modifier parser", () => {
     expect(positivePowerModifierPrimitive).toEqual({
       primitiveId: "modifier:positivePower",
       matches: [{ id: "plus-n-power" }],
+    });
+    expect(negativePowerModifierPrimitive).toEqual({
+      primitiveId: "modifier:negativePower",
+      matches: [{ id: "minus-n-power" }],
     });
   });
 
@@ -24,4 +30,15 @@ describe("power modifier parser", () => {
       rest: "until the end of your opponent's next End Phase.",
     });
   });
+
+  it.each(["−1000 power during this turn.", "-1000 power during this turn."])(
+    "parses negative power and leaves duration text: %s",
+    (text) => {
+      expect(parseNegativePowerModifier({ text })).toEqual({
+        value: -1000,
+        evidence: ["modifier:negativePower"],
+        rest: "during this turn.",
+      });
+    },
+  );
 });

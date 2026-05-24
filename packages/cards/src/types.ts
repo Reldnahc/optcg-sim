@@ -2,6 +2,7 @@ import type {
   Condition,
   Effect,
   EffectCategory,
+  EffectBlockCost,
   SequencedEffect,
   SourcePresencePolicy,
   Trigger,
@@ -38,6 +39,8 @@ export type PrimitiveEvidence =
   | "condition:synthetic:C"
   | "condition:opponentFieldCount"
   | "condition:trashCount"
+  | "condition:donFieldCount"
+  | "condition:comparator:lte"
   | "condition:comparator:gte"
   | "condition:threshold:positiveInteger"
   | "instruction:draw"
@@ -51,6 +54,8 @@ export type PrimitiveEvidence =
   | "instruction:synthetic:B"
   | "instructionSupport:planned"
   | "cardinality:upTo"
+  | "cost:returnDon"
+  | "composition:costedEffect"
   | "keyword:anySupported"
   | "player:self"
   | "player:opponent"
@@ -62,9 +67,11 @@ export type PrimitiveEvidence =
   | "target:thisCharacter"
   | "reference:thatCharacter"
   | "duration:whileConditionTrue"
+  | "duration:thisTurn"
   | "duration:opponentNextRefreshPhase"
   | "duration:opponentNextEndPhase"
   | "modifier:positivePower"
+  | "modifier:negativePower"
   | "protectionProcess:fieldRemoval"
   | "protectionProcess:ko"
   | "protectionSource:opponentEffects"
@@ -112,6 +119,7 @@ export interface ExpressionParseResult {
   readonly blockPatch?: {
     readonly category?: EffectCategory;
     readonly condition?: Condition;
+    readonly cost?: EffectBlockCost;
   };
 }
 
@@ -170,6 +178,7 @@ export interface ParsedEffectBlock {
   readonly category: EffectCategory;
   readonly trigger: Trigger;
   readonly condition?: Condition;
+  readonly cost?: EffectBlockCost;
   readonly sourcePresencePolicy: SourcePresencePolicy;
   readonly oncePerTurn?: true;
   readonly effect: Effect;

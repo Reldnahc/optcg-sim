@@ -5,6 +5,8 @@ import {
   opponentNextRefreshPhaseDurationPrimitive,
   parseOpponentNextEndPhaseDuration,
   parseOpponentNextRefreshPhaseDuration,
+  parseThisTurnDuration,
+  thisTurnDurationPrimitive,
 } from "./field-effect-durations.js";
 
 describe("field-effect duration parsers", () => {
@@ -16,6 +18,10 @@ describe("field-effect duration parsers", () => {
     expect(opponentNextEndPhaseDurationPrimitive).toEqual({
       primitiveId: "duration:opponentNextEndPhase",
       matches: [{ id: "until-end-opponent-next-end-phase" }],
+    });
+    expect(thisTurnDurationPrimitive).toEqual({
+      primitiveId: "duration:thisTurn",
+      matches: [{ id: "during-this-turn" }],
     });
   });
 
@@ -37,6 +43,14 @@ describe("field-effect duration parsers", () => {
       }),
     ).toEqual({
       evidence: ["duration:opponentNextEndPhase"],
+      rest: "",
+    });
+  });
+
+  it("parses this turn duration", () => {
+    expect(parseThisTurnDuration({ text: "during this turn." })).toEqual({
+      duration: { type: "thisTurn" },
+      evidence: ["duration:thisTurn"],
       rest: "",
     });
   });

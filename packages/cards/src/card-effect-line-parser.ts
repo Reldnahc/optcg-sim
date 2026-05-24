@@ -1,5 +1,6 @@
 import { parseAndConnector, parseThenConnector } from "./connectors/index.js";
 import {
+  parseDonFieldCountCondition,
   parseOpponentRestedCharactersCondition,
   parseTrashCountCondition,
 } from "./conditions/index.js";
@@ -11,6 +12,7 @@ import {
 import { parseExpression } from "./expression-parser.js";
 import {
   parseDrawInstruction,
+  parseModifyPowerInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseRestOpponentCharactersInstruction,
@@ -27,6 +29,7 @@ import {
 import {
   conditionalContinuousExpressionParser,
   conditionalExpressionSegmentParser,
+  costedEffectExpressionParser,
   instructionExpressionSegmentParser,
   syntheticInstructionSegmentParser,
 } from "./segments/index.js";
@@ -35,12 +38,14 @@ import type { ParsedEffectLine, ParseCardEffectLineResult } from "./types.js";
 const instructionParsers = [
   parseDrawInstruction,
   parseTrashFromHandInstruction,
+  parseModifyPowerInstruction,
   parseRestOpponentCharactersInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
 ] as const;
 
 const conditionParsers = [
+  parseDonFieldCountCondition,
   parseOpponentRestedCharactersCondition,
   parseTrashCountCondition,
 ] as const;
@@ -75,6 +80,9 @@ const defaultRegistry = {
       conditions: conditionParsers,
       connectors: [parseAndConnector],
       instructions: continuousInstructionParsers,
+    }),
+    costedEffectExpressionParser({
+      instructions: instructionParsers,
     }),
     (input) =>
       parseExpression(input.text, {

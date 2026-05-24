@@ -21,13 +21,16 @@ export const yourLeaderTargetPrimitive = {
 export function parseOpponentCharactersTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
-  if (!/^of your opponent's Characters?\.?$/i.test(input.text)) {
+  const match = /^of your opponent's Characters?\b\s*(?<rest>.*)$/i.exec(
+    input.text,
+  );
+  if (match === null) {
     return undefined;
   }
 
   return {
     evidence: ["player:opponent", "target:opponentCharacters"],
-    rest: "",
+    rest: match.groups?.["rest"]?.trim() ?? "",
   };
 }
 
