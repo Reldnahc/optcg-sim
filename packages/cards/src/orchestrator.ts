@@ -73,8 +73,12 @@ export function parseEffectLineDetailed(
     ok: true,
     value: {
       block: {
-        category: "auto",
+        category:
+          expression.blockPatch?.category ?? entryPoint.node.category ?? "auto",
         trigger: entryPoint.node.trigger,
+        ...(expression.blockPatch?.condition === undefined
+          ? {}
+          : { condition: expression.blockPatch.condition }),
         sourcePresencePolicy: sourcePresencePolicy(entryPoint.evidence),
         ...markerParse.patch,
         effect: expression.effect,

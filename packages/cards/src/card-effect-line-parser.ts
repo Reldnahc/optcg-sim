@@ -1,14 +1,20 @@
 import { parseAndConnector, parseThenConnector } from "./connectors/index.js";
-import { parseOpponentRestedCharactersCondition } from "./conditions/index.js";
 import {
+  parseOpponentRestedCharactersCondition,
+  parseTrashCountCondition,
+} from "./conditions/index.js";
+import {
+  parseImplicitPermanentEntryPoint,
   parseRecognizedUnsupportedEntryPoint,
   parseSupportedEntryPoint,
 } from "./entry-points/index.js";
 import { parseExpression } from "./expression-parser.js";
 import {
   parseDrawInstruction,
+  parseOpponentEffectFieldRemovalProtectionInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseRestOpponentCharactersInstruction,
+  parseThisCharacterKeywordGrantInstruction,
   parseTrashFromHandInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
 } from "./instructions/index.js";
@@ -19,6 +25,7 @@ import {
   type EffectLineParserRegistry,
 } from "./orchestrator.js";
 import {
+  conditionalContinuousExpressionParser,
   conditionalExpressionSegmentParser,
   instructionExpressionSegmentParser,
   syntheticInstructionSegmentParser,
@@ -33,7 +40,15 @@ const instructionParsers = [
   parseYourLeaderPowerOpponentNextEndInstruction,
 ] as const;
 
-const conditionParsers = [parseOpponentRestedCharactersCondition] as const;
+const conditionParsers = [
+  parseOpponentRestedCharactersCondition,
+  parseTrashCountCondition,
+] as const;
+
+const continuousInstructionParsers = [
+  parseOpponentEffectFieldRemovalProtectionInstruction,
+  parseThisCharacterKeywordGrantInstruction,
+] as const;
 
 export function parseCardEffectLine(
   text: string,
@@ -49,9 +64,18 @@ export function parseCardEffectLineDetailed(
 }
 
 const defaultRegistry = {
-  entryPoints: [parseSupportedEntryPoint, parseRecognizedUnsupportedEntryPoint],
+  entryPoints: [
+    parseSupportedEntryPoint,
+    parseRecognizedUnsupportedEntryPoint,
+    parseImplicitPermanentEntryPoint,
+  ],
   markers: [parseOncePerTurnMarker],
   expressions: [
+    conditionalContinuousExpressionParser({
+      conditions: conditionParsers,
+      connectors: [parseAndConnector],
+      instructions: continuousInstructionParsers,
+    }),
     (input) =>
       parseExpression(input.text, {
         connectors: [parseThenConnector, parseAndConnector],

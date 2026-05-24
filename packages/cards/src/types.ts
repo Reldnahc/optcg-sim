@@ -17,6 +17,7 @@ export type PrimitiveEvidence =
   | "entry:endOfYourTurn"
   | "entry:eventMain"
   | "entry:eventCounter"
+  | "entry:implicitPermanent"
   | "entrySupport:unsupported"
   | "marker:oncePerTurn"
   | "wrapper:onPlay"
@@ -31,10 +32,12 @@ export type PrimitiveEvidence =
   | "composition:entryExpression"
   | "expression:sequence"
   | "expression:conditional"
+  | "expression:conditionalContinuous"
   | "connector:then"
   | "connector:andOrdered"
   | "condition:synthetic:C"
   | "condition:opponentFieldCount"
+  | "condition:trashCount"
   | "condition:comparator:gte"
   | "condition:threshold:positiveInteger"
   | "instruction:draw"
@@ -42,9 +45,12 @@ export type PrimitiveEvidence =
   | "instruction:rest"
   | "instruction:preventActivation"
   | "instruction:modifyPower"
+  | "instruction:giveProtection"
+  | "instruction:giveKeyword"
   | "instruction:synthetic:A"
   | "instruction:synthetic:B"
   | "instructionSupport:planned"
+  | "keyword:anySupported"
   | "player:self"
   | "player:opponent"
   | "chooser:self"
@@ -52,10 +58,13 @@ export type PrimitiveEvidence =
   | "target:opponentCharacters"
   | "target:thatCharacter"
   | "target:yourLeader"
+  | "target:thisCharacter"
   | "reference:thatCharacter"
+  | "duration:whileConditionTrue"
   | "duration:opponentNextRefreshPhase"
   | "duration:opponentNextEndPhase"
-  | "modifier:positivePower";
+  | "modifier:positivePower"
+  | "protection:opponentEffectFieldRemoval";
 
 export interface PrimitiveNode {
   readonly type: string;
@@ -81,6 +90,7 @@ export interface EntryPointParseResult {
   readonly node: {
     readonly type: "entryPoint";
     readonly trigger: Trigger;
+    readonly category?: EffectCategory;
   };
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
@@ -94,6 +104,10 @@ export interface ExpressionParseResult {
   readonly effect: Effect;
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
+  readonly blockPatch?: {
+    readonly category?: EffectCategory;
+    readonly condition?: Condition;
+  };
 }
 
 export interface EffectBlockPatch {
@@ -150,6 +164,7 @@ export type SegmentParser = (
 export interface ParsedEffectBlock {
   readonly category: EffectCategory;
   readonly trigger: Trigger;
+  readonly condition?: Condition;
   readonly sourcePresencePolicy: SourcePresencePolicy;
   readonly oncePerTurn?: true;
   readonly effect: Effect;

@@ -152,6 +152,109 @@ describe("card effect line parser", () => {
     expect(result?.evidence).toContain("instruction:modifyPower");
   });
 
+  it("parses conditional continuous protection and keyword bodies compositionally", () => {
+    const result = parseCardEffectLine(
+      "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        condition: {
+          type: "trashCount",
+          player: "self",
+          op: "gte",
+          value: 7,
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "giveProtection",
+                target: { type: "self" },
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "trashCount",
+                    player: "self",
+                    op: "gte",
+                    value: 7,
+                  },
+                },
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "giveKeyword",
+                target: { type: "self" },
+                keyword: "blocker",
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "trashCount",
+                    player: "self",
+                    op: "gte",
+                    value: 7,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toContain("entry:implicitPermanent");
+    expect(result?.evidence).toContain("condition:trashCount");
+    expect(result?.evidence).toContain("instruction:giveProtection");
+    expect(result?.evidence).toContain("instruction:giveKeyword");
+    expect(result?.evidence).toContain("keyword:anySupported");
+  });
+
+  it("parses conditional continuous protection without requiring keyword text", () => {
+    expect(
+      parseCardEffectLine(
+        "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects.",
+      ),
+    ).toMatchObject({
+      block: {
+        category: "permanent",
+        effect: {
+          type: "giveProtection",
+          target: { type: "self" },
+        },
+      },
+    });
+  });
+
+  it("parses conditional continuous keyword before protection", () => {
+    expect(
+      parseCardEffectLine(
+        "If you have 7 or more cards in your trash, this Character gains [Banish] and cannot be removed from the field by your opponent's effects.",
+      ),
+    ).toMatchObject({
+      block: {
+        category: "permanent",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: { type: "giveKeyword", keyword: "banish" },
+            },
+            {
+              connector: "then",
+              effect: { type: "giveProtection" },
+            },
+          ],
+        },
+      },
+    });
+  });
+
   it("fails closed for unknown entry points", () => {
     expect(parseCardEffectLine("[Unknown] Draw 1 card.")).toBeUndefined();
   });

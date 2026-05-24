@@ -1,3 +1,4 @@
+export { conditionalContinuousExpressionParser } from "./conditional-continuous.js";
 export {
   conditionalExpressionSegmentParser,
   instructionExpressionSegmentParser,

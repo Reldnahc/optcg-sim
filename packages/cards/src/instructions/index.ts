@@ -1,3 +1,7 @@
+export {
+  parseOpponentEffectFieldRemovalProtectionInstruction,
+  parseThisCharacterKeywordGrantInstruction,
+} from "./continuous-field-effects.js";
 export { parseDrawInstruction } from "./draw.js";
 export {
   parsePreventThatCharacterRefreshInstruction,
