@@ -108,6 +108,19 @@ const stageSearchPlan = (effect: Effect): SearchRequest | null => {
   return request;
 };
 
+export const isSupportedStartOfGameEffectBlock = (
+  block: EffectBlock,
+): boolean =>
+  block.category === "auto" &&
+  block.trigger.type === "startOfGame" &&
+  block.cost === undefined &&
+  block.condition === undefined &&
+  block.conditionTiming === undefined &&
+  block.failurePolicy === undefined &&
+  block.optional !== true &&
+  block.sourcePresencePolicy === "noSourceRequired" &&
+  stageSearchPlan(block.effect) !== null;
+
 const findStageCandidates = (
   player: PlayerState,
   manifest: MatchCardManifest,

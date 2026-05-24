@@ -324,7 +324,7 @@ const isPermanentBlock = (
 ): boolean =>
   block.category === "permanent" && block.trigger.type === "permanent";
 
-const isSupportedPermanentContinuousShape = (
+export const isSupportedPermanentContinuousEffectBlock = (
   block: EffectDefinition["effects"][number],
 ): boolean => {
   if (!isPermanentBlock(block)) return false;
@@ -367,7 +367,7 @@ export const hasCombatSafeImplementedDslDefinition = (
   if (!hasPermanentBlock) return false;
   return definition.effects.every(
     (block) =>
-      isSupportedPermanentContinuousShape(block) ||
+      isSupportedPermanentContinuousEffectBlock(block) ||
       isSupportedNonPermanentCombatSafeBlock(block),
   );
 };

@@ -52,6 +52,9 @@ importers:
 
   packages/cards:
     dependencies:
+      "@optcg/engine-core":
+        specifier: workspace:*
+        version: link:../engine-core
       "@optcg/types":
         specifier: workspace:*
         version: link:../types

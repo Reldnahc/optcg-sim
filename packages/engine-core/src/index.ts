@@ -28,3 +28,5 @@ export {
 } from "./actions.js";
 export { computeView } from "./compute-view.js";
 export { filterStateForPlayer } from "./filter-state-for-player.js";
+export { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
+export type { RuntimeSupportAdmissionResult } from "./effect-runtime-admission.js";

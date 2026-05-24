@@ -16,6 +16,7 @@
     "test": "corepack pnpm exec vitest run --root ../.. packages/cards/src"
   },
   "dependencies": {
+    "@optcg/engine-core": "workspace:*",
     "@optcg/types": "workspace:*"
   }
 }
