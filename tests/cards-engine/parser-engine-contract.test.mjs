@@ -435,7 +435,7 @@ test("cards parser emits keyword-only permanent primitives accepted by engine ma
   );
 });
 
-test("cards parser emits protection-only permanent primitives while broad engine materialization fails closed", () => {
+test("cards parser emits protection-only permanent primitives accepted by broad engine materialization", () => {
   const effectBlock = parseSupportedEffectBlock(
     "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects.",
     [
@@ -469,11 +469,11 @@ test("cards parser emits protection-only permanent primitives while broad engine
       },
       definitionId,
     ),
-    false,
+    true,
   );
 });
 
-test("cards parser emits broad field-removal protection primitives while current engine materialization fails closed", () => {
+test("cards parser emits broad field-removal protection primitives accepted by engine materialization", () => {
   const effectBlock = parseSupportedEffectBlock(
     "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].",
     [
@@ -513,6 +513,6 @@ test("cards parser emits broad field-removal protection primitives while current
       },
       definitionId,
     ),
-    false,
+    true,
   );
 });

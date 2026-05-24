@@ -5,6 +5,7 @@ import type {
   GameState,
   PlayerId,
   Protection,
+  ProtectionFieldRemovalClassification,
   ReplacementProcess,
 } from "@optcg/types";
 
@@ -29,7 +30,7 @@ export interface FieldRemovalProtectionError {
 
 type FieldRemovalAttempt = {
   processFamily: "fieldRemoval";
-  classification: "moveFromFieldToTrash";
+  classification: ProtectionFieldRemovalClassification;
   sourceKind: "cardEffect" | "cost";
   sourceControllerId: PlayerId;
 };
@@ -48,6 +49,19 @@ type FieldRemovalProtectionEffect = ContinuousEffectRecord & {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+
+const supportedFieldRemovalClassifications = new Set([
+  "moveFromFieldToTrash",
+  "moveFromFieldToHand",
+  "moveFromFieldToDeck",
+  "moveFromFieldToLife",
+  "moveFromFieldToOtherZone",
+]);
+
+const isSupportedFieldRemovalClassification = (
+  value: unknown,
+): value is ProtectionFieldRemovalClassification =>
+  typeof value === "string" && supportedFieldRemovalClassifications.has(value);
 
 export const isFieldRemovalProtectionModifier = (
   effect: ContinuousEffectRecord,
@@ -198,7 +212,13 @@ const attemptFromProcess = (
   if (attempt["processFamily"] !== "fieldRemoval") {
     return { ok: false, reason: "ambiguous-field-removal-source" };
   }
-  if (attempt["classification"] !== "moveFromFieldToTrash") {
+  if (!isSupportedFieldRemovalClassification(attempt["classification"])) {
+    return { ok: false, reason: "unsupported-field-removal-destination" };
+  }
+  if (
+    process.type !== "moveZone" &&
+    attempt["classification"] !== "moveFromFieldToTrash"
+  ) {
     return { ok: false, reason: "unsupported-field-removal-destination" };
   }
   if (
@@ -214,11 +234,25 @@ const attemptFromProcess = (
     ok: true,
     attempt: {
       processFamily: "fieldRemoval",
-      classification: "moveFromFieldToTrash",
+      classification: attempt["classification"],
       sourceKind: attempt["sourceKind"],
       sourceControllerId: attempt["sourceControllerId"] as PlayerId,
     },
   };
+};
+
+const protectionCoversAttempt = (
+  protection: Protection,
+  attempt: FieldRemovalAttempt,
+): boolean => {
+  if (protection.process !== "fieldRemoval") {
+    return false;
+  }
+  const classification = protection.fieldRemoval.classification;
+  return (
+    classification === "moveFromFieldToOtherZone" ||
+    classification === attempt.classification
+  );
 };
 
 export const applyFieldRemovalProtection = (
@@ -241,6 +275,9 @@ export const applyFieldRemovalProtection = (
     ok: true,
     prevented:
       attempt.attempt.sourceKind === "cardEffect" &&
-      attempt.attempt.sourceControllerId !== target.controller,
+      attempt.attempt.sourceControllerId !== target.controller &&
+      protections.protections.some((protection) =>
+        protectionCoversAttempt(protection, attempt.attempt),
+      ),
   };
 };

@@ -3,6 +3,14 @@ import type { ContinuousEffectRecord, Protection } from "@optcg/types";
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+const supportedFieldRemovalClassifications = new Set([
+  "moveFromFieldToTrash",
+  "moveFromFieldToHand",
+  "moveFromFieldToDeck",
+  "moveFromFieldToLife",
+  "moveFromFieldToOtherZone",
+]);
+
 export const isSupportedFieldRemovalProtection = (
   protection: Protection,
 ): protection is Extract<Protection, { process: "fieldRemoval" }> => {
@@ -13,7 +21,8 @@ export const isSupportedFieldRemovalProtection = (
   if (!isRecord(exclusions)) return false;
   return (
     metadata["processFamily"] === "fieldRemoval" &&
-    metadata["classification"] === "moveFromFieldToTrash" &&
+    typeof metadata["classification"] === "string" &&
+    supportedFieldRemovalClassifications.has(metadata["classification"]) &&
     metadata["sourceKind"] === "cardEffect" &&
     metadata["sourceControllerRelation"] === "opponentControlled" &&
     metadata["targetScope"] === "thisCard" &&
