@@ -13,8 +13,13 @@ import {
 } from "../../packages/engine-core/src/effect-runtime-continuous.ts";
 import { isSupportedQueuedEffectConditionShape } from "../../packages/engine-core/src/effect-runtime-conditions.ts";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "../../packages/engine-core/src/effect-runtime-sequence-support.ts";
+import { createSupportedSearchRevealTransientSet } from "../../packages/engine-core/src/effect-runtime-search-reveal.ts";
 import { isSupportedWhenAttackingCompatibleQueuedEffect } from "../../packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts";
 import { isSupportedOnKOCompatibleQueuedEffect } from "../../packages/engine-core/src/effect-runtime-trigger-queueing-ko.ts";
+import {
+  createActiveState,
+  queueDrawForP1,
+} from "../../packages/engine-core/src/effect-runtime-queue-processing-test-support.ts";
 
 const parseSupportedEffectBlock = (text, evidence = []) => {
   const parsed = parseCardEffectLine(text);
@@ -221,6 +226,34 @@ test("cards parser emits planned field-effect primitives while current engine su
     ),
     false,
   );
+});
+
+test("cards parser emits top-of-deck type search accepted by engine search-reveal support", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    [
+      "entry:onPlay",
+      "instruction:search",
+      "look:topDeck",
+      "filter:type",
+      "cardinality:upTo",
+      "destination:hand",
+      "reveal:bothPlayers",
+      "remaining:bottomDeck",
+      "order:anyOrder",
+    ],
+  );
+
+  assert.equal(effectBlock.effect.type, "search");
+  assert.deepEqual(effectBlock.effect.request.filter, {
+    typesAny: ["Five Elders"],
+  });
+  const result = createSupportedSearchRevealTransientSet(
+    createActiveState(),
+    queueDrawForP1(),
+    effectBlock.effect,
+  );
+  assert.equal(result.ok, true);
 });
 
 test("cards parser emits keyword-only permanent primitives accepted by engine materialization", () => {

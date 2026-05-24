@@ -32,6 +32,7 @@ import {
   conditionalExpressionSegmentParser,
   costedEffectExpressionParser,
   instructionExpressionSegmentParser,
+  searchRevealExpressionParser,
   syntheticInstructionSegmentParser,
 } from "./segments/index.js";
 import type { ParsedEffectLine, ParseCardEffectLineResult } from "./types.js";
@@ -90,6 +91,7 @@ const defaultRegistry = {
     costedEffectExpressionParser({
       instructions: instructionParsers,
     }),
+    searchRevealExpressionParser,
     (input) =>
       parseExpression(input.text, {
         connectors: [parseThenConnector, parseAndConnector],

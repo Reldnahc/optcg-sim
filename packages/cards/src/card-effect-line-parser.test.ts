@@ -304,6 +304,54 @@ describe("card effect line parser", () => {
     });
   });
 
+  it("parses top-of-deck type search reveal as one reusable search request", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "search",
+          request: {
+            zone: "deck",
+            player: "self",
+            lookCount: 5,
+            filter: { typesAny: ["Five Elders"] },
+            min: 0,
+            max: 1,
+            destination: "hand",
+            revealTo: "bothPlayers",
+            remainingCards: {
+              destination: "deck",
+              position: "bottom",
+              order: "ownerChoice",
+            },
+            shuffleAfter: false,
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:search",
+        "look:topDeck",
+        "zone:deck",
+        "count:positiveInteger",
+        "filter:type",
+        "cardinality:upTo",
+        "destination:hand",
+        "reveal:bothPlayers",
+        "remaining:rest",
+        "remaining:bottomDeck",
+        "order:anyOrder",
+      ]),
+    );
+  });
+
   it("fails closed for unknown entry points", () => {
     expect(parseCardEffectLine("[Unknown] Draw 1 card.")).toBeUndefined();
   });
