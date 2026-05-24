@@ -5,4 +5,5 @@ export {
   parseOptionalCostSequence,
   type OptionalCostSequenceParseResult,
 } from "./sequence.js";
+export { parseRestSelfCost } from "./rest-self.js";
 export { parseTrashFromHandCost } from "./trash-from-hand.js";

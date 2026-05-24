@@ -40,6 +40,12 @@ const supportedEntryPoints: readonly SupportedEntryPoint[] = [
     category: "activate",
     evidence: ["entry:activateMain", "sourcePresence:mustRemain"],
   },
+  {
+    text: "[Your Turn]",
+    trigger: { type: "permanent" },
+    category: "permanent",
+    evidence: ["entry:yourTurn", "sourcePresence:mustRemain"],
+  },
 ];
 
 export function parseSupportedEntryPoint(

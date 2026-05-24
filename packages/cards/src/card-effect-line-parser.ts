@@ -22,7 +22,9 @@ import {
   parseThisCharacterKeywordGrantInstruction,
   parseTrashAllYourCharactersInstruction,
   parseTrashFromHandInstruction,
+  parseYourLeaderConditionalPowerInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
+  parsePlayFromHandInstruction,
 } from "./instructions/index.js";
 import { parseOncePerTurnMarker } from "./markers/index.js";
 import {
@@ -52,6 +54,7 @@ const instructionParsers = [
   parseDrawInstruction,
   parseTrashFromHandInstruction,
   parseTrashAllYourCharactersInstruction,
+  parsePlayFromHandInstruction,
   parsePlayFromTrashInstruction,
   parseModifyPowerInstruction,
   parseRestOpponentCharactersInstruction,
@@ -69,6 +72,7 @@ const conditionParsers = [
 const continuousInstructionParsers = [
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseThisCharacterKeywordGrantInstruction,
+  parseYourLeaderConditionalPowerInstruction,
 ] as const;
 
 const generalExpressionParser = (input: ParseInput) =>

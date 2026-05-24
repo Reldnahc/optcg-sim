@@ -6,9 +6,14 @@ import {
   type CostParseResult,
   type SequenceCostPrimitive,
 } from "./rest-don.js";
+import { parseRestSelfCost } from "./rest-self.js";
 import { parseTrashFromHandCost } from "./trash-from-hand.js";
 
-const costParsers = [parseRestDonCost, parseTrashFromHandCost] as const;
+const costParsers = [
+  parseRestSelfCost,
+  parseRestDonCost,
+  parseTrashFromHandCost,
+] as const;
 
 export interface OptionalCostSequenceParseResult {
   readonly cost: OptionalCost;
@@ -29,10 +34,15 @@ export function parseOptionalCostSequence(
   }
 
   const parsedCosts: CostParseResult[] = [];
-  for (const part of parts) {
-    const parsed = parseCostPart(part);
+  let inheritedAction: "rest" | undefined;
+  for (const [index, part] of parts.entries()) {
+    const text = applyInheritedAction(part, inheritedAction);
+    const parsed = parseCostPart(text);
     if (parsed === undefined || parsed.rest.length > 0) {
       return undefined;
+    }
+    if (index === 0 && /^rest\b/i.test(part)) {
+      inheritedAction = "rest";
     }
     parsedCosts.push(parsed);
   }
@@ -59,6 +69,8 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
         count: cost.count,
         ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
       };
+    case "restSelf":
+      return { type: "restSelf" };
     case "trashFromHand":
       return {
         type: "trashFromHand",
@@ -67,6 +79,17 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
       };
   }
+}
+
+function applyInheritedAction(
+  text: string,
+  inheritedAction: "rest" | undefined,
+): string {
+  if (inheritedAction === undefined || /^(?:rest|trash)\b/i.test(text)) {
+    return text;
+  }
+
+  return `${inheritedAction} ${text}`;
 }
 
 function parseCostPart(text: string): CostParseResult | undefined {

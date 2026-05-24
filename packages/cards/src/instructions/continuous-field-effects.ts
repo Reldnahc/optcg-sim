@@ -1,7 +1,11 @@
 import type { Condition } from "@optcg/types";
 
 import { parseKeyword } from "../keywords/index.js";
-import { parseThisCharacterTarget } from "../targets/index.js";
+import { parsePositivePowerModifier } from "../modifiers/index.js";
+import {
+  parseThisCharacterTarget,
+  parseYourLeaderTarget,
+} from "../targets/index.js";
 import type { InstructionParseResult, ParseInput } from "../types.js";
 
 export interface ContinuousInstructionContext {
@@ -18,6 +22,15 @@ export const thisCharacterKeywordGrantPrimitive = {
   childPrimitiveIds: [
     "target:thisCharacter",
     "keyword:anySupported",
+    "duration:whileConditionTrue",
+  ],
+} as const;
+
+export const yourLeaderConditionalPowerPrimitive = {
+  primitiveId: "instruction:modifyPower",
+  childPrimitiveIds: [
+    "target:yourLeader",
+    "modifier:positivePower",
     "duration:whileConditionTrue",
   ],
 } as const;
@@ -54,6 +67,47 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
         "instruction:giveKeyword",
         ...target.evidence,
         ...keyword.evidence,
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    };
+  };
+
+export const parseYourLeaderConditionalPowerInstruction: ContinuousInstructionParser =
+  (input, context) => {
+    const target = parseYourLeaderTarget(input);
+    if (target?.target === undefined) {
+      return undefined;
+    }
+
+    const actionMatch = /^gains\s+(?<rest>.*)$/i.exec(target.rest);
+    const modifierText = actionMatch?.groups?.["rest"];
+    if (modifierText === undefined) {
+      return undefined;
+    }
+
+    const modifier = parsePositivePowerModifier({ text: modifierText });
+    if (
+      modifier === undefined ||
+      (modifier.rest.length > 0 && modifier.rest !== ".")
+    ) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "modifyPower",
+        target: target.target,
+        value: modifier.value,
+        duration: {
+          type: "whileConditionTrue",
+          condition: context.condition,
+        },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        ...target.evidence,
+        ...modifier.evidence,
         "duration:whileConditionTrue",
       ],
       rest: "",

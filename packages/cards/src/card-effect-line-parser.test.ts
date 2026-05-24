@@ -674,6 +674,135 @@ describe("card effect line parser", () => {
     );
   });
 
+  it("parses Your Turn conditional Leader power as continuous primitives", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] If you have 19 or more cards in your trash, your Leader gains +1000 power.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        condition: {
+          type: "trashCount",
+          player: "self",
+          op: "gte",
+          value: 19,
+        },
+        effect: {
+          type: "modifyPower",
+          target: { type: "myLeader" },
+          value: 1000,
+          duration: { type: "whileConditionTrue" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:yourTurn",
+        "expression:conditionalContinuous",
+        "condition:trashCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "target:yourLeader",
+        "modifier:positivePower",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
+
+  it("parses Activate Main rest-cost play-from-hand with dynamic cost predicate compositionally", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] You may rest this card and 3 of your DON!! cards: Play up to 1 black {Five Elders} type Character card with a cost equal to or less than the number of DON!! cards on your field from your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "activateMain" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "paidCost",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "sequence",
+                  optional: true,
+                  costs: [
+                    { type: "restSelf" },
+                    { type: "restDon", count: 3, chooser: "self" },
+                  ],
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    saveResultAs: "handSelection:play-from-hand",
+                    effect: {
+                      type: "selectCards",
+                      zone: "hand",
+                      player: "self",
+                      chooser: "self",
+                      min: 0,
+                      max: 1,
+                      filter: {
+                        colorsAny: ["black"],
+                        categories: ["character"],
+                        typesAny: ["Five Elders"],
+                        custom: "costLteSelfDonFieldCount",
+                      },
+                      saveAs: "handSelection:play-from-hand",
+                      visibility: "chooserOnly",
+                    },
+                  },
+                  {
+                    connector: "ifPossible",
+                    effect: {
+                      type: "playSelected",
+                      selection: "handSelection:play-from-hand",
+                      ignoreCost: true,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activateMain",
+        "composition:optionalCostedEffect",
+        "composition:costSequence",
+        "cost:restSelf",
+        "target:thisCard",
+        "cost:restDon",
+        "cardinality:exact",
+        "target:yourDonCards",
+        "instruction:playSelected",
+        "zone:hand",
+        "filter:color",
+        "filter:type",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "valueSource:donFieldCount:self",
+        "composition:selectThenPlay",
+      ]),
+    );
+  });
+
   it("fails closed for unknown entry points", () => {
     expect(parseCardEffectLine("[Unknown] Draw 1 card.")).toBeUndefined();
   });

@@ -27,6 +27,7 @@ const predicateParsers: readonly PredicateParser[] = [
   parseEventCategoryPredicate,
   parseCharacterCategoryPredicate,
   parsePowerPredicate,
+  parseDynamicDonFieldCostPredicate,
   parseCostPredicate,
   parseNameExclusionPredicate,
   parseNamePredicate,
@@ -268,6 +269,29 @@ function parseCostPredicate(
       "condition:threshold:positiveInteger",
     ],
     rest: restText ?? "",
+  };
+}
+
+function parseDynamicDonFieldCostPredicate(
+  text: string,
+  current: CardFilter,
+): ReturnType<PredicateParser> {
+  const match =
+    /^a cost equal to or less than the number of DON!! cards on your field\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, custom: "costLteSelfDonFieldCount" },
+    evidence: [
+      "filter:cost",
+      "condition:comparator:lte",
+      "valueSource:donFieldCount:self",
+    ],
+    rest: match.groups?.["rest"] ?? "",
   };
 }
 
