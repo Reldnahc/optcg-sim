@@ -45,14 +45,12 @@ describe("continuous protection instruction parser", () => {
         protection: {
           process: "fieldRemoval",
           fieldRemoval: {
+            classification: "moveFromFieldToTrash",
             sourceKind: "cardEffect",
             sourceControllerRelation: "opponentControlled",
           },
         },
-        duration: {
-          type: "whileConditionTrue",
-          condition: context.condition,
-        },
+        duration: { type: "permanent" },
       },
       evidence: [
         "instruction:giveProtection",

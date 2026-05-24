@@ -82,10 +82,7 @@ function buildProtectionEffect(options: {
       sourceKind: options.sourceKind,
       sourceControllerRelation: options.sourceControllerRelation,
     }),
-    duration: {
-      type: "whileConditionTrue",
-      condition: options.context.condition,
-    },
+    duration: { type: "permanent" },
   };
 }
 
@@ -97,7 +94,7 @@ function fieldRemovalProtection(options: {
     process: "fieldRemoval",
     fieldRemoval: {
       processFamily: "fieldRemoval",
-      classification: "moveFromFieldToOtherZone",
+      classification: "moveFromFieldToTrash",
       sourceKind: options.sourceKind,
       sourceControllerRelation: options.sourceControllerRelation,
       targetScope: "thisCard",

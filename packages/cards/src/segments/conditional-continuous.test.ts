@@ -57,7 +57,7 @@ describe("conditional continuous expression parser", () => {
             effect: { type: "giveProtection" },
           },
           {
-            connector: "then",
+            connector: "always",
             effect: { type: "giveKeyword", keyword: "blocker" },
           },
         ],
@@ -72,7 +72,7 @@ describe("conditional continuous expression parser", () => {
             effect: { type: "giveKeyword", keyword: "doubleAttack" },
           },
           {
-            connector: "then",
+            connector: "always",
             effect: { type: "giveProtection" },
           },
         ],

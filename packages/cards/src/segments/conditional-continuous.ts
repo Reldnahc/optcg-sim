@@ -42,7 +42,7 @@ export function conditionalContinuousExpressionParser(options: {
       }
 
       return {
-        effect: body.effect,
+        effect: normalizeContinuousEffect(body.effect),
         evidence: [
           "expression:conditionalContinuous",
           ...condition.evidence,
@@ -57,6 +57,22 @@ export function conditionalContinuousExpressionParser(options: {
     }
 
     return undefined;
+  };
+}
+
+function normalizeContinuousEffect(
+  effect: ExpressionParseResult["effect"],
+): ExpressionParseResult["effect"] {
+  if (effect.type !== "sequence") {
+    return effect;
+  }
+
+  return {
+    ...effect,
+    effects: effect.effects.map((segment) => ({
+      ...segment,
+      connector: "always",
+    })),
   };
 }
 

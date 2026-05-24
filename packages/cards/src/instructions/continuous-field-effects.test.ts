@@ -49,10 +49,7 @@ describe("continuous field-effect instruction parsers", () => {
         type: "giveKeyword",
         target: { type: "self" },
         keyword,
-        duration: {
-          type: "whileConditionTrue",
-          condition: context.condition,
-        },
+        duration: { type: "permanent" },
       },
       evidence: [
         "instruction:giveKeyword",

@@ -175,32 +175,16 @@ describe("card effect line parser", () => {
               effect: {
                 type: "giveProtection",
                 target: { type: "self" },
-                duration: {
-                  type: "whileConditionTrue",
-                  condition: {
-                    type: "trashCount",
-                    player: "self",
-                    op: "gte",
-                    value: 7,
-                  },
-                },
+                duration: { type: "permanent" },
               },
             },
             {
-              connector: "then",
+              connector: "always",
               effect: {
                 type: "giveKeyword",
                 target: { type: "self" },
                 keyword: "blocker",
-                duration: {
-                  type: "whileConditionTrue",
-                  condition: {
-                    type: "trashCount",
-                    player: "self",
-                    op: "gte",
-                    value: 7,
-                  },
-                },
+                duration: { type: "permanent" },
               },
             },
           ],
@@ -246,7 +230,7 @@ describe("card effect line parser", () => {
               effect: { type: "giveKeyword", keyword: "banish" },
             },
             {
-              connector: "then",
+              connector: "always",
               effect: { type: "giveProtection" },
             },
           ],

@@ -23,7 +23,7 @@ export const thisCharacterKeywordGrantPrimitive = {
 } as const;
 
 export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionParser =
-  (input, context) => {
+  (input) => {
     const target = parseThisCharacterTarget({
       text: input.text,
       allowImplicit: true,
@@ -48,10 +48,7 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
         type: "giveKeyword",
         target: { type: "self" },
         keyword: keyword.keyword,
-        duration: {
-          type: "whileConditionTrue",
-          condition: context.condition,
-        },
+        duration: { type: "permanent" },
       },
       evidence: [
         "instruction:giveKeyword",
