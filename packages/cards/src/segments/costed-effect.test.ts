@@ -4,13 +4,30 @@ import { parseDrawInstruction } from "../instructions/index.js";
 import { costedEffectExpressionParser } from "./costed-effect.js";
 
 describe("costed effect expression parser", () => {
-  it("parses return-DON cost and delegates body parsing to normal instructions", () => {
+  it("parses return-DON cost as an engine-supported payCost sequence segment", () => {
     expect(
       costedEffectExpressionParser({
         instructions: [parseDrawInstruction],
       })({ text: "DON!! −1: Draw 1 card." }),
     ).toEqual({
-      effect: { type: "draw", count: 1, player: "self" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "cost:return-don",
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: { type: "returnDon", count: 1, optional: true },
+            },
+          },
+          {
+            id: "body:after-cost",
+            connector: "ifYouDo",
+            effect: { type: "draw", count: 1, player: "self" },
+          },
+        ],
+      },
       evidence: [
         "composition:costedEffect",
         "cost:returnDon",
@@ -20,9 +37,6 @@ describe("costed effect expression parser", () => {
         "player:self",
       ],
       rest: "",
-      blockPatch: {
-        cost: { type: "returnDon", count: 1 },
-      },
     });
   });
 });

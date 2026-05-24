@@ -25,16 +25,30 @@ export function costedEffectExpressionParser(options: {
     }
 
     return {
-      effect: body.effect,
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "cost:return-don",
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: { ...cost.cost, optional: true },
+            },
+          },
+          {
+            id: "body:after-cost",
+            connector: "ifYouDo",
+            effect: body.effect,
+          },
+        ],
+      },
       evidence: [
         "composition:costedEffect",
         ...cost.evidence,
         ...body.evidence,
       ],
       rest: "",
-      blockPatch: {
-        cost: cost.cost,
-      },
     };
   };
 }

@@ -255,14 +255,30 @@ describe("card effect line parser", () => {
     });
   });
 
-  it("parses return-DON cost into an On Play draw block", () => {
+  it("parses return-DON cost into an engine-supported On Play payCost sequence", () => {
     expect(parseCardEffectLine("[On Play] DON!! −1: Draw 1 card.")).toEqual({
       block: {
         category: "auto",
         trigger: { type: "onPlay" },
         sourcePresencePolicy: "mustRemainInSameZone",
-        cost: { type: "returnDon", count: 1 },
-        effect: { type: "draw", count: 1, player: "self" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              id: "cost:return-don",
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 1, optional: true },
+              },
+            },
+            {
+              id: "body:after-cost",
+              connector: "ifYouDo",
+              effect: { type: "draw", count: 1, player: "self" },
+            },
+          ],
+        },
       },
       evidence: [
         "entry:onPlay",

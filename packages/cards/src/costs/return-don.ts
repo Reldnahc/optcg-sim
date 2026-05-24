@@ -2,8 +2,10 @@ import type { EffectBlockCost } from "@optcg/types";
 
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
 
+type ReturnDonCost = Extract<EffectBlockCost, { type: "returnDon" }>;
+
 export interface CostParseResult {
-  readonly cost: EffectBlockCost;
+  readonly cost: ReturnDonCost;
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
 }
