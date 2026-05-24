@@ -36,15 +36,13 @@ describe("composed expression segment parsers", () => {
           {
             connector: "always",
             effect: {
-              type: "custom",
-              handler: "planned:restOpponentCharacters",
+              type: "sequence",
             },
           },
           {
             connector: "then",
             effect: {
-              type: "custom",
-              handler: "planned:preventThatCharacterOpponentNextRefresh",
+              type: "cannotBecomeActive",
             },
           },
         ],
@@ -71,8 +69,7 @@ describe("composed expression segment parsers", () => {
           value: 2,
         },
         then: {
-          type: "custom",
-          handler: "planned:yourLeaderPowerOpponentNextEnd",
+          type: "modifyPower",
         },
       },
     });
@@ -97,8 +94,7 @@ describe("composed expression segment parsers", () => {
         },
       },
       effect: {
-        type: "custom",
-        handler: "planned:yourLeaderPowerOpponentNextEnd",
+        type: "modifyPower",
       },
     });
   });
@@ -134,15 +130,13 @@ describe("composed expression segment parsers", () => {
                 {
                   connector: "always",
                   effect: {
-                    type: "custom",
-                    handler: "planned:restOpponentCharacters",
+                    type: "sequence",
                   },
                 },
                 {
                   connector: "then",
                   effect: {
-                    type: "custom",
-                    handler: "planned:preventThatCharacterOpponentNextRefresh",
+                    type: "cannotBecomeActive",
                   },
                 },
               ],
@@ -153,8 +147,7 @@ describe("composed expression segment parsers", () => {
             effect: {
               type: "conditional",
               then: {
-                type: "custom",
-                handler: "planned:yourLeaderPowerOpponentNextEnd",
+                type: "modifyPower",
               },
             },
           },

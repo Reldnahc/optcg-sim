@@ -85,4 +85,29 @@ describe("continuous protection instruction parser", () => {
       ],
     });
   });
+
+  it("parses effect K.O. protection without falling back to planned custom support", () => {
+    expect(
+      parseProtectionInstruction(
+        {
+          text: "This Character cannot be K.O.'d by effects.",
+        },
+        context,
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "protectFromKO",
+        target: { type: "self" },
+        duration: { type: "permanent" },
+      },
+      evidence: [
+        "instruction:giveProtection",
+        "target:thisCharacter",
+        "protectionProcess:ko",
+        "protectionSource:effects",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
 });

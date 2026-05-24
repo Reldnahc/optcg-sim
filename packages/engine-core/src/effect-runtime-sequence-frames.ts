@@ -35,7 +35,13 @@ import {
   resumeSequenceFrameAfterHandSelection as resumeSequenceFrameAfterHandSelectionHelper,
   resumeSequenceFrameAfterTrashFromHand as resumeSequenceFrameAfterTrashFromHandHelper,
 } from "./effect-runtime-sequence-select-cards.js";
-import { applySavedFieldObjectKoSequenceSegment } from "./effect-runtime-sequence-saved-field-object.js";
+import {
+  applySavedFieldObjectKoSequenceSegment,
+  applySavedFieldObjectRestSequenceSegment,
+  applySavedFieldObjectRestrictionSequenceSegment,
+} from "./effect-runtime-sequence-saved-field-object.js";
+import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import { createContinuousRecordsForResolvedEffect } from "./effect-runtime-continuous.js";
 import {
   applySelectTargetsSequenceSegment,
   resumeSequenceFrameAfterSelectTargets as resumeSequenceFrameAfterSelectTargetsHelper,
@@ -559,6 +565,89 @@ const continueNoDecisionSegments = (
       nextState = resolvedKo.state;
       nextLedgers = resolvedKo.ledgers;
       events.push(...resolvedKo.events);
+      continue;
+    }
+    if (segment.effect.type === "rest") {
+      const rested = applySavedFieldObjectRestSequenceSegment({
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment,
+        segmentKey,
+        state: nextState,
+      });
+      nextState = rested.state;
+      nextLedgers = rested.ledgers;
+      continue;
+    }
+    if (
+      segment.effect.type === "cannotBecomeActive" ||
+      segment.effect.type === "cannotAttack" ||
+      segment.effect.type === "cannotBlock"
+    ) {
+      const restricted = applySavedFieldObjectRestrictionSequenceSegment({
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers: nextLedgers,
+        segment,
+        segmentKey,
+        state: nextState,
+      });
+      nextState = restricted.state;
+      nextLedgers = restricted.ledgers;
+      continue;
+    }
+    if (segment.effect.type === "conditional") {
+      const condition = evaluateQueuedEffectCondition(
+        nextState,
+        entry,
+        segment.effect.if,
+      );
+      if (!condition.supported) {
+        return { ok: false };
+      }
+      if (!condition.passed) {
+        nextLedgers = {
+          ...nextLedgers,
+          segmentResults: {
+            ...nextLedgers.segmentResults,
+            [segmentKey(segment, index)]: {
+              ...emptySegmentResult(),
+              attempted: true,
+            },
+          },
+        };
+        continue;
+      }
+      const records = createContinuousRecordsForResolvedEffect(
+        nextState,
+        entry,
+        segment.effect.then,
+      );
+      if (records === null) {
+        return { ok: false };
+      }
+      nextState =
+        records.length === 0
+          ? nextState
+          : {
+              ...nextState,
+              continuousEffects: [...nextState.continuousEffects, ...records],
+            };
+      nextLedgers = {
+        ...nextLedgers,
+        segmentResults: {
+          ...nextLedgers.segmentResults,
+          [segmentKey(segment, index)]: {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: records.length > 0,
+          },
+        },
+      };
       continue;
     }
     const decisionResult = createTrashDecision(

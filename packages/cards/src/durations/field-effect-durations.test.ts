@@ -31,6 +31,7 @@ describe("field-effect duration parsers", () => {
         text: "in your opponent's next Refresh Phase.",
       }),
     ).toEqual({
+      duration: { type: "untilStartOfNextTurn", player: "opponent" },
       evidence: ["duration:opponentNextRefreshPhase"],
       rest: "",
     });
@@ -42,6 +43,7 @@ describe("field-effect duration parsers", () => {
         text: "until the end of your opponent's next End Phase.",
       }),
     ).toEqual({
+      duration: { type: "untilEndOfNextTurn", player: "opponent" },
       evidence: ["duration:opponentNextEndPhase"],
       rest: "",
     });

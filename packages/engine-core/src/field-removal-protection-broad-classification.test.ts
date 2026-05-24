@@ -101,6 +101,20 @@ const fieldRemovalProcess = (
   usedReplacementIds: [],
 });
 
+const koProcess = (
+  target: CardInstance,
+  sourceControllerId = p1,
+  sourceKind: "cardEffect" | "cost" = "cardEffect",
+): ReplacementProcess => ({
+  ...fieldRemovalProcess(
+    target,
+    "moveFromFieldToTrash",
+    sourceControllerId,
+    sourceKind,
+  ),
+  type: "ko",
+});
+
 test("broad field-removal protection blocks opponent effect removal to any other zone", () => {
   const { state, target } = setupProtectedCharacter(
     fieldRemovalProtection("moveFromFieldToOtherZone"),
@@ -134,6 +148,26 @@ test("broad field-removal protection still excludes controller costs", () => {
       target,
       fieldRemovalProcess(target, "moveFromFieldToTrash", p2, "cost"),
     ),
+    { ok: true, prevented: false },
+  );
+});
+
+test("KO protection blocks matching opponent effect K.O. without blocking controller effects", () => {
+  const { state, target } = setupProtectedCharacter({
+    process: "ko",
+    sourceKind: "cardEffect",
+    sourceControllerRelation: "opponentControlled",
+  });
+
+  assert.deepEqual(
+    applyFieldRemovalProtection(state, target, koProcess(target)),
+    {
+      ok: true,
+      prevented: true,
+    },
+  );
+  assert.deepEqual(
+    applyFieldRemovalProtection(state, target, koProcess(target, p2)),
     { ok: true, prevented: false },
   );
 });

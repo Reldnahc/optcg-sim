@@ -272,12 +272,11 @@ test("cards parser keeps recognized unsupported entry points out of engine suppo
   }
 });
 
-test("cards parser emits planned field-effect primitives while current engine support fails closed", () => {
+test("cards parser emits field-control primitives accepted by engine sequence support", () => {
   const effectBlock = parseSupportedEffectBlock(
     "[On Play] Rest up to 1 of your opponent's Characters and that Character will not become active in your opponent's next Refresh Phase. Then, if your opponent has 2 or more rested Characters, your Leader gains +2000 power until the end of your opponent's next End Phase.",
     [
       "entry:onPlay",
-      "instructionSupport:planned",
       "instruction:rest",
       "reference:thatCharacter",
       "instruction:preventActivation",
@@ -291,7 +290,7 @@ test("cards parser emits planned field-effect primitives while current engine su
   );
 
   assert.equal(effectBlock.effect.type, "sequence");
-  assert.ok(conditionalSegment, "expected planned conditional segment");
+  assert.ok(conditionalSegment, "expected conditional segment");
   assert.equal(
     isSupportedQueuedEffectConditionShape(conditionalSegment.effect.if),
     true,
@@ -302,7 +301,7 @@ test("cards parser emits planned field-effect primitives while current engine su
       "onPlay",
       "mustRemainInSameZone",
     ),
-    false,
+    true,
   );
 });
 

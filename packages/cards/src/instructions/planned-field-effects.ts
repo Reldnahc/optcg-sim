@@ -11,6 +11,20 @@ import {
 } from "../targets/index.js";
 import type { InstructionParser } from "../types.js";
 
+const thatCharacterSelectionId = "selected:thatCharacter";
+
+const thatCharacterSavedTarget = {
+  type: "savedFieldObject",
+  binding: {
+    family: "selectedTargets",
+    saveResultAs: thatCharacterSelectionId,
+  },
+  zone: "characterArea",
+  player: "opponent",
+  visibility: "publicOnly",
+  onFailure: "failClosed",
+} as const;
+
 export const restOpponentCharactersPrimitive = {
   primitiveId: "instruction:rest",
   childPrimitiveIds: ["cardinality:upTo", "target:opponentCharacters"],
@@ -53,10 +67,39 @@ export const parseRestOpponentCharactersInstruction: InstructionParser = (
   }
 
   return {
-    effect: { type: "custom", handler: "planned:restOpponentCharacters" },
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:that-character",
+          connector: "always",
+          saveResultAs: thatCharacterSelectionId,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "opponent",
+              zone: "characterArea",
+              filter: { categories: ["character"] },
+              min: cardinality.cardinality.min,
+              max: cardinality.cardinality.max,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+            },
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "rest",
+            target: thatCharacterSavedTarget,
+          },
+        },
+      ],
+    },
     evidence: [
       "instruction:rest",
-      "instructionSupport:planned",
       ...cardinality.evidence,
       "chooser:self:upTo",
       ...target.evidence,
@@ -84,18 +127,22 @@ export const parsePreventThatCharacterRefreshInstruction: InstructionParser = (
   const duration = parseOpponentNextRefreshPhaseDuration({
     text: durationText,
   });
-  if (duration === undefined || duration.rest.length > 0) {
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
     return undefined;
   }
 
   return {
     effect: {
-      type: "custom",
-      handler: "planned:preventThatCharacterOpponentNextRefresh",
+      type: "cannotBecomeActive",
+      target: thatCharacterSavedTarget,
+      duration: duration.duration,
     },
     evidence: [
       "instruction:preventActivation",
-      "instructionSupport:planned",
       ...reference.evidence,
       ...duration.evidence,
     ],
@@ -106,7 +153,7 @@ export const parsePreventThatCharacterRefreshInstruction: InstructionParser = (
 export const parseYourLeaderPowerOpponentNextEndInstruction: InstructionParser =
   (input) => {
     const target = parseYourLeaderTarget(input);
-    if (target === undefined) {
+    if (target === undefined || target.target === undefined) {
       return undefined;
     }
 
@@ -124,18 +171,23 @@ export const parseYourLeaderPowerOpponentNextEndInstruction: InstructionParser =
     const duration = parseOpponentNextEndPhaseDuration({
       text: modifier.rest,
     });
-    if (duration === undefined || duration.rest.length > 0) {
+    if (
+      duration === undefined ||
+      duration.duration === undefined ||
+      duration.rest.length > 0
+    ) {
       return undefined;
     }
 
     return {
       effect: {
-        type: "custom",
-        handler: "planned:yourLeaderPowerOpponentNextEnd",
+        type: "modifyPower",
+        target: target.target,
+        value: modifier.value,
+        duration: duration.duration,
       },
       evidence: [
         "instruction:modifyPower",
-        "instructionSupport:planned",
         ...target.evidence,
         ...modifier.evidence,
         ...duration.evidence,

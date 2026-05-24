@@ -8,9 +8,13 @@ import type {
   SelectTargetsEffect,
   SelectCardsEffect,
   Target,
+  CardFilter,
+  Duration,
 } from "@optcg/types";
 
 import { isSupportedHandSelectionCardFilter } from "./action-state.js";
+import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
+import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
 import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
@@ -20,6 +24,23 @@ type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
 type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 type SearchEffect = Extract<Effect, { type: "search" }>;
 type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
+type RestEffect = Extract<Effect, { type: "rest" }> & {
+  target: Extract<Target, { type: "savedFieldObject" }>;
+};
+type ConditionalContinuousEffect = Extract<Effect, { type: "conditional" }> & {
+  then:
+    | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "cannotBecomeActive" }>
+    | Extract<Effect, { type: "cannotAttack" }>
+    | Extract<Effect, { type: "cannotBlock" }>;
+};
+type SavedTargetContinuousEffect = (
+  | Extract<Effect, { type: "cannotBecomeActive" }>
+  | Extract<Effect, { type: "cannotAttack" }>
+  | Extract<Effect, { type: "cannotBlock" }>
+) & {
+  target: Extract<Target, { type: "savedFieldObject" }>;
+};
 type KoEffect = Extract<Effect, { type: "ko" }> & {
   target: Extract<Target, { type: "savedFieldObject" }>;
 };
@@ -34,6 +55,9 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | SelectCardsEffect
     | SelectTargetsEffect
     | PlaySelectedEffect
+    | RestEffect
+    | SavedTargetContinuousEffect
+    | ConditionalContinuousEffect
     | KoEffect;
 };
 
@@ -315,6 +339,68 @@ const isSupportedKoSegment = (
 ): effect is KoEffect =>
   effect.type === "ko" && isSupportedSavedFieldObjectKoTarget(effect.target);
 
+const supportedPublicFieldTargetFilterKeys = new Set<keyof CardFilter>([
+  "categories",
+  "colorsAny",
+  "cost",
+  "power",
+  "state",
+  "typesAny",
+]);
+
+const isSupportedPublicFieldTargetFilter = (
+  filter: CardFilter | undefined,
+): boolean =>
+  filter === undefined ||
+  Object.keys(filter).every((key) =>
+    supportedPublicFieldTargetFilterKeys.has(key as keyof CardFilter),
+  );
+
+const isSupportedSequenceTargetRequest = (
+  request: SelectTargetsEffect["request"],
+): boolean =>
+  request.timing === "onResolution" &&
+  request.chooser === "self" &&
+  request.zone === "characterArea" &&
+  (request.player === "self" || request.player === "opponent") &&
+  Number.isInteger(request.min) &&
+  Number.isInteger(request.max) &&
+  request.min >= 0 &&
+  request.min <= request.max &&
+  request.max <= 5 &&
+  isSupportedPublicFieldTargetFilter(request.filter);
+
+const isSupportedRestSegment = (
+  effect: SequenceSegmentEffect,
+): effect is RestEffect =>
+  effect.type === "rest" && isSupportedSavedFieldObjectKoTarget(effect.target);
+
+const isSupportedSequenceContinuousDuration = (duration: Duration): boolean =>
+  duration.type === "thisBattle" ||
+  duration.type === "thisTurn" ||
+  duration.type === "whileSourceOnField" ||
+  duration.type === "permanent" ||
+  duration.type === "untilEndOfNextTurn" ||
+  duration.type === "untilStartOfNextTurn" ||
+  duration.type === "untilEndOfTurn";
+
+const isSupportedSavedTargetContinuousSegment = (
+  effect: SequenceSegmentEffect,
+): effect is SavedTargetContinuousEffect =>
+  (effect.type === "cannotBecomeActive" ||
+    effect.type === "cannotAttack" ||
+    effect.type === "cannotBlock") &&
+  isSupportedSavedFieldObjectKoTarget(effect.target) &&
+  isSupportedSequenceContinuousDuration(effect.duration);
+
+const isSupportedConditionalContinuousSegment = (
+  effect: SequenceSegmentEffect,
+): effect is ConditionalContinuousEffect =>
+  effect.type === "conditional" &&
+  effect.else === undefined &&
+  isSupportedQueuedEffectConditionShape(effect.if) &&
+  isSupportedContinuousQueueEffect(effect.then);
+
 const isActivateMainAreaZone = (
   zone: EffectQueueEntry["source"]["zone"],
 ): zone is NonNullable<EffectQueueEntry["source"]["zone"]> =>
@@ -417,33 +503,19 @@ export const toSupportedSequenceBlock = (
       }
       if (segment.effect.type === "selectTargets") {
         const request = segment.effect.request;
-        if (
-          request.timing !== "onResolution" ||
-          request.chooser !== "self" ||
-          request.zone !== "characterArea" ||
-          request.player !== "opponent" ||
-          !Number.isInteger(request.min) ||
-          !Number.isInteger(request.max) ||
-          request.min < 0 ||
-          request.min > request.max ||
-          request.max > 1 ||
-          request.allowFewerIfUnavailable ||
-          (request.filter !== undefined &&
-            (request.filter.categories === undefined ||
-              request.filter.categories.length !== 1 ||
-              request.filter.categories[0] !== "character" ||
-              request.filter.cost === undefined ||
-              "op" in request.filter.cost ||
-              request.filter.cost.min !== undefined ||
-              request.filter.cost.max === undefined ||
-              !Number.isFinite(request.filter.cost.max) ||
-              Object.keys(request.filter).some(
-                (key) => key !== "categories" && key !== "cost",
-              )))
-        ) {
+        if (!isSupportedSequenceTargetRequest(request)) {
           return false;
         }
         supportState.hasPendingDecisionSegment = true;
+        return true;
+      }
+      if (isSupportedRestSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedSavedTargetContinuousSegment(segment.effect)) {
+        return true;
+      }
+      if (isSupportedConditionalContinuousSegment(segment.effect)) {
         return true;
       }
       if (segment.effect.type === "playSelected") {

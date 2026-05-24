@@ -32,16 +32,55 @@ describe("planned field-effect instruction parsers", () => {
     });
   });
 
-  it("parses rest opponent Characters as a planned primitive", () => {
+  it("parses rest opponent Characters as target selection plus rest primitives", () => {
     expect(
       parseRestOpponentCharactersInstruction({
         text: "Rest up to 1 of your opponent's Characters",
       }),
     ).toEqual({
-      effect: { type: "custom", handler: "planned:restOpponentCharacters" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select:that-character",
+            connector: "always",
+            saveResultAs: "selected:thatCharacter",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                filter: { categories: ["character"] },
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "rest",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "selected:thatCharacter",
+                },
+                zone: "characterArea",
+                player: "opponent",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
       evidence: [
         "instruction:rest",
-        "instructionSupport:planned",
         "cardinality:upTo",
         "count:positiveInteger",
         "chooser:self:upTo",
@@ -64,19 +103,29 @@ describe("planned field-effect instruction parsers", () => {
     expect(singular).toEqual(plural);
   });
 
-  it("parses the selected Character refresh lock as a planned primitive", () => {
+  it("parses the selected Character refresh lock as a saved-target restriction", () => {
     expect(
       parsePreventThatCharacterRefreshInstruction({
         text: "that Character will not become active in your opponent's next Refresh Phase.",
       }),
     ).toEqual({
       effect: {
-        type: "custom",
-        handler: "planned:preventThatCharacterOpponentNextRefresh",
+        type: "cannotBecomeActive",
+        target: {
+          type: "savedFieldObject",
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "selected:thatCharacter",
+          },
+          zone: "characterArea",
+          player: "opponent",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+        duration: { type: "untilStartOfNextTurn", player: "opponent" },
       },
       evidence: [
         "instruction:preventActivation",
-        "instructionSupport:planned",
         "reference:thatCharacter",
         "target:thatCharacter",
         "duration:opponentNextRefreshPhase",
@@ -85,19 +134,20 @@ describe("planned field-effect instruction parsers", () => {
     });
   });
 
-  it("parses your Leader power through opponent next End Phase as planned", () => {
+  it("parses your Leader power through opponent next End Phase as a modifier", () => {
     expect(
       parseYourLeaderPowerOpponentNextEndInstruction({
         text: "your Leader gains +2000 power until the end of your opponent's next End Phase.",
       }),
     ).toEqual({
       effect: {
-        type: "custom",
-        handler: "planned:yourLeaderPowerOpponentNextEnd",
+        type: "modifyPower",
+        target: { type: "myLeader" },
+        value: 2000,
+        duration: { type: "untilEndOfNextTurn", player: "opponent" },
       },
       evidence: [
         "instruction:modifyPower",
-        "instructionSupport:planned",
         "target:yourLeader",
         "modifier:positivePower",
         "duration:opponentNextEndPhase",

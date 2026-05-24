@@ -137,6 +137,69 @@ describe("resolvePublicTargetCandidates", () => {
     });
   });
 
+  test("matches public target candidates through reusable metadata and state filters", () => {
+    const state = createActiveState();
+    const redElder = toCardId("red-elder");
+    const blueElder = toCardId("blue-elder");
+    const redStrawHat = toCardId("red-straw-hat");
+    addManifestCard(state, {
+      cardId: redElder,
+      category: "character",
+      cost: 5,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: blueElder,
+      category: "character",
+      cost: 5,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: redStrawHat,
+      category: "character",
+      cost: 5,
+      power: 5000,
+    });
+    state.cardManifest.cards[redElder] = {
+      ...must(state.cardManifest.cards[redElder], "red elder metadata"),
+      colors: ["red"],
+      types: ["Five Elders"],
+    };
+    state.cardManifest.cards[blueElder] = {
+      ...must(state.cardManifest.cards[blueElder], "blue elder metadata"),
+      colors: ["blue"],
+      types: ["Five Elders"],
+    };
+    state.cardManifest.cards[redStrawHat] = {
+      ...must(state.cardManifest.cards[redStrawHat], "red straw hat metadata"),
+      colors: ["red"],
+      types: ["Straw Hat Crew"],
+    };
+    const refs = placeCharacters(state, p1, [redElder, blueElder, redStrawHat]);
+    const player = must(state.players[p1], "p1");
+    const first = must(player.characters[0], "first");
+    const second = must(player.characters[1], "second");
+    const third = must(player.characters[2], "third");
+    first.state = "rested";
+    second.state = "rested";
+    third.state = "active";
+
+    const result = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        filter: {
+          categories: ["character"],
+          colorsAny: ["red"],
+          typesAny: ["Five Elders"],
+          state: "rested",
+        },
+      }),
+      { sourceControllerId: p1 },
+    );
+
+    expect(targetCards(result)).toEqual([refs[0]]);
+  });
+
   test("supports leaderArea and opponent/nonTurnPlayer references with cost equality", () => {
     const state = createActiveState();
     state.turn.turnPlayerId = p1;

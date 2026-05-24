@@ -71,8 +71,14 @@ function buildProtectionEffect(options: {
   readonly sourceKind: "battle" | "cardEffect";
   readonly sourceControllerRelation: "eitherController" | "opponentControlled";
 }): Effect {
-  if (options.process !== "fieldRemoval") {
-    return { type: "custom", handler: "planned:giveProtection" };
+  if (options.process === "ko") {
+    return {
+      type: "protectFromKO",
+      target: { type: "self" },
+      duration: { type: "permanent" },
+      sourceKind: options.sourceKind,
+      sourceControllerRelation: options.sourceControllerRelation,
+    };
   }
 
   return {

@@ -219,6 +219,7 @@ export const createEffectRuntimeQueueResults = (
     entry: EffectQueueEntry,
   ):
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>
     | undefined => {

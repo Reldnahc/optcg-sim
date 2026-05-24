@@ -70,6 +70,12 @@ export const isFieldRemovalProtectionModifier = (
   effect.modifier.operation.type === "protection" &&
   effect.modifier.operation.protection.process === "fieldRemoval";
 
+const isProtectionModifier = (
+  effect: ContinuousEffectRecord,
+): effect is FieldRemovalProtectionEffect =>
+  effect.modifier.layer === "protection" &&
+  effect.modifier.operation.type === "protection";
+
 const isSupportedDuration = (
   duration: ContinuousEffectRecord["duration"],
 ): boolean =>
@@ -120,6 +126,23 @@ export const isSupportedFieldRemovalProtectionModifier = (
   isSupportedDuration(effect.duration) &&
   effect.modifier.target.type === "self" &&
   isSupportedFieldRemovalProtection(effect.modifier.operation.protection);
+
+const isSupportedKoProtection = (protection: Protection): boolean =>
+  protection.process === "ko" &&
+  (protection.sourceKind === "cardEffect" ||
+    protection.sourceKind === "battle") &&
+  (protection.sourceControllerRelation === undefined ||
+    protection.sourceControllerRelation === "opponentControlled" ||
+    protection.sourceControllerRelation === "eitherController");
+
+export const isSupportedProtectionModifier = (
+  effect: ContinuousEffectRecord,
+): boolean =>
+  isProtectionModifier(effect) &&
+  isSupportedDuration(effect.duration) &&
+  effect.modifier.target.type === "self" &&
+  (isSupportedFieldRemovalProtection(effect.modifier.operation.protection) ||
+    isSupportedKoProtection(effect.modifier.operation.protection));
 
 const toConditionQueueEntry = (
   effect: ContinuousEffectRecord,
@@ -179,8 +202,8 @@ export const fieldRemovalProtectionsForCard = (
     ...deriveImplementedDslPermanentContinuousEffects(state),
   ];
   for (const effect of effects) {
-    if (!isFieldRemovalProtectionModifier(effect)) continue;
-    if (!isSupportedFieldRemovalProtectionModifier(effect)) {
+    if (!isProtectionModifier(effect)) continue;
+    if (!isSupportedProtectionModifier(effect)) {
       return { ok: false, reason: "malformed-field-removal-protection" };
     }
     if (!durationIsActive(state, effect)) continue;
@@ -255,6 +278,36 @@ const protectionCoversAttempt = (
   );
 };
 
+const koProtectionCoversAttempt = (
+  protection: Protection,
+  attempt: FieldRemovalAttempt,
+): boolean => {
+  if (protection.process !== "ko") {
+    return false;
+  }
+  if (
+    protection.sourceKind !== undefined &&
+    protection.sourceKind !== attempt.sourceKind
+  ) {
+    return false;
+  }
+  if (protection.sourceControllerRelation === "opponentControlled") {
+    return attempt.sourceControllerId !== "";
+  }
+  return true;
+};
+
+const protectionRequiresOpponentController = (
+  protection: Protection,
+): boolean => {
+  if (protection.process === "fieldRemoval") {
+    return (
+      protection.fieldRemoval.sourceControllerRelation === "opponentControlled"
+    );
+  }
+  return protection.sourceControllerRelation === "opponentControlled";
+};
+
 export const applyFieldRemovalProtection = (
   state: GameState,
   target: CardInstance,
@@ -273,11 +326,19 @@ export const applyFieldRemovalProtection = (
 
   return {
     ok: true,
-    prevented:
-      attempt.attempt.sourceKind === "cardEffect" &&
-      attempt.attempt.sourceControllerId !== target.controller &&
-      protections.protections.some((protection) =>
-        protectionCoversAttempt(protection, attempt.attempt),
-      ),
+    prevented: protections.protections.some((protection) => {
+      if (
+        protectionRequiresOpponentController(protection) &&
+        attempt.attempt.sourceControllerId === target.controller
+      ) {
+        return false;
+      }
+      return (
+        (attempt.attempt.sourceKind === "cardEffect" &&
+          protectionCoversAttempt(protection, attempt.attempt)) ||
+        (process.type === "ko" &&
+          koProtectionCoversAttempt(protection, attempt.attempt))
+      );
+    }),
   };
 };

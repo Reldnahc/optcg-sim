@@ -86,7 +86,7 @@ describe("card effect line parser", () => {
     expect(result?.evidence).toContain("instruction:draw");
   });
 
-  it("parses planned field primitives through composition instead of a full-line template", () => {
+  it("parses field-control primitives through composition instead of planned placeholders", () => {
     const result = parseCardEffectLine(
       "[On Play] Rest up to 1 of your opponent's Characters and that Character will not become active in your opponent's next Refresh Phase. Then, if your opponent has 2 or more rested Characters, your Leader gains +2000 power until the end of your opponent's next End Phase.",
     );
@@ -106,16 +106,23 @@ describe("card effect line parser", () => {
                   {
                     connector: "always",
                     effect: {
-                      type: "custom",
-                      handler: "planned:restOpponentCharacters",
+                      type: "sequence",
+                      effects: [
+                        {
+                          connector: "always",
+                          effect: { type: "selectTargets" },
+                        },
+                        {
+                          connector: "then",
+                          effect: { type: "rest" },
+                        },
+                      ],
                     },
                   },
                   {
                     connector: "then",
                     effect: {
-                      type: "custom",
-                      handler:
-                        "planned:preventThatCharacterOpponentNextRefresh",
+                      type: "cannotBecomeActive",
                     },
                   },
                 ],
@@ -136,8 +143,10 @@ describe("card effect line parser", () => {
                   value: 2,
                 },
                 then: {
-                  type: "custom",
-                  handler: "planned:yourLeaderPowerOpponentNextEnd",
+                  type: "modifyPower",
+                  target: { type: "myLeader" },
+                  value: 2000,
+                  duration: { type: "untilEndOfNextTurn", player: "opponent" },
                 },
               },
             },
@@ -145,7 +154,7 @@ describe("card effect line parser", () => {
         },
       },
     });
-    expect(result?.evidence).toContain("instructionSupport:planned");
+    expect(result?.evidence).not.toContain("instructionSupport:planned");
     expect(result?.evidence).toContain("instruction:rest");
     expect(result?.evidence).toContain("instruction:preventActivation");
     expect(result?.evidence).toContain("condition:opponentFieldCount");

@@ -31,6 +31,7 @@ export function parseOpponentNextRefreshPhaseDuration(
   }
 
   return {
+    duration: { type: "untilStartOfNextTurn", player: "opponent" },
     evidence: ["duration:opponentNextRefreshPhase"],
     rest: "",
   };
@@ -46,6 +47,7 @@ export function parseOpponentNextEndPhaseDuration(
   }
 
   return {
+    duration: { type: "untilEndOfNextTurn", player: "opponent" },
     evidence: ["duration:opponentNextEndPhase"],
     rest: "",
   };

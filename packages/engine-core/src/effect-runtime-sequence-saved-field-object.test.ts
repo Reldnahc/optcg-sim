@@ -250,6 +250,65 @@ const selectTargetsThenKoSavedSelectedTargetSequence = (): Extract<
   ],
 });
 
+const selectTargetsThenRestAndLockSavedTargetSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "select-target",
+      connector: "always",
+      saveResultAs: "savedTarget",
+      effect: {
+        type: "selectTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          zone: "characterArea",
+          player: "opponent",
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["character"] },
+        },
+      },
+    },
+    {
+      id: "rest-selected-target",
+      connector: "then",
+      effect: {
+        type: "rest",
+        target: {
+          type: "savedFieldObject",
+          binding: { family: "selectedTargets", saveResultAs: "savedTarget" },
+          zone: "characterArea",
+          player: "opponent",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+      },
+    },
+    {
+      id: "lock-selected-target",
+      connector: "then",
+      effect: {
+        type: "cannotBecomeActive",
+        target: {
+          type: "savedFieldObject",
+          binding: { family: "selectedTargets", saveResultAs: "savedTarget" },
+          zone: "characterArea",
+          player: "opponent",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+        duration: { type: "untilStartOfNextTurn", player: "opponent" },
+      },
+    },
+  ],
+});
+
 const markHandCharactersSupported = (state: GameState): void => {
   const player = must(state.players[p1], "p1");
   for (const card of player.hand) {
@@ -464,6 +523,54 @@ test("selectTargets saved reference is consumed by later KO segment deterministi
   assert.equal(first.state.seq > paused.state.seq, true);
   assert.equal(first.stateHash, second.stateHash);
   assert.equal(first.stateHash, hashCanonicalStateValue(first.state));
+});
+
+test("selectTargets saved reference can feed rest and refresh-lock sequence children", () => {
+  const { state } = sequenceQueueState(
+    selectTargetsThenRestAndLockSavedTargetSequence(),
+  );
+  const p2State = must(state.players[p2], "p2");
+  const target = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "target"),
+    zone: "characterArea",
+  });
+  target.state = "active";
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 2000,
+  });
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "target selection");
+  assert.equal(decision.type, "selectTargets");
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: [must(decision.candidates[0], "candidate").card],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const restedTarget = must(resolved.state.players[p2], "p2").characters.find(
+    (card) => card.instanceId === target.instanceId,
+  );
+  assert.equal(restedTarget?.state, "rested");
+  assert.equal(
+    resolved.state.continuousEffects.some(
+      (effect) =>
+        effect.modifier.layer === "restriction" &&
+        effect.modifier.operation.type === "restriction" &&
+        effect.modifier.operation.restriction === "cannotBecomeActive",
+    ),
+    true,
+  );
 });
 
 test.each([

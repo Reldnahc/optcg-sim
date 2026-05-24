@@ -119,8 +119,10 @@ const hasUnsupportedBattleEffectBody = (value: unknown): boolean => {
   }
 
   const type = value["type"];
+  if (type === "protectFromKO") {
+    return value["sourceKind"] !== "cardEffect";
+  }
   if (
-    type === "protectFromKO" ||
     type === "cannotBeBlockedBy" ||
     type === "cannotBeAttacked" ||
     type === "cannotBlock"

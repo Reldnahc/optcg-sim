@@ -24,7 +24,7 @@ import {
 import {
   fieldRemovalProtectionsForCard,
   isFieldRemovalProtectionModifier,
-  isSupportedFieldRemovalProtectionModifier,
+  isSupportedProtectionModifier,
   malformedFieldRemovalProtectionMessage,
 } from "./field-removal-protection.js";
 
@@ -88,7 +88,8 @@ const isSupportedContinuousPowerModifier = (
         effect.modifier.target.type === "exactCard") &&
       effect.modifier.operation.type === "restriction" &&
       (effect.modifier.operation.restriction === "cannotAttack" ||
-        effect.modifier.operation.restriction === "cannotBlock")));
+        effect.modifier.operation.restriction === "cannotBlock" ||
+        effect.modifier.operation.restriction === "cannotBecomeActive")));
 
 const isNonEmptyStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) &&
@@ -148,6 +149,7 @@ const isSupportedDuration = (
   duration.type === "thisBattle" ||
   duration.type === "thisTurn" ||
   duration.type === "untilEndOfTurn" ||
+  duration.type === "untilEndOfNextTurn" ||
   duration.type === "untilStartOfNextTurn" ||
   duration.type === "whileSourceOnField" ||
   duration.type === "permanent" ||
@@ -213,7 +215,7 @@ const assertSupportedContinuousEffects = (state: GameState): void => {
       recordConditionPasses(state, effect);
       continue;
     }
-    if (isSupportedFieldRemovalProtectionModifier(effect)) continue;
+    if (isSupportedProtectionModifier(effect)) continue;
     if (isFieldRemovalProtectionModifier(effect)) {
       throw new TypeError(malformedFieldRemovalProtectionMessage(effect));
     }

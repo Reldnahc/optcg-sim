@@ -241,6 +241,8 @@ export interface ProtectionFieldRemovalMetadata {
 export interface SimpleProtection {
   process: "ko" | "damage" | "trash" | "effect";
   fieldRemoval?: never;
+  sourceKind?: ProtectionFieldRemovalSourceKind;
+  sourceControllerRelation?: ProtectionFieldRemovalSourceControllerRelation;
   source?: CardRef;
   duration?: Duration;
 }

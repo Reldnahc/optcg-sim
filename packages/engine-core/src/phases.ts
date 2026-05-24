@@ -110,7 +110,24 @@ const expireTurnBoundaryContinuousEffects = (
   ...state,
   continuousEffects: state.continuousEffects.filter((effect) => {
     if (effect.duration.type === "thisTurn") return false;
-    if (effect.duration.type !== "untilEndOfTurn") return true;
+    if (
+      effect.duration.type !== "untilEndOfTurn" &&
+      effect.duration.type !== "untilEndOfNextTurn"
+    ) {
+      return true;
+    }
+    if (effect.duration.type === "untilEndOfNextTurn") {
+      if (effect.duration.player === "self") {
+        return effect.controller !== endingTurnPlayerId;
+      }
+      if (effect.duration.player === "opponent") {
+        return effect.controller === endingTurnPlayerId;
+      }
+      if (effect.duration.player === "controller") {
+        return effect.controller !== endingTurnPlayerId;
+      }
+      return effect.source.playerId !== endingTurnPlayerId;
+    }
     const whoseTurn = effect.duration.whoseTurn ?? "current";
     if (whoseTurn === "current") return false;
     if (whoseTurn === "sourceController") {
@@ -287,15 +304,53 @@ const isFirstPlayerFirstTurn = (
 ): boolean =>
   state.turn.globalTurn === 1 && state.turn.playerTurnCounts[playerId] === 1;
 
-const readyPlayerCards = (player: PlayerState): PlayerState => {
+const cardMatchesExactCardRestriction = (
+  card: CardInstance,
+  effect: GameState["continuousEffects"][number],
+): boolean => {
+  const target = effect.modifier.target;
+  return (
+    target.type === "exactCard" &&
+    target.card.instanceId === card.instanceId &&
+    target.card.cardId === card.cardId &&
+    target.card.playerId === card.controller
+  );
+};
+
+const cannotBecomeActiveDuringRefresh = (
+  state: GameState,
+  card: CardInstance,
+): boolean =>
+  state.continuousEffects.some(
+    (effect) =>
+      effect.modifier.layer === "restriction" &&
+      effect.modifier.operation.type === "restriction" &&
+      effect.modifier.operation.restriction === "cannotBecomeActive" &&
+      cardMatchesExactCardRestriction(card, effect),
+  );
+
+const readyCardForRefresh = (
+  state: GameState,
+  card: CardInstance,
+): CardInstance =>
+  cannotBecomeActiveDuringRefresh(state, card)
+    ? card
+    : { ...card, state: "active" };
+
+const readyPlayerCards = (
+  state: GameState,
+  player: PlayerState,
+): PlayerState => {
   const next: PlayerState = {
     ...player,
-    leader: { ...player.leader, state: "active" },
-    characters: player.characters.map((card) => ({ ...card, state: "active" })),
-    costArea: player.costArea.map((card) => ({ ...card, state: "active" })),
+    leader: readyCardForRefresh(state, player.leader),
+    characters: player.characters.map((card) =>
+      readyCardForRefresh(state, card),
+    ),
+    costArea: player.costArea.map((card) => readyCardForRefresh(state, card)),
   };
   if (player.stage !== undefined) {
-    next.stage = { ...player.stage, state: "active" };
+    next.stage = readyCardForRefresh(state, player.stage);
   }
   return next;
 };
@@ -315,6 +370,7 @@ export const advanceRefreshPhase = (state: GameState): EngineResult => {
   }
 
   const events: EngineEvent[] = [];
+  const refreshRestrictionState = state;
   state = expireStartOfRefreshContinuousEffects(state, turnPlayerId);
   if (!hasStartedCurrentPhase(state, "refresh", turnPlayerId)) {
     appendEvent(events, state, "phaseStarted", {
@@ -347,7 +403,7 @@ export const advanceRefreshPhase = (state: GameState): EngineResult => {
     );
   }
 
-  const refreshedPlayer = readyPlayerCards({
+  const refreshedPlayer = readyPlayerCards(refreshRestrictionState, {
     ...turnPlayer,
     leader: { ...turnPlayer.leader, attachedDon: [] },
     characters: turnPlayer.characters.map((card) => ({

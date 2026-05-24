@@ -33,8 +33,11 @@ const publicCandidateVisibility = { type: "public" } as const;
 
 const supportedFilterKeys = new Set<keyof CardFilter>([
   "categories",
+  "colorsAny",
   "cost",
   "power",
+  "state",
+  "typesAny",
 ]);
 
 const supportedZones = new Set<Zone>(["leaderArea", "characterArea"]);
@@ -103,9 +106,18 @@ const hasSupportedNumericFilter = (
   );
 };
 
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
 const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
   filter === undefined ||
   (hasOnlySupportedFilterKeys(filter) &&
+    (filter.categories === undefined || isStringArray(filter.categories)) &&
+    (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
+    (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
+    (filter.state === undefined ||
+      filter.state === "active" ||
+      filter.state === "rested") &&
     hasSupportedNumericFilter(filter.cost) &&
     hasSupportedNumericFilter(filter.power));
 
@@ -137,6 +149,7 @@ const numericFilterMatches = (
 };
 
 const cardMatchesFilter = (
+  instance: CardInstance,
   card: ResolvedCard,
   filter: CardFilter | undefined,
 ): boolean => {
@@ -148,6 +161,21 @@ const cardMatchesFilter = (
     filter.categories !== undefined &&
     !filter.categories.includes(card.category)
   ) {
+    return false;
+  }
+  if (
+    filter.colorsAny !== undefined &&
+    !filter.colorsAny.some((color) => card.colors.includes(color))
+  ) {
+    return false;
+  }
+  if (
+    filter.typesAny !== undefined &&
+    !filter.typesAny.some((type) => card.types.includes(type))
+  ) {
+    return false;
+  }
+  if (filter.state !== undefined && instance.state !== filter.state) {
     return false;
   }
 
@@ -221,7 +249,10 @@ export const resolvePublicTargetCandidates = (
       return { ok: false, reason: "missingCardMetadata" };
     }
 
-    if (metadata === undefined || cardMatchesFilter(metadata, request.filter)) {
+    if (
+      metadata === undefined ||
+      cardMatchesFilter(card, metadata, request.filter)
+    ) {
       candidates.push({
         card: toCardRef(card, targetPlayerId),
         visibility: publicCandidateVisibility,

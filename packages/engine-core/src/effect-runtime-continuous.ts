@@ -23,7 +23,11 @@ import {
   malformedFieldRemovalProtectionMessage,
 } from "./field-removal-protection-shape.js";
 
-const supportedRestriction = new Set(["cannotAttack", "cannotBlock"]);
+const supportedRestriction = new Set([
+  "cannotAttack",
+  "cannotBlock",
+  "cannotBecomeActive",
+]);
 const supportedFilterKeys = new Set<keyof CardFilter>([
   "categories",
   "cost",
@@ -46,6 +50,14 @@ const isSupportedDuration = (duration: Duration): boolean => {
   if (duration.type === "untilEndOfTurn") {
     const whoseTurn = duration.whoseTurn ?? "current";
     return whoseTurn === "current" || whoseTurn === "sourceController";
+  }
+  if (duration.type === "untilEndOfNextTurn") {
+    return (
+      duration.player === "self" ||
+      duration.player === "opponent" ||
+      duration.player === "controller" ||
+      duration.player === "owner"
+    );
   }
   if (duration.type !== "untilStartOfNextTurn") {
     return (
@@ -127,10 +139,12 @@ export const isSupportedContinuousQueueEffect = (
   effect: Effect,
 ): effect is
   | Extract<Effect, { type: "modifyPower" }>
+  | Extract<Effect, { type: "cannotBecomeActive" }>
   | Extract<Effect, { type: "cannotAttack" }>
   | Extract<Effect, { type: "cannotBlock" }> => {
   if (
     effect.type !== "modifyPower" &&
+    effect.type !== "cannotBecomeActive" &&
     effect.type !== "cannotAttack" &&
     effect.type !== "cannotBlock"
   ) {
@@ -175,6 +189,7 @@ const toExactCardTarget = (
 const mapEffectToModifier = (
   effect:
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>,
   target: TargetSpec,
@@ -198,6 +213,7 @@ const createRecord = (
   entry: EffectQueueEntry,
   effect:
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>,
   target: TargetSpec,
@@ -232,6 +248,7 @@ export const createContinuousRecordsForResolvedEffect = (
   entry: EffectQueueEntry,
   effect:
     | Extract<Effect, { type: "modifyPower" }>
+    | Extract<Effect, { type: "cannotBecomeActive" }>
     | Extract<Effect, { type: "cannotAttack" }>
     | Extract<Effect, { type: "cannotBlock" }>,
   chosenTargets?: readonly CardRef[],
@@ -451,6 +468,29 @@ const effectToDerivedModifier = (
       layer: "basePowerSet",
       target: effect.target,
       operation: { type: "setBasePower", value: effect.value },
+    };
+  }
+  if (effect.type === "protectFromKO") {
+    if (effect.target.type !== "self" || effect.duration.type !== "permanent") {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported ko protection shape"),
+      );
+    }
+    return {
+      layer: "protection",
+      target: { type: "self" },
+      operation: {
+        type: "protection",
+        protection: {
+          process: "ko",
+          ...(effect.sourceKind === undefined
+            ? {}
+            : { sourceKind: effect.sourceKind }),
+          ...(effect.sourceControllerRelation === undefined
+            ? {}
+            : { sourceControllerRelation: effect.sourceControllerRelation }),
+        },
+      },
     };
   }
   if (effect.type !== "giveProtection") {

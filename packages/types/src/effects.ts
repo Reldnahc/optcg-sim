@@ -248,6 +248,7 @@ export type Duration =
       type: "untilEndOfTurn";
       whoseTurn?: "current" | "sourceController" | "targetController";
     }
+  | { type: "untilEndOfNextTurn"; player: PlayerRef }
   | { type: "untilStartOfNextTurn"; player: PlayerRef }
   | { type: "whileSourceOnField" }
   | { type: "whileConditionTrue"; condition: Condition }
@@ -601,7 +602,14 @@ export type Effect =
     }
   | { type: "damage"; target: "leader"; player: PlayerRef; count: number }
   | { type: "invalidateEffects"; target: Target; duration: Duration }
-  | { type: "protectFromKO"; target: Target; duration: Duration }
+  | {
+      type: "protectFromKO";
+      target: Target;
+      duration: Duration;
+      sourceKind?: "battle" | "cardEffect";
+      sourceControllerRelation?: "eitherController" | "opponentControlled";
+    }
+  | { type: "cannotBecomeActive"; target: Target; duration: Duration }
   | { type: "cannotAttack"; target: Target; duration: Duration }
   | { type: "cannotBlock"; target: Target; duration: Duration }
   | { type: "cannotBeAttacked"; target: Target; duration: Duration }
