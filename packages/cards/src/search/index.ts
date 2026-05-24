@@ -1,6 +1,8 @@
 export {
-  parseAddUpToAnyCardToHand,
-  parseRevealUpToTypeCardToHand,
+  parseSearchAnyCardFilter,
+  parseSearchCardFilter,
+  parseSearchSelectionToHand,
+  parseSearchSelectionVerb,
 } from "./reveal-to-hand.js";
 export { parseRestToBottomAnyOrder } from "./rest-bottom.js";
 export { parseTopDeckLook } from "./top-of-deck.js";

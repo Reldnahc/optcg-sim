@@ -1,8 +1,7 @@
 import type { ExpressionParseResult, ParseInput } from "../types.js";
 import {
-  parseAddUpToAnyCardToHand,
-  parseRevealUpToTypeCardToHand,
   parseRestToBottomAnyOrder,
+  parseSearchSelectionToHand,
   parseTopDeckLook,
 } from "../search/index.js";
 import { parseExpression } from "../expression-parser.js";
@@ -18,9 +17,7 @@ export function searchRevealExpressionParser(
     return undefined;
   }
 
-  const reveal =
-    parseRevealUpToTypeCardToHand({ text: look.rest }) ??
-    parseAddUpToAnyCardToHand({ text: look.rest });
+  const reveal = parseSearchSelectionToHand({ text: look.rest });
   if (reveal === undefined) {
     return undefined;
   }

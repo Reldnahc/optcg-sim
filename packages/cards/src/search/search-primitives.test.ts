@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  parseAddUpToAnyCardToHand,
-  parseRevealUpToTypeCardToHand,
+  parseSearchAnyCardFilter,
+  parseSearchSelectionToHand,
+  parseSearchSelectionVerb,
 } from "./reveal-to-hand.js";
 import { parseRestToBottomAnyOrder } from "./rest-bottom.js";
 import { parseTopDeckLook } from "./top-of-deck.js";
@@ -47,7 +48,7 @@ describe("search reveal primitives", () => {
 
   it("parses reveal up-to typed-card selection into cardinality filter and hand destination", () => {
     expect(
-      parseRevealUpToTypeCardToHand({
+      parseSearchSelectionToHand({
         text: "reveal up to 1 {Five Elders} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
       }),
     ).toEqual({
@@ -57,18 +58,18 @@ describe("search reveal primitives", () => {
       revealTo: "bothPlayers",
       rest: "Then, place the rest at the bottom of your deck in any order.",
       evidence: [
+        "reveal:bothPlayers",
         "cardinality:upTo",
         "count:positiveInteger",
         "filter:type",
         "destination:hand",
-        "reveal:bothPlayers",
       ],
     });
   });
 
   it("parses add up-to any-card selection as private search to hand", () => {
     expect(
-      parseAddUpToAnyCardToHand({
+      parseSearchSelectionToHand({
         text: "add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.",
       }),
     ).toEqual({
@@ -78,12 +79,46 @@ describe("search reveal primitives", () => {
       revealTo: "chooserOnly",
       rest: "Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.",
       evidence: [
+        "reveal:chooserOnly",
         "cardinality:upTo",
         "count:positiveInteger",
         "filter:any",
         "destination:hand",
-        "reveal:chooserOnly",
       ],
+    });
+  });
+
+  it("parses search publicness independently from filter shape", () => {
+    expect(parseSearchSelectionVerb({ text: "reveal up to 1 card." })).toEqual({
+      revealTo: "bothPlayers",
+      rest: "up to 1 card.",
+      evidence: ["reveal:bothPlayers"],
+    });
+    expect(parseSearchSelectionVerb({ text: "add up to 1 card." })).toEqual({
+      revealTo: "chooserOnly",
+      rest: "up to 1 card.",
+      evidence: ["reveal:chooserOnly"],
+    });
+  });
+
+  it("can combine private add wording with a typed-card filter", () => {
+    const result = parseSearchSelectionToHand({
+      text: "add up to 1 {Five Elders} type card to your hand. Then, place the rest at the bottom of your deck in any order.",
+    });
+
+    expect(result).toMatchObject({
+      filter: { typesAny: ["Five Elders"] },
+      revealTo: "chooserOnly",
+    });
+    expect(result?.evidence).toContain("filter:type");
+    expect(result?.evidence).toContain("reveal:chooserOnly");
+  });
+
+  it("parses any-card filter independently from publicness wording", () => {
+    expect(parseSearchAnyCardFilter({ text: "card to your hand." })).toEqual({
+      filter: {},
+      rest: " to your hand.",
+      evidence: ["filter:any"],
     });
   });
 
