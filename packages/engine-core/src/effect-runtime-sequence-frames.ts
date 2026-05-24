@@ -55,7 +55,7 @@ import {
   shouldAttemptSegment,
 } from "./effect-runtime-sequence-segments.js";
 import {
-  isSupportedSequenceBlock,
+  toSupportedSequenceBlock,
   type SupportedSequenceBlock,
   type SupportedSequenceSegment,
 } from "./effect-runtime-sequence-support.js";
@@ -606,7 +606,8 @@ export const createSupportedSequenceFrameDecision = (
   if (effectBlock?.effect.type !== "sequence") {
     return undefined;
   }
-  if (!isSupportedSequenceBlock(entry, effectBlock)) {
+  const supportedBlock = toSupportedSequenceBlock(entry, effectBlock);
+  if (supportedBlock === undefined) {
     return { ok: false };
   }
 
@@ -630,7 +631,7 @@ export const createSupportedSequenceFrameDecision = (
   const run = continueNoDecisionSegments(
     nextState,
     resolvingEntry,
-    effectBlock.effect,
+    supportedBlock.effect,
     0,
     ledgers,
     createTrashDecision,
@@ -754,7 +755,7 @@ export const resumeSequenceFrameAfterSearchReveal = (
     emptySegmentResult,
     findFrameQueueEntry,
     findSequenceEffectBlock,
-    isSupportedSequenceBlock,
+    toSupportedSequenceBlock,
     resumeSequenceFrameFromLedgers: (params) =>
       resumeSequenceFrameFromLedgers(
         params as {
@@ -791,14 +792,15 @@ export const resumeSequenceFrameAfterOptionalActivation = (
     };
   }
   const effectBlock = findSequenceEffectBlock(state, entry);
-  if (!isSupportedSequenceBlock(entry, effectBlock)) {
+  const supportedBlock = toSupportedSequenceBlock(entry, effectBlock);
+  if (supportedBlock === undefined) {
     return {
       error: sequenceRuntimeError(entry.effectBlockId, "missing-effect-block"),
       ok: false,
     };
   }
   const pausedSegment =
-    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+    supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
     (pausedSegment.effect.type !== "draw" &&
@@ -905,7 +907,7 @@ export const resumeSequenceFrameAfterOptionalActivation = (
 
   const resumed = resumeSequenceFrameFromLedgers({
     createTrashDecision,
-    effectBlock,
+    effectBlock: supportedBlock,
     entry,
     finalizeCompleted: true,
     frame,
@@ -949,14 +951,15 @@ export const resumeSequenceFrameAfterOptionalCost = (
     };
   }
   const effectBlock = findSequenceEffectBlock(state, entry);
-  if (!isSupportedSequenceBlock(entry, effectBlock)) {
+  const supportedBlock = toSupportedSequenceBlock(entry, effectBlock);
+  if (supportedBlock === undefined) {
     return {
       error: sequenceRuntimeError(entry.effectBlockId, "missing-effect-block"),
       ok: false,
     };
   }
   const pausedSegment =
-    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+    supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (pausedSegment === undefined || pausedSegment.effect.type !== "payCost") {
     return {
       error: sequenceRuntimeError(
@@ -988,7 +991,7 @@ export const resumeSequenceFrameAfterOptionalCost = (
       : frame.savedReferences;
   return resumeSequenceFrameFromLedgers({
     createTrashDecision,
-    effectBlock,
+    effectBlock: supportedBlock,
     entry,
     finalizeCompleted: true,
     frame,
@@ -1022,7 +1025,8 @@ export const resumeSequenceFrameAfterPlaySelectedOverflow = (
     };
   }
   const effectBlock = findSequenceEffectBlock(state, entry);
-  if (!isSupportedSequenceBlock(entry, effectBlock)) {
+  const supportedBlock = toSupportedSequenceBlock(entry, effectBlock);
+  if (supportedBlock === undefined) {
     return {
       error: sequenceRuntimeError(entry.effectBlockId, "missing-effect-block"),
       ok: false,
@@ -1030,7 +1034,7 @@ export const resumeSequenceFrameAfterPlaySelectedOverflow = (
   }
   return resumePlaySelectedOverflowFrame({
     createUnsupportedTrashDecision,
-    effectBlock,
+    effectBlock: supportedBlock,
     emptySegmentResult,
     entry,
     frame,

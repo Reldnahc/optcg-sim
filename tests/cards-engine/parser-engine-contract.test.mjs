@@ -300,7 +300,7 @@ test("cards parser emits top-of-deck type search accepted by engine search-revea
   assert.equal(result.ok, true);
 });
 
-test("cards parser emits costed private search plus trash while current engine sequence gate fails closed", () => {
+test("cards parser emits costed private search plus trash accepted by engine sequence support", () => {
   const effectBlock = parseSupportedEffectBlock(
     "[On Play] DON!! −1: Look at 5 cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.",
     [
@@ -338,7 +338,7 @@ test("cards parser emits costed private search plus trash while current engine s
       "onPlay",
       "mustRemainInSameZone",
     ),
-    false,
+    true,
   );
 });
 

@@ -9,7 +9,6 @@ import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditio
 import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
 import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
-import { isSupportedQueuedTrashFromHandEffect } from "./effect-runtime-trash-from-hand.js";
 
 type EffectBlock = EffectDefinition["effects"][number];
 
@@ -41,6 +40,16 @@ const isSupportedSearchBody = (
   block.sourcePresencePolicy === "mustRemainInSameZone" &&
   block.effect.type === "search" &&
   isSupportedSearchRequestShape(block.effect.request);
+
+const isSupportedTrashFromHandBody = (
+  effect: Effect,
+): effect is Extract<Effect, { type: "trashFromHand" }> =>
+  effect.type === "trashFromHand" &&
+  effect.player === "self" &&
+  effect.chooser === "self" &&
+  effect.filter === undefined &&
+  Number.isInteger(effect.count) &&
+  effect.count > 0;
 
 const isQueuedAutoSequenceTriggerType = (
   triggerType: Trigger["type"],
@@ -82,7 +91,7 @@ const isSupportedNonOptionalBody = (
 ): boolean =>
   isSupportedDrawBody(block.effect) ||
   isSupportedDrawUpToBody(block.effect) ||
-  isSupportedQueuedTrashFromHandEffect(block) ||
+  isSupportedTrashFromHandBody(block.effect) ||
   isSupportedSearchBody(block) ||
   isSupportedContinuousQueueEffect(block.effect) ||
   isSupportedSequenceBody(block, adapter);

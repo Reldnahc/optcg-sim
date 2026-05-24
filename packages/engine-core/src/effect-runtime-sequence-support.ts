@@ -44,6 +44,51 @@ export interface SequenceSupportOptions {
   requirePositiveDrawCount?: boolean;
 }
 
+const flattenNestedSequenceSegments = (
+  segment: SequenceEffect["effects"][number],
+): SequenceEffect["effects"] | null => {
+  if (segment.effect.type !== "sequence") {
+    return [segment];
+  }
+  if (segment.optional === true || segment.saveResultAs !== undefined) {
+    return null;
+  }
+  const flattened = flattenSequenceEffect(segment.effect);
+  if (flattened === null) {
+    return null;
+  }
+  return flattened.effects.map((child, index) =>
+    index === 0 ? { ...child, connector: segment.connector } : child,
+  );
+};
+
+export const flattenSequenceEffect = (
+  effect: SequenceEffect,
+): SequenceEffect | null => {
+  const effects: SequenceEffect["effects"] = [];
+  for (const segment of effect.effects) {
+    const flattened = flattenNestedSequenceSegments(segment);
+    if (flattened === null) {
+      return null;
+    }
+    effects.push(...flattened);
+  }
+  return { ...effect, effects };
+};
+
+const toFlattenedSequenceBlock = (
+  effectBlock: EffectDefinition["effects"][number] | undefined,
+): EffectDefinition["effects"][number] | undefined => {
+  if (effectBlock?.effect.type !== "sequence") {
+    return effectBlock;
+  }
+  const flattened = flattenSequenceEffect(effectBlock.effect);
+  if (flattened === null) {
+    return undefined;
+  }
+  return { ...effectBlock, effect: flattened };
+};
+
 const toSyntheticQueueEntry = (
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
 ): EffectQueueEntry => ({
@@ -257,35 +302,36 @@ const isScopedActivateMainSequenceEntry = (entry: EffectQueueEntry): boolean =>
   isActivateMainAreaZone(entry.source.zone) &&
   isActivateMainAreaZone(entry.sourceSnapshot.zone);
 
-export const isSupportedSequenceBlock = (
+export const toSupportedSequenceBlock = (
   entry: EffectQueueEntry,
   effectBlock: EffectDefinition["effects"][number] | undefined,
   options: SequenceSupportOptions = {},
-): effectBlock is SupportedSequenceBlock => {
+): SupportedSequenceBlock | undefined => {
+  const flattenedBlock = toFlattenedSequenceBlock(effectBlock);
   const allowSavedReferences = options.allowSavedReferences ?? true;
   const requirePositiveDrawCount = options.requirePositiveDrawCount ?? false;
   const isSupportedCategoryForEntry =
-    effectBlock?.category === "auto" ||
-    (effectBlock?.category === "activate" &&
-      effectBlock.trigger.type === "activateMain" &&
+    flattenedBlock?.category === "auto" ||
+    (flattenedBlock?.category === "activate" &&
+      flattenedBlock.trigger.type === "activateMain" &&
       isScopedActivateMainSequenceEntry(entry));
 
   if (
-    effectBlock === undefined ||
+    flattenedBlock === undefined ||
     !isSupportedCategoryForEntry ||
-    effectBlock.optional === true ||
-    effectBlock.cost !== undefined ||
-    effectBlock.conditionTiming !== undefined ||
-    effectBlock.failurePolicy !== undefined ||
-    effectBlock.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-    effectBlock.effect.type !== "sequence" ||
-    effectBlock.effect.effects.length === 0
+    flattenedBlock.optional === true ||
+    flattenedBlock.cost !== undefined ||
+    flattenedBlock.conditionTiming !== undefined ||
+    flattenedBlock.failurePolicy !== undefined ||
+    flattenedBlock.sourcePresencePolicy !== entry.sourcePresencePolicy ||
+    flattenedBlock.effect.type !== "sequence" ||
+    flattenedBlock.effect.effects.length === 0
   ) {
-    return false;
+    return undefined;
   }
 
-  let hasPendingDecisionSegment = false;
-  const allSegmentsSupported = effectBlock.effect.effects.every(
+  const supportState = { hasPendingDecisionSegment: false };
+  const allSegmentsSupported = flattenedBlock.effect.effects.every(
     (segment, index) => {
       if (
         !isSupportedConnector(segment.connector) ||
@@ -305,7 +351,7 @@ export const isSupportedSequenceBlock = (
           return false;
         }
         if (segment.optional === true) {
-          hasPendingDecisionSegment = true;
+          supportState.hasPendingDecisionSegment = true;
         }
         return true;
       }
@@ -313,32 +359,32 @@ export const isSupportedSequenceBlock = (
         if (segment.optional === true) {
           return false;
         }
-        hasPendingDecisionSegment = true;
+        supportState.hasPendingDecisionSegment = true;
         return true;
       }
       if (isSupportedTrashFromHandSegment(segment.effect)) {
         if (index === 0) {
           return false;
         }
-        hasPendingDecisionSegment = true;
+        supportState.hasPendingDecisionSegment = true;
         return true;
       }
       if (isSupportedSearchSegment(segment.effect)) {
-        hasPendingDecisionSegment = true;
+        supportState.hasPendingDecisionSegment = true;
         return true;
       }
       if (isSupportedPayCostSegment(segment.effect)) {
         if (segment.optional === true) {
           return false;
         }
-        hasPendingDecisionSegment = true;
+        supportState.hasPendingDecisionSegment = true;
         return true;
       }
       if (isSupportedSequenceHandSelectCardsSegment(segment.effect)) {
         if (index === 0) {
           return false;
         }
-        hasPendingDecisionSegment = true;
+        supportState.hasPendingDecisionSegment = true;
         return true;
       }
       if (segment.effect.type === "selectTargets") {
@@ -369,7 +415,7 @@ export const isSupportedSequenceBlock = (
         ) {
           return false;
         }
-        hasPendingDecisionSegment = true;
+        supportState.hasPendingDecisionSegment = true;
         return true;
       }
       if (segment.effect.type === "playSelected") {
@@ -385,8 +431,17 @@ export const isSupportedSequenceBlock = (
       return false;
     },
   );
-  return allSegmentsSupported && hasPendingDecisionSegment;
+  return allSegmentsSupported && supportState.hasPendingDecisionSegment
+    ? (flattenedBlock as SupportedSequenceBlock)
+    : undefined;
 };
+
+export const isSupportedSequenceBlock = (
+  entry: EffectQueueEntry,
+  effectBlock: EffectDefinition["effects"][number] | undefined,
+  options: SequenceSupportOptions = {},
+): effectBlock is SupportedSequenceBlock =>
+  toSupportedSequenceBlock(entry, effectBlock, options) !== undefined;
 
 export const isSupportedQueuedAutoSequenceForEntryPoint = (
   effect: EffectDefinition["effects"][number],

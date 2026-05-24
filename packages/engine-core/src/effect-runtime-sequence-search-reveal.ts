@@ -147,10 +147,10 @@ export const resumeSequenceFrameAfterSearchRevealHelper = (params: {
     state: GameState,
     entry: EffectQueueEntry,
   ) => EffectDefinition["effects"][number] | undefined;
-  isSupportedSequenceBlock: (
+  toSupportedSequenceBlock: (
     entry: EffectQueueEntry,
     effectBlock: EffectDefinition["effects"][number] | undefined,
-  ) => effectBlock is SupportedSequenceBlock;
+  ) => SupportedSequenceBlock | undefined;
   resumeSequenceFrameFromLedgers: (params: {
     createTrashDecision: unknown;
     effectBlock: SupportedSequenceBlock;
@@ -183,8 +183,11 @@ export const resumeSequenceFrameAfterSearchRevealHelper = (params: {
       ok: false,
     };
   }
-  const effectBlock = params.findSequenceEffectBlock(params.state, entry);
-  if (!params.isSupportedSequenceBlock(entry, effectBlock)) {
+  const effectBlock = params.toSupportedSequenceBlock(
+    entry,
+    params.findSequenceEffectBlock(params.state, entry),
+  );
+  if (effectBlock === undefined) {
     return {
       error: params.sequenceRuntimeError(
         entry.effectBlockId,
