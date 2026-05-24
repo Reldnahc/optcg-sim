@@ -223,6 +223,77 @@ test("cards parser emits planned field-effect primitives while current engine su
   );
 });
 
+test("cards parser emits keyword-only permanent primitives accepted by engine materialization", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "If you have 7 or more cards in your trash, this Character gains [Blocker].",
+    [
+      "entry:implicitPermanent",
+      "expression:conditionalContinuous",
+      "condition:trashCount",
+      "condition:comparator:gte",
+      "instruction:giveKeyword",
+      "target:thisCharacter",
+      "keyword:anySupported",
+    ],
+  );
+  const definitionId = "cards-engine-contract:keyword-permanent";
+
+  assert.equal(effectBlock.effect.type, "giveKeyword");
+  assert.equal(
+    hasCombatSafeImplementedDslDefinition(
+      {
+        cardManifest: {
+          effectDefinitions: {
+            [definitionId]: {
+              effects: [effectBlock],
+            },
+          },
+        },
+      },
+      definitionId,
+    ),
+    true,
+  );
+});
+
+test("cards parser emits protection-only permanent primitives while broad engine materialization fails closed", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects.",
+    [
+      "entry:implicitPermanent",
+      "expression:conditionalContinuous",
+      "condition:trashCount",
+      "condition:comparator:gte",
+      "instruction:giveProtection",
+      "target:thisCharacter",
+      "protectionProcess:fieldRemoval",
+      "protectionSource:opponentEffects",
+    ],
+  );
+  const definitionId = "cards-engine-contract:protection-permanent";
+
+  assert.equal(effectBlock.effect.type, "giveProtection");
+  assert.equal(
+    effectBlock.effect.protection.fieldRemoval.classification,
+    "moveFromFieldToOtherZone",
+  );
+  assert.equal(
+    hasCombatSafeImplementedDslDefinition(
+      {
+        cardManifest: {
+          effectDefinitions: {
+            [definitionId]: {
+              effects: [effectBlock],
+            },
+          },
+        },
+      },
+      definitionId,
+    ),
+    false,
+  );
+});
+
 test("cards parser emits broad field-removal protection primitives while current engine materialization fails closed", () => {
   const effectBlock = parseSupportedEffectBlock(
     "If you have 7 or more cards in your trash, this Character cannot be removed from the field by your opponent's effects and gains [Blocker].",
