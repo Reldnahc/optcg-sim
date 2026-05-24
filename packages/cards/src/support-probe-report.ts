@@ -1,6 +1,3 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-
 import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 import type { CardId, EffectBlock } from "@optcg/types";
 
@@ -10,6 +7,8 @@ import type { ParsedEffectLine } from "./types.js";
 export interface SupportProbeRequest {
   readonly text?: string;
   readonly cardId?: string;
+  readonly fetchCard?: PoneglyphFetch;
+  readonly baseUrl?: string;
 }
 
 export interface SupportProbeReport {
@@ -18,20 +17,29 @@ export interface SupportProbeReport {
   readonly errors: readonly string[];
 }
 
-interface PoneglyphFixture {
+interface PoneglyphCardProbePayload {
   readonly cardId: string;
   readonly effect: string;
 }
 
-const fixtureDirectory = fileURLToPath(
-  new URL("../../../fixtures/poneglyph/cards/", import.meta.url),
-);
+interface PoneglyphFetchResponse {
+  readonly ok: boolean;
+  readonly status: number;
+  json(): Promise<unknown>;
+}
 
-export const createSupportProbeReport = (
+type PoneglyphFetch = (url: string) => Promise<PoneglyphFetchResponse>;
+
+const defaultPoneglyphBaseUrl = "https://api.poneglyph.one";
+
+export const createSupportProbeReport = async (
   request: SupportProbeRequest,
-): SupportProbeReport => {
+): Promise<SupportProbeReport> => {
   if (request.cardId !== undefined && request.cardId.length > 0) {
-    return createCardSupportProbeReport(request.cardId);
+    return createCardSupportProbeReport(request.cardId, {
+      baseUrl: request.baseUrl ?? defaultPoneglyphBaseUrl,
+      fetchCard: request.fetchCard ?? fetchPoneglyphCard,
+    });
   }
 
   if (request.text === undefined || request.text.length === 0) {
@@ -45,42 +53,24 @@ export const createSupportProbeReport = (
   return createTextLineReport(request.text);
 };
 
-export const findPoneglyphFixtureByCardId = (
+const createCardSupportProbeReport = async (
   cardId: string,
-): PoneglyphFixture | undefined => {
-  const prefix = `${cardId.toUpperCase()}.`;
-  const fileName = readdirSync(fixtureDirectory).find((entry) =>
-    entry.toUpperCase().startsWith(prefix),
-  );
-  if (fileName === undefined) {
-    return undefined;
-  }
-
-  const parsed = JSON.parse(
-    readFileSync(`${fixtureDirectory}/${fileName}`, "utf8"),
-  ) as unknown;
-  if (!isFixtureObject(parsed)) {
-    return undefined;
-  }
-
-  return {
-    cardId: parsed.card_number,
-    effect: parsed.effect,
-  };
-};
-
-const createCardSupportProbeReport = (cardId: string): SupportProbeReport => {
-  const fixture = findPoneglyphFixtureByCardId(cardId);
-  if (fixture === undefined) {
+  options: {
+    readonly baseUrl: string;
+    readonly fetchCard: PoneglyphFetch;
+  },
+): Promise<SupportProbeReport> => {
+  const fetched = await fetchPoneglyphCardPayload(cardId, options);
+  if (!fetched.ok) {
     return {
       exitCode: 1,
       lines: [],
-      errors: [`Card fixture not found: ${cardId}`],
+      errors: [fetched.error],
     };
   }
 
-  const lines = [`Card ID: ${fixture.cardId}`];
-  const effectLines = fixture.effect
+  const lines = [`Card ID: ${fetched.card.cardId}`];
+  const effectLines = fetched.card.effect
     .split(/\r?\n/u)
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
@@ -113,6 +103,43 @@ const createCardSupportProbeReport = (cardId: string): SupportProbeReport => {
   }
 
   return { exitCode, lines, errors: [] };
+};
+
+const fetchPoneglyphCardPayload = async (
+  cardId: string,
+  options: {
+    readonly baseUrl: string;
+    readonly fetchCard: PoneglyphFetch;
+  },
+): Promise<
+  | { readonly ok: true; readonly card: PoneglyphCardProbePayload }
+  | { readonly ok: false; readonly error: string }
+> => {
+  const url = `${options.baseUrl.replace(/\/+$/u, "")}/v1/cards/${encodeURIComponent(cardId)}`;
+  const response = await options.fetchCard(url);
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: `Poneglyph card fetch failed for ${cardId}: HTTP ${String(response.status)}`,
+    };
+  }
+
+  const payload = await response.json();
+  const cardPayload = toPoneglyphCardProbePayload(payload);
+  if (cardPayload === undefined) {
+    return {
+      ok: false,
+      error: `Poneglyph card fetch failed for ${cardId}: invalid response payload`,
+    };
+  }
+
+  return {
+    ok: true,
+    card: {
+      cardId: cardPayload.card_number,
+      effect: cardPayload.effect,
+    },
+  };
 };
 
 const createTextLineReport = (text: string): SupportProbeReport => {
@@ -212,7 +239,9 @@ const runtimeReason = (
   lineReport: Extract<ParsedLineReport, { readonly parseOk: true }>,
 ): string => lineReport.runtimeReason ?? "unsupported runtime effect shape";
 
-const isFixtureObject = (
+const fetchPoneglyphCard: PoneglyphFetch = async (url) => fetch(url);
+
+const isPoneglyphCardProbePayload = (
   value: unknown,
 ): value is { readonly card_number: CardId; readonly effect: string } => {
   if (typeof value !== "object" || value === null) {
@@ -223,4 +252,17 @@ const isFixtureObject = (
     typeof candidate["card_number"] === "string" &&
     typeof candidate["effect"] === "string"
   );
+};
+
+const toPoneglyphCardProbePayload = (
+  value: unknown,
+): { readonly card_number: CardId; readonly effect: string } | undefined => {
+  if (isPoneglyphCardProbePayload(value)) {
+    return value;
+  }
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  const data = (value as Record<string, unknown>)["data"];
+  return isPoneglyphCardProbePayload(data) ? data : undefined;
 };

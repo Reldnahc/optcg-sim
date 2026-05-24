@@ -17,9 +17,9 @@ function parseArgs(argv: readonly string[]): ProbeArgs {
   };
 }
 
-function main(): number {
+async function main(): Promise<number> {
   const { cardId, text } = parseArgs(process.argv.slice(2));
-  const report = createSupportProbeReport({
+  const report = await createSupportProbeReport({
     ...(cardId === undefined ? {} : { cardId }),
     ...(text === undefined ? {} : { text }),
   });
@@ -41,4 +41,4 @@ function writeError(message: string): void {
   process.stderr.write(`${message}\n`);
 }
 
-process.exitCode = main();
+process.exitCode = await main();
