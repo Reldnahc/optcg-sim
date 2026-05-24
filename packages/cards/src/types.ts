@@ -34,12 +34,28 @@ export type PrimitiveEvidence =
   | "connector:then"
   | "connector:andOrdered"
   | "condition:synthetic:C"
+  | "condition:opponentFieldCount"
+  | "condition:comparator:gte"
+  | "condition:threshold:positiveInteger"
   | "instruction:draw"
   | "instruction:trashFromHand"
+  | "instruction:rest"
+  | "instruction:preventActivation"
+  | "instruction:modifyPower"
   | "instruction:synthetic:A"
   | "instruction:synthetic:B"
+  | "instructionSupport:planned"
   | "player:self"
-  | "chooser:self";
+  | "player:opponent"
+  | "chooser:self"
+  | "chooser:self:upTo"
+  | "target:opponentCharacters"
+  | "target:thatCharacter"
+  | "target:yourLeader"
+  | "reference:thatCharacter"
+  | "duration:opponentNextRefreshPhase"
+  | "duration:opponentNextEndPhase"
+  | "modifier:positivePower";
 
 export interface PrimitiveNode {
   readonly type: string;

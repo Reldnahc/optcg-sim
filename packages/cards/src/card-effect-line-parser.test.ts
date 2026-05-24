@@ -86,6 +86,72 @@ describe("card effect line parser", () => {
     expect(result?.evidence).toContain("instruction:draw");
   });
 
+  it("parses planned field primitives through composition instead of a full-line template", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Rest up to 1 of your opponent's Characters and that Character will not become active in your opponent's next Refresh Phase. Then, if your opponent has 2 or more rested Characters, your Leader gains +2000 power until the end of your opponent's next End Phase.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "custom",
+                      handler: "planned:restOpponentCharacters",
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "custom",
+                      handler:
+                        "planned:preventThatCharacterOpponentNextRefresh",
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "fieldCount",
+                  player: "opponent",
+                  filter: {
+                    categories: ["character"],
+                    state: "rested",
+                  },
+                  op: "gte",
+                  value: 2,
+                },
+                then: {
+                  type: "custom",
+                  handler: "planned:yourLeaderPowerOpponentNextEnd",
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toContain("instructionSupport:planned");
+    expect(result?.evidence).toContain("instruction:rest");
+    expect(result?.evidence).toContain("instruction:preventActivation");
+    expect(result?.evidence).toContain("condition:opponentFieldCount");
+    expect(result?.evidence).toContain("instruction:modifyPower");
+  });
+
   it("fails closed for unknown entry points", () => {
     expect(parseCardEffectLine("[Unknown] Draw 1 card.")).toBeUndefined();
   });
