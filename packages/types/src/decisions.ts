@@ -25,6 +25,7 @@ export interface PaymentSpec {
 }
 
 export type PaymentOption =
+  | { id: string; type: "restSelf" }
   | { id: string; type: "restDon"; count: number }
   | { id: string; type: "returnDon"; count: number }
   | { id: string; type: "trashFromHand"; count: number; filter?: CardFilter }

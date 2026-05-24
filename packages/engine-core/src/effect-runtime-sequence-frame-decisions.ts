@@ -300,6 +300,28 @@ const isSupportedChooseOneOption = (
   return supportsScopedFieldTrashFilter(option.filter);
 };
 
+const findRestableSource = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): CardInstance | undefined => {
+  const player = state.players[entry.controllerId];
+  if (player === undefined) {
+    return undefined;
+  }
+  const candidates = [
+    player.leader,
+    ...player.characters,
+    ...(player.stage === undefined ? [] : [player.stage]),
+  ];
+  return candidates.find(
+    (card) =>
+      card.instanceId === entry.source.instanceId &&
+      card.cardId === entry.source.cardId &&
+      card.controller === entry.controllerId &&
+      card.state !== "rested",
+  );
+};
+
 export const getSequencePayCostLegalActions = (
   state: GameState,
   playerId: EffectQueueEntry["controllerId"],
@@ -318,6 +340,17 @@ export const getSequencePayCostLegalActions = (
 
   const legalPayments: LegalAction[] = [];
   for (const option of decision.paymentOptions) {
+    if (option.type === "restSelf") {
+      legalPayments.push({
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: {
+          type: "payment" as const,
+          optionId: option.id,
+        },
+      });
+      continue;
+    }
     if (option.type === "trashFromHand") {
       const selectableCardIds = player.hand.map((card) => card.instanceId);
       legalPayments.push(
@@ -394,13 +427,27 @@ export const getSequenceOptionalPayCostOptions = (
 ): Array<
   Extract<
     OptionalPayCostDecision["paymentOptions"][number],
-    { type: "restDon" | "returnDon" | "trashFromHand" | "trashFromField" }
+    {
+      type:
+        | "restSelf"
+        | "restDon"
+        | "returnDon"
+        | "trashFromHand"
+        | "trashFromField";
+    }
   >
 > => {
   const paymentOptions: Array<
     Extract<
       OptionalPayCostDecision["paymentOptions"][number],
-      { type: "restDon" | "returnDon" | "trashFromHand" | "trashFromField" }
+      {
+        type:
+          | "restSelf"
+          | "restDon"
+          | "returnDon"
+          | "trashFromHand"
+          | "trashFromField";
+      }
     >
   > = [];
   const currentPlayer = state.players[entry.controllerId];
@@ -408,6 +455,15 @@ export const getSequenceOptionalPayCostOptions = (
     currentPlayer === undefined ? 0 : getReturnDonEligibleCount(currentPlayer);
   const handEligibleCount = currentPlayer?.hand.length ?? 0;
 
+  if (cost.type === "restSelf") {
+    if (findRestableSource(state, entry) !== undefined) {
+      paymentOptions.push({
+        id: "restSelf",
+        type: "restSelf",
+      });
+    }
+    return paymentOptions;
+  }
   if (cost.type === "restDon") {
     if (activeDonCount(state, entry.controllerId) >= cost.count) {
       paymentOptions.push({

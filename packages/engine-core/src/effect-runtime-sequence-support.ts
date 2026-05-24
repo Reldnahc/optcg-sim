@@ -1,7 +1,9 @@
 import type {
+  Cost,
   Effect,
   EffectDefinition,
   EffectQueueEntry,
+  OptionalCost,
   PlaySelectedEffect,
   SelectTargetsEffect,
   SelectCardsEffect,
@@ -47,6 +49,9 @@ export interface SequenceSupportOptions {
 const flattenNestedSequenceSegments = (
   segment: SequenceEffect["effects"][number],
 ): SequenceEffect["effects"] | null => {
+  if (segment.effect.type === "payCost") {
+    return flattenPayCostSequenceSegment(segment);
+  }
   if (segment.effect.type !== "sequence") {
     return [segment];
   }
@@ -60,6 +65,52 @@ const flattenNestedSequenceSegments = (
   return flattened.effects.map((child, index) =>
     index === 0 ? { ...child, connector: segment.connector } : child,
   );
+};
+
+const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
+  switch (cost.type) {
+    case "restSelf":
+      return { type: "restSelf", optional: true };
+    case "restDon":
+      return { ...cost, optional: true };
+    case "returnDon":
+      return { ...cost, optional: true };
+    case "trashFromHand":
+      return { ...cost, optional: true };
+    case "sequence":
+    case "trashSelf":
+    case "discard":
+    case "custom":
+      return undefined;
+  }
+};
+
+const flattenPayCostSequenceSegment = (
+  segment: SequenceEffect["effects"][number],
+): SequenceEffect["effects"] | null => {
+  if (
+    segment.effect.type !== "payCost" ||
+    segment.effect.cost.type !== "sequence"
+  ) {
+    return [segment];
+  }
+  if (segment.optional === true) {
+    return null;
+  }
+  const costs = segment.effect.cost.costs
+    .map(toOptionalCost)
+    .filter((cost): cost is OptionalCost => cost !== undefined);
+  if (costs.length !== segment.effect.cost.costs.length || costs.length === 0) {
+    return null;
+  }
+  return costs.map((cost, index) => ({
+    id: `${segment.id ?? "pay-cost"}:${String(index)}`,
+    connector: index === 0 ? segment.connector : "ifYouDo",
+    ...(index === costs.length - 1 && segment.saveResultAs !== undefined
+      ? { saveResultAs: segment.saveResultAs }
+      : {}),
+    effect: { type: "payCost", cost },
+  }));
 };
 
 export const flattenSequenceEffect = (
@@ -227,6 +278,9 @@ const isSupportedPayCostSegment = (
         hasSupportedFieldFilter(option.filter)
       );
     });
+  }
+  if (cost.type === "restSelf") {
+    return true;
   }
   return (
     (cost.type === "restDon" ||

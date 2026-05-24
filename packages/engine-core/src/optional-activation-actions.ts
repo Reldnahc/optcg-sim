@@ -9,6 +9,7 @@ import type {
   GameState,
   LegalAction,
   PlayerId,
+  PlayerState,
   QueueEntryId,
 } from "@optcg/types";
 
@@ -84,6 +85,51 @@ const toTrashCard = (
   zone: { zone: "trash", playerId, slot: "trash", index },
 });
 
+const restSourceCard = (
+  player: PlayerState,
+  source: CardRef,
+): PlayerState | null => {
+  if (
+    player.leader.instanceId === source.instanceId &&
+    player.leader.cardId === source.cardId &&
+    source.zone?.zone === "leaderArea" &&
+    player.leader.state !== "rested"
+  ) {
+    return {
+      ...player,
+      leader: { ...player.leader, state: "rested" },
+    };
+  }
+  const characterIndex = player.characters.findIndex(
+    (card) =>
+      card.instanceId === source.instanceId &&
+      card.cardId === source.cardId &&
+      source.zone?.zone === "characterArea" &&
+      card.state !== "rested",
+  );
+  if (characterIndex >= 0) {
+    return {
+      ...player,
+      characters: player.characters.map((card, index) =>
+        index === characterIndex ? { ...card, state: "rested" } : card,
+      ),
+    };
+  }
+  if (
+    player.stage !== undefined &&
+    player.stage.instanceId === source.instanceId &&
+    player.stage.cardId === source.cardId &&
+    source.zone?.zone === "stageArea" &&
+    player.stage.state !== "rested"
+  ) {
+    return {
+      ...player,
+      stage: { ...player.stage, state: "rested" },
+    };
+  }
+  return null;
+};
+
 const supportsScopedFieldTrashFilter = (
   filter: CardFilter | undefined,
 ): filter is { categories: ["character"]; typesAny: [string, ...string[]] } =>
@@ -135,6 +181,7 @@ export const applyOptionalActivationDecisionResponse = (
     if (
       player === undefined ||
       (decision.cost.type !== "restDon" &&
+        decision.cost.type !== "restSelf" &&
         decision.cost.type !== "returnDon" &&
         decision.cost.type !== "trashFromHand" &&
         decision.cost.type !== "chooseOne")
@@ -168,6 +215,11 @@ export const applyOptionalActivationDecisionResponse = (
             selectedDonInstanceIds: NonNullable<
               typeof action.response.selectedDonInstanceIds
             >;
+          }
+        | {
+            playerId: PlayerId;
+            optionId: "restSelf";
+            selectedCardInstanceIds: [CardInstance["instanceId"]];
           }
         | {
             playerId: PlayerId;
@@ -356,6 +408,45 @@ export const applyOptionalActivationDecisionResponse = (
           playerId: decision.playerId,
           optionId: selectedOption.type,
           selectedCardInstanceIds: selected,
+        };
+      } else if (selectedOption.type === "restSelf") {
+        if (
+          paymentResponse.selectedDonInstanceIds !== undefined ||
+          paymentResponse.selectedCardInstanceIds !== undefined
+        ) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment source rest selection is invalid."),
+          );
+        }
+        const causedBy = decision.causedBy;
+        const source =
+          causedBy.type === "effect" && "queueEntryId" in causedBy
+            ? state.effectQueue.find(
+                (entry) => entry.id === causedBy.queueEntryId,
+              )?.source
+            : undefined;
+        if (source === undefined) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment source rest selection is invalid."),
+          );
+        }
+        const rested = restSourceCard(player, source);
+        if (rested === null) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment source rest selection is invalid."),
+          );
+        }
+        nextPlayer = rested;
+        costPaidPayload = {
+          playerId: decision.playerId,
+          optionId: "restSelf",
+          selectedCardInstanceIds: [source.instanceId],
         };
       } else {
         if (
