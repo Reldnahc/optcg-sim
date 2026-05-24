@@ -2,6 +2,7 @@ import { parseExpression } from "../expression-parser.js";
 import type {
   ConditionParser,
   ConnectorParser,
+  ExpressionParseResult,
   InstructionParser,
   ParseInput,
   SegmentParser,
@@ -67,6 +68,51 @@ export function conditionalExpressionSegmentParser(options: {
           ...condition.evidence,
           ...then.evidence,
         ],
+      };
+    }
+
+    return undefined;
+  };
+}
+
+export function conditionalBlockExpressionParser(options: {
+  readonly conditions: readonly ConditionParser[];
+  readonly connectors: readonly ConnectorParser[];
+  readonly instructions: readonly InstructionParser[];
+}): (input: ParseInput) => ExpressionParseResult | undefined {
+  return (input: ParseInput) => {
+    const match = /^if (?<condition>.+), (?<then>.+)$/i.exec(input.text);
+    const conditionText = match?.groups?.["condition"];
+    const thenText = match?.groups?.["then"];
+    if (conditionText === undefined || thenText === undefined) {
+      return undefined;
+    }
+
+    for (const conditionParser of options.conditions) {
+      const condition = conditionParser({ text: conditionText });
+      if (condition === undefined || condition.rest.length > 0) {
+        continue;
+      }
+
+      const then = parseExpression(thenText, {
+        connectors: options.connectors,
+        segments: [syntheticInstructionSegmentParser(options.instructions)],
+      });
+      if (then === undefined || then.rest.length > 0) {
+        continue;
+      }
+
+      return {
+        effect: then.effect,
+        evidence: [
+          "expression:conditional",
+          ...condition.evidence,
+          ...then.evidence,
+        ],
+        rest: "",
+        blockPatch: {
+          condition: condition.condition,
+        },
       };
     }
 

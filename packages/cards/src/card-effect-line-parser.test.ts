@@ -288,20 +288,17 @@ describe("card effect line parser", () => {
         category: "auto",
         trigger: { type: "whenAttacking" },
         sourcePresencePolicy: "mustRemainInSameZone",
+        condition: {
+          type: "fieldCount",
+          player: "self",
+          filter: { categories: ["don"] },
+          op: "lte",
+          value: 6,
+        },
         effect: {
-          type: "conditional",
-          if: {
-            type: "fieldCount",
-            player: "self",
-            filter: { categories: ["don"] },
-            op: "lte",
-            value: 6,
-          },
-          then: {
-            type: "modifyPower",
-            value: -1000,
-            duration: { type: "thisTurn" },
-          },
+          type: "modifyPower",
+          value: -1000,
+          duration: { type: "thisTurn" },
         },
       },
     });

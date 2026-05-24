@@ -9,6 +9,7 @@ import {
   parseYourLeaderPowerOpponentNextEndInstruction,
 } from "../instructions/index.js";
 import {
+  conditionalBlockExpressionParser,
   conditionalExpressionSegmentParser,
   instructionExpressionSegmentParser,
 } from "./composed-expression.js";
@@ -73,6 +74,31 @@ describe("composed expression segment parsers", () => {
           type: "custom",
           handler: "planned:yourLeaderPowerOpponentNextEnd",
         },
+      },
+    });
+  });
+
+  it("parses a top-level conditional expression into a block condition and body effect", () => {
+    expect(
+      conditionalBlockExpressionParser({
+        conditions: [parseOpponentRestedCharactersCondition],
+        connectors: [parseAndConnector],
+        instructions: plannedInstructions,
+      })({
+        text: "if your opponent has 2 or more rested Characters, your Leader gains +2000 power until the end of your opponent's next End Phase.",
+      }),
+    ).toMatchObject({
+      blockPatch: {
+        condition: {
+          type: "fieldCount",
+          player: "opponent",
+          op: "gte",
+          value: 2,
+        },
+      },
+      effect: {
+        type: "custom",
+        handler: "planned:yourLeaderPowerOpponentNextEnd",
       },
     });
   });

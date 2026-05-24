@@ -28,6 +28,7 @@ import {
 } from "./orchestrator.js";
 import {
   conditionalContinuousExpressionParser,
+  conditionalBlockExpressionParser,
   conditionalExpressionSegmentParser,
   costedEffectExpressionParser,
   instructionExpressionSegmentParser,
@@ -80,6 +81,11 @@ const defaultRegistry = {
       conditions: conditionParsers,
       connectors: [parseAndConnector],
       instructions: continuousInstructionParsers,
+    }),
+    conditionalBlockExpressionParser({
+      conditions: conditionParsers,
+      connectors: [parseThenConnector, parseAndConnector],
+      instructions: instructionParsers,
     }),
     costedEffectExpressionParser({
       instructions: instructionParsers,

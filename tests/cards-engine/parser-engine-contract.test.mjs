@@ -4,6 +4,7 @@ import { test } from "vitest";
 import { parseCardEffectLine } from "../../packages/cards/src/card-effect-line-parser.ts";
 import {
   isSupportedNoChoiceOnPlayDrawEffect,
+  isSupportedNoChoiceOnKODrawEffect,
   isSupportedNoChoiceWhenAttackingDrawEffect,
 } from "../../packages/engine-core/src/effect-runtime.ts";
 import {
@@ -12,6 +13,8 @@ import {
 } from "../../packages/engine-core/src/effect-runtime-continuous.ts";
 import { isSupportedQueuedEffectConditionShape } from "../../packages/engine-core/src/effect-runtime-conditions.ts";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "../../packages/engine-core/src/effect-runtime-sequence-support.ts";
+import { isSupportedWhenAttackingCompatibleQueuedEffect } from "../../packages/engine-core/src/effect-runtime-trigger-queueing-attack.ts";
+import { isSupportedOnKOCompatibleQueuedEffect } from "../../packages/engine-core/src/effect-runtime-trigger-queueing-ko.ts";
 
 const parseSupportedEffectBlock = (text, evidence = []) => {
   const parsed = parseCardEffectLine(text);
@@ -100,12 +103,124 @@ test("cards parser emits conditional power reduction primitives accepted by engi
     ],
   );
 
-  assert.equal(effectBlock.effect.type, "conditional");
+  assert.equal(effectBlock.effect.type, "modifyPower");
   assert.equal(
-    isSupportedQueuedEffectConditionShape(effectBlock.effect.if),
+    isSupportedQueuedEffectConditionShape(effectBlock.condition),
     true,
   );
-  assert.equal(isSupportedContinuousQueueEffect(effectBlock.effect.then), true);
+  assert.equal(isSupportedContinuousQueueEffect(effectBlock.effect), true);
+});
+
+test("cards parser emits conditional power reduction while current engine attack queueing fails closed", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[When Attacking] If you have 6 or less DON!! cards on your field, give up to 1 of your opponent's Characters −1000 power during this turn.",
+    [
+      "entry:whenAttacking",
+      "expression:conditional",
+      "condition:donFieldCount",
+      "condition:comparator:lte",
+      "target:opponentCharacters",
+      "cardinality:upTo",
+      "modifier:negativePower",
+      "duration:thisTurn",
+    ],
+  );
+
+  assert.equal(
+    isSupportedQueuedEffectConditionShape(effectBlock.condition),
+    true,
+  );
+  assert.equal(isSupportedContinuousQueueEffect(effectBlock.effect), true);
+  assert.equal(
+    isSupportedWhenAttackingCompatibleQueuedEffect(effectBlock),
+    false,
+  );
+});
+
+test("cards parser emits On K.O. draw accepted by engine On K.O. support", () => {
+  const effectBlock = parseSupportedEffectBlock("[On K.O.] Draw 1 card.", [
+    "entry:onKO",
+    "sourcePresence:resolveFromDestination",
+    "instruction:draw",
+  ]);
+
+  assert.equal(isSupportedNoChoiceOnKODrawEffect(effectBlock), true);
+  assert.equal(isSupportedOnKOCompatibleQueuedEffect(effectBlock), true);
+});
+
+test("cards parser emits On K.O. trash-from-hand while current engine On K.O. support fails closed", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[On K.O.] Trash 1 card from your hand.",
+    [
+      "entry:onKO",
+      "sourcePresence:resolveFromDestination",
+      "instruction:trashFromHand",
+    ],
+  );
+
+  assert.equal(effectBlock.effect.type, "trashFromHand");
+  assert.equal(isSupportedOnKOCompatibleQueuedEffect(effectBlock), false);
+});
+
+test("cards parser keeps recognized unsupported entry points out of engine support", () => {
+  const cases = [
+    ["[On Block] Draw 1 card.", "entry:onBlock"],
+    ["[End of Your Turn] Draw 1 card.", "entry:endOfYourTurn"],
+    ["[Main] Draw 1 card.", "entry:eventMain"],
+    ["[Counter] Draw 1 card.", "entry:eventCounter"],
+  ];
+
+  for (const [text, entryEvidence] of cases) {
+    const effectBlock = parseSupportedEffectBlock(text, [
+      entryEvidence,
+      "entrySupport:unsupported",
+      "instruction:draw",
+    ]);
+
+    assert.equal(isSupportedNoChoiceOnPlayDrawEffect(effectBlock), false);
+    assert.equal(
+      isSupportedQueuedAutoSequenceForEntryPoint(
+        effectBlock,
+        "onPlay",
+        "mustRemainInSameZone",
+      ),
+      false,
+    );
+  }
+});
+
+test("cards parser emits planned field-effect primitives while current engine support fails closed", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[On Play] Rest up to 1 of your opponent's Characters and that Character will not become active in your opponent's next Refresh Phase. Then, if your opponent has 2 or more rested Characters, your Leader gains +2000 power until the end of your opponent's next End Phase.",
+    [
+      "entry:onPlay",
+      "instructionSupport:planned",
+      "instruction:rest",
+      "reference:thatCharacter",
+      "instruction:preventActivation",
+      "condition:opponentFieldCount",
+      "modifier:positivePower",
+      "duration:opponentNextEndPhase",
+    ],
+  );
+  const conditionalSegment = effectBlock.effect.effects.find(
+    (segment) => segment.effect.type === "conditional",
+  );
+
+  assert.equal(effectBlock.effect.type, "sequence");
+  assert.ok(conditionalSegment, "expected planned conditional segment");
+  assert.equal(
+    isSupportedQueuedEffectConditionShape(conditionalSegment.effect.if),
+    false,
+  );
+  assert.equal(
+    isSupportedQueuedAutoSequenceForEntryPoint(
+      effectBlock,
+      "onPlay",
+      "mustRemainInSameZone",
+    ),
+    false,
+  );
 });
 
 test("cards parser emits broad field-removal protection primitives while current engine materialization fails closed", () => {
@@ -130,8 +245,9 @@ test("cards parser emits broad field-removal protection primitives while current
   );
   const definitionId = "cards-engine-contract:permanent";
 
+  assert.ok(protectionSegment, "expected field-removal protection segment");
   assert.equal(
-    protectionSegment?.effect.protection.fieldRemoval.classification,
+    protectionSegment.effect.protection.fieldRemoval.classification,
     "moveFromFieldToOtherZone",
   );
   assert.equal(
