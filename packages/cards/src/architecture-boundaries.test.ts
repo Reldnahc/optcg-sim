@@ -77,13 +77,7 @@ describe("cards package architecture boundaries", () => {
     },
     {
       layer: "/instructions/",
-      forbidden: [
-        "/entry-points/",
-        "/connectors/",
-        "/conditions/",
-        "/durations/",
-        "/references/",
-      ],
+      forbidden: ["/entry-points/", "/connectors/", "/conditions/"],
     },
     {
       layer: "/conditions/",

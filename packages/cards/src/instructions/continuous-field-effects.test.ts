@@ -17,12 +17,12 @@ const context: ContinuousInstructionContext = {
 
 describe("continuous field-effect instruction parsers", () => {
   it("defines continuous bodies as primitive parents with match families", () => {
-    expect(thisCharacterKeywordGrantPrimitive).toMatchObject({
+    expect(thisCharacterKeywordGrantPrimitive).toEqual({
       primitiveId: "instruction:giveKeyword",
-      matches: [
-        {
-          id: "this-character-gains-supported-keyword",
-        },
+      childPrimitiveIds: [
+        "target:thisCharacter",
+        "keyword:anySupported",
+        "duration:whileConditionTrue",
       ],
     });
   });
@@ -56,8 +56,8 @@ describe("continuous field-effect instruction parsers", () => {
       },
       evidence: [
         "instruction:giveKeyword",
-        "keyword:anySupported",
         "target:thisCharacter",
+        "keyword:anySupported",
         "duration:whileConditionTrue",
       ],
       rest: "",

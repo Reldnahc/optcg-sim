@@ -11,28 +11,23 @@ import {
 
 describe("planned field-effect instruction parsers", () => {
   it("defines field-effect instructions as primitive parents with match families", () => {
-    expect(restOpponentCharactersPrimitive).toMatchObject({
+    expect(restOpponentCharactersPrimitive).toEqual({
       primitiveId: "instruction:rest",
-      matches: [
-        {
-          id: "rest-up-to-opponent-characters",
-        },
-      ],
+      childPrimitiveIds: ["cardinality:upTo", "target:opponentCharacters"],
     });
-    expect(preventThatCharacterRefreshPrimitive).toMatchObject({
+    expect(preventThatCharacterRefreshPrimitive).toEqual({
       primitiveId: "instruction:preventActivation",
-      matches: [
-        {
-          id: "prevent-that-character-opponent-next-refresh",
-        },
+      childPrimitiveIds: [
+        "reference:thatCharacter",
+        "duration:opponentNextRefreshPhase",
       ],
     });
-    expect(yourLeaderPowerOpponentNextEndPrimitive).toMatchObject({
+    expect(yourLeaderPowerOpponentNextEndPrimitive).toEqual({
       primitiveId: "instruction:modifyPower",
-      matches: [
-        {
-          id: "your-leader-power-opponent-next-end",
-        },
+      childPrimitiveIds: [
+        "target:yourLeader",
+        "modifier:positivePower",
+        "duration:opponentNextEndPhase",
       ],
     });
   });
@@ -47,6 +42,7 @@ describe("planned field-effect instruction parsers", () => {
       evidence: [
         "instruction:rest",
         "instructionSupport:planned",
+        "cardinality:upTo",
         "count:positiveInteger",
         "chooser:self:upTo",
         "player:opponent",
@@ -101,8 +97,8 @@ describe("planned field-effect instruction parsers", () => {
       evidence: [
         "instruction:modifyPower",
         "instructionSupport:planned",
-        "modifier:positivePower",
         "target:yourLeader",
+        "modifier:positivePower",
         "duration:opponentNextEndPhase",
       ],
       rest: "",

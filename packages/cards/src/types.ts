@@ -50,6 +50,7 @@ export type PrimitiveEvidence =
   | "instruction:synthetic:A"
   | "instruction:synthetic:B"
   | "instructionSupport:planned"
+  | "cardinality:upTo"
   | "keyword:anySupported"
   | "player:self"
   | "player:opponent"
