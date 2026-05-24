@@ -35,7 +35,11 @@ import {
   searchRevealExpressionParser,
   syntheticInstructionSegmentParser,
 } from "./segments/index.js";
-import type { ParsedEffectLine, ParseCardEffectLineResult } from "./types.js";
+import type {
+  ParsedEffectLine,
+  ParseCardEffectLineResult,
+  ParseInput,
+} from "./types.js";
 
 const instructionParsers = [
   parseDrawInstruction,
@@ -56,6 +60,23 @@ const continuousInstructionParsers = [
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseThisCharacterKeywordGrantInstruction,
 ] as const;
+
+const generalExpressionParser = (input: ParseInput) =>
+  parseExpression(input.text, {
+    connectors: [parseThenConnector, parseAndConnector],
+    segments: [
+      conditionalExpressionSegmentParser({
+        conditions: conditionParsers,
+        connectors: [parseAndConnector],
+        instructions: instructionParsers,
+      }),
+      instructionExpressionSegmentParser({
+        connectors: [parseAndConnector],
+        instructions: instructionParsers,
+      }),
+      syntheticInstructionSegmentParser(instructionParsers),
+    ],
+  });
 
 export function parseCardEffectLine(
   text: string,
@@ -90,23 +111,9 @@ const defaultRegistry = {
     }),
     costedEffectExpressionParser({
       instructions: instructionParsers,
+      expressions: [searchRevealExpressionParser, generalExpressionParser],
     }),
     searchRevealExpressionParser,
-    (input) =>
-      parseExpression(input.text, {
-        connectors: [parseThenConnector, parseAndConnector],
-        segments: [
-          conditionalExpressionSegmentParser({
-            conditions: conditionParsers,
-            connectors: [parseAndConnector],
-            instructions: instructionParsers,
-          }),
-          instructionExpressionSegmentParser({
-            connectors: [parseAndConnector],
-            instructions: instructionParsers,
-          }),
-          syntheticInstructionSegmentParser(instructionParsers),
-        ],
-      }),
+    generalExpressionParser,
   ],
 } satisfies EffectLineParserRegistry;

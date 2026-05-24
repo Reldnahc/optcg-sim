@@ -9,6 +9,9 @@ import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
 export function costedEffectExpressionParser(options: {
   readonly instructions: readonly InstructionParser[];
+  readonly expressions?: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input) => {
     const cost = parseReturnDonCost(input);
@@ -16,10 +19,7 @@ export function costedEffectExpressionParser(options: {
       return undefined;
     }
 
-    const body = parseExpression(cost.rest, {
-      connectors: [],
-      segments: [syntheticInstructionSegmentParser(options.instructions)],
-    });
+    const body = parseCostedBody(cost.rest, options);
     if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
@@ -51,4 +51,26 @@ export function costedEffectExpressionParser(options: {
       rest: "",
     };
   };
+}
+
+function parseCostedBody(
+  text: string,
+  options: {
+    readonly instructions: readonly InstructionParser[];
+    readonly expressions?: readonly ((
+      input: ParseInput,
+    ) => ExpressionParseResult | undefined)[];
+  },
+): ExpressionParseResult | undefined {
+  for (const expression of options.expressions ?? []) {
+    const parsed = expression({ text });
+    if (parsed !== undefined && parsed.rest.length === 0) {
+      return parsed;
+    }
+  }
+
+  return parseExpression(text, {
+    connectors: [],
+    segments: [syntheticInstructionSegmentParser(options.instructions)],
+  });
 }

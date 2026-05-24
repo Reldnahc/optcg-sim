@@ -9,7 +9,7 @@ export function parseRestToBottomAnyOrder(
   input: ParseInput,
 ): RestBottomParseResult | undefined {
   const match =
-    /^Then, place the rest at the bottom of your deck in any order\.?$/i.exec(
+    /^Then, place the rest at the bottom of your deck in any order(?:\.|,\s+and\s+(?<rest>.+))$/i.exec(
       input.text,
     );
   if (match === null) {
@@ -18,6 +18,6 @@ export function parseRestToBottomAnyOrder(
 
   return {
     evidence: ["remaining:rest", "remaining:bottomDeck", "order:anyOrder"],
-    rest: "",
+    rest: match.groups?.["rest"] ?? "",
   };
 }

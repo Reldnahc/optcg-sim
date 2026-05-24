@@ -352,6 +352,82 @@ describe("card effect line parser", () => {
     );
   });
 
+  it("parses costed private top-of-deck search with trailing trash compositionally", () => {
+    const result = parseCardEffectLine(
+      "[On Play] DON!! −1: Look at 5 cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 1, optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "search",
+                      request: {
+                        zone: "deck",
+                        player: "self",
+                        lookCount: 5,
+                        filter: {},
+                        min: 0,
+                        max: 1,
+                        destination: "hand",
+                        revealTo: "chooserOnly",
+                        remainingCards: {
+                          destination: "deck",
+                          position: "bottom",
+                          order: "ownerChoice",
+                        },
+                        shuffleAfter: false,
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "trashFromHand",
+                      count: 1,
+                      player: "self",
+                      chooser: "self",
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "cost:returnDon",
+        "instruction:search",
+        "look:topDeck",
+        "filter:any",
+        "reveal:chooserOnly",
+        "remaining:bottomDeck",
+        "instruction:trashFromHand",
+      ]),
+    );
+  });
+
   it("fails closed for unknown entry points", () => {
     expect(parseCardEffectLine("[Unknown] Draw 1 card.")).toBeUndefined();
   });

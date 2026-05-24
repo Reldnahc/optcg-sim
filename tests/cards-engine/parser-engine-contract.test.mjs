@@ -256,6 +256,48 @@ test("cards parser emits top-of-deck type search accepted by engine search-revea
   assert.equal(result.ok, true);
 });
 
+test("cards parser emits costed private search plus trash while current engine sequence gate fails closed", () => {
+  const effectBlock = parseSupportedEffectBlock(
+    "[On Play] DON!! −1: Look at 5 cards from the top of your deck and add up to 1 card to your hand. Then, place the rest at the bottom of your deck in any order, and trash 1 card from your hand.",
+    [
+      "entry:onPlay",
+      "cost:returnDon",
+      "instruction:search",
+      "look:topDeck",
+      "filter:any",
+      "reveal:chooserOnly",
+      "remaining:bottomDeck",
+      "instruction:trashFromHand",
+    ],
+  );
+
+  assert.equal(effectBlock.effect.type, "sequence");
+  const body = effectBlock.effect.effects[1]?.effect;
+  assert.equal(body?.type, "sequence");
+  const searchSegment = body.effects.find(
+    (segment) => segment.effect.type === "search",
+  );
+  assert.ok(searchSegment, "expected search segment after DON cost");
+  assert.equal(searchSegment.effect.request.revealTo, "chooserOnly");
+  assert.deepEqual(searchSegment.effect.request.filter, {});
+  assert.equal(
+    createSupportedSearchRevealTransientSet(
+      createActiveState(),
+      queueDrawForP1(),
+      searchSegment.effect,
+    ).ok,
+    true,
+  );
+  assert.equal(
+    isSupportedQueuedAutoSequenceForEntryPoint(
+      effectBlock,
+      "onPlay",
+      "mustRemainInSameZone",
+    ),
+    false,
+  );
+});
+
 test("cards parser emits keyword-only permanent primitives accepted by engine materialization", () => {
   const effectBlock = parseSupportedEffectBlock(
     "If you have 7 or more cards in your trash, this Character gains [Blocker].",

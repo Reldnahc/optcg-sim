@@ -18,7 +18,7 @@ export const returnDonCostPrimitive = {
 export function parseReturnDonCost(
   input: ParseInput,
 ): CostParseResult | undefined {
-  const match = /^DON!!\s*[−-](?<count>[1-9]\d*):\s*(?<rest>.*)$/i.exec(
+  const match = /^DON!!\s*[-−](?<count>[1-9]\d*):\s*(?<rest>.*)$/i.exec(
     input.text,
   );
   const countText = match?.groups?.["count"];

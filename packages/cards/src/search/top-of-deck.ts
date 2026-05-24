@@ -10,7 +10,7 @@ export function parseTopDeckLook(
   input: ParseInput,
 ): TopDeckLookParseResult | undefined {
   const match =
-    /^Look at (?<count>\d+) cards from the top of your deck;\s+(?<rest>.+)$/i.exec(
+    /^Look at (?<count>\d+) cards from the top of your deck(?:;|\s+and)\s+(?<rest>.+)$/i.exec(
       input.text,
     );
   const countText = match?.groups?.["count"];
