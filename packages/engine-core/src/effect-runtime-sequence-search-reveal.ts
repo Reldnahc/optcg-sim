@@ -137,7 +137,7 @@ export const applySearchRevealSequenceSegment = (params: {
 };
 
 export const resumeSequenceFrameAfterSearchRevealHelper = (params: {
-  createUnsupportedTrashDecision: unknown;
+  createTrashDecision: unknown;
   emptySegmentResult: () => SequenceSegmentResult;
   findFrameQueueEntry: (
     state: GameState,
@@ -214,7 +214,7 @@ export const resumeSequenceFrameAfterSearchRevealHelper = (params: {
       ? params.selectedCards
       : existingResult?.selectedCards;
   return params.resumeSequenceFrameFromLedgers({
-    createTrashDecision: params.createUnsupportedTrashDecision,
+    createTrashDecision: params.createTrashDecision,
     effectBlock,
     entry,
     finalizeCompleted: true,

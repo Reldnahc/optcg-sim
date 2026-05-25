@@ -7,6 +7,7 @@ import {
 } from "./effect-runtime-sequence-frames.js";
 import { hasSequenceFrameForDecision } from "./effect-runtime-sequence-frame-decisions.js";
 import { applySupportedSearchRevealChoiceResponse } from "./effect-runtime-search-reveal.js";
+import { createSupportedTrashFromHandChoiceDecision } from "./effect-runtime-trash-from-hand.js";
 
 const isCardRef = (value: unknown): value is CardRef => {
   if (typeof value !== "object" || value === null) {
@@ -68,6 +69,7 @@ export const applySearchRevealSequenceChoiceResponse = (
     searchResult.state,
     decision.id,
     selectedCards,
+    createSupportedTrashFromHandChoiceDecision,
   );
   if (resumed === undefined) {
     return searchResult;
@@ -99,6 +101,7 @@ export const resumeSequenceAfterSearchRevealOrderResponse = (
     orderResult.state,
     decision.id,
     [],
+    createSupportedTrashFromHandChoiceDecision,
   );
   if (resumed === undefined) {
     return null;

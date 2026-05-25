@@ -837,9 +837,10 @@ export const resumeSequenceFrameAfterSearchReveal = (
   state: GameState,
   decisionId: SelectCardsDecision["id"],
   selectedCards: readonly CardRef[],
+  createTrashDecision: CreateTrashFromHandSequenceDecision,
 ): SequenceFrameResumeResult =>
   resumeSequenceFrameAfterSearchRevealHelper({
-    createUnsupportedTrashDecision,
+    createTrashDecision,
     decisionId,
     emptySegmentResult,
     findFrameQueueEntry,
