@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ContinuousInstructionContext } from "./continuous-field-effects.js";
 import {
+  parseSetBasePowerInstruction,
   parseThisCharacterKeywordGrantInstruction,
   thisCharacterKeywordGrantPrimitive,
 } from "./continuous-field-effects.js";
@@ -16,6 +17,58 @@ const context: ContinuousInstructionContext = {
 };
 
 describe("continuous field-effect instruction parsers", () => {
+  it("parses set-base-power as target plus value under a supplied condition", () => {
+    expect(
+      parseSetBasePowerInstruction(
+        {
+          text: "set the base power of all of your {Five Elders} type Characters to 7000.",
+        },
+        {
+          condition: {
+            type: "trashCount",
+            player: "self",
+            op: "gte",
+            value: 10,
+          },
+        },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "setBasePower",
+        target: {
+          type: "all",
+          zone: "characterArea",
+          player: "self",
+          filter: {
+            categories: ["character"],
+            typesAny: ["Five Elders"],
+          },
+        },
+        value: 7000,
+        duration: {
+          type: "whileConditionTrue",
+          condition: {
+            type: "trashCount",
+            player: "self",
+            op: "gte",
+            value: 10,
+          },
+        },
+      },
+      evidence: [
+        "instruction:setBasePower",
+        "cardinality:all",
+        "player:self",
+        "zone:characterArea",
+        "filter:type",
+        "filter:category:character",
+        "value:basePower:positiveInteger",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
+
   it("defines continuous bodies as primitive parents with match families", () => {
     expect(thisCharacterKeywordGrantPrimitive).toEqual({
       primitiveId: "instruction:giveKeyword",
@@ -49,7 +102,10 @@ describe("continuous field-effect instruction parsers", () => {
         type: "giveKeyword",
         target: { type: "self" },
         keyword,
-        duration: { type: "permanent" },
+        duration: {
+          type: "whileConditionTrue",
+          condition: context.condition,
+        },
       },
       evidence: [
         "instruction:giveKeyword",

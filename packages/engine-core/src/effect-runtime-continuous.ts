@@ -72,6 +72,12 @@ const isSupportedDuration = (duration: Duration): boolean => {
   );
 };
 
+const isSupportedBasePowerDuration = (duration: Duration): boolean =>
+  duration.type === "permanent" ||
+  duration.type === "whileSourceOnField" ||
+  (duration.type === "whileConditionTrue" &&
+    isSupportedQueuedEffectConditionShape(duration.condition));
+
 const hasSupportedNumericFilter = (
   filter: CardFilter["cost"] | CardFilter["power"],
 ): boolean => {
@@ -423,7 +429,7 @@ const effectToDerivedModifier = (
         unsupportedDerivedMessage("unsupported keyword target"),
       );
     }
-    if (effect.duration.type !== "permanent") {
+    if (!isSupportedDuration(effect.duration)) {
       throw new TypeError(
         unsupportedDerivedMessage("unsupported keyword duration"),
       );
@@ -448,7 +454,7 @@ const effectToDerivedModifier = (
         unsupportedDerivedMessage("unsupported base-power target"),
       );
     }
-    if (effect.duration.type !== "permanent") {
+    if (!isSupportedBasePowerDuration(effect.duration)) {
       throw new TypeError(
         unsupportedDerivedMessage("unsupported base-power duration"),
       );
@@ -465,7 +471,10 @@ const effectToDerivedModifier = (
     };
   }
   if (effect.type === "protectFromKO") {
-    if (effect.target.type !== "self" || effect.duration.type !== "permanent") {
+    if (
+      effect.target.type !== "self" ||
+      !isSupportedDuration(effect.duration)
+    ) {
       throw new TypeError(
         unsupportedDerivedMessage("unsupported ko protection shape"),
       );
@@ -490,7 +499,7 @@ const effectToDerivedModifier = (
   if (effect.type !== "giveProtection") {
     return null;
   }
-  if (effect.target.type !== "self" || effect.duration.type !== "permanent") {
+  if (effect.target.type !== "self" || !isSupportedDuration(effect.duration)) {
     throw new TypeError(
       unsupportedDerivedMessage("unsupported protection shape"),
     );
@@ -634,9 +643,7 @@ export const deriveImplementedDslPermanentContinuousEffects = (
             source,
             sourceSnapshot,
             block.condition,
-            part.effect.type === "modifyPower"
-              ? part.effect.duration
-              : { type: "whileSourceOnField" },
+            durationForDerivedEffect(part.effect),
             block.id,
             modifier,
             index,
@@ -646,4 +653,18 @@ export const deriveImplementedDslPermanentContinuousEffects = (
     }
   }
   return derived;
+};
+
+const durationForDerivedEffect = (effect: Effect): Duration => {
+  if (
+    effect.type === "modifyPower" ||
+    effect.type === "giveKeyword" ||
+    effect.type === "setBasePower" ||
+    effect.type === "protectFromKO" ||
+    effect.type === "giveProtection"
+  ) {
+    return effect.duration;
+  }
+
+  return { type: "whileSourceOnField" };
 };

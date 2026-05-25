@@ -69,7 +69,7 @@ describe("modify power instruction parser", () => {
           request: {
             filter: {
               categories: ["character"],
-              cost: { op: "lte", value: 5 },
+              cost: { max: 5 },
             },
           },
         },

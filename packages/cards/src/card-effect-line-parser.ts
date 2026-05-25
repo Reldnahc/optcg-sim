@@ -14,11 +14,13 @@ import {
 import { parseExpression } from "./expression-parser.js";
 import {
   parseDrawInstruction,
+  parseKoInstruction,
   parseModifyPowerInstruction,
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parsePlayFromTrashInstruction,
   parseRestOpponentCharactersInstruction,
+  parseSetBasePowerInstruction,
   parseThisCharacterKeywordGrantInstruction,
   parseTrashAllYourCharactersInstruction,
   parseTrashFromHandInstruction,
@@ -57,6 +59,7 @@ const instructionParsers = [
   parsePlayFromHandInstruction,
   parsePlayFromTrashInstruction,
   parseModifyPowerInstruction,
+  parseKoInstruction,
   parseRestOpponentCharactersInstruction,
   parsePreventThatCharacterRefreshInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
@@ -73,6 +76,7 @@ const continuousInstructionParsers = [
   parseOpponentEffectFieldRemovalProtectionInstruction,
   parseThisCharacterKeywordGrantInstruction,
   parseYourLeaderConditionalPowerInstruction,
+  parseSetBasePowerInstruction,
 ] as const;
 
 const generalExpressionParser = (input: ParseInput) =>

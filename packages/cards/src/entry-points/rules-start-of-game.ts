@@ -69,5 +69,5 @@ function parseDeckRestriction(
 }
 
 function isGteCostPredicate(cost: CardFilter["cost"]): boolean {
-  return cost !== undefined && "op" in cost && cost.op === "gte";
+  return cost !== undefined && !("op" in cost) && typeof cost.min === "number";
 }

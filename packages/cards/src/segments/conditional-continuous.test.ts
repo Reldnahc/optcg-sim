@@ -26,16 +26,19 @@ describe("conditional continuous expression parser", () => {
     ).toMatchObject({
       blockPatch: {
         category: "permanent",
-        condition: {
-          type: "trashCount",
-          player: "self",
-          op: "gte",
-          value: 7,
-        },
       },
       effect: {
         type: "giveProtection",
         target: { type: "self" },
+        duration: {
+          type: "whileConditionTrue",
+          condition: {
+            type: "trashCount",
+            player: "self",
+            op: "gte",
+            value: 7,
+          },
+        },
       },
     });
   });

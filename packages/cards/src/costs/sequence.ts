@@ -29,7 +29,7 @@ export function parseOptionalCostSequence(
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
 
-  if (parts.length < 2) {
+  if (parts.length === 0) {
     return undefined;
   }
 
@@ -47,6 +47,18 @@ export function parseOptionalCostSequence(
     parsedCosts.push(parsed);
   }
 
+  if (parsedCosts.length === 1) {
+    const [parsedCost] = parsedCosts;
+    if (parsedCost === undefined) {
+      return undefined;
+    }
+    return {
+      cost: toOptionalCost(parsedCost.cost),
+      evidence: parsedCost.evidence,
+      rest: "",
+    };
+  }
+
   return {
     cost: {
       type: "sequence",
@@ -59,6 +71,28 @@ export function parseOptionalCostSequence(
     ],
     rest: "",
   };
+}
+
+function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
+  switch (cost.type) {
+    case "restDon":
+      return {
+        type: "restDon",
+        count: cost.count,
+        ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
+        optional: true,
+      };
+    case "restSelf":
+      return { type: "restSelf", optional: true };
+    case "trashFromHand":
+      return {
+        type: "trashFromHand",
+        count: cost.count,
+        chooser: cost.chooser,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+        optional: true,
+      };
+  }
 }
 
 function toRequiredCost(cost: SequenceCostPrimitive): Cost {

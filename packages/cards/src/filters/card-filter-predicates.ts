@@ -246,7 +246,7 @@ function parseCostPredicate(
   current: CardFilter,
 ): ReturnType<PredicateParser> {
   const match =
-    /^a cost of (?<value>[1-9]\d*) (?<direction>or more|or less)\b\s*(?<rest>.*)$/i.exec(
+    /^a (?:base )?cost of (?<value>[1-9]\d*) (?<direction>or more|or less)\b\s*(?<rest>.*)$/i.exec(
       text,
     );
   const valueText = match?.groups?.["value"];
@@ -261,7 +261,10 @@ function parseCostPredicate(
   return {
     filter: {
       ...current,
-      cost: { op, value: Number.parseInt(valueText, 10) },
+      cost:
+        op === "gte"
+          ? { min: Number.parseInt(valueText, 10) }
+          : { max: Number.parseInt(valueText, 10) },
     },
     evidence: [
       "filter:cost",

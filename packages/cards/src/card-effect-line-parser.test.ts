@@ -170,12 +170,6 @@ describe("card effect line parser", () => {
       block: {
         category: "permanent",
         trigger: { type: "permanent" },
-        condition: {
-          type: "trashCount",
-          player: "self",
-          op: "gte",
-          value: 7,
-        },
         effect: {
           type: "sequence",
           effects: [
@@ -184,7 +178,15 @@ describe("card effect line parser", () => {
               effect: {
                 type: "giveProtection",
                 target: { type: "self" },
-                duration: { type: "permanent" },
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "trashCount",
+                    player: "self",
+                    op: "gte",
+                    value: 7,
+                  },
+                },
               },
             },
             {
@@ -193,7 +195,15 @@ describe("card effect line parser", () => {
                 type: "giveKeyword",
                 target: { type: "self" },
                 keyword: "blocker",
-                duration: { type: "permanent" },
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "trashCount",
+                    player: "self",
+                    op: "gte",
+                    value: 7,
+                  },
+                },
               },
             },
           ],
@@ -693,12 +703,6 @@ describe("card effect line parser", () => {
         category: "permanent",
         trigger: { type: "permanent" },
         sourcePresencePolicy: "mustRemainInSameZone",
-        condition: {
-          type: "trashCount",
-          player: "self",
-          op: "gte",
-          value: 19,
-        },
         effect: {
           type: "modifyPower",
           target: { type: "myLeader" },
@@ -808,6 +812,127 @@ describe("card effect line parser", () => {
         "condition:comparator:lte",
         "valueSource:donFieldCount:self",
         "composition:selectThenPlay",
+      ]),
+    );
+  });
+
+  it("parses conditional continuous set-base-power from reusable condition and target primitives", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] If you have 10 or more cards in your trash, set the base power of all of your {Five Elders} type Characters to 7000.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "setBasePower",
+          target: {
+            type: "all",
+            zone: "characterArea",
+            player: "self",
+            filter: {
+              categories: ["character"],
+              typesAny: ["Five Elders"],
+            },
+          },
+          value: 7000,
+          duration: {
+            type: "whileConditionTrue",
+            condition: {
+              type: "trashCount",
+              player: "self",
+              op: "gte",
+              value: 10,
+            },
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:yourTurn",
+        "expression:conditionalContinuous",
+        "condition:trashCount",
+        "condition:comparator:gte",
+        "instruction:setBasePower",
+        "cardinality:all",
+        "filter:type",
+        "filter:category:character",
+        "value:basePower:positiveInteger",
+      ]),
+    );
+  });
+
+  it("parses optional single hand-trash cost into reusable selected-target K.O. composition", () => {
+    const result = parseCardEffectLine(
+      "[On Play] You may trash 1 card from your hand: K.O. up to 1 of your opponent's Characters with a base cost of 5 or less.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "paidCost",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "trashFromHand",
+                  count: 1,
+                  chooser: "self",
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    saveResultAs: "selected:ko-target",
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        player: "opponent",
+                        zone: "characterArea",
+                        filter: {
+                          categories: ["character"],
+                          cost: { max: 5 },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "ko",
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "composition:optionalCostedEffect",
+        "cost:trashFromHand",
+        "instruction:ko",
+        "cardinality:upTo",
+        "target:opponentCharacters",
+        "filter:cost",
+        "condition:comparator:lte",
+        "composition:selectThenApply",
       ]),
     );
   });

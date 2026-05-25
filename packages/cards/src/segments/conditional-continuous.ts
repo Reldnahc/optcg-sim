@@ -51,7 +51,6 @@ export function conditionalContinuousExpressionParser(options: {
         rest: "",
         blockPatch: {
           category: "permanent",
-          condition: condition.condition,
         },
       };
     }

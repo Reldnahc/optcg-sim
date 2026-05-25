@@ -35,12 +35,32 @@ describe("card filter predicate parser", () => {
     ).toEqual({
       filter: {
         categories: ["character"],
-        cost: { op: "gte", value: 5 },
+        cost: { min: 5 },
       },
       evidence: [
         "filter:category:character",
         "filter:cost",
         "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses base cost as the same reusable cost predicate family", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "Characters with a base cost of 5 or less",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        cost: { max: 5 },
+      },
+      evidence: [
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
         "condition:threshold:positiveInteger",
       ],
       rest: "",

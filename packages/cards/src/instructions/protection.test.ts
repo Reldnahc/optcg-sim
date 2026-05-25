@@ -50,7 +50,10 @@ describe("continuous protection instruction parser", () => {
             sourceControllerRelation: "opponentControlled",
           },
         },
-        duration: { type: "permanent" },
+        duration: {
+          type: "whileConditionTrue",
+          condition: context.condition,
+        },
       },
       evidence: [
         "instruction:giveProtection",
@@ -98,7 +101,10 @@ describe("continuous protection instruction parser", () => {
       effect: {
         type: "protectFromKO",
         target: { type: "self" },
-        duration: { type: "permanent" },
+        duration: {
+          type: "whileConditionTrue",
+          condition: context.condition,
+        },
       },
       evidence: [
         "instruction:giveProtection",

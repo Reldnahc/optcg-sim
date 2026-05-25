@@ -75,7 +75,10 @@ function buildProtectionEffect(options: {
     return {
       type: "protectFromKO",
       target: { type: "self" },
-      duration: { type: "permanent" },
+      duration: {
+        type: "whileConditionTrue",
+        condition: options.context.condition,
+      },
       sourceKind: options.sourceKind,
       sourceControllerRelation: options.sourceControllerRelation,
     };
@@ -88,7 +91,10 @@ function buildProtectionEffect(options: {
       sourceKind: options.sourceKind,
       sourceControllerRelation: options.sourceControllerRelation,
     }),
-    duration: { type: "permanent" },
+    duration: {
+      type: "whileConditionTrue",
+      condition: options.context.condition,
+    },
   };
 }
 

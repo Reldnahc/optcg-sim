@@ -9,7 +9,10 @@ import type {
   ReplacementProcess,
 } from "@optcg/types";
 
-import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import {
+  evaluateQueuedEffectCondition,
+  isSupportedQueuedEffectConditionShape,
+} from "./effect-runtime-conditions.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "./effect-runtime-continuous.js";
 import { isSupportedFieldRemovalProtection } from "./field-removal-protection-shape.js";
 export {
@@ -84,7 +87,9 @@ const isSupportedDuration = (
   duration.type === "untilEndOfTurn" ||
   duration.type === "untilStartOfNextTurn" ||
   duration.type === "whileSourceOnField" ||
-  duration.type === "permanent";
+  duration.type === "permanent" ||
+  (duration.type === "whileConditionTrue" &&
+    isSupportedQueuedEffectConditionShape(duration.condition));
 
 const isCardRefLive = (
   state: GameState,
@@ -115,6 +120,14 @@ const durationIsActive = (
 ): boolean => {
   if (effect.duration.type === "whileSourceOnField") {
     return isCardRefLive(state, effect.source);
+  }
+  if (effect.duration.type === "whileConditionTrue") {
+    const result = evaluateQueuedEffectCondition(
+      state,
+      toConditionQueueEntry(effect),
+      effect.duration.condition,
+    );
+    return result.supported && result.passed;
   }
   return true;
 };

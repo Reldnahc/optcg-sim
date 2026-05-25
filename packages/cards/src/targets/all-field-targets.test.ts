@@ -59,7 +59,7 @@ describe("all field target parser", () => {
         player: "self",
         filter: {
           categories: ["character"],
-          cost: { op: "gte", value: 5 },
+          cost: { min: 5 },
         },
       },
       evidence: [

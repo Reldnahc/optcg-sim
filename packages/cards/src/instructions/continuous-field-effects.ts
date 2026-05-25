@@ -3,6 +3,7 @@ import type { Condition } from "@optcg/types";
 import { parseKeyword } from "../keywords/index.js";
 import { parsePositivePowerModifier } from "../modifiers/index.js";
 import {
+  parseAllFieldTarget,
   parseThisCharacterTarget,
   parseYourLeaderTarget,
 } from "../targets/index.js";
@@ -35,8 +36,58 @@ export const yourLeaderConditionalPowerPrimitive = {
   ],
 } as const;
 
+export const setBasePowerPrimitive = {
+  primitiveId: "instruction:setBasePower",
+  childPrimitiveIds: [
+    "cardinality:all",
+    "filter:type",
+    "filter:category:character",
+    "value:basePower:positiveInteger",
+    "duration:whileConditionTrue",
+  ],
+} as const;
+
+export const parseSetBasePowerInstruction: ContinuousInstructionParser = (
+  input,
+  context,
+) => {
+  const match =
+    /^set the base power of (?<target>.+) to (?<value>[1-9]\d*)\.?$/i.exec(
+      input.text,
+    );
+  const targetText = match?.groups?.["target"];
+  const valueText = match?.groups?.["value"];
+  if (targetText === undefined || valueText === undefined) {
+    return undefined;
+  }
+
+  const target = parseAllFieldTarget({ text: targetText });
+  if (target === undefined || target.rest.length > 0) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "setBasePower",
+      target: target.target,
+      value: Number.parseInt(valueText, 10),
+      duration: {
+        type: "whileConditionTrue",
+        condition: context.condition,
+      },
+    },
+    evidence: [
+      "instruction:setBasePower",
+      ...target.evidence,
+      "value:basePower:positiveInteger",
+      "duration:whileConditionTrue",
+    ],
+    rest: "",
+  };
+};
+
 export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionParser =
-  (input) => {
+  (input, context) => {
     const target = parseThisCharacterTarget({
       text: input.text,
       allowImplicit: true,
@@ -61,7 +112,10 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
         type: "giveKeyword",
         target: { type: "self" },
         keyword: keyword.keyword,
-        duration: { type: "permanent" },
+        duration: {
+          type: "whileConditionTrue",
+          condition: context.condition,
+        },
       },
       evidence: [
         "instruction:giveKeyword",

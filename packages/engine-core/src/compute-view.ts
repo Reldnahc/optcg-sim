@@ -113,7 +113,9 @@ const isSupportedContinuousBasePowerSetModifier = (
   effect: ContinuousEffectRecord,
 ): boolean =>
   (effect.duration.type === "permanent" ||
-    effect.duration.type === "whileSourceOnField") &&
+    effect.duration.type === "whileSourceOnField" ||
+    (effect.duration.type === "whileConditionTrue" &&
+      isSupportedQueuedEffectConditionShape(effect.duration.condition))) &&
   effect.modifier.layer === "basePowerSet" &&
   effect.modifier.operation.type === "setBasePower" &&
   Number.isSafeInteger(effect.modifier.operation.value) &&

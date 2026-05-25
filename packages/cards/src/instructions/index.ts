@@ -1,8 +1,10 @@
 export {
+  parseSetBasePowerInstruction,
   parseThisCharacterKeywordGrantInstruction,
   parseYourLeaderConditionalPowerInstruction,
 } from "./continuous-field-effects.js";
 export { parseDrawInstruction } from "./draw.js";
+export { parseKoInstruction } from "./ko.js";
 export { parseModifyPowerInstruction } from "./modify-power.js";
 export { parsePlayFromHandInstruction } from "./play-from-hand.js";
 export { parsePlayFromTrashInstruction } from "./play-from-trash.js";
