@@ -48,7 +48,7 @@ export const PlayerMat = ({
       />
     </div>
     <div className="trash-panel">
-      <Zone label="Trash" cards={zones.trash} size="mini" />
+      <Zone label="Trash" cards={zones.trash} size="small" />
     </div>
     <div className="cost-panel">
       <Zone label="Cost Area" cards={zones.costArea} size="mini" />
