@@ -18,23 +18,35 @@ const fixturesRoot = new URL(
   import.meta.url,
 );
 
-export const createOp13FixtureFetch = (): DevPoneglyphFetch => async (url) => {
-  const cardId = decodeURIComponent(url.split("/").at(-1) ?? "");
-  const fileName = fixtureFiles[cardId];
-  if (fileName === undefined) {
-    return {
-      ok: false,
-      status: 404,
-      json: () => Promise.resolve({}),
+export const createOp13FixtureFetch =
+  (): DevPoneglyphFetch => async (url, init) => {
+    if (!url.endsWith("/v1/cards/batch") || init?.method !== "POST") {
+      return {
+        ok: false,
+        status: 404,
+        json: () => Promise.resolve({}),
+      };
+    }
+    const body = JSON.parse(init.body ?? "{}") as {
+      card_numbers?: string[];
     };
-  }
-  const raw = await readFile(
-    fileURLToPath(new URL(fileName, fixturesRoot)),
-    "utf8",
-  );
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(JSON.parse(raw) as unknown),
+    const data: Record<string, unknown> = {};
+    const missing: string[] = [];
+    for (const cardId of body.card_numbers ?? []) {
+      const fileName = fixtureFiles[cardId];
+      if (fileName === undefined) {
+        missing.push(cardId);
+        continue;
+      }
+      const raw = await readFile(
+        fileURLToPath(new URL(fileName, fixturesRoot)),
+        "utf8",
+      );
+      data[cardId] = JSON.parse(raw) as unknown;
+    }
+    return {
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ data, missing }),
+    };
   };
-};

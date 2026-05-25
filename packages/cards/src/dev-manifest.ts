@@ -24,8 +24,15 @@ export interface DevPoneglyphFetchResponse {
   json(): Promise<unknown>;
 }
 
+export interface DevPoneglyphFetchRequest {
+  readonly method?: "GET" | "POST";
+  readonly headers?: Record<string, string>;
+  readonly body?: string;
+}
+
 export type DevPoneglyphFetch = (
   url: string,
+  init?: DevPoneglyphFetchRequest,
 ) => Promise<DevPoneglyphFetchResponse>;
 
 export interface BuildDevMatchCardManifestFromPoneglyphIdsRequest {
@@ -86,11 +93,14 @@ export const buildDevMatchCardManifestFromPoneglyphIds = async (
   const cards: Record<CardId, ResolvedCard> = {};
   const effectDefinitions: Record<string, EffectDefinition> = {};
 
-  for (const cardId of uniqueCardIds(request.cardIds)) {
-    const detail = await fetchPoneglyphCardDetail(cardId, {
+  const details = await fetchPoneglyphCardDetails(
+    uniqueCardIds(request.cardIds),
+    {
       baseUrl,
       fetchCard,
-    });
+    },
+  );
+  for (const detail of details) {
     const built = buildResolvedCard(detail, versions);
     cards[built.card.cardId] = built.card;
     const effectDefinitionId = built.card.support.effectDefinitionId;
@@ -134,33 +144,77 @@ const uniqueCardIds = (cardIds: readonly CardId[]): CardId[] => {
   return unique;
 };
 
-const fetchPoneglyphCardDetail = async (
-  cardId: CardId,
+const maxBatchCardCount = 60;
+
+const fetchPoneglyphCardDetails = async (
+  cardIds: readonly CardId[],
   options: {
     readonly baseUrl: string;
     readonly fetchCard: DevPoneglyphFetch;
   },
-): Promise<PoneglyphCardDetail> => {
-  const url = `${options.baseUrl.replace(/\/+$/u, "")}/v1/cards/${encodeURIComponent(cardId)}`;
-  const response = await options.fetchCard(url);
+): Promise<PoneglyphCardDetail[]> => {
+  const details: PoneglyphCardDetail[] = [];
+  for (const chunk of chunks(cardIds, maxBatchCardCount)) {
+    details.push(...(await fetchPoneglyphCardDetailBatch(chunk, options)));
+  }
+  return details;
+};
+
+const fetchPoneglyphCardDetailBatch = async (
+  cardIds: readonly CardId[],
+  options: {
+    readonly baseUrl: string;
+    readonly fetchCard: DevPoneglyphFetch;
+  },
+): Promise<PoneglyphCardDetail[]> => {
+  if (cardIds.length === 0) {
+    return [];
+  }
+  const url = `${options.baseUrl.replace(/\/+$/u, "")}/v1/cards/batch`;
+  const response = await options.fetchCard(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ card_numbers: cardIds }),
+  });
   if (!response.ok) {
     throw new Error(
-      `Poneglyph card fetch failed for ${String(cardId)}: HTTP ${String(response.status)}`,
+      `Poneglyph card batch fetch failed: HTTP ${String(response.status)}`,
     );
   }
   const payload = await response.json();
-  const detail = toPoneglyphCardDetail(payload);
-  if (detail === undefined) {
+  const batch = toPoneglyphCardBatchPayload(payload);
+  if (batch === undefined) {
     throw new Error(
-      `Poneglyph card fetch failed for ${String(cardId)}: invalid response payload`,
+      "Poneglyph card batch fetch failed: invalid response payload",
     );
   }
-  if (detail.card_number !== cardId) {
+  if (batch.missing.length > 0) {
     throw new Error(
-      `Poneglyph card fetch failed for ${String(cardId)}: response card_number was ${detail.card_number}`,
+      `Poneglyph card batch fetch failed: missing ${batch.missing.join(", ")}`,
     );
   }
-  return detail;
+  return cardIds.map((cardId) => {
+    const detail = batch.data[cardId];
+    if (detail === undefined) {
+      throw new Error(
+        `Poneglyph card batch fetch failed: missing ${String(cardId)}`,
+      );
+    }
+    if (detail.card_number !== cardId) {
+      throw new Error(
+        `Poneglyph card batch fetch failed for ${String(cardId)}: response card_number was ${detail.card_number}`,
+      );
+    }
+    return detail;
+  });
+};
+
+const chunks = <T>(values: readonly T[], size: number): T[][] => {
+  const chunked: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    chunked.push(values.slice(index, index + size));
+  }
+  return chunked;
 };
 
 const buildResolvedCard = (
@@ -478,19 +532,39 @@ const optional = <T>(
 const sha256 = (value: unknown): string =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-const fetchPoneglyphCard: DevPoneglyphFetch = async (url) => fetch(url);
+const fetchPoneglyphCard: DevPoneglyphFetch = async (url, init) =>
+  fetch(url, init);
 
-const toPoneglyphCardDetail = (
+const toPoneglyphCardBatchPayload = (
   value: unknown,
-): PoneglyphCardDetail | undefined => {
-  if (isPoneglyphCardDetail(value)) {
-    return value;
-  }
+):
+  | {
+      readonly data: Record<string, PoneglyphCardDetail>;
+      readonly missing: readonly string[];
+    }
+  | undefined => {
   if (typeof value !== "object" || value === null) {
     return undefined;
   }
-  const data = (value as Record<string, unknown>)["data"];
-  return isPoneglyphCardDetail(data) ? data : undefined;
+  const candidate = value as Record<string, unknown>;
+  const data = candidate["data"];
+  const missing = candidate["missing"];
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !Array.isArray(missing) ||
+    !missing.every((entry) => typeof entry === "string")
+  ) {
+    return undefined;
+  }
+  const details: Record<string, PoneglyphCardDetail> = {};
+  for (const [cardId, detail] of Object.entries(data)) {
+    if (!isPoneglyphCardDetail(detail)) {
+      return undefined;
+    }
+    details[cardId] = detail;
+  }
+  return { data: details, missing };
 };
 
 const isPoneglyphCardDetail = (

@@ -65,20 +65,26 @@ const baseCard = (
 
 const fetchFrom =
   (cards: Record<string, PoneglyphCardDetail>): DevPoneglyphFetch =>
-  (url) => {
-    const cardId = decodeURIComponent(url.split("/").at(-1) ?? "");
-    const card = cards[cardId];
-    if (card === undefined) {
-      return Promise.resolve({
-        ok: false,
-        status: 404,
-        json: () => Promise.resolve({}),
-      });
+  (url, init) => {
+    assert.equal(url.endsWith("/v1/cards/batch"), true);
+    assert.equal(init?.method, "POST");
+    const body = JSON.parse(init.body ?? "{}") as {
+      card_numbers?: string[];
+    };
+    const data: Record<string, PoneglyphCardDetail> = {};
+    const missing: string[] = [];
+    for (const cardId of body.card_numbers ?? []) {
+      const card = cards[cardId];
+      if (card === undefined) {
+        missing.push(cardId);
+      } else {
+        data[cardId] = card;
+      }
     }
     return Promise.resolve({
       ok: true,
       status: 200,
-      json: () => Promise.resolve({ data: card }),
+      json: () => Promise.resolve({ data, missing }),
     });
   };
 
@@ -118,6 +124,37 @@ describe("dev Poneglyph manifest builder", () => {
     assert.equal(unsupported.support.status, "unsupported");
     assert.equal(unsupported.support.effectDefinitionId, undefined);
     assert.match(unsupported.support.notes ?? "", /parse failed/u);
+  });
+
+  test("chunks batch requests at 60 unique card IDs", async () => {
+    const cardIds = Array.from(
+      { length: 61 },
+      (_, index) => `OP01-${String(index + 1).padStart(3, "0")}` as CardId,
+    );
+    const calls: number[] = [];
+
+    await buildDevMatchCardManifestFromPoneglyphIds({
+      cardIds,
+      fetchCard: (url, init) => {
+        assert.equal(url.endsWith("/v1/cards/batch"), true);
+        const body = JSON.parse(init?.body ?? "{}") as {
+          card_numbers?: string[];
+        };
+        const requested = body.card_numbers ?? [];
+        calls.push(requested.length);
+        const data = Object.fromEntries(
+          requested.map((cardId) => [cardId, baseCard(cardId, null)]),
+        );
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data, missing: [] }),
+        });
+      },
+      createdAt: "2026-05-25T00:00:00.000Z",
+    });
+
+    assert.deepEqual(calls, [60, 1]);
   });
 });
 
