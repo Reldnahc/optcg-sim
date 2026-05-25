@@ -23,8 +23,9 @@ const collectTypeScriptFiles = async (directory: string): Promise<string[]> => {
       files.push(...(await collectTypeScriptFiles(path)));
     } else if (
       entry.isFile() &&
-      path.endsWith(".ts") &&
-      !path.endsWith(".test.ts")
+      (path.endsWith(".ts") || path.endsWith(".tsx")) &&
+      !path.endsWith(".test.ts") &&
+      !path.endsWith(".test.tsx")
     ) {
       files.push(path);
     }

@@ -8,7 +8,7 @@
     "prepare": "husky",
     "format": "corepack pnpm exec prettier --write .",
     "format:check": "corepack pnpm exec prettier --check .",
-    "lint": "corepack pnpm exec eslint . --max-warnings=0 --ext .js,.mjs,.cjs,.ts,.mts,.cts",
+    "lint": "corepack pnpm exec eslint . --max-warnings=0 --ext .js,.mjs,.cjs,.ts,.mts,.cts,.tsx",
     "contracts": "corepack pnpm run contracts:compile && corepack pnpm run contracts:validate-effects && corepack pnpm run contracts:validate-db-schema && corepack pnpm run stories:validate && corepack pnpm run types:sync:check && corepack pnpm run test:contracts && corepack pnpm run test:cleanup-contracts",
     "contracts:compile": "corepack pnpm exec tsc -p contracts/tsconfig.json --noEmit",
     "contracts:validate-effects": "node --experimental-strip-types tools/validate-effect-dsl-fixtures.ts",

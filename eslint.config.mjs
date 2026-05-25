@@ -8,7 +8,7 @@ const nodeGlobals = {
 };
 
 const sourceFileSizeGuardFiles = [
-  "packages/**/*.{ts,mts,cts,js,mjs,cjs}",
+  "packages/**/*.{ts,tsx,mts,cts,js,mjs,cjs}",
   "tools/**/*.{ts,mts,cts,js,mjs,cjs}",
   "tests/**/*.{ts,mts,cts,js,mjs,cjs}",
   "contracts/**/*.ts",
@@ -23,7 +23,7 @@ const typedConfigs = [
   ...tseslint.configs.strictTypeChecked,
 ].map((config) => ({
   ...config,
-  files: ["**/*.{ts,mts,cts}"],
+  files: ["**/*.{ts,tsx,mts,cts}"],
   languageOptions: {
     ...config.languageOptions,
     globals: nodeGlobals,
@@ -40,6 +40,7 @@ export default [
     ignores: [
       "coverage/**",
       "dist/**",
+      "**/dist/**",
       "node_modules/**",
       "tests/fixtures/eslint/**",
       "tests/fixtures/prettier/ignored/**",
@@ -62,7 +63,7 @@ export default [
     },
   },
   {
-    files: ["**/*.{ts,mts,cts}"],
+    files: ["**/*.{ts,tsx,mts,cts}"],
     languageOptions: {
       globals: nodeGlobals,
     },
@@ -105,10 +106,11 @@ export default [
   },
   {
     files: [
-      "packages/**/*.{ts,mts,cts,js,mjs,cjs}",
+      "packages/**/*.{ts,tsx,mts,cts,js,mjs,cjs}",
       "tests/fixtures/eslint/production-smells.ts",
       "tests/fixtures/eslint/packages/**/*.{ts,mts,cts,js,mjs,cjs}",
     ],
+    ignores: ["packages/*/vite.config.{js,mjs,cjs,ts,mts,cts}"],
     rules: {
       "no-console": "error",
       "no-restricted-syntax": [
@@ -156,6 +158,12 @@ export default [
           ],
         },
       ],
+    },
+  },
+  {
+    files: ["packages/client/src/react/**/*.{ts,tsx}"],
+    languageOptions: {
+      globals: globals.browser,
     },
   },
   {

@@ -97,7 +97,7 @@ test("eslint max-lines guard uses hard max 1000 for normal code files", () => {
 
   assert.equal(ruleOptions.max, 1000);
   assert.deepEqual(guardConfig.files, [
-    "packages/**/*.{ts,mts,cts,js,mjs,cjs}",
+    "packages/**/*.{ts,tsx,mts,cts,js,mjs,cjs}",
     "tools/**/*.{ts,mts,cts,js,mjs,cjs}",
     "tests/**/*.{ts,mts,cts,js,mjs,cjs}",
     "contracts/**/*.ts",

@@ -11,10 +11,19 @@
     }
   },
   "scripts": {
+    "build:ui": "corepack pnpm exec vite build --config vite.config.mjs",
+    "dev": "corepack pnpm exec vite --config vite.config.mjs --host 127.0.0.1",
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run --root ../.. packages/client/src"
   },
   "dependencies": {
-    "@optcg/types": "workspace:*"
+    "@optcg/types": "workspace:*",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "vite": "^8.0.14"
   }
 }
