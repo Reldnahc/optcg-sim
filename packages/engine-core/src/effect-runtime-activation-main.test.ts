@@ -193,6 +193,53 @@ test("activate main supports sequence body with optional choose-one payCost and 
   );
 });
 
+test("activate main legal actions require activateMain trigger even for supported sequence bodies", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.characters[0], "character");
+  const effectId = toEffectId("on-play-sequence-not-activate-main");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(character.cardId),
+    category: "character",
+    definitionId: "def-on-play-sequence-not-activate-main",
+    effectId,
+  });
+  const effectBlock = must(definition.effects[0], "effect");
+  effectBlock.category = "auto";
+  effectBlock.trigger = { type: "onPlay" };
+  effectBlock.effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "trashFromHand",
+          count: 1,
+          player: "self",
+          chooser: "self",
+        },
+      },
+    ],
+  };
+
+  const legal = getLegalActions(state, p1);
+
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.type === "activateEffect" &&
+        action.source.instanceId === character.instanceId &&
+        action.effectId === effectId,
+    ),
+    false,
+  );
+});
+
 test("applyAction accepts activate main from character and stage sources", () => {
   const state = makeMainPhaseLegalActionState();
   const p1State = must(state.players[p1], "p1");

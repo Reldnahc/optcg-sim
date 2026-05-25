@@ -183,7 +183,8 @@ const findSupportedActivateMainEffects = (
     return (
       isSupportedActivateMainNoChoiceDrawEffect(effect) ||
       isSupportedOptionalActivateMainNoChoiceDrawEffect(effect) ||
-      isSupportedSequenceBlock(sequenceSupportEntry, effect)
+      (effect.trigger.type === "activateMain" &&
+        isSupportedSequenceBlock(sequenceSupportEntry, effect))
     );
   });
 };
