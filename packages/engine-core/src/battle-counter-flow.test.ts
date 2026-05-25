@@ -583,6 +583,7 @@ test("supported Counter Event remains legal with unrelated non-counter effect bl
     "counter definition",
   );
   const counterEffect = must(definition.effects[0], "counter effect");
+  assert.equal(counterEffect.effect.type, "modifyPower");
   state.cardManifest.effectDefinitions = {
     ...state.cardManifest.effectDefinitions,
     [`${String(counterEvent.cardId)}:counter`]: {
@@ -613,6 +614,64 @@ test("supported Counter Event remains legal with unrelated non-counter effect bl
     ),
     true,
   );
+});
+
+test("supported Counter Event remains legal with multiple supported counter power blocks and resolves their total", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  installSupportedCounterEvent(state, counterEvent, 2000);
+  const definition = must(
+    state.cardManifest.effectDefinitions?.[
+      `${String(counterEvent.cardId)}:counter`
+    ],
+    "counter definition",
+  );
+  const counterEffect = must(definition.effects[0], "counter effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [`${String(counterEvent.cardId)}:counter`]: {
+      ...definition,
+      effects: [
+        counterEffect,
+        {
+          ...counterEffect,
+          id: `${String(counterEffect.id)}:second` as EffectDefinition["effects"][number]["id"],
+          effect: {
+            type: "modifyPower",
+            target: { type: "attackTarget" },
+            value: 1000,
+            duration: { type: "thisBattle" },
+          },
+        },
+      ],
+    },
+  };
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterEvent.instanceId,
+    ),
+    true,
+  );
+
+  const used = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterEvent.instanceId,
+    target: must(opened.state.battle, "battle").currentTarget,
+  });
+
+  assert.equal(used.errors, undefined);
+  assert.equal(battleCounterPower(used.state.battle), 3000);
 });
 
 test("supported nonzero-cost Counter Event requires payCost then resolves with rested DON", () => {

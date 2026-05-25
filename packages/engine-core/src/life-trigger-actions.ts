@@ -106,29 +106,30 @@ const hasUnsupportedShape = (effect: EffectBlock): boolean =>
   effect.optional !== undefined ||
   effect.oncePerTurn !== undefined;
 
-const selectSupportedTriggerEffect = (
+const selectSupportedTriggerEffects = (
   effects: readonly EffectBlock[],
-): EffectBlock | undefined => {
+): readonly EffectBlock[] | undefined => {
   const triggerEffects = effects.filter(
     (effect) => effect.trigger.type === "trigger",
   );
-  if (triggerEffects.length !== 1) {
+  if (triggerEffects.length === 0) {
     return undefined;
   }
-  const effect = triggerEffects[0];
-  if (effect === undefined) {
+  if (
+    triggerEffects.some(
+      (effect) =>
+        hasUnsupportedShape(effect) || !isSupportedTriggerEffect(effect),
+    )
+  ) {
     return undefined;
   }
-  if (hasUnsupportedShape(effect)) {
-    return undefined;
-  }
-  return isSupportedTriggerEffect(effect) ? effect : undefined;
+  return triggerEffects;
 };
 
 const resolveSupportedLifeTriggerEffect = (
   state: GameState,
   card: Pick<CardRef, "instanceId" | "cardId" | "playerId">,
-): { resolved: ResolvedCard; effect: EffectBlock } | undefined => {
+): { resolved: ResolvedCard; effects: readonly EffectBlock[] } | undefined => {
   const resolved = state.cardManifest.cards[card.cardId];
   if (resolved === undefined || !hasLifeTriggerText(resolved.triggerText)) {
     return undefined;
@@ -140,21 +141,24 @@ const resolveSupportedLifeTriggerEffect = (
   if (!lookup.ok) {
     return undefined;
   }
-  const effect = selectSupportedTriggerEffect(lookup.definition.effects);
-  if (effect === undefined) {
+  const effects = selectSupportedTriggerEffects(lookup.definition.effects);
+  if (effects === undefined) {
     return undefined;
   }
   if (
-    !isSupportedLifeTriggerConditionInNoZoneContext(
-      state,
-      resolved,
-      effect,
-      card,
+    effects.some(
+      (effect) =>
+        !isSupportedLifeTriggerConditionInNoZoneContext(
+          state,
+          resolved,
+          effect,
+          card,
+        ),
     )
   ) {
     return undefined;
   }
-  return { resolved, effect };
+  return { resolved, effects };
 };
 
 const isSupportedLifeTriggerConditionInNoZoneContext = (
@@ -438,8 +442,11 @@ const applyActivatedTriggerResponse = (
       ),
     );
   }
-  const sourcePresencePolicy = supported.effect.sourcePresencePolicy;
-  if (sourcePresencePolicy === undefined) {
+  if (
+    supported.effects.some(
+      (effect) => effect.sourcePresencePolicy === undefined,
+    )
+  ) {
     return toEngineResult(
       state,
       [],
@@ -490,65 +497,81 @@ const applyActivatedTriggerResponse = (
     },
     { type: "public" },
   );
-  appendEvent(
-    state,
-    events,
-    "triggerActivated",
-    {
-      playerId: decision.playerId,
-      card: source,
-      revealId,
-      effectBlockId: supported.effect.id,
-    },
-    { type: "public" },
-  );
-  const triggerEvent = events[events.length - 1];
-  const triggerEventId = triggerEvent?.id;
-  const triggerEventSeq = triggerEvent?.seq ?? state.eventJournal.length + 1;
-  const queueEntry: EffectQueueEntry = {
-    id: `queue-entry:life-trigger:${String(decision.id)}:${String(
-      supported.effect.id,
-    )}` as EffectQueueEntry["id"],
-    state: "pending",
-    timingWindowId: `timing-window:life-trigger:${String(
-      decision.id,
-    )}` as EffectQueueEntry["timingWindowId"],
-    generation: 0,
-    controllerId: decision.playerId,
-    source,
-    sourceSnapshot: toSourceSnapshot(source, supported.resolved),
-    ...(triggerEventId !== undefined ? { triggerEventId } : {}),
-    effectBlockId: supported.effect.id,
-    orderingGroup:
-      decision.playerId === state.turn.turnPlayerId
-        ? "turnPlayer"
-        : "nonTurnPlayer",
-    createdAtEventSeq: triggerEventSeq,
-    queuedAtStateSeq: toStateSeq(state.seq + 1),
-    sourcePresencePolicy,
-    causedBy: { type: "decision", decisionId: decision.id },
-  };
-  appendEvent(
-    state,
-    events,
-    "effectQueued",
-    {
-      queueEntryId: queueEntry.id,
-      timingWindowId: queueEntry.timingWindowId,
-      generation: queueEntry.generation,
-      effectBlockId: queueEntry.effectBlockId,
-      triggerEventId: queueEntry.triggerEventId,
-      sourcePresencePolicy: queueEntry.sourcePresencePolicy,
-      orderingGroup: queueEntry.orderingGroup,
-    },
-    { type: "public" },
-  );
+  const queueEntries: EffectQueueEntry[] = [];
+  for (const effect of supported.effects) {
+    const sourcePresencePolicy = effect.sourcePresencePolicy;
+    if (sourcePresencePolicy === undefined) {
+      return toEngineResult(
+        state,
+        [],
+        invalidDecision(
+          `Life Trigger card ${String(
+            decision.card.cardId,
+          )} is unsupported for activation.`,
+        ),
+      );
+    }
+    appendEvent(
+      state,
+      events,
+      "triggerActivated",
+      {
+        playerId: decision.playerId,
+        card: source,
+        revealId,
+        effectBlockId: effect.id,
+      },
+      { type: "public" },
+    );
+    const triggerEvent = events[events.length - 1];
+    const triggerEventId = triggerEvent?.id;
+    const triggerEventSeq = triggerEvent?.seq ?? state.eventJournal.length + 1;
+    const queueEntry: EffectQueueEntry = {
+      id: `queue-entry:life-trigger:${String(decision.id)}:${String(
+        effect.id,
+      )}` as EffectQueueEntry["id"],
+      state: "pending",
+      timingWindowId: `timing-window:life-trigger:${String(
+        decision.id,
+      )}` as EffectQueueEntry["timingWindowId"],
+      generation: 0,
+      controllerId: decision.playerId,
+      source,
+      sourceSnapshot: toSourceSnapshot(source, supported.resolved),
+      ...(triggerEventId !== undefined ? { triggerEventId } : {}),
+      effectBlockId: effect.id,
+      orderingGroup:
+        decision.playerId === state.turn.turnPlayerId
+          ? "turnPlayer"
+          : "nonTurnPlayer",
+      createdAtEventSeq: triggerEventSeq,
+      queuedAtStateSeq: toStateSeq(state.seq + 1),
+      sourcePresencePolicy,
+      causedBy: { type: "decision", decisionId: decision.id },
+    };
+    appendEvent(
+      state,
+      events,
+      "effectQueued",
+      {
+        queueEntryId: queueEntry.id,
+        timingWindowId: queueEntry.timingWindowId,
+        generation: queueEntry.generation,
+        effectBlockId: queueEntry.effectBlockId,
+        triggerEventId: queueEntry.triggerEventId,
+        sourcePresencePolicy: queueEntry.sourcePresencePolicy,
+        orderingGroup: queueEntry.orderingGroup,
+      },
+      { type: "public" },
+    );
+    queueEntries.push(queueEntry);
+  }
 
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
-    effectQueue: [...state.effectQueue, queueEntry],
+    effectQueue: [...state.effectQueue, ...queueEntries],
     revealedCards: [
       ...state.revealedCards,
       {

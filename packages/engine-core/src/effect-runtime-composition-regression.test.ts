@@ -493,6 +493,25 @@ test("life-trigger and counter matrices preserve supported wrappers and fail clo
         {
           ...triggerWithoutFlags,
           sourcePresencePolicy: "resolveFromLastKnownInformation",
+        },
+        {
+          ...triggerWithoutFlags,
+          id: `${String(triggerWithoutFlags.id)}:second` as typeof triggerWithoutFlags.id,
+          sourcePresencePolicy: "resolveFromLastKnownInformation",
+          effect: { type: "draw", count: 2, player: "self" },
+        },
+      ],
+    },
+  };
+  assert.ok(getSupportedLifeTriggerDecision(lifeState, p2, lifeTop.card));
+
+  lifeState.cardManifest.effectDefinitions = {
+    "def-life-trigger": {
+      ...lifeDef,
+      effects: [
+        {
+          ...triggerWithoutFlags,
+          sourcePresencePolicy: "resolveFromLastKnownInformation",
           effect: {
             type: "sequence",
             effects: [
@@ -629,6 +648,7 @@ test("life-trigger and counter matrices preserve supported wrappers and fail clo
         {
           ...unsupportedCounterEffect,
           id: `${String(unsupportedCounterEffect.id)}:duplicate` as typeof unsupportedCounterEffect.id,
+          oncePerTurn: true,
         },
       ],
     },

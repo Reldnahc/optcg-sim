@@ -170,17 +170,6 @@ export const createAttackTriggerQueueing = (
           ],
         );
       }
-      if (matching.length !== 1) {
-        return toEngineResult(
-          state,
-          [],
-          [
-            whenAttackingTriggerQueueingError(
-              "multiple-when-attacking-effects",
-            ),
-          ],
-        );
-      }
       for (const effectBlock of matching) {
         const queueId =
           `queue-entry:${String(event.id)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
@@ -413,17 +402,6 @@ export const createAttackTriggerQueueing = (
             ],
           );
         }
-        if (matching.length !== 1) {
-          return toEngineResult(
-            state,
-            [],
-            [
-              onOpponentAttackTriggerQueueingError(
-                "multiple-on-opponent-attack-effects",
-              ),
-            ],
-          );
-        }
         for (const effectBlock of matching) {
           const queueId =
             `queue-entry:${String(event.id)}:onOpponentAttack:${String(effectBlock.id)}` as EffectQueueEntry["id"];
@@ -461,21 +439,6 @@ export const createAttackTriggerQueueing = (
     if (appended.length === 0) {
       return undefined;
     }
-    const sameControllerEntryCount = appended.filter(
-      (entry) => entry.controllerId === defenderId,
-    ).length;
-    if (sameControllerEntryCount > 1) {
-      return toEngineResult(
-        state,
-        [],
-        [
-          onOpponentAttackTriggerQueueingError(
-            "multiple-on-opponent-attack-effects",
-          ),
-        ],
-      );
-    }
-
     const nextState: GameState = {
       ...state,
       seq: toStateSeq(state.seq + 1),

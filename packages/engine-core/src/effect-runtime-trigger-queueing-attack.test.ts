@@ -182,6 +182,41 @@ test("queues supported When Attacking effect from a multi-effect definition with
   );
 });
 
+test("queues every supported same-entrypoint When Attacking effect block", () => {
+  const { state, definition } = attackQueueingState();
+  const whenAttackingEffect = must(
+    definition.effects[0],
+    "whenAttacking effect",
+  );
+  const secondWhenAttackingEffect = {
+    ...whenAttackingEffect,
+    id: `${String(whenAttackingEffect.id)}:second` as typeof whenAttackingEffect.id,
+    effect: { type: "draw", count: 2, player: "self" },
+  } satisfies EffectDefinition["effects"][number];
+  state.cardManifest.effectDefinitions = {
+    "def-when-attacking": {
+      ...definition,
+      effects: [whenAttackingEffect, secondWhenAttackingEffect],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.state.effectQueue.map((entry) => entry.effectBlockId),
+    [whenAttackingEffect.id, secondWhenAttackingEffect.id],
+  );
+  assert.deepEqual(
+    result.events
+      .filter((event) => event.type === "effectQueued")
+      .map(
+        (event) => (event.payload as { effectBlockId?: unknown }).effectBlockId,
+      ),
+    [whenAttackingEffect.id, secondWhenAttackingEffect.id],
+  );
+});
+
 test("queues supported On Your Opponent's Attack effect from a multi-effect definition with unrelated supported effects", () => {
   const { state, definition } = opponentAttackQueueingState();
   const onOpponentAttackEffect = must(
@@ -213,6 +248,37 @@ test("queues supported On Your Opponent's Attack effect from a multi-effect defi
     | { effectBlockId?: unknown }
     | undefined;
   assert.equal(payload?.effectBlockId, onOpponentAttackEffect.id);
+});
+
+test("queues every supported same-entrypoint On Your Opponent's Attack effect block", () => {
+  const { state, definition } = opponentAttackQueueingState();
+  const onOpponentAttackEffect = must(
+    definition.effects[0],
+    "onOpponentAttack effect",
+  );
+  const secondOnOpponentAttackEffect = {
+    ...onOpponentAttackEffect,
+    id: `${String(onOpponentAttackEffect.id)}:second` as typeof onOpponentAttackEffect.id,
+    effect: { type: "draw", count: 2, player: "self" },
+  } satisfies EffectDefinition["effects"][number];
+  state.cardManifest.effectDefinitions = {
+    "def-on-opponent-attack": {
+      ...definition,
+      effects: [onOpponentAttackEffect, secondOnOpponentAttackEffect],
+    },
+  };
+
+  const result = processDefenderOpponentAttackTiming(state);
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.events
+      .filter((event) => event.type === "effectQueued")
+      .map(
+        (event) => (event.payload as { effectBlockId?: unknown }).effectBlockId,
+      ),
+    [onOpponentAttackEffect.id, secondOnOpponentAttackEffect.id],
+  );
 });
 
 test("unsupported same-entrypoint When Attacking effect fails closed beside a supported When Attacking effect", () => {

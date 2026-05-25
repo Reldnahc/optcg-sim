@@ -1,6 +1,7 @@
 import type {
   Action,
   CardInstance,
+  EffectDefinition,
   EngineEvent,
   EngineResult,
   GameState,
@@ -716,6 +717,29 @@ const hasCounterTriggerDefinition = (
       definition.effects.some((effect) => effect.trigger.type === "counter"),
   );
 
+const supportedCounterEventPowerValue = (
+  effect: EffectDefinition["effects"][number],
+): number | null => {
+  if (
+    effect.category !== "auto" ||
+    effect.optional === true ||
+    effect.oncePerTurn === true ||
+    effect.condition !== undefined ||
+    effect.conditionTiming !== undefined ||
+    effect.cost !== undefined ||
+    effect.failurePolicy !== undefined ||
+    effect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
+    effect.effect.type !== "modifyPower" ||
+    effect.effect.target.type !== "attackTarget" ||
+    effect.effect.duration.type !== "thisBattle" ||
+    !Number.isInteger(effect.effect.value) ||
+    effect.effect.value <= 0
+  ) {
+    return null;
+  }
+  return effect.effect.value;
+};
+
 const getSupportedCounterEventPower = (
   state: GameState,
   card: CardInstance,
@@ -734,33 +758,25 @@ const getSupportedCounterEventPower = (
   const counterEffects =
     definition?.effects.filter((effect) => effect.trigger.type === "counter") ??
     [];
-  const effect = counterEffects[0];
   if (
     definition?.implementationStatus !== "implemented-dsl" ||
-    counterEffects.length !== 1 ||
-    effect === undefined ||
-    effect.category !== "auto" ||
-    effect.optional === true ||
-    effect.oncePerTurn === true ||
-    effect.condition !== undefined ||
-    effect.conditionTiming !== undefined ||
-    effect.cost !== undefined ||
-    effect.failurePolicy !== undefined ||
-    effect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
-    effect.effect.type !== "modifyPower" ||
-    effect.effect.target.type !== "attackTarget" ||
-    effect.effect.duration.type !== "thisBattle"
+    counterEffects.length === 0
   ) {
     return null;
+  }
+  let value = 0;
+  for (const counterEffect of counterEffects) {
+    const counterValue = supportedCounterEventPowerValue(counterEffect);
+    if (counterValue === null) {
+      return null;
+    }
+    value += counterValue;
   }
   const printedCost = metadata.cost ?? 0;
   if (!Number.isInteger(printedCost) || printedCost < 0) {
     return null;
   }
-  if (!Number.isInteger(effect.effect.value) || effect.effect.value <= 0) {
-    return null;
-  }
-  return { value: effect.effect.value, printedCost };
+  return { value, printedCost };
 };
 
 const getCounterEventPaymentLegalActions = (

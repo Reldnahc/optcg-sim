@@ -475,12 +475,15 @@ test("ENG-023A: attacker When Attacking resolves before defender block decision"
   assert.equal(damageIndex, -1);
 });
 
-test("ENG-023A: multiple same-player attacker When Attacking effects fail closed without mutation", () => {
+test("ENG-023A: multiple same-player attacker When Attacking effects resolve as independent supported blocks", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
-  withMultipleWhenAttackingDrawEffects(state, p1State.leader);
-  const before = JSON.stringify(state);
+  const definition = withMultipleWhenAttackingDrawEffects(
+    state,
+    p1State.leader,
+  );
+  const effectIds = definition.effects.map((effect) => effect.id);
 
   const result = applyDeclareAttack(state, {
     type: "declareAttack",
@@ -496,10 +499,16 @@ test("ENG-023A: multiple same-player attacker When Attacking effects fail closed
     },
   });
 
-  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
-  assert.deepEqual(result.events, []);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.events
+      .filter((event) => event.type === "effectQueued")
+      .map(
+        (event) =>
+          (event.payload as Partial<{ effectBlockId: string }>).effectBlockId,
+      ),
+    effectIds,
+  );
 });
 
 test("ENG-023D: unsupported attacker When Attacking choice fails closed without mutation or hidden identity leakage", () => {
@@ -929,14 +938,25 @@ test("ENG-023B: defender timing waits until Block Step response completes", () =
   assert.ok(effectResolvedIndex < damageIndex);
 });
 
-test("ENG-023B: multiple same-player defender attack timing effects fail closed without mutation", () => {
+test("ENG-023B: multiple same-player defender attack timing effects resolve as independent supported blocks", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   const defenderCharacter = must(p2State.characters[0], "defender character");
-  withOnOpponentAttackDrawEffect(state, p2State.leader, "def-opp-leader");
-  withOnOpponentAttackDrawEffect(state, defenderCharacter, "def-opp-character");
-  const before = JSON.stringify(state);
+  const leaderDefinition = withOnOpponentAttackDrawEffect(
+    state,
+    p2State.leader,
+    "def-opp-leader",
+  );
+  const characterDefinition = withOnOpponentAttackDrawEffect(
+    state,
+    defenderCharacter,
+    "def-opp-character",
+  );
+  const effectIds = [
+    must(leaderDefinition.effects[0], "leader effect").id,
+    must(characterDefinition.effects[0], "character effect").id,
+  ];
 
   const result = applyDeclareAttack(state, {
     type: "declareAttack",
@@ -952,10 +972,16 @@ test("ENG-023B: multiple same-player defender attack timing effects fail closed 
     },
   });
 
-  assert.equal(result.errors?.[0]?.type, "effectRuntimeError");
-  assert.deepEqual(result.events, []);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.events
+      .filter((event) => event.type === "effectQueued")
+      .map(
+        (event) =>
+          (event.payload as Partial<{ effectBlockId: string }>).effectBlockId,
+      ),
+    effectIds,
+  );
 });
 
 test("ENG-023D: unsupported defender On Your Opponent's Attack custom effect fails closed without mutation or hidden identity leakage", () => {

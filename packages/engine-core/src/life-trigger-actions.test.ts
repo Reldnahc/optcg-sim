@@ -378,19 +378,8 @@ test("getSupportedLifeTriggerDecision rejects malformed, untested, and unreviewe
   const topLife = must(p2State.life[0], "top life");
   const cardId = toCardId("trigger-life-malformed");
   const supported = supportedLifeTriggerDefinition(cardId);
-  const supportedEffect = must(supported.effects[0], "supported effect");
   const definitions: Record<string, EffectDefinition> = {
     "def-malformed-empty": { ...supported, effects: [] },
-    "def-malformed-multiple": {
-      ...supported,
-      effects: [
-        supportedEffect,
-        {
-          ...supportedEffect,
-          id: `${String(cardId)}:effect:2` as EffectBlock["id"],
-        },
-      ],
-    },
     "def-untested-definition": {
       ...supported,
       metadata: { ...supported.metadata, tested: false },
