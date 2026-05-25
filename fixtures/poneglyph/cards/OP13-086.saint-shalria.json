@@ -1,0 +1,141 @@
+{
+  "attribute": ["Ranged"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "4",
+  "card_number": "OP13-086",
+  "card_type": "Character",
+  "color": ["Black"],
+  "cost": 1,
+  "counter": 1000,
+  "effect": "[On Play] Look at 3 cards from the top of your deck; reveal up to 1 {Celestial Dragons} type card other than [Saint Shalria] and add it to your hand. Then, trash the rest and trash 1 card from your hand.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Saint Shalria",
+  "official_faq": [],
+  "power": 0,
+  "rarity": "UC",
+  "released": true,
+  "released_at": "2025-11-07T00:00:00.000Z",
+  "set": "OP13",
+  "set_name": "Carrying on His Will",
+  "trigger": null,
+  "types": ["Celestial Dragons"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP13-086/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP13-086/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "3.05",
+        "low_price": "0.18",
+        "market_price": "0.42",
+        "mid_price": "0.49",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/657359/one-piece-card-game-carrying-on-his-will-saint-shalria"
+      },
+      "name": null,
+      "product": {
+        "id": "a1b89330-2649-4ab0-a123-bda851a70215",
+        "name": "Carrying on His Will",
+        "released_at": "2025-11-07T00:00:00.000Z",
+        "set_code": "OP13",
+        "slug": "carrying-on-his-will"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP13-086/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP13-086/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "49.99",
+        "low_price": "8.00",
+        "market_price": "8.81",
+        "mid_price": "9.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/657823/one-piece-card-game-one-piece-promotion-cards-saint-shalria-premium-card-collection-best-selection-vol-5"
+      },
+      "name": null,
+      "product": {
+        "id": "096777d6-6629-4a0c-bee4-5ae70a91926d",
+        "name": "Best Selection Vol.5",
+        "released_at": null,
+        "set_code": null,
+        "slug": "best-selection-vol-5"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": null,
+          "thumb": null
+        }
+      },
+      "index": 2,
+      "label": "Release Event",
+      "market": {
+        "high_price": "28.99",
+        "low_price": "4.99",
+        "market_price": "6.42",
+        "mid_price": "6.77",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/661437/one-piece-card-game-carrying-on-his-will-3rd-anniversary-tournament-cards-saint-shalria"
+      },
+      "name": null,
+      "product": {
+        "id": "922d2baa-04f8-4395-88de-00af294dd8a8",
+        "name": "OP13 Release Event",
+        "released_at": null,
+        "set_code": null,
+        "slug": "op13-release-event"
+      }
+    }
+  ]
+}

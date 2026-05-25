@@ -101,6 +101,7 @@ export interface LocalDevMatch {
 export interface CreatePremadeDevMatchSetupOptions {
   readonly fetchCard?: DevPoneglyphFetch;
   readonly baseUrl?: string;
+  readonly redisUrl?: string;
 }
 
 export interface ApplyLocalDevActionInput {
@@ -230,6 +231,7 @@ export const createPremadeDevMatchSetup = async (
       ? {}
       : { fetchCard: options.fetchCard }),
     ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
+    ...(options.redisUrl === undefined ? {} : { redisUrl: options.redisUrl }),
   });
 };
 

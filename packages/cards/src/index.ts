@@ -8,9 +8,29 @@ export { parseEffectLine } from "./orchestrator.js";
 export { parseOncePerTurnMarker } from "./markers/index.js";
 export { evaluatePrimitiveSupport } from "./support-evaluator.js";
 export {
+  createCardCacheKey,
+  createCardRepository,
+  createPoneglyphHttpClient,
+} from "./card-repository.js";
+export {
+  createRedisCardDataCache,
+  createRedisCardDataCacheFromClient,
+} from "./redis-card-cache.js";
+export {
   buildDevMatchCardManifestFromPoneglyphIds,
   parseDevCardIdList,
 } from "./dev-manifest.js";
+export type {
+  CachedResolvedCard,
+  CardDataCache,
+  CardRepository,
+  CardRepositoryVersions,
+  PoneglyphClient,
+  PoneglyphFetch,
+  PoneglyphFetchRequest,
+  PoneglyphFetchResponse,
+} from "./card-repository.js";
+export type { RedisJsonClient } from "./redis-card-cache.js";
 export type {
   BuildDevMatchCardManifestFromPoneglyphIdsRequest,
   DevPoneglyphFetch,

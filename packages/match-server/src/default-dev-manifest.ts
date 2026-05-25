@@ -1,5 +1,6 @@
 import {
   buildDevMatchCardManifestFromPoneglyphIds,
+  createRedisCardDataCache,
   parseDevCardIdList,
   type DevPoneglyphFetch,
 } from "@optcg/cards";
@@ -14,6 +15,7 @@ interface CreateDefaultDevMatchSetupInput {
   readonly createdAt: string;
   readonly fetchCard?: DevPoneglyphFetch;
   readonly baseUrl?: string;
+  readonly redisUrl?: string;
 }
 
 const devLeaderCardId = "OP13-079" as CardId;
@@ -26,6 +28,7 @@ const devDeckCardIds = [
   "OP13-089",
   "OP13-091",
   "OP13-099",
+  "OP13-086",
 ] as const;
 
 const devCardIdsText = `
@@ -37,6 +40,7 @@ OP13-084
 OP13-089
 OP13-091
 OP13-099
+OP13-086
 `;
 
 const repeatedDeck = (): CardId[] =>
@@ -67,6 +71,12 @@ export const createDefaultDevMatchSetup = async (
 ): Promise<DevMatchSetup> => {
   const sharedDeck = repeatedDeck();
   const sharedDonDeck = donDeck();
+  const cache =
+    input.fetchCard === undefined
+      ? await createRedisCardDataCache({
+          url: input.redisUrl ?? process.env["REDIS_URL"] ?? defaultRedisUrl,
+        })
+      : undefined;
   return {
     matchId: input.matchId,
     firstPlayerId: input.firstPlayerId,
@@ -84,9 +94,12 @@ export const createDefaultDevMatchSetup = async (
         cardDataVersion: "live-poneglyph-dev-v1",
         effectDefinitionsVersion: "generated-dev-v1",
       },
+      ...(cache === undefined ? {} : { cache }),
       ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
       ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
     }),
     shuffleDecks: true,
   };
 };
+
+const defaultRedisUrl = "redis://localhost:6379";

@@ -239,6 +239,7 @@ export const createDevHttpServer = async (
         ? {}
         : { fetchCard: options.fetchCard }),
       ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
+      ...(options.redisUrl === undefined ? {} : { redisUrl: options.redisUrl }),
     });
   const matchRef = {
     match: createLocalDevMatch(options.setup ?? (await createDefaultSetup())),

@@ -8,6 +8,7 @@ const fixtureFiles: Record<string, string> = {
   "OP13-082": "OP13-082.five-elders.json",
   "OP13-083": "OP13-083.st-jaygarcia-saturn.json",
   "OP13-084": "OP13-084.st-shepherd-ju-peter.json",
+  "OP13-086": "OP13-086.saint-shalria.json",
   "OP13-089": "OP13-089.st-topman-warcury.json",
   "OP13-091": "OP13-091.st-marcus-mars.json",
   "OP13-099": "OP13-099.the-empty-throne.json",
