@@ -1,0 +1,324 @@
+import type {
+  DecisionId,
+  DecisionResponse,
+  InstanceId,
+  PublicChooseQuantityDecision,
+  PublicOrderCardsDecision,
+  PublicPendingDecision,
+  PublicSelectCardsDecision,
+} from "@optcg/types";
+
+export type DecisionDraft =
+  | {
+      kind: "selectCards";
+      decisionId: DecisionId;
+      selectedInstanceIds: InstanceId[];
+    }
+  | {
+      kind: "orderCards";
+      decisionId: DecisionId;
+      orderedInstanceIds: InstanceId[];
+    }
+  | {
+      kind: "chooseQuantity";
+      decisionId: DecisionId;
+      quantity: number;
+    }
+  | {
+      kind: "generic";
+      decisionId: DecisionId;
+    };
+
+export type DecisionModalModel =
+  | {
+      kind: "selectCards";
+      decisionId: DecisionId;
+      prompt: string;
+      min: number;
+      max: number;
+      canConfirm: boolean;
+      selectedInstanceIds: InstanceId[];
+      cards: PublicSelectCardsDecision["candidates"];
+      confirmLabel: string;
+    }
+  | {
+      kind: "orderCards";
+      decisionId: DecisionId;
+      prompt: string;
+      destination: PublicOrderCardsDecision["destination"];
+      canConfirm: true;
+      orderedInstanceIds: InstanceId[];
+      cards: PublicOrderCardsDecision["cards"];
+    }
+  | {
+      kind: "chooseQuantity";
+      decisionId: DecisionId;
+      prompt: string;
+      min: number;
+      max: number;
+      quantity: number;
+      canConfirm: boolean;
+    }
+  | {
+      kind: "generic";
+      decisionId: DecisionId;
+      prompt: string;
+      canConfirm: false;
+      decisionType: string;
+    };
+
+type CardDecision =
+  | PublicSelectCardsDecision
+  | PublicOrderCardsDecision
+  | PublicChooseQuantityDecision;
+
+const instanceKey = (instanceId: InstanceId): string => String(instanceId);
+
+const assertDraftForDecision = (
+  decision: CardDecision,
+  draft: DecisionDraft,
+): void => {
+  if (draft.decisionId !== decision.id || draft.kind !== decision.type) {
+    throw new Error("Decision draft does not match the active decision.");
+  }
+};
+
+const selectCandidateIds = (
+  decision: PublicSelectCardsDecision,
+): ReadonlySet<string> =>
+  new Set(
+    decision.candidates.map((candidate) =>
+      instanceKey(candidate.card.instanceId),
+    ),
+  );
+
+const orderCardIds = (
+  decision: PublicOrderCardsDecision,
+): ReadonlySet<string> =>
+  new Set(decision.cards.map((card) => instanceKey(card.instanceId)));
+
+const isSelectConfirmable = (
+  decision: PublicSelectCardsDecision,
+  draft: Extract<DecisionDraft, { kind: "selectCards" }>,
+): boolean =>
+  draft.selectedInstanceIds.length >= decision.min &&
+  draft.selectedInstanceIds.length <= decision.max;
+
+const isQuantityConfirmable = (
+  decision: PublicChooseQuantityDecision,
+  draft: Extract<DecisionDraft, { kind: "chooseQuantity" }>,
+): boolean => draft.quantity >= decision.min && draft.quantity <= decision.max;
+
+export const createDecisionDraft = (
+  decision: PublicPendingDecision,
+): DecisionDraft => {
+  if (decision.type === "selectCards") {
+    return {
+      kind: "selectCards",
+      decisionId: decision.id,
+      selectedInstanceIds: [],
+    };
+  }
+  if (decision.type === "orderCards") {
+    return {
+      kind: "orderCards",
+      decisionId: decision.id,
+      orderedInstanceIds: decision.cards.map((card) => card.instanceId),
+    };
+  }
+  if (decision.type === "chooseQuantity") {
+    return {
+      kind: "chooseQuantity",
+      decisionId: decision.id,
+      quantity: decision.min,
+    };
+  }
+  return { kind: "generic", decisionId: decision.id };
+};
+
+export const toggleDecisionSelectedCard = (
+  decision: PublicSelectCardsDecision,
+  draft: DecisionDraft,
+  instanceId: InstanceId,
+): DecisionDraft => {
+  assertDraftForDecision(decision, draft);
+  if (draft.kind !== "selectCards") {
+    throw new Error("Decision draft is not a selectCards draft.");
+  }
+  if (!selectCandidateIds(decision).has(instanceKey(instanceId))) {
+    return draft;
+  }
+  if (
+    draft.selectedInstanceIds.some((selectedId) => selectedId === instanceId)
+  ) {
+    return {
+      ...draft,
+      selectedInstanceIds: draft.selectedInstanceIds.filter(
+        (selectedId) => selectedId !== instanceId,
+      ),
+    };
+  }
+  if (draft.selectedInstanceIds.length >= decision.max) {
+    return draft;
+  }
+  return {
+    ...draft,
+    selectedInstanceIds: [...draft.selectedInstanceIds, instanceId],
+  };
+};
+
+export const moveOrderedCardNear = (
+  decision: PublicOrderCardsDecision,
+  draft: DecisionDraft,
+  draggedId: InstanceId,
+  targetId: InstanceId,
+  placement: "before" | "after",
+): DecisionDraft => {
+  assertDraftForDecision(decision, draft);
+  if (draft.kind !== "orderCards") {
+    throw new Error("Decision draft is not an orderCards draft.");
+  }
+  const legalIds = orderCardIds(decision);
+  if (
+    !legalIds.has(instanceKey(draggedId)) ||
+    !legalIds.has(instanceKey(targetId))
+  ) {
+    return draft;
+  }
+  const withoutDragged = draft.orderedInstanceIds.filter(
+    (candidateId) => candidateId !== draggedId,
+  );
+  const targetIndex = withoutDragged.findIndex(
+    (candidateId) => candidateId === targetId,
+  );
+  if (targetIndex === -1) {
+    return draft;
+  }
+  const insertIndex = placement === "before" ? targetIndex : targetIndex + 1;
+  return {
+    ...draft,
+    orderedInstanceIds: [
+      ...withoutDragged.slice(0, insertIndex),
+      draggedId,
+      ...withoutDragged.slice(insertIndex),
+    ],
+  };
+};
+
+export const setDecisionQuantity = (
+  draft: DecisionDraft,
+  quantity: number,
+): DecisionDraft => {
+  if (draft.kind !== "chooseQuantity") {
+    throw new Error("Decision draft is not a chooseQuantity draft.");
+  }
+  return { ...draft, quantity };
+};
+
+export const createDecisionModalModel = (
+  decision: PublicPendingDecision,
+  draft: DecisionDraft = createDecisionDraft(decision),
+): DecisionModalModel => {
+  if (decision.type === "selectCards") {
+    assertDraftForDecision(decision, draft);
+    if (draft.kind !== "selectCards") {
+      throw new Error("Decision draft is not a selectCards draft.");
+    }
+    const canConfirm = isSelectConfirmable(decision, draft);
+    return {
+      kind: "selectCards",
+      decisionId: decision.id,
+      prompt: decision.prompt,
+      min: decision.min,
+      max: decision.max,
+      canConfirm,
+      selectedInstanceIds: draft.selectedInstanceIds,
+      cards: decision.candidates,
+      confirmLabel:
+        decision.min === 0 && draft.selectedInstanceIds.length === 0
+          ? "Take none"
+          : "Confirm",
+    };
+  }
+  if (decision.type === "orderCards") {
+    assertDraftForDecision(decision, draft);
+    if (draft.kind !== "orderCards") {
+      throw new Error("Decision draft is not an orderCards draft.");
+    }
+    return {
+      kind: "orderCards",
+      decisionId: decision.id,
+      prompt: decision.prompt,
+      destination: decision.destination,
+      canConfirm: true,
+      orderedInstanceIds: draft.orderedInstanceIds,
+      cards: decision.cards,
+    };
+  }
+  if (decision.type === "chooseQuantity") {
+    assertDraftForDecision(decision, draft);
+    if (draft.kind !== "chooseQuantity") {
+      throw new Error("Decision draft is not a chooseQuantity draft.");
+    }
+    return {
+      kind: "chooseQuantity",
+      decisionId: decision.id,
+      prompt: decision.prompt,
+      min: decision.min,
+      max: decision.max,
+      quantity: draft.quantity,
+      canConfirm: isQuantityConfirmable(decision, draft),
+    };
+  }
+  return {
+    kind: "generic",
+    decisionId: decision.id,
+    prompt: decision.prompt,
+    canConfirm: false,
+    decisionType: decision.type,
+  };
+};
+
+export const buildDecisionResponse = (
+  decision: PublicPendingDecision,
+  draft: DecisionDraft,
+): DecisionResponse => {
+  const model = createDecisionModalModel(decision, draft);
+  if (decision.type === "selectCards") {
+    if (!model.canConfirm) {
+      throw new Error("Decision draft is not confirmable.");
+    }
+    if (draft.kind !== "selectCards") {
+      throw new Error("Decision draft is not a selectCards draft.");
+    }
+    return {
+      type: "cards",
+      cards: decision.candidates
+        .filter((candidate) =>
+          draft.selectedInstanceIds.some(
+            (selectedId) => selectedId === candidate.card.instanceId,
+          ),
+        )
+        .map((candidate) => candidate.card),
+    };
+  }
+  if (decision.type === "orderCards") {
+    if (!model.canConfirm) {
+      throw new Error("Decision draft is not confirmable.");
+    }
+    if (draft.kind !== "orderCards") {
+      throw new Error("Decision draft is not an orderCards draft.");
+    }
+    return { type: "orderedIds", ids: draft.orderedInstanceIds.map(String) };
+  }
+  if (decision.type === "chooseQuantity") {
+    if (!model.canConfirm) {
+      throw new Error("Decision draft is not confirmable.");
+    }
+    if (draft.kind !== "chooseQuantity") {
+      throw new Error("Decision draft is not a chooseQuantity draft.");
+    }
+    return { type: "chooseQuantity", quantity: draft.quantity };
+  }
+  throw new Error("Unsupported decision modal response.");
+};
