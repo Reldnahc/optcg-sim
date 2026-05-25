@@ -1,0 +1,105 @@
+import type { MatchId } from "@optcg/types";
+
+import type {
+  ClaimedSeat,
+  CreatedMatch,
+  MatchActionResult,
+  MatchCardCatalog,
+  MatchSnapshot,
+  MatchTransport,
+  RespondToDecisionInput,
+  SubmitVisibleActionInput,
+} from "./transport.js";
+
+export interface DevHttpMatchTransportOptions {
+  baseUrl: string;
+  fetch?: typeof fetch;
+}
+
+const trimTrailingSlash = (value: string): string => value.replace(/\/+$/u, "");
+
+const jsonHeaders = (sessionToken?: string): HeadersInit => ({
+  "content-type": "application/json",
+  ...(sessionToken === undefined
+    ? {}
+    : { "x-optcg-session-token": sessionToken }),
+});
+
+const readJson = async <T>(response: Response): Promise<T> => {
+  const body = (await response.json()) as unknown;
+  if (!response.ok) {
+    throw new Error(
+      `Match transport request failed with HTTP ${String(response.status)}: ${JSON.stringify(
+        body,
+      )}`,
+    );
+  }
+  return body as T;
+};
+
+export const createDevHttpMatchTransport = ({
+  baseUrl,
+  fetch: fetchImpl = fetch,
+}: DevHttpMatchTransportOptions): MatchTransport => {
+  const root = trimTrailingSlash(baseUrl);
+  const matchPath = (matchId: MatchId, path: string): string =>
+    `${root}/api/matches/${encodeURIComponent(String(matchId))}${path}`;
+
+  const postJson = async <T>(
+    url: string,
+    body: unknown,
+    sessionToken?: string,
+  ): Promise<T> => {
+    const response = await fetchImpl(url, {
+      method: "POST",
+      headers: jsonHeaders(sessionToken),
+      body: JSON.stringify(body),
+    });
+    return readJson<T>(response);
+  };
+
+  return {
+    async createMatch() {
+      return postJson<CreatedMatch>(`${root}/api/matches`, {});
+    },
+    async claimSeat(input) {
+      const url = matchPath(
+        input.matchId,
+        `/seats/${encodeURIComponent(String(input.playerId))}/claim`,
+      );
+      return postJson<ClaimedSeat>(url, undefined);
+    },
+    async loadState(matchId) {
+      const response = await fetchImpl(matchPath(matchId, "/state"));
+      return readJson<MatchSnapshot>(response);
+    },
+    async loadCards(matchId) {
+      const response = await fetchImpl(matchPath(matchId, "/cards"));
+      return readJson<MatchCardCatalog>(response);
+    },
+    async submitVisibleAction(input: SubmitVisibleActionInput) {
+      return postJson<MatchActionResult>(
+        matchPath(input.matchId, "/action"),
+        {
+          playerId: input.playerId,
+          actionIndex: input.actionIndex,
+          ...(input.expectedStateSeq === undefined
+            ? {}
+            : { expectedStateSeq: input.expectedStateSeq }),
+        },
+        input.sessionToken,
+      );
+    },
+    async respondToDecision(input: RespondToDecisionInput) {
+      return postJson<MatchActionResult>(
+        matchPath(input.matchId, "/decision"),
+        {
+          playerId: input.playerId,
+          decisionId: input.decisionId,
+          response: input.response,
+        },
+        input.sessionToken,
+      );
+    },
+  };
+};

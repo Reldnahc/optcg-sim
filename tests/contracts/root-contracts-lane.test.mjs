@@ -174,6 +174,7 @@ test("root typecheck compiles workspace package lanes", async () => {
     "corepack pnpm exec tsc -p packages/cli/tsconfig.json --noEmit",
     "corepack pnpm exec tsc -p packages/cards/tsconfig.json --noEmit",
     "corepack pnpm exec tsc -p packages/match-server/tsconfig.json --noEmit",
+    "corepack pnpm exec tsc -p packages/client/tsconfig.json --noEmit",
     "corepack pnpm exec tsc -p tools/tsconfig.json --noEmit",
   ];
 

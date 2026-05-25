@@ -71,6 +71,12 @@ importers:
         specifier: workspace:*
         version: link:../types
 
+  packages/client:
+    dependencies:
+      "@optcg/types":
+        specifier: workspace:*
+        version: link:../types
+
   packages/engine-core:
     dependencies:
       "@optcg/types":
