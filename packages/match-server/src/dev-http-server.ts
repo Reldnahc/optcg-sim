@@ -6,7 +6,12 @@ import {
 } from "node:http";
 import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { DecisionId, DecisionResponse, PlayerId } from "@optcg/types";
+import type {
+  DecisionId,
+  DecisionResponse,
+  MatchId,
+  PlayerId,
+} from "@optcg/types";
 
 import {
   applyLocalDevAction,
@@ -34,6 +39,24 @@ interface DevDecisionRequest {
 
 interface DevResetRequest {
   setup?: unknown;
+}
+
+interface CreatedDevMatchResponse {
+  matchId: MatchId;
+  seats: Record<string, { playerId: PlayerId; sessionToken: string }>;
+  snapshot: ReturnType<typeof getLocalDevSnapshot>;
+}
+
+interface LocalDevMatchRegistry {
+  createMatch: (
+    setup?: Parameters<typeof createLocalDevMatch>[0],
+  ) => Promise<CreatedDevMatchResponse>;
+  resetMatch: (
+    matchId: MatchId,
+    setup?: Parameters<typeof createLocalDevMatch>[0],
+  ) => Promise<CreatedDevMatchResponse>;
+  getMatch: (matchId: MatchId) => LocalDevMatch | undefined;
+  defaultMatchId: MatchId;
 }
 
 export interface DevHttpServer {
@@ -141,22 +164,148 @@ const isDevDecisionRequest = (value: unknown): value is DevDecisionRequest => {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+const matchNotFound = (response: ServerResponse, matchId: string): void => {
+  sendJson(response, 404, { errors: [`Match ${matchId} not found.`] });
+};
+
+const createLocalAnonSeats = (
+  setup: Parameters<typeof createLocalDevMatch>[0],
+): CreatedDevMatchResponse["seats"] =>
+  Object.fromEntries(
+    setup.playerOrder.map((playerId) => [
+      playerId,
+      {
+        playerId,
+        sessionToken: `dev-local:${String(setup.matchId)}:${String(playerId)}`,
+      },
+    ]),
+  );
+
+const createLocalDevMatchRegistry = async (
+  createDefaultSetup: (
+    matchId?: MatchId,
+  ) => Promise<Parameters<typeof createLocalDevMatch>[0]>,
+  initialSetup?: Parameters<typeof createLocalDevMatch>[0],
+): Promise<LocalDevMatchRegistry> => {
+  let nextMatchNumber = 1;
+  const matches = new Map<MatchId, LocalDevMatch>();
+  const defaultSetup =
+    initialSetup ?? (await createDefaultSetup("dev-local-match" as MatchId));
+  const defaultMatchId = defaultSetup.matchId;
+  matches.set(defaultMatchId, createLocalDevMatch(defaultSetup));
+
+  const buildCreatedResponse = (
+    setup: Parameters<typeof createLocalDevMatch>[0],
+    match: LocalDevMatch,
+  ): CreatedDevMatchResponse => ({
+    matchId: setup.matchId,
+    seats: createLocalAnonSeats(setup),
+    snapshot: getLocalDevSnapshot(match),
+  });
+
+  return {
+    defaultMatchId,
+    async createMatch(setup) {
+      const actualSetup =
+        setup ??
+        (await createDefaultSetup(
+          `dev-local-match-${String(nextMatchNumber++)}` as MatchId,
+        ));
+      const match = createLocalDevMatch(actualSetup);
+      matches.set(actualSetup.matchId, match);
+      return buildCreatedResponse(actualSetup, match);
+    },
+    async resetMatch(matchId, setup) {
+      const actualSetup = setup ?? (await createDefaultSetup(matchId));
+      const match = createLocalDevMatch({ ...actualSetup, matchId });
+      matches.set(matchId, match);
+      return buildCreatedResponse({ ...actualSetup, matchId }, match);
+    },
+    getMatch(matchId) {
+      return matches.get(matchId);
+    },
+  };
+};
+
 const handleApiRequest = async (
   request: IncomingMessage,
   response: ServerResponse,
-  matchRef: { match: LocalDevMatch },
-  createDefaultSetup: () => Promise<Parameters<typeof createLocalDevMatch>[0]>,
+  registry: LocalDevMatchRegistry,
 ): Promise<void> => {
   const url = request.url ?? "/";
-  if (request.method === "GET" && url === "/api/state") {
-    sendJson(response, 200, getLocalDevSnapshot(matchRef.match));
+  const pathname = new URL(url, "http://localhost").pathname;
+  const defaultMatch = registry.getMatch(registry.defaultMatchId);
+  if (defaultMatch === undefined) {
+    throw new Error("Default dev match is missing.");
+  }
+  const matchRoute =
+    /^\/api\/matches\/(?<matchId>[^/]+)\/(?<resource>[^/]+)$/u.exec(pathname);
+  if (request.method === "POST" && pathname === "/api/matches") {
+    sendJson(response, 201, await registry.createMatch());
     return;
   }
-  if (request.method === "GET" && url === "/api/cards") {
-    sendJson(response, 200, getLocalDevCardCatalog(matchRef.match));
+  if (matchRoute !== null) {
+    const matchId = decodeURIComponent(matchRoute.groups?.["matchId"] ?? "");
+    const resource = matchRoute.groups?.["resource"];
+    const match = registry.getMatch(matchId as MatchId);
+    if (match === undefined) {
+      matchNotFound(response, matchId);
+      return;
+    }
+    if (request.method === "GET" && resource === "state") {
+      sendJson(response, 200, getLocalDevSnapshot(match));
+      return;
+    }
+    if (request.method === "GET" && resource === "cards") {
+      sendJson(response, 200, getLocalDevCardCatalog(match));
+      return;
+    }
+    if (request.method === "POST" && resource === "action") {
+      let body: unknown;
+      try {
+        body = await readRequestJson(request);
+      } catch {
+        sendJson(response, 400, { errors: ["Request body must be JSON."] });
+        return;
+      }
+      if (!isDevActionRequest(body)) {
+        sendJson(response, 400, {
+          errors: ["Expected playerId and numeric actionIndex."],
+        });
+        return;
+      }
+      sendJson(response, 200, applyLocalDevAction(match, body));
+      return;
+    }
+    if (request.method === "POST" && resource === "decision") {
+      let body: unknown;
+      try {
+        body = await readRequestJson(request);
+      } catch {
+        sendJson(response, 400, { errors: ["Request body must be JSON."] });
+        return;
+      }
+      if (!isDevDecisionRequest(body)) {
+        sendJson(response, 400, {
+          errors: ["Expected playerId, decisionId, and decision response."],
+        });
+        return;
+      }
+      sendJson(response, 200, applyLocalDevDecision(match, body));
+      return;
+    }
+    sendJson(response, 404, { errors: ["API route not found."] });
     return;
   }
-  if (request.method === "POST" && url === "/api/reset") {
+  if (request.method === "GET" && pathname === "/api/state") {
+    sendJson(response, 200, getLocalDevSnapshot(defaultMatch));
+    return;
+  }
+  if (request.method === "GET" && pathname === "/api/cards") {
+    sendJson(response, 200, getLocalDevCardCatalog(defaultMatch));
+    return;
+  }
+  if (request.method === "POST" && pathname === "/api/reset") {
     let body: unknown;
     try {
       body = await readRequestJson(request);
@@ -172,13 +321,16 @@ const handleApiRequest = async (
       sendJson(response, 400, { errors: ["Invalid dev match setup."] });
       return;
     }
-    matchRef.match = createLocalDevMatch(
-      resetRequest.setup ?? (await createDefaultSetup()),
+    const explicitSetup =
+      resetRequest.setup === undefined ? undefined : resetRequest.setup;
+    const reset = await registry.resetMatch(
+      registry.defaultMatchId,
+      explicitSetup,
     );
-    sendJson(response, 200, getLocalDevSnapshot(matchRef.match));
+    sendJson(response, 200, reset.snapshot);
     return;
   }
-  if (request.method === "POST" && url === "/api/action") {
+  if (request.method === "POST" && pathname === "/api/action") {
     let body: unknown;
     try {
       body = await readRequestJson(request);
@@ -192,10 +344,10 @@ const handleApiRequest = async (
       });
       return;
     }
-    sendJson(response, 200, applyLocalDevAction(matchRef.match, body));
+    sendJson(response, 200, applyLocalDevAction(defaultMatch, body));
     return;
   }
-  if (request.method === "POST" && url === "/api/decision") {
+  if (request.method === "POST" && pathname === "/api/decision") {
     let body: unknown;
     try {
       body = await readRequestJson(request);
@@ -209,7 +361,7 @@ const handleApiRequest = async (
       });
       return;
     }
-    sendJson(response, 200, applyLocalDevDecision(matchRef.match, body));
+    sendJson(response, 200, applyLocalDevDecision(defaultMatch, body));
     return;
   }
   sendJson(response, 404, { errors: ["API route not found."] });
@@ -220,7 +372,8 @@ const handleStaticRequest = async (
   response: ServerResponse,
 ): Promise<void> => {
   const url = request.url ?? "/";
-  const route = staticRoutes.get(url);
+  const pathname = new URL(url, "http://localhost").pathname;
+  const route = staticRoutes.get(pathname);
   if (request.method !== "GET" || route === undefined) {
     sendText(response, 404, "text/plain; charset=utf-8", "Not found");
     return;
@@ -233,21 +386,23 @@ const handleStaticRequest = async (
 export const createDevHttpServer = async (
   options: CreateDevHttpServerOptions = {},
 ): Promise<DevHttpServer> => {
-  const createDefaultSetup = async () =>
+  const createDefaultSetup = async (matchId?: MatchId) =>
     createPremadeDevMatchSetup({
+      ...(matchId === undefined ? {} : { matchId }),
       ...(options.fetchCard === undefined
         ? {}
         : { fetchCard: options.fetchCard }),
       ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
       ...(options.redisUrl === undefined ? {} : { redisUrl: options.redisUrl }),
     });
-  const matchRef = {
-    match: createLocalDevMatch(options.setup ?? (await createDefaultSetup())),
-  };
+  const registry = await createLocalDevMatchRegistry(
+    createDefaultSetup,
+    options.setup,
+  );
   const server = createServer((request, response) => {
     const url = request.url ?? "/";
     const operation = url.startsWith("/api/")
-      ? handleApiRequest(request, response, matchRef, createDefaultSetup)
+      ? handleApiRequest(request, response, registry)
       : handleStaticRequest(request, response);
     operation.catch((error: unknown) => {
       sendJson(response, 500, {

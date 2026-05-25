@@ -9,6 +9,84 @@ const createFixtureDevHttpServer = () =>
   createDevHttpServer({ fetchCard: createDefaultDevFixtureFetch() });
 
 describe("dev HTTP server", () => {
+  test("creates independent local anonymous dev matches keyed by matchId", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const firstCreate = await fetch(`${server.url()}/api/matches`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const secondCreate = await fetch(`${server.url()}/api/matches`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      assert.equal(firstCreate.status, 201);
+      assert.equal(secondCreate.status, 201);
+      const first = (await firstCreate.json()) as {
+        matchId?: string;
+        snapshot?: { stateSeq?: number };
+      };
+      const second = (await secondCreate.json()) as {
+        matchId?: string;
+        snapshot?: { stateSeq?: number };
+      };
+      assert.equal(typeof first.matchId, "string");
+      assert.equal(typeof second.matchId, "string");
+      assert.notEqual(first.matchId, second.matchId);
+
+      const actionResponse = await fetch(
+        `${server.url()}/api/matches/${String(first.matchId)}/action`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            playerId: "p1",
+            actionIndex: 0,
+            expectedStateSeq: first.snapshot?.stateSeq,
+          }),
+        },
+      );
+      assert.equal(actionResponse.status, 200);
+
+      const firstStateResponse = await fetch(
+        `${server.url()}/api/matches/${String(first.matchId)}/state`,
+      );
+      const secondStateResponse = await fetch(
+        `${server.url()}/api/matches/${String(second.matchId)}/state`,
+      );
+      assert.equal(firstStateResponse.status, 200);
+      assert.equal(secondStateResponse.status, 200);
+      const firstState = (await firstStateResponse.json()) as {
+        stateSeq?: number;
+      };
+      const secondState = (await secondStateResponse.json()) as {
+        stateSeq?: number;
+      };
+      assert.notEqual(firstState.stateSeq, secondState.stateSeq);
+      assert.equal(secondState.stateSeq, second.snapshot?.stateSeq);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("returns not found for unknown local dev match ids", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(
+        `${server.url()}/api/matches/missing-match/state`,
+      );
+      assert.equal(response.status, 404);
+      const body = (await response.json()) as { errors?: string[] };
+      assert.deepEqual(body.errors, ["Match missing-match not found."]);
+    } finally {
+      await server.close();
+    }
+  });
+
   test("serves filtered match state without exposing the engine state", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
@@ -148,6 +226,19 @@ describe("dev HTTP server", () => {
 
       assert.equal(script.includes("@optcg/engine-core"), false);
       assert.equal(script.includes("engine-core"), false);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("serves the dev UI shell when a matchId query is present", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/?matchId=dev-local-match`);
+      assert.equal(response.status, 200);
+      const body = await response.text();
+      assert.equal(body.includes('id="app"'), true);
     } finally {
       await server.close();
     }

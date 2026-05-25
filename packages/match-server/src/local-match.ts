@@ -102,6 +102,7 @@ export interface CreatePremadeDevMatchSetupOptions {
   readonly fetchCard?: DevPoneglyphFetch;
   readonly baseUrl?: string;
   readonly redisUrl?: string;
+  readonly matchId?: MatchId;
 }
 
 export interface ApplyLocalDevActionInput {
@@ -223,7 +224,7 @@ export const createPremadeDevMatchSetup = async (
   options: CreatePremadeDevMatchSetupOptions = {},
 ): Promise<DevMatchSetup> => {
   return createDefaultDevMatchSetup({
-    matchId: "dev-local-match" as MatchId,
+    matchId: options.matchId ?? ("dev-local-match" as MatchId),
     firstPlayerId: p1,
     playerOrder: [p1, p2],
     createdAt,

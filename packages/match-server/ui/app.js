@@ -1,4 +1,5 @@
 const state = {
+  matchId: null,
   snapshot: null,
   cardsByPlayer: {},
   errors: [],
@@ -9,6 +10,13 @@ const state = {
   actionInFlight: false,
   decisionDraft: null,
   orderDragInstanceId: null,
+};
+
+const matchApiPath = (resource) => {
+  if (state.matchId === null) {
+    return `/api/${resource}`;
+  }
+  return `/api/matches/${encodeURIComponent(state.matchId)}/${resource}`;
 };
 
 const requestJson = async (path, options = {}) => {
@@ -25,10 +33,39 @@ const requestJson = async (path, options = {}) => {
   return body;
 };
 
+const matchIdFromUrl = () =>
+  new URL(window.location.href).searchParams.get("matchId");
+
+const setMatchId = (matchId) => {
+  state.matchId = matchId;
+  const url = new URL(window.location.href);
+  url.searchParams.set("matchId", matchId);
+  window.history.replaceState({}, "", url);
+};
+
+const createMatch = async () => {
+  const created = await requestJson("/api/matches", { method: "POST" });
+  setMatchId(created.matchId);
+  state.snapshot = created.snapshot;
+  state.cardsByPlayer =
+    (await requestJson(matchApiPath("cards"))).players ?? {};
+  state.errors = [];
+  state.menu = null;
+  state.followupMenu = null;
+  state.confirmingConcede = null;
+  render();
+};
+
 const loadState = async () => {
+  const urlMatchId = matchIdFromUrl();
+  if (urlMatchId === null) {
+    await createMatch();
+    return;
+  }
+  state.matchId = urlMatchId;
   const [snapshot, catalog] = await Promise.all([
-    requestJson("/api/state"),
-    requestJson("/api/cards"),
+    requestJson(matchApiPath("state")),
+    requestJson(matchApiPath("cards")),
   ]);
   state.snapshot = snapshot;
   state.cardsByPlayer = catalog.players ?? {};
@@ -39,13 +76,7 @@ const loadState = async () => {
 };
 
 const resetMatch = async () => {
-  state.snapshot = await requestJson("/api/reset", { method: "POST" });
-  state.cardsByPlayer = (await requestJson("/api/cards")).players ?? {};
-  state.errors = [];
-  state.menu = null;
-  state.followupMenu = null;
-  state.confirmingConcede = null;
-  render();
+  await createMatch();
 };
 
 const usesFullscreenDecisionModal = (decision) =>
@@ -72,11 +103,11 @@ const applyAction = async (playerId, actionIndex, followupAnchor = null) => {
   state.decisionDraft = null;
   render();
   try {
-    const result = await requestJson("/api/action", {
+    const result = await requestJson(matchApiPath("action"), {
       method: "POST",
       body: JSON.stringify({ playerId, actionIndex, expectedStateSeq }),
     });
-    const catalog = await requestJson("/api/cards");
+    const catalog = await requestJson(matchApiPath("cards"));
     state.snapshot = result.snapshot;
     state.cardsByPlayer = catalog.players ?? {};
     state.errors = result.errors;
@@ -98,11 +129,11 @@ const applyDecision = async (playerId, decisionId, response) => {
   state.followupMenu = null;
   state.confirmingConcede = null;
   state.decisionDraft = null;
-  const result = await requestJson("/api/decision", {
+  const result = await requestJson(matchApiPath("decision"), {
     method: "POST",
     body: JSON.stringify({ playerId, decisionId, response }),
   });
-  const catalog = await requestJson("/api/cards");
+  const catalog = await requestJson(matchApiPath("cards"));
   state.snapshot = result.snapshot;
   state.cardsByPlayer = catalog.players ?? {};
   state.errors = result.errors;
@@ -396,6 +427,7 @@ const renderMatchControls = (snapshot) => `
       New match
     </button>
     <div class="match-state">
+      <span>${escapeHtml(state.matchId ?? "no match")}</span>
       <span>${escapeHtml(snapshot.status)}</span>
       <span>${escapeHtml(snapshot.turn.turnPlayerId)} / ${escapeHtml(
         snapshot.turn.phase,
