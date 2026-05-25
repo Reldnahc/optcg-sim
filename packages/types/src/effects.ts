@@ -202,6 +202,7 @@ export interface CardSelectionRequest {
   max: number;
   allowFewerIfUnavailable: boolean;
   visibility?: "public" | "privateToChooser";
+  remainingCards?: SearchRequest["remainingCards"];
 }
 
 export type Target =

@@ -159,6 +159,90 @@ test("chooser-only empty-filter top-five search keeps selected identity private 
   );
 });
 
+test("trash-rest search moves unselected looked cards to trash without ordering remainder", () => {
+  const state = createActiveState();
+  const looked = setDeck(state, [
+    "topn-trash-a",
+    "topn-trash-b",
+    "topn-trash-c",
+    "topn-trash-tail",
+  ]);
+  const opened = openSearch(
+    state,
+    search({
+      lookCount: 3,
+      remainingCards: { destination: "trash" },
+    }),
+  );
+  const select = selectDecision(opened);
+  const chosen = must(select.candidates[1], "chosen").card;
+
+  const resolved = applyAction(opened, choose(select.id, [chosen]));
+  const player = must(resolved.state.players[p1], "p1");
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(player.hand.at(-1)?.instanceId, looked[1]?.instanceId);
+  assert.deepEqual(
+    player.trash.slice(0, 2).map((card) => card.instanceId),
+    [looked[0]?.instanceId, looked[2]?.instanceId],
+  );
+  assert.deepEqual(
+    player.deck.map((card) => card.instanceId),
+    [looked[3]?.instanceId],
+  );
+  assert.deepEqual(
+    resolved.events.map((event) => event.type),
+    [
+      "decisionResolved",
+      "cardMoved",
+      "cardMoved",
+      "cardTrashed",
+      "cardMoved",
+      "cardTrashed",
+      "effectResolved",
+    ],
+  );
+});
+
+test("trash-rest search with no eligible candidate trashes all looked cards", () => {
+  const state = createActiveState();
+  const looked = setDeck(state, [
+    "topn-trash-none-a",
+    "topn-trash-none-b",
+    "topn-trash-none-tail",
+  ]);
+  const entry = queueDrawForP1();
+  state.effectQueue = [entry];
+
+  const result = createSupportedSearchRevealChoiceDecision(
+    state,
+    entry,
+    search({
+      lookCount: 2,
+      filter: { categories: ["stage"] },
+      remainingCards: { destination: "trash" },
+    }),
+  );
+  const player = must(result.state.players[p1], "p1");
+
+  assert.equal(result.ok, true);
+  assert.equal(result.kind, "noEligibleCandidate");
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(
+    player.trash.slice(0, 2).map((card) => card.instanceId),
+    [looked[0]?.instanceId, looked[1]?.instanceId],
+  );
+  assert.deepEqual(
+    player.deck.map((card) => card.instanceId),
+    [looked[2]?.instanceId],
+  );
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["cardRevealed", "cardMoved", "cardTrashed", "cardMoved", "cardTrashed"],
+  );
+});
+
 test("top-N filter varies look count color type and excluded name", () => {
   const state = createActiveState();
   const looked = setDeck(state, [

@@ -8,7 +8,6 @@ import type {
   EngineEvent,
   EngineResult,
   GameState,
-  OrderCardsDecision,
   SelectCardsDecision,
 } from "@optcg/types";
 
@@ -27,6 +26,19 @@ import {
 } from "./action-state.js";
 import { hashCanonicalStateValue } from "./canonical-state.js";
 import { resolvePlayerId } from "./effect-runtime-primitives.js";
+import {
+  appendSearchRevealRemainderTrashEvents,
+  createSearchRevealOrderCardsDecision,
+  deckAfterTrashingLookedCards,
+  hasSupportedDeckBottomRemainingCardsPolicy,
+  hasSupportedRemainingCardsPolicy,
+  hasSupportedTrashRemainingCardsPolicy,
+  isExactCharacterCategoryFilter,
+  toCardRefForPlayer,
+  toDeckCard,
+  toTrashCards,
+  trashAfterTrashingLookedCards,
+} from "./effect-runtime-search-reveal-remainder.js";
 
 type SearchEffect = Extract<Effect, { type: "search" }>;
 type EngineInternalTransientCardSet = {
@@ -36,7 +48,7 @@ type EngineInternalTransientCardSet = {
   ownerId?: CardInstance["owner"];
   controllerId?: CardInstance["controller"];
   visibility: { type: string; playerId: EffectQueueEntry["controllerId"] };
-  cleanupPolicy: string;
+  cleanupPolicy: "returnToOrigin";
 };
 
 export type SearchRevealTransientSetResult =
@@ -130,27 +142,6 @@ const failChoiceClosed = (
   ok: false,
   state,
 });
-
-const isExactCharacterCategoryFilter = (
-  filter: SearchEffect["request"]["filter"],
-): boolean => {
-  const keys = Object.keys(filter).sort();
-  return (
-    keys.length === 1 &&
-    keys[0] === "categories" &&
-    filter.categories !== undefined &&
-    filter.categories.length === 1 &&
-    filter.categories[0] === "character"
-  );
-};
-
-const hasSupportedRemainingCardsPolicy = (
-  request: SearchEffect["request"],
-): boolean =>
-  request.remainingCards !== undefined &&
-  request.remainingCards.destination === "deck" &&
-  request.remainingCards.position === "bottom" &&
-  request.remainingCards.order === "ownerChoice";
 
 const isLegacyTopOneSearch = (effect: SearchEffect): boolean =>
   effect.request.lookCount === 1 &&
@@ -304,9 +295,6 @@ const revealIdForEntry = (entry: EffectQueueEntry): string =>
 const decisionIdForEntry = (entry: EffectQueueEntry) =>
   toDecisionId(`decision:selectCards:search-reveal:${String(entry.id)}`);
 
-const orderDecisionIdForQueueEntryId = (queueEntryId: string) =>
-  toDecisionId(`decision:orderCards:search-reveal:${queueEntryId}`);
-
 const transientSetIdForEntry = (entry: EffectQueueEntry) =>
   `set:search-reveal:${String(entry.id)}`;
 
@@ -416,49 +404,6 @@ const toHandCard = (
   zone: { zone: "hand", playerId, slot: "hand", index },
 });
 
-const toDeckCard = (
-  card: CardInstance,
-  playerId: CardInstance["controller"],
-  index: number,
-): CardInstance => ({
-  ...card,
-  zone: { zone: "deck", playerId, slot: "deck", index },
-});
-
-const createSearchRevealOrderCardsDecision = (
-  queueEntryId: string,
-  effectId: EffectQueueEntry["effectBlockId"],
-  playerId: EffectQueueEntry["controllerId"],
-  cards: readonly CardRef[],
-): OrderCardsDecision => ({
-  id: orderDecisionIdForQueueEntryId(queueEntryId),
-  type: "orderCards",
-  playerId,
-  prompt: "Order the remaining looked cards.",
-  causedBy: {
-    type: "effect",
-    queueEntryId: queueEntryId as EffectQueueEntry["id"],
-    effectId,
-  },
-  visibility: { type: "private", playerId },
-  cards: cards.map((card) => ({ ...card })),
-  destination: "deck",
-  defaultResponse: {
-    type: "orderedIds",
-    ids: cards.map((card) => String(card.instanceId)),
-  },
-});
-
-const toCardRefForPlayer = (
-  card: CardInstance,
-  playerId: CardInstance["controller"],
-): CardRef => ({
-  instanceId: card.instanceId,
-  cardId: card.cardId,
-  playerId,
-  zone: card.zone,
-});
-
 const getQueuedEntryForSearchDecision = (
   state: GameState,
   causedBy: NonNullable<GameState["pendingDecision"]>["causedBy"],
@@ -485,8 +430,7 @@ const hasExpectedTransientSetShape = (
     transientSet.ownerId !== playerId ||
     transientSet.controllerId !== playerId ||
     transientSet.visibility.type !== "private" ||
-    transientSet.visibility.playerId !== playerId ||
-    transientSet.cleanupPolicy !== "returnToOrigin"
+    transientSet.visibility.playerId !== playerId
   ) {
     return false;
   }
@@ -560,6 +504,51 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
   );
 
   if (candidates.length === 0) {
+    if (hasSupportedTrashRemainingCardsPolicy(effect.request)) {
+      const player = state.players[supported.playerId];
+      if (player === undefined) {
+        return failChoiceClosed(state, entry, "unsupported-player-ref");
+      }
+      const lookedDeckCards = player.deck.slice(0, cards.length);
+      const trashedCards = toTrashCards(lookedDeckCards, supported.playerId);
+      appendSearchRevealRemainderTrashEvents(state, events, {
+        causedBy,
+        originalCards: lookedDeckCards,
+        playerId: supported.playerId,
+        selectionSetId: transientSet.id,
+        trashedCards,
+      });
+      for (const event of events) {
+        event.causedBy = causedBy;
+      }
+      const nextSeq = toStateSeq(state.seq + 1);
+      const nextState: GameState = {
+        ...state,
+        seq: nextSeq,
+        players: {
+          ...state.players,
+          [supported.playerId]: {
+            ...player,
+            deck: deckAfterTrashingLookedCards(
+              supported.playerId,
+              player.deck.slice(cards.length),
+            ),
+            trash: trashAfterTrashingLookedCards(
+              supported.playerId,
+              trashedCards,
+              player.trash,
+            ),
+          },
+        },
+        eventJournal: [...state.eventJournal, ...events],
+      };
+      return {
+        events,
+        kind: "noEligibleCandidate",
+        ok: true,
+        state: nextState,
+      };
+    }
     if (cards.length <= 1) {
       for (const event of events) {
         event.causedBy = causedBy;
@@ -609,7 +598,7 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
           visibility,
           origin: "topOfDeck",
           createdAtStateSeq: nextSeq,
-          cleanupPolicy: "returnToOrigin",
+          cleanupPolicy: transientSet.cleanupPolicy,
         },
       ],
       eventJournal: [...state.eventJournal, ...events],
@@ -648,6 +637,9 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
         effect.request.revealTo === "bothPlayers"
           ? "public"
           : "privateToChooser",
+      ...(effect.request.remainingCards !== undefined
+        ? { remainingCards: effect.request.remainingCards }
+        : {}),
     },
     candidates: cards
       .map((card) => ({
@@ -690,7 +682,7 @@ export const createSupportedSearchRevealChoiceDecisionFromTransientSet = (
         visibility,
         origin: "topOfDeck",
         createdAtStateSeq: nextSeq,
-        cleanupPolicy: "returnToOrigin",
+        cleanupPolicy: transientSet.cleanupPolicy,
       },
     ],
     eventJournal: [...state.eventJournal, ...events],
@@ -903,9 +895,12 @@ export const applySupportedSearchRevealChoiceResponse = (
   );
   const queuedEntry = getQueuedEntryForSearchDecision(state, decision.causedBy);
   const selectedInstanceId = selectedCard?.instanceId;
-  const remainingLookedCards = lookedDeckCards
-    .filter((card) => card.instanceId !== selectedInstanceId)
-    .map((card, index) => toDeckCard(card, decision.playerId, index));
+  const remainingOriginalLookedCards = lookedDeckCards.filter(
+    (card) => card.instanceId !== selectedInstanceId,
+  );
+  const remainingLookedCards = remainingOriginalLookedCards.map((card, index) =>
+    toDeckCard(card, decision.playerId, index),
+  );
   const tail = player.deck.slice(reveal.cards.length);
   const deckWhileOrdering = reindexZoneCards(
     [...remainingLookedCards, ...tail],
@@ -940,7 +935,11 @@ export const applySupportedSearchRevealChoiceResponse = (
     }
   }
 
-  if (remainderRefs.length > 1 && queueEntryId !== undefined) {
+  if (
+    hasSupportedDeckBottomRemainingCardsPolicy(decision.request) &&
+    remainderRefs.length > 1 &&
+    queueEntryId !== undefined
+  ) {
     const orderDecision = createSearchRevealOrderCardsDecision(
       queueEntryId,
       decision.causedBy.type === "effect"
@@ -991,11 +990,31 @@ export const applySupportedSearchRevealChoiceResponse = (
     return toEngineResult(nextState, events);
   }
 
+  const trashedRemainderCards = hasSupportedTrashRemainingCardsPolicy(
+    decision.request,
+  )
+    ? toTrashCards(remainingOriginalLookedCards, decision.playerId)
+    : [];
+  appendSearchRevealRemainderTrashEvents(state, events, {
+    causedBy: { type: "decision", decisionId: decision.id },
+    originalCards: remainingOriginalLookedCards,
+    playerId: decision.playerId,
+    selectionSetId: String(decision.request.set),
+    trashedCards: trashedRemainderCards,
+  });
+
   const finalDeck = reindexZoneCards(
-    [...tail, ...remainingLookedCards],
+    hasSupportedTrashRemainingCardsPolicy(decision.request)
+      ? tail
+      : [...tail, ...remainingLookedCards],
     "deck",
     decision.playerId,
     "deck",
+  );
+  const finalTrash = trashAfterTrashingLookedCards(
+    decision.playerId,
+    trashedRemainderCards,
+    player.trash,
   );
   if (queuedEntry !== undefined && options.deferQueueResolution !== true) {
     appendEffectResolvedEvent(state, events, queuedEntry);
@@ -1010,6 +1029,7 @@ export const applySupportedSearchRevealChoiceResponse = (
       [decision.playerId]: {
         ...player,
         deck: finalDeck,
+        trash: finalTrash,
         hand:
           movedCard === undefined ? player.hand : [...player.hand, movedCard],
       },
