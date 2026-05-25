@@ -11,6 +11,7 @@ import {
   respondToMulliganDecision,
   startMulliganFlow,
 } from "@optcg/engine-core";
+import type { DevPoneglyphFetch } from "@optcg/cards";
 import type {
   CardId,
   EngineError,
@@ -95,6 +96,11 @@ export interface DevMatchSetup {
 
 export interface LocalDevMatch {
   state: GameState;
+}
+
+export interface CreatePremadeDevMatchSetupOptions {
+  readonly fetchCard?: DevPoneglyphFetch;
+  readonly baseUrl?: string;
 }
 
 export interface ApplyLocalDevActionInput {
@@ -212,12 +218,18 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
   );
 };
 
-export const createPremadeDevMatchSetup = (): DevMatchSetup => {
+export const createPremadeDevMatchSetup = async (
+  options: CreatePremadeDevMatchSetupOptions = {},
+): Promise<DevMatchSetup> => {
   return createOp13DevMatchSetup({
     matchId: "dev-local-match" as MatchId,
     firstPlayerId: p1,
     playerOrder: [p1, p2],
     createdAt,
+    ...(options.fetchCard === undefined
+      ? {}
+      : { fetchCard: options.fetchCard }),
+    ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
   });
 };
 
@@ -289,9 +301,7 @@ const playerSetupById = (
   [setup.players[1].playerId]: setup.players[1],
 });
 
-export const createLocalDevMatch = (
-  setup: DevMatchSetup = createPremadeDevMatchSetup(),
-): LocalDevMatch => {
+export const createLocalDevMatch = (setup: DevMatchSetup): LocalDevMatch => {
   const players = playerSetupById(setup);
   const firstPlayer = players[setup.playerOrder[0]];
   const secondPlayer = players[setup.playerOrder[1]];

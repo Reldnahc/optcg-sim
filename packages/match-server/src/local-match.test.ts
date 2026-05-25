@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { describe, test } from "vitest";
+import { beforeAll, describe, test } from "vitest";
 import type { CardId, PlayerId } from "@optcg/types";
 
 import {
@@ -8,12 +8,26 @@ import {
   createLocalDevMatch,
   createPremadeDevMatchSetup,
   getLocalDevSnapshot,
+  type DevMatchSetup,
 } from "./local-match.js";
+import { createOp13FixtureFetch } from "./op13-fixture-fetch.test-support.js";
 
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
 const op13079 = "OP13-079" as CardId;
 const op13099 = "OP13-099" as CardId;
+
+let premadeSetup: DevMatchSetup;
+
+beforeAll(async () => {
+  premadeSetup = await createPremadeDevMatchSetup({
+    fetchCard: createOp13FixtureFetch(),
+  });
+});
+
+const setupClone = (): DevMatchSetup => structuredClone(premadeSetup);
+
+const createTestMatch = () => createLocalDevMatch(setupClone());
 
 const actionIndexByLabel = (
   labels: readonly { label: string; index: number }[],
@@ -37,10 +51,7 @@ const mustPlayerSnapshot = (
   return player;
 };
 
-const mustCard = (
-  setup: ReturnType<typeof createPremadeDevMatchSetup>,
-  cardId: CardId,
-) => {
+const mustCard = (setup: DevMatchSetup, cardId: CardId) => {
   const card = setup.cardManifest.cards[cardId];
   if (card === undefined) {
     throw new Error(`Missing manifest card ${String(cardId)}.`);
@@ -134,7 +145,7 @@ const advanceUntilPlayable = (
 
 describe("local dev match", () => {
   test("premade dev setup uses the OP13 fixture cards with generated effect definitions", () => {
-    const setup = createPremadeDevMatchSetup();
+    const setup = setupClone();
     const expectedDeckIds = [
       "OP13-080",
       "OP13-082",
@@ -179,7 +190,7 @@ describe("local dev match", () => {
   });
 
   test("premade dev match shuffles decks before opening hands", () => {
-    const setup = createPremadeDevMatchSetup();
+    const setup = setupClone();
     const match = createLocalDevMatch(setup);
     completeSetupIfPresent(match);
     const snapshot = getLocalDevSnapshot(match);
@@ -191,7 +202,7 @@ describe("local dev match", () => {
   });
 
   test("exposes filtered player views and server-owned action indexes", () => {
-    const match = createLocalDevMatch();
+    const match = createTestMatch();
     const snapshot = getLocalDevSnapshot(match);
     const p1Snapshot = mustPlayerSnapshot(snapshot, p1);
     const p2Snapshot = mustPlayerSnapshot(snapshot, p2);
@@ -218,7 +229,7 @@ describe("local dev match", () => {
   });
 
   test("applies the current server action by player and index", () => {
-    const match = createLocalDevMatch();
+    const match = createTestMatch();
     const before = completeSetupIfPresent(match);
     const keepIndex = actionIndexByLabel(
       mustPlayerSnapshot(before, p1).actions,
@@ -240,7 +251,7 @@ describe("local dev match", () => {
   });
 
   test("applies explicit filtered card decision responses by decision id", () => {
-    const match = createLocalDevMatch();
+    const match = createTestMatch();
     const before = getLocalDevSnapshot(match);
     const p1Snapshot = mustPlayerSnapshot(before, p1);
     const decision = p1Snapshot.view.pendingDecision;
@@ -266,7 +277,7 @@ describe("local dev match", () => {
   });
 
   test("exposes server-owned phase advancement after mulligans complete", () => {
-    const match = createLocalDevMatch();
+    const match = createTestMatch();
     const main = keepBothPlayersAndAdvance(match);
 
     assert.equal(main.status, "active");
@@ -279,7 +290,7 @@ describe("local dev match", () => {
   });
 
   test("play-card payment decisions are labeled as payment, not generic response", () => {
-    const match = createLocalDevMatch();
+    const match = createTestMatch();
     const main = advanceUntilPlayable(match);
     const activePlayerId = main.activePlayerId;
     const playAction = mustPlayerSnapshot(main, activePlayerId).actions.find(
@@ -307,7 +318,7 @@ describe("local dev match", () => {
   });
 
   test("rejects a stale action index without mutating the match", () => {
-    const match = createLocalDevMatch();
+    const match = createTestMatch();
     const before = getLocalDevSnapshot(match);
 
     const result = applyLocalDevAction(match, {
@@ -320,7 +331,7 @@ describe("local dev match", () => {
   });
 
   test("rejects stale action requests after another action advances the state", () => {
-    const match = createLocalDevMatch();
+    const match = createTestMatch();
     const before = keepBothPlayersAndAdvance(match);
     const endMainIndex = actionIndexByLabel(
       mustPlayerSnapshot(before, p1).actions,
@@ -347,7 +358,7 @@ describe("local dev match", () => {
   });
 
   test("boots from a premade match setup carrying manifest and player decks", () => {
-    const setup = createPremadeDevMatchSetup();
+    const setup = setupClone();
     const match = createLocalDevMatch(setup);
     const snapshot = getLocalDevSnapshot(match);
 

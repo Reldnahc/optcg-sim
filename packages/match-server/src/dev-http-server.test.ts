@@ -3,10 +3,14 @@ import { describe, test } from "vitest";
 
 import { createDevHttpServer } from "./dev-http-server.js";
 import { createPremadeDevMatchSetup } from "./local-match.js";
+import { createOp13FixtureFetch } from "./op13-fixture-fetch.test-support.js";
+
+const createFixtureDevHttpServer = () =>
+  createDevHttpServer({ fetchCard: createOp13FixtureFetch() });
 
 describe("dev HTTP server", () => {
   test("serves filtered match state without exposing the engine state", async () => {
-    const server = createDevHttpServer();
+    const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const response = await fetch(`${server.url()}/api/state`);
@@ -24,7 +28,7 @@ describe("dev HTTP server", () => {
   });
 
   test("serves public card metadata for browser board images", async () => {
-    const server = createDevHttpServer();
+    const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const response = await fetch(`${server.url()}/api/cards`);
@@ -54,7 +58,7 @@ describe("dev HTTP server", () => {
   });
 
   test("accepts explicit decision responses without exposing hidden manifest data", async () => {
-    const server = createDevHttpServer();
+    const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const stateResponse = await fetch(`${server.url()}/api/state`);
@@ -100,7 +104,7 @@ describe("dev HTTP server", () => {
   });
 
   test("rejects explicit decision responses from the wrong player", async () => {
-    const server = createDevHttpServer();
+    const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const stateResponse = await fetch(`${server.url()}/api/state`);
@@ -135,7 +139,7 @@ describe("dev HTTP server", () => {
   });
 
   test("serves browser assets that do not import server-only engine packages", async () => {
-    const server = createDevHttpServer();
+    const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
       const response = await fetch(`${server.url()}/app.js`);
@@ -150,8 +154,10 @@ describe("dev HTTP server", () => {
   });
 
   test("accepts an explicit premade match setup through reset", async () => {
-    const server = createDevHttpServer();
-    const setup = createPremadeDevMatchSetup();
+    const server = await createFixtureDevHttpServer();
+    const setup = await createPremadeDevMatchSetup({
+      fetchCard: createOp13FixtureFetch(),
+    });
     const custom = {
       ...setup,
       matchId: "dev-http-custom-match",

@@ -16,6 +16,10 @@ export type {
   DevPlayerSnapshot,
   DevVisibleAction,
   LocalDevMatch,
+  CreatePremadeDevMatchSetupOptions,
 } from "./local-match.js";
 export { createDevHttpServer } from "./dev-http-server.js";
-export type { DevHttpServer } from "./dev-http-server.js";
+export type {
+  CreateDevHttpServerOptions,
+  DevHttpServer,
+} from "./dev-http-server.js";

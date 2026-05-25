@@ -12,9 +12,11 @@ import {
   applyLocalDevAction,
   applyLocalDevDecision,
   createLocalDevMatch,
+  createPremadeDevMatchSetup,
   getLocalDevCardCatalog,
   getLocalDevSnapshot,
   isDevMatchSetup,
+  type CreatePremadeDevMatchSetupOptions,
   type LocalDevMatch,
 } from "./local-match.js";
 
@@ -38,6 +40,10 @@ export interface DevHttpServer {
   listen: (port: number, host?: string) => Promise<void>;
   close: () => Promise<void>;
   url: () => string;
+}
+
+export interface CreateDevHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
+  readonly setup?: Parameters<typeof createLocalDevMatch>[0];
 }
 
 const uiRoot = new URL("../ui/", import.meta.url);
@@ -139,6 +145,7 @@ const handleApiRequest = async (
   request: IncomingMessage,
   response: ServerResponse,
   matchRef: { match: LocalDevMatch },
+  createDefaultSetup: () => Promise<Parameters<typeof createLocalDevMatch>[0]>,
 ): Promise<void> => {
   const url = request.url ?? "/";
   if (request.method === "GET" && url === "/api/state") {
@@ -165,7 +172,9 @@ const handleApiRequest = async (
       sendJson(response, 400, { errors: ["Invalid dev match setup."] });
       return;
     }
-    matchRef.match = createLocalDevMatch(resetRequest.setup);
+    matchRef.match = createLocalDevMatch(
+      resetRequest.setup ?? (await createDefaultSetup()),
+    );
     sendJson(response, 200, getLocalDevSnapshot(matchRef.match));
     return;
   }
@@ -221,12 +230,23 @@ const handleStaticRequest = async (
   sendText(response, 200, contentTypeForPath(route), body);
 };
 
-export const createDevHttpServer = (): DevHttpServer => {
-  const matchRef = { match: createLocalDevMatch() };
+export const createDevHttpServer = async (
+  options: CreateDevHttpServerOptions = {},
+): Promise<DevHttpServer> => {
+  const createDefaultSetup = async () =>
+    createPremadeDevMatchSetup({
+      ...(options.fetchCard === undefined
+        ? {}
+        : { fetchCard: options.fetchCard }),
+      ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
+    });
+  const matchRef = {
+    match: createLocalDevMatch(options.setup ?? (await createDefaultSetup())),
+  };
   const server = createServer((request, response) => {
     const url = request.url ?? "/";
     const operation = url.startsWith("/api/")
-      ? handleApiRequest(request, response, matchRef)
+      ? handleApiRequest(request, response, matchRef, createDefaultSetup)
       : handleStaticRequest(request, response);
     operation.catch((error: unknown) => {
       sendJson(response, 500, {

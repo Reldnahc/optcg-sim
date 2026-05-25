@@ -7,6 +7,15 @@ export { parseExpression } from "./expression-parser.js";
 export { parseEffectLine } from "./orchestrator.js";
 export { parseOncePerTurnMarker } from "./markers/index.js";
 export { evaluatePrimitiveSupport } from "./support-evaluator.js";
+export {
+  buildDevMatchCardManifestFromPoneglyphIds,
+  parseDevCardIdList,
+} from "./dev-manifest.js";
+export type {
+  BuildDevMatchCardManifestFromPoneglyphIdsRequest,
+  DevPoneglyphFetch,
+  DevPoneglyphFetchResponse,
+} from "./dev-manifest.js";
 export type {
   EffectLineParserRegistry,
   EntryPointParser,
