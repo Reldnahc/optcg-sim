@@ -3,10 +3,10 @@ import { describe, test } from "vitest";
 
 import { createDevHttpServer } from "./dev-http-server.js";
 import { createPremadeDevMatchSetup } from "./local-match.js";
-import { createOp13FixtureFetch } from "./op13-fixture-fetch.test-support.js";
+import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
 
 const createFixtureDevHttpServer = () =>
-  createDevHttpServer({ fetchCard: createOp13FixtureFetch() });
+  createDevHttpServer({ fetchCard: createDefaultDevFixtureFetch() });
 
 describe("dev HTTP server", () => {
   test("serves filtered match state without exposing the engine state", async () => {
@@ -156,7 +156,7 @@ describe("dev HTTP server", () => {
   test("accepts an explicit premade match setup through reset", async () => {
     const server = await createFixtureDevHttpServer();
     const setup = await createPremadeDevMatchSetup({
-      fetchCard: createOp13FixtureFetch(),
+      fetchCard: createDefaultDevFixtureFetch(),
     });
     const custom = {
       ...setup,

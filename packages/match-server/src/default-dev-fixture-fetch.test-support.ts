@@ -18,7 +18,7 @@ const fixturesRoot = new URL(
   import.meta.url,
 );
 
-export const createOp13FixtureFetch =
+export const createDefaultDevFixtureFetch =
   (): DevPoneglyphFetch => async (url, init) => {
     if (!url.endsWith("/v1/cards/batch") || init?.method !== "POST") {
       return {

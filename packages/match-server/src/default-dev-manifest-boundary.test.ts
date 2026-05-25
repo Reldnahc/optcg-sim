@@ -2,10 +2,10 @@ import { readFile } from "node:fs/promises";
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
-describe("OP13 dev manifest boundary", () => {
+describe("default dev manifest boundary", () => {
   test("does not compile card text or read card fixtures in match-server", async () => {
     const source = await readFile(
-      new URL("./op13-dev-manifest.ts", import.meta.url),
+      new URL("./default-dev-manifest.ts", import.meta.url),
       "utf8",
     );
 

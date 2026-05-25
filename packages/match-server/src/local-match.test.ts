@@ -10,7 +10,7 @@ import {
   getLocalDevSnapshot,
   type DevMatchSetup,
 } from "./local-match.js";
-import { createOp13FixtureFetch } from "./op13-fixture-fetch.test-support.js";
+import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
 
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
@@ -21,7 +21,7 @@ let premadeSetup: DevMatchSetup;
 
 beforeAll(async () => {
   premadeSetup = await createPremadeDevMatchSetup({
-    fetchCard: createOp13FixtureFetch(),
+    fetchCard: createDefaultDevFixtureFetch(),
   });
 });
 
@@ -144,7 +144,7 @@ const advanceUntilPlayable = (
 };
 
 describe("local dev match", () => {
-  test("premade dev setup uses the OP13 fixture cards with generated effect definitions", () => {
+  test("premade dev setup uses the default fixture cards with generated effect definitions", () => {
     const setup = setupClone();
     const expectedDeckIds = [
       "OP13-080",

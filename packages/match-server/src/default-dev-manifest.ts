@@ -7,7 +7,7 @@ import type { CardId, PlayerId } from "@optcg/types";
 
 import type { DevMatchPlayerSetup, DevMatchSetup } from "./local-match.js";
 
-interface CreateOp13DevMatchSetupInput {
+interface CreateDefaultDevMatchSetupInput {
   readonly matchId: DevMatchSetup["matchId"];
   readonly firstPlayerId: PlayerId;
   readonly playerOrder: readonly [PlayerId, PlayerId];
@@ -62,8 +62,8 @@ const playerSetup = (
   donDeckCardIds,
 });
 
-export const createOp13DevMatchSetup = async (
-  input: CreateOp13DevMatchSetupInput,
+export const createDefaultDevMatchSetup = async (
+  input: CreateDefaultDevMatchSetupInput,
 ): Promise<DevMatchSetup> => {
   const sharedDeck = repeatedDeck();
   const sharedDonDeck = donDeck();

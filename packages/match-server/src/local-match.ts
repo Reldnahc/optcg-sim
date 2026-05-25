@@ -28,7 +28,7 @@ import type {
   DecisionResponse,
 } from "@optcg/types";
 
-import { createOp13DevMatchSetup } from "./op13-dev-manifest.js";
+import { createDefaultDevMatchSetup } from "./default-dev-manifest.js";
 
 export interface DevVisibleAction {
   index: number;
@@ -221,7 +221,7 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
 export const createPremadeDevMatchSetup = async (
   options: CreatePremadeDevMatchSetupOptions = {},
 ): Promise<DevMatchSetup> => {
-  return createOp13DevMatchSetup({
+  return createDefaultDevMatchSetup({
     matchId: "dev-local-match" as MatchId,
     firstPlayerId: p1,
     playerOrder: [p1, p2],
