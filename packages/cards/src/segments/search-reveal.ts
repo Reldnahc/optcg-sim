@@ -1,5 +1,6 @@
 import type { ExpressionParseResult, ParseInput } from "../types.js";
 import {
+  parseRestToTrash,
   parseRestToBottomAnyOrder,
   parseSearchSelectionToHand,
   parseTopDeckLook,
@@ -22,7 +23,9 @@ export function searchRevealExpressionParser(
     return undefined;
   }
 
-  const remaining = parseRestToBottomAnyOrder({ text: reveal.rest });
+  const remaining =
+    parseRestToBottomAnyOrder({ text: reveal.rest }) ??
+    parseRestToTrash({ text: reveal.rest });
   if (remaining === undefined) {
     return undefined;
   }
@@ -38,11 +41,7 @@ export function searchRevealExpressionParser(
       max: reveal.max,
       destination: "hand" as const,
       revealTo: reveal.revealTo,
-      remainingCards: {
-        destination: "deck" as const,
-        position: "bottom" as const,
-        order: "ownerChoice" as const,
-      },
+      remainingCards: remaining.remainingCards,
       shuffleAfter: false,
     },
   };

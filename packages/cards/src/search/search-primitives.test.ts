@@ -5,7 +5,7 @@ import {
   parseSearchSelectionToHand,
   parseSearchSelectionVerb,
 } from "./reveal-to-hand.js";
-import { parseRestToBottomAnyOrder } from "./rest-bottom.js";
+import { parseRestToBottomAnyOrder, parseRestToTrash } from "./rest-bottom.js";
 import { parseStageTypeCardFilter } from "./stage-type-card-filter.js";
 import { parseTopDeckLook } from "./top-of-deck.js";
 import { parseTypeCardFilter } from "./type-card-filter.js";
@@ -166,6 +166,11 @@ describe("search reveal primitives", () => {
       }),
     ).toEqual({
       evidence: ["remaining:rest", "remaining:bottomDeck", "order:anyOrder"],
+      remainingCards: {
+        destination: "deck",
+        position: "bottom",
+        order: "ownerChoice",
+      },
       rest: "",
     });
   });
@@ -177,6 +182,23 @@ describe("search reveal primitives", () => {
       }),
     ).toEqual({
       evidence: ["remaining:rest", "remaining:bottomDeck", "order:anyOrder"],
+      remainingCards: {
+        destination: "deck",
+        position: "bottom",
+        order: "ownerChoice",
+      },
+      rest: "trash 1 card from your hand.",
+    });
+  });
+
+  it("parses trash-rest remainder policy independently from search selection", () => {
+    expect(
+      parseRestToTrash({
+        text: "Then, trash the rest and trash 1 card from your hand.",
+      }),
+    ).toEqual({
+      evidence: ["remaining:rest", "remaining:trash"],
+      remainingCards: { destination: "trash" },
       rest: "trash 1 card from your hand.",
     });
   });

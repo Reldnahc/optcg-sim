@@ -107,6 +107,7 @@ export type PrimitiveEvidence =
   | "reveal:chooserOnly"
   | "remaining:rest"
   | "remaining:bottomDeck"
+  | "remaining:trash"
   | "order:anyOrder"
   | "keyword:anySupported"
   | "player:self"

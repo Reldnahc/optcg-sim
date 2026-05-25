@@ -1403,7 +1403,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Visibility",
       "heading_level": 2,
-      "marker_line": 621,
+      "marker_line": 625,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s015`"
     },
     {
@@ -1412,7 +1412,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Replacement triggers",
       "heading_level": 2,
-      "marker_line": 637,
+      "marker_line": 641,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s016`"
     },
     {
@@ -1421,7 +1421,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Type enums",
       "heading_level": 2,
-      "marker_line": 653,
+      "marker_line": 657,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s017`"
     },
     {
@@ -1430,7 +1430,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: vanilla confirmed card",
       "heading_level": 2,
-      "marker_line": 684,
+      "marker_line": 688,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s018`"
     },
     {
@@ -1439,7 +1439,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: On Play draw 1",
       "heading_level": 2,
-      "marker_line": 704,
+      "marker_line": 708,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s019`"
     },
     {
@@ -1448,7 +1448,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: Activate Main with cost and up-to target",
       "heading_level": 2,
-      "marker_line": 734,
+      "marker_line": 738,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s020`"
     },
     {
@@ -1457,7 +1457,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example: permanent power buff",
       "heading_level": 2,
-      "marker_line": 788,
+      "marker_line": 792,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s021`"
     },
     {
@@ -1466,7 +1466,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Poneglyph text-to-DSL pipeline",
       "heading_level": 2,
-      "marker_line": 837,
+      "marker_line": 841,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s022`"
     },
     {
@@ -1475,7 +1475,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "v3 additions from real Poneglyph examples",
       "heading_level": 2,
-      "marker_line": 878,
+      "marker_line": 882,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s023`"
     },
     {
@@ -1484,7 +1484,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Source-attached DON!! condition",
       "heading_level": 3,
-      "marker_line": 886,
+      "marker_line": 890,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s024`"
     },
     {
@@ -1493,7 +1493,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Richer filters",
       "heading_level": 3,
-      "marker_line": 903,
+      "marker_line": 907,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s025`"
     },
     {
@@ -1502,7 +1502,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Transient reveal and selection primitives",
       "heading_level": 3,
-      "marker_line": 924,
+      "marker_line": 928,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s026`"
     },
     {
@@ -1511,7 +1511,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Effect-play options",
       "heading_level": 3,
-      "marker_line": 1012,
+      "marker_line": 1016,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s027`"
     },
     {
@@ -1520,7 +1520,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Example implementation docs",
       "heading_level": 2,
-      "marker_line": 1028,
+      "marker_line": 1032,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s028`"
     },
     {
@@ -1529,7 +1529,7 @@
       "doc_path": "05-effect-dsl-reference.md",
       "heading": "Schema coverage policy",
       "heading_level": 2,
-      "marker_line": 1036,
+      "marker_line": 1040,
       "visible_line": "Section Ref: `05-effect-dsl-reference.s029`"
     },
     {

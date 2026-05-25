@@ -447,6 +447,69 @@ describe("card effect line parser", () => {
     );
   });
 
+  it("parses public top-of-deck search with name exclusion, trash-rest policy, and trailing hand trash compositionally", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Look at 3 cards from the top of your deck; reveal up to 1 {Celestial Dragons} type card other than [Saint Shalria] and add it to your hand. Then, trash the rest and trash 1 card from your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "search",
+                request: {
+                  zone: "deck",
+                  player: "self",
+                  lookCount: 3,
+                  filter: {
+                    typesAny: ["Celestial Dragons"],
+                    nameNot: ["Saint Shalria"],
+                  },
+                  min: 0,
+                  max: 1,
+                  destination: "hand",
+                  revealTo: "bothPlayers",
+                  remainingCards: {
+                    destination: "trash",
+                  },
+                  shuffleAfter: false,
+                },
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "trashFromHand",
+                count: 1,
+                player: "self",
+                chooser: "self",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "instruction:search",
+        "look:topDeck",
+        "filter:type",
+        "filter:nameNot",
+        "reveal:bothPlayers",
+        "remaining:trash",
+        "instruction:trashFromHand",
+      ]),
+    );
+  });
+
   it("parses rules text plus start-of-game stage play as separate primitives", () => {
     const result = parseCardEffectLine(
       "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck and at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck.",

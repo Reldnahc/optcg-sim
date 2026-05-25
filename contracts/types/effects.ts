@@ -263,11 +263,15 @@ export interface SearchRequest {
   max: number;
   destination: Zone;
   revealTo: Visibility;
-  remainingCards?: {
-    destination: Zone;
-    position: "top" | "bottom";
-    order: "ownerChoice" | "random";
-  };
+  remainingCards?:
+    | {
+        destination: "deck";
+        position: "top" | "bottom";
+        order: "ownerChoice" | "random";
+      }
+    | {
+        destination: "trash";
+      };
   shuffleAfter?: boolean;
 }
 
