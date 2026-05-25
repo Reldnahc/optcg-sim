@@ -5,7 +5,10 @@ import {
   parseSearchSelectionToHand,
   parseSearchSelectionVerb,
 } from "./reveal-to-hand.js";
-import { parseRestToBottomAnyOrder, parseRestToTrash } from "./rest-bottom.js";
+import {
+  parseRestToBottomAnyOrder,
+  parseRestToTrash,
+} from "./remaining-cards.js";
 import { parseStageTypeCardFilter } from "./stage-type-card-filter.js";
 import { parseTopDeckLook } from "./top-of-deck.js";
 import { parseTypeCardFilter } from "./type-card-filter.js";
