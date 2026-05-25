@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {
   createServer,
@@ -47,6 +48,29 @@ interface CreatedDevMatchResponse {
   snapshot: ReturnType<typeof getLocalDevSnapshot>;
 }
 
+type AuthSubject =
+  | { type: "anonymousDev"; devSessionId: string }
+  | { type: "user"; userId: string; sessionId: string };
+
+interface AuthContext {
+  subject: AuthSubject;
+}
+
+interface AuthProvider {
+  authenticate: (request: IncomingMessage) => AuthContext | undefined;
+}
+
+interface MatchSeat {
+  matchId: MatchId;
+  playerId: PlayerId;
+  subject: AuthContext["subject"];
+}
+
+interface LocalDevMatchSession {
+  match: LocalDevMatch;
+  seats: Record<string, MatchSeat>;
+}
+
 interface LocalDevMatchRegistry {
   createMatch: (
     setup?: Parameters<typeof createLocalDevMatch>[0],
@@ -56,6 +80,11 @@ interface LocalDevMatchRegistry {
     setup?: Parameters<typeof createLocalDevMatch>[0],
   ) => Promise<CreatedDevMatchResponse>;
   getMatch: (matchId: MatchId) => LocalDevMatch | undefined;
+  authorizeSeat: (
+    auth: AuthContext | undefined,
+    matchId: MatchId,
+    playerId: PlayerId,
+  ) => "authorized" | "unauthenticated" | "forbidden";
   defaultMatchId: MatchId;
 }
 
@@ -168,18 +197,81 @@ const matchNotFound = (response: ServerResponse, matchId: string): void => {
   sendJson(response, 404, { errors: [`Match ${matchId} not found.`] });
 };
 
+const createDevAuthProvider = (): AuthProvider => ({
+  authenticate: (request) => {
+    const token = request.headers["x-optcg-session-token"];
+    if (typeof token !== "string" || token.length === 0) {
+      return undefined;
+    }
+    return {
+      subject: { type: "anonymousDev", devSessionId: token },
+    };
+  },
+});
+
+const authRejected = (
+  response: ServerResponse,
+  result: "unauthenticated" | "forbidden",
+): void => {
+  if (result === "unauthenticated") {
+    sendJson(response, 401, { errors: ["Missing or invalid session token."] });
+    return;
+  }
+  sendJson(response, 403, {
+    errors: ["Session token is not authorized for this match seat."],
+  });
+};
+
 const createLocalAnonSeats = (
   setup: Parameters<typeof createLocalDevMatch>[0],
-): CreatedDevMatchResponse["seats"] =>
+): Record<string, MatchSeat> =>
   Object.fromEntries(
-    setup.playerOrder.map((playerId) => [
+    setup.playerOrder.map((playerId): [string, MatchSeat] => [
       playerId,
       {
+        matchId: setup.matchId,
         playerId,
-        sessionToken: `dev-local:${String(setup.matchId)}:${String(playerId)}`,
+        subject: {
+          type: "anonymousDev",
+          devSessionId: `dev-local:${String(setup.matchId)}:${String(
+            playerId,
+          )}:${randomUUID()}`,
+        },
       },
     ]),
   );
+
+const createdSeatResponse = (
+  seats: Record<string, MatchSeat>,
+): CreatedDevMatchResponse["seats"] =>
+  Object.fromEntries(
+    Object.entries(seats).map(([key, seat]) => [
+      key,
+      {
+        playerId: seat.playerId,
+        sessionToken:
+          seat.subject.type === "anonymousDev"
+            ? seat.subject.devSessionId
+            : seat.subject.sessionId,
+      },
+    ]),
+  );
+
+const subjectsMatch = (left: AuthSubject, right: AuthSubject): boolean => {
+  switch (left.type) {
+    case "anonymousDev":
+      return (
+        right.type === "anonymousDev" &&
+        left.devSessionId === right.devSessionId
+      );
+    case "user":
+      return (
+        right.type === "user" &&
+        left.userId === right.userId &&
+        left.sessionId === right.sessionId
+      );
+  }
+};
 
 const createLocalDevMatchRegistry = async (
   createDefaultSetup: (
@@ -188,19 +280,22 @@ const createLocalDevMatchRegistry = async (
   initialSetup?: Parameters<typeof createLocalDevMatch>[0],
 ): Promise<LocalDevMatchRegistry> => {
   let nextMatchNumber = 1;
-  const matches = new Map<MatchId, LocalDevMatch>();
+  const sessions = new Map<MatchId, LocalDevMatchSession>();
   const defaultSetup =
     initialSetup ?? (await createDefaultSetup("dev-local-match" as MatchId));
   const defaultMatchId = defaultSetup.matchId;
-  matches.set(defaultMatchId, createLocalDevMatch(defaultSetup));
+  sessions.set(defaultMatchId, {
+    match: createLocalDevMatch(defaultSetup),
+    seats: createLocalAnonSeats(defaultSetup),
+  });
 
   const buildCreatedResponse = (
     setup: Parameters<typeof createLocalDevMatch>[0],
-    match: LocalDevMatch,
+    session: LocalDevMatchSession,
   ): CreatedDevMatchResponse => ({
     matchId: setup.matchId,
-    seats: createLocalAnonSeats(setup),
-    snapshot: getLocalDevSnapshot(match),
+    seats: createdSeatResponse(session.seats),
+    snapshot: getLocalDevSnapshot(session.match),
   });
 
   return {
@@ -211,18 +306,35 @@ const createLocalDevMatchRegistry = async (
         (await createDefaultSetup(
           `dev-local-match-${String(nextMatchNumber++)}` as MatchId,
         ));
-      const match = createLocalDevMatch(actualSetup);
-      matches.set(actualSetup.matchId, match);
-      return buildCreatedResponse(actualSetup, match);
+      const session = {
+        match: createLocalDevMatch(actualSetup),
+        seats: createLocalAnonSeats(actualSetup),
+      };
+      sessions.set(actualSetup.matchId, session);
+      return buildCreatedResponse(actualSetup, session);
     },
     async resetMatch(matchId, setup) {
       const actualSetup = setup ?? (await createDefaultSetup(matchId));
-      const match = createLocalDevMatch({ ...actualSetup, matchId });
-      matches.set(matchId, match);
-      return buildCreatedResponse({ ...actualSetup, matchId }, match);
+      const normalizedSetup = { ...actualSetup, matchId };
+      const session = {
+        match: createLocalDevMatch(normalizedSetup),
+        seats: createLocalAnonSeats(normalizedSetup),
+      };
+      sessions.set(matchId, session);
+      return buildCreatedResponse(normalizedSetup, session);
     },
     getMatch(matchId) {
-      return matches.get(matchId);
+      return sessions.get(matchId)?.match;
+    },
+    authorizeSeat(auth, matchId, playerId) {
+      if (auth === undefined) {
+        return "unauthenticated";
+      }
+      const seat = sessions.get(matchId)?.seats[String(playerId)];
+      if (seat === undefined || !subjectsMatch(seat.subject, auth.subject)) {
+        return "forbidden";
+      }
+      return "authorized";
     },
   };
 };
@@ -231,6 +343,7 @@ const handleApiRequest = async (
   request: IncomingMessage,
   response: ServerResponse,
   registry: LocalDevMatchRegistry,
+  authProvider: AuthProvider,
 ): Promise<void> => {
   const url = request.url ?? "/";
   const pathname = new URL(url, "http://localhost").pathname;
@@ -274,6 +387,15 @@ const handleApiRequest = async (
         });
         return;
       }
+      const authResult = registry.authorizeSeat(
+        authProvider.authenticate(request),
+        matchId as MatchId,
+        body.playerId,
+      );
+      if (authResult !== "authorized") {
+        authRejected(response, authResult);
+        return;
+      }
       sendJson(response, 200, applyLocalDevAction(match, body));
       return;
     }
@@ -289,6 +411,15 @@ const handleApiRequest = async (
         sendJson(response, 400, {
           errors: ["Expected playerId, decisionId, and decision response."],
         });
+        return;
+      }
+      const authResult = registry.authorizeSeat(
+        authProvider.authenticate(request),
+        matchId as MatchId,
+        body.playerId,
+      );
+      if (authResult !== "authorized") {
+        authRejected(response, authResult);
         return;
       }
       sendJson(response, 200, applyLocalDevDecision(match, body));
@@ -399,10 +530,11 @@ export const createDevHttpServer = async (
     createDefaultSetup,
     options.setup,
   );
+  const authProvider = createDevAuthProvider();
   const server = createServer((request, response) => {
     const url = request.url ?? "/";
     const operation = url.startsWith("/api/")
-      ? handleApiRequest(request, response, registry)
+      ? handleApiRequest(request, response, registry, authProvider)
       : handleStaticRequest(request, response);
     operation.catch((error: unknown) => {
       sendJson(response, 500, {

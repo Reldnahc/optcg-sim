@@ -23,6 +23,8 @@ test("dev UI keeps concede out of popup followups and requires confirmation", ()
   assert.equal(script.includes("expectedStateSeq"), true);
   assert.equal(script.includes("/api/matches"), true);
   assert.equal(script.includes("matchApiPath"), true);
+  assert.equal(script.includes("x-optcg-session-token"), true);
+  assert.equal(script.includes("sessionStorage"), true);
 });
 
 test("dev UI keeps action lists height bounded independently from concede", () => {

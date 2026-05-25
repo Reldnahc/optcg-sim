@@ -1,5 +1,6 @@
 const state = {
   matchId: null,
+  seatsByPlayer: {},
   snapshot: null,
   cardsByPlayer: {},
   errors: [],
@@ -21,8 +22,8 @@ const matchApiPath = (resource) => {
 
 const requestJson = async (path, options = {}) => {
   const response = await fetch(path, {
-    headers: { "content-type": "application/json" },
     ...options,
+    headers: { "content-type": "application/json", ...(options.headers ?? {}) },
   });
   const body = await response.json();
   if (!response.ok) {
@@ -43,9 +44,43 @@ const setMatchId = (matchId) => {
   window.history.replaceState({}, "", url);
 };
 
+const seatsStorageKey = (matchId) => `optcg:dev-match-seats:${matchId}`;
+
+const storeSeats = (matchId, seats) => {
+  state.seatsByPlayer = seats ?? {};
+  window.sessionStorage.setItem(
+    seatsStorageKey(matchId),
+    JSON.stringify(state.seatsByPlayer),
+  );
+};
+
+const loadStoredSeats = (matchId) => {
+  const raw = window.sessionStorage.getItem(seatsStorageKey(matchId));
+  if (raw === null) {
+    state.seatsByPlayer = {};
+    return;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    state.seatsByPlayer =
+      typeof parsed === "object" && parsed !== null ? parsed : {};
+  } catch {
+    state.seatsByPlayer = {};
+  }
+};
+
+const authHeadersForPlayer = (playerId) => {
+  const token = state.seatsByPlayer[playerId]?.sessionToken;
+  if (token === undefined) {
+    return {};
+  }
+  return { "x-optcg-session-token": token };
+};
+
 const createMatch = async () => {
   const created = await requestJson("/api/matches", { method: "POST" });
   setMatchId(created.matchId);
+  storeSeats(created.matchId, created.seats);
   state.snapshot = created.snapshot;
   state.cardsByPlayer =
     (await requestJson(matchApiPath("cards"))).players ?? {};
@@ -63,6 +98,7 @@ const loadState = async () => {
     return;
   }
   state.matchId = urlMatchId;
+  loadStoredSeats(urlMatchId);
   const [snapshot, catalog] = await Promise.all([
     requestJson(matchApiPath("state")),
     requestJson(matchApiPath("cards")),
@@ -105,6 +141,7 @@ const applyAction = async (playerId, actionIndex, followupAnchor = null) => {
   try {
     const result = await requestJson(matchApiPath("action"), {
       method: "POST",
+      headers: authHeadersForPlayer(playerId),
       body: JSON.stringify({ playerId, actionIndex, expectedStateSeq }),
     });
     const catalog = await requestJson(matchApiPath("cards"));
@@ -131,6 +168,7 @@ const applyDecision = async (playerId, decisionId, response) => {
   state.decisionDraft = null;
   const result = await requestJson(matchApiPath("decision"), {
     method: "POST",
+    headers: authHeadersForPlayer(playerId),
     body: JSON.stringify({ playerId, decisionId, response }),
   });
   const catalog = await requestJson(matchApiPath("cards"));

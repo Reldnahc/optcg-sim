@@ -8,54 +8,78 @@ import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-s
 const createFixtureDevHttpServer = () =>
   createDevHttpServer({ fetchCard: createDefaultDevFixtureFetch() });
 
+interface CreatedDevMatchBody {
+  matchId?: string;
+  seats?: Record<string, { playerId?: string; sessionToken?: string }>;
+  snapshot?: { stateSeq?: number };
+}
+
+const createDevMatch = async (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+): Promise<CreatedDevMatchBody> => {
+  const response = await fetch(`${server.url()}/api/matches`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  assert.equal(response.status, 201);
+  return (await response.json()) as CreatedDevMatchBody;
+};
+
+const requireCreatedMatch = (
+  body: CreatedDevMatchBody,
+): {
+  matchId: string;
+  p1Token: string;
+  p2Token: string;
+  stateSeq: number;
+} => {
+  const matchId = body.matchId;
+  const p1Token = body.seats?.["p1"]?.sessionToken;
+  const p2Token = body.seats?.["p2"]?.sessionToken;
+  const stateSeq = body.snapshot?.stateSeq;
+  if (
+    matchId === undefined ||
+    p1Token === undefined ||
+    p2Token === undefined ||
+    stateSeq === undefined
+  ) {
+    throw new Error("Created dev match response was missing seat data.");
+  }
+  return { matchId, p1Token, p2Token, stateSeq };
+};
+
 describe("dev HTTP server", () => {
   test("creates independent local anonymous dev matches keyed by matchId", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const firstCreate = await fetch(`${server.url()}/api/matches`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const secondCreate = await fetch(`${server.url()}/api/matches`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      assert.equal(firstCreate.status, 201);
-      assert.equal(secondCreate.status, 201);
-      const first = (await firstCreate.json()) as {
-        matchId?: string;
-        snapshot?: { stateSeq?: number };
-      };
-      const second = (await secondCreate.json()) as {
-        matchId?: string;
-        snapshot?: { stateSeq?: number };
-      };
-      assert.equal(typeof first.matchId, "string");
-      assert.equal(typeof second.matchId, "string");
+      const first = requireCreatedMatch(await createDevMatch(server));
+      const second = requireCreatedMatch(await createDevMatch(server));
       assert.notEqual(first.matchId, second.matchId);
 
       const actionResponse = await fetch(
-        `${server.url()}/api/matches/${String(first.matchId)}/action`,
+        `${server.url()}/api/matches/${first.matchId}/action`,
         {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: {
+            "content-type": "application/json",
+            "x-optcg-session-token": first.p1Token,
+          },
           body: JSON.stringify({
             playerId: "p1",
             actionIndex: 0,
-            expectedStateSeq: first.snapshot?.stateSeq,
+            expectedStateSeq: first.stateSeq,
           }),
         },
       );
       assert.equal(actionResponse.status, 200);
 
       const firstStateResponse = await fetch(
-        `${server.url()}/api/matches/${String(first.matchId)}/state`,
+        `${server.url()}/api/matches/${first.matchId}/state`,
       );
       const secondStateResponse = await fetch(
-        `${server.url()}/api/matches/${String(second.matchId)}/state`,
+        `${server.url()}/api/matches/${second.matchId}/state`,
       );
       assert.equal(firstStateResponse.status, 200);
       assert.equal(secondStateResponse.status, 200);
@@ -66,7 +90,51 @@ describe("dev HTTP server", () => {
         stateSeq?: number;
       };
       assert.notEqual(firstState.stateSeq, secondState.stateSeq);
-      assert.equal(secondState.stateSeq, second.snapshot?.stateSeq);
+      assert.equal(secondState.stateSeq, second.stateSeq);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("requires a matching local anonymous seat token for match actions", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const first = requireCreatedMatch(await createDevMatch(server));
+      const second = requireCreatedMatch(await createDevMatch(server));
+      const url = `${server.url()}/api/matches/${first.matchId}/action`;
+      const body = JSON.stringify({
+        playerId: "p1",
+        actionIndex: 0,
+        expectedStateSeq: first.stateSeq,
+      });
+
+      const missing = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+      });
+      assert.equal(missing.status, 401);
+
+      const wrongPlayer = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-optcg-session-token": first.p2Token,
+        },
+        body,
+      });
+      assert.equal(wrongPlayer.status, 403);
+
+      const wrongMatch = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-optcg-session-token": second.p1Token,
+        },
+        body,
+      });
+      assert.equal(wrongMatch.status, 403);
     } finally {
       await server.close();
     }
