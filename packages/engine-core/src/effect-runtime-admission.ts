@@ -77,7 +77,10 @@ const autoAdapterFor = (
     ]);
   }
   if (block.trigger.type === "main") {
-    return autoAdapter("main", ["noSourceRequired"]);
+    return autoAdapter("main", [
+      "noSourceRequired",
+      "resolveFromDestinationZone",
+    ]);
   }
   if (block.trigger.type === "trigger") {
     return autoAdapter("trigger", ["noSourceRequired"]);

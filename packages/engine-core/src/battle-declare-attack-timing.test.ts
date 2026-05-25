@@ -280,7 +280,7 @@ test("ENG-060A: attacker When Attacking metadata remains usable with an unrelate
   );
 });
 
-test("ENG-060A: unsupported mixed When Attacking metadata is not hidden for legal attack exposure", () => {
+test("ENG-060A: unsupported mixed When Attacking metadata does not block legal attack exposure", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -308,11 +308,11 @@ test("ENG-060A: unsupported mixed When Attacking metadata is not hidden for lega
         action.attacker.instanceId === attacker.instanceId &&
         action.target.instanceId === p2State.leader.instanceId,
     ),
-    false,
+    true,
   );
 });
 
-test("ENG-060A: unsupported mixed When Attacking condition is not hidden for legal attack exposure", () => {
+test("ENG-060A: unsupported mixed When Attacking condition does not block legal attack exposure", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -340,7 +340,7 @@ test("ENG-060A: unsupported mixed When Attacking condition is not hidden for leg
         action.attacker.instanceId === attacker.instanceId &&
         action.target.instanceId === p2State.leader.instanceId,
     ),
-    false,
+    true,
   );
 });
 

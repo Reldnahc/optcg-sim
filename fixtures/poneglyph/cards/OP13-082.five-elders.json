@@ -1,0 +1,111 @@
+{
+  "attribute": ["Slash", "Special"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "4",
+  "card_number": "OP13-082",
+  "card_type": "Character",
+  "color": ["Black"],
+  "cost": 10,
+  "counter": null,
+  "effect": "[Activate: Main] If your Leader is [Imu], you may rest 1 of your DON!! cards and trash 1 card from your hand: Trash all of your Characters and play up to 5 {Five Elders} type Character cards with 5000 power and different card names from your trash.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": null,
+  "name": "Five Elders",
+  "official_faq": [
+    {
+      "answer": "Yes. All of your Characters, including this Character, are trashed when using this effect.",
+      "question": "Will this Character itself be trashed when using this [Activate Main] effect?",
+      "updated_on": "2026-02-06"
+    }
+  ],
+  "power": 12000,
+  "rarity": "SR",
+  "released": true,
+  "released_at": "2025-11-07T00:00:00.000Z",
+  "set": "OP13",
+  "set_name": "Carrying on His Will",
+  "trigger": null,
+  "types": ["Celestial Dragons", "Five Elders"],
+  "variants": [
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP13-082/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP13-082/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "1075.00",
+        "low_price": "1.40",
+        "market_price": "1.79",
+        "mid_price": "3.00",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/657350/one-piece-card-game-carrying-on-his-will-five-elders"
+      },
+      "name": null,
+      "product": {
+        "id": "a1b89330-2649-4ab0-a123-bda851a70215",
+        "name": "Carrying on His Will",
+        "released_at": "2025-11-07T00:00:00.000Z",
+        "set_code": "OP13",
+        "slug": "carrying-on-his-will"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": null,
+        "y": null
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP13-082/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP13-082/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "70.19",
+        "low_price": "40.00",
+        "market_price": "44.35",
+        "mid_price": "53.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/657351/one-piece-card-game-carrying-on-his-will-five-elders-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "a1b89330-2649-4ab0-a123-bda851a70215",
+        "name": "Carrying on His Will",
+        "released_at": "2025-11-07T00:00:00.000Z",
+        "set_code": "OP13",
+        "slug": "carrying-on-his-will"
+      }
+    }
+  ]
+}

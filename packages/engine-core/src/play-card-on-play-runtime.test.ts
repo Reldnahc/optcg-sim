@@ -469,25 +469,6 @@ test("choice custom Event and unsupported On Play effects fail closed without mu
       }),
     },
     {
-      name: "continuous-battle-duration",
-      mutate: (
-        definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,
-      ) => ({
-        ...definition,
-        effects: [
-          {
-            ...must(definition.effects[0], "effect"),
-            effect: {
-              type: "modifyPower" as const,
-              target: { type: "self" },
-              value: 1000,
-              duration: { type: "thisBattle" },
-            },
-          },
-        ],
-      }),
-    },
-    {
       name: "battle-timing-trigger",
       mutate: (
         definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,

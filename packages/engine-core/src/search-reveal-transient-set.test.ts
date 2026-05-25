@@ -629,6 +629,9 @@ test("search reveal PlayerViews keep legal actions and metadata content-agnostic
     playerId: p1,
     prompt: "Choose a revealed card or decline.",
     causedBy: { type: "ruleProcess", name: "privateCausality" },
+    min: 0,
+    max: 1,
+    candidates: [{ card: candidate }],
   });
   assert.deepEqual(chooserView.revealedCards, [
     {
@@ -647,7 +650,6 @@ test("search reveal PlayerViews keep legal actions and metadata content-agnostic
     [{ type: "respondToDecision", decisionId: decision.id }],
   );
   assertDoesNotContain(chooserView.pendingDecision, "set:search-reveal", "set");
-  assertDoesNotContain(chooserView.pendingDecision, "candidates", "candidates");
   assertDoesNotContain(
     chooserView.legalActions,
     String(topDeck.cardId),

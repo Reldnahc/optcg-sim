@@ -17,10 +17,7 @@ import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
 } from "./effect-runtime-conditions.js";
-import {
-  deriveImplementedDslPermanentContinuousEffects,
-  hasCombatSafeImplementedDslDefinition,
-} from "./effect-runtime-continuous.js";
+import { deriveImplementedDslPermanentContinuousEffects } from "./effect-runtime-continuous.js";
 import {
   fieldRemovalProtectionsForCard,
   isFieldRemovalProtectionModifier,
@@ -35,12 +32,6 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 const unsupportedCombatKeywords = new Set<Keyword>([
   "doubleAttack",
   "unblockable",
-]);
-const supportedDslCombatKeywords = new Set<Keyword>([
-  "rush",
-  "rushCharacter",
-  "banish",
-  "blocker",
 ]);
 const supportedContinuousKeywordGrants = new Set<Keyword>([
   "blocker",
@@ -319,6 +310,9 @@ const durationIsActive = (
   state: GameState,
   effect: ContinuousEffectRecord,
 ): boolean => {
+  if (effect.duration.type === "thisBattle") {
+    return state.battle !== undefined;
+  }
   if (effect.duration.type === "whileSourceOnField") {
     return isCardRefLive(state, effect.source);
   }
@@ -455,43 +449,6 @@ const resolveCombatMetadata = (
     throw new TypeError(
       `Unsupported support status ${resolved.support.status} for ${String(card.cardId)}.`,
     );
-  }
-  if (resolved.support.effectDefinitionId !== undefined) {
-    if (
-      !hasCombatSafeImplementedDslDefinition(
-        state,
-        resolved.support.effectDefinitionId,
-      )
-    ) {
-      throw new TypeError(
-        `Unsupported combat effect definition for ${String(card.cardId)}.`,
-      );
-    }
-  } else if (
-    Object.values(state.cardManifest.effectDefinitions ?? {}).some(
-      (definition) => definition.cardId === card.cardId,
-    )
-  ) {
-    throw new TypeError(
-      `Unsupported combat effect definition for ${String(card.cardId)}.`,
-    );
-  }
-  if (resolved.support.status === "implemented-dsl") {
-    if (
-      (resolved.effectText ?? "").trim().length > 0 ||
-      (resolved.triggerText ?? "").trim().length > 0
-    ) {
-      throw new TypeError(
-        `Unsupported combat text metadata for ${String(card.cardId)}.`,
-      );
-    }
-    for (const keyword of resolved.printedKeywords) {
-      if (!supportedDslCombatKeywords.has(keyword)) {
-        throw new TypeError(
-          `Unsupported combat keyword ${keyword} for ${String(card.cardId)}.`,
-        );
-      }
-    }
   }
   for (const keyword of resolved.printedKeywords) {
     if (unsupportedCombatKeywords.has(keyword)) {

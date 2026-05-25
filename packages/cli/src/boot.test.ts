@@ -8,9 +8,9 @@ import { test } from "vitest";
 
 import { bootFixtureMatch, bootLocalManifestFixtureMatch } from "./boot.js";
 
-const representativeManifestPath = fileURLToPath(
+const realCardDslManifestPath = fileURLToPath(
   new URL(
-    "../../../fixtures/cards/representative-match-card-manifest.json",
+    "../../../fixtures/cards/real-card-dsl-match-card-manifest.json",
     import.meta.url,
   ),
 );
@@ -44,32 +44,32 @@ test("bootFixtureMatch reaches the first mulligan decision deterministically", (
   assert.equal(first.summary.stateHash, first.stateHash);
 });
 
-test("bootLocalManifestFixtureMatch boots the representative card manifest deterministically", () => {
+test("bootLocalManifestFixtureMatch boots the real-card DSL manifest deterministically", () => {
   const first = bootLocalManifestFixtureMatch({
-    manifestPath: representativeManifestPath,
+    manifestPath: realCardDslManifestPath,
   });
   const second = bootLocalManifestFixtureMatch({
-    manifestPath: representativeManifestPath,
+    manifestPath: realCardDslManifestPath,
   });
 
   assert.equal(first.stateHash, second.stateHash);
   assert.equal(
     first.state.cardManifest.manifestHash,
-    "4a246598c566ce027427293970f8fd0769f97a013cb1adb8401df64d11c87c4b",
+    "real-card-dsl-match-card-manifest-no-example-test-v1",
   );
   assert.equal(first.state.cardManifest.source, "poneglyph-fixture");
   assert.deepEqual(Object.keys(first.state.cardManifest.cards).sort(), [
-    "OP01-060",
-    "OP05-091",
+    "EB03-001",
+    "OP04-014",
   ]);
   const firstP1 = mustPlayer(first, p1);
   const firstP2 = mustPlayer(first, p2);
-  assert.equal(firstP1.leader.cardId, "OP01-060");
-  assert.equal(firstP2.leader.cardId, "OP01-060");
+  assert.equal(firstP1.leader.cardId, "EB03-001");
+  assert.equal(firstP2.leader.cardId, "EB03-001");
   assert.equal(firstP1.hand.length, 5);
   assert.equal(firstP2.hand.length, 5);
-  assert.equal(firstP1.hand[0]?.cardId, "OP05-091");
-  assert.equal(firstP2.hand[0]?.cardId, "OP05-091");
+  assert.equal(firstP1.hand[0]?.cardId, "OP04-014");
+  assert.equal(firstP2.hand[0]?.cardId, "OP04-014");
   assert.equal(first.state.seq, 1);
   assert.equal(first.state.status.type, "setup");
   assert.equal(first.state.pendingDecision?.type, "mulligan");
@@ -82,7 +82,7 @@ test("bootLocalManifestFixtureMatch fails clearly when the manifest file is abse
       bootLocalManifestFixtureMatch({
         manifestPath: join(
           tmpdir(),
-          "optcg-cli-missing-representative-manifest.json",
+          "optcg-cli-missing-real-card-dsl-manifest.json",
         ),
       }),
     /CLI local manifest fixture not found:/u,
@@ -99,8 +99,8 @@ test("bootLocalManifestFixtureMatch fails clearly when the manifest shape is mal
       source: "poneglyph-fixture",
       cardDataVersion: "bad",
       cards: {
-        "OP01-060": {
-          cardId: "OP01-060",
+        "EB03-001": {
+          cardId: "EB03-001",
           category: "leader",
           name: "Donquixote Doflamingo",
           support: {},
@@ -115,6 +115,6 @@ test("bootLocalManifestFixtureMatch fails clearly when the manifest shape is mal
 
   assert.throws(
     () => bootLocalManifestFixtureMatch({ manifestPath: malformedPath }),
-    /CLI local manifest fixture card OP05-091 must be an object/u,
+    /CLI local manifest fixture card OP04-014 must be an object/u,
   );
 });

@@ -62,7 +62,7 @@ test("implemented-dsl no-keyword combat bodies can attack as normal without effe
   );
 });
 
-test("implemented-dsl combat bodies fail closed when an effect definition exists on a combat card", () => {
+test("implemented-dsl combat bodies ignore unrelated effect definitions for combat projection", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -105,8 +105,8 @@ test("implemented-dsl combat bodies fail closed when an effect definition exists
   });
   assert.equal(
     legal.some((action) => action.type === "declareAttack"),
-    false,
+    true,
   );
-  assert.equal(result.errors?.[0]?.type, "illegalAction");
+  assert.equal(result.errors, undefined);
   assert.equal(JSON.stringify(state), before);
 });

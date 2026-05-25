@@ -409,7 +409,7 @@ test("reviewed permanent implemented-dsl leader power applies only while trash t
   );
 });
 
-test("fails closed when definition mixes permanent block with unsupported non-permanent block", () => {
+test("computeView derives permanent records without authorizing unrelated non-permanent blocks", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");
   const source = withCharacter(p1, toCardId("char-vanilla"), 0);
@@ -440,8 +440,9 @@ test("fails closed when definition mixes permanent block with unsupported non-pe
     "def:mixed:unsupported": mixed,
   };
 
-  assert.throws(
-    () => computeView(state),
-    /unsupported.*(effect definition|materialization)/i,
+  const view = computeView(state);
+  assert.equal(
+    view.cards[source.instanceId]?.keywords.includes("blocker"),
+    true,
   );
 });

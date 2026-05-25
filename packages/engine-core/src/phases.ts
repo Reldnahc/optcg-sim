@@ -18,10 +18,8 @@ import {
   detectPendingRuntimeWork,
   processEffectRuntime,
 } from "./effect-runtime.js";
-import {
-  deriveImplementedDslPermanentContinuousEffects,
-  hasCombatSafeImplementedDslDefinition,
-} from "./effect-runtime-continuous.js";
+import { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
+import { deriveImplementedDslPermanentContinuousEffects } from "./effect-runtime-continuous.js";
 import { assertGameStateInvariants } from "./invariants.js";
 import { applyRuleProcessingCheckpoint } from "./rule-processing.js";
 import { hasUnsupportedSupportGateText } from "./battle-support.js";
@@ -202,20 +200,34 @@ const withIndexedZone = (
 const hasUnsupportedBoardCardSupport = (status: CardSupportStatus): boolean =>
   status !== "vanilla-confirmed";
 
+const isImplementedDslBoardZone = (card: CardInstance): boolean =>
+  card.zone.zone === "leaderArea" ||
+  card.zone.zone === "characterArea" ||
+  card.zone.zone === "stageArea";
+
 const isSupportedImplementedDslBoardCard = (
   state: GameState,
   card: CardInstance,
   resolved: ResolvedCard,
 ): boolean => {
   if (resolved.support.status !== "implemented-dsl") return false;
-  if (card.zone.zone !== "leaderArea" && card.zone.zone !== "characterArea") {
+  if (!isImplementedDslBoardZone(card)) {
     return false;
   }
   const effectDefinitionId = resolved.support.effectDefinitionId;
+  if (
+    effectDefinitionId === undefined ||
+    resolved.support.customHandlerIds !== undefined
+  ) {
+    return false;
+  }
+  const definition = state.cardManifest.effectDefinitions?.[effectDefinitionId];
   return (
-    effectDefinitionId !== undefined &&
-    resolved.support.customHandlerIds === undefined &&
-    hasCombatSafeImplementedDslDefinition(state, effectDefinitionId)
+    definition !== undefined &&
+    definition.effects.length > 0 &&
+    definition.effects.every(
+      (block) => evaluateEffectBlockRuntimeSupport(block).supported,
+    )
   );
 };
 

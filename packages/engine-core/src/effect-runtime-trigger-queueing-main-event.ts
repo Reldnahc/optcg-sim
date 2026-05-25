@@ -11,7 +11,7 @@ import type {
 
 import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
 import {
-  isSupportedMainEventTargetKoEffect,
+  isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
   isSupportedNoChoiceMainEventDrawEffect,
   isSupportedOptionalNoChoiceMainEventDrawEffect,
 } from "./effect-runtime-primitives.js";
@@ -24,24 +24,6 @@ import {
   findCardInstanceInTrash,
   toSnapshot,
 } from "./effect-runtime-trigger-source-lookup.js";
-
-const isSupportedMainEventTargetKoEffectAllowingOncePerTurn = (
-  effect: EffectDefinition["effects"][number],
-): effect is EffectDefinition["effects"][number] & {
-  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
-} => {
-  if (isSupportedMainEventTargetKoEffect(effect)) {
-    return true;
-  }
-  if (effect.oncePerTurn !== true) {
-    return false;
-  }
-  const effectWithoutOncePerTurn: EffectDefinition["effects"][number] = {
-    ...effect,
-  };
-  delete effectWithoutOncePerTurn.oncePerTurn;
-  return isSupportedMainEventTargetKoEffect(effectWithoutOncePerTurn);
-};
 
 const isSupportedMainEventDrawUpToEffect = (
   effect: EffectDefinition["effects"][number],

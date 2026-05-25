@@ -106,7 +106,14 @@ const assertPublicDecisionShape = (
   const pending = view.pendingDecision;
   assert.ok(pending, `${label}: pending decision must exist`);
   const keys = Object.keys(pending).sort();
-  const required = ["causedBy", "id", "playerId", "prompt", "type"].sort();
+  const baseRequired = ["causedBy", "id", "playerId", "prompt", "type"];
+  const typeRequired =
+    pending.type === "selectCards"
+      ? ["candidates", "max", "min"]
+      : pending.type === "orderCards"
+        ? ["cards", "destination"]
+        : [];
+  const required = [...baseRequired, ...typeRequired].sort();
   if ("timeoutMs" in pending) {
     assert.deepEqual(
       keys,
@@ -472,7 +479,6 @@ const assertNoHiddenLeak = (
       "damageProcess",
       "remainingDamagePoints",
       "sourceKeyword",
-      "candidates",
       "paymentOptions",
       "targetOptions",
       "cardOptions",

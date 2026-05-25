@@ -130,10 +130,10 @@ function isPlainManifestFixture(value: unknown): value is MatchCardManifest {
   );
 }
 
-test("package boundary allows plain representative manifest fixture data", async () => {
+test("package boundary allows plain real-card DSL manifest fixture data", async () => {
   const fixturePath = path.join(
     repoRoot,
-    "fixtures/cards/representative-match-card-manifest.json",
+    "fixtures/cards/real-card-dsl-match-card-manifest.json",
   );
   const parsed = JSON.parse(await readFile(fixturePath, "utf8")) as unknown;
 
@@ -143,7 +143,7 @@ test("package boundary allows plain representative manifest fixture data", async
   );
   assert.ok(
     Object.keys(parsed.cards).length > 0,
-    "representative manifest fixture should contain card data",
+    "real-card DSL manifest fixture should contain card data",
   );
 });
 

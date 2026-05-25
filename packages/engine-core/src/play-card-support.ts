@@ -5,120 +5,13 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import {
-  isSupportedMainEventTargetKoEffect,
-  isSupportedNoChoiceMainEventDrawEffect,
-  isSupportedNoChoiceOnKODrawEffect,
-  isSupportedNoChoiceOnPlayDrawEffect,
-  isSupportedNoChoiceWhenAttackingDrawEffect,
-  resolveImplementedDslEffectDefinition,
-} from "./effect-runtime.js";
-import {
-  isSupportedOptionalNoChoiceMainEventDrawEffect,
-  isSupportedOptionalNoChoiceOnPlayDrawEffect,
-} from "./effect-runtime-primitives.js";
-import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
+import { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
+import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
 import { hasUnsupportedSupportGateText } from "./battle-support.js";
 
 export type SupportedPlayMetadata = {
   category: "character" | "stage" | "event";
   printedCost: number;
-};
-
-const isSupportedMainEventTargetKoEffectAllowingOncePerTurn = (
-  effect: EffectDefinition["effects"][number],
-): boolean => {
-  if (isSupportedMainEventTargetKoEffect(effect)) {
-    return true;
-  }
-  if (effect.oncePerTurn !== true) {
-    return false;
-  }
-  const effectWithoutOncePerTurn: EffectDefinition["effects"][number] = {
-    ...effect,
-  };
-  delete effectWithoutOncePerTurn.oncePerTurn;
-  return isSupportedMainEventTargetKoEffect(effectWithoutOncePerTurn);
-};
-
-const isSupportedOnPlayDrawUpToEffect = (
-  effect: EffectDefinition["effects"][number],
-): boolean =>
-  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
-  effect.trigger.type === "onPlay" &&
-  effect.category === "auto" &&
-  effect.optional !== true &&
-  effect.oncePerTurn !== true &&
-  effect.cost === undefined &&
-  effect.condition === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.failurePolicy === undefined &&
-  effect.effect.type === "drawUpTo" &&
-  Number.isInteger(effect.effect.count) &&
-  effect.effect.count >= 0 &&
-  effect.effect.player === "self";
-
-const isSupportedMainEventDrawUpToEffect = (
-  effect: EffectDefinition["effects"][number],
-): boolean =>
-  effect.sourcePresencePolicy === "resolveFromDestinationZone" &&
-  effect.trigger.type === "main" &&
-  effect.category === "auto" &&
-  effect.optional !== true &&
-  effect.oncePerTurn !== true &&
-  effect.cost === undefined &&
-  effect.condition === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.failurePolicy === undefined &&
-  effect.effect.type === "drawUpTo" &&
-  Number.isInteger(effect.effect.count) &&
-  effect.effect.count >= 0 &&
-  effect.effect.player === "self";
-
-const isSupportedCharacterOnPlayEffect = (
-  effect: EffectDefinition["effects"][number],
-): boolean =>
-  isSupportedNoChoiceOnPlayDrawEffect(effect) ||
-  isSupportedOptionalNoChoiceOnPlayDrawEffect(effect) ||
-  isSupportedOnPlayDrawUpToEffect(effect) ||
-  isSupportedQueuedAutoSequenceForEntryPoint(
-    effect,
-    "onPlay",
-    "mustRemainInSameZone",
-  );
-
-const isSupportedEventMainEffect = (
-  effect: EffectDefinition["effects"][number],
-): boolean =>
-  isSupportedNoChoiceMainEventDrawEffect(effect) ||
-  isSupportedOptionalNoChoiceMainEventDrawEffect(effect) ||
-  isSupportedMainEventDrawUpToEffect(effect) ||
-  isSupportedMainEventTargetKoEffectAllowingOncePerTurn(effect) ||
-  isSupportedQueuedAutoSequenceForEntryPoint(
-    effect,
-    "main",
-    "resolveFromDestinationZone",
-  );
-
-const isSupportedCharacterNonOnPlayEffect = (
-  effect: EffectDefinition["effects"][number],
-): boolean => {
-  if (effect.trigger.type === "whenAttacking") {
-    return (
-      isSupportedNoChoiceWhenAttackingDrawEffect(effect) ||
-      isSupportedQueuedAutoSequenceForEntryPoint(
-        effect,
-        "whenAttacking",
-        "mustRemainInSameZone",
-      )
-    );
-  }
-  if (effect.trigger.type === "onKO") {
-    return isSupportedNoChoiceOnKODrawEffect(effect, {
-      allowOncePerTurn: true,
-    });
-  }
-  return effect.trigger.type === "permanent";
 };
 
 const hasOnlySupportedRelevantEffects = (
@@ -128,6 +21,10 @@ const hasOnlySupportedRelevantEffects = (
 ): boolean =>
   (!options.requireAtLeastOne || effects.length > 0) &&
   effects.every(predicate);
+
+const isRuntimeAdmittedEffect = (
+  effect: EffectDefinition["effects"][number],
+): boolean => evaluateEffectBlockRuntimeSupport(effect).supported;
 
 export const canResolveDestinationConflict = (
   player: GameState["players"][PlayerId],
@@ -171,12 +68,12 @@ export const getSupportedPlayMetadata = (
       if (
         !hasOnlySupportedRelevantEffects(
           onPlayEffects,
-          isSupportedCharacterOnPlayEffect,
+          isRuntimeAdmittedEffect,
           { requireAtLeastOne: false },
         ) ||
         !lookup.definition.effects
           .filter((effect) => effect.trigger.type !== "onPlay")
-          .every(isSupportedCharacterNonOnPlayEffect)
+          .every(isRuntimeAdmittedEffect)
       ) {
         return null;
       }
@@ -190,18 +87,23 @@ export const getSupportedPlayMetadata = (
         (effect) => effect.trigger.type === "main",
       );
       if (
-        !hasOnlySupportedRelevantEffects(
-          mainEffects,
-          isSupportedEventMainEffect,
-          {
-            requireAtLeastOne: true,
-          },
-        )
+        !hasOnlySupportedRelevantEffects(mainEffects, isRuntimeAdmittedEffect, {
+          requireAtLeastOne: true,
+        })
       ) {
         return null;
       }
       return {
         category: "event",
+        printedCost: Math.max(0, resolved.cost),
+      };
+    }
+    if (resolved.category === "stage") {
+      if (!lookup.definition.effects.every(isRuntimeAdmittedEffect)) {
+        return null;
+      }
+      return {
+        category: "stage",
         printedCost: Math.max(0, resolved.cost),
       };
     }

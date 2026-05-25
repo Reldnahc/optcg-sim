@@ -33,4 +33,5 @@ export {
   resolveSavedFieldObjectKoSelection,
   executeUnreplacedSelectedTargetKoProcess,
   isSupportedMainEventTargetKoEffect,
+  isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
 } from "./effect-runtime-target-ko-primitives.js";

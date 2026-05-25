@@ -176,7 +176,6 @@ const supportsBattleRuntimeMetadataSanitization = (
 ): definition is EffectDefinition =>
   definition !== undefined &&
   definition.effects.length > 0 &&
-  definition.effects.some(isSupportedBattleRuntimeEffect) &&
   definition.effects.every(
     (effect) =>
       isSupportedBattleRuntimeEffect(effect) ||

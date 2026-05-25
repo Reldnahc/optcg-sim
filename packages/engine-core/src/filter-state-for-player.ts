@@ -1,8 +1,10 @@
 import type {
   CardInstance,
+  CardSelectionCandidate,
   CardRef,
   ComputedGameView,
   EngineEvent,
+  EventVisibility,
   GameState,
   InstanceId,
   LegalAction,
@@ -172,6 +174,21 @@ const toPublicDecisionCausedBy = (
   }
   return causedBy;
 };
+
+const isVisibleToPlayer = (
+  visibility: EventVisibility,
+  playerId: PlayerId,
+): boolean =>
+  visibility.type === "public" ||
+  (visibility.type === "private" && visibility.playerId === playerId);
+
+const toPublicCardCandidates = (
+  candidates: readonly CardSelectionCandidate[],
+  playerId: PlayerId,
+): Array<Pick<CardSelectionCandidate, "card">> =>
+  candidates
+    .filter((candidate) => isVisibleToPlayer(candidate.visibility, playerId))
+    .map((candidate) => ({ card: candidate.card }));
 
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
   typeof value === "object" && value !== null
@@ -367,6 +384,23 @@ const toPublicDecision = (
       mode: pending.mode,
       min: pending.min,
       max: pending.max,
+    };
+  }
+  if (pending.type === "selectCards") {
+    return {
+      ...base,
+      type: "selectCards",
+      min: pending.request.min,
+      max: pending.request.max,
+      candidates: toPublicCardCandidates(pending.candidates, playerId),
+    };
+  }
+  if (pending.type === "orderCards") {
+    return {
+      ...base,
+      type: "orderCards",
+      cards: [...pending.cards],
+      destination: pending.destination,
     };
   }
   return { ...base, type: pending.type };

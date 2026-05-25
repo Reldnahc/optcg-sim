@@ -779,10 +779,7 @@ const assertEng021dEndOfBattleTriggerMetadataFailsClosed = () => {
 
   const error = must(result.errors?.[0], "ENG-021D end of battle error");
   assert.equal(error.type, "illegalAction");
-  assert.equal(
-    error.reason,
-    "declareAttack is unsupported for current combat metadata.",
-  );
+  assert.equal(error.reason, "Battle requires unsupported effect metadata.");
   assert.deepEqual(result.events, []);
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);

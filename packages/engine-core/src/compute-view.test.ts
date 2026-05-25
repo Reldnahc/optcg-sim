@@ -730,30 +730,35 @@ test("supports implemented-dsl combat body with supported keywords and no effect
   );
 });
 
-test("fails closed when implemented-dsl combat body has effect definition metadata", () => {
+test("implemented-dsl leader with non-combat effect definition can attack normally", () => {
   const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  setMainTurnAfterFirstTurn(state);
+  p1State.leader.state = "active";
   const manifest = {
     ...state.cardManifest,
     cards: { ...state.cardManifest.cards },
   };
   manifest.cards[toCardId("leader-red")] = {
     ...must(manifest.cards[toCardId("leader-red")], "leader-red"),
+    effectText: "[Activate: Main] Draw 1 card.",
     support: {
       ...must(manifest.cards[toCardId("leader-red")], "leader-red").support,
       status: "implemented-dsl",
+      effectDefinitionId: "leader-red:activate-main",
     },
   };
   manifest.effectDefinitions = {
-    "leader-red:on-play": {
+    "leader-red:activate-main": {
       cardId: toCardId("leader-red"),
       implementationStatus: "implemented-dsl",
       effects: [
         {
-          id: "leader-red:on-play:1" as never,
-          category: "auto",
-          trigger: { type: "onPlay" },
-          optional: false,
-          oncePerTurn: false,
+          id: "leader-red:activate-main:1" as never,
+          category: "activate",
+          trigger: { type: "activateMain" },
+          oncePerTurn: true,
           sourcePresencePolicy: "mustRemainInSameZone",
           effect: { type: "draw", count: 1, player: "self" },
         },
@@ -768,29 +773,10 @@ test("fails closed when implemented-dsl combat body has effect definition metada
   };
   state.cardManifest = manifest;
 
-  assert.throws(
-    () => computeView(state),
-    /unsupported.*(effect definition|materialization)/i,
-  );
-});
-
-test("fails closed when implemented-dsl combat body has support effect definition metadata without registry entry", () => {
-  const state = createState();
-  const manifest = {
-    ...state.cardManifest,
-    cards: { ...state.cardManifest.cards },
-  };
-  manifest.cards[toCardId("leader-red")] = {
-    ...must(manifest.cards[toCardId("leader-red")], "leader-red"),
-    support: {
-      ...must(manifest.cards[toCardId("leader-red")], "leader-red").support,
-      status: "implemented-dsl",
-      effectDefinitionId: "missing-definition",
-    },
-  };
-  state.cardManifest = manifest;
-
-  assert.throws(() => computeView(state), /unsupported.*effect definition/i);
+  const view = computeView(state);
+  assert.deepEqual(view.legalAttackTargets[p1State.leader.instanceId], [
+    p2State.leader.instanceId,
+  ]);
 });
 
 test("fails closed when combat card has unsupported printed combat keywords", () => {

@@ -37,8 +37,8 @@ export interface BootLocalManifestFixtureMatchOptions {
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
 const createdAt = "2026-05-04T00:00:00.000Z";
-const representativeLeaderCardId = "OP01-060" as CardId;
-const representativeCharacterCardId = "OP05-091" as CardId;
+const representativeLeaderCardId = "EB03-001" as CardId;
+const representativeCharacterCardId = "OP04-014" as CardId;
 
 const toCardId = (value: string): CardId => value as CardId;
 

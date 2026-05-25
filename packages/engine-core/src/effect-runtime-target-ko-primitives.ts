@@ -616,3 +616,21 @@ export const isSupportedMainEventTargetKoEffect = (
   }
   return isReviewedTargetKoRequestShape(effect.effect.target.request);
 };
+
+export const isSupportedMainEventTargetKoEffectAllowingOncePerTurn = (
+  effect: EffectDefinition["effects"][number],
+): effect is EffectDefinition["effects"][number] & {
+  sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+} => {
+  if (isSupportedMainEventTargetKoEffect(effect)) {
+    return true;
+  }
+  if (effect.oncePerTurn !== true) {
+    return false;
+  }
+  const effectWithoutOncePerTurn: EffectDefinition["effects"][number] = {
+    ...effect,
+  };
+  delete effectWithoutOncePerTurn.oncePerTurn;
+  return isSupportedMainEventTargetKoEffect(effectWithoutOncePerTurn);
+};

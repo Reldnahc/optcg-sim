@@ -56,6 +56,12 @@ export default [
     },
   },
   {
+    files: ["packages/match-server/ui/**/*.js"],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+  {
     files: ["**/*.{ts,mts,cts}"],
     languageOptions: {
       globals: nodeGlobals,

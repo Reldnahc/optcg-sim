@@ -1,0 +1,126 @@
+{
+  "attribute": ["?"],
+  "available_languages": ["en", "fr", "ja"],
+  "block": "4",
+  "card_number": "OP13-079",
+  "card_type": "Leader",
+  "color": ["Black"],
+  "cost": null,
+  "counter": null,
+  "effect": "Under the rules of this game, you cannot include Events with a cost of 2 or more in your deck and at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck.\n[Activate: Main] [Once Per Turn] You may trash 1 of your {Celestial Dragons} type Characters or 1 card from your hand: Draw 1 card.",
+  "language": "en",
+  "legality": {
+    "Extra Regulation": {
+      "status": "legal"
+    },
+    "Standard": {
+      "status": "legal"
+    }
+  },
+  "life": 4,
+  "name": "Imu",
+  "official_faq": [
+    {
+      "answer": "Effects reading \"At the start of the game\" are resolved after shuffling your deck and revealing your Leader card, after determining who goes first, but before drawing your opening hand. In this Leader's case, after deciding who goes first, the player using this Leader decides whether or not to search their deck and play up to 1 {Mary Geoise} type Stage card. If they do, they search their deck for the card, play it, and then shuffle their deck again.",
+      "question": "At what point at the start of the game do you resolve the effect \"at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck\"?",
+      "updated_on": "2026-02-06"
+    },
+    {
+      "answer": "If both players need to resolve this \"at the start of the game\" effect, the player going first plays their Stage card first, followed by the player going second.",
+      "question": "If both my opponent and I are using this Leader, which player resolves the effect, \"at the start of the game, play up to 1 {Mary Geoise} type Stage card from your deck\" first?",
+      "updated_on": "2026-02-06"
+    },
+    {
+      "answer": "It means that this Leader's attribute is not any of \"Slash\", \"Strike\", \"Ranged\", \"Special\", or \"Wisdom\".",
+      "question": "What is meant by this Leader's attribute being \"?\".",
+      "updated_on": "2026-02-06"
+    },
+    {
+      "answer": "Yes, you can.",
+      "question": "Can I use this [Activate: Main] effect to trash a card that does not have the {Celestial Dragons} type from my hand?",
+      "updated_on": "2026-02-06"
+    }
+  ],
+  "power": 5000,
+  "rarity": "L",
+  "released": true,
+  "released_at": "2025-11-07T00:00:00.000Z",
+  "set": "OP13",
+  "set_name": "Carrying on His Will",
+  "trigger": null,
+  "types": ["?"],
+  "variants": [
+    {
+      "artist": "TV animation ONE PIECE Takashi Kojima",
+      "crop_focus": {
+        "x": 0.571961,
+        "y": 0.358699
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": "https://cdn.poneglyph.one/images/OP13-079/en/scans/0/display.webp",
+          "full": "https://cdn.poneglyph.one/images/OP13-079/en/scans/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP13-079/en/scans/0/thumb.webp"
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP13-079/en/stock/0/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP13-079/en/stock/0/thumb.webp"
+        }
+      },
+      "index": 0,
+      "label": "Standard",
+      "market": {
+        "high_price": "15.21",
+        "low_price": "0.05",
+        "market_price": "0.21",
+        "mid_price": "0.25",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/657344/one-piece-card-game-carrying-on-his-will-imu"
+      },
+      "name": null,
+      "product": {
+        "id": "a1b89330-2649-4ab0-a123-bda851a70215",
+        "name": "Carrying on His Will",
+        "released_at": "2025-11-07T00:00:00.000Z",
+        "set_code": "OP13",
+        "slug": "carrying-on-his-will"
+      }
+    },
+    {
+      "artist": null,
+      "crop_focus": {
+        "x": 0.619601,
+        "y": 0.319048
+      },
+      "errata": [],
+      "images": {
+        "scan": {
+          "display": null,
+          "full": null,
+          "thumb": null
+        },
+        "stock": {
+          "full": "https://cdn.poneglyph.one/images/OP13-079/en/stock/1/full.png",
+          "thumb": "https://cdn.poneglyph.one/images/OP13-079/en/stock/1/thumb.webp"
+        }
+      },
+      "index": 1,
+      "label": "Alternate Art",
+      "market": {
+        "high_price": "121.48",
+        "low_price": "28.00",
+        "market_price": "32.27",
+        "mid_price": "36.99",
+        "tcgplayer_url": "https://www.tcgplayer.com/product/657345/one-piece-card-game-carrying-on-his-will-imu-alternate-art"
+      },
+      "name": null,
+      "product": {
+        "id": "a1b89330-2649-4ab0-a123-bda851a70215",
+        "name": "Carrying on His Will",
+        "released_at": "2025-11-07T00:00:00.000Z",
+        "set_code": "OP13",
+        "slug": "carrying-on-his-will"
+      }
+    }
+  ]
+}

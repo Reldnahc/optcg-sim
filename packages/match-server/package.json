@@ -1,0 +1,23 @@
+{
+  "name": "@optcg/match-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "dev": "corepack pnpm exec tsx src/dev-server.ts",
+    "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
+    "test": "corepack pnpm exec vitest run --root ../.. packages/match-server/src"
+  },
+  "dependencies": {
+    "@optcg/cards": "workspace:*",
+    "@optcg/engine-core": "workspace:*",
+    "@optcg/types": "workspace:*"
+  }
+}

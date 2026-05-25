@@ -7,6 +7,7 @@ import type {
 
 import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
 import { isSupportedContinuousQueueEffect } from "./effect-runtime-continuous.js";
+import { isSupportedMainEventTargetKoEffectAllowingOncePerTurn } from "./effect-runtime-primitives.js";
 import { isSupportedSearchRequestShape } from "./effect-runtime-search-reveal.js";
 import { isSupportedQueuedAutoSequenceForEntryPoint } from "./effect-runtime-sequence-support.js";
 
@@ -94,6 +95,10 @@ const isSupportedContinuousBody = (
   (block.sourcePresencePolicy === "mustRemainInSameZone" ||
     !isSourceDependentContinuousEffect(block.effect));
 
+const isSupportedTargetChoiceBody = (
+  block: EffectBlock & { sourcePresencePolicy: SourcePresencePolicy },
+): boolean => isSupportedMainEventTargetKoEffectAllowingOncePerTurn(block);
+
 const hasSupportedBlockEnvelope = (
   block: EffectBlock,
   adapter: AutoRuntimeEntryAdapter,
@@ -116,6 +121,7 @@ const isSupportedNonOptionalBody = (
   isSupportedTrashFromHandBody(block.effect) ||
   isSupportedSearchBody(block) ||
   isSupportedContinuousBody(block) ||
+  isSupportedTargetChoiceBody(block) ||
   isSupportedSequenceBody(block, adapter);
 
 const isSupportedOptionalBody = (

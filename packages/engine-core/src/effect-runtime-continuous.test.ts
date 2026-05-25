@@ -1020,7 +1020,7 @@ test("fails closed for unsupported permanent shape", () => {
   );
 });
 
-test("fails closed when definition mixes permanent block with unsupported non-permanent block", () => {
+test("derives permanent records without authorizing unrelated non-permanent blocks", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");
   const source = withCharacter(p1, toCardId("char-vanilla"), 0);
@@ -1034,8 +1034,17 @@ test("fails closed when definition mixes permanent block with unsupported non-pe
     effect: { type: "custom", handler: "unsupported-handler" },
   });
   installPermanentDslCandidate(state, source, definition);
-  assert.throws(
-    () => deriveImplementedDslPermanentContinuousEffects(state),
-    /unsupported permanent shape/i,
+
+  const derived = deriveImplementedDslPermanentContinuousEffects(state);
+
+  assert.equal(derived.length, 2);
+  assert.equal(
+    derived.every(
+      (record) =>
+        record.createdBy.type === "ruleProcess" &&
+        record.createdBy.name ===
+          "implemented-dsl-permanent-continuous-materialization",
+    ),
+    true,
   );
 });

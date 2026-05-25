@@ -246,7 +246,7 @@ test("loads cards-produced plain manifest data while resolving synthetic target 
     "implemented-dsl",
   );
   assert.equal(
-    resolved.state.cardManifest.cards[toCardId("OP05-091")]?.support.status,
+    resolved.state.cardManifest.cards[toCardId("EB01-003")]?.support.status,
     "unsupported",
   );
   assert.deepEqual(

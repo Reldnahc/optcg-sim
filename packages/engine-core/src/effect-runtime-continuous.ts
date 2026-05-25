@@ -17,7 +17,6 @@ import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
 } from "./effect-runtime-conditions.js";
-import { isSupportedNoChoiceOnKODrawEffect } from "./effect-runtime-primitives.js";
 import {
   isSupportedFieldRemovalProtection,
   malformedFieldRemovalProtectionMessage,
@@ -352,23 +351,18 @@ export const isSupportedPermanentContinuousEffectBlock = (
   return true;
 };
 
-const isSupportedNonPermanentCombatSafeBlock = (
-  block: EffectDefinition["effects"][number],
-): boolean =>
-  isSupportedNoChoiceOnKODrawEffect(block, { allowOncePerTurn: true });
-
 export const hasCombatSafeImplementedDslDefinition = (
   state: GameState,
   effectDefinitionId: string,
 ): boolean => {
   const definition = state.cardManifest.effectDefinitions?.[effectDefinitionId];
   if (definition === undefined || definition.effects.length === 0) return false;
-  const hasPermanentBlock = definition.effects.some(isPermanentBlock);
-  if (!hasPermanentBlock) return false;
-  return definition.effects.every(
-    (block) =>
-      isSupportedPermanentContinuousEffectBlock(block) ||
-      isSupportedNonPermanentCombatSafeBlock(block),
+  const permanentBlocks = definition.effects.filter(isPermanentBlock);
+  return (
+    permanentBlocks.length > 0 &&
+    permanentBlocks.every((block) =>
+      isSupportedPermanentContinuousEffectBlock(block),
+    )
   );
 };
 
@@ -549,16 +543,6 @@ export const deriveImplementedDslPermanentContinuousEffects = (
     }
     const permanentBlocks = definition.effects.filter(isPermanentBlock);
     if (permanentBlocks.length === 0) continue;
-    const hasUnsupportedNonPermanentBlock = definition.effects.some(
-      (block) =>
-        !isPermanentBlock(block) &&
-        !isSupportedNonPermanentCombatSafeBlock(block),
-    );
-    if (hasUnsupportedNonPermanentBlock) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported permanent shape"),
-      );
-    }
     if (
       !resolved.support.tested ||
       resolved.support.cardDataVersion !== state.cardManifest.cardDataVersion

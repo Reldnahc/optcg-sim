@@ -15,9 +15,9 @@ import type { GameState } from "@optcg/types";
 
 import type { DispatchCliCommandResult } from "./commands.js";
 
-const representativeManifestPath = fileURLToPath(
+const realCardDslManifestPath = fileURLToPath(
   new URL(
-    "../../../fixtures/cards/representative-match-card-manifest.json",
+    "../../../fixtures/cards/real-card-dsl-match-card-manifest.json",
     import.meta.url,
   ),
 );
@@ -164,13 +164,13 @@ test("runCli boot summary entry point returns without interactive input", async 
   assert.equal(typeof parsed.stateHash, "string");
 });
 
-test("runCli boot summary can load the local representative manifest fixture", async () => {
+test("runCli boot summary can load the local real-card DSL manifest fixture", async () => {
   const { runCli } = await import("./cli.js");
   const stdout = createWriter();
   const stderr = createWriter();
 
   const status = await runCli(
-    ["--boot-summary", "--manifest-fixture", representativeManifestPath],
+    ["--boot-summary", "--manifest-fixture", realCardDslManifestPath],
     {
       stdin: Readable.from([]),
       stdout: stdout.writer,
@@ -196,7 +196,7 @@ test("runCli boot summary can load the local representative manifest fixture", a
   assert.equal(parsed.hasPendingDecision, true);
   assert.equal(
     parsed.manifestHash,
-    "4a246598c566ce027427293970f8fd0769f97a013cb1adb8401df64d11c87c4b",
+    "real-card-dsl-match-card-manifest-no-example-test-v1",
   );
   assert.equal(parsed.cardCount, 2);
   assert.equal(typeof parsed.stateHash, "string");
@@ -211,7 +211,7 @@ test("runCli manifest fixture failures are deterministic command-line diagnostic
     [
       "--boot-summary",
       "--manifest-fixture",
-      "fixtures/cards/missing-representative-match-card-manifest.json",
+      "fixtures/cards/missing-real-card-dsl-match-card-manifest.json",
     ],
     {
       stdin: Readable.from([]),
@@ -224,7 +224,7 @@ test("runCli manifest fixture failures are deterministic command-line diagnostic
   assert.equal(stdout.output(), "");
   assert.match(
     stderr.output(),
-    /^CLI local manifest fixture not found: .*missing-representative-match-card-manifest\.json/u,
+    /^CLI local manifest fixture not found: .*missing-real-card-dsl-match-card-manifest\.json/u,
   );
 });
 
@@ -253,19 +253,14 @@ test("command-script mode dispatches a deterministic command sequence", async ()
   assert.match(stdout.output(), /State hash: [a-f0-9]+/u);
 });
 
-test("command-script mode can boot from the local representative manifest fixture", async () => {
+test("command-script mode can boot from the local real-card DSL manifest fixture", async () => {
   const { runCli } = await import("./cli.js");
   const stdout = createWriter();
   const stderr = createWriter();
   const manifests: string[] = [];
 
   const status = await runCli(
-    [
-      "--command-script",
-      "show",
-      "--manifest-fixture",
-      representativeManifestPath,
-    ],
+    ["--command-script", "show", "--manifest-fixture", realCardDslManifestPath],
     {
       stdin: Readable.from([]),
       stdout: stdout.writer,
@@ -281,7 +276,7 @@ test("command-script mode can boot from the local representative manifest fixtur
   assert.equal(status, 0);
   assert.equal(stderr.output(), "");
   assert.deepEqual(manifests, [
-    "4a246598c566ce027427293970f8fd0769f97a013cb1adb8401df64d11c87c4b",
+    "real-card-dsl-match-card-manifest-no-example-test-v1",
   ]);
   assert.match(stdout.output(), /State seq: 1/u);
   assert.match(stdout.output(), /Status: setup/u);
@@ -594,7 +589,7 @@ test("interactive mode rejects manifest fixture boot because it is unsupported",
   const stderr = createWriter();
 
   const status = await runCli(
-    ["--interactive", "--manifest-fixture", representativeManifestPath],
+    ["--interactive", "--manifest-fixture", realCardDslManifestPath],
     {
       stdin: Readable.from([]),
       stdout: stdout.writer,

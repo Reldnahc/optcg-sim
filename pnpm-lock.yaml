@@ -74,6 +74,18 @@ importers:
         specifier: workspace:*
         version: link:../types
 
+  packages/match-server:
+    dependencies:
+      "@optcg/cards":
+        specifier: workspace:*
+        version: link:../cards
+      "@optcg/engine-core":
+        specifier: workspace:*
+        version: link:../engine-core
+      "@optcg/types":
+        specifier: workspace:*
+        version: link:../types
+
   packages/types: {}
 
 packages:
