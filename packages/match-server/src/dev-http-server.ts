@@ -44,8 +44,13 @@ interface DevResetRequest {
 
 interface CreatedDevMatchResponse {
   matchId: MatchId;
-  seats: Record<string, { playerId: PlayerId; sessionToken: string }>;
+  seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
   snapshot: ReturnType<typeof getLocalDevSnapshot>;
+}
+
+interface ClaimedDevSeatResponse {
+  matchId: MatchId;
+  seat: { playerId: PlayerId; sessionToken: string };
 }
 
 type AuthSubject =
@@ -63,7 +68,7 @@ interface AuthProvider {
 interface MatchSeat {
   matchId: MatchId;
   playerId: PlayerId;
-  subject: AuthContext["subject"];
+  subject?: AuthContext["subject"];
 }
 
 interface LocalDevMatchSession {
@@ -79,6 +84,10 @@ interface LocalDevMatchRegistry {
     matchId: MatchId,
     setup?: Parameters<typeof createLocalDevMatch>[0],
   ) => Promise<CreatedDevMatchResponse>;
+  claimSeat: (
+    matchId: MatchId,
+    playerId: PlayerId,
+  ) => ClaimedDevSeatResponse | "matchNotFound" | "seatNotFound" | "claimed";
   getMatch: (matchId: MatchId) => LocalDevMatch | undefined;
   authorizeSeat: (
     auth: AuthContext | undefined,
@@ -231,12 +240,6 @@ const createLocalAnonSeats = (
       {
         matchId: setup.matchId,
         playerId,
-        subject: {
-          type: "anonymousDev",
-          devSessionId: `dev-local:${String(setup.matchId)}:${String(
-            playerId,
-          )}:${randomUUID()}`,
-        },
       },
     ]),
   );
@@ -249,10 +252,7 @@ const createdSeatResponse = (
       key,
       {
         playerId: seat.playerId,
-        sessionToken:
-          seat.subject.type === "anonymousDev"
-            ? seat.subject.devSessionId
-            : seat.subject.sessionId,
+        claimed: seat.subject !== undefined,
       },
     ]),
   );
@@ -323,6 +323,24 @@ const createLocalDevMatchRegistry = async (
       sessions.set(matchId, session);
       return buildCreatedResponse(normalizedSetup, session);
     },
+    claimSeat(matchId, playerId) {
+      const session = sessions.get(matchId);
+      if (session === undefined) {
+        return "matchNotFound";
+      }
+      const seat = session.seats[String(playerId)];
+      if (seat === undefined) {
+        return "seatNotFound";
+      }
+      if (seat.subject !== undefined) {
+        return "claimed";
+      }
+      const sessionToken = `dev-local:${String(matchId)}:${String(
+        playerId,
+      )}:${randomUUID()}`;
+      seat.subject = { type: "anonymousDev", devSessionId: sessionToken };
+      return { matchId, seat: { playerId, sessionToken } };
+    },
     getMatch(matchId) {
       return sessions.get(matchId)?.match;
     },
@@ -331,7 +349,11 @@ const createLocalDevMatchRegistry = async (
         return "unauthenticated";
       }
       const seat = sessions.get(matchId)?.seats[String(playerId)];
-      if (seat === undefined || !subjectsMatch(seat.subject, auth.subject)) {
+      if (
+        seat === undefined ||
+        seat.subject === undefined ||
+        !subjectsMatch(seat.subject, auth.subject)
+      ) {
         return "forbidden";
       }
       return "authorized";
@@ -355,6 +377,37 @@ const handleApiRequest = async (
     /^\/api\/matches\/(?<matchId>[^/]+)\/(?<resource>[^/]+)$/u.exec(pathname);
   if (request.method === "POST" && pathname === "/api/matches") {
     sendJson(response, 201, await registry.createMatch());
+    return;
+  }
+  const seatClaimRoute =
+    /^\/api\/matches\/(?<matchId>[^/]+)\/seats\/(?<playerId>[^/]+)\/claim$/u.exec(
+      pathname,
+    );
+  if (request.method === "POST" && seatClaimRoute !== null) {
+    const matchId = decodeURIComponent(
+      seatClaimRoute.groups?.["matchId"] ?? "",
+    ) as MatchId;
+    const playerId = decodeURIComponent(
+      seatClaimRoute.groups?.["playerId"] ?? "",
+    ) as PlayerId;
+    const result = registry.claimSeat(matchId, playerId);
+    if (result === "matchNotFound") {
+      matchNotFound(response, matchId);
+      return;
+    }
+    if (result === "seatNotFound") {
+      sendJson(response, 404, {
+        errors: [`Seat ${String(playerId)} not found.`],
+      });
+      return;
+    }
+    if (result === "claimed") {
+      sendJson(response, 409, {
+        errors: [`Seat ${String(playerId)} is already claimed.`],
+      });
+      return;
+    }
+    sendJson(response, 200, result);
     return;
   }
   if (matchRoute !== null) {

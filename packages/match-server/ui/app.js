@@ -1,5 +1,6 @@
 const state = {
   matchId: null,
+  seatId: "p1",
   seatsByPlayer: {},
   snapshot: null,
   cardsByPlayer: {},
@@ -37,10 +38,15 @@ const requestJson = async (path, options = {}) => {
 const matchIdFromUrl = () =>
   new URL(window.location.href).searchParams.get("matchId");
 
-const setMatchId = (matchId) => {
+const seatIdFromUrl = () =>
+  new URL(window.location.href).searchParams.get("seat") ?? "p1";
+
+const setMatchLocation = (matchId, seatId) => {
   state.matchId = matchId;
+  state.seatId = seatId;
   const url = new URL(window.location.href);
   url.searchParams.set("matchId", matchId);
+  url.searchParams.set("seat", seatId);
   window.history.replaceState({}, "", url);
 };
 
@@ -77,10 +83,27 @@ const authHeadersForPlayer = (playerId) => {
   return { "x-optcg-session-token": token };
 };
 
+const claimSeat = async (matchId, seatId) => {
+  if (state.seatsByPlayer[seatId]?.sessionToken !== undefined) {
+    return;
+  }
+  const claimed = await requestJson(
+    `/api/matches/${encodeURIComponent(matchId)}/seats/${encodeURIComponent(
+      seatId,
+    )}/claim`,
+    { method: "POST" },
+  );
+  storeSeats(matchId, {
+    ...state.seatsByPlayer,
+    [seatId]: claimed.seat,
+  });
+};
+
 const createMatch = async () => {
   const created = await requestJson("/api/matches", { method: "POST" });
-  setMatchId(created.matchId);
-  storeSeats(created.matchId, created.seats);
+  setMatchLocation(created.matchId, "p1");
+  storeSeats(created.matchId, {});
+  await claimSeat(created.matchId, "p1");
   state.snapshot = created.snapshot;
   state.cardsByPlayer =
     (await requestJson(matchApiPath("cards"))).players ?? {};
@@ -98,7 +121,9 @@ const loadState = async () => {
     return;
   }
   state.matchId = urlMatchId;
+  state.seatId = seatIdFromUrl();
   loadStoredSeats(urlMatchId);
+  await claimSeat(urlMatchId, state.seatId);
   const [snapshot, catalog] = await Promise.all([
     requestJson(matchApiPath("state")),
     requestJson(matchApiPath("cards")),
@@ -464,8 +489,13 @@ const renderMatchControls = (snapshot) => `
     <button class="action-button reset-action" type="button" data-reset-match>
       New match
     </button>
+    <div class="seat-links">
+      <a href="${escapeHtml(seatUrl("p1"))}">P1 seat</a>
+      <a href="${escapeHtml(seatUrl("p2"))}">P2 seat</a>
+    </div>
     <div class="match-state">
       <span>${escapeHtml(state.matchId ?? "no match")}</span>
+      <span>Seat ${escapeHtml(state.seatId)}</span>
       <span>${escapeHtml(snapshot.status)}</span>
       <span>${escapeHtml(snapshot.turn.turnPlayerId)} / ${escapeHtml(
         snapshot.turn.phase,
@@ -477,6 +507,15 @@ const renderMatchControls = (snapshot) => `
       .join("")}
   </section>
 `;
+
+const seatUrl = (seatId) => {
+  const url = new URL(window.location.href);
+  if (state.matchId !== null) {
+    url.searchParams.set("matchId", state.matchId);
+  }
+  url.searchParams.set("seat", seatId);
+  return `${url.pathname}${url.search}${url.hash}`;
+};
 
 const menuActions = () => {
   if (state.menu === null || state.snapshot === null) {

@@ -10,8 +10,16 @@ const createFixtureDevHttpServer = () =>
 
 interface CreatedDevMatchBody {
   matchId?: string;
-  seats?: Record<string, { playerId?: string; sessionToken?: string }>;
+  seats?: Record<string, { playerId?: string; claimed?: boolean }>;
   snapshot?: { stateSeq?: number };
+}
+
+interface ClaimedDevSeatBody {
+  matchId?: string;
+  seat?: {
+    playerId?: string;
+    sessionToken?: string;
+  };
 }
 
 const createDevMatch = async (
@@ -30,23 +38,44 @@ const requireCreatedMatch = (
   body: CreatedDevMatchBody,
 ): {
   matchId: string;
-  p1Token: string;
-  p2Token: string;
   stateSeq: number;
 } => {
   const matchId = body.matchId;
-  const p1Token = body.seats?.["p1"]?.sessionToken;
-  const p2Token = body.seats?.["p2"]?.sessionToken;
   const stateSeq = body.snapshot?.stateSeq;
-  if (
-    matchId === undefined ||
-    p1Token === undefined ||
-    p2Token === undefined ||
-    stateSeq === undefined
-  ) {
-    throw new Error("Created dev match response was missing seat data.");
+  if (matchId === undefined || stateSeq === undefined) {
+    throw new Error("Created dev match response was missing match data.");
   }
-  return { matchId, p1Token, p2Token, stateSeq };
+  const seats = body.seats;
+  const p1Seat = seats?.["p1"];
+  const p2Seat = seats?.["p2"];
+  if (p1Seat === undefined || p2Seat === undefined) {
+    throw new Error("Created dev match response was missing seat summaries.");
+  }
+  assert.equal(p1Seat.playerId, "p1");
+  assert.equal(p2Seat.playerId, "p2");
+  assert.equal(JSON.stringify(body).includes("sessionToken"), false);
+  return { matchId, stateSeq };
+};
+
+const claimDevSeat = async (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  matchId: string,
+  playerId: "p1" | "p2",
+): Promise<string> => {
+  const response = await fetch(
+    `${server.url()}/api/matches/${matchId}/seats/${playerId}/claim`,
+    { method: "POST" },
+  );
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as ClaimedDevSeatBody;
+  const token = body.seat?.sessionToken;
+  if (body.matchId !== matchId || body.seat?.playerId !== playerId) {
+    throw new Error("Claimed dev seat response had the wrong identity.");
+  }
+  if (token === undefined) {
+    throw new Error("Claimed dev seat response did not include a token.");
+  }
+  return token;
 };
 
 describe("dev HTTP server", () => {
@@ -57,6 +86,7 @@ describe("dev HTTP server", () => {
       const first = requireCreatedMatch(await createDevMatch(server));
       const second = requireCreatedMatch(await createDevMatch(server));
       assert.notEqual(first.matchId, second.matchId);
+      const firstP1Token = await claimDevSeat(server, first.matchId, "p1");
 
       const actionResponse = await fetch(
         `${server.url()}/api/matches/${first.matchId}/action`,
@@ -64,7 +94,7 @@ describe("dev HTTP server", () => {
           method: "POST",
           headers: {
             "content-type": "application/json",
-            "x-optcg-session-token": first.p1Token,
+            "x-optcg-session-token": firstP1Token,
           },
           body: JSON.stringify({
             playerId: "p1",
@@ -102,6 +132,9 @@ describe("dev HTTP server", () => {
     try {
       const first = requireCreatedMatch(await createDevMatch(server));
       const second = requireCreatedMatch(await createDevMatch(server));
+      const firstP1Token = await claimDevSeat(server, first.matchId, "p1");
+      const firstP2Token = await claimDevSeat(server, first.matchId, "p2");
+      const secondP1Token = await claimDevSeat(server, second.matchId, "p1");
       const url = `${server.url()}/api/matches/${first.matchId}/action`;
       const body = JSON.stringify({
         playerId: "p1",
@@ -120,7 +153,7 @@ describe("dev HTTP server", () => {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-optcg-session-token": first.p2Token,
+          "x-optcg-session-token": firstP2Token,
         },
         body,
       });
@@ -130,11 +163,40 @@ describe("dev HTTP server", () => {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-optcg-session-token": second.p1Token,
+          "x-optcg-session-token": secondP1Token,
         },
         body,
       });
       assert.equal(wrongMatch.status, 403);
+
+      const accepted = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-optcg-session-token": firstP1Token,
+        },
+        body,
+      });
+      assert.equal(accepted.status, 200);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("rejects duplicate local anonymous claims for the same seat", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const match = requireCreatedMatch(await createDevMatch(server));
+      await claimDevSeat(server, match.matchId, "p1");
+
+      const duplicate = await fetch(
+        `${server.url()}/api/matches/${match.matchId}/seats/p1/claim`,
+        { method: "POST" },
+      );
+      assert.equal(duplicate.status, 409);
+      const body = (await duplicate.json()) as { errors?: string[] };
+      assert.deepEqual(body.errors, ["Seat p1 is already claimed."]);
     } finally {
       await server.close();
     }
