@@ -316,9 +316,15 @@ describe("dev HTTP server", () => {
 
       assert.equal(p1Initial.type, "stateSync");
       assert.deepEqual(Object.keys(p1Initial.snapshot?.players ?? {}), ["p1"]);
-      assert.deepEqual(Object.keys(p1Initial.cards?.players ?? {}), ["p1"]);
+      assert.deepEqual(Object.keys(p1Initial.cards?.players ?? {}).sort(), [
+        "p1",
+        "p2",
+      ]);
       assert.deepEqual(Object.keys(p2Initial.snapshot?.players ?? {}), ["p2"]);
-      assert.deepEqual(Object.keys(p2Initial.cards?.players ?? {}), ["p2"]);
+      assert.deepEqual(Object.keys(p2Initial.cards?.players ?? {}).sort(), [
+        "p1",
+        "p2",
+      ]);
 
       p1Socket.socket.send(
         JSON.stringify({

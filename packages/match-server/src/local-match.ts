@@ -818,15 +818,13 @@ export const getLocalDevCardCatalog = (
 ): DevVisibleCardCatalog => {
   const snapshot = getLocalDevSnapshot(match);
   const players: Record<PlayerId, DevPlayerCardCatalog> = {};
-  for (const [playerId, playerSnapshot] of Object.entries(snapshot.players)) {
-    const cards: Record<CardId, DevCardCatalogEntry> = {};
-    for (const cardId of visibleCardIdsForView(playerSnapshot.view)) {
-      const card = match.state.cardManifest.cards[cardId];
-      if (card !== undefined) {
-        cards[cardId] = devCardCatalogEntry(card);
-      }
-    }
-    players[playerId as PlayerId] = { cards };
+  for (const [viewerId, playerSnapshot] of Object.entries(snapshot.players)) {
+    addVisibleCatalogEntries(
+      players,
+      match.state.cardManifest,
+      viewerId as PlayerId,
+      playerSnapshot.view,
+    );
   }
   return { players };
 };
@@ -840,59 +838,84 @@ export const getLocalDevCardCatalogForPlayer = (
   if (playerSnapshot === undefined) {
     return { players: {} };
   }
-  const cards: Record<CardId, DevCardCatalogEntry> = {};
-  for (const cardId of visibleCardIdsForView(playerSnapshot.view)) {
-    const card = match.state.cardManifest.cards[cardId];
-    if (card !== undefined) {
-      cards[cardId] = devCardCatalogEntry(card);
-    }
-  }
-  return {
-    players: {
-      [playerId]: { cards },
-    },
-  };
+  const players: Record<PlayerId, DevPlayerCardCatalog> = {};
+  addVisibleCatalogEntries(
+    players,
+    match.state.cardManifest,
+    playerId,
+    playerSnapshot.view,
+  );
+  return { players };
 };
 
-const addVisibleCard = (
-  visibleCardIds: Set<CardId>,
+const addVisibleCatalogEntryForCardId = (
+  players: Record<PlayerId, DevPlayerCardCatalog>,
+  manifest: MatchCardManifest,
+  owner: PlayerId,
+  cardId: CardId,
+): void => {
+  const manifestCard = manifest.cards[cardId];
+  if (manifestCard === undefined) {
+    return;
+  }
+  const ownerCatalog = players[owner] ?? { cards: {} };
+  ownerCatalog.cards[cardId] = devCardCatalogEntry(manifestCard);
+  players[owner] = ownerCatalog;
+};
+
+const addVisibleCatalogEntry = (
+  players: Record<PlayerId, DevPlayerCardCatalog>,
+  manifest: MatchCardManifest,
   card: PublicCardView | undefined,
 ): void => {
-  if (card !== undefined) {
-    visibleCardIds.add(card.cardId);
+  if (card === undefined) {
+    return;
   }
+  addVisibleCatalogEntryForCardId(players, manifest, card.owner, card.cardId);
 };
 
-const addVisibleCards = (
-  visibleCardIds: Set<CardId>,
+const addVisibleCatalogEntriesForCards = (
+  players: Record<PlayerId, DevPlayerCardCatalog>,
+  manifest: MatchCardManifest,
   cards: readonly PublicCardView[],
 ): void => {
   for (const card of cards) {
-    addVisibleCard(visibleCardIds, card);
+    addVisibleCatalogEntry(players, manifest, card);
   }
 };
 
-const visibleCardIdsForView = (view: PlayerView): Set<CardId> => {
-  const visibleCardIds = new Set<CardId>();
-  addVisibleCard(visibleCardIds, view.self.leader);
-  addVisibleCard(visibleCardIds, view.self.stage);
-  addVisibleCards(visibleCardIds, view.self.characters);
-  addVisibleCards(visibleCardIds, view.self.costArea);
-  addVisibleCards(visibleCardIds, view.self.hand);
-  addVisibleCards(visibleCardIds, view.self.trash);
-  addVisibleCards(visibleCardIds, view.self.life.faceUpCards);
-  addVisibleCard(visibleCardIds, view.opponent.leader);
-  addVisibleCard(visibleCardIds, view.opponent.stage);
-  addVisibleCards(visibleCardIds, view.opponent.characters);
-  addVisibleCards(visibleCardIds, view.opponent.costArea);
-  addVisibleCards(visibleCardIds, view.opponent.trash);
-  addVisibleCards(visibleCardIds, view.opponent.life.faceUpCards);
+const addVisibleCatalogEntries = (
+  players: Record<PlayerId, DevPlayerCardCatalog>,
+  manifest: MatchCardManifest,
+  viewerId: PlayerId,
+  view: PlayerView,
+): void => {
+  addVisibleCatalogEntry(players, manifest, view.self.leader);
+  addVisibleCatalogEntry(players, manifest, view.self.stage);
+  addVisibleCatalogEntriesForCards(players, manifest, view.self.characters);
+  addVisibleCatalogEntriesForCards(players, manifest, view.self.costArea);
+  addVisibleCatalogEntriesForCards(players, manifest, view.self.hand);
+  addVisibleCatalogEntriesForCards(players, manifest, view.self.trash);
+  addVisibleCatalogEntriesForCards(
+    players,
+    manifest,
+    view.self.life.faceUpCards,
+  );
+  addVisibleCatalogEntry(players, manifest, view.opponent.leader);
+  addVisibleCatalogEntry(players, manifest, view.opponent.stage);
+  addVisibleCatalogEntriesForCards(players, manifest, view.opponent.characters);
+  addVisibleCatalogEntriesForCards(players, manifest, view.opponent.costArea);
+  addVisibleCatalogEntriesForCards(players, manifest, view.opponent.trash);
+  addVisibleCatalogEntriesForCards(
+    players,
+    manifest,
+    view.opponent.life.faceUpCards,
+  );
   for (const reveal of view.revealedCards) {
     for (const card of reveal.cards) {
-      visibleCardIds.add(card.cardId);
+      addVisibleCatalogEntryForCardId(players, manifest, viewerId, card.cardId);
     }
   }
-  return visibleCardIds;
 };
 
 const devCardCatalogEntry = (

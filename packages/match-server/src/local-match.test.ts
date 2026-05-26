@@ -7,6 +7,7 @@ import {
   applyLocalDevDecision,
   createLocalDevMatch,
   createPremadeDevMatchSetup,
+  getLocalDevCardCatalogForPlayer,
   getLocalDevSnapshot,
   type DevMatchSetup,
 } from "./local-match.js";
@@ -228,6 +229,24 @@ describe("local dev match", () => {
           !Object.prototype.hasOwnProperty.call(action, "raw"),
       ),
     );
+  });
+
+  test("per-player card catalogs include opponent public card metadata under the opponent owner", () => {
+    const match = createTestMatch();
+    const snapshot = getLocalDevSnapshot(match);
+    const p1View = mustPlayerSnapshot(snapshot, p1).view;
+    const opponentLeader = p1View.opponent.leader;
+
+    const catalog = getLocalDevCardCatalogForPlayer(match, p1);
+    const entry =
+      catalog.players[opponentLeader.owner]?.cards[opponentLeader.cardId];
+    if (entry === undefined) {
+      throw new Error("Missing opponent leader catalog entry.");
+    }
+
+    assert.equal(opponentLeader.owner, p2);
+    assert.equal(entry.name, "Imu");
+    assert.equal(entry.imageUrl?.startsWith("https://"), true);
   });
 
   test("applies the current server action by player and index", () => {
