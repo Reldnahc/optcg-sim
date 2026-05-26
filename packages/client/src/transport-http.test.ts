@@ -152,42 +152,13 @@ describe("dev HTTP match transport", () => {
     );
   });
 
-  test("sends the claimed seat token with action requests", async () => {
-    const recorder = createRecordingFetch(() =>
-      responseJson({
-        snapshot: { stateSeq: 2 },
-        errors: [],
-      }),
-    );
+  test("does not expose HTTP gameplay action helpers", () => {
     const transport = createDevHttpMatchTransport({
       baseUrl: "http://localhost:3000",
-      fetch: recorder.fetch,
+      fetch: createRecordingFetch(() => responseJson({})).fetch,
     });
 
-    await transport.submitVisibleAction({
-      matchId: "match-1" as MatchId,
-      playerId: "p1" as PlayerId,
-      sessionToken: "token-p1",
-      actionIndex: 3,
-      expectedStateSeq: 1,
-    });
-
-    const request = recorder.requests[0];
-    if (request === undefined) {
-      throw new Error("Expected an action request to be recorded.");
-    }
-    assert.equal(
-      new Headers(request.init?.headers).get("x-optcg-session-token"),
-      "token-p1",
-    );
-    assert.equal(request.init?.method, "POST");
-    assert.equal(
-      request.init.body,
-      JSON.stringify({
-        playerId: "p1",
-        actionIndex: 3,
-        expectedStateSeq: 1,
-      }),
-    );
+    assert.equal("submitVisibleAction" in transport, false);
+    assert.equal("respondToDecision" in transport, false);
   });
 });

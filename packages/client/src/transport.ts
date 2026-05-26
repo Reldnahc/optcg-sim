@@ -71,7 +71,6 @@ export interface LocalLobby {
 export interface SubmitVisibleActionInput {
   matchId: MatchId;
   playerId: PlayerId;
-  sessionToken: string;
   actionIndex: number;
   expectedStateSeq?: number;
 }
@@ -79,7 +78,6 @@ export interface SubmitVisibleActionInput {
 export interface RespondToDecisionInput {
   matchId: MatchId;
   playerId: PlayerId;
-  sessionToken: string;
   decisionId: DecisionId;
   response: DecisionResponse;
 }
@@ -111,10 +109,10 @@ export interface MatchActionResultMessage {
 export interface LiveMatchConnection {
   close: () => void;
   submitVisibleAction: (
-    input: Omit<SubmitVisibleActionInput, "sessionToken">,
+    input: SubmitVisibleActionInput,
   ) => Promise<MatchActionResult>;
   respondToDecision: (
-    input: Omit<RespondToDecisionInput, "sessionToken">,
+    input: RespondToDecisionInput,
   ) => Promise<MatchActionResult>;
 }
 
@@ -143,10 +141,4 @@ export interface MatchTransport {
   }) => Promise<ClaimedSeat>;
   loadState: (matchId: MatchId) => Promise<MatchSnapshot>;
   loadCards: (matchId: MatchId) => Promise<MatchCardCatalog>;
-  submitVisibleAction: (
-    input: SubmitVisibleActionInput,
-  ) => Promise<MatchActionResult>;
-  respondToDecision: (
-    input: RespondToDecisionInput,
-  ) => Promise<MatchActionResult>;
 }

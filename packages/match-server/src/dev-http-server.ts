@@ -280,19 +280,6 @@ const createDevAuthProvider = (): AuthProvider => ({
   },
 });
 
-const authRejected = (
-  response: ServerResponse,
-  result: "unauthenticated" | "forbidden",
-): void => {
-  if (result === "unauthenticated") {
-    sendJson(response, 401, { errors: ["Missing or invalid session token."] });
-    return;
-  }
-  sendJson(response, 403, {
-    errors: ["Session token is not authorized for this match seat."],
-  });
-};
-
 const createLocalAnonSeats = (
   setup: Parameters<typeof createLocalDevMatch>[0],
 ): Record<string, MatchSeat> =>
@@ -613,58 +600,6 @@ const handleApiRequest = async (
       sendJson(response, 200, getLocalDevCardCatalog(match));
       return;
     }
-    if (request.method === "POST" && resource === "action") {
-      let body: unknown;
-      try {
-        body = await readRequestJson(request);
-      } catch {
-        sendJson(response, 400, { errors: ["Request body must be JSON."] });
-        return;
-      }
-      if (!isDevActionRequest(body)) {
-        sendJson(response, 400, {
-          errors: ["Expected playerId and numeric actionIndex."],
-        });
-        return;
-      }
-      const authResult = registry.authorizeSeat(
-        authProvider.authenticate(request),
-        matchId as MatchId,
-        body.playerId,
-      );
-      if (authResult !== "authorized") {
-        authRejected(response, authResult);
-        return;
-      }
-      sendJson(response, 200, applyLocalDevAction(match, body));
-      return;
-    }
-    if (request.method === "POST" && resource === "decision") {
-      let body: unknown;
-      try {
-        body = await readRequestJson(request);
-      } catch {
-        sendJson(response, 400, { errors: ["Request body must be JSON."] });
-        return;
-      }
-      if (!isDevDecisionRequest(body)) {
-        sendJson(response, 400, {
-          errors: ["Expected playerId, decisionId, and decision response."],
-        });
-        return;
-      }
-      const authResult = registry.authorizeSeat(
-        authProvider.authenticate(request),
-        matchId as MatchId,
-        body.playerId,
-      );
-      if (authResult !== "authorized") {
-        authRejected(response, authResult);
-        return;
-      }
-      sendJson(response, 200, applyLocalDevDecision(match, body));
-      return;
-    }
     sendJson(response, 404, { errors: ["API route not found."] });
     return;
   }
@@ -699,40 +634,6 @@ const handleApiRequest = async (
       explicitSetup,
     );
     sendJson(response, 200, reset.snapshot);
-    return;
-  }
-  if (request.method === "POST" && pathname === "/api/action") {
-    let body: unknown;
-    try {
-      body = await readRequestJson(request);
-    } catch {
-      sendJson(response, 400, { errors: ["Request body must be JSON."] });
-      return;
-    }
-    if (!isDevActionRequest(body)) {
-      sendJson(response, 400, {
-        errors: ["Expected playerId and numeric actionIndex."],
-      });
-      return;
-    }
-    sendJson(response, 200, applyLocalDevAction(defaultMatch, body));
-    return;
-  }
-  if (request.method === "POST" && pathname === "/api/decision") {
-    let body: unknown;
-    try {
-      body = await readRequestJson(request);
-    } catch {
-      sendJson(response, 400, { errors: ["Request body must be JSON."] });
-      return;
-    }
-    if (!isDevDecisionRequest(body)) {
-      sendJson(response, 400, {
-        errors: ["Expected playerId, decisionId, and decision response."],
-      });
-      return;
-    }
-    sendJson(response, 200, applyLocalDevDecision(defaultMatch, body));
     return;
   }
   sendJson(response, 404, { errors: ["API route not found."] });

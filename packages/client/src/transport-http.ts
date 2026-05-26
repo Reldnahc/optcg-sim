@@ -4,12 +4,9 @@ import type {
   ClaimedSeat,
   CreatedMatch,
   LocalLobby,
-  MatchActionResult,
   MatchCardCatalog,
   MatchSnapshot,
   MatchTransport,
-  RespondToDecisionInput,
-  SubmitVisibleActionInput,
 } from "./transport.js";
 
 export interface DevHttpMatchTransportOptions {
@@ -95,30 +92,6 @@ export const createDevHttpMatchTransport = ({
     async loadCards(matchId) {
       const response = await fetchImpl(matchPath(matchId, "/cards"));
       return readJson<MatchCardCatalog>(response);
-    },
-    async submitVisibleAction(input: SubmitVisibleActionInput) {
-      return postJson<MatchActionResult>(
-        matchPath(input.matchId, "/action"),
-        {
-          playerId: input.playerId,
-          actionIndex: input.actionIndex,
-          ...(input.expectedStateSeq === undefined
-            ? {}
-            : { expectedStateSeq: input.expectedStateSeq }),
-        },
-        input.sessionToken,
-      );
-    },
-    async respondToDecision(input: RespondToDecisionInput) {
-      return postJson<MatchActionResult>(
-        matchPath(input.matchId, "/decision"),
-        {
-          playerId: input.playerId,
-          decisionId: input.decisionId,
-          response: input.response,
-        },
-        input.sessionToken,
-      );
     },
   };
 };

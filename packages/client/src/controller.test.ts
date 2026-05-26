@@ -7,29 +7,27 @@ import {
   createClientSessionStore,
   createMemoryClientStorage,
 } from "./session.js";
-import type { MatchLiveTransport, MatchTransport } from "./transport.js";
+import type {
+  LiveMatchConnection,
+  MatchLiveTransport,
+  MatchTransport,
+} from "./transport.js";
 import { createMatchClientController } from "./controller.js";
 
-const createFakeTransport = (options?: {
-  actionErrors?: string[];
-  decisionErrors?: string[];
-}): MatchTransport & {
+const createFakeTransport = (): MatchTransport & {
   claimedSeats: Array<{
     matchId: MatchId;
     playerId: PlayerId;
     sessionToken?: string;
   }>;
-  submittedTokens: string[];
 } => {
   const claimedSeats: Array<{
     matchId: MatchId;
     playerId: PlayerId;
     sessionToken?: string;
   }> = [];
-  const submittedTokens: string[] = [];
   return {
     claimedSeats,
-    submittedTokens,
     createLobby() {
       return Promise.resolve({
         lobbyId: "lobby-1",
@@ -84,19 +82,42 @@ const createFakeTransport = (options?: {
     loadCards() {
       return Promise.resolve({ players: {} });
     },
+  };
+};
+
+const createFakeLiveTransport = (options?: {
+  actionErrors?: string[];
+  decisionErrors?: string[];
+}): MatchLiveTransport & {
+  submittedActions: number[];
+  submittedDecisions: DecisionId[];
+  connection: LiveMatchConnection;
+} => {
+  const submittedActions: number[] = [];
+  const submittedDecisions: DecisionId[] = [];
+  const connection: LiveMatchConnection = {
+    close() {},
     submitVisibleAction(input) {
-      submittedTokens.push(input.sessionToken);
+      submittedActions.push(input.actionIndex);
       return Promise.resolve({
         snapshot: { stateSeq: 2, players: {} },
         errors: options?.actionErrors ?? [],
       });
     },
     respondToDecision(input) {
-      submittedTokens.push(input.sessionToken);
+      submittedDecisions.push(input.decisionId);
       return Promise.resolve({
         snapshot: { stateSeq: 2, players: {} },
         errors: options?.decisionErrors ?? [],
       });
+    },
+  };
+  return {
+    submittedActions,
+    submittedDecisions,
+    connection,
+    connect() {
+      return connection;
     },
   };
 };
@@ -161,19 +182,21 @@ describe("match client controller", () => {
     );
   });
 
-  test("submits actions with the claimed seat token", async () => {
-    const transport = createFakeTransport();
+  test("submits gameplay actions through the live connection", async () => {
+    const liveTransport = createFakeLiveTransport();
     const controller = createMatchClientController({
-      transport,
+      transport: createFakeTransport(),
+      liveTransport,
       sessionStore: createClientSessionStore({
         storage: createMemoryClientStorage(),
       }),
     });
 
     await controller.startNewLocalMatch("p1" as PlayerId);
+    controller.connectLive({ onState() {}, onError() {} });
     await controller.submitVisibleAction({ actionIndex: 0 });
 
-    assert.deepEqual(transport.submittedTokens, ["token-p1"]);
+    assert.deepEqual(liveTransport.submittedActions, [0]);
   });
 
   test("does not fall back to HTTP gameplay when live transport is configured but disconnected", async () => {
@@ -197,7 +220,6 @@ describe("match client controller", () => {
       () => controller.submitVisibleAction({ actionIndex: 0 }),
       /Live match connection is not active/u,
     );
-    assert.deepEqual(transport.submittedTokens, []);
   });
 
   test("does not fall back to HTTP decisions when live transport is configured but disconnected", async () => {
@@ -225,7 +247,6 @@ describe("match client controller", () => {
         }),
       /Live match connection is not active/u,
     );
-    assert.deepEqual(transport.submittedTokens, []);
   });
 
   test("revalidates an existing seat credential when joining a match", async () => {
@@ -263,16 +284,19 @@ describe("match client controller", () => {
   });
 
   test("rejects server-side decision errors instead of treating them as success", async () => {
+    const liveTransport = createFakeLiveTransport({
+      decisionErrors: ["Unsupported decision type."],
+    });
     const controller = createMatchClientController({
-      transport: createFakeTransport({
-        decisionErrors: ["Unsupported decision type."],
-      }),
+      transport: createFakeTransport(),
+      liveTransport,
       sessionStore: createClientSessionStore({
         storage: createMemoryClientStorage(),
       }),
     });
 
     await controller.startNewLocalMatch("p1" as PlayerId);
+    controller.connectLive({ onState() {}, onError() {} });
 
     await assert.rejects(
       () =>

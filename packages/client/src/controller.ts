@@ -249,14 +249,9 @@ export const createMatchClientController = ({
           : { expectedStateSeq: currentState.snapshot.stateSeq }),
       };
       const result =
-        liveTransport === undefined
-          ? await transport.submitVisibleAction({
-              ...transportInput,
-              sessionToken: credential.sessionToken,
-            })
-          : await requireLiveConnection(liveConnection).submitVisibleAction(
-              transportInput,
-            );
+        await requireLiveConnection(liveConnection).submitVisibleAction(
+          transportInput,
+        );
       throwIfActionResultFailed(result.errors);
       const cards =
         currentState?.cards ?? (await transport.loadCards(credential.matchId));
@@ -280,14 +275,9 @@ export const createMatchClientController = ({
         response: input.response,
       };
       const result =
-        liveTransport === undefined
-          ? await transport.respondToDecision({
-              ...transportInput,
-              sessionToken: credential.sessionToken,
-            })
-          : await requireLiveConnection(liveConnection).respondToDecision(
-              transportInput,
-            );
+        await requireLiveConnection(liveConnection).respondToDecision(
+          transportInput,
+        );
       throwIfActionResultFailed(result.errors);
       const cards =
         currentState?.cards ?? (await transport.loadCards(credential.matchId));

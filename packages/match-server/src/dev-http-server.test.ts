@@ -207,28 +207,36 @@ describe("dev HTTP server", () => {
   test("creates independent local anonymous dev matches keyed by matchId", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
+    const sockets: WebSocket[] = [];
     try {
       const first = requireCreatedMatch(await createDevMatch(server));
       const second = requireCreatedMatch(await createDevMatch(server));
       assert.notEqual(first.matchId, second.matchId);
       const firstP1Token = await claimDevSeat(server, first.matchId, "p1");
-
-      const actionResponse = await fetch(
-        `${server.url()}/api/matches/${first.matchId}/action`,
-        {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "x-optcg-session-token": firstP1Token,
-          },
-          body: JSON.stringify({
-            playerId: "p1",
-            actionIndex: 0,
-            expectedStateSeq: first.stateSeq,
-          }),
-        },
+      const firstP1Socket = await openSocket(
+        webSocketUrl(server, first.matchId, "p1", firstP1Token),
       );
-      assert.equal(actionResponse.status, 200);
+      sockets.push(firstP1Socket.socket);
+      const firstInitial = (await firstP1Socket.next()) as {
+        snapshot?: { stateSeq?: number };
+      };
+
+      firstP1Socket.socket.send(
+        JSON.stringify({
+          type: "submitAction",
+          matchId: first.matchId,
+          playerId: "p1",
+          clientActionId: "first-action",
+          actionIndex: 0,
+          expectedStateSeq: firstInitial.snapshot?.stateSeq,
+        }),
+      );
+      const actionResult = (await firstP1Socket.next()) as {
+        type?: string;
+        accepted?: boolean;
+      };
+      assert.equal(actionResult.type, "actionResult");
+      assert.equal(actionResult.accepted, true);
 
       const firstStateResponse = await fetch(
         `${server.url()}/api/matches/${first.matchId}/state`,
@@ -247,62 +255,33 @@ describe("dev HTTP server", () => {
       assert.notEqual(firstState.stateSeq, secondState.stateSeq);
       assert.equal(secondState.stateSeq, second.stateSeq);
     } finally {
+      for (const socket of sockets) {
+        socket.close();
+      }
       await server.close();
     }
   });
 
-  test("requires a matching local anonymous seat token for match actions", async () => {
+  test("does not expose HTTP gameplay action or decision routes", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
     try {
-      const first = requireCreatedMatch(await createDevMatch(server));
-      const second = requireCreatedMatch(await createDevMatch(server));
-      const firstP1Token = await claimDevSeat(server, first.matchId, "p1");
-      const firstP2Token = await claimDevSeat(server, first.matchId, "p2");
-      const secondP1Token = await claimDevSeat(server, second.matchId, "p1");
-      const url = `${server.url()}/api/matches/${first.matchId}/action`;
-      const body = JSON.stringify({
-        playerId: "p1",
-        actionIndex: 0,
-        expectedStateSeq: first.stateSeq,
-      });
+      const match = requireCreatedMatch(await createDevMatch(server));
+      const urls = [
+        `${server.url()}/api/matches/${match.matchId}/action`,
+        `${server.url()}/api/matches/${match.matchId}/decision`,
+        `${server.url()}/api/action`,
+        `${server.url()}/api/decision`,
+      ];
 
-      const missing = await fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body,
-      });
-      assert.equal(missing.status, 401);
-
-      const wrongPlayer = await fetch(url, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-optcg-session-token": firstP2Token,
-        },
-        body,
-      });
-      assert.equal(wrongPlayer.status, 403);
-
-      const wrongMatch = await fetch(url, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-optcg-session-token": secondP1Token,
-        },
-        body,
-      });
-      assert.equal(wrongMatch.status, 403);
-
-      const accepted = await fetch(url, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-optcg-session-token": firstP1Token,
-        },
-        body,
-      });
-      assert.equal(accepted.status, 200);
+      for (const url of urls) {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        assert.equal(response.status, 404);
+      }
     } finally {
       await server.close();
     }
@@ -560,83 +539,121 @@ describe("dev HTTP server", () => {
     }
   });
 
-  test("accepts explicit decision responses without exposing hidden manifest data", async () => {
+  test("accepts websocket decision responses without exposing hidden manifest data", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
+    const sockets: WebSocket[] = [];
     try {
-      const stateResponse = await fetch(`${server.url()}/api/state`);
-      assert.equal(stateResponse.status, 200);
-      const stateBody = (await stateResponse.json()) as {
-        players?: Record<
-          string,
-          {
-            view?: {
-              pendingDecision?: {
-                id?: string;
-                type?: string;
-                candidates?: Array<{ card?: unknown }>;
+      const match = requireCreatedMatch(await createDevMatch(server));
+      const p1Token = await claimDevSeat(server, match.matchId, "p1");
+      const p1Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", p1Token),
+      );
+      sockets.push(p1Socket.socket);
+      const stateBody = (await p1Socket.next()) as {
+        snapshot?: {
+          players?: Record<
+            string,
+            {
+              view?: {
+                pendingDecision?: {
+                  id?: string;
+                  type?: string;
+                  candidates?: Array<{ card?: unknown }>;
+                };
               };
-            };
-          }
-        >;
+            }
+          >;
+        };
       };
-      const decision = stateBody.players?.["p1"]?.view?.pendingDecision;
+      const decision =
+        stateBody.snapshot?.players?.["p1"]?.view?.pendingDecision;
       assert.equal(decision?.type, "selectCards");
       const candidate = decision.candidates?.[0]?.card;
       if (decision.id === undefined || candidate === undefined) {
         throw new Error("Missing filtered setup decision candidate.");
       }
 
-      const response = await fetch(`${server.url()}/api/decision`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      p1Socket.socket.send(
+        JSON.stringify({
+          type: "respondToDecision",
+          matchId: match.matchId,
           playerId: "p1",
+          clientActionId: "decision-action",
           decisionId: decision.id,
           response: { type: "cards", cards: [candidate] },
         }),
-      });
-      assert.equal(response.status, 200);
-      const body = await response.text();
-      assert.equal(body.includes("cardManifest"), false);
-      assert.equal(body.includes("effectDefinitions"), false);
-      assert.equal(body.includes('"errors":[]'), true);
+      );
+      const actionResult = (await p1Socket.next()) as {
+        type?: string;
+        accepted?: boolean;
+        errors?: string[];
+      };
+      const update = await p1Socket.next();
+      const serialized = JSON.stringify({ actionResult, update });
+
+      assert.equal(actionResult.type, "actionResult");
+      assert.equal(actionResult.accepted, true);
+      assert.deepEqual(actionResult.errors, []);
+      assert.equal(serialized.includes("cardManifest"), false);
+      assert.equal(serialized.includes("effectDefinitions"), false);
     } finally {
+      for (const socket of sockets) {
+        socket.close();
+      }
       await server.close();
     }
   });
 
-  test("rejects explicit decision responses from the wrong player", async () => {
+  test("rejects websocket decision responses from the wrong player", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");
+    const sockets: WebSocket[] = [];
     try {
-      const stateResponse = await fetch(`${server.url()}/api/state`);
-      const stateBody = (await stateResponse.json()) as {
-        players?: Record<
-          string,
-          { view?: { pendingDecision?: { id?: string } } }
-        >;
+      const match = requireCreatedMatch(await createDevMatch(server));
+      const p1Token = await claimDevSeat(server, match.matchId, "p1");
+      const p2Token = await claimDevSeat(server, match.matchId, "p2");
+      const p1Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", p1Token),
+      );
+      const p2Socket = await openSocket(
+        webSocketUrl(server, match.matchId, "p2", p2Token),
+      );
+      sockets.push(p1Socket.socket, p2Socket.socket);
+      const p1State = (await p1Socket.next()) as {
+        snapshot?: {
+          players?: Record<
+            string,
+            { view?: { pendingDecision?: { id?: string } } }
+          >;
+        };
       };
-      const decisionId = stateBody.players?.["p1"]?.view?.pendingDecision?.id;
+      await p2Socket.next();
+      const decisionId =
+        p1State.snapshot?.players?.["p1"]?.view?.pendingDecision?.id;
       if (decisionId === undefined) {
         throw new Error("Missing p1 pending decision.");
       }
 
-      const response = await fetch(`${server.url()}/api/decision`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      p2Socket.socket.send(
+        JSON.stringify({
+          type: "respondToDecision",
+          matchId: match.matchId,
           playerId: "p2",
+          clientActionId: "wrong-player-decision",
           decisionId,
           response: { type: "cards", cards: [] },
         }),
-      });
-      assert.equal(response.status, 200);
-      const body = (await response.json()) as { errors?: string[] };
-      assert.deepEqual(body.errors, [
+      );
+      const actionResult = (await p2Socket.next()) as { errors?: string[] };
+
+      assert.deepEqual(actionResult.errors, [
         `Decision ${decisionId} is not pending for p2.`,
       ]);
     } finally {
+      for (const socket of sockets) {
+        socket.close();
+      }
       await server.close();
     }
   });
