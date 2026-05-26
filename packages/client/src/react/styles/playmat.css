@@ -10,9 +10,9 @@
     ". player-life . player-leader player-stage . player-deck ."
     ". player-don-deck player-cost player-cost player-cost player-cost player-trash .";
   grid-template-columns:
-    var(--card-width) var(--card-width) minmax(116px, 1fr)
-    var(--card-width) var(--card-width) minmax(116px, 1fr)
-    var(--card-width) var(--card-width);
+    var(--card-zone-width) var(--card-zone-width) minmax(116px, 1fr)
+    var(--card-zone-width) var(--card-zone-width) minmax(116px, 1fr)
+    var(--card-zone-width) var(--card-zone-width);
   grid-template-rows:
     var(--playmat-row-height) var(--playmat-row-height)
     var(--playmat-row-height) minmax(0, 1fr)

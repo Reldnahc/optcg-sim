@@ -2,6 +2,7 @@
   --playmat-row-height: calc(100vh / 6.5);
   --card-height: calc(var(--playmat-row-height) - 14px);
   --card-width: calc(var(--card-height) / 1.4);
+  --card-zone-width: calc(var(--card-width) + 14px);
 
   display: grid;
   grid-template-columns: minmax(900px, 1fr) 260px;

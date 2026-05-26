@@ -80,10 +80,14 @@ describe("playmat structure", () => {
       appShellStyles,
       /--card-width:\s*calc\(var\(--card-height\)\s*\/\s*1\.4\);/,
     );
+    assert.match(
+      appShellStyles,
+      /--card-zone-width:\s*calc\(var\(--card-width\)\s*\+\s*14px\);/,
+    );
     assert.match(cardStyles, /height:\s*var\(--card-height\);/);
     assert.match(
       playmatStyles,
-      /grid-template-columns:\s*var\(--card-width\)\s+var\(--card-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-width\)\s+var\(--card-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-width\)\s+var\(--card-width\);/,
+      /grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\);/,
     );
   });
 
