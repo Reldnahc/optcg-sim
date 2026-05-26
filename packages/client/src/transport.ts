@@ -12,6 +12,12 @@ export interface ClientVisibleAction {
   index: number;
   type: PlayerView["legalActions"][number]["type"] | "advanceToMainPhase";
   label: string;
+  decisionPayment?:
+    | { kind: "paymentDeclined" }
+    | {
+        kind: "trashCardCost";
+        selectedCardInstanceIds: InstanceId[];
+      };
   placement?: {
     instanceId: InstanceId;
   };

@@ -50,6 +50,7 @@ export interface ClientActionModel {
     | "clearDecisionSelection"
     | "chooseNoDecisionCards";
   label: string;
+  decisionPayment?: ClientVisibleAction["decisionPayment"];
 }
 
 export interface BoardViewModel {
@@ -205,7 +206,14 @@ const addAction = (
 ): void => {
   const key = String(instanceId);
   const current = actions[key] ?? [];
-  current.push({ index: action.index, type: action.type, label: action.label });
+  current.push({
+    index: action.index,
+    type: action.type,
+    label: action.label,
+    ...(action.decisionPayment === undefined
+      ? {}
+      : { decisionPayment: action.decisionPayment }),
+  });
   actions[key] = current;
 };
 

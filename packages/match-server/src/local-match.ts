@@ -34,6 +34,12 @@ export interface DevVisibleAction {
   index: number;
   type: LegalAction["type"] | "advanceToMainPhase";
   label: string;
+  decisionPayment?:
+    | { kind: "paymentDeclined" }
+    | {
+        kind: "trashCardCost";
+        selectedCardInstanceIds: CardInstance["instanceId"][];
+      };
   placement?: {
     instanceId: CardInstance["instanceId"];
   };
@@ -134,9 +140,11 @@ const visibleAction = (
 ): Omit<ExecutableDevAction, "index" | "apply"> => {
   const placement = actionPlacement(action);
   const attachment = actionAttachment(action);
+  const decisionPayment = actionDecisionPayment(state, action);
   return {
     type: action.type,
     label: actionLabel(state, action),
+    ...(decisionPayment === undefined ? {} : { decisionPayment }),
     ...(placement === undefined
       ? {}
       : { placement: { instanceId: placement } }),
@@ -495,6 +503,47 @@ const responseLabel = (
     case "chooseQuantity":
       return `Choose ${String(action.response.quantity)}`;
   }
+};
+
+const actionDecisionPayment = (
+  state: GameState,
+  action: LegalAction,
+): DevVisibleAction["decisionPayment"] | undefined => {
+  if (action.type !== "respondToDecision") {
+    return undefined;
+  }
+  const response = action.response;
+  if (response.type === "paymentDeclined") {
+    return { kind: "paymentDeclined" };
+  }
+  if (response.type !== "payment") {
+    return undefined;
+  }
+  const pending = state.pendingDecision;
+  if (
+    pending === undefined ||
+    pending.type !== "payCost" ||
+    pending.id !== action.decisionId
+  ) {
+    return undefined;
+  }
+  const option = pending.paymentOptions.find(
+    (candidate) => candidate.id === response.optionId,
+  );
+  if (option?.type !== "trashFromHand" && option?.type !== "trashFromField") {
+    return undefined;
+  }
+  const selectedCardInstanceIds = response.selectedCardInstanceIds;
+  if (
+    selectedCardInstanceIds === undefined ||
+    selectedCardInstanceIds.length === 0
+  ) {
+    return undefined;
+  }
+  return {
+    kind: "trashCardCost",
+    selectedCardInstanceIds: [...selectedCardInstanceIds],
+  };
 };
 
 const actionLabel = (state: GameState, action: LegalAction): string => {
