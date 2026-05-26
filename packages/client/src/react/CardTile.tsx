@@ -38,7 +38,10 @@ export const CardTile = ({
       ? undefined
       : `${card.powerDelta > 0 ? "+" : ""}${String(card.powerDelta)}`;
   return (
-    <div className="card-tile-shell">
+    <div
+      className="card-tile-shell"
+      data-card-instance-id={String(card.instanceId)}
+    >
       <button
         className={`card-tile ${card.state === "rested" ? "is-rested" : ""} ${
           isSelected ? "is-selected" : ""

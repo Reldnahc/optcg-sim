@@ -20,6 +20,10 @@ export interface ClientVisibleAction {
         chooseLabel: string;
         selectedCardInstanceIds: InstanceId[];
       };
+  attack?: {
+    attackerInstanceId: InstanceId;
+    targetInstanceId: InstanceId;
+  };
   placement?: {
     instanceId: InstanceId;
   };

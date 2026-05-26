@@ -476,6 +476,38 @@ describe("local dev match", () => {
     void snapshot;
   });
 
+  test("attack action metadata exposes attacker and target instance ids", () => {
+    const match = createTestMatch();
+    let snapshot = keepBothPlayersAndAdvance(match);
+    for (let step = 0; step < 2; step += 1) {
+      const current = mustPlayerSnapshot(snapshot, snapshot.activePlayerId);
+      const endMain = current.actions.find((action) =>
+        action.label.includes("End main phase"),
+      );
+      if (endMain === undefined) {
+        throw new Error("Expected end-main action while setting up attack.");
+      }
+      const result = applyLocalDevAction(match, {
+        playerId: snapshot.activePlayerId,
+        actionIndex: endMain.index,
+      });
+      assert.deepEqual(result.errors, []);
+      snapshot = getLocalDevSnapshot(match);
+    }
+    const p1Snapshot = mustPlayerSnapshot(snapshot, p1);
+    const attackAction = p1Snapshot.actions.find(
+      (action) => action.type === "declareAttack",
+    );
+    if (attackAction === undefined) {
+      throw new Error("Expected attack action metadata.");
+    }
+
+    assert.deepEqual(attackAction.attack, {
+      attackerInstanceId: p1Snapshot.view.self.leader.instanceId,
+      targetInstanceId: p1Snapshot.view.opponent.leader.instanceId,
+    });
+  });
+
   test("counter-step pass action is labeled as ending the counter phase", () => {
     const match = createTestMatch();
     let snapshot = keepBothPlayersAndAdvance(match);

@@ -238,6 +238,38 @@ describe("board view model", () => {
     assert.deepEqual(model.self.leader.attachedDonCards, []);
   });
 
+  test("projects public battle attacker and current target for both seats", () => {
+    const view = minimalView();
+    view.battle = {
+      attacker: ref("leader-1", "OP13-079", p1),
+      originalTarget: ref("opp-leader", "OP01-001", p2),
+      currentTarget: ref("opp-leader", "OP01-001", p2),
+      step: "counter",
+      damageCount: 1,
+    };
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(model.battleArrow, {
+      attackerInstanceId: "leader-1",
+      targetInstanceId: "opp-leader",
+    });
+  });
+
   test("trash cards stay newest-first and render upright even if engine state was rested", () => {
     const view = minimalView();
     view.self.trash = [

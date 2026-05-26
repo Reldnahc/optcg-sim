@@ -262,4 +262,27 @@ describe("card action menu", () => {
     assert.match(markup, /class="[^"]*is-pending-choice/u);
     assert.match(markup, /class="[^"]*is-selected/u);
   });
+
+  test("battle arrow renders from public battle state", () => {
+    const layout = board();
+    layout.battleArrow = {
+      attackerInstanceId: "self-leader",
+      targetInstanceId: "opponent-leader",
+    };
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: layout,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /class="[^"]*battle-arrow-overlay/u);
+    assert.match(markup, /data-battle-attacker="self-leader"/u);
+    assert.match(markup, /data-battle-target="opponent-leader"/u);
+  });
 });

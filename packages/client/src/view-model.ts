@@ -46,11 +46,13 @@ export interface ClientActionModel {
   type:
     | PublicLegalAction["type"]
     | "advanceToMainPhase"
+    | "chooseAttackTarget"
     | "confirmDecisionSelection"
     | "clearDecisionSelection"
     | "chooseNoDecisionCards";
   label: string;
   decisionPayment?: ClientVisibleAction["decisionPayment"];
+  attack?: ClientVisibleAction["attack"];
 }
 
 export interface BoardViewModel {
@@ -58,6 +60,10 @@ export interface BoardViewModel {
   self: ClientPlayerZonesModel;
   opponent: Omit<ClientPlayerZonesModel, "hand"> & { handCount: number };
   actionsByCardInstanceId: Record<string, ClientActionModel[]>;
+  battleArrow?: {
+    attackerInstanceId: string;
+    targetInstanceId: string;
+  };
 }
 
 type LegacyPublicCardView = Omit<PublicCardView, "attachedDonIds"> & {
@@ -213,6 +219,7 @@ const addAction = (
     ...(action.decisionPayment === undefined
       ? {}
       : { decisionPayment: action.decisionPayment }),
+    ...(action.attack === undefined ? {} : { attack: action.attack }),
   });
   actions[key] = current;
 };
@@ -252,5 +259,15 @@ export const createBoardViewModel = ({
     self: selfZones(player.view, catalog),
     opponent: opponentZones(player.view, catalog),
     actionsByCardInstanceId: actionMenusByCard(player.actions),
+    ...(player.view.battle === undefined
+      ? {}
+      : {
+          battleArrow: {
+            attackerInstanceId: String(player.view.battle.attacker.instanceId),
+            targetInstanceId: String(
+              player.view.battle.currentTarget.instanceId,
+            ),
+          },
+        }),
   };
 };

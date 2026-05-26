@@ -42,6 +42,10 @@ export interface DevVisibleAction {
         chooseLabel: string;
         selectedCardInstanceIds: CardInstance["instanceId"][];
       };
+  attack?: {
+    attackerInstanceId: CardInstance["instanceId"];
+    targetInstanceId: CardInstance["instanceId"];
+  };
   placement?: {
     instanceId: CardInstance["instanceId"];
   };
@@ -142,6 +146,7 @@ const visibleAction = (
 ): Omit<ExecutableDevAction, "index" | "apply"> => {
   const placement = actionPlacement(action);
   const attachment = actionAttachment(action);
+  const attack = actionAttack(action);
   const decisionPayment = actionDecisionPayment(state, action);
   return {
     type: action.type,
@@ -151,6 +156,7 @@ const visibleAction = (
       ? {}
       : { placement: { instanceId: placement } }),
     ...(attachment === undefined ? {} : { attachment }),
+    ...(attack === undefined ? {} : { attack }),
   };
 };
 
@@ -613,6 +619,18 @@ const actionAttachment = (
   };
 };
 
+const actionAttack = (
+  action: LegalAction,
+): DevVisibleAction["attack"] | undefined => {
+  if (action.type !== "declareAttack") {
+    return undefined;
+  }
+  return {
+    attackerInstanceId: action.attacker.instanceId,
+    targetInstanceId: action.target.instanceId,
+  };
+};
+
 const mulliganActions = (
   state: GameState,
   playerId: PlayerId,
@@ -740,11 +758,20 @@ const devPlayerSnapshot = (
 ): DevPlayerSnapshot => ({
   view: filterStateForPlayer(state, playerId),
   actions: executableActions(state, playerId).map(
-    ({ index, type, label, decisionPayment, placement, attachment }) => ({
+    ({
+      index,
+      type,
+      label,
+      decisionPayment,
+      attack,
+      placement,
+      attachment,
+    }) => ({
       index,
       type,
       label,
       ...(decisionPayment === undefined ? {} : { decisionPayment }),
+      ...(attack === undefined ? {} : { attack }),
       ...(placement === undefined ? {} : { placement }),
       ...(attachment === undefined ? {} : { attachment }),
     }),

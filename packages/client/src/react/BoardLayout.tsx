@@ -3,6 +3,7 @@ import type {
   ClientActionModel,
   ClientCardModel,
 } from "../view-model.js";
+import { BattleArrowOverlay } from "./BattleArrowOverlay.js";
 import { HandRow } from "./HandRow.js";
 import { Zone } from "./Zone.js";
 
@@ -76,6 +77,7 @@ export const BoardLayout = ({
       />
     </div>
     <div className="tabletop-board">
+      <BattleArrowOverlay battleArrow={board.battleArrow} />
       <div className="playmat-zone opponent-cost">
         <Zone
           label="Cost Area"
