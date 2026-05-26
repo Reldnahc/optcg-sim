@@ -6,6 +6,8 @@ import { describe, test } from "vitest";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const playmatStylesPath = join(sourceDirectory, "styles", "playmat.css");
+const appShellStylesPath = join(sourceDirectory, "styles", "app-shell.css");
+const cardStylesPath = join(sourceDirectory, "styles", "card.css");
 
 describe("playmat structure", () => {
   test("board layout uses one physical table grid instead of mirrored player mats", async () => {
@@ -44,16 +46,44 @@ describe("playmat structure", () => {
   });
 
   test("physical table grid uses fixed play rows with a center flexible spacer", async () => {
-    const styles = await readFile(playmatStylesPath, "utf8");
+    const [appShellStyles, playmatStyles] = await Promise.all([
+      readFile(appShellStylesPath, "utf8"),
+      readFile(playmatStylesPath, "utf8"),
+    ]);
 
-    assert.match(styles, /--playmat-row-height:\s*calc\(100vh\s*\/\s*6\.5\);/);
     assert.match(
-      styles,
+      appShellStyles,
+      /--playmat-row-height:\s*calc\(100vh\s*\/\s*6\.5\);/,
+    );
+    assert.match(
+      playmatStyles,
       /grid-template-rows:\s*var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+minmax\(\s*0,\s*1fr\s*\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\)\s+var\(--playmat-row-height\);/,
     );
     assert.equal(
-      styles.includes('". . . center-spacer center-spacer . . ."'),
+      playmatStyles.includes('". . . center-spacer center-spacer . . ."'),
       true,
+    );
+  });
+
+  test("card-sized zones reserve the same reactive card width used by cards", async () => {
+    const [appShellStyles, playmatStyles, cardStyles] = await Promise.all([
+      readFile(appShellStylesPath, "utf8"),
+      readFile(playmatStylesPath, "utf8"),
+      readFile(cardStylesPath, "utf8"),
+    ]);
+
+    assert.match(
+      appShellStyles,
+      /--card-height:\s*calc\(var\(--playmat-row-height\)\s*-\s*14px\);/,
+    );
+    assert.match(
+      appShellStyles,
+      /--card-width:\s*calc\(var\(--card-height\)\s*\/\s*1\.4\);/,
+    );
+    assert.match(cardStyles, /height:\s*var\(--card-height\);/);
+    assert.match(
+      playmatStyles,
+      /grid-template-columns:\s*var\(--card-width\)\s+var\(--card-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-width\)\s+var\(--card-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-width\)\s+var\(--card-width\);/,
     );
   });
 

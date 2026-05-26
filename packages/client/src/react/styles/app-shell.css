@@ -1,4 +1,8 @@
 .match-app {
+  --playmat-row-height: calc(100vh / 6.5);
+  --card-height: calc(var(--playmat-row-height) - 14px);
+  --card-width: calc(var(--card-height) / 1.4);
+
   display: grid;
   grid-template-columns: minmax(900px, 1fr) 260px;
   gap: 8px;
@@ -43,7 +47,7 @@
 .hand-cards {
   display: flex;
   width: 100%;
-  height: 96px;
+  height: var(--card-height);
   min-width: 0;
   gap: 5px;
   overflow: visible;

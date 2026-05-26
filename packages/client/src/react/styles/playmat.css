@@ -1,6 +1,4 @@
 .tabletop-board {
-  --playmat-row-height: calc(100vh / 6.5);
-
   position: relative;
   display: grid;
   grid-template-areas:
@@ -12,8 +10,9 @@
     ". player-life . player-leader player-stage . player-deck ."
     ". player-don-deck player-cost player-cost player-cost player-cost player-trash .";
   grid-template-columns:
-    86px 86px minmax(116px, 1fr) 84px 84px minmax(116px, 1fr)
-    86px 86px;
+    var(--card-width) var(--card-width) minmax(116px, 1fr)
+    var(--card-width) var(--card-width) minmax(116px, 1fr)
+    var(--card-width) var(--card-width);
   grid-template-rows:
     var(--playmat-row-height) var(--playmat-row-height)
     var(--playmat-row-height) minmax(0, 1fr)

@@ -2,7 +2,7 @@
   position: relative;
   aspect-ratio: 5 / 7;
   width: auto;
-  height: 100%;
+  height: var(--card-height);
   flex: 0 0 auto;
 }
 
