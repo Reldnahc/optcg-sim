@@ -130,6 +130,18 @@ const isSupportedContinuousBasePowerSetModifier = (
   effect.modifier.target.player === "self" &&
   isSupportedBasePowerSetFilter(effect.modifier.target.filter);
 
+const isSupportedContinuousCostModifier = (
+  effect: ContinuousEffectRecord,
+): boolean =>
+  isSupportedDuration(effect.duration) &&
+  effect.modifier.layer === "costAdd" &&
+  effect.modifier.operation.type === "addCost" &&
+  Number.isSafeInteger(effect.modifier.operation.value) &&
+  effect.modifier.target.type === "allMatching" &&
+  effect.modifier.target.zone === "hand" &&
+  (effect.modifier.target.player === "self" ||
+    effect.modifier.target.player === "opponent");
+
 const isSupportedContinuousKeywordModifier = (
   effect: ContinuousEffectRecord,
 ): boolean =>
@@ -216,6 +228,11 @@ const assertSupportedContinuousEffects = (state: GameState): void => {
     if (isSupportedProtectionModifier(effect)) continue;
     if (isFieldRemovalProtectionModifier(effect)) {
       throw new TypeError(malformedFieldRemovalProtectionMessage(effect));
+    }
+    if (isSupportedContinuousCostModifier(effect)) {
+      if (!durationIsActive(state, effect)) continue;
+      recordConditionPasses(state, effect);
+      continue;
     }
     if (!isSupportedContinuousKeywordModifier(effect)) {
       throw new TypeError(unsupportedContinuousEffectMessage(effect));
@@ -547,6 +564,12 @@ const isCardRefLive = (
   if (
     player.leader.instanceId === ref.instanceId &&
     player.leader.cardId === ref.cardId
+  ) {
+    return true;
+  }
+  if (
+    player.stage?.instanceId === ref.instanceId &&
+    player.stage.cardId === ref.cardId
   ) {
     return true;
   }

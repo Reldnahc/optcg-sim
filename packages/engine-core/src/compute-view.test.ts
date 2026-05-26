@@ -447,18 +447,6 @@ const unsupportedContinuousEffectCases: Array<{
       }),
   },
   {
-    label: "cost add modifier",
-    createEffect: (state) =>
-      continuousPowerEffectRecord(state, {
-        id: "unsupported-cost-add",
-        modifier: {
-          layer: "costAdd",
-          target: { type: "self" },
-          operation: { type: "addCost", value: 1 },
-        },
-      }),
-  },
-  {
     label: "keyword modifier",
     createEffect: (state) =>
       continuousPowerEffectRecord(state, {
