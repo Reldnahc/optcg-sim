@@ -19,6 +19,8 @@ export const MatchApp = (): React.JSX.Element => {
     selectedCardInstanceId === undefined
       ? []
       : client.cardActions(selectedCardInstanceId);
+  const globalActions =
+    decisionModal === undefined ? client.globalActions() : [];
 
   return (
     <main className="match-app">
@@ -51,7 +53,7 @@ export const MatchApp = (): React.JSX.Element => {
             .phase
         }
         errors={client.state.errors}
-        globalActions={client.globalActions()}
+        globalActions={globalActions}
         selectedActions={selectedActions}
         selectedCardInstanceId={selectedCardInstanceId}
         disabled={client.state.actionInFlight}
@@ -70,6 +72,7 @@ export const MatchApp = (): React.JSX.Element => {
         disabled={client.state.actionInFlight}
         onToggleCard={client.toggleDecisionCard}
         onQuantity={client.setDecisionQuantityValue}
+        onOption={client.setDecisionOptionValue}
         onConfirm={() => {
           void client.confirmDecision();
         }}

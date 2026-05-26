@@ -19,6 +19,7 @@ import {
   createDecisionModalModel,
   moveOrderedCardNear,
   setDecisionQuantity,
+  setDecisionOption,
   toggleDecisionSelectedCard,
 } from "./decision-modal.js";
 
@@ -142,24 +143,30 @@ describe("headless decision modal models", () => {
     );
   });
 
-  test("unknown decision families become generic descriptors without response construction", () => {
+  test("simple option decisions can use the modal response path", () => {
     const decision: PublicPendingDecision = {
       ...baseDecision,
       type: "mulligan",
     };
-    const draft = createDecisionDraft(decision);
+    const draft = setDecisionOption(
+      decision,
+      createDecisionDraft(decision),
+      "mulligan",
+    );
     const model = createDecisionModalModel(decision, draft);
+    const response = buildDecisionResponse(decision, draft);
 
     assert.deepEqual(model, {
-      kind: "generic",
+      kind: "chooseOption",
       decisionId: decision.id,
       prompt: decision.prompt,
-      canConfirm: false,
-      decisionType: "mulligan",
+      options: [
+        { value: "keep", label: "Keep hand" },
+        { value: "mulligan", label: "Mulligan" },
+      ],
+      selectedOption: "mulligan",
+      canConfirm: true,
     });
-    assert.throws(
-      () => buildDecisionResponse(decision, draft),
-      /Unsupported decision modal response/u,
-    );
+    assert.deepEqual(response, { type: "mulligan", keep: false });
   });
 });

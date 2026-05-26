@@ -27,6 +27,12 @@ test("dev UI keeps concede out of popup followups and requires confirmation", ()
   assert.equal(script.includes("sessionStorage"), true);
   assert.equal(script.includes("/claim"), true);
   assert.equal(script.includes("seatUrl"), true);
+  assert.equal(
+    script.includes(
+      '{ method: "POST", headers: authHeadersForPlayer(seatId) }',
+    ),
+    true,
+  );
 });
 
 test("dev UI keeps action lists height bounded independently from concede", () => {

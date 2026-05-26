@@ -124,6 +124,34 @@ describe("dev HTTP match transport", () => {
     );
   });
 
+  test("sends an existing seat token when reclaiming a seat", async () => {
+    const recorder = createRecordingFetch(() =>
+      responseJson({
+        matchId: "match-1",
+        seat: { playerId: "p1", sessionToken: "token-p1" },
+      }),
+    );
+    const transport = createDevHttpMatchTransport({
+      baseUrl: "http://localhost:3000/",
+      fetch: recorder.fetch,
+    });
+
+    await transport.claimSeat({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "token-p1",
+    });
+
+    const request = recorder.requests[0];
+    if (request === undefined) {
+      throw new Error("Expected a claim request to be recorded.");
+    }
+    assert.equal(
+      new Headers(request.init?.headers).get("x-optcg-session-token"),
+      "token-p1",
+    );
+  });
+
   test("sends the claimed seat token with action requests", async () => {
     const recorder = createRecordingFetch(() =>
       responseJson({

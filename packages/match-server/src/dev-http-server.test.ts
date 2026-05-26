@@ -266,6 +266,62 @@ describe("dev HTTP server", () => {
     }
   });
 
+  test("allows idempotent local anonymous claims with the matching seat token", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const match = requireCreatedMatch(await createDevMatch(server));
+      const token = await claimDevSeat(server, match.matchId, "p1");
+
+      const duplicate = await fetch(
+        `${server.url()}/api/matches/${match.matchId}/seats/p1/claim`,
+        {
+          method: "POST",
+          headers: { "x-optcg-session-token": token },
+        },
+      );
+
+      assert.equal(duplicate.status, 200);
+      const body = (await duplicate.json()) as {
+        seat?: { playerId?: string; sessionToken?: string };
+      };
+      assert.deepEqual(body.seat, {
+        playerId: "p1",
+        sessionToken: token,
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("reuses a supplied local anonymous token when claiming an unclaimed seat", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const match = requireCreatedMatch(await createDevMatch(server));
+      const token = `dev-local:${match.matchId}:p1:existing`;
+
+      const claim = await fetch(
+        `${server.url()}/api/matches/${match.matchId}/seats/p1/claim`,
+        {
+          method: "POST",
+          headers: { "x-optcg-session-token": token },
+        },
+      );
+
+      assert.equal(claim.status, 200);
+      const body = (await claim.json()) as {
+        seat?: { playerId?: string; sessionToken?: string };
+      };
+      assert.deepEqual(body.seat, {
+        playerId: "p1",
+        sessionToken: token,
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   test("returns not found for unknown local dev match ids", async () => {
     const server = await createFixtureDevHttpServer();
     await server.listen(0, "127.0.0.1");

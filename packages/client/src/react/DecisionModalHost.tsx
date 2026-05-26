@@ -7,6 +7,7 @@ export interface DecisionModalHostProps {
   disabled: boolean;
   onToggleCard: (instanceId: InstanceId) => void;
   onQuantity: (quantity: number) => void;
+  onOption: (option: string) => void;
   onConfirm: () => void;
 }
 
@@ -15,6 +16,7 @@ export const DecisionModalHost = ({
   disabled,
   onToggleCard,
   onQuantity,
+  onOption,
   onConfirm,
 }: DecisionModalHostProps): React.JSX.Element | null => {
   if (model === undefined) {
@@ -64,6 +66,24 @@ export const DecisionModalHost = ({
             onQuantity(Number(event.currentTarget.value));
           }}
         />
+      ) : null}
+      {model.kind === "chooseOption" ? (
+        <div className="decision-option-list">
+          {model.options.map((option) => (
+            <button
+              key={option.value}
+              className={`decision-choice ${
+                option.value === model.selectedOption ? "is-selected" : ""
+              }`}
+              type="button"
+              onClick={() => {
+                onOption(option.value);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       ) : null}
       {model.kind === "generic" ? (
         <p className="muted">This decision needs a dedicated control.</p>

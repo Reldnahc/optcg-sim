@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
-import type { MatchId, PlayerId } from "@optcg/types";
+import type { DecisionId, MatchId, PlayerId } from "@optcg/types";
 
 import {
   createClientSessionStore,
@@ -10,11 +10,25 @@ import {
 import type { MatchTransport } from "./transport.js";
 import { createMatchClientController } from "./controller.js";
 
-const createFakeTransport = (): MatchTransport & {
+const createFakeTransport = (options?: {
+  actionErrors?: string[];
+  decisionErrors?: string[];
+}): MatchTransport & {
+  claimedSeats: Array<{
+    matchId: MatchId;
+    playerId: PlayerId;
+    sessionToken?: string;
+  }>;
   submittedTokens: string[];
 } => {
+  const claimedSeats: Array<{
+    matchId: MatchId;
+    playerId: PlayerId;
+    sessionToken?: string;
+  }> = [];
   const submittedTokens: string[] = [];
   return {
+    claimedSeats,
     submittedTokens,
     createLobby() {
       return Promise.resolve({
@@ -55,11 +69,12 @@ const createFakeTransport = (): MatchTransport & {
       });
     },
     claimSeat(input) {
+      claimedSeats.push(input);
       return Promise.resolve({
         matchId: input.matchId,
         seat: {
           playerId: input.playerId,
-          sessionToken: `token-${String(input.playerId)}`,
+          sessionToken: input.sessionToken ?? `token-${String(input.playerId)}`,
         },
       });
     },
@@ -73,14 +88,14 @@ const createFakeTransport = (): MatchTransport & {
       submittedTokens.push(input.sessionToken);
       return Promise.resolve({
         snapshot: { stateSeq: 2, players: {} },
-        errors: [],
+        errors: options?.actionErrors ?? [],
       });
     },
     respondToDecision(input) {
       submittedTokens.push(input.sessionToken);
       return Promise.resolve({
         snapshot: { stateSeq: 2, players: {} },
-        errors: [],
+        errors: options?.decisionErrors ?? [],
       });
     },
   };
@@ -159,5 +174,61 @@ describe("match client controller", () => {
     await controller.submitVisibleAction({ actionIndex: 0 });
 
     assert.deepEqual(transport.submittedTokens, ["token-p1"]);
+  });
+
+  test("revalidates an existing seat credential when joining a match", async () => {
+    const transport = createFakeTransport();
+    const sessionStore = createClientSessionStore({
+      storage: createMemoryClientStorage(),
+    });
+    sessionStore.saveClaimedSeat({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "existing-token-p1",
+    });
+    const controller = createMatchClientController({
+      transport,
+      sessionStore,
+    });
+
+    await controller.joinLocalMatch({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+    });
+
+    assert.deepEqual(transport.claimedSeats, [
+      {
+        matchId: "match-1",
+        playerId: "p1",
+        sessionToken: "existing-token-p1",
+      },
+    ]);
+    assert.deepEqual(controller.currentCredential(), {
+      matchId: "match-1",
+      playerId: "p1",
+      sessionToken: "existing-token-p1",
+    });
+  });
+
+  test("rejects server-side decision errors instead of treating them as success", async () => {
+    const controller = createMatchClientController({
+      transport: createFakeTransport({
+        decisionErrors: ["Unsupported decision type."],
+      }),
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+
+    await controller.startNewLocalMatch("p1" as PlayerId);
+
+    await assert.rejects(
+      () =>
+        controller.respondToDecision({
+          decisionId: "decision-1" as DecisionId,
+          response: { type: "mulligan", keep: true },
+        }),
+      /Unsupported decision type\./u,
+    );
   });
 });

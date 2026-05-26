@@ -65,6 +65,12 @@ const requireCredential = (
   return credential;
 };
 
+const throwIfActionResultFailed = (errors: readonly string[]): void => {
+  if (errors.length > 0) {
+    throw new Error(errors.join("\n"));
+  }
+};
+
 export const createMatchClientController = ({
   transport,
   sessionStore,
@@ -97,14 +103,17 @@ export const createMatchClientController = ({
   ): Promise<MatchClientState> => {
     sessionStore.setCurrentSeat(seat);
     const existing = sessionStore.loadClaimedSeat();
-    if (existing === undefined) {
-      const claimed = await transport.claimSeat(seat);
-      sessionStore.saveClaimedSeat({
-        matchId: claimed.matchId,
-        playerId: claimed.seat.playerId,
-        sessionToken: claimed.seat.sessionToken,
-      });
-    }
+    const claimed = await transport.claimSeat({
+      ...seat,
+      ...(existing === undefined
+        ? {}
+        : { sessionToken: existing.sessionToken }),
+    });
+    sessionStore.saveClaimedSeat({
+      matchId: claimed.matchId,
+      playerId: claimed.seat.playerId,
+      sessionToken: claimed.seat.sessionToken,
+    });
     return loadState(seat);
   };
 
@@ -188,6 +197,7 @@ export const createMatchClientController = ({
           ? {}
           : { expectedStateSeq: currentState.snapshot.stateSeq }),
       });
+      throwIfActionResultFailed(result.errors);
       const cards =
         currentState?.cards ?? (await transport.loadCards(credential.matchId));
       currentState = {
@@ -210,6 +220,7 @@ export const createMatchClientController = ({
         decisionId: input.decisionId,
         response: input.response,
       });
+      throwIfActionResultFailed(result.errors);
       const cards =
         currentState?.cards ?? (await transport.loadCards(credential.matchId));
       currentState = {

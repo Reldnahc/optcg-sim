@@ -186,14 +186,13 @@ const combinedEngineResult = (
 const advanceToMainPhase = (state: GameState): EngineResult => {
   const events: EngineResult["events"] = [];
   let current = state;
-  const steps = [
-    advanceRefreshPhase,
-    advanceDrawPhase,
-    advanceDonPhase,
-    enterMainPhase,
-  ];
-  for (const step of steps) {
-    if (current.turn.phase === "main" || current.status.type !== "active") {
+  for (let stepCount = 0; stepCount < 4; stepCount += 1) {
+    if (
+      current.turn.phase === "main" ||
+      current.status.type !== "active" ||
+      current.pendingDecision !== undefined ||
+      current.battle !== undefined
+    ) {
       return combinedEngineResult(
         {
           state: current,
@@ -203,12 +202,54 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
         events,
       );
     }
-    const result = step(current);
-    events.push(...result.events);
-    if (result.errors !== undefined && result.errors.length > 0) {
-      return combinedEngineResult(result, events);
+
+    if (current.turn.phase === "refresh") {
+      const result = advanceRefreshPhase(current);
+      events.push(...result.events);
+      if (result.errors !== undefined && result.errors.length > 0) {
+        return combinedEngineResult(result, events);
+      }
+      current = result.state;
+      continue;
     }
-    current = result.state;
+
+    if (current.turn.phase === "draw") {
+      const result = advanceDrawPhase(current);
+      events.push(...result.events);
+      if (result.errors !== undefined && result.errors.length > 0) {
+        return combinedEngineResult(result, events);
+      }
+      current = result.state;
+      continue;
+    }
+
+    if (current.turn.phase === "don") {
+      const donResult = advanceDonPhase(current);
+      events.push(...donResult.events);
+      if (donResult.errors !== undefined && donResult.errors.length > 0) {
+        return combinedEngineResult(donResult, events);
+      }
+      current = donResult.state;
+      if (current.pendingDecision !== undefined) {
+        continue;
+      }
+      const mainResult = enterMainPhase(current);
+      events.push(...mainResult.events);
+      if (mainResult.errors !== undefined && mainResult.errors.length > 0) {
+        return combinedEngineResult(mainResult, events);
+      }
+      current = mainResult.state;
+      continue;
+    }
+
+    return combinedEngineResult(
+      {
+        state: current,
+        events,
+        stateHash: hashCanonicalStateValue(current),
+      },
+      events,
+    );
   }
   return combinedEngineResult(
     {
@@ -218,6 +259,14 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
     },
     events,
   );
+};
+
+const autoAdvanceMandatoryTurnFlow = (result: EngineResult): EngineResult => {
+  if (result.errors !== undefined && result.errors.length > 0) {
+    return result;
+  }
+  const advanced = advanceToMainPhase(result.state);
+  return combinedEngineResult(advanced, [...result.events, ...advanced.events]);
 };
 
 export const createPremadeDevMatchSetup = async (
@@ -686,7 +735,9 @@ export const applyLocalDevAction = (
     };
   }
 
-  const result = startMulliganAfterSetupIfReady(action.apply(match.state));
+  const result = autoAdvanceMandatoryTurnFlow(
+    startMulliganAfterSetupIfReady(action.apply(match.state)),
+  );
   const errors = result.errors?.map(describeEngineError) ?? [];
   if (errors.length === 0) {
     match.state = result.state;
@@ -723,12 +774,17 @@ export const applyLocalDevDecision = (
     };
   }
 
-  const result = startMulliganAfterSetupIfReady(
-    applyAction(match.state, {
-      type: "respondToDecision",
-      decisionId: input.decisionId,
-      response: input.response,
-    }),
+  const action = {
+    type: "respondToDecision" as const,
+    decisionId: input.decisionId,
+    response: input.response,
+  };
+  const responseResult =
+    decision.type === "mulligan"
+      ? respondToMulliganDecision(match.state, action)
+      : applyAction(match.state, action);
+  const result = autoAdvanceMandatoryTurnFlow(
+    startMulliganAfterSetupIfReady(responseResult),
   );
   const errors = result.errors?.map(describeEngineError) ?? [];
   if (errors.length === 0) {

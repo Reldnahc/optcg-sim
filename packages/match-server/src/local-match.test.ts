@@ -101,13 +101,15 @@ const keepBothPlayersAndAdvance = (
     ),
   });
   snapshot = getLocalDevSnapshot(match);
-  applyLocalDevAction(match, {
-    playerId: p1,
-    actionIndex: actionIndexByLabel(
-      mustPlayerSnapshot(snapshot, p1).actions,
-      "Advance to main phase",
-    ),
-  });
+  const advanceAction = mustPlayerSnapshot(snapshot, p1).actions.find(
+    (action) => action.label.includes("Advance to main phase"),
+  );
+  if (advanceAction !== undefined) {
+    applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: advanceAction.index,
+    });
+  }
   return getLocalDevSnapshot(match);
 };
 
@@ -250,6 +252,29 @@ describe("local dev match", () => {
     );
   });
 
+  test("applies explicit mulligan decision responses by decision id", () => {
+    const match = createTestMatch();
+    const before = completeSetupIfPresent(match);
+    const p1Decision = mustPlayerSnapshot(before, p1).view.pendingDecision;
+    if (p1Decision?.type !== "mulligan") {
+      throw new Error("Expected p1 mulligan decision.");
+    }
+
+    const result = applyLocalDevDecision(match, {
+      playerId: p1,
+      decisionId: p1Decision.id,
+      response: { type: "mulligan", keep: true },
+    });
+
+    assert.deepEqual(result.errors, []);
+    const after = getLocalDevSnapshot(match);
+    assert.equal(mustPlayerSnapshot(after, p1).view.pendingDecision, undefined);
+    assert.equal(
+      mustPlayerSnapshot(after, p2).view.pendingDecision?.type,
+      "mulligan",
+    );
+  });
+
   test("applies explicit filtered card decision responses by decision id", () => {
     const match = createTestMatch();
     const before = getLocalDevSnapshot(match);
@@ -286,6 +311,37 @@ describe("local dev match", () => {
       mustPlayerSnapshot(main, p1).actions.some((action) =>
         action.label.includes("End main phase"),
       ),
+    );
+  });
+
+  test("auto-resolves mandatory refresh draw and don gates after ending main", () => {
+    const match = createTestMatch();
+    const main = keepBothPlayersAndAdvance(match);
+    const endMain = actionIndexByLabel(
+      mustPlayerSnapshot(main, p1).actions,
+      "End main phase",
+    );
+
+    const result = applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: endMain,
+    });
+
+    assert.deepEqual(result.errors, []);
+    const after = getLocalDevSnapshot(match);
+    assert.equal(after.turn.turnPlayerId, p2);
+    assert.equal(after.turn.phase, "main");
+    assert.equal(after.activePlayerId, p2);
+    assert.ok(
+      mustPlayerSnapshot(after, p2).actions.some((action) =>
+        action.label.includes("End main phase"),
+      ),
+    );
+    assert.equal(
+      mustPlayerSnapshot(after, p2).actions.some((action) =>
+        action.label.includes("Advance to main phase"),
+      ),
+      false,
     );
   });
 

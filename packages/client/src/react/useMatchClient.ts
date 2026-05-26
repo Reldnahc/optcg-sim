@@ -17,6 +17,7 @@ import {
   createMatchClientController,
   moveOrderedCardNear,
   setDecisionQuantity,
+  setDecisionOption,
   toggleDecisionSelectedCard,
 } from "../index.js";
 import type {
@@ -54,6 +55,7 @@ export interface MatchClientUi {
     placement: "before" | "after",
   ) => void;
   setDecisionQuantityValue: (quantity: number) => void;
+  setDecisionOptionValue: (option: string) => void;
   confirmDecision: () => Promise<void>;
   createNewMatch: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -105,6 +107,11 @@ const createController = (): MatchClientController =>
 
 const visibleErrors = (errors: readonly string[]): string[] => [...errors];
 
+const modalSuppressedDecisionTypes: ReadonlySet<string> = new Set([]);
+
+const shouldRenderDecisionModal = (decisionType: string | undefined): boolean =>
+  decisionType !== undefined && !modalSuppressedDecisionTypes.has(decisionType);
+
 export const useMatchClient = (): MatchClientUi => {
   const controller = useMemo(() => createController(), []);
   const [clientState, setClientState] = useState<
@@ -139,7 +146,9 @@ export const useMatchClient = (): MatchClientUi => {
         ? decisionDraft
         : createDecisionDraft(pendingDecision);
   const decisionModal =
-    pendingDecision === undefined || activeDecisionDraft === undefined
+    pendingDecision === undefined ||
+    activeDecisionDraft === undefined ||
+    !shouldRenderDecisionModal(pendingDecision.type)
       ? undefined
       : createDecisionModalModel(pendingDecision, activeDecisionDraft);
 
@@ -311,11 +320,36 @@ export const useMatchClient = (): MatchClientUi => {
     [pendingDecision],
   );
 
-  const setDecisionQuantityValue = useCallback((quantity: number): void => {
-    setDecisionDraft((draft) =>
-      draft === undefined ? undefined : setDecisionQuantity(draft, quantity),
-    );
-  }, []);
+  const setDecisionQuantityValue = useCallback(
+    (quantity: number): void => {
+      if (pendingDecision === undefined) {
+        return;
+      }
+      setDecisionDraft((draft) =>
+        setDecisionQuantity(
+          draft ?? createDecisionDraft(pendingDecision),
+          quantity,
+        ),
+      );
+    },
+    [pendingDecision],
+  );
+
+  const setDecisionOptionValue = useCallback(
+    (option: string): void => {
+      if (pendingDecision === undefined) {
+        return;
+      }
+      setDecisionDraft((draft) =>
+        setDecisionOption(
+          pendingDecision,
+          draft ?? createDecisionDraft(pendingDecision),
+          option,
+        ),
+      );
+    },
+    [pendingDecision],
+  );
 
   return {
     state: {
@@ -339,6 +373,7 @@ export const useMatchClient = (): MatchClientUi => {
     toggleDecisionCard,
     moveDecisionCard,
     setDecisionQuantityValue,
+    setDecisionOptionValue,
     confirmDecision,
     createNewMatch,
     refresh,

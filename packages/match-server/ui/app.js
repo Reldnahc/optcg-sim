@@ -84,14 +84,11 @@ const authHeadersForPlayer = (playerId) => {
 };
 
 const claimSeat = async (matchId, seatId) => {
-  if (state.seatsByPlayer[seatId]?.sessionToken !== undefined) {
-    return;
-  }
   const claimed = await requestJson(
     `/api/matches/${encodeURIComponent(matchId)}/seats/${encodeURIComponent(
       seatId,
     )}/claim`,
-    { method: "POST" },
+    { method: "POST", headers: authHeadersForPlayer(seatId) },
   );
   storeSeats(matchId, {
     ...state.seatsByPlayer,

@@ -93,6 +93,7 @@ interface LocalDevMatchRegistry {
   claimSeat: (
     matchId: MatchId,
     playerId: PlayerId,
+    auth: AuthContext | undefined,
   ) => ClaimedDevSeatResponse | "matchNotFound" | "seatNotFound" | "claimed";
   getMatch: (matchId: MatchId) => LocalDevMatch | undefined;
   authorizeSeat: (
@@ -408,7 +409,7 @@ const createLocalDevMatchRegistry = async (
       sessions.set(matchId, session);
       return buildCreatedResponse(normalizedSetup, session);
     },
-    claimSeat(matchId, playerId) {
+    claimSeat(matchId, playerId, auth) {
       const session = sessions.get(matchId);
       if (session === undefined) {
         return "matchNotFound";
@@ -418,11 +419,25 @@ const createLocalDevMatchRegistry = async (
         return "seatNotFound";
       }
       if (seat.subject !== undefined) {
+        if (
+          auth !== undefined &&
+          subjectsMatch(seat.subject, auth.subject) &&
+          seat.subject.type === "anonymousDev"
+        ) {
+          return {
+            matchId,
+            seat: {
+              playerId,
+              sessionToken: seat.subject.devSessionId,
+            },
+          };
+        }
         return "claimed";
       }
-      const sessionToken = `dev-local:${String(matchId)}:${String(
-        playerId,
-      )}:${randomUUID()}`;
+      const sessionToken =
+        auth?.subject.type === "anonymousDev"
+          ? auth.subject.devSessionId
+          : `dev-local:${String(matchId)}:${String(playerId)}:${randomUUID()}`;
       seat.subject = { type: "anonymousDev", devSessionId: sessionToken };
       return { matchId, seat: { playerId, sessionToken } };
     },
@@ -520,7 +535,11 @@ const handleApiRequest = async (
     const playerId = decodeURIComponent(
       seatClaimRoute.groups?.["playerId"] ?? "",
     ) as PlayerId;
-    const result = registry.claimSeat(matchId, playerId);
+    const result = registry.claimSeat(
+      matchId,
+      playerId,
+      authProvider.authenticate(request),
+    );
     if (result === "matchNotFound") {
       matchNotFound(response, matchId);
       return;

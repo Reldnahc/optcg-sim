@@ -100,6 +100,7 @@ export interface MatchTransport {
   claimSeat: (input: {
     matchId: MatchId;
     playerId: PlayerId;
+    sessionToken?: string;
   }) => Promise<ClaimedSeat>;
   loadState: (matchId: MatchId) => Promise<MatchSnapshot>;
   loadCards: (matchId: MatchId) => Promise<MatchCardCatalog>;

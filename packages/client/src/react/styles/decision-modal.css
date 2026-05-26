@@ -21,6 +21,11 @@
   gap: 8px;
 }
 
+.decision-option-list {
+  display: flex;
+  gap: 8px;
+}
+
 .decision-choice,
 .decision-order-row {
   border: 1px solid #f4eee7;

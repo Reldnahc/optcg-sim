@@ -25,6 +25,11 @@ export type DecisionDraft =
       quantity: number;
     }
   | {
+      kind: "chooseOption";
+      decisionId: DecisionId;
+      option: string;
+    }
+  | {
       kind: "generic";
       decisionId: DecisionId;
     };
@@ -58,6 +63,14 @@ export type DecisionModalModel =
       max: number;
       quantity: number;
       canConfirm: boolean;
+    }
+  | {
+      kind: "chooseOption";
+      decisionId: DecisionId;
+      prompt: string;
+      options: Array<{ value: string; label: string }>;
+      selectedOption: string;
+      canConfirm: true;
     }
   | {
       kind: "generic";
@@ -109,6 +122,25 @@ const isQuantityConfirmable = (
   draft: Extract<DecisionDraft, { kind: "chooseQuantity" }>,
 ): boolean => draft.quantity >= decision.min && draft.quantity <= decision.max;
 
+const optionLabel = (decisionType: string, option: string): string => {
+  if (decisionType === "mulligan" && option === "keep") {
+    return "Keep hand";
+  }
+  if (decisionType === "mulligan" && option === "mulligan") {
+    return "Mulligan";
+  }
+  return option;
+};
+
+const simpleDecisionOptions = (
+  decision: PublicPendingDecision,
+): string[] | undefined => {
+  if (decision.type === "mulligan") {
+    return ["keep", "mulligan"];
+  }
+  return undefined;
+};
+
 export const createDecisionDraft = (
   decision: PublicPendingDecision,
 ): DecisionDraft => {
@@ -133,7 +165,30 @@ export const createDecisionDraft = (
       quantity: decision.min,
     };
   }
+  const options = simpleDecisionOptions(decision);
+  if (options !== undefined) {
+    return {
+      kind: "chooseOption",
+      decisionId: decision.id,
+      option: options[0] ?? "",
+    };
+  }
   return { kind: "generic", decisionId: decision.id };
+};
+
+export const setDecisionOption = (
+  decision: PublicPendingDecision,
+  draft: DecisionDraft,
+  option: string,
+): DecisionDraft => {
+  if (draft.kind !== "chooseOption") {
+    throw new Error("Decision draft is not a chooseOption draft.");
+  }
+  const options = simpleDecisionOptions(decision);
+  if (options === undefined || !options.includes(option)) {
+    return draft;
+  }
+  return { ...draft, option };
 };
 
 export const toggleDecisionSelectedCard = (
@@ -270,6 +325,23 @@ export const createDecisionModalModel = (
       canConfirm: isQuantityConfirmable(decision, draft),
     };
   }
+  const simpleOptions = simpleDecisionOptions(decision);
+  if (simpleOptions !== undefined) {
+    if (draft.decisionId !== decision.id || draft.kind !== "chooseOption") {
+      throw new Error("Decision draft is not a chooseOption draft.");
+    }
+    return {
+      kind: "chooseOption",
+      decisionId: decision.id,
+      prompt: decision.prompt,
+      options: simpleOptions.map((option) => ({
+        value: option,
+        label: optionLabel(decision.type, option),
+      })),
+      selectedOption: draft.option,
+      canConfirm: true,
+    };
+  }
   return {
     kind: "generic",
     decisionId: decision.id,
@@ -319,6 +391,12 @@ export const buildDecisionResponse = (
       throw new Error("Decision draft is not a chooseQuantity draft.");
     }
     return { type: "chooseQuantity", quantity: draft.quantity };
+  }
+  if (decision.type === "mulligan") {
+    if (draft.kind !== "chooseOption") {
+      throw new Error("Decision draft is not a chooseOption draft.");
+    }
+    return { type: "mulligan", keep: draft.option === "keep" };
   }
   throw new Error("Unsupported decision modal response.");
 };

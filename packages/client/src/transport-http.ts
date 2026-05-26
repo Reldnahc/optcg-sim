@@ -86,7 +86,7 @@ export const createDevHttpMatchTransport = ({
         input.matchId,
         `/seats/${encodeURIComponent(String(input.playerId))}/claim`,
       );
-      return postJson<ClaimedSeat>(url, undefined);
+      return postJson<ClaimedSeat>(url, undefined, input.sessionToken);
     },
     async loadState(matchId) {
       const response = await fetchImpl(matchPath(matchId, "/state"));
