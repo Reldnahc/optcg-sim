@@ -187,6 +187,9 @@ const actionMenusByCard = (
 ): Record<string, ClientActionModel[]> => {
   const byCard: Record<string, ClientActionModel[]> = {};
   for (const action of actions) {
+    if (action.attachment !== undefined) {
+      continue;
+    }
     if (action.placement !== undefined) {
       addAction(byCard, action.placement.instanceId, action);
     }

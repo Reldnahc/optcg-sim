@@ -131,6 +131,7 @@ describe("board view model", () => {
               index: 2,
               type: "attachDon",
               label: "Attach DON!!",
+              placement: { instanceId: "leader-1" as InstanceId },
               attachment: {
                 donInstanceId: "don-2" as InstanceId,
                 targetInstanceId: "leader-1" as InstanceId,
