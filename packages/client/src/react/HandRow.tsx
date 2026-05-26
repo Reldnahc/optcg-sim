@@ -11,29 +11,46 @@ export type HandOverflowDirection = "left" | "right";
 
 export interface HandOverlapInput {
   availableWidth: number;
+  outsideOverflowWidth?: number;
   cardWidth: number;
   cardCount: number;
 }
 
-export const calculateHandOverlap = ({
+export interface HandLayout {
+  overlap: number;
+  laneExtension: number;
+  edgePacked: boolean;
+}
+
+export const calculateHandLayout = ({
   availableWidth,
+  outsideOverflowWidth = 0,
   cardWidth,
   cardCount,
-}: HandOverlapInput): number => {
+}: HandOverlapInput): HandLayout => {
   if (cardCount <= 1 || availableWidth <= 0 || cardWidth <= 0) {
-    return 0;
+    return { overlap: 0, laneExtension: 0, edgePacked: false };
   }
 
   const naturalWidth =
     cardCount * cardWidth + (cardCount - 1) * HAND_CARD_GAP_PX;
   if (naturalWidth <= availableWidth) {
-    return 0;
+    return { overlap: 0, laneExtension: 0, edgePacked: false };
   }
 
-  const requiredOverlap = (naturalWidth - availableWidth) / (cardCount - 1);
+  const laneExtension = Math.min(
+    Math.max(0, outsideOverflowWidth),
+    naturalWidth - availableWidth,
+  );
+  const usableWidth = availableWidth + laneExtension;
+  const requiredOverlap = (naturalWidth - usableWidth) / (cardCount - 1);
   const maximumOverlap = Math.max(0, cardWidth - MIN_VISIBLE_CARD_WIDTH_PX);
-  return Math.min(requiredOverlap, maximumOverlap);
+  const overlap = Math.min(Math.max(0, requiredOverlap), maximumOverlap);
+  return { overlap, laneExtension, edgePacked: true };
 };
+
+export const calculateHandOverlap = (input: HandOverlapInput): number =>
+  calculateHandLayout(input).overlap;
 
 export interface HandRowProps {
   label: string;
@@ -58,7 +75,11 @@ export const HandRow = ({
 }: HandRowProps): React.JSX.Element => {
   const rowRef = useRef<HTMLElement | null>(null);
   const cardsRef = useRef<HTMLDivElement | null>(null);
-  const [overlap, setOverlap] = useState(0);
+  const [layout, setLayout] = useState<HandLayout>({
+    overlap: 0,
+    laneExtension: 0,
+    edgePacked: false,
+  });
 
   useEffect(() => {
     const rowElement = rowRef.current;
@@ -70,9 +91,12 @@ export const HandRow = ({
     const updateOverlap = (): void => {
       const firstCard =
         cardsElement.querySelector<HTMLElement>(".card-tile-shell");
-      setOverlap(
-        calculateHandOverlap({
+      const rowRect = rowElement.getBoundingClientRect();
+      setLayout(
+        calculateHandLayout({
           availableWidth: rowElement.clientWidth,
+          outsideOverflowWidth:
+            overflowDirection === "left" ? rowRect.left : 0,
           cardWidth: firstCard?.getBoundingClientRect().width ?? 0,
           cardCount: cards.length,
         }),
@@ -91,21 +115,27 @@ export const HandRow = ({
     const resizeObserver = new ResizeObserver(updateOverlap);
     resizeObserver.observe(rowElement);
     resizeObserver.observe(cardsElement);
+    window.addEventListener("resize", updateOverlap);
     return () => {
       resizeObserver.disconnect();
+      window.removeEventListener("resize", updateOverlap);
     };
-  }, [cards.length]);
+  }, [cards.length, overflowDirection]);
 
   const handCardsClassName = [
     "hand-cards",
     `hand-cards-overlap-${overflowDirection}`,
-    overlap > 0 ? "is-overlapping" : "",
+    layout.edgePacked ? "is-edge-packed" : "",
+    layout.laneExtension > 0 ? "is-using-outside-lane" : "",
+    layout.overlap > 0 ? "is-overlapping" : "",
   ]
     .filter(Boolean)
     .join(" ");
   const handStyle = {
-    "--hand-overlap": `${overlap.toFixed(2)}px`,
-  } as CSSProperties & Record<"--hand-overlap", string>;
+    "--hand-lane-extension": `${layout.laneExtension.toFixed(2)}px`,
+    "--hand-overlap": `${layout.overlap.toFixed(2)}px`,
+  } as CSSProperties &
+    Record<"--hand-lane-extension" | "--hand-overlap", string>;
 
   return (
     <section ref={rowRef} className="hand-row" aria-label={label}>

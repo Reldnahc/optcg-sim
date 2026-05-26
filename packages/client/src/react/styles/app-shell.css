@@ -63,18 +63,24 @@
   justify-content: center;
   gap: 5px;
   overflow: visible;
+  --hand-lane-extension: 0px;
   --hand-overlap: 0px;
+}
+
+.hand-cards.is-using-outside-lane.hand-cards-overlap-left {
+  width: calc(100% + var(--hand-lane-extension));
+  margin-left: calc(-1 * var(--hand-lane-extension));
 }
 
 .hand-cards.is-overlapping {
   gap: 0;
 }
 
-.hand-cards.is-overlapping.hand-cards-overlap-left {
+.hand-cards.is-edge-packed.hand-cards-overlap-left {
   justify-content: flex-end;
 }
 
-.hand-cards.is-overlapping.hand-cards-overlap-right {
+.hand-cards.is-edge-packed.hand-cards-overlap-right {
   justify-content: flex-start;
 }
 

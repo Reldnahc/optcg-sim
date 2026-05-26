@@ -8,7 +8,11 @@ import { describe, test } from "vitest";
 
 import type { CardId, InstanceId } from "@optcg/types";
 
-import { HandRow, calculateHandOverlap } from "./HandRow.js";
+import {
+  HandRow,
+  calculateHandLayout,
+  calculateHandOverlap,
+} from "./HandRow.js";
 import type { ClientCardModel } from "../view-model.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
@@ -42,6 +46,35 @@ describe("hand layout", () => {
     );
   });
 
+  test("player hand consumes outside-left lane before overlapping cards", () => {
+    assert.deepEqual(
+      calculateHandLayout({
+        availableWidth: 200,
+        outsideOverflowWidth: 80,
+        cardWidth: 60,
+        cardCount: 5,
+      }),
+      {
+        overlap: 10,
+        laneExtension: 80,
+        edgePacked: true,
+      },
+    );
+    assert.deepEqual(
+      calculateHandLayout({
+        availableWidth: 200,
+        outsideOverflowWidth: 200,
+        cardWidth: 60,
+        cardCount: 5,
+      }),
+      {
+        overlap: 0,
+        laneExtension: 120,
+        edgePacked: true,
+      },
+    );
+  });
+
   test("board hands declare opposite overflow directions", () => {
     const opponentMarkup = renderToStaticMarkup(
       createElement(HandRow, {
@@ -68,14 +101,18 @@ describe("hand layout", () => {
     assert.match(styles, /\.hand-row\s*\{[^}]*justify-content:\s*center;/u);
     assert.match(styles, /\.hand-cards\s*\{[^}]*flex-wrap:\s*nowrap;/u);
     assert.match(styles, /\.hand-cards\s*\{[^}]*width:\s*100%;/u);
+    assert.match(
+      styles,
+      /\.hand-cards\.is-using-outside-lane\.hand-cards-overlap-left\s*\{[^}]*width:\s*calc\(100%\s*\+\s*var\(--hand-lane-extension\)\);[^}]*margin-left:\s*calc\(-1\s*\*\s*var\(--hand-lane-extension\)\);/u,
+    );
     assert.match(styles, /\.hand-cards\.is-overlapping\s*\{[^}]*gap:\s*0;/u);
     assert.match(
       styles,
-      /\.hand-cards\.is-overlapping\.hand-cards-overlap-left\s*\{[^}]*justify-content:\s*flex-end;/u,
+      /\.hand-cards\.is-edge-packed\.hand-cards-overlap-left\s*\{[^}]*justify-content:\s*flex-end;/u,
     );
     assert.match(
       styles,
-      /\.hand-cards\.is-overlapping\.hand-cards-overlap-right\s*\{[^}]*justify-content:\s*flex-start;/u,
+      /\.hand-cards\.is-edge-packed\.hand-cards-overlap-right\s*\{[^}]*justify-content:\s*flex-start;/u,
     );
     assert.match(
       styles,
