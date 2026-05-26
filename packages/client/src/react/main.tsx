@@ -1,6 +1,12 @@
 import { createRoot } from "react-dom/client";
 import { MatchApp } from "./MatchApp.js";
 import "./styles.css";
+import "./styles/app-shell.css";
+import "./styles/playmat.css";
+import "./styles/zone.css";
+import "./styles/card.css";
+import "./styles/controls.css";
+import "./styles/decision-modal.css";
 
 const root = document.getElementById("root");
 if (root === null) {

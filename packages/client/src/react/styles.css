@@ -1,10 +1,3 @@
-@import "./styles/app-shell.css";
-@import "./styles/playmat.css";
-@import "./styles/zone.css";
-@import "./styles/card.css";
-@import "./styles/controls.css";
-@import "./styles/decision-modal.css";
-
 :root {
   color: #f8f6f3;
   background: #282322;
