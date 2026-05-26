@@ -14,7 +14,6 @@ export interface ControlRailProps {
   disabled: boolean;
   onAction: (actionIndex: number) => void;
   onNewMatch: () => void;
-  onRefresh: () => void;
 }
 
 export const ControlRail = ({
@@ -30,7 +29,6 @@ export const ControlRail = ({
   disabled,
   onAction,
   onNewMatch,
-  onRefresh,
 }: ControlRailProps): React.JSX.Element => (
   <aside className="control-rail">
     <section className="summary-panel opponent-summary">
@@ -40,9 +38,6 @@ export const ControlRail = ({
       <div className="control-actions">
         <button className="action-button" type="button" onClick={onNewMatch}>
           New match
-        </button>
-        <button className="action-button" type="button" onClick={onRefresh}>
-          Refresh
         </button>
       </div>
       <dl className="match-facts">

@@ -59,7 +59,6 @@ export interface MatchClientUi {
   setDecisionOptionValue: (option: string) => void;
   confirmDecision: () => Promise<void>;
   createNewMatch: () => Promise<void>;
-  refresh: () => Promise<void>;
 }
 
 const seatIdFromUrl = (): PlayerId => {
@@ -219,14 +218,6 @@ export const useMatchClient = (): MatchClientUi => {
       controller.disconnectLive();
     };
   }, [liveConnectionKey, controller]);
-
-  const refresh = useCallback(async (): Promise<void> => {
-    const refreshed = await controller.refresh();
-    if (isMatchClientState(refreshed)) {
-      setMatchLocation(refreshed.matchId, refreshed.seat.playerId);
-    }
-    setClientState(refreshed);
-  }, [controller]);
 
   const createNewMatch = useCallback(async (): Promise<void> => {
     const created = await controller.startNewLocalLobby("p1" as PlayerId);
@@ -403,6 +394,5 @@ export const useMatchClient = (): MatchClientUi => {
     setDecisionOptionValue,
     confirmDecision,
     createNewMatch,
-    refresh,
   };
 };

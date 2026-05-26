@@ -63,9 +63,6 @@ export const MatchApp = (): React.JSX.Element => {
         onNewMatch={() => {
           void client.createNewMatch();
         }}
-        onRefresh={() => {
-          void client.refresh();
-        }}
       />
       <DecisionModalHost
         model={decisionModal}
