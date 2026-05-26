@@ -33,6 +33,10 @@ const unsupportedCombatKeywords = new Set<Keyword>([
   "doubleAttack",
   "unblockable",
 ]);
+interface ComputeViewOptions {
+  unsupportedCombatKeywordPolicy?: "throw" | "ignore";
+}
+
 const supportedContinuousKeywordGrants = new Set<Keyword>([
   "blocker",
   "banish",
@@ -427,6 +431,7 @@ const computedKeywordsForCard = (
 const resolveCombatMetadata = (
   state: GameState,
   card: CardInstance,
+  options: ComputeViewOptions = {},
 ): ResolvedCard & { power: number } => {
   const resolved = state.cardManifest.cards[card.cardId];
   if (resolved === undefined) {
@@ -453,7 +458,10 @@ const resolveCombatMetadata = (
     );
   }
   for (const keyword of resolved.printedKeywords) {
-    if (unsupportedCombatKeywords.has(keyword)) {
+    if (
+      options.unsupportedCombatKeywordPolicy !== "ignore" &&
+      unsupportedCombatKeywords.has(keyword)
+    ) {
       throw new TypeError(
         `Unsupported combat keyword ${keyword} for ${String(card.cardId)}.`,
       );
@@ -491,8 +499,9 @@ const canAttackNow = (
 const legalTargetsForAttacker = (
   state: GameState,
   attacker: CardInstance,
+  options: ComputeViewOptions = {},
 ): InstanceId[] => {
-  const metadata = resolveCombatMetadata(state, attacker);
+  const metadata = resolveCombatMetadata(state, attacker, options);
   const attackerKeywords = computedKeywordsForCard(state, attacker, metadata);
   if (!canAttackNow(state, attacker, attackerKeywords)) return [];
   const opponentId = (Object.keys(state.players) as PlayerId[]).find(
@@ -566,8 +575,9 @@ const canBlockNow = (
 const computeCardView = (
   state: GameState,
   card: CardInstance,
+  options: ComputeViewOptions = {},
 ): ComputedCardView => {
-  const metadata = resolveCombatMetadata(state, card);
+  const metadata = resolveCombatMetadata(state, card, options);
   const printedBasePower = metadata.power;
   const basePower = continuousBasePowerForCard(state, card) ?? printedBasePower;
   const donBonus =
@@ -605,7 +615,10 @@ const computeCardView = (
   };
 };
 
-export const computeView = (state: GameState): ComputedGameView => {
+export const computeView = (
+  state: GameState,
+  options: ComputeViewOptions = {},
+): ComputedGameView => {
   assertSupportedContinuousEffects(state);
 
   const cards: ComputedGameView["cards"] = {};
@@ -617,8 +630,12 @@ export const computeView = (state: GameState): ComputedGameView => {
   }
 
   for (const card of allCombatCards) {
-    cards[card.instanceId] = computeCardView(state, card);
-    legalAttackTargets[card.instanceId] = legalTargetsForAttacker(state, card);
+    cards[card.instanceId] = computeCardView(state, card, options);
+    legalAttackTargets[card.instanceId] = legalTargetsForAttacker(
+      state,
+      card,
+      options,
+    );
   }
 
   return {

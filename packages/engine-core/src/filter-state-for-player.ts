@@ -60,8 +60,6 @@ const boardCardsForState = (state: GameState): CardInstance[] =>
     ...player.characters,
   ]);
 
-const viewPowerUnsupportedKeywords = new Set(["doubleAttack", "unblockable"]);
-
 const hasComputableBoardPowerMetadata = (state: GameState): boolean => {
   return boardCardsForState(state).every((card) => {
     const resolved = state.cardManifest.cards[card.cardId];
@@ -76,13 +74,6 @@ const hasComputableBoardPowerMetadata = (state: GameState): boolean => {
     ) {
       return false;
     }
-    if (
-      resolved.printedKeywords.some((keyword) =>
-        viewPowerUnsupportedKeywords.has(keyword),
-      )
-    ) {
-      return false;
-    }
     return true;
   });
 };
@@ -93,7 +84,9 @@ const computedPowerByInstance = (
   if (!hasComputableBoardPowerMetadata(state)) {
     return undefined;
   }
-  const view: ComputedGameView = computeView(state);
+  const view: ComputedGameView = computeView(state, {
+    unsupportedCombatKeywordPolicy: "ignore",
+  });
   return new Map<InstanceId, number>(
     Object.values(view.cards).flatMap((card) =>
       card.currentPower === undefined

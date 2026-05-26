@@ -207,6 +207,9 @@ describe("board view model", () => {
     assert.equal(model.self.leader.currentPower, 7000);
     assert.equal(model.self.leader.powerDelta, 2000);
     const character = model.self.characters[0];
+    if (character === undefined) {
+      throw new Error("Expected the character in the view model.");
+    }
     assert.equal(character.printedPower, 5000);
     assert.equal(character.currentPower, 4000);
     assert.equal(character.powerDelta, -1000);
