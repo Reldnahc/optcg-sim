@@ -674,6 +674,80 @@ test("supported Counter Event remains legal with multiple supported counter powe
   assert.equal(battleCounterPower(used.state.battle), 3000);
 });
 
+test("conditional Counter Event can apply choose-from-leader-or-character power to current battle target", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  installSupportedCounterEvent(state, counterEvent, 4000);
+  const definitionId = `${String(counterEvent.cardId)}:counter`;
+  const definition = must(
+    state.cardManifest.effectDefinitions?.[definitionId],
+    "counter definition",
+  );
+  const counterEffect = must(definition.effects[0], "counter effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: {
+      ...definition,
+      effects: [
+        {
+          ...counterEffect,
+          condition: {
+            type: "hasCardInZone",
+            player: "self",
+            zone: "leaderArea",
+            filter: { categories: ["leader"], names: ["leader-blue"] },
+          },
+          effect: {
+            type: "modifyPower",
+            target: {
+              type: "chooseFromZones",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+                filter: { categories: ["leader", "character"] },
+              },
+            },
+            value: 4000,
+            duration: { type: "thisBattle" },
+          },
+        },
+      ],
+    },
+  };
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterEvent.instanceId,
+    ),
+    true,
+  );
+  const used = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterEvent.instanceId,
+    target: must(opened.state.battle, "battle").currentTarget,
+  });
+
+  assert.equal(used.errors, undefined);
+  assert.equal(battleCounterPower(used.state.battle), 4000);
+});
+
 test("supported nonzero-cost Counter Event requires payCost then resolves with rested DON", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");

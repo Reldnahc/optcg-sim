@@ -268,7 +268,7 @@ const validateKoReplacementTarget = (
   ) {
     return failure(effectId, "private-target");
   }
-  if (located.zone !== "characterArea") {
+  if (located.zone !== "characterArea" && located.zone !== "stageArea") {
     return failure(
       effectId,
       located.zone === "leaderArea" ? "non-character-target" : "stale-target",
@@ -285,8 +285,12 @@ const validateKoReplacementTarget = (
 
   const resolved = state.cardManifest.cards[located.card.cardId];
   if (resolved === undefined) return failure(effectId, "missing-card");
-  if (resolved.category !== "character")
+  if (
+    (located.zone === "characterArea" && resolved.category !== "character") ||
+    (located.zone === "stageArea" && resolved.category !== "stage")
+  ) {
     return failure(effectId, "non-character-target");
+  }
   return { ok: true, located, ref, resolved };
 };
 

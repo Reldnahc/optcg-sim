@@ -335,17 +335,21 @@ export const executeUnreplacedSelectedTargetKoProcess = (
       : card,
   );
 
+  const nextPlayer = {
+    ...player,
+    characters: nextCharacters,
+    trash: nextTrash,
+    costArea: nextCostArea,
+  };
+  if (located.zone === "stageArea") {
+    delete nextPlayer.stage;
+  }
+
   const nextState = {
     ...state,
     players: {
       ...state.players,
-      [located.playerId]: {
-        ...player,
-        characters: nextCharacters,
-        ...(located.zone === "stageArea" ? { stage: undefined } : {}),
-        trash: nextTrash,
-        costArea: nextCostArea,
-      },
+      [located.playerId]: nextPlayer,
     },
   };
 

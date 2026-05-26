@@ -1,7 +1,7 @@
 import type {
   Action,
+  CardRef,
   CardInstance,
-  EffectDefinition,
   EngineEvent,
   EngineResult,
   GameState,
@@ -28,6 +28,7 @@ import {
   isSupportedBattleResolutionEnvelope,
   sameCardRef,
 } from "./battle-support.js";
+import { getSupportedCounterEventPower } from "./battle-counter-event-support.js";
 import { computeView } from "./compute-view.js";
 import { detectPendingRuntimeWork } from "./effect-runtime.js";
 import { hasOnlyFieldRemovalProtections } from "./field-removal-protection.js";
@@ -194,7 +195,11 @@ const getLegalCharacterCounterActions = (
   }
   return defender.hand.flatMap((card) => {
     const metadata = state.cardManifest.cards[card.cardId];
-    const supportedEvent = getSupportedCounterEventPower(state, card);
+    const supportedEvent = getSupportedCounterEventPower(
+      state,
+      card,
+      battle.currentTarget,
+    );
     if (
       !(
         (metadata?.category === "character" &&
@@ -327,6 +332,7 @@ export const applyUseCounter = (
     const supportedCounterEvent = getSupportedCounterEventPower(
       state,
       handCard,
+      battle.currentTarget,
     );
     if (supportedCounterEvent === null) {
       return illegalAction(
@@ -567,6 +573,7 @@ export const applyCounterStepDecisionResponse = (
     const supportedCounterEvent = getSupportedCounterEventPower(
       state,
       handCard,
+      battle.currentTarget,
     );
     if (
       supportedCounterEvent === null ||
@@ -717,78 +724,18 @@ const hasCounterTriggerDefinition = (
       definition.effects.some((effect) => effect.trigger.type === "counter"),
   );
 
-const supportedCounterEventPowerValue = (
-  effect: EffectDefinition["effects"][number],
-): number | null => {
-  if (
-    effect.category !== "auto" ||
-    effect.optional === true ||
-    effect.oncePerTurn === true ||
-    effect.condition !== undefined ||
-    effect.conditionTiming !== undefined ||
-    effect.cost !== undefined ||
-    effect.failurePolicy !== undefined ||
-    effect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
-    effect.effect.type !== "modifyPower" ||
-    effect.effect.target.type !== "attackTarget" ||
-    effect.effect.duration.type !== "thisBattle" ||
-    !Number.isInteger(effect.effect.value) ||
-    effect.effect.value <= 0
-  ) {
-    return null;
-  }
-  return effect.effect.value;
-};
-
-const getSupportedCounterEventPower = (
-  state: GameState,
-  card: CardInstance,
-): { value: number; printedCost: number } | null => {
-  const metadata = state.cardManifest.cards[card.cardId];
-  if (
-    metadata?.category !== "event" ||
-    metadata.support.status !== "implemented-dsl" ||
-    metadata.support.effectDefinitionId === undefined ||
-    (metadata.support.customHandlerIds?.length ?? 0) > 0
-  ) {
-    return null;
-  }
-  const definition =
-    state.cardManifest.effectDefinitions?.[metadata.support.effectDefinitionId];
-  const counterEffects =
-    definition?.effects.filter((effect) => effect.trigger.type === "counter") ??
-    [];
-  if (
-    definition?.implementationStatus !== "implemented-dsl" ||
-    counterEffects.length === 0
-  ) {
-    return null;
-  }
-  let value = 0;
-  for (const counterEffect of counterEffects) {
-    const counterValue = supportedCounterEventPowerValue(counterEffect);
-    if (counterValue === null) {
-      return null;
-    }
-    value += counterValue;
-  }
-  const printedCost = metadata.cost ?? 0;
-  if (!Number.isInteger(printedCost) || printedCost < 0) {
-    return null;
-  }
-  return { value, printedCost };
-};
-
 const getCounterEventPaymentLegalActions = (
   state: GameState,
   playerId: PlayerId,
 ): LegalAction[] => {
   const decision = state.pendingDecision;
+  const battle = state.battle;
   const player = state.players[playerId];
   if (
     decision === undefined ||
     decision.type !== "payCost" ||
     decision.playerId !== playerId ||
+    battle === undefined ||
     player === undefined
   ) {
     return [];
@@ -808,7 +755,11 @@ const getCounterEventPaymentLegalActions = (
   if (handCard === undefined) {
     return [];
   }
-  const supported = getSupportedCounterEventPower(state, handCard);
+  const supported = getSupportedCounterEventPower(
+    state,
+    handCard,
+    battle.currentTarget,
+  );
   if (supported === null || supported.printedCost <= 0) {
     return [];
   }
@@ -829,8 +780,9 @@ const getCounterEventPaymentLegalActions = (
 const isUnsupportedCounterEventCandidate = (
   state: GameState,
   card: CardInstance,
+  target: CardRef | undefined,
 ): boolean => {
-  if (getSupportedCounterEventPower(state, card) !== null) {
+  if (getSupportedCounterEventPower(state, card, target) !== null) {
     return false;
   }
   const metadata = state.cardManifest.cards[card.cardId];
@@ -848,6 +800,7 @@ export const getUnsupportedCounterWindowReason = (
   defenderId: PlayerId,
 ): string | undefined => {
   const defender = state.players[defenderId];
+  const target = state.battle?.currentTarget;
   if (defender === undefined) {
     return "Battle requires unsupported counter window handling.";
   }
@@ -856,11 +809,11 @@ export const getUnsupportedCounterWindowReason = (
     if (metadata === undefined) {
       return "Battle requires unsupported counter window handling.";
     }
-    if (isUnsupportedCounterEventCandidate(state, card)) {
+    if (isUnsupportedCounterEventCandidate(state, card, target)) {
       return unsupportedCounterEventReason;
     }
     if (
-      getSupportedCounterEventPower(state, card) === null &&
+      getSupportedCounterEventPower(state, card, target) === null &&
       hasCounterTriggerDefinition(state, card.cardId)
     ) {
       return "Battle requires unsupported counter window handling.";
@@ -879,13 +832,14 @@ const hasPotentialCharacterCounterActions = (
   state: GameState,
   defenderId: PlayerId,
 ): boolean => {
+  const target = state.battle?.currentTarget;
   const defender = state.players[defenderId];
   if (defender === undefined) {
     return false;
   }
   return defender.hand.some((card) => {
     const metadata = state.cardManifest.cards[card.cardId];
-    const supportedEvent = getSupportedCounterEventPower(state, card);
+    const supportedEvent = getSupportedCounterEventPower(state, card, target);
     return (
       (metadata?.category === "character" &&
         metadata.counter !== undefined &&

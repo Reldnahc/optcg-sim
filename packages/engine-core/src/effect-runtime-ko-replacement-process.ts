@@ -102,6 +102,9 @@ const findKoTargetByInstanceId = (
     if (card !== undefined) {
       return { playerId, card };
     }
+    if (player.stage?.instanceId === instanceId) {
+      return { playerId, card: player.stage };
+    }
   }
   return null;
 };
