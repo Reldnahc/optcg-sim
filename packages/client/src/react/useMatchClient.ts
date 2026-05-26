@@ -14,6 +14,7 @@ import {
   createDecisionDraft,
   createDecisionModalModel,
   createDevHttpMatchTransport,
+  createDevWebSocketLobbyTransport,
   createDevWebSocketMatchTransport,
   createMatchClientController,
   moveOrderedCardNear,
@@ -101,6 +102,7 @@ const createController = (): MatchClientController =>
   createMatchClientController({
     transport: createDevHttpMatchTransport({ baseUrl: "" }),
     liveTransport: createDevWebSocketMatchTransport({ baseUrl: "" }),
+    lobbyLiveTransport: createDevWebSocketLobbyTransport({ baseUrl: "" }),
     sessionStore: createClientSessionStore({
       storage: createBrowserSessionStorage(),
     }),
@@ -142,6 +144,10 @@ export const useMatchClient = (): MatchClientUi => {
   const liveConnectionKey = !isMatchClientState(clientState)
     ? undefined
     : `${String(clientState.matchId)}:${String(clientState.seat.playerId)}`;
+  const lobbyConnectionKey =
+    clientState === undefined || isMatchClientState(clientState)
+      ? undefined
+      : `${clientState.lobbyId}:${String(clientState.seat.playerId)}`;
   const pendingDecision = playerSnapshot?.view.pendingDecision;
   const activeDecisionDraft =
     pendingDecision === undefined
@@ -218,6 +224,30 @@ export const useMatchClient = (): MatchClientUi => {
       controller.disconnectLive();
     };
   }, [liveConnectionKey, controller]);
+
+  useEffect(() => {
+    if (lobbyConnectionKey === undefined) {
+      controller.disconnectLobbyLive();
+      return;
+    }
+    controller.connectLobbyLive({
+      onState(nextState) {
+        if (isMatchClientState(nextState)) {
+          setMatchLocation(nextState.matchId, nextState.seat.playerId);
+        } else {
+          setLobbyLocation(nextState.lobbyId, nextState.seat.playerId);
+        }
+        setClientState(nextState);
+        setErrors([]);
+      },
+      onError(message) {
+        setErrors([message]);
+      },
+    });
+    return () => {
+      controller.disconnectLobbyLive();
+    };
+  }, [lobbyConnectionKey, controller]);
 
   const createNewMatch = useCallback(async (): Promise<void> => {
     const created = await controller.startNewLocalLobby("p1" as PlayerId);

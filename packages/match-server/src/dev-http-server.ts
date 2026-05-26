@@ -491,6 +491,7 @@ const handleApiRequest = async (
   response: ServerResponse,
   registry: LocalDevMatchRegistry,
   lobbyRegistry: LocalDevLobbyRegistry,
+  lobbyConnections: Set<DevLobbySocketConnection>,
   authProvider: AuthProvider,
 ): Promise<void> => {
   const url = request.url ?? "/";
@@ -546,6 +547,7 @@ const handleApiRequest = async (
       });
       return;
     }
+    broadcastLobbyState(result, lobbyConnections);
     sendJson(response, 200, result);
     return;
   }
@@ -725,15 +727,23 @@ const parseWebSocketFrames = (
   return { messages, remaining: Buffer.from(buffer.subarray(offset)), close };
 };
 
-interface DevSocketConnection {
-  matchId: MatchId;
-  playerId: PlayerId;
+interface DevSocketBaseConnection {
   socket: Duplex;
   serverSeq: number;
 }
 
+interface DevSocketConnection extends DevSocketBaseConnection {
+  matchId: MatchId;
+  playerId: PlayerId;
+}
+
+interface DevLobbySocketConnection extends DevSocketBaseConnection {
+  lobbyId: string;
+  playerId: PlayerId;
+}
+
 const sendSocketJson = (
-  connection: DevSocketConnection,
+  connection: DevSocketBaseConnection,
   payload: Record<string, unknown>,
 ): void => {
   connection.socket.write(websocketTextFrame(JSON.stringify(payload)));
@@ -754,14 +764,90 @@ const playerStatePayload = (
   };
 };
 
+const lobbyStatePayload = (
+  lobby: CreatedDevLobbyResponse,
+  connection: DevLobbySocketConnection,
+): Record<string, unknown> => ({
+  type: "lobbySync",
+  lobbyId: connection.lobbyId,
+  serverSeq: ++connection.serverSeq,
+  lobby,
+});
+
+const broadcastLobbyState = (
+  lobby: CreatedDevLobbyResponse,
+  connections: Set<DevLobbySocketConnection>,
+): void => {
+  for (const connection of connections) {
+    if (connection.lobbyId === lobby.lobbyId) {
+      sendSocketJson(connection, lobbyStatePayload(lobby, connection));
+    }
+  }
+};
+
 const handleWebSocketUpgrade = (
   request: IncomingMessage,
   socket: Duplex,
   registry: LocalDevMatchRegistry,
+  lobbyRegistry: LocalDevLobbyRegistry,
   authProvider: AuthProvider,
   connections: Set<DevSocketConnection>,
+  lobbyConnections: Set<DevLobbySocketConnection>,
 ): void => {
   const url = new URL(request.url ?? "/", "http://localhost");
+  const lobbyRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/ws$/u.exec(
+    url.pathname,
+  );
+  if (lobbyRoute !== null) {
+    const lobbyId = decodeURIComponent(lobbyRoute.groups?.["lobbyId"] ?? "");
+    const playerId = (url.searchParams.get("playerId") ?? "") as PlayerId;
+    const key = request.headers["sec-websocket-key"];
+    const lobby = lobbyRegistry.getLobby(lobbyId);
+    if (
+      lobby === undefined ||
+      typeof key !== "string" ||
+      key.length === 0 ||
+      playerId.length === 0 ||
+      lobby.seats[String(playerId)]?.claimed !== true
+    ) {
+      socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
+      return;
+    }
+
+    socket.write(
+      [
+        "HTTP/1.1 101 Switching Protocols",
+        "Upgrade: websocket",
+        "Connection: Upgrade",
+        `Sec-WebSocket-Accept: ${websocketAccept(key)}`,
+        "\r\n",
+      ].join("\r\n"),
+    );
+
+    const connection: DevLobbySocketConnection = {
+      lobbyId,
+      playerId,
+      socket,
+      serverSeq: 0,
+    };
+    lobbyConnections.add(connection);
+    socket.on("close", () => {
+      lobbyConnections.delete(connection);
+    });
+    sendSocketJson(connection, lobbyStatePayload(lobby, connection));
+
+    let buffered: Buffer = Buffer.alloc(0);
+    socket.on("data", (chunk: Buffer) => {
+      buffered = Buffer.concat([buffered, chunk]);
+      const parsed = parseWebSocketFrames(buffered);
+      buffered = parsed.remaining;
+      if (parsed.close) {
+        socket.end();
+      }
+    });
+    return;
+  }
+
   const route = /^\/api\/matches\/(?<matchId>[^/]+)\/ws$/u.exec(url.pathname);
   if (route === null) {
     socket.end("HTTP/1.1 404 Not Found\r\n\r\n");
@@ -894,6 +980,7 @@ export const createDevHttpServer = async (
   const lobbyRegistry = createLocalDevLobbyRegistry(registry);
   const authProvider = createDevAuthProvider();
   const socketConnections = new Set<DevSocketConnection>();
+  const lobbySocketConnections = new Set<DevLobbySocketConnection>();
   const server = createServer((request, response) => {
     const url = request.url ?? "/";
     const operation = url.startsWith("/api/")
@@ -902,6 +989,7 @@ export const createDevHttpServer = async (
           response,
           registry,
           lobbyRegistry,
+          lobbySocketConnections,
           authProvider,
         )
       : handleStaticRequest(request, response);
@@ -916,8 +1004,10 @@ export const createDevHttpServer = async (
       request,
       socket,
       registry,
+      lobbyRegistry,
       authProvider,
       socketConnections,
+      lobbySocketConnections,
     );
   });
 
@@ -936,6 +1026,10 @@ export const createDevHttpServer = async (
         connection.socket.destroy();
       }
       socketConnections.clear();
+      for (const connection of lobbySocketConnections) {
+        connection.socket.destroy();
+      }
+      lobbySocketConnections.clear();
       await new Promise<void>((resolve, reject) => {
         server.close((error) => {
           if (error === undefined) {

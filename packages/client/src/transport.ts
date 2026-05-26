@@ -96,6 +96,13 @@ export interface MatchStateSyncMessage {
   cards: MatchCardCatalog;
 }
 
+export interface LobbyStateSyncMessage {
+  type: "lobbySync";
+  lobbyId: string;
+  serverSeq: number;
+  lobby: LocalLobby;
+}
+
 export interface MatchActionResultMessage {
   type: "actionResult";
   matchId: MatchId;
@@ -116,6 +123,10 @@ export interface LiveMatchConnection {
   ) => Promise<MatchActionResult>;
 }
 
+export interface LiveLobbyConnection {
+  close: () => void;
+}
+
 export interface MatchLiveTransport {
   connect: (input: {
     matchId: MatchId;
@@ -124,6 +135,15 @@ export interface MatchLiveTransport {
     onStateSync: (message: MatchStateSyncMessage) => void;
     onError: (message: string) => void;
   }) => LiveMatchConnection;
+}
+
+export interface LobbyLiveTransport {
+  connect: (input: {
+    lobbyId: string;
+    playerId: PlayerId;
+    onLobbySync: (message: LobbyStateSyncMessage) => void;
+    onError: (message: string) => void;
+  }) => LiveLobbyConnection;
 }
 
 export interface MatchTransport {

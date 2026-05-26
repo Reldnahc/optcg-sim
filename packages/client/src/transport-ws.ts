@@ -6,6 +6,8 @@ import type {
 } from "@optcg/types";
 
 import type {
+  LobbyLiveTransport,
+  LobbyStateSyncMessage,
   MatchActionResult,
   MatchActionResultMessage,
   MatchLiveTransport,
@@ -41,6 +43,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const isStateSync = (value: unknown): value is MatchStateSyncMessage =>
   isRecord(value) && value["type"] === "stateSync";
+
+const isLobbySync = (value: unknown): value is LobbyStateSyncMessage =>
+  isRecord(value) && value["type"] === "lobbySync";
 
 const isActionResult = (value: unknown): value is MatchActionResultMessage =>
   isRecord(value) && value["type"] === "actionResult";
@@ -199,6 +204,48 @@ export const createDevWebSocketMatchTransport = ({
           },
           clientActionId,
         );
+      },
+    };
+  },
+});
+
+export const createDevWebSocketLobbyTransport = ({
+  baseUrl,
+  WebSocket: WebSocketImpl = WebSocket,
+}: DevWebSocketMatchTransportOptions): LobbyLiveTransport => ({
+  connect({ lobbyId, playerId, onLobbySync, onError }) {
+    const url = new URL(
+      `/api/lobbies/${encodeURIComponent(lobbyId)}/ws`,
+      socketRoot(baseUrl),
+    );
+    url.searchParams.set("playerId", String(playerId));
+
+    const socket = new WebSocketImpl(url);
+    socket.addEventListener("message", (event) => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(String(event.data)) as unknown;
+      } catch {
+        onError("Received invalid WebSocket JSON.");
+        return;
+      }
+
+      if (isLobbySync(parsed)) {
+        onLobbySync(parsed);
+        return;
+      }
+
+      if (isRecord(parsed) && parsed["type"] === "lobbyError") {
+        onError(messageError(parsed));
+      }
+    });
+    socket.addEventListener("error", () => {
+      onError("Lobby WebSocket error.");
+    });
+
+    return {
+      close() {
+        socket.close();
       },
     };
   },

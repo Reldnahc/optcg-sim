@@ -8,11 +8,14 @@ import {
   createMemoryClientStorage,
 } from "./session.js";
 import type {
+  LobbyLiveTransport,
+  LobbyStateSyncMessage,
   LiveMatchConnection,
   MatchLiveTransport,
   MatchTransport,
 } from "./transport.js";
 import { createMatchClientController } from "./controller.js";
+import type { MatchClientSessionState } from "./controller.js";
 
 const createFakeTransport = (): MatchTransport & {
   claimedSeats: Array<{
@@ -122,6 +125,26 @@ const createFakeLiveTransport = (options?: {
   };
 };
 
+const createFakeLobbyLiveTransport = (): LobbyLiveTransport & {
+  emit: (message: LobbyStateSyncMessage) => void;
+} => {
+  let onLobbySync: ((message: LobbyStateSyncMessage) => void) | undefined;
+  return {
+    connect(input) {
+      onLobbySync = input.onLobbySync;
+      return {
+        close() {},
+      };
+    },
+    emit(message) {
+      if (onLobbySync === undefined) {
+        throw new Error("Lobby live transport was not connected.");
+      }
+      onLobbySync(message);
+    },
+  };
+};
+
 describe("match client controller", () => {
   test("starts a local match by creating, claiming, and loading data", async () => {
     const transport = createFakeTransport();
@@ -165,6 +188,55 @@ describe("match client controller", () => {
       matchId: "match-2",
       playerId: "p2",
       sessionToken: "token-p2",
+    });
+  });
+
+  test("claims and loads the match when a waiting lobby becomes ready", async () => {
+    const transport = createFakeTransport();
+    const lobbyLiveTransport = createFakeLobbyLiveTransport();
+    const controller = createMatchClientController({
+      transport,
+      lobbyLiveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+
+    const initial = await controller.startNewLocalLobby("p1" as PlayerId);
+    assert.equal("lobbyId" in initial, true);
+
+    const readyStatePromise = new Promise<MatchClientSessionState>(
+      (resolve, reject) => {
+        controller.connectLobbyLive({
+          onState: resolve,
+          onError: reject,
+        });
+      },
+    );
+    lobbyLiveTransport.emit({
+      type: "lobbySync",
+      lobbyId: "lobby-1",
+      serverSeq: 1,
+      lobby: {
+        lobbyId: "lobby-1",
+        matchId: "match-1" as MatchId,
+        seats: {
+          p1: { playerId: "p1" as PlayerId, claimed: true },
+          p2: { playerId: "p2" as PlayerId, claimed: true },
+        },
+      },
+    });
+
+    const readyState = await readyStatePromise;
+
+    assert.equal("matchId" in readyState, true);
+    assert.deepEqual(transport.claimedSeats, [
+      { matchId: "match-1", playerId: "p1" },
+    ]);
+    assert.deepEqual(controller.currentCredential(), {
+      matchId: "match-1",
+      playerId: "p1",
+      sessionToken: "token-p1",
     });
   });
 

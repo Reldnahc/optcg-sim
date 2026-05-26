@@ -43,6 +43,19 @@ const webSocketUrl = (
   return url.toString();
 };
 
+const lobbyWebSocketUrl = (
+  server: Awaited<ReturnType<typeof createFixtureDevHttpServer>>,
+  lobbyId: string,
+  playerId: string,
+): string => {
+  const url = new URL(
+    `/api/lobbies/${encodeURIComponent(lobbyId)}/ws`,
+    server.url().replace(/^http/u, "ws"),
+  );
+  url.searchParams.set("playerId", playerId);
+  return url.toString();
+};
+
 interface TestSocket {
   socket: WebSocket;
   next: () => Promise<unknown>;
@@ -200,6 +213,51 @@ describe("dev HTTP server", () => {
       );
       assert.equal(matchState.status, 200);
     } finally {
+      await server.close();
+    }
+  });
+
+  test("pushes lobby readiness to an already-waiting seat when the second seat joins", async () => {
+    const server = await createFixtureDevHttpServer();
+    await server.listen(0, "127.0.0.1");
+    const sockets: WebSocket[] = [];
+    try {
+      const created = await createDevLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+      await claimDevLobbySeat(server, lobbyId, "p1");
+      const p1LobbySocket = await openSocket(
+        lobbyWebSocketUrl(server, lobbyId, "p1"),
+      );
+      sockets.push(p1LobbySocket.socket);
+
+      const initial = (await p1LobbySocket.next()) as {
+        type?: string;
+        lobby?: CreatedDevLobbyBody;
+      };
+      assert.equal(initial.type, "lobbySync");
+      assert.equal(initial.lobby?.matchId, undefined);
+
+      await claimDevLobbySeat(server, lobbyId, "p2");
+
+      const ready = (await p1LobbySocket.next()) as {
+        type?: string;
+        lobby?: CreatedDevLobbyBody;
+      };
+      assert.equal(ready.type, "lobbySync");
+      const readyLobby = ready.lobby;
+      if (readyLobby === undefined) {
+        throw new Error("Lobby sync did not include lobby state.");
+      }
+      assert.equal(readyLobby.seats["p1"]?.claimed, true);
+      assert.equal(readyLobby.seats["p2"]?.claimed, true);
+      assert.equal(typeof readyLobby.matchId, "string");
+    } finally {
+      for (const socket of sockets) {
+        socket.close();
+      }
       await server.close();
     }
   });

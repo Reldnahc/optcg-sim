@@ -11,7 +11,10 @@ import type {
   ClientSessionStore,
 } from "./session.js";
 import type {
+  LiveLobbyConnection,
   LocalLobby,
+  LobbyLiveTransport,
+  LobbyStateSyncMessage,
   MatchCardCatalog,
   MatchLiveTransport,
   MatchSnapshot,
@@ -58,6 +61,11 @@ export interface MatchClientController {
     onError: (message: string) => void;
   }) => void;
   disconnectLive: () => void;
+  connectLobbyLive: (input: {
+    onState: (state: MatchClientSessionState) => void;
+    onError: (message: string) => void;
+  }) => void;
+  disconnectLobbyLive: () => void;
   currentCredential: () => ClientSeatCredential | undefined;
   currentState: () => MatchClientState | undefined;
 }
@@ -90,15 +98,23 @@ const requireLiveConnection = (
 export const createMatchClientController = ({
   transport,
   liveTransport,
+  lobbyLiveTransport,
   sessionStore,
 }: {
   transport: MatchTransport;
   liveTransport?: MatchLiveTransport;
+  lobbyLiveTransport?: LobbyLiveTransport;
   sessionStore: ClientSessionStore;
 }): MatchClientController => {
   let currentState: MatchClientState | undefined;
   let currentLobbyState: LobbyClientState | undefined;
   let liveConnection: LiveMatchConnection | undefined;
+  let lobbyLiveConnection: LiveLobbyConnection | undefined;
+
+  const disconnectLobbyConnection = (): void => {
+    lobbyLiveConnection?.close();
+    lobbyLiveConnection = undefined;
+  };
 
   const loadState = async (
     seat: ClientSeatIdentity,
@@ -114,6 +130,7 @@ export const createMatchClientController = ({
       cards,
     };
     currentLobbyState = undefined;
+    disconnectLobbyConnection();
     return currentState;
   };
 
@@ -223,6 +240,42 @@ export const createMatchClientController = ({
     disconnectLive() {
       liveConnection?.close();
       liveConnection = undefined;
+    },
+    connectLobbyLive({ onState, onError }) {
+      if (
+        currentLobbyState === undefined ||
+        lobbyLiveTransport === undefined ||
+        lobbyLiveConnection !== undefined
+      ) {
+        return;
+      }
+      const lobbyId = currentLobbyState.lobbyId;
+      const playerId = currentLobbyState.seat.playerId;
+      const toLobbyState = (
+        message: LobbyStateSyncMessage,
+      ): LobbyClientState => ({
+        lobbyId: message.lobbyId,
+        seat: { lobbyId: message.lobbyId, playerId },
+        lobby: message.lobby,
+      });
+      lobbyLiveConnection = lobbyLiveTransport.connect({
+        lobbyId,
+        playerId,
+        onError,
+        onLobbySync(message) {
+          if (message.lobbyId !== lobbyId) {
+            return;
+          }
+          void claimMatchIfReady(toLobbyState(message))
+            .then(onState)
+            .catch((error: unknown) => {
+              onError(error instanceof Error ? error.message : String(error));
+            });
+        },
+      });
+    },
+    disconnectLobbyLive() {
+      disconnectLobbyConnection();
     },
     async refresh() {
       if (currentLobbyState !== undefined) {
