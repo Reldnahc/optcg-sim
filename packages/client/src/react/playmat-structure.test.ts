@@ -88,7 +88,24 @@ describe("playmat structure", () => {
     assert.match(cardStyles, /height:\s*var\(--card-height\);/);
     assert.match(
       playmatStyles,
-      /grid-template-columns:\s*var\(--card-zone-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+minmax\(\s*116px,\s*1fr\s*\)\s+var\(--card-zone-width\);/,
+      /grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\);/,
+    );
+  });
+
+  test("playmat columns use fixed reactive tracks so cost rows cannot resize the board", async () => {
+    const [appShellStyles, playmatStyles] = await Promise.all([
+      readFile(appShellStylesPath, "utf8"),
+      readFile(playmatStylesPath, "utf8"),
+    ]);
+
+    assert.match(
+      appShellStyles,
+      /--playmat-wide-zone-width:\s*calc\(var\(--card-width\)\s*\*\s*1\.6\);/,
+    );
+    assert.equal(playmatStyles.includes("minmax(116px, 1fr)"), false);
+    assert.match(
+      playmatStyles,
+      /grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\);/,
     );
   });
 

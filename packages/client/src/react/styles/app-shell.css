@@ -3,6 +3,7 @@
   --card-height: calc(var(--playmat-row-height) - 14px);
   --card-width: calc(var(--card-height) / 1.4);
   --card-zone-width: calc(var(--card-width) + 14px);
+  --playmat-wide-zone-width: calc(var(--card-width) * 1.6);
 
   position: relative;
   display: grid;
