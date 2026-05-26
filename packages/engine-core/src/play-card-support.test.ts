@@ -336,6 +336,79 @@ test("getSupportedPlayMetadata accepts implemented-DSL Event Main reusable seque
   );
 });
 
+test("getSupportedPlayMetadata accepts implemented-DSL Event play when trigger text is represented by supported DSL", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const event = must(p1State.hand[0], "implemented event with trigger text");
+  const implemented = resolvedCard({
+    cardId: event.cardId,
+    category: "event",
+    cost: 1,
+    triggerText: "[Trigger] Activate this card's [Main] effect.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-event-main-with-trigger",
+    },
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    event.cardId,
+    implemented.support,
+  );
+  const baseEffect = must(baseDefinition.effects[0], "base effect");
+  const definition = {
+    ...baseDefinition,
+    effects: [
+      {
+        ...baseEffect,
+        id: "synthetic:event-main-search" as EffectDefinition["effects"][number]["id"],
+        trigger: { type: "main" as const },
+        sourcePresencePolicy: "resolveFromDestinationZone" as const,
+        effect: {
+          type: "search" as const,
+          request: {
+            zone: "deck" as const,
+            player: "self" as const,
+            lookCount: 3,
+            filter: { typesAny: ["Celestial Dragons"] },
+            min: 0,
+            max: 1,
+            destination: "hand" as const,
+            revealTo: "bothPlayers" as const,
+            remainingCards: { destination: "trash" as const },
+            shuffleAfter: false,
+          },
+        },
+      },
+      {
+        ...baseEffect,
+        id: "synthetic:event-trigger-main" as EffectDefinition["effects"][number]["id"],
+        trigger: { type: "trigger" as const },
+        sourcePresencePolicy: "noSourceRequired" as const,
+        effect: {
+          type: "activateReferencedEffect" as const,
+          source: { type: "triggerCard" as const },
+          trigger: { type: "main" as const },
+        },
+      },
+    ],
+  } satisfies EffectDefinition;
+  state.cardManifest.cards[event.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-event-main-with-trigger": definition,
+  };
+
+  assert.deepEqual(getSupportedPlayMetadata(state, event), {
+    category: "event",
+    printedCost: 1,
+  });
+  assert.deepEqual(
+    getPlayableHandCards(state, p1).map((card) => card.instanceId),
+    [event.instanceId],
+  );
+});
+
 test("getSupportedPlayMetadata rejects unsupported reusable sequence legal-action shapes", () => {
   const makeOnPlayCharacterState = () => {
     const state = setupMainPlayState();

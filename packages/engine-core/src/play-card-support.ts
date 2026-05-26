@@ -180,10 +180,7 @@ export const getSupportedPlayMetadata = (
     return null;
   }
   if (resolved.support.status === "implemented-dsl") {
-    if (
-      resolved.cost === undefined ||
-      hasUnsupportedSupportGateText(resolved.triggerText, resolved)
-    ) {
+    if (resolved.cost === undefined) {
       return null;
     }
     const lookup = resolveImplementedDslEffectDefinition(
