@@ -246,6 +246,7 @@ describe("local dev match", () => {
 
     assert.equal(opponentLeader.owner, p2);
     assert.equal(entry.name, "Imu");
+    assert.equal(entry.effectText?.startsWith("Under the rules"), true);
     assert.equal(entry.imageUrl?.startsWith("https://"), true);
   });
 

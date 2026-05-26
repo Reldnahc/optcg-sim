@@ -131,6 +131,8 @@ describe("board view model", () => {
               cardId: "OP13-080" as CardId,
               name: "Searcher",
               category: "Character",
+              effectText: "[On Play] Look at cards.",
+              triggerText: "Draw 1 card.",
               imageUrl: "https://cdn.example/card.png",
             },
           },
@@ -145,6 +147,8 @@ describe("board view model", () => {
       throw new Error("Expected the hand card in the view model.");
     }
     assert.equal(handCard.name, "Searcher");
+    assert.equal(handCard.effectText, "[On Play] Look at cards.");
+    assert.equal(handCard.triggerText, "Draw 1 card.");
     assert.equal(handCard.imageUrl, "https://cdn.example/card.png");
     assert.deepEqual(
       model.actionsByCardInstanceId["hand-1"]?.map((action) => action.label),

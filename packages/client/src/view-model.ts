@@ -18,6 +18,8 @@ export interface ClientCardModel {
   cardId: CardId;
   name: string;
   category: string;
+  effectText?: string;
+  triggerText?: string;
   imageUrl?: string;
   state?: PublicCardView["state"];
   attachedDonCount: number;
@@ -71,6 +73,10 @@ const cardModel = (
     cardId: card.cardId,
     name: entry.name,
     category: entry.category,
+    ...(entry.effectText === undefined ? {} : { effectText: entry.effectText }),
+    ...(entry.triggerText === undefined
+      ? {}
+      : { triggerText: entry.triggerText }),
     ...(entry.imageUrl === undefined ? {} : { imageUrl: entry.imageUrl }),
     ...(card.state === undefined ? {} : { state: card.state }),
     attachedDonCount: card.attachedDonCount,

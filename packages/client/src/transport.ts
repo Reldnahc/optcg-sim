@@ -41,6 +41,8 @@ export interface MatchCardCatalogEntry {
   cost?: number;
   power?: number;
   life?: number;
+  effectText?: string;
+  triggerText?: string;
   imageUrl?: string;
 }
 

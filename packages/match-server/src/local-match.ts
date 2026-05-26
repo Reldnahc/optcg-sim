@@ -65,6 +65,8 @@ export interface DevCardCatalogEntry {
   cost?: number;
   power?: number;
   life?: number;
+  effectText?: string;
+  triggerText?: string;
   imageUrl?: string;
 }
 
@@ -931,6 +933,10 @@ const devCardCatalogEntry = (
     ...(card.cost === undefined ? {} : { cost: card.cost }),
     ...(card.power === undefined ? {} : { power: card.power }),
     ...(card.life === undefined ? {} : { life: card.life }),
+    ...(card.effectText === undefined ? {} : { effectText: card.effectText }),
+    ...(card.triggerText === undefined
+      ? {}
+      : { triggerText: card.triggerText }),
     ...(imageUrl === undefined ? {} : { imageUrl }),
   };
 };
