@@ -13,6 +13,7 @@ import {
   createClientSessionStore,
   createDecisionDraft,
   createDecisionModalModel,
+  isDecisionModalSuppressed,
   createDevHttpMatchTransport,
   createDevWebSocketLobbyTransport,
   createDevWebSocketMatchTransport,
@@ -118,11 +119,6 @@ const createController = (): MatchClientController =>
 
 const visibleErrors = (errors: readonly string[]): string[] => [...errors];
 
-const modalSuppressedDecisionTypes: ReadonlySet<string> = new Set([]);
-
-const shouldRenderDecisionModal = (decisionType: string | undefined): boolean =>
-  decisionType !== undefined && !modalSuppressedDecisionTypes.has(decisionType);
-
 const isSelfAttachmentTarget = (
   board: BoardViewModel | undefined,
   instanceId: string,
@@ -193,7 +189,7 @@ export const useMatchClient = (): MatchClientUi => {
   const decisionModal =
     pendingDecision === undefined ||
     activeDecisionDraft === undefined ||
-    !shouldRenderDecisionModal(pendingDecision.type)
+    isDecisionModalSuppressed(pendingDecision)
       ? undefined
       : createDecisionModalModel(
           pendingDecision,

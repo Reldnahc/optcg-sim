@@ -17,6 +17,7 @@ import {
   buildDecisionResponse,
   createDecisionDraft,
   createDecisionModalModel,
+  isDecisionModalSuppressed,
   moveOrderedCardNear,
   setDecisionActionOption,
   setDecisionQuantity,
@@ -200,5 +201,22 @@ describe("headless decision modal models", () => {
       selectedActionIndex: 5,
       canConfirm: true,
     });
+  });
+
+  test("counter-step pass decisions are suppressed from modal rendering", () => {
+    const counterPass: PublicSelectCardsDecision = {
+      ...selectDecision(),
+      id: "decision:counterStep:pass:attacker-1:7" as DecisionId,
+      min: 0,
+      max: 0,
+      candidates: [],
+    };
+    const normalSelection: PublicSelectCardsDecision = {
+      ...selectDecision(),
+      id: "decision:selectCards:search-reveal:queue-entry-1" as DecisionId,
+    };
+
+    assert.equal(isDecisionModalSuppressed(counterPass), true);
+    assert.equal(isDecisionModalSuppressed(normalSelection), false);
   });
 });

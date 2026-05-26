@@ -100,6 +100,15 @@ type CardDecision =
   | PublicOrderCardsDecision
   | PublicChooseQuantityDecision;
 
+const suppressedDecisionIdPrefixes = ["decision:counterStep:pass:"] as const;
+
+export const isDecisionModalSuppressed = (
+  decision: PublicPendingDecision,
+): boolean =>
+  suppressedDecisionIdPrefixes.some((prefix) =>
+    String(decision.id).startsWith(prefix),
+  );
+
 const instanceKey = (instanceId: InstanceId): string => String(instanceId);
 
 const assertDraftForDecision = (
