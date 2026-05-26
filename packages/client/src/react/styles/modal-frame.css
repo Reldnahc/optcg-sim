@@ -1,0 +1,33 @@
+.modal-frame {
+  position: fixed;
+  inset: 14% 22%;
+  z-index: 10;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border: 2px solid #f4eee7;
+  background: rgba(38, 35, 34, 0.97);
+  padding: 16px;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
+}
+
+.modal-frame-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-frame-header h2 {
+  margin: 0;
+}
+
+.modal-frame-close {
+  min-height: 30px;
+  border: 0;
+  border-radius: 5px;
+  color: #fff;
+  background: #3f3d3c;
+  cursor: pointer;
+  padding: 0 12px;
+}

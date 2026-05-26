@@ -58,7 +58,7 @@ describe("collection modal", () => {
       }),
     );
 
-    assert.match(markup, /class="collection-modal"/u);
+    assert.match(markup, /collection-modal/u);
     assert.equal(markup.includes("decision-modal"), false);
     assert.equal(markup.includes("Player trash"), true);
     assert.equal(markup.includes("One"), true);

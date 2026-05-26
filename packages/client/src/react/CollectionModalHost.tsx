@@ -1,5 +1,6 @@
 import type { ClientCardModel } from "../view-model.js";
 import { CardTile } from "./CardTile.js";
+import { ModalFrame } from "./ModalFrame.js";
 
 export interface CollectionModalModel {
   title: string;
@@ -20,27 +21,16 @@ export const CollectionModalHost = ({
   }
 
   return (
-    <section
-      className="collection-modal"
-      onClick={(event) => {
-        event.stopPropagation();
-      }}
+    <ModalFrame
+      title={model.title}
+      className="modal-frame-collection collection-modal"
+      onClose={onClose}
     >
-      <div className="collection-modal-header">
-        <h2>{model.title}</h2>
-        <button
-          className="collection-modal-close"
-          type="button"
-          onClick={onClose}
-        >
-          Close
-        </button>
-      </div>
       <div className="collection-modal-card-grid">
         {model.cards.map((card) => (
           <CardTile key={String(card.instanceId)} card={card} />
         ))}
       </div>
-    </section>
+    </ModalFrame>
   );
 };

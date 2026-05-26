@@ -1,6 +1,7 @@
 import type { InstanceId } from "@optcg/types";
 
 import type { DecisionModalModel } from "../interactions/decision-modal.js";
+import { ModalFrame } from "./ModalFrame.js";
 
 export interface DecisionModalHostProps {
   model?: DecisionModalModel | undefined;
@@ -25,8 +26,7 @@ export const DecisionModalHost = ({
     return null;
   }
   return (
-    <section className="decision-modal">
-      <h2>{model.prompt}</h2>
+    <ModalFrame title={model.prompt} className="modal-frame-decision">
       {model.kind === "selectCards" ? (
         <div className="decision-card-grid">
           {model.cards.map((candidate) => {
@@ -118,6 +118,6 @@ export const DecisionModalHost = ({
       >
         Confirm
       </button>
-    </section>
+    </ModalFrame>
   );
 };
