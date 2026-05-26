@@ -196,6 +196,61 @@ const toPublicCardCandidates = (
     .filter((candidate) => isVisibleToPlayer(candidate.visibility, playerId))
     .map((candidate) => ({ card: candidate.card }));
 
+const searchRevealSetIdPrefix = "set:search-reveal:";
+const searchRevealRecordIdPrefix = "reveal:search-reveal:";
+
+const searchRevealRecordIdForSet = (setId: string): string | undefined =>
+  setId.startsWith(searchRevealSetIdPrefix)
+    ? `${searchRevealRecordIdPrefix}${setId.slice(searchRevealSetIdPrefix.length)}`
+    : undefined;
+
+const cardRefKey = (card: CardRef): string => String(card.instanceId);
+
+const visibleChoiceCardsForSelectDecision = (
+  state: GameState,
+  playerId: PlayerId,
+  pending: Extract<
+    NonNullable<GameState["pendingDecision"]>,
+    { type: "selectCards" }
+  >,
+): CardRef[] => {
+  const set = pending.request.set;
+  if (set !== undefined) {
+    const revealId = searchRevealRecordIdForSet(String(set));
+    const reveal =
+      revealId === undefined
+        ? undefined
+        : state.revealedCards.find((record) => record.id === revealId);
+    if (
+      reveal !== undefined &&
+      isVisibleToPlayer(reveal.visibility, playerId)
+    ) {
+      return [...reveal.cards];
+    }
+  }
+  return pending.candidates
+    .filter((candidate) => isVisibleToPlayer(candidate.visibility, playerId))
+    .map((candidate) => candidate.card);
+};
+
+const toPublicCardChoices = (
+  state: GameState,
+  playerId: PlayerId,
+  pending: Extract<
+    NonNullable<GameState["pendingDecision"]>,
+    { type: "selectCards" }
+  >,
+): Array<Pick<CardSelectionCandidate, "card"> & { selectable: boolean }> => {
+  const legalCardKeys = new Set(
+    pending.candidates
+      .filter((candidate) => isVisibleToPlayer(candidate.visibility, playerId))
+      .map((candidate) => cardRefKey(candidate.card)),
+  );
+  return visibleChoiceCardsForSelectDecision(state, playerId, pending).map(
+    (card) => ({ card, selectable: legalCardKeys.has(cardRefKey(card)) }),
+  );
+};
+
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
   typeof value === "object" && value !== null
     ? (value as Record<string, unknown>)
@@ -399,6 +454,7 @@ const toPublicDecision = (
       min: pending.request.min,
       max: pending.request.max,
       candidates: toPublicCardCandidates(pending.candidates, playerId),
+      choices: toPublicCardChoices(state, playerId, pending),
     };
   }
   if (pending.type === "orderCards") {

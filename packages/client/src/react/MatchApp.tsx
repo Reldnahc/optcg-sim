@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import type { CardRef } from "@optcg/types";
+
 import { BoardLayout } from "./BoardLayout.js";
 import type { CollectionModalModel } from "./CollectionModalHost.js";
 import { CollectionModalHost } from "./CollectionModalHost.js";
@@ -29,6 +31,19 @@ export const MatchApp = (): React.JSX.Element => {
       : undefined;
   const globalActions =
     decisionModal === undefined ? client.globalActions() : [];
+  const cardDisplay = (card: CardRef): { name: string; imageUrl?: string } => {
+    const catalogEntry =
+      matchState?.cards.players[card.playerId]?.cards[card.cardId];
+    if (catalogEntry === undefined) {
+      return { name: String(card.cardId) };
+    }
+    return {
+      name: catalogEntry.name,
+      ...(catalogEntry.imageUrl === undefined
+        ? {}
+        : { imageUrl: catalogEntry.imageUrl }),
+    };
+  };
 
   return (
     <main className="match-app">
@@ -85,6 +100,7 @@ export const MatchApp = (): React.JSX.Element => {
       <DecisionModalHost
         model={decisionModal}
         disabled={client.state.actionInFlight}
+        cardDisplay={cardDisplay}
         onToggleCard={client.toggleDecisionCard}
         onQuantity={client.setDecisionQuantityValue}
         onOption={client.setDecisionOptionValue}

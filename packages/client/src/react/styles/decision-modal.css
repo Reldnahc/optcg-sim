@@ -4,6 +4,34 @@
   gap: 8px;
 }
 
+.decision-card-choice {
+  width: var(--card-width);
+  aspect-ratio: 5 / 7;
+  padding: 0;
+  overflow: hidden;
+}
+
+.decision-card-choice.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.decision-card-face {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.decision-card-placeholder {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  padding: 8px;
+  font-size: 0.7rem;
+}
+
 .decision-option-list {
   display: flex;
   gap: 8px;

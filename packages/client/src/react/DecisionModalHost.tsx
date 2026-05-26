@@ -1,4 +1,4 @@
-import type { InstanceId } from "@optcg/types";
+import type { CardRef, InstanceId } from "@optcg/types";
 
 import type { DecisionModalModel } from "../interactions/decision-modal.js";
 import { ModalFrame } from "./ModalFrame.js";
@@ -6,6 +6,9 @@ import { ModalFrame } from "./ModalFrame.js";
 export interface DecisionModalHostProps {
   model?: DecisionModalModel | undefined;
   disabled: boolean;
+  cardDisplay?:
+    | ((card: CardRef) => { name: string; imageUrl?: string })
+    | undefined;
   onToggleCard: (instanceId: InstanceId) => void;
   onQuantity: (quantity: number) => void;
   onOption: (option: string) => void;
@@ -16,6 +19,7 @@ export interface DecisionModalHostProps {
 export const DecisionModalHost = ({
   model,
   disabled,
+  cardDisplay,
   onToggleCard,
   onQuantity,
   onOption,
@@ -29,19 +33,35 @@ export const DecisionModalHost = ({
     <ModalFrame title={model.prompt} className="modal-frame-decision">
       {model.kind === "selectCards" ? (
         <div className="decision-card-grid">
-          {model.cards.map((candidate) => {
-            const instanceId = candidate.card.instanceId;
+          {model.cards.map((choice) => {
+            const instanceId = choice.card.instanceId;
             const selected = model.selectedInstanceIds.includes(instanceId);
+            const display = cardDisplay?.(choice.card) ?? {
+              name: String(choice.card.cardId),
+            };
             return (
               <button
                 key={String(instanceId)}
-                className={`decision-choice ${selected ? "is-selected" : ""}`}
+                className={`decision-choice decision-card-choice ${
+                  selected ? "is-selected" : ""
+                } ${choice.selectable ? "" : "is-disabled"}`}
                 type="button"
+                disabled={disabled || !choice.selectable}
                 onClick={() => {
                   onToggleCard(instanceId);
                 }}
               >
-                {String(candidate.card.cardId)}
+                {display.imageUrl === undefined ? (
+                  <span className="decision-card-placeholder">
+                    {display.name}
+                  </span>
+                ) : (
+                  <img
+                    className="decision-card-face"
+                    src={display.imageUrl}
+                    alt={display.name}
+                  />
+                )}
               </button>
             );
           })}

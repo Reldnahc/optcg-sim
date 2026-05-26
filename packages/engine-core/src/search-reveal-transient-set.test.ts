@@ -632,6 +632,7 @@ test("search reveal PlayerViews keep legal actions and metadata content-agnostic
     min: 0,
     max: 1,
     candidates: [{ card: candidate }],
+    choices: [{ card: candidate, selectable: true }],
   });
   assert.deepEqual(chooserView.revealedCards, [
     {

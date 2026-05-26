@@ -38,7 +38,9 @@ export interface HandRowProps {
   overflowDirection: HandOverflowDirection;
   selectedCardInstanceId?: string | undefined;
   selectedDonInstanceIds?: readonly string[] | undefined;
-  cardActions?: ((instanceId: string) => readonly ClientActionModel[]) | undefined;
+  cardActions?:
+    | ((instanceId: string) => readonly ClientActionModel[])
+    | undefined;
   actionDisabled?: boolean | undefined;
   onCardClick?: ((instanceId: string) => void) | undefined;
   onCardAction?: ((actionIndex: number) => void) | undefined;
@@ -77,8 +79,7 @@ export const HandRow = ({
       setLayout(
         calculateCardRowLayout({
           availableWidth: rowElement.clientWidth,
-          laneExtensionWidth:
-            overflowDirection === "left" ? rowRect.left : 0,
+          laneExtensionWidth: overflowDirection === "left" ? rowRect.left : 0,
           cardWidth: firstCard?.getBoundingClientRect().width ?? 0,
           cardCount: cards.length,
         }),

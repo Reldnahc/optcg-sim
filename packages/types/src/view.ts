@@ -44,11 +44,11 @@ export interface PublicCardView {
   controller: PlayerId;
   zone: ZoneRef;
   state?: "active" | "rested";
-  printedPower?: number;
-  currentPower?: number;
   attachedDonCount: number;
   attachedDonIds: InstanceId[];
   turnPlayed?: number;
+  printedPower?: number;
+  currentPower?: number;
 }
 
 export interface PublicLifeView {
@@ -109,6 +109,9 @@ export interface PublicSelectCardsDecision extends PublicDecision<"selectCards">
   min: number;
   max: number;
   candidates: Array<Pick<CardSelectionCandidate, "card">>;
+  choices: Array<
+    Pick<CardSelectionCandidate, "card"> & { selectable: boolean }
+  >;
 }
 
 export interface PublicOrderCardsDecision extends PublicDecision<"orderCards"> {

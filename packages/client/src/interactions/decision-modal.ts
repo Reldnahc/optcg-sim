@@ -50,7 +50,7 @@ export type DecisionModalModel =
       max: number;
       canConfirm: boolean;
       selectedInstanceIds: InstanceId[];
-      cards: PublicSelectCardsDecision["candidates"];
+      cards: PublicSelectCardsDecision["choices"];
       confirmLabel: string;
     }
   | {
@@ -340,7 +340,7 @@ export const createDecisionModalModel = (
       max: decision.max,
       canConfirm,
       selectedInstanceIds: draft.selectedInstanceIds,
-      cards: decision.candidates,
+      cards: decision.choices,
       confirmLabel:
         decision.min === 0 && draft.selectedInstanceIds.length === 0
           ? "Take none"

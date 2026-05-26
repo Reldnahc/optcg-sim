@@ -109,7 +109,7 @@ const assertPublicDecisionShape = (
   const baseRequired = ["causedBy", "id", "playerId", "prompt", "type"];
   const typeRequired =
     pending.type === "selectCards"
-      ? ["candidates", "max", "min"]
+      ? ["candidates", "choices", "max", "min"]
       : pending.type === "orderCards"
         ? ["cards", "destination"]
         : [];

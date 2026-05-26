@@ -16,7 +16,9 @@ export interface ZoneProps {
   slotCount?: number | undefined;
   selectedCardInstanceId?: string | undefined;
   selectedDonInstanceIds?: readonly string[] | undefined;
-  cardActions?: ((instanceId: string) => readonly ClientActionModel[]) | undefined;
+  cardActions?:
+    | ((instanceId: string) => readonly ClientActionModel[])
+    | undefined;
   actionDisabled?: boolean | undefined;
   onCardClick?: ((instanceId: string) => void) | undefined;
   onCardAction?: ((actionIndex: number) => void) | undefined;

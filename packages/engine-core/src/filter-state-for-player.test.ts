@@ -271,6 +271,72 @@ test("confirmLifeTrigger projection is private to decision player and does not l
   );
 });
 
+test("search selectCards projection includes visible nonselectable choices without exposing them as legal candidates", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const legalCard = must(p1State.hand[0], "legal searched card");
+  const illegalCard = must(p1State.hand[1], "nonmatching searched card");
+  const legalRef = cardRef(legalCard, p1);
+  const illegalRef = cardRef(illegalCard, p1);
+
+  state.revealedCards = [
+    {
+      id: "reveal:search-reveal:queue-public-choices",
+      cards: [legalRef, illegalRef],
+      visibility: { type: "private", playerId: p1 },
+      origin: "topOfDeck",
+      createdAtStateSeq: toStateSeq(state.seq),
+      cleanupPolicy: "none",
+    },
+  ];
+  state.pendingDecision = {
+    id: toDecisionId("decision:selectCards:search-reveal:queue-public-choices"),
+    type: "selectCards",
+    playerId: p1,
+    prompt: "Choose a revealed card or decline.",
+    causedBy: { type: "ruleProcess", name: "test:searchReveal" },
+    visibility: { type: "private", playerId: p1 },
+    request: {
+      timing: "onResolution",
+      chooser: "self",
+      player: "self",
+      zone: "deck",
+      min: 0,
+      max: 1,
+      allowFewerIfUnavailable: true,
+      visibility: "privateToChooser",
+      set: "set:search-reveal:queue-public-choices" as never,
+    },
+    candidates: [
+      { card: legalRef, visibility: { type: "private", playerId: p1 } },
+    ],
+  };
+
+  const forDecisionPlayer = filterStateForPlayer(state, p1);
+  const forOpponent = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(
+    forDecisionPlayer.pendingDecision?.type === "selectCards"
+      ? forDecisionPlayer.pendingDecision.choices
+      : undefined,
+    [
+      { card: legalRef, selectable: true },
+      { card: illegalRef, selectable: false },
+    ],
+  );
+  assert.deepEqual(
+    forDecisionPlayer.pendingDecision?.type === "selectCards"
+      ? forDecisionPlayer.pendingDecision.candidates
+      : undefined,
+    [{ card: legalRef }],
+  );
+  assert.equal(forOpponent.pendingDecision, undefined);
+  assert.equal(
+    JSON.stringify(forOpponent).includes(String(illegalRef.cardId)),
+    false,
+  );
+});
+
 test("chooseTriggerOrder projection stays metadata-only and hides private ids from non-recipient", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1 state");

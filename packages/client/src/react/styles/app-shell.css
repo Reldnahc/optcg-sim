@@ -17,8 +17,7 @@
 .board-shell {
   display: grid;
   grid-template-areas: "hand-rail playmat-board .";
-  grid-template-columns:
-    minmax(0, 1fr) max-content minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
   gap: 8px;
   min-width: 0;
   min-height: 0;

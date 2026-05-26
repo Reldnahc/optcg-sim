@@ -47,6 +47,10 @@ const selectDecision = (): PublicSelectCardsDecision => ({
   min: 0,
   max: 1,
   candidates: [{ card: cardRef("1") }, { card: cardRef("2") }],
+  choices: [
+    { card: cardRef("1"), selectable: true },
+    { card: cardRef("2"), selectable: true },
+  ],
 });
 
 const orderDecision = (): PublicOrderCardsDecision => ({
@@ -94,6 +98,28 @@ describe("headless decision modal models", () => {
 
     assert.equal(model.kind, "selectCards");
     assert.deepEqual(model.selectedInstanceIds, ["1"]);
+  });
+
+  test("selectCards draft exposes disabled choices and prevents selecting them", () => {
+    const decision: PublicSelectCardsDecision = {
+      ...selectDecision(),
+      candidates: [{ card: cardRef("1") }],
+      choices: [
+        { card: cardRef("1"), selectable: true },
+        { card: cardRef("2"), selectable: false },
+      ],
+    };
+    let draft = createDecisionDraft(decision);
+    draft = toggleDecisionSelectedCard(decision, draft, "2" as InstanceId);
+
+    const model = createDecisionModalModel(decision, draft);
+
+    assert.equal(model.kind, "selectCards");
+    assert.deepEqual(model.cards, [
+      { card: cardRef("1"), selectable: true },
+      { card: cardRef("2"), selectable: false },
+    ]);
+    assert.deepEqual(model.selectedInstanceIds, []);
   });
 
   test("orderCards draft supports drag-style ordering and builds orderedIds response", () => {
