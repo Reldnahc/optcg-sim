@@ -738,10 +738,11 @@ const devPlayerSnapshot = (
 ): DevPlayerSnapshot => ({
   view: filterStateForPlayer(state, playerId),
   actions: executableActions(state, playerId).map(
-    ({ index, type, label, placement, attachment }) => ({
+    ({ index, type, label, decisionPayment, placement, attachment }) => ({
       index,
       type,
       label,
+      ...(decisionPayment === undefined ? {} : { decisionPayment }),
       ...(placement === undefined ? {} : { placement }),
       ...(attachment === undefined ? {} : { attachment }),
     }),
