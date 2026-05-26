@@ -50,10 +50,12 @@ export const BoardLayout = ({
       <HandRow
         label="Opponent hand"
         cards={hiddenCards(board.opponent.handCount)}
+        overflowDirection="right"
       />
       <HandRow
         label="Player hand"
         cards={board.self.hand}
+        overflowDirection="left"
         selectedCardInstanceId={selectedCardInstanceId}
         cardActions={cardActions}
         actionDisabled={actionDisabled}

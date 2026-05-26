@@ -95,9 +95,14 @@ describe("playmat structure", () => {
     const appShellStyles = await readFile(appShellStylesPath, "utf8");
 
     assert.equal(appShellStyles.includes("minmax(650px, 900px)"), false);
+    assert.equal(appShellStyles.includes("clamp(230px, 24vw, 360px)"), false);
     assert.match(
       appShellStyles,
-      /grid-template-columns:\s*clamp\(\s*230px,\s*24vw,\s*360px\s*\)\s+max-content;/,
+      /grid-template-columns:\s*minmax\(var\(--card-zone-width\),\s*1fr\)\s+max-content\s+minmax\(var\(--card-zone-width\),\s*1fr\);/,
+    );
+    assert.match(
+      appShellStyles,
+      /grid-template-areas:\s*"hand-rail playmat-board \.";/,
     );
   });
 
