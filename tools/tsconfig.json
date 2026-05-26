@@ -8,6 +8,7 @@
   },
   "files": [
     "build-agent-packet.ts",
+    "dev-match.ts",
     "post-merge-cleanup.ts",
     "spec-metadata.ts",
     "sync-package-types.ts",

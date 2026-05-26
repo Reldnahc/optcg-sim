@@ -6,6 +6,8 @@
   "packageManager": "pnpm@10.33.2",
   "scripts": {
     "prepare": "husky",
+    "dev": "node --experimental-strip-types tools/dev-match.ts",
+    "dev:match": "node --experimental-strip-types tools/dev-match.ts",
     "format": "corepack pnpm exec prettier --write .",
     "format:check": "corepack pnpm exec prettier --check .",
     "lint": "corepack pnpm exec eslint . --max-warnings=0 --ext .js,.mjs,.cjs,.ts,.mts,.cts,.tsx",
