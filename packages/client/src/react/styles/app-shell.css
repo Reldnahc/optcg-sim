@@ -4,8 +4,9 @@
   --card-width: calc(var(--card-height) / 1.4);
   --card-zone-width: calc(var(--card-width) + 14px);
 
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(900px, 1fr) 260px;
+  grid-template-columns: 1fr;
   gap: 8px;
   height: 100vh;
   padding: 8px;
@@ -16,8 +17,7 @@
   display: grid;
   grid-template-areas: "hand-rail playmat-board .";
   grid-template-columns:
-    minmax(var(--card-zone-width), 1fr) max-content
-    minmax(var(--card-zone-width), 1fr);
+    minmax(0, 1fr) max-content minmax(0, 1fr);
   gap: 8px;
   min-width: 0;
   min-height: 0;

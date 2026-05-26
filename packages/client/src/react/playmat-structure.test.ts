@@ -8,6 +8,7 @@ const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const playmatStylesPath = join(sourceDirectory, "styles", "playmat.css");
 const appShellStylesPath = join(sourceDirectory, "styles", "app-shell.css");
 const cardStylesPath = join(sourceDirectory, "styles", "card.css");
+const controlsStylesPath = join(sourceDirectory, "styles", "controls.css");
 
 describe("playmat structure", () => {
   test("board layout uses one physical table grid instead of mirrored player mats", async () => {
@@ -92,18 +93,29 @@ describe("playmat structure", () => {
   });
 
   test("board shell does not force an oversized playmat width", async () => {
-    const appShellStyles = await readFile(appShellStylesPath, "utf8");
+    const [appShellStyles, controlsStyles] = await Promise.all([
+      readFile(appShellStylesPath, "utf8"),
+      readFile(controlsStylesPath, "utf8"),
+    ]);
 
+    assert.equal(appShellStyles.includes("minmax(900px, 1fr) 260px"), false);
     assert.equal(appShellStyles.includes("minmax(650px, 900px)"), false);
     assert.equal(appShellStyles.includes("clamp(230px, 24vw, 360px)"), false);
+    assert.match(appShellStyles, /grid-template-columns:\s*1fr;/);
     assert.match(
       appShellStyles,
-      /grid-template-columns:\s*minmax\(var\(--card-zone-width\),\s*1fr\)\s+max-content\s+minmax\(var\(--card-zone-width\),\s*1fr\);/,
+      /grid-template-columns:\s*minmax\(0,\s*1fr\)\s+max-content\s+minmax\(0,\s*1fr\);/,
     );
     assert.match(
       appShellStyles,
       /grid-template-areas:\s*"hand-rail playmat-board \.";/,
     );
+    assert.match(
+      controlsStyles,
+      /\.control-rail\s*\{[^}]*position:\s*absolute;/u,
+    );
+    assert.match(controlsStyles, /\.control-rail\s*\{[^}]*right:\s*8px;/u);
+    assert.match(controlsStyles, /\.control-rail\s*\{[^}]*width:\s*260px;/u);
   });
 
   test("leader and stage zones are centered and mirrored", async () => {

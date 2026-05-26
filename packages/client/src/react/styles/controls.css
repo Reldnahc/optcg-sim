@@ -1,6 +1,11 @@
 .control-rail {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  bottom: 8px;
   display: grid;
   grid-template-rows: 118px minmax(0, 1fr) 118px;
+  width: 260px;
   gap: 8px;
   min-height: 0;
 }
