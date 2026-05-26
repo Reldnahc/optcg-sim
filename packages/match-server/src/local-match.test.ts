@@ -429,6 +429,45 @@ describe("local dev match", () => {
     void snapshot;
   });
 
+  test("counter-step pass action is labeled as ending the counter phase", () => {
+    const match = createTestMatch();
+    let snapshot = keepBothPlayersAndAdvance(match);
+    for (let step = 0; step < 2; step += 1) {
+      const current = mustPlayerSnapshot(snapshot, snapshot.activePlayerId);
+      const endMain = current.actions.find((action) =>
+        action.label.includes("End main phase"),
+      );
+      if (endMain === undefined) {
+        throw new Error("Expected end-main action while setting up attack.");
+      }
+      const result = applyLocalDevAction(match, {
+        playerId: snapshot.activePlayerId,
+        actionIndex: endMain.index,
+      });
+      assert.deepEqual(result.errors, []);
+      snapshot = getLocalDevSnapshot(match);
+    }
+    const attackAction = mustPlayerSnapshot(snapshot, p1).actions.find(
+      (action) => action.type === "declareAttack",
+    );
+    if (attackAction === undefined) {
+      throw new Error("Expected an attack action.");
+    }
+
+    const opened = applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: attackAction.index,
+    });
+
+    assert.deepEqual(opened.errors, []);
+    const counterLabels = mustPlayerSnapshot(
+      getLocalDevSnapshot(match),
+      p2,
+    ).actions.map((action) => action.label);
+    assert.ok(counterLabels.includes("End counter phase"));
+    assert.equal(counterLabels.includes("Choose 0 card"), false);
+  });
+
   test("rejects a stale action index without mutating the match", () => {
     const match = createTestMatch();
     const before = getLocalDevSnapshot(match);
