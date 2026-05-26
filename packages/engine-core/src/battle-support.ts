@@ -11,6 +11,7 @@ import type {
 
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime.js";
 import { isSupportedQueuedEffectConditionShape } from "./effect-runtime-conditions.js";
+import { isSupportedPermanentContinuousEffectBlock } from "./effect-runtime-continuous.js";
 import {
   isSupportedOnOpponentAttackCompatibleQueuedEffect,
   isSupportedWhenAttackingCompatibleQueuedEffect,
@@ -102,6 +103,31 @@ export const hasUnsupportedSupportGateText = (
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+const isBattleNeutralFieldRemovalProtection = (value: unknown): boolean => {
+  if (!isRecord(value) || value["process"] !== "fieldRemoval") {
+    return false;
+  }
+  const fieldRemoval = value["fieldRemoval"];
+  if (!isRecord(fieldRemoval)) {
+    return false;
+  }
+  const exclusions = fieldRemoval["exclusions"];
+  if (!isRecord(exclusions)) {
+    return false;
+  }
+  return (
+    fieldRemoval["processFamily"] === "fieldRemoval" &&
+    fieldRemoval["sourceKind"] === "cardEffect" &&
+    fieldRemoval["sourceControllerRelation"] === "opponentControlled" &&
+    fieldRemoval["targetScope"] === "thisCard" &&
+    exclusions["battleKO"] === "excluded" &&
+    exclusions["ruleProcessTrash"] === "excluded" &&
+    exclusions["controllerCost"] === "excluded" &&
+    exclusions["controllerOwnedEffect"] === "excluded" &&
+    exclusions["ambiguousCustomRemoval"] === "failClosed"
+  );
+};
+
 const hasThisBattleDuration = (value: unknown): boolean => {
   if (!isRecord(value)) {
     return false;
@@ -135,18 +161,18 @@ const hasUnsupportedBattleEffectBody = (value: unknown): boolean => {
 
   const operation = value["operation"];
   if (isRecord(operation)) {
-    if (
-      operation["type"] === "protection" ||
-      operation["type"] === "restriction"
-    ) {
+    if (operation["type"] === "restriction") {
       return true;
     }
+    if (operation["type"] === "protection") {
+      return !isBattleNeutralFieldRemovalProtection(operation["protection"]);
+    }
     if (isRecord(operation["protection"])) {
-      return true;
+      return !isBattleNeutralFieldRemovalProtection(operation["protection"]);
     }
   }
   if (isRecord(value["protection"])) {
-    return true;
+    return !isBattleNeutralFieldRemovalProtection(value["protection"]);
   }
 
   return Object.values(value).some((entry) =>
@@ -195,14 +221,34 @@ const hasSupportedBattleRuntimeDefinition = (
   );
 };
 
-const hasSupportedBattleRuntimeDefinitionForText = (
+const hasBattleSafeImplementedDslDefinitionForText = (
   state: GameState,
   cardId: CardInstance["cardId"],
-): boolean =>
-  hasSupportedBattleRuntimeDefinition(
+): boolean => {
+  const card = state.cardManifest.cards[cardId];
+  if (card === undefined) {
+    return false;
+  }
+  if (hasSupportedBattleRuntimeDefinition(state.cardManifest, card)) {
+    return true;
+  }
+  const lookup = resolveImplementedDslEffectDefinition(
+    card,
     state.cardManifest,
-    state.cardManifest.cards[cardId],
   );
+  if (!lookup.ok) {
+    return false;
+  }
+  return (
+    lookup.definition.effects.length > 0 &&
+    lookup.definition.effects.every(
+      (effect) =>
+        isSupportedBattleRuntimeEffect(effect) ||
+        isBattleNeutralTrigger(effect.trigger) ||
+        isSupportedPermanentContinuousEffectBlock(effect),
+    )
+  );
+};
 
 const supportsBattleRuntimeSanitization = (
   manifest: MatchCardManifest,
@@ -295,7 +341,7 @@ export const hasUnsupportedBattleEffectMetadata = (
     if (
       card !== undefined &&
       hasUnsupportedSupportGateText(card.effectText, card) &&
-      !hasSupportedBattleRuntimeDefinitionForText(state, cardId)
+      !hasBattleSafeImplementedDslDefinitionForText(state, cardId)
     ) {
       return true;
     }
@@ -308,7 +354,10 @@ export const hasUnsupportedBattleEffectMetadata = (
       continue;
     }
     for (const effect of definition.effects) {
-      if (isSupportedBattleRuntimeEffect(effect)) {
+      if (
+        isSupportedBattleRuntimeEffect(effect) ||
+        isSupportedPermanentContinuousEffectBlock(effect)
+      ) {
         continue;
       }
       if (

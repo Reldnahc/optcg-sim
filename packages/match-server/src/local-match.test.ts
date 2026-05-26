@@ -524,6 +524,66 @@ describe("local dev match", () => {
     assert.equal(catalog.players[p1]?.cards["OP13-084" as CardId]?.power, 5000);
   });
 
+  test("real dev characters on field do not block leader attacks", () => {
+    const match = createTestMatch();
+    keepBothPlayersAndAdvance(match);
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const sourceIndex = p1State.deck.findIndex(
+      (card) => card.cardId === ("OP13-084" as CardId),
+    );
+    if (sourceIndex < 0) {
+      throw new Error("Missing OP13-084 in p1 deck.");
+    }
+    const [source] = p1State.deck.splice(sourceIndex, 1);
+    if (source === undefined) {
+      throw new Error("Failed to remove OP13-084 from p1 deck.");
+    }
+    source.zone = {
+      zone: "characterArea",
+      playerId: p1,
+      slot: "character",
+      index: 0,
+    };
+    source.state = "active";
+    source.turnPlayed = 1;
+    p1State.characters = [source];
+    p1State.deck = p1State.deck.map((card, index) => ({
+      ...card,
+      zone: { zone: "deck", playerId: p1, slot: "deck", index },
+    }));
+    match.state.turn.phase = "main";
+    match.state.turn.turnPlayerId = p1;
+    match.state.turn.globalTurn = 3;
+    match.state.turn.playerTurnCounts[p1] = 2;
+
+    const snapshot = getLocalDevSnapshot(match);
+    const attackAction = mustPlayerSnapshot(snapshot, p1).actions.find(
+      (action) =>
+        action.type === "declareAttack" &&
+        action.placement?.instanceId === p1State.leader.instanceId,
+    );
+    if (attackAction === undefined) {
+      throw new Error(
+        `Expected leader attack action with character in play; actions were: ${mustPlayerSnapshot(
+          snapshot,
+          p1,
+        )
+          .actions.map((action) => action.label)
+          .join(", ")}`,
+      );
+    }
+
+    const opened = applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: attackAction.index,
+    });
+
+    assert.deepEqual(opened.errors, []);
+  });
+
   test("rejects a stale action index without mutating the match", () => {
     const match = createTestMatch();
     const before = getLocalDevSnapshot(match);
